@@ -250,7 +250,8 @@ describe('Phase 8: Symbolic Core Integration & Validation', () => {
             const highPriorityTask = new Task({
                 term: termFactory.create({name: 'HIGH_PRIORITY'}),
                 punctuation: '.',
-                budget: {priority: 0.9}
+                budget: {priority: 0.9},
+                truth: {frequency: 0.9, confidence: 0.8}
             });
 
             // Add to memory system
@@ -286,13 +287,15 @@ describe('Phase 8: Symbolic Core Integration & Validation', () => {
             const inheritanceTask = new Task({
                 term: inheritanceTerm,
                 punctuation: '.',
-                budget: {priority: 0.8}
+                budget: {priority: 0.8},
+                truth: {frequency: 0.9, confidence: 0.8}
             });
 
             const similarityTask = new Task({
                 term: similarityTerm,
                 punctuation: '.',
-                budget: {priority: 0.7}
+                budget: {priority: 0.7},
+                truth: {frequency: 0.9, confidence: 0.8}
             });
 
             // Add to memory
@@ -359,7 +362,8 @@ describe('Phase 8: Symbolic Core Integration & Validation', () => {
                 const task = new Task({
                     term,
                     punctuation: '.',
-                    budget: {priority: 0.5}
+                    budget: {priority: 0.5},
+                    truth: {frequency: 0.9, confidence: 0.8}
                 });
                 nar._memory.addTask(task, Date.now());
             }
