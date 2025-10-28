@@ -47,7 +47,7 @@ export const createTask = (overrides = {}) => {
     };
     const taskData = {...defaults, ...overrides};
 
-    if (taskData.punctuation === '.' && taskData.truth === null) {
+    if ((taskData.punctuation === '.' || taskData.punctuation === '!') && taskData.truth === null) {
         taskData.truth = createTruth();
     }
 

@@ -117,7 +117,7 @@ export class TruthFunctions {
         const t2 = v2 instanceof Truth ? v2 : new Truth(v2?.frequency || 0.5, v2?.confidence || 0.9);
 
         const result = Truth.comparison(t1, t2);
-        return result ? {frequency: result.f, confidence: result.c} : null;
+        return result ? {frequency: result.frequency, confidence: result.confidence} : null;
     }
 
     /**
@@ -133,7 +133,7 @@ export class TruthFunctions {
         const t = v instanceof Truth ? v : new Truth(v?.frequency || 0.5, v?.confidence || 0.9);
 
         const result = Truth.conversion(t);
-        return result ? {frequency: result.f, confidence: result.c} : null;
+        return result ? {frequency: result.frequency, confidence: result.confidence} : null;
     }
 
     /**
@@ -149,7 +149,7 @@ export class TruthFunctions {
         const t = v instanceof Truth ? v : new Truth(v?.frequency || 0.5, v?.confidence || 0.9);
 
         const result = Truth.negation(t);
-        return result ? {frequency: result.f, confidence: result.c} : null;
+        return result ? {frequency: result.frequency, confidence: result.confidence} : null;
     }
 
     /**
@@ -179,8 +179,8 @@ export class TruthFunctions {
         const t = v instanceof Truth ? v : new Truth(v?.frequency || 0.5, v?.confidence || 0.9);
 
         return {
-            frequency: clamp(t.f, 0, 1),
-            confidence: clamp(t.c, 0, 1)
+            frequency: clamp(t.frequency, 0, 1),
+            confidence: clamp(t.confidence, 0, 1)
         };
     }
 }

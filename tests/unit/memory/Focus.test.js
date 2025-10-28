@@ -101,9 +101,9 @@ describe('Focus', () => {
         const term2 = termFactory.create({name: 'B'});
         const term3 = termFactory.create({name: 'C'});
 
-        const task1 = new Task({term: term1, punctuation: '.', budget: {priority: 0.5}});
-        const task2 = new Task({term: term2, punctuation: '.', budget: {priority: 0.3}});
-        const task3 = new Task({term: term3, punctuation: '.', budget: {priority: 0.8}});
+        const task1 = new Task({term: term1, punctuation: '.', budget: {priority: 0.5}, truth: {frequency: 0.9, confidence: 0.8}});
+        const task2 = new Task({term: term2, punctuation: '.', budget: {priority: 0.3}, truth: {frequency: 0.9, confidence: 0.8}});
+        const task3 = new Task({term: term3, punctuation: '.', budget: {priority: 0.8}, truth: {frequency: 0.9, confidence: 0.8}});
 
         focus.addTaskToFocus(task1);
         focus.addTaskToFocus(task2);
@@ -120,7 +120,7 @@ describe('Focus', () => {
         focus.createFocusSet('set2');
 
         const term = termFactory.create({name: 'A'});
-        const task = new Task({term, punctuation: '.', budget: {priority: 0.7}});
+        const task = new Task({term, punctuation: '.', budget: {priority: 0.7}, truth: {frequency: 0.9, confidence: 0.8}});
 
         focus.setFocus('set1');
         focus.addTaskToFocus(task);

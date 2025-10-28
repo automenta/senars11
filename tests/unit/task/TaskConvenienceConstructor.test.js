@@ -23,13 +23,13 @@ describe('Task convenience constructor', () => {
     });
 
     test('should create belief task with punctuation "."', () => {
-        const task = new Task({term, punctuation: '.'});
+        const task = new Task({term, punctuation: '.', truth: new Truth()});
 
         expect(task.type).toBe('BELIEF');
     });
 
     test('should create goal task with punctuation "!"', () => {
-        const task = new Task({term, punctuation: '!'});
+        const task = new Task({term, punctuation: '!', truth: new Truth()});
 
         expect(task.type).toBe('GOAL');
     });
@@ -41,15 +41,15 @@ describe('Task convenience constructor', () => {
     });
 
     test('should use default priority when not provided', () => {
-        const task = new Task({term, punctuation: '.'});
+        const task = new Task({term, punctuation: '.', truth: new Truth()});
 
         expect(task.budget.priority).toBe(0.5); // Default priority
     });
 
-    test('should use null truth when not provided', () => {
-        const task = new Task({term, punctuation: '.'});
-
-        expect(task.truth).toBeNull();
+    test('should throw error when BELIEF task created without truth', () => {
+        expect(() => {
+            new Task({term, punctuation: '.'});
+        }).toThrow(/BELIEF tasks must have valid truth values/);
     });
 
     test('should throw error for invalid punctuation', () => {
@@ -68,11 +68,12 @@ describe('Task convenience constructor', () => {
     });
 
     test('should work with withTruth operation after convenience constructor', () => {
-        const task = new Task({term, punctuation: '.'});
+        const initialTruth = new Truth(0.5, 0.6);
+        const task = new Task({term, punctuation: '.', truth: initialTruth});
         const newTruth = new Truth(0.9, 0.8);
         const updatedTask = task.clone({truth: newTruth});
 
-        expect(task.truth).toBeNull();
+        expect(task.truth).toBe(initialTruth);
         expect(updatedTask.truth).toBe(newTruth);
     });
 });
