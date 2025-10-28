@@ -201,12 +201,14 @@ describe('Phase 8: Symbolic Core Integration & Validation', () => {
             const task1 = new Task({
                 term: term1,
                 punctuation: '.',
-                budget: {priority: 0.9}
+                budget: {priority: 0.9},
+                truth: {frequency: 0.9, confidence: 0.8}
             });
             const task2 = new Task({
                 term: term2,
                 punctuation: '.',
-                budget: {priority: 0.6}
+                budget: {priority: 0.6},
+                truth: {frequency: 0.9, confidence: 0.8}
             });
 
             // Add tasks to the memory system
@@ -230,7 +232,8 @@ describe('Phase 8: Symbolic Core Integration & Validation', () => {
             const focusTask = new Task({
                 term: termFactory.create({name: 'FOCUS_TEST'}),
                 punctuation: '.',
-                budget: {priority: 0.95}
+                budget: {priority: 0.95},
+                truth: {frequency: 0.9, confidence: 0.8}
             });
             focus.addTaskToFocus(focusTask);
 

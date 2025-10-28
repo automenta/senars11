@@ -63,17 +63,20 @@ describe('Memory Architecture', () => {
             const highPriorityTask = new Task({
                 term: termA,
                 punctuation: '.',
-                budget: {priority: 0.9}
+                budget: {priority: 0.9},
+                truth: {frequency: 0.9, confidence: 0.8}
             });
             const mediumPriorityTask = new Task({
                 term: termB,
                 punctuation: '.',
-                budget: {priority: 0.6}
+                budget: {priority: 0.6},
+                truth: {frequency: 0.9, confidence: 0.8}
             });
             const lowPriorityTask = new Task({
                 term: termC,
                 punctuation: '.',
-                budget: {priority: 0.2}
+                budget: {priority: 0.2},
+                truth: {frequency: 0.9, confidence: 0.8}
             });
 
             // Add high-priority task to focus
@@ -99,7 +102,8 @@ describe('Memory Architecture', () => {
             const importantTask = new Task({
                 term: importantTerm,
                 punctuation: '.',
-                budget: {priority: 0.85}
+                budget: {priority: 0.85},
+                truth: {frequency: 0.9, confidence: 0.8}
             });
 
             // Add to focus initially
@@ -195,7 +199,8 @@ describe('Memory Architecture', () => {
             const tasks = terms.map((term, i) => new Task({
                 term,
                 punctuation: '.',
-                budget: {priority: 0.5 - (i * 0.1)} // Decreasing priority
+                budget: {priority: 0.5 - (i * 0.1)}, // Decreasing priority
+                truth: {frequency: 0.9, confidence: 0.8}
             }));
 
             tasks.forEach((task, idx) => memory.addTask(task, Date.now() - (idx * 1000))); // Different timestamps
@@ -222,7 +227,8 @@ describe('Memory Architecture', () => {
             const task = new Task({
                 term,
                 punctuation: '.',
-                budget: {priority: 0.7}
+                budget: {priority: 0.7},
+                truth: {frequency: 0.9, confidence: 0.8}
             });
 
             // Add task at time 0
@@ -253,17 +259,20 @@ describe('Memory Architecture', () => {
             const taskA = new Task({
                 term: termFactory.create({name: 'A'}),
                 punctuation: '.',
-                budget: {priority: 0.9}
+                budget: {priority: 0.9},
+                truth: {frequency: 0.9, confidence: 0.8}
             });
             const taskB = new Task({
                 term: termFactory.create({name: 'B'}),
                 punctuation: '.',
-                budget: {priority: 0.6}
+                budget: {priority: 0.6},
+                truth: {frequency: 0.9, confidence: 0.8}
             });
             const taskC = new Task({
                 term: termFactory.create({name: 'C'}),
                 punctuation: '.',
-                budget: {priority: 0.4}
+                budget: {priority: 0.4},
+                truth: {frequency: 0.9, confidence: 0.8}
             });
 
             focus.setFocus('high_priority');
@@ -323,7 +332,8 @@ describe('Memory Architecture', () => {
                 const task = new Task({
                     term,
                     punctuation: '.',
-                    budget: {priority: Math.random()}
+                    budget: {priority: Math.random()},
+                    truth: {frequency: 0.9, confidence: 0.8}
                 });
 
                 // Add to both focus and memory to test integration
@@ -359,7 +369,8 @@ describe('Memory Architecture', () => {
                 const task = new Task({
                     term,
                     punctuation: '.',
-                    budget: {priority: 0.5}
+                    budget: {priority: 0.5},
+                    truth: {frequency: 0.9, confidence: 0.8}
                 });
                 memory.addTask(task, Date.now());
             }
