@@ -237,14 +237,24 @@ function peg$parse(input, options) {
   function peg$f1(term, punc, truth) {
     return {
       term: term,
-      punctuation: punc !== null ? punc : '.',
+      punctuation: punc,
       truthValue: truth,
       taskType: punc === '?' ? 'QUESTION' : (punc === '!' ? 'GOAL' : 'BELIEF')
     };
   }
   function peg$f2(punc) {    return punc;  }
-  function peg$f3(f, c) {    return { frequency: f, confidence: c };  }
-  function peg$f4(f) {    return { frequency: f, confidence: 0.9 };  }
+  function peg$f3(f, c) {
+    if (f < 0 || f > 1 || c < 0 || c > 1) {
+      error(`Truth values out of range: frequency=${f} (0-1), confidence=${c} (0-1)`);
+    }
+    return { frequency: f, confidence: c };
+  }
+  function peg$f4(f) {
+    if (f < 0 || f > 1) {
+      error(`Frequency value out of range: ${f} (should be 0-1)`);
+    }
+    return { frequency: f, confidence: 0.9 };
+  }
   function peg$f5(subject, op, predicate) {
     return options.termFactory.create({ operator: op.trim(), components: [subject, predicate] });
   }
@@ -470,15 +480,17 @@ function peg$parse(input, options) {
     s1 = peg$parseTerm();
     if (s1 !== peg$FAILED) {
       s2 = peg$parsePunctuation();
-      if (s2 === peg$FAILED) {
-        s2 = null;
+      if (s2 !== peg$FAILED) {
+        s3 = peg$parseTruthValue();
+        if (s3 === peg$FAILED) {
+          s3 = null;
+        }
+        peg$savedPos = s0;
+        s0 = peg$f1(s1, s2, s3);
+      } else {
+        peg$currPos = s0;
+        s0 = peg$FAILED;
       }
-      s3 = peg$parseTruthValue();
-      if (s3 === peg$FAILED) {
-        s3 = null;
-      }
-      peg$savedPos = s0;
-      s0 = peg$f1(s1, s2, s3);
     } else {
       peg$currPos = s0;
       s0 = peg$FAILED;

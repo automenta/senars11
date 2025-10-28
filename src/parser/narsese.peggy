@@ -3,10 +3,10 @@ start
   = _ content:(Task / Term) _ { return content; }
 
 Task "task"
-  = term:Term punc:Punctuation? truth:TruthValue? {
+  = term:Term punc:Punctuation truth:TruthValue? {
       return {
         term: term,
-        punctuation: punc !== null ? punc : '.',
+        punctuation: punc,
         truthValue: truth,
         taskType: punc === '?' ? 'QUESTION' : (punc === '!' ? 'GOAL' : 'BELIEF')
       };
@@ -16,8 +16,18 @@ Punctuation
   = _ punc:[.!?] { return punc; }
 
 TruthValue
-  = _ "%" _ f:Float _ ";" _ c:Float _ "%" { return { frequency: f, confidence: c }; }
-  / _ "%" _ f:Float _ "%" { return { frequency: f, confidence: 0.9 }; }
+  = _ "%" _ f:Float _ ";" _ c:Float _ "%" {
+      if (f < 0 || f > 1 || c < 0 || c > 1) {
+        error(`Truth values out of range: frequency=${f} (0-1), confidence=${c} (0-1)`);
+      }
+      return { frequency: f, confidence: c };
+    }
+  / _ "%" _ f:Float _ "%" {
+      if (f < 0 || f > 1) {
+        error(`Frequency value out of range: ${f} (should be 0-1)`);
+      }
+      return { frequency: f, confidence: 0.9 };
+    }
 
 Term "term"
   = Statement

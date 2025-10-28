@@ -18,8 +18,14 @@ export class Truth {
 
     static revision = (t1, t2) => {
         if (!t1 || !t2) return t1 || t2;
+        
+        // If both truth values are identical, return the same value
+        if (t1.frequency === t2.frequency && t1.confidence === t2.confidence) {
+            return new Truth(t1.frequency, t1.confidence);
+        }
+        
         const {frequency: f1, confidence: c1} = t1, {frequency: f2, confidence: c2} = t2, cSum = c1 + c2;
-        return new Truth(cSum > 0 ? (f1 * c1 + f2 * c2) / cSum : 0, clamp(cSum, 0, 1));
+        return new Truth(cSum > 0 ? (f1 * c1 + f2 * c2) / cSum : (f1 + f2) / 2, clamp(cSum, 0, 1));
     };
 
     static negation = t => Truth.unaryOp(t, t => new Truth(1 - t.frequency, t.confidence));
