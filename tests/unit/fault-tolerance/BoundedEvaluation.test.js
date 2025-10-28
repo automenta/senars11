@@ -34,7 +34,8 @@ describe('Bounded Evaluation Tests', () => {
     test('Task budget includes cycles and depth fields', () => {
         const task = new Task({
             term: new Term(TermType.ATOM, 'test'),
-            budget: { cycles: 50, depth: 5, priority: 0.5, durability: 0.5, quality: 0.5 }
+            budget: { cycles: 50, depth: 5, priority: 0.5, durability: 0.5, quality: 0.5 },
+            truth: { frequency: 0.9, confidence: 0.8 }
         });
 
         expect(task.budget.cycles).toBe(50);
@@ -43,7 +44,8 @@ describe('Bounded Evaluation Tests', () => {
 
     test('Default task budget includes cycles and depth fields', () => {
         const task = new Task({
-            term: new Term(TermType.ATOM, 'test')
+            term: new Term(TermType.ATOM, 'test'),
+            truth: { frequency: 0.9, confidence: 0.8 }
         });
 
         expect(task.budget.cycles).toBe(100);

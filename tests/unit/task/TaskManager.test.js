@@ -31,15 +31,15 @@ describe('TaskManager', () => {
     });
 
     test('should add a task to pending queue', () => {
-        const task = new Task({term});
+        const task = new Task({term, truth: {frequency: 0.9, confidence: 0.8}});
         taskManager.addTask(task);
         expect(taskManager.pendingTasksCount).toBe(1);
         expect(taskManager.getPendingTasks()).toContain(task);
     });
 
     test('should process pending tasks', () => {
-        const highPriorityTask = new Task({term, budget: {priority: 0.8}});
-        const lowPriorityTask = new Task({term: termFactory.create({name: 'B'}), budget: {priority: 0.4}});
+        const highPriorityTask = new Task({term, budget: {priority: 0.8}, truth: {frequency: 0.9, confidence: 0.8}});
+        const lowPriorityTask = new Task({term: termFactory.create({name: 'B'}), budget: {priority: 0.4}, truth: {frequency: 0.9, confidence: 0.8}});
 
         taskManager.addTask(highPriorityTask);
         taskManager.addTask(lowPriorityTask);
@@ -61,7 +61,7 @@ describe('TaskManager', () => {
     });
 
     test('should find tasks by term', () => {
-        const task = new Task({term});
+        const task = new Task({term, truth: {frequency: 0.9, confidence: 0.8}});
         taskManager.addTask(task);
         taskManager.processPendingTasks();
         const foundTasks = taskManager.findTasksByTerm(term);
@@ -70,8 +70,8 @@ describe('TaskManager', () => {
     });
 
     test('should get highest priority tasks correctly', () => {
-        const task1 = new Task({term, budget: {priority: 0.6}});
-        const task2 = new Task({term: termFactory.create({name: 'B'}), budget: {priority: 0.8}});
+        const task1 = new Task({term, budget: {priority: 0.6}, truth: {frequency: 0.9, confidence: 0.8}});
+        const task2 = new Task({term: termFactory.create({name: 'B'}), budget: {priority: 0.8}, truth: {frequency: 0.9, confidence: 0.8}});
         taskManager.addTask(task1);
         taskManager.addTask(task2);
         taskManager.processPendingTasks();
@@ -83,7 +83,7 @@ describe('TaskManager', () => {
     });
 
     test('should update task priority correctly', () => {
-        const task = new Task({term, budget: {priority: 0.5}});
+        const task = new Task({term, budget: {priority: 0.5}, truth: {frequency: 0.9, confidence: 0.8}});
         taskManager.addTask(task);
         taskManager.processPendingTasks();
 
