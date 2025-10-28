@@ -57,17 +57,20 @@ describe('Bounded Evaluation Tests', () => {
         
         const validTask = new Task({
             term: new Term(TermType.ATOM, 'valid'),
-            budget: { priority: 0.5, durability: 0.5, quality: 0.5, cycles: 5, depth: 3 }
+            budget: { priority: 0.5, durability: 0.5, quality: 0.5, cycles: 5, depth: 3 },
+            truth: { frequency: 0.9, confidence: 0.8 }
         });
 
         const exhaustedCycleTask = new Task({
             term: new Term(TermType.ATOM, 'exhausted-cycles'),
-            budget: { priority: 0.5, durability: 0.5, quality: 0.5, cycles: 0, depth: 3 }
+            budget: { priority: 0.5, durability: 0.5, quality: 0.5, cycles: 0, depth: 3 },
+            truth: { frequency: 0.9, confidence: 0.8 }
         });
 
         const exhaustedDepthTask = new Task({
             term: new Term(TermType.ATOM, 'exhausted-depth'),
-            budget: { priority: 0.5, durability: 0.5, quality: 0.5, cycles: 5, depth: 0 }
+            budget: { priority: 0.5, durability: 0.5, quality: 0.5, cycles: 5, depth: 0 },
+            truth: { frequency: 0.9, confidence: 0.8 }
         });
 
         const tasks = [validTask, exhaustedCycleTask, exhaustedDepthTask];
@@ -82,7 +85,8 @@ describe('Bounded Evaluation Tests', () => {
         
         const task = new Task({
             term: new Term(TermType.ATOM, 'test'),
-            budget: { priority: 0.5, durability: 0.5, quality: 0.5, cycles: 10, depth: 5 }
+            budget: { priority: 0.5, durability: 0.5, quality: 0.5, cycles: 10, depth: 5 },
+            truth: { frequency: 0.9, confidence: 0.8 }
         });
 
         const processedTask = cycle._applyBudgetConstraints([task])[0];
@@ -96,7 +100,8 @@ describe('Bounded Evaluation Tests', () => {
         
         const task = new Task({
             term: new Term(TermType.ATOM, 'zero-test'),
-            budget: { priority: 0.5, durability: 0.5, quality: 0.5, cycles: 1, depth: 1 }
+            budget: { priority: 0.5, durability: 0.5, quality: 0.5, cycles: 1, depth: 1 },
+            truth: { frequency: 0.9, confidence: 0.8 }
         });
 
         let processedTask = cycle._applyBudgetConstraints([task])[0];

@@ -43,12 +43,14 @@ describe('FocusSetSelector', () => {
         const lowPriorityTask = new Task({
             term,
             punctuation: '.',
-            budget: {priority: 0.1} // Below threshold
+            budget: {priority: 0.1}, // Below threshold
+            truth: {frequency: 0.9, confidence: 0.8}
         });
         const highPriorityTask = new Task({
             term,
             punctuation: '.',
-            budget: {priority: 0.5} // Above threshold
+            budget: {priority: 0.5}, // Above threshold
+            truth: {frequency: 0.9, confidence: 0.8}
         });
 
         const selected = selector.select([lowPriorityTask, highPriorityTask], currentTime);
@@ -66,6 +68,7 @@ describe('FocusSetSelector', () => {
             term: term1,
             punctuation: '.',
             budget: {priority: 0.8},
+            truth: {frequency: 0.9, confidence: 0.8},
             stamp: new ArrayStamp({id: 'id1', creationTime: currentTime - 1000, source: 'INPUT'}),
         });
 
@@ -73,6 +76,7 @@ describe('FocusSetSelector', () => {
             term: term2,
             punctuation: '.',
             budget: {priority: 0.6},
+            truth: {frequency: 0.9, confidence: 0.8},
             stamp: new ArrayStamp({id: 'id2', creationTime: currentTime - 500, source: 'INPUT'}),
         });
 
@@ -80,6 +84,7 @@ describe('FocusSetSelector', () => {
             term: term3,
             punctuation: '.',
             budget: {priority: 0.4},
+            truth: {frequency: 0.9, confidence: 0.8},
             stamp: new ArrayStamp({id: 'id3', creationTime: currentTime - 2000, source: 'INPUT'}),
         });
 
@@ -98,6 +103,7 @@ describe('FocusSetSelector', () => {
                 term,
                 punctuation: '.',
                 budget: {priority: 0.5 + (i * 0.1)},
+                truth: {frequency: 0.9, confidence: 0.8},
                 stamp: new ArrayStamp({id: `id${i}`, creationTime: currentTime - (i * 100), source: 'INPUT'}),
             });
             tasks.push(task);
@@ -114,6 +120,7 @@ describe('FocusSetSelector', () => {
             term,
             punctuation: '.',
             budget: {priority: 0.5},
+            truth: {frequency: 0.9, confidence: 0.8},
             stamp: new ArrayStamp({id: 'recent', creationTime: currentTime - 100, source: 'INPUT'}),
         });
 
@@ -121,6 +128,7 @@ describe('FocusSetSelector', () => {
             term,
             punctuation: '.',
             budget: {priority: 0.5},
+            truth: {frequency: 0.9, confidence: 0.8},
             stamp: new ArrayStamp({id: 'old', creationTime: currentTime - 10000, source: 'INPUT'}),
         });
 
@@ -138,8 +146,8 @@ describe('FocusSetSelector', () => {
             components: [termFactory.create({name: 'A'}), termFactory.create({name: 'B'})]
         });
 
-        const simpleTask = new Task({term: simpleTerm, punctuation: '.', budget: {priority: 0.5}});
-        const complexTask = new Task({term: complexTerm, punctuation: '.', budget: {priority: 0.5}});
+        const simpleTask = new Task({term: simpleTerm, punctuation: '.', budget: {priority: 0.5}, truth: {frequency: 0.9, confidence: 0.8}});
+        const complexTask = new Task({term: complexTerm, punctuation: '.', budget: {priority: 0.5}, truth: {frequency: 0.9, confidence: 0.8}});
 
         const selected = selector.select([simpleTask, complexTask], currentTime);
 
