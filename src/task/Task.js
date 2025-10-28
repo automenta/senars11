@@ -18,6 +18,18 @@ export class Task {
 
         this.term = term;
         this.type = PUNCTUATION_TO_TYPE[punctuation] || 'BELIEF';
+        
+        // Validate truth value based on task type
+        if (this.type === 'QUESTION') {
+            if (truth !== null) {
+                throw new Error('Questions cannot have truth values');
+            }
+        } else if (this.type === 'BELIEF' || this.type === 'GOAL') {
+            if (truth === null) {
+                throw new Error(`${this.type} tasks must have valid truth values`);
+            }
+        }
+        
         this.truth = this._createTruth(truth);
         this.budget = Object.freeze({...budget});
         this.stamp = stamp || ArrayStamp.createInput();
@@ -29,7 +41,15 @@ export class Task {
     }
 
     _createTruth(truth) {
-        return truth instanceof Truth ? truth : (truth ? new Truth(truth.f, truth.c) : null);
+        if (truth instanceof Truth) return truth;
+        if (!truth) return null;
+        
+        // Handle format: {frequency, confidence}
+        if (truth.frequency !== undefined && truth.confidence !== undefined) {
+            return new Truth(truth.frequency, truth.confidence);
+        }
+        
+        return null;
     }
 
     clone(overrides = {}) {

@@ -10,7 +10,8 @@ const COMMANDS = Object.freeze({
     trace: ['trace', 't'],
     reset: ['reset', 'r'],
     save: ['save', 'sv'],
-    load: ['load', 'ld']
+    load: ['load', 'ld'],
+    demo: ['demo', 'd', 'example']
 });
 
 export class ReplInterface {
@@ -107,6 +108,7 @@ Available commands:
   :reset, :r        - Reset the NAR system
   :save, :sv         - Save current agent state to file
   :load, :ld         - Load agent state from file
+  :demo, :d         - Run an example/demo (use ":demo" for list)
 
 Narsese input examples:
   (bird --> animal).                     (inheritance statement)
@@ -182,6 +184,92 @@ ${beliefs.slice(-5).map(task => `  ${task.term.name} ${task.truth?.toString() ||
                 : 'Failed to load NAR state - deserialization error';
         } catch (error) {
             return `Error loading NAR state: ${error.message}`;
+        }
+    }
+
+    async _demo(args) {
+        const exampleName = args && args.length > 0 ? args[0] : null;
+        
+        if (!exampleName) {
+            return `Available examples:
+  agent-builder-demo     - Demonstrates building agents with various capabilities
+  causal-reasoning       - Shows causal reasoning capabilities
+  inductive-reasoning    - Demonstrates inductive inference
+  syllogism              - Classic syllogistic reasoning examples
+  temporal               - Temporal reasoning demonstrations
+  performance            - Performance benchmarking example
+  phase10-complete       - Full phase 10 reasoning demonstration
+  phase10-final          - Final comprehensive demonstration
+  websocket              - WebSocket monitoring example
+  lm-providers           - Language model provider integrations
+
+Usage: :demo <example-name> (without the .js extension)`;
+        }
+
+        // Map example names to file paths
+        const exampleMap = {
+            'agent-builder': '../examples/agent-builder-demo.js',
+            'agent-builder-demo': '../examples/agent-builder-demo.js',
+            'causal-reasoning': '../examples/causal-reasoning-demo.js',
+            'causal-reasoning-demo': '../examples/causal-reasoning-demo.js',
+            'inductive-reasoning': '../examples/inductive-reasoning-demo.js',
+            'inductive-reasoning-demo': '../examples/inductive-reasoning-demo.js',
+            'syllogism': '../examples/syllogism-demo.js',
+            'syllogism-demo': '../examples/syllogism-demo.js',
+            'temporal': '../examples/temporal-reasoning-demo.js',
+            'temporal-reasoning': '../examples/temporal-reasoning-demo.js',
+            'temporal-reasoning-demo': '../examples/temporal-reasoning-demo.js',
+            'performance': '../examples/performance-benchmark.js',
+            'performance-benchmark': '../examples/performance-benchmark.js',
+            'phase10-complete': '../examples/phase10-complete-demo.js',
+            'phase10-final': '../examples/phase10-final-demo.js',
+            'phase10-final-demo': '../examples/phase10-final-demo.js',
+            'websocket': '../examples/websocket-monitoring-test.js',
+            'websocket-demo': '../examples/websocket-monitoring-test.js',
+            'websocket-monitoring': '../examples/websocket-monitoring-test.js',
+            'lm-providers': '../examples/lm-providers.js',
+            'basic-usage': '../examples/basic-usage.js'
+        };
+
+        const examplePath = exampleMap[exampleName];
+        if (!examplePath) {
+            return `Unknown example: ${exampleName}. Use ":demo" for a list of available examples.`;
+        }
+
+        try {
+            // Import and run the example - we need to use a file URL for the import
+            const path = await import('path');
+            const url = await import('url');
+            
+            // Get the current directory and build the absolute path
+            const __filename = url.fileURLToPath(import.meta.url);
+            const __dirname = path.dirname(__filename);
+            const filePath = path.resolve(__dirname, examplePath);
+            
+            // Import using file:// URL protocol
+            const exampleModule = await import(`file://${filePath}`);
+            
+            // If the example has a default export that's a function, call it with the current NAR instance
+            if (exampleModule.default && typeof exampleModule.default === 'function') {
+                console.log(`\nRunning example: ${exampleName}`);
+                console.log('='.repeat(40));
+                
+                await exampleModule.default(this.nar);
+                
+                console.log('='.repeat(40));
+                console.log(`Example ${exampleName} completed.`);
+                
+                return 'Example executed successfully.';
+            } else {
+                // If no default function, just show the import was successful
+                return `Example ${exampleName} imported successfully. (No default function to execute)`;
+            }
+        } catch (error) {
+            // Provide more specific error information
+            if (error.code === 'MODULE_NOT_FOUND') {
+                return `Example file not found: ${examplePath}. Make sure the file exists in the examples directory.`;
+            }
+            return `Error running example ${exampleName}: ${error.message}`;
         }
     }
 }

@@ -134,9 +134,7 @@ export class ComponentManager extends BaseComponent {
      * @returns {Promise<boolean>} True if all components were initialized successfully
      */
     async initializeAll() {
-        this.logInfo('Initializing all components', {
-            totalComponents: this._components.size
-        });
+        this.logInfo(`Initializing ${this._components.size} components...`);
 
         const startupOrder = this.getStartupOrder();
         const failedComponents = [];
@@ -163,13 +161,11 @@ export class ComponentManager extends BaseComponent {
 
         const success = failedComponents.length === 0;
 
-        this.logInfo(`Component initialization complete`, {
-            total: startupOrder.length,
-            successful: startupOrder.length - failedComponents.length,
-            failed: failedComponents.length,
-            failedComponents,
-            success
-        });
+        if (failedComponents.length > 0) {
+            this.logInfo(`Init: ${startupOrder.length - failedComponents.length}/${startupOrder.length} OK, ${failedComponents.length} failed`);
+        } else {
+            this.logInfo(`All ${startupOrder.length} components OK`);
+        }
 
         this.emitEvent('components.initialized', {
             total: startupOrder.length,
@@ -187,9 +183,7 @@ export class ComponentManager extends BaseComponent {
      * @returns {Promise<boolean>} True if all components were started successfully
      */
     async startAll() {
-        this.logInfo('Starting all components', {
-            totalComponents: this._components.size
-        });
+        this.logInfo(`Starting ${this._components.size} components...`);
 
         const startupOrder = this.getStartupOrder();
         const failedComponents = [];
@@ -216,13 +210,11 @@ export class ComponentManager extends BaseComponent {
 
         const success = failedComponents.length === 0;
 
-        this.logInfo(`Component start complete`, {
-            total: startupOrder.length,
-            successful: startupOrder.length - failedComponents.length,
-            failed: failedComponents.length,
-            failedComponents,
-            success
-        });
+        if (failedComponents.length > 0) {
+            this.logInfo(`Start: ${startupOrder.length - failedComponents.length}/${startupOrder.length} successful, ${failedComponents.length} failed`);
+        } else {
+            this.logInfo(`All ${startupOrder.length} components started successfully`);
+        }
 
         this.emitEvent('components.started', {
             total: startupOrder.length,
@@ -240,9 +232,7 @@ export class ComponentManager extends BaseComponent {
      * @returns {Promise<boolean>} True if all components were stopped successfully
      */
     async stopAll() {
-        this.logInfo('Stopping all components', {
-            totalComponents: this._components.size
-        });
+        this.logInfo(`Stopping ${this._components.size} components...`);
 
         const shutdownOrder = this.getShutdownOrder();
         const failedComponents = [];
@@ -269,13 +259,11 @@ export class ComponentManager extends BaseComponent {
 
         const success = failedComponents.length === 0;
 
-        this.logInfo(`Component stop complete`, {
-            total: shutdownOrder.length,
-            successful: shutdownOrder.length - failedComponents.length,
-            failed: failedComponents.length,
-            failedComponents,
-            success
-        });
+        if (failedComponents.length > 0) {
+            this.logInfo(`Stop: ${shutdownOrder.length - failedComponents.length}/${shutdownOrder.length} successful, ${failedComponents.length} failed`);
+        } else {
+            this.logInfo(`All ${shutdownOrder.length} components stopped successfully`);
+        }
 
         this.emitEvent('components.stopped', {
             total: shutdownOrder.length,
@@ -293,9 +281,7 @@ export class ComponentManager extends BaseComponent {
      * @returns {Promise<boolean>} True if all components were disposed successfully
      */
     async disposeAll() {
-        this.logInfo('Disposing all components', {
-            totalComponents: this._components.size
-        });
+        this.logInfo(`Disposing ${this._components.size} components...`);
 
         const shutdownOrder = this.getShutdownOrder();
         const failedComponents = [];
@@ -320,13 +306,11 @@ export class ComponentManager extends BaseComponent {
 
         const success = failedComponents.length === 0;
 
-        this.logInfo(`Component dispose complete`, {
-            total: shutdownOrder.length,
-            successful: shutdownOrder.length - failedComponents.length,
-            failed: failedComponents.length,
-            failedComponents,
-            success
-        });
+        if (failedComponents.length > 0) {
+            this.logInfo(`Dispose: ${shutdownOrder.length - failedComponents.length}/${shutdownOrder.length} successful, ${failedComponents.length} failed`);
+        } else {
+            this.logInfo(`All ${shutdownOrder.length} components disposed successfully`);
+        }
 
         this.emitEvent('components.disposed', {
             total: shutdownOrder.length,

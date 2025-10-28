@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { ReplInterface } from './io/ReplInterface.js';
+import { Repl } from './tui/Repl.js';
 import { WebSocketMonitor } from './server/WebSocketMonitor.js';
 import { NAR } from './nar/NAR.js';
 
@@ -20,7 +20,7 @@ const DEFAULT_CONFIG = Object.freeze({
 });
 
 async function main() {
-    console.log('Starting SeNARS with WebSocket monitoring...');
+    console.log('SeNARS starting...');
 
     const nar = new NAR(DEFAULT_CONFIG.nar);
     await nar.initialize();
@@ -29,7 +29,7 @@ async function main() {
     await monitor.start();
     nar.connectToWebSocketMonitor(monitor);
 
-    const repl = new ReplInterface(DEFAULT_CONFIG);
+    const repl = new Repl(DEFAULT_CONFIG);
     repl.nar = nar;
 
     setupGracefulShutdown(repl, monitor);

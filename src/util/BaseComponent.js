@@ -173,7 +173,6 @@ export class BaseComponent {
         }
 
         try {
-            this.logInfo('Initializing component');
             await this._initialize();
             this._initialized = true;
 
@@ -183,7 +182,7 @@ export class BaseComponent {
                 component: this._name
             });
 
-            this._logger.info('Component initialized successfully');
+            this._logger.info(`${this._name} initialized`);
             this.incrementMetric('initializeCount');
             return true;
         } catch (error) {
@@ -208,7 +207,6 @@ export class BaseComponent {
         }
 
         try {
-            this.logInfo('Starting component');
             this._startTime = Date.now();
             await this._start();
             this._started = true;
@@ -220,7 +218,7 @@ export class BaseComponent {
                 uptime: this.uptime
             });
 
-            this.logInfo('Component started successfully');
+            this._logger.info(`${this._name} started`);
             this.incrementMetric('startCount');
             return true;
         } catch (error) {
@@ -240,7 +238,6 @@ export class BaseComponent {
         }
 
         try {
-            this.logInfo('Stopping component');
             await this._stop();
             this._started = false;
 
@@ -251,7 +248,7 @@ export class BaseComponent {
                 uptime: this.uptime
             });
 
-            this.logInfo('Component stopped successfully');
+            this._logger.info(`${this._name} stopped`);
             this.incrementMetric('stopCount');
             return true;
         } catch (error) {
@@ -271,8 +268,6 @@ export class BaseComponent {
         }
 
         try {
-            this.logInfo('Disposing component');
-
             // Stop if running
             if (this._started) {
                 await this.stop();
@@ -288,7 +283,7 @@ export class BaseComponent {
                 uptime: this.uptime
             });
 
-            this.logInfo('Component disposed successfully');
+            this._logger.info(`${this._name} disposed`);
             return true;
         } catch (error) {
             this._logger.error('Failed to dispose component', error);

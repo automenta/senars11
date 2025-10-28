@@ -177,13 +177,43 @@ export class NAR extends BaseComponent {
     _createTask(parsed) {
         const {term, truthValue, punctuation} = parsed;
         const budget = {priority: this._calculateInputPriority(parsed)};
+        
+        // Determine task type based on punctuation
+        const taskType = this._getTaskTypeFromPunctuation(punctuation);
+        
+        let truth;
+        
+        if (taskType === 'QUESTION') {
+            // Questions should not have truth values
+            if (truthValue) {
+                throw new Error(`Questions cannot have truth values: input was ${parsed.originalInput || 'unspecified'}`);
+            }
+            truth = null; // Questions don't have truth values
+        } else {
+            // Beliefs and Goals must have valid truth values
+            if (truthValue) {
+                truth = new Truth(truthValue.frequency, truthValue.confidence);
+            } else {
+                // Use default truth values for beliefs and goals
+                truth = new Truth(1.0, 0.9); // Default truth values for NARS
+            }
+        }
 
         return new Task({
             term,
             punctuation,
-            truth: truthValue ? new Truth(truthValue.frequency, truthValue.confidence) : null,
+            truth,
             budget,
         });
+    }
+
+    _getTaskTypeFromPunctuation(punctuation) {
+        switch (punctuation) {
+            case '.': return 'BELIEF';
+            case '!': return 'GOAL';
+            case '?': return 'QUESTION';
+            default: return 'BELIEF'; // Default to belief
+        }
     }
 
     async initialize() {
