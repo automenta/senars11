@@ -184,12 +184,12 @@ describe('Syllogistic Reasoning - (a-->b) + (b-->c) -> (a-->c)', () => {
         
         const containsAB = beliefs.some(b => {
             const term = b.term?.toString?.() || b.term || '';
-            return term.includes('a-->b');
+            return term === '(a-->b)';
         });
         
         const containsBC = beliefs.some(b => {
             const term = b.term?.toString?.() || b.term || '';
-            return term.includes('b-->c');
+            return term === '(b-->c)';
         });
         
         expect(containsAB).toBe(true);
@@ -203,7 +203,7 @@ describe('Syllogistic Reasoning - (a-->b) + (b-->c) -> (a-->c)', () => {
             beliefs = nar.getBeliefs();
             foundAC = beliefs.some(b => {
                 const term = b.term?.toString?.() || b.term || '';
-                return term.includes('a-->c');
+                return term === '(a-->c)';
             });
             
             if (foundAC) break;
@@ -215,7 +215,7 @@ describe('Syllogistic Reasoning - (a-->b) + (b-->c) -> (a-->c)', () => {
         // Get the derived task to verify its properties
         const acTask = beliefs.find(b => {
             const term = b.term?.toString?.() || b.term || '';
-            return term.includes('a-->c');
+            return term === '(a-->c)';
         });
         
         expect(acTask).toBeDefined();
@@ -254,8 +254,8 @@ describe('Syllogistic Reasoning - (a-->b) + (b-->c) -> (a-->c)', () => {
         const beliefs = nar.getBeliefs();
         expect(beliefs.length).toBe(2);
         
-        const abTask = beliefs.find(b => (b.term?.toString?.() || b.term || '').includes('a-->b'));
-        const bcTask = beliefs.find(b => (b.term?.toString?.() || b.term || '').includes('b-->c'));
+        const abTask = beliefs.find(b => (b.term?.toString?.() || b.term || '')==='(a-->b)');
+        const bcTask = beliefs.find(b => (b.term?.toString?.() || b.term || '')==='(b-->c)');
         
         expect(abTask).toBeDefined();
         expect(bcTask).toBeDefined();
@@ -335,7 +335,7 @@ if (typeof require !== 'undefined' && require.main === module) {
                 const beliefs = nar.getBeliefs();
                 foundAC = beliefs.some(b => {
                     const term = b.term?.toString?.() || b.term || '';
-                    return term.includes('a-->c');
+                    return term.toString()==='(a-->c)';
                 });
                 if (foundAC) break;
             }
