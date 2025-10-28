@@ -184,7 +184,7 @@ describe('FocusSetSelector', () => {
 
     test('should handle tasks with zero complexity', () => {
         const term = termFactory.create({name: 'A'});
-        const task = new Task({term, punctuation: '.', budget: {priority: 0.5}});
+        const task = new Task({term, punctuation: '.', budget: {priority: 0.5}, truth: {frequency: 0.9, confidence: 0.8}});
 
         const selected = selector.select([task], currentTime);
         expect(selected).toHaveLength(1);
@@ -193,8 +193,8 @@ describe('FocusSetSelector', () => {
 
     test('should maintain selection stability across multiple calls', () => {
         const term = termFactory.create({name: 'A'});
-        const task1 = new Task({term, punctuation: '.', budget: {priority: 0.8}});
-        const task2 = new Task({term, punctuation: '.', budget: {priority: 0.6}});
+        const task1 = new Task({term, punctuation: '.', budget: {priority: 0.8}, truth: {frequency: 0.9, confidence: 0.8}});
+        const task2 = new Task({term, punctuation: '.', budget: {priority: 0.6}, truth: {frequency: 0.9, confidence: 0.8}});
 
         const selected1 = selector.select([task1, task2], currentTime);
         const selected2 = selector.select([task1, task2], currentTime);

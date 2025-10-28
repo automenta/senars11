@@ -21,11 +21,11 @@ describe('Task - Additional Specific Tests', () => {
 
     describe('Initialization', () => {
         test('creates with defaults', () => {
-            const task = new Task({term});
+            const task = new Task({term, truth: {frequency: 0.9, confidence: 0.8}});
 
             expect(task.term).toBe(term);
             expect(task.type).toBe('BELIEF');
-            expect(task.truth).toBeNull();
+            expect(task.truth).toBeDefined();
             expect(task.budget).toEqual(TEST_CONSTANTS.BUDGET.DEFAULT);
             expect(task.stamp).toBeInstanceOf(Stamp);
         });

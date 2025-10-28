@@ -36,8 +36,8 @@ describe('MemoryConsolidation', () => {
         const term1 = termFactory.create({components: ['A']});
         const term2 = termFactory.create({components: ['B']});
 
-        const task1 = new Task({term: term1, type: 'BELIEF', priority: 0.8});
-        const task2 = new Task({term: term2, type: 'BELIEF', priority: 0.6});
+        const task1 = new Task({term: term1, punctuation: '.', budget: {priority: 0.8}, truth: {frequency: 0.9, confidence: 0.8}});
+        const task2 = new Task({term: term2, punctuation: '.', budget: {priority: 0.6}, truth: {frequency: 0.9, confidence: 0.8}});
 
         memory.addTask(task1);
         memory.addTask(task2);
