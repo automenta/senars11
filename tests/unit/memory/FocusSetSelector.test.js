@@ -172,8 +172,8 @@ describe('FocusSetSelector', () => {
         const term1 = termFactory.create({name: 'A'});
         const term2 = termFactory.create({name: 'B'});
 
-        const task1 = new Task({term: term1, punctuation: '.', budget: {priority: 0.5}});
-        const task2 = new Task({term: term2, punctuation: '.', budget: {priority: 0.8}});
+        const task1 = new Task({term: term1, punctuation: '.', budget: {priority: 0.5}, truth: {frequency: 0.9, confidence: 0.8}});
+        const task2 = new Task({term: term2, punctuation: '.', budget: {priority: 0.8}, truth: {frequency: 0.9, confidence: 0.8}});
 
         // Same timestamp - urgency should be 0 for both
         const selected = selector.select([task1, task2], currentTime);
