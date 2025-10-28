@@ -43,10 +43,18 @@ export class Truth {
     static weak = c => clamp(c / (c + TRUTH.WEAKENING_FACTOR), 0, 1);
     static safeDiv = (num, den) => den === 0 ? 0 : clamp(num / den, 0, 1);
 
+    get f() {
+        return this.frequency;
+    }
+
+    get c() {
+        return this.confidence;
+    }
+
     equals(other) {
         return other instanceof Truth &&
-            Math.abs(this.f - other.f) < TRUTH.EPSILON &&
-            Math.abs(this.c - other.c) < TRUTH.EPSILON;
+            Math.abs(this.frequency - other.frequency) < TRUTH.EPSILON &&
+            Math.abs(this.confidence - other.confidence) < TRUTH.EPSILON;
     }
 
     toString() {

@@ -22,7 +22,7 @@ export class TruthFunctions {
         const t2 = v2 instanceof Truth ? v2 : new Truth(v2?.frequency || 0.5, v2?.confidence || 0.9);
 
         const revised = Truth.revision(t1, t2);
-        return {frequency: revised.f, confidence: revised.c};
+        return {frequency: revised.frequency, confidence: revised.confidence};
     }
 
     /**
@@ -40,7 +40,7 @@ export class TruthFunctions {
         const t2 = v2 instanceof Truth ? v2 : new Truth(v2?.frequency || 0.5, v2?.confidence || 0.9);
 
         const result = Truth.deduction(t1, t2);
-        return result ? {frequency: result.f, confidence: result.c} : null;
+        return result ? {frequency: result.frequency, confidence: result.confidence} : null;
     }
 
     /**
@@ -58,7 +58,7 @@ export class TruthFunctions {
         const t2 = v2 instanceof Truth ? v2 : new Truth(v2?.frequency || 0.5, v2?.confidence || 0.9);
 
         const result = Truth.induction(t1, t2);
-        return result ? {frequency: result.f, confidence: result.c} : null;
+        return result ? {frequency: result.frequency, confidence: result.confidence} : null;
     }
 
     /**
@@ -76,7 +76,7 @@ export class TruthFunctions {
         const t2 = v2 instanceof Truth ? v2 : new Truth(v2?.frequency || 0.5, v2?.confidence || 0.9);
 
         const result = Truth.abduction(t1, t2);
-        return result ? {frequency: result.f, confidence: result.c} : null;
+        return result ? {frequency: result.frequency, confidence: result.confidence} : null;
     }
 
     /**
@@ -94,12 +94,12 @@ export class TruthFunctions {
         const t2 = v2 instanceof Truth ? v2 : new Truth(v2?.frequency || 0.5, v2?.confidence || 0.9);
 
         const result = Truth.op(t1, t2, (t, u) => {
-            const f = t.f; // Similar to abduction
-            const c = t.c * u.c * (TRUTH.EXEMPLIFICATION_CONFIDENCE_FACTOR || 0.1);
+            const f = t.frequency; // Similar to abduction
+            const c = t.confidence * u.confidence * (TRUTH.EXEMPLIFICATION_CONFIDENCE_FACTOR || 0.1);
             return new Truth(f, c);
         });
 
-        return result ? {frequency: result.f, confidence: result.c} : null;
+        return result ? {frequency: result.frequency, confidence: result.confidence} : null;
     }
 
     /**

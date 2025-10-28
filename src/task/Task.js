@@ -104,7 +104,7 @@ export class Task {
         return new Task({
             term: reconstructedTerm,
             punctuation: data.punctuation,
-            truth: data.truth ? new Truth(data.truth.f, data.truth.c) : null,
+            truth: data.truth ? new Truth(data.truth.frequency || data.truth.f, data.truth.confidence || data.truth.c) : null,
             budget: data.budget || {priority: 0.5, durability: 0.5, quality: 0.5, cycles: 100, depth: 10}
         });
     }
