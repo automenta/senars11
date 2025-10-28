@@ -66,8 +66,8 @@ describe('Memory and Focus Management Integration', () => {
             const term1 = termFactory.create({name: 'urgent'});
             const term2 = termFactory.create({name: 'normal'});
 
-            const urgentTask = new Task({term: term1, punctuation: '.', budget: {priority: 0.9}});
-            const normalTask = new Task({term: term2, punctuation: '.', budget: {priority: 0.5}});
+            const urgentTask = new Task({term: term1, punctuation: '.', budget: {priority: 0.9}, truth: {frequency: 0.9, confidence: 0.8}});
+            const normalTask = new Task({term: term2, punctuation: '.', budget: {priority: 0.5}, truth: {frequency: 0.9, confidence: 0.8}});
 
             focus.setFocus('primary');
             focus.addTaskToFocus(urgentTask);
@@ -92,7 +92,7 @@ describe('Memory and Focus Management Integration', () => {
             focus.setFocus('test-set');
 
             const term = termFactory.create({name: 'test'});
-            const task = new Task({term, punctuation: '.', budget: {priority: 0.8}});
+            const task = new Task({term, punctuation: '.', budget: {priority: 0.8}, truth: {frequency: 0.9, confidence: 0.8}});
 
             focus.addTaskToFocus(task);
 
@@ -126,12 +126,14 @@ describe('Memory and Focus Management Integration', () => {
                 term: simpleTerm,
                 punctuation: '.',
                 budget: {priority: 0.7},
+                truth: {frequency: 0.9, confidence: 0.8},
                 stamp: new ArrayStamp({id: 'recent', creationTime: currentTime - 1000, source: 'INPUT'}),
             });
             const oldTask = new Task({
                 term: complexTerm,
                 punctuation: '.',
                 budget: {priority: 0.5},
+                truth: {frequency: 0.9, confidence: 0.8},
                 stamp: new ArrayStamp({id: 'old', creationTime: currentTime - 10000, source: 'INPUT'}),
             });
 
@@ -156,12 +158,14 @@ describe('Memory and Focus Management Integration', () => {
             const highPriorityTask = new Task({
                 term: termFactory.create({name: 'high'}),
                 punctuation: '.',
-                budget: {priority: 0.8}
+                budget: {priority: 0.8},
+                truth: {frequency: 0.9, confidence: 0.8}
             });
             const lowPriorityTask = new Task({
                 term: termFactory.create({name: 'low'}),
                 punctuation: '.',
-                budget: {priority: 0.1}
+                budget: {priority: 0.1},
+                truth: {frequency: 0.9, confidence: 0.8}
             });
 
             const selected = selector.select([highPriorityTask, lowPriorityTask], currentTime);
@@ -258,10 +262,10 @@ describe('Memory and Focus Management Integration', () => {
 
             // Create tasks
             const tasks = [
-                new Task({term: catAnimalTerm, punctuation: '.', budget: {priority: 0.9}}),
-                new Task({term: dogAnimalTerm, punctuation: '.', budget: {priority: 0.8}}),
-                new Task({term: catPetTerm, punctuation: '.', budget: {priority: 0.7}}),
-                new Task({term: animalMammalTerm, punctuation: '.', budget: {priority: 0.6}})
+                new Task({term: catAnimalTerm, punctuation: '.', budget: {priority: 0.9}, truth: {frequency: 0.9, confidence: 0.8}}),
+                new Task({term: dogAnimalTerm, punctuation: '.', budget: {priority: 0.8}, truth: {frequency: 0.9, confidence: 0.8}}),
+                new Task({term: catPetTerm, punctuation: '.', budget: {priority: 0.7}, truth: {frequency: 0.9, confidence: 0.8}}),
+                new Task({term: animalMammalTerm, punctuation: '.', budget: {priority: 0.6}, truth: {frequency: 0.9, confidence: 0.8}})
             ];
 
             // Add some tasks to focus
@@ -291,7 +295,7 @@ describe('Memory and Focus Management Integration', () => {
             // Create many concepts
             for (let i = 0; i < 100; i++) {
                 const term = termFactory.create({name: `concept${i}`});
-                const task = new Task({term, punctuation: '.', budget: {priority: 0.5}});
+                const task = new Task({term, punctuation: '.', budget: {priority: 0.5}, truth: {frequency: 0.9, confidence: 0.8}});
                 memory.addTask(task, currentTime);
             }
 
@@ -314,7 +318,7 @@ describe('Memory and Focus Management Integration', () => {
             // Add many tasks to focus
             for (let i = 0; i < 50; i++) {
                 const term = termFactory.create({name: `focus_item${i}`});
-                const task = new Task({term, punctuation: '.', budget: {priority: 0.5}});
+                const task = new Task({term, punctuation: '.', budget: {priority: 0.5}, truth: {frequency: 0.9, confidence: 0.8}});
                 focus.addTaskToFocus(task);
             }
 

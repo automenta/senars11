@@ -70,6 +70,11 @@ export class TaskManager extends BaseComponent {
     }
 
     _createTask(punctuation, term, truth = null, budget) {
+        // Provide default truth values for BELIEF and GOAL tasks if none provided
+        if ((punctuation === '.' || punctuation === '!') && truth === null) {
+            truth = new Truth(1.0, 0.9); // Default truth values for NARS
+        }
+        
         return new Task({
             term,
             truth,
