@@ -346,9 +346,9 @@ describe('Memory and Focus Management Integration', () => {
             const term2 = termFactory.create({name: 'B'});
             const term3 = termFactory.create({name: 'C'});
 
-            const task1 = new Task({term: term1, punctuation: '.', budget: {priority: 0.8}});
-            const task2 = new Task({term: term2, punctuation: '.', budget: {priority: 0.6}});
-            const task3 = new Task({term: term3, punctuation: '.', budget: {priority: 0.9}});
+            const task1 = new Task({term: term1, punctuation: '.', budget: {priority: 0.8}, truth: {frequency: 0.9, confidence: 0.8}});
+            const task2 = new Task({term: term2, punctuation: '.', budget: {priority: 0.6}, truth: {frequency: 0.9, confidence: 0.8}});
+            const task3 = new Task({term: term3, punctuation: '.', budget: {priority: 0.9}, truth: {frequency: 0.9, confidence: 0.8}});
 
             focus.addTaskToFocus(task1);
             focus.addTaskToFocus(task2);
