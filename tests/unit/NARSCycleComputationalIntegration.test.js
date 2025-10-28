@@ -23,7 +23,7 @@ describe('NARS Inference Cycle Integration with Computational Operations', () =>
         // This should go through the parser and proper task creation process
         try {
             // Adding a simple computational expression to test integration
-            const success = await nar.input('<(add^("3", "2")) --> "5">.');
+            const success = await nar.input('((add^("3", "2")) --> "5").');
             expect(success).toBe(true);
             
             // Run one reasoning cycle to process the computational task

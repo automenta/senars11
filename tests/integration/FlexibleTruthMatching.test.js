@@ -58,10 +58,10 @@ describe('Flexible Truth Matching Tests', () => {
 
     it('should work for conjunction reasoning with flexible matching', async () => {
         const result = await new TestNAR()
-            .input('(&&, <a --> b>, <b --> c>)', 0.9, 0.9)  // a is b AND b is c
+            .input('(&&, (a --> b), (b --> c))', 0.9, 0.9)  // a is b AND b is c
             .run(3)
             .expect(
-                new TaskMatch('(&&, <a --> b>, <b --> c>)')  // Expect the conjunction itself
+                new TaskMatch('(&&, (a --> b), (b --> c))')  // Expect the conjunction itself
                     .withFlexibleTruth(0.9, 0.9, 0.1)  // With tolerance
             )
             .execute();
@@ -72,14 +72,14 @@ describe('Flexible Truth Matching Tests', () => {
     it('should handle cases where exact values might vary due to implementation changes', async () => {
         // This test demonstrates resilience to minor implementation variations
         const testNar = new TestNAR()
-            .input('cat --> animal', 0.9, 0.8)
-            .input('dog --> animal', 0.85, 0.75)
+            .input('(cat --> animal)', 0.9, 0.8)
+            .input('(dog --> animal)', 0.85, 0.75)
             .run(2);
 
         // Test with flexible matching to accommodate possible minor variations
         const result = await testNar
             .expect(
-                new TaskMatch('cat --> animal')
+                new TaskMatch('(cat --> animal)')
                     .withFlexibleTruth(0.9, 0.8, 0.05)  // Allow ±5% tolerance
             )
             .execute();

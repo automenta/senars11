@@ -21,27 +21,30 @@ TruthValue
 
 Term "term"
   = Statement
-  / InfixCompound
   / PrefixCompound
   / Product
   / Set
   / AtomicTerm
 
 Statement
+  = AngleBracketStatement
+  / ParenthesizedStatement
+
+AngleBracketStatement
   = "<" _ subject:Term _ op:InfixOperator _ predicate:Term _ ">" {
       return options.termFactory.create({ operator: op.trim(), components: [subject, predicate] });
     }
 
-InfixCompound
-  = "(" _ left:Term _ op:InfixOperator _ right:Term _ ")" {
-      return options.termFactory.create({ operator: op.trim(), components: [left, right] });
+ParenthesizedStatement
+  = "(" _ subject:Term _ op:InfixOperator _ predicate:Term _ ")" {
+      return options.termFactory.create({ operator: op.trim(), components: [subject, predicate] });
     }
 
 InfixOperator
-  = op:(" --> " / " <-> " / " ==> " / " <=> " / " = " / " && " / " || ") { return op; }
+  = op:("-->" / "<->" / "==>" / "<=>" / "=/>" / "=|" / "=/=" / "=" / "&&" / "||") { return op; }
 
 PrefixCompound
-  = "(" _ op:("--," / "&/," / "&," / "|,") _ components:TermList _ ")" {
+  = "(" _ op:("-->," / "<->," / "==>," / "<=>,") _ components:TermList _ ")" {
       return options.termFactory.create({ operator: op.slice(0, -1), components: components });
     }
 
