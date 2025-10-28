@@ -7,7 +7,7 @@ import {taskAssertions, testImmutability, TestSuiteFactory} from '../../support/
 TestSuiteFactory.createTaskRelatedSuite({
     className: 'Task',
     Constructor: Task,
-    validInput: {term: createTerm('A')},
+    validInput: {term: createTerm('A'), truth: createTruth()},
     testAssertions: true,
     assertionUtils: taskAssertions
 });
@@ -53,12 +53,13 @@ describe('Task - Additional Specific Tests', () => {
     test('clones with modifications', () => {
         const task1 = createTask({term});
         const newTruth = createTruth(0.9, 0.9);
-        const task2 = task1.clone({punctuation: '?', truth: newTruth});
+        // Clone to question - need to reset truth to null as questions can't have truth values
+        const task2 = task1.clone({punctuation: '?', truth: null});
 
         expect(task1.type).toBe('BELIEF');
         expect(task1.truth).toEqual(createTruth());
         expect(task2.type).toBe('QUESTION');
-        expect(task2.truth).toEqual(newTruth);
+        expect(task2.truth).toBeNull();
         expect(task2.term).toBe(task1.term);
     });
 

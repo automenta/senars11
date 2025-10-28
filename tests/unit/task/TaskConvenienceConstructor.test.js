@@ -52,9 +52,10 @@ describe('Task convenience constructor', () => {
         }).toThrow(/BELIEF tasks must have valid truth values/);
     });
 
-    test('should throw error for invalid punctuation', () => {
-        const task = new Task({term, punctuation: '*'});
-        expect(task.type).toBe('BELIEF');
+    test('should throw error for invalid punctuation (defaults to BELIEF but needs truth)', () => {
+        expect(() => {
+            new Task({term, punctuation: '*'});
+        }).toThrow(/BELIEF tasks must have valid truth values/);
     });
 
     test('should work with immutable operations', () => {

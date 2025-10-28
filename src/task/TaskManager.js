@@ -1,4 +1,5 @@
 import {Task} from './Task.js';
+import {Truth} from '../Truth.js';
 import {collectTasksFromAllConcepts} from '../util/memory.js';
 import {BaseComponent} from '../util/BaseComponent.js';
 
