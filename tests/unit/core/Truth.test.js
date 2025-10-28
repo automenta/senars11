@@ -146,10 +146,10 @@ describe('Truth - Additional Specific Tests', () => {
                     Truth.revision(t1, t2);
                     Truth.negation(t1);
 
-                    expect(t1.f).toBe(originalT1.f);
-                    expect(t1.c).toBe(originalT1.c);
-                    expect(t2.f).toBe(originalT2.f);
-                    expect(t2.c).toBe(originalT2.c);
+                    expect(t1.frequency).toBe(originalT1.frequency);
+                    expect(t1.confidence).toBe(originalT1.confidence);
+                    expect(t2.frequency).toBe(originalT2.frequency);
+                    expect(t2.confidence).toBe(originalT2.confidence);
                 })
             );
         });

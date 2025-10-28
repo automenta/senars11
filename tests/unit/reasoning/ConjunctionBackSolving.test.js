@@ -37,6 +37,6 @@ describe('Conjunction Back-Solving Test (Unified)', () => {
         // Note: This may require more complex rule implementation than currently exists
 
         // For now, let's just ensure the system doesn't crash with complex terms
-        await expect(nar.input('((&, (?a = 1), (add ^ (*, ?a, ?b) = 3)) ==> (accept ^ (*, ?b))).')).resolves;
+        await expect(nar.input('((&, (?a = 1), (add(?a, ?b) = 3)) ==> accept(*, ?b)).')).resolves;
     });
 });
