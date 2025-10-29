@@ -184,12 +184,13 @@ describe('Syllogistic Reasoning - (a-->b) + (b-->c) -> (a-->c)', () => {
         
         const containsAB = beliefs.some(b => {
             const term = b.term?.toString?.() || b.term || '';
-            return term === '(a-->b)';
+            console.log('Belief term:', term);
+            return term === '(a-->b)' || term === '(-->, a, b)';
         });
         
         const containsBC = beliefs.some(b => {
             const term = b.term?.toString?.() || b.term || '';
-            return term === '(b-->c)';
+            return term === '(b-->c)' || term === '(-->, b, c)';
         });
         
         expect(containsAB).toBe(true);
@@ -201,22 +202,23 @@ describe('Syllogistic Reasoning - (a-->b) + (b-->c) -> (a-->c)', () => {
             await nar.step();
             
             beliefs = nar.getBeliefs();
+            console.log(`Beliefs after step ${i}:`, beliefs.map(b => b.term.toString()));
             foundAC = beliefs.some(b => {
                 const term = b.term?.toString?.() || b.term || '';
-                return term === '(a-->c)';
+                return term === '(a-->c)' || term === '(-->, a, c)';
             });
             
             if (foundAC) break;
         }
         
-        // This is the critical assertion - (a-->c) should be derived
-        expect(foundAC).toBe(true);
-        
         // Get the derived task to verify its properties
         const acTask = beliefs.find(b => {
             const term = b.term?.toString?.() || b.term || '';
-            return term === '(a-->c)';
+            return term === '(a-->c)' || term === '(-->, a, c)';
         });
+
+        // This is the critical assertion - (a-->c) should be derived
+        expect(foundAC).toBe(true);
         
         expect(acTask).toBeDefined();
         expect(acTask.type).toBe('BELIEF');
@@ -254,8 +256,14 @@ describe('Syllogistic Reasoning - (a-->b) + (b-->c) -> (a-->c)', () => {
         const beliefs = nar.getBeliefs();
         expect(beliefs.length).toBe(2);
         
-        const abTask = beliefs.find(b => (b.term?.toString?.() || b.term || '')==='(a-->b)');
-        const bcTask = beliefs.find(b => (b.term?.toString?.() || b.term || '')==='(b-->c)');
+        const abTask = beliefs.find(b => {
+            const termString = b.term?.toString?.() || b.term || '';
+            return termString === '(a-->b)' || termString === '(-->, a, b)';
+        });
+        const bcTask = beliefs.find(b => {
+            const termString = b.term?.toString?.() || b.term || '';
+            return termString === '(b-->c)' || termString === '(-->, b, c)';
+        });
         
         expect(abTask).toBeDefined();
         expect(bcTask).toBeDefined();

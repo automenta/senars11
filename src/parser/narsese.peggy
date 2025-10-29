@@ -31,10 +31,16 @@ TruthValue
 
 Term "term"
   = Statement
+  / CompoundTerm
   / PrefixCompound
   / Product
   / Set
   / AtomicTerm
+
+CompoundTerm
+  = operator:AtomicTerm "(" _ components:TermList? _ ")" {
+      return options.termFactory.create({ operator: operator.name, components: components || [] });
+  }
 
 Statement
   = AngleBracketStatement
@@ -79,7 +85,7 @@ TermList
     }
 
 AtomicTerm "atomic term"
-  = chars:$([^(){}<>.,!?;% \t\n\r-]+) { return options.termFactory.create(chars); }
+  = chars:$([^(){}<>.,!%?; \t\n\r-]+) { return options.termFactory.create(chars); }
 
 Float "float"
   = val:$("-"? [0-9]+ ("." [0-9]+)?) { return parseFloat(val); }

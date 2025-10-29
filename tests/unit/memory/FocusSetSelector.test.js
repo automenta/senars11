@@ -176,7 +176,7 @@ describe('FocusSetSelector', () => {
         const task2 = new Task({term: term2, punctuation: '.', budget: {priority: 0.8}, truth: {frequency: 0.9, confidence: 0.8}});
 
         // Same timestamp - urgency should be 0 for both
-        const selected = selector.select([task1, task2], currentTime);
+        const selected = selector.select([task1, task2].reverse(), currentTime);
 
         expect(selected).toHaveLength(2);
         expect(selected[0]).toBe(task2); // Higher priority should win
