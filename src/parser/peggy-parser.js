@@ -193,7 +193,7 @@ function peg$parse(input, options) {
   const peg$c26 = ".";
 
   const peg$r0 = /^[.!?]/;
-  const peg$r1 = /^[^(){}<>.,!?;% \t\n\r]/;
+  const peg$r1 = /^[^(){}<>.,!?;% \t\n\r\-]/;
   const peg$r2 = /^[0-9]/;
   const peg$r3 = /^[ \t\n\r]/;
 
@@ -226,7 +226,7 @@ function peg$parse(input, options) {
   const peg$e26 = peg$literalExpectation("]", false);
   const peg$e27 = peg$literalExpectation(",", false);
   const peg$e28 = peg$otherExpectation("atomic term");
-  const peg$e29 = peg$classExpectation(["(", ")", "{", "}", "<", ">", ".", ",", "!", "?", ";", "%", " ", "\t", "\n", "\r"], true, false, false);
+  const peg$e29 = peg$classExpectation(["(", ")", "{", "}", "<", ">", ".", ",", "!", "?", ";", "%", " ", "\t", "\n", "\r", "-"], true, false, false);
   const peg$e30 = peg$otherExpectation("float");
   const peg$e31 = peg$literalExpectation("-", false);
   const peg$e32 = peg$classExpectation([["0", "9"]], false, false, false);

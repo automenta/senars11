@@ -79,7 +79,7 @@ TermList
     }
 
 AtomicTerm "atomic term"
-  = chars:$([^(){}<>.,!?;% \t\n\r]+) { return options.termFactory.create(chars); }
+  = chars:$([^(){}<>.,!?;% \t\n\r-]+) { return options.termFactory.create(chars); }
 
 Float "float"
   = val:$("-"? [0-9]+ ("." [0-9]+)?) { return parseFloat(val); }
