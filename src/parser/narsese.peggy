@@ -35,6 +35,7 @@ Term "term"
   / PrefixCompound
   / Product
   / Set
+  / Variable
   / AtomicTerm
 
 CompoundTerm
@@ -86,6 +87,9 @@ TermList
 
 AtomicTerm "atomic term"
   = chars:$([^(){}<>.,!%?; \t\n\r-]+) { return options.termFactory.create(chars); }
+
+Variable "variable"
+  = varName:$([?$#*][^(){}<>.,!%?; \t\n\r-]*) { return options.termFactory.create(varName); }
 
 Float "float"
   = val:$("-"? [0-9]+ ("." [0-9]+)?) { return parseFloat(val); }
