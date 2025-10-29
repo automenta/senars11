@@ -176,6 +176,7 @@ export class CooperationEngine {
      */
     termsMatch(term1, term2) {
         if (!term1 || !term2) return false;
+        //return term1.equals(term2);
         return term1.toString() === term2.toString();
     }
 
