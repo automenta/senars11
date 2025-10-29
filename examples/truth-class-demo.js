@@ -1,4 +1,4 @@
-import {Truth} from './src/Truth.js';
+import {Truth} from '../src/Truth.js';
 
 console.log('Testing Truth class directly:');
 

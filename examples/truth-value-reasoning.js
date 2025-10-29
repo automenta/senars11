@@ -1,4 +1,4 @@
-import {Repl} from './src/tui/Repl.js';
+import {Repl} from '../src/tui/Repl.js';
 
 // Test if syllogistic reasoning works with explicit truth values
 async function testSyllogisticExplicitTruth() {

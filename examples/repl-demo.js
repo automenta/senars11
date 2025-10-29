@@ -1,4 +1,4 @@
-import {Repl} from './src/tui/Repl.js';
+import {Repl} from '../src/tui/Repl.js';
 
 // Create a simple test to verify the REPL functionality
 const repl = new Repl();
