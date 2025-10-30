@@ -54,6 +54,7 @@ function startViteDevServer() {
             // Pass WebSocket connection info to UI
             VITE_WS_HOST: DEFAULT_CONFIG.webSocket.host,
             VITE_WS_PORT: DEFAULT_CONFIG.webSocket.port,
+            VITE_WS_PATH: DEFAULT_CONFIG.webSocket.path,
         }
     });
 

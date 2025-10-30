@@ -20,7 +20,13 @@ function App() {
   useEffect(() => {
     if (!model) return;
     
-    wsService.current = new WebSocketService('ws://localhost:8080');
+    // Construct WebSocket URL using Vite environment variables, with defaults
+    const wsHost = import.meta.env.VITE_WS_HOST || 'localhost';
+    const wsPort = import.meta.env.VITE_WS_PORT || '8080';
+    const wsPath = import.meta.env.VITE_WS_PATH || '/ws';
+    const wsUrl = `ws://${wsHost}:${wsPort}${wsPath}`;
+    
+    wsService.current = new WebSocketService(wsUrl);
     wsService.current.connect();
     
     import('./utils/consoleBridge').then(module => {
