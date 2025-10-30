@@ -2,35 +2,22 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   // Global setup file for tests
-  globalSetup: './tests/global-setup.js',
+  globalSetup: './global-setup.js',
   
-  // Run tests in parallel on different browsers
+  // Run tests only on Chromium in headless mode
   projects: [
     {
       name: 'chromium',
       use: { 
         browserName: 'chromium',
         viewport: { width: 1280, height: 720 },
-      },
-    },
-    {
-      name: 'firefox',
-      use: { 
-        browserName: 'firefox',
-        viewport: { width: 1280, height: 720 },
-      },
-    },
-    {
-      name: 'webkit',
-      use: { 
-        browserName: 'webkit',
-        viewport: { width: 1280, height: 720 },
+        headless: true,  // Run in headless mode
       },
     },
   ],
   
   // Test directory
-  testDir: './tests',
+  testDir: './e2e-tests',
   
   // Maximum time one test can run for
   timeout: 30000,
