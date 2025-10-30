@@ -8,15 +8,14 @@ highlighter:
 lineNumbers: false
 transition: slide
 css: ./custom.css
-contextMenu: false
 ---
 
 # SeNARS
 
-Principled and Pragmatic Neuro-Symbolic Cognition
+Semantic Non-Axiomatic Reasoning System
 
 <div class="center text-sm opacity-75">
-  Advancing AI Reliability and Power Through Neuro-Symbolic Integration
+  Advancing AI Power and Reliability through Neuro-Symbolic Cognition
 </div>
 
 ---
@@ -26,15 +25,10 @@ Principled and Pragmatic Neuro-Symbolic Cognition
 A complete cognitive architecture designed for a synergistic union of:
 
 - **Formal symbolic reasoning**
-- **Semantic power of Large Language Models (LMs)**
+- **Semantic power of Language Models (LMs)**
 
-Today we'll explore how SeNARS combines the best of both worlds to create a transparent, reliable, and adaptive AI
+SeNARS combines the best of both worlds to create a transparent, reliable, and adaptive AI
 system.
-
-<div class="center text-sm mt-4">
-This presentation is designed to be educational and commercially persuasive,
-building understanding from foundational concepts to advanced capabilities.
-</div>
 
 ---
 
@@ -363,10 +357,6 @@ graph TD
 
 ---
 
-## Understanding the SeNARS Architecture
-
-At its core, SeNARS is built on a **Component-Based Architecture**:
-
 ```mermaid
 graph TD
     subgraph "SeNARS Cognitive Core"
@@ -625,65 +615,6 @@ These implementation details ensure SeNARS is both powerful and practical.
 
 ---
 
-## Development Roadmap
-
-<div class="grid grid-cols-2 gap-4 mb-4">
-  <div class="p-4 bg-blue-500 bg-opacity-20 rounded">
-    <div class="font-bold text-lg mb-2">Track 1: Core Cognition & Self-Improvement</div>
-    <ul class="text-sm space-y-1">
-      <li>Short-Term: Enhanced meta-cognition with reasoning state tracking</li>
-      <li>Mid-Term: Self-optimizing reasoning strategies & performance tuning</li>
-      <li>Long-Term: Advanced self-correction and self-reflection mechanisms</li>
-    </ul>
-  </div>
-  <div class="p-4 bg-green-500 bg-opacity-20 rounded">
-    <div class="font-bold text-lg mb-2">Track 2: Knowledge Architecture & Scalability</div>
-    <ul class="text-sm space-y-1">
-      <li>Short-Term: Improved concept indexing and memory efficiency</li>
-      <li>Mid-Term: Distributed knowledge graphs & federation</li>
-      <li>Long-Term: Hybrid memory systems with vector databases</li>
-    </ul>
-  </div>
-</div>
-
-<div class="grid grid-cols-2 gap-4 mb-4">
-  <div class="p-4 bg-yellow-500 bg-opacity-20 rounded">
-    <div class="font-bold text-lg mb-2">Track 3: Cognitive Tooling & Autonomous Development</div>
-    <ul class="text-sm space-y-1">
-      <li>Short-Term: Real-time cognitive visualization dashboard</li>
-      <li>Mid-Term: Automated debugging and cognitive trace analysis</li>
-      <li>Long-Term: Self-documentation and automated test generation</li>
-    </ul>
-  </div>
-  <div class="p-4 bg-purple-500 bg-opacity-20 rounded">
-    <div class="font-bold text-lg mb-2">Track 4: Symbiotic Intelligence</div>
-    <ul class="text-sm space-y-1">
-      <li>Short-Term: Enhanced XAI with cognitive process narratives</li>
-      <li>Mid-Term: Interactive reasoning with human-in-the-loop</li>
-      <li>Long-Term: Collaborative reasoning between multiple agents</li>
-    </ul>
-  </div>
-</div>
-
-<div class="p-4 bg-red-500 bg-opacity-20 rounded mb-4">
-  <div class="font-bold text-lg mb-2">Track 5: Future Enhancements</div>
-  <ul class="text-sm grid grid-cols-2 gap-2">
-    <li>Advanced reasoning strategies</li>
-    <li>Enhanced LM integration</li>
-    <li>Complex perception interfaces</li>
-    <li>Extended action execution</li>
-    <li>Improved temporal reasoning</li>
-    <li>Multi-agent coordination</li>
-  </ul>
-</div>
-
-<div class="center text-sm">
-These tracks focus on making SeNARS a true cognitive partner that works symbiotically with humans,
-enhancing rather than replacing human intelligence.
-</div>
-
----
-
 ## Investor-Ready Highlights
 
 SeNARS is designed from the ground up to deliver value and attract investment:
@@ -693,19 +624,8 @@ SeNARS is designed from the ground up to deliver value and attract investment:
 - 👨‍💻 **Attracts Top Talent**: Clean, modular, well-documented design that developers love
 - 📊 **Clear Path to ROI**: Research agenda focused on delivering commercial value at every step
 
-```mermaid
-pie showData
-    title SeNARS Value Proposition
-    "Market Opportunity" : 40
-    "Technical Excellence" : 30
-    "Team Expertise" : 20
-    "Scalability" : 10
-```
-
-<div class="center text-lg p-4 bg-gradient-to-r from-blue-500 to-purple-500 bg-opacity-20 rounded">
 SeNARS represents a unique investment opportunity at the intersection
 of cutting-edge AI research and practical commercial applications.
-</div>
 
 ---
 
@@ -732,12 +652,16 @@ All SeNARS functionality has been verified through comprehensive unit tests and 
   </div>
 </div>
 
+---
+
 ### Advanced Features
 
 - Component-based architecture with BaseComponent standardization
 - Focus-driven attention mechanisms with configurable selection strategies
 - Circuit breaker patterns for resilient LM integration
 - Event-driven architecture for component communication
+
+---
 
 ### Demonstrated Capabilities
 
