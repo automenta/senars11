@@ -14,6 +14,30 @@ const messageHandlers = {
   },
   notification: (data) => useUiStore.getState().addNotification(data.payload),
   error: (data) => useUiStore.getState().setError(data.payload),
+  conceptUpdate: (data) => {
+    const { concept, changeType } = data.payload;
+    if (changeType === 'removed') {
+      useUiStore.getState().removeConcept(concept.term);
+    } else {
+      useUiStore.getState().addConcept(concept);
+    }
+  },
+  taskUpdate: (data) => {
+    const { task } = data.payload;
+    useUiStore.getState().addTask(task);
+  },
+  cycleUpdate: (data) => {
+    const { cycle } = data.payload;
+    useUiStore.getState().addCycle(cycle);
+  },
+  systemMetrics: (data) => {
+    const { payload } = data;
+    useUiStore.getState().setSystemMetrics(payload);
+  },
+  log: (data) => {
+    const { level = 'log', data: logData } = data;
+    console[level](...logData);
+  },
 };
 
 class WebSocketService {

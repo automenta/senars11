@@ -8,12 +8,29 @@ const defaultLayout = {
     {
       type: 'border',
       location: 'left',
+      size: 250,
+      children: [
+        {
+          type: 'tab',
+          name: 'Tasks',
+          component: 'TaskPanel'
+        },
+        {
+          type: 'tab',
+          name: 'Concepts',
+          component: 'ConceptPanel'
+        }
+      ]
+    },
+    {
+      type: 'border',
+      location: 'bottom',
       size: 200,
       children: [
         {
           type: 'tab',
-          name: 'Explorer',
-          component: 'ExplorerPanel'
+          name: 'Console',
+          component: 'ConsolePanel'
         }
       ]
     }
@@ -24,7 +41,7 @@ const defaultLayout = {
     children: [
       {
         type: 'tabset',
-        weight: 70,
+        weight: 60,
         children: [
           {
             type: 'tab',
@@ -34,30 +51,18 @@ const defaultLayout = {
         ]
       },
       {
-        type: 'row',
-        weight: 30,
+        type: 'tabset',
+        weight: 40,
         children: [
           {
-            type: 'tabset',
-            weight: 50,
-            children: [
-              {
-                type: 'tab',
-                name: 'Console',
-                component: 'ConsolePanel'
-              }
-            ]
+            type: 'tab',
+            name: 'Cycles',
+            component: 'CyclePanel'
           },
           {
-            type: 'tabset',
-            weight: 50,
-            children: [
-              {
-                type: 'tab',
-                name: 'Variables',
-                component: 'VariablesPanel'
-              }
-            ]
+            type: 'tab',
+            name: 'Variables',
+            component: 'VariablesPanel'
           }
         ]
       }

@@ -37,6 +37,46 @@ const reasoningSlice = (set) => ({
     reasoningSteps: [...state.reasoningSteps, step]
   })),
   clearReasoningSteps: () => set({ reasoningSteps: [] }),
+  
+  // SeNARS-specific state
+  tasks: [],
+  addTask: (task) => set(state => {
+    // Check if task already exists
+    const existingIndex = state.tasks.findIndex(t => t.id === task.id);
+    if (existingIndex !== -1) {
+      const updatedTasks = [...state.tasks];
+      updatedTasks[existingIndex] = task;
+      return { tasks: updatedTasks };
+    }
+    return { tasks: [...state.tasks, task] };
+  }),
+  clearTasks: () => set({ tasks: [] }),
+  
+  concepts: [],
+  addConcept: (concept) => set(state => {
+    // Check if concept already exists
+    const existingIndex = state.concepts.findIndex(c => c.term === concept.term);
+    if (existingIndex !== -1) {
+      const updatedConcepts = [...state.concepts];
+      updatedConcepts[existingIndex] = concept;
+      return { concepts: updatedConcepts };
+    }
+    return { concepts: [...state.concepts, concept] };
+  }),
+  removeConcept: (term) => set(state => ({
+    concepts: state.concepts.filter(c => c.term !== term)
+  })),
+  clearConcepts: () => set({ concepts: [] }),
+  
+  cycles: [],
+  addCycle: (cycle) => set(state => ({
+    cycles: [...state.cycles, cycle].slice(-50) // Keep only last 50 cycles
+  })),
+  clearCycles: () => set({ cycles: [] }),
+  
+  systemMetrics: null,
+  setSystemMetrics: (metrics) => set({ systemMetrics: metrics }),
+  clearSystemMetrics: () => set({ systemMetrics: null }),
 });
 
 // Session management slice

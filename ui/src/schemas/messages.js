@@ -73,6 +73,84 @@ export const logSchema = messageSchema.extend({
   timestamp: z.number(),
 });
 
+// SeNARS-specific schemas
+export const taskSchema = z.object({
+  id: z.string(),
+  term: z.string(),
+  type: z.enum(['input', 'belief', 'question', 'goal']),
+  truth: z.object({
+    frequency: z.number(),
+    confidence: z.number(),
+  }).optional(),
+  budget: z.object({
+    priority: z.number(),
+    durability: z.number(),
+    quality: z.number(),
+  }).optional(),
+  occurrenceTime: z.number().optional(),
+  creationTime: z.number(),
+});
+
+export const conceptSchema = z.object({
+  term: z.string(),
+  priority: z.number(),
+  occurrenceTime: z.number().optional(),
+  taskCount: z.number(),
+  beliefCount: z.number(),
+  questionCount: z.number(),
+  lastAccess: z.number(),
+});
+
+export const cycleUpdateSchema = z.object({
+  cycle: z.number(),
+  timestamp: z.number(),
+  tasksProcessed: z.number(),
+  beliefsAdded: z.number(),
+  questionsAnswered: z.number(),
+});
+
+export const conceptUpdateSchema = messageSchema.extend({
+  type: z.literal('conceptUpdate'),
+  payload: z.object({ 
+    concept: conceptSchema,
+    changeType: z.enum(['added', 'updated', 'removed'])
+  }),
+});
+
+export const taskUpdateSchema = messageSchema.extend({
+  type: z.literal('taskUpdate'),
+  payload: z.object({ 
+    task: taskSchema,
+    changeType: z.enum(['input', 'processed', 'added', 'answered'])
+  }),
+});
+
+export const cycleUpdateSchemaMsg = messageSchema.extend({
+  type: z.literal('cycleUpdate'),
+  payload: z.object({ cycle: cycleUpdateSchema }),
+});
+
+export const systemMetricsSchema = messageSchema.extend({
+  type: z.literal('systemMetrics'),
+  payload: z.object({
+    cycleCount: z.number(),
+    taskCount: z.number(),
+    conceptCount: z.number(),
+    runtime: z.number(),
+    connectedClients: z.number(),
+    startTime: z.number(),
+  }),
+});
+
+export const narseseInputSchema = messageSchema.extend({
+  type: z.literal('narseseInput'),
+  payload: z.object({
+    input: z.string(),
+    success: z.boolean(),
+    message: z.string().optional(),
+  }),
+});
+
 // Schema registry for validation
 const schemaRegistry = {
   'layoutUpdate': layoutUpdateSchema,
@@ -82,6 +160,11 @@ const schemaRegistry = {
   'notification': notificationSchemaMsg,
   'error': errorSchema,
   'log': logSchema,
+  'conceptUpdate': conceptUpdateSchema,
+  'taskUpdate': taskUpdateSchema,
+  'cycleUpdate': cycleUpdateSchemaMsg,
+  'systemMetrics': systemMetricsSchema,
+  'narseseInput': narseseInputSchema,
 };
 
 // Validate incoming messages
