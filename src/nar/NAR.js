@@ -578,10 +578,6 @@ export class NAR extends BaseComponent {
         return [];
     }
 
-    _ensureToolIntegration() {
-        if (!this._toolIntegration) throw new Error('Tool integration is not enabled');
-    }
-
     async executeTool(toolId, params, context = {}) {
         const startTime = Date.now();
         try {
@@ -621,10 +617,6 @@ export class NAR extends BaseComponent {
 
     getAvailableTools() {
         return this._toolIntegration ? this._toolIntegration.getAvailableTools() : [];
-    }
-
-    _ensureExplanationService() {
-        if (!this._explanationService) throw new Error('Explanation service is not enabled');
     }
 
     async explainToolResult(toolResult, context = {}) {

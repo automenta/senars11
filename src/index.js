@@ -45,7 +45,7 @@ function setupGracefulShutdown(repl, monitor) {
             await repl.persistenceManager.saveToDefault(state);
             console.log('Current state saved to agent.json');
         } catch (saveError) {
-            console.error('Error saving state on shutdown:', saveError.message);
+            console.error('Error saving state on shutdown:', saveError?.message || saveError);
         }
 
         await monitor.stop();
@@ -53,12 +53,12 @@ function setupGracefulShutdown(repl, monitor) {
     });
 
     process.on('uncaughtException', (error) => {
-        console.error('Uncaught exception:', error);
+        console.error('Uncaught exception:', error?.message || error);
         process.exit(1);
     });
 
     process.on('unhandledRejection', (reason, promise) => {
-        console.error('Unhandled rejection at:', promise, 'reason:', reason);
+        console.error('Unhandled rejection at:', promise, 'reason:', reason?.message || reason);
         process.exit(1);
     });
 }
