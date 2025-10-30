@@ -5,7 +5,9 @@
   "main": "src/index.js",
   "type": "module",
   "scripts": {
-    "test": "NODE_NO_WARNINGS=1 NODE_OPTIONS=--experimental-vm-modules npx jest",
+    "test": "npm run test:core && npm run test:ui",
+    "test:core": "NODE_NO_WARNINGS=1 NODE_OPTIONS=--experimental-vm-modules npx jest",
+    "test:ui": "cd ui && npm test",
     "test:unit": "NODE_NO_WARNINGS=1 NODE_OPTIONS=--experimental-vm-modules npx jest tests/unit",
     "test:integration": "NODE_NO_WARNINGS=1 NODE_OPTIONS=--experimental-vm-modules npx jest tests/integration",
     "test:property": "NODE_NO_WARNINGS=1 NODE_OPTIONS=--experimental-vm-modules npx jest tests/nal/propertyBasedTests.test.js",

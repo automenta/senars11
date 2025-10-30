@@ -1,17 +1,24 @@
 import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
-  // Global setup file for tests
-  globalSetup: './global-setup.js',
+  webServer: {
+    command: 'npm run dev',
+    url: 'http://localhost:5173',
+    reuseExistingServer: !process.env.CI,
+  },
   
   // Run tests only on Chromium in headless mode
   projects: [
     {
       name: 'chromium',
       use: { 
+        baseURL: 'http://localhost:5173',
         browserName: 'chromium',
         viewport: { width: 1280, height: 720 },
         headless: true,  // Run in headless mode
+        launchOptions: {
+          args: ['--no-sandbox'],
+        },
       },
     },
   ],

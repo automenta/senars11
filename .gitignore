@@ -18,3 +18,8 @@ lerna-debug.log*
 .idea
 benchmark-results-*
 agent.json
+
+# Test artifacts
+ui/playwright-report/
+ui/test-results/
+ui/test-results.json

@@ -3,6 +3,7 @@ module.exports = {
     testPathIgnorePatterns: [
         'v8/.*',
         'v9/.*',
+        'ui/',
     ],
     transform: {
         '^.+\\.js$': 'babel-jest',
