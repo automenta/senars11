@@ -37,12 +37,10 @@ const useUiStore = create((set, get) => ({
   addTask: (task) => set(state => {
     // Check if task already exists
     const existingIndex = state.tasks.findIndex(t => t.id === task.id);
-    if (existingIndex !== -1) {
-      const updatedTasks = [...state.tasks];
-      updatedTasks[existingIndex] = task;
-      return { tasks: updatedTasks };
-    }
-    return { tasks: [...state.tasks, task] };
+    const tasks = existingIndex !== -1 
+      ? [...state.tasks.slice(0, existingIndex), task, ...state.tasks.slice(existingIndex + 1)] 
+      : [...state.tasks, task];
+    return { tasks };
   }),
   clearTasks: () => set({ tasks: [] }),
   
@@ -50,12 +48,10 @@ const useUiStore = create((set, get) => ({
   addConcept: (concept) => set(state => {
     // Check if concept already exists
     const existingIndex = state.concepts.findIndex(c => c.term === concept.term);
-    if (existingIndex !== -1) {
-      const updatedConcepts = [...state.concepts];
-      updatedConcepts[existingIndex] = concept;
-      return { concepts: updatedConcepts };
-    }
-    return { concepts: [...state.concepts, concept] };
+    const concepts = existingIndex !== -1 
+      ? [...state.concepts.slice(0, existingIndex), concept, ...state.concepts.slice(existingIndex + 1)] 
+      : [...state.concepts, concept];
+    return { concepts };
   }),
   removeConcept: (term) => set(state => ({
     concepts: state.concepts.filter(c => c.term !== term)

@@ -40,5 +40,11 @@ export default [
       'indent': ['error', 2],
       'comma-dangle': ['error', 'only-multiline']
     }
+  },
+  {
+    files: ['src/utils/consoleBridge.js', 'src/utils/websocket.js', 'src/schemas/messages.js'],
+    rules: {
+      'no-console': 'off' // Allow console statements in utility files where they are intentional
+    }
   }
 ];

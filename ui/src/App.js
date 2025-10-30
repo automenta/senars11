@@ -13,9 +13,7 @@ function App() {
   const [model, setModel] = useState(null);
   const wsService = useRef(null);
   
-  useEffect(() => {
-    setModel(Model.fromJson(defaultLayout));
-  }, []);
+  useEffect(() => setModel(Model.fromJson(defaultLayout)), []);
 
   useEffect(() => {
     if (!model) return;

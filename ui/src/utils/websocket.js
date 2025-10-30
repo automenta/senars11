@@ -20,7 +20,7 @@ const messageHandlers = {
   conceptUpdate: (data) => {
     const { concept, changeType } = data.payload;
     return changeType === 'removed' 
-      ? getStore().removeConcept(concept.term)
+      ? getStore().removeConcept(concept.term) 
       : getStore().addConcept(concept);
   },
   taskUpdate: (data) => getStore().addTask(data.payload.task),
@@ -29,28 +29,46 @@ const messageHandlers = {
   log: ({ level = 'log', data: logData }) => console[level](...logData ?? []),
 };
 
+// Connection state management
+const ConnectionState = {
+  DISCONNECTED: 0,
+  CONNECTING: 1,
+  CONNECTED: 2,
+  RECONNECTING: 3,
+};
+
 class WebSocketService {
-  constructor(url) {
+  constructor(url, options = {}) {
     this.url = url;
     this.ws = null;
-    this.reconnectInterval = 5000;
-    this.maxReconnectAttempts = 10;
+    this.state = ConnectionState.DISCONNECTED;
+    this.reconnectInterval = options.reconnectInterval || 5000;
+    this.maxReconnectAttempts = options.maxReconnectAttempts || 10;
     this.reconnectAttempts = 0;
+    this.messageQueue = [];
   }
 
   connect() {
-    this.disconnect();
+    if (this.state === ConnectionState.CONNECTING || this.state === ConnectionState.CONNECTED) {
+      return; // Don't connect if already connecting or connected
+    }
+    
+    this.state = ConnectionState.CONNECTING;
+    this.disconnect(); // Ensure clean state
     this.ws = new WebSocket(this.url);
 
     this.ws.onopen = () => {
       console.log('WebSocket connected');
       getStore().setWsConnected(true);
+      this.state = ConnectionState.CONNECTED;
       this.reconnectAttempts = 0;
+      this.processMessageQueue(); // Send any queued messages
     };
 
     this.ws.onclose = () => {
       console.log('WebSocket disconnected');
       getStore().setWsConnected(false);
+      this.state = ConnectionState.DISCONNECTED;
       this.attemptReconnect();
     };
 
@@ -62,16 +80,18 @@ class WebSocketService {
     this.ws.onmessage = this.handleMessage.bind(this);
   }
 
-  attemptReconnect = () => 
-    this.reconnectAttempts < this.maxReconnectAttempts
-      ? setTimeout(() => {
+  attemptReconnect = () => {
+    if (this.reconnectAttempts < this.maxReconnectAttempts) {
+      this.state = ConnectionState.RECONNECTING;
+      setTimeout(() => {
         this.reconnectAttempts++;
         this.connect();
-      }, this.reconnectInterval)
-      : (() => {
-        console.error('Max reconnection attempts reached');
-        getStore().setError(new Error('Could not reconnect to server'));
-      })();
+      }, this.reconnectInterval);
+    } else {
+      console.error('Max reconnection attempts reached');
+      getStore().setError(new Error('Could not reconnect to server'));
+    }
+  };
 
   async handleMessage(event) {
     try {
@@ -102,10 +122,11 @@ class WebSocketService {
       this.ws.close();
       this.ws = null;
     }
+    this.state = ConnectionState.DISCONNECTED;
   }
 
   sendMessage(message) {
-    if (this.ws?.readyState === WebSocket.OPEN) {
+    if (this.state === ConnectionState.CONNECTED && this.ws?.readyState === WebSocket.OPEN) {
       try {
         this.ws.send(JSON.stringify(message));
       } catch (error) {
@@ -113,16 +134,22 @@ class WebSocketService {
         getStore().setError(error);
       }
     } else {
-      this.handleOfflineMessage(message);
+      this.queueMessage(message);
     }
   }
 
-  handleOfflineMessage(message) {
-    if (this.ws?.readyState === WebSocket.CONNECTING) {
-      console.log('WebSocket is connecting, will send message when connected');
-      setTimeout(() => this.sendMessage(message), 1000);
-    } else {
-      console.error('WebSocket is not available for sending message');
+  queueMessage(message) {
+    this.messageQueue.push(message);
+    // Limit queue size to prevent memory issues
+    if (this.messageQueue.length > 100) {
+      this.messageQueue.shift(); // Remove oldest message
+    }
+  }
+
+  processMessageQueue() {
+    while (this.messageQueue.length > 0) {
+      const message = this.messageQueue.shift();
+      this.sendMessage(message);
     }
   }
 }

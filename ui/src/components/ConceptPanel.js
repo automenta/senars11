@@ -1,12 +1,13 @@
 import React from 'react';
 import useUiStore from '../stores/uiStore.js';
+import GenericPanel from './GenericPanel.js';
 
 const ConceptPanel = () => {
   const concepts = useUiStore(state => state.concepts);
   
-  return React.createElement('div', { style: { maxHeight: 'calc(100% - 2rem)', overflowY: 'auto' } },
-    concepts.map((concept, index) => 
-      React.createElement('div', { 
+  const renderConcept = (concept, index) => 
+    React.createElement('div', 
+      { 
         key: concept.term || index,
         style: {
           padding: '0.5rem',
@@ -24,9 +25,13 @@ const ConceptPanel = () => {
       React.createElement('div', { style: { fontSize: '0.8rem', color: '#666' } },
         `Last access: ${new Date(concept.lastAccess).toLocaleTimeString()}`
       )
-      )
-    )
-  );
+    );
+
+  return React.createElement(GenericPanel, { 
+    maxHeight: 'calc(100% - 2rem)',
+    items: concepts,
+    renderItem: renderConcept
+  });
 };
 
 export default ConceptPanel;

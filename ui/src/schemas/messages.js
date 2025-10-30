@@ -109,26 +109,30 @@ export const cycleUpdateSchema = z.object({
   questionsAnswered: z.number(),
 });
 
-export const conceptUpdateSchema = messageSchema.extend({
-  type: z.literal('conceptUpdate'),
-  payload: z.object({ 
+// Helper function to create update schemas
+const createUpdateSchema = (type, payloadSchema) => 
+  messageSchema.extend({
+    type: z.literal(type),
+    payload: payloadSchema,
+  });
+
+export const conceptUpdateSchema = createUpdateSchema('conceptUpdate', 
+  z.object({ 
     concept: conceptSchema,
     changeType: z.enum(['added', 'updated', 'removed'])
-  }),
-});
+  })
+);
 
-export const taskUpdateSchema = messageSchema.extend({
-  type: z.literal('taskUpdate'),
-  payload: z.object({ 
+export const taskUpdateSchema = createUpdateSchema('taskUpdate', 
+  z.object({ 
     task: taskSchema,
     changeType: z.enum(['input', 'processed', 'added', 'answered'])
-  }),
-});
+  })
+);
 
-export const cycleUpdateMessageSchema = messageSchema.extend({
-  type: z.literal('cycleUpdate'),
-  payload: z.object({ cycle: cycleUpdateSchema }),
-});
+export const cycleUpdateMessageSchema = createUpdateSchema('cycleUpdate', 
+  z.object({ cycle: cycleUpdateSchema })
+);
 
 export const systemMetricsSchema = messageSchema.extend({
   type: z.literal('systemMetrics'),
@@ -173,7 +177,9 @@ export const validateMessage = (data) => {
     const schema = schemaRegistry[data.type] || messageSchema;
     return schema.parse(data);
   } catch (error) {
-    console.error('Message validation error:', error.errors);
+    // In a production environment, we might want to log these errors differently
+    // For now, we keep the console.error for debugging
+    console.error('Message validation error:', error?.errors || error?.message);
     return null;
   }
 };

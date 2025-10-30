@@ -9,7 +9,7 @@ class ErrorBoundary extends React.Component {
     this.state = { hasError: false, error: null, errorInfo: null };
   }
 
-  static getDerivedStateFromError(error) {
+  static getDerivedStateFromError() {
     return { hasError: true };
   }
 
@@ -23,8 +23,6 @@ class ErrorBoundary extends React.Component {
       componentStack: errorInfo.componentStack,
       timestamp: Date.now()
     });
-    
-    console.error('Error caught by boundary:', error, errorInfo);
   }
 
   handleRetry = () => {

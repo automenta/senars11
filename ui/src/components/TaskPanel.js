@@ -1,13 +1,14 @@
 import React from 'react';
 import useUiStore from '../stores/uiStore.js';
 import { formatTruth, formatBudget } from '../utils/formatters.js';
+import GenericPanel from './GenericPanel.js';
 
 const TaskPanel = () => {
   const tasks = useUiStore(state => state.tasks);
   
-  return React.createElement('div', { style: { maxHeight: 'calc(100% - 2rem)', overflowY: 'auto' } },
-    tasks.map((task, index) => 
-      React.createElement('div', { 
+  const renderTask = (task, index) => 
+    React.createElement('div', 
+      { 
         key: task.id || index,
         style: {
           padding: '0.5rem',
@@ -25,9 +26,13 @@ const TaskPanel = () => {
       task.occurrenceTime && React.createElement('div', { style: { fontSize: '0.8rem', color: '#666' } }, 
         `Time: ${new Date(task.occurrenceTime).toLocaleTimeString()}`
       )
-      )
-    )
-  );
+    );
+
+  return React.createElement(GenericPanel, { 
+    maxHeight: 'calc(100% - 2rem)',
+    items: tasks,
+    renderItem: renderTask
+  });
 };
 
 export default TaskPanel;
