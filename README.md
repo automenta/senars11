@@ -10,6 +10,7 @@ directory's [DESIGN.md](../DESIGN.md).
 - `tests/` - Comprehensive test suite following TDD methodology
 - `examples/` - Usage examples and demonstrations
 - `DESIGN.plan.md` - Phased development plan with TDD approach
+- `ui/` - Web UI built with React and Vite
 
 ## Development Phases
 
@@ -25,5 +26,22 @@ The implementation follows the 8-phase plan:
 8. Deployment and Documentation
 
 ## Getting Started
+
+### Running the Web UI
+
+To run both the SeNARS backend and the web UI together:
+
+```bash
+npm run web
+```
+
+This starts the WebSocket monitoring server and the Vite development server in a single command. The UI will be available at http://localhost:5174/ (or another available port).
+
+### Other Commands
+
+- `npm run dev` - Run the NAR in watch mode
+- `npm run start` - Run the NAR normally
+- `npm run cli` - Run the SeNARS command-line interface
+- `npm run test` - Run the test suite
 
 See the development plan for detailed instructions on contributing to this reimplementation.
