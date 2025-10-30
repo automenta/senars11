@@ -14,7 +14,7 @@ export const SemanticType = Object.freeze({
     UNKNOWN: 'unknown'
 });
 
-const COMMUTATIVE_OPERATORS = Object.freeze(['&', '|', '+', '*', '<->', '<=>', '=']);
+
 
 export class Term {
     constructor(type, name, components = [], operator = null) {
@@ -125,39 +125,12 @@ export class Term {
         if (this._type === TermType.COMPOUND) {
             if (this._components.length !== other._components.length) return false;
 
-            if (this._isCommutativeOperator()) {
-                return this._componentsMatch(other._components);
-            } else {
-                for (let i = 0; i < this._components.length; i++) {
-                    if (!this._components[i].equals(other._components[i])) return false;
-                }
+            for (let i = 0; i < this._components.length; i++) {
+                if (!this._components[i].equals(other._components[i])) return false;
             }
         }
 
         return true;
-    }
-
-    _isCommutativeOperator() {
-        return COMMUTATIVE_OPERATORS.includes(this._operator);
-    }
-
-    _componentsMatch(otherComponents) {
-        if (this._components.length !== otherComponents.length) return false;
-
-        const thisSorted = [...this._components].sort((a, b) => this._compareTerms(a, b));
-        const otherSorted = [...otherComponents].sort((a, b) => this._compareTerms(a, b));
-
-        for (let i = 0; i < thisSorted.length; i++) {
-            if (!thisSorted[i].equals(otherSorted[i])) return false;
-        }
-
-        return true;
-    }
-
-    _compareTerms(a, b) {
-        if (a._name < b._name) return -1;
-        if (a._name > b._name) return 1;
-        return 0;
     }
 
     toString() {

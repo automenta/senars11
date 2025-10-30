@@ -7,8 +7,8 @@ highlighter:
   theme: 'dracula'
 lineNumbers: false
 transition: slide
-zoom: 0.8
-
+css: ./custom.css
+contextMenu: false
 ---
 
 # SeNARS
@@ -136,7 +136,9 @@ SeNARS is a **neuro-symbolic** architecture that delivers **explainable, robust,
   </div>
 </div>
 
-Key difference:
+---
+
+# Key Difference
 
 - **Transparent Reasoning**: Trace every conclusion back to its premises
 - **Modular Architecture**: Component-based design with clear interfaces
@@ -268,6 +270,8 @@ SeNARS is built on three fundamental components:
     - Efficient caching and normalization in TermFactory
     - Structural intelligence with component access, visitors, and reducers
 
+---
+
 ```javascript
 // Example Term structure
 const catTerm = new Term({
@@ -280,10 +284,11 @@ const inheritanceTerm = new Term({
 });
 ```
 
+---
+
 Terms are the building blocks of all knowledge in SeNARS, providing:
 
 - **Normalization**: Automatic reduction of equivalent terms (e.g., `(&, A, B)` = `(&, B, A)`)
-- **Efficient Comparison**: SHA256-based hashing for fast equality checks
 - **Immutability**: Ensures consistency across reasoning with frozen objects
 
 ---
@@ -301,6 +306,8 @@ Terms are the building blocks of all knowledge in SeNARS, providing:
     - Truth values (frequency, confidence) for Bayesian revision
     - Budget metrics for attention allocation (priority, durability, quality)
 
+---
+
 ```javascript
 // Example Task structure
 const beliefTask = new Task({
@@ -310,6 +317,8 @@ const beliefTask = new Task({
     budget: { priority: 0.8, durability: 0.7, quality: 0.9 }
 });
 ```
+
+----
 
 Tasks represent the dynamic aspects of cognition:
 
@@ -330,6 +339,8 @@ Tasks represent the dynamic aspects of cognition:
     - Each concept holds related tasks for the same term
     - Specialized indexes for different term types (inheritance, implication, etc.)
 - **Forgetting Mechanisms**: Adaptive consolidation based on priority and activation
+
+---
 
 ```mermaid
 graph TD
@@ -416,6 +427,8 @@ SeNARS operates in discrete cognitive cycles that emulate a stream of consciousn
 4. **Memory Consolidation** 🧠: Update knowledge graph and manage attention
 5. **Output Generation** 🌱: Produce answers, beliefs, or actions
 
+---
+
 ```mermaid
 flowchart TD
     A[Input Processing] --> B[Focus Task Selection]
@@ -441,6 +454,8 @@ Budget calculation factors:
 | **Durability** | Persistence requirements | Longer-term tasks maintained in focus |
 | **Quality** | Relevance and usefulness | Higher quality tasks receive more attention |
 
+---
+
 SeNARS implements rigorous, explainable reasoning through formal inference rules:
 
 | Rule             | Structure                          | Purpose                        |
@@ -463,6 +478,8 @@ SeNARS integrates LMs as a specialized service layer rather than a black box:
 - **CircuitBreaker**: Resilient operation with fallback mechanisms
 
 This creates powerful synergy: the **RuleEngine** provides rigor, while the **LM** provides creativity and grounding.
+
+---
 
 ```mermaid
 graph TD
@@ -489,6 +506,8 @@ SeNARS is designed for **adaptive self-improvement**:
 2. **Analysis**: Classifies successful and failed reasoning patterns
 3. **Adaptation**: Adjusts rule priorities and reasoning strategies based on metrics
 
+---
+
 | Strategy               | Approach                     | Use Case                           |
 |------------------------|------------------------------|------------------------------------|
 | **Rule Effectiveness** | Track success/failure rates  | Adapt rule selection and priorities|
@@ -496,6 +515,8 @@ SeNARS is designed for **adaptive self-improvement**:
 | **Cognitive Load**     | Balance task complexity      | Maintain reasoning efficiency       |
 | **Resource Management**| Adaptive memory consolidation| Optimize memory utilization         |
 | **Error Recovery**     | Circuit breaker mechanisms   | Maintain system resilience          |
+
+---
 
 Key features:
 
@@ -512,6 +533,8 @@ SeNARS implements sophisticated temporal reasoning capabilities through:
 - **Stamp Management**: Complete event tracing with timestamps and derivation history
 - **Evidence Tracking**: Maintains complete origin and evidence chain for every piece of knowledge
 - **Temporal Coherence**: Ensures consistency of temporal relationships between events
+
+---
 
 Specialized temporal concepts:
 
@@ -532,10 +555,14 @@ SeNARS implements a robust component architecture with standardized interfaces:
 - **Validation Framework**: Input and configuration validation utilities
 - **Event Integration**: Built-in event bus for component communication
 
+---
+
 **Component Management**:
 - **Lifecycle Management**: Initialize, start, stop, and dispose patterns
 - **Dependency Management**: Explicit dependency relationships between components
 - **Configuration System**: Centralized configuration with validation and defaults
+
+---
 
 ```javascript
 class Memory extends BaseComponent {
@@ -583,6 +610,8 @@ SeNARS is implemented with modern software engineering practices:
 - **Extensibility**: Plugin architecture for adding new capabilities through component registration
 - **Testing**: Comprehensive unit and integration tests with property-based testing
 - **Documentation**: Self-documenting code with inline examples and JSDoc annotations
+
+---
 
 Key implementation features:
 

@@ -1,11 +1,7 @@
 import {Term} from '../../term/Term.js';
 
 export class PatternMatcher {
-    /**
-     * Check if an operator is commutative
-     */
-    _isCommutativeOperator = (operator => new Set(['&', '|', '<->', '<=>', '=']).has(operator));
-    _commutativeOperators = new Set(['&', '|', '<->', '<=>', '=']);
+    // No longer need commutative operator constants since terms are canonicalized
 
     /**
      * Unify two terms, adding variable bindings to an existing binding map
@@ -63,30 +59,9 @@ export class PatternMatcher {
 
     _unifyCompound(pattern, term, bindings) {
         if (pattern.operator !== term.operator) {
-            if (this._isCommutativeOperator(pattern.operator) &&
-                this._isCommutativeOperator(term.operator) &&
-                pattern.components.length === term.components.length) {
-                return this._unifyCommutative(pattern, term, bindings);
-            }
             return false;
         }
         if (pattern.components.length !== term.components.length) return false;
-
-        for (let i = 0; i < pattern.components.length; i++) {
-            if (!this._unifyTerms(pattern.components[i], term.components[i], bindings)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    /**
-     * Unify commutative operators where order doesn't matter
-     */
-    _unifyCommutative(pattern, term, bindings) {
-        if (pattern.components.length !== term.components.length) {
-            return false;
-        }
 
         for (let i = 0; i < pattern.components.length; i++) {
             if (!this._unifyTerms(pattern.components[i], term.components[i], bindings)) {
@@ -124,9 +99,7 @@ export class PatternMatcher {
         return !!(term?.name?.startsWith?.('?'));
     }
 
-    isCommutativeOperator(operator) {
-        return this._commutativeOperators.has(operator);
-    }
+
 
     /**
      * Check if two terms are equal with respect to bindings

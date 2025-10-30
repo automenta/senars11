@@ -79,10 +79,13 @@ describe('Term', () => {
     });
 
     describe('Normalization', () => {
-        test('should handle commutative operators by sorting components', () => {
+        test('should handle commutative operators by canonicalization', () => {
             const term1 = createCompoundTerm('&', [atomA, atomB]);
             const term2 = createCompoundTerm('&', [atomB, atomA]);
+            // Both terms should have the same canonical form
             expect(term1.name).toBe('(&, A, B)');
+            expect(term2.name).toBe('(&, A, B)');
+            // Since both terms are in canonical form, equality should match them
             expect(term1.equals(term2)).toBe(true);
         });
 
