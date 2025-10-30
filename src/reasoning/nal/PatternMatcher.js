@@ -100,7 +100,6 @@ export class PatternMatcher {
     }
 
 
-
     /**
      * Check if two terms are equal with respect to bindings
      */
@@ -134,7 +133,7 @@ export class PatternMatcher {
 
         return false;
     }
-    
+
     /**
      * Enhanced unification for higher-order terms
      * This supports matching complex patterns like (Similar, (Human ==> Mortal), (Socrates ==> Mortal))
@@ -143,7 +142,7 @@ export class PatternMatcher {
         const bindings = existingBindings || new Map();
         return this._unifyHigherOrderTerms(pattern, term, bindings) ? bindings : null;
     }
-    
+
     _unifyHigherOrderTerms(pattern, term, bindings) {
         // If the pattern is a variable that can match complex terms
         if (this._isVariable(pattern)) {
@@ -184,7 +183,7 @@ export class PatternMatcher {
                 // for higher-order reasoning
                 return false;
             }
-            
+
             if (pattern.components.length !== term.components.length) return false;
 
             for (let i = 0; i < pattern.components.length; i++) {
@@ -197,7 +196,7 @@ export class PatternMatcher {
 
         return false;
     }
-    
+
     _termsEqualHigherOrder(t1, t2, bindings = null) {
         if (!t1 || !t2) return t1 === t2;
 

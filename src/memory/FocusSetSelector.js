@@ -20,7 +20,7 @@ export class FocusSetSelector extends ConfigurableComponent {
 
         super(defaultConfig);
         this.configure(config);
-        
+
         // Track task access patterns for context sensitivity
         this._taskAccessCounts = new Map();
         this._taskLastAccessed = new Map();
@@ -49,7 +49,7 @@ export class FocusSetSelector extends ConfigurableComponent {
         // Calculate composite scores with context sensitivity
         const scoredTasks = candidates.map(task => {
             const score = this._calculateCompositeScore(task, context, currentTime, maxUrgency, maxComplexity, maxAccessCount);
-            return { task, score };
+            return {task, score};
         });
 
         // Sort by score and return top tasks

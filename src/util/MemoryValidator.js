@@ -6,7 +6,7 @@ export class MemoryValidator {
             algorithm: options.algorithm || 'simple-hash',
             ...options
         };
-        
+
         this.checksums = new Map();
         this.isEnabled = true;
     }
@@ -18,19 +18,19 @@ export class MemoryValidator {
 
         const str = JSON.stringify(obj, Object.keys(obj).sort());
         let hash = 0;
-        
+
         for (let i = 0; i < str.length; i++) {
             const char = str.charCodeAt(i);
             hash = ((hash << 5) - hash) + char;
             hash = hash & hash;
         }
-        
+
         return hash.toString();
     }
 
     storeChecksum(key, obj) {
         if (!this.isEnabled) return;
-        
+
         const checksum = this.calculateChecksum(obj);
         if (checksum) {
             this.checksums.set(key, checksum);
@@ -40,18 +40,18 @@ export class MemoryValidator {
 
     validate(key, obj) {
         if (!this.isEnabled || !this.options.enableChecksums) {
-            return { valid: true, message: 'Validation disabled' };
+            return {valid: true, message: 'Validation disabled'};
         }
 
         const expectedChecksum = this.checksums.get(key);
         if (!expectedChecksum) {
             this.storeChecksum(key, obj);
-            return { valid: true, message: 'First validation - stored checksum' };
+            return {valid: true, message: 'First validation - stored checksum'};
         }
 
         const actualChecksum = this.calculateChecksum(obj);
         if (!actualChecksum) {
-            return { valid: false, message: 'Could not calculate checksum' };
+            return {valid: false, message: 'Could not calculate checksum'};
         }
 
         if (expectedChecksum !== actualChecksum) {
@@ -63,7 +63,7 @@ export class MemoryValidator {
             };
         }
 
-        return { valid: true, message: 'Valid' };
+        return {valid: true, message: 'Valid'};
     }
 
     validateBatch(validations) {
@@ -73,14 +73,25 @@ export class MemoryValidator {
         }));
     }
 
-    enable() { this.isEnabled = true; }
-    disable() { this.isEnabled = false; }
-    clear() { this.checksums.clear(); }
-    getChecksums() { return new Map(this.checksums); }
+    enable() {
+        this.isEnabled = true;
+    }
+
+    disable() {
+        this.isEnabled = false;
+    }
+
+    clear() {
+        this.checksums.clear();
+    }
+
+    getChecksums() {
+        return new Map(this.checksums);
+    }
 
     updateChecksum(key, obj) {
         if (!this.isEnabled) return;
-        
+
         const checksum = this.calculateChecksum(obj);
         if (checksum) {
             this.checksums.set(key, checksum);

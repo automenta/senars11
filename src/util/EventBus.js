@@ -1,12 +1,12 @@
 import mitt from 'mitt';
-import { TraceId } from './TraceId.js';
+import {TraceId} from './TraceId.js';
 
 export class EventBus {
     constructor() {
         this._emitter = mitt();
         this._middleware = [];
         this._errorHandlers = new Set();
-        this._stats = { eventsEmitted: 0, eventsHandled: 0, errors: 0 };
+        this._stats = {eventsEmitted: 0, eventsHandled: 0, errors: 0};
         this._enabled = true;
     }
 
@@ -54,19 +54,19 @@ export class EventBus {
         this._stats.eventsEmitted++;
 
         const traceId = options.traceId || TraceId.generate();
-        
+
         let processedData = {
             ...data,
             eventName,
             traceId
         };
-        
+
         for (const middleware of this._middleware) {
             try {
                 processedData = await middleware(processedData);
                 if (processedData === null) return; // Middleware can stop propagation
             } catch (error) {
-                this._handleError('middleware', error, { eventName, data, traceId });
+                this._handleError('middleware', error, {eventName, data, traceId});
                 return;
             }
         }
@@ -76,7 +76,7 @@ export class EventBus {
             this._stats.eventsHandled++;
         } catch (error) {
             this._stats.errors++;
-            this._handleError('listener', error, { eventName, data, traceId });
+            this._handleError('listener', error, {eventName, data, traceId});
         }
     }
 
@@ -95,7 +95,7 @@ export class EventBus {
     }
 
     getStats() {
-        return { ...this._stats };
+        return {...this._stats};
     }
 
     clear() {

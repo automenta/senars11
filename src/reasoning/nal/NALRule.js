@@ -73,7 +73,7 @@ export class NALRule extends Rule {
     _unify(pattern, term) {
         return this._patternMatcher.unify(pattern, term);
     }
-    
+
     /**
      * Unify two terms using higher-order pattern matching
      * @param {Term} pattern - The pattern term

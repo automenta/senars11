@@ -1,11 +1,9 @@
-import { isTrue, isFalse, isNull, SYSTEM_ATOMS } from './SystemAtoms.js';
-
 /**
  * Variable Binding Utilities for SeNARS v10
  * Shared utilities for matching and binding variables between terms
  */
 export class VariableBindingUtils {
-    
+
     /**
      * Enhanced method to match and bind variables in compound structures
      * This handles cases like (?x, ?y) = (3, 4) → bindings ?x=3, ?y=4
@@ -16,7 +14,7 @@ export class VariableBindingUtils {
         // This handles cases like (?x, ?y) = (3, 4) → bindings ?x=3, ?y=4
         // or (f(?x), g(?y)) = (f(3), g(5)) → ?x=3, ?y=5
         // or (a, ?x, c) = (a, b, c) → ?x=b
-        
+
         const newBindings = new Map(variableBindings);
 
         // If both terms are compound with same operator
@@ -30,7 +28,7 @@ export class VariableBindingUtils {
             for (let i = 0; i < leftTerm.components.length; i++) {
                 const leftComp = leftTerm.components[i];
                 const rightComp = rightTerm.components[i];
-                
+
                 if (leftComp.name?.startsWith('?')) {
                     // Left component is a variable, bind it to the right component
                     newBindings.set(leftComp.name, rightComp);
@@ -54,30 +52,30 @@ export class VariableBindingUtils {
                     return null;
                 }
             }
-            
+
             return newBindings;
         }
-        
+
         // If one term is a variable and the other is not
         if (leftTerm.name?.startsWith('?') && !rightTerm.name?.startsWith('?')) {
             newBindings.set(leftTerm.name, rightTerm);
             return newBindings;
         }
-        
+
         if (rightTerm.name?.startsWith('?') && !leftTerm.name?.startsWith('?')) {
             newBindings.set(rightTerm.name, leftTerm);
             return newBindings;
         }
-        
+
         // If both are atomic and equal
         if (leftTerm.name === rightTerm.name) {
             return newBindings;
         }
-        
+
         // No match found
         return null;
     }
-    
+
     /**
      * Advanced pattern matching for higher-order reasoning
      * This handles cases where variables can match complex patterns, not just simple terms
@@ -91,13 +89,13 @@ export class VariableBindingUtils {
             newBindings.set(leftTerm.name, rightTerm);
             return newBindings;
         }
-        
+
         if (rightTerm.name?.startsWith('?') && !leftTerm.name?.startsWith('?')) {
             // Right term is a variable, bind it to the left term (which could be complex)
             newBindings.set(rightTerm.name, leftTerm);
             return newBindings;
         }
-        
+
         // If both terms are compound with same operator, try matching
         if (leftTerm.isCompound && rightTerm.isCompound && leftTerm.operator === rightTerm.operator) {
             if (leftTerm.components.length !== rightTerm.components.length) {
@@ -108,7 +106,7 @@ export class VariableBindingUtils {
             for (let i = 0; i < leftTerm.components.length; i++) {
                 const leftComp = leftTerm.components[i];
                 const rightComp = rightTerm.components[i];
-                
+
                 if (leftComp.name?.startsWith('?')) {
                     // Left component is a variable, bind it to the right component
                     newBindings.set(leftComp.name, rightComp);
@@ -145,39 +143,39 @@ export class VariableBindingUtils {
                     }
                 }
             }
-            
+
             return newBindings;
         }
-        
+
         // If both are atomic and equal
         if (leftTerm.name === rightTerm.name) {
             return newBindings;
         }
-        
+
         return null;
     }
-    
+
     /**
      * Match complex patterns including higher-order terms like (Similar, (Human ==> Mortal), (Socrates ==> Mortal))
      */
     static matchHigherOrderPatterns(pattern, target, variableBindings) {
         const newBindings = new Map(variableBindings);
-        
+
         // Pattern could be something like (Similar, ?X, ?Y) where ?X and ?Y could match complex terms
         if (pattern.isCompound && target.isCompound) {
             if (pattern.operator !== target.operator) {
                 // For higher-order matching, we might still match if the structure allows it
                 return null;
             }
-            
+
             if (pattern.components.length !== target.components.length) {
                 return null;
             }
-            
+
             for (let i = 0; i < pattern.components.length; i++) {
                 const patternComp = pattern.components[i];
                 const targetComp = target.components[i];
-                
+
                 if (patternComp.name?.startsWith('?')) {
                     // This is a pattern variable, bind it to the target component
                     newBindings.set(patternComp.name, targetComp);
@@ -195,15 +193,15 @@ export class VariableBindingUtils {
                     return null;
                 }
             }
-            
+
             return newBindings;
         }
-        
+
         // Basic equality case
         if (pattern.name === target.name) {
             return newBindings;
         }
-        
+
         return null;
     }
 
@@ -211,6 +209,6 @@ export class VariableBindingUtils {
      * Create standard result object for evaluation operations
      */
     static createResult(result, success, message, additionalData = {}) {
-        return { result, success, message, ...additionalData };
+        return {result, success, message, ...additionalData};
     }
 }

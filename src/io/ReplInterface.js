@@ -146,7 +146,7 @@ Narsese input examples:
 
     _trace() {
         const beliefs = this.nar.getBeliefs();
-        return beliefs.length === 0 
+        return beliefs.length === 0
             ? 'No recent beliefs found.'
             : `Recent Beliefs (last 5):
 ${beliefs.slice(-5).map(task => `  ${task.term.name} ${task.truth?.toString() || ''}`).join('\n')}`;
@@ -178,8 +178,8 @@ ${beliefs.slice(-5).map(task => `  ${task.term.name} ${task.truth?.toString() ||
 
             const state = await this.persistenceManager.loadFromDefault();
             const success = await this.nar.deserialize(state);
-            
-            return success 
+
+            return success
                 ? `NAR state loaded successfully from ${this.persistenceManager.defaultPath}`
                 : 'Failed to load NAR state - deserialization error';
         } catch (error) {
@@ -189,7 +189,7 @@ ${beliefs.slice(-5).map(task => `  ${task.term.name} ${task.truth?.toString() ||
 
     async _demo(args) {
         const exampleName = args && args.length > 0 ? args[0] : null;
-        
+
         if (!exampleName) {
             return `Available examples:
   agent-builder-demo     - Demonstrates building agents with various capabilities
@@ -240,25 +240,25 @@ Usage: :demo <example-name> (without the .js extension)`;
             // Import and run the example - we need to use a file URL for the import
             const path = await import('path');
             const url = await import('url');
-            
+
             // Get the current directory and build the absolute path
             const __filename = url.fileURLToPath(import.meta.url);
             const __dirname = path.dirname(__filename);
             const filePath = path.resolve(__dirname, examplePath);
-            
+
             // Import using file:// URL protocol
             const exampleModule = await import(`file://${filePath}`);
-            
+
             // If the example has a default export that's a function, call it with the current NAR instance
             if (exampleModule.default && typeof exampleModule.default === 'function') {
                 console.log(`\nRunning example: ${exampleName}`);
                 console.log('='.repeat(40));
-                
+
                 await exampleModule.default(this.nar);
-                
+
                 console.log('='.repeat(40));
                 console.log(`Example ${exampleName} completed.`);
-                
+
                 return 'Example executed successfully.';
             } else {
                 // If no default function, just show the import was successful

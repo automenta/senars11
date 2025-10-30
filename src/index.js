@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 
-import { Repl } from './tui/Repl.js';
-import { WebSocketMonitor } from './server/WebSocketMonitor.js';
-import { NAR } from './nar/NAR.js';
+import {Repl} from './tui/Repl.js';
+import {WebSocketMonitor} from './server/WebSocketMonitor.js';
+import {NAR} from './nar/NAR.js';
 
 const DEFAULT_CONFIG = Object.freeze({
     nar: {
-        lm: { enabled: false },
-        reasoningAboutReasoning: { enabled: true }
+        lm: {enabled: false},
+        reasoningAboutReasoning: {enabled: true}
     },
     persistence: {
         defaultPath: './agent.json'
@@ -68,5 +68,5 @@ import.meta.url === `file://${process.argv[1]}` && main().catch(error => {
     process.exit(1);
 });
 
-export { main as startServer };
+export {main as startServer};
 export * from './module.js';

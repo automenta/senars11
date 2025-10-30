@@ -9,26 +9,26 @@ async function testTwoStatements() {
 
     console.log('\\nInputting (a-->b). %1.0;0.9%');
     await nar.input('(a-->b). %1.0;0.9%');
-    
+
     console.log('\\nAfter first input:');
     const beliefs1 = nar.getBeliefs();
     console.log(`Beliefs: ${beliefs1.length}`);
     beliefs1.forEach((task, i) => {
         const term = task.term?.toString?.() || task.term || 'Unknown';
         const truth = task.truth ? `${task.truth.frequency},${task.truth.confidence}` : 'NULL';
-        console.log(`  ${i+1}. ${term} [${truth}]`);
+        console.log(`  ${i + 1}. ${term} [${truth}]`);
     });
 
     console.log('\\nInputting (b-->c). %1.0;0.9%');
     await nar.input('(b-->c). %1.0;0.9%');
-    
+
     console.log('\\nAfter second input:');
     const beliefs2 = nar.getBeliefs();
     console.log(`Beliefs: ${beliefs2.length}`);
     beliefs2.forEach((task, i) => {
         const term = task.term?.toString?.() || task.term || 'Unknown';
         const truth = task.truth ? `${task.truth.frequency},${task.truth.confidence}` : 'NULL';
-        console.log(`  ${i+1}. ${term} [${truth}]`);
+        console.log(`  ${i + 1}. ${term} [${truth}]`);
     });
 
     console.log('\\nRunning 1 reasoning cycle...');
@@ -40,7 +40,7 @@ async function testTwoStatements() {
     beliefs3.forEach((task, i) => {
         const term = task.term?.toString?.() || task.term || 'Unknown';
         const truth = task.truth ? `${task.truth.frequency},${task.truth.confidence}` : 'NULL';
-        console.log(`  ${i+1}. ${term} [${truth}]`);
+        console.log(`  ${i + 1}. ${term} [${truth}]`);
     });
 
     console.log('\\nRunning 10 more reasoning cycles...');
@@ -54,9 +54,9 @@ async function testTwoStatements() {
     beliefs4.forEach((task, i) => {
         const term = task.term?.toString?.() || task.term || 'Unknown';
         const truth = task.truth ? `${task.truth.frequency},${task.truth.confidence}` : 'NULL';
-        console.log(`  ${i+1}. ${term} [${truth}]`);
+        console.log(`  ${i + 1}. ${term} [${truth}]`);
     });
-    
+
     // Also check ALL tasks, not just beliefs
     console.log('\\nAll tasks in memory:');
     const stats = nar.getStats();

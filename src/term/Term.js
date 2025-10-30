@@ -15,7 +15,6 @@ export const SemanticType = Object.freeze({
 });
 
 
-
 export class Term {
     constructor(type, name, components = [], operator = null) {
         this._type = type;
@@ -28,26 +27,6 @@ export class Term {
         this._semanticType = this._determineSemanticType();
 
         return freeze(this);
-    }
-
-    _determineSemanticType() {
-        if (this._type === TermType.ATOM) {
-            if (['True', 'False', 'Null'].includes(this._name)) {
-                return SemanticType.BOOLEAN;
-            }
-            
-            if (this._name?.startsWith('?')) {
-                return SemanticType.VARIABLE;
-            }
-            
-            if (!isNaN(Number(this._name))) {
-                return SemanticType.NUMERIC;
-            }
-            
-            return SemanticType.NAL_CONCEPT;
-        } else {
-            return SemanticType.NAL_CONCEPT;
-        }
     }
 
     get type() {
@@ -110,6 +89,35 @@ export class Term {
         return crypto.createHash('sha256').update(str).digest('hex');
     }
 
+    static fromJSON(data) {
+        if (!data) {
+            throw new Error('Term.fromJSON requires valid data object');
+        }
+
+        const components = data.components || [];
+        return new Term(data.type, data.name, components, data.operator);
+    }
+
+    _determineSemanticType() {
+        if (this._type === TermType.ATOM) {
+            if (['True', 'False', 'Null'].includes(this._name)) {
+                return SemanticType.BOOLEAN;
+            }
+
+            if (this._name?.startsWith('?')) {
+                return SemanticType.VARIABLE;
+            }
+
+            if (!isNaN(Number(this._name))) {
+                return SemanticType.NUMERIC;
+            }
+
+            return SemanticType.NAL_CONCEPT;
+        } else {
+            return SemanticType.NAL_CONCEPT;
+        }
+    }
+
     _calculateComplexity() {
         return this._type === TermType.ATOM
             ? 1
@@ -163,14 +171,5 @@ export class Term {
             semanticType: this._semanticType,
             version: '1.0.0'
         };
-    }
-
-    static fromJSON(data) {
-        if (!data) {
-            throw new Error('Term.fromJSON requires valid data object');
-        }
-
-        const components = data.components || [];
-        return new Term(data.type, data.name, components, data.operator);
     }
 }

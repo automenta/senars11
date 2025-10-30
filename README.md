@@ -35,7 +35,8 @@ To run both the SeNARS backend and the web UI together:
 npm run web
 ```
 
-This starts the WebSocket monitoring server and the Vite development server in a single command. The UI will be available at http://localhost:5174/ (or another available port).
+This starts the WebSocket monitoring server and the Vite development server in a single command. The UI will be
+available at http://localhost:5174/ (or another available port).
 
 ### Other Commands
 

@@ -339,7 +339,7 @@ export class MemoryIndex {
 
         // Filter by category
         if (filters.category) {
-            results = results.filter(concept => 
+            results = results.filter(concept =>
                 this._getTermCategory(concept.term) === filters.category);
         }
 
@@ -348,7 +348,7 @@ export class MemoryIndex {
             results = results.filter(concept => {
                 const complexity = this._getTermComplexity(concept.term);
                 return (!filters.minComplexity || complexity >= filters.minComplexity) &&
-                       (!filters.maxComplexity || complexity <= filters.maxComplexity);
+                    (!filters.maxComplexity || complexity <= filters.maxComplexity);
             });
         }
 
@@ -357,13 +357,13 @@ export class MemoryIndex {
             results = results.filter(concept => {
                 const activation = concept.activation || 0;
                 return (filters.minActivation === undefined || activation >= filters.minActivation) &&
-                       (filters.maxActivation === undefined || activation <= filters.maxActivation);
+                    (filters.maxActivation === undefined || activation <= filters.maxActivation);
             });
         }
 
         // Filter by operator
         if (filters.operator) {
-            results = results.filter(concept => 
+            results = results.filter(concept =>
                 concept.term.operator === filters.operator);
         }
 
@@ -372,7 +372,7 @@ export class MemoryIndex {
             results = results.filter(concept => {
                 const createdAt = concept.createdAt || 0;
                 return (!filters.createdAfter || createdAt >= filters.createdAfter) &&
-                       (!filters.createdBefore || createdAt <= filters.createdBefore);
+                    (!filters.createdBefore || createdAt <= filters.createdBefore);
             });
         }
 
@@ -386,7 +386,7 @@ export class MemoryIndex {
         const allConcepts = this.getAllConcepts();
         const scoredConcepts = allConcepts.map(concept => {
             const score = this._calculateRelevanceScore(queryTerm, concept.term);
-            return { concept, score };
+            return {concept, score};
         });
 
         // Sort by score descending and limit results
@@ -416,10 +416,10 @@ export class MemoryIndex {
         if (queryTerm.components && conceptTerm.components) {
             const queryComponents = new Set(queryTerm.components.map(c => c.toString()));
             const conceptComponents = new Set(conceptTerm.components.map(c => c.toString()));
-            
+
             const intersection = [...queryComponents].filter(x => conceptComponents.has(x)).length;
             const union = new Set([...queryComponents, ...conceptComponents]).size;
-            
+
             if (union > 0) {
                 score += 0.5 * (intersection / union);
             }
@@ -430,7 +430,7 @@ export class MemoryIndex {
             // Simple string similarity (could be enhanced with more sophisticated algorithms)
             const queryName = queryTerm.name.toLowerCase();
             const conceptName = conceptTerm.name.toLowerCase();
-            
+
             if (queryName === conceptName) {
                 score += 0.4;
             } else if (queryName.includes(conceptName) || conceptName.includes(queryName)) {
@@ -493,8 +493,8 @@ export class MemoryIndex {
         // Find concepts where this term is a subject or predicate in inheritance
         const subjectConcepts = this.findInheritanceConcepts(term);
         const predicateConcepts = []; // Would need inverse index for this
-        
-        [...subjectConcepts, ...predicateConcepts].forEach(concept => 
+
+        [...subjectConcepts, ...predicateConcepts].forEach(concept =>
             relatedConcepts.add(concept));
     }
 
@@ -502,8 +502,8 @@ export class MemoryIndex {
         // Find concepts where this term is a premise or conclusion in implication
         const premiseConcepts = this.findImplicationConcepts(term);
         const conclusionConcepts = []; // Would need inverse index for this
-        
-        [...premiseConcepts, ...conclusionConcepts].forEach(concept => 
+
+        [...premiseConcepts, ...conclusionConcepts].forEach(concept =>
             relatedConcepts.add(concept));
     }
 
@@ -539,11 +539,11 @@ export class MemoryIndex {
         // This is a very rough estimation
         // In reality, memory usage would depend on the actual implementation
         let estimatedBytes = 0;
-        
+
         for (const [key, value] of index.entries()) {
             // Estimate key size (assuming string keys)
             estimatedBytes += typeof key === 'string' ? key.length : 8;
-            
+
             // Estimate value size (assuming Sets of concepts)
             if (value instanceof Set) {
                 estimatedBytes += value.size * 64; // Rough estimate per concept reference
@@ -551,7 +551,7 @@ export class MemoryIndex {
                 estimatedBytes += 64; // Rough estimate for single value
             }
         }
-        
+
         return estimatedBytes;
     }
 
@@ -599,7 +599,7 @@ export class MemoryIndex {
 
         // Restore configuration
         if (data.config) {
-            this._config = { ...this._config, ...data.config };
+            this._config = {...this._config, ...data.config};
         }
 
         // Note: Actual index data would need to be restored based on specific implementation
@@ -938,25 +938,25 @@ export class MemoryIndex {
      * Get concepts that match specific patterns or criteria
      */
     queryConcepts(query, options = {}) {
-        const { limit = 50, sortBy = 'relevance', ascending = false } = options;
-        
+        const {limit = 50, sortBy = 'relevance', ascending = false} = options;
+
         // If query is a function, use it as a filter
         if (typeof query === 'function') {
             return this.getAllConcepts()
                 .filter(query)
                 .slice(0, limit);
         }
-        
+
         // If query is a string, treat it as a search term
         if (typeof query === 'string') {
             return this._searchConceptsByText(query, limit);
         }
-        
+
         // If query is an object, treat it as filter criteria
         if (typeof query === 'object') {
             return this.findConceptsWithFilters(query).slice(0, limit);
         }
-        
+
         return [];
     }
 
@@ -966,17 +966,17 @@ export class MemoryIndex {
     _searchConceptsByText(searchTerm, limit) {
         const normalizedSearch = searchTerm.toLowerCase();
         const results = [];
-        
+
         // Search in term names and components
         for (const concept of this.getAllConcepts()) {
             const term = concept.term;
             let relevance = 0;
-            
+
             // Check term name
             if (term.name && term.name.toLowerCase().includes(normalizedSearch)) {
                 relevance += 0.5;
             }
-            
+
             // Check components if it's a compound term
             if (term.components) {
                 for (const component of term.components) {
@@ -986,17 +986,17 @@ export class MemoryIndex {
                     }
                 }
             }
-            
+
             // Check operator
             if (term.operator && term.operator.toLowerCase().includes(normalizedSearch)) {
                 relevance += 0.2;
             }
-            
+
             if (relevance > 0) {
-                results.push({ concept, relevance });
+                results.push({concept, relevance});
             }
         }
-        
+
         // Sort by relevance and limit
         return results
             .sort((a, b) => b.relevance - a.relevance)
@@ -1093,7 +1093,7 @@ export class MemoryIndex {
         // Categorize concepts into periods
         for (const concept of this.getAllConcepts()) {
             const createdAt = concept.createdAt || 0;
-            
+
             for (let i = 0; i < periodCount; i++) {
                 if (createdAt >= periods[i].start && createdAt < periods[i].end) {
                     periods[i].concepts.push(concept);
@@ -1134,17 +1134,17 @@ export class MemoryIndex {
         // This is a simplified CSV export
         // In practice, this would need more sophisticated handling
         let csv = 'Term,Category,Complexity,Activation,CreatedAt\n';
-        
+
         for (const concept of data.concepts) {
             const term = concept.term.name || concept.term.toString();
             const category = this._getTermCategory(concept.term);
             const complexity = this._getTermComplexity(concept.term);
             const activation = concept.activation || 0;
             const createdAt = concept.createdAt || 0;
-            
+
             csv += `"${term}",${category},${complexity},${activation},${createdAt}\n`;
         }
-        
+
         return csv;
     }
 
@@ -1223,7 +1223,7 @@ export class MemoryIndex {
                 external: usage.external
             };
         }
-        return { heapUsed: 0, heapTotal: 0, rss: 0, external: 0 };
+        return {heapUsed: 0, heapTotal: 0, rss: 0, external: 0};
     }
 
     /**
@@ -1242,14 +1242,14 @@ export class MemoryIndex {
      */
     _getQueryPerformance() {
         if (this._performance.queryTimes.length === 0) {
-            return { avgQueryTime: 0, maxQueryTime: 0, totalQueries: 0 };
+            return {avgQueryTime: 0, maxQueryTime: 0, totalQueries: 0};
         }
 
         const totalQueries = this._performance.queryTimes.length;
         const avgQueryTime = this._performance.queryTimes.reduce((sum, time) => sum + time, 0) / totalQueries;
         const maxQueryTime = Math.max(...this._performance.queryTimes);
 
-        return { avgQueryTime, maxQueryTime, totalQueries };
+        return {avgQueryTime, maxQueryTime, totalQueries};
     }
 
     /**
@@ -1270,7 +1270,7 @@ export class MemoryIndex {
      */
     _recordQueryTime(time) {
         this._performance.queryTimes.push(time);
-        
+
         // Keep only last 1000 measurements to prevent memory growth
         if (this._performance.queryTimes.length > 1000) {
             this._performance.queryTimes = this._performance.queryTimes.slice(-500);
@@ -1282,7 +1282,7 @@ export class MemoryIndex {
      */
     _recordIndexUpdateTime(time) {
         this._performance.indexUpdateTimes.push(time);
-        
+
         // Keep only last 1000 measurements to prevent memory growth
         if (this._performance.indexUpdateTimes.length > 1000) {
             this._performance.indexUpdateTimes = this._performance.indexUpdateTimes.slice(-500);
@@ -1294,11 +1294,11 @@ export class MemoryIndex {
      */
     getPerformanceStats() {
         if (!this._performance) {
-            return { error: 'Performance monitoring not initialized' };
+            return {error: 'Performance monitoring not initialized'};
         }
 
         const currentMetrics = this._performance.lastMetrics || this._collectPerformanceMetrics();
-        
+
         return {
             current: currentMetrics,
             historical: {
@@ -1339,7 +1339,7 @@ export class MemoryIndex {
         // Index size recommendations
         const largeIndexes = Object.entries(metrics.indexSizes)
             .filter(([name, size]) => size > 10000) // 10k threshold
-            .map(([name, size]) => ({ name, size }));
+            .map(([name, size]) => ({name, size}));
 
         if (largeIndexes.length > 0) {
             recommendations.push({
@@ -1358,7 +1358,7 @@ export class MemoryIndex {
      */
     optimizePerformance() {
         const startTime = Date.now();
-        
+
         // Run garbage collection if available
         if (global.gc) {
             global.gc();
@@ -1530,7 +1530,7 @@ export class MemoryIndex {
             const termIndex = this._indexes.term;
             for (const [termId, concepts] of termIndex.entries()) {
                 result.checked++;
-                
+
                 for (const concept of concepts) {
                     // Verify concept exists in other relevant indexes
                     if (concept.term.isAtomic) {
@@ -1545,7 +1545,7 @@ export class MemoryIndex {
                             result.inconsistent++;
                             result.errors.push(`Compound concept ${termId} missing from compoundByOp index`);
                         }
-                        
+
                         // Check operator-specific indexes
                         switch (concept.term.operator) {
                             case '-->':
@@ -1607,7 +1607,7 @@ export class MemoryIndex {
         try {
             // Check for entries in secondary indexes that don't exist in primary term index
             const termIndex = this._indexes.term;
-            
+
             // Check atomic index
             const atomicIndex = this._indexes.atomic;
             for (const [termName, concepts] of atomicIndex.entries()) {
@@ -1703,7 +1703,7 @@ export class MemoryIndex {
         try {
             // Check for invalid references in compound terms
             const termIndex = this._indexes.term;
-            
+
             for (const [termId, concepts] of termIndex.entries()) {
                 result.checked++;
                 for (const concept of concepts) {
@@ -1746,14 +1746,14 @@ export class MemoryIndex {
      */
     _validateTermReference(term) {
         if (!term) {
-            return { valid: false, reason: 'Null term reference' };
+            return {valid: false, reason: 'Null term reference'};
         }
 
         if (term.isAtomic) {
             // Check if atomic term exists in atomic index
             const atomicIndex = this._indexes.atomic;
             if (!atomicIndex.has(term.name)) {
-                return { valid: false, reason: `Atomic term not found: ${term.name}` };
+                return {valid: false, reason: `Atomic term not found: ${term.name}`};
             }
         } else if (term.isCompound) {
             // Check if all components are valid
@@ -1761,13 +1761,13 @@ export class MemoryIndex {
                 for (const component of term.components) {
                     const componentValidity = this._validateTermReference(component);
                     if (!componentValidity.valid) {
-                        return { valid: false, reason: `Invalid component: ${componentValidity.reason}` };
+                        return {valid: false, reason: `Invalid component: ${componentValidity.reason}`};
                     }
                 }
             }
         }
 
-        return { valid: true, reason: 'Valid reference' };
+        return {valid: true, reason: 'Valid reference'};
     }
 
     /**
@@ -1848,7 +1848,7 @@ export class MemoryIndex {
      */
     getValidationStats() {
         if (!this._validation) {
-            return { error: 'Validation not initialized' };
+            return {error: 'Validation not initialized'};
         }
 
         const stats = {
@@ -1889,7 +1889,7 @@ export class MemoryIndex {
                 results.actions.push('Attempting to repair validation issues...');
 
                 // Repair term consistency issues
-                if (validationResults.details.termConsistency && 
+                if (validationResults.details.termConsistency &&
                     !validationResults.details.termConsistency.passed) {
                     const repairedCount = this._repairTermConsistency();
                     results.repaired += repairedCount;
@@ -1897,7 +1897,7 @@ export class MemoryIndex {
                 }
 
                 // Remove orphaned entries
-                if (validationResults.details.orphanedEntries && 
+                if (validationResults.details.orphanedEntries &&
                     !validationResults.details.orphanedEntries.passed) {
                     const removedCount = this._removeOrphanedEntries();
                     results.repaired += removedCount;
@@ -1905,7 +1905,7 @@ export class MemoryIndex {
                 }
 
                 // Remove duplicates
-                if (validationResults.details.duplicates && 
+                if (validationResults.details.duplicates &&
                     !validationResults.details.duplicates.passed) {
                     const removedCount = this._removeDuplicates();
                     results.repaired += removedCount;
@@ -1913,7 +1913,7 @@ export class MemoryIndex {
                 }
 
                 // Repair invalid references
-                if (validationResults.details.invalidReferences && 
+                if (validationResults.details.invalidReferences &&
                     !validationResults.details.invalidReferences.passed) {
                     const repairedCount = this._repairInvalidReferences();
                     results.repaired += repairedCount;
@@ -1954,7 +1954,7 @@ export class MemoryIndex {
                             this._addToIndex('compoundByOp', concept.term.operator, concept);
                             repairedCount++;
                         }
-                        
+
                         // Add to operator-specific indexes
                         switch (concept.term.operator) {
                             case '-->':
@@ -2011,7 +2011,7 @@ export class MemoryIndex {
 
         try {
             const termIndex = this._indexes.term;
-            
+
             // Check atomic index
             const atomicIndex = this._indexes.atomic;
             for (const [termName, concepts] of atomicIndex.entries()) {
@@ -2089,7 +2089,7 @@ export class MemoryIndex {
             // For now, we'll just log invalid references
             // In a real implementation, we might try to create missing terms or remove invalid references
             const validationResults = this.validate();
-            if (validationResults.details.invalidReferences && 
+            if (validationResults.details.invalidReferences &&
                 validationResults.details.invalidReferences.errors.length > 0) {
                 for (const error of validationResults.details.invalidReferences.errors) {
                     this._logger?.warn(`Invalid reference detected: ${error}`);

@@ -3,18 +3,18 @@ export const CapabilityTypes = {
     FILE_SYSTEM_WRITE: 'file-system-write',
     NETWORK_ACCESS: 'network-access',
     COMMAND_EXECUTION: 'command-execution',
-    
+
     PROCESS_MANAGEMENT: 'process-management',
     USER_MANAGEMENT: 'user-management',
     SYSTEM_CONFIGURATION: 'system-configuration',
-    
+
     DATABASE_ACCESS: 'database-access',
     ENCRYPTION: 'encryption',
     CRYPTOGRAPHY: 'cryptography',
-    
+
     EXTERNAL_API_ACCESS: 'external-api-access',
     WEB_REQUESTS: 'web-requests',
-    
+
     RESOURCE_LIMITS: 'resource-limits',
     MEMORY_ACCESS: 'memory-access',
     CPU_INTENSIVE: 'cpu-intensive'
@@ -32,12 +32,12 @@ export class Capability {
     }
 
     validate(context = {}) {
-        const result = { valid: true, errors: [] };
+        const result = {valid: true, errors: []};
 
-        if ([CapabilityTypes.PROCESS_MANAGEMENT, 
-             CapabilityTypes.USER_MANAGEMENT, 
-             CapabilityTypes.SYSTEM_CONFIGURATION].includes(this.type) 
-             && !this.requiresApproval) {
+        if ([CapabilityTypes.PROCESS_MANAGEMENT,
+                CapabilityTypes.USER_MANAGEMENT,
+                CapabilityTypes.SYSTEM_CONFIGURATION].includes(this.type)
+            && !this.requiresApproval) {
             result.valid = false;
             result.errors.push(`Capability ${this.type} requires explicit approval`);
         }
@@ -57,6 +57,45 @@ export class CapabilityManager {
         this.grants = new Map();
         this.policyRules = new Map();
         this.auditLog = [];
+    }
+
+    static async createDefaultManager() {
+        const manager = new CapabilityManager();
+
+        await manager.registerCapability('file-system-read', new Capability(CapabilityTypes.FILE_SYSTEM_READ, {
+            description: 'Read access to file system in restricted directories',
+            scope: 'local',
+            permissions: ['read-files', 'read-directories']
+        }));
+
+        await manager.registerCapability('file-system-write', new Capability(CapabilityTypes.FILE_SYSTEM_WRITE, {
+            description: 'Write access to file system in restricted directories',
+            scope: 'local',
+            permissions: ['write-files', 'create-directories'],
+            requiresApproval: true
+        }));
+
+        await manager.registerCapability('network-access', new Capability(CapabilityTypes.NETWORK_ACCESS, {
+            description: 'Network access for HTTP requests',
+            scope: 'network',
+            permissions: ['http-requests', 'https-requests']
+        }));
+
+        await manager.registerCapability('command-execution', new Capability(CapabilityTypes.COMMAND_EXECUTION, {
+            description: 'Execute predefined safe system commands',
+            scope: 'system',
+            permissions: ['execute-commands'],
+            requiresApproval: true
+        }));
+
+        await manager.registerCapability('external-api-access', new Capability(CapabilityTypes.EXTERNAL_API_ACCESS, {
+            description: 'Access to external APIs',
+            scope: 'network',
+            permissions: ['api-calls'],
+            requiresApproval: true
+        }));
+
+        return manager;
     }
 
     async registerCapability(id, capability) {
@@ -97,7 +136,7 @@ export class CapabilityManager {
 
         for (const capId of capabilityIds) {
             const capability = this.capabilities.get(capId);
-            
+
             if (capability.requiresApproval && !options.approved) {
                 throw new Error(`Capability "${capId}" requires explicit approval`);
             }
@@ -118,7 +157,7 @@ export class CapabilityManager {
 
         for (const capId of capabilityIds) {
             if (toolGrants.has(capId)) {
-                failedGrants.push({ id: capId, reason: 'Already granted' });
+                failedGrants.push({id: capId, reason: 'Already granted'});
                 continue;
             }
 
@@ -153,7 +192,7 @@ export class CapabilityManager {
             return {
                 success: true,
                 revoked: [],
-                failed: capabilityIds.map(id => ({ id, reason: 'No grants exist for tool' }))
+                failed: capabilityIds.map(id => ({id, reason: 'No grants exist for tool'}))
             };
         }
 
@@ -170,7 +209,7 @@ export class CapabilityManager {
                     capabilityId: capId
                 });
             } else {
-                failedRevocations.push({ id: capId, reason: 'Not granted to tool' });
+                failedRevocations.push({id: capId, reason: 'Not granted to tool'});
             }
         }
 
@@ -301,7 +340,7 @@ export class CapabilityManager {
             }
         }
 
-        return { allowed: true };
+        return {allowed: true};
     }
 
     _matchesPattern(value, patterns) {
@@ -354,7 +393,7 @@ export class CapabilityManager {
         }
 
         const allCapabilities = [...manifest.requiredCapabilities, ...manifest.optionalCapabilities];
-        
+
         const capabilitiesToGrant = allCapabilities.filter(capId => {
             const capability = this.capabilities.get(capId);
             if (!capability.requiresApproval) {
@@ -402,8 +441,8 @@ export class CapabilityManager {
         }
 
         if (filter.toolId) {
-            events = events.filter(event => 
-                event.data.toolId === filter.toolId || 
+            events = events.filter(event =>
+                event.data.toolId === filter.toolId ||
                 event.data.capabilityGrants?.some(g => g.toolId === filter.toolId)
             );
         }
@@ -431,44 +470,5 @@ export class CapabilityManager {
         if (this.auditLog.length > 10000) {
             this.auditLog = this.auditLog.slice(-5000);
         }
-    }
-
-    static async createDefaultManager() {
-        const manager = new CapabilityManager();
-
-        await manager.registerCapability('file-system-read', new Capability(CapabilityTypes.FILE_SYSTEM_READ, {
-            description: 'Read access to file system in restricted directories',
-            scope: 'local',
-            permissions: ['read-files', 'read-directories']
-        }));
-
-        await manager.registerCapability('file-system-write', new Capability(CapabilityTypes.FILE_SYSTEM_WRITE, {
-            description: 'Write access to file system in restricted directories',
-            scope: 'local',
-            permissions: ['write-files', 'create-directories'],
-            requiresApproval: true
-        }));
-
-        await manager.registerCapability('network-access', new Capability(CapabilityTypes.NETWORK_ACCESS, {
-            description: 'Network access for HTTP requests',
-            scope: 'network',
-            permissions: ['http-requests', 'https-requests']
-        }));
-
-        await manager.registerCapability('command-execution', new Capability(CapabilityTypes.COMMAND_EXECUTION, {
-            description: 'Execute predefined safe system commands',
-            scope: 'system',
-            permissions: ['execute-commands'],
-            requiresApproval: true
-        }));
-
-        await manager.registerCapability('external-api-access', new Capability(CapabilityTypes.EXTERNAL_API_ACCESS, {
-            description: 'Access to external APIs',
-            scope: 'network',
-            permissions: ['api-calls'],
-            requiresApproval: true
-        }));
-
-        return manager;
     }
 }

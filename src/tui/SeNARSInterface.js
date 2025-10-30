@@ -22,10 +22,10 @@ export class SeNARSInterface {
         this.persistenceManager = new PersistenceManager({
             defaultPath: config.persistence?.defaultPath || './agent.json'
         });
-        
+
         // Animation state
         this.animationState = {spinningIndex: 0, pulsePhase: 0};
-        
+
         // Create blessed screen
         this.screen = blessed.screen({
             smartCSR: true,
@@ -35,10 +35,10 @@ export class SeNARSInterface {
 
         // Set up the layout
         this._setupLayout();
-        
+
         // Set up the main loop for animations
         this._startAnimationLoop();
-        
+
         // Handle exit gracefully
         this.screen.key(['C-c'], (ch, key) => {
             this.screen.destroy();
@@ -182,7 +182,7 @@ export class SeNARSInterface {
         setInterval(() => {
             this.animationState.spinningIndex = (this.animationState.spinningIndex + 1) % 4;
             this.animationState.pulsePhase = (this.animationState.pulsePhase + 0.1) % (2 * Math.PI);
-            
+
             // Update status bar with animated content
             this.statusBar.setContent(this._getStatusContent());
             this.screen.render();
@@ -192,7 +192,7 @@ export class SeNARSInterface {
     _getStatusContent() {
         const spins = ['🌀', '◕', '◔', '◕'];
         const currentSpin = spins[this.animationState.spinningIndex];
-        
+
         const stats = this.nar.getStats();
         return `{bold}⚡ Status: ${currentSpin} | Concepts: ${stats.memoryStats.conceptCount} | Cycles: ${stats.cycleCount} | Tasks: ${stats.memoryStats.taskCount}{/bold}`;
     }
@@ -200,7 +200,7 @@ export class SeNARSInterface {
     async start() {
         this.output.setContent('🌈 Welcome to SeNARS! Type {bold}/help{/bold} for commands or enter Narsese statements.\n');
         this.screen.render();
-        
+
         // Setup event handlers
         this._setupEventHandlers();
     }
@@ -218,18 +218,18 @@ export class SeNARSInterface {
 
     async _handleInput(inputText) {
         this.sessionState.history.push(inputText);
-        
+
         if (inputText.startsWith('/')) {
             // Extract command and arguments properly
             const parts = inputText.slice(1).split(' ');
             const cmd = parts[0];
             const args = parts.slice(1);
-            
+
             await this._executeCommand(cmd, ...args);
         } else {
             await this._processNarsese(inputText);
         }
-        
+
         // Update memory display after processing
         this._updateMemoryDisplay();
         this.screen.render();
@@ -260,7 +260,7 @@ export class SeNARSInterface {
 
             if (result) {
                 this._addToOutput(`✅ Input processed successfully (${duration}ms)`);
-                
+
                 // Only show latest beliefs in the output, not all tasks
                 const beliefs = this.nar.getBeliefs();
                 if (beliefs.length > 0) {
@@ -281,7 +281,7 @@ export class SeNARSInterface {
     _addToOutput(text) {
         const currentTime = new Date().toLocaleTimeString();
         const formattedText = `[${currentTime}] ${text}`;
-        
+
         // Add to output box
         this.output.pushLine(formattedText);
         this.output.setScrollPerc(100); // Auto-scroll to bottom
@@ -293,9 +293,9 @@ export class SeNARSInterface {
         content += ` Concepts: ${stats.memoryStats.conceptCount}\n`;
         content += ` Tasks: ${stats.memoryStats.taskCount}\n`;
         content += ` Focus Size: ${stats.memoryStats.focusSize}\n\n`;
-        
+
         content += '{bold}📋 Recent Tasks{/bold}\n';
-        
+
         // Try multiple possible methods to get tasks
         let tasks = [];
         if (this.nar.getTasks && typeof this.nar.getTasks === 'function') {
@@ -331,14 +331,14 @@ export class SeNARSInterface {
                 const occurrence = task.stamp ? `Stamp: ${task.stamp}` : 'Stamp: N/A';
                 const occurrenceTime = task.occurrenceTime !== undefined ? `OccTime: ${task.occurrenceTime}` : '';
                 const type = task.type ? `Type: ${task.type}` : 'Type: Task';
-                
+
                 content += `{cyan}[${index + 1}]{/cyan} {green}${task.term?.name || 'Unknown Task'}{/green}\n`;
                 content += `    {blue}| ${type} | ${truthStr} | ${priority} | ${occurrence}${occurrenceTime ? ` | ${occurrenceTime}` : ''}{/blue}\n`;
             });
         } else {
             content += '{red}No tasks in memory{/red}\n';
         }
-        
+
         this.memoryDisplay.setContent(content);
     }
 
@@ -390,11 +390,11 @@ export class SeNARSInterface {
   {cyan}Average Concept Priority:{/cyan} ${stats.memoryStats.avgPriority?.toFixed(3) || 'N/A'}
 
 {bold}📋 Detailed Task Information{/bold}\n`;
-        
-        const tasks = this.nar.getTasks && typeof this.nar.getTasks === 'function' ? 
-                     this.nar.getTasks() : 
-                     (this.nar.memory?.getTasks && typeof this.nar.memory.getTasks === 'function' ? 
-                      this.nar.memory.getTasks() : []);
+
+        const tasks = this.nar.getTasks && typeof this.nar.getTasks === 'function' ?
+            this.nar.getTasks() :
+            (this.nar.memory?.getTasks && typeof this.nar.memory.getTasks === 'function' ?
+                this.nar.memory.getTasks() : []);
 
         if (tasks.length > 0) {
             tasks.slice(-10).forEach((task, index) => {
@@ -402,14 +402,14 @@ export class SeNARSInterface {
                 const priority = task.priority !== undefined ? `Priority: ${task.priority.toFixed(3)}` : 'Priority: N/A';
                 const occurrence = task.stamp ? `Occurrence: ${task.stamp}` : 'Occurrence: N/A';
                 const occurrenceTime = task.occurrenceTime !== undefined ? `Occurrence Time: ${task.occurrenceTime}` : '';
-                
+
                 content += `{magenta}[${index + 1}]:{/magenta} {green}${task.term?.name || 'Unknown Task'}{/green}\n`;
                 content += `    {blue}| ${truthStr} | ${priority} | ${occurrence} ${occurrenceTime}{/blue}\n`;
             });
         } else {
             content += '{red}No tasks in memory{/red}\n';
         }
-        
+
         return content;
     }
 
@@ -418,16 +418,16 @@ export class SeNARSInterface {
         if (beliefs.length === 0) {
             return '🔍 No recent beliefs found.';
         }
-        
+
         let content = '{bold}🔍 Recent Beliefs (last 5){/bold}\n';
         beliefs.slice(-5).forEach(task => {
             const truthStr = task.truth ? task.truth.toString() : '';
             const priority = task.priority !== undefined ? ` | P:${task.priority.toFixed(3)}` : '';
             const occurrence = task.stamp ? ` | Occ:${task.stamp}` : '';
-            
+
             content += `  {cyan}${task.term.name}{/cyan} {magenta}${truthStr}{/magenta}{yellow}${priority}{/yellow}{blue}${occurrence}{/blue}\n`;
         });
-        
+
         return content;
     }
 
@@ -457,8 +457,8 @@ export class SeNARSInterface {
 
             const state = await this.persistenceManager.loadFromDefault();
             const success = await this.nar.deserialize(state);
-            
-            return success 
+
+            return success
                 ? `💾 NAR state loaded successfully from {bold}${this.persistenceManager.defaultPath}{/bold}`
                 : '❌ Failed to load NAR state - deserialization error';
         } catch (error) {
@@ -468,7 +468,7 @@ export class SeNARSInterface {
 
     async _demo(args) {
         const exampleName = args && args.length > 0 ? args[0] : null;
-        
+
         if (!exampleName) {
             return `{rainbow}🎭 Available examples:{/rainbow}
   {cyan}agent-builder-demo     {/cyan}- Demonstrates building agents with various capabilities
@@ -519,25 +519,25 @@ export class SeNARSInterface {
             // Import and run the example
             const path = await import('path');
             const url = await import('url');
-            
+
             // Get the current directory and build the absolute path
             const __filename = url.fileURLToPath(import.meta.url);
             const __dirname = path.dirname(__filename);
             const filePath = path.resolve(__dirname, examplePath);
-            
+
             // Import using file:// URL protocol
             const exampleModule = await import(`file://${filePath}`);
-            
+
             // If the example has a default export that's a function, call it with the current NAR instance
             if (exampleModule.default && typeof exampleModule.default === 'function') {
                 this._addToOutput(`\n🎭 Running example: {bold}${exampleName}{/bold}`);
                 this._addToOutput('='.repeat(40));
-                
+
                 await exampleModule.default(this.nar);
-                
+
                 this._addToOutput('='.repeat(40));
                 this._addToOutput(`🎭 Example {bold}${exampleName}{/bold} completed.`);
-                
+
                 return '✅ Example executed successfully.';
             } else {
                 // If no default function, just show the import was successful

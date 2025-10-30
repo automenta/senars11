@@ -12,10 +12,10 @@ console.log("Testing input processing...");
 try {
     const result = await repl.nar.input("(a --> b).");
     console.log("Input processed successfully:", result);
-    
+
     // Process one step to ensure tasks are processed
     await repl.nar.step();
-    
+
     // Get stats
     const stats = repl.nar.getStats();
     console.log("Memory stats after input:");

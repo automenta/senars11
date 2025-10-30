@@ -1,5 +1,5 @@
-import { parse } from './peggy-parser.js';
-import { TermFactory } from '../term/TermFactory.js';
+import {parse} from './peggy-parser.js';
+import {TermFactory} from '../term/TermFactory.js';
 
 export class NarseseParser {
     constructor(termFactory) {
@@ -7,6 +7,6 @@ export class NarseseParser {
     }
 
     parse(input) {
-        return parse(input, { termFactory: this.termFactory });
+        return parse(input, {termFactory: this.termFactory});
     }
 }

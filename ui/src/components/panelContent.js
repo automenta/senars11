@@ -6,13 +6,31 @@ import VariablesPanel from './VariablesPanel.js';
 import TaskPanel from './TaskPanel.js';
 import ConceptPanel from './ConceptPanel.js';
 import CyclePanel from './CyclePanel.js';
+import DemoPanel from './DemoPanel.js';
+import PriorityFluctuationPanel from './PriorityFluctuationPanel.js';
+import SystemStatusPanel from './SystemStatusPanel.js';
+import TaskMonitorPanel from './TaskMonitorPanel.js';
+import InputInterfacePanel from './InputInterfacePanel.js';
+import ConceptRelationshipPanel from './ConceptRelationshipPanel.js';
+import ReasoningTracePanel from './ReasoningTracePanel.js';
+import TimeSeriesPanel from './TimeSeriesPanel.js';
+import DashboardPanel from './DashboardPanel.js';
 
 export const contentMap = {
-  'ExplorerPanel': ExplorerPanel,
-  'MainPanel': MainPanel,
-  'ConsolePanel': ConsolePanel,
-  'VariablesPanel': VariablesPanel,
-  'TaskPanel': TaskPanel,
-  'ConceptPanel': ConceptPanel,
-  'CyclePanel': CyclePanel,
+    'ExplorerPanel': ExplorerPanel,
+    'MainPanel': MainPanel,
+    'DashboardPanel': DashboardPanel,
+    'ConsolePanel': ConsolePanel,
+    'VariablesPanel': VariablesPanel,
+    'TaskPanel': TaskPanel,
+    'ConceptPanel': ConceptPanel,
+    'CyclePanel': CyclePanel,
+    'DemoPanel': DemoPanel,
+    'PriorityFluctuationPanel': PriorityFluctuationPanel,
+    'SystemStatusPanel': SystemStatusPanel,
+    'TaskMonitorPanel': TaskMonitorPanel,
+    'InputInterfacePanel': InputInterfacePanel,
+    'ConceptRelationshipPanel': ConceptRelationshipPanel,
+    'ReasoningTracePanel': ReasoningTracePanel,
+    'TimeSeriesPanel': TimeSeriesPanel,
 };

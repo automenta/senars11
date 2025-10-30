@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import {z} from 'zod';
 import {CYCLE, MEMORY, PERFORMANCE, SYSTEM} from './constants.js';
 
 const DEFAULT_CONFIG = {
@@ -138,7 +138,7 @@ export class SystemConfig {
         if (!validationResult.success) {
             throw new Error(`Configuration validation failed after setting value: ${validationResult.error.message}`);
         }
-        
+
         this._config = validationResult.data;
 
         return this;

@@ -1,5 +1,4 @@
-import { NAR } from './nar/NAR.js';
-import { EvaluationEngine } from './reasoning/EvaluationEngine.js';
+import {NAR} from './nar/NAR.js';
 
 export class InputTasks {
     constructor() {
@@ -9,7 +8,7 @@ export class InputTasks {
     // Public Task Management Methods
     addTask(task, priority = 0) {
         if (!this._validateTask(task)) throw new Error('Invalid task format');
-        this.tasks.push({ task, priority, timestamp: Date.now() });
+        this.tasks.push({task, priority, timestamp: Date.now()});
         this._sortTasks();
     }
 
@@ -63,7 +62,7 @@ export class Agent {
         this.inputTasks = new InputTasks();
         this.evaluator = this.nar._evaluator;
         this.isRunning = false;
-        this.config = { maxCyclesPerStep: config.maxCyclesPerStep || 100, ...config };
+        this.config = {maxCyclesPerStep: config.maxCyclesPerStep || 100, ...config};
         this._pluginManager = null; // Initialize plugin manager
     }
 
@@ -98,7 +97,7 @@ export class Agent {
     async processNextTask() {
         const taskItem = this.inputTasks.getHighestPriorityTask();
         if (taskItem) {
-            const { task } = taskItem;
+            const {task} = taskItem;
             try {
                 if (this._canAddTask(task)) {
                     await this.nar.step();
@@ -123,7 +122,8 @@ export class Agent {
         }
     }
 
-    async _processDerivedTasks() {}
+    async _processDerivedTasks() {
+    }
 
     _removeProcessedTask(task) {
         const allTasks = this.inputTasks.getAllTasks();
@@ -153,14 +153,39 @@ export class Agent {
     }
 
     // Component Accessor Methods
-    getNAR() { return this.nar; }
-    getEvaluator() { return this.evaluator; }
-    getInputTasks() { return this.inputTasks; }
-    
-    getLM() { return this.nar.lm || null; }
-    getMetricsMonitor() { return this.nar.metricsMonitor || null; }
-    getEmbeddingLayer() { return this.nar.embeddingLayer || null; }
-    getTermLayer() { return this.nar.termLayer || null; }
-    getTools() { return this.nar.tools || null; }
-    getPluginManager() { return this._pluginManager; }
+    getNAR() {
+        return this.nar;
+    }
+
+    getEvaluator() {
+        return this.evaluator;
+    }
+
+    getInputTasks() {
+        return this.inputTasks;
+    }
+
+    getLM() {
+        return this.nar.lm || null;
+    }
+
+    getMetricsMonitor() {
+        return this.nar.metricsMonitor || null;
+    }
+
+    getEmbeddingLayer() {
+        return this.nar.embeddingLayer || null;
+    }
+
+    getTermLayer() {
+        return this.nar.termLayer || null;
+    }
+
+    getTools() {
+        return this.nar.tools || null;
+    }
+
+    getPluginManager() {
+        return this._pluginManager;
+    }
 }

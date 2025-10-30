@@ -19,7 +19,7 @@ export class CircuitBreaker {
             this.state = 'HALF_OPEN';
             this.successCount = 0;
         }
-        
+
         if (this.state !== 'HALF_OPEN' && this.shouldOpen()) {
             this.state = 'OPEN';
             this.lastFailureTime = Date.now();
@@ -53,8 +53,13 @@ export class CircuitBreaker {
         }
     }
 
-    shouldOpen() { return this.failureCount >= this.options.failureThreshold; }
-    isResetTimeoutExpired() { return Date.now() - this.lastFailureTime >= this.options.resetTimeout; }
+    shouldOpen() {
+        return this.failureCount >= this.options.failureThreshold;
+    }
+
+    isResetTimeoutExpired() {
+        return Date.now() - this.lastFailureTime >= this.options.resetTimeout;
+    }
 
     getState() {
         return {
@@ -89,6 +94,6 @@ export class CircuitBreaker {
 
 export const withCircuitBreaker = (fn, circuitBreakerOptions = {}) => {
     const circuitBreaker = new CircuitBreaker(circuitBreakerOptions);
-    
+
     return async (...args) => circuitBreaker.execute(() => fn(...args));
 };

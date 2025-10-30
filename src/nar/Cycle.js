@@ -21,10 +21,21 @@ export class Cycle extends BaseComponent {
         this._stats = this._initStats();
     }
 
-    get evaluator() { return this._evaluator; }
-    get cycleCount() { return this._cycleCount; }
-    get isRunning() { return this._isRunning; }
-    get stats() { return {...this._stats}; }
+    get evaluator() {
+        return this._evaluator;
+    }
+
+    get cycleCount() {
+        return this._cycleCount;
+    }
+
+    get isRunning() {
+        return this._isRunning;
+    }
+
+    get stats() {
+        return {...this._stats};
+    }
 
     async execute() {
         const cycleStartTime = Date.now();
@@ -92,7 +103,7 @@ export class Cycle extends BaseComponent {
 
     async _processInferencesWithEvaluator(inferences) {
         const processed = [];
-        
+
         for (const inference of inferences) {
             try {
                 processed.push(await this._processInference(inference));
@@ -101,7 +112,7 @@ export class Cycle extends BaseComponent {
                 processed.push(inference);
             }
         }
-        
+
         return processed;
     }
 
@@ -114,20 +125,20 @@ export class Cycle extends BaseComponent {
     async _processOperationTerm(inference) {
         const evaluationResult = await this._evaluator.evaluate(inference.term, this._nar, new Map());
         return evaluationResult.success && evaluationResult.result
-            ? inference.clone({ term: evaluationResult.result })
+            ? inference.clone({term: evaluationResult.result})
             : inference;
     }
 
     _processNALTerm(inference) {
         const reducedTerm = this._evaluator.reduce(inference.term);
-        return inference.clone({ term: reducedTerm });
+        return inference.clone({term: reducedTerm});
     }
 
     _filterTasksByBudget(tasks) {
         return tasks.filter(task => {
             if (!task.budget) return true;
-            
-            const { cycles, depth } = task.budget;
+
+            const {cycles, depth} = task.budget;
             return (cycles === undefined || cycles > 0) && (depth === undefined || depth > 0);
         });
     }
@@ -135,17 +146,17 @@ export class Cycle extends BaseComponent {
     _applyBudgetConstraints(inferences) {
         return inferences.map(inference => {
             if (!inference.budget) return inference;
-            
+
             const newCycles = Math.max(0, (inference.budget.cycles ?? 0) - 1);
             const newDepth = Math.max(0, (inference.budget.depth ?? 0) - 1);
-            
+
             const newBudget = {
                 ...inference.budget,
                 cycles: newCycles,
                 depth: newDepth
             };
-            
-            return inference.clone({ budget: newBudget });
+
+            return inference.clone({budget: newBudget});
         });
     }
 
@@ -195,7 +206,7 @@ export class Cycle extends BaseComponent {
         this._isRunning = false;
         this._stats = this._initStats();
     }
-    
+
     _initStats() {
         return {
             totalCycles: 0,

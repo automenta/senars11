@@ -2,9 +2,9 @@
  * PrologParser.js - Parser that translates Prolog syntax into SeNARS beliefs/goals
  */
 
-import { TermFactory } from '../term/TermFactory.js';
-import { Task } from '../task/Task.js';
-import { Truth } from '../Truth.js';
+import {TermFactory} from '../term/TermFactory.js';
+import {Task} from '../task/Task.js';
+import {Truth} from '../Truth.js';
 
 export class PrologParser {
     constructor(termFactory = null) {
@@ -21,7 +21,7 @@ export class PrologParser {
             .filter(line => line && !line.startsWith('%'))
             .flatMap(line => this._parseLine(line));
     }
-    
+
     _parseLine(line) {
         if (this._isRule(line)) return this._parseRule(line);
         if (this._isFact(line)) return [this._parseFact(line)];
@@ -47,25 +47,25 @@ export class PrologParser {
      */
     _parseFact(factLine) {
         const fact = factLine.replace(/\.$/, '').trim(); // Remove trailing dot
-        
+
         // Parse: predicate(arg1, arg2, ...)
         const match = fact.match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*\(\s*(.*)\s*\)$/);
         if (!match) {
             throw new Error(`Invalid fact format: ${factLine}`);
         }
-        
+
         const [_, predicate, argsStr] = match;
         const args = this._parseArguments(argsStr);
-        
+
         // Create the relation term: predicate(args) using helper
         const relationTerm = this._createPredicateTerm(predicate, args);
-        
+
         // Create a belief task with high truth value
         return new Task({
             term: relationTerm,
             punctuation: '.',  // Belief
             truth: new Truth(1.0, 0.9),  // High frequency and confidence
-            budget: { priority: 0.8, durability: 0.7, quality: 0.8 }
+            budget: {priority: 0.8, durability: 0.7, quality: 0.8}
         });
     }
 
@@ -76,46 +76,46 @@ export class PrologParser {
     _parseRule(ruleLine) {
         const rule = ruleLine.replace(/\.$/, '').trim(); // Remove trailing dot
         const parts = rule.split(':-');
-        
+
         if (parts.length !== 2) {
             throw new Error(`Invalid rule format: ${ruleLine}`);
         }
-        
+
         const [headStr, bodyStr] = parts;
         const head = headStr.trim();
         const body = bodyStr.trim();
-        
+
         const tasks = [];
-        
+
         // Parse the head of the rule (conclusion)
         const headTask = this._parseFact(`${head}.`);
         tasks.push(headTask);
-        
+
         // For body components, parse each part separated by comma
         // Need to handle commas inside parentheses properly
         const bodyParts = this._splitRuleBody(body);
-        
+
         for (const bodyPart of bodyParts) {
             const bodyTask = this._parseFact(`${bodyPart.trim()}.`);
             tasks.push(bodyTask);
         }
-        
+
         return tasks;
     }
-    
+
     /**
      * Split rule body by commas, respecting nested structures
      */
     _splitRuleBody(bodyStr) {
         if (!bodyStr) return [];
-        
+
         const parts = [];
         let currentPart = '';
         let parenLevel = 0;
-        
+
         for (let i = 0; i < bodyStr.length; i++) {
             const char = bodyStr[i];
-            
+
             if (char === '(') {
                 parenLevel++;
                 currentPart += char;
@@ -129,11 +129,11 @@ export class PrologParser {
                 currentPart += char;
             }
         }
-        
+
         if (currentPart.trim()) {
             parts.push(currentPart.trim());
         }
-        
+
         return parts;
     }
 
@@ -143,25 +143,25 @@ export class PrologParser {
      */
     _parseQuery(queryLine) {
         const query = queryLine.replace(/\s*\?$/, '').trim(); // Remove trailing question mark
-        
+
         const match = query.match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*\(\s*(.*)\s*\)$/);
         if (!match) {
             throw new Error(`Invalid query format: ${queryLine}`);
         }
-        
+
         const [_, predicate, argsStr] = match;
         const args = this._parseArguments(argsStr);
-        
+
         // Create the query term using helper
         const queryTerm = this._createPredicateTerm(predicate, args);
-        
+
         // Create a question task
         return new Task({
             term: queryTerm,
             punctuation: '?'  // Question
         });
     }
-    
+
     /**
      * Helper method to create predicate term structure from arguments
      * @param {string} predicate - Predicate name
@@ -173,20 +173,20 @@ export class PrologParser {
         const argTerms = args.map(arg => {
             if (arg.startsWith('_') || /^[A-Z]/.test(arg)) {
                 // Variable
-                return this.termFactory.create({ name: `?${arg.toLowerCase()}`, type: 'variable' });
+                return this.termFactory.create({name: `?${arg.toLowerCase()}`, type: 'variable'});
             } else {
                 // Constant
-                return this.termFactory.create({ name: arg.toLowerCase(), type: 'atomic' });
+                return this.termFactory.create({name: arg.toLowerCase(), type: 'atomic'});
             }
         });
-        
-        const argsTerm = this.termFactory.create({ 
-            operator: ',', 
-            components: argTerms 
+
+        const argsTerm = this.termFactory.create({
+            operator: ',',
+            components: argTerms
         });
-        
-        const predicateTerm = this.termFactory.create({ name: predicate, type: 'atomic' });
-        
+
+        const predicateTerm = this.termFactory.create({name: predicate, type: 'atomic'});
+
         return this.termFactory.create({
             operator: '^',  // Operation operator in NARS
             components: [predicateTerm, argsTerm]
@@ -207,7 +207,7 @@ export class PrologParser {
 
         for (let i = 0; i < argsStr.length; i++) {
             const char = argsStr[i];
-            
+
             if (!inQuotes) {
                 if (char === '(') {
                     parenLevel++;
@@ -233,11 +233,11 @@ export class PrologParser {
                 }
             }
         }
-        
+
         if (currentArg.trim()) {
             args.push(currentArg.trim());
         }
-        
+
         return args;
     }
 }

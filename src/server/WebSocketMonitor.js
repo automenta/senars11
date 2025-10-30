@@ -1,4 +1,4 @@
-import { WebSocketServer } from 'ws';
+import {WebSocketServer} from 'ws';
 import {EventEmitter} from 'events';
 
 const DEFAULT_OPTIONS = Object.freeze({
@@ -10,7 +10,7 @@ const DEFAULT_OPTIONS = Object.freeze({
 
 const NAR_EVENTS = Object.freeze([
     'task.input',
-    'task.processed', 
+    'task.processed',
     'cycle.start',
     'cycle.complete',
     'task.added',
@@ -36,10 +36,10 @@ class WebSocketMonitor {
 
     async start() {
         return new Promise((resolve, reject) => {
-            this.server = new WebSocketServer({ 
-                port: this.port, 
+            this.server = new WebSocketServer({
+                port: this.port,
                 host: this.host,
-                path: this.path 
+                path: this.path
             });
 
             this.server.on('connection', (ws, request) => {
@@ -54,7 +54,7 @@ class WebSocketMonitor {
 
                 this._sendToClient(ws, {
                     type: 'connection',
-                    data: { 
+                    data: {
                         clientId,
                         timestamp: Date.now(),
                         message: 'Connected to SeNARS monitoring server'
@@ -64,10 +64,10 @@ class WebSocketMonitor {
                 ws.on('message', (data) => this._handleClientMessage(ws, data));
                 ws.on('close', () => {
                     this.clients.delete(ws);
-                    this.eventEmitter.emit('clientDisconnected', { clientId, timestamp: Date.now() });
+                    this.eventEmitter.emit('clientDisconnected', {clientId, timestamp: Date.now()});
                 });
-                
-                this.eventEmitter.emit('clientConnected', { clientId, timestamp: Date.now() });
+
+                this.eventEmitter.emit('clientConnected', {clientId, timestamp: Date.now()});
             });
 
             this.server.on('error', (error) => {
@@ -87,7 +87,7 @@ class WebSocketMonitor {
             for (const client of this.clients) {
                 client.close(1001, 'Server shutting down');
             }
-            
+
             this.clients.clear();
 
             if (this.server) {
@@ -119,7 +119,7 @@ class WebSocketMonitor {
             };
 
             const jsonMessage = JSON.stringify(message);
-            
+
             for (const client of this.clients) {
                 if (client.readyState === client.OPEN) {
                     client.send(jsonMessage);
@@ -143,7 +143,7 @@ class WebSocketMonitor {
     _handleClientMessage(client, data) {
         try {
             const message = JSON.parse(data.toString());
-            
+
             switch (message.type) {
                 case 'subscribe':
                     this._handleSubscribe(client, message);
@@ -152,17 +152,17 @@ class WebSocketMonitor {
                     this._handleUnsubscribe(client, message);
                     break;
                 case 'ping':
-                    this._sendToClient(client, { type: 'pong', timestamp: Date.now() });
+                    this._sendToClient(client, {type: 'pong', timestamp: Date.now()});
                     break;
                 default:
                     console.warn('Unknown message type:', message.type);
             }
         } catch (error) {
             console.error('Error handling client message:', error);
-            this._sendToClient(client, { 
-                type: 'error', 
+            this._sendToClient(client, {
+                type: 'error',
                 message: 'Invalid message format',
-                error: error.message 
+                error: error.message
             });
         }
     }
@@ -224,6 +224,228 @@ class WebSocketMonitor {
         console.log('WebSocket monitor now listening to NAR events');
     }
 
+    // Method to register handlers for client messages
+    registerClientMessageHandler(messageType, handler) {
+        if (!this.clientMessageHandlers) {
+            this.clientMessageHandlers = new Map();
+        }
+        this.clientMessageHandlers.set(messageType, handler);
+    }
+
+    // Method to broadcast custom events (not NAR events)
+    broadcastCustomEvent(eventType, data, options = {}) {
+        try {
+            if (this.eventFilter && typeof this.eventFilter === 'function') {
+                if (!this.eventFilter(eventType, data)) {
+                    return;
+                }
+            }
+
+            const message = {
+                type: eventType,
+                data,
+                timestamp: Date.now(),
+                ...options
+            };
+
+            const jsonMessage = JSON.stringify(message);
+
+            for (const client of this.clients) {
+                if (client.readyState === client.OPEN) {
+                    client.send(jsonMessage);
+                }
+            }
+        } catch (error) {
+            console.error('Error broadcasting custom event:', error);
+        }
+    }
+
+    _handleClientMessage(client, data) {
+        try {
+            const rawData = data.toString();
+            if (!rawData.trim()) {
+                this._sendToClient(client, {
+                    type: 'error',
+                    message: 'Empty message received'
+                });
+                return;
+            }
+            
+            const message = JSON.parse(rawData);
+
+            // Validate message structure
+            if (!message.type || typeof message.type !== 'string') {
+                this._sendToClient(client, {
+                    type: 'error',
+                    message: 'Invalid message format: missing or invalid type field'
+                });
+                return;
+            }
+
+            switch (message.type) {
+                case 'subscribe':
+                    this._handleSubscribe(client, message);
+                    break;
+                case 'unsubscribe':
+                    this._handleUnsubscribe(client, message);
+                    break;
+                case 'ping':
+                    this._sendToClient(client, {type: 'pong', timestamp: Date.now()});
+                    break;
+                case 'narseseInput':
+                    this._handleNarseseInput(client, message);
+                    break;
+                default:
+                    // Check if this is a custom client message type
+                    if (this.clientMessageHandlers && this.clientMessageHandlers.has(message.type)) {
+                        const handler = this.clientMessageHandlers.get(message.type);
+                        // Ensure handler exists and is a function
+                        if (typeof handler === 'function') {
+                            try {
+                                handler(message);
+                            } catch (handlerError) {
+                                console.error(`Error in handler for message type ${message.type}:`, handlerError);
+                                this._sendToClient(client, {
+                                    type: 'error',
+                                    message: `Handler error for ${message.type}`,
+                                    error: handlerError.message
+                                });
+                            }
+                        } else {
+                            console.error(`Invalid handler for message type: ${message.type}`);
+                            this._sendToClient(client, {
+                                type: 'error',
+                                message: `Invalid handler for message type: ${message.type}`
+                            });
+                        }
+                    } else {
+                        console.warn('Unknown message type:', message.type);
+                        this._sendToClient(client, {
+                            type: 'error',
+                            message: `Unknown message type: ${message.type}`
+                        });
+                    }
+            }
+        } catch (error) {
+            if (error instanceof SyntaxError) {
+                console.error('Invalid JSON received:', error.message);
+                this._sendToClient(client, {
+                    type: 'error',
+                    message: 'Invalid JSON format',
+                    error: error.message
+                });
+            } else {
+                console.error('Error handling client message:', error);
+                this._sendToClient(client, {
+                    type: 'error',
+                    message: 'Error processing message',
+                    error: error.message
+                });
+            }
+        }
+    }
+    
+    // Handler for narsese input messages
+    async _handleNarseseInput(client, message) {
+        try {
+            if (!message.payload || !message.payload.input) {
+                this._sendToClient(client, {
+                    type: 'narseseInput',
+                    payload: {
+                        input: message.payload?.input || '',
+                        success: false,
+                        message: 'Missing input in payload'
+                    }
+                });
+                return;
+            }
+            
+            const narseseString = message.payload.input;
+            
+            // Validate that we have a NAR instance to process the input
+            if (!this._nar) {
+                this._sendToClient(client, {
+                    type: 'narseseInput',
+                    payload: {
+                        input: narseseString,
+                        success: false,
+                        message: 'NAR instance not available'
+                    }
+                });
+                return;
+            }
+            
+            // Process the input with the NAR
+            try {
+                const result = await this._nar.input(narseseString);
+                
+                this._sendToClient(client, {
+                    type: 'narseseInput',
+                    payload: {
+                        input: narseseString,
+                        success: result,
+                        message: result ? 'Input processed successfully' : 'Input processing failed'
+                    }
+                });
+            } catch (error) {
+                console.error('Error processing narsese input:', error);
+                this._sendToClient(client, {
+                    type: 'narseseInput',
+                    payload: {
+                        input: narseseString,
+                        success: false,
+                        message: `Error: ${error.message}`
+                    }
+                });
+            }
+        } catch (error) {
+            console.error('Error in _handleNarseseInput:', error);
+            this._sendToClient(client, {
+                type: 'narseseInput',
+                payload: {
+                    input: message.payload?.input || '',
+                    success: false,
+                    message: `Internal error: ${error.message}`
+                }
+            });
+        }
+    }
+    
+    // Store reference to NAR for processing inputs
+    listenToNAR(nar) {
+        if (!nar || !nar.on) {
+            throw new Error('NAR instance must have an on() method');
+        }
+        
+        this._nar = nar;
+
+        const NAR_EVENTS = Object.freeze([
+            'task.input',
+            'task.processed',
+            'cycle.start',
+            'cycle.complete',
+            'task.added',
+            'belief.added',
+            'question.answered',
+            'system.started',
+            'system.stopped',
+            'system.reset',
+            'system.loaded'
+        ]);
+
+        NAR_EVENTS.forEach(eventName => {
+            nar.on(eventName, (data, metadata) => {
+                this.broadcastEvent(eventName, {
+                    data,
+                    metadata: metadata || {},
+                    timestamp: Date.now()
+                });
+            });
+        });
+
+        console.log('WebSocket monitor now listening to NAR events');
+    }
+
     on(event, listener) {
         this.eventEmitter.on(event, listener);
     }
@@ -233,4 +455,4 @@ class WebSocketMonitor {
     }
 }
 
-export { WebSocketMonitor };
+export {WebSocketMonitor};

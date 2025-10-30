@@ -1,5 +1,5 @@
-import { EvaluationEngine as BooleanReductionEngine } from '../../../src/reasoning/EvaluationEngine.js';
-import { Term, TermType } from '../../../src/term/Term.js';
+import {EvaluationEngine as BooleanReductionEngine} from '../../../src/reasoning/EvaluationEngine.js';
+import {Term, TermType} from '../../../src/term/Term.js';
 import {SYSTEM_ATOMS} from '../../../src/reasoning/SystemAtoms.js';
 
 describe('BooleanReductionEngine (Unified)', () => {

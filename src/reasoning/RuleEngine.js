@@ -68,14 +68,14 @@ export class RuleEngine extends BaseComponent {
         if (rule instanceof LMRule && !rule.lm && this._lm) {
             rule = rule.clone({lm: this._lm});
         }
-        
+
         this._rules.set(rule.id, rule);
-        
+
         // Index the rule if performance optimizer has indexing enabled
         if (this._performanceOptimizer) {
             this._performanceOptimizer.indexRule(rule);
         }
-        
+
         return this;
     }
 
@@ -112,7 +112,7 @@ export class RuleEngine extends BaseComponent {
         } else {
             candidateRules = this.rules;
         }
-        
+
         const applicable = candidateRules.filter(rule => rule.canApply(task));
         return this._filterByType(applicable, ruleType).sort((a, b) => b.priority - a.priority);
     }
@@ -134,12 +134,12 @@ export class RuleEngine extends BaseComponent {
             this._rules.set(rule.id, updatedRule);
             success = true;
             this._incrementTypeMetric(rule);
-            
+
             // Update rule effectiveness if performance optimizer is available
             if (this._performanceOptimizer) {
                 this._performanceOptimizer.updateRuleEffectiveness(rule.id, success, results?.length || 0);
             }
-            
+
             return {results, rule: updatedRule};
         } catch (error) {
             if (error.rule) this._rules.set(rule.id, error.rule);
@@ -247,12 +247,12 @@ export class RuleEngine extends BaseComponent {
             this._rules.set(rule.id, updatedRule);
             success = true;
             this._incrementTypeMetric(rule);
-            
+
             // Update rule effectiveness
             if (this._performanceOptimizer) {
                 this._performanceOptimizer.updateRuleEffectiveness(rule.id, success, results?.length || 0);
             }
-            
+
             return {results, rule: updatedRule};
         } catch (error) {
             if (error.rule) this._rules.set(rule.id, error.rule);

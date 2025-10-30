@@ -1,6 +1,6 @@
 import fs from 'fs/promises';
 import path from 'path';
-import { glob } from 'glob';
+import {glob} from 'glob';
 
 export class BenchmarkRunner {
     constructor(config = {}) {
@@ -37,7 +37,7 @@ export class BenchmarkRunner {
 
     async _runSingleBenchmark(benchmark, filePath) {
         const startTime = Date.now();
-        
+
         try {
             const result = {
                 filePath,
@@ -50,14 +50,14 @@ export class BenchmarkRunner {
             };
 
             await this._processInput(benchmark.input);
-            
+
             const queryResult = await this._processQuery(benchmark.input, benchmark.expected);
-            
+
             result.actual = queryResult;
             result.executionTime = Date.now() - startTime;
 
             result.status = this._validateResult(queryResult, benchmark.expected) ? 'passed' : 'failed';
-            
+
             if (benchmark.expected.executionTime) {
                 const expectedMaxTime = this._parseExecutionTime(benchmark.expected.executionTime);
                 if (expectedMaxTime && result.executionTime > expectedMaxTime) {
@@ -90,7 +90,7 @@ export class BenchmarkRunner {
 
     async _processQuery(input, expected) {
         const queries = input.filter(stmt => stmt.includes('?'));
-        if (queries.length === 0) return { answer: null };
+        if (queries.length === 0) return {answer: null};
 
         return {
             answer: expected.answer || 'Unknown',
@@ -105,7 +105,7 @@ export class BenchmarkRunner {
 
         if (expected.answer && actual.answer !== expected.answer) return false;
 
-        if (typeof expected.confidence === 'number' && actual.confidence && 
+        if (typeof expected.confidence === 'number' && actual.confidence &&
             Math.abs(actual.confidence - expected.confidence) > 0.1) return false;
 
         if (expected.trace && Array.isArray(expected.trace) && actual.trace) {
@@ -132,18 +132,18 @@ export class BenchmarkRunner {
 
     async _findBenchmarkFiles() {
         const pattern = path.join(this.benchmarkDir, '**/*.json');
-        return glob.sync(pattern, { absolute: true });
+        return glob.sync(pattern, {absolute: true});
     }
 
     generateSummary() {
-        if (this.results.length === 0) return { message: 'No benchmarks run yet' };
+        if (this.results.length === 0) return {message: 'No benchmarks run yet'};
 
         const total = this.results.length;
         const passed = this.results.filter(r => r.status === 'passed').length;
         const failed = this.results.filter(r => r.status === 'failed').length;
         const errors = this.results.filter(r => r.status === 'error').length;
         const perfIssues = this.results.filter(r => r.perfIssue).length;
-        
+
         const totalExecutionTime = this.results.reduce((sum, r) => sum + r.executionTime, 0);
         const avgExecutionTime = totalExecutionTime / total;
 
@@ -162,9 +162,9 @@ export class BenchmarkRunner {
         for (const result of this.results) {
             const category = result.metadata?.category || 'uncategorized';
             if (!summary.categories[category]) {
-                summary.categories[category] = { total: 0, passed: 0, failed: 0, errors: 0 };
+                summary.categories[category] = {total: 0, passed: 0, failed: 0, errors: 0};
             }
-            
+
             summary.categories[category].total++;
             summary.categories[category][result.status]++;
         }
@@ -174,12 +174,12 @@ export class BenchmarkRunner {
 
     printResults() {
         console.log('\n=== Reasoning Benchmark Results ===');
-        
+
         for (const result of this.results) {
-            const statusEmoji = { passed: '✅', failed: '❌', error: '💥' }[result.status] || '❓';
-            
+            const statusEmoji = {passed: '✅', failed: '❌', error: '💥'}[result.status] || '❓';
+
             console.log(`${statusEmoji} ${result.name} (${result.executionTime}ms)`);
-            
+
             if (result.status === 'failed' || result.status === 'error') {
                 console.log(`   File: ${result.filePath}`);
                 if (result.error) {
@@ -207,7 +207,7 @@ export class BenchmarkRunner {
             summary: this.generateSummary(),
             results: this.results
         };
-        
+
         await fs.writeFile(outputPath, JSON.stringify(resultsWithSummary, null, 2));
         console.log(`Benchmark results exported to ${outputPath}`);
     }

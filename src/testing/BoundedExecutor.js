@@ -15,12 +15,12 @@ export class BoundedExecutor {
             const executeTask = async () => {
                 try {
                     let result;
-                    
+
                     if (nar && cycleLimit > 0) {
                         // If we have a NAR instance and cycle limit, we can enforce cycle limits
                         const initialCycles = nar.cycleCount || 0;
                         result = await taskFn();
-                        
+
                         // Check if cycle count exceeded limit
                         const cyclesExecuted = (nar.cycleCount || 0) - initialCycles;
                         if (cyclesExecuted > cycleLimit) {
@@ -29,7 +29,7 @@ export class BoundedExecutor {
                     } else {
                         result = await taskFn();
                     }
-                    
+
                     clearTimeout(timeoutId);
                     resolve(result);
                 } catch (error) {
@@ -43,8 +43,8 @@ export class BoundedExecutor {
     }
 
     static async inputWithLimits(nar, narseseString, options = {}) {
-        const { timeoutMs = 2000, maxCycles = 20 } = options;
-        
+        const {timeoutMs = 2000, maxCycles = 20} = options;
+
         return this.executeWithTimeout(
             async () => {
                 await nar.input(narseseString);
@@ -61,8 +61,8 @@ export class BoundedExecutor {
     }
 
     static async stepWithLimits(nar, options = {}) {
-        const { timeoutMs = 1000, maxCycles = 1 } = options;
-        
+        const {timeoutMs = 1000, maxCycles = 1} = options;
+
         return this.executeWithTimeout(
             async () => {
                 return await nar.step();
@@ -74,9 +74,9 @@ export class BoundedExecutor {
     }
 
     static async runCyclesWithLimits(nar, count, options = {}) {
-        const { timeoutMs = 2000 } = options;
+        const {timeoutMs = 2000} = options;
         const maxCycles = Math.min(count, 50); // Prevent excessive cycle counts
-        
+
         return this.executeWithTimeout(
             async () => {
                 return await nar.runCycles(maxCycles);

@@ -34,8 +34,13 @@ export class LM extends BaseComponent {
         Object.freeze(this);
     }
 
-    get config() { return {...this._config}; }
-    get metrics() { return this.lmMetrics; }
+    get config() {
+        return {...this._config};
+    }
+
+    get metrics() {
+        return this.lmMetrics;
+    }
 
     async _initialize() {
         if (this.lmMetrics.initialize) {
@@ -90,12 +95,12 @@ export class LM extends BaseComponent {
             return result;
         } catch (error) {
             this.logError(`LM generateText failed for provider ${providerId}:`, error);
-            
+
             if (error.message && error.message.includes('Circuit breaker is OPEN')) {
                 this.logInfo(`Circuit breaker is OPEN for provider ${providerId}, using fallback...`);
                 return this._handleFallback(prompt, options);
             }
-            
+
             throw error;
         }
     }
@@ -110,12 +115,12 @@ export class LM extends BaseComponent {
             return await this.circuitBreaker.execute(() => provider.generateEmbedding(text));
         } catch (error) {
             this.logError(`LM generateEmbedding failed for provider ${providerId}:`, error);
-            
+
             if (error.message && error.message.includes('Circuit breaker is OPEN')) {
                 this.logInfo(`Circuit breaker is OPEN for provider ${providerId}, using fallback...`);
                 return this._handleEmbeddingFallback(text);
             }
-            
+
             throw error;
         }
     }
@@ -135,18 +140,23 @@ export class LM extends BaseComponent {
             }
         } catch (error) {
             this.logError(`LM process failed for provider ${providerId}:`, error);
-            
+
             if (error.message && error.message.includes('Circuit breaker is OPEN')) {
                 this.logInfo(`Circuit breaker is OPEN for provider ${providerId}, using fallback...`);
                 return this._handleFallback(prompt, options);
             }
-            
+
             throw error;
         }
     }
 
-    selectOptimalModel(task, constraints = {}) { return this.modelSelector.select(task, constraints); }
-    getAvailableModels() { return this.modelSelector.getAvailableModels(); }
+    selectOptimalModel(task, constraints = {}) {
+        return this.modelSelector.select(task, constraints);
+    }
+
+    getAvailableModels() {
+        return this.modelSelector.getAvailableModels();
+    }
 
     _countTokens = text => typeof text === 'string' ? text.split(/\s+/).filter(token => token.length > 0).length : 0;
 
@@ -169,8 +179,20 @@ export class LM extends BaseComponent {
         };
     }
 
-    getCircuitBreakerState() { return this.circuitBreaker.getState(); }
-    resetCircuitBreaker() { this.circuitBreaker.reset(); this.logInfo('Circuit breaker reset'); }
-    translateToNarsese(text) { return this.narseseTranslator.toNarsese(text); }
-    translateFromNarsese(narsese) { return this.narseseTranslator.fromNarsese(narsese); }
+    getCircuitBreakerState() {
+        return this.circuitBreaker.getState();
+    }
+
+    resetCircuitBreaker() {
+        this.circuitBreaker.reset();
+        this.logInfo('Circuit breaker reset');
+    }
+
+    translateToNarsese(text) {
+        return this.narseseTranslator.toNarsese(text);
+    }
+
+    translateFromNarsese(narsese) {
+        return this.narseseTranslator.fromNarsese(narsese);
+    }
 }

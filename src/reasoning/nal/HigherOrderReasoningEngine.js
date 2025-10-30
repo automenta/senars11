@@ -11,9 +11,9 @@ export class HigherOrderReasoningEngine {
         this.termFactory = new TermFactory();
         // Register check functions and their corresponding processors - makes it extensible
         this._patternHandlers = [
-            { check: this._isPatternMatchingTerm.bind(this), process: this._processPatternMatching.bind(this) },
-            { check: this._isStatementAsObjectTerm.bind(this), process: this._processStatementAsObject.bind(this) },
-            { check: this._isNestedImplicationTerm.bind(this), process: this._processNestedImplication.bind(this) }
+            {check: this._isPatternMatchingTerm.bind(this), process: this._processPatternMatching.bind(this)},
+            {check: this._isStatementAsObjectTerm.bind(this), process: this._processStatementAsObject.bind(this)},
+            {check: this._isNestedImplicationTerm.bind(this), process: this._processNestedImplication.bind(this)}
         ];
     }
 
@@ -25,7 +25,7 @@ export class HigherOrderReasoningEngine {
      */
     processHigherOrderTerm(term, context) {
         if (!this._isHigherOrderCandidate(term)) {
-            return { result: term, success: false, message: 'Not a higher-order term candidate' };
+            return {result: term, success: false, message: 'Not a higher-order term candidate'};
         }
 
         // Try each pattern handler in sequence until one succeeds
@@ -35,14 +35,14 @@ export class HigherOrderReasoningEngine {
             }
         }
 
-        return { result: term, success: false, message: 'No higher-order pattern matched' };
+        return {result: term, success: false, message: 'No higher-order pattern matched'};
     }
 
     /**
      * Register a new pattern handler for extensibility
      */
     registerPatternHandler(checkFunction, processFunction) {
-        this._patternHandlers.push({ check: checkFunction, process: processFunction });
+        this._patternHandlers.push({check: checkFunction, process: processFunction});
     }
 
     /**
@@ -52,8 +52,8 @@ export class HigherOrderReasoningEngine {
         if (!term?.isCompound || !term.components) return false;
 
         // Check if any component is itself a compound statement
-        return term.components.some(component => this._isLogicalStatement(component)) || 
-               this._isPatternMatchingOperator(term.operator);
+        return term.components.some(component => this._isLogicalStatement(component)) ||
+            this._isPatternMatchingOperator(term.operator);
     }
 
     /**
@@ -94,8 +94,8 @@ export class HigherOrderReasoningEngine {
         if (!term?.isCompound || !term.components) return false;
 
         if (term.operator === '==>' && term.components.length === 2) {
-            return this._isLogicalStatement(term.components[0]) || 
-                   this._isLogicalStatement(term.components[1]);
+            return this._isLogicalStatement(term.components[0]) ||
+                this._isLogicalStatement(term.components[1]);
         }
 
         return false;
@@ -106,27 +106,27 @@ export class HigherOrderReasoningEngine {
      */
     _processPatternMatching(term, context) {
         const [pattern1, pattern2] = term.components;
-        
+
         if (!this._isLogicalStatement(pattern1) || !this._isLogicalStatement(pattern2)) {
-            return { result: term, success: false, message: 'Both arguments must be logical statements' };
+            return {result: term, success: false, message: 'Both arguments must be logical statements'};
         }
 
         // Try to find variable bindings between the two patterns
         const bindings = VariableBindingUtils.matchAndBindVariables(pattern1, pattern2, new Map());
-        
+
         if (bindings) {
             const similarity = this._calculatePatternSimilarity(pattern1, pattern2, bindings);
-            return { 
-                result: this._createSimilarityResult(similarity), 
-                success: true, 
+            return {
+                result: this._createSimilarityResult(similarity),
+                success: true,
                 message: `Patterns matched with similarity: ${similarity}`,
-                bindings 
+                bindings
             };
         } else {
-            return { 
-                result: this._createSimilarityResult(0), 
-                success: true, 
-                message: 'Patterns did not match' 
+            return {
+                result: this._createSimilarityResult(0),
+                success: true,
+                message: 'Patterns did not match'
             };
         }
     }
@@ -135,27 +135,27 @@ export class HigherOrderReasoningEngine {
      * Process terms where statements are treated as objects
      */
     _processStatementAsObject(term, context) {
-        const processedComponents = term.components.map(component => 
-            this._isLogicalStatement(component) 
+        const processedComponents = term.components.map(component =>
+            this._isLogicalStatement(component)
                 ? this._processLogicalStatementAsObject(component, context)
                 : component
         );
 
         const hasChanges = processedComponents.some((comp, idx) => comp !== term.components[idx]);
-        
+
         if (hasChanges) {
-            const newTerm = new Term('compound', 
-                `(${term.operator}, ${processedComponents.map(c => c.name || c.toString()).join(', ')})`, 
-                processedComponents, 
+            const newTerm = new Term('compound',
+                `(${term.operator}, ${processedComponents.map(c => c.name || c.toString()).join(', ')})`,
+                processedComponents,
                 term.operator);
-            return { 
-                result: newTerm, 
-                success: true, 
-                message: 'Processed logical statements as objects' 
+            return {
+                result: newTerm,
+                success: true,
+                message: 'Processed logical statements as objects'
             };
         }
 
-        return { result: term, success: false, message: 'No logical statements to process as objects' };
+        return {result: term, success: false, message: 'No logical statements to process as objects'};
     }
 
     /**
@@ -172,7 +172,7 @@ export class HigherOrderReasoningEngine {
      */
     _processNestedImplication(term, context) {
         if (!term.components || term.components.length !== 2) {
-            return { result: term, success: false, message: 'Nested implication needs exactly 2 components' };
+            return {result: term, success: false, message: 'Nested implication needs exactly 2 components'};
         }
 
         const [antecedent, consequent] = term.components;
@@ -183,7 +183,7 @@ export class HigherOrderReasoningEngine {
             return this._processImplicationToStatement(antecedent, consequent, context);
         }
 
-        return { result: term, success: false, message: 'Neither component is a logical statement' };
+        return {result: term, success: false, message: 'Neither component is a logical statement'};
     }
 
     /**
@@ -193,21 +193,21 @@ export class HigherOrderReasoningEngine {
         const matchingFacts = this._findMatchingFacts(antecedentStatement, context);
 
         if (matchingFacts.length > 0) {
-            const derivedTerm = new Term('compound', 
-                `(higher-order-implication-result, ${consequent.name || consequent.toString()})`, 
-                [consequent], 
+            const derivedTerm = new Term('compound',
+                `(higher-order-implication-result, ${consequent.name || consequent.toString()})`,
+                [consequent],
                 'higher-order-result');
-                
-            return { 
-                result: derivedTerm, 
-                success: true, 
-                message: 'Higher-order implication resolved based on matching facts' 
+
+            return {
+                result: derivedTerm,
+                success: true,
+                message: 'Higher-order implication resolved based on matching facts'
             };
         } else {
-            return { 
-                result: term, 
-                success: true, 
-                message: 'Higher-order implication pending evidence for antecedent' 
+            return {
+                result: term,
+                success: true,
+                message: 'Higher-order implication pending evidence for antecedent'
             };
         }
     }
@@ -219,16 +219,16 @@ export class HigherOrderReasoningEngine {
         const antecedentMatches = this._findMatchingFacts(antecedent, context);
 
         if (antecedentMatches.length > 0) {
-            return { 
-                result: consequentStatement, 
-                success: true, 
-                message: 'Conditional statement derived from true antecedent' 
+            return {
+                result: consequentStatement,
+                success: true,
+                message: 'Conditional statement derived from true antecedent'
             };
         } else {
-            return { 
-                result: term, 
-                success: true, 
-                message: 'Conditional statement awaits evidence for antecedent' 
+            return {
+                result: term,
+                success: true,
+                message: 'Conditional statement awaits evidence for antecedent'
             };
         }
     }
@@ -238,17 +238,17 @@ export class HigherOrderReasoningEngine {
      */
     _findMatchingFacts(term, context) {
         const matches = [];
-        
+
         if (context?.memory?.concepts) {
             for (const concept of context.memory.concepts.values()) {
                 if (concept.beliefs) {
-                    matches.push(...concept.beliefs.filter(belief => 
+                    matches.push(...concept.beliefs.filter(belief =>
                         VariableBindingUtils.matchAndBindVariables(term, belief.term, new Map())
                     ));
                 }
             }
         }
-        
+
         return matches;
     }
 

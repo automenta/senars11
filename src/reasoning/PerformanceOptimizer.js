@@ -33,7 +33,7 @@ export class RuleIndex {
     _tryInferPatterns(rule) {
         // For common NAL rule types, we can infer their patterns
         const ruleName = rule.constructor.name.toLowerCase();
-        
+
         if (ruleName.includes('deduction')) {
             // Deduction rules typically match --> and specific patterns
             this._addOperatorRule('-->', rule);
@@ -308,7 +308,7 @@ export class PerformanceOptimizer {
      */
     async applyRulesWithOptimization(rules, task, context) {
         let applicableRules = rules.filter(rule => rule.canApply && rule.canApply(task));
-        
+
         // Apply prioritization if enabled
         if (this.config.enablePrioritization) {
             applicableRules = this._prioritizeRules(applicableRules);
@@ -335,7 +335,7 @@ export class PerformanceOptimizer {
             // Get stored priority for each rule (default to base priority)
             const priorityA = this._rulePriorities.get(a.id) ?? a.priority;
             const priorityB = this._rulePriorities.get(b.id) ?? b.priority;
-            
+
             // Sort by priority (higher first)
             return priorityB - priorityA;
         });
@@ -347,8 +347,8 @@ export class PerformanceOptimizer {
     updateRuleEffectiveness(ruleId, success, resultCount) {
         if (!this.config.enablePrioritization) return;
 
-        let currentStats = this._rulePriorities.get(ruleId) || { 
-            totalApplications: 0, 
+        let currentStats = this._rulePriorities.get(ruleId) || {
+            totalApplications: 0,
             successfulApplications: 0,
             avgResultCount: 0
         };
@@ -437,7 +437,7 @@ export class PerformanceOptimizer {
         return {
             cacheStats: this.ruleCache ? this.ruleCache.getStats() : null,
             profileCount: this.profiles.size,
-            indexedRules: this.ruleIndex ? 
+            indexedRules: this.ruleIndex ?
                 Array.from(this.ruleIndex._categoryIndex.values()).flat().length : 0,
             hasProfiling: this.config.enableProfiling,
             hasCaching: this.config.enableCaching,

@@ -209,10 +209,17 @@ export class Reasoner {
 
     setReasoningMode(mode, enabled) {
         switch (mode) {
-            case 'symbolic': this.config.enableSymbolicReasoning = enabled; break;
-            case 'temporal': this.config.enableTemporalReasoning = enabled; break;
-            case 'modular': this.config.enableModularReasoning = enabled; break;
-            default: throw new Error(`Unknown reasoning mode: ${mode}`);
+            case 'symbolic':
+                this.config.enableSymbolicReasoning = enabled;
+                break;
+            case 'temporal':
+                this.config.enableTemporalReasoning = enabled;
+                break;
+            case 'modular':
+                this.config.enableModularReasoning = enabled;
+                break;
+            default:
+                throw new Error(`Unknown reasoning mode: ${mode}`);
         }
         return this;
     }

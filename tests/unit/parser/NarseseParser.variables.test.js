@@ -1,5 +1,4 @@
-import { NarseseParser } from '../../../src/parser/NarseseParser.js';
-import { TermFactory } from '../../../src/term/TermFactory.js';
+import {NarseseParser} from '../../../src/parser/NarseseParser.js';
 
 describe('NarseseParser - Variable Parsing', () => {
     const parser = new NarseseParser();

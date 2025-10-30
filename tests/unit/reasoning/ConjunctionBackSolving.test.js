@@ -1,4 +1,4 @@
-import { EvaluationEngine as OperationEvaluationEngine } from '../../../src/reasoning/EvaluationEngine.js';
+import {EvaluationEngine as OperationEvaluationEngine} from '../../../src/reasoning/EvaluationEngine.js';
 import {TermFactory} from '../../../src/term/TermFactory.js';
 import {NAR} from '../../../src/nar/NAR.js';
 

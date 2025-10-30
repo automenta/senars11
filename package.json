@@ -16,7 +16,7 @@
     "dev": "node --watch src/nar/NAR.js",
     "start": "node src/nar/NAR.js",
     "cli": "node src/index.js",
-    "web": "node web-wrapper.js",
+    "web": "node webui.js",
     "build:parser": "npx peggy --format es -o src/parser/peggy-parser.js src/parser/narsese.peggy",
     "slides:dev": "slidev docs/presentations/slides-next.md",
     "slides:pdf": "slidev export docs/presentations/slides-next.md"

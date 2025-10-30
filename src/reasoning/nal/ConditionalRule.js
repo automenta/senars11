@@ -36,7 +36,7 @@ export class ConditionalRule extends NALRule {
         }
 
         const allTasks = RuleUtils.collectTasks(context);
-        
+
         for (const compTask of allTasks) {
             if (compTask === task) continue;
 
@@ -49,7 +49,7 @@ export class ConditionalRule extends NALRule {
                 // One conditional and one non-conditional - check for modus ponens, etc.
                 const ponensResults = this._applyConditionalToFact(task, compTask);
                 results.push(...ponensResults);
-                
+
                 // Also try the reverse order
                 const reversePonensResults = this._applyConditionalToFact(compTask, task);
                 results.push(...reversePonensResults);
@@ -174,7 +174,7 @@ export class ConditionalRule extends NALRule {
 
         // This is for when we might have specific contrapositive patterns
         // (Currently a placeholder - more complex logic would be needed for full contrapositive)
-        
+
         return null;
     }
 

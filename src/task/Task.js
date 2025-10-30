@@ -8,17 +8,17 @@ const DEFAULT_BUDGET = Object.freeze({priority: 0.5, durability: 0.5, quality: 0
 
 export class Task {
     constructor({
-        term,
-        punctuation = '.',
-        truth = null,
-        budget = DEFAULT_BUDGET,
-        stamp = null
-    }) {
+                    term,
+                    punctuation = '.',
+                    truth = null,
+                    budget = DEFAULT_BUDGET,
+                    stamp = null
+                }) {
         if (!(term instanceof Term)) throw new Error('Task must be initialized with a valid Term object.');
 
         this.term = term;
         this.type = PUNCTUATION_TO_TYPE[punctuation] || 'BELIEF';
-        
+
         // Validate truth value based on task type
         if (this.type === 'QUESTION') {
             if (truth !== null) {
@@ -29,7 +29,7 @@ export class Task {
                 throw new Error(`${this.type} tasks must have valid truth values`);
             }
         }
-        
+
         this.truth = this._createTruth(truth);
         this.budget = Object.freeze({...budget});
         this.stamp = stamp || ArrayStamp.createInput();
@@ -40,15 +40,34 @@ export class Task {
         return TYPE_TO_PUNCTUATION[this.type];
     }
 
+    static fromJSON(data) {
+        if (!data) {
+            throw new Error('Task.fromJSON requires valid data object');
+        }
+
+        const reconstructedTerm = data.term ?
+            (typeof data.term === 'string' ?
+                {toString: () => data.term, equals: (other) => other.toString && other.toString() === data.term} :
+                data.term) :
+            null;
+
+        return new Task({
+            term: reconstructedTerm,
+            punctuation: data.punctuation,
+            truth: data.truth ? new Truth(data.truth.frequency || data.truth.f, data.truth.confidence || data.truth.c) : null,
+            budget: data.budget || {priority: 0.5, durability: 0.5, quality: 0.5, cycles: 100, depth: 10}
+        });
+    }
+
     _createTruth(truth) {
         if (truth instanceof Truth) return truth;
         if (!truth) return null;
-        
+
         // Handle format: {frequency, confidence}
         if (truth.frequency !== undefined && truth.confidence !== undefined) {
             return new Truth(truth.frequency, truth.confidence);
         }
-        
+
         return null;
     }
 
@@ -64,7 +83,9 @@ export class Task {
     }
 
     isBelief = () => this.type === 'BELIEF';
+
     isGoal = () => this.type === 'GOAL';
+
     isQuestion = () => this.type === 'QUESTION';
 
     equals(other) {
@@ -83,29 +104,13 @@ export class Task {
             term: this.term.serialize ? this.term.serialize() : this.term.toString(),
             punctuation: this.punctuation,
             type: this.type,
-            truth: this.truth ? this.truth.serialize ? this.truth.serialize() : { f: this.truth.f, c: this.truth.c } : null,
+            truth: this.truth ? this.truth.serialize ? this.truth.serialize() : {
+                f: this.truth.f,
+                c: this.truth.c
+            } : null,
             budget: this.budget,
             stamp: this.stamp.serialize ? this.stamp.serialize() : null,
             version: '1.0.0'
         };
-    }
-
-    static fromJSON(data) {
-        if (!data) {
-            throw new Error('Task.fromJSON requires valid data object');
-        }
-
-        const reconstructedTerm = data.term ? 
-            (typeof data.term === 'string' ? 
-                { toString: () => data.term, equals: (other) => other.toString && other.toString() === data.term } :
-                data.term) :
-            null;
-
-        return new Task({
-            term: reconstructedTerm,
-            punctuation: data.punctuation,
-            truth: data.truth ? new Truth(data.truth.frequency || data.truth.f, data.truth.confidence || data.truth.c) : null,
-            budget: data.budget || {priority: 0.5, durability: 0.5, quality: 0.5, cycles: 100, depth: 10}
-        });
     }
 }

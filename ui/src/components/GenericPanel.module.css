@@ -1,50 +1,50 @@
 .listPanel {
-  max-height: calc(100% - 2rem);
-  overflow-y: auto;
+    max-height: calc(100% - 2rem);
+    overflow-y: auto;
 }
 
 .listItem {
-  padding: 0.5rem;
-  margin: 0.25rem 0;
-  background-color: white;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 0.9rem;
+    padding: 0.5rem;
+    margin: 0.25rem 0;
+    background-color: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.9rem;
 }
 
 .listItemTitle {
-  font-weight: bold;
+    font-weight: bold;
 }
 
 .listItemDetails {
-  font-size: 0.9rem;
+    font-size: 0.9rem;
 }
 
 .listItemTimestamp {
-  font-size: 0.8rem;
-  color: #666;
+    font-size: 0.8rem;
+    color: #666;
 }
 
 .emptyState {
-  padding: 1rem;
-  text-align: center;
-  color: #999;
+    padding: 1rem;
+    text-align: center;
+    color: #999;
 }
 
 .cycleMetrics {
-  margin-bottom: 1rem;
+    margin-bottom: 1rem;
 }
 
 .cycleMetrics div {
-  margin: 0.25rem 0;
+    margin: 0.25rem 0;
 }
 
 .recentCyclesTitle {
-  margin: 1rem 0 0.5rem 0;
-  font-size: 1rem;
+    margin: 1rem 0 0.5rem 0;
+    font-size: 1rem;
 }
 
 .cyclesList {
-  max-height: calc(100% - 8rem);
-  overflow-y: auto;
+    max-height: calc(100% - 8rem);
+    overflow-y: auto;
 }

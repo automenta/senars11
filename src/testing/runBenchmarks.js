@@ -11,18 +11,18 @@ const benchmarkDir = path.join(__dirname, '../../benchmarks');
 
 async function runBenchmarks() {
     console.log('Starting reasoning benchmark suite...\n');
-    
+
     const runner = new BenchmarkRunner({
         benchmarkDir: benchmarkDir
     });
-    
+
     try {
         const results = await runner.runAllBenchmarks();
         runner.printResults();
-        
+
         const outputPath = path.join(__dirname, `../../benchmark-results-${Date.now()}.json`);
         await runner.exportResults(outputPath);
-        
+
         const summary = runner.generateSummary();
         process.exit((summary.failed > 0 || summary.errors > 0) ? 1 : 0);
     } catch (error) {
@@ -35,4 +35,4 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     runBenchmarks();
 }
 
-export { runBenchmarks, BenchmarkRunner };
+export {runBenchmarks, BenchmarkRunner};

@@ -1,9 +1,9 @@
 /**
  * Unit Test for Task Validation - Proper Jest Format
- * 
+ *
  * This test validates that Task instantiation properly validates:
  * 1. BELIEF tasks must have truth values
- * 2. GOAL tasks must have truth values  
+ * 2. GOAL tasks must have truth values
  * 3. QUESTION tasks cannot have truth values
  */
 

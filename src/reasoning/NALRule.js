@@ -147,7 +147,7 @@ export class NALRule extends Rule {
      */
     _substituteVariables(term, bindings, termFactory) {
         if (!term || !bindings || !termFactory) return null;
-        
+
         if (term.isAtomic) {
             // If this is a variable (starts with '?'), try to get its binding
             if (term.name && term.name.startsWith && term.name.startsWith('?')) {

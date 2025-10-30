@@ -14,7 +14,7 @@ export const ResourceLimits = {
 export class SandboxedTool extends BaseTool {
     constructor(config = {}) {
         super(config);
-        
+
         this.memoryLimit = config.memoryLimit || ResourceLimits.MEMORY;
         this.cpuTimeLimit = config.cpuTimeLimit || ResourceLimits.CPU_TIME;
         this.runtimeLimit = config.runtimeLimit || ResourceLimits.RUNTIME;
@@ -26,9 +26,9 @@ export class SandboxedTool extends BaseTool {
             path.join(process.cwd(), 'temp'),
             path.join(process.cwd(), 'work')
         ]);
-        
+
         this.executionDir = path.join(this.workingDir, 'sandboxes', this.constructor.name, Date.now().toString());
-        
+
         this._ensureExecutionDirectory();
     }
 
@@ -38,10 +38,10 @@ export class SandboxedTool extends BaseTool {
         }
 
         const hasCapabilities = await context.engine.capabilityManager.hasAllCapabilities(
-            this.constructor.name.toLowerCase().replace(/tool$/, ''), 
+            this.constructor.name.toLowerCase().replace(/tool$/, ''),
             this.getRequiredCapabilities()
         );
-        
+
         if (!hasCapabilities) {
             const requiredCaps = this.getRequiredCapabilities();
             throw new Error(`Tool lacks required capabilities: ${requiredCaps.join(', ')}`);
@@ -75,14 +75,14 @@ export class SandboxedTool extends BaseTool {
 
     isPathAllowed(targetPath) {
         const resolvedPath = path.resolve(targetPath);
-        
+
         for (const allowedDir of this.allowedPaths) {
             const resolvedAllowedDir = path.resolve(allowedDir);
             if (resolvedPath === resolvedAllowedDir || resolvedPath.startsWith(resolvedAllowedDir + path.sep)) {
                 return true;
             }
         }
-        
+
         return false;
     }
 
@@ -197,7 +197,7 @@ export class SandboxedTool extends BaseTool {
             LC_ALL: process.env.LC_ALL || 'C.UTF-8'
         };
 
-        return { ...safeEnv, ...additionalEnv };
+        return {...safeEnv, ...additionalEnv};
     }
 
     async cleanup() {

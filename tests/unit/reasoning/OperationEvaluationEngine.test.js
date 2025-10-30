@@ -1,4 +1,4 @@
-import { EvaluationEngine as OperationEvaluationEngine } from '../../../src/reasoning/EvaluationEngine.js';
+import {EvaluationEngine as OperationEvaluationEngine} from '../../../src/reasoning/EvaluationEngine.js';
 import {TermFactory} from '../../../src/term/TermFactory.js';
 
 describe('OperationEvaluationEngine (Unified)', () => {
@@ -309,7 +309,6 @@ describe('OperationEvaluationEngine (Unified)', () => {
         expect(result.success).toBe(true);
         expect(result.result.name).toBe('echo: hello');
     });
-
 
 
     test('should handle nested compound term evaluation', async () => {

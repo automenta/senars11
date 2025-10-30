@@ -5,6 +5,7 @@ A web-based user interface for a reasoning engine built with React, FlexLayout, 
 ## Overview
 
 This UI provides an IDE-like environment for interacting with a reasoning engine. It features:
+
 - Dynamic panel docking and layout management
 - Real-time communication with a server via WebSockets
 - Comprehensive error handling
@@ -57,8 +58,8 @@ This UI provides an IDE-like environment for interacting with a reasoning engine
    This will start the Vite development server on http://localhost:5173
 
 3. **Run tests:**
-   - Unit tests: `npm run test`
-   - E2E tests: `npm run e2e`
+    - Unit tests: `npm run test`
+    - E2E tests: `npm run e2e`
 
 4. **Code quality checks:**
    ```bash
@@ -93,11 +94,13 @@ The UI communicates with the server via WebSockets using the following message t
 
 ## Theme System
 
-The UI supports light and dark themes that can be toggled. Themes are persisted in localStorage and respect system preferences by default.
+The UI supports light and dark themes that can be toggled. Themes are persisted in localStorage and respect system
+preferences by default.
 
 ## Error Handling
 
 The application includes:
+
 - React Error Boundaries for component-level errors
 - Global error handling via Zustand store
 - Console bridging to forward browser logs to the server

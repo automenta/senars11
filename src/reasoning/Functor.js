@@ -57,7 +57,7 @@ export class FunctorRegistry {
         if (this.functors.has(name)) {
             // Check if the functors are functionally equivalent to avoid unnecessary warnings
             const existingFunctor = this.functors.get(name);
-            if (existingFunctor && 
+            if (existingFunctor &&
                 existingFunctor.execute.toString() === functor.execute.toString() &&
                 existingFunctor.arity === functor.arity &&
                 existingFunctor.isCommutative === functor.isCommutative &&
@@ -138,13 +138,13 @@ export class FunctorRegistry {
     // Enhanced registration method with configuration options
     registerFunctor(name, execute, config = {}) {
         const functor = new ConcreteFunctor(name, execute, config);
-        
+
         if (this.functors.has(name)) {
             this.logger?.warn(`Functor ${name} is already registered, replacing it.`);
         }
-        
+
         this.functors.set(name, functor);
-        
+
         return functor;
     }
 
@@ -163,7 +163,7 @@ export class FunctorRegistry {
     getFunctorProperties(name) {
         const functor = this.get(name);
         if (!functor) return null;
-        
+
         return {
             name: functor.name,
             arity: functor.arity,
@@ -177,8 +177,8 @@ export class FunctorRegistry {
     hasProperty(name, property) {
         const functor = this.get(name);
         if (!functor) return false;
-        
-        switch(property) {
+
+        switch (property) {
             case 'commutative':
                 return functor.isCommutative;
             case 'associative':
@@ -191,10 +191,10 @@ export class FunctorRegistry {
     // Get all functors with a specific property
     getFunctorsWithProperty(property) {
         const result = [];
-        
+
         for (const [name, functor] of this.functors.entries()) {
             let hasProp = false;
-            switch(property) {
+            switch (property) {
                 case 'commutative':
                     hasProp = functor.isCommutative;
                     break;
@@ -205,12 +205,12 @@ export class FunctorRegistry {
                     hasProp = functor.config[property] === true;
                     break;
             }
-            
+
             if (hasProp) {
                 result.push({name, functor});
             }
         }
-        
+
         return result;
     }
 }

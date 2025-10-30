@@ -55,14 +55,14 @@ export class HigherOrderRule extends NALRule {
 
             // Attempt to match the outer structure while considering inner statements
             const bindings = this._unify(task.term, compTask.term);
-            
+
             if (bindings) {
                 // Create a derived term by substituting bindings
                 const derivedTerm = this._substituteVariables(task.term, bindings);
-                
+
                 // Calculate truth value for the derived statement
                 const derivedTruth = this._calculateTruth(task.truth, compTask.truth);
-                
+
                 results.push(this._createDerivedTask(task, {
                     term: derivedTerm,
                     truth: derivedTruth,

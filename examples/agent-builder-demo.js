@@ -1,7 +1,7 @@
 /**
  * Example demonstrating the AgentBuilder functionality
  */
-import { AgentBuilder } from '../src/config/AgentBuilder.js';
+import {AgentBuilder} from '../src/config/AgentBuilder.js';
 
 // Example 1: Create an agent with default configuration
 console.log('=== Creating agent with default configuration ===');
@@ -12,7 +12,7 @@ console.log('Default agent created successfully');
 console.log('\n=== Creating agent with metrics and embeddings enabled ===');
 const customAgent = new AgentBuilder()
     .withMetrics(true)
-    .withEmbeddings({ model: 'text-embedding-ada-002', enabled: true })
+    .withEmbeddings({model: 'text-embedding-ada-002', enabled: true})
     .withLM(true)
     .withTools(false)
     .withFunctors(['core-arithmetic'])
@@ -30,7 +30,7 @@ const configAgent = new AgentBuilder()
     .withConfig({
         subsystems: {
             metrics: true,
-            embeddingLayer: { enabled: true, model: 'test-model' },
+            embeddingLayer: {enabled: true, model: 'test-model'},
             functors: ['core-arithmetic', 'set-operations'],
             rules: ['syllogistic-core'],
             tools: false,
@@ -49,7 +49,7 @@ const minimalAgent = new AgentBuilder()
     .withConfig({
         subsystems: {
             metrics: false,
-            embeddingLayer: { enabled: false },
+            embeddingLayer: {enabled: false},
             functors: [],
             rules: [],
             tools: false,

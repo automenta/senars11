@@ -14,18 +14,18 @@ describe('TruthFunctions - Property Based Tests', () => {
                     if (Number.isNaN(f1) || Number.isNaN(c1) || Number.isNaN(f2) || Number.isNaN(c2)) {
                         return true;
                     }
-                    
+
                     const t1 = new Truth(f1, c1);
                     const t2 = new Truth(f2, c2);
                     const result = TruthFunctions.deduction(t1, t2);
-                    
+
                     if (result) {
                         expect(result.frequency).toBeGreaterThanOrEqual(0);
                         expect(result.frequency).toBeLessThanOrEqual(1);
                         expect(result.confidence).toBeGreaterThanOrEqual(0);
                         expect(result.confidence).toBeLessThanOrEqual(1);
                     }
-                    
+
                     return true;
                 }
             )
@@ -43,18 +43,18 @@ describe('TruthFunctions - Property Based Tests', () => {
                     if (Number.isNaN(f1) || Number.isNaN(c1) || Number.isNaN(f2) || Number.isNaN(c2)) {
                         return true;
                     }
-                    
+
                     const t1 = new Truth(f1, c1);
                     const t2 = new Truth(f2, c2);
                     const result = TruthFunctions.induction(t1, t2);
-                    
+
                     if (result) {
                         expect(result.frequency).toBeGreaterThanOrEqual(0);
                         expect(result.frequency).toBeLessThanOrEqual(1);
                         expect(result.confidence).toBeGreaterThanOrEqual(0);
                         expect(result.confidence).toBeLessThanOrEqual(1);
                     }
-                    
+
                     return true;
                 }
             )
@@ -72,18 +72,18 @@ describe('TruthFunctions - Property Based Tests', () => {
                     if (Number.isNaN(f1) || Number.isNaN(c1) || Number.isNaN(f2) || Number.isNaN(c2)) {
                         return true;
                     }
-                    
+
                     const t1 = new Truth(f1, c1);
                     const t2 = new Truth(f2, c2);
                     const result = TruthFunctions.abduction(t1, t2);
-                    
+
                     if (result) {
                         expect(result.frequency).toBeGreaterThanOrEqual(0);
                         expect(result.frequency).toBeLessThanOrEqual(1);
                         expect(result.confidence).toBeGreaterThanOrEqual(0);
                         expect(result.confidence).toBeLessThanOrEqual(1);
                     }
-                    
+
                     return true;
                 }
             )
@@ -99,18 +99,18 @@ describe('TruthFunctions - Property Based Tests', () => {
                     if (Number.isNaN(f) || Number.isNaN(c)) {
                         return true;
                     }
-                    
+
                     const t1 = new Truth(f, c);
                     const t2 = new Truth(f, c);
                     const result = TruthFunctions.revision(t1, t2);
-                    
+
                     if (result) {
                         expect(result.frequency).toBeCloseTo(f, 5);
-                        
+
                         expect(result.confidence).toBeGreaterThanOrEqual(0);
                         expect(result.confidence).toBeLessThanOrEqual(1);
                     }
-                    
+
                     return true;
                 }
             )
@@ -126,15 +126,15 @@ describe('TruthFunctions - Property Based Tests', () => {
                     if (Number.isNaN(f) || Number.isNaN(c)) {
                         return true;
                     }
-                    
+
                     const t = new Truth(f, c);
                     const result = TruthFunctions.negation(t);
-                    
+
                     if (result) {
                         expect(result.frequency).toBeCloseTo(1 - f, 5);
                         expect(result.confidence).toBeCloseTo(c, 5);
                     }
-                    
+
                     return true;
                 }
             )
@@ -150,13 +150,13 @@ describe('TruthFunctions - Property Based Tests', () => {
                     if (Number.isNaN(f) || Number.isNaN(c)) {
                         return true;
                     }
-                    
+
                     const t = new Truth(f, c);
                     const expectation = TruthFunctions.expectation(t);
-                    
+
                     expect(expectation).toBeGreaterThanOrEqual(0);
                     expect(expectation).toBeLessThanOrEqual(1);
-                    
+
                     return true;
                 }
             )
@@ -172,14 +172,14 @@ describe('TruthFunctions - Property Based Tests', () => {
                     if (Number.isNaN(f) || Number.isNaN(c)) {
                         return true;
                     }
-                    
+
                     const t = new Truth(f, c);
                     const result = TruthFunctions.conversion(t);
-                    
+
                     if (result) {
                         expect(result.confidence).toBeLessThanOrEqual(f);
                     }
-                    
+
                     return true;
                 }
             )
@@ -199,18 +199,18 @@ describe('NAL Rules - Property Based Tests', () => {
                     if (Number.isNaN(f1) || Number.isNaN(c1) || Number.isNaN(f2) || Number.isNaN(c2)) {
                         return true;
                     }
-                    
+
                     const t1 = new Truth(f1, c1);
                     const t2 = new Truth(f2, c2);
                     const result = TruthFunctions.deduction(t1, t2);
-                    
+
                     if (result) {
                         const expectedConfidence = c1 * c2;
                         expect(result.confidence).toBeCloseTo(expectedConfidence, 5);
-                        
+
                         expect(result.confidence).toBeGreaterThan(0.64);
                     }
-                    
+
                     return true;
                 }
             )
@@ -228,16 +228,16 @@ describe('NAL Rules - Property Based Tests', () => {
                     if (Number.isNaN(f1) || Number.isNaN(c1) || Number.isNaN(f2) || Number.isNaN(c2)) {
                         return true;
                     }
-                    
+
                     const t1 = new Truth(f1, c1);
                     const t2 = new Truth(f2, c2);
                     const result = TruthFunctions.induction(t1, t2);
-                    
+
                     if (result) {
                         const expectedMaxConfidence = c1 * c2;
                         expect(result.confidence).toBeLessThanOrEqual(expectedMaxConfidence);
                     }
-                    
+
                     return true;
                 }
             )
@@ -255,16 +255,16 @@ describe('NAL Rules - Property Based Tests', () => {
                     if (Number.isNaN(f1) || Number.isNaN(c1) || Number.isNaN(f2) || Number.isNaN(c2)) {
                         return true;
                     }
-                    
+
                     const t1 = new Truth(f1, c1);
                     const t2 = new Truth(f2, c2);
                     const result = TruthFunctions.abduction(t1, t2);
-                    
+
                     if (result) {
                         const expectedMaxConfidence = Math.min(c1 * c2, c2);
                         expect(result.confidence).toBeLessThanOrEqual(expectedMaxConfidence);
                     }
-                    
+
                     return true;
                 }
             )
@@ -281,25 +281,25 @@ describe('NAL Reasoning Edge Cases - Property Based Tests', () => {
                     if (Number.isNaN(f)) {
                         return true;
                     }
-                    
+
                     const t1 = new Truth(f, 0);
                     const t2 = new Truth(f, 0.9);
-                    
+
                     const deductionResult = TruthFunctions.deduction(t1, t2);
                     if (deductionResult) {
                         expect(deductionResult.confidence).toBeCloseTo(0, 5);
                     }
-                    
+
                     const inductionResult = TruthFunctions.induction(t1, t2);
                     if (inductionResult) {
                         expect(inductionResult.confidence).toBeCloseTo(0, 5);
                     }
-                    
+
                     const abductionResult = TruthFunctions.abduction(t1, t2);
                     if (abductionResult) {
                         expect(abductionResult.confidence).toBeCloseTo(0, 5);
                     }
-                    
+
                     return true;
                 }
             )
@@ -317,14 +317,14 @@ describe('NAL Reasoning Edge Cases - Property Based Tests', () => {
                     if (Number.isNaN(c1) || Number.isNaN(c2)) {
                         return true;
                     }
-                    
+
                     const t1 = new Truth(f1, c1);
                     const t2 = new Truth(f2, c2);
-                    
+
                     const deduction = TruthFunctions.deduction(t1, t2);
                     const induction = TruthFunctions.induction(t1, t2);
                     const abduction = TruthFunctions.abduction(t1, t2);
-                    
+
                     [deduction, induction, abduction].forEach(result => {
                         if (result) {
                             expect(result.frequency).toBeGreaterThanOrEqual(0);
@@ -333,7 +333,7 @@ describe('NAL Reasoning Edge Cases - Property Based Tests', () => {
                             expect(result.confidence).toBeLessThanOrEqual(1);
                         }
                     });
-                    
+
                     return true;
                 }
             )

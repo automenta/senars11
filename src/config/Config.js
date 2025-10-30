@@ -53,7 +53,7 @@ export const DEFAULT_CONFIG = {
 /**
  * Configuration validator
  */
-import { validateConfigWithDefaults } from './ConfigValidator.js';
+import {validateConfigWithDefaults} from './ConfigValidator.js';
 
 export class ConfigValidator {
     /**

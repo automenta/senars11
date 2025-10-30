@@ -3,7 +3,7 @@ export class Plugin {
         if (new.target === Plugin) {
             throw new TypeError('Cannot instantiate Plugin directly. Please extend the Plugin class.');
         }
-        
+
         this.id = id;
         this.config = config;
         this.initialized = false;
@@ -81,10 +81,17 @@ export class Plugin {
         }
     }
 
-    async _initialize() {}
-    async _start() {}
-    async _stop() {}
-    async _dispose() {}
+    async _initialize() {
+    }
+
+    async _start() {
+    }
+
+    async _stop() {
+    }
+
+    async _dispose() {
+    }
 
     getStatus() {
         return {
@@ -170,10 +177,10 @@ export class PluginManager {
                     ...this.context,
                     pluginManager: this
                 })
-                .catch(error => {
-                    console.error(`Failed to initialize plugin ${id}:`, error);
-                    allSuccessful = false;
-                })
+                    .catch(error => {
+                        console.error(`Failed to initialize plugin ${id}:`, error);
+                        allSuccessful = false;
+                    })
             );
         }
 
@@ -194,13 +201,13 @@ export class PluginManager {
         for (const [id, plugin] of this.plugins) {
             promises.push(
                 plugin.start()
-                .then(success => {
-                    if (!success) allSuccessful = false;
-                })
-                .catch(error => {
-                    console.error(`Failed to start plugin ${id}:`, error);
-                    allSuccessful = false;
-                })
+                    .then(success => {
+                        if (!success) allSuccessful = false;
+                    })
+                    .catch(error => {
+                        console.error(`Failed to start plugin ${id}:`, error);
+                        allSuccessful = false;
+                    })
             );
         }
 
@@ -215,13 +222,13 @@ export class PluginManager {
         for (const [id, plugin] of this.plugins) {
             promises.push(
                 plugin.stop()
-                .then(success => {
-                    if (!success) allSuccessful = false;
-                })
-                .catch(error => {
-                    console.error(`Failed to stop plugin ${id}:`, error);
-                    allSuccessful = false;
-                })
+                    .then(success => {
+                        if (!success) allSuccessful = false;
+                    })
+                    .catch(error => {
+                        console.error(`Failed to stop plugin ${id}:`, error);
+                        allSuccessful = false;
+                    })
             );
         }
 
@@ -236,13 +243,13 @@ export class PluginManager {
         for (const [id, plugin] of this.plugins) {
             promises.push(
                 plugin.dispose()
-                .then(success => {
-                    if (!success) allSuccessful = false;
-                })
-                .catch(error => {
-                    console.error(`Failed to dispose plugin ${id}:`, error);
-                    allSuccessful = false;
-                })
+                    .then(success => {
+                        if (!success) allSuccessful = false;
+                    })
+                    .catch(error => {
+                        console.error(`Failed to dispose plugin ${id}:`, error);
+                        allSuccessful = false;
+                    })
             );
         }
 

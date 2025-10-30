@@ -11,6 +11,7 @@ npm run web
 ```
 
 This will:
+
 1. Start the SeNARS WebSocket monitoring server on ws://localhost:8080/ws
 2. Start the Vite development server for the web UI (typically on http://localhost:5174/)
 3. Enable real-time communication between the reasoning system and the UI
@@ -25,6 +26,7 @@ The following environment variables can be used to customize the WebSocket serve
 ## Shutdown
 
 To stop both servers gracefully, press `Ctrl+C`. This will:
+
 1. Save the current NAR state to `agent.json`
 2. Stop the WebSocket server
 3. Stop the reasoning system
@@ -33,6 +35,7 @@ To stop both servers gracefully, press `Ctrl+C`. This will:
 ## How it works
 
 The wrapper script:
+
 - Initializes a NAR (Non-Axiomatic Reasoning) instance
 - Sets up a WebSocket monitor to provide real-time data
 - Starts the reasoning cycle

@@ -9,7 +9,10 @@
   ],
   "expected": {
     "answer": "(A --> C) & (+3).",
-    "trace": ["nal.temporal-deduction", "nal.temporal-inference"],
+    "trace": [
+      "nal.temporal-deduction",
+      "nal.temporal-inference"
+    ],
     "confidence": 0.72,
     "executionTime": "<1500"
   },

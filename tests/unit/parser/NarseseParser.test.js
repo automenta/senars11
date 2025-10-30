@@ -1,5 +1,5 @@
-import { NarseseParser } from '../../../src/parser/NarseseParser.js';
-import { Term } from '../../../src/term/Term.js';
+import {NarseseParser} from '../../../src/parser/NarseseParser.js';
+import {Term} from '../../../src/term/Term.js';
 
 describe('NarseseParser', () => {
     const parser = new NarseseParser();
@@ -30,6 +30,6 @@ describe('NarseseParser', () => {
 
     test('parses a statement with a truth value', () => {
         const result = parser.parse('a. %1.0;0.9%');
-        expect(result.truthValue).toEqual({ frequency: 1.0, confidence: 0.9 });
+        expect(result.truthValue).toEqual({frequency: 1.0, confidence: 0.9});
     });
 });

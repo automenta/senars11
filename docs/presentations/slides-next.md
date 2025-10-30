@@ -498,13 +498,13 @@ SeNARS is designed for **adaptive self-improvement**:
 
 ---
 
-| Strategy               | Approach                     | Use Case                           |
-|------------------------|------------------------------|------------------------------------|
-| **Rule Effectiveness** | Track success/failure rates  | Adapt rule selection and priorities|
-| **Performance Metrics**| Monitor execution times      | Optimize reasoning workflows        |
-| **Cognitive Load**     | Balance task complexity      | Maintain reasoning efficiency       |
-| **Resource Management**| Adaptive memory consolidation| Optimize memory utilization         |
-| **Error Recovery**     | Circuit breaker mechanisms   | Maintain system resilience          |
+| Strategy                | Approach                      | Use Case                            |
+|-------------------------|-------------------------------|-------------------------------------|
+| **Rule Effectiveness**  | Track success/failure rates   | Adapt rule selection and priorities |
+| **Performance Metrics** | Monitor execution times       | Optimize reasoning workflows        |
+| **Cognitive Load**      | Balance task complexity       | Maintain reasoning efficiency       |
+| **Resource Management** | Adaptive memory consolidation | Optimize memory utilization         |
+| **Error Recovery**      | Circuit breaker mechanisms    | Maintain system resilience          |
 
 ---
 
@@ -539,6 +539,7 @@ Specialized temporal concepts:
 SeNARS implements a robust component architecture with standardized interfaces:
 
 **BaseComponent Features**:
+
 - **Initialization Framework**: Standardized initialization with configuration support
 - **Metrics Collection**: Base metrics and statistics gathering
 - **Logging Integration**: Consistent logging across all components
@@ -548,6 +549,7 @@ SeNARS implements a robust component architecture with standardized interfaces:
 ---
 
 **Component Management**:
+
 - **Lifecycle Management**: Initialize, start, stop, and dispose patterns
 - **Dependency Management**: Explicit dependency relationships between components
 - **Configuration System**: Centralized configuration with validation and defaults
@@ -579,7 +581,7 @@ SeNARS supports a comprehensive set of Narsese expressions:
 | **Implication**            | `(premise ==> conclusion)` | `(cat ==> furry)`                   |
 | **Negation**               | `(--, term)`               | `(--, cat)`                         |
 | **Conjunction**            | `(&, term1, term2, ...)`   | `(&, cat, dog)`                     |
-| **Disjunction**            | `(\|, term1, term2, ...)` | `(\|, cat, dog)`                    |
+| **Disjunction**            | `(\|, term1, term2, ...)`  | `(\|, cat, dog)`                    |
 | **Extensional Difference** | `(#, term1, term2)`        | `(#, cat, dog)`                     |
 | **Intensional Difference** | `(\, term1, term2)`        | `(\, cat, dog)`                     |
 | **Instance**               | `(term {-- class)`         | `(cat {-- animal)`                  |

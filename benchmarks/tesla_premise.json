@@ -8,7 +8,10 @@
   ],
   "expected": {
     "answer": "(my_car --> needs_electricity).",
-    "trace": ["nal.deduction", "nal.inheritance"],
+    "trace": [
+      "nal.deduction",
+      "nal.inheritance"
+    ],
     "confidence": 0.8,
     "executionTime": "<1000"
   },

@@ -36,46 +36,6 @@ export class NAR extends BaseComponent {
         this._registerComponents();
     }
 
-    _initComponents(config) {
-        const lmEnabled = config.lm?.enabled === true;
-        this._termFactory = new TermFactory();
-        this._memory = new Memory(this._config.memory);
-        this._parser = new NarseseParser(this._termFactory);
-        this._focus = new Focus(this._config.focus);
-        this._taskManager = new TaskManager(this._memory, this._focus, this._config.taskManager);
-        this._evaluator = new EvaluationEngine(null, this._termFactory);
-        this._lm = lmEnabled ? new LM() : null;
-        this._ruleEngine = new RuleEngine(this._config.ruleEngine || {}, this._lm, this._termFactory);
-        const strategy = lmEnabled
-            ? new CoordinatedReasoningStrategy(this._ruleEngine, this._config.reasoning || {})
-            : new NaiveExhaustiveStrategy(this._config.reasoning || {});
-        this._cycle = new Cycle({
-            memory: this._memory,
-            focus: this._focus,
-            ruleEngine: this._ruleEngine,
-            taskManager: this._taskManager,
-            evaluator: this._evaluator,
-            config: this._config.get('cycle'),
-            reasoningStrategy: strategy,
-            termFactory: this._termFactory,
-            nar: this
-        });
-        this._initOptionalComponents(config);
-    }
-
-    _initOptionalComponents(config) {
-        this._toolIntegration = config.tools?.enabled !== false ? new ToolIntegration(config.tools || {}) : null;
-        if (this._toolIntegration) {
-            this._toolIntegration.connectToReasoningCore(this);
-            this._explanationService = new ExplanationService({ lm: this._lm || null, ...config.tools?.explanation });
-        }
-        this._metricsMonitor = new MetricsMonitor({ eventBus: this._eventBus, nar: this, ...config.metricsMonitor });
-        const embeddingConfig = config.embeddingLayer || { enabled: false };
-        this._embeddingLayer = embeddingConfig.enabled ? new EmbeddingLayer(embeddingConfig) : null;
-        this._termLayer = new TermLayer({ capacity: config.termLayer?.capacity || 1000, ...config.termLayer });
-        this._reasoningAboutReasoning = new ReasoningAboutReasoning(this, { ...config.reasoningAboutReasoning });
-    }
-
     get config() {
         return this._config;
     }
@@ -108,12 +68,69 @@ export class NAR extends BaseComponent {
         return this._componentManager;
     }
 
-    get metricsMonitor() { return this._metricsMonitor; }
-    get evaluator() { return this._evaluator; }
-    get ruleEngine() { return this._ruleEngine; }
-    get embeddingLayer() { return this._embeddingLayer; }
-    get termLayer() { return this._termLayer; }
-    get reasoningAboutReasoning() { return this._reasoningAboutReasoning; }
+    get metricsMonitor() {
+        return this._metricsMonitor;
+    }
+
+    get evaluator() {
+        return this._evaluator;
+    }
+
+    get ruleEngine() {
+        return this._ruleEngine;
+    }
+
+    get embeddingLayer() {
+        return this._embeddingLayer;
+    }
+
+    get termLayer() {
+        return this._termLayer;
+    }
+
+    get reasoningAboutReasoning() {
+        return this._reasoningAboutReasoning;
+    }
+
+    _initComponents(config) {
+        const lmEnabled = config.lm?.enabled === true;
+        this._termFactory = new TermFactory();
+        this._memory = new Memory(this._config.memory);
+        this._parser = new NarseseParser(this._termFactory);
+        this._focus = new Focus(this._config.focus);
+        this._taskManager = new TaskManager(this._memory, this._focus, this._config.taskManager);
+        this._evaluator = new EvaluationEngine(null, this._termFactory);
+        this._lm = lmEnabled ? new LM() : null;
+        this._ruleEngine = new RuleEngine(this._config.ruleEngine || {}, this._lm, this._termFactory);
+        const strategy = lmEnabled
+            ? new CoordinatedReasoningStrategy(this._ruleEngine, this._config.reasoning || {})
+            : new NaiveExhaustiveStrategy(this._config.reasoning || {});
+        this._cycle = new Cycle({
+            memory: this._memory,
+            focus: this._focus,
+            ruleEngine: this._ruleEngine,
+            taskManager: this._taskManager,
+            evaluator: this._evaluator,
+            config: this._config.get('cycle'),
+            reasoningStrategy: strategy,
+            termFactory: this._termFactory,
+            nar: this
+        });
+        this._initOptionalComponents(config);
+    }
+
+    _initOptionalComponents(config) {
+        this._toolIntegration = config.tools?.enabled !== false ? new ToolIntegration(config.tools || {}) : null;
+        if (this._toolIntegration) {
+            this._toolIntegration.connectToReasoningCore(this);
+            this._explanationService = new ExplanationService({lm: this._lm || null, ...config.tools?.explanation});
+        }
+        this._metricsMonitor = new MetricsMonitor({eventBus: this._eventBus, nar: this, ...config.metricsMonitor});
+        const embeddingConfig = config.embeddingLayer || {enabled: false};
+        this._embeddingLayer = embeddingConfig.enabled ? new EmbeddingLayer(embeddingConfig) : null;
+        this._termLayer = new TermLayer({capacity: config.termLayer?.capacity || 1000, ...config.termLayer});
+        this._reasoningAboutReasoning = new ReasoningAboutReasoning(this, {...config.reasoningAboutReasoning});
+    }
 
     _registerComponents() {
         this._componentManager.registerComponent('termFactory', {
@@ -164,12 +181,20 @@ export class NAR extends BaseComponent {
             const added = this._taskManager.addTask(task);
 
             if (added) {
-                this._eventBus.emit('task.input', {task, source: 'user', originalInput: narseseString, parsed}, {traceId: options.traceId});
+                this._eventBus.emit('task.input', {
+                    task,
+                    source: 'user',
+                    originalInput: narseseString,
+                    parsed
+                }, {traceId: options.traceId});
                 await this._processPendingTasks(options.traceId);
             }
             return added;
         } catch (error) {
-            this._eventBus.emit('input.error', {error: error.message, input: narseseString}, {traceId: options.traceId});
+            this._eventBus.emit('input.error', {
+                error: error.message,
+                input: narseseString
+            }, {traceId: options.traceId});
             throw error;
         }
     }
@@ -177,12 +202,12 @@ export class NAR extends BaseComponent {
     _createTask(parsed) {
         const {term, truthValue, punctuation} = parsed;
         const budget = {priority: this._calculateInputPriority(parsed)};
-        
+
         // Determine task type based on punctuation
         const taskType = this._getTaskTypeFromPunctuation(punctuation);
-        
+
         let truth;
-        
+
         if (taskType === 'QUESTION') {
             // Questions should not have truth values
             if (truthValue) {
@@ -209,10 +234,14 @@ export class NAR extends BaseComponent {
 
     _getTaskTypeFromPunctuation(punctuation) {
         switch (punctuation) {
-            case '.': return 'BELIEF';
-            case '!': return 'GOAL';
-            case '?': return 'QUESTION';
-            default: return 'BELIEF'; // Default to belief
+            case '.':
+                return 'BELIEF';
+            case '!':
+                return 'GOAL';
+            case '?':
+                return 'QUESTION';
+            default:
+                return 'BELIEF'; // Default to belief
         }
     }
 
@@ -331,6 +360,39 @@ export class NAR extends BaseComponent {
             timestamp: Date.now(),
             version: '10.0.0'
         };
+    }
+
+    getConcepts() {
+        if (this._memory) {
+            return this._memory.getAllConcepts();
+        }
+        return [];
+    }
+
+    getConceptByName(termString) {
+        if (this._memory) {
+            // Look for existing concept
+            for (const concept of this._memory.getAllConcepts()) {
+                if (concept.term.toString() === termString) {
+                    return concept;
+                }
+            }
+        }
+        return null;
+    }
+
+    getConceptPriorities() {
+        if (this._memory) {
+            return this._memory.getAllConcepts().map(concept => ({
+                term: concept.term.toString(),
+                priority: concept.priority || concept.activation || 0,
+                activation: concept.activation || 0,
+                useCount: concept.useCount || 0,
+                quality: concept.quality || 0,
+                totalTasks: concept.totalTasks || 0
+            }));
+        }
+        return [];
     }
 
     async deserialize(state) {
@@ -458,17 +520,17 @@ export class NAR extends BaseComponent {
     }
 
     async generateWithLM(prompt, options = {}) {
-        return this._withComponentCheck(this._lm, 'Language Model is not enabled in this NAR instance', 
+        return this._withComponentCheck(this._lm, 'Language Model is not enabled in this NAR instance',
             lm => lm.generateText(prompt, options));
     }
 
     translateToNarsese(text) {
-        return this._withComponentCheck(this._lm, 'Language Model is not enabled in this NAR instance', 
+        return this._withComponentCheck(this._lm, 'Language Model is not enabled in this NAR instance',
             lm => lm.translateToNarsese(text));
     }
 
     translateFromNarsese(narsese) {
-        return this._withComponentCheck(this._lm, 'Language Model is not enabled in this NAR instance', 
+        return this._withComponentCheck(this._lm, 'Language Model is not enabled in this NAR instance',
             lm => lm.translateFromNarsese(narsese));
     }
 
@@ -497,7 +559,7 @@ export class NAR extends BaseComponent {
         if (!monitor || typeof monitor.listenToNAR !== 'function') {
             throw new Error('Invalid WebSocket monitor provided');
         }
-        
+
         monitor.listenToNAR(this);
         this.logInfo('Connected to WebSocket monitor for real-time monitoring');
     }

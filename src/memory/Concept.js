@@ -118,13 +118,13 @@ export class Concept extends ConfigurableComponent {
         }
         return added;
     }
-    
+
     enforceCapacity(maxTasksPerType) {
         this._enforceBagCapacity(this._beliefs, maxTasksPerType * CAPACITY_DISTRIBUTION.BELIEF);
         this._enforceBagCapacity(this._goals, maxTasksPerType * CAPACITY_DISTRIBUTION.GOAL);
         this._enforceBagCapacity(this._questions, maxTasksPerType * CAPACITY_DISTRIBUTION.QUESTION);
     }
-    
+
     _enforceBagCapacity(bag, maxCount) {
         if (bag.size > maxCount) {
             while (bag.size > maxCount) {

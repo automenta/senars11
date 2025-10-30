@@ -14,7 +14,7 @@ export class ExtendedNALRule extends NALRule {
             priority: 0.5,
             category: 'extended'
         });
-        
+
         this.ruleType = config?.ruleType || 'general';
     }
 
@@ -36,8 +36,8 @@ export class ExtendedNALRule extends NALRule {
         if (term1.operator !== term2.operator) return false;
         if ((term1.components?.length || 0) !== (term2.components?.length || 0)) return false;
         if (term1.name !== term2.name) return false;
-        
-        return !term1.components || term1.components.every((comp, i) => 
+
+        return !term1.components || term1.components.every((comp, i) =>
             this._structuralEquivalence(comp, term2.components[i]));
     }
 
@@ -50,11 +50,17 @@ export class ExtendedNALRule extends NALRule {
         if (!truth2) return truth1;
 
         const operations = {
-            intersection: (t1, t2) => ({ f: t1.frequency * t2.frequency, c: t1.confidence * t2.confidence }),
-            union: (t1, t2) => ({ f: t1.frequency + t2.frequency - (t1.frequency * t2.frequency), c: t1.confidence * t2.confidence }),
-            difference: (t1, t2) => ({ f: Math.max(0, t1.frequency - t2.frequency), c: t1.confidence * t2.confidence }),
-            comparison: (t1, t2) => ({ f: Math.min(t1.frequency, t2.frequency) / Math.max(t1.frequency, t2.frequency || 0.001), c: t1.confidence * t2.confidence }),
-            default: (t1, t2) => ({ f: (t1.frequency + t2.frequency) / 2, c: Math.min(t1.confidence, t2.confidence) })
+            intersection: (t1, t2) => ({f: t1.frequency * t2.frequency, c: t1.confidence * t2.confidence}),
+            union: (t1, t2) => ({
+                f: t1.frequency + t2.frequency - (t1.frequency * t2.frequency),
+                c: t1.confidence * t2.confidence
+            }),
+            difference: (t1, t2) => ({f: Math.max(0, t1.frequency - t2.frequency), c: t1.confidence * t2.confidence}),
+            comparison: (t1, t2) => ({
+                f: Math.min(t1.frequency, t2.frequency) / Math.max(t1.frequency, t2.frequency || 0.001),
+                c: t1.confidence * t2.confidence
+            }),
+            default: (t1, t2) => ({f: (t1.frequency + t2.frequency) / 2, c: Math.min(t1.confidence, t2.confidence)})
         };
 
         const {f, c} = (operations[operation] || operations.default)(truth1, truth2);
@@ -73,11 +79,11 @@ export class ExtendedNALRule extends NALRule {
         if (!subject || !predicate) return null;
 
         // Conversion: <S --> P> ⊣⊢ <P --> S> (with lower confidence)
-        const converted = new Term('compound', 
-            `(--> ${predicate.name}, ${subject.name})`, 
-            [predicate, subject], 
+        const converted = new Term('compound',
+            `(--> ${predicate.name}, ${subject.name})`,
+            [predicate, subject],
             '-->');
-            
+
         return converted;
     }
 
@@ -93,12 +99,12 @@ export class ExtendedNALRule extends NALRule {
         if (!antecedent || !consequent) return null;
 
         // Contraposition: (A ==> B) ⊢ (¬B ==> ¬A)
-        const contrapositive = new Term('compound', 
-            `(==> (not ${consequent.name}), (not ${antecedent.name}))`, 
-            [new Term('compound', `(not ${consequent.name})`, [consequent], 'not'), 
-             new Term('compound', `(not ${antecedent.name})`, [antecedent], 'not')], 
+        const contrapositive = new Term('compound',
+            `(==> (not ${consequent.name}), (not ${antecedent.name}))`,
+            [new Term('compound', `(not ${consequent.name})`, [consequent], 'not'),
+                new Term('compound', `(not ${antecedent.name})`, [antecedent], 'not')],
             '==>');
-            
+
         return contrapositive;
     }
 }
@@ -118,9 +124,9 @@ export class ConversionRule extends ExtendedNALRule {
     }
 
     _matches(task, context) {
-        return task.term?.isCompound && 
-               task.term.operator === '-->' && 
-               task.term.components?.length === 2;
+        return task.term?.isCompound &&
+            task.term.operator === '-->' &&
+            task.term.components?.length === 2;
     }
 
     async _apply(task, context) {
@@ -129,13 +135,13 @@ export class ConversionRule extends ExtendedNALRule {
         }
 
         const [subject, predicate] = task.term.components;
-        
+
         // Create the converted statement <P --> S>
-        const convertedTerm = new Term('compound', 
-            `(--> ${predicate.name}, ${subject.name})`, 
-            [predicate, subject], 
+        const convertedTerm = new Term('compound',
+            `(--> ${predicate.name}, ${subject.name})`,
+            [predicate, subject],
             '-->');
-        
+
         const derivedTruth = new Truth(
             task.truth.frequency,  // Same frequency
             task.truth.confidence * 0.8  // Lower confidence due to conversion
@@ -166,9 +172,9 @@ export class EquivalenceRule extends ExtendedNALRule {
     }
 
     _matches(task, context) {
-        return task.term?.isCompound && 
-               task.term.operator === '<=>' && 
-               task.term.components?.length === 2;
+        return task.term?.isCompound &&
+            task.term.operator === '<=>' &&
+            task.term.components?.length === 2;
     }
 
     async _apply(task, context) {
@@ -184,7 +190,7 @@ export class EquivalenceRule extends ExtendedNALRule {
             `(==> ${left.name}, ${right.name})`,
             [left, right],
             '==>');
-        
+
         results.push(this._createDerivedTask(task, {
             term: implication1,
             truth: this._calculateNALTruth(task.truth, new Truth(1.0, 0.9), 'intersection'),
@@ -197,7 +203,7 @@ export class EquivalenceRule extends ExtendedNALRule {
             `(==> ${right.name}, ${left.name})`,
             [right, left],
             '==>');
-        
+
         results.push(this._createDerivedTask(task, {
             term: implication2,
             truth: this._calculateNALTruth(task.truth, new Truth(1.0, 0.9), 'intersection'),
@@ -223,9 +229,9 @@ export class NegationRule extends ExtendedNALRule {
     }
 
     _matches(task, context) {
-        return task.term?.isCompound && 
-               task.term.operator === '--' &&  // NAL negation operator
-               task.term.components?.length >= 1;
+        return task.term?.isCompound &&
+            task.term.operator === '--' &&  // NAL negation operator
+            task.term.components?.length >= 1;
     }
 
     async _apply(task, context) {
@@ -270,9 +276,9 @@ export class ConjunctionRule extends ExtendedNALRule {
     }
 
     _matches(task, context) {
-        return task.term?.isCompound && 
-               task.term.operator === '&' && 
-               task.term.components?.length >= 2;
+        return task.term?.isCompound &&
+            task.term.operator === '&' &&
+            task.term.components?.length >= 2;
     }
 
     async _apply(task, context) {
@@ -316,9 +322,9 @@ export class DisjunctionRule extends ExtendedNALRule {
     }
 
     _matches(task, context) {
-        return task.term?.isCompound && 
-               task.term.operator === '|' && 
-               task.term.components?.length >= 2;
+        return task.term?.isCompound &&
+            task.term.operator === '|' &&
+            task.term.components?.length >= 2;
     }
 
     async _apply(task, context) {

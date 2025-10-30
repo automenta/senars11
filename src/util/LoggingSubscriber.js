@@ -7,8 +7,8 @@ export class LoggingSubscriber {
             eventFilter: options.eventFilter || null,
             logger: options.logger || console
         };
-        
-        this.levels = { 'debug': 0, 'info': 1, 'warn': 2, 'error': 3 };
+
+        this.levels = {'debug': 0, 'info': 1, 'warn': 2, 'error': 3};
         this.currentLogLevel = this.levels[this.options.level] || this.levels.info;
         this.stopped = false;
         this.boundMiddleware = this._loggingMiddleware.bind(this);
@@ -59,7 +59,7 @@ export class LoggingSubscriber {
     }
 
     _sanitizeEventData(eventData) {
-        const sanitized = { ...eventData };
+        const sanitized = {...eventData};
         delete sanitized.eventName;
         delete sanitized.timestamp;
         delete sanitized.component;

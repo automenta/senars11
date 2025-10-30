@@ -1,130 +1,130 @@
 :root {
-  /* Light theme variables */
-  --bg-primary: #ffffff;
-  --bg-secondary: #f5f5f5;
-  --text-primary: #333333;
-  --text-secondary: #666666;
-  --border-color: #ddd;
-  --panel-header-bg: #f5f5f5;
-  --panel-header-text: #333;
-  --button-bg: #1976d2;
-  --button-hover-bg: #1565c0;
-  --error-bg: #ffe6e6;
-  --error-text: #d32f2f;
+    /* Light theme variables */
+    --bg-primary: #ffffff;
+    --bg-secondary: #f5f5f5;
+    --text-primary: #333333;
+    --text-secondary: #666666;
+    --border-color: #ddd;
+    --panel-header-bg: #f5f5f5;
+    --panel-header-text: #333;
+    --button-bg: #1976d2;
+    --button-hover-bg: #1565c0;
+    --error-bg: #ffe6e6;
+    --error-text: #d32f2f;
 }
 
 [data-theme="dark"] {
-  /* Dark theme variables */
-  --bg-primary: #1e1e1e;
-  --bg-secondary: #2d2d2d;
-  --text-primary: #e0e0e0;
-  --text-secondary: #b0b0b0;
-  --border-color: #444;
-  --panel-header-bg: #2d2d2d;
-  --panel-header-text: #e0e0e0;
-  --button-bg: #2196f3;
-  --button-hover-bg: #1e88e5;
-  --error-bg: #4c2e2e;
-  --error-text: #ff6b6b;
+    /* Dark theme variables */
+    --bg-primary: #1e1e1e;
+    --bg-secondary: #2d2d2d;
+    --text-primary: #e0e0e0;
+    --text-secondary: #b0b0b0;
+    --border-color: #444;
+    --panel-header-bg: #2d2d2d;
+    --panel-header-text: #e0e0e0;
+    --button-bg: #2196f3;
+    --button-hover-bg: #1e88e5;
+    --error-bg: #4c2e2e;
+    --error-text: #ff6b6b;
 }
 
 body {
-  margin: 0;
-  padding: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  overflow: hidden; /* Prevent default scrolling as FlexLayout handles it */
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow: hidden; /* Prevent default scrolling as FlexLayout handles it */
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
 }
 
 #root {
-  height: 100vh;
-  width: 100vw;
+    height: 100vh;
+    width: 100vw;
 }
 
 /* FlexLayout overrides */
 .flexlayout__layout {
-  width: 100%;
-  height: 100vh;
-  background-color: var(--bg-primary);
+    width: 100%;
+    height: 100vh;
+    background-color: var(--bg-primary);
 }
 
 .flexlayout__tab_toolbar {
-  padding: 4px;
-  background-color: var(--bg-secondary);
-  border-bottom: 1px solid var(--border-color);
+    padding: 4px;
+    background-color: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
 }
 
 .flexlayout__tab {
-  background-color: var(--bg-secondary);
-  color: var(--text-primary);
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
 }
 
 .flexlayout__tab_selected {
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
 }
 
 /* Scrollbar styling */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+    width: 8px;
+    height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--bg-secondary);
+    background: var(--bg-secondary);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--text-secondary);
-  border-radius: 4px;
+    background: var(--text-secondary);
+    border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--text-primary);
+    background: var(--text-primary);
 }
 
 /* Common UI elements */
 button {
-  padding: 8px 16px;
-  background-color: var(--button-bg);
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
+    padding: 8px 16px;
+    background-color: var(--button-bg);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
 }
 
 button:hover {
-  background-color: var(--button-hover-bg);
+    background-color: var(--button-hover-bg);
 }
 
 /* Notification styles */
 .notification {
-  padding: 12px 16px;
-  margin: 8px;
-  border-radius: 4px;
-  background-color: var(--bg-secondary);
-  border-left: 4px solid var(--button-bg);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    padding: 12px 16px;
+    margin: 8px;
+    border-radius: 4px;
+    background-color: var(--bg-secondary);
+    border-left: 4px solid var(--button-bg);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .notification-error {
-  border-left-color: var(--error-text);
+    border-left-color: var(--error-text);
 }
 
 .notification-success {
-  border-left-color: #4caf50;
+    border-left-color: #4caf50;
 }
 
 .notification-warning {
-  border-left-color: #ff9800;
+    border-left-color: #ff9800;
 }
 
 .error-boundary button:hover {
-  background-color: #1565c0;
+    background-color: #1565c0;
 }

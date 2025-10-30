@@ -39,7 +39,11 @@ describe('TaskManager', () => {
 
     test('should process pending tasks', () => {
         const highPriorityTask = new Task({term, budget: {priority: 0.8}, truth: {frequency: 0.9, confidence: 0.8}});
-        const lowPriorityTask = new Task({term: termFactory.create({name: 'B'}), budget: {priority: 0.4}, truth: {frequency: 0.9, confidence: 0.8}});
+        const lowPriorityTask = new Task({
+            term: termFactory.create({name: 'B'}),
+            budget: {priority: 0.4},
+            truth: {frequency: 0.9, confidence: 0.8}
+        });
 
         taskManager.addTask(highPriorityTask);
         taskManager.addTask(lowPriorityTask);
@@ -71,7 +75,11 @@ describe('TaskManager', () => {
 
     test('should get highest priority tasks correctly', () => {
         const task1 = new Task({term, budget: {priority: 0.6}, truth: {frequency: 0.9, confidence: 0.8}});
-        const task2 = new Task({term: termFactory.create({name: 'B'}), budget: {priority: 0.8}, truth: {frequency: 0.9, confidence: 0.8}});
+        const task2 = new Task({
+            term: termFactory.create({name: 'B'}),
+            budget: {priority: 0.8},
+            truth: {frequency: 0.9, confidence: 0.8}
+        });
         taskManager.addTask(task1);
         taskManager.addTask(task2);
         taskManager.processPendingTasks();

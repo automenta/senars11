@@ -1,7 +1,9 @@
 class ForgetPolicy {
-    selectForRemoval(items, itemData, insertionOrder, accessTimes) { }
-    
-    orderItems(items, itemData, insertionOrder, accessTimes) { }
+    selectForRemoval(items, itemData, insertionOrder, accessTimes) {
+    }
+
+    orderItems(items, itemData, insertionOrder, accessTimes) {
+    }
 }
 
 class PriorityForgetPolicy extends ForgetPolicy {
@@ -17,7 +19,7 @@ class PriorityForgetPolicy extends ForgetPolicy {
         }
         return lowestPriorityItem;
     }
-    
+
     orderItems(items, itemData) {
         return [...itemData.entries()]
             .sort((a, b) => b[1] - a[1])
@@ -38,7 +40,7 @@ class LRUForgetPolicy extends ForgetPolicy {
         }
         return leastRecentItem;
     }
-    
+
     orderItems(items, itemData, insertionOrder, accessTimes) {
         return [...accessTimes.entries()]
             .sort((a, b) => b[1] - a[1])
@@ -56,7 +58,7 @@ class FIFOForgetPolicy extends ForgetPolicy {
         }
         return null;
     }
-    
+
     orderItems(items, itemData, insertionOrder) {
         return insertionOrder.filter(item => items.has(item));
     }
@@ -66,11 +68,11 @@ class RandomForgetPolicy extends ForgetPolicy {
     selectForRemoval(items) {
         const itemArray = [...items.keys()];
         if (itemArray.length === 0) return null;
-        
+
         const randomIndex = Math.floor(Math.random() * itemArray.length);
         return itemArray[randomIndex];
     }
-    
+
     orderItems(items) {
         const itemArray = [...items.keys()];
         for (let i = itemArray.length - 1; i > 0; i--) {
@@ -105,7 +107,7 @@ export class Bag {
     get maxSize() {
         return this._maxSize;
     }
-    
+
     set maxSize(newSize) {
         if (newSize < this._maxSize) {
             while (this.size > newSize) {
@@ -114,14 +116,14 @@ export class Bag {
         }
         this._maxSize = newSize;
     }
-    
+
+    get forgetPolicy() {
+        return this._forgetPolicyName;
+    }
+
     setForgetPolicy(policy) {
         this._forgetPolicy = POLICIES[policy] || POLICIES[DEFAULT_POLICY];
         this._forgetPolicyName = policy;
-    }
-    
-    get forgetPolicy() {
-        return this._forgetPolicyName;
     }
 
     add(item) {
@@ -133,10 +135,10 @@ export class Bag {
 
         const priority = item.budget?.priority || 0;
         this._items.set(item, priority);
-        
+
         this._insertionOrder.push(item);
         this._accessTimes.set(item, Date.now());
-        
+
         return true;
     }
 
@@ -155,7 +157,7 @@ export class Bag {
 
     peek() {
         if (this.size === 0) return null;
-        
+
         const orderedItems = this.getItemsInPriorityOrder();
         return orderedItems[0] || null;
     }
@@ -185,12 +187,12 @@ export class Bag {
     _removeItemByPolicy() {
         if (this.size > 0) {
             const itemToRemove = this._forgetPolicy.selectForRemoval(
-                this._items, 
-                this._items, 
-                this._insertionOrder, 
+                this._items,
+                this._items,
+                this._insertionOrder,
                 this._accessTimes
             );
-            
+
             if (itemToRemove !== null) {
                 this.remove(itemToRemove);
             }
@@ -236,12 +238,16 @@ export class Bag {
             this.clear();
 
             if (data.items) {
-                for (const { item: itemData, priority } of data.items) {
+                for (const {item: itemData, priority} of data.items) {
                     if (itemData) {
                         const placeholderItem = {
-                            budget: { priority: priority },
-                            serialize: function() { return itemData; },
-                            toString: function() { return JSON.stringify(itemData); }
+                            budget: {priority: priority},
+                            serialize: function () {
+                                return itemData;
+                            },
+                            toString: function () {
+                                return JSON.stringify(itemData);
+                            }
                         };
                         this.add(placeholderItem);
                     }
@@ -251,8 +257,12 @@ export class Bag {
             if (data.insertionOrder) {
                 this._insertionOrder = data.insertionOrder.map((itemData, index) => {
                     return {
-                        serialize: function() { return itemData.item; },
-                        toString: function() { return JSON.stringify(itemData.item); }
+                        serialize: function () {
+                            return itemData.item;
+                        },
+                        toString: function () {
+                            return JSON.stringify(itemData.item);
+                        }
                     };
                 });
             }

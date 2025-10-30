@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import {z} from 'zod';
 
 const configSchema = z.object({
     memory: z.object({
@@ -74,9 +74,9 @@ const configSchema = z.object({
 const validateConfig = (config) => {
     try {
         const validatedConfig = configSchema.parse(config);
-        return { error: null, value: validatedConfig };
+        return {error: null, value: validatedConfig};
     } catch (error) {
-        return { error: error, value: null };
+        return {error: error, value: null};
     }
 };
 
@@ -89,4 +89,4 @@ const validateConfigWithDefaults = (config) => {
     }
 };
 
-export { validateConfig, validateConfigWithDefaults, configSchema };
+export {validateConfig, validateConfigWithDefaults, configSchema};

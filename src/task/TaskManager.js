@@ -75,7 +75,7 @@ export class TaskManager extends BaseComponent {
         if ((punctuation === '.' || punctuation === '!') && truth === null) {
             truth = new Truth(1.0, 0.9); // Default truth values for NARS
         }
-        
+
         return new Task({
             term,
             truth,
@@ -183,9 +183,9 @@ export class TaskManager extends BaseComponent {
         };
     }
 
-    _getPriorityBucket = (priority) => 
-        priority < PRIORITY_BUCKETS.LOW_THRESHOLD ? 'low' : 
-        priority < PRIORITY_BUCKETS.MEDIUM_THRESHOLD ? 'medium' : 'high';
+    _getPriorityBucket = (priority) =>
+        priority < PRIORITY_BUCKETS.LOW_THRESHOLD ? 'low' :
+            priority < PRIORITY_BUCKETS.MEDIUM_THRESHOLD ? 'medium' : 'high';
 
     clearPendingTasks() {
         this._pendingTasks.clear();
@@ -226,7 +226,7 @@ export class TaskManager extends BaseComponent {
             this._pendingTasks.clear();
 
             if (data.pendingTasks) {
-                for (const { id, task: taskData } of data.pendingTasks) {
+                for (const {id, task: taskData} of data.pendingTasks) {
                     if (taskData) {
                         this._pendingTasks.set(id, Task.fromJSON ? Task.fromJSON(taskData) : null);
                     }
@@ -234,7 +234,7 @@ export class TaskManager extends BaseComponent {
             }
 
             if (data.stats) {
-                this._stats = { ...data.stats };
+                this._stats = {...data.stats};
             }
 
             return true;

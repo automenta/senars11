@@ -1,10 +1,7 @@
-import { Agent } from '../Agent.js';
-import { NAR } from '../nar/NAR.js';
-import { FunctorRegistry } from '../reasoning/Functor.js';
-import { RuleEngine } from '../reasoning/RuleEngine.js';
-import { ToolIntegration } from '../tools/ToolIntegration.js';
-import { SystemConfig } from './SystemConfig.js';
-import { PluginManager } from '../util/Plugin.js';
+import {Agent} from '../Agent.js';
+import {NAR} from '../nar/NAR.js';
+import {SystemConfig} from './SystemConfig.js';
+import {PluginManager} from '../util/Plugin.js';
 
 export class AgentBuilder {
     constructor() {
@@ -34,7 +31,7 @@ export class AgentBuilder {
 
     static createAgent(config = {}) {
         const builder = new AgentBuilder();
-        
+
         if (config) {
             if (config.metrics !== undefined) builder.withMetrics(config.metrics);
             if (config.embeddingLayer !== undefined) builder.withEmbeddings(config.embeddingLayer);
@@ -42,14 +39,14 @@ export class AgentBuilder {
             if (config.rules !== undefined) builder.withRules(config.rules);
             if (config.tools !== undefined) builder.withTools(config.tools);
             if (config.lm !== undefined) builder.withLM(config.lm);
-            
+
             if (config.plugins) {
-                builder.withConfig({ subsystems: { ...builder.config.subsystems, plugins: config.plugins } });
+                builder.withConfig({subsystems: {...builder.config.subsystems, plugins: config.plugins}});
             }
-            
+
             builder.withConfig(config);
         }
-        
+
         return builder.build();
     }
 
@@ -74,14 +71,14 @@ export class AgentBuilder {
                 functors: ['core-arithmetic', 'set-operations'],
                 rules: ['syllogistic-core', 'temporal'],
                 tools: true,
-                lm: { enabled: true }
+                lm: {enabled: true}
             },
             ...config
         });
     }
 
     withConfig(config) {
-        this.config = { ...this.config, ...config };
+        this.config = {...this.config, ...config};
         return this;
     }
 
@@ -122,11 +119,11 @@ export class AgentBuilder {
 
     build() {
         const systemConfig = SystemConfig.from(this._extractSystemConfig(this.config));
-        
+
         const narConfig = this._buildNARConfig();
-        
+
         const nar = new NAR(narConfig);
-        
+
         const agent = new Agent({
             nar,
             ...this.config.agent
@@ -137,11 +134,11 @@ export class AgentBuilder {
             agent,
             eventBus: nar._eventBus || nar.eventBus
         });
-        
+
         if (this.config.subsystems.plugins) {
             this._registerPlugins(pluginManager, this.config.subsystems.plugins);
         }
-        
+
         agent._pluginManager = pluginManager;
 
         if (this.config.subsystems.functors) {
@@ -166,20 +163,20 @@ export class AgentBuilder {
     _buildNARConfig() {
         const narConfig = {
             ...this.config.nar,
-            lm: { enabled: !!this.config.subsystems.lm },
-            tools: { enabled: !!this.config.subsystems.tools }
+            lm: {enabled: !!this.config.subsystems.lm},
+            tools: {enabled: !!this.config.subsystems.tools}
         };
 
         if (this.config.subsystems.metrics) {
-            narConfig.metricsMonitor = typeof this.config.subsystems.metrics === 'object' 
-                ? this.config.subsystems.metrics 
+            narConfig.metricsMonitor = typeof this.config.subsystems.metrics === 'object'
+                ? this.config.subsystems.metrics
                 : {};
         }
 
         if (this.config.subsystems.embeddingLayer) {
             narConfig.embeddingLayer = typeof this.config.subsystems.embeddingLayer === 'object'
                 ? this.config.subsystems.embeddingLayer
-                : { enabled: true };
+                : {enabled: true};
         }
 
         return narConfig;
@@ -228,17 +225,35 @@ export class AgentBuilder {
 
     _registerArithmeticFunctors(registry) {
         const arithmeticOps = [
-            { name: 'add', fn: (a, b) => a + b, commutative: true, associative: true, desc: 'Addition operation' },
-            { name: 'subtract', fn: (a, b) => a - b, commutative: false, associative: false, desc: 'Subtraction operation' },
-            { name: 'multiply', fn: (a, b) => a * b, commutative: true, associative: true, desc: 'Multiplication operation' },
-            { name: 'divide', fn: (a, b) => b !== 0 ? a / b : null, commutative: false, associative: false, desc: 'Division operation' }
+            {name: 'add', fn: (a, b) => a + b, commutative: true, associative: true, desc: 'Addition operation'},
+            {
+                name: 'subtract',
+                fn: (a, b) => a - b,
+                commutative: false,
+                associative: false,
+                desc: 'Subtraction operation'
+            },
+            {
+                name: 'multiply',
+                fn: (a, b) => a * b,
+                commutative: true,
+                associative: true,
+                desc: 'Multiplication operation'
+            },
+            {
+                name: 'divide',
+                fn: (a, b) => b !== 0 ? a / b : null,
+                commutative: false,
+                associative: false,
+                desc: 'Division operation'
+            }
         ];
-        
+
         arithmeticOps.forEach(op => {
             if (!registry.has(op.name)) {
-                registry.registerFunctorDynamic(op.name, op.fn, { 
-                    arity: 2, 
-                    isCommutative: op.commutative, 
+                registry.registerFunctorDynamic(op.name, op.fn, {
+                    arity: 2,
+                    isCommutative: op.commutative,
                     isAssociative: op.associative,
                     description: op.desc
                 });
@@ -248,24 +263,24 @@ export class AgentBuilder {
 
     _registerSetOperationFunctors(registry) {
         const setOps = [
-            { 
-                name: 'union', 
+            {
+                name: 'union',
                 fn: (a, b) => Array.isArray(a) && Array.isArray(b) ? [...new Set([...a, ...b])] : null,
                 commutative: true,
                 desc: 'Set union operation'
             },
-            { 
-                name: 'intersection', 
+            {
+                name: 'intersection',
                 fn: (a, b) => Array.isArray(a) && Array.isArray(b) ? a.filter(x => b.includes(x)) : null,
                 commutative: true,
                 desc: 'Set intersection operation'
             }
         ];
-        
+
         setOps.forEach(op => {
             if (!registry.has(op.name)) {
-                registry.registerFunctorDynamic(op.name, op.fn, { 
-                    arity: 2, 
+                registry.registerFunctorDynamic(op.name, op.fn, {
+                    arity: 2,
                     isCommutative: op.commutative,
                     description: op.desc
                 });
@@ -320,7 +335,7 @@ export class AgentBuilder {
                     pluginManager.registerPlugin(pluginSpec.instance);
                 } else if (pluginSpec && pluginSpec.constructor) {
                     const plugin = new pluginSpec.constructor(
-                        pluginSpec.id || pluginSpec.constructor.name.toLowerCase(), 
+                        pluginSpec.id || pluginSpec.constructor.name.toLowerCase(),
                         pluginSpec.config || {}
                     );
                     pluginManager.registerPlugin(plugin);
@@ -342,9 +357,10 @@ export class AgentBuilder {
 
     _initializeSubsystems(agent, nar) {
         if (this.config.subsystems.tools) {
-            agent.getNAR().initializeTools().catch(() => {});
+            agent.getNAR().initializeTools().catch(() => {
+            });
         }
-        
+
         if (agent._pluginManager) {
             agent._pluginManager.initializeAll().then(success => {
                 if (success) {

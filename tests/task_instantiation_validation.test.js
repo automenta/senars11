@@ -1,13 +1,13 @@
 /**
  * Unit Test for Task Instantiation Validation
- * 
+ *
  * This test verifies that Task instantiation properly validates:
  * 1. BELIEF tasks must have truth values
- * 2. GOAL tasks must have truth values  
+ * 2. GOAL tasks must have truth values
  * 3. QUESTION tasks cannot have truth values
  * 4. Only valid Truth objects are accepted
  * 5. Default punctuation behavior
- * 
+ *
  * Each test either creates a valid Task or throws an appropriate error.
  */
 
@@ -149,7 +149,7 @@ describe('Task Instantiation Validation', () => {
         const truth = new Truth(-1, 2); // Invalid values (clamped by Truth constructor)
         expect(truth.frequency).toBe(0); // Should be clamped to [0,1] range
         expect(truth.confidence).toBe(1); // Should be clamped to [0,1] range
-        
+
         // This should still work in a Task
         const task = new Task({
             term: mockTerm,
@@ -157,7 +157,7 @@ describe('Task Instantiation Validation', () => {
             truth: truth,
             budget: {priority: 0.5}
         });
-        
+
         expect(task).toBeDefined();
         expect(task.truth.frequency).toBe(0);
         expect(task.truth.confidence).toBe(1);
@@ -217,7 +217,7 @@ describe('Task Instantiation Validation', () => {
 // Simple test runner for when executed directly
 if (typeof require !== 'undefined' && require.main === module) {
     console.log('🧪 Running Task Instantiation Validation Tests...');
-    
+
     // Run validation tests manually
     const tests = {
         'BELIEF without truth throws': () => {
@@ -233,7 +233,7 @@ if (typeof require !== 'undefined' && require.main === module) {
                 return e.message.includes('BELIEF tasks must have valid truth values');
             }
         },
-        
+
         'BELIEF with truth succeeds': () => {
             try {
                 const task = new Task({
@@ -247,7 +247,7 @@ if (typeof require !== 'undefined' && require.main === module) {
                 return false;
             }
         },
-        
+
         'QUESTION with truth throws': () => {
             try {
                 new Task({
@@ -261,7 +261,7 @@ if (typeof require !== 'undefined' && require.main === module) {
                 return e.message.includes('Questions cannot have truth values');
             }
         },
-        
+
         'QUESTION without truth succeeds': () => {
             try {
                 const task = new Task({
@@ -276,14 +276,14 @@ if (typeof require !== 'undefined' && require.main === module) {
             }
         }
     };
-    
+
     // Create a simple mock term for the manual run
     const mockTerm = new (require('../src/term/Term.js').Term)({name: 'test'});
-    
+
     Object.entries(tests).forEach(([name, testFn]) => {
         const result = testFn();
         console.log(`${result ? '✅' : '❌'} ${name}: ${result ? 'PASSED' : 'FAILED'}`);
     });
-    
+
     console.log('\\n📋 Task validation tests completed.');
 }

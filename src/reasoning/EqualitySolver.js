@@ -1,6 +1,6 @@
-import { SYSTEM_ATOMS } from './SystemAtoms.js';
-import { TermFactory } from '../term/TermFactory.js';
-import { VariableBindingUtils } from './VariableBindingUtils.js';
+import {SYSTEM_ATOMS} from './SystemAtoms.js';
+import {TermFactory} from '../term/TermFactory.js';
+import {VariableBindingUtils} from './VariableBindingUtils.js';
 
 /**
  * Equality Solver Module for SeNARS v10
@@ -18,16 +18,15 @@ export class EqualitySolver {
         }
 
         const [leftSide, rightSide] = equalityTerm.components;
-        
+
         // Get all variable bindings from matching the two sides
         const bindings = VariableBindingUtils.matchAndBindVariables(leftSide, rightSide, variableBindings);
         if (bindings) {
-            return VariableBindingUtils.createResult(null, true, 'Equality solved', { bindings });
+            return VariableBindingUtils.createResult(null, true, 'Equality solved', {bindings});
         }
 
         return VariableBindingUtils.createResult(SYSTEM_ATOMS.Null, false, 'Could not solve equality');
     }
-
 
 
     // Solve equation involving equality
@@ -39,7 +38,7 @@ export class EqualitySolver {
         }
 
         if (leftTerm.name?.startsWith('?') && leftTerm.name === variableName) {
-            return VariableBindingUtils.createResult(rightTerm, true, 'Direct variable assignment', { solvedVariable: variableName });
+            return VariableBindingUtils.createResult(rightTerm, true, 'Direct variable assignment', {solvedVariable: variableName});
         }
 
         return VariableBindingUtils.createResult(SYSTEM_ATOMS.Null, false, 'No back-solving pattern matched');
@@ -51,24 +50,24 @@ export class EqualitySolver {
         }
 
         const [leftSide, rightSide] = equalityTerm.components;
-        
+
         // Check for direct variable assignment in left side
         if (leftSide.name?.startsWith('?') && leftSide.name === variableName) {
             // If left side is the variable being solved for, return the right side
-            return VariableBindingUtils.createResult(rightSide, true, 'Variable found on left side of equality', { solvedVariable: variableName });
+            return VariableBindingUtils.createResult(rightSide, true, 'Variable found on left side of equality', {solvedVariable: variableName});
         }
 
         // Check for direct variable assignment in right side
         if (rightSide.name?.startsWith('?') && rightSide.name === variableName) {
             // If right side is the variable being solved for, return the left side
-            return VariableBindingUtils.createResult(leftSide, true, 'Variable found on right side of equality', { solvedVariable: variableName });
+            return VariableBindingUtils.createResult(leftSide, true, 'Variable found on right side of equality', {solvedVariable: variableName});
         }
 
         // Perform bidirectional matching and variable binding
         const bindings = VariableBindingUtils.matchAndBindVariables(leftSide, rightSide, variableBindings);
         if (bindings && bindings.has(variableName)) {
             const boundValue = bindings.get(variableName);
-            return VariableBindingUtils.createResult(boundValue, true, 'Variable found through bidirectional matching', { solvedVariable: variableName });
+            return VariableBindingUtils.createResult(boundValue, true, 'Variable found through bidirectional matching', {solvedVariable: variableName});
         }
 
         return VariableBindingUtils.createResult(SYSTEM_ATOMS.Null, false, 'Target variable not found in equality expression');

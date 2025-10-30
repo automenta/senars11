@@ -252,7 +252,7 @@ export class ReasoningContext {
      */
     addBelief(term, truth) {
         const key = term.toString();
-        this._beliefBase.set(key, { term, truth, timestamp: Date.now() });
+        this._beliefBase.set(key, {term, truth, timestamp: Date.now()});
         this.incrementMetric('beliefsAdded');
         return this;
     }
@@ -289,7 +289,7 @@ export class ReasoningContext {
     getConflictsFor(term) {
         const termStr = term.toString();
         return [...this._conflictTracker.entries()]
-            .filter(([key, conflict]) => 
+            .filter(([key, conflict]) =>
                 conflict.term1.toString() === termStr || conflict.term2.toString() === termStr
             )
             .map(([key, conflict]) => conflict);
@@ -480,7 +480,7 @@ export class ReasoningContext {
      */
     checkConsistency() {
         let inconsistencies = [];
-        
+
         // Check for direct contradictions in the belief base
         for (const [key1, belief1] of this._beliefBase.entries()) {
             for (const [key2, belief2] of this._beliefBase.entries()) {
@@ -498,7 +498,7 @@ export class ReasoningContext {
                 }
             }
         }
-        
+
         return inconsistencies;
     }
 
@@ -509,7 +509,7 @@ export class ReasoningContext {
         // This is a very basic implementation - a real system would have more sophisticated logic
         const str1 = term1.toString();
         const str2 = term2.toString();
-        
+
         // Check for simple negation patterns
         return (str1 === `~${str2}` || str2 === `~${str1}`);
     }
@@ -520,13 +520,13 @@ export class ReasoningContext {
     getRelatedBeliefs(term) {
         const termStr = term.toString();
         const related = [];
-        
+
         for (const [key, belief] of this._beliefBase.entries()) {
             if (key.includes(termStr)) {
                 related.push(belief);
             }
         }
-        
+
         return related;
     }
 }

@@ -9,14 +9,14 @@ async function testBeliefDisappearance() {
 
     console.log('\\nInputting (a-->b). %1.0;0.9%');
     await nar.input('(a-->b). %1.0;0.9%');
-    
+
     console.log('\\nAfter input:');
     const beliefs1 = nar.getBeliefs();
     console.log(`Beliefs: ${beliefs1.length}`);
     beliefs1.forEach((task, i) => {
         const term = task.term?.toString?.() || task.term || 'Unknown';
         const truth = task.truth ? `${task.truth.frequency},${task.truth.confidence}` : 'NULL';
-        console.log(`  ${i+1}. ${term} [${truth}]`);
+        console.log(`  ${i + 1}. ${term} [${truth}]`);
     });
 
     console.log('\\nRunning 1 reasoning cycle...');
@@ -28,7 +28,7 @@ async function testBeliefDisappearance() {
     beliefs2.forEach((task, i) => {
         const term = task.term?.toString?.() || task.term || 'Unknown';
         const truth = task.truth ? `${task.truth.frequency},${task.truth.confidence}` : 'NULL';
-        console.log(`  ${i+1}. ${term} [${truth}]`);
+        console.log(`  ${i + 1}. ${term} [${truth}]`);
     });
 
     console.log('\\nMemory stats after 1 step:');
@@ -47,7 +47,7 @@ async function testBeliefDisappearance() {
     beliefs3.forEach((task, i) => {
         const term = task.term?.toString?.() || task.term || 'Unknown';
         const truth = task.truth ? `${task.truth.frequency},${task.truth.confidence}` : 'NULL';
-        console.log(`  ${i+1}. ${term} [${truth}]`);
+        console.log(`  ${i + 1}. ${term} [${truth}]`);
     });
 }
 

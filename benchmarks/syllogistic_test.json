@@ -8,7 +8,9 @@
   ],
   "expected": {
     "answer": "(Socrates --> mortal).",
-    "trace": ["nal.deduction"],
+    "trace": [
+      "nal.deduction"
+    ],
     "confidence": 0.81,
     "executionTime": "<500"
   },

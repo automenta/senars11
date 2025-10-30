@@ -3,9 +3,9 @@
  * following OpenNARS approach to ensure tests terminate reliably.
  */
 
-import { NAR } from '../nar/NAR.js';
-import { Task } from '../task/Task.js';
-import { Truth } from '../Truth.js';
+import {NAR} from '../nar/NAR.js';
+import {Task} from '../task/Task.js';
+import {Truth} from '../Truth.js';
 
 /**
  * Runs a SeNARS test with a maximum cycle limit to ensure termination
@@ -19,16 +19,16 @@ export async function runCycleLimitedTest(testFn, maxCycles = 100, config = {}) 
     let cycleCount = 0;
     let result;
     let error = null;
-    
+
     try {
         // Run the test function which should add tasks or set up the system
         result = await testFn(nar);
-        
+
         // Run the reasoning cycle up to the maximum count
         while (cycleCount < maxCycles) {
             const cycleResult = await nar.step();
             cycleCount++;
-            
+
             // Check if the test condition is satisfied
             if (result && typeof result.checkSuccess === 'function') {
                 if (await result.checkSuccess(nar)) {
@@ -41,7 +41,7 @@ export async function runCycleLimitedTest(testFn, maxCycles = 100, config = {}) 
                 }
             }
         }
-        
+
         // If we've reached max cycles without a specific success condition, 
         // consider it successful if no error occurred
         return {
@@ -78,7 +78,7 @@ export function createTestTask(termString, punctuation = '.', frequency = 1.0, c
         term: termString, // In a real implementation, this would be parsed
         punctuation,
         truth: new Truth(frequency, confidence),
-        budget: { priority, durability: 0.7, quality: 0.8 }
+        budget: {priority, durability: 0.7, quality: 0.8}
     });
 }
 
@@ -117,7 +117,7 @@ export class CycleLimitedTester {
             for (const taskSpec of this.testTasks) {
                 await nar.input(`<${taskSpec.taskString}> ${taskSpec.punctuation} %${taskSpec.frequency};${taskSpec.confidence}%`);
             }
-            
+
             return {
                 checkSuccess: async (nar) => {
                     // Check if expected results are met
@@ -140,8 +140,8 @@ export class CycleLimitedTester {
  */
 export async function runNALTest(testFn, maxCycles = 50) {
     return await runCycleLimitedTest(testFn, maxCycles, {
-        lm: { enabled: false }, // Disable LM for pure NAL tests
-        cycle: { delay: 0 } // Run at max speed for tests
+        lm: {enabled: false}, // Disable LM for pure NAL tests
+        cycle: {delay: 0} // Run at max speed for tests
     });
 }
 
@@ -150,7 +150,7 @@ export async function runNALTest(testFn, maxCycles = 50) {
  */
 export async function runHybridTest(testFn, maxCycles = 100) {
     return await runCycleLimitedTest(testFn, maxCycles, {
-        lm: { enabled: true }, // Enable LM for hybrid tests
-        cycle: { delay: 0 } // Run at max speed for tests
+        lm: {enabled: true}, // Enable LM for hybrid tests
+        cycle: {delay: 0} // Run at max speed for tests
     });
 }

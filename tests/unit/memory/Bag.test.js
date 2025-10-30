@@ -44,8 +44,16 @@ describe('Bag', () => {
         let task1, task2;
 
         beforeEach(() => {
-            task1 = new Task({term: createAtom('A'), budget: {priority: 0.5}, truth: {frequency: 0.9, confidence: 0.8}});
-            task2 = new Task({term: createAtom('B'), budget: {priority: 0.8}, truth: {frequency: 0.9, confidence: 0.8}});
+            task1 = new Task({
+                term: createAtom('A'),
+                budget: {priority: 0.5},
+                truth: {frequency: 0.9, confidence: 0.8}
+            });
+            task2 = new Task({
+                term: createAtom('B'),
+                budget: {priority: 0.8},
+                truth: {frequency: 0.9, confidence: 0.8}
+            });
             bag.add(task1);
             bag.add(task2);
         });

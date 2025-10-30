@@ -1,6 +1,5 @@
 import {EvaluationEngine} from '../src/reasoning/EvaluationEngine.js';
 import {TermFactory} from '../src/term/TermFactory.js';
-import {Truth} from '../src/Truth.js';
 
 /**
  * Test suite for MeTTa-style higher-order reasoning capabilities
@@ -33,7 +32,7 @@ describe('MeTTa Higher-Order Reasoning Tests', () => {
 
         // Try to evaluate the higher-order term
         const result = await engine.evaluate(implicationTerm, context);
-        
+
         expect(result.success).toBe(true);
         expect(result.result).toBeDefined();
     });
@@ -43,19 +42,19 @@ describe('MeTTa Higher-Order Reasoning Tests', () => {
         const humanTerm = termFactory.create('Human');
         const mortalTerm = termFactory.create('Mortal');
         const socratesTerm = termFactory.create('Socrates');
-        
+
         const humanMortalImplication = termFactory.create({
             name: '(==>, Human, Mortal)',
             operator: '==>',
             components: [humanTerm, mortalTerm]
         });
-        
+
         const socratesMortalImplication = termFactory.create({
             name: '(==>, Socrates, Mortal)',
             operator: '==>',
             components: [socratesTerm, mortalTerm]
         });
-        
+
         // Create a pattern matching term (Similar, (Human ==> Mortal), (Socrates ==> Mortal))
         const similarOperator = termFactory.create('Similar');
         const patternMatchingTerm = termFactory.create({
@@ -72,7 +71,7 @@ describe('MeTTa Higher-Order Reasoning Tests', () => {
 
         // Evaluate the pattern matching term
         const result = await engine.evaluate(patternMatchingTerm, context);
-        
+
         expect(result.success).toBe(true);
         expect(result.result).toBeDefined();
         expect(result.message).toContain('Higher-order reasoning');
@@ -83,14 +82,14 @@ describe('MeTTa Higher-Order Reasoning Tests', () => {
         const aTerm = termFactory.create({name: 'A'});
         const bTerm = termFactory.create({name: 'B'});
         const cTerm = termFactory.create({name: 'C'});
-        
+
         // (A ==> B)
         const innerImplication = termFactory.create({
             name: '(==>, A, B)',
             operator: '==>',
             components: [aTerm, bTerm]
         });
-        
+
         // ((A ==> B) ==> C)
         const outerImplication = termFactory.create({
             name: '(==>, (A ==> B), C)',
@@ -105,7 +104,7 @@ describe('MeTTa Higher-Order Reasoning Tests', () => {
         };
 
         const result = await engine.evaluate(outerImplication, context);
-        
+
         expect(result.success).toBe(true);
         expect(result.result).toBeDefined();
     });
@@ -114,14 +113,14 @@ describe('MeTTa Higher-Order Reasoning Tests', () => {
         // Test processing terms where logical statements are treated as objects
         const subjectTerm = termFactory.create({name: 'Subject'});
         const predicateTerm = termFactory.create({name: 'Predicate'});
-        
+
         // Create a statement: (Subject --> Predicate)
         const statement = termFactory.create({
             name: '(-->, Subject, Predicate)',
             operator: '-->',
             components: [subjectTerm, predicateTerm]
         });
-        
+
         // Create a term about the statement: (Believes, John, (Subject --> Predicate))
         const johnTerm = termFactory.create({name: 'John'});
         const believesTerm = termFactory.create({name: 'Believes'});
@@ -138,7 +137,7 @@ describe('MeTTa Higher-Order Reasoning Tests', () => {
         };
 
         const result = await engine.evaluate(beliefStatement, context);
-        
+
         expect(result.success).toBe(true);
         expect(result.result).toBeDefined();
     });

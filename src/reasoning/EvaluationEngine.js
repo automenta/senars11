@@ -1,7 +1,7 @@
 import {Term} from '../term/Term.js';
 import {TermFactory} from '../term/TermFactory.js';
 import {ConcreteFunctor, FunctorRegistry} from './Functor.js';
-import {isNull, isTrue, isFalse, SYSTEM_ATOMS} from './SystemAtoms.js';
+import {isFalse, isNull, isTrue, SYSTEM_ATOMS} from './SystemAtoms.js';
 import {VectorOperations} from './VectorOperations.js';
 import {EqualitySolver} from './EqualitySolver.js';
 import {VariableBindingUtils} from './VariableBindingUtils.js';
@@ -17,7 +17,7 @@ export class EvaluationEngine {
         this.termFactory = termFactory || new TermFactory();
         this.equalitySolver = new EqualitySolver(this.termFactory);
         this.higherOrderEngine = new HigherOrderReasoningEngine();
-        
+
         // Advanced features configuration
         this.config = {
             enableCaching: config.enableCaching !== false,
@@ -27,17 +27,17 @@ export class EvaluationEngine {
             enableTypeChecking: config.enableTypeChecking !== false,
             ...config
         };
-        
+
         // Evaluation caches
         if (this.config.enableCaching) {
             this._evaluationCache = new Map();
             this._cacheHits = 0;
             this._cacheMisses = 0;
         }
-        
+
         // Current recursion depth tracking
         this._recursionDepth = 0;
-        
+
         // Rules for functional evaluation (when all arguments are boolean values)
         this.functionalRules = {
             '&': this._reduceAndFunctional.bind(this),
@@ -46,7 +46,7 @@ export class EvaluationEngine {
             '==>': this._reduceImplicationFunctional.bind(this),
             '<=>': this._reduceEquivalenceFunctional.bind(this)
         };
-        
+
         // Rules for structural reduction (traditional NAL logic)
         this.structuralRules = {
             '&': this._reduceAndStructural.bind(this),
@@ -55,7 +55,7 @@ export class EvaluationEngine {
             '==>': this._reduceImplicationStructural.bind(this),
             '<=>': this._reduceEquivalenceStructural.bind(this)
         };
-        
+
         this._initializeDefaultFunctors();
     }
 
@@ -106,7 +106,7 @@ export class EvaluationEngine {
             // Check for higher-order reasoning patterns before standard evaluation
             const higherOrderResult = this.higherOrderEngine.processHigherOrderTerm(term, context);
             if (higherOrderResult.success) {
-                const result = this._createResult(higherOrderResult.result, true, `Higher-order reasoning: ${higherOrderResult.message}`, 
+                const result = this._createResult(higherOrderResult.result, true, `Higher-order reasoning: ${higherOrderResult.message}`,
                     higherOrderResult.bindings ? {bindings: higherOrderResult.bindings} : {});
                 this._setCacheResult(cacheKey, result);
                 return result;
@@ -121,7 +121,7 @@ export class EvaluationEngine {
                     result = await this._evaluateUnifiedOperator(term, context, variableBindings);
                     break;
                 case '^':
-                    result = term.components.length !== 2 
+                    result = term.components.length !== 2
                         ? this._createResult(SYSTEM_ATOMS.Null, false, 'Invalid operation format')
                         : await this._evaluateOperation(term, variableBindings);
                     break;
@@ -146,7 +146,7 @@ export class EvaluationEngine {
     async _evaluateUnifiedOperator(term, context, variableBindings) {
         // Check if all arguments are Boolean atoms (True, False, Null) for functional evaluation
         const isFunctionalEvaluation = this._areAllBooleanValues(term.components, variableBindings);
-        
+
         if (isFunctionalEvaluation) {
             // Perform functional evaluation
             const evaluatorMap = {
@@ -155,9 +155,9 @@ export class EvaluationEngine {
                 '==>': this._evaluateImplicationFunction.bind(this),
                 '<=>': this._evaluateEquivalenceFunction.bind(this)
             };
-            
-            return evaluatorMap[term.operator]?.(term, variableBindings) || 
-                   this._evaluateNonOperation(term, context, variableBindings);
+
+            return evaluatorMap[term.operator]?.(term, variableBindings) ||
+                this._evaluateNonOperation(term, context, variableBindings);
         } else {
             // Create structural compound (the traditional NAL behavior)
             // Also perform structural reduction
@@ -166,7 +166,7 @@ export class EvaluationEngine {
     }
 
     /**
-     * Check if all components are Boolean atoms (True, False, Null) 
+     * Check if all components are Boolean atoms (True, False, Null)
      * This method combines logic from both OperationEvaluationEngine and UnifiedOperatorEvaluator
      */
     _areAllBooleanValues(components, variableBindings) {
@@ -209,15 +209,15 @@ export class EvaluationEngine {
             return this._createResult(SYSTEM_ATOMS.Null, false, 'Equivalence requires exactly 2 arguments');
         }
 
-        const [leftVal, rightVal] = term.components.map(comp => 
+        const [leftVal, rightVal] = term.components.map(comp =>
             this._valueFromSubstitutedTerm(comp, variableBindings)
         );
 
         // Boolean equivalence: A iff B
         return this._createBooleanResult(
             leftVal === rightVal ? SYSTEM_ATOMS.True : SYSTEM_ATOMS.False,
-            leftVal === rightVal 
-                ? 'Boolean equivalence: values are equal' 
+            leftVal === rightVal
+                ? 'Boolean equivalence: values are equal'
                 : 'Boolean equivalence: values are different'
         );
     }
@@ -231,7 +231,7 @@ export class EvaluationEngine {
         }
 
         const [left, right] = term.components;
-        
+
         // Check for variable bindings in both directions
         const leftBound = this._substituteVariables(left, variableBindings);
         const rightBound = this._substituteVariables(right, variableBindings);
@@ -247,7 +247,7 @@ export class EvaluationEngine {
         if (leftBound.isAtomic && rightBound.isAtomic) {
             const leftVal = this._termToValue(leftBound);
             const rightVal = this._termToValue(rightBound);
-            
+
             // For simple values, return True/False
             if (leftVal === rightVal) {
                 return this._createResult(SYSTEM_ATOMS.True, true, 'Equality: atomic values match');
@@ -275,17 +275,17 @@ export class EvaluationEngine {
         if (this._isOperationWithVariable(left) && this._isAtomicOrNumeric(right)) {
             return await this._solveForVariableInOperation(left, right, variableBindings);
         }
-        
+
         // Case 2: Reverse equation like 7 = (X + 3)
         if (this._isOperationWithVariable(right) && this._isAtomicOrNumeric(left)) {
             return await this._solveForVariableInOperation(right, left, variableBindings);
         }
-        
+
         // Case 3: Both sides are operations, like (X + 2) = (3 + Y)
         if (this._isOperationWithVariable(left) && this._isOperationWithVariable(right)) {
             return await this._solveOperationOperationEquation(left, right, variableBindings);
         }
-        
+
         return null; // No equation to solve
     }
 
@@ -312,7 +312,7 @@ export class EvaluationEngine {
      */
     _isAtomicOrNumeric(term) {
         if (term.isAtomic) return true;
-        
+
         // Check if it's a numeric compound like (3,4) or a simple number
         const value = this._termToValue(term);
         return typeof value === 'number' || (Array.isArray(value) && value.every(v => typeof v === 'number'));
@@ -329,7 +329,7 @@ export class EvaluationEngine {
 
         const [functionTerm, argsTerm] = operation.components;
         const functionName = this._resolveFunctionName(functionTerm, variableBindings);
-        
+
         if (!functionName) {
             return this._createResult(SYSTEM_ATOMS.Null, false, 'Unbound variable in function position');
         }
@@ -341,7 +341,7 @@ export class EvaluationEngine {
 
         const args = this._extractArguments(argsTerm, variableBindings);
         const variableIndex = args.findIndex(arg => arg.name?.startsWith('?'));
-        
+
         if (variableIndex === -1) {
             // No variable to solve for, just evaluate the operation
             return await this._evaluateOperation(operation, variableBindings);
@@ -349,24 +349,24 @@ export class EvaluationEngine {
 
         // Try to solve the equation - _solveArithmeticEquation returns an object like result
         const equationResult = this._solveArithmeticEquation(functionName, args, variableIndex, targetValue);
-        
+
         if (equationResult.success) {
             const solvedValue = equationResult.result;
             if (solvedValue && !isNull(solvedValue)) {
                 // Create a binding for the solved variable
                 const newBindings = new Map(variableBindings);
                 newBindings.set(args[variableIndex].name, solvedValue);
-                
+
                 // Return both the solved value and True (indicating successful equation solving)
                 return this._createResult(
-                    SYSTEM_ATOMS.True, 
-                    true, 
-                    `Variable ${args[variableIndex].name} solved to ${solvedValue.name || solvedValue.toString()}`, 
-                    { solvedVariable: args[variableIndex].name, solvedValue, bindings: newBindings }
+                    SYSTEM_ATOMS.True,
+                    true,
+                    `Variable ${args[variableIndex].name} solved to ${solvedValue.name || solvedValue.toString()}`,
+                    {solvedVariable: args[variableIndex].name, solvedValue, bindings: newBindings}
                 );
             }
         }
-        
+
         return null; // Could not solve
     }
 
@@ -417,7 +417,7 @@ export class EvaluationEngine {
     }
 
     _applyFunctionalRule(operator, components) {
-        return this._applyReductionRule(operator, components, this.functionalRules, 
+        return this._applyReductionRule(operator, components, this.functionalRules,
             (op, err) => {
                 console.error(`Error during functional reduction for operator ${op}:`, err.message);
                 console.error('Stack:', err.stack);
@@ -437,19 +437,19 @@ export class EvaluationEngine {
                 return new Term('compound', `(${safeOperator}, ${componentNames.join(', ')})`, safeComponents, safeOperator);
             });
     }
-    
+
     _applyReductionRule(operator, components, rulesMap, errorHandler) {
         // Validate inputs to prevent undefined operators in normal processing
         const safeOperator = operator || 'UNKNOWN';
         const safeComponents = components || [];
         const componentNames = safeComponents.map(comp => comp.name || comp.toString());
         const termName = `(${safeOperator}, ${componentNames.join(', ')})`;
-        
+
         if (!operator) {
             // This should not happen during normal operation - indicates a data flow issue
             return new Term('compound', termName, safeComponents, safeOperator);
         }
-        
+
         const rule = rulesMap[operator];
         if (rule) {
             try {
@@ -487,9 +487,9 @@ export class EvaluationEngine {
         const operand = components[0];
         return this._unaryBooleanOperation(operand,
             val => isTrue(val) ? SYSTEM_ATOMS.False :
-                   isFalse(val) ? SYSTEM_ATOMS.True :
-                   isNull(val) ? SYSTEM_ATOMS.Null :
-                   SYSTEM_ATOMS.Null);
+                isFalse(val) ? SYSTEM_ATOMS.True :
+                    isNull(val) ? SYSTEM_ATOMS.Null :
+                        SYSTEM_ATOMS.Null);
     }
 
     _reduceImplicationFunctional(components) {
@@ -498,7 +498,7 @@ export class EvaluationEngine {
         if (isNull(antecedent) || isNull(consequent)) return SYSTEM_ATOMS.Null;
         return (isFalse(antecedent) || isTrue(consequent)) ? SYSTEM_ATOMS.True
             : (isTrue(antecedent) && isFalse(consequent)) ? SYSTEM_ATOMS.False
-            : SYSTEM_ATOMS.Null;
+                : SYSTEM_ATOMS.Null;
     }
 
     _reduceEquivalenceFunctional(components) {
@@ -507,7 +507,7 @@ export class EvaluationEngine {
         if (isNull(left) || isNull(right)) return SYSTEM_ATOMS.Null;
         return ((isTrue(left) && isTrue(right)) || (isFalse(left) && isFalse(right))) ? SYSTEM_ATOMS.True
             : ((isTrue(left) && isFalse(right)) || (isFalse(left) && isTrue(right))) ? SYSTEM_ATOMS.False
-            : SYSTEM_ATOMS.Null;
+                : SYSTEM_ATOMS.Null;
     }
 
     // Structural reduction rules (NAL logic)
@@ -539,16 +539,16 @@ export class EvaluationEngine {
         if (!components || components.length === 0) return SYSTEM_ATOMS.Null;
 
         const operand = components[0];
-        
+
         // Handle boolean values in negation
         return isTrue(operand) ? SYSTEM_ATOMS.False
             : isFalse(operand) ? SYSTEM_ATOMS.True
-            : isNull(operand) ? SYSTEM_ATOMS.Null
-            // Check for double negation elimination in structural context
-            : (operand.isCompound && operand.operator === '--' && operand.components && operand.components.length > 0) 
-                ? operand.components[0]
-                // For non-boolean terms, return the negation structure
-                : new Term('compound', 'NEGATION', [operand], '--');
+                : isNull(operand) ? SYSTEM_ATOMS.Null
+                    // Check for double negation elimination in structural context
+                    : (operand.isCompound && operand.operator === '--' && operand.components && operand.components.length > 0)
+                        ? operand.components[0]
+                        // For non-boolean terms, return the negation structure
+                        : new Term('compound', 'NEGATION', [operand], '--');
     }
 
     _reduceImplicationStructural(components) {
@@ -560,42 +560,42 @@ export class EvaluationEngine {
         }
 
         const [antecedent, consequent] = components;
-        
+
         // Check for boolean values in implication (NAL logic)
         const isAntFalse = isFalse(antecedent);
         const isConsTrue = isTrue(consequent);
         const isAntTrue = isTrue(antecedent);
         const isConsFalse = isFalse(consequent);
         const isAntOrConsNull = isNull(antecedent) || isNull(consequent);
-        
+
         return isAntFalse || isConsTrue ? SYSTEM_ATOMS.True      // False -> X is True, X -> True is True
             : (isAntTrue && isConsFalse) ? SYSTEM_ATOMS.False    // True -> False is False
-            : isAntOrConsNull ? SYSTEM_ATOMS.Null                // Null in either position gives Null
-            // For NAL concepts, return the implication structure with proper canonical name
-            : new Term('compound', `(==>, ${antecedent.name}, ${consequent.name})`, [antecedent, consequent], '==>');
+                : isAntOrConsNull ? SYSTEM_ATOMS.Null                // Null in either position gives Null
+                    // For NAL concepts, return the implication structure with proper canonical name
+                    : new Term('compound', `(==>, ${antecedent.name}, ${consequent.name})`, [antecedent, consequent], '==>');
     }
 
     _reduceEquivalenceStructural(components) {
         if (!components || components.length !== 2) {
             // If not proper equivalence, return first component or compound term
-            return components && components.length > 0 
-                ? (components.length === 1 ? components[0] : new Term('compound', 'EQUIVALENCE', components, '<=>')) 
+            return components && components.length > 0
+                ? (components.length === 1 ? components[0] : new Term('compound', 'EQUIVALENCE', components, '<=>'))
                 : SYSTEM_ATOMS.Null;
         }
 
         const [left, right] = components;
-        
+
         // Check for boolean values in equivalence (NAL logic)
         const bothTrue = isTrue(left) && isTrue(right);
         const bothFalse = isFalse(left) && isFalse(right);
         const trueFalse = (isTrue(left) && isFalse(right)) || (isFalse(left) && isTrue(right));
         const isLeftOrRightNull = isNull(left) || isNull(right);
-        
+
         return bothTrue || bothFalse ? SYSTEM_ATOMS.True         // Both True or both False
             : trueFalse ? SYSTEM_ATOMS.False                      // One True, one False
-            : isLeftOrRightNull ? SYSTEM_ATOMS.Null              // Null in either position gives Null
-            // For NAL concepts, return the equivalence structure
-            : new Term('compound', 'EQUIVALENCE', [left, right], '<=>');
+                : isLeftOrRightNull ? SYSTEM_ATOMS.Null              // Null in either position gives Null
+                    // For NAL concepts, return the equivalence structure
+                    : new Term('compound', 'EQUIVALENCE', [left, right], '<=>');
     }
 
     /**
@@ -611,11 +611,11 @@ export class EvaluationEngine {
             const processedTerm = reducedComponents.some((comp, idx) => comp !== term.components[idx])
                 ? new Term(term.type, term.name, reducedComponents, term.operator)
                 : term;
-            
+
             // Then apply the reduction to the processed term
             return this.reduce(processedTerm);
         }
-        
+
         // For atomic terms, just return after possible processing
         return this.reduce(term);
     }
@@ -808,7 +808,7 @@ export class EvaluationEngine {
         }
 
         const [leftSide, rightSide] = equalityTerm.components;
-        
+
         // Get all variable bindings from matching the two sides
         const bindings = VariableBindingUtils.matchAndBindVariables(leftSide, rightSide, variableBindings);
         if (bindings) {
@@ -824,7 +824,7 @@ export class EvaluationEngine {
         }
 
         const [leftSide, rightSide] = equalityTerm.components;
-        
+
         // Check for direct variable assignment in left side
         if (leftSide.name?.startsWith('?') && leftSide.name === variableName) {
             // If left side is the variable being solved for, return the right side
@@ -861,7 +861,6 @@ export class EvaluationEngine {
 
         return this._createResult(SYSTEM_ATOMS.Null, false, 'Target variable not found in equality expression');
     }
-
 
 
     _containsVariable(term, variableName) {
@@ -1005,19 +1004,19 @@ export class EvaluationEngine {
     _createBooleanResult(result, message) {
         return this._createResult(result, true, message); // Evaluation itself is successful regardless of result
     }
-    
+
     _valueFromSubstitutedTerm(term, variableBindings) {
         return this._termToValue(this._substituteVariables(term, variableBindings));
     }
-    
+
     _binaryBooleanOperation(left, right, operationFn) {
         // Check if both are null first
         if (isNull(left) || isNull(right)) return SYSTEM_ATOMS.Null;
-        
+
         // Apply the operation function
         return operationFn(left, right);
     }
-    
+
     /**
      * Public method to match and bind variables in compound structures
      * Exposes the shared variable binding functionality
@@ -1025,32 +1024,32 @@ export class EvaluationEngine {
     matchAndBindVariables(leftTerm, rightTerm, variableBindings = new Map()) {
         return VariableBindingUtils.matchAndBindVariables(leftTerm, rightTerm, variableBindings);
     }
-    
+
     // Backward compatibility for tests that access the private method directly
     _matchAndBindVariables(leftTerm, rightTerm, variableBindings) {
         return VariableBindingUtils.matchAndBindVariables(leftTerm, rightTerm, variableBindings);
     }
-    
+
     _unaryBooleanOperation(operand, operationFn) {
         return operationFn(operand);
     }
-    
+
     _naryBooleanOperation(components, someCheck1, result1, someCheck2, result2, everyCheck, result3, defaultFn) {
         return components.some(comp => someCheck1(comp)) ? result1 :
-               components.some(comp => someCheck2(comp)) ? result2 :
-               components.every(comp => everyCheck(comp)) ? result3 :
-               defaultFn();
+            components.some(comp => someCheck2(comp)) ? result2 :
+                components.every(comp => everyCheck(comp)) ? result3 :
+                    defaultFn();
     }
-    
+
     _naryStructuralOperation(components, filterCond, check1, result1, check2, result2, allCaseResult, operator, termType) {
         // Filter components based on condition
         const filteredComponents = components.filter(comp => filterCond(comp));
-        
+
         // Check for first condition (False for AND, True for OR)
         if (components.some(comp => check1(comp))) return result1;
         // Check for Null condition
         if (components.some(comp => check2(comp))) return result2;
-        
+
         // If all components were filtered out (e.g., all were True for AND)
         if (filteredComponents.length === 0) return allCaseResult;
         // If only one component remains after filtering
@@ -1088,7 +1087,7 @@ export class EvaluationEngine {
         if (this.config.enableCaching && cacheKey) {
             this._evaluationCache.set(cacheKey, result);
             this._cacheMisses++;
-            
+
             // Limit cache size to prevent memory issues
             if (this._evaluationCache.size > 1000) {
                 // Remove oldest entries (simple FIFO)
@@ -1133,7 +1132,7 @@ export class EvaluationEngine {
      */
     analyzeTerm(term) {
         if (!this.config.enableTypeChecking) {
-            return { isValid: true, type: 'unknown' };
+            return {isValid: true, type: 'unknown'};
         }
 
         // Perform type analysis on the term
@@ -1155,7 +1154,7 @@ export class EvaluationEngine {
      */
     _calculateTermComplexity(term) {
         if (!term.isCompound) return 1;
-        
+
         let complexity = 1; // Base complexity for the term itself
         if (term.components) {
             for (const comp of term.components) {
@@ -1170,11 +1169,11 @@ export class EvaluationEngine {
      */
     _hasVariables(term) {
         if (term.name?.startsWith('?')) return true;
-        
+
         if (term.isCompound && term.components) {
             return term.components.some(comp => this._hasVariables(comp));
         }
-        
+
         return false;
     }
 
@@ -1193,12 +1192,12 @@ export class EvaluationEngine {
             // These operators should have 2 or more components
             return term.components?.length >= 2;
         }
-        
+
         // For other terms, just check if components are valid
         if (term.components) {
             return term.components.every(comp => comp !== undefined);
         }
-        
+
         return true;
     }
 }

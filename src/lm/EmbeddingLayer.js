@@ -11,7 +11,7 @@ export class EmbeddingLayer {
             cacheSize: config.cacheSize || 1000,
             ...config
         };
-        
+
         this.embeddingCache = new Map();
         this.enabled = this.config.enabled;
     }
@@ -27,7 +27,7 @@ export class EmbeddingLayer {
         }
 
         const inputStr = typeof input === 'string' ? input : input.toString();
-        
+
         // Check cache first
         if (this.embeddingCache.has(inputStr)) {
             return this.embeddingCache.get(inputStr);
@@ -35,7 +35,7 @@ export class EmbeddingLayer {
 
         // Generate embedding (this would typically call an actual embedding API)
         const embedding = await this._generateEmbedding(inputStr);
-        
+
         // Cache the result (with size limit)
         if (this.embeddingCache.size >= this.config.cacheSize) {
             const firstKey = this.embeddingCache.keys().next().value;
@@ -53,7 +53,7 @@ export class EmbeddingLayer {
      * @returns {number} - Similarity score (0 to 1)
      */
     calculateSimilarity(embedding1, embedding2) {
-        if (!Array.isArray(embedding1) || !Array.isArray(embedding2) || 
+        if (!Array.isArray(embedding1) || !Array.isArray(embedding2) ||
             embedding1.length !== embedding2.length) {
             return 0;
         }
@@ -97,7 +97,7 @@ export class EmbeddingLayer {
         for (const candidate of candidates) {
             const candidateEmbedding = await this.getEmbedding(candidate);
             const similarity = this.calculateSimilarity(inputEmbedding, candidateEmbedding);
-            
+
             if (similarity >= threshold) {
                 results.push({
                     item: candidate,
@@ -121,12 +121,12 @@ export class EmbeddingLayer {
         // For now, we'll create a simple deterministic hash-based "embedding"
         const hash = this._simpleHash(text);
         const embedding = new Array(1536).fill(0); // Typical size for OpenAI embeddings
-        
+
         // Create a simple deterministic vector based on the hash
         for (let i = 0; i < embedding.length; i++) {
             embedding[i] = Math.sin(hash + i) * 0.5 + 0.5;
         }
-        
+
         return embedding;
     }
 

@@ -26,10 +26,10 @@ export class Repl {
         this.persistenceManager = new PersistenceManager({
             defaultPath: config.persistence?.defaultPath || './agent.json'
         });
-        
+
         // Animation state for emojis
         this.animationState = {spinningIndex: 0};
-        
+
         // State for run command
         this.isRunningLoop = false;
         this.originalTraceState = false;
@@ -42,10 +42,10 @@ export class Repl {
      */
     _encodeShortId(input) {
         if (!input) return 'N/A';
-        
+
         // Convert input to string if it isn't already
         const inputStr = String(input);
-        
+
         // Use a large set of visible unicode characters for high radix encoding
         const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzαβγδεζηθικλμνξοπρστυφχψωАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдежзийклмнопрстуфхцчшщъыьэюя∀∂∃∅∇∈∉∋∌∏∑∙√∝∞∟∠∡∢∣∤∥∦∧∨∩∪∫∬∭∮∯∰∱∲∳∴∵∶∷∸∹∺∻∼∽∾∿≀≁≂≃≄≅≆≇≈≉≊≋≌≍≎≏≐≑≒≓≔≕≖≗≘≙≚≛≜≝≞≟≠≡≢≣≤≥≦≧≨≩≪≫≬≭≮≯≰≱≲≳≴≵≶≷≸≹≺≻≼≽≾≿⊀⊁⊂⊃⊄⊅⊆⊇⊈⊉⊊⊋⊌⊍⊎⊏⊐⊑⊒⊓⊔⊕⊖⊗⊘⊙⊚⊛⊜⊝⊞⊟⊠⊡⊢⊣⊤⊥⊦⊧⊨⊩⊪⊫⊬⊭⊮⊯⊰⊱⊲⊳⊴⊵⊶⊷⊸⊹⊺⊻⊼⊽⊾⊿⋀⋁⋂⋃⋄⋅⋆⋇⋈⋉⋊⋋⋌⋍⋎⋏⋐⋑⋒⋓⋔⋕⋖⋗⋘⋙⋚⋛⋜⋝⋞⋟⋠⋡⋢⋣⋤⋥⋦⋧⋨⋩⋪⋫⋬⋭⋮⋯⋰⋱⋲⋳⋴⋵⋶⋷⋸⋹⋺⋻⋼⋽⋾⋿';
 
@@ -56,35 +56,39 @@ export class Repl {
             hash = ((hash << 5) - hash) + charCode;
             hash |= 0; // Convert to 32bit integer
         }
-        
+
         // Make sure it's positive
         hash = Math.abs(hash);
-        
+
         // Encode using the custom charset
         if (hash === 0) return chars[0];
-        
+
         let result = '';
         const base = chars.length;
         let num = hash;
-        
+
         while (num > 0) {
             result = chars[num % base] + result;
             num = Math.floor(num / base);
         }
-        
+
         // Limit length to 8 characters max for readability
         return result.length > 8 ? result.substring(0, 8) : result;
     }
-    
+
     /**
      * Convert task type to NARS punctuation character
      */
     _getTypePunctuation(type) {
         switch (type?.toUpperCase()) {
-            case 'BELIEF': return '.';
-            case 'GOAL': return '!';
-            case 'QUESTION': return '?';
-            default: return '.';
+            case 'BELIEF':
+                return '.';
+            case 'GOAL':
+                return '!';
+            case 'QUESTION':
+                return '?';
+            default:
+                return '.';
         }
     }
 
@@ -204,7 +208,7 @@ export class Repl {
         const conceptCount = memoryStats?.memoryUsage?.concepts || memoryStats?.totalConcepts || 0;
         const focusTaskCount = memoryStats?.memoryUsage?.focusConcepts || memoryStats?.focusConceptsCount || 0;
         const totalTasks = memoryStats?.memoryUsage?.totalTasks || memoryStats?.totalTasks || 0;
-        
+
         return `📊 System Status:
   ⚡ Running: ${stats.isRunning ? 'Yes' : 'No'}
   🕒 Internal Clock: ${stats.cycleCount}
@@ -225,7 +229,7 @@ export class Repl {
         const avgPriority = memoryStats?.averageActivation || memoryStats?.averagePriority || 0;
         const capacity = this.nar.config?.memory?.maxConcepts || 'N/A';
         const forgettingThreshold = this.nar.config?.memory?.priorityThreshold || 'N/A';
-        
+
         let content = `💾 Memory Statistics:
   🧠 Concepts: ${conceptCount}
   📋 Tasks in Memory: ${taskCount}
@@ -235,7 +239,7 @@ export class Repl {
   📊 Average Concept Priority: ${avgPriority.toFixed(3)}
 
 📋 Detailed Task Information:\n`;
-        
+
         // Get tasks from all concepts in memory
         let tasks = [];
         try {
@@ -275,7 +279,7 @@ export class Repl {
                 const priority = task.budget?.priority !== undefined ? `$${task.budget.priority.toFixed(3)} ` : '';
                 const term = task.term?.toString?.() || task.term || 'Unknown';
                 const punctuation = this._getTypePunctuation(task.type || 'TASK');
-                
+
                 let truthStr = '';
                 if (task.truth) {
                     const freq = task.truth.frequency !== undefined ? task.truth.frequency.toFixed(3) : '1.000';
@@ -285,16 +289,16 @@ export class Repl {
                     // Use default truth values if not set
                     truthStr = ' %1.000,0.900%';  // Default truth values
                 }
-                
-                const occurrence = task.occurrenceTime !== undefined || task.stamp ? 
+
+                const occurrence = task.occurrenceTime !== undefined || task.stamp ?
                     ` ${task.occurrenceTime || ''}@${task.stamp ? this._encodeShortId(task.stamp.id || task.stamp) : ''}`.trim() : '';
-                
+
                 content += `  [${index + 1}]: ${priority}${term}${punctuation}${truthStr}${occurrence}\n`;
             });
         } else {
             content += '  ❌ No tasks in memory\n';
         }
-        
+
         return content;
     }
 
@@ -303,14 +307,14 @@ export class Repl {
         if (beliefs.length === 0) {
             return '🔍 No recent beliefs found.';
         }
-        
+
         let content = '🔍 Recent Beliefs (last 5):\n';
         beliefs.slice(-5).forEach(task => {
             // Format task in NARS style: $priority term<punctuation> %frequency,confidence% occurrence@stamp
             const priority = task.budget?.priority !== undefined ? `$${task.budget.priority.toFixed(3)} ` : '';
             const term = task.term?.toString?.() || task.term?.name || 'Unknown';
             const punctuation = this._getTypePunctuation(task.type || 'BELIEF');
-            
+
             let truthStr = '';
             if (task.truth) {
                 const freq = task.truth.frequency !== undefined ? task.truth.frequency.toFixed(3) : '1.000';
@@ -320,13 +324,13 @@ export class Repl {
                 // Use default truth values if not set
                 truthStr = ' %1.000,0.900%';  // Default truth values
             }
-            
-            const occurrence = task.occurrenceTime !== undefined || task.stamp ? 
+
+            const occurrence = task.occurrenceTime !== undefined || task.stamp ?
                 ` ${task.occurrenceTime || ''}@${task.stamp ? this._encodeShortId(task.stamp.id || task.stamp) : ''}`.trim() : '';
-            
+
             content += `  ${priority}${term}${punctuation}${truthStr}${occurrence}\n`;
         });
-        
+
         return content.trim();
     }
 
@@ -353,19 +357,19 @@ export class Repl {
 
         // Add stop command temporarily to command map
         this.commands.set('stop', this._stop.bind(this));
-        
+
         // Save original trace state
         this.originalTraceState = this.traceEnabled;
-        
+
         this.isRunningLoop = true;
         console.log('🏃 Running continuously... Use "/stop" to stop.');
-        
+
         // Auto-enable trace if it wasn't already enabled
         if (!this.traceEnabled) {
             this.traceEnabled = true;
             console.log('👁️ Trace enabled for this run session');
         }
-        
+
         // Set up the run interval
         this.runInterval = setInterval(async () => {
             try {
@@ -390,16 +394,16 @@ export class Repl {
             this.runInterval = null;
         }
         this.isRunningLoop = false;
-        
+
         // Remove stop command from command map
         this.commands.delete('stop');
-        
+
         // Restore original trace state
         if (!this.originalTraceState && this.traceEnabled) {
             this.traceEnabled = false;
             console.log('↩️  Trace restored to original state');
         }
-        
+
         console.log('\n🛑 Run stopped by user.');
         return '✅ Run stopped.';
     }
@@ -428,8 +432,8 @@ export class Repl {
 
             const state = await this.persistenceManager.loadFromDefault();
             const success = await this.nar.deserialize(state);
-            
-            return success 
+
+            return success
                 ? `💾 NAR state loaded successfully from ${this.persistenceManager.defaultPath}`
                 : '❌ Failed to load NAR state - deserialization error';
         } catch (error) {
@@ -439,11 +443,11 @@ export class Repl {
 
     async _demo(args) {
         const exampleName = args && args.length > 0 ? args[0] : null;
-        
+
         if (!exampleName) {
             return `🎭 Available examples:\n${[
                 'agent-builder-demo     - Demonstrates building agents with various capabilities',
-                'causal-reasoning       - Shows causal reasoning capabilities', 
+                'causal-reasoning       - Shows causal reasoning capabilities',
                 'inductive-reasoning    - Demonstrates inductive inference',
                 'syllogism              - Classic syllogistic reasoning examples',
                 'temporal               - Temporal reasoning demonstrations',
@@ -491,25 +495,25 @@ Usage: /demo <example-name> (without the .js extension)`;
             // Import and run the example
             const path = await import('path');
             const url = await import('url');
-            
+
             // Get the current directory and build the absolute path
             const __filename = url.fileURLToPath(import.meta.url);
             const __dirname = path.dirname(__filename);
             const filePath = path.resolve(__dirname, examplePath);
-            
+
             // Import using file:// URL protocol
             const exampleModule = await import(`file://${filePath}`);
-            
+
             // If the example has a default export that's a function, call it with the current NAR instance
             if (exampleModule.default && typeof exampleModule.default === 'function') {
                 console.log(`\n🎭 Running example: ${exampleName}`);
                 console.log('='.repeat(40));
-                
+
                 await exampleModule.default(this.nar);
-                
+
                 console.log('='.repeat(40));
                 console.log(`🎭 Example ${exampleName} completed.`);
-                
+
                 return '✅ Example executed successfully.';
             } else {
                 // If no default function, just show the import was successful

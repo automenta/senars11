@@ -136,7 +136,7 @@ export class Focus extends BaseComponent {
             }
 
             if (data.config) {
-                this._config = { ...this._config, ...data.config };
+                this._config = {...this._config, ...data.config};
             }
 
             this.clear();
@@ -377,8 +377,8 @@ class FocusSet {
             if (data.tasks) {
                 for (const taskEntry of data.tasks) {
                     if (taskEntry) {
-                        const reconstructedTask = taskEntry.task ? 
-                            (Task.fromJSON ? Task.fromJSON(taskEntry.task) : null) : 
+                        const reconstructedTask = taskEntry.task ?
+                            (Task.fromJSON ? Task.fromJSON(taskEntry.task) : null) :
                             null;
 
                         if (reconstructedTask) {

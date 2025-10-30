@@ -34,20 +34,20 @@ export class Memory extends BaseComponent {
 
         super({...defaultConfig, ...config}, 'Memory');
         this._config = {...this.config, ...config};
-        
+
         this._concepts = new Map();
         this._conceptBag = new Bag(this._config.maxConcepts, this._config.forgetPolicy);
         this._focusConcepts = new Set();
         this._index = new MemoryIndex();
         this._consolidation = new MemoryConsolidation();
-        
-        this._memoryValidator = this._config.enableMemoryValidation 
+
+        this._memoryValidator = this._config.enableMemoryValidation
             ? new MemoryValidator({
                 enableChecksums: true,
                 validationInterval: this._config.memoryValidationInterval
-            }) 
+            })
             : null;
-        
+
         this._stats = {
             totalConcepts: 0,
             totalTasks: 0,
@@ -67,10 +67,21 @@ export class Memory extends BaseComponent {
         this._lastConsolidationTime = Date.now();
     }
 
-    get config() { return {...this._config}; }
-    get concepts() { return new Map(this._concepts); }
-    get focusConcepts() { return new Set(this._focusConcepts); }
-    get stats() { return {...this._stats}; }
+    get config() {
+        return {...this._config};
+    }
+
+    get concepts() {
+        return new Map(this._concepts);
+    }
+
+    get focusConcepts() {
+        return new Set(this._focusConcepts);
+    }
+
+    get stats() {
+        return {...this._stats};
+    }
 
     getConfigValue(key, defaultVal) {
         return this._config[key] !== undefined ? this._config[key] : defaultVal;
@@ -90,12 +101,12 @@ export class Memory extends BaseComponent {
         if (added) {
             this._stats.totalTasks++;
             this._updateResourceUsage(concept, 1);
-            
+
             if (task.budget.priority >= this._config.priorityThreshold) {
                 this._focusConcepts.add(concept);
                 this._updateFocusConceptsCount();
             }
-            
+
             if (this._config.enableAdaptiveForgetting && this._isUnderMemoryPressure()) {
                 this._applyAdaptiveForgetting();
             }
@@ -123,7 +134,7 @@ export class Memory extends BaseComponent {
         if (this._config.forgetPolicy === 'priority') {
             let lowestPriorityConcept = null;
             let lowestPriority = Infinity;
-            
+
             for (const [term, concept] of this._concepts) {
                 const conceptPriority = concept.activation || 0.1;
                 if (conceptPriority < lowestPriority) {
@@ -131,7 +142,7 @@ export class Memory extends BaseComponent {
                     lowestPriorityConcept = {term, concept};
                 }
             }
-            
+
             if (lowestPriorityConcept) {
                 this._removeConceptInternal(lowestPriorityConcept.term);
                 this._stats.conceptsForgotten++;
@@ -139,14 +150,14 @@ export class Memory extends BaseComponent {
         } else if (this._config.forgetPolicy === 'lru') {
             let oldestConcept = null;
             let oldestTime = Infinity;
-            
+
             for (const [term, concept] of this._concepts) {
                 if (concept.lastAccessed < oldestTime) {
                     oldestTime = concept.lastAccessed;
                     oldestConcept = {term, concept};
                 }
             }
-            
+
             if (oldestConcept) {
                 this._removeConceptInternal(oldestConcept.term);
                 this._stats.conceptsForgotten++;
@@ -160,7 +171,7 @@ export class Memory extends BaseComponent {
             }
         }
     }
-    
+
     _removeConceptInternal(term) {
         const concept = this._concepts.get(term);
         if (!concept) return false;
@@ -170,10 +181,10 @@ export class Memory extends BaseComponent {
         this._index.removeConcept(concept);
         this._stats.totalConcepts--;
         this._stats.totalTasks -= concept.totalTasks;
-        
+
         return true;
     }
-    
+
     _findConceptByEquality(term) {
         for (const [key, value] of this._concepts) {
             if (key.equals(term)) return value;
@@ -196,7 +207,7 @@ export class Memory extends BaseComponent {
     }
 
     getMostActiveConcepts(limit = 10, scoringType = 'standard') {
-        return scoringType === 'composite' 
+        return scoringType === 'composite'
             ? this._getMostActiveConceptsByCompositeScoring(limit)
             : this.getAllConcepts()
                 .map(concept => this._calculateConceptScore(concept, ...Object.values(Memory.SCORING_WEIGHTS), ...Object.values(Memory.NORMALIZATION_LIMITS)))
@@ -224,7 +235,7 @@ export class Memory extends BaseComponent {
             complexityWeight: 0.15,
             diversityWeight: 0.1
         };
-        
+
         const {
             activationWeight = defaultWeights.activationWeight,
             useCountWeight = defaultWeights.useCountWeight,
@@ -243,8 +254,8 @@ export class Memory extends BaseComponent {
             const activationScore = concept.activation;
             const qualityScore = concept.quality || 0;
             const complexityScore = this._calculateConceptComplexityScore(concept, termFactory);
-            const diversityScore = cognitiveDiversity 
-                ? this._calculateConceptDiversityScore(concept, cognitiveDiversity) 
+            const diversityScore = cognitiveDiversity
+                ? this._calculateConceptDiversityScore(concept, cognitiveDiversity)
                 : 0;
 
             const compositeScore = (activationScore * activationWeight) +
@@ -255,7 +266,7 @@ export class Memory extends BaseComponent {
                 (diversityScore * diversityWeight) +
                 (this._calculateRecencyScore(concept.lastAccessed) * 0.05);
 
-            return { concept, score: compositeScore };
+            return {concept, score: compositeScore};
         });
 
         scoredConcepts.sort((a, b) => b.score - a.score);
@@ -292,7 +303,7 @@ export class Memory extends BaseComponent {
     }
 
     getConceptsByCompositeScoring(criteria = {}) {
-        const { limit = 10, minScore = 0, scoringOptions = {}, sortBy = 'composite' } = criteria;
+        const {limit = 10, minScore = 0, scoringOptions = {}, sortBy = 'composite'} = criteria;
 
         const concepts = this.getAllConcepts();
         const scoredConcepts = concepts.map(concept => {
@@ -311,9 +322,11 @@ export class Memory extends BaseComponent {
     }
 
     _calculateDetailedConceptScore(concept, options = {}) {
-        const { activationWeight = 0.3, useCountWeight = 0.2, taskCountWeight = 0.2,
+        const {
+            activationWeight = 0.3, useCountWeight = 0.2, taskCountWeight = 0.2,
             qualityWeight = 0.15, complexityWeight = 0.15, diversityWeight = 0.1,
-            termFactory = null } = options;
+            termFactory = null
+        } = options;
 
         const activationScore = concept.activation;
         const normalizedUseCount = clamp(concept.useCount / 100, 0, 1);
@@ -443,10 +456,10 @@ export class Memory extends BaseComponent {
         const conceptKey = concept.term.toString();
         const currentUsage = this._resourceTracker.get(conceptKey) || 0;
         const newUsage = Math.max(0, currentUsage + change);
-        
+
         this._resourceTracker.set(conceptKey, newUsage);
         this._stats.totalResourceUsage += change;
-        
+
         if (this._stats.totalResourceUsage > this._stats.peakResourceUsage) {
             this._stats.peakResourceUsage = this._stats.totalResourceUsage;
         }
@@ -456,18 +469,18 @@ export class Memory extends BaseComponent {
         const conceptPressure = this._stats.totalConcepts / this._config.maxConcepts;
         const resourcePressure = this._stats.totalResourceUsage / this._config.resourceBudget;
         const taskPressure = this._stats.totalTasks / (this._config.maxConcepts * this._config.maxTasksPerConcept);
-        
+
         return Math.max(conceptPressure, resourcePressure, taskPressure) >= this._config.memoryPressureThreshold;
     }
 
     _applyAdaptiveForgetting() {
         this._stats.memoryPressureEvents++;
-        
+
         const conceptsToForget = Math.min(
             Math.floor(this._stats.totalConcepts * 0.1),
             5
         );
-        
+
         for (let i = 0; i < conceptsToForget; i++) {
             this._applyConceptForgetting();
         }
@@ -500,7 +513,7 @@ export class Memory extends BaseComponent {
             concept,
             resourceUsage: this._resourceTracker.get(term.toString()) || 0
         }));
-        
+
         concepts.sort((a, b) => ascending ? a.resourceUsage - b.resourceUsage : b.resourceUsage - a.resourceUsage);
         return concepts;
     }
@@ -514,7 +527,7 @@ export class Memory extends BaseComponent {
                     break;
                 }
             }
-            
+
             if (!conceptExists) {
                 this._resourceTracker.delete(termStr);
                 this._stats.totalResourceUsage -= usage;
@@ -524,7 +537,7 @@ export class Memory extends BaseComponent {
 
     validateMemory() {
         if (!this._memoryValidator) {
-            return { valid: true, message: 'Memory validation is disabled' };
+            return {valid: true, message: 'Memory validation is disabled'};
         }
 
         const validations = [
@@ -535,11 +548,11 @@ export class Memory extends BaseComponent {
 
         const results = this._memoryValidator.validateBatch(validations);
         const invalidResults = results.filter(result => !result.result.valid);
-        
+
         if (invalidResults.length > 0) {
             this._stats.memoryCorruptionEvents++;
             this._stats.validationFailures += invalidResults.length;
-            
+
             this.logger.warn('Memory corruption detected', {
                 invalidCount: invalidResults.length,
                 totalChecked: results.length,
@@ -548,7 +561,7 @@ export class Memory extends BaseComponent {
                     message: r.result.message
                 }))
             });
-            
+
             return {
                 valid: false,
                 message: `Memory corruption detected in ${invalidResults.length} structures`,
@@ -556,7 +569,7 @@ export class Memory extends BaseComponent {
             };
         }
 
-        return { valid: true, message: 'Memory validation passed' };
+        return {valid: true, message: 'Memory validation passed'};
     }
 
     updateMemoryChecksum(key, obj) {
@@ -565,7 +578,7 @@ export class Memory extends BaseComponent {
 
     getMemoryValidationStats() {
         if (!this._memoryValidator) {
-            return { validationEnabled: false };
+            return {validationEnabled: false};
         }
 
         return {
@@ -622,15 +635,18 @@ export class Memory extends BaseComponent {
             this.clear();
 
             if (data.config) {
-                this._config = { ...this._config, ...data.config };
+                this._config = {...this._config, ...data.config};
             }
 
             for (const conceptData of data.concepts) {
                 if (conceptData.concept) {
-                    const term = typeof conceptData.term === 'string' ? 
-                        { toString: () => conceptData.term, equals: (other) => other.toString && other.toString() === conceptData.term } : 
+                    const term = typeof conceptData.term === 'string' ?
+                        {
+                            toString: () => conceptData.term,
+                            equals: (other) => other.toString && other.toString() === conceptData.term
+                        } :
                         conceptData.term;
-                    
+
                     const concept = new Concept(term, this._config);
                     if (concept.deserialize) {
                         await concept.deserialize(conceptData.concept);
@@ -645,7 +661,10 @@ export class Memory extends BaseComponent {
 
             if (data.focusConcepts) {
                 for (const termStr of data.focusConcepts) {
-                    const concept = this._concepts.get({ toString: () => termStr, equals: (other) => other.toString && other.toString() === termStr });
+                    const concept = this._concepts.get({
+                        toString: () => termStr,
+                        equals: (other) => other.toString && other.toString() === termStr
+                    });
                     if (concept) {
                         this._focusConcepts.add(concept);
                     }
@@ -658,7 +677,7 @@ export class Memory extends BaseComponent {
             }
 
             if (data.stats) {
-                this._stats = { ...data.stats };
+                this._stats = {...data.stats};
             }
 
             if (data.resourceTracker) {

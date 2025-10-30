@@ -1,5 +1,5 @@
 import {Logger} from '../util/Logger.js';
-import {CapabilityManager, Capability} from '../util/CapabilityManager.js';
+import {Capability, CapabilityManager} from '../util/CapabilityManager.js';
 
 export class ToolEngine {
     constructor(config = {}) {
@@ -32,7 +32,7 @@ export class ToolEngine {
                 errorPatterns: new Map()
             }
         });
-        
+
         if (!this.capabilityManager) {
             this.capabilityManager = new CapabilityManager();
         }
@@ -68,7 +68,7 @@ export class ToolEngine {
 
         for (const capability of toolCapabilities) {
             if (!this.capabilityManager.capabilities.has(capability)) {
-                await this.capabilityManager.registerCapability(capability, 
+                await this.capabilityManager.registerCapability(capability,
                     new Capability(capability, {
                         description: `Capability for ${capability}`,
                         scope: 'default',
