@@ -46,17 +46,17 @@ export const panelUpdateSchema = messageSchema.extend({
   payload: z.object({ id: z.string(), config: z.record(z.unknown()) }),
 });
 
-export const reasoningStepSchemaMsg = messageSchema.extend({
+export const reasoningStepMessageSchema = messageSchema.extend({
   type: z.literal('reasoningStep'),
   payload: z.object({ step: reasoningStepSchema }),
 });
 
-export const sessionUpdateSchemaMsg = messageSchema.extend({
+export const sessionUpdateMessageSchema = messageSchema.extend({
   type: z.literal('sessionUpdate'),
   payload: sessionUpdateSchema,
 });
 
-export const notificationSchemaMsg = messageSchema.extend({
+export const notificationMessageSchema = messageSchema.extend({
   type: z.literal('notification'),
   payload: notificationSchema,
 });
@@ -125,7 +125,7 @@ export const taskUpdateSchema = messageSchema.extend({
   }),
 });
 
-export const cycleUpdateSchemaMsg = messageSchema.extend({
+export const cycleUpdateMessageSchema = messageSchema.extend({
   type: z.literal('cycleUpdate'),
   payload: z.object({ cycle: cycleUpdateSchema }),
 });
@@ -155,14 +155,14 @@ export const narseseInputSchema = messageSchema.extend({
 const schemaRegistry = {
   'layoutUpdate': layoutUpdateSchema,
   'panelUpdate': panelUpdateSchema,
-  'reasoningStep': reasoningStepSchemaMsg,
-  'sessionUpdate': sessionUpdateSchemaMsg,
-  'notification': notificationSchemaMsg,
+  'reasoningStep': reasoningStepMessageSchema,
+  'sessionUpdate': sessionUpdateMessageSchema,
+  'notification': notificationMessageSchema,
   'error': errorSchema,
   'log': logSchema,
   'conceptUpdate': conceptUpdateSchema,
   'taskUpdate': taskUpdateSchema,
-  'cycleUpdate': cycleUpdateSchemaMsg,
+  'cycleUpdate': cycleUpdateMessageSchema,
   'systemMetrics': systemMetricsSchema,
   'narseseInput': narseseInputSchema,
 };

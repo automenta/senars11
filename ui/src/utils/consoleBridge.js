@@ -10,9 +10,9 @@ const originalConsole = {
 };
 
 // Function to set WebSocket instance for console bridging
-export function setConsoleBridge(webSocket) {
+export const setConsoleBridge = (webSocket) => {
   ws = webSocket;
-}
+};
 
 // Format log arguments for transmission
 const formatArgs = (args) => args.map(arg => 
@@ -32,15 +32,19 @@ const createLogSender = (level) => (...args) => {
   }
 };
 
-// Replace console functions to forward logs
-console.log = createLogSender('log');
-console.error = createLogSender('error');
-console.warn = createLogSender('warn');
-console.info = createLogSender('info');
+// Initialize console bridging by replacing console functions
+const initConsoleBridge = () => {
+  ['log', 'error', 'warn', 'info'].forEach(level => {
+    console[level] = createLogSender(level);
+  });
+};
+
+// Initialize the console bridge when module is loaded
+initConsoleBridge();
 
 // Function to restore original console functions
-export function restoreOriginalConsole() {
+export const restoreOriginalConsole = () => {
   Object.keys(originalConsole).forEach(level => {
     console[level] = originalConsole[level];
   });
-}
+};
