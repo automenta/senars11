@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useMemo } from 'react';
 import useUiStore from '../stores/uiStore.js';
 import {formatBudget, formatTruth} from '../utils/formatters.js';
 import GenericPanel from './GenericPanel.js';
@@ -7,10 +7,10 @@ const TaskMonitorPanel = () => {
     const tasks = useUiStore(state => state.tasks);
     const reasoningSteps = useUiStore(state => state.reasoningSteps);
     
-    const renderTask = (task, index) =>
+    const renderTask = useCallback((task, index) =>
         React.createElement('div',
             {
-                key: task.id || index,
+                key: task.id || `task-${index}`,
                 style: {
                     padding: '0.5rem',
                     margin: '0.25rem 0',
@@ -25,8 +25,8 @@ const TaskMonitorPanel = () => {
                 }
             },
             React.createElement('div', {style: {fontWeight: 'bold', display: 'flex', justifyContent: 'space-between'}},
-                React.createElement('span', null, task.term),
-                React.createElement('span', {style: {fontSize: '0.75rem', color: '#666'}}, task.type)
+                React.createElement('span', null, task.term || 'No term'),
+                React.createElement('span', {style: {fontSize: '0.75rem', color: '#666'}}, task.type || 'Unknown')
             ),
             task.truth && React.createElement('div', {style: {fontSize: '0.8rem', marginTop: '0.25rem'}},
                 `Truth: ${formatTruth(task.truth)}`
@@ -37,13 +37,13 @@ const TaskMonitorPanel = () => {
             task.occurrenceTime && React.createElement('div', {style: {fontSize: '0.7rem', color: '#666', marginTop: '0.25rem'}},
                 `Time: ${new Date(task.occurrenceTime).toLocaleTimeString()}`
             )
-        );
+        ), []);
 
     // Render reasoning steps as well
-    const renderReasoningStep = (step, index) =>
+    const renderReasoningStep = useCallback((step, index) =>
         React.createElement('div',
             {
-                key: step.id || index,
+                key: step.id || `step-${index}`,
                 style: {
                     padding: '0.5rem',
                     margin: '0.25rem 0',
@@ -53,25 +53,25 @@ const TaskMonitorPanel = () => {
                     fontSize: '0.85rem'
                 }
             },
-            React.createElement('div', {style: {fontWeight: 'bold'}}, `Step ${step.step}`),
-            React.createElement('div', null, step.description),
+            step.step && React.createElement('div', {style: {fontWeight: 'bold'}}, `Step ${step.step}`),
+            step.description && React.createElement('div', null, step.description),
             step.result && React.createElement('div', {style: {marginTop: '0.25rem', fontStyle: 'italic'}},
                 `Result: ${step.result}`
             ),
-            React.createElement('div', {style: {fontSize: '0.7rem', color: '#666', marginTop: '0.25rem'}},
+            step.timestamp && React.createElement('div', {style: {fontSize: '0.7rem', color: '#666', marginTop: '0.25rem'}},
                 `Time: ${new Date(step.timestamp).toLocaleTimeString()}`
             )
-        );
+        ), []);
 
     // Combine tasks and reasoning steps
-    const items = [
+    const items = useMemo(() => [
         { type: 'header', content: 'Recent Tasks' },
         ...tasks.map(t => ({ type: 'task', data: t })),
         { type: 'header', content: 'Recent Reasoning Steps' },
         ...reasoningSteps.map(s => ({ type: 'reasoningStep', data: s }))
-    ];
+    ], [tasks, reasoningSteps]);
 
-    const renderMonitorItem = (item, index) => {
+    const renderMonitorItem = useCallback((item, index) => {
         if (item.type === 'header') {
             return React.createElement('div', {
                 style: {
@@ -89,7 +89,7 @@ const TaskMonitorPanel = () => {
             return renderReasoningStep(item.data, index);
         }
         return null;
-    };
+    }, [renderTask, renderReasoningStep]);
 
     return React.createElement(GenericPanel, {
         title: 'Task Monitor',

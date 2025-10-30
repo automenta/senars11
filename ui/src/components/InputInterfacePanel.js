@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import useUiStore from '../stores/uiStore.js';
 import GenericPanel from './GenericPanel.js';
 
@@ -7,7 +7,7 @@ const InputInterfacePanel = () => {
     const [history, setHistory] = useState([]);
     const wsService = useUiStore(state => state.wsService);
     
-    const sendInput = () => {
+    const sendInput = useCallback(() => {
         if (!inputText.trim() || !wsService) return;
         
         const narseseInput = {
@@ -17,28 +17,43 @@ const InputInterfacePanel = () => {
             }
         };
         
-        wsService.sendMessage(narseseInput);
-        
-        // Add to history
-        const newEntry = {
-            id: Date.now(),
-            input: inputText.trim(),
-            timestamp: Date.now(),
-            status: 'sent'
-        };
-        
-        setHistory(prev => [newEntry, ...prev].slice(0, 20)); // Keep last 20 entries
-        setInputText('');
-    };
+        try {
+            wsService.sendMessage(narseseInput);
+            
+            // Add to history
+            const newEntry = {
+                id: Date.now(),
+                input: inputText.trim(),
+                timestamp: Date.now(),
+                status: 'sent'
+            };
+            
+            setHistory(prev => [newEntry, ...prev].slice(0, 20)); // Keep last 20 entries
+            setInputText('');
+        } catch (error) {
+            console.error('Error sending narsese input:', error);
+            
+            // Add error to history
+            const errorEntry = {
+                id: Date.now(),
+                input: inputText.trim(),
+                timestamp: Date.now(),
+                status: 'error',
+                error: error.message
+            };
+            
+            setHistory(prev => [errorEntry, ...prev].slice(0, 20));
+        }
+    }, [inputText, wsService]);
     
-    const handleKeyPress = (e) => {
+    const handleKeyPress = useCallback((e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             sendInput();
         }
-    };
+    }, [sendInput]);
     
-    const renderHistoryItem = (item, index) => 
+    const renderHistoryItem = useCallback((item, index) => 
         React.createElement('div',
             {
                 key: item.id,
@@ -56,8 +71,12 @@ const InputInterfacePanel = () => {
                 React.createElement('span', {style: {fontSize: '0.7rem', color: '#666'}}, 
                     new Date(item.timestamp).toLocaleTimeString()
                 )
+            ),
+            item.status === 'error' && React.createElement('div', 
+                {style: {fontSize: '0.75rem', color: '#dc3545', marginTop: '0.25rem'}},
+                `Error: ${item.error || 'Unknown error'}`
             )
-        );
+        ), []);
 
     // Input form
     const inputForm = React.createElement('div', 
@@ -75,7 +94,8 @@ const InputInterfacePanel = () => {
                 borderRadius: '4px',
                 resize: 'vertical',
                 minHeight: '60px',
-                fontSize: '0.9rem'
+                fontSize: '0.9rem',
+                fontFamily: 'monospace'
             }
         }),
         React.createElement('div', {style: {display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem'}},
@@ -90,7 +110,7 @@ const InputInterfacePanel = () => {
                     borderRadius: '4px',
                     cursor: inputText.trim() && wsService ? 'pointer' : 'not-allowed'
                 }
-            }, 'Submit')
+            }, 'Submit Input')
         )
     );
 
@@ -109,7 +129,9 @@ const InputInterfacePanel = () => {
     // History section
     const historySection = React.createElement('div', null,
         React.createElement('div', {style: {fontWeight: 'bold', marginBottom: '0.5rem'}}, 'Input History:'),
-        ...history.map(item => renderHistoryItem(item, item.id))
+        history.length > 0 
+            ? React.createElement('div', null, ...history.map(renderHistoryItem))
+            : React.createElement('div', {style: {padding: '0.5rem', fontStyle: 'italic', color: '#6c757d'}}, 'No input history yet.')
     );
 
     const items = [
@@ -120,7 +142,7 @@ const InputInterfacePanel = () => {
         { type: 'history', content: historySection }
     ];
 
-    const renderInputItem = (item, index) => {
+    const renderInputItem = useCallback((item, index) => {
         if (item.type === 'header') {
             return React.createElement('div', {
                 style: {
@@ -138,7 +160,7 @@ const InputInterfacePanel = () => {
             return item.content;
         }
         return null;
-    };
+    }, []);
 
     return React.createElement(GenericPanel, {
         title: 'Input Interface',

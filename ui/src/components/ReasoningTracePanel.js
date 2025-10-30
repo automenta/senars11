@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import useUiStore from '../stores/uiStore.js';
 import GenericPanel from './GenericPanel.js';
 
@@ -8,7 +8,7 @@ const ReasoningTracePanel = () => {
     const tasks = useUiStore(state => state.tasks);
     
     // Group related reasoning steps and tasks
-    const groupReasoningTrace = () => {
+    const traceGroups = useMemo(() => {
         const traceGroups = [];
         
         // Process reasoning steps
@@ -17,8 +17,8 @@ const ReasoningTracePanel = () => {
                 id: `step-${index}`,
                 type: 'reasoningStep',
                 data: step,
-                timestamp: step.timestamp,
-                description: step.description
+                timestamp: step.timestamp || 0,
+                description: step.description || 'No description'
             });
         });
         
@@ -30,7 +30,7 @@ const ReasoningTracePanel = () => {
                     type: 'task',
                     data: task,
                     timestamp: task.creationTime,
-                    description: `Task: ${task.term} (${task.type})`
+                    description: `Task: ${task.term || 'Unknown'} (${task.type || 'Unknown'})`
                 });
             }
         });
@@ -39,23 +39,22 @@ const ReasoningTracePanel = () => {
         traceGroups.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
         
         return traceGroups;
-    };
+    }, [reasoningSteps, tasks]);
     
-    const traceGroups = groupReasoningTrace();
-    
-    const renderTraceItem = (item, index) => {
+    const renderTraceItem = useCallback((item, index) => {
         const isExpanded = expandedTrace === item.id;
         
         let contentElement = null;
         if (item.type === 'reasoningStep') {
             const step = item.data;
             contentElement = React.createElement('div', null,
-                React.createElement('div', {style: {fontWeight: 'bold'}}, `Step ${step.step}`),
-                React.createElement('div', null, step.description),
+                step.step !== undefined && React.createElement('div', {style: {fontWeight: 'bold'}}, `Step ${step.step}`),
+                step.description && React.createElement('div', null, step.description),
                 step.result && React.createElement('div', {style: {fontWeight: '500', marginTop: '0.5rem'}}, 
                     `Result: ${step.result}`
                 ),
-                step.metadata && Object.keys(step.metadata).length > 0 && React.createElement('div', 
+                step.metadata && typeof step.metadata === 'object' && Object.keys(step.metadata).length > 0 && 
+                React.createElement('div', 
                     {style: {fontSize: '0.8rem', marginTop: '0.5rem', color: '#666'}},
                     React.createElement('div', {style: {fontWeight: 'bold'}}, 'Metadata:'),
                     Object.entries(step.metadata).map(([key, value]) => 
@@ -66,8 +65,8 @@ const ReasoningTracePanel = () => {
         } else if (item.type === 'task') {
             const task = item.data;
             contentElement = React.createElement('div', null,
-                React.createElement('div', {style: {fontWeight: 'bold'}}, task.term),
-                React.createElement('div', {style: {fontSize: '0.8rem', color: '#666'}}, `Type: ${task.type}`),
+                task.term && React.createElement('div', {style: {fontWeight: 'bold'}}, task.term),
+                task.type && React.createElement('div', {style: {fontSize: '0.8rem', color: '#666'}}, `Type: ${task.type}`),
                 task.truth && React.createElement('div', null, `Truth: ${JSON.stringify(task.truth)}`),
                 task.budget && React.createElement('div', {style: {fontSize: '0.8rem'}}, 
                     `Priority: ${(task.budget.priority || 0).toFixed(3)}`
@@ -106,14 +105,14 @@ const ReasoningTracePanel = () => {
                 item.description
             )
         );
-    };
+    }, [expandedTrace]);
 
-    const items = [
+    const items = useMemo(() => [
         { type: 'header', content: `Reasoning Trace (${traceGroups.length} events)` },
         ...traceGroups.map(item => ({ type: 'traceItem', data: item }))
-    ];
+    ], [traceGroups]);
 
-    const renderTrace = (item, index) => {
+    const renderTrace = useCallback((item, index) => {
         if (item.type === 'header') {
             return React.createElement('div', {
                 style: {
@@ -129,7 +128,7 @@ const ReasoningTracePanel = () => {
             return renderTraceItem(item.data, index);
         }
         return null;
-    };
+    }, [renderTraceItem]);
 
     return React.createElement(GenericPanel, {
         title: 'Reasoning Trace',

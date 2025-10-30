@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useMemo } from 'react';
 import useUiStore from '../stores/uiStore.js';
 import GenericPanel from './GenericPanel.js';
 
@@ -12,7 +12,7 @@ const DashboardPanel = () => {
     const demoStates = useUiStore(state => state.demoStates);
     
     // Calculate summary metrics
-    const calculateMetrics = () => {
+    const metrics = useMemo(() => {
         // System metrics from demo metrics
         let systemStats = { tasksProcessed: 0, conceptsActive: 0, cyclesCompleted: 0, memoryUsage: 0 };
         
@@ -30,9 +30,9 @@ const DashboardPanel = () => {
         }
         
         // Calculate demo stats
-        const runningDemos = Object.keys(demoStates).filter(id => demoStates[id].state === 'running').length;
-        const completedDemos = Object.keys(demoStates).filter(id => demoStates[id].state === 'completed').length;
-        const errorDemos = Object.keys(demoStates).filter(id => demoStates[id].state === 'error').length;
+        const runningDemos = Object.keys(demoStates).filter(id => demoStates[id]?.state === 'running').length;
+        const completedDemos = Object.keys(demoStates).filter(id => demoStates[id]?.state === 'completed').length;
+        const errorDemos = Object.keys(demoStates).filter(id => demoStates[id]?.state === 'error').length;
         
         // Calculate task stats
         const beliefs = tasks.filter(t => t.type === 'belief').length;
@@ -51,14 +51,13 @@ const DashboardPanel = () => {
             totalTasks: tasks.length,
             wsConnected
         };
-    };
-    
-    const metrics = calculateMetrics();
+    }, [demoMetrics, concepts, tasks, wsConnected, demos, demoStates]);
     
     // Render metric card
-    const renderMetricCard = (title, value, description, color = '#007bff') => 
+    const renderMetricCard = useCallback((title, value, description, color = '#007bff') => 
         React.createElement('div', 
             {
+                key: title, // Add key for React performance
                 style: {
                     padding: '1rem',
                     margin: '0.5rem',
@@ -81,9 +80,9 @@ const DashboardPanel = () => {
                 {style: {fontSize: '0.75rem', color: '#6c757d', marginTop: '0.25rem'}}, 
                 description
             )
-        );
+        ), []);
     
-    const renderStatusIndicator = (status, label) => {
+    const renderStatusIndicator = useCallback((status, label) => {
         let color, bgColor;
         if (status === true || status === 'Connected') {
             color = '#28a745';
@@ -98,6 +97,7 @@ const DashboardPanel = () => {
         
         return React.createElement('div',
             {
+                key: label, // Add key for React performance
                 style: {
                     padding: '0.25rem 0.5rem',
                     margin: '0.25rem',
@@ -111,98 +111,102 @@ const DashboardPanel = () => {
             },
             label
         );
-    };
+    }, []);
 
     // Create metric cards
-    const metricCards = React.createElement('div', 
-        {style: {display: 'flex', flexWrap: 'wrap', marginBottom: '1rem'}},
-        renderMetricCard('System Status', metrics.wsConnected ? 'Operational' : 'Offline', 'WebSocket Connection', metrics.wsConnected ? '#28a745' : '#dc3545'),
-        renderMetricCard('Active Concepts', metrics.totalConcepts, 'Current concept count'),
-        renderMetricCard('Active Tasks', metrics.totalTasks, 'Total tasks in system'),
-        renderMetricCard('Running Demos', metrics.runningDemos, 'Currently executing demos')
-    );
+    const metricCards = useMemo(() => 
+        React.createElement('div', 
+            {style: {display: 'flex', flexWrap: 'wrap', marginBottom: '1rem'}},
+            renderMetricCard('System Status', metrics.wsConnected ? 'Operational' : 'Offline', 'WebSocket Connection', metrics.wsConnected ? '#28a745' : '#dc3545'),
+            renderMetricCard('Active Concepts', metrics.totalConcepts, 'Current concept count'),
+            renderMetricCard('Active Tasks', metrics.totalTasks, 'Total tasks in system'),
+            renderMetricCard('Running Demos', metrics.runningDemos, 'Currently executing demos')
+        ), [metrics, renderMetricCard]);
     
     // Task distribution chart (simple visualization)
-    const taskDistribution = React.createElement('div', 
-        {style: {marginBottom: '1rem'}},
-        React.createElement('h4', {style: {margin: '0 0 0.5rem 0', fontSize: '1rem'}}, 'Task Distribution'),
+    const taskDistribution = useMemo(() => 
         React.createElement('div', 
-            {style: {display: 'flex', height: '2rem', borderRadius: '4px', overflow: 'hidden', border: '1px solid #ced4da'}},
+            {style: {marginBottom: '1rem'}},
+            React.createElement('h4', {style: {margin: '0 0 0.5rem 0', fontSize: '1rem'}}, 'Task Distribution'),
             React.createElement('div', 
-                {
-                    style: {
-                        width: `${(metrics.beliefs / Math.max(metrics.totalTasks, 1)) * 100}%`,
-                        backgroundColor: '#28a745',
-                        minWidth: metrics.beliefs > 0 ? '10px' : '0'
-                    }
-                },
-                metrics.beliefs > 0 && React.createElement('span', 
-                    {style: {color: 'white', fontSize: '0.7rem', padding: '0 0.5rem'}}, 
-                    `Beliefs: ${metrics.beliefs}`
-                )
-            ),
-            React.createElement('div', 
-                {
-                    style: {
-                        width: `${(metrics.questions / Math.max(metrics.totalTasks, 1)) * 100}%`,
-                        backgroundColor: '#007bff',
-                        minWidth: metrics.questions > 0 ? '10px' : '0'
-                    }
-                },
-                metrics.questions > 0 && React.createElement('span', 
-                    {style: {color: 'white', fontSize: '0.7rem', padding: '0 0.5rem'}}, 
-                    `Questions: ${metrics.questions}`
-                )
-            ),
-            React.createElement('div', 
-                {
-                    style: {
-                        width: `${(metrics.goals / Math.max(metrics.totalTasks, 1)) * 100}%`,
-                        backgroundColor: '#ffc107',
-                        minWidth: metrics.goals > 0 ? '10px' : '0'
-                    }
-                },
-                metrics.goals > 0 && React.createElement('span', 
-                    {style: {color: 'white', fontSize: '0.7rem', padding: '0 0.5rem'}}, 
-                    `Goals: ${metrics.goals}`
+                {style: {display: 'flex', height: '2rem', borderRadius: '4px', overflow: 'hidden', border: '1px solid #ced4da'}},
+                React.createElement('div', 
+                    {
+                        style: {
+                            width: `${(metrics.beliefs / Math.max(metrics.totalTasks, 1)) * 100}%`,
+                            backgroundColor: '#28a745',
+                            minWidth: metrics.beliefs > 0 ? '10px' : '0'
+                        }
+                    },
+                    metrics.beliefs > 0 && React.createElement('span', 
+                        {style: {color: 'white', fontSize: '0.7rem', padding: '0 0.5rem'}}, 
+                        `Beliefs: ${metrics.beliefs}`
+                    )
+                ),
+                React.createElement('div', 
+                    {
+                        style: {
+                            width: `${(metrics.questions / Math.max(metrics.totalTasks, 1)) * 100}%`,
+                            backgroundColor: '#007bff',
+                            minWidth: metrics.questions > 0 ? '10px' : '0'
+                        }
+                    },
+                    metrics.questions > 0 && React.createElement('span', 
+                        {style: {color: 'white', fontSize: '0.7rem', padding: '0 0.5rem'}}, 
+                        `Questions: ${metrics.questions}`
+                    )
+                ),
+                React.createElement('div', 
+                    {
+                        style: {
+                            width: `${(metrics.goals / Math.max(metrics.totalTasks, 1)) * 100}%`,
+                            backgroundColor: '#ffc107',
+                            minWidth: metrics.goals > 0 ? '10px' : '0'
+                        }
+                    },
+                    metrics.goals > 0 && React.createElement('span', 
+                        {style: {color: 'white', fontSize: '0.7rem', padding: '0 0.5rem'}}, 
+                        `Goals: ${metrics.goals}`
+                    )
                 )
             )
-        )
-    );
+        ), [metrics]);
     
     // Demo status summary
-    const demoSummary = React.createElement('div', 
-        {style: {marginBottom: '1rem'}},
-        React.createElement('h4', {style: {margin: '0 0 0.5rem 0', fontSize: '1rem'}}, 'Demo Status'),
+    const demoSummary = useMemo(() => 
         React.createElement('div', 
-            {style: {display: 'flex', alignItems: 'center', gap: '1rem'}},
-            renderStatusIndicator(metrics.runningDemos > 0, `${metrics.runningDemos} Running`),
-            renderStatusIndicator(metrics.completedDemos > 0, `${metrics.completedDemos} Completed`),
-            renderStatusIndicator(metrics.errorDemos > 0, `${metrics.errorDemos} Errors`)
-        )
-    );
+            {style: {marginBottom: '1rem'}},
+            React.createElement('h4', {style: {margin: '0 0 0.5rem 0', fontSize: '1rem'}}, 'Demo Status'),
+            React.createElement('div', 
+                {style: {display: 'flex', alignItems: 'center', gap: '1rem'}},
+                renderStatusIndicator(metrics.runningDemos > 0, `${metrics.runningDemos} Running`),
+                renderStatusIndicator(metrics.completedDemos > 0, `${metrics.completedDemos} Completed`),
+                renderStatusIndicator(metrics.errorDemos > 0, `${metrics.errorDemos} Errors`)
+            )
+        ), [metrics, renderStatusIndicator]);
     
     // System stats
-    const systemStats = React.createElement('div', 
-        {style: {marginBottom: '1rem'}},
-        React.createElement('h4', {style: {margin: '0 0 0.5rem 0', fontSize: '1rem'}}, 'System Stats'),
+    const systemStats = useMemo(() => 
         React.createElement('div', 
-            {style: {display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem'}},
-            renderMetricCard('Tasks Processed', metrics.systemStats.tasksProcessed, 'Total tasks processed'),
-            renderMetricCard('Cycles Completed', metrics.systemStats.cyclesCompleted, 'Reasoning cycles'),
-            renderMetricCard('Memory Usage', metrics.systemStats.memoryUsage.toFixed(2), 'System memory units')
-        )
-    );
+            {style: {marginBottom: '1rem'}},
+            React.createElement('h4', {style: {margin: '0 0 0.5rem 0', fontSize: '1rem'}}, 'System Stats'),
+            React.createElement('div', 
+                {style: {display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem'}},
+                renderMetricCard('Tasks Processed', metrics.systemStats.tasksProcessed, 'Total tasks processed'),
+                renderMetricCard('Cycles Completed', metrics.systemStats.cyclesCompleted, 'Reasoning cycles'),
+                renderMetricCard('Memory Usage', metrics.systemStats.memoryUsage.toFixed(2), 'System memory units')
+            )
+        ), [metrics, renderMetricCard]);
     
-    const items = [
+    const items = useMemo(() => [
         { type: 'header', content: 'System Dashboard' },
         { type: 'metrics', content: metricCards },
         { type: 'taskDistribution', content: taskDistribution },
         { type: 'demoSummary', content: demoSummary },
         { type: 'systemStats', content: systemStats }
-    ];
+    ], [metricCards, taskDistribution, demoSummary, systemStats]);
 
-    const renderDashboardItem = (item, index) => {
+    const renderDashboardItem = useCallback((item, index) => {
         if (item.type === 'header') {
             return React.createElement('div', {
                 style: {
@@ -217,7 +221,7 @@ const DashboardPanel = () => {
         } else {
             return item.content;
         }
-    };
+    }, []);
 
     return React.createElement(GenericPanel, {
         title: 'Dashboard',

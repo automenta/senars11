@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import useUiStore from '../stores/uiStore.js';
 import GenericPanel from './GenericPanel.js';
 
@@ -6,10 +6,9 @@ const ConceptRelationshipPanel = () => {
     const concepts = useUiStore(state => state.concepts);
     const tasks = useUiStore(state => state.tasks);
     const [selectedConcept, setSelectedConcept] = useState(null);
-    const canvasRef = useRef(null);
     
     // Process concepts to identify relationships
-    const processRelationships = () => {
+    const relationships = useMemo(() => {
         const relationships = [];
         const conceptTerms = concepts.map(c => c.term);
         
@@ -39,12 +38,10 @@ const ConceptRelationshipPanel = () => {
         });
         
         return relationships;
-    };
-    
-    const relationships = processRelationships();
+    }, [concepts, tasks]);
     
     // Render concept details when one is selected
-    const renderConceptDetails = () => {
+    const renderConceptDetails = useCallback(() => {
         if (!selectedConcept) return null;
         
         const concept = concepts.find(c => c.term === selectedConcept);
@@ -66,10 +63,10 @@ const ConceptRelationshipPanel = () => {
             React.createElement('div', {style: {fontSize: '0.9rem'}}, `Beliefs: ${concept.beliefCount || 0}`),
             React.createElement('div', {style: {fontSize: '0.9rem'}}, `Questions: ${concept.questionCount || 0}`)
         );
-    };
+    }, [selectedConcept, concepts]);
     
     // Render relationships table
-    const renderRelationships = () => {
+    const renderRelationships = useCallback(() => {
         if (relationships.length === 0) {
             return React.createElement('div', 
                 {style: {padding: '1rem', fontStyle: 'italic', color: '#6c757d'}},
@@ -124,10 +121,10 @@ const ConceptRelationshipPanel = () => {
                 )
             )
         );
-    };
+    }, [relationships, setSelectedConcept]);
     
     // Render concept list
-    const renderConceptList = () => {
+    const renderConceptList = useCallback(() => {
         if (concepts.length === 0) {
             return React.createElement('div', 
                 {style: {padding: '1rem', fontStyle: 'italic', color: '#6c757d'}},
@@ -142,7 +139,7 @@ const ConceptRelationshipPanel = () => {
                 concepts.map((concept, index) => 
                     React.createElement('span', 
                         {
-                            key: index,
+                            key: concept.term || index, // Use term as key if available, otherwise index
                             onClick: () => setSelectedConcept(concept.term),
                             style: {
                                 padding: '0.25rem 0.5rem',
@@ -154,12 +151,12 @@ const ConceptRelationshipPanel = () => {
                                 fontSize: '0.8rem'
                             }
                         },
-                        `${concept.term} (${concept.priority?.toFixed(2) || 0})`
+                        `${concept.term} (${(concept.priority || 0).toFixed(2)})`
                     )
                 )
             )
         );
-    };
+    }, [concepts, selectedConcept]);
 
     const items = [
         { type: 'header', content: 'Concept Relationships' },
@@ -168,7 +165,7 @@ const ConceptRelationshipPanel = () => {
         { type: 'details', content: renderConceptDetails() }
     ];
 
-    const renderRelationshipItem = (item, index) => {
+    const renderRelationshipItem = useCallback((item, index) => {
         if (item.type === 'header') {
             return React.createElement('div', {
                 style: {
@@ -183,7 +180,7 @@ const ConceptRelationshipPanel = () => {
         } else {
             return item.content;
         }
-    };
+    }, []);
 
     return React.createElement(GenericPanel, {
         title: 'Concept Relationships',

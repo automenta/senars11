@@ -374,16 +374,20 @@ export class DemoWrapper {
     
     async sendDemoMetrics(demoId, metrics) {
         if (this.webSocketMonitor) {
-            this.webSocketMonitor.broadcastEvent('demoMetrics', {
-                type: 'demoMetrics',
-                payload: {
-                    demoId,
-                    systemMetrics: {
-                        ...metrics,
-                        timestamp: Date.now()
+            try {
+                this.webSocketMonitor.broadcastEvent('demoMetrics', {
+                    type: 'demoMetrics',
+                    payload: {
+                        demoId,
+                        systemMetrics: {
+                            ...metrics,
+                            timestamp: Date.now()
+                        }
                     }
-                }
-            });
+                });
+            } catch (error) {
+                console.error('Error sending demo metrics:', error);
+            }
         }
     }
     
