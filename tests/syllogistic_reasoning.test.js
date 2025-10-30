@@ -184,7 +184,7 @@ describe('Syllogistic Reasoning - (a-->b) + (b-->c) -> (a-->c)', () => {
         
         const containsAB = beliefs.some(b => {
             const term = b.term?.toString?.() || b.term || '';
-            console.log('Belief term:', term);
+
             return term === '(a-->b)' || term === '(-->, a, b)';
         });
         
@@ -202,7 +202,7 @@ describe('Syllogistic Reasoning - (a-->b) + (b-->c) -> (a-->c)', () => {
             await nar.step();
             
             beliefs = nar.getBeliefs();
-            console.log(`Beliefs after step ${i}:`, beliefs.map(b => b.term.toString()));
+            //console.log(`Beliefs after step ${i}:`, beliefs.map(b => b.term.toString()));
             foundAC = beliefs.some(b => {
                 const term = b.term?.toString?.() || b.term || '';
                 return term === '(a-->c)' || term === '(-->, a, c)';
@@ -315,7 +315,7 @@ describe('Syllogistic Reasoning - (a-->b) + (b-->c) -> (a-->c)', () => {
 // Run the test suite manually if this file is executed directly
 if (typeof require !== 'undefined' && require.main === module) {
     // Simple test runner for when executed directly
-    console.log('🧪 Running Syllogistic Reasoning Unit Tests...');
+    //console.log('🧪 Running Syllogistic Reasoning Unit Tests...');
     
     const testFunctions = {
         '1. Truth Value Handling - No Undefined Values': async () => {
@@ -327,7 +327,7 @@ if (typeof require !== 'undefined' && require.main === module) {
             if (!task || !task.truth || task.truth.frequency !== 1.0) {
                 throw new Error('Truth value not properly set');
             }
-            console.log('✅ Test 1 passed');
+            //console.log('✅ Test 1 passed');
             return true;
         },
         
@@ -351,7 +351,7 @@ if (typeof require !== 'undefined' && require.main === module) {
             if (!foundAC) {
                 throw new Error('Syllogistic derivation (a-->c) not found');
             }
-            console.log('✅ Test 9 passed');
+            //console.log('✅ Test 9 passed');
             return true;
         }
     };
@@ -360,11 +360,11 @@ if (typeof require !== 'undefined' && require.main === module) {
     Promise.all(Object.entries(testFunctions).map(async ([name, testFn]) => {
         try {
             await testFn();
-            console.log(`✅ ${name}`);
+            //console.log(`✅ ${name}`);
         } catch (error) {
             console.log(`❌ ${name}: ${error.message}`);
         }
     })).then(() => {
-        console.log('\\n📋 Unit test execution completed. Check results above.');
+        //console.log('\\n📋 Unit test execution completed. Check results above.');
     });
 }

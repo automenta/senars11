@@ -35,7 +35,7 @@ describe('Conjunction Back-Solving Test (Unified)', () => {
 
         // This is what we want to achieve: ((&, (?a=1), (add(?a,?b)=3)) ==> accept(?b)) should reduce to accept(2)
         // Note: This may require more complex rule implementation than currently exists
-        console.log('Test nar.input');
+
         // For now, let's just ensure the system doesn't crash with complex terms
         await expect(nar.input('((&, (?a = 1), (add(?a, ?b) = 3)) ==> accept(*, ?b)).')).resolves;
     });
