@@ -1,43 +1,32 @@
 import useUiStore from '../stores/uiStore';
 import { validateMessage } from '../schemas/messages';
 
+// Utility function to get store methods
+const getStore = () => useUiStore.getState();
+
 // Message handlers map for cleaner code
 const messageHandlers = {
-  layoutUpdate: (data) => useUiStore.getState().setLayout(data.payload.layout),
-  panelUpdate: (data) => useUiStore.getState().addPanel(data.payload.id, data.payload.config),
-  reasoningStep: (data) => useUiStore.getState().addReasoningStep(data.payload.step),
+  layoutUpdate: (data) => getStore().setLayout(data.payload.layout),
+  panelUpdate: (data) => getStore().addPanel(data.payload.id, data.payload.config),
+  reasoningStep: (data) => getStore().addReasoningStep(data.payload.step),
   sessionUpdate: (data) => {
     const { action, session } = data.payload;
-    action === 'start' 
-      ? useUiStore.getState().setActiveSession(session) 
-      : useUiStore.getState().endSession();
+    return action === 'start' 
+      ? getStore().setActiveSession(session) 
+      : getStore().endSession();
   },
-  notification: (data) => useUiStore.getState().addNotification(data.payload),
-  error: (data) => useUiStore.getState().setError(data.payload),
+  notification: (data) => getStore().addNotification(data.payload),
+  error: (data) => getStore().setError(data.payload),
   conceptUpdate: (data) => {
     const { concept, changeType } = data.payload;
-    if (changeType === 'removed') {
-      useUiStore.getState().removeConcept(concept.term);
-    } else {
-      useUiStore.getState().addConcept(concept);
-    }
+    return changeType === 'removed' 
+      ? getStore().removeConcept(concept.term)
+      : getStore().addConcept(concept);
   },
-  taskUpdate: (data) => {
-    const { task } = data.payload;
-    useUiStore.getState().addTask(task);
-  },
-  cycleUpdate: (data) => {
-    const { cycle } = data.payload;
-    useUiStore.getState().addCycle(cycle);
-  },
-  systemMetrics: (data) => {
-    const { payload } = data;
-    useUiStore.getState().setSystemMetrics(payload);
-  },
-  log: (data) => {
-    const { level = 'log', data: logData } = data;
-    console[level](...logData);
-  },
+  taskUpdate: (data) => getStore().addTask(data.payload.task),
+  cycleUpdate: (data) => getStore().addCycle(data.payload.cycle),
+  systemMetrics: (data) => getStore().setSystemMetrics(data.payload),
+  log: ({ level = 'log', data: logData }) => console[level](...logData ?? []),
 };
 
 class WebSocketService {
@@ -55,58 +44,57 @@ class WebSocketService {
 
     this.ws.onopen = () => {
       console.log('WebSocket connected');
-      useUiStore.getState().setWsConnected(true);
+      getStore().setWsConnected(true);
       this.reconnectAttempts = 0;
     };
 
     this.ws.onclose = () => {
       console.log('WebSocket disconnected');
-      useUiStore.getState().setWsConnected(false);
+      getStore().setWsConnected(false);
       this.attemptReconnect();
     };
 
     this.ws.onerror = (error) => {
       console.error('WebSocket error:', error);
-      useUiStore.getState().setError(error);
+      getStore().setError(error);
     };
 
     this.ws.onmessage = this.handleMessage.bind(this);
   }
 
-  attemptReconnect() {
-    if (this.reconnectAttempts < this.maxReconnectAttempts) {
-      setTimeout(() => {
+  attemptReconnect = () => 
+    this.reconnectAttempts < this.maxReconnectAttempts
+      ? setTimeout(() => {
         this.reconnectAttempts++;
         this.connect();
-      }, this.reconnectInterval);
-    } else {
-      console.error('Max reconnection attempts reached');
-      useUiStore.getState().setError(new Error('Could not reconnect to server'));
-    }
-  }
+      }, this.reconnectInterval)
+      : (() => {
+        console.error('Max reconnection attempts reached');
+        getStore().setError(new Error('Could not reconnect to server'));
+      })();
 
   async handleMessage(event) {
     try {
       const data = JSON.parse(event.data);
       const validatedData = validateMessage(data);
       
-      validatedData 
+      return validatedData 
         ? this.routeMessage(validatedData) 
         : this.handleInvalidMessage(data);
     } catch (error) {
       console.error('Error parsing WebSocket message:', error);
-      useUiStore.getState().setError(error);
+      getStore().setError(error);
     }
   }
 
   routeMessage(data) {
     const handler = messageHandlers[data.type];
-    handler ? handler(data) : console.log('Unknown message type:', data.type, data);
+    return handler ? handler(data) : console.log('Unknown message type:', data.type, data);
   }
 
   handleInvalidMessage(data) {
     console.error('Invalid message format:', data);
-    useUiStore.getState().setError(new Error('Received invalid message format'));
+    getStore().setError(new Error('Received invalid message format'));
   }
 
   disconnect() {
@@ -122,7 +110,7 @@ class WebSocketService {
         this.ws.send(JSON.stringify(message));
       } catch (error) {
         console.error('Error sending WebSocket message:', error);
-        useUiStore.getState().setError(error);
+        getStore().setError(error);
       }
     } else {
       this.handleOfflineMessage(message);

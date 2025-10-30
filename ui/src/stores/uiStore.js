@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 
-// UI state slice
-const uiSlice = (set, get) => ({
+// Combined state management with logical groupings
+const useUiStore = create((set, get) => ({
+  // UI state
   layout: null,
   setLayout: (layout) => set({ layout }),
   savedLayouts: {},
@@ -9,16 +10,12 @@ const uiSlice = (set, get) => ({
     savedLayouts: { ...state.savedLayouts, [name]: layout }
   })),
   loadLayout: (name) => get().savedLayouts[name],
-});
 
-// WebSocket state slice
-const webSocketSlice = (set) => ({
+  // WebSocket state
   wsConnected: false,
   setWsConnected: (connected) => set({ wsConnected: connected }),
-});
 
-// Panel management slice
-const panelSlice = (set) => ({
+  // Panel management
   panels: {},
   addPanel: (id, config) => set(state => ({
     panels: { ...state.panels, [id]: config }
@@ -28,17 +25,14 @@ const panelSlice = (set) => ({
     delete newPanels[id];
     return { panels: newPanels };
   }),
-});
 
-// Reasoning engine state slice
-const reasoningSlice = (set) => ({
+  // SeNARS reasoning engine state
   reasoningSteps: [],
   addReasoningStep: (step) => set(state => ({
     reasoningSteps: [...state.reasoningSteps, step]
   })),
   clearReasoningSteps: () => set({ reasoningSteps: [] }),
   
-  // SeNARS-specific state
   tasks: [],
   addTask: (task) => set(state => {
     // Check if task already exists
@@ -77,37 +71,24 @@ const reasoningSlice = (set) => ({
   systemMetrics: null,
   setSystemMetrics: (metrics) => set({ systemMetrics: metrics }),
   clearSystemMetrics: () => set({ systemMetrics: null }),
-});
 
-// Session management slice
-const sessionSlice = (set) => ({
+  // Session and application state
   activeSession: null,
   setActiveSession: (session) => set({ activeSession: session }),
   endSession: () => set({ activeSession: null }),
-});
-
-// Error handling slice
-const errorSlice = (set) => ({
+  
+  // Status and UI state
   error: null,
   setError: (error) => set({ error }),
   clearError: () => set({ error: null }),
-});
-
-// Loading state slice
-const loadingSlice = (set) => ({
+  
   isLoading: false,
   setLoading: (loading) => set({ isLoading: loading }),
-});
-
-// Theme management slice
-const themeSlice = (set) => ({
+  
   theme: 'light',
   setTheme: (theme) => set({ theme }),
   toggleTheme: () => set(state => ({ theme: state.theme === 'light' ? 'dark' : 'light' })),
-});
-
-// Notification system slice
-const notificationSlice = (set) => ({
+  
   notifications: [],
   addNotification: (notification) => set(state => ({
     notifications: [...state.notifications, { ...notification, id: Date.now() }]
@@ -116,18 +97,6 @@ const notificationSlice = (set) => ({
     notifications: state.notifications.filter(n => n.id !== id)
   })),
   clearNotifications: () => set({ notifications: [] }),
-});
-
-const useUiStore = create((set, get) => ({
-  ...uiSlice(set, get),
-  ...webSocketSlice(set),
-  ...panelSlice(set),
-  ...reasoningSlice(set),
-  ...sessionSlice(set),
-  ...errorSlice(set),
-  ...loadingSlice(set),
-  ...themeSlice(set, get),
-  ...notificationSlice(set),
 }));
 
 export default useUiStore;

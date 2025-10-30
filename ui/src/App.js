@@ -21,10 +21,8 @@ function App() {
     if (!model) return;
     
     // Construct WebSocket URL using Vite environment variables, with defaults
-    const wsHost = import.meta.env.VITE_WS_HOST || 'localhost';
-    const wsPort = import.meta.env.VITE_WS_PORT || '8080';
-    const wsPath = import.meta.env.VITE_WS_PATH || '/ws';
-    const wsUrl = `ws://${wsHost}:${wsPort}${wsPath}`;
+    const { VITE_WS_HOST='localhost', VITE_WS_PORT='8080', VITE_WS_PATH='/ws' } = import.meta.env;
+    const wsUrl = `ws://${VITE_WS_HOST}:${VITE_WS_PORT}${VITE_WS_PATH}`;
     
     wsService.current = new WebSocketService(wsUrl);
     wsService.current.connect();
@@ -43,9 +41,10 @@ function App() {
     const component = node.getComponent();
     const content = contentMap[component] || `Content for ${component}`;
     
-    return React.createElement(Panel, { title: component.replace('Panel', '') || 'Panel' },
-      React.createElement('div', null, content)
-    );
+    return React.createElement(Panel, { 
+      title: component.replace('Panel', '') || 'Panel',
+      content 
+    });
   };
 
   return React.createElement(ErrorBoundary, null,
@@ -57,7 +56,7 @@ function App() {
         factory: componentFactory,
         key: 'flexlayout-root'
       })
-      : React.createElement('div', { style: { padding: '20px' } }, 
+      : React.createElement('div', { className: 'loading', style: { padding: '20px' } }, 
         React.createElement('p', null, 'Loading UI...')
       )
   );

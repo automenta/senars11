@@ -5,18 +5,7 @@ const CyclePanel = () => {
   const systemMetrics = useUiStore(state => state.systemMetrics);
   const cycles = useUiStore(state => state.cycles);
   
-  return React.createElement('div', { 
-    className: 'cycle-panel',
-    style: { 
-      padding: '1rem', 
-      height: '100%', 
-      overflowY: 'auto',
-      backgroundColor: '#f8f9fa',
-      fontFamily: 'monospace'
-    } 
-  },
-    React.createElement('h3', { style: { margin: '0 0 1rem 0', fontSize: '1.1rem' } }, 'System Metrics'),
-    
+  return React.createElement('div', null,
     systemMetrics && React.createElement('div', { style: { marginBottom: '1rem' } },
       React.createElement('div', null, `Cycles: ${systemMetrics.cycleCount}`),
       React.createElement('div', null, `Tasks: ${systemMetrics.taskCount}`),
@@ -39,13 +28,13 @@ const CyclePanel = () => {
             fontSize: '0.9rem'
           }
         },
-          React.createElement('div', { style: { fontWeight: 'bold' } }, `Cycle #${cycle.cycle}`),
-          React.createElement('div', null, 
-            `Tasks: ${cycle.tasksProcessed} | Beliefs: ${cycle.beliefsAdded} | Qs: ${cycle.questionsAnswered}`
-          ),
-          React.createElement('div', { style: { fontSize: '0.8rem', color: '#666' } },
-            `${new Date(cycle.timestamp).toLocaleTimeString()}`
-          )
+        React.createElement('div', { style: { fontWeight: 'bold' } }, `Cycle #${cycle.cycle}`),
+        React.createElement('div', null, 
+          `Tasks: ${cycle.tasksProcessed} | Beliefs: ${cycle.beliefsAdded} | Qs: ${cycle.questionsAnswered}`
+        ),
+        React.createElement('div', { style: { fontSize: '0.8rem', color: '#666' } },
+          `${new Date(cycle.timestamp).toLocaleTimeString()}`
+        )
         )
       )
     )
