@@ -39,12 +39,16 @@ function App() {
 
   const componentFactory = (node) => {
     const component = node.getComponent();
-    const content = contentMap[component] || `Content for ${component}`;
+    const ContentComponent = contentMap[component];
+    
+    // If ContentComponent is a function/component, render it as children; otherwise show as text
+    const content = ContentComponent
+      ? React.createElement(ContentComponent)
+      : `Content for ${component}`;
     
     return React.createElement(Panel, { 
-      title: component.replace('Panel', '') || 'Panel',
-      content 
-    });
+      title: component.replace('Panel', '') || 'Panel'
+    }, content);
   };
 
   return React.createElement(ErrorBoundary, null,
