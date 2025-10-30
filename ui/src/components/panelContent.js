@@ -1,15 +1,17 @@
-import React from 'react';
-
 // Panel content mapping to reduce duplication in App.js
+import ExplorerPanel from './ExplorerPanel.js';
+import MainPanel from './MainPanel.js';
+import ConsolePanel from './ConsolePanel.js';
+import VariablesPanel from './VariablesPanel.js';
 import TaskPanel from './TaskPanel.js';
 import ConceptPanel from './ConceptPanel.js';
 import CyclePanel from './CyclePanel.js';
 
 export const contentMap = {
-  'ExplorerPanel': () => React.createElement('div', null, 'Explorer content goes here'),
-  'MainPanel': () => React.createElement('div', null, 'Main content goes here'),
-  'ConsolePanel': () => React.createElement('div', null, 'Console output goes here'),
-  'VariablesPanel': () => React.createElement('div', null, 'Variable inspection goes here'),
+  'ExplorerPanel': ExplorerPanel,
+  'MainPanel': MainPanel,
+  'ConsolePanel': ConsolePanel,
+  'VariablesPanel': VariablesPanel,
   'TaskPanel': TaskPanel,
   'ConceptPanel': ConceptPanel,
   'CyclePanel': CyclePanel,
