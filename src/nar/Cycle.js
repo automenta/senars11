@@ -31,22 +31,14 @@ export class Cycle extends BaseComponent {
         this._isRunning = true;
 
         try {
+            // Process pending tasks and consolidate memory
             this._taskManager.processPendingTasks(cycleStartTime);
             this._memory.consolidate(cycleStartTime);
 
-            const focusTasks = this._focus.getTasks(this._config.focusTaskLimit || DEFAULT_FOCUS_TASK_LIMIT);
-            const allConcepts = this._memory.getAllConcepts();
-            const memoryTasks = allConcepts.flatMap(c => c.getAllTasks ? c.getAllTasks() : []);
+            // Get and filter tasks
+            const allTasks = await this._getFilteredTasks();
 
-            const filteredTasks = this._filterTasksByBudget([...focusTasks, ...memoryTasks]);
-            const taskMap = new Map();
-            filteredTasks.forEach(task => taskMap.set(task.stamp.id, task));
-            let allTasks = Array.from(taskMap.values());
-
-            if (this._nar?.termLayer) {
-                allTasks = await this._enhanceTasksWithAssociativeLinks(allTasks, this._nar.termLayer);
-            }
-
+            // Execute reasoning strategy
             const newInferences = await this._reasoningStrategy.execute(
                 this._memory,
                 this._ruleEngine.rules,
@@ -54,18 +46,15 @@ export class Cycle extends BaseComponent {
                 allTasks
             );
 
+            // Process and apply budget constraints to inferences
             const processedInferences = await this._processInferencesWithEvaluator(newInferences);
             const budgetedInferences = this._applyBudgetConstraints(processedInferences);
 
+            // Update memory and stats
             this._updateMemoryWithInferences(budgetedInferences, cycleStartTime);
             this._updateCycleStats(cycleStartTime);
 
-            return {
-                cycleNumber: this._cycleCount,
-                newInferences: budgetedInferences.length,
-                cycleTime: Date.now() - cycleStartTime,
-                memoryStats: this._memory.getDetailedStats()
-            };
+            return this._createCycleResult(budgetedInferences.length, cycleStartTime);
 
         } catch (error) {
             this.logger.error('Error in reasoning cycle:', error);
@@ -75,14 +64,38 @@ export class Cycle extends BaseComponent {
         }
     }
 
+    async _getFilteredTasks() {
+        const focusTasks = this._focus.getTasks(this._config.focusTaskLimit || DEFAULT_FOCUS_TASK_LIMIT);
+        const allConcepts = this._memory.getAllConcepts();
+        const memoryTasks = allConcepts.flatMap(c => c.getAllTasks ? c.getAllTasks() : []);
+
+        const filteredTasks = this._filterTasksByBudget([...focusTasks, ...memoryTasks]);
+        const taskMap = new Map();
+        filteredTasks.forEach(task => taskMap.set(task.stamp.id, task));
+        let allTasks = Array.from(taskMap.values());
+
+        if (this._nar?.termLayer) {
+            allTasks = await this._enhanceTasksWithAssociativeLinks(allTasks, this._nar.termLayer);
+        }
+
+        return allTasks;
+    }
+
+    _createCycleResult(inferenceCount, cycleStartTime) {
+        return {
+            cycleNumber: this._cycleCount,
+            newInferences: inferenceCount,
+            cycleTime: Date.now() - cycleStartTime,
+            memoryStats: this._memory.getDetailedStats()
+        };
+    }
+
     async _processInferencesWithEvaluator(inferences) {
         const processed = [];
         
         for (const inference of inferences) {
             try {
-                processed.push(inference.term.operator === '^'
-                    ? await this._processOperationTerm(inference)
-                    : this._processNALTerm(inference));
+                processed.push(await this._processInference(inference));
             } catch (error) {
                 this.logger.warn(`Evaluation failed for inference, keeping original:`, error.message);
                 processed.push(inference);
@@ -90,6 +103,12 @@ export class Cycle extends BaseComponent {
         }
         
         return processed;
+    }
+
+    async _processInference(inference) {
+        return inference.term.operator === '^'
+            ? await this._processOperationTerm(inference)
+            : this._processNALTerm(inference);
     }
 
     async _processOperationTerm(inference) {
@@ -108,8 +127,8 @@ export class Cycle extends BaseComponent {
         return tasks.filter(task => {
             if (!task.budget) return true;
             
-            return (task.budget.cycles === undefined || task.budget.cycles > 0) &&
-                   (task.budget.depth === undefined || task.budget.depth > 0);
+            const { cycles, depth } = task.budget;
+            return (cycles === undefined || cycles > 0) && (depth === undefined || depth > 0);
         });
     }
 

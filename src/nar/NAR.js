@@ -438,6 +438,19 @@ export class NAR extends BaseComponent {
         if (!this._lm) throw new Error('Language Model is not enabled in this NAR instance');
     }
 
+    _ensureToolIntegration() {
+        if (!this._toolIntegration) throw new Error('Tool integration is not enabled');
+    }
+
+    _ensureExplanationService() {
+        if (!this._explanationService) throw new Error('Explanation service is not enabled');
+    }
+
+    _withComponentCheck(component, message, operation) {
+        if (!component) throw new Error(message);
+        return operation(component);
+    }
+
     registerLMProvider(id, provider) {
         this._ensureLMEnabled();
         this._lm.registerProvider(id, provider);
@@ -445,18 +458,18 @@ export class NAR extends BaseComponent {
     }
 
     async generateWithLM(prompt, options = {}) {
-        this._ensureLMEnabled();
-        return await this._lm.generateText(prompt, options);
+        return this._withComponentCheck(this._lm, 'Language Model is not enabled in this NAR instance', 
+            lm => lm.generateText(prompt, options));
     }
 
     translateToNarsese(text) {
-        this._ensureLMEnabled();
-        return this._lm.translateToNarsese(text);
+        return this._withComponentCheck(this._lm, 'Language Model is not enabled in this NAR instance', 
+            lm => lm.translateToNarsese(text));
     }
 
     translateFromNarsese(narsese) {
-        this._ensureLMEnabled();
-        return this._lm.translateFromNarsese(narsese);
+        return this._withComponentCheck(this._lm, 'Language Model is not enabled in this NAR instance', 
+            lm => lm.translateFromNarsese(narsese));
     }
 
     _calculateInputPriority(parsed) {
@@ -570,15 +583,15 @@ export class NAR extends BaseComponent {
     }
 
     async executeTool(toolId, params, context = {}) {
-        this._ensureToolIntegration();
         const startTime = Date.now();
         try {
-            const result = await this._toolIntegration.executeTool(toolId, params, {
-                nar: this,
-                memory: this._memory,
-                timestamp: Date.now(),
-                ...context
-            });
+            const result = await this._withComponentCheck(this._toolIntegration, 'Tool integration is not enabled',
+                toolIntegration => toolIntegration.executeTool(toolId, params, {
+                    nar: this,
+                    memory: this._memory,
+                    timestamp: Date.now(),
+                    ...context
+                }));
             const duration = Date.now() - startTime;
             duration > 1000 && this.logger.warn(`Slow tool execution: ${toolId} took ${duration}ms`, {
                 toolId,
@@ -597,13 +610,13 @@ export class NAR extends BaseComponent {
     }
 
     async executeTools(toolCalls, context = {}) {
-        this._ensureToolIntegration();
-        return await this._toolIntegration.executeTools(toolCalls, {
-            nar: this,
-            memory: this._memory,
-            timestamp: Date.now(),
-            ...context
-        });
+        return await this._withComponentCheck(this._toolIntegration, 'Tool integration is not enabled',
+            toolIntegration => toolIntegration.executeTools(toolCalls, {
+                nar: this,
+                memory: this._memory,
+                timestamp: Date.now(),
+                ...context
+            }));
     }
 
     getAvailableTools() {
@@ -615,42 +628,42 @@ export class NAR extends BaseComponent {
     }
 
     async explainToolResult(toolResult, context = {}) {
-        this._ensureExplanationService();
-        return await this._explanationService.explainToolResult(toolResult, {
-            nar: this,
-            memory: this._memory,
-            timestamp: Date.now(),
-            ...context
-        });
+        return await this._withComponentCheck(this._explanationService, 'Explanation service is not enabled',
+            service => service.explainToolResult(toolResult, {
+                nar: this,
+                memory: this._memory,
+                timestamp: Date.now(),
+                ...context
+            }));
     }
 
     async explainToolResults(toolResults, context = {}) {
-        this._ensureExplanationService();
-        return await this._explanationService.explainToolResults(toolResults, {
-            nar: this,
-            memory: this._memory,
-            timestamp: Date.now(),
-            ...context
-        });
+        return await this._withComponentCheck(this._explanationService, 'Explanation service is not enabled',
+            service => service.explainToolResults(toolResults, {
+                nar: this,
+                memory: this._memory,
+                timestamp: Date.now(),
+                ...context
+            }));
     }
 
     async summarizeToolExecution(toolResults, context = {}) {
-        this._ensureExplanationService();
-        return await this._explanationService.summarizeToolExecution(toolResults, {
-            nar: this,
-            memory: this._memory,
-            timestamp: Date.now(),
-            ...context
-        });
+        return await this._withComponentCheck(this._explanationService, 'Explanation service is not enabled',
+            service => service.summarizeToolExecution(toolResults, {
+                nar: this,
+                memory: this._memory,
+                timestamp: Date.now(),
+                ...context
+            }));
     }
 
     async assessToolResults(toolResults, context = {}) {
-        this._ensureExplanationService();
-        return await this._explanationService.assessToolResults(toolResults, {
-            nar: this,
-            memory: this._memory,
-            timestamp: Date.now(),
-            ...context
-        });
+        return await this._withComponentCheck(this._explanationService, 'Explanation service is not enabled',
+            service => service.assessToolResults(toolResults, {
+                nar: this,
+                memory: this._memory,
+                timestamp: Date.now(),
+                ...context
+            }));
     }
 }
