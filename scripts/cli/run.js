@@ -10,8 +10,7 @@ const __dirname = dirname(__filename);
 // CLI runner that can handle different CLI operations
 const args = process.argv.slice(2);
 
-function showUsage() {
-    console.log(`
+const USAGE_MESSAGE = `
 Usage: node scripts/cli/run.js [options]
 
 Options:
@@ -28,36 +27,71 @@ Examples:
   node scripts/cli/run.js --eval "(a --> b)."
   node scripts/cli/run.js --repl
   node scripts/cli/run.js --dev
-    `);
+`;
+
+const CLI_CONFIG = {
+    module: 'src/index.js',
+    baseDir: join(__dirname, '../../'),
+    devArgs: ['--dev', '--watch'],
+    helpArgs: ['--help', '-h']
+};
+
+function showUsage() {
+    console.log(USAGE_MESSAGE);
 }
 
-if (args.includes('--help') || args.includes('-h')) {
-    showUsage();
-    process.exit(0);
+/**
+ * Check if help was requested
+ */
+function isHelpRequested(args) {
+    return args.some(arg => CLI_CONFIG.helpArgs.includes(arg));
 }
 
-// Determine which CLI mode to run
-let cliModule = 'src/index.js';
-let nodeArgs = [];
+/**
+ * Process arguments to extract dev mode and other options
+ */
+function processArgs(args) {
+    let nodeArgs = [];
+    const remainingArgs = [...args]; // Create a copy to avoid modifying original
 
-// Check for dev mode
-if (args.includes('--dev') || args.includes('--watch')) {
-    nodeArgs.push('--watch');
-    // Remove --dev/--watch from args passed to the CLI
-    args.splice(args.indexOf('--dev') !== -1 ? args.indexOf('--dev') : args.indexOf('--watch'), 1);
+    // Check for dev mode and extract node args
+    if (args.includes('--dev') || args.includes('--watch')) {
+        nodeArgs.push('--watch');
+        // Remove --dev/--watch from args passed to the CLI
+        const devIndex = args.indexOf('--dev') !== -1 ? args.indexOf('--dev') : args.indexOf('--watch');
+        remainingArgs.splice(devIndex, 1);
+    }
+
+    return { nodeArgs, remainingArgs };
 }
 
-// Pass the remaining arguments to the CLI module
-const child = spawn('node', [...nodeArgs, cliModule, ...args], {
-    stdio: 'inherit',
-    cwd: join(__dirname, '../../')
-});
+/**
+ * Run the CLI process
+ */
+function runCLI(nodeArgs, remainingArgs) {
+    const child = spawn('node', [...nodeArgs, CLI_CONFIG.module, ...remainingArgs], {
+        stdio: 'inherit',
+        cwd: CLI_CONFIG.baseDir
+    });
 
-child.on('error', (err) => {
-    console.error('Error running CLI:', err.message);
-    process.exit(1);
-});
+    child.on('error', (err) => {
+        console.error('Error running CLI:', err.message);
+        process.exit(1);
+    });
 
-child.on('close', (code) => {
-    process.exit(code);
-});
+    child.on('close', (code) => {
+        process.exit(code);
+    });
+}
+
+function main() {
+    if (isHelpRequested(args)) {
+        showUsage();
+        process.exit(0);
+    }
+
+    const { nodeArgs, remainingArgs } = processArgs(args);
+    runCLI(nodeArgs, remainingArgs);
+}
+
+main();

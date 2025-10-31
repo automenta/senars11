@@ -9,8 +9,7 @@ const __dirname = dirname(__filename);
 
 const args = process.argv.slice(2);
 
-function showUsage() {
-    console.log(`
+const USAGE_MESSAGE = `
 Usage: node scripts/tests/run.js [options]
 
 Options:
@@ -28,47 +27,19 @@ Options:
   --watch             Watch mode
 
 Examples:
-  node bin/tests/run.js --core
-  node bin/tests/run.js --ui
-  node bin/tests/run.js --all --verbose
-  node bin/tests/run.js --unit --coverage
-  node bin/tests/run.js --e2e --watch
-    `);
-}
+  node scripts/tests/run.js --core
+  node scripts/tests/run.js --ui
+  node scripts/tests/run.js --all --verbose
+  node scripts/tests/run.js --unit --coverage
+  node scripts/tests/run.js --e2e --watch
+`;
 
-if (args.includes('--help') || args.includes('-h')) {
-    showUsage();
-    process.exit(0);
-}
+const DEFAULT_TEST_TYPE = 'core';
+const HELP_ARGS = ['--help', '-h'];
+const VERBOSE_ARGS = ['--verbose', '-v'];
+const OPTION_ARGS = ['--coverage', '--watch', ...VERBOSE_ARGS];
 
-// Parse arguments
-let testType = 'core'; // default
-let verbose = args.includes('--verbose') || args.includes('-v');
-let coverage = args.includes('--coverage');
-let watch = args.includes('--watch');
-
-for (let i = 0; i < args.length; i++) {
-    if (args[i] === '--core') {
-        testType = 'core';
-    } else if (args[i] === '--ui') {
-        testType = 'ui';
-    } else if (args[i] === '--e2e') {
-        testType = 'e2e';
-    } else if (args[i] === '--unit') {
-        testType = 'unit';
-    } else if (args[i] === '--integration') {
-        testType = 'integration';
-    } else if (args[i] === '--property') {
-        testType = 'property';
-    } else if (args[i] === '--all') {
-        testType = 'all';
-    } else if (args[i] === '--automated') {
-        testType = 'automated';
-    }
-}
-
-// Map test types to npm scripts
-const testCommands = {
+const TEST_COMMANDS = {
     'core': 'test:core',
     'ui': 'test:ui',
     'unit': 'test:unit',
@@ -79,32 +50,83 @@ const testCommands = {
     'e2e': 'test:e2e'
 };
 
-let npmScript = testCommands[testType];
-
-if (!npmScript) {
-    console.error(`Unknown test type: ${testType}`);
-    process.exit(1);
+function showUsage() {
+    console.log(USAGE_MESSAGE);
 }
 
-// Add additional flags based on options
-let jestArgs = [];
-if (verbose) jestArgs.push('--verbose');
-if (coverage) jestArgs.push('--coverage');
-if (watch) jestArgs.push('--watch');
+/**
+ * Check if help was requested
+ */
+function isHelpRequested(args) {
+    return args.some(arg => HELP_ARGS.includes(arg));
+}
 
-console.log(`Running ${testType} tests...`);
+/**
+ * Parse command line arguments
+ */
+function parseArgs(args) {
+    let testType = DEFAULT_TEST_TYPE;
+    let verbose = args.some(arg => VERBOSE_ARGS.includes(arg));
+    let coverage = args.includes('--coverage');
+    let watch = args.includes('--watch');
 
-// Start the appropriate test command
-const child = spawn('npm', ['run', npmScript, '--', ...jestArgs], {
-    stdio: 'inherit',
-    cwd: join(__dirname, '../../')
-});
+    for (let i = 0; i < args.length; i++) {
+        if (Object.keys(TEST_COMMANDS).includes(args[i].replace(/^--/, ''))) {
+            testType = args[i].replace(/^--/, '');
+        }
+    }
 
-child.on('error', (err) => {
-    console.error('Error running tests:', err.message);
-    process.exit(1);
-});
+    return { testType, verbose, coverage, watch };
+}
 
-child.on('close', (code) => {
-    process.exit(code);
-});
+/**
+ * Build test arguments based on options
+ */
+function buildTestArgs({ verbose, coverage, watch }) {
+    const jestArgs = [];
+    if (verbose) jestArgs.push('--verbose');
+    if (coverage) jestArgs.push('--coverage');
+    if (watch) jestArgs.push('--watch');
+    return jestArgs;
+}
+
+/**
+ * Start the test runner
+ */
+function runTests(npmScript, jestArgs) {
+    console.log(`Running ${npmScript.replace('test:', '')} tests...`);
+
+    const child = spawn('npm', ['run', npmScript, '--', ...jestArgs], {
+        stdio: 'inherit',
+        cwd: join(__dirname, '../../')
+    });
+
+    child.on('error', (err) => {
+        console.error('Error running tests:', err.message);
+        process.exit(1);
+    });
+
+    child.on('close', (code) => {
+        process.exit(code);
+    });
+}
+
+function main() {
+    if (isHelpRequested(args)) {
+        showUsage();
+        process.exit(0);
+    }
+
+    const { testType, verbose, coverage, watch } = parseArgs(args);
+    
+    const npmScript = TEST_COMMANDS[testType];
+    if (!npmScript) {
+        console.error(`Unknown test type: ${testType}`);
+        process.exit(1);
+    }
+
+    const jestArgs = buildTestArgs({ verbose, coverage, watch });
+    runTests(npmScript, jestArgs);
+}
+
+main();

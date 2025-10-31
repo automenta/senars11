@@ -9,8 +9,7 @@ const __dirname = dirname(__filename);
 
 const args = process.argv.slice(2);
 
-function showUsage() {
-    console.log(`
+const USAGE_MESSAGE = `
 Usage: node scripts/ui/run.js [options]
 
 Options:
@@ -25,63 +24,112 @@ Examples:
   node scripts/ui/run.js --dev
   node scripts/ui/run.js --prod --port 3000
   node scripts/ui/run.js --dev --port 8081 --ws-port 8082
-    `);
+`;
+
+const DEFAULT_CONFIG = {
+    isDevMode: true,
+    port: '5173',
+    wsPort: '8080',
+    host: 'localhost'
+};
+
+function showUsage() {
+    console.log(USAGE_MESSAGE);
 }
 
-if (args.includes('--help') || args.includes('-h')) {
-    showUsage();
-    process.exit(0);
+/**
+ * Check if help was requested
+ */
+function isHelpRequested(args) {
+    return args.includes('--help') || args.includes('-h');
 }
 
-// Default to development mode
-let isDevMode = !args.includes('--prod'); // Default to dev mode unless --prod is specified
-let port = '5173';
-let wsPort = '8080';
-let host = 'localhost';
+/**
+ * Parse command line arguments
+ */
+function parseArgs(args) {
+    let isDevMode = DEFAULT_CONFIG.isDevMode;
+    let port = DEFAULT_CONFIG.port;
+    let wsPort = DEFAULT_CONFIG.wsPort;
+    let host = DEFAULT_CONFIG.host;
 
-// Parse arguments
-for (let i = 0; i < args.length; i++) {
-    if (args[i] === '--prod') {
-        isDevMode = false;
-    } else if (args[i] === '--dev') {
-        isDevMode = true;
-    } else if (args[i] === '--port' && args[i + 1]) {
-        port = args[i + 1];
-        i++; // Skip next argument since it's the value
-    } else if (args[i] === '--ws-port' && args[i + 1]) {
-        wsPort = args[i + 1];
-        i++; // Skip next argument since it's the value
-    } else if (args[i] === '--host' && args[i + 1]) {
-        host = args[i + 1];
-        i++; // Skip next argument since it's the value
+    for (let i = 0; i < args.length; i++) {
+        if (args[i] === '--prod') {
+            isDevMode = false;
+        } else if (args[i] === '--dev') {
+            isDevMode = true;
+        } else if (args[i] === '--port' && args[i + 1]) {
+            port = args[i + 1];
+            i++; // Skip next argument since it's the value
+        } else if (args[i] === '--ws-port' && args[i + 1]) {
+            wsPort = args[i + 1];
+            i++; // Skip next argument since it's the value
+        } else if (args[i] === '--host' && args[i + 1]) {
+            host = args[i + 1];
+            i++; // Skip next argument since it's the value
+        }
     }
+    
+    // Default to dev mode unless --prod was explicitly specified
+    if (!args.includes('--prod') && !args.includes('--dev')) {
+        isDevMode = DEFAULT_CONFIG.isDevMode;
+    }
+
+    return { isDevMode, port, wsPort, host };
 }
 
-console.log(`Starting ${isDevMode ? 'development' : 'production'} UI server...`);
-console.log(`Port: ${port}, WebSocket Port: ${wsPort}, Host: ${host}`);
+/**
+ * Set environment variables for the UI
+ */
+function setEnvironmentVariables({ port, wsPort, host }) {
+    process.env.PORT = port;
+    process.env.VITE_WS_PORT = wsPort;
+    process.env.VITE_WS_HOST = host;
+    
+    // Also set WebSocket environment variables
+    process.env.WS_PORT = wsPort;
+    process.env.WS_HOST = host;
+}
 
-// Set environment variables
-process.env.PORT = port;
-process.env.VITE_WS_PORT = wsPort;
-process.env.VITE_WS_HOST = host;
+/**
+ * Start the UI server
+ */
+function startUIServer({ port, wsPort, host }) {
+    console.log(`Starting ${port === DEFAULT_CONFIG.port && wsPort === DEFAULT_CONFIG.wsPort && host === DEFAULT_CONFIG.host ? 
+        (DEFAULT_CONFIG.isDevMode ? 'development' : 'production') : 
+        'custom'} UI server...`);
+    console.log(`Port: ${port}, WebSocket Port: ${wsPort}, Host: ${host}`);
 
-// Start the web UI
-const child = spawn('node', ['webui.js'], {
-    stdio: 'inherit',
-    cwd: join(__dirname, '../../'),
-    env: {
-        ...process.env,
-        WS_PORT: wsPort,
-        WS_HOST: host,
-        PORT: port
+    const child = spawn('node', ['webui.js'], {
+        stdio: 'inherit',
+        cwd: join(__dirname, '../../'),
+        env: {
+            ...process.env,
+            WS_PORT: wsPort,
+            WS_HOST: host,
+            PORT: port
+        }
+    });
+
+    child.on('error', (err) => {
+        console.error('Error starting UI server:', err.message);
+        process.exit(1);
+    });
+
+    child.on('close', (code) => {
+        process.exit(code);
+    });
+}
+
+function main() {
+    if (isHelpRequested(args)) {
+        showUsage();
+        process.exit(0);
     }
-});
 
-child.on('error', (err) => {
-    console.error('Error starting UI server:', err.message);
-    process.exit(1);
-});
+    const config = parseArgs(args);
+    setEnvironmentVariables(config);
+    startUIServer(config);
+}
 
-child.on('close', (code) => {
-    process.exit(code);
-});
+main();

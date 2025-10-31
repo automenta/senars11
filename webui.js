@@ -25,6 +25,9 @@ const DEFAULT_CONFIG = Object.freeze({
     }
 });
 
+/**
+ * Initialize and start the WebSocket server
+ */
 async function startWebSocketServer() {
     console.log('Starting WebSocket server...');
 
@@ -53,6 +56,9 @@ async function startWebSocketServer() {
     return {nar, monitor, demoWrapper};
 }
 
+/**
+ * Start the Vite development server
+ */
 function startViteDevServer() {
     console.log('Starting Vite dev server...');
 
@@ -65,12 +71,12 @@ function startViteDevServer() {
             // Pass WebSocket connection info to UI
             VITE_WS_HOST: DEFAULT_CONFIG.webSocket.host,
             VITE_WS_PORT: DEFAULT_CONFIG.webSocket.port,
-            VITE_WS_PATH: DEFAULT_CONFIG.webSocket.path,
+            VITE_WS_PATH: DEFAULT_CONFIG.webSocket.path || undefined,
         }
     });
 
     viteProcess.on('error', (err) => {
-        console.error('Error starting Vite server:', err);
+        console.error('Error starting Vite server:', err.message);
         process.exit(1);
     });
 
@@ -84,6 +90,9 @@ function startViteDevServer() {
     return viteProcess;
 }
 
+/**
+ * Setup graceful shutdown handlers
+ */
 async function setupGracefulShutdown(webSocketServer) {
     const shutdown = async () => {
         console.log('\nShutting down gracefully...');
@@ -115,7 +124,7 @@ async function setupGracefulShutdown(webSocketServer) {
     process.on('SIGINT', shutdown);
     process.on('SIGTERM', shutdown);
     process.on('uncaughtException', (error) => {
-        console.error('Uncaught exception:', error);
+        console.error('Uncaught exception:', error.message);
         process.exit(1);
     });
     process.on('unhandledRejection', (reason, promise) => {
@@ -145,12 +154,12 @@ async function main() {
 
         console.log('Both servers are running. Press Ctrl+C to stop.');
     } catch (error) {
-        console.error('Failed to start servers:', error);
+        console.error('Failed to start servers:', error.message);
         process.exit(1);
     }
 }
 
 main().catch(error => {
-    console.error('Unexpected error:', error);
+    console.error('Unexpected error:', error.message);
     process.exit(1);
 });

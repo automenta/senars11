@@ -12,10 +12,7 @@ const execAsync = promisify(exec);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const args = process.argv.slice(2);
-
-function showUsage() {
-    console.log(`
+const USAGE_MESSAGE = `
 Usage: node scripts/utils/data-management.js [options]
 
 Options:
@@ -34,224 +31,281 @@ Examples:
   node scripts/utils/data-management.js --backup
   node scripts/utils/data-management.js --restore backups/session-2023.json
   node scripts/utils/data-management.js --clean
-    `);
+`;
+
+const HELP_ARGS = ['--help', '-h'];
+const OPERATION_ARGS = ['--export', '--import', '--backup', '--restore', '--clean', '--list'];
+const FORMAT_ARG = '--format';
+
+const DATA_LOCATIONS = [
+    { dir: 'backups', description: 'Backup files' },
+    { dir: 'demo-results', description: 'Demo result files' },
+    { dir: 'test-results', description: 'Test result files' },
+    { dir: '.', pattern: '*.json', description: 'JSON state files' }
+];
+
+const PATTERNS_TO_CLEAN = [
+    'test-results/screenshots/*',
+    'test-results/videos/*',
+    'demo-results/*',
+    'comparison-results/*',
+    'backups/*.old',
+    '*.tmp',
+    '*.temp',
+    'tmp/*'
+];
+
+function showUsage() {
+    console.log(USAGE_MESSAGE);
 }
 
-if (args.includes('--help') || args.includes('-h')) {
-    showUsage();
-    process.exit(0);
+/**
+ * Check if help was requested
+ */
+function isHelpRequested(args) {
+    return args.some(arg => HELP_ARGS.includes(arg));
 }
 
-// Parse arguments
-let operation = null;
-let targetPath = null;
-let format = 'json';
+/**
+ * Parse command line arguments
+ */
+function parseArgs(args) {
+    let operation = null;
+    let targetPath = null;
+    let format = 'json';
 
-for (let i = 0; i < args.length; i++) {
-    if (args[i] === '--export' && args[i + 1]) {
-        operation = 'export';
-        targetPath = args[i + 1];
-        i++;
-    } else if (args[i] === '--import' && args[i + 1]) {
-        operation = 'import';
-        targetPath = args[i + 1];
-        i++;
-    } else if (args[i] === '--backup') {
-        operation = 'backup';
-    } else if (args[i] === '--restore' && args[i + 1]) {
-        operation = 'restore';
-        targetPath = args[i + 1];
-        i++;
-    } else if (args[i] === '--clean') {
-        operation = 'clean';
-    } else if (args[i] === '--list') {
-        operation = 'list';
-    } else if (args[i] === '--format' && args[i + 1]) {
-        format = args[i + 1];
-        i++;
+    for (let i = 0; i < args.length; i++) {
+        if (args[i] === '--export' && args[i + 1]) {
+            operation = 'export';
+            targetPath = args[i + 1];
+            i++;
+        } else if (args[i] === '--import' && args[i + 1]) {
+            operation = 'import';
+            targetPath = args[i + 1];
+            i++;
+        } else if (args[i] === '--backup') {
+            operation = 'backup';
+        } else if (args[i] === '--restore' && args[i + 1]) {
+            operation = 'restore';
+            targetPath = args[i + 1];
+            i++;
+        } else if (args[i] === '--clean') {
+            operation = 'clean';
+        } else if (args[i] === '--list') {
+            operation = 'list';
+        } else if (args[i] === '--format' && args[i + 1]) {
+            format = args[i + 1];
+            i++;
+        }
+    }
+
+    return { operation, targetPath, format };
+}
+
+/**
+ * Validate file exists
+ */
+function validateFileExists(path) {
+    if (!existsSync(path)) {
+        console.error(`❌ File does not exist: ${path}`);
+        process.exit(1);
     }
 }
 
-if (!operation) {
-    console.log('No operation specified. Use --help for usage information.');
-    process.exit(1);
+/**
+ * Parse and validate JSON file
+ */
+async function parseJsonFile(path) {
+    const data = await readFile(path, 'utf8');
+    try {
+        return JSON.parse(data);
+    } catch (error) {
+        console.error(`❌ Invalid JSON in file: ${error.message}`);
+        process.exit(1);
+    }
 }
 
-console.log(`Running data management operation: ${operation}${targetPath ? ` ${targetPath}` : ''}`);
+/**
+ * Export operation
+ */
+async function exportOperation(targetPath, format) {
+    console.log(`\\n📤 Exporting current state to: ${targetPath}`);
+    
+    const exportDir = dirname(targetPath);
+    if (exportDir !== '.') {
+        await execAsync(`mkdir -p ${exportDir}`);
+    }
+    
+    // Create a placeholder export file for now
+    await writeFile(targetPath, JSON.stringify({
+        timestamp: new Date().toISOString(),
+        operation: 'export',
+        format: format,
+        description: 'SeNARS state export'
+    }, null, 2));
+    
+    console.log(`✅ State exported to: ${targetPath}`);
+}
 
-async function runDataManagement() {
+/**
+ * Import operation
+ */
+async function importOperation(targetPath) {
+    console.log(`\\n📥 Importing state from: ${targetPath}`);
+    
+    validateFileExists(targetPath);
+    
+    // Read and validate import file
+    const parsedData = await parseJsonFile(targetPath);
+    
+    console.log(`✅ Successfully read import file: ${targetPath}`);
+    console.log(`   Format: ${parsedData.format || 'unknown'}`);
+    console.log(`   Timestamp: ${parsedData.timestamp || 'unknown'}`);
+    console.log(`✅ State imported from: ${targetPath}`);
+}
+
+/**
+ * Backup operation
+ */
+async function backupOperation(format) {
+    console.log('\\n📦 Creating backup of current state...');
+    
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').replace('T', '_').replace('Z', '');
+    const backupDir = 'backups';
+    const backupPath = `${backupDir}/senars-backup-${timestamp}.json`;
+    
+    await execAsync(`mkdir -p ${backupDir}`);
+    
+    // Create a backup file
+    await writeFile(backupPath, JSON.stringify({
+        timestamp: new Date().toISOString(),
+        operation: 'backup',
+        format: format,
+        description: 'SeNARS state backup',
+        backupInfo: {
+            timestamp,
+            originalPath: backupPath
+        }
+    }, null, 2));
+    
+    console.log(`✅ Backup created: ${backupPath}`);
+}
+
+/**
+ * Restore operation
+ */
+async function restoreOperation(targetPath) {
+    console.log(`\\n📥 Restoring from: ${targetPath}`);
+    
+    validateFileExists(targetPath);
+    
+    // Validate backup file
+    const parsedBackup = await parseJsonFile(targetPath);
+    console.log(`✅ Valid backup file detected`);
+    console.log(`   Backup time: ${parsedBackup.timestamp}`);
+    console.log(`   Format: ${parsedBackup.format || 'unknown'}`);
+    console.log(`✅ State restored from: ${targetPath}`);
+}
+
+/**
+ * Clean operation
+ */
+async function cleanOperation(cwd) {
+    console.log('\\n🧹 Cleaning up old data and test artifacts...');
+    
+    for (const pattern of PATTERNS_TO_CLEAN) {
+        try {
+            // Using shell command to handle glob patterns
+            await execAsync(`rm -rf ${pattern} 2>/dev/null || true`, { cwd });
+            console.log(`  Removed: ${pattern}`);
+        } catch (error) {
+            // Silently continue if pattern doesn't match any files
+        }
+    }
+    
+    console.log('✅ Clean up completed');
+}
+
+/**
+ * List operation
+ */
+async function listOperation() {
+    console.log('\\n📋 Listing available data files...');
+    
+    for (const location of DATA_LOCATIONS) {
+        try {
+            if (location.pattern) {
+                // Look for JSON files in root
+                const files = await readdir('.');
+                const jsonFiles = files.filter(f => f.endsWith('.json') && 
+                    !f.includes('package') && 
+                    !f.includes('config') && 
+                    !f.includes('README'));
+                
+                if (jsonFiles.length > 0) {
+                    console.log(`\\n${location.description}:`);
+                    jsonFiles.forEach(file => console.log(`  - ${file}`));
+                }
+            } else if (existsSync(location.dir)) {
+                const files = await readdir(location.dir);
+                if (files.length > 0) {
+                    console.log(`\\n${location.description} (${location.dir}/):`);
+                    files.forEach(file => console.log(`  - ${location.dir}/${file}`));
+                }
+            }
+        } catch (error) {
+            // Directory doesn't exist or isn't readable, continue
+        }
+    }
+}
+
+async function main() {
+    const args = process.argv.slice(2);
+
+    if (isHelpRequested(args)) {
+        showUsage();
+        process.exit(0);
+    }
+
+    const { operation, targetPath, format } = parseArgs(args);
+
+    if (!operation) {
+        console.log('No operation specified. Use --help for usage information.');
+        process.exit(1);
+    }
+
+    console.log(`Running data management operation: ${operation}${targetPath ? ` ${targetPath}` : ''}`);
+
     try {
         const cwd = join(__dirname, '../..');
         
         switch (operation) {
             case 'export':
-                console.log(`\\n📤 Exporting current state to: ${targetPath}`);
-                
-                // For now, we'll create a simple export by running a script that exports data
-                // In the future, this could interface with a specific export API
-                const exportDir = dirname(targetPath);
-                if (exportDir !== '.') {
-                    await execAsync(`mkdir -p ${exportDir}`);
-                }
-                
-                // Create a placeholder export file for now
-                await writeFile(targetPath, JSON.stringify({
-                    timestamp: new Date().toISOString(),
-                    operation: 'export',
-                    format: format,
-                    description: 'SeNARS state export'
-                }, null, 2));
-                
-                console.log(`✅ State exported to: ${targetPath}`);
+                await exportOperation(targetPath, format);
                 break;
-                
             case 'import':
-                console.log(`\\n📥 Importing state from: ${targetPath}`);
-                
-                if (!existsSync(targetPath)) {
-                    console.error(`❌ File does not exist: ${targetPath}`);
-                    process.exit(1);
-                }
-                
-                // Read and validate import file
-                const importData = await readFile(targetPath, 'utf8');
-                let parsedData;
-                
-                try {
-                    parsedData = JSON.parse(importData);
-                    console.log(`✅ Successfully read import file: ${targetPath}`);
-                    console.log(`   Format: ${parsedData.format || 'unknown'}`);
-                    console.log(`   Timestamp: ${parsedData.timestamp || 'unknown'}`);
-                } catch (error) {
-                    console.error(`❌ Invalid JSON in import file: ${error.message}`);
-                    process.exit(1);
-                }
-                
-                console.log(`✅ State imported from: ${targetPath}`);
+                await importOperation(targetPath);
                 break;
-                
             case 'backup':
-                console.log('\\n📦 Creating backup of current state...');
-                
-                const timestamp = new Date().toISOString().replace(/[:.]/g, '-').replace('T', '_').replace('Z', '');
-                const backupDir = 'backups';
-                const backupPath = `${backupDir}/senars-backup-${timestamp}.json`;
-                
-                await execAsync(`mkdir -p ${backupDir}`);
-                
-                // Create a backup file
-                await writeFile(backupPath, JSON.stringify({
-                    timestamp: new Date().toISOString(),
-                    operation: 'backup',
-                    format: format,
-                    description: 'SeNARS state backup',
-                    backupInfo: {
-                        timestamp,
-                        originalPath: backupPath
-                    }
-                }, null, 2));
-                
-                console.log(`✅ Backup created: ${backupPath}`);
+                await backupOperation(format);
                 break;
-                
             case 'restore':
-                console.log(`\\n📥 Restoring from: ${targetPath}`);
-                
-                if (!existsSync(targetPath)) {
-                    console.error(`❌ Backup file does not exist: ${targetPath}`);
-                    process.exit(1);
-                }
-                
-                // Validate backup file
-                const backupData = await readFile(targetPath, 'utf8');
-                try {
-                    const parsedBackup = JSON.parse(backupData);
-                    console.log(`✅ Valid backup file detected`);
-                    console.log(`   Backup time: ${parsedBackup.timestamp}`);
-                    console.log(`   Format: ${parsedBackup.format || 'unknown'}`);
-                } catch (error) {
-                    console.error(`❌ Invalid backup file: ${error.message}`);
-                    process.exit(1);
-                }
-                
-                console.log(`✅ State restored from: ${targetPath}`);
+                await restoreOperation(targetPath);
                 break;
-                
             case 'clean':
-                console.log('\\n🧹 Cleaning up old data and test artifacts...');
-                
-                // Define patterns for files to clean up
-                const patternsToClean = [
-                    'test-results/screenshots/*',
-                    'test-results/videos/*',
-                    'demo-results/*',
-                    'comparison-results/*',
-                    'backups/*.old',
-                    '*.tmp',
-                    '*.temp',
-                    'tmp/*'
-                ];
-                
-                for (const pattern of patternsToClean) {
-                    try {
-                        // Using shell command to handle glob patterns
-                        await execAsync(`rm -rf ${pattern} 2>/dev/null || true`, { cwd });
-                        console.log(`  Removed: ${pattern}`);
-                    } catch (error) {
-                        // Silently continue if pattern doesn't match any files
-                    }
-                }
-                
-                console.log('✅ Clean up completed');
+                await cleanOperation(cwd);
                 break;
-                
             case 'list':
-                console.log('\\n📋 Listing available data files...');
-                
-                const dataLocations = [
-                    { dir: 'backups', description: 'Backup files' },
-                    { dir: 'demo-results', description: 'Demo result files' },
-                    { dir: 'test-results', description: 'Test result files' },
-                    { dir: '.', pattern: '*.json', description: 'JSON state files' }
-                ];
-                
-                for (const location of dataLocations) {
-                    try {
-                        if (location.pattern) {
-                            // Look for JSON files in root
-                            const files = await readdir('.');
-                            const jsonFiles = files.filter(f => f.endsWith('.json') && 
-                                !f.includes('package') && 
-                                !f.includes('config') && 
-                                !f.includes('README'));
-                            
-                            if (jsonFiles.length > 0) {
-                                console.log(`\\n${location.description}:`);
-                                jsonFiles.forEach(file => console.log(`  - ${file}`));
-                            }
-                        } else if (existsSync(location.dir)) {
-                            const files = await readdir(location.dir);
-                            if (files.length > 0) {
-                                console.log(`\\n${location.description} (${location.dir}/):`);
-                                files.forEach(file => console.log(`  - ${location.dir}/${file}`));
-                            }
-                        }
-                    } catch (error) {
-                        // Directory doesn't exist or isn't readable, continue
-                    }
-                }
-                
+                await listOperation();
                 break;
-                
             default:
                 console.log(`Unknown operation: ${operation}`);
                 process.exit(1);
         }
-        
     } catch (error) {
         console.error('Error running data management operation:', error);
         process.exit(1);
     }
 }
 
-runDataManagement();
+main();

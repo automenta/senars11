@@ -8,10 +8,7 @@ import { readdir, writeFile, readFile } from 'fs/promises';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const args = process.argv.slice(2);
-
-function showUsage() {
-    console.log(`
+const USAGE_MESSAGE = `
 Usage: node scripts/utils/config-comparison.js [options]
 
 Options:
@@ -27,43 +24,223 @@ Examples:
   node scripts/utils/config-comparison.js --run default,aggressive,conservative
   node scripts/utils/config-comparison.js --run my-config1,my-config2 --benchmark
   node scripts/utils/config-comparison.js --run experimental --analysis --demo
-    `);
+`;
+
+const DEFAULT_CONFIG = Object.freeze({
+    configList: ['default'],
+    outputDir: 'comparison-results',
+    timeout: 60000
+});
+
+const HELP_ARGS = ['--help', '-h'];
+const MODE_ARGS = ['--benchmark', '--analysis', '--demo'];
+
+function showUsage() {
+    console.log(USAGE_MESSAGE);
 }
 
-if (args.includes('--help') || args.includes('-h')) {
-    showUsage();
-    process.exit(0);
+/**
+ * Check if help was requested
+ */
+function isHelpRequested(args) {
+    return args.some(arg => HELP_ARGS.includes(arg));
 }
 
-// Parse arguments
-let configList = ['default']; // default
-let runBenchmark = args.includes('--benchmark');
-let runAnalysis = args.includes('--analysis');
-let runDemo = args.includes('--demo');
-let outputDir = 'comparison-results';
-let timeout = 60000;
+/**
+ * Parse command line arguments
+ */
+function parseArgs(args) {
+    let configList = [...DEFAULT_CONFIG.configList];
+    let runBenchmark = args.includes('--benchmark');
+    let runAnalysis = args.includes('--analysis');
+    let runDemo = args.includes('--demo');
+    let outputDir = DEFAULT_CONFIG.outputDir;
+    let timeout = DEFAULT_CONFIG.timeout;
 
-for (let i = 0; i < args.length; i++) {
-    if (args[i] === '--run' && args[i + 1]) {
-        configList = args[i + 1].split(',');
-        i++;
-    } else if (args[i] === '--output' && args[i + 1]) {
-        outputDir = args[i + 1];
-        i++;
-    } else if (args[i] === '--timeout' && args[i + 1]) {
-        timeout = parseInt(args[i + 1]);
-        i++;
+    for (let i = 0; i < args.length; i++) {
+        if (args[i] === '--run' && args[i + 1]) {
+            configList = args[i + 1].split(',');
+            i++;
+        } else if (args[i] === '--output' && args[i + 1]) {
+            outputDir = args[i + 1];
+            i++;
+        } else if (args[i] === '--timeout' && args[i + 1]) {
+            timeout = parseInt(args[i + 1]);
+            i++;
+        }
+    }
+
+    // Default to at least running analysis if no specific mode is specified
+    if (!runBenchmark && !runAnalysis && !runDemo) {
+        runAnalysis = true;
+    }
+
+    return { configList, runBenchmark, runAnalysis, runDemo, outputDir, timeout };
+}
+
+/**
+ * Execute a process with timeout
+ */
+async function runProcess(command, args, env, cwd, timeout, configName, operationName) {
+    const processObj = spawn(command, args, {
+        env: { 
+            ...process.env,
+            ...env
+        },
+        cwd,
+        timeout: timeout
+    });
+
+    let output = '';
+    processObj.stdout.on('data', (data) => {
+        output += data.toString();
+    });
+
+    processObj.stderr.on('data', (data) => {
+        console.error(`  Error in ${operationName} for ${configName}:`, data.toString());
+    });
+
+    return new Promise((resolve, reject) => {
+        const timeoutId = setTimeout(() => {
+            processObj.kill();
+            reject(new Error(`${operationName} for ${configName} timed out`));
+        }, timeout);
+
+        processObj.on('close', (code) => {
+            clearTimeout(timeoutId);
+            resolve({
+                exitCode: code,
+                output,
+                success: code === 0
+            });
+        });
+    });
+}
+
+/**
+ * Run configuration analysis
+ */
+async function runAnalysis(config, { outputDir, timeout }) {
+    console.log(`  Running analysis for ${config}...`);
+    try {
+        const result = await runProcess(
+            'node', 
+            ['comprehensive_analysis.js'], 
+            { SENARS_CONFIG: config },
+            join(__dirname, '../..'),
+            timeout,
+            config,
+            'analysis'
+        );
+        
+        // Save analysis output
+        await writeFile(`${outputDir}/results/analysis_${config}.txt`, result.output);
+        return result;
+    } catch (error) {
+        console.error(`  Analysis failed for ${config}:`, error.message);
+        return { success: false, error: error.message };
     }
 }
 
-// Default to at least running analysis if no specific mode is specified
-if (!runBenchmark && !runAnalysis && !runDemo) {
-    runAnalysis = true;
+/**
+ * Run configuration benchmark
+ */
+async function runBenchmark(config, { outputDir, timeout }) {
+    console.log(`  Running benchmarks for ${config}...`);
+    try {
+        const result = await runProcess(
+            'node', 
+            ['src/testing/runBenchmarks.js'], 
+            { SENARS_CONFIG: config },
+            join(__dirname, '../..'),
+            timeout,
+            config,
+            'benchmark'
+        );
+        
+        // Save benchmark output
+        await writeFile(`${outputDir}/results/benchmark_${config}.txt`, result.output);
+        return result;
+    } catch (error) {
+        console.error(`  Benchmark failed for ${config}:`, error.message);
+        return { success: false, error: error.message };
+    }
 }
 
-console.log(`Running configuration comparison: ${configList.join(', ')}`);
+/**
+ * Run configuration demo
+ */
+async function runDemo(config, { outputDir, timeout }) {
+    console.log(`  Running demo for ${config}...`);
+    try {
+        const result = await runProcess(
+            'node', 
+            ['run-demo.js'], 
+            { SENARS_CONFIG: config },
+            join(__dirname, '../..'),
+            timeout,
+            config,
+            'demo'
+        );
+        
+        // Save demo output
+        await writeFile(`${outputDir}/results/demo_${config}.txt`, result.output);
+        return result;
+    } catch (error) {
+        console.error(`  Demo failed for ${config}:`, error.message);
+        return { success: false, error: error.message };
+    }
+}
 
-async function runConfigComparison() {
+/**
+ * Generate summary report
+ */
+function generateSummary(configList, results) {
+    const summary = {
+        timestamp: new Date().toISOString(),
+        configurations: configList,
+        results: results,
+        summary: {}
+    };
+
+    // Calculate summary statistics
+    for (const config in results) {
+        const configResult = results[config];
+        summary.summary[config] = {
+            analysis_success: configResult.analysis?.success || false,
+            benchmark_success: configResult.benchmark?.success || false,
+            demo_success: configResult.demo?.success || false
+        };
+    }
+
+    return summary;
+}
+
+/**
+ * Print summary to console
+ */
+function printSummary(summary) {
+    console.log('\\n📈 Summary:');
+    for (const config in summary.summary) {
+        const stats = summary.summary[config];
+        console.log(`  ${config}:`);
+        console.log(`    Analysis: ${stats.analysis_success ? '✅' : '❌'}`);
+        console.log(`    Benchmark: ${stats.benchmark_success ? '✅' : '❌'}`);
+        console.log(`    Demo: ${stats.demo_success ? '✅' : '❌'}`);
+    }
+}
+
+async function main() {
+    const args = process.argv.slice(2);
+
+    if (isHelpRequested(args)) {
+        showUsage();
+        process.exit(0);
+    }
+
+    const { configList, runBenchmark, runAnalysis, runDemo, outputDir, timeout } = parseArgs(args);
+    console.log(`Running configuration comparison: ${configList.join(', ')}`);
+
     try {
         console.log(`\\n📊 Starting configuration comparison...`);
         
@@ -75,172 +252,24 @@ async function runConfigComparison() {
         for (const config of configList) {
             console.log(`\\n🧪 Testing configuration: ${config}`);
             
-            // Create a temporary config file or environment setting for this test
             const configResult = {};
             
             if (runAnalysis) {
-                console.log(`  Running analysis for ${config}...`);
-                try {
-                    const analysisProcess = spawn('node', [`comprehensive_analysis.js`], {
-                        env: { 
-                            ...process.env,
-                            SENARS_CONFIG: config 
-                        },
-                        cwd: join(__dirname, '../..'),
-                        timeout: timeout
-                    });
-                    
-                    let analysisOutput = '';
-                    analysisProcess.stdout.on('data', (data) => {
-                        analysisOutput += data.toString();
-                    });
-                    
-                    analysisProcess.stderr.on('data', (data) => {
-                        console.error(`  Error in analysis for ${config}:`, data.toString());
-                    });
-                    
-                    await new Promise((resolve, reject) => {
-                        const timeoutId = setTimeout(() => {
-                            analysisProcess.kill();
-                            reject(new Error(`Analysis for ${config} timed out`));
-                        }, timeout);
-                        
-                        analysisProcess.on('close', (code) => {
-                            clearTimeout(timeoutId);
-                            configResult.analysis = {
-                                exitCode: code,
-                                output: analysisOutput,
-                                success: code === 0
-                            };
-                            resolve();
-                        });
-                    });
-                    
-                    // Save analysis output
-                    await writeFile(`${outputDir}/results/analysis_${config}.txt`, analysisOutput);
-                    
-                } catch (error) {
-                    console.error(`  Analysis failed for ${config}:`, error.message);
-                    configResult.analysis = { success: false, error: error.message };
-                }
+                configResult.analysis = await runAnalysis(config, { outputDir, timeout });
             }
             
             if (runBenchmark) {
-                console.log(`  Running benchmarks for ${config}...`);
-                try {
-                    const benchmarkProcess = spawn('node', ['src/testing/runBenchmarks.js'], {
-                        env: { 
-                            ...process.env,
-                            SENARS_CONFIG: config 
-                        },
-                        cwd: join(__dirname, '../..'),
-                        timeout: timeout
-                    });
-                    
-                    let benchmarkOutput = '';
-                    benchmarkProcess.stdout.on('data', (data) => {
-                        benchmarkOutput += data.toString();
-                    });
-                    
-                    benchmarkProcess.stderr.on('data', (data) => {
-                        console.error(`  Error in benchmarks for ${config}:`, data.toString());
-                    });
-                    
-                    await new Promise((resolve, reject) => {
-                        const timeoutId = setTimeout(() => {
-                            benchmarkProcess.kill();
-                            reject(new Error(`Benchmark for ${config} timed out`));
-                        }, timeout);
-                        
-                        benchmarkProcess.on('close', (code) => {
-                            clearTimeout(timeoutId);
-                            configResult.benchmark = {
-                                exitCode: code,
-                                output: benchmarkOutput,
-                                success: code === 0
-                            };
-                            resolve();
-                        });
-                    });
-                    
-                    // Save benchmark output
-                    await writeFile(`${outputDir}/results/benchmark_${config}.txt`, benchmarkOutput);
-                    
-                } catch (error) {
-                    console.error(`  Benchmark failed for ${config}:`, error.message);
-                    configResult.benchmark = { success: false, error: error.message };
-                }
+                configResult.benchmark = await runBenchmark(config, { outputDir, timeout });
             }
             
             if (runDemo) {
-                console.log(`  Running demo for ${config}...`);
-                try {
-                    // Note: For demo runs with different configs, we'd need to implement 
-                    // configuration passing to the demo script, which is a more complex task
-                    const demoProcess = spawn('node', ['run-demo.js'], {
-                        env: { 
-                            ...process.env,
-                            SENARS_CONFIG: config 
-                        },
-                        cwd: join(__dirname, '../..'),
-                        timeout: timeout
-                    });
-                    
-                    let demoOutput = '';
-                    demoProcess.stdout.on('data', (data) => {
-                        demoOutput += data.toString();
-                    });
-                    
-                    demoProcess.stderr.on('data', (data) => {
-                        console.error(`  Error in demo for ${config}:`, data.toString());
-                    });
-                    
-                    await new Promise((resolve, reject) => {
-                        const timeoutId = setTimeout(() => {
-                            demoProcess.kill();
-                            reject(new Error(`Demo for ${config} timed out`));
-                        }, timeout);
-                        
-                        demoProcess.on('close', (code) => {
-                            clearTimeout(timeoutId);
-                            configResult.demo = {
-                                exitCode: code,
-                                output: demoOutput,
-                                success: code === 0
-                            };
-                            resolve();
-                        });
-                    });
-                    
-                    // Save demo output
-                    await writeFile(`${outputDir}/results/demo_${config}.txt`, demoOutput);
-                    
-                } catch (error) {
-                    console.error(`  Demo failed for ${config}:`, error.message);
-                    configResult.demo = { success: false, error: error.message };
-                }
+                configResult.demo = await runDemo(config, { outputDir, timeout });
             }
             
             results[config] = configResult;
         }
         
-        // Generate summary report
-        const summary = {
-            timestamp: new Date().toISOString(),
-            configurations: configList,
-            results: results,
-            summary: {}
-        };
-        
-        // Calculate summary statistics
-        for (const config in results) {
-            const configResult = results[config];
-            summary.summary[config] = {
-                analysis_success: configResult.analysis?.success || false,
-                benchmark_success: configResult.benchmark?.success || false,
-                demo_success: configResult.demo?.success || false
-            };
-        }
+        const summary = generateSummary(configList, results);
         
         // Write summary report
         await writeFile(`${outputDir}/comparison-summary.json`, JSON.stringify(summary, null, 2));
@@ -249,19 +278,11 @@ async function runConfigComparison() {
         console.log(`📊 Results saved to: ${outputDir}/`);
         
         // Print summary to console
-        console.log('\\n📈 Summary:');
-        for (const config in summary.summary) {
-            const stats = summary.summary[config];
-            console.log(`  ${config}:`);
-            console.log(`    Analysis: ${stats.analysis_success ? '✅' : '❌'}`);
-            console.log(`    Benchmark: ${stats.benchmark_success ? '✅' : '❌'}`);
-            console.log(`    Demo: ${stats.demo_success ? '✅' : '❌'}`);
-        }
-        
+        printSummary(summary);
     } catch (error) {
         console.error('Error running configuration comparison:', error);
         process.exit(1);
     }
 }
 
-runConfigComparison();
+main();
