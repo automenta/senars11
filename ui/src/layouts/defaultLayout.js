@@ -1,12 +1,29 @@
-// Default FlexLayout configuration with organized structure
+/**
+ * Layout configuration utilities and default layout definition
+ */
+
+// Layout building blocks
 const createTab = (name, component) => ({
   type: 'tab',
   name,
   component
 });
 
-const createTabSet = (children, weight = 50) => ({
+const createTabSet = (children, weight = 50, id = null) => ({
   type: 'tabset',
+  weight,
+  children,
+  ...(id && { id }) // Add ID only if provided
+});
+
+const createRow = (children, weight = 100) => ({
+  type: 'row',
+  weight,
+  children
+});
+
+const createColumn = (children, weight = 100) => ({
+  type: 'column',
   weight,
   children
 });
@@ -18,47 +35,100 @@ const createBorder = (location, size, children) => ({
   children
 });
 
-// Layout configuration organized by regions
-const defaultLayout = {
-  global: {
-    tabEnableClose: true,
-    tabEnableFloat: true,
-  },
-  borders: [
-    // Left sidebar with navigation panels
-    createBorder('left', 250, [
-      createTab('Tasks', 'TaskPanel'),
-      createTab('Concepts', 'ConceptPanel'),
-      createTab('Demos', 'DemoPanel'),
-      createTab('System', 'SystemStatusPanel')
-    ]),
-    // Bottom panel with monitoring and logs
-    createBorder('bottom', 250, [
-      createTab('Console', 'ConsolePanel'),
-      createTab('Priorities', 'PriorityFluctuationPanel'),
-      createTab('Relationships', 'ConceptRelationshipPanel'),
-      createTab('Trace', 'ReasoningTracePanel'),
-      createTab('Time Series', 'TimeSeriesPanel')
-    ])
+// Panel definitions for consistent naming and component mapping
+const PANELS = {
+  // Left sidebar panels
+  NAVIGATION: [
+    { name: 'Tasks', component: 'TaskPanel' },
+    { name: 'Concepts', component: 'ConceptPanel' },
+    { name: 'Demos', component: 'DemoPanel' },
+    { name: 'System', component: 'SystemStatusPanel' }
   ],
-  layout: {
-    type: 'row',
-    weight: 100,
-    children: [
-      // Left main area with dashboard and monitoring
-      createTabSet([
-        createTab('Dashboard', 'DashboardPanel'),
-        createTab('Main', 'MainPanel'),
-        createTab('Task Monitor', 'TaskMonitorPanel')
-      ], 60),
-      // Right main area with execution and input
-      createTabSet([
-        createTab('Cycles', 'CyclePanel'),
-        createTab('Variables', 'VariablesPanel'),
-        createTab('Input', 'InputInterfacePanel')
-      ], 40)
-    ]
-  }
+  
+  // Bottom panels
+  MONITORING: [
+    { name: 'Console', component: 'ConsolePanel' },
+    { name: 'Priorities', component: 'PriorityFluctuationPanel' },
+    { name: 'Relationships', component: 'ConceptRelationshipPanel' },
+    { name: 'Trace', component: 'ReasoningTracePanel' },
+    { name: 'Time Series', component: 'TimeSeriesPanel' }
+  ],
+  
+  // Left main area panels
+  DASHBOARD: [
+    { name: 'Dashboard', component: 'DashboardPanel' },
+    { name: 'Main', component: 'MainPanel' },
+    { name: 'Task Monitor', component: 'TaskMonitorPanel' }
+  ],
+  
+  // Right main area panels
+  EXECUTION: [
+    { name: 'Cycles', component: 'CyclePanel' },
+    { name: 'Variables', component: 'VariablesPanel' },
+    { name: 'Input', component: 'InputInterfacePanel' }
+  ]
+};
+
+// Layout configuration helper functions
+const createNavigationBorder = () => 
+  createBorder('left', 250, 
+    PANELS.NAVIGATION.map(panel => createTab(panel.name, panel.component))
+  );
+
+const createMonitoringBorder = () => 
+  createBorder('bottom', 250, 
+    PANELS.MONITORING.map(panel => createTab(panel.name, panel.component))
+  );
+
+const createDashboardArea = () => 
+  createTabSet(
+    PANELS.DASHBOARD.map(panel => createTab(panel.name, panel.component)),
+    60,
+    'dashboard-area'
+  );
+
+const createExecutionArea = () => 
+  createTabSet(
+    PANELS.EXECUTION.map(panel => createTab(panel.name, panel.component)),
+    40,
+    'execution-area'
+  );
+
+// Global layout configuration
+const GLOBAL_CONFIG = {
+  tabEnableClose: true,
+  tabEnableFloat: true,
+  splitterSize: 6,
+  tabSetEnableDeleteWhenEmpty: true,
+  tabSetEnableDrop: true
+};
+
+// Main layout definition
+const defaultLayout = {
+  global: GLOBAL_CONFIG,
+  borders: [
+    createNavigationBorder(),
+    createMonitoringBorder()
+  ],
+  layout: createRow([
+    createDashboardArea(),
+    createExecutionArea()
+  ])
 };
 
 export default defaultLayout;
+
+// Export utility functions for dynamic layout creation
+export {
+  createTab,
+  createTabSet,
+  createRow,
+  createColumn,
+  createBorder,
+  PANELS,
+  GLOBAL_CONFIG,
+  createNavigationBorder,
+  createMonitoringBorder,
+  createDashboardArea,
+  createExecutionArea
+};

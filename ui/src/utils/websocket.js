@@ -12,112 +12,209 @@ const ConnectionState = {
   RECONNECTING: 3,
 };
 
-// Message handler utilities
-const createMessageHandler = (action) => (data) => {
-  try {
-    return getStore()[action](data.payload);
-  } catch (error) {
-    console.error(`Error handling ${action}:`, error);
-  }
-};
-
-const createMessageHandlerWithParams = (action) => (data) => {
-  try {
-    const {id, config} = data.payload;
-    return getStore()[action](id, config);
-  } catch (error) {
-    console.error(`Error handling ${action}:`, error);
-  }
-};
-
-const createDemoStateHandler = (data) => {
-  try {
-    const {demoId, ...payload} = data.payload;
-    return getStore().setDemoState(demoId, payload);
-  } catch (error) {
-    console.error('Error handling demoState:', error);
-  }
-};
-
-const createDemoMetricsHandler = (data) => {
-  try {
-    const {demoId, ...payload} = data.payload;
-    return getStore().setDemoMetrics(demoId, payload);
-  } catch (error) {
-    console.error('Error handling demoMetrics:', error);
-  }
-};
-
-const createNarseseInputHandler = (data) => {
-  try {
-    const {input, success, message} = data.payload;
-    const notification = {
-      type: success ? 'success' : 'error',
-      title: success ? 'Narsese Input Success' : 'Narsese Input Error',
-      message: success ? `Processed: ${input}` : (message || 'Failed to process input'),
-      timestamp: Date.now()
+/**
+ * WebSocket message handler class that encapsulates all message processing logic
+ */
+class MessageHandlers {
+  /**
+   * Creates a handler for a simple store action that takes the entire payload
+   * @param {string} action - The store action to call
+   * @returns {Function} Handler function
+   */
+  static createMessageHandler(action) {
+    return (data) => {
+      try {
+        return getStore()[action](data.payload);
+      } catch (error) {
+        console.error(`Error handling ${action}:`, error);
+        getStore().addNotification({
+          type: 'error',
+          title: `Error handling ${action}`,
+          message: error.message,
+          timestamp: Date.now()
+        });
+      }
     };
-    getStore().addNotification(notification);
-  } catch (error) {
-    console.error('Error handling narseseInput:', error);
   }
-};
 
-const createSessionUpdateHandler = (data) => {
-  try {
-    const {action, session} = data.payload;
-    return action === 'start'
-      ? getStore().setActiveSession(session)
-      : getStore().endSession();
-  } catch (error) {
-    console.error('Error handling sessionUpdate:', error);
+  /**
+   * Creates a handler for store actions that take separate id and config parameters
+   * @param {string} action - The store action to call
+   * @returns {Function} Handler function
+   */
+  static createMessageHandlerWithParams(action) {
+    return (data) => {
+      try {
+        const {id, config} = data.payload;
+        return getStore()[action](id, config);
+      } catch (error) {
+        console.error(`Error handling ${action}:`, error);
+        getStore().addNotification({
+          type: 'error',
+          title: `Error handling ${action}`,
+          message: error.message,
+          timestamp: Date.now()
+        });
+      }
+    };
   }
-};
 
-const createConceptUpdateHandler = (data) => {
-  try {
-    const {concept, changeType} = data.payload;
-    return changeType === 'removed'
-      ? getStore().removeConcept(concept.term)
-      : getStore().addConcept(concept);
-  } catch (error) {
-    console.error('Error handling conceptUpdate:', error);
+  /**
+   * Handler for demo state updates
+   * @param {Object} data - The message data
+   * @returns {*} Result of the store action
+   */
+  static createDemoStateHandler(data) {
+    try {
+      const {demoId, ...payload} = data.payload;
+      return getStore().setDemoState(demoId, payload);
+    } catch (error) {
+      console.error('Error handling demoState:', error);
+      getStore().addNotification({
+        type: 'error',
+        title: 'Error handling demo state',
+        message: error.message,
+        timestamp: Date.now()
+      });
+    }
   }
-};
 
-const createLogHandler = ({level = 'log', data: logData}) => {
-  try {
-    console[level](...(logData || []));
-  } catch (error) {
-    console.error('Error handling log:', error);
+  /**
+   * Handler for demo metrics updates
+   * @param {Object} data - The message data
+   * @returns {*} Result of the store action
+   */
+  static createDemoMetricsHandler(data) {
+    try {
+      const {demoId, ...payload} = data.payload;
+      return getStore().setDemoMetrics(demoId, payload);
+    } catch (error) {
+      console.error('Error handling demoMetrics:', error);
+      getStore().addNotification({
+        type: 'error',
+        title: 'Error handling demo metrics',
+        message: error.message,
+        timestamp: Date.now()
+      });
+    }
   }
-};
+
+  /**
+   * Handler for Narsese input results
+   * @param {Object} data - The message data
+   * @returns {*} Result of the store action
+   */
+  static createNarseseInputHandler(data) {
+    try {
+      const {input, success, message} = data.payload;
+      const notification = {
+        type: success ? 'success' : 'error',
+        title: success ? 'Narsese Input Success' : 'Narsese Input Error',
+        message: success ? `Processed: ${input}` : (message || 'Failed to process input'),
+        timestamp: Date.now()
+      };
+      return getStore().addNotification(notification);
+    } catch (error) {
+      console.error('Error handling narseseInput:', error);
+      getStore().addNotification({
+        type: 'error',
+        title: 'Error handling Narsese input',
+        message: error.message,
+        timestamp: Date.now()
+      });
+    }
+  }
+
+  /**
+   * Handler for session updates
+   * @param {Object} data - The message data
+   * @returns {*} Result of the store action
+   */
+  static createSessionUpdateHandler(data) {
+    try {
+      const {action, session} = data.payload;
+      return action === 'start'
+        ? getStore().setActiveSession(session)
+        : getStore().endSession();
+    } catch (error) {
+      console.error('Error handling sessionUpdate:', error);
+      getStore().addNotification({
+        type: 'error',
+        title: 'Error handling session update',
+        message: error.message,
+        timestamp: Date.now()
+      });
+    }
+  }
+
+  /**
+   * Handler for concept updates
+   * @param {Object} data - The message data
+   * @returns {*} Result of the store action
+   */
+  static createConceptUpdateHandler(data) {
+    try {
+      const {concept, changeType} = data.payload;
+      return changeType === 'removed'
+        ? getStore().removeConcept(concept.term)
+        : getStore().addConcept(concept);
+    } catch (error) {
+      console.error('Error handling conceptUpdate:', error);
+      getStore().addNotification({
+        type: 'error',
+        title: 'Error handling concept update',
+        message: error.message,
+        timestamp: Date.now()
+      });
+    }
+  }
+
+  /**
+   * Handler for log messages
+   * @param {Object} data - The message data
+   */
+  static createLogHandler({level = 'log', data: logData}) {
+    try {
+      console[level](...(logData || []));
+    } catch (error) {
+      console.error('Error handling log:', error);
+    }
+  }
+}
 
 // Message handlers map for cleaner code
 const messageHandlers = {
-  layoutUpdate: createMessageHandler('setLayout'),
-  panelUpdate: createMessageHandlerWithParams('addPanel'),
-  reasoningStep: createMessageHandler('addReasoningStep'),
-  sessionUpdate: createSessionUpdateHandler,
-  notification: createMessageHandler('addNotification'),
-  error: createMessageHandler('setError'),
-  conceptUpdate: createConceptUpdateHandler,
-  taskUpdate: createMessageHandler('addTask'),
-  cycleUpdate: createMessageHandler('addCycle'),
-  systemMetrics: createMessageHandler('setSystemMetrics'),
-  log: createLogHandler,
+  layoutUpdate: MessageHandlers.createMessageHandler('setLayout'),
+  panelUpdate: MessageHandlers.createMessageHandlerWithParams('addPanel'),
+  reasoningStep: MessageHandlers.createMessageHandler('addReasoningStep'),
+  sessionUpdate: MessageHandlers.createSessionUpdateHandler,
+  notification: MessageHandlers.createMessageHandler('addNotification'),
+  error: MessageHandlers.createMessageHandler('setError'),
+  conceptUpdate: MessageHandlers.createConceptUpdateHandler,
+  taskUpdate: MessageHandlers.createMessageHandler('addTask'),
+  cycleUpdate: MessageHandlers.createMessageHandler('addCycle'),
+  systemMetrics: MessageHandlers.createMessageHandler('setSystemMetrics'),
+  log: MessageHandlers.createLogHandler,
   
   // Demo-related handlers
-  demoState: createDemoStateHandler,
-  demoStep: createMessageHandler('addDemoStep'),
-  demoMetrics: createDemoMetricsHandler,
-  demoList: createMessageHandler('setDemoList'),
+  demoState: MessageHandlers.createDemoStateHandler,
+  demoStep: MessageHandlers.createMessageHandler('addDemoStep'),
+  demoMetrics: MessageHandlers.createDemoMetricsHandler,
+  demoList: MessageHandlers.createMessageHandler('setDemoList'),
   
   // Narsese input handler
-  narseseInput: createNarseseInputHandler,
+  narseseInput: MessageHandlers.createNarseseInputHandler,
 };
 
+/**
+ * WebSocket service class that manages the connection and message handling
+ */
 class WebSocketService {
+  /**
+   * Creates a new WebSocket service instance
+   * @param {string} url - The WebSocket URL to connect to
+   * @param {Object} options - Configuration options
+   */
   constructor(url, options = {}) {
     this.url = url;
     this.ws = null;
@@ -130,6 +227,7 @@ class WebSocketService {
     this.heartbeatTimeout = null;
     this.heartbeatTimeoutDuration = options.heartbeatTimeout || 15000; // 15 seconds
     this.lastHeartbeat = Date.now();
+    this.connectionTimeout = null;
     
     // Check if we're in a test environment
     // Playwright sets navigator.webdriver to true in automated browsers
@@ -139,6 +237,9 @@ class WebSocketService {
                               import.meta.env.VITE_TEST_MODE === 'true');
   }
 
+  /**
+   * Initiates the WebSocket connection
+   */
   connect() {
     if (this.state === ConnectionState.CONNECTING || this.state === ConnectionState.CONNECTED) {
       console.warn('WebSocket is already connecting or connected');
@@ -161,7 +262,7 @@ class WebSocketService {
     this.disconnect(); // Ensure clean state
     
     // Set a timeout for connection
-    const connectionTimeout = setTimeout(() => {
+    this.connectionTimeout = setTimeout(() => {
       if (this.state === ConnectionState.CONNECTING) {
         console.error(`WebSocket connection timeout after 10 seconds: ${this.url}`);
         this.handleError(new Error('Connection timeout'));
@@ -173,20 +274,24 @@ class WebSocketService {
       this.ws = new WebSocket(this.url);
 
       this.ws.onopen = () => {
-        clearTimeout(connectionTimeout);
+        clearTimeout(this.connectionTimeout);
+        this.connectionTimeout = null;
         this.handleOpen();
       };
       this.ws.onclose = (event) => {
-        clearTimeout(connectionTimeout);
+        clearTimeout(this.connectionTimeout);
+        this.connectionTimeout = null;
         this.handleClose(event);
       };
       this.ws.onerror = (error) => {
-        clearTimeout(connectionTimeout);
+        clearTimeout(this.connectionTimeout);
+        this.connectionTimeout = null;
         this.handleError(error);
       };
       this.ws.onmessage = this.handleMessage.bind(this);
     } catch (error) {
-      clearTimeout(connectionTimeout);
+      clearTimeout(this.connectionTimeout);
+      this.connectionTimeout = null;
       console.error('Error creating WebSocket connection:', error);
       getStore().setError({
         message: error.message || 'Failed to create WebSocket connection',
@@ -196,6 +301,9 @@ class WebSocketService {
     }
   }
 
+  /**
+   * Handles successful connection opening
+   */
   handleOpen() {
     console.log('WebSocket connected');
     getStore().setWsConnected(true);
@@ -210,7 +318,9 @@ class WebSocketService {
     }
   }
 
-  // Helper method to simulate test data
+  /**
+   * Helper method to simulate test data in test environments
+   */
   simulateTestData() {
     // Send initial demo list that tests expect - do this immediately
     const demoList = [
@@ -360,6 +470,10 @@ class WebSocketService {
     }, 1500); // Every 1.5 seconds instead of 2 seconds for more activity
   }
 
+  /**
+   * Handles connection closing
+   * @param {CloseEvent} event - The close event
+   */
   handleClose(event) {
     console.log(`WebSocket disconnected: ${event.code} - ${event.reason}`);
     getStore().setWsConnected(false);
@@ -368,6 +482,10 @@ class WebSocketService {
     this.attemptReconnect();
   }
 
+  /**
+   * Handles connection errors
+   * @param {Event} error - The error event
+   */
   handleError(error) {
     console.error('WebSocket error:', error);
     getStore().setError({
@@ -376,6 +494,9 @@ class WebSocketService {
     });
   }
 
+  /**
+   * Sets up the heartbeat mechanism to maintain connection
+   */
   setupHeartbeat() {
     // Clear any existing heartbeat
     this.clearHeartbeat();
@@ -395,6 +516,9 @@ class WebSocketService {
     }, 30000); // Ping every 30 seconds
   }
   
+  /**
+   * Clears the heartbeat mechanism
+   */
   clearHeartbeat() {
     if (this.heartbeatInterval) {
       clearInterval(this.heartbeatInterval);
@@ -406,12 +530,18 @@ class WebSocketService {
     }
   }
   
+  /**
+   * Handles heartbeat timeout
+   */
   handleHeartbeatTimeout() {
     console.warn('Heartbeat timeout detected, attempting to reconnect');
     this.disconnect();
     this.attemptReconnect();
   }
 
+  /**
+   * Attempts to reconnect to the WebSocket server
+   */
   attemptReconnect = () => {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.state = ConnectionState.RECONNECTING;
@@ -429,6 +559,10 @@ class WebSocketService {
     }
   };
 
+  /**
+   * Handles incoming WebSocket messages
+   * @param {MessageEvent} event - The message event
+   */
   async handleMessage(event) {
     try {
       // Check if this is a heartbeat response
@@ -457,6 +591,10 @@ class WebSocketService {
     }
   }
 
+  /**
+   * Routes messages to appropriate handlers
+   * @param {Object} data - The validated message data
+   */
   routeMessage(data) {
     // In test mode, also handle demo control commands
     if (this.isTestEnvironment && data.type === 'demoControl') {
@@ -478,9 +616,19 @@ class WebSocketService {
       }
     } catch (error) {
       console.error('Error in message handler:', error, 'for message:', data);
+      getStore().addNotification({
+        type: 'error',
+        title: 'Message handler error',
+        message: error.message,
+        timestamp: Date.now()
+      });
     }
   }
 
+  /**
+   * Handles demo control commands in test mode
+   * @param {Object} data - The demo control message data
+   */
   handleDemoControl(data) {
     const { command, demoId, parameters } = data.payload;
     
@@ -541,6 +689,10 @@ class WebSocketService {
     }
   }
 
+  /**
+   * Handles Narsese input in test mode
+   * @param {Object} data - The Narsese input message data
+   */
   handleNarseseInput(data) {
     const { input } = data.payload;
     
@@ -571,13 +723,31 @@ class WebSocketService {
     }, 50);
   }
 
+  /**
+   * Handles invalid messages
+   * @param {Object} data - The invalid message data
+   */
   handleInvalidMessage(data) {
     console.error('Invalid message format:', data);
     // Don't setError for every invalid message to avoid UI flooding
     console.warn('Received invalid message format (see above)');
+    getStore().addNotification({
+      type: 'warning',
+      title: 'Invalid message received',
+      message: `Message type: ${data.type}`,
+      timestamp: Date.now()
+    });
   }
 
+  /**
+   * Disconnects from the WebSocket
+   */
   disconnect() {
+    if (this.connectionTimeout) {
+      clearTimeout(this.connectionTimeout);
+      this.connectionTimeout = null;
+    }
+    
     if (this.ws) {
       try {
         this.ws.close(1000, 'Client disconnecting');
@@ -590,6 +760,10 @@ class WebSocketService {
     this.clearHeartbeat();
   }
 
+  /**
+   * Sends a message through the WebSocket
+   * @param {Object} message - The message to send
+   */
   sendMessage(message) {
     if (this.isTestEnvironment) {
       // In test mode, process immediately
@@ -620,6 +794,10 @@ class WebSocketService {
     }
   }
 
+  /**
+   * Queues a message for later sending when connection is restored
+   * @param {Object} message - The message to queue
+   */
   queueMessage(message) {
     // Add message to queue
     this.messageQueue.push(message);
@@ -627,9 +805,18 @@ class WebSocketService {
     if (this.messageQueue.length > 100) {
       const removedMessage = this.messageQueue.shift();
       console.warn('Message queue overflow, removing oldest message:', removedMessage);
+      getStore().addNotification({
+        type: 'warning',
+        title: 'Message queue overflow',
+        message: 'Removed oldest message to prevent memory issues',
+        timestamp: Date.now()
+      });
     }
   }
 
+  /**
+   * Processes messages that were queued while disconnected
+   */
   processMessageQueue() {
     // Process messages that were queued while disconnected
     while (this.messageQueue.length > 0) {

@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { memo } from 'react';
 import useUiStore from '../stores/uiStore.js';
 import {formatBudget, formatTruth} from '../utils/formatters.js';
-import GenericPanel from './GenericPanel.js';
+import ListPanel from './ListPanel.js';
 
-const TaskPanel = () => {
+const TaskPanel = memo(() => {
     const tasks = useUiStore(state => state.tasks);
 
     const renderTask = (task, index) =>
@@ -13,8 +13,8 @@ const TaskPanel = () => {
                 style: {
                     padding: '0.5rem',
                     margin: '0.25rem 0',
-                    backgroundColor: 'white',
-                    border: '1px solid #ddd',
+                    backgroundColor: 'var(--bg-primary)',
+                    border: '1px solid var(--border-color)',
                     borderRadius: '4px',
                     fontSize: '0.9rem'
                 }
@@ -23,16 +23,40 @@ const TaskPanel = () => {
             React.createElement('div', null,
                 `Type: ${task.type} | Truth: ${formatTruth(task.truth)} | Budget: ${formatBudget(task.budget)}`
             ),
-            task.occurrenceTime && React.createElement('div', {style: {fontSize: '0.8rem', color: '#666'}},
+            task.occurrenceTime && React.createElement('div', {style: {fontSize: '0.8rem', color: 'var(--text-secondary)'}},
                 `Time: ${new Date(task.occurrenceTime).toLocaleTimeString()}`
             )
         );
 
-    return React.createElement(GenericPanel, {
-        maxHeight: 'calc(100% - 2rem)',
+    const filterTask = (task, searchTerm) => {
+        // Check if the search term matches any relevant field in the task
+        const searchLower = searchTerm.toLowerCase();
+        return (
+            (task.term && task.term.toLowerCase().includes(searchLower)) ||
+            (task.type && task.type.toLowerCase().includes(searchLower)) ||
+            (task.id && task.id.toLowerCase().includes(searchLower))
+        );
+    };
+
+    const sortOptions = [
+        { key: 'priority', label: 'Priority' },
+        { key: 'creationTime', label: 'Time' },
+        { key: 'term', label: 'Term' },
+        { key: 'type', label: 'Type' }
+    ];
+
+    return React.createElement(ListPanel, {
+        title: 'Tasks',
         items: tasks,
-        renderItem: renderTask
+        renderItem: renderTask,
+        searchPlaceholder: 'Search tasks...',
+        sortOptions: sortOptions,
+        defaultSort: 'creationTime',
+        filterFn: filterTask,
+        emptyMessage: 'No tasks to display',
+        useVirtualization: tasks.length > 100,  // Only use virtualization for large datasets
+        itemHeight: 70  // Approximate height of each task item
     });
-};
+});
 
 export default TaskPanel;

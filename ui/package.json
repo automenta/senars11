@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@playwright/test": "^1.56.1",
+    "date-fns": "^4.1.0",
     "flexlayout-react": "^0.8.17",
     "puppeteer": "^24.27.0",
     "react": "^19.1.1",

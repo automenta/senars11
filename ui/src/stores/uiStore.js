@@ -25,6 +25,30 @@ const createObjectSetter = (objName) => (key, value) => (prev) => ({
 
 const createObjectClearer = (objName) => () => ({[objName]: {}});
 
+// Batch update function to update multiple related properties at once
+const batchUpdate = (set, updates) => {
+  set(prevState => {
+    const newState = {...prevState};
+    for (const [key, value] of Object.entries(updates)) {
+      if (typeof value === 'function') {
+        newState[key] = value(newState); // If it's a function, call it with current state
+      } else {
+        newState[key] = value; // Otherwise, set the value directly
+      }
+    }
+    return newState;
+  });
+};
+
+// Selector functions for memoized access to parts of state
+const selectors = {
+  getWebSocketState: (state) => ({wsConnected: state.wsConnected, wsService: state.wsService}),
+  getLayoutState: (state) => ({layout: state.layout, savedLayouts: state.savedLayouts}),
+  getUiStatus: (state) => ({error: state.error, isLoading: state.isLoading, theme: state.theme}),
+  getNotificationState: (state) => ({notifications: state.notifications}),
+  getDemoState: (state) => ({demos: state.demos, demoStates: state.demoStates, demoSteps: state.demoSteps}),
+};
+
 // Combined state management with logical groupings
 const useUiStore = create((set, get) => ({
   // UI state
@@ -47,6 +71,9 @@ const useUiStore = create((set, get) => ({
   addPanel: (id, config) => set(state => ({
     panels: {...state.panels, [id]: config}
   })),
+  updatePanel: (id, config) => set(state => ({
+    panels: {...state.panels, [id]: {...state.panels[id], ...config}}
+  })),
   removePanel: (id) => set(state => {
     const newPanels = {...state.panels};
     delete newPanels[id];
@@ -56,23 +83,39 @@ const useUiStore = create((set, get) => ({
   // Reasoning engine state
   reasoningSteps: [],
   addReasoningStep: (step) => set(createListSetter('reasoningSteps')(step)),
-  clearReasoningSteps: createListClearer('reasoningSteps'),
+  updateReasoningStep: (id, updates) => set(state => ({
+    reasoningSteps: state.reasoningSteps.map(step => 
+      step.id === id ? {...step, ...updates} : step
+    )
+  })),
+  clearReasoningSteps: () => set({reasoningSteps: []}),
 
   // Task state
   tasks: [],
   addTask: (task) => set(createListSetter('tasks')(task)),
-  clearTasks: createListClearer('tasks'),
+  updateTask: (id, updates) => set(state => ({
+    tasks: state.tasks.map(task => 
+      task.id === id ? {...task, ...updates} : task
+    )
+  })),
+  removeTask: (id) => set(createItemRemover('tasks', 'id')(id)),
+  clearTasks: () => set({tasks: []}),
 
   // Concept state
   concepts: [],
   addConcept: (concept) => set(createListSetter('concepts')(concept)),
+  updateConcept: (term, updates) => set(state => ({
+    concepts: state.concepts.map(concept => 
+      concept.term === term ? {...concept, ...updates} : concept
+    )
+  })),
   removeConcept: (term) => set(createItemRemover('concepts', 'term')(term)),
-  clearConcepts: createListClearer('concepts'),
+  clearConcepts: () => set({concepts: []}),
 
   // Cycle state
   cycles: [],
   addCycle: (cycle) => set(createLimitedListSetter('cycles', 50)(cycle)),
-  clearCycles: createListClearer('cycles'),
+  clearCycles: () => set({cycles: []}),
 
   // System metrics
   systemMetrics: null,
@@ -88,14 +131,26 @@ const useUiStore = create((set, get) => ({
   setDemoStateDirect: (demoId, state) => set(prev => ({
     demoStates: {...prev.demoStates, [demoId]: state}
   })),
+  updateDemoState: (demoId, updates) => set(state => ({
+    demoStates: {
+      ...state.demoStates,
+      [demoId]: {...state.demoStates[demoId], ...updates}
+    }
+  })),
 
   demoSteps: [],
   addDemoStep: createLimitedListSetter('demoSteps', 100),
-  clearDemoSteps: createListClearer('demoSteps'),
+  clearDemoSteps: () => set({demoSteps: []}),
 
   demoMetrics: {},
   setDemoMetrics: createObjectSetter('demoMetrics'),
-  clearDemoMetrics: createObjectClearer('demoMetrics'),
+  updateDemoMetrics: (demoId, updates) => set(state => ({
+    demoMetrics: {
+      ...state.demoMetrics,
+      [demoId]: {...state.demoMetrics[demoId], ...updates}
+    }
+  })),
+  clearDemoMetrics: () => set({demoMetrics: {}}),
 
   // Session state
   activeSession: null,
@@ -119,10 +174,44 @@ const useUiStore = create((set, get) => ({
   addNotification: (notification) => set(state => ({
     notifications: [...state.notifications, {...notification, id: Date.now()}]
   })),
+  updateNotification: (id, updates) => set(state => ({
+    notifications: state.notifications.map(n => 
+      n.id === id ? {...n, ...updates} : n
+    )
+  })),
   removeNotification: (id) => set(state => ({
     notifications: state.notifications.filter(n => n.id !== id)
   })),
-  clearNotifications: createListClearer('notifications'),
+  clearNotifications: () => set({notifications: []}),
+
+  // Batch update function for multiple state changes
+  batchUpdate: (updates) => batchUpdate(set, updates),
+
+  // Selector functions for memoized access
+  selectors: selectors,
+  
+  // Utility functions
+  resetStore: () => set({
+    layout: null,
+    savedLayouts: {},
+    wsConnected: false,
+    wsService: null,
+    panels: {},
+    reasoningSteps: [],
+    tasks: [],
+    concepts: [],
+    cycles: [],
+    systemMetrics: null,
+    demos: [],
+    demoStates: {},
+    demoSteps: [],
+    demoMetrics: {},
+    activeSession: null,
+    error: null,
+    isLoading: false,
+    theme: 'light',
+    notifications: []
+  })
 }));
 
 export default useUiStore;

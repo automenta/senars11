@@ -7,7 +7,15 @@ import {initializeTheme} from './utils/theme.js';
 // Initialize theme before rendering the app
 initializeTheme();
 
-createRoot(document.getElementById('root')).render(
+// Add performance monitoring in development
+if (process.env.NODE_ENV === 'development') {
+    import('./utils/performance.js').then(module => {
+        console.log('Performance monitoring enabled in development mode');
+    });
+}
+
+const root = createRoot(document.getElementById('root'));
+root.render(
     React.createElement(
         React.StrictMode,
         null,

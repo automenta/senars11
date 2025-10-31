@@ -64,8 +64,9 @@ function App() {
             : `Content for ${component}`;
 
         return React.createElement(Panel, {
-            title: component.replace('Panel', '') || 'Panel'
-        }, content);
+            title: component.replace('Panel', '') || 'Panel',
+            content: ContentComponent
+        });
     };
 
     return React.createElement(ErrorBoundary, null,

@@ -1,0 +1,155 @@
+/**
+ * Performance utility functions for optimizing component rendering
+ */
+
+/**
+ * Memoized selector creator to prevent unnecessary re-renders
+ * @param {Function} selector - Function to extract data from state
+ * @returns {Function} Memoized selector function
+ */
+export const createMemoizedSelector = (selector) => {
+  let lastArgs = null;
+  let lastResult = null;
+  
+  return (...args) => {
+    if (!lastArgs || !deepEqual(lastArgs, args)) {
+      lastArgs = args;
+      lastResult = selector(...args);
+    }
+    return lastResult;
+  };
+};
+
+/**
+ * Deep equality check for objects
+ * @param {*} obj1 - First object to compare
+ * @param {*} obj2 - Second object to compare
+ * @returns {boolean} True if objects are deeply equal, false otherwise
+ */
+const deepEqual = (obj1, obj2) => {
+  if (obj1 === obj2) return true;
+  
+  if (obj1 == null || obj2 == null) return false;
+  
+  if (typeof obj1 !== 'object' || typeof obj2 !== 'object') return obj1 === obj2;
+  
+  const keys1 = Object.keys(obj1);
+  const keys2 = Object.keys(obj2);
+  
+  if (keys1.length !== keys2.length) return false;
+  
+  for (const key of keys1) {
+    if (!keys2.includes(key)) return false;
+    if (!deepEqual(obj1[key], obj2[key])) return false;
+  }
+  
+  return true;
+};
+
+/**
+ * Debounced function execution
+ * @param {Function} func - Function to debounce
+ * @param {number} wait - Wait time in milliseconds
+ * @returns {Function} Debounced function
+ */
+export const debounce = (func, wait) => {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+};
+
+/**
+ * Throttled function execution
+ * @param {Function} func - Function to throttle
+ * @param {number} limit - Throttle limit in milliseconds
+ * @returns {Function} Throttled function
+ */
+export const throttle = (func, limit) => {
+  let inThrottle;
+  return function (...args) {
+    if (!inThrottle) {
+      func.apply(this, args);
+      inThrottle = true;
+      setTimeout(() => inThrottle = false, limit);
+    }
+  };
+};
+
+/**
+ * Memoize function results to prevent unnecessary recalculations
+ * @param {Function} fn - Function to memoize
+ * @returns {Function} Memoized function
+ */
+export const memoize = (fn) => {
+  const cache = new Map();
+  return (...args) => {
+    const key = JSON.stringify(args);
+    if (cache.has(key)) {
+      return cache.get(key);
+    }
+    const result = fn(...args);
+    cache.set(key, result);
+    return result;
+  };
+};
+
+/**
+ * Virtualized list rendering function
+ * @param {Array} items - Items to render
+ * @param {Function} renderItem - Function to render each item
+ * @param {number} itemHeight - Height of each item in pixels
+ * @param {number} containerHeight - Height of the container in pixels
+ * @param {number} startIndex - Index to start rendering from
+ * @param {number} endIndex - Index to stop rendering at
+ * @returns {Array} Array of rendered items
+ */
+export const virtualizeList = (items, renderItem, itemHeight, containerHeight, startIndex, endIndex) => {
+  const visibleItems = items.slice(startIndex, endIndex + 1);
+  const translateY = startIndex * itemHeight;
+  
+  return React.createElement('div', {
+    style: {
+      height: containerHeight,
+      overflow: 'hidden',
+      position: 'relative'
+    }
+  },
+    React.createElement('div', {
+      style: {
+        transform: `translateY(${translateY}px)`,
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%'
+      }
+    },
+      ...visibleItems.map((item, index) => renderItem(item, startIndex + index))
+    )
+  );
+};
+
+/**
+ * Measure render performance of a component
+ * @param {string} componentName - Name of the component
+ * @param {Function} renderFn - Function that renders the component
+ * @returns {any} Rendered component with performance metrics
+ */
+export const withPerformanceMonitoring = (componentName, renderFn) => {
+  return (...args) => {
+    const startTime = performance.now();
+    const result = renderFn(...args);
+    const endTime = performance.now();
+    
+    if (process.env.NODE_ENV === 'development' || process.env.VITE_TEST_MODE === 'true') {
+      console.debug(`Render time for ${componentName}: ${endTime - startTime}ms`);
+    }
+    
+    return result;
+  };
+};

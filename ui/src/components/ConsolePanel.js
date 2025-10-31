@@ -22,15 +22,20 @@ const ConsolePanel = () => {
                 }
             },
             React.createElement('span', {style: {fontWeight: 'bold'}},
-                message.type ? `${message.type.toUpperCase()}: ` : ''),
+                message.type ? `${(message.type).toUpperCase()}: ` : ''),
             React.createElement('span', null, message.message || message.title || 'Console message')
         );
 
     return React.createElement(GenericPanel, {
+        title: 'Console',
         items: consoleMessages,
         renderItem: renderConsoleMessage,
-        maxHeight: 'calc(100% - 1rem)',
-        emptyMessage: 'Console is empty'
+        maxHeight: 'calc(100% - 2rem)',
+        emptyMessage: 'Console is empty',
+        withTimestamp: true,
+        autoScroll: true,
+        maxItems: 100,
+        showCount: true
     });
 };
 

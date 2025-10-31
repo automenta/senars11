@@ -159,10 +159,11 @@ const DemoPanel = () => {
 
     return React.createElement(GenericPanel, {
         title: 'Demos',
-        maxHeight: 'calc(100% - 2rem)',
         items,
         renderItem: renderDemo,
-        emptyMessage: 'No demos available. The server will send a list of available demos.'
+        maxHeight: 'calc(100% - 2rem)',
+        emptyMessage: 'No demos available. The server will send a list of available demos.',
+        showCount: true
     });
 };
 
