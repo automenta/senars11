@@ -7,6 +7,8 @@ import defaultLayout from './layouts/defaultLayout';
 import ErrorBoundary from './components/ErrorBoundary';
 import Panel from './components/Panel';
 import {contentMap} from './components/panelContent';
+import interactionTracker from './utils/interactionTracker';
+import adaptiveDemoEngine from './utils/adaptiveDemoEngine';
 
 function App() {
     const layoutRef = useRef(null);
@@ -45,6 +47,54 @@ function App() {
             }
             useUiStore.getState().setWsService(null);
             wsService.current?.disconnect();
+        };
+    }, [model]);
+
+    // Initialize viewer-aware systems after WebSocket connection is established
+    useEffect(() => {
+        if (!model) return;
+
+        const wsServiceInstance = wsService.current;
+        if (!wsServiceInstance) return;
+
+        // Wait for WebSocket to be connected before initializing viewer systems
+        const initViewerSystems = () => {
+            if (useUiStore.getState().wsConnected) {
+                // Initialize interaction tracking
+                interactionTracker.initialize();
+                
+                // Initialize adaptive demo engine
+                adaptiveDemoEngine.initialize().then(() => {
+                    console.log('Adaptive Demo Engine initialized');
+                });
+            } else {
+                // Wait a bit and try again
+                setTimeout(initViewerSystems, 500);
+            }
+        };
+
+        // Start initialization after a small delay to ensure WebSocket is ready
+        setTimeout(initViewerSystems, 1000);
+
+        // Set up WebSocket connection status tracking
+        const connectionHandler = () => {
+            useUiStore.getState().setWsConnected(true);
+        };
+        
+        const disconnectionHandler = () => {
+            useUiStore.getState().setWsConnected(false);
+        };
+
+        if (wsServiceInstance.ws) {
+            wsServiceInstance.ws.addEventListener('open', connectionHandler);
+            wsServiceInstance.ws.addEventListener('close', disconnectionHandler);
+        }
+
+        return () => {
+            if (wsServiceInstance?.ws) {
+                wsServiceInstance.ws.removeEventListener('open', connectionHandler);
+                wsServiceInstance.ws.removeEventListener('close', disconnectionHandler);
+            }
         };
     }, [model]);
 

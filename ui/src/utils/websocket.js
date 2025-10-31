@@ -1,5 +1,6 @@
 import useUiStore from '../stores/uiStore';
 import {validateMessage} from '../schemas/messages';
+import { createWebSocketClient } from '../../../src/utils/websocket-client.js';
 
 // Utility function to get store methods
 const getStore = () => useUiStore.getState();

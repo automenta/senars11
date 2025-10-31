@@ -6,6 +6,7 @@ import {dirname, join} from 'path';
 import {WebSocketMonitor} from './src/server/WebSocketMonitor.js';
 import {NAR} from './src/nar/NAR.js';
 import {DemoWrapper} from './src/demo/DemoWrapper.js';
+import {config, getConfig, DEFAULT_CONFIG as SHARED_CONFIG} from './src/config.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -13,54 +14,51 @@ const __dirname = dirname(__filename);
 // Parse arguments to support flexible server configuration
 const args = process.argv.slice(2);
 
+// Base default config with nar settings which is specific to this app
 const DEFAULT_CONFIG = Object.freeze({
     nar: {
         lm: {enabled: false},
         reasoningAboutReasoning: {enabled: true}
     },
-    persistence: {
-        defaultPath: './agent.json'
-    },
-    webSocket: {
-        port: parseInt(process.env.WS_PORT) || 8080,
-        host: process.env.WS_HOST || 'localhost',
-        maxConnections: 20
-    },
-    ui: {
-        port: parseInt(process.env.PORT) || 5173
-    }
+    ...getConfig()  // Include the shared config
 });
 
 /**
  * Parse command line arguments to support flexible configuration
  */
 function parseArgs(args) {
-    let config = { ...DEFAULT_CONFIG };
+    let appConfig = {...getConfig()};
+    
+    // Keep the NAR configuration separate since it's not in the shared config
+    const narConfig = {
+        lm: {enabled: false},
+        reasoningAboutReasoning: {enabled: true}
+    };
     
     for (let i = 0; i < args.length; i++) {
         if (args[i] === '--ws-port' && args[i + 1]) {
-            config = {
-                ...config,
+            appConfig = {
+                ...appConfig,
                 webSocket: {
-                    ...config.webSocket,
+                    ...appConfig.webSocket,
                     port: parseInt(args[i + 1])
                 }
             };
             i++; // Skip next argument since it's the value
         } else if (args[i] === '--port' && args[i + 1]) {
-            config = {
-                ...config,
+            appConfig = {
+                ...appConfig,
                 ui: {
-                    ...config.ui,
+                    ...appConfig.ui,
                     port: parseInt(args[i + 1])
                 }
             };
             i++; // Skip next argument since it's the value
         } else if (args[i] === '--host' && args[i + 1]) {
-            config = {
-                ...config,
+            appConfig = {
+                ...appConfig,
                 webSocket: {
-                    ...config.webSocket,
+                    ...appConfig.webSocket,
                     host: args[i + 1]
                 }
             };
@@ -68,7 +66,13 @@ function parseArgs(args) {
         }
     }
     
-    return config;
+    // Return combined config with both app and NAR settings
+    return {
+        nar: narConfig,
+        persistence: appConfig.persistence,
+        webSocket: appConfig.webSocket,
+        ui: appConfig.ui
+    };
 }
 
 /**
@@ -105,20 +109,20 @@ async function startWebSocketServer(config = DEFAULT_CONFIG) {
 /**
  * Start the Vite development server
  */
-function startViteDevServer(config = DEFAULT_CONFIG) {
-    console.log(`Starting Vite dev server on port ${config.ui.port}...`);
+function startViteDevServer(serverConfig) {
+    console.log(`Starting Vite dev server on port ${serverConfig.ui.port}...`);
 
     // Change to ui directory and run vite dev server
-    const viteProcess = spawn('npx', ['vite', 'dev', '--port', config.ui.port.toString()], {
+    const viteProcess = spawn('npx', ['vite', 'dev', '--port', serverConfig.ui.port.toString()], {
         cwd: join(__dirname, 'ui'),
         stdio: 'inherit', // This allows the Vite server to control the terminal properly
         env: {
             ...process.env,
             // Pass WebSocket connection info to UI
-            VITE_WS_HOST: config.webSocket.host,
-            VITE_WS_PORT: config.webSocket.port.toString(),
-            VITE_WS_PATH: DEFAULT_CONFIG.webSocket.path || undefined,
-            PORT: config.ui.port.toString() // Also set PORT for compatibility
+            VITE_WS_HOST: serverConfig.webSocket.host,
+            VITE_WS_PORT: serverConfig.webSocket.port.toString(),
+            VITE_WS_PATH: serverConfig.webSocket.path,
+            PORT: serverConfig.ui.port.toString() // Also set PORT for compatibility
         }
     });
 
@@ -147,12 +151,12 @@ async function setupGracefulShutdown(webSocketServer) {
         // Save NAR state
         try {
             const state = webSocketServer.nar.serialize();
-            // Save to default path
+            // Save to default path from config
             const fs = await import('fs');
-            await fs.promises.writeFile(DEFAULT_CONFIG.persistence.defaultPath, JSON.stringify(state, null, 2));
+            await fs.promises.writeFile(webSocketServer.persistence.defaultPath || './agent.json', JSON.stringify(state, null, 2));
             console.log('Current state saved to agent.json');
         } catch (saveError) {
-            console.error('Error saving state on shutdown:', saveError.message);
+            console.error('Error saving state on shutdown:', saveError?.message || saveError);
         }
 
         // Stop WebSocket server
@@ -171,11 +175,11 @@ async function setupGracefulShutdown(webSocketServer) {
     process.on('SIGINT', shutdown);
     process.on('SIGTERM', shutdown);
     process.on('uncaughtException', (error) => {
-        console.error('Uncaught exception:', error.message);
+        console.error('Uncaught exception:', error?.message || error);
         process.exit(1);
     });
     process.on('unhandledRejection', (reason, promise) => {
-        console.error('Unhandled rejection at:', promise, 'reason:', reason);
+        console.error('Unhandled rejection at:', promise, 'reason:', reason?.message || reason);
         process.exit(1);
     });
 }
@@ -185,19 +189,16 @@ async function main() {
 
     try {
         // Parse command line arguments for flexible configuration
-        const config = parseArgs(args);
+        const serverConfig = parseArgs(args);
         
         // Start WebSocket server with the parsed config
-        webSocketServer = await startWebSocketServer(config);
+        webSocketServer = await startWebSocketServer(serverConfig);
 
         // Set up graceful shutdown
-        await setupGracefulShutdown({
-            nar: webSocketServer.nar,
-            monitor: webSocketServer.monitor
-        });
+        await setupGracefulShutdown(webSocketServer);
 
         // Start Vite dev server
-        const viteProcess = startViteDevServer(config);
+        const viteProcess = startViteDevServer(serverConfig);
 
         // Store the websocket server info for shutdown
         webSocketServer.viteProcess = viteProcess;

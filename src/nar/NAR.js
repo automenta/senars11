@@ -24,6 +24,7 @@ import {MetricsMonitor} from '../reasoning/MetricsMonitor.js';
 import {EmbeddingLayer} from '../lm/EmbeddingLayer.js';
 import {TermLayer} from '../memory/TermLayer.js';
 import {ReasoningAboutReasoning} from '../reasoning/ReasoningAboutReasoning.js';
+import {AutonomousDevelopmentEngine} from '../autonomous-development/AutonomousDevelopmentEngine.js';
 
 export class NAR extends BaseComponent {
     constructor(config = {}) {
@@ -92,6 +93,10 @@ export class NAR extends BaseComponent {
         return this._reasoningAboutReasoning;
     }
 
+    get autonomousDevelopment() {
+        return this._autonomousDevelopmentEngine;
+    }
+
     _initComponents(config) {
         const lmEnabled = config.lm?.enabled === true;
         this._termFactory = new TermFactory();
@@ -116,6 +121,20 @@ export class NAR extends BaseComponent {
             termFactory: this._termFactory,
             nar: this
         });
+        
+        // Initialize autonomous development engine
+        this._autonomousDevelopmentEngine = new AutonomousDevelopmentEngine(this, {
+            enabled: config.autonomousDevelopment?.enabled !== false,
+            developmentCycleInterval: config.autonomousDevelopment?.cycleInterval || 120000,
+            selfImprovementEnabled: config.autonomousDevelopment?.selfImprovementEnabled !== false,
+            humanCollaborationEnabled: config.autonomousDevelopment?.humanCollaborationEnabled !== false,
+            learningEnabled: config.autonomousDevelopment?.learningEnabled !== false,
+            evolutionStrategy: config.autonomousDevelopment?.evolutionStrategy || 'balanced',
+            selfTuningConfig: config.autonomousDevelopment?.selfTuning || {},
+            selfTeachingConfig: config.autonomousDevelopment?.selfTeaching || {},
+            humanInLoopConfig: config.autonomousDevelopment?.humanInLoop || {}
+        });
+        
         this._initOptionalComponents(config);
     }
 
@@ -130,6 +149,8 @@ export class NAR extends BaseComponent {
         this._embeddingLayer = embeddingConfig.enabled ? new EmbeddingLayer(embeddingConfig) : null;
         this._termLayer = new TermLayer({capacity: config.termLayer?.capacity || 1000, ...config.termLayer});
         this._reasoningAboutReasoning = new ReasoningAboutReasoning(this, {...config.reasoningAboutReasoning});
+        
+        // Initialize autonomous development components if not already done in _initComponents
     }
 
     _registerComponents() {
@@ -160,6 +181,28 @@ export class NAR extends BaseComponent {
         }
 
         this._componentManager.registerComponent('cycle', this._cycle, ['memory', 'focus', 'taskManager', 'ruleEngine']);
+        
+        // Register autonomous development engine
+        if (this._autonomousDevelopmentEngine) {
+            this._componentManager.registerComponent('autonomousDevelopment', {
+                initialize: async () => { 
+                    await this._autonomousDevelopmentEngine.start(); 
+                    return true; 
+                },
+                start: () => Promise.resolve(true),
+                stop: async () => { 
+                    await this._autonomousDevelopmentEngine.stop(); 
+                    return true; 
+                },
+                dispose: async () => { 
+                    await this._autonomousDevelopmentEngine.stop(); 
+                    return true; 
+                },
+                isInitialized: false,
+                isStarted: false,
+                isDisposed: false
+            });
+        }
     }
 
     _setupDefaultRules() {
@@ -253,7 +296,7 @@ export class NAR extends BaseComponent {
         return success;
     }
 
-    start(options = {}) {
+    async start(options = {}) {
         if (this._isRunning) {
             this.logWarn('NAR already running');
             return false;
@@ -274,6 +317,16 @@ export class NAR extends BaseComponent {
             }
         }, this._config.get('cycle.delay'));
 
+        // Start autonomous development engine if configured
+        if (this._autonomousDevelopmentEngine) {
+            try {
+                await this._autonomousDevelopmentEngine.start();
+                this.logInfo('Autonomous development engine started');
+            } catch (error) {
+                this.logError('Failed to start autonomous development engine:', error);
+            }
+        }
+
         this._eventBus.emit('system.started', {timestamp: Date.now()}, {traceId: options.traceId});
         this.logInfo('NAR started successfully');
         return true;
@@ -290,7 +343,7 @@ export class NAR extends BaseComponent {
         }
     }
 
-    stop(options = {}) {
+    async stop(options = {}) {
         if (!this._isRunning) {
             this.logWarn('NAR not running');
             return false;
@@ -299,7 +352,17 @@ export class NAR extends BaseComponent {
         this._isRunning = false;
         this._cycleInterval && clearInterval(this._cycleInterval) && (this._cycleInterval = null);
 
-        this._stopComponentsAsync();
+        // Stop autonomous development engine if it exists
+        if (this._autonomousDevelopmentEngine) {
+            try {
+                await this._autonomousDevelopmentEngine.stop();
+                this.logInfo('Autonomous development engine stopped');
+            } catch (error) {
+                this.logError('Error stopping autonomous development engine:', error);
+            }
+        }
+
+        await this._stopComponentsAsync();
 
         this._eventBus.emit('system.stopped', {timestamp: Date.now()}, {traceId: options.traceId});
         this.logInfo('NAR stopped successfully');

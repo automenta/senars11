@@ -3,6 +3,7 @@
 import { spawn } from 'child_process';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { config as appConfig } from '../../src/config.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -28,9 +29,9 @@ Examples:
 
 const DEFAULT_CONFIG = Object.freeze({
     isDevMode: true,
-    port: 5173,
-    wsPort: 8080,
-    host: 'localhost'
+    port: appConfig.ui.port,
+    wsPort: appConfig.webSocket.port,
+    host: appConfig.webSocket.host
 });
 
 /**
