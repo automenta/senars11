@@ -1,120 +1,128 @@
 import {create} from 'zustand';
 
+// Helper functions to reduce duplication
+const createListSetter = (listName) => (item) => (state) => {
+  const existingIndex = state[listName].findIndex(i => i.id === item.id || i.term === item.term);
+  const updatedList = existingIndex !== -1
+    ? [...state[listName].slice(0, existingIndex), item, ...state[listName].slice(existingIndex + 1)]
+    : [...state[listName], item];
+  return {[listName]: updatedList};
+};
+
+const createLimitedListSetter = (listName, limit) => (item) => (state) => ({
+  [listName]: [...state[listName], item].slice(-limit)
+});
+
+const createItemRemover = (listName, key) => (keyValue) => (state) => ({
+  [listName]: state[listName].filter(item => item[key] !== keyValue)
+});
+
+const createListClearer = (listName) => () => ({[listName]: []});
+
+const createObjectSetter = (objName) => (key, value) => (prev) => ({
+  [objName]: {...prev[objName], [key]: value}
+});
+
+const createObjectClearer = (objName) => () => ({[objName]: {}});
+
 // Combined state management with logical groupings
 const useUiStore = create((set, get) => ({
-    // UI state
-    layout: null,
-    setLayout: (layout) => set({layout}),
-    savedLayouts: {},
-    saveLayout: (name, layout) => set(state => ({
-        savedLayouts: {...state.savedLayouts, [name]: layout}
-    })),
-    loadLayout: (name) => get().savedLayouts[name],
+  // UI state
+  layout: null,
+  setLayout: (layout) => set({layout}),
+  savedLayouts: {},
+  saveLayout: (name, layout) => set(state => ({
+    savedLayouts: {...state.savedLayouts, [name]: layout}
+  })),
+  loadLayout: (name) => get().savedLayouts[name],
 
-    // WebSocket state
-    wsConnected: false,
-    setWsConnected: (connected) => set({wsConnected: connected}),
+  // WebSocket state
+  wsConnected: false,
+  setWsConnected: (connected) => set({wsConnected: connected}),
+  wsService: null,
+  setWsService: (wsService) => set({wsService}),
 
-    // Store reference to WebSocket service for components that need to send messages
-    wsService: null,
-    setWsService: (wsService) => set({wsService}),
+  // Panel management
+  panels: {},
+  addPanel: (id, config) => set(state => ({
+    panels: {...state.panels, [id]: config}
+  })),
+  removePanel: (id) => set(state => {
+    const newPanels = {...state.panels};
+    delete newPanels[id];
+    return {panels: newPanels};
+  }),
 
-    // Panel management
-    panels: {},
-    addPanel: (id, config) => set(state => ({
-        panels: {...state.panels, [id]: config}
-    })),
-    removePanel: (id) => set(state => {
-        const newPanels = {...state.panels};
-        delete newPanels[id];
-        return {panels: newPanels};
-    }),
+  // Reasoning engine state
+  reasoningSteps: [],
+  addReasoningStep: (step) => set(createListSetter('reasoningSteps')(step)),
+  clearReasoningSteps: createListClearer('reasoningSteps'),
 
-    // SeNARS reasoning engine state
-    reasoningSteps: [],
-    addReasoningStep: (step) => set(state => ({
-        reasoningSteps: [...state.reasoningSteps, step]
-    })),
-    clearReasoningSteps: () => set({reasoningSteps: []}),
+  // Task state
+  tasks: [],
+  addTask: (task) => set(createListSetter('tasks')(task)),
+  clearTasks: createListClearer('tasks'),
 
-    tasks: [],
-    addTask: (task) => set(state => {
-        // Check if task already exists
-        const existingIndex = state.tasks.findIndex(t => t.id === task.id);
-        const tasks = existingIndex !== -1
-            ? [...state.tasks.slice(0, existingIndex), task, ...state.tasks.slice(existingIndex + 1)]
-            : [...state.tasks, task];
-        return {tasks};
-    }),
-    clearTasks: () => set({tasks: []}),
+  // Concept state
+  concepts: [],
+  addConcept: (concept) => set(createListSetter('concepts')(concept)),
+  removeConcept: (term) => set(createItemRemover('concepts', 'term')(term)),
+  clearConcepts: createListClearer('concepts'),
 
-    concepts: [],
-    addConcept: (concept) => set(state => {
-        // Check if concept already exists
-        const existingIndex = state.concepts.findIndex(c => c.term === concept.term);
-        const concepts = existingIndex !== -1
-            ? [...state.concepts.slice(0, existingIndex), concept, ...state.concepts.slice(existingIndex + 1)]
-            : [...state.concepts, concept];
-        return {concepts};
-    }),
-    removeConcept: (term) => set(state => ({
-        concepts: state.concepts.filter(c => c.term !== term)
-    })),
-    clearConcepts: () => set({concepts: []}),
+  // Cycle state
+  cycles: [],
+  addCycle: (cycle) => set(createLimitedListSetter('cycles', 50)(cycle)),
+  clearCycles: createListClearer('cycles'),
 
-    cycles: [],
-    addCycle: (cycle) => set(state => ({
-        cycles: [...state.cycles, cycle].slice(-50) // Keep only last 50 cycles
-    })),
-    clearCycles: () => set({cycles: []}),
+  // System metrics
+  systemMetrics: null,
+  setSystemMetrics: (metrics) => set({systemMetrics: metrics}),
+  clearSystemMetrics: () => set({systemMetrics: null}),
 
-    systemMetrics: null,
-    setSystemMetrics: (metrics) => set({systemMetrics: metrics}),
-    clearSystemMetrics: () => set({systemMetrics: null}),
+  // Demo-related state
+  demos: [],
+  setDemoList: (demos) => set({demos}),
+  
+  demoStates: {},
+  setDemoState: createObjectSetter('demoStates'),
+  setDemoStateDirect: (demoId, state) => set(prev => ({
+    demoStates: {...prev.demoStates, [demoId]: state}
+  })),
 
-    // Demo-related state
-    demos: [],
-    setDemoList: (demos) => set({demos}),
-    demoStates: {},
-    setDemoState: (demoId, state) => set(prev => ({
-        demoStates: {...prev.demoStates, [demoId]: state}
-    })),
-    demoSteps: [],
-    addDemoStep: (step) => set(state => ({
-        demoSteps: [...state.demoSteps, step].slice(-100) // Keep only last 100 steps
-    })),
-    clearDemoSteps: () => set({demoSteps: []}),
-    demoMetrics: {},
-    setDemoMetrics: (demoId, metrics) => set(prev => ({
-        demoMetrics: {...prev.demoMetrics, [demoId]: metrics}
-    })),
-    clearDemoMetrics: () => set({demoMetrics: {}}),
+  demoSteps: [],
+  addDemoStep: createLimitedListSetter('demoSteps', 100),
+  clearDemoSteps: createListClearer('demoSteps'),
 
-    // Session and application state
-    activeSession: null,
-    setActiveSession: (session) => set({activeSession: session}),
-    endSession: () => set({activeSession: null}),
+  demoMetrics: {},
+  setDemoMetrics: createObjectSetter('demoMetrics'),
+  clearDemoMetrics: createObjectClearer('demoMetrics'),
 
-    // Status and UI state
-    error: null,
-    setError: (error) => set({error}),
-    clearError: () => set({error: null}),
+  // Session state
+  activeSession: null,
+  setActiveSession: (session) => set({activeSession: session}),
+  endSession: () => set({activeSession: null}),
 
-    isLoading: false,
-    setLoading: (loading) => set({isLoading: loading}),
+  // UI status state
+  error: null,
+  setError: (error) => set({error}),
+  clearError: () => set({error: null}),
 
-    theme: 'light',
-    setTheme: (theme) => set({theme}),
-    toggleTheme: () => set(state => ({theme: state.theme === 'light' ? 'dark' : 'light'})),
+  isLoading: false,
+  setLoading: (loading) => set({isLoading: loading}),
 
-    notifications: [],
-    addNotification: (notification) => set(state => ({
-        notifications: [...state.notifications, {...notification, id: Date.now()}]
-    })),
-    removeNotification: (id) => set(state => ({
-        notifications: state.notifications.filter(n => n.id !== id)
-    })),
-    clearNotifications: () => set({notifications: []}),
+  theme: 'light',
+  setTheme: (theme) => set({theme}),
+  toggleTheme: () => set(state => ({theme: state.theme === 'light' ? 'dark' : 'light'})),
+
+  // Notification state
+  notifications: [],
+  addNotification: (notification) => set(state => ({
+    notifications: [...state.notifications, {...notification, id: Date.now()}]
+  })),
+  removeNotification: (id) => set(state => ({
+    notifications: state.notifications.filter(n => n.id !== id)
+  })),
+  clearNotifications: createListClearer('notifications'),
 }));
 
 export default useUiStore;

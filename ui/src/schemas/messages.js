@@ -39,17 +39,17 @@ export const notificationSchema = z.object({
 // Specific message schemas
 export const layoutUpdateSchema = messageSchema.extend({
     type: z.literal('layoutUpdate'),
-    payload: z.object({layout: z.record(z.unknown())}),
+    payload: z.object({ layout: z.record(z.unknown()) }),
 });
 
 export const panelUpdateSchema = messageSchema.extend({
     type: z.literal('panelUpdate'),
-    payload: z.object({id: z.string(), config: z.record(z.unknown())}),
+    payload: z.object({ id: z.string(), config: z.record(z.unknown()) }),
 });
 
 export const reasoningStepMessageSchema = messageSchema.extend({
     type: z.literal('reasoningStep'),
-    payload: z.object({step: reasoningStepSchema}),
+    payload: z.object({ step: reasoningStepSchema }),
 });
 
 export const sessionUpdateMessageSchema = messageSchema.extend({
@@ -64,7 +64,7 @@ export const notificationMessageSchema = messageSchema.extend({
 
 export const errorSchema = messageSchema.extend({
     type: z.literal('error'),
-    payload: z.object({message: z.string(), code: z.number().optional()}),
+    payload: z.object({ message: z.string(), code: z.number().optional() }),
 });
 
 export const logSchema = messageSchema.extend({
@@ -132,7 +132,7 @@ export const taskUpdateSchema = createUpdateSchema('taskUpdate',
 );
 
 export const cycleUpdateMessageSchema = createUpdateSchema('cycleUpdate',
-    z.object({cycle: cycleUpdateSchema})
+    z.object({ cycle: cycleUpdateSchema })
 );
 
 export const systemMetricsSchema = messageSchema.extend({
@@ -174,15 +174,95 @@ const schemaRegistry = {
     ...demoSchemas,
 };
 
-// Validate incoming messages
+// Validation result types
+export const ValidationError = {
+    INVALID_TYPE: 'INVALID_TYPE',
+    INVALID_FORMAT: 'INVALID_FORMAT',
+    MISSING_REQUIRED: 'MISSING_REQUIRED',
+    UNKNOWN_ERROR: 'UNKNOWN_ERROR',
+};
+
+// Validate incoming messages with detailed error reporting
 export const validateMessage = (data) => {
+    if (!data || typeof data !== 'object') {
+        console.error('Message validation error: Invalid message format - message is not an object');
+        return null;
+    }
+
+    if (!data.type) {
+        console.error('Message validation error: Missing message type');
+        return null;
+    }
+
     try {
         const schema = schemaRegistry[data.type] || messageSchema;
         return schema.parse(data);
     } catch (error) {
-        // In a production environment, we might want to log these errors differently
-        // For now, we keep the console.error for debugging
-        console.error('Message validation error:', error?.errors || error?.message);
+        // Extract detailed error information
+        if (error && typeof error === 'object' && error.issues) {
+            const validationErrors = error.issues.map(issue => ({
+                path: issue.path.join('.'),
+                message: issue.message,
+                code: issue.code
+            }));
+
+            console.error('Message validation error:', {
+                type: data.type,
+                errors: validationErrors,
+                originalData: JSON.stringify(data, null, 2)
+            });
+        } else {
+            console.error('Message validation error:', {
+                type: data.type,
+                error: error?.message || error
+            });
+        }
+
         return null;
+    }
+};
+
+// Helper function to validate and return detailed error info
+export const validateMessageDetailed = (data) => {
+    if (!data || typeof data !== 'object') {
+        return {
+            success: false,
+            errorType: ValidationError.INVALID_FORMAT,
+            errorMessage: 'Message is not an object',
+            data: null
+        };
+    }
+
+    if (!data.type) {
+        return {
+            success: false,
+            errorType: ValidationError.MISSING_REQUIRED,
+            errorMessage: 'Missing message type',
+            data: null
+        };
+    }
+
+    try {
+        const schema = schemaRegistry[data.type] || messageSchema;
+        const validatedData = schema.parse(data);
+
+        return {
+            success: true,
+            errorType: null,
+            errorMessage: null,
+            data: validatedData
+        };
+    } catch (error) {
+        const validationErrors = error?.issues || [];
+        const firstError = validationErrors[0] || { message: 'Unknown validation error' };
+
+        return {
+            success: false,
+            errorType: ValidationError.INVALID_FORMAT,
+            errorMessage: firstError.message,
+            data: null,
+            originalData: data,
+            validationDetails: validationErrors
+        };
     }
 };

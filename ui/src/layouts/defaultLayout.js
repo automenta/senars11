@@ -1,118 +1,64 @@
-// Default FlexLayout configuration
+// Default FlexLayout configuration with organized structure
+const createTab = (name, component) => ({
+  type: 'tab',
+  name,
+  component
+});
+
+const createTabSet = (children, weight = 50) => ({
+  type: 'tabset',
+  weight,
+  children
+});
+
+const createBorder = (location, size, children) => ({
+  type: 'border',
+  location,
+  size,
+  children
+});
+
+// Layout configuration organized by regions
 const defaultLayout = {
-    global: {
-        tabEnableClose: true,
-        tabEnableFloat: true,
-    },
-    borders: [
-        {
-            type: 'border',
-            location: 'left',
-            size: 250,
-            children: [
-                {
-                    type: 'tab',
-                    name: 'Tasks',
-                    component: 'TaskPanel'
-                },
-                {
-                    type: 'tab',
-                    name: 'Concepts',
-                    component: 'ConceptPanel'
-                },
-                {
-                    type: 'tab',
-                    name: 'Demos',
-                    component: 'DemoPanel'
-                },
-                {
-                    type: 'tab',
-                    name: 'System',
-                    component: 'SystemStatusPanel'
-                }
-            ]
-        },
-        {
-            type: 'border',
-            location: 'bottom',
-            size: 250,
-            children: [
-                {
-                    type: 'tab',
-                    name: 'Console',
-                    component: 'ConsolePanel'
-                },
-                {
-                    type: 'tab',
-                    name: 'Priorities',
-                    component: 'PriorityFluctuationPanel'
-                },
-                {
-                    type: 'tab',
-                    name: 'Relationships',
-                    component: 'ConceptRelationshipPanel'
-                },
-                {
-                    type: 'tab',
-                    name: 'Trace',
-                    component: 'ReasoningTracePanel'
-                },
-                {
-                    type: 'tab',
-                    name: 'Time Series',
-                    component: 'TimeSeriesPanel'
-                }
-            ]
-        }
-    ],
-    layout: {
-        type: 'row',
-        weight: 100,
-        children: [
-            {
-                type: 'tabset',
-                weight: 60,
-                children: [
-                    {
-                        type: 'tab',
-                        name: 'Dashboard',
-                        component: 'DashboardPanel'
-                    },
-                    {
-                        type: 'tab',
-                        name: 'Main',
-                        component: 'MainPanel'
-                    },
-                    {
-                        type: 'tab',
-                        name: 'Task Monitor',
-                        component: 'TaskMonitorPanel'
-                    }
-                ]
-            },
-            {
-                type: 'tabset',
-                weight: 40,
-                children: [
-                    {
-                        type: 'tab',
-                        name: 'Cycles',
-                        component: 'CyclePanel'
-                    },
-                    {
-                        type: 'tab',
-                        name: 'Variables',
-                        component: 'VariablesPanel'
-                    },
-                    {
-                        type: 'tab',
-                        name: 'Input',
-                        component: 'InputInterfacePanel'
-                    }
-                ]
-            }
-        ]
-    }
+  global: {
+    tabEnableClose: true,
+    tabEnableFloat: true,
+  },
+  borders: [
+    // Left sidebar with navigation panels
+    createBorder('left', 250, [
+      createTab('Tasks', 'TaskPanel'),
+      createTab('Concepts', 'ConceptPanel'),
+      createTab('Demos', 'DemoPanel'),
+      createTab('System', 'SystemStatusPanel')
+    ]),
+    // Bottom panel with monitoring and logs
+    createBorder('bottom', 250, [
+      createTab('Console', 'ConsolePanel'),
+      createTab('Priorities', 'PriorityFluctuationPanel'),
+      createTab('Relationships', 'ConceptRelationshipPanel'),
+      createTab('Trace', 'ReasoningTracePanel'),
+      createTab('Time Series', 'TimeSeriesPanel')
+    ])
+  ],
+  layout: {
+    type: 'row',
+    weight: 100,
+    children: [
+      // Left main area with dashboard and monitoring
+      createTabSet([
+        createTab('Dashboard', 'DashboardPanel'),
+        createTab('Main', 'MainPanel'),
+        createTab('Task Monitor', 'TaskMonitorPanel')
+      ], 60),
+      // Right main area with execution and input
+      createTabSet([
+        createTab('Cycles', 'CyclePanel'),
+        createTab('Variables', 'VariablesPanel'),
+        createTab('Input', 'InputInterfacePanel')
+      ], 40)
+    ]
+  }
 };
 
 export default defaultLayout;
