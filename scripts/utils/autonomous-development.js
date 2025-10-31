@@ -1,20 +1,14 @@
 #!/usr/bin/env node
 
-import { spawn, exec } from 'child_process';
-import { promisify } from 'util';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-import { writeFile, readdir, readFile } from 'fs/promises';
-import { existsSync } from 'fs';
+import { ScriptUtils } from './script-utils.js';
+import { ConfigUtils } from './config-utils.js';
+import { ProcessUtils } from './process-utils.js';
+import { EvolutionUtils } from './evolution-utils.js';
+import { writeFile } from 'fs/promises';
 
-const execAsync = promisify(exec);
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const { args, helpRequested } = ScriptUtils.parseArgs(process.argv.slice(2));
 
-const args = process.argv.slice(2);
-
-function showUsage() {
-    console.log(`
+const USAGE_MESSAGE = `
 Usage: node scripts/utils/autonomous-development.js [options]
 
 Options:
@@ -33,70 +27,57 @@ Examples:
   node scripts/utils/autonomous-development.js --mode tune-heuristics
   node scripts/utils/autonomous-development.js --mode ui-optimization --generations 20
   node scripts/utils/autonomous-development.js --mode self-development --visual-feedback
-    `);
+`;
+
+if (helpRequested) {
+    ScriptUtils.showUsageAndExit(USAGE_MESSAGE);
 }
 
-if (args.includes('--help') || args.includes('-h')) {
-    showUsage();
-    process.exit(0);
-}
+// Default configuration
+const DEFAULTS = {
+    mode: 'tune-heuristics',
+    generations: 10,
+    populationSize: 5,
+    useVisualFeedback: true,
+    optimizePerformance: false,
+    optimizeUI: false,
+    configTemplate: null,
+    outputDir: 'auto-development-results',
+    iterationsPerGen: 3
+};
 
-// Parse arguments
-let mode = 'tune-heuristics';
-let generations = 10;
-let populationSize = 5;
-let useVisualFeedback = true;
-let optimizePerformance = false;
-let optimizeUI = false;
-let configTemplate = null;
-let outputDir = 'auto-development-results';
-let iterationsPerGen = 3;
+// Parse arguments with type conversion
+const argSpecs = {
+    '--mode': { key: 'mode', parser: ConfigUtils.parseString },
+    '--generations': { key: 'generations', parser: ConfigUtils.parseInt },
+    '--population': { key: 'populationSize', parser: ConfigUtils.parseInt },
+    '--visual-feedback': { key: 'useVisualFeedback', boolean: true },
+    '--no-visual-feedback': { key: 'useVisualFeedback', boolean: true },
+    '--performance-goal': { key: 'optimizePerformance', boolean: true },
+    '--ui-goal': { key: 'optimizeUI', boolean: true },
+    '--config-template': { key: 'configTemplate', parser: ConfigUtils.parseString },
+    '--output-dir': { key: 'outputDir', parser: ConfigUtils.parseString },
+    '--iterations': { key: 'iterationsPerGen', parser: ConfigUtils.parseInt }
+};
 
-for (let i = 0; i < args.length; i++) {
-    if (args[i] === '--mode' && args[i + 1]) {
-        mode = args[i + 1];
-        i++;
-    } else if (args[i] === '--generations' && args[i + 1]) {
-        generations = parseInt(args[i + 1]);
-        i++;
-    } else if (args[i] === '--population' && args[i + 1]) {
-        populationSize = parseInt(args[i + 1]);
-        i++;
-    } else if (args[i] === '--visual-feedback') {
-        useVisualFeedback = true;
-    } else if (args[i] === '--no-visual-feedback') {
-        useVisualFeedback = false;
-    } else if (args[i] === '--performance-goal') {
-        optimizePerformance = true;
-    } else if (args[i] === '--ui-goal') {
-        optimizeUI = true;
-    } else if (args[i] === '--config-template' && args[i + 1]) {
-        configTemplate = args[i + 1];
-        i++;
-    } else if (args[i] === '--output-dir' && args[i + 1]) {
-        outputDir = args[i + 1];
-        i++;
-    } else if (args[i] === '--iterations' && args[i + 1]) {
-        iterationsPerGen = parseInt(args[i + 1]);
-        i++;
-    }
-}
+const parsedArgs = ConfigUtils.parseArgs(args, argSpecs);
+const config = ConfigUtils.createConfig(DEFAULTS, parsedArgs);
 
 // Set default optimization goals based on mode
-if (mode === 'tune-heuristics') {
-    optimizePerformance = true;
-} else if (mode === 'ui-optimization') {
-    optimizeUI = true;
-} else if (mode === 'self-development') {
-    optimizePerformance = true;
-    optimizeUI = true;
-    useVisualFeedback = true;
+if (config.mode === 'tune-heuristics') {
+    config.optimizePerformance = true;
+} else if (config.mode === 'ui-optimization') {
+    config.optimizeUI = true;
+} else if (config.mode === 'self-development') {
+    config.optimizePerformance = true;
+    config.optimizeUI = true;
+    config.useVisualFeedback = true;
 }
 
-console.log(`Running autonomous development in mode: ${mode}`);
+console.log(`Running autonomous development in mode: ${config.mode}`);
 
 // Define parameter ranges for evolution
-const parameterRanges = {
+const PARAMETER_RANGES = {
     memory: {
         maxConcepts: { min: 10, max: 1000 },
         maxTasksPerConcept: { min: 5, max: 100 },
@@ -114,66 +95,30 @@ const parameterRanges = {
     }
 };
 
-async function generateRandomConfig() {
-    const config = {
-        memory: {},
-        reasoning: {},
-        visualization: {}
-    };
-    
-    for (const category in parameterRanges) {
-        for (const param in parameterRanges[category]) {
-            const range = parameterRanges[category][param];
-            // Generate random value within range
-            config[category][param] = Math.random() * (range.max - range.min) + range.min;
-        }
-    }
-    
-    return config;
-}
-
-async function evaluateConfiguration(config, generation, individual) {
+async function evaluateConfiguration(configToEvaluate, generation, individual) {
     console.log(`  Evaluating configuration ${individual} in generation ${generation}...`);
     
     // Create a temporary config file for this evaluation
-    const tempConfigFile = `${outputDir}/temp-config-${generation}-${individual}.json`;
-    await writeFile(tempConfigFile, JSON.stringify(config, null, 2));
+    const tempConfigFile = `${config.outputDir}/temp-config-${generation}-${individual}.json`;
+    await writeFile(tempConfigFile, JSON.stringify(configToEvaluate, null, 2));
     
     const evaluationResult = {};
     
     // If using visual feedback, run visualizations and capture results
-    if (useVisualFeedback) {
+    if (config.useVisualFeedback) {
         console.log(`    Running visual analysis...`);
         
-        // For visual feedback, we'd run a demo and capture screenshots
-        // In a real implementation, this would analyze visual outputs
         try {
-            const visualProcess = spawn('node', ['run-demo.js'], {
-                cwd: join(__dirname, '../..'),
+            const { code, stdout, stderr } = await ProcessUtils.spawnProcess('node', ['run-demo.js'], {
                 env: {
                     ...process.env,
                     SENARS_CONFIG_FILE: tempConfigFile
-                },
-                stdio: ['pipe', 'pipe', 'pipe']
+                }
             });
             
-            let visualOutput = '';
-            visualProcess.stdout.on('data', (data) => {
-                visualOutput += data.toString();
-            });
-            
-            visualProcess.stderr.on('data', (data) => {
-                visualOutput += data.toString();
-            });
-            
-            await new Promise((resolve) => {
-                visualProcess.on('close', (code) => {
-                    evaluationResult.visualSuccess = code === 0;
-                    evaluationResult.visualOutput = visualOutput;
-                    evaluationResult.visualExitCode = code;
-                    resolve();
-                });
-            });
+            evaluationResult.visualSuccess = code === 0;
+            evaluationResult.visualOutput = stdout + stderr;
+            evaluationResult.visualExitCode = code;
             
             // In a real system, we'd analyze the visual output here
             // For now, we'll just record that it ran successfully
@@ -187,36 +132,20 @@ async function evaluateConfiguration(config, generation, individual) {
     }
     
     // If optimizing for performance, run benchmarks
-    if (optimizePerformance) {
+    if (config.optimizePerformance) {
         console.log(`    Running performance analysis...`);
         
         try {
-            const perfProcess = spawn('node', ['src/testing/runBenchmarks.js'], {
-                cwd: join(__dirname, '../..'),
+            const { code, stdout, stderr } = await ProcessUtils.spawnProcess('node', ['src/testing/runBenchmarks.js'], {
                 env: {
                     ...process.env,
                     SENARS_CONFIG_FILE: tempConfigFile
-                },
-                stdio: ['pipe', 'pipe', 'pipe']
+                }
             });
             
-            let perfOutput = '';
-            perfProcess.stdout.on('data', (data) => {
-                perfOutput += data.toString();
-            });
-            
-            perfProcess.stderr.on('data', (data) => {
-                perfOutput += data.toString();
-            });
-            
-            await new Promise((resolve) => {
-                perfProcess.on('close', (code) => {
-                    evaluationResult.perfSuccess = code === 0;
-                    evaluationResult.perfOutput = perfOutput;
-                    evaluationResult.perfExitCode = code;
-                    resolve();
-                });
-            });
+            evaluationResult.perfSuccess = code === 0;
+            evaluationResult.perfOutput = stdout + stderr;
+            evaluationResult.perfExitCode = code;
             
             // Simple performance scoring based on success and arbitrary metrics
             evaluationResult.perfScore = evaluationResult.perfSuccess ? 
@@ -233,12 +162,12 @@ async function evaluateConfiguration(config, generation, individual) {
     let totalScore = 0;
     let scoreCount = 0;
     
-    if (useVisualFeedback) {
+    if (config.useVisualFeedback) {
         totalScore += evaluationResult.visualScore * 0.4; // 40% weight to visual
         scoreCount += 0.4;
     }
     
-    if (optimizePerformance) {
+    if (config.optimizePerformance) {
         totalScore += evaluationResult.perfScore * 0.6; // 60% weight to performance
         scoreCount += 0.6;
     }
@@ -247,7 +176,7 @@ async function evaluateConfiguration(config, generation, individual) {
     
     // Clean up temp file
     try {
-        await execAsync(`rm -f ${tempConfigFile}`);
+        await ProcessUtils.executeCommand(`rm -f ${tempConfigFile}`);
     } catch (error) {
         // Ignore cleanup errors
     }
@@ -255,72 +184,22 @@ async function evaluateConfiguration(config, generation, individual) {
     return evaluationResult;
 }
 
-async function selectParents(population) {
-    // Simple tournament selection
-    const tournamentSize = 3;
-    const selected = [];
-    
-    for (let i = 0; i < 2; i++) {
-        const tournament = [];
-        for (let j = 0; j < tournamentSize; j++) {
-            const randomIdx = Math.floor(Math.random() * population.length);
-            tournament.push(population[randomIdx]);
-        }
-        
-        // Select the best in tournament
-        tournament.sort((a, b) => b.fitness - a.fitness);
-        selected.push(tournament[0]);
-    }
-    
-    return selected;
-}
-
-async function crossover(parent1, parent2) {
-    // Simple crossover - average parameter values
-    const child = JSON.parse(JSON.stringify(parent1.config)); // Deep copy
-    
-    for (const category in child) {
-        for (const param in child[category]) {
-            // Mix values from both parents
-            const val1 = parent1.config[category][param];
-            const val2 = parent2.config[category][param];
-            child[category][param] = (val1 + val2) / 2;
-        }
-    }
-    
-    return child;
-}
-
-async function mutate(config, mutationRate = 0.1) {
-    // Apply random mutations to parameters
-    for (const category in parameterRanges) {
-        for (const param in parameterRanges[category]) {
-            if (Math.random() < mutationRate) {
-                const range = parameterRanges[category][param];
-                config[category][param] = Math.random() * (range.max - range.min) + range.min;
-            }
-        }
-    }
-    
-    return config;
-}
-
 async function runAutonomousDevelopment() {
     try {
-        console.log(`\\n🤖 Starting autonomous development in mode: ${mode}`);
-        console.log(`📊 Parameters: generations=${generations}, population=${populationSize}`);
+        console.log(`\n🤖 Starting autonomous development in mode: ${config.mode}`);
+        console.log(`📊 Parameters: generations=${config.generations}, population=${config.populationSize}`);
         
         // Create output directory
-        await execAsync(`mkdir -p ${outputDir} ${outputDir}/generations ${outputDir}/configs ${outputDir}/results`);
+        await ProcessUtils.executeCommand(`mkdir -p ${config.outputDir} ${config.outputDir}/generations ${config.outputDir}/configs ${config.outputDir}/results`);
         
         // Initialize population
         let population = [];
-        console.log('\\n🌱 Initializing population...');
+        console.log('\n🌱 Initializing population...');
         
-        for (let i = 0; i < populationSize; i++) {
-            const config = await generateRandomConfig();
+        for (let i = 0; i < config.populationSize; i++) {
+            const configIndividual = EvolutionUtils.generateRandomConfig(PARAMETER_RANGES);
             population.push({
-                config: config,
+                config: configIndividual,
                 id: i
             });
         }
@@ -328,8 +207,8 @@ async function runAutonomousDevelopment() {
         const evolutionHistory = [];
         
         // Main evolution loop
-        for (let gen = 0; gen < generations; gen++) {
-            console.log(`\\n GenerationType ${gen + 1}/${generations}`);
+        for (let gen = 0; gen < config.generations; gen++) {
+            console.log(`\n GenerationType ${gen + 1}/${config.generations}`);
             
             // Evaluate entire population
             for (let i = 0; i < population.length; i++) {
@@ -343,58 +222,53 @@ async function runAutonomousDevelopment() {
             }
             
             // Sort by fitness (descending)
-            population.sort((a, b) => b.fitness - a.fitness);
+            population.sort((a, b) => (b.fitness || 0) - (a.fitness || 0));
             
             // Record best of generation
             const bestOfGen = population[0];
             evolutionHistory.push({
                 generation: gen,
                 bestFitness: bestOfGen.fitness,
-                averageFitness: population.reduce((sum, ind) => sum + ind.fitness, 0) / population.length,
+                averageFitness: population.reduce((sum, ind) => sum + (ind.fitness || 0), 0) / population.length,
                 bestConfig: bestOfGen.config
             });
             
             console.log(`    Best fitness: ${bestOfGen.fitness.toFixed(4)}`);
             
             // Save best config of generation
-            await writeFile(
-                `${outputDir}/generations/gen-${gen}-best.json`, 
-                JSON.stringify(bestOfGen.config, null, 2)
+            await EvolutionUtils.saveConfig(
+                bestOfGen.config,
+                `${config.outputDir}/generations/gen-${gen}-best.json`
             );
             
             // Create next generation (except for the last generation)
-            if (gen < generations - 1) {
-                const nextPopulation = [population[0]]; // Elitism: keep best
-                
-                while (nextPopulation.length < populationSize) {
-                    const [parent1, parent2] = await selectParents(population);
-                    let childConfig = await crossover(parent1, parent2);
-                    childConfig = await mutate(childConfig);
-                    
-                    nextPopulation.push({
-                        config: childConfig,
-                        id: nextPopulation.length
-                    });
-                }
-                
-                population = nextPopulation;
+            if (gen < config.generations - 1) {
+                population = await EvolutionUtils.createNextGeneration(
+                    population, 
+                    PARAMETER_RANGES, 
+                    { 
+                        populationSize: config.populationSize,
+                        mutationRate: 0.1,
+                        elitismCount: 1
+                    }
+                );
             }
         }
         
         // Select overall best
-        population.sort((a, b) => b.fitness - a.fitness);
+        population.sort((a, b) => (b.fitness || 0) - (a.fitness || 0));
         const bestOverall = population[0];
         
         // Generate final report
         const finalReport = {
             timestamp: new Date().toISOString(),
-            mode: mode,
+            mode: config.mode,
             parameters: {
-                generations,
-                populationSize,
-                useVisualFeedback,
-                optimizePerformance,
-                optimizeUI
+                generations: config.generations,
+                populationSize: config.populationSize,
+                useVisualFeedback: config.useVisualFeedback,
+                optimizePerformance: config.optimizePerformance,
+                optimizeUI: config.optimizeUI
             },
             evolutionHistory,
             bestConfiguration: bestOverall.config,
@@ -406,18 +280,19 @@ async function runAutonomousDevelopment() {
             }
         };
         
-        await writeFile(`${outputDir}/final-report.json`, JSON.stringify(finalReport, null, 2));
+        await writeFile(`${config.outputDir}/final-report.json`, JSON.stringify(finalReport, null, 2));
         
-        console.log('\\n🎉 Autonomous development completed!');
+        console.log('\n🎉 Autonomous development completed!');
         console.log(`🏆 Best fitness achieved: ${bestOverall.fitness.toFixed(4)}`);
-        console.log(`📊 Results saved to: ${outputDir}/`);
+        console.log(`📊 Results saved to: ${config.outputDir}/`);
         
         // Print summary to console
-        console.log('\\n📈 Evolution Summary:');
+        console.log('\n📈 Evolution Summary:');
         console.log(`  Initial average fitness: ${finalReport.summary.initialAverage.toFixed(4)}`);
         console.log(`  Final average fitness: ${finalReport.summary.finalAverage.toFixed(4)}`);
         console.log(`  Best fitness: ${finalReport.summary.bestFitness.toFixed(4)}`);
-        console.log(`  Improvement: ${((finalReport.summary.finalAverage / finalReport.summary.initialAverage - 1) * 100).toFixed(2)}% average`);
+        const improvement = ((finalReport.summary.finalAverage / finalReport.summary.initialAverage - 1) * 100).toFixed(2);
+        console.log(`  Improvement: ${improvement}% average`);
         
     } catch (error) {
         console.error('Error running autonomous development:', error);

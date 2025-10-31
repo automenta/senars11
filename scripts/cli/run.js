@@ -1,14 +1,9 @@
 #!/usr/bin/env node
 
-import { spawn } from 'child_process';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+import { ScriptUtils } from '../utils/script-utils.js';
 
 // CLI runner that can handle different CLI operations
-const args = process.argv.slice(2);
+const { args, helpRequested } = ScriptUtils.parseArgs(process.argv.slice(2));
 
 const USAGE_MESSAGE = `
 Usage: node scripts/cli/run.js [options]
@@ -30,27 +25,10 @@ Examples:
 `;
 
 const CLI_CONFIG = Object.freeze({
-    module: 'src/index.js',
-    baseDir: join(__dirname, '../../'),
-    devArgs: ['--dev', '--watch'],
-    helpArgs: ['--help', '-h']
+    module: 'src/index.js'
 });
 
-function showUsage() {
-    console.log(USAGE_MESSAGE);
-}
-
-/**
- * Check if help was requested
- */
-function isHelpRequested(args) {
-    return args.some(arg => CLI_CONFIG.helpArgs.includes(arg));
-}
-
-/**
- * Process arguments to extract dev mode and other options
- */
-function processArgs(args) {
+const processArgs = args => {
     let nodeArgs = [];
     const remainingArgs = [...args]; // Create a copy to avoid modifying original
 
@@ -63,35 +41,11 @@ function processArgs(args) {
     }
 
     return { nodeArgs, remainingArgs };
+};
+
+if (helpRequested) {
+    ScriptUtils.showUsageAndExit(USAGE_MESSAGE);
 }
 
-/**
- * Run the CLI process
- */
-function runCLI(nodeArgs, remainingArgs) {
-    const child = spawn('node', [...nodeArgs, CLI_CONFIG.module, ...remainingArgs], {
-        stdio: 'inherit',
-        cwd: CLI_CONFIG.baseDir
-    });
-
-    child.on('error', (err) => {
-        console.error('Error running CLI:', err.message);
-        process.exit(1);
-    });
-
-    child.on('close', (code) => {
-        process.exit(code);
-    });
-}
-
-function main() {
-    if (isHelpRequested(args)) {
-        showUsage();
-        process.exit(0);
-    }
-
-    const { nodeArgs, remainingArgs } = processArgs(args);
-    runCLI(nodeArgs, remainingArgs);
-}
-
-main();
+const { nodeArgs, remainingArgs } = processArgs(args);
+ScriptUtils.spawnProcess('node', [...nodeArgs, CLI_CONFIG.module, ...remainingArgs]);

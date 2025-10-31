@@ -34,5 +34,5 @@ export const contentMap = {
     'ConceptRelationshipPanel': ConceptRelationshipPanel,
     'ReasoningTracePanel': ReasoningTracePanel,
     'TimeSeriesPanel': TimeSeriesPanel,
-    'PriorityHistogramPanel': PriorityHistogram,
+    'PriorityHistogram': PriorityHistogram,
 };

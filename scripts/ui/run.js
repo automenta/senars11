@@ -1,13 +1,8 @@
 #!/usr/bin/env node
 
-import { spawn } from 'child_process';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { ScriptUtils } from '../utils/script-utils.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const args = process.argv.slice(2);
+const { args, helpRequested } = ScriptUtils.parseArgs(process.argv.slice(2));
 
 const USAGE_MESSAGE = `
 Usage: node scripts/ui/run.js [options]
@@ -33,44 +28,29 @@ const DEFAULT_CONFIG = Object.freeze({
     host: 'localhost'
 });
 
-/**
- * Print usage information
- */
-function showUsage() {
-    console.log(USAGE_MESSAGE);
-}
-
-/**
- * Check if help was requested
- */
-function isHelpRequested(args) {
-    return args.includes('--help') || args.includes('-h');
-}
-
-/**
- * Parse command line arguments
- */
-function parseArgs(args) {
+const parseArgs = args => {
     let isDevMode = DEFAULT_CONFIG.isDevMode;
     let port = DEFAULT_CONFIG.port;
     let wsPort = DEFAULT_CONFIG.wsPort;
     let host = DEFAULT_CONFIG.host;
 
-    for (let i = 0; i < args.length; i++) {
-        if (args[i] === '--prod') {
-            isDevMode = false;
-        } else if (args[i] === '--dev') {
-            isDevMode = true;
-        } else if (args[i] === '--port' && args[i + 1]) {
-            port = parseInt(args[i + 1]);
-            i++; // Skip next argument since it's the value
-        } else if (args[i] === '--ws-port' && args[i + 1]) {
-            wsPort = parseInt(args[i + 1]);
-            i++; // Skip next argument since it's the value
-        } else if (args[i] === '--host' && args[i + 1]) {
-            host = args[i + 1];
-            i++; // Skip next argument since it's the value
-        }
+    // Parse key-value arguments
+    const keyValueArgs = ScriptUtils.parseKeyValueArgs(args, {
+        '--port': 'port',
+        '--ws-port': 'wsPort',
+        '--host': 'host'
+    });
+    
+    // Override defaults with parsed values if provided
+    if (keyValueArgs.port) port = parseInt(keyValueArgs.port);
+    if (keyValueArgs.wsPort) wsPort = parseInt(keyValueArgs.wsPort);
+    if (keyValueArgs.host) host = keyValueArgs.host;
+
+    // Check for boolean flags
+    if (args.includes('--prod')) {
+        isDevMode = false;
+    } else if (args.includes('--dev')) {
+        isDevMode = true;
     }
     
     // Default to dev mode unless --prod was explicitly specified
@@ -79,48 +59,27 @@ function parseArgs(args) {
     }
 
     return { isDevMode, port, wsPort, host };
+};
+
+if (helpRequested) {
+    ScriptUtils.showUsageAndExit(USAGE_MESSAGE);
 }
 
-/**
- * Start the UI server with proper argument forwarding
- */
-function startUIServer({ port, wsPort, host }) {
-    console.log(`Starting ${port === DEFAULT_CONFIG.port && wsPort === DEFAULT_CONFIG.wsPort && host === DEFAULT_CONFIG.host ? 
-        (DEFAULT_CONFIG.isDevMode ? 'development' : 'production') : 
-        'custom'} UI server...`);
-    console.log(`UI Port: ${port}, WebSocket Port: ${wsPort}, Host: ${host}`);
+const config = parseArgs(args);
+const { port, wsPort, host } = config;
 
-    const spawnArgs = ['--port', port.toString(), '--ws-port', wsPort.toString(), '--host', host];
-    
-    const child = spawn('node', ['webui.js', ...spawnArgs], {
-        stdio: 'inherit',
-        cwd: join(__dirname, '../../'),
-        env: {
-            ...process.env,
-            WS_PORT: wsPort.toString(),
-            WS_HOST: host,
-            PORT: port.toString()
-        }
-    });
+console.log(`Starting ${port === DEFAULT_CONFIG.port && wsPort === DEFAULT_CONFIG.wsPort && host === DEFAULT_CONFIG.host ? 
+    (DEFAULT_CONFIG.isDevMode ? 'development' : 'production') : 
+    'custom'} UI server...`);
+console.log(`UI Port: ${port}, WebSocket Port: ${wsPort}, Host: ${host}`);
 
-    child.on('error', (err) => {
-        console.error('Error starting UI server:', err.message);
-        process.exit(1);
-    });
+const spawnArgs = ['--port', port.toString(), '--ws-port', wsPort.toString(), '--host', host];
 
-    child.on('close', (code) => {
-        process.exit(code);
-    });
-}
-
-function main() {
-    if (isHelpRequested(args)) {
-        showUsage();
-        process.exit(0);
+ScriptUtils.spawnProcess('node', ['webui.js', ...spawnArgs], {
+    env: {
+        ...process.env,
+        WS_PORT: wsPort.toString(),
+        WS_HOST: host,
+        PORT: port.toString()
     }
-
-    const config = parseArgs(args);
-    startUIServer(config);
-}
-
-main();
+});

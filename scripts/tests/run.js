@@ -1,13 +1,8 @@
 #!/usr/bin/env node
 
-import { spawn } from 'child_process';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { ScriptUtils } from '../utils/script-utils.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const args = process.argv.slice(2);
+const { args, helpRequested } = ScriptUtils.parseArgs(process.argv.slice(2));
 
 const USAGE_MESSAGE = `
 Usage: node scripts/tests/run.js [options]
@@ -35,9 +30,7 @@ Examples:
 `;
 
 const DEFAULT_TEST_TYPE = 'core';
-const HELP_ARGS = ['--help', '-h'];
 const VERBOSE_ARGS = ['--verbose', '-v'];
-const OPTION_ARGS = ['--coverage', '--watch', ...VERBOSE_ARGS];
 
 const TEST_COMMANDS = {
     'core': 'test:core',
@@ -50,83 +43,38 @@ const TEST_COMMANDS = {
     'e2e': 'test:e2e'
 };
 
-function showUsage() {
-    console.log(USAGE_MESSAGE);
-}
-
-/**
- * Check if help was requested
- */
-function isHelpRequested(args) {
-    return args.some(arg => HELP_ARGS.includes(arg));
-}
-
-/**
- * Parse command line arguments
- */
-function parseArgs(args) {
+const parseArgs = args => {
     let testType = DEFAULT_TEST_TYPE;
     let verbose = args.some(arg => VERBOSE_ARGS.includes(arg));
     let coverage = args.includes('--coverage');
     let watch = args.includes('--watch');
 
-    for (let i = 0; i < args.length; i++) {
-        if (Object.keys(TEST_COMMANDS).includes(args[i].replace(/^--/, ''))) {
-            testType = args[i].replace(/^--/, '');
-        }
+    const foundTestType = ScriptUtils.findArgValue(args, Object.keys(TEST_COMMANDS));
+    if (foundTestType) {
+        testType = foundTestType;
     }
 
     return { testType, verbose, coverage, watch };
+};
+
+const buildTestArgs = ({ verbose, coverage, watch }) => [
+    ...(verbose ? ['--verbose'] : []),
+    ...(coverage ? ['--coverage'] : []),
+    ...(watch ? ['--watch'] : [])
+];
+
+if (helpRequested) {
+    ScriptUtils.showUsageAndExit(USAGE_MESSAGE);
 }
 
-/**
- * Build test arguments based on options
- */
-function buildTestArgs({ verbose, coverage, watch }) {
-    const jestArgs = [];
-    if (verbose) jestArgs.push('--verbose');
-    if (coverage) jestArgs.push('--coverage');
-    if (watch) jestArgs.push('--watch');
-    return jestArgs;
+const { testType, verbose, coverage, watch } = parseArgs(args);
+
+const npmScript = TEST_COMMANDS[testType];
+if (!npmScript) {
+    console.error(`Unknown test type: ${testType}`);
+    process.exit(1);
 }
 
-/**
- * Start the test runner
- */
-function runTests(npmScript, jestArgs) {
-    console.log(`Running ${npmScript.replace('test:', '')} tests...`);
-
-    const child = spawn('npm', ['run', npmScript, '--', ...jestArgs], {
-        stdio: 'inherit',
-        cwd: join(__dirname, '../../')
-    });
-
-    child.on('error', (err) => {
-        console.error('Error running tests:', err.message);
-        process.exit(1);
-    });
-
-    child.on('close', (code) => {
-        process.exit(code);
-    });
-}
-
-function main() {
-    if (isHelpRequested(args)) {
-        showUsage();
-        process.exit(0);
-    }
-
-    const { testType, verbose, coverage, watch } = parseArgs(args);
-    
-    const npmScript = TEST_COMMANDS[testType];
-    if (!npmScript) {
-        console.error(`Unknown test type: ${testType}`);
-        process.exit(1);
-    }
-
-    const jestArgs = buildTestArgs({ verbose, coverage, watch });
-    runTests(npmScript, jestArgs);
-}
-
-main();
+const jestArgs = buildTestArgs({ verbose, coverage, watch });
+console.log(`Running ${npmScript.replace('test:', '')} tests...`);
+ScriptUtils.spawnProcess('npm', ['run', npmScript, '--', ...jestArgs]);

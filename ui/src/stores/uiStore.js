@@ -64,7 +64,7 @@ const batchUpdate = (set, updates) => {
   });
 };
 
-// Selector functions for memoized access to parts of state
+// Selectors for memoized access to parts of state
 const selectors = {
   getWebSocketState: (state) => ({wsConnected: state.wsConnected, wsService: state.wsService}),
   getLayoutState: (state) => ({layout: state.layout, savedLayouts: state.savedLayouts}),

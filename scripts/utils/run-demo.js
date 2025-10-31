@@ -7,10 +7,9 @@ import path from 'path';
 
 const execAsync = promisify(exec);
 
-// Configuration for the live demo
 const DEMO_CONFIG = Object.freeze({
-    WEBSOCKET_PORT: 8083,  // Changed to avoid conflicts
-    UI_PORT: 5176,         // Changed to avoid conflicts
+    WEBSOCKET_PORT: 8083,
+    UI_PORT: 5176,
     DURATION: 60000, // 1 minute demo
     DEMONSTRATION_TYPES: [
         'priority-fluctuations',
@@ -26,10 +25,19 @@ const DEMO_CONFIG = Object.freeze({
     BASE_TERMS: ['cat', 'dog', 'bird', 'fish', 'animal', 'mammal', 'pet', 'living']
 });
 
-/**
- * Log an event to demo data
- */
-function logEvent(demoData, source, message) {
+const updateMetricsFromMessage = (demoData, message) => {
+    if (message.includes('derivation') || message.includes('reasoning')) {
+        demoData.metrics.derivationsMade++;
+    } else if (message.includes('priority')) {
+        demoData.metrics.priorityChanges++;
+    } else if (message.includes('task')) {
+        demoData.metrics.tasksProcessed++;
+    } else if (message.includes('connected')) {
+        demoData.metrics.connections++;
+    }
+};
+
+const logEvent = (demoData, source, message) => {
     demoData.events.push({
         timestamp: Date.now(),
         source,
@@ -37,26 +45,10 @@ function logEvent(demoData, source, message) {
         relativeTime: Date.now() - demoData.startTime
     });
     
-    // Update metrics based on message content
-    if (message.includes('derivation') || message.includes('reasoning')) {
-        demoData.metrics.derivationsMade++;
-    }
-    if (message.includes('priority')) {
-        demoData.metrics.priorityChanges++;
-    }
-    if (message.includes('task')) {
-        demoData.metrics.tasksProcessed++;
-    }
-    if (message.includes('connected')) {
-        demoData.metrics.connections++;
-    }
-}
+    updateMetricsFromMessage(demoData, message);
+};
 
-/**
- * Create automation script content
- */
-function createAutomationScript(webSocketPort) {
-    return `
+const createAutomationScript = (webSocketPort) => `
 // Use a dynamic import to load the WebSocket library
 async function runDemoAutomation() {
     // Add a small delay to ensure server is ready
@@ -255,12 +247,8 @@ async function runDemoAutomation() {
 // Execute the demo automation
 runDemoAutomation().catch(err => console.error('Demo automation error:', err));
 `;
-}
 
-/**
- * Create and configure a child process with common event handlers
- */
-function createProcessWithLogging(spawnArgs, logPrefix, processes, demoData) {
+const createProcessWithLogging = (spawnArgs, logPrefix, processes, demoData) => {
     const childProcess = spawn(...spawnArgs);
 
     childProcess.stdout.on('data', (data) => {
@@ -278,15 +266,11 @@ function createProcessWithLogging(spawnArgs, logPrefix, processes, demoData) {
 
     processes.push(childProcess);
     return childProcess;
-}
+};
 
-/**
- * Setup demo environment
- */
-async function setupDemo() {
+const setupDemoEnvironment = async () => {
     console.log('🚀 Setting up live demo environment...');
 
-    // Create demo results directory
     await fs.mkdir('demo-results', { recursive: true });
     await fs.mkdir('demo-results/logs', { recursive: true });
 
@@ -302,12 +286,9 @@ async function setupDemo() {
             connections: 0
         }
     };
-}
+};
 
-/**
- * Start the WebSocket server
- */
-async function startWebSocketServer(demoData, processes) {
+const startWebSocketServer = async (demoData, processes) => {
     console.log(`🔌 Starting WebSocket server on port ${DEMO_CONFIG.WEBSOCKET_PORT}...`);
 
     createProcessWithLogging(
@@ -326,16 +307,12 @@ async function startWebSocketServer(demoData, processes) {
         demoData
     );
 
-    // Wait for server to start
     await new Promise(resolve => setTimeout(resolve, DEMO_CONFIG.STARTUP_DELAYS.server));
 
     console.log('✅ WebSocket server started');
-}
+};
 
-/**
- * Start the demo UI
- */
-async function startDemoUI(demoData, processes) {
+const startDemoUI = async (demoData, processes) => {
     console.log(`🖥️  Starting demo UI on port ${DEMO_CONFIG.UI_PORT}...`);
 
     createProcessWithLogging(
@@ -354,16 +331,12 @@ async function startDemoUI(demoData, processes) {
         demoData
     );
 
-    // Wait for UI to start
     await new Promise(resolve => setTimeout(resolve, DEMO_CONFIG.STARTUP_DELAYS.ui));
 
     console.log('✅ Demo UI started');
-}
+};
 
-/**
- * Start demo automation
- */
-async function startDemoAutomation(demoData, processes) {
+const startDemoAutomation = async (demoData, processes) => {
     console.log('🤖 Starting demo automation...');
 
     const automationScript = createAutomationScript(DEMO_CONFIG.WEBSOCKET_PORT);
@@ -380,12 +353,9 @@ async function startDemoAutomation(demoData, processes) {
     );
 
     console.log('✅ Demo automation started');
-}
+};
 
-/**
- * Generate demo report
- */
-async function generateDemoReport(demoData) {
+const generateDemoReport = async (demoData) => {
     const report = {
         ...demoData,
         endTime: Date.now(),
@@ -402,7 +372,6 @@ async function generateDemoReport(demoData) {
     const reportPath = path.join(process.cwd(), 'demo-results', 'demo-report.json');
     await fs.writeFile(reportPath, JSON.stringify(report, null, 2));
 
-    // Create a summary text file
     const summaryPath = path.join(process.cwd(), 'demo-results', 'demo-summary.txt');
     const summary = `LIVE DEMO SUMMARY
 ================
@@ -428,28 +397,22 @@ ${demoData.events.slice(-20).map(e => '[' + new Date(e.timestamp).toLocaleTimeSt
     console.log(`\\n📋 Demo report saved to: ${reportPath}`);
     console.log(`📋 Demo summary saved to: ${summaryPath}`);
 
-    // Show key metrics
     console.log(`\\n🏆 Demo Results:`);
     console.log(`  • ${report.summary.tasksProcessed} tasks processed`);
     console.log(`  • ${report.summary.derivationsMade} derivations made`);
     console.log(`  • ${report.summary.priorityChanges} priority changes`);
     console.log(`  • ${report.summary.connections} connections`);
-}
+};
 
-/**
- * Cleanup demo processes and temporary files
- */
-async function cleanupDemo(processes) {
+const cleanupDemo = async (processes) => {
     console.log('\\n🔄 Cleaning up demo processes...');
 
-    // Kill all processes
     processes.forEach(process => {
         if (!process.killed) {
             process.kill();
         }
     });
 
-    // Clear temporary files
     try {
         await fs.unlink(path.join(process.cwd(), 'demo-automation-tmp.js'));
     } catch (err) {
@@ -457,16 +420,12 @@ async function cleanupDemo(processes) {
     }
 
     console.log('✅ Cleanup completed');
-}
+};
 
-/**
- * Run the complete demo
- */
-async function runDemo() {
+(async () => {
     const processes = [];
     let demoData;
 
-    // Handle graceful shutdown
     process.on('SIGINT', async () => {
         console.log('\\n⚠️  Received SIGINT, shutting down demo...');
         await cleanupDemo(processes);
@@ -474,7 +433,7 @@ async function runDemo() {
     });
 
     try {
-        demoData = await setupDemo();
+        demoData = await setupDemoEnvironment();
         await startWebSocketServer(demoData, processes);
         await startDemoUI(demoData, processes);
         await startDemoAutomation(demoData, processes);
@@ -488,28 +447,18 @@ async function runDemo() {
             console.log(`  • ${type.replace('-', ' ')}`);
         });
 
-        // Wait for demo to complete
         await new Promise(resolve => setTimeout(resolve, DEMO_CONFIG.DURATION));
 
         console.log('\\n📊 Generating demo report...');
         await generateDemoReport(demoData);
 
-        return true;
+        const success = true;
+        console.log(`\\n🎉 Demo ${success ? 'COMPLETED SUCCESSFULLY' : 'FAILED'}`);
+        process.exit(success ? 0 : 1);
     } catch (error) {
         console.error('❌ Demo error:', error);
-        return false;
+        process.exit(1);
     } finally {
         await cleanupDemo(processes);
     }
-}
-
-// Execute
-runDemo()
-    .then(success => {
-        console.log(`\\n🎉 Demo ${success ? 'COMPLETED SUCCESSFULLY' : 'FAILED'}`);
-        process.exit(success ? 0 : 1);
-    })
-    .catch(error => {
-        console.error('Demo execution error:', error);
-        process.exit(1);
-    });
+})();

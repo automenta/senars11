@@ -16,28 +16,17 @@ const TEST_CONFIG = Object.freeze({
     DEMO_RUNNER_PORT: 3002  // Port for automated demo runner
 });
 
-/**
- * Delay function
- */
-function delay(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-/**
- * Create directory with proper error handling
- */
-async function createDirectory(dirPath) {
+const createDirectory = async (dirPath) => {
     try {
         await fs.access(dirPath);
     } catch {
         await fs.mkdir(dirPath, { recursive: true });
     }
-}
+};
 
-/**
- * Kill existing processes on specified ports
- */
-async function killExistingProcesses() {
+const killExistingProcesses = async () => {
     try {
         // Kill any existing processes on our ports
         await execAsync(`lsof -ti:${TEST_CONFIG.WEBSOCKET_PORT} | xargs kill -9 2>/dev/null || true`);
@@ -46,13 +35,9 @@ async function killExistingProcesses() {
     } catch (error) {
         // Ignore errors if no processes were running
     }
-}
+};
 
-/**
- * Generate demo script content
- */
-function generateDemoScript(webSocketPort) {
-    return `
+const generateDemoScript = (webSocketPort) => `
 const WebSocket = require('ws');
 const ws = new WebSocket('ws://localhost:' + ${webSocketPort});
 
@@ -127,136 +112,100 @@ ws.on('close', () => {
     console.log('Demo runner disconnected');
 });
 `;
-}
 
-/**
- * Start the backend server
- */
-async function startBackend(testResults) {
-    console.log('Starting WebSocket backend...');
+const startProcess = (name, spawnArgs, spawnOptions, testResults) => {
+    console.log(`Starting ${name}...`);
     
-    const backendProcess = spawn('node', ['webui.js'], {
-        env: {
-            ...process.env,
-            WS_PORT: TEST_CONFIG.WEBSOCKET_PORT,
-            WS_HOST: 'localhost'
-        },
-        cwd: process.cwd(),
-        stdio: ['pipe', 'pipe', 'pipe']
-    });
+    const process = spawn(...spawnArgs, spawnOptions);
 
-    // Handle backend output
-    backendProcess.stdout.on('data', (data) => {
+    // Handle output
+    process.stdout.on('data', (data) => {
         const output = data.toString();
-        console.log(`[BACKEND] ${output}`);
-        captureOutput('[BACKEND]', output, testResults);
+        console.log(`[${name.toUpperCase()}] ${output}`);
+        captureOutput(`[${name.toUpperCase()}]`, output, testResults);
     });
 
-    backendProcess.stderr.on('data', (data) => {
+    process.stderr.on('data', (data) => {
         const error = data.toString();
-        console.error(`[BACKEND ERROR] ${error}`);
-        testResults.errors.push(`Backend error: ${error}`);
+        console.error(`[${name.toUpperCase()} ERROR] ${error}`);
+        testResults.errors.push(`${name} error: ${error}`);
         testResults.success = false;
     });
 
-    backendProcess.on('error', (err) => {
-        console.error(`Backend process error:`, err);
-        testResults.errors.push(`Backend process error: ${err.message}`);
+    process.on('error', (err) => {
+        console.error(`${name} process error:`, err);
+        testResults.errors.push(`${name} process error: ${err.message}`);
         testResults.success = false;
     });
+
+    return process;
+};
+
+const startBackend = async (testResults) => {
+    const backendProcess = startProcess('BACKEND', 
+        ['node', ['webui.js']], 
+        {
+            env: {
+                ...process.env,
+                WS_PORT: TEST_CONFIG.WEBSOCKET_PORT,
+                WS_HOST: 'localhost'
+            },
+            cwd: process.cwd(),
+            stdio: ['pipe', 'pipe', 'pipe']
+        },
+        testResults
+    );
 
     // Wait a bit for backend to start
     await delay(3000);
     
     console.log('✓ WebSocket backend started');
     return backendProcess;
-}
+};
 
-/**
- * Start the demo UI
- */
-async function startDemoUI(testResults) {
-    console.log('Starting demo UI...');
-    
-    const uiProcess = spawn('npx', ['vite', '-c', 'simple-uis/vite.config.js'], {
-        env: {
-            ...process.env,
-            PORT: TEST_CONFIG.UI_PORT,
-            VITE_WS_PORT: TEST_CONFIG.WEBSOCKET_PORT,
-            VITE_TEST_MODE: 'false'  // Real mode, not test mode
+const startDemoUI = async (testResults) => {
+    const uiProcess = startProcess('UI', 
+        ['npx', ['vite', '-c', 'simple-uis/vite.config.js']], 
+        {
+            env: {
+                ...process.env,
+                PORT: TEST_CONFIG.UI_PORT,
+                VITE_WS_PORT: TEST_CONFIG.WEBSOCKET_PORT,
+                VITE_TEST_MODE: 'false'  // Real mode, not test mode
+            },
+            cwd: path.join(process.cwd(), 'ui'),
+            stdio: ['pipe', 'pipe', 'pipe']
         },
-        cwd: path.join(process.cwd(), 'ui'),
-        stdio: ['pipe', 'pipe', 'pipe']
-    });
-
-    // Handle UI output
-    uiProcess.stdout.on('data', (data) => {
-        const output = data.toString();
-        console.log(`[UI] ${output}`);
-        captureOutput('[UI]', output, testResults);
-    });
-
-    uiProcess.stderr.on('data', (data) => {
-        const error = data.toString();
-        console.error(`[UI ERROR] ${error}`);
-        testResults.errors.push(`UI error: ${error}`);
-        testResults.success = false;
-    });
-
-    uiProcess.on('error', (err) => {
-        console.error(`UI process error:`, err);
-        testResults.errors.push(`UI process error: ${err.message}`);
-        testResults.success = false;
-    });
+        testResults
+    );
 
     // Wait for UI to start
     await delay(5000);
     
     console.log('✓ Demo UI started');
     return uiProcess;
-}
+};
 
-/**
- * Start the demo runner
- */
-async function startDemoRunner(testResults) {
-    console.log('Starting automated demo runner...');
-    
+const startDemoRunner = async (testResults) => {
     const demoScript = generateDemoScript(TEST_CONFIG.WEBSOCKET_PORT);
     
     // Write the demo runner script to a temporary file
     const demoRunnerPath = path.join(process.cwd(), 'demo-runner-tmp.js');
     await fs.writeFile(demoRunnerPath, demoScript);
     
-    const demoRunnerProcess = spawn('node', [demoRunnerPath], {
-        stdio: ['pipe', 'pipe', 'pipe']
-    });
-
-    demoRunnerProcess.stdout.on('data', (data) => {
-        const output = data.toString();
-        console.log(`[DEMO RUNNER] ${output}`);
-        captureOutput('[DEMO RUNNER]', output, testResults);
-    });
-
-    demoRunnerProcess.stderr.on('data', (data) => {
-        const error = data.toString();
-        console.error(`[DEMO RUNNER ERROR] ${error}`);
-        testResults.warnings.push(`Demo runner error: ${error}`);
-    });
-
-    demoRunnerProcess.on('error', (err) => {
-        console.error(`Demo runner process error:`, err);
-        testResults.errors.push(`Demo runner process error: ${err.message}`);
-    });
+    const demoRunnerProcess = startProcess('DEMO RUNNER', 
+        ['node', [demoRunnerPath]], 
+        {
+            stdio: ['pipe', 'pipe', 'pipe']
+        },
+        testResults
+    );
 
     console.log('✓ Automated demo runner started');
     return demoRunnerProcess;
-}
+};
 
-/**
- * Capture output and log based on content
- */
-function captureOutput(source, output, testResults) {
+const captureOutput = (source, output, testResults) => {
     // Look for errors in output
     if (output.toLowerCase().includes('error') || output.toLowerCase().includes('exception')) {
         testResults.warnings.push(`${source} output contained potential error: ${output}`);
@@ -268,12 +217,9 @@ function captureOutput(source, output, testResults) {
         output.toLowerCase().includes('ready')) {
         console.log(`✅ ${source} ${output.trim()}`);
     }
-}
+};
 
-/**
- * Generate the test report
- */
-async function generateTestReport(testResults, reportPath) {
+const generateTestReport = async (testResults, reportPath) => {
     const report = {
         ...testResults,
         duration: Date.now() - testResults.startTimestamp,
@@ -289,25 +235,14 @@ async function generateTestReport(testResults, reportPath) {
     console.log(`Warnings: ${report.warnings.length}`);
     console.log(`Success: ${report.success}`);
     console.log(`Report saved to: ${reportPath}`);
-}
+};
 
-/**
- * Cleanup all processes and files
- */
-async function cleanup(backendProcess, uiProcess, demoRunnerProcess) {
+const cleanup = async (backendProcess, uiProcess, demoRunnerProcess) => {
     console.log('\n🔄 Cleaning up processes...');
     
-    if (backendProcess) {
-        backendProcess.kill();
-    }
-    
-    if (uiProcess) {
-        uiProcess.kill();
-    }
-    
-    if (demoRunnerProcess) {
-        demoRunnerProcess.kill();
-    }
+    [backendProcess, uiProcess, demoRunnerProcess]
+        .filter(Boolean)
+        .forEach(process => process.kill());
     
     // Kill any remaining processes on our ports
     await killExistingProcesses();
@@ -320,12 +255,10 @@ async function cleanup(backendProcess, uiProcess, demoRunnerProcess) {
     }
     
     console.log('✓ Cleanup completed');
-}
+};
 
-/**
- * Main test function
- */
-async function runTests() {
+// Execute
+(async () => {
     const testResults = {
         startTimestamp: Date.now(),
         errors: [],
@@ -386,7 +319,4 @@ async function runTests() {
     } finally {
         await cleanup(backendProcess, uiProcess, demoRunnerProcess);
     }
-}
-
-// Execute
-runTests();
+})();

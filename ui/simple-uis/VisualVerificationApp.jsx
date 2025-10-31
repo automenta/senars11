@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import WebSocketStatus from './WebSocketStatus';
 import DemoRunner from './DemoRunner';
 import NarseseInput from './NarseseInput';
-import TaskMonitor from './TaskMonitor';
+import TaskMonitor from './TaskMonitor.js';
 import { useState } from 'react';
 
 // Visual verification test harness for Senars UI components
