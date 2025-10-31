@@ -1,4 +1,4 @@
-import React, { memo, useState, useCallback } from 'react';
+import React, { memo, useState, useCallback, useMemo } from 'react';
 import useUiStore from '../stores/uiStore.js';
 import GenericPanel from './GenericPanel.js';
 import VirtualizedList from './VirtualizedList.js';
@@ -33,60 +33,50 @@ const ListPanel = memo(({
   const [sortBy, setSortBy] = useState(defaultSort);
   const [sortDirection, setSortDirection] = useState('asc'); // 'asc' or 'desc'
   
-  // Filter items based on search term
-  let filteredItems = items;
-  if (searchTerm) {
-    if (filterFn) {
-      filteredItems = items.filter(item => filterFn(item, searchTerm));
-    } else {
-      // Default filter: match any string property containing the search term (case insensitive)
-      filteredItems = items.filter(item => {
-        if (typeof item === 'string') {
-          return item.toLowerCase().includes(searchTerm.toLowerCase());
-        } else if (typeof item === 'object') {
-          return Object.values(item).some(value => 
-            String(value).toLowerCase().includes(searchTerm.toLowerCase())
-          );
-        }
-        return false;
-      });
-    }
-  }
-  
-  // Sort items
-  let sortedItems = [...filteredItems];
-  if (sortBy) {
-    sortedItems.sort((a, b) => {
-      let valueA = a;
-      let valueB = b;
-      
-      // Navigate nested properties if sortBy contains dots (e.g., 'user.name')
-      if (typeof sortBy === 'string' && sortBy.includes('.')) {
-        const keys = sortBy.split('.');
-        for (const key of keys) {
-          valueA = valueA?.[key];
-          valueB = valueB?.[key];
-        }
-      } else {
-        valueA = a[sortBy];
-        valueB = b[sortBy];
-      }
-      
-      // Handle different data types
-      let comparison = 0;
-      if (typeof valueA === 'string' && typeof valueB === 'string') {
-        comparison = valueA.toLowerCase().localeCompare(valueB.toLowerCase());
-      } else if (typeof valueA === 'number' && typeof valueB === 'number') {
-        comparison = valueA - valueB;
-      } else {
-        // Fallback comparison
-        comparison = String(valueA).localeCompare(String(valueB));
-      }
-      
-      return sortDirection === 'asc' ? comparison : -comparison;
-    });
-  }
-  
+  // Memoize filtered and sorted items to prevent unnecessary computations
+  const processedItems = useMemo(() => {
+    // Filter items based on search term
+    const filteredItems = searchTerm 
+      ? filterFn 
+        ? items.filter(item => filterFn(item, searchTerm))
+        : items.filter(item => {
+            if (typeof item === 'string') {
+              return item.toLowerCase().includes(searchTerm.toLowerCase());
+            } else if (typeof item === 'object') {
+              return Object.values(item).some(value => 
+                String(value).toLowerCase().includes(searchTerm.toLowerCase())
+              );
+            }
+            return false;
+          })
+      : items;
+    
+    // Sort items
+    return sortBy 
+      ? [...filteredItems].sort((a, b) => {
+          let valueA = typeof sortBy === 'string' && sortBy.includes('.') 
+            ? sortBy.split('.').reduce((obj, key) => obj?.[key], a)
+            : a[sortBy];
+          let valueB = typeof sortBy === 'string' && sortBy.includes('.') 
+            ? sortBy.split('.').reduce((obj, key) => obj?.[key], b)
+            : b[sortBy];
+          
+          // Handle different data types
+          let comparison = 0;
+          if (typeof valueA === 'string' && typeof valueB === 'string') {
+            comparison = valueA.toLowerCase().localeCompare(valueB.toLowerCase());
+          } else if (typeof valueA === 'number' && typeof valueB === 'number') {
+            comparison = valueA - valueB;
+          } else {
+            // Fallback comparison
+            comparison = String(valueA).localeCompare(String(valueB));
+          }
+          
+          return sortDirection === 'asc' ? comparison : -comparison;
+        })
+      : [...filteredItems];
+  }, [items, searchTerm, filterFn, sortBy, sortDirection]);
+
   // Handle sort change
   const handleSortChange = useCallback((newSortBy) => {
     if (sortBy === newSortBy) {
@@ -105,7 +95,7 @@ const ListPanel = memo(({
   }, []);
 
   // Render sort controls if sort options are provided
-  const sortControls = sortOptions.length > 0 && React.createElement('div', { 
+  const sortControls = useMemo(() => sortOptions.length > 0 && React.createElement('div', { 
     style: { 
       display: 'flex', 
       gap: '0.5rem', 
@@ -149,10 +139,10 @@ const ListPanel = memo(({
         )
       )
     )
-  );
+  ), [sortOptions, searchTerm, handleSearchChange, sortBy, sortDirection, handleSortChange]);
 
   // Render item count
-  const itemCount = React.createElement('div', { 
+  const itemCount = useMemo(() => React.createElement('div', { 
     style: { 
       fontSize: '0.8rem', 
       color: '#666', 
@@ -160,31 +150,31 @@ const ListPanel = memo(({
       marginBottom: '0.25rem' 
     } 
   },
-    `${sortedItems.length} item${sortedItems.length !== 1 ? 's' : ''} (${items.length} total)`
-  );
+    `${processedItems.length} item${processedItems.length !== 1 ? 's' : ''} (${items.length} total)`
+  ), [processedItems.length, items.length]);
 
   // Choose between virtualized and regular rendering based on configuration
-  const content = useVirtualization && sortedItems.length > 100
+  const content = useMemo(() => useVirtualization && processedItems.length > 100
     ? React.createElement(VirtualizedList, {
-        items: sortedItems,
+        items: processedItems,
         renderItem: renderItem,
         itemHeight: itemHeight,
         containerHeight: 400, // Default height, could be made configurable
         overscan: 5
       })
     : React.createElement(GenericPanel, {
-        items: sortedItems,
+        items: processedItems,
         renderItem: renderItem,
         maxHeight: 'calc(100% - 4rem)', // Account for title, controls, and count display
         emptyMessage: emptyMessage,
         autoScroll: autoScroll,
         maxItems: maxItems
-      });
+      }), [useVirtualization, processedItems, renderItem, itemHeight, autoScroll, maxItems, emptyMessage]);
 
   return React.createElement('div', { style: { height: '100%', display: 'flex', flexDirection: 'column' } },
     React.createElement('div', { style: { fontWeight: 'bold', marginBottom: '0.5rem' }}, title),
     sortControls,
-    sortedItems.length > 0 && itemCount,
+    processedItems.length > 0 && itemCount,
     content
   );
 });

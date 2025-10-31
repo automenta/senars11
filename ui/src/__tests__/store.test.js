@@ -29,11 +29,17 @@ describe('UI Store', () => {
         });
 
         it('should update WebSocket service', () => {
-            const mockWsService = { connect: vi.fn(), disconnect: vi.fn() };
+            // Create a simple test object that mimics the WebSocket service interface
+            const wsService = { 
+                connect: () => {}, 
+                disconnect: () => {},
+                send: () => {},
+                readyState: 1
+            };
             const {setWsService} = useUiStore.getState();
-            setWsService(mockWsService);
+            setWsService(wsService);
 
-            expect(useUiStore.getState().wsService).toBe(mockWsService);
+            expect(useUiStore.getState().wsService).toBe(wsService);
         });
     });
 

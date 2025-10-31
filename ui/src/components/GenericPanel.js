@@ -28,58 +28,62 @@ const GenericPanel = memo(({
   const [containerRef, setContainerRef] = useState(null);
   
   // Truncate items if maxItems is specified
-  const displayItems = maxItems ? items.slice(-maxItems) : items;
+  const displayItems = useMemo(() => maxItems ? items.slice(-maxItems) : items, [items, maxItems]);
   
   // Auto-scroll to bottom when items change if autoScroll is enabled
   useEffect(() => {
     if (autoScroll && containerRef) {
       containerRef.scrollTop = containerRef.scrollHeight;
     }
-  }, [displayItems, autoScroll, containerRef]);
+  }, [displayItems.length, autoScroll, containerRef]); // Only check length to avoid unnecessary triggers
 
-  const containerStyleComputed = { 
+  const containerStyleComputed = useMemo(() => ({ 
     maxHeight, 
     overflowY: 'auto', 
     ...containerStyle 
-  };
+  }), [maxHeight, containerStyle]);
 
-  const containerProps = {
+  const containerProps = useMemo(() => ({
     style: containerStyleComputed,
     ref: (el) => setContainerRef(el) // Set ref for auto-scroll functionality
-  };
+  }), [containerStyleComputed]);
+
+  const titleElement = title ? React.createElement('div', { 
+    style: { 
+      fontWeight: 'bold', 
+      marginBottom: '0.5rem',
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center'
+    } 
+  },
+    React.createElement('span', null, title),
+    showCount && React.createElement('span', { 
+      style: { fontSize: '0.8rem', color: '#666' } 
+    }, `(${displayItems.length})`)
+  ) : null;
+
+  const contentElement = displayItems.length > 0
+    ? displayItems.map((item, index) => renderItem(item, index))
+    : React.createElement('div', {
+        className: 'emptyState',
+        style: { padding: '1rem', textAlign: 'center', color: '#999' }
+      }, emptyMessage);
+
+  const timestampElement = withTimestamp ? React.createElement('div', {
+    style: { 
+      fontSize: '0.7rem', 
+      color: '#666', 
+      textAlign: 'right', 
+      marginTop: '0.25rem',
+      paddingRight: '0.5rem'
+    }
+  }, format(new Date(), 'HH:mm:ss')) : null;
 
   return React.createElement('div', { className: 'genericPanel' },
-    title && React.createElement('div', { 
-      style: { 
-        fontWeight: 'bold', 
-        marginBottom: '0.5rem',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center'
-      } 
-    },
-      React.createElement('span', null, title),
-      showCount && React.createElement('span', { 
-        style: { fontSize: '0.8rem', color: '#666' } 
-      }, `(${displayItems.length})`)
-    ),
-    React.createElement('div', containerProps,
-      displayItems.length > 0
-        ? displayItems.map((item, index) => renderItem(item, index))
-        : React.createElement('div', {
-          className: 'emptyState',
-          style: { padding: '1rem', textAlign: 'center', color: '#999' }
-        }, emptyMessage)
-    ),
-    withTimestamp && React.createElement('div', {
-      style: { 
-        fontSize: '0.7rem', 
-        color: '#666', 
-        textAlign: 'right', 
-        marginTop: '0.25rem',
-        paddingRight: '0.5rem'
-      }
-    }, format(new Date(), 'HH:mm:ss'))
+    titleElement,
+    React.createElement('div', containerProps, contentElement),
+    timestampElement
   );
 });
 

@@ -28,10 +28,18 @@ const VirtualizedList = ({
   
   // Memoize visible items to prevent unnecessary re-renders
   const visibleItems = useMemo(() => {
-    return items.slice(startIdx, endIdx + 1).map((item, index) => {
-      const actualIndex = startIdx + index;
-      return renderItem(item, actualIndex);
-    });
+    const itemsToRender = items.slice(startIdx, endIdx + 1);
+    const renderedItems = [];
+    
+    for (let i = 0; i < itemsToRender.length; i++) {
+      const item = itemsToRender[i];
+      const actualIndex = startIdx + i;
+      renderedItems.push(
+        React.createElement('div', { key: item.id || actualIndex }, renderItem(item, actualIndex))
+      );
+    }
+    
+    return renderedItems;
   }, [items, startIdx, endIdx, renderItem]);
   
   // Handle scroll event

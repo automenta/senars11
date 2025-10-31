@@ -44,26 +44,28 @@ describe('Helper Functions', () => {
 
     describe('Function Utilities', () => {
         it('should debounce function calls', async () => {
-            const mockFn = vi.fn();
-            const debouncedFn = debounce(mockFn, 10);
+            let callCount = 0;
+            const increment = () => { callCount++; };
+            const debouncedFn = debounce(increment, 10);
             
             debouncedFn();
             debouncedFn(); // This should cancel the previous call
             await delay(15); // Wait for debounce
             
-            expect(mockFn).toHaveBeenCalledTimes(1);
+            expect(callCount).toBe(1);
         });
 
         it('should throttle function calls', async () => {
-            const mockFn = vi.fn();
-            const throttledFn = throttle(mockFn, 20);
+            let callCount = 0;
+            const increment = () => { callCount++; };
+            const throttledFn = throttle(increment, 20);
             
             throttledFn();
             throttledFn(); // This should be ignored
             await delay(25); // Wait for throttle to reset
             throttledFn(); // This should execute
             
-            expect(mockFn).toHaveBeenCalledTimes(2);
+            expect(callCount).toBe(2);
         });
     });
 
@@ -120,22 +122,26 @@ describe('Helper Functions', () => {
         });
 
         it('should memoize function results', () => {
-            const expensiveFn = vi.fn(x => x * 2);
+            let callCount = 0;
+            const expensiveFn = (x) => {
+                callCount++;
+                return x * 2;
+            };
             const memoizedFn = memoize(expensiveFn);
             
             // First call should execute the function
             const result1 = memoizedFn(5);
-            expect(expensiveFn).toHaveBeenCalledTimes(1);
+            expect(callCount).toBe(1);
             expect(result1).toBe(10);
             
             // Second call with same args should use cache
             const result2 = memoizedFn(5);
-            expect(expensiveFn).toHaveBeenCalledTimes(1); // Not called again
+            expect(callCount).toBe(1); // Not called again
             expect(result2).toBe(10);
             
             // Call with different args should execute again
             const result3 = memoizedFn(10);
-            expect(expensiveFn).toHaveBeenCalledTimes(2);
+            expect(callCount).toBe(2);
             expect(result3).toBe(20);
         });
     });

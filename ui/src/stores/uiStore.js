@@ -1,29 +1,53 @@
 import {create} from 'zustand';
 
 // Helper functions to reduce duplication
+const findItemIndex = (list, item) => list.findIndex(i => i.id === item.id || i.term === item.term);
+
 const createListSetter = (listName) => (item) => (state) => {
-  const existingIndex = state[listName].findIndex(i => i.id === item.id || i.term === item.term);
-  const updatedList = existingIndex !== -1
-    ? [...state[listName].slice(0, existingIndex), item, ...state[listName].slice(existingIndex + 1)]
-    : [...state[listName], item];
-  return {[listName]: updatedList};
+  const currentList = state[listName];
+  const existingIndex = findItemIndex(currentList, item);
+  
+  if (existingIndex !== -1) {
+    // Update existing item - use spread to create new array but only change the one item
+    const newList = [...currentList];
+    newList[existingIndex] = item;
+    return {[listName]: newList};
+  } else {
+    // Add new item
+    return {[listName]: [...currentList, item]};
+  }
 };
 
 const createLimitedListSetter = (listName, limit) => (item) => (state) => ({
   [listName]: [...state[listName], item].slice(-limit)
 });
 
-const createItemRemover = (listName, key) => (keyValue) => (state) => ({
-  [listName]: state[listName].filter(item => item[key] !== keyValue)
-});
+const createItemUpdater = (listName, key) => (keyValue, updates) => (state) => {
+  const currentList = state[listName];
+  const index = currentList.findIndex(item => item[key] === keyValue);
+  
+  if (index === -1) return {[listName]: currentList}; // Item not found, return unchanged
+  
+  const newList = [...currentList];
+  newList[index] = { ...newList[index], ...updates };
+  return {[listName]: newList};
+};
 
-const createListClearer = (listName) => () => ({[listName]: []});
+const createItemRemover = (listName, key) => (keyValue) => (state) => {
+  const currentList = state[listName];
+  const indexToRemove = currentList.findIndex(item => item[key] === keyValue);
+  
+  if (indexToRemove === -1) return {[listName]: currentList}; // Item not found, return unchanged
+  
+  // Create new array without the item to remove
+  const newList = [...currentList];
+  newList.splice(indexToRemove, 1);
+  return {[listName]: newList};
+};
 
 const createObjectSetter = (objName) => (key, value) => (prev) => ({
   [objName]: {...prev[objName], [key]: value}
 });
-
-const createObjectClearer = (objName) => () => ({[objName]: {}});
 
 // Batch update function to update multiple related properties at once
 const batchUpdate = (set, updates) => {
@@ -83,32 +107,27 @@ const useUiStore = create((set, get) => ({
   // Reasoning engine state
   reasoningSteps: [],
   addReasoningStep: (step) => set(createListSetter('reasoningSteps')(step)),
-  updateReasoningStep: (id, updates) => set(state => ({
-    reasoningSteps: state.reasoningSteps.map(step => 
-      step.id === id ? {...step, ...updates} : step
-    )
-  })),
+  updateReasoningStep: (id, updates) => set(state => {
+    const index = state.reasoningSteps.findIndex(step => step.id === id);
+    if (index === -1) return { reasoningSteps: state.reasoningSteps }; // Not found, return unchanged
+    
+    const newList = [...state.reasoningSteps];
+    newList[index] = { ...newList[index], ...updates };
+    return { reasoningSteps: newList };
+  }),
   clearReasoningSteps: () => set({reasoningSteps: []}),
 
   // Task state
   tasks: [],
   addTask: (task) => set(createListSetter('tasks')(task)),
-  updateTask: (id, updates) => set(state => ({
-    tasks: state.tasks.map(task => 
-      task.id === id ? {...task, ...updates} : task
-    )
-  })),
+  updateTask: (id, updates) => set(createItemUpdater('tasks', 'id')(id, updates)),
   removeTask: (id) => set(createItemRemover('tasks', 'id')(id)),
   clearTasks: () => set({tasks: []}),
 
   // Concept state
   concepts: [],
   addConcept: (concept) => set(createListSetter('concepts')(concept)),
-  updateConcept: (term, updates) => set(state => ({
-    concepts: state.concepts.map(concept => 
-      concept.term === term ? {...concept, ...updates} : concept
-    )
-  })),
+  updateConcept: (term, updates) => set(createItemUpdater('concepts', 'term')(term, updates)),
   removeConcept: (term) => set(createItemRemover('concepts', 'term')(term)),
   clearConcepts: () => set({concepts: []}),
 
@@ -171,17 +190,12 @@ const useUiStore = create((set, get) => ({
 
   // Notification state
   notifications: [],
-  addNotification: (notification) => set(state => ({
-    notifications: [...state.notifications, {...notification, id: Date.now()}]
-  })),
-  updateNotification: (id, updates) => set(state => ({
-    notifications: state.notifications.map(n => 
-      n.id === id ? {...n, ...updates} : n
-    )
-  })),
-  removeNotification: (id) => set(state => ({
-    notifications: state.notifications.filter(n => n.id !== id)
-  })),
+  addNotification: (notification) => set(state => {
+    const newNotification = { ...notification, id: Date.now() };
+    return { notifications: [...state.notifications, newNotification] };
+  }),
+  updateNotification: (id, updates) => set(createItemUpdater('notifications', 'id')(id, updates)),
+  removeNotification: (id) => set(createItemRemover('notifications', 'id')(id)),
   clearNotifications: () => set({notifications: []}),
 
   // Batch update function for multiple state changes

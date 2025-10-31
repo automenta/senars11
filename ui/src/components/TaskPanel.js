@@ -2,6 +2,7 @@ import React, { memo } from 'react';
 import useUiStore from '../stores/uiStore.js';
 import {formatBudget, formatTruth} from '../utils/formatters.js';
 import ListPanel from './ListPanel.js';
+import { listItemStyles, typography } from '../utils/styles.js';
 
 const TaskPanel = memo(() => {
     const tasks = useUiStore(state => state.tasks);
@@ -10,20 +11,13 @@ const TaskPanel = memo(() => {
         React.createElement('div',
             {
                 key: task.id || index,
-                style: {
-                    padding: '0.5rem',
-                    margin: '0.25rem 0',
-                    backgroundColor: 'var(--bg-primary)',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: '4px',
-                    fontSize: '0.9rem'
-                }
+                style: listItemStyles.base
             },
-            React.createElement('div', {style: {fontWeight: 'bold'}}, task.term),
+            React.createElement('div', {style: typography.subtitle}, task.term),
             React.createElement('div', null,
                 `Type: ${task.type} | Truth: ${formatTruth(task.truth)} | Budget: ${formatBudget(task.budget)}`
             ),
-            task.occurrenceTime && React.createElement('div', {style: {fontSize: '0.8rem', color: 'var(--text-secondary)'}},
+            task.occurrenceTime && React.createElement('div', {style: typography.small},
                 `Time: ${new Date(task.occurrenceTime).toLocaleTimeString()}`
             )
         );

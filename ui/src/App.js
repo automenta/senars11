@@ -58,14 +58,13 @@ function App() {
         const component = node.getComponent();
         const ContentComponent = contentMap[component];
 
-        // If ContentComponent is a function/component, render it; otherwise show as text
-        const contentElement = ContentComponent
-            ? React.createElement(ContentComponent)
-            : `Content for ${component}`;
-
         return React.createElement(Panel, {
             title: component.replace('Panel', '') || 'Panel'
-        }, contentElement);
+        }, 
+            ContentComponent 
+                ? React.createElement(ContentComponent) 
+                : `Content for ${component}`
+        );
     };
 
     return React.createElement(ErrorBoundary, null,

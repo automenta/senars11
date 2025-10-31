@@ -70,31 +70,6 @@ const PANELS = {
   ]
 };
 
-// Layout configuration helper functions
-const createNavigationBorder = () => 
-  createBorder('left', 250, 
-    PANELS.NAVIGATION.map(panel => createTab(panel.name, panel.component))
-  );
-
-const createMonitoringBorder = () => 
-  createBorder('bottom', 250, 
-    PANELS.MONITORING.map(panel => createTab(panel.name, panel.component))
-  );
-
-const createDashboardArea = () => 
-  createTabSet(
-    PANELS.DASHBOARD.map(panel => createTab(panel.name, panel.component)),
-    60,
-    'dashboard-area'
-  );
-
-const createExecutionArea = () => 
-  createTabSet(
-    PANELS.EXECUTION.map(panel => createTab(panel.name, panel.component)),
-    40,
-    'execution-area'
-  );
-
 // Global layout configuration
 const GLOBAL_CONFIG = {
   tabEnableClose: true,
@@ -104,16 +79,41 @@ const GLOBAL_CONFIG = {
   tabSetEnableDrop: true
 };
 
+// Modular layout section builder functions
+const buildNavigationSection = () => 
+  createBorder('left', 250, 
+    PANELS.NAVIGATION.map(panel => createTab(panel.name, panel.component))
+  );
+
+const buildMonitoringSection = () => 
+  createBorder('bottom', 250, 
+    PANELS.MONITORING.map(panel => createTab(panel.name, panel.component))
+  );
+
+const buildDashboardArea = () => 
+  createTabSet(
+    PANELS.DASHBOARD.map(panel => createTab(panel.name, panel.component)),
+    60,
+    'dashboard-area'
+  );
+
+const buildExecutionArea = () => 
+  createTabSet(
+    PANELS.EXECUTION.map(panel => createTab(panel.name, panel.component)),
+    40,
+    'execution-area'
+  );
+
 // Main layout definition
 const defaultLayout = {
   global: GLOBAL_CONFIG,
   borders: [
-    createNavigationBorder(),
-    createMonitoringBorder()
+    buildNavigationSection(),
+    buildMonitoringSection()
   ],
   layout: createRow([
-    createDashboardArea(),
-    createExecutionArea()
+    buildDashboardArea(),
+    buildExecutionArea()
   ])
 };
 

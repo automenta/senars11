@@ -12,198 +12,120 @@ const ConnectionState = {
   RECONNECTING: 3,
 };
 
-/**
- * WebSocket message handler class that encapsulates all message processing logic
- */
-class MessageHandlers {
-  /**
-   * Creates a handler for a simple store action that takes the entire payload
-   * @param {string} action - The store action to call
-   * @returns {Function} Handler function
-   */
-  static createMessageHandler(action) {
-    return (data) => {
-      try {
-        return getStore()[action](data.payload);
-      } catch (error) {
-        console.error(`Error handling ${action}:`, error);
-        getStore().addNotification({
-          type: 'error',
-          title: `Error handling ${action}`,
-          message: error.message,
-          timestamp: Date.now()
-        });
-      }
+// Generic error handler with consistent notification
+const handleHandlerError = (action, error) => {
+  console.error(`Error handling ${action}:`, error);
+  getStore().addNotification({
+    type: 'error',
+    title: `Error handling ${action}`,
+    message: error.message,
+    timestamp: Date.now()
+  });
+};
+
+// Message handler factory functions
+const createMessageHandler = (action) => (data) => {
+  try {
+    return getStore()[action](data.payload);
+  } catch (error) {
+    handleHandlerError(action, error);
+  }
+};
+
+const createMessageHandlerWithParams = (action) => (data) => {
+  try {
+    const {id, config} = data.payload;
+    return getStore()[action](id, config);
+  } catch (error) {
+    handleHandlerError(action, error);
+  }
+};
+
+const createDemoStateHandler = (data) => {
+  try {
+    const {demoId, ...payload} = data.payload;
+    return getStore().setDemoState(demoId, payload);
+  } catch (error) {
+    handleHandlerError('demoState', error);
+  }
+};
+
+const createDemoMetricsHandler = (data) => {
+  try {
+    const {demoId, ...payload} = data.payload;
+    return getStore().setDemoMetrics(demoId, payload);
+  } catch (error) {
+    handleHandlerError('demoMetrics', error);
+  }
+};
+
+const createNarseseInputHandler = (data) => {
+  try {
+    const {input, success, message: msg} = data.payload;
+    const notification = {
+      type: success ? 'success' : 'error',
+      title: success ? 'Narsese Input Success' : 'Narsese Input Error',
+      message: success ? `Processed: ${input}` : (msg || 'Failed to process input'),
+      timestamp: Date.now()
     };
+    return getStore().addNotification(notification);
+  } catch (error) {
+    handleHandlerError('narseseInput', error);
   }
+};
 
-  /**
-   * Creates a handler for store actions that take separate id and config parameters
-   * @param {string} action - The store action to call
-   * @returns {Function} Handler function
-   */
-  static createMessageHandlerWithParams(action) {
-    return (data) => {
-      try {
-        const {id, config} = data.payload;
-        return getStore()[action](id, config);
-      } catch (error) {
-        console.error(`Error handling ${action}:`, error);
-        getStore().addNotification({
-          type: 'error',
-          title: `Error handling ${action}`,
-          message: error.message,
-          timestamp: Date.now()
-        });
-      }
-    };
+const createSessionUpdateHandler = (data) => {
+  try {
+    const {action, session} = data.payload;
+    return action === 'start'
+      ? getStore().setActiveSession(session)
+      : getStore().endSession();
+  } catch (error) {
+    handleHandlerError('sessionUpdate', error);
   }
+};
 
-  /**
-   * Handler for demo state updates
-   * @param {Object} data - The message data
-   * @returns {*} Result of the store action
-   */
-  static createDemoStateHandler(data) {
-    try {
-      const {demoId, ...payload} = data.payload;
-      return getStore().setDemoState(demoId, payload);
-    } catch (error) {
-      console.error('Error handling demoState:', error);
-      getStore().addNotification({
-        type: 'error',
-        title: 'Error handling demo state',
-        message: error.message,
-        timestamp: Date.now()
-      });
-    }
+const createConceptUpdateHandler = (data) => {
+  try {
+    const {concept, changeType} = data.payload;
+    return changeType === 'removed'
+      ? getStore().removeConcept(concept.term)
+      : getStore().addConcept(concept);
+  } catch (error) {
+    handleHandlerError('conceptUpdate', error);
   }
+};
 
-  /**
-   * Handler for demo metrics updates
-   * @param {Object} data - The message data
-   * @returns {*} Result of the store action
-   */
-  static createDemoMetricsHandler(data) {
-    try {
-      const {demoId, ...payload} = data.payload;
-      return getStore().setDemoMetrics(demoId, payload);
-    } catch (error) {
-      console.error('Error handling demoMetrics:', error);
-      getStore().addNotification({
-        type: 'error',
-        title: 'Error handling demo metrics',
-        message: error.message,
-        timestamp: Date.now()
-      });
-    }
+const createLogHandler = ({level = 'log', data: logData}) => {
+  try {
+    console[level](...(logData || []));
+  } catch (error) {
+    console.error('Error handling log:', error);
   }
-
-  /**
-   * Handler for Narsese input results
-   * @param {Object} data - The message data
-   * @returns {*} Result of the store action
-   */
-  static createNarseseInputHandler(data) {
-    try {
-      const {input, success, message} = data.payload;
-      const notification = {
-        type: success ? 'success' : 'error',
-        title: success ? 'Narsese Input Success' : 'Narsese Input Error',
-        message: success ? `Processed: ${input}` : (message || 'Failed to process input'),
-        timestamp: Date.now()
-      };
-      return getStore().addNotification(notification);
-    } catch (error) {
-      console.error('Error handling narseseInput:', error);
-      getStore().addNotification({
-        type: 'error',
-        title: 'Error handling Narsese input',
-        message: error.message,
-        timestamp: Date.now()
-      });
-    }
-  }
-
-  /**
-   * Handler for session updates
-   * @param {Object} data - The message data
-   * @returns {*} Result of the store action
-   */
-  static createSessionUpdateHandler(data) {
-    try {
-      const {action, session} = data.payload;
-      return action === 'start'
-        ? getStore().setActiveSession(session)
-        : getStore().endSession();
-    } catch (error) {
-      console.error('Error handling sessionUpdate:', error);
-      getStore().addNotification({
-        type: 'error',
-        title: 'Error handling session update',
-        message: error.message,
-        timestamp: Date.now()
-      });
-    }
-  }
-
-  /**
-   * Handler for concept updates
-   * @param {Object} data - The message data
-   * @returns {*} Result of the store action
-   */
-  static createConceptUpdateHandler(data) {
-    try {
-      const {concept, changeType} = data.payload;
-      return changeType === 'removed'
-        ? getStore().removeConcept(concept.term)
-        : getStore().addConcept(concept);
-    } catch (error) {
-      console.error('Error handling conceptUpdate:', error);
-      getStore().addNotification({
-        type: 'error',
-        title: 'Error handling concept update',
-        message: error.message,
-        timestamp: Date.now()
-      });
-    }
-  }
-
-  /**
-   * Handler for log messages
-   * @param {Object} data - The message data
-   */
-  static createLogHandler({level = 'log', data: logData}) {
-    try {
-      console[level](...(logData || []));
-    } catch (error) {
-      console.error('Error handling log:', error);
-    }
-  }
-}
+};
 
 // Message handlers map for cleaner code
 const messageHandlers = {
-  layoutUpdate: MessageHandlers.createMessageHandler('setLayout'),
-  panelUpdate: MessageHandlers.createMessageHandlerWithParams('addPanel'),
-  reasoningStep: MessageHandlers.createMessageHandler('addReasoningStep'),
-  sessionUpdate: MessageHandlers.createSessionUpdateHandler,
-  notification: MessageHandlers.createMessageHandler('addNotification'),
-  error: MessageHandlers.createMessageHandler('setError'),
-  conceptUpdate: MessageHandlers.createConceptUpdateHandler,
-  taskUpdate: MessageHandlers.createMessageHandler('addTask'),
-  cycleUpdate: MessageHandlers.createMessageHandler('addCycle'),
-  systemMetrics: MessageHandlers.createMessageHandler('setSystemMetrics'),
-  log: MessageHandlers.createLogHandler,
+  layoutUpdate: createMessageHandler('setLayout'),
+  panelUpdate: createMessageHandlerWithParams('addPanel'),
+  reasoningStep: createMessageHandler('addReasoningStep'),
+  sessionUpdate: createSessionUpdateHandler,
+  notification: createMessageHandler('addNotification'),
+  error: createMessageHandler('setError'),
+  conceptUpdate: createConceptUpdateHandler,
+  taskUpdate: createMessageHandler('addTask'),
+  cycleUpdate: createMessageHandler('addCycle'),
+  systemMetrics: createMessageHandler('setSystemMetrics'),
+  log: createLogHandler,
   
   // Demo-related handlers
-  demoState: MessageHandlers.createDemoStateHandler,
-  demoStep: MessageHandlers.createMessageHandler('addDemoStep'),
-  demoMetrics: MessageHandlers.createDemoMetricsHandler,
-  demoList: MessageHandlers.createMessageHandler('setDemoList'),
+  demoState: createDemoStateHandler,
+  demoStep: createMessageHandler('addDemoStep'),
+  demoMetrics: createDemoMetricsHandler,
+  demoList: createMessageHandler('setDemoList'),
   
   // Narsese input handler
-  narseseInput: MessageHandlers.createNarseseInputHandler,
+  narseseInput: createNarseseInputHandler,
 };
 
 /**
@@ -565,8 +487,22 @@ class WebSocketService {
    */
   async handleMessage(event) {
     try {
+      if (!event || !event.data) {
+        console.warn('Received empty or invalid message event');
+        return;
+      }
+      
+      let data;
+      try {
+        data = JSON.parse(event.data);
+      } catch (parseError) {
+        console.error('Error parsing WebSocket message JSON:', parseError);
+        // Don't setError for every parsing error as it could flood the UI
+        console.warn('Invalid JSON format in message:', event.data);
+        return;
+      }
+      
       // Check if this is a heartbeat response
-      const data = JSON.parse(event.data);
       if (data.type === 'pong') {
         this.lastHeartbeat = Date.now();
         // Clear the heartbeat timeout if set
@@ -578,16 +514,17 @@ class WebSocketService {
       }
       
       const validatedData = validateMessage(data);
-
-      if (validatedData) {
-        return this.routeMessage(validatedData);
-      } else {
+      
+      if (!validatedData) {
         this.handleInvalidMessage(data);
+        return;
       }
+      
+      return this.routeMessage(validatedData);
     } catch (error) {
-      console.error('Error parsing WebSocket message:', error);
+      console.error('Unexpected error in handleMessage:', error);
       // Don't setError for every parsing error as it could flood the UI
-      console.warn('Invalid message format (see above error)');
+      console.warn('Unexpected error processing WebSocket message');
     }
   }
 
@@ -596,35 +533,37 @@ class WebSocketService {
    * @param {Object} data - The validated message data
    */
   routeMessage(data) {
+    const { type, payload } = data;
+    
     // In test mode, also handle demo control commands
-    if (this.isTestEnvironment && data.type === 'demoControl') {
-      this.handleDemoControl(data);
+    if (this.isTestEnvironment && type === 'demoControl') {
+      this.handleDemoControl({ type, payload });
       return;
     }
     
     // Handle system commands
-    if (data.type === 'systemCommand') {
-      this.handleSystemCommand(data);
+    if (type === 'systemCommand') {
+      this.handleSystemCommand({ type, payload });
       return;
     }
     
     // Handle panel commands
-    if (data.type === 'panelCommand') {
-      this.handlePanelCommand(data);
+    if (type === 'panelCommand') {
+      this.handlePanelCommand({ type, payload });
       return;
     }
     
     try {
-      const handler = messageHandlers[data.type];
+      const handler = messageHandlers[type];
       if (handler) {
         return handler(data);
       } else {
         // In test mode, we may have additional message types
-        if (this.isTestEnvironment && data.type === 'narseseInput') {
-          this.handleNarseseInput(data);
+        if (this.isTestEnvironment && type === 'narseseInput') {
+          this.handleNarseseInput({ type, payload });
           return;
         }
-        console.log('Unknown message type:', data.type, data);
+        console.log('Unknown message type:', type, data);
       }
     } catch (error) {
       console.error('Error in message handler:', error, 'for message:', data);
@@ -641,8 +580,8 @@ class WebSocketService {
    * Handles demo control commands in test mode
    * @param {Object} data - The demo control message data
    */
-  handleDemoControl(data) {
-    const { command, demoId, parameters } = data.payload;
+  handleDemoControl({ payload }) {
+    const { command, demoId, parameters } = payload;
     
     console.log(`Handling demo control: ${command} for demo ${demoId}`);
     
@@ -753,12 +692,12 @@ class WebSocketService {
     } else if (command === 'pause') {
       this.routeMessage({
         type: 'demoState',
-        payload: { demoId, status: 'paused', progress: data.payload.progress || 50 }
+        payload: { demoId, status: 'paused', progress: payload.progress || 50 }
       });
     } else if (command === 'resume') {
       this.routeMessage({
         type: 'demoState',
-        payload: { demoId, status: 'running', progress: data.payload.progress || 50 }
+        payload: { demoId, status: 'running', progress: payload.progress || 50 }
       });
     }
   }
@@ -767,8 +706,8 @@ class WebSocketService {
    * Handles Narsese input in test mode
    * @param {Object} data - The Narsese input message data
    */
-  handleNarseseInput(data) {
-    const { input } = data.payload;
+  handleNarseseInput({ payload }) {
+    const { input } = payload;
     
     console.log(`Handling narsese input: ${input}`);
     
@@ -927,6 +866,11 @@ class WebSocketService {
    * @param {Object} message - The message to send
    */
   sendMessage(message) {
+    if (!message) {
+      console.warn('Attempted to send null/undefined message');
+      return;
+    }
+    
     if (this.isTestEnvironment) {
       // In test mode, process immediately
       if (message.type === 'demoControl') {
@@ -941,7 +885,8 @@ class WebSocketService {
 
     if (this.state === ConnectionState.CONNECTED && this.ws?.readyState === WebSocket.OPEN) {
       try {
-        this.ws.send(JSON.stringify(message));
+        const serializedMessage = JSON.stringify(message);
+        this.ws.send(serializedMessage);
       } catch (error) {
         console.error('Error sending WebSocket message:', error);
         getStore().setError({
