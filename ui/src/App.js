@@ -13,7 +13,11 @@ function App() {
     const [model, setModel] = useState(null);
     const wsService = useRef(null);
 
-    useEffect(() => setModel(Model.fromJson(defaultLayout)), []);
+    useEffect(() => {
+        const savedLayout = localStorage.getItem('layout');
+        const initialLayout = savedLayout ? JSON.parse(savedLayout) : defaultLayout;
+        setModel(Model.fromJson(initialLayout));
+    }, []);
 
     useEffect(() => {
         if (!model) return;
@@ -44,8 +48,11 @@ function App() {
         };
     }, [model]);
 
-    const handleLayoutChange = (newModel) =>
-        useUiStore.getState().setLayout(newModel.toJson());
+    const handleLayoutChange = (newModel) => {
+        const jsonLayout = newModel.toJson();
+        localStorage.setItem('layout', JSON.stringify(jsonLayout));
+        useUiStore.getState().setLayout(jsonLayout);
+    };
 
     const componentFactory = (node) => {
         const component = node.getComponent();
