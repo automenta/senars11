@@ -16,7 +16,7 @@ Options:
   --help, -h        Show this help message
   --dev             Start development mode with hot reloading (default)
   --prod            Start production mode
-  --port <port>     Specify port for the server (default: 5173)
+  --port <port>     Specify port for the UI server (default: 5173)
   --ws-port <port>  Specify WebSocket port (default: 8080)
   --host <host>     Specify host (default: localhost)
 
@@ -26,13 +26,16 @@ Examples:
   node scripts/ui/run.js --dev --port 8081 --ws-port 8082
 `;
 
-const DEFAULT_CONFIG = {
+const DEFAULT_CONFIG = Object.freeze({
     isDevMode: true,
-    port: '5173',
-    wsPort: '8080',
+    port: 5173,
+    wsPort: 8080,
     host: 'localhost'
-};
+});
 
+/**
+ * Print usage information
+ */
 function showUsage() {
     console.log(USAGE_MESSAGE);
 }
@@ -59,10 +62,10 @@ function parseArgs(args) {
         } else if (args[i] === '--dev') {
             isDevMode = true;
         } else if (args[i] === '--port' && args[i + 1]) {
-            port = args[i + 1];
+            port = parseInt(args[i + 1]);
             i++; // Skip next argument since it's the value
         } else if (args[i] === '--ws-port' && args[i + 1]) {
-            wsPort = args[i + 1];
+            wsPort = parseInt(args[i + 1]);
             i++; // Skip next argument since it's the value
         } else if (args[i] === '--host' && args[i + 1]) {
             host = args[i + 1];
@@ -79,35 +82,24 @@ function parseArgs(args) {
 }
 
 /**
- * Set environment variables for the UI
- */
-function setEnvironmentVariables({ port, wsPort, host }) {
-    process.env.PORT = port;
-    process.env.VITE_WS_PORT = wsPort;
-    process.env.VITE_WS_HOST = host;
-    
-    // Also set WebSocket environment variables
-    process.env.WS_PORT = wsPort;
-    process.env.WS_HOST = host;
-}
-
-/**
- * Start the UI server
+ * Start the UI server with proper argument forwarding
  */
 function startUIServer({ port, wsPort, host }) {
     console.log(`Starting ${port === DEFAULT_CONFIG.port && wsPort === DEFAULT_CONFIG.wsPort && host === DEFAULT_CONFIG.host ? 
         (DEFAULT_CONFIG.isDevMode ? 'development' : 'production') : 
         'custom'} UI server...`);
-    console.log(`Port: ${port}, WebSocket Port: ${wsPort}, Host: ${host}`);
+    console.log(`UI Port: ${port}, WebSocket Port: ${wsPort}, Host: ${host}`);
 
-    const child = spawn('node', ['webui.js'], {
+    const spawnArgs = ['--port', port.toString(), '--ws-port', wsPort.toString(), '--host', host];
+    
+    const child = spawn('node', ['webui.js', ...spawnArgs], {
         stdio: 'inherit',
         cwd: join(__dirname, '../../'),
         env: {
             ...process.env,
-            WS_PORT: wsPort,
+            WS_PORT: wsPort.toString(),
             WS_HOST: host,
-            PORT: port
+            PORT: port.toString()
         }
     });
 
@@ -128,7 +120,6 @@ function main() {
     }
 
     const config = parseArgs(args);
-    setEnvironmentVariables(config);
     startUIServer(config);
 }
 

@@ -10,6 +10,9 @@ import {DemoWrapper} from './src/demo/DemoWrapper.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+// Parse arguments to support flexible server configuration
+const args = process.argv.slice(2);
+
 const DEFAULT_CONFIG = Object.freeze({
     nar: {
         lm: {enabled: false},
@@ -19,22 +22,65 @@ const DEFAULT_CONFIG = Object.freeze({
         defaultPath: './agent.json'
     },
     webSocket: {
-        port: process.env.WS_PORT || 8080,
+        port: parseInt(process.env.WS_PORT) || 8080,
         host: process.env.WS_HOST || 'localhost',
         maxConnections: 20
+    },
+    ui: {
+        port: parseInt(process.env.PORT) || 5173
     }
 });
 
 /**
+ * Parse command line arguments to support flexible configuration
+ */
+function parseArgs(args) {
+    let config = { ...DEFAULT_CONFIG };
+    
+    for (let i = 0; i < args.length; i++) {
+        if (args[i] === '--ws-port' && args[i + 1]) {
+            config = {
+                ...config,
+                webSocket: {
+                    ...config.webSocket,
+                    port: parseInt(args[i + 1])
+                }
+            };
+            i++; // Skip next argument since it's the value
+        } else if (args[i] === '--port' && args[i + 1]) {
+            config = {
+                ...config,
+                ui: {
+                    ...config.ui,
+                    port: parseInt(args[i + 1])
+                }
+            };
+            i++; // Skip next argument since it's the value
+        } else if (args[i] === '--host' && args[i + 1]) {
+            config = {
+                ...config,
+                webSocket: {
+                    ...config.webSocket,
+                    host: args[i + 1]
+                }
+            };
+            i++; // Skip next argument since it's the value
+        }
+    }
+    
+    return config;
+}
+
+/**
  * Initialize and start the WebSocket server
  */
-async function startWebSocketServer() {
-    console.log('Starting WebSocket server...');
+async function startWebSocketServer(config = DEFAULT_CONFIG) {
+    console.log(`Starting WebSocket server on ${config.webSocket.host}:${config.webSocket.port}...`);
 
-    const nar = new NAR(DEFAULT_CONFIG.nar);
+    const nar = new NAR(config.nar);
     await nar.initialize();
 
-    const monitor = new WebSocketMonitor(DEFAULT_CONFIG.webSocket);
+    const monitor = new WebSocketMonitor(config.webSocket);
     await monitor.start();
     nar.connectToWebSocketMonitor(monitor);
 
@@ -59,19 +105,20 @@ async function startWebSocketServer() {
 /**
  * Start the Vite development server
  */
-function startViteDevServer() {
-    console.log('Starting Vite dev server...');
+function startViteDevServer(config = DEFAULT_CONFIG) {
+    console.log(`Starting Vite dev server on port ${config.ui.port}...`);
 
     // Change to ui directory and run vite dev server
-    const viteProcess = spawn('npx', ['vite', 'dev'], {
+    const viteProcess = spawn('npx', ['vite', 'dev', '--port', config.ui.port.toString()], {
         cwd: join(__dirname, 'ui'),
         stdio: 'inherit', // This allows the Vite server to control the terminal properly
         env: {
             ...process.env,
             // Pass WebSocket connection info to UI
-            VITE_WS_HOST: DEFAULT_CONFIG.webSocket.host,
-            VITE_WS_PORT: DEFAULT_CONFIG.webSocket.port,
+            VITE_WS_HOST: config.webSocket.host,
+            VITE_WS_PORT: config.webSocket.port.toString(),
             VITE_WS_PATH: DEFAULT_CONFIG.webSocket.path || undefined,
+            PORT: config.ui.port.toString() // Also set PORT for compatibility
         }
     });
 
@@ -137,8 +184,11 @@ async function main() {
     let webSocketServer;
 
     try {
-        // Start WebSocket server
-        webSocketServer = await startWebSocketServer();
+        // Parse command line arguments for flexible configuration
+        const config = parseArgs(args);
+        
+        // Start WebSocket server with the parsed config
+        webSocketServer = await startWebSocketServer(config);
 
         // Set up graceful shutdown
         await setupGracefulShutdown({
@@ -147,7 +197,7 @@ async function main() {
         });
 
         // Start Vite dev server
-        const viteProcess = startViteDevServer();
+        const viteProcess = startViteDevServer(config);
 
         // Store the websocket server info for shutdown
         webSocketServer.viteProcess = viteProcess;

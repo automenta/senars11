@@ -29,12 +29,12 @@ Examples:
   node scripts/cli/run.js --dev
 `;
 
-const CLI_CONFIG = {
+const CLI_CONFIG = Object.freeze({
     module: 'src/index.js',
     baseDir: join(__dirname, '../../'),
     devArgs: ['--dev', '--watch'],
     helpArgs: ['--help', '-h']
-};
+});
 
 function showUsage() {
     console.log(USAGE_MESSAGE);
