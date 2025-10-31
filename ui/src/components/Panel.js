@@ -5,8 +5,7 @@ import styles from './Panel.module.css';
 
 const Panel = memo(({ 
   title, 
-  children, 
-  content: ContentComponent,
+  children,
   showWebSocketStatus = true,
   showHeader = true,
   className = '',
@@ -15,11 +14,6 @@ const Panel = memo(({
 }) => {
   const wsConnected = useUiStore(state => state.wsConnected);
   const [isLoading, setIsLoading] = useState(false);
-  
-  // If content is a React component, render it; otherwise display as text
-  const panelContent = typeof ContentComponent === 'function'
-    ? React.createElement(ContentComponent, {})
-    : ContentComponent;
 
   // Construct the class name with base styles and custom className
   const panelClassName = `${styles.panel} ${className || ''}`.trim();
@@ -53,7 +47,7 @@ const Panel = memo(({
     panelHeader,
     React.createElement('div', { className: styles['panel-content'] }, 
       React.createElement(ErrorBoundary, null,
-        children || panelContent
+        children
       )
     )
   );

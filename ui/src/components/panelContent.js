@@ -15,6 +15,7 @@ import ConceptRelationshipPanel from './ConceptRelationshipPanel.js';
 import ReasoningTracePanel from './ReasoningTracePanel.js';
 import TimeSeriesPanel from './TimeSeriesPanel.js';
 import DashboardPanel from './DashboardPanel.js';
+import PriorityHistogram from './PriorityHistogram.js';
 
 export const contentMap = {
     'ExplorerPanel': ExplorerPanel,
@@ -33,4 +34,5 @@ export const contentMap = {
     'ConceptRelationshipPanel': ConceptRelationshipPanel,
     'ReasoningTracePanel': ReasoningTracePanel,
     'TimeSeriesPanel': TimeSeriesPanel,
+    'PriorityHistogramPanel': PriorityHistogram,
 };

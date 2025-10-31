@@ -12,7 +12,9 @@
     "test:unit": "vitest run",
     "test:e2e": "playwright test",
     "lint": "eslint src",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "demo-movies": "node demo-movie-generator.js",
+    "demo-movies-fps": "node demo-movie-generator.js --fps-control"
   },
   "dependencies": {
     "@playwright/test": "^1.56.1",

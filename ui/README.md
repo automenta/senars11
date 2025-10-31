@@ -162,6 +162,22 @@ The application includes:
 - Console bridging to forward browser logs to the server
 - Comprehensive WebSocket error handling with reconnection logic and better error messaging
 
+## Demo Movie Generation
+
+To create movies of all demos for visual verification:
+
+1. Make sure the UI is running: `npm run dev`
+2. Run the movie generator script: `node demo-movie-generator.js`
+3. For lower disk usage, use FPS control: `node demo-movie-generator.js --fps-control`
+
+The script will:
+- Navigate to the UI
+- Run each available demo
+- Record the UI interactions as videos or screenshots
+- Save recordings in the `demo-videos` directory
+
+The FPS control option captures screenshots at a specified rate (default 1 FPS) which significantly reduces disk space usage compared to full video recording.
+
 ## Contributing
 
 1. Fork the repository

@@ -49,6 +49,7 @@ const PANELS = {
   MONITORING: [
     { name: 'Console', component: 'ConsolePanel' },
     { name: 'Priorities', component: 'PriorityFluctuationPanel' },
+    { name: 'Priority Histogram', component: 'PriorityHistogramPanel' },
     { name: 'Relationships', component: 'ConceptRelationshipPanel' },
     { name: 'Trace', component: 'ReasoningTracePanel' },
     { name: 'Time Series', component: 'TimeSeriesPanel' }

@@ -602,6 +602,18 @@ class WebSocketService {
       return;
     }
     
+    // Handle system commands
+    if (data.type === 'systemCommand') {
+      this.handleSystemCommand(data);
+      return;
+    }
+    
+    // Handle panel commands
+    if (data.type === 'panelCommand') {
+      this.handlePanelCommand(data);
+      return;
+    }
+    
     try {
       const handler = messageHandlers[data.type];
       if (handler) {
@@ -643,13 +655,75 @@ class WebSocketService {
         });
       }, 100);
       
-      // Simulate progress
+      // Simulate concept activity during demo
+      setTimeout(() => {
+        // Add some concepts to visualize
+        const concepts = [
+          { term: `concept_${demoId}_A`, priority: 0.85, occurrenceTime: Date.now(), taskCount: 3, beliefCount: 2, questionCount: 1, lastAccess: Date.now() },
+          { term: `concept_${demoId}_B`, priority: 0.72, occurrenceTime: Date.now(), taskCount: 2, beliefCount: 1, questionCount: 0, lastAccess: Date.now() },
+          { term: `concept_${demoId}_C`, priority: 0.91, occurrenceTime: Date.now(), taskCount: 4, beliefCount: 3, questionCount: 2, lastAccess: Date.now() }
+        ];
+        
+        concepts.forEach(concept => {
+          this.routeMessage({
+            type: 'conceptUpdate',
+            payload: { concept, changeType: 'added' }
+          });
+        });
+      }, 150);
+      
+      // Simulate task activity during demo
+      setTimeout(() => {
+        const tasks = [
+          {
+            id: `task_${demoId}_1`,
+            content: `<${['cat', 'dog', 'bird'][Math.floor(Math.random() * 3)]} --> ${['animal', 'pet', 'mammal'][Math.floor(Math.random() * 3)]}>${['.', '?', '!'][Math.floor(Math.random() * 3)]}`,
+            priority: 0.78,
+            creationTime: Date.now(),
+            type: ['belief', 'question', 'goal'][Math.floor(Math.random() * 3)]
+          },
+          {
+            id: `task_${demoId}_2`,
+            content: `<${['fish', 'horse', 'rabbit'][Math.floor(Math.random() * 3)]} --> ${['water', 'farm', 'pet'][Math.floor(Math.random() * 3)]}>${['.', '?', '!'][Math.floor(Math.random() * 3)]}`,
+            priority: 0.65,
+            creationTime: Date.now(),
+            type: ['belief', 'question', 'goal'][Math.floor(Math.random() * 3)]
+          }
+        ];
+        
+        tasks.forEach(task => {
+          this.routeMessage({
+            type: 'taskUpdate',
+            payload: { task, changeType: 'input' }
+          });
+        });
+      }, 250);
+      
+      // Simulate progress with additional data
       setTimeout(() => {
         this.routeMessage({
           type: 'demoState',
           payload: { demoId, status: 'running', progress: 25, currentStep: 'Processing input' }
         });
       }, 300);
+      
+      // More concepts during processing
+      setTimeout(() => {
+        const concept = {
+          term: `derived_${demoId}_X`,
+          priority: 0.68,
+          occurrenceTime: Date.now(),
+          taskCount: 1,
+          beliefCount: 1,
+          questionCount: 0,
+          lastAccess: Date.now()
+        };
+        
+        this.routeMessage({
+          type: 'conceptUpdate',
+          payload: { concept, changeType: 'added' }
+        });
+      }, 400);
       
       setTimeout(() => {
         this.routeMessage({
@@ -721,6 +795,94 @@ class WebSocketService {
         }
       });
     }, 50);
+  }
+
+  handleSystemCommand(data) {
+    const { command, targetPanels } = data.payload;
+    
+    console.log(`Handling system command: ${command}`, targetPanels);
+    
+    if (command === 'ensurePanelActivity' || command === 'generateInitialData') {
+      // Generate some sample data for the specified panels
+      if (!targetPanels || targetPanels.includes('concepts')) {
+        // Add sample concepts
+        const sampleConcepts = [
+          { term: 'sample_concept_1', priority: 0.8, occurrenceTime: Date.now(), taskCount: 2, beliefCount: 1, questionCount: 0, lastAccess: Date.now() },
+          { term: 'sample_concept_2', priority: 0.65, occurrenceTime: Date.now(), taskCount: 1, beliefCount: 0, questionCount: 1, lastAccess: Date.now() },
+          { term: 'sample_concept_3', priority: 0.92, occurrenceTime: Date.now(), taskCount: 3, beliefCount: 2, questionCount: 1, lastAccess: Date.now() }
+        ];
+        
+        sampleConcepts.forEach(concept => {
+          this.routeMessage({
+            type: 'conceptUpdate',
+            payload: { concept, changeType: 'added' }
+          });
+        });
+      }
+      
+      if (!targetPanels || targetPanels.includes('tasks')) {
+        // Add sample tasks
+        const sampleTasks = [
+          { id: `task_${Date.now()}_sample1`, content: '<sample --> task>.', priority: 0.75, creationTime: Date.now(), type: 'belief' },
+          { id: `task_${Date.now()}_sample2`, content: '<another --> example>?', priority: 0.62, creationTime: Date.now(), type: 'question' }
+        ];
+        
+        sampleTasks.forEach(task => {
+          this.routeMessage({
+            type: 'taskUpdate',
+            payload: { task, changeType: 'input' }
+          });
+        });
+      }
+    }
+  }
+
+  handlePanelCommand(data) {
+    const { command, panel, panels, duration, demoId } = data.payload;
+    
+    console.log(`Handling panel command: ${command}`, { panel, panels, duration });
+    
+    if (command === 'activateVisualization' && panels) {
+      // Generate data relevant to the demo to activate visualization panels
+      panels.forEach(panelName => {
+        if (panelName === 'PriorityHistogramPanel') {
+          // The panel will visualize existing data, so just ensure there's data
+        } else if (panelName === 'ConceptPanel') {
+          // Add some concepts specific to this demo
+          const concept = {
+            term: `demo_${demoId}_${Date.now()}`,
+            priority: Math.random(), // Random priority to show distribution
+            occurrenceTime: Date.now(),
+            taskCount: Math.floor(Math.random() * 3),
+            beliefCount: Math.floor(Math.random() * 2),
+            questionCount: Math.floor(Math.random() * 2),
+            lastAccess: Date.now()
+          };
+          
+          this.routeMessage({
+            type: 'conceptUpdate',
+            payload: { concept, changeType: 'added' }
+          });
+        } else if (panelName === 'TaskPanel') {
+          // Add some tasks specific to this demo
+          const task = {
+            id: `demo_task_${demoId}_${Date.now()}`,
+            content: `<demo_${demoId} --> example>.`,
+            priority: Math.random(), // Random priority to show distribution
+            creationTime: Date.now(),
+            type: ['belief', 'question', 'goal'][Math.floor(Math.random() * 3)]
+          };
+          
+          this.routeMessage({
+            type: 'taskUpdate',
+            payload: { task, changeType: 'input' }
+          });
+        }
+      });
+    } else if (command === 'highlight' && panel) {
+      // Highlight a specific panel (could trigger UI animation or focus)
+      console.log(`Highlighting panel: ${panel} for ${duration || 3000}ms`);
+    }
   }
 
   /**

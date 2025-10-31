@@ -10,6 +10,18 @@ const DemoPanel = () => {
     // Helper function to send demo control commands
     const sendDemoControl = (demoId, command, parameters = {}) => {
         if (wsService) {
+            // When starting a demo, also trigger data generation for other panels
+            if (command === 'start') {
+                // Send a system command to ensure other panels have data during demo
+                wsService.sendMessage({
+                    type: 'systemCommand',
+                    payload: {
+                        command: 'ensurePanelActivity',
+                        panels: ['ConceptPanel', 'TaskPanel', 'PriorityHistogramPanel']
+                    }
+                });
+            }
+            
             wsService.sendMessage({
                 type: 'demoControl',
                 payload: {
@@ -79,7 +91,21 @@ const DemoPanel = () => {
                 ),
                 React.createElement('div', {style: {display: 'flex', gap: '0.25rem'}},
                     React.createElement('button', {
-                        onClick: () => sendDemoControl(demo.id, 'start'),
+                        onClick: () => {
+                            // First ensure other panels are activated, then start demo
+                            if (wsService) {
+                                // Highlight relevant panels during demo
+                                wsService.sendMessage({
+                                    type: 'panelCommand',
+                                    payload: {
+                                        command: 'activateVisualization',
+                                        panels: ['ConceptPanel', 'TaskPanel', 'PriorityHistogramPanel'],
+                                        demoId: demo.id
+                                    }
+                                });
+                            }
+                            sendDemoControl(demo.id, 'start');
+                        },
                         disabled: state.state === 'running',
                         style: {
                             padding: '0.25rem 0.5rem',
