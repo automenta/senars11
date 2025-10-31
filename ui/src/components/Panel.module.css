@@ -8,14 +8,25 @@
     background-color: #fff;
 }
 
-.panel-title {
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     padding: 8px 12px;
-    margin: 0;
     background-color: #f5f5f5;
     border-bottom: 1px solid #ddd;
+}
+
+.panel-title {
+    margin: 0;
     font-size: 14px;
     font-weight: 600;
     color: #333;
+    flex: 1;
+}
+
+.panel-status {
+    flex-shrink: 0;
 }
 
 .panel-content {
