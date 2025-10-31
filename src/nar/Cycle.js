@@ -65,6 +65,17 @@ export class Cycle extends BaseComponent {
             this._updateMemoryWithInferences(budgetedInferences, cycleStartTime);
             this._updateCycleStats(cycleStartTime);
 
+            // Integrate with self-tuning: check for priority-based adjustments
+            if (this._nar?.autonomousDevelopment?.selfTuningEngine) {
+                const tuningAdjustments = this._nar.autonomousDevelopment.selfTuningEngine.integrateWithCycle(this._cycleCount);
+                if (tuningAdjustments.length > 0) {
+                    this.logger.debug('Applied tuning adjustments during cycle', {
+                        adjustmentCount: tuningAdjustments.length,
+                        cycleNumber: this._cycleCount
+                    });
+                }
+            }
+
             return this._createCycleResult(budgetedInferences.length, cycleStartTime);
 
         } catch (error) {

@@ -22,9 +22,9 @@ export class AutonomousDevelopmentEngine {
 
         this.isRunning = false;
         this.developmentCycleIntervalId = null;
-        this.selfTuningEngine = null;
-        this.selfTeachingEngine = null;
-        this.humanInLoopEngine = null;
+        this._selfTuningEngine = null;
+        this._selfTeachingEngine = null;
+        this._humanInLoopEngine = null;
         
         this.improvementHistory = [];
         this.developmentGoals = new Set();
@@ -42,33 +42,33 @@ export class AutonomousDevelopmentEngine {
 
     _initializeEngines() {
         // Initialize self-tuning engine
-        this.selfTuningEngine = new SelfTuningEngine(this.nar, {
+        this._selfTuningEngine = new SelfTuningEngine(this.nar, {
             enabled: this.config.selfImprovementEnabled,
             tuningInterval: this.config.tuningInterval || 30000,
             ...this.config.selfTuningConfig
         });
 
         // Initialize self-teaching engine
-        this.selfTeachingEngine = new SelfTeachingEngine(this.nar, {
+        this._selfTeachingEngine = new SelfTeachingEngine(this.nar, {
             enabled: this.config.learningEnabled,
             demoInterval: this.config.demoInterval || 60000,
             ...this.config.selfTeachingConfig
         });
 
         // Initialize human-in-loop engine
-        this.humanInLoopEngine = new HumanInLoopEngine(this.nar, {
+        this._humanInLoopEngine = new HumanInLoopEngine(this.nar, {
             enabled: this.config.humanCollaborationEnabled,
             feedbackCollectionInterval: this.config.feedbackInterval || 30000,
             ...this.config.humanInLoopConfig
         });
 
         // Integrate engines where appropriate
-        if (this.config.humanCollaborationEnabled && this.selfTuningEngine) {
-            this.humanInLoopEngine.integrateWithSelfTuning(this.selfTuningEngine);
+        if (this.config.humanCollaborationEnabled && this._selfTuningEngine) {
+            this._humanInLoopEngine.integrateWithSelfTuning(this._selfTuningEngine);
         }
 
-        if (this.config.humanCollaborationEnabled && this.selfTeachingEngine) {
-            this.humanInLoopEngine.integrateWithSelfTeaching(this.selfTeachingEngine);
+        if (this.config.humanCollaborationEnabled && this._selfTeachingEngine) {
+            this._humanInLoopEngine.integrateWithSelfTeaching(this._selfTeachingEngine);
         }
     }
 

@@ -1,5 +1,6 @@
 import { MetricsMonitor } from '../reasoning/MetricsMonitor.js';
 import { ReasoningAboutReasoning } from '../reasoning/ReasoningAboutReasoning.js';
+import { PriorityHistogramTuner } from '../reasoning/PriorityHistogramTuner.js';
 
 /**
  * Self-Tuning Engine
@@ -14,6 +15,7 @@ export class SelfTuningEngine {
             adaptationStrength: config.adaptationStrength || 0.1, // 10% max adjustment per tuning cycle
             feedbackWindow: config.feedbackWindow || 100, // cycles to evaluate changes
             maxParameters: config.maxParameters || 20, // max params to tune simultaneously
+            enablePriorityBasedTuning: config.enablePriorityBasedTuning !== false,
             ...config
         };
 
@@ -24,9 +26,17 @@ export class SelfTuningEngine {
         this.feedbackBuffer = [];
         this.tuningHistory = [];
         this.humanFeedbackQueue = [];
+        this.priorityHistogramTuner = null;
 
         this._initializeParameters();
         this._setupEventListeners();
+        
+        if (this.config.enablePriorityBasedTuning) {
+            this.priorityHistogramTuner = new PriorityHistogramTuner({
+                ...config.priorityHistogramConfig,
+                updateIntervalCycles: config.priorityUpdateIntervalCycles || 10
+            });
+        }
     }
 
     _initializeParameters() {
@@ -140,12 +150,65 @@ export class SelfTuningEngine {
         return true;
     }
 
+    /**
+     * Method for integration with reasoning cycles - to be called during each cycle
+     */
+    integrateWithCycle(cycleCount) {
+        // Check if we need to sample priority histograms during the cycle
+        if (this.priorityHistogramTuner) {
+            // Sample priorities periodically (every N cycles)
+            if (cycleCount % this.priorityHistogramTuner.config.updateIntervalCycles === 0) {
+                try {
+                    this.priorityHistogramTuner.samplePriorities(this.nar._memory, this.nar._focus);
+                    const priorityAdjustments = this.priorityHistogramTuner.analyzeAndAdjust(this.nar._memory, this.nar._focus);
+                    return priorityAdjustments;
+                } catch (error) {
+                    console.error('Error in priority histogram tuning during cycle:', error);
+                    return [];
+                }
+            }
+        }
+        
+        return [];
+    }
+    
+    /**
+     * Get priority histogram data
+     */
+    getPriorityHistogramData() {
+        if (this.priorityHistogramTuner) {
+            return this.priorityHistogramTuner.getPriorityHistogram();
+        }
+        return null;
+    }
+    
+    /**
+     * Get priority-based tuning recommendations
+     */
+    getPriorityBasedRecommendations() {
+        if (this.priorityHistogramTuner) {
+            return this.priorityHistogramTuner.getTuningRecommendations();
+        }
+        return [];
+    }
+
     async _performTuningCycle() {
         if (!this.config.enabled) return;
 
         try {
             // Collect current system metrics
             const metrics = await this._collectMetrics();
+            
+            // Sample priority histograms if enabled
+            if (this.priorityHistogramTuner) {
+                this.priorityHistogramTuner.samplePriorities(this.nar._memory, this.nar._focus);
+                
+                // Apply priority-based adjustments
+                const priorityAdjustments = this.priorityHistogramTuner.analyzeAndAdjust(this.nar._memory, this.nar._focus);
+                if (priorityAdjustments.length > 0) {
+                    console.log(`Applied ${priorityAdjustments.length} priority-based adjustments`);
+                }
+            }
             
             // Analyze current performance
             const analysis = this._analyzePerformance(metrics);
@@ -166,6 +229,8 @@ export class SelfTuningEngine {
                     timestamp: Date.now(),
                     suggestions: suggestions,
                     appliedChanges: appliedChanges,
+                    priorityAdjustments: this.priorityHistogramTuner ? 
+                        this.priorityHistogramTuner.getTuningHistory(1) : [],
                     performanceBefore: metrics,
                     analysis: analysis
                 });
