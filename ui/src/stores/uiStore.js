@@ -75,22 +75,61 @@ const selectors = {
   getDemoState: (state) => ({demos: state.demos, demoStates: state.demoStates, demoSteps: state.demoSteps}),
 };
 
+// Action creators for consistent state updates
+const actions = {
+  // WebSocket actions
+  setWebSocketConnected: (connected) => ({wsConnected: connected}),
+  setWebSocketService: (service) => ({wsService: service}),
+  
+  // Layout actions
+  setLayout: (layout) => ({layout}),
+  saveLayout: (name, layout) => (state) => ({
+    savedLayouts: {...state.savedLayouts, [name]: layout}
+  }),
+  
+  // Notification actions
+  addNotification: (notification) => (state) => ({
+    notifications: [...state.notifications, { ...notification, id: Date.now() }]
+  }),
+  
+  // Reset action
+  resetStore: () => ({
+    layout: null,
+    savedLayouts: {},
+    wsConnected: false,
+    wsService: null,
+    panels: {},
+    reasoningSteps: [],
+    tasks: [],
+    concepts: [],
+    cycles: [],
+    systemMetrics: null,
+    demos: [],
+    demoStates: {},
+    demoSteps: [],
+    demoMetrics: {},
+    activeSession: null,
+    error: null,
+    isLoading: false,
+    theme: 'light',
+    notifications: []
+  })
+};
+
 // Combined state management with logical groupings
 const useUiStore = create((set, get) => ({
   // UI state
   layout: null,
-  setLayout: (layout) => set({layout}),
+  setLayout: (layout) => set(actions.setLayout(layout)),
   savedLayouts: {},
-  saveLayout: (name, layout) => set(state => ({
-    savedLayouts: {...state.savedLayouts, [name]: layout}
-  })),
+  saveLayout: (name, layout) => set(actions.saveLayout(name, layout)),
   loadLayout: (name) => get().savedLayouts[name],
 
   // WebSocket state
   wsConnected: false,
-  setWsConnected: (connected) => set({wsConnected: connected}),
+  setWsConnected: (connected) => set(actions.setWebSocketConnected(connected)),
   wsService: null,
-  setWsService: (wsService) => set({wsService}),
+  setWsService: (wsService) => set(actions.setWebSocketService(wsService)),
 
   // Panel management
   panels: {},
@@ -185,9 +224,7 @@ const useUiStore = create((set, get) => ({
 
   // Notification state
   notifications: [],
-  addNotification: (notification) => set(state => ({
-    notifications: [...state.notifications, { ...notification, id: Date.now() }]
-  })),
+  addNotification: (notification) => set(actions.addNotification(notification)),
   updateNotification: (id, updates) => set(createItemUpdater('notifications', 'id')(id, updates)),
   removeNotification: (id) => set(createItemRemover('notifications', 'id')(id)),
   clearNotifications: () => set({notifications: []}),
@@ -199,27 +236,7 @@ const useUiStore = create((set, get) => ({
   selectors: selectors,
   
   // Utility functions
-  resetStore: () => set({
-    layout: null,
-    savedLayouts: {},
-    wsConnected: false,
-    wsService: null,
-    panels: {},
-    reasoningSteps: [],
-    tasks: [],
-    concepts: [],
-    cycles: [],
-    systemMetrics: null,
-    demos: [],
-    demoStates: {},
-    demoSteps: [],
-    demoMetrics: {},
-    activeSession: null,
-    error: null,
-    isLoading: false,
-    theme: 'light',
-    notifications: []
-  })
+  resetStore: () => set(actions.resetStore())
 }));
 
 export default useUiStore;

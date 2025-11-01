@@ -11,6 +11,7 @@ import {
   createLogHandler,
   getStore
 } from './messageHandlers';
+import { createMessageProcessor, messageProcessorUtils } from './messageProcessor';
 
 const ConnectionState = Object.freeze({
   DISCONNECTED: 0,
@@ -56,6 +57,20 @@ class WebSocketService {
     this.heartbeatTimeoutDuration = options.heartbeatTimeout || 15000; // 15 seconds
     this.lastHeartbeat = Date.now();
     this.connectionTimeout = null;
+    
+    // Initialize message processor for elegant message handling
+    this.messageProcessor = createMessageProcessor()
+      .use(messageProcessorUtils.createValidationMiddleware())
+      .use(messageProcessorUtils.createLoggingMiddleware(console.log))
+      .onError((error, originalMessage) => {
+        console.error('Message processing error:', error, originalMessage);
+        getStore().addNotification?.({
+          type: 'error',
+          title: 'Message processing error',
+          message: error?.message || 'Unknown message processing error',
+          timestamp: Date.now()
+        });
+      });
     
     // Check if we're in a test environment
     this.isTestEnvironment = typeof window !== 'undefined' && 
@@ -334,7 +349,7 @@ class WebSocketService {
     }
   }
 
-  routeMessage(data) {
+  async routeMessage(data) {
     const { type, payload } = data || {};
     
     if (!type) {
@@ -342,7 +357,7 @@ class WebSocketService {
       return;
     }
     
-    // Handle special command types with dedicated handlers
+    // Handle special command types with dedicated handlers (these bypass the processor)
     const commandHandlers = {
       demoControl: () => this.isTestEnvironment ? this.handleDemoControl({ type, payload }) : null,
       systemCommand: () => this.handleSystemCommand({ type, payload }),
@@ -355,22 +370,36 @@ class WebSocketService {
     }
     
     try {
-      const handler = messageHandlers[type];
-      if (handler) {
-        return handler(data);
-      } else {
-        // In test mode, we may have additional message types
-        if (this.isTestEnvironment && type === 'narseseInput') {
-          return this.handleNarseseInput({ type, payload });
+      // Process message through the pipeline
+      const result = await this.messageProcessor.process(data, { wsService: this });
+      
+      if (result.success) {
+        const processedData = result.data;
+        const handler = messageHandlers[processedData.type];
+        if (handler) {
+          return handler(processedData);
+        } else {
+          // In test mode, we may have additional message types
+          if (this.isTestEnvironment && processedData.type === 'narseseInput') {
+            return this.handleNarseseInput({ type: processedData.type, payload: processedData.payload });
+          }
+          console.log('Unknown message type:', processedData.type, processedData);
         }
-        console.log('Unknown message type:', type, data);
+      } else {
+        console.error('Message processing failed:', result.error, data);
+        getStore().addNotification?.({
+          type: 'error',
+          title: 'Message processing failed',
+          message: result.error,
+          timestamp: Date.now()
+        });
       }
     } catch (error) {
-      console.error('Error in message handler:', error, 'for message:', data);
+      console.error('Error in message processing pipeline:', error, 'for message:', data);
       getStore().addNotification?.({
         type: 'error',
-        title: 'Message handler error',
-        message: error?.message || 'Unknown error in message handler',
+        title: 'Message processing error',
+        message: error?.message || 'Unknown error in message processing',
         timestamp: Date.now()
       });
     }

@@ -2,6 +2,7 @@ import React, { memo } from 'react';
 import useUiStore from '../stores/uiStore.js';
 import ErrorBoundary from './ErrorBoundary.js';
 import { WebSocketStatus } from './GenericComponents.js';
+import { themeUtils } from '../utils/themeUtils.js';
 import styles from './Panel.module.css';
 
 const Panel = memo(({ 
@@ -28,7 +29,7 @@ const Panel = memo(({
           fontSize: '0.8rem',
           marginLeft: '0.5rem',
           padding: '0.1rem 0.3rem',
-          backgroundColor: wsConnected ? '#d4edda' : '#f8d7da',
+          backgroundColor: themeUtils.getWebSocketStatusBgColor(wsConnected),
           borderRadius: '3px'
         }
       })

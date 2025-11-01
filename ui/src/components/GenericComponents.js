@@ -1,6 +1,7 @@
 import React, { memo } from 'react';
 import { format } from 'date-fns';
 import useUiStore from '../stores/uiStore.js';
+import { themeUtils } from '../utils/themeUtils.js';
 
 /**
  * Generic status badge component
@@ -10,11 +11,11 @@ import useUiStore from '../stores/uiStore.js';
  */
 const StatusBadge = memo(({ status, label, ...props }) => {
   const statusConfig = {
-    success: { color: '#28a745', bg: '#d4edda' },
-    warning: { color: '#ffc107', bg: '#fff3cd' },
-    error: { color: '#dc3545', bg: '#f8d7da' },
-    info: { color: '#17a2b8', bg: '#d1ecf1' },
-    default: { color: '#6c757d', bg: '#f8f9fa' }
+    success: { color: themeUtils.get('COLORS.SUCCESS'), bg: themeUtils.get('COLORS.SUCCESS') + '20' },
+    warning: { color: themeUtils.get('COLORS.WARNING'), bg: themeUtils.get('COLORS.WARNING') + '20' },
+    error: { color: themeUtils.get('COLORS.DANGER'), bg: themeUtils.get('COLORS.DANGER') + '20' },
+    info: { color: themeUtils.get('COLORS.INFO'), bg: themeUtils.get('COLORS.INFO') + '20' },
+    default: { color: themeUtils.get('COLORS.SECONDARY'), bg: themeUtils.get('COLORS.GRAY_200') }
   };
   
   const { color, bg } = statusConfig[status] || statusConfig.default;
@@ -157,14 +158,18 @@ const WebSocketStatus = memo(({ showLabel = true, ...props }) => {
   
   return React.createElement('div', { 
     className: 'websocket-status',
-    style: { display: 'flex', alignItems: 'center', ...props.style }
+    style: { 
+      display: 'flex', 
+      alignItems: 'center', 
+      ...props.style 
+    }
   },
   React.createElement('div', {
     style: {
       width: '0.75rem',
       height: '0.75rem',
       borderRadius: '50%',
-      backgroundColor: wsConnected ? '#28a745' : '#dc3545',
+      backgroundColor: themeUtils.getWebSocketStatusColor(wsConnected),
       marginRight: '0.5rem'
     }
   }),
