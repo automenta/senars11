@@ -419,92 +419,91 @@ class WebSocketMonitor {
             const config = message.payload;
             
             if (!config || !config.provider) {
-                this._sendToClient(client, {
-                    type: 'testLMConnection',
-                    success: false,
-                    message: 'Missing configuration or provider in payload'
-                });
-                return;
+                return this._sendToClient(client, this._createTestResult(false, 'Missing configuration or provider in payload'));
             }
 
             // Check if we have access to the LM instance in the NAR
             if (!this._nar || !this._nar.lm) {
-                this._sendToClient(client, {
-                    type: 'testLMConnection',
-                    success: false,
-                    message: 'LM component not available'
-                });
-                return;
+                return this._sendToClient(client, this._createTestResult(false, 'LM component not available'));
             }
 
             try {
-                // Try to register a temporary provider with the test config
-                let testProvider;
+                // Try to create a test provider based on the configuration
+                const testProvider = await this._createTestProvider(config);
                 
-                // Create provider based on type
-                if (config.provider === 'openai') {
-                    const {LangChainProvider} = await import('../lm/LangChainProvider.js');
-                    testProvider = new LangChainProvider({
-                        provider: 'openai',
-                        modelName: config.model,
-                        apiKey: config.apiKey,
-                        temperature: config.temperature,
-                        maxTokens: config.maxTokens
-                    });
-                } else if (config.provider === 'ollama') {
-                    const {LangChainProvider} = await import('../lm/LangChainProvider.js');
-                    testProvider = new LangChainProvider({
-                        provider: 'ollama',
-                        modelName: config.model,
-                        baseURL: config.baseURL,
-                        temperature: config.temperature,
-                        maxTokens: config.maxTokens
-                    });
-                } else if (config.provider === 'anthropic') {
-                    // For now, we'll use a dummy implementation since we don't have an Anthropic provider
-                    // In a real implementation, you'd have an Anthropic provider
-                    testProvider = new (await import('../lm/DummyProvider.js')).DummyProvider({
-                        id: 'test-anthropic',
-                        responseTemplate: `Anthropic test response for: {prompt}`
-                    });
-                } else {
-                    // For other providers, try to create a dummy provider or return error
-                    testProvider = new (await import('../lm/DummyProvider.js')).DummyProvider({
-                        id: `test-${config.provider}`,
-                        responseTemplate: `Test response for ${config.provider}: {prompt}`
-                    });
-                }
-
-                // Try to generate a simple test response
+                // Try to generate a test response
                 const testResponse = await testProvider.generateText('Hello, can you respond to this test message?', {
                     maxTokens: 20
                 });
 
-                // If we get a response without error, the connection is successful
-                this._sendToClient(client, {
-                    type: 'testLMConnection',
-                    success: true,
-                    message: `Successfully connected to ${config.name || config.provider} provider`,
-                    model: config.model,
-                    baseURL: config.baseURL,
-                    responseSample: testResponse.substring(0, 100) + (testResponse.length > 100 ? '...' : '')
-                });
+                // Send success response
+                this._sendToClient(client, this._createTestResult(true, 
+                    `Successfully connected to ${config.name || config.provider} provider`,
+                    { model: config.model, baseURL: config.baseURL, responseSample: testResponse.substring(0, 100) + (testResponse.length > 100 ? '...' : '') }
+                ));
             } catch (error) {
                 console.error('LM connection test failed:', error);
-                this._sendToClient(client, {
-                    type: 'testLMConnection',
-                    success: false,
-                    message: `Connection failed: ${error.message || 'Unknown error'}`,
-                    error: error.message
-                });
+                this._sendToClient(client, this._createTestResult(false, 
+                    `Connection failed: ${error.message || 'Unknown error'}`, 
+                    { error: error.message }
+                ));
             }
         } catch (error) {
             console.error('Error in _handleTestLMConnection:', error);
-            this._sendToClient(client, {
-                type: 'testLMConnection',
-                success: false,
-                message: `Internal error: ${error.message}`
-            });
+            this._sendToClient(client, this._createTestResult(false, `Internal error: ${error.message}`));
+        }
+    }
+    
+    // Helper method to create standardized test result messages
+    _createTestResult(success, message, additionalData = {}) {
+        return {
+            type: 'testLMConnection',
+            success,
+            message,
+            ...additionalData
+        };
+    }
+    
+    // Helper method to create a test provider based on configuration
+    async _createTestProvider(config) {
+        const providerType = config.provider;
+        
+        switch(providerType) {
+            case 'openai':
+                const {LangChainProvider} = await import('../lm/LangChainProvider.js');
+                return new LangChainProvider({
+                    provider: 'openai',
+                    modelName: config.model,
+                    apiKey: config.apiKey,
+                    temperature: config.temperature,
+                    maxTokens: config.maxTokens
+                });
+                
+            case 'ollama':
+                const {LangChainProvider: OllamaProvider} = await import('../lm/LangChainProvider.js');
+                return new OllamaProvider({
+                    provider: 'ollama',
+                    modelName: config.model,
+                    baseURL: config.baseURL,
+                    temperature: config.temperature,
+                    maxTokens: config.maxTokens
+                });
+                
+            case 'anthropic':
+                // Use a dummy provider for Anthropic since we don't have a real one
+                const {DummyProvider} = await import('../lm/DummyProvider.js');
+                return new DummyProvider({
+                    id: 'test-anthropic',
+                    responseTemplate: `Anthropic test response for: {prompt}`
+                });
+                
+            default:
+                // For other providers, use a dummy provider
+                const {DummyProvider: GenericDummyProvider} = await import('../lm/DummyProvider.js');
+                return new GenericDummyProvider({
+                    id: `test-${providerType}`,
+                    responseTemplate: `Test response for ${providerType}: {prompt}`
+                });
         }
     }
 

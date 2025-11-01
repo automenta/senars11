@@ -119,72 +119,75 @@ const LMConfigPanel = () => {
   }, []);
 
   // Render provider selection buttons
-  const renderProviderSelector = () => {
-    return React.createElement('div', { style: { marginBottom: '1.5rem' } },
-      React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '0.5rem' } },
-        Object.keys(DEFAULT_PROVIDER_CONFIGS).map(providerId => 
-          React.createElement('button', {
-            key: providerId,
-            onClick: () => handleProviderChange(providerId),
-            style: {
-              padding: '0.5rem 1rem',
-              border: selectedProvider === providerId ? '2px solid #007bff' : '1px solid #ccc',
-              backgroundColor: selectedProvider === providerId ? '#e7f3ff' : '#f8f9fa',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '0.9rem',
-              fontWeight: selectedProvider === providerId ? 'bold' : 'normal'
-            }
-          }, DEFAULT_PROVIDER_CONFIGS[providerId].name)
-        )
+  const renderProviderSelector = () => React.createElement('div', { style: { marginBottom: '1.5rem' } },
+    React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '0.5rem' } },
+      Object.keys(DEFAULT_PROVIDER_CONFIGS).map(providerId => 
+        React.createElement('button', {
+          key: providerId,
+          onClick: () => handleProviderChange(providerId),
+          style: {
+            padding: '0.5rem 1rem',
+            border: selectedProvider === providerId ? '2px solid #007bff' : '1px solid #ccc',
+            backgroundColor: selectedProvider === providerId ? '#e7f3ff' : '#f8f9fa',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '0.9rem',
+            fontWeight: selectedProvider === providerId ? 'bold' : 'normal'
+          }
+        }, DEFAULT_PROVIDER_CONFIGS[providerId].name)
       )
-    );
-  };
+    )
+  );
 
   // Render test result
   const renderTestResult = () => {
     if (!testResult) return null;
 
+    const { success, message, model } = testResult;
+    const bg = success ? '#d4edda' : '#f8d7da';
+    const border = success ? '#c3e6c3' : '#f5c6cb';
+    const color = success ? '#155724' : '#721c24';
+    
     return React.createElement(Card, {
       style: {
         padding: '1rem',
         borderRadius: '4px',
-        backgroundColor: testResult.success ? '#d4edda' : '#f8d7da',
-        border: `1px solid ${testResult.success ? '#c3e6c3' : '#f5c6cb'}`,
+        backgroundColor: bg,
+        border: `1px solid ${border}`,
         marginBottom: '1rem'
       }
     },
-      React.createElement('div', { style: { fontWeight: 'bold', color: testResult.success ? '#155724' : '#721c24' } },
-        testResult.success ? '✓ Connection Successful' : '✗ Connection Failed'
+      React.createElement('div', { style: { fontWeight: 'bold', color } }, 
+        success ? '✓ Connection Successful' : '✗ Connection Failed'
       ),
-      React.createElement('div', { style: { fontSize: '0.9rem', marginTop: '0.5rem' } }, testResult.message),
-      testResult.model && React.createElement('div', { style: { fontSize: '0.8rem', marginTop: '0.25rem', color: '#666' } },
-        `Model: ${testResult.model}`
+      React.createElement('div', { style: { fontSize: '0.9rem', marginTop: '0.5rem' } }, message),
+      model && React.createElement('div', { style: { fontSize: '0.8rem', marginTop: '0.25rem', color: '#666' } },
+        `Model: ${model}`
       )
     );
   };
 
   // Render action buttons
-  const renderActionButtons = () => {
-    return React.createElement('div', { style: { display: 'flex', gap: '0.5rem', marginTop: '1rem' } },
-      React.createElement(Button, {
-        onClick: saveConfig,
-        variant: 'primary',
-        style: { flex: 1 }
-      }, 'Save Configuration'),
-      React.createElement(Button, {
-        onClick: testConnection,
-        disabled: isTesting,
-        variant: isTesting ? 'secondary' : 'success',
-        style: { flex: 1 }
-      }, isTesting ? 'Testing...' : 'Test Connection'),
-      React.createElement(Button, {
-        onClick: toggleSecretVisibility,
-        variant: showSecrets ? 'warning' : 'secondary',
-        style: { flex: 1 }
-      }, showSecrets ? 'Hide Secrets' : 'Show Secrets')
-    );
-  };
+  const renderActionButtons = () => React.createElement('div', { 
+    style: { display: 'flex', gap: '0.5rem', marginTop: '1rem' } 
+  },
+    React.createElement(Button, {
+      onClick: saveConfig,
+      variant: 'primary',
+      style: { flex: 1 }
+    }, 'Save Configuration'),
+    React.createElement(Button, {
+      onClick: testConnection,
+      disabled: isTesting,
+      variant: isTesting ? 'secondary' : 'success',
+      style: { flex: 1 }
+    }, isTesting ? 'Testing...' : 'Test Connection'),
+    React.createElement(Button, {
+      onClick: toggleSecretVisibility,
+      variant: showSecrets ? 'warning' : 'secondary',
+      style: { flex: 1 }
+    }, showSecrets ? 'Hide Secrets' : 'Show Secrets')
+  );
 
   return React.createElement('div', {
     style: {

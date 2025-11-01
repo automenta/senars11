@@ -222,9 +222,10 @@ const useUiStore = create((set, get) => ({
 
   // Notification state
   notifications: [],
-  addNotification: (notification) => set(state => ({
-    notifications: [...state.notifications, { ...notification, id: notification.id || Date.now() + Math.random() }]
-  })),
+  addNotification: (notification) => set(state => {
+    const id = notification.id || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    return { notifications: [...state.notifications, { ...notification, id }] };
+  }),
   updateNotification: (id, updates) => set(createItemUpdater('notifications', 'id')(id, updates)),
   removeNotification: (id) => set(createItemRemover('notifications', 'id')(id)),
   clearNotifications: () => set({notifications: []}),

@@ -11,46 +11,55 @@ const originalConsole = {
   trace: console.trace,
 };
 
+// Format log arguments for transmission
+const formatArgs = (args) => args.map(arg =>
+  typeof arg === 'object' && arg !== null ? JSON.stringify(arg, null, 2) : String(arg)
+);
+
+// Get metadata for debugging
+const getLogMetadata = () => ({
+  url: typeof window !== 'undefined' ? window.location.href : 'N/A',
+  userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'N/A'
+});
+
+// Send log message to WebSocket
+const sendLogToWebSocket = (currentWsService, level, args) => {
+  if (!currentWsService || currentWsService.state !== 2) return; // 2 is ConnectionState.CONNECTED
+  
+  try {
+    const message = {
+      type: 'log',
+      level,
+      data: formatArgs(args),
+      timestamp: Date.now(),
+      meta: getLogMetadata()
+    };
+    
+    // Use the WebSocketService's sendMessage method
+    if (typeof currentWsService.sendMessage === 'function') {
+      currentWsService.sendMessage(message);
+    } else if (currentWsService.ws?.readyState === WebSocket.OPEN) {
+      currentWsService.ws.send(JSON.stringify(message));
+    }
+  } catch (error) {
+    originalConsole.error('Failed to send console log to WebSocket:', error);
+  }
+};
+
+// Create a log sender function that wraps original console and sends to WebSocket
+const createLogSender = (level) => (...args) => {
+  // Always call original console function for browser visibility
+  originalConsole[level](...args);
+  
+  // Also send to WebSocket if available and connected
+  const currentWsService = useUiStore.getState().wsService;
+  sendLogToWebSocket(currentWsService, level, args);
+};
+
 // Initialize console bridging by replacing console functions
 const initConsoleBridge = () => {
-  ['log', 'error', 'warn', 'info', 'debug', 'trace'].forEach(level => {
-    if (originalConsole[level]) {
-      // Create log sender function that accesses the store when called
-      console[level] = (...args) => {
-        // Always call original console function for browser visibility
-        originalConsole[level](...args);
-        
-        // Also send to WebSocket if available and connected
-        const currentWsService = useUiStore.getState().wsService;
-        if (currentWsService && currentWsService.state === 2) { // 2 is ConnectionState.CONNECTED
-          try {
-            const message = {
-              type: 'log',
-              level,
-              data: args.map(arg =>
-                typeof arg === 'object' && arg !== null ? JSON.stringify(arg, null, 2) : String(arg)
-              ),
-              timestamp: Date.now(),
-              // Add some metadata for better debugging
-              meta: {
-                url: typeof window !== 'undefined' ? window.location.href : 'N/A',
-                userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'N/A'
-              }
-            };
-            
-            // Use the WebSocketService's sendMessage method
-            if (typeof currentWsService.sendMessage === 'function') {
-              currentWsService.sendMessage(message);
-            } else if (currentWsService.ws?.readyState === WebSocket.OPEN) {
-              currentWsService.ws.send(JSON.stringify(message));
-            }
-          } catch (error) {
-            // If sending to WebSocket fails, log to console but don't break the console functionality
-            originalConsole.error('Failed to send console log to WebSocket:', error);
-          }
-        }
-      };
-    }
+  Object.keys(originalConsole).forEach(level => {
+    console[level] = createLogSender(level);
   });
 };
 
