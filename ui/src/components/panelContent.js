@@ -16,6 +16,7 @@ import ReasoningTracePanel from './ReasoningTracePanel.js';
 import TimeSeriesPanel from './TimeSeriesPanel.js';
 import DashboardPanel from './DashboardPanel.js';
 import PriorityHistogram from './PriorityHistogram.js';
+import LMConfigPanel from './LMConfigPanel.js';
 
 export const contentMap = {
   'ExplorerPanel': ExplorerPanel,
@@ -35,4 +36,5 @@ export const contentMap = {
   'ReasoningTracePanel': ReasoningTracePanel,
   'TimeSeriesPanel': TimeSeriesPanel,
   'PriorityHistogram': PriorityHistogram,
+  'LMConfigPanel': LMConfigPanel,
 };

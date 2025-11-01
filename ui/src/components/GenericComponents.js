@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, useState } from 'react';
 import { format } from 'date-fns';
 import useUiStore from '../stores/uiStore.js';
 import { themeUtils } from '../utils/themeUtils.js';
@@ -177,11 +177,181 @@ const WebSocketStatus = memo(({ showLabel = true, ...props }) => {
   );
 });
 
+// Generic form field component to reduce duplication in forms
+const GenericFormField = ({ 
+  label, 
+  children, 
+  required = false, 
+  description = null,
+  style = {} 
+}) => {
+  return React.createElement('div', { 
+    style: { 
+      marginBottom: '1rem', 
+      ...style 
+    } 
+  },
+    React.createElement('label', {
+      style: {
+        display: 'block',
+        fontWeight: 'bold',
+        marginBottom: '0.25rem',
+        fontSize: '0.9rem',
+        color: '#333'
+      }
+    }, 
+      label,
+      required && React.createElement('span', { style: { color: 'red' } }, ' *')
+    ),
+    children,
+    description && React.createElement('div', {
+      style: {
+        fontSize: '0.8rem',
+        color: '#666',
+        marginTop: '0.25rem'
+      }
+    }, description)
+  );
+};
+
+// Generic input field component that combines label and input
+const GenericInputField = ({ 
+  label, 
+  value, 
+  onChange, 
+  type = 'text', 
+  placeholder = '', 
+  required = false,
+  description = null,
+  disabled = false 
+}) => {
+  return React.createElement(GenericFormField, { label, required, description },
+    React.createElement('input', {
+      type,
+      value,
+      onChange: (e) => onChange(e.target.value),
+      placeholder,
+      disabled,
+      required,
+      style: {
+        width: '100%',
+        padding: '0.5rem',
+        border: '1px solid #ddd',
+        borderRadius: '4px',
+        fontSize: '0.9rem'
+      }
+    })
+  );
+};
+
+// Generic select field component that combines label and select
+const GenericSelectField = ({ 
+  label, 
+  value, 
+  onChange, 
+  options, 
+  required = false,
+  description = null,
+  disabled = false 
+}) => {
+  return React.createElement(GenericFormField, { label, required, description },
+    React.createElement('select', {
+      value,
+      onChange: (e) => onChange(e.target.value),
+      disabled,
+      style: {
+        width: '100%',
+        padding: '0.5rem',
+        border: '1px solid #ddd',
+        borderRadius: '4px',
+        fontSize: '0.9rem'
+      }
+    },
+      options.map(option => 
+        React.createElement('option', { key: option.value, value: option.value }, option.label)
+      )
+    )
+  );
+};
+
+// Collapsible section component
+const CollapsibleSection = ({ title, children, defaultOpen = false }) => {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  return React.createElement('div', {
+    style: {
+      border: '1px solid #e9ecef',
+      borderRadius: '4px',
+      marginBottom: '1rem'
+    }
+  },
+    React.createElement('div', {
+      style: {
+        padding: '0.75rem',
+        backgroundColor: '#f8f9fa',
+        borderBottom: isOpen ? '1px solid #e9ecef' : 'none',
+        cursor: 'pointer',
+        fontWeight: 'bold'
+      },
+      onClick: () => setIsOpen(!isOpen)
+    },
+      React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
+        React.createElement('span', null, title),
+        React.createElement('span', null, isOpen ? '▼' : '▶')
+      )
+    ),
+    isOpen && React.createElement('div', { style: { padding: '1rem' } }, children)
+  );
+};
+
+// Toggle switch component
+const ToggleSwitch = ({ checked, onChange, label }) => {
+  return React.createElement('label', {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      cursor: 'pointer',
+      fontSize: '0.9rem'
+    }
+  },
+    React.createElement('div', {
+      style: {
+        position: 'relative',
+        width: '40px',
+        height: '20px',
+        backgroundColor: checked ? '#007bff' : '#ccc',
+        borderRadius: '10px',
+        marginRight: '0.5rem',
+        transition: 'background-color 0.3s'
+      }
+    },
+      React.createElement('div', {
+        style: {
+          position: 'absolute',
+          top: '2px',
+          left: checked ? '22px' : '2px',
+          width: '16px',
+          height: '16px',
+          backgroundColor: 'white',
+          borderRadius: '50%',
+          transition: 'left 0.3s'
+        }
+      })
+    ),
+    label
+  );
+};
+
 export {
   StatusBadge,
   LoadingSpinner,
   EmptyState,
   ErrorState,
   TimeDisplay,
-  WebSocketStatus
+  WebSocketStatus,
+  GenericFormField,
+  GenericInputField,
+  GenericSelectField,
+  CollapsibleSection,
+  ToggleSwitch
 };

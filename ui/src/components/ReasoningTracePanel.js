@@ -4,12 +4,14 @@ import GenericPanel from './GenericPanel.js';
 
 const ReasoningTracePanel = () => {
   const [expandedTrace, setExpandedTrace] = useState(null);
+  const [filterType, setFilterType] = useState('all'); // 'all', 'reasoningStep', 'task'
+  const [filterText, setFilterText] = useState('');
   const reasoningSteps = useUiStore(state => state.reasoningSteps);
   const tasks = useUiStore(state => state.tasks);
     
-  // Group related reasoning steps and tasks
+  // Group related reasoning steps and tasks with filtering
   const traceGroups = useMemo(() => {
-    const traceGroups = [];
+    let traceGroups = [];
         
     // Process reasoning steps
     reasoningSteps.forEach((step, index) => {
@@ -35,11 +37,27 @@ const ReasoningTracePanel = () => {
       }
     });
         
+    // Apply type filter
+    if (filterType !== 'all') {
+      traceGroups = traceGroups.filter(item => item.type === filterType);
+    }
+    
+    // Apply text filter
+    if (filterText.trim()) {
+      const searchText = filterText.toLowerCase();
+      traceGroups = traceGroups.filter(item => 
+        item.description.toLowerCase().includes(searchText) ||
+        (item.data.term && item.data.term.toLowerCase().includes(searchText)) ||
+        (item.data.type && item.data.type.toLowerCase().includes(searchText)) ||
+        (item.data.result && item.data.result.toLowerCase().includes(searchText))
+      );
+    }
+        
     // Sort by timestamp
     traceGroups.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
         
     return traceGroups;
-  }, [reasoningSteps, tasks]);
+  }, [reasoningSteps, tasks, filterType, filterText]);
     
   const renderTraceItem = useCallback((item, index) => {
     const isExpanded = expandedTrace === item.id;
@@ -108,12 +126,64 @@ const ReasoningTracePanel = () => {
   }, [expandedTrace]);
 
   const items = useMemo(() => [
+    { type: 'controls', filterType, setFilterType, filterText, setFilterText },
     { type: 'header', content: `Reasoning Trace (${traceGroups.length} events)` },
     ...traceGroups.map(item => ({ type: 'traceItem', data: item }))
-  ], [traceGroups]);
+  ], [traceGroups, filterType, filterText]);
+
+  const renderControlBar = useCallback((controls) => {
+    return React.createElement('div', 
+      {
+        style: {
+          display: 'flex',
+          gap: '1rem',
+          marginBottom: '1rem',
+          padding: '0.5rem',
+          backgroundColor: '#f8f9fa',
+          borderRadius: '4px'
+        }
+      },
+      React.createElement('div', { style: { flex: 1 } },
+        React.createElement('label', { style: { display: 'block', fontSize: '0.8rem', marginBottom: '0.25rem' } }, 'Filter by Type:'),
+        React.createElement('select', {
+          value: controls.filterType,
+          onChange: (e) => controls.setFilterType(e.target.value),
+          style: {
+            width: '100%',
+            padding: '0.25rem',
+            border: '1px solid #ddd',
+            borderRadius: '4px',
+            fontSize: '0.9rem'
+          }
+        },
+          React.createElement('option', { value: 'all' }, 'All Events'),
+          React.createElement('option', { value: 'reasoningStep' }, 'Reasoning Steps'),
+          React.createElement('option', { value: 'task' }, 'Tasks')
+        )
+      ),
+      React.createElement('div', { style: { flex: 1 } },
+        React.createElement('label', { style: { display: 'block', fontSize: '0.8rem', marginBottom: '0.25rem' } }, 'Search:'),
+        React.createElement('input', {
+          type: 'text',
+          value: controls.filterText,
+          onChange: (e) => controls.setFilterText(e.target.value),
+          placeholder: 'Search in events...',
+          style: {
+            width: '100%',
+            padding: '0.25rem',
+            border: '1px solid #ddd',
+            borderRadius: '4px',
+            fontSize: '0.9rem'
+          }
+        })
+      )
+    );
+  }, []);
 
   const renderTrace = useCallback((item, index) => {
-    if (item.type === 'header') {
+    if (item.type === 'controls') {
+      return renderControlBar(item);
+    } else if (item.type === 'header') {
       return React.createElement('div', {
         style: {
           fontWeight: 'bold',
@@ -128,7 +198,7 @@ const ReasoningTracePanel = () => {
       return renderTraceItem(item.data, index);
     }
     return null;
-  }, [renderTraceItem]);
+  }, [renderTraceItem, renderControlBar]);
 
   return React.createElement(GenericPanel, {
     title: 'Reasoning Trace',

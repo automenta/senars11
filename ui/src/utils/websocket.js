@@ -405,8 +405,7 @@ class WebSocketService {
     }
   }
 
-  handleDemoControl({ payload }) {
-    const { command, demoId } = payload;
+  handleDemoControl({ payload: { command, demoId } }) {
     
     console.log(`Handling demo control: ${command} for demo ${demoId}`);
     
@@ -512,8 +511,7 @@ class WebSocketService {
     }
   }
 
-  handleNarseseInput({ payload }) {
-    const { input } = payload;
+  handleNarseseInput({ payload: { input } }) {
     
     console.log(`Handling narsese input: ${input}`);
     
@@ -522,7 +520,7 @@ class WebSocketService {
       this.routeMessage({
         type: 'narseseInput',
         payload: { 
-          input: input, 
+          input, 
           success: true, 
           message: `Processed: ${input}` 
         }

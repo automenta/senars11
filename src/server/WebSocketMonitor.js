@@ -140,32 +140,7 @@ class WebSocketMonitor {
         }
     }
 
-    _handleClientMessage(client, data) {
-        try {
-            const message = JSON.parse(data.toString());
 
-            switch (message.type) {
-                case 'subscribe':
-                    this._handleSubscribe(client, message);
-                    break;
-                case 'unsubscribe':
-                    this._handleUnsubscribe(client, message);
-                    break;
-                case 'ping':
-                    this._sendToClient(client, {type: 'pong', timestamp: Date.now()});
-                    break;
-                default:
-                    console.warn('Unknown message type:', message.type);
-            }
-        } catch (error) {
-            console.error('Error handling client message:', error);
-            this._sendToClient(client, {
-                type: 'error',
-                message: 'Invalid message format',
-                error: error.message
-            });
-        }
-    }
 
     _handleSubscribe(client, message) {
         this._sendToClient(client, {
@@ -418,20 +393,6 @@ class WebSocketMonitor {
         }
         
         this._nar = nar;
-
-        const NAR_EVENTS = Object.freeze([
-            'task.input',
-            'task.processed',
-            'cycle.start',
-            'cycle.complete',
-            'task.added',
-            'belief.added',
-            'question.answered',
-            'system.started',
-            'system.stopped',
-            'system.reset',
-            'system.loaded'
-        ]);
 
         NAR_EVENTS.forEach(eventName => {
             nar.on(eventName, (data, metadata) => {

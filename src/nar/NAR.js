@@ -8,7 +8,7 @@ import {RuleEngine} from '../reasoning/RuleEngine.js';
 import {SyllogisticRule} from '../reasoning/rules/syllogism.js';
 import {ImplicationSyllogisticRule} from '../reasoning/rules/implicationSyllogism.js';
 import {ModusPonensRule} from '../reasoning/rules/modusponens.js';
-import {PRIORITY} from '../config/constants.js';
+import {PRIORITY, TASK} from '../config/constants.js';
 import {BaseComponent} from '../util/BaseComponent.js';
 import {ComponentManager} from '../util/ComponentManager.js';
 import {NaiveExhaustiveStrategy} from '../reasoning/NaiveExhaustiveStrategy.js';
@@ -233,16 +233,11 @@ export class NAR extends BaseComponent {
     }
 
     _getTaskTypeFromPunctuation(punctuation) {
-        switch (punctuation) {
-            case '.':
-                return 'BELIEF';
-            case '!':
-                return 'GOAL';
-            case '?':
-                return 'QUESTION';
-            default:
-                return 'BELIEF'; // Default to belief
-        }
+        return {
+            '.': 'BELIEF',
+            '!': 'GOAL', 
+            '?': 'QUESTION'
+        }[punctuation] || 'BELIEF'; // Default to belief
     }
 
     async initialize() {
@@ -452,9 +447,8 @@ export class NAR extends BaseComponent {
     }
 
     getBeliefs(queryTerm = null) {
-        return queryTerm
-            ? this.query(queryTerm)
-            : Array.from(this._memory.getAllConcepts()).flatMap(concept => concept.getTasksByType('BELIEF'));
+        return queryTerm ? this.query(queryTerm) 
+            : this._memory.getAllConcepts().flatMap(c => c.getTasksByType('BELIEF'));
     }
 
     getGoals() {
@@ -487,12 +481,10 @@ export class NAR extends BaseComponent {
             isRunning: this._isRunning,
             cycleCount: this._cycle.cycleCount,
             memoryStats: this._memory.getDetailedStats(),
-            taskManagerStats: typeof this._taskManager.getTaskStats === 'function'
-                ? this._taskManager.getTaskStats()
-                : this._taskManager.stats,
+            taskManagerStats: this._taskManager.getTaskStats?.() ?? this._taskManager.stats,
             cycleStats: this._cycle.stats,
             config: this._config.toJSON(),
-            lmStats: this._lm ? this._lm.getMetrics() : undefined
+            lmStats: this._lm?.getMetrics?.()
         };
     }
 
@@ -546,7 +538,7 @@ export class NAR extends BaseComponent {
         const confidenceBoost = (truthValue.confidence || 0) * confidenceMultiplier;
         const typeBoost = {GOAL: goalBoost, QUESTION: questionBoost}[taskType] || 0;
 
-        return Math.min(1.0, basePriority + confidenceBoost + typeBoost);
+        return Math.min(PRIORITY.MAX_PRIORITY, basePriority + confidenceBoost + typeBoost);
     }
 
     async _processPendingTasks(traceId) {

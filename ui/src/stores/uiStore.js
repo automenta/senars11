@@ -1,14 +1,12 @@
 import {create} from 'zustand';
 
 // Helper functions to reduce duplication
-const findItemIndex = (list, item) => {
-  if (!list || !item) return -1;
-  return list.findIndex(i => i?.id === item?.id || i?.term === item?.term);
-};
+const findItemIndex = (list, item, idField = 'id') => 
+  list?.findIndex?.(i => i?.[idField] === item?.[idField]) ?? -1;
 
-const createListSetter = (listName) => (item) => (state) => {
+const createListSetter = (listName) => (item, idField = 'id') => (state) => {
   const currentList = state[listName] || [];
-  const existingIndex = findItemIndex(currentList, item);
+  const existingIndex = findItemIndex(currentList, item, idField);
   
   if (existingIndex !== -1) {
     const newList = [...currentList];
@@ -19,7 +17,7 @@ const createListSetter = (listName) => (item) => (state) => {
   }
 };
 
-const createLimitedListSetter = (listName, limit) => (item) => (state) => ({
+const createLimitedListSetter = (listName, limit) => (item, idField = 'id') => (state) => ({
   [listName]: [...(state[listName] || []), item].slice(-limit)
 });
 
@@ -87,7 +85,7 @@ const actions = {
     savedLayouts: {...state.savedLayouts, [name]: layout}
   }),
   
-  // Notification actions
+  // Notification actions (kept for backward compatibility if needed)
   addNotification: (notification) => (state) => ({
     notifications: [...state.notifications, { ...notification, id: Date.now() }]
   }),
@@ -123,7 +121,7 @@ const useUiStore = create((set, get) => ({
   setLayout: (layout) => set(actions.setLayout(layout)),
   savedLayouts: {},
   saveLayout: (name, layout) => set(actions.saveLayout(name, layout)),
-  loadLayout: (name) => get().savedLayouts[name],
+  loadLayout: (name) => get().savedLayouts?.[name],
 
   // WebSocket state
   wsConnected: false,
@@ -147,27 +145,27 @@ const useUiStore = create((set, get) => ({
 
   // Reasoning engine state
   reasoningSteps: [],
-  addReasoningStep: (step) => set(createListSetter('reasoningSteps')(step)),
+  addReasoningStep: (step) => set(createListSetter('reasoningSteps')(step, 'id')),
   updateReasoningStep: (id, updates) => set(createItemUpdater('reasoningSteps', 'id')(id, updates)),
   clearReasoningSteps: () => set({reasoningSteps: []}),
 
   // Task state
   tasks: [],
-  addTask: (task) => set(createListSetter('tasks')(task)),
+  addTask: (task) => set(createListSetter('tasks')(task, 'id')),
   updateTask: (id, updates) => set(createItemUpdater('tasks', 'id')(id, updates)),
   removeTask: (id) => set(createItemRemover('tasks', 'id')(id)),
   clearTasks: () => set({tasks: []}),
 
   // Concept state
   concepts: [],
-  addConcept: (concept) => set(createListSetter('concepts')(concept)),
+  addConcept: (concept) => set(createListSetter('concepts')(concept, 'term')),
   updateConcept: (term, updates) => set(createItemUpdater('concepts', 'term')(term, updates)),
   removeConcept: (term) => set(createItemRemover('concepts', 'term')(term)),
   clearConcepts: () => set({concepts: []}),
 
   // Cycle state
   cycles: [],
-  addCycle: (cycle) => set(createLimitedListSetter('cycles', 50)(cycle)),
+  addCycle: (cycle) => set(createLimitedListSetter('cycles', 50)(cycle, 'id')),
   clearCycles: () => set({cycles: []}),
 
   // System metrics
@@ -192,7 +190,7 @@ const useUiStore = create((set, get) => ({
   })),
 
   demoSteps: [],
-  addDemoStep: createLimitedListSetter('demoSteps', 100),
+  addDemoStep: (step) => set(createLimitedListSetter('demoSteps', 100)(step, 'id')),
   clearDemoSteps: () => set({demoSteps: []}),
 
   demoMetrics: {},
@@ -224,7 +222,7 @@ const useUiStore = create((set, get) => ({
 
   // Notification state
   notifications: [],
-  addNotification: (notification) => set(actions.addNotification(notification)),
+  addNotification: (notification) => set(createListSetter('notifications')(notification, 'id')),
   updateNotification: (id, updates) => set(createItemUpdater('notifications', 'id')(id, updates)),
   removeNotification: (id) => set(createItemRemover('notifications', 'id')(id)),
   clearNotifications: () => set({notifications: []}),

@@ -3,79 +3,16 @@
  * @description Simple, robust system configuration with validation
  */
 
-import {deepFreeze} from '../util/common.js';
-import {validateConfigWithDefaults} from '../config/ConfigValidator.js';
-
-// Simple default configuration
-const DEFAULT_CONFIG = deepFreeze({
-    memory: {
-        capacity: 1000,
-        consolidationThreshold: 0.1,
-        forgettingThreshold: 0.05,
-        conceptActivationDecay: 0.95
-    },
-    focus: {
-        size: 100,
-        setCount: 3,
-        attentionDecay: 0.98,
-        diversityFactor: 0.3
-    },
-    taskManager: {
-        defaultPriority: 0.5,
-        priorityThreshold: 0.1, // Added the missing property
-        priority: {
-            confidenceMultiplier: 0.3,
-            goalBoost: 0.2,
-            questionBoost: 0.1
-        }
-    },
-    cycle: {
-        delay: 50,
-        maxTasksPerCycle: 10,
-        ruleApplicationLimit: 50
-    },
-    ruleEngine: {
-        enableValidation: true,
-        maxRuleApplicationsPerCycle: 20,
-        performanceTracking: true
-    },
-    lm: {
-        enabled: false,
-        defaultProvider: 'dummy',
-        maxConcurrentRequests: 5,
-        timeout: 10000,
-        retryAttempts: 2,
-        cacheEnabled: true,
-        cacheSize: 100
-    },
-    performance: {
-        enableProfiling: false,
-        maxExecutionTime: 100,
-        memoryLimit: 512 * 1024 * 1024,
-        gcThreshold: 0.8
-    },
-    logging: {
-        level: 'info',
-        enableConsole: true,
-        enableFile: false,
-        maxFileSize: 10 * 1024 * 1024,
-        retentionDays: 7
-    },
-    errorHandling: {
-        enableGracefulDegradation: true,
-        maxErrorRate: 0.1,
-        enableRecovery: true,
-        recoveryAttempts: 3
-    }
-});
+import {ConfigManager} from '../config/ConfigManager.js';
 
 /**
- * Simple configuration class that merges defaults with user overrides
+ * SystemConfig class that uses the centralized ConfigManager
  */
 export class SystemConfig {
     constructor(userConfig = {}) {
-        // Validate the configuration using Zod
-        this._config = validateConfigWithDefaults(userConfig);
+        // Use ConfigManager to handle validation and merging
+        this._configManager = new ConfigManager(userConfig);
+        this._config = this._configManager.toJSON();
     }
 
     static from(userConfig = {}) {
@@ -83,15 +20,19 @@ export class SystemConfig {
     }
 
     get(path) {
-        const pathParts = path.split('.');
-        let current = this._config;
+        return this._configManager.get(path);
+    }
 
-        for (const part of pathParts) {
-            if (current === null || current === undefined) return undefined;
-            current = current[part];
-        }
+    set(path, value) {
+        this._configManager.set(path, value);
+        this._config = this._configManager.toJSON();
+        return this;
+    }
 
-        return current;
+    update(updates) {
+        this._configManager.update(updates);
+        this._config = this._configManager.toJSON();
+        return this;
     }
 
     toJSON() {
