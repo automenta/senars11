@@ -1,3 +1,4 @@
+```
 ╭─────────────────────────────────────────────────────────────────────────────────────────────────────╮
 │ ✓  WriteFile Writing to EVAL.md                                                                     │
 │                                                                                                     │
@@ -84,6 +85,7 @@
 │       points to a system with significant potential for academic research, education, and           │
 │       commercial applications in the growing field of Explainable AI.                               │
 ╰─────────────────────────────────────────────────────────────────────────────────────────────────────╯
+```
 
 
 # Strategic Evaluation of the SeNARS Project
