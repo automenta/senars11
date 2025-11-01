@@ -25,6 +25,7 @@ The SeNARS project has successfully completed core foundational development (Pha
 - **Testing**: Property-based testing and benchmark suite establishment with Jest and fast-check
 - **WebSocket Integration**: Real-time monitoring via WebSocketMonitor.js connecting NAR to UI
 - **UI Foundation**: Vite + React + Zustand + FlexLayout stack with advanced data processing
+- **Language Model Integration**: LM capabilities with configurable providers (OpenAI, Ollama, etc.) already implemented
 
 ### Current Architecture & Integration
 
@@ -57,7 +58,7 @@ The SeNARS project has successfully completed core foundational development (Pha
 
 ### Current Focus: Phase 12 - Foundation Enhancement (UI Development)
 
-**Agile Focus**: Complete the integration between UI and core reasoning engine while establishing a robust, reliable UI foundation.
+**Agile Focus**: Complete the integration between UI and core reasoning engine while establishing a robust, reliable UI foundation with rich visualization capabilities for reasoning activity.
 
 **Project Structure:**
 ```
@@ -65,7 +66,7 @@ The SeNARS project has successfully completed core foundational development (Pha
 ├── src/
 │   ├── components/          # React components (createElement-based)
 │   ├── stores/              # Zustand state management
-│   ├── utils/               # Helper utilities (websocket, data processing, theme utils)
+│   ├── utils/               # Helper utilities (websocket, data processing)
 │   ├── schemas/             # Shared Zod validation schemas
 │   ├── layouts/             # FlexLayout configurations for docking panels
 │   ├── App.js               # Root component with WebSocket setup
@@ -82,122 +83,129 @@ The SeNARS project has successfully completed core foundational development (Pha
 
 ---
 
-### Phase 12: Foundation Enhancement (UI Integration & Reliability)
+### Phase 12: Foundation Enhancement (UI Integration & Reasoning Visualization)
 
-**Agile Focus**: Complete core integration between UI and reasoning engine, establish robust error handling, and ensure reliable operation with comprehensive monitoring.
+**Agile Focus**: Complete core integration between UI and reasoning engine, establish robust error handling, and implement rich visualization capabilities to observe actual reasoning activity.
 
 **Integration Status**: 
 - ✅ Core NAR reasoning engine available via webui.js
+- ✅ Language Model capabilities with configurable providers (OpenAI, Ollama, etc.) implemented in `/src/lm/LM.js`
 - ✅ WebSocketMonitor.js provides real-time communication bridge
 - ✅ UI stack (Vite+React+Zustand+FlexLayout) already implemented
 - ✅ Data processing pipeline with DataProcessor class implemented
 - ⏳ ConsoleBridge mechanism (browser logs → WebSocket server) needs implementation
 - ⏳ Error boundary system with fallback UIs needs implementation
-- ⏳ WebSocket health monitoring needs implementation
+- ⏳ Rich reasoning visualization components need implementation
 
 **Actionable Implementation Steps (In Priority Order):**
 
-* **12.1: Core Integration Completion:**
+* **12.1: Core Integration & LM Configuration:**
     * **Action:** Implement ConsoleBridge in `ui/src/utils/consoleBridge.js` to forward browser console logs to WebSocket server
     * **Action:** Create global error boundary in `ui/src/components/ErrorBoundary.js` with configurable fallback UIs
     * **Action:** Establish WebSocket connection health monitoring in `ui/src/utils/websocket.js`
-    * **Action:** Verify Zod schema sharing between core and UI in `ui/src/schemas/messages.js`
-    * **Success Criteria:** Browser logs appear in server logs, UI gracefully handles WebSocket disconnections, real-time data flows from NAR to UI
+    * **Action:** Implement Language Model provider configuration UI (`LMConfigPanel.js`) to manage models, API keys, and settings
+    * **Action:** Create LM status and capability visualization showing active providers and connection status
+    * **Success Criteria:** Browser logs appear in server logs, UI gracefully handles WebSocket disconnections, LM providers can be configured via UI, users see active LM status
 
-* **12.2: Reliability & Error Handling:**
-    * **Action:** Implement configurable retry strategies for WebSocket reconnection in `ui/src/utils/websocket.js`
-    * **Action:** Add centralized error reporting in `ui/src/stores/uiStore.js` with configurable alerting
-    * **Action:** Create offline state management in UI components to handle connection interruptions
-    * **Success Criteria:** UI recovers gracefully from connection losses, errors are logged centrally, user receives appropriate feedback
+* **12.2: Reasoning Activity Monitoring:**
+    * **Action:** Create reasoning trace visualization in `ui/src/components/ReasoningTracePanel.js` to show inference steps
+    * **Action:** Implement task flow visualization showing input → processing → output chains with LM integration points
+    * **Action:** Build concept relationship visualization showing how concepts evolve over time and interact with LM responses
+    * **Action:** Add metrics dashboard showing reasoning speed, task throughput, LM interaction frequency, and system efficiency
+    * **Success Criteria:** Users can observe reasoning-LM interaction patterns, understand task flow, see concept evolution with LM influence
 
-* **12.3: Monitoring & Diagnostics:**
-    * **Action:** Add WebSocket ping/pong health checks in `ui/src/utils/websocket.js`
-    * **Action:** Implement connection status indicators in UI components
-    * **Action:** Create diagnostic tools for troubleshooting UI ↔ Core communication
-    * **Success Criteria:** Connection health is continuously monitored, users see clear connection status, diagnostic tools help troubleshoot issues
+* **12.3: Educational Visualization & Demonstration:**
+    * **Action:** Implement screenshot capture functionality for educational demonstrations in `ui/src/utils/screenshot.js`
+    * **Action:** Create demonstration mode with step-by-step reasoning visualization
+    * **Action:** Build movie generation capability to record reasoning sequences for education
+    * **Action:** Add annotation tools for explaining reasoning steps in the UI
+    * **Success Criteria:** Educational demonstrations can be automatically generated, reasoning sequences are captured for learning purposes, explanation capabilities available
 
 **Reference Implementation Files:**
 - **Core Integration**: `/home/me/senars10/webui.js` - WebSocket bridge between NAR and UI
 - **UI WebSocket**: `/home/me/senars10/ui/src/utils/websocket.js` - UI-side WebSocket client
 - **Core WebSocket**: `/home/me/senars10/src/server/WebSocketMonitor.js` - Server-side WebSocket monitor
+- **Language Models**: `/home/me/senars10/src/lm/LM.js` - LM integration and configuration
 - **Configuration**: `/home/me/senars10/src/config/SystemConfig.js` - Zod-validated system config
 - **Event System**: `/home/me/senars10/src/util/EventBus.js` - mitt-based event bus
 
-**Implementation Pattern:** Abstracted error handling modules with parameterized configuration options
+**Implementation Pattern:** Abstracted visualization modules with reasoning-focused data flows
 
 ---
 
-### Phase 13: Performance & Extensibility Enhancement
+### Phase 13: Hybrid Reasoning & Language Model Enhancement
 
-**Agile Focus**: Optimize system performance and implement extensible architecture for future growth.
+**Agile Focus**: Implement enhanced integration between NARS reasoning and Language Model capabilities with improved interaction patterns.
 
 **Current Status**:
 - ✅ VirtualizedList component already implemented in UI for large dataset handling
-- ✅ Zustand store optimization patterns already in place
-- ⏳ Plugin architecture needs implementation for UI extensibility
-- ⏳ Performance benchmarking system needs establishment
-- ⏳ Dashboard customization system needs implementation
+- ✅ Zustand store patterns already in place
+- ✅ Language Model integration with OpenAI, Ollama, etc. already available
+- ⏳ Hybrid reasoning patterns need optimization
+- ⏳ Advanced LM-NARS interaction models need implementation
+- ⏳ Analysis tools need development
 
 **Actionable Implementation Steps (In Priority Order):**
 
-* **13.1: Performance Optimization:**
-    * **Action:** Implement React.memo and useMemo optimization in `ui/src/components/DataPanel.js` and other heavy components
-    * **Action:** Add performance monitoring with configurable metrics in `ui/src/utils/performance.js`
-    * **Action:** Create performance benchmark scripts in `ui/src/__benchmarks__/` for tracking optimization impact
-    * **Action:** Implement lazy loading for non-critical UI components using React.lazy
-    * **Success Criteria:** UI maintains 60fps during high-frequency data updates, performance metrics are tracked, lazy loading reduces initial bundle size
+* **13.1: Enhanced LM-NARS Reasoning Patterns:**
+    * **Action:** Implement improved interaction patterns between Language Models and NARS reasoning
+    * **Action:** Create configurable reasoning strategies that blend LM capabilities with NARS logical inference
+    * **Action:** Develop feedback mechanisms where LM outputs influence NARS concept formation and vice versa
+    * **Action:** Build visualization components for hybrid reasoning traces (`HybridReasoningPanel.js`)
+    * **Success Criteria:** Seamless interaction between LM and NARS reasoning, users can observe blended reasoning processes
 
-* **13.2: Extensible Architecture:**
-    * **Action:** Design plugin interface specification in `ui/src/types/plugin.d.ts` or equivalent JavaScript pattern
-    * **Action:** Create plugin registry system in `ui/src/utils/pluginRegistry.js`
-    * **Action:** Implement plugin loading mechanism that supports dynamic UI component injection
-    * **Action:** Add plugin lifecycle hooks (init, start, stop, destroy) for proper resource management
-    * **Success Criteria:** Third-party developers can create and load UI plugins without modifying core code, plugin lifecycle is properly managed
+* **13.2: Reasoning Analysis:**
+    * **Action:** Create tools for analyzing reasoning behaviors in hybrid LM-NARS systems
+    * **Action:** Implement pattern recognition for reasoning pathways in LM-NARS interaction
+    * **Action:** Develop metrics for measuring reasoning performance (accuracy, speed, coherence)
+    * **Action:** Add comparative analysis tools showing reasoning patterns over time
+    * **Success Criteria:** Reasoning behaviors are analyzable, performance patterns are measurable, users can study reasoning phenomena
 
-* **13.3: Configurable Dashboards:**
-    * **Action:** Enhance FlexLayout configurations in `ui/src/layouts/` with import/export functionality
-    * **Action:** Create layout persistence system in `ui/src/stores/uiStore.js` for saving/loading dashboard configurations
-    * **Action:** Implement drag-and-drop customization interface for users to modify their dashboards
-    * **Action:** Add layout validation to ensure dashboard integrity during user modifications
-    * **Success Criteria:** Users can save, load, and share custom dashboard layouts, drag-and-drop customization works smoothly, layouts persist across sessions
+* **13.3: Advanced LM Integration:**
+    * **Action:** Design plugin architecture for additional Language Model providers and custom integrations
+    * **Action:** Create registry system for different LM capabilities and specialization profiles
+    * **Action:** Implement dynamic LM selection based on reasoning context and task requirements
+    * **Action:** Add configuration capabilities for domain-specific LM adaptations
+    * **Success Criteria:** Multiple LM providers seamlessly integrated, context-aware LM selection available, domain-specific adaptations possible
 
 **Reference Implementation Files:**
-- **Performance**: `/home/me/senars10/ui/src/components/VirtualizedList.js` - Current virtualization implementation
-- **State Management**: `/home/me/senars10/ui/src/stores/uiStore.js` - Zustand store with current optimization patterns  
-- **Layout System**: `/home/me/senars10/ui/src/layouts/` - FlexLayout configurations
 - **Component Architecture**: `/home/me/senars10/ui/src/components/` - Current component implementations
+- **State Management**: `/home/me/senars10/ui/src/stores/uiStore.js` - Zustand store patterns
+- **Layout System**: `/home/me/senars10/ui/src/layouts/` - FlexLayout configurations
+- **Core Reasoning**: `/home/me/senars10/src/reasoning/` - Current NAR reasoning implementations
+- **Language Models**: `/home/me/senars10/src/lm/` - Existing LM integration
 
-**Implementation Pattern:** Parameterized optimization strategies with configurable parameters
+**Implementation Pattern:** Modular architecture with hybrid LM-NARS reasoning patterns
 
 ---
 
-### Phase 14: Quality & Developer Experience Enhancement
+### Phase 14: Quality Assurance & Developer Experience Enhancement
 
-**Agile Focus**: Establish comprehensive quality assurance systems and optimize developer experience for rapid iteration.
+**Agile Focus**: Establish comprehensive quality assurance systems for reasoning verification and optimize developer experience for rapid iteration on core reasoning functionality.
 
 **Current Status**:
 - ✅ Unit tests already implemented with Vitest in `ui/src/__tests__/`
 - ✅ E2E tests already implemented with Playwright
 - ✅ ESLint + Prettier linting and formatting configured
-- ⏳ Visual regression testing needs implementation
+- ⏳ Reasoning verification tests need implementation
 - ⏳ Component documentation system needs implementation
 - ⏳ Comprehensive testing utilities need development
 
 **Actionable Implementation Steps (In Priority Order):**
 
-* **14.1: Quality Assurance Framework:**
-    * **Action:** Set up visual regression testing using Playwright in `ui/tests/visual-regression/`
-    * **Action:** Create automated screenshot comparison for UI component changes
-    * **Action:** Enhance existing unit tests with more comprehensive coverage in `ui/src/__tests__/`
-    * **Action:** Implement test coverage reporting with thresholds in `package.json` scripts
-    * **Success Criteria:** Visual changes are automatically detected and reviewed, test coverage meets minimum thresholds, automated testing catches UI regressions
+* **14.1: Reasoning Verification Framework:**
+    * **Action:** Set up automated reasoning verification tests to validate NAR logic output
+    * **Action:** Create test scenarios that verify reasoning step correctness
+    * **Action:** Enhance existing unit tests with reasoning-specific coverage in `ui/src/__tests__/`
+    * **Action:** Implement reasoning quality metrics reporting in test outputs
+    * **Success Criteria:** Reasoning output is automatically verified against expected results, logic correctness is validated, comprehensive test coverage for reasoning components
 
 * **14.2: Developer Experience:**
-    * **Action:** Create Storybook-like component development environment in `ui/src/dev/`
+    * **Action:** Create reasoning playground environment in `ui/src/dev/` for testing reasoning scenarios
     * **Action:** Implement hot-reload configuration optimization in `ui/vite.config.js`
-    * **Action:** Create testing utilities framework in `ui/src/test-utils/` for common test scenarios
-    * **Action:** Add development helper scripts in `ui/package.json` for common development tasks
-    * **Success Criteria:** Developers can rapidly develop and test components in isolation, hot-reload works consistently, testing utilities simplify common test patterns
+    * **Action:** Create reasoning test utilities framework in `ui/src/test-utils/` for common reasoning test scenarios
+    * **Action:** Add reasoning-specific helper scripts in `package.json` for testing and demonstration
+    * **Success Criteria:** Developers can rapidly test reasoning scenarios in isolation, hot-reload works consistently, reasoning utilities simplify common test patterns
 
 **Reference Implementation Files:**
 - **Testing**: `/home/me/senars10/ui/src/__tests__/` - Current test files
@@ -205,18 +213,18 @@ The SeNARS project has successfully completed core foundational development (Pha
 - **Package Management**: `/home/me/senars10/ui/package.json` - Current scripts and dependencies
 - **Linting**: `/home/me/senars10/ui/.eslintrc.js` - ESLint configuration
 
-**Implementation Pattern:** Automated quality assurance framework with parameterized validation rules
+**Implementation Pattern:** Automated reasoning verification framework with quality validation rules
 
 ---
 
-### Phase 15: Accessibility & Innovation Enhancement
+### Phase 15: Accessibility & UI Intelligence Enhancement
 
-**Agile Focus**: Maximize accessibility compliance and implement adaptive systems for advanced user experience.
+**Agile Focus**: Maximize accessibility compliance and implement intelligent UI systems that adapt to user needs and reasoning patterns.
 
 **Current Status**:
 - ⏳ WCAG 2.1 AA compliance features need implementation
 - ⏳ Keyboard navigation needs comprehensive implementation
-- ⏳ Internationalization framework needs development
+- ⏳ UI intelligence based on reasoning patterns needs implementation
 - ⏳ Feature flags system needs implementation
 - ⏳ Analytics framework needs establishment
 
@@ -225,32 +233,32 @@ The SeNARS project has successfully completed core foundational development (Pha
 * **15.1: Accessibility Compliance:**
     * **Action:** Implement comprehensive keyboard navigation in `ui/src/components/` with ARIA attributes
     * **Action:** Add WCAG 2.1 AA compliance checking utilities in `ui/src/utils/accessibility.js`
-    * **Action:** Create high contrast theme options in `ui/src/utils/themeUtils.js`
     * **Action:** Implement screen reader support for all interactive components
     * **Action:** Add focus management system for modal dialogs and dynamic content
+    * **Action:** Create high contrast accessibility options (deferred from theming)
     * **Success Criteria:** UI passes WCAG 2.1 AA compliance checks, all functionality accessible via keyboard, screen readers provide meaningful information
 
-* **15.2: Internationalization (i18n):**
-    * **Action:** Create localization system in `ui/src/utils/i18n.js` with configurable language support
-    * **Action:** Implement text translation utilities for UI components
-    * **Action:** Add RTL (right-to-left) layout support where needed
-    * **Action:** Localize date, time, and number formats based on user locale
-    * **Success Criteria:** UI supports multiple languages, text displays properly in different locales, RTL layouts work correctly
+* **15.2: UI Intelligence:**
+    * **Action:** Implement UI intelligence subsystem that leverages reasoning patterns for interface adaptation
+    * **Action:** Create user behavior analysis in `ui/src/utils/userAnalytics.js` to detect usage patterns
+    * **Action:** Build predictive interface adaptation using reasoning to highlight significant events
+    * **Action:** Develop recommendation system for exploring different configurations based on user interests
+    * **Success Criteria:** UI adapts intelligently to user needs, user experience enhanced through AI-driven adjustments
 
-* **15.3: Adaptive Features:**
+* **15.3: User Experience Features:**
     * **Action:** Implement feature flags system in `ui/src/utils/featureFlags.js` with configurable rollout parameters
     * **Action:** Create user preference persistence system in `ui/src/stores/uiStore.js`
     * **Action:** Add analytics tracking framework in `ui/src/utils/analytics.js` with configurable privacy controls
-    * **Action:** Implement user behavior analysis for interface adaptation in `ui/src/utils/userBehavior.js`
-    * **Success Criteria:** Features can be gradually rolled out to users, user preferences persist across sessions, analytics provide meaningful insights
+    * **Action:** Implement bookmarking and annotation system for documenting interesting findings
+    * **Success Criteria:** Features can be gradually rolled out to users, preferences persist across sessions, findings can be documented and shared
 
 **Reference Implementation Files:**
-- **Theming**: `/home/me/senars10/ui/src/utils/themeUtils.js` - Current theme utilities
 - **State Management**: `/home/me/senars10/ui/src/stores/uiStore.js` - Zustand store for preferences
 - **Components**: `/home/me/senars10/ui/src/components/` - UI components that need accessibility
-- **Utilities**: `/home/me/senars10/ui/src/utils/` - Location for new accessibility and i18n utilities
+- **Utilities**: `/home/me/senars10/ui/src/utils/` - Location for new accessibility utilities
+- **Core Reasoning**: `/home/me/senars10/src/nar/NAR.js` - Main NAR system for UI intelligence
 
-**Implementation Pattern:** Parameterized accessibility system with configurable compliance levels
+**Implementation Pattern:** Intelligent UI system with configurable adaptation
 
 ---
 
@@ -260,24 +268,32 @@ The SeNARS project has successfully completed core foundational development (Pha
 
 **Current Status**:
 - ✅ Core NAR reasoning engine has curiosity mechanisms (based on plan requirements)
+- ✅ Language Model integration enables hybrid autonomy patterns
 - ⏳ Curiosity visualization components need implementation in UI
 - ⏳ Knowledge gap identification display needs creation
-- ⏳ Autonomous learning controls need development
+- ⏳ Autonomy controls need development
 
 **Actionable Implementation Steps:**
 
 * **16.1: Autonomy Visualization:**
-    * **Action:** Create curiosity visualization panel in `ui/src/components/CuriosityPanel.js` to display autonomous question generation
-    * **Action:** Implement knowledge gap identification display in `ui/src/components/KnowledgeGapPanel.js`
-    * **Action:** Add curiosity intensity controls in `ui/src/components/CuriosityControls.js`
+    * **Action:** Create curiosity visualization panel in `ui/src/components/CuriosityPanel.js` to display autonomous question generation with LM interaction highlighting
+    * **Action:** Implement knowledge gap identification display in `ui/src/components/KnowledgeGapPanel.js` showing where LM assistance is sought
+    * **Action:** Add curiosity intensity controls in `ui/src/components/CuriosityControls.js` with LM influence parameters
     * **Action:** Connect visualization to NAR's curiosity mechanisms via WebSocket events
-    * **Success Criteria:** Users can observe agent's autonomous learning processes, see knowledge gaps being identified, control curiosity parameters
+    * **Success Criteria:** Users can observe agent's autonomous learning processes enhanced by LM capabilities, see knowledge gaps where hybrid assistance is valuable, control curiosity-LM interaction parameters
+
+* **16.2: Autonomy Controls:**
+    * **Action:** Implement autonomy configuration in `ui/src/components/AutonomyControls.js` to adjust LM-NARS interaction parameters
+    * **Action:** Create mode selection allowing different hybrid reasoning strategies
+    * **Action:** Add controls for testing different LM configurations and their impact on reasoning
+    * **Action:** Build visualization showing how autonomy interacts over time
+    * **Success Criteria:** Users can configure and experiment with different autonomy parameters, modes are clearly selectable, experimentation is guided by insights
 
 **Acceptance Criteria:**
 
 - [ ] The UI provides real-time insight into the agent's autonomous reasoning processes through configurable visualization
-- [ ] Users can interact with and influence the agent's autonomous learning via parameterized controls
-- [ ] The system's curiosity and self-improvement mechanisms are visible and configurable through the UI
+- [ ] Users can interact with and influence the agent's learning via parameterized controls affecting LM-NARS interaction
+- [ ] The system's curiosity, self-improvement, and autonomy mechanisms are visible and configurable through the UI
 
 ---
 
@@ -290,7 +306,7 @@ and performance:
 
 *Goal: Extend the UI with sophisticated interaction patterns and visualization capabilities.*
 
-**Agile Focus:** Enable sophisticated user interactions and complex data visualizations through modular, configurable systems.
+**Agile Focus:** Enable sophisticated user interactions and complex data visualizations through modular, configurable systems with emphasis on reasoning activity visualization.
 
 **Actionable Implementation Steps:**
 
@@ -304,65 +320,101 @@ and performance:
     * **Action:** Implement 3D relationship visualization using a library like D3.js in `ui/src/components/Relationship3D.js`
     * **Action:** Create graph visualization for concept relationships in `ui/src/components/ConceptGraph.js`
     * **Action:** Build interactive reasoning chain visualizer in `ui/src/components/ReasoningChainViz.js`
-    * **Success Criteria:** Complex relationships become intuitive to understand, reasoning processes visualized clearly
+    * **Action:** Add animation capabilities to show reasoning flow and temporal patterns
+    * **Success Criteria:** Complex relationships become intuitive to understand, temporal reasoning patterns visualized clearly, educational value enhanced
 
-* **17.3: Collaborative Features:**
+* **17.3: Collaborative Features (Deferred):**
     * **Action:** Implement real-time collaborative editing with operational transformation in `ui/src/utils/collaboration.js`
     * **Action:** Add role-based access controls for multi-user environments
     * **Action:** Create shared workspace management in `ui/src/stores/collaborationStore.js`
     * **Success Criteria:** Multiple users can work together in real-time, appropriate security and access controls in place
+    * **Note:** This feature is deferred to phase 20+ as it's not essential for core reasoning visualization
 
 ### Phase 18: Performance & Resource Optimization (Optional)
 
 *Goal: Optimize UI performance through advanced caching, rendering, and configurable resource management.*
 
-**Agile Focus:** Maximize responsiveness while minimizing resource consumption through sophisticated optimization strategies.
+**Agile Focus:** Maximize responsiveness while minimizing resource consumption through sophisticated optimization strategies - DEFERRED due to "premature optimization" principle.
 
 **Actionable Implementation Steps:**
 
-* **18.1: Advanced Caching:**
+* **18.1: Advanced Caching (Deferred):**
     * **Action:** Implement multi-level caching system in `ui/src/utils/cacheManager.js` with configurable policies
     * **Action:** Add intelligent data preloading based on user behavior patterns
     * **Action:** Create cache invalidation strategies for real-time data updates
     * **Success Criteria:** Improved performance through efficient caching, minimal resource consumption
+    * **Note:** This feature is deferred to phase 20+ as performance optimization should occur after functionality is proven effective
 
-* **18.2: Rendering Optimization:**
+* **18.2: Rendering Optimization (Deferred):**
     * **Action:** Implement WebAssembly integration for performance-critical calculations in `ui/src/utils/wasm.js`
     * **Action:** Create offscreen rendering for complex visualizations
     * **Action:** Add GPU acceleration for data visualization where available
     * **Success Criteria:** Efficient rendering of complex visualizations, reduced main thread load
+    * **Note:** This feature is deferred to phase 20+ following "premature optimization" principle
 
-* **18.3: Resource Management:**
+* **18.3: Resource Management (Deferred):**
     * **Action:** Implement browser resource monitoring in `ui/src/utils/resourceMonitor.js`
     * **Action:** Add intelligent memory management for large datasets
     * **Action:** Create adaptive quality scaling based on device capabilities
     * **Success Criteria:** Stable performance under varying load conditions, automatic adaptation to device capabilities
+    * **Note:** This feature is deferred to phase 20+ as optimization should follow functionality validation
 
-### Phase 19: Advanced Integration & Intelligence (Optional)
+### Phase 19: Advanced Reasoning & LM Integration (Optional)
 
-*Goal: Extend UI to support sophisticated agent capabilities and reasoning patterns through configurable integration.*
+*Goal: Extend UI to support sophisticated reasoning capabilities and advanced Language Model integration through configurable hybrid systems.*
 
-**Agile Focus:** Enable sophisticated agent interactions through intelligent, configurable visualization and analysis systems.
+**Agile Focus:** Enable sophisticated reasoning exploration through intelligent, configurable visualization and analysis systems with focus on LM-NARS hybrid reasoning.
 
 **Actionable Implementation Steps:**
 
-* **19.1: Multi-Agent Support:**
+* **19.1: Multi-Agent Reasoning Support:**
     * **Action:** Implement visualization of multiple interacting agents in `ui/src/components/MultiAgentViz.js`
-    * **Action:** Create coordination visualization tools for agent teamwork
+    * **Action:** Create coordination visualization tools for agent teamwork with LM collaboration highlighting
     * **Action:** Add inter-agent communication monitoring in `ui/src/components/AgentCommunication.js`
-    * **Success Criteria:** Understanding of complex multi-agent systems through clear visualizations
+    * **Success Criteria:** Understanding of complex multi-agent systems through clear visualizations, LM influence patterns visible
 
 * **19.2: Advanced Reasoning Analysis:**
-    * **Action:** Build comprehensive reasoning chain debugger in `ui/src/components/ReasoningDebugger.js`
-    * **Action:** Create rule application visualization in `ui/src/components/RuleApplicationViz.js`
+    * **Action:** Build comprehensive reasoning debugger in `ui/src/components/ReasoningDebugger.js` for hybrid reasoning
+    * **Action:** Create LM-NARS interaction visualization in `ui/src/components/HybridInteractionViz.js`
     * **Action:** Add reasoning performance analysis tools in `ui/src/components/ReasoningAnalyzer.js`
-    * **Success Criteria:** Enhanced understanding and debugging of complex reasoning operations
+    * **Success Criteria:** Enhanced understanding and debugging of complex reasoning operations, reasoning patterns clearly visible
 
-* **19.3: Predictive Intelligence:**
-    * **Action:** Implement user behavior prediction for interface adaptation in `ui/src/utils/predictiveUI.js`
-    * **Action:** Add intelligent task suggestion system based on user patterns
-    * **Action:** Create predictive resource allocation based on usage patterns
-    * **Success Criteria:** Proactive and intelligent user interface adapting to user needs
+* **19.3: Advanced LM-NARS Integration:**
+    * **Action:** Implement advanced LM provider management with custom configuration capabilities in `ui/src/components/LMProviderManager.js`
+    * **Action:** Add intelligent LM selection system using reasoning pattern recognition in `ui/src/utils/lmIntelligence.js`
+    * **Action:** Create reasoning-based interface adaptation leveraging hybrid LM-NARS intelligence
+    * **Success Criteria:** Proactive and intelligent LM-NARS interface using hybrid reasoning, enhanced user experience through AI-driven adjustments
+
+### Phase 20: Internationalization, Theming & Collaboration (Deferred)
+
+*Goal: Support global usage, user preference customization, and collaborative reasoning exploration.*
+
+**Agile Focus:** Provide internationalization, theming, and collaborative capabilities after core reasoning functionality is established.
+
+**Actionable Implementation Steps:**
+
+* **20.1: Internationalization (i18n):**
+    * **Action:** Create localization system in `ui/src/utils/i18n.js` with configurable language support
+    * **Action:** Implement text translation utilities for UI components
+    * **Action:** Add RTL (right-to-left) layout support where needed
+    * **Action:** Localize date, time, and number formats based on user locale
+    * **Success Criteria:** UI supports multiple languages, text displays properly in different locales, RTL layouts work correctly
+    * **Note:** This feature is deferred as core reasoning functionality is the priority
+
+* **20.2: Advanced Theming:**
+    * **Action:** Implement comprehensive theme system in `ui/src/utils/themeUtils.js` with multiple theme options
+    * **Action:** Create theme persistence system in `ui/src/stores/uiStore.js`
+    * **Action:** Add user interface for theme customization
+    * **Success Criteria:** Users can customize UI appearance to their preferences while maintaining accessibility
+    * **Note:** This feature is deferred as core reasoning visualization is the priority
+
+* **20.3: Collaborative Features:**
+    * **Action:** Implement real-time collaborative editing with operational transformation in `ui/src/utils/collaboration.js`
+    * **Action:** Add role-based access controls for multi-user environments
+    * **Action:** Create shared workspace management in `ui/src/stores/collaborationStore.js`
+    * **Action:** Add collaborative annotation and discussion tools for reasoning analysis
+    * **Success Criteria:** Multiple users can work together in real-time studying reasoning, appropriate security and access controls in place, collaborative analysis supported
+    * **Note:** This feature is deferred as individual user reasoning exploration is the priority
 
 **Reference Implementation Files:**
 - **Core Integration**: `/home/me/senars10/src/nar/NAR.js` - Main NAR reasoning engine
@@ -484,16 +536,16 @@ npm run test:property
 ### Phase Dependency Map & Critical Path
 
 **Critical Path (Minimum Viable Implementation):**
-- Phase 12 (Foundation Enhancement) → Phase 15 (Accessibility & Innovation) → Phase 16 (Autonomy Visualization)
-- This sequence delivers a functional, accessible UI with core visualization capabilities
+- Phase 12 (Foundation Enhancement) → Phase 15 (Accessibility & UI Intelligence) → Phase 16 (Autonomy Visualization)
+- This sequence delivers a functional, accessible UI with core reasoning visualization capabilities
 
 **Parallelizable Work Streams:**
-- Phase 13 (Performance & Extensibility) can proceed in parallel with Phase 12 after core integration is complete
-- Phase 14 (Quality & Developer Experience) can run continuously alongside other phases
+- Phase 13 (Hybrid Reasoning & Language Model Enhancement) can proceed in parallel with Phase 12 after core integration is complete
+- Phase 14 (Quality Assurance & Developer Experience) can run continuously alongside other phases
 
 **Dependencies:**
-- Phase 12.1 Core Integration must be functionally complete before starting Phase 13.2 Extensible Architecture
-- Phase 12.3 Integration & Data Flow must be stable before starting Phase 16.1 Autonomy Visualization
+- Phase 12.1 Core Integration must be functionally complete before starting Phase 13.2 Hybrid Reasoning Patterns
+- Phase 12.3 Reasoning Visualization must be stable before starting Phase 16.1 Autonomy Visualization
 - Phase 15.1 Accessibility Compliance should run concurrently with all UI component development
 
 ### Risk Assessment & Mitigation Strategies
@@ -501,18 +553,18 @@ npm run test:property
 **High-Risk Areas:**
 - **WebSocket Integration Complexity**: Risk of communication failures between UI and core
   - *Mitigation*: Implement comprehensive fallback and error recovery systems early, use connection health checks
-- **Performance Bottlenecks**: Risk of UI degradation with large datasets
-  - *Mitigation*: Implement virtualization and performance monitoring from the start, set performance budgets
+- **Reasoning Visualization Accuracy**: Risk of misrepresentation of NAR reasoning processes
+  - *Mitigation*: Implement thorough validation of visualization data against actual reasoning output
 - **Accessibility Compliance**: Risk of incomplete WCAG compliance
   - *Mitigation*: Implement accessibility checks in CI pipeline, use automated accessibility testing tools
 - **Schema Validation Mismatches**: Risk of data format incompatibilities between core and UI
   - *Mitigation*: Implement comprehensive schema validation and backward compatibility checks early
 
 **Medium-Risk Areas:**
-- **Extensibility Architecture**: Risk of overly complex plugin system
-  - *Mitigation*: Start with simple plugin interface, validate with actual use cases before expanding
-- **Internationalization**: Risk of complex text handling issues
-  - *Mitigation*: Start with simple language switching, test with actual translation files early
+- **Hybrid Reasoning Architecture**: Risk of overly complex LM-NARS interaction system
+  - *Mitigation*: Start with simple interaction patterns, validate with actual use cases before expanding
+- **LM Integration Complexity**: Risk of complex integration between different Language Model providers
+  - *Mitigation*: Begin with core LM providers, validate data flow between models early
 - **Multi-Agent Visualization**: Risk of complex visualization performance issues
   - *Mitigation*: Implement scalable visualization components with progressive loading strategies
 
@@ -521,23 +573,25 @@ npm run test:property
   - *Mitigation*: Use simple boolean flags initially, expand to sophisticated systems as needed
 - **Analytics Tracking**: Risk of privacy/compliance issues
   - *Mitigation*: Implement opt-in tracking with clear privacy controls and transparency
+- **Performance Optimization**: Risk of optimization complexity causing regressions
+  - *Mitigation*: Defer optimization to later phases following "premature optimization" principle
 
 ### Resource Recommendations
 
 **Single Developer Approach:**
 - Focus on critical path (Phase 12 → 15 → 16) first
-- Implement basic version of Phase 13 features as needed for stability
-- Defer complex extensibility until core functionality is stable
+- Implement basic version of Phase 13 features (hybrid reasoning) as needed for enhanced reasoning
+- Defer complex performance optimization and internationalization until core functionality is proven valuable
 
 **Team Approach (2+ Developers):**
-- **Developer 1**: Phase 12 & 15 (Core integration & accessibility)
-- **Developer 2**: Phase 13 & 14 (Performance & quality assurance) 
-- **Collaborative**: Phase 16 (Autonomy visualization) after Phase 12 completion
+- **Developer 1**: Phase 12 & 16 (Core integration & reasoning visualization)
+- **Developer 2**: Phase 13 & 14 (Hybrid reasoning & quality assurance)
+- **Developer 3**: Phase 15 & UI intelligence features (Accessibility & UI intelligence)
 
 **Resource Prioritization:**
-- **High Priority**: Core integration, error handling, accessibility compliance
-- **Medium Priority**: Performance optimization, quality assurance systems
-- **Lower Priority**: Advanced extensibility, internationalization, adaptive features
+- **High Priority**: Core integration, reasoning visualization, accessibility compliance, hybrid reasoning
+- **Medium Priority**: Quality assurance systems, UI intelligence, extensibility
+- **Lower Priority**: Performance optimization, internationalization, theming, collaboration features
 
 ### Testing Strategy Enhancement
 
