@@ -138,32 +138,43 @@ function startViteDevServer(config = DEFAULT_CONFIG) {
 }
 
 /**
+ * Save the NAR state to file
+ */
+async function saveNarState(nar) {
+    const fs = await import('fs');
+    const state = nar.serialize();
+    await fs.promises.writeFile(DEFAULT_CONFIG.persistence.defaultPath, JSON.stringify(state, null, 2));
+    console.log('Current state saved to agent.json');
+}
+
+/**
+ * Shutdown sequence for all services
+ */
+async function shutdownServices(webSocketServer) {
+    // Save NAR state
+    try {
+        await saveNarState(webSocketServer.nar);
+    } catch (saveError) {
+        console.error('Error saving state on shutdown:', saveError.message);
+    }
+
+    // Stop WebSocket server
+    if (webSocketServer.monitor) {
+        await webSocketServer.monitor.stop();
+    }
+
+    if (webSocketServer.nar) {
+        webSocketServer.nar.stop();
+    }
+}
+
+/**
  * Setup graceful shutdown handlers
  */
 async function setupGracefulShutdown(webSocketServer) {
     const shutdown = async () => {
         console.log('\nShutting down gracefully...');
-
-        // Save NAR state
-        try {
-            const state = webSocketServer.nar.serialize();
-            // Save to default path
-            const fs = await import('fs');
-            await fs.promises.writeFile(DEFAULT_CONFIG.persistence.defaultPath, JSON.stringify(state, null, 2));
-            console.log('Current state saved to agent.json');
-        } catch (saveError) {
-            console.error('Error saving state on shutdown:', saveError.message);
-        }
-
-        // Stop WebSocket server
-        if (webSocketServer.monitor) {
-            await webSocketServer.monitor.stop();
-        }
-
-        if (webSocketServer.nar) {
-            webSocketServer.nar.stop();
-        }
-
+        await shutdownServices(webSocketServer);
         console.log('Servers stopped successfully');
         process.exit(0);
     };

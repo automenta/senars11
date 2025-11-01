@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { ScriptUtils } from '../utils/script-utils.js';
+import { ScriptUtils, BASE_DIR } from '../utils/script-utils.js';
 
 // CLI runner that can handle different CLI operations
 const { args, helpRequested } = ScriptUtils.parseArgs(process.argv.slice(2));
@@ -25,7 +25,7 @@ Examples:
 `;
 
 const CLI_CONFIG = Object.freeze({
-    module: 'src/index.js'
+    module: BASE_DIR + '/src/index.js'
 });
 
 const processArgs = args => {

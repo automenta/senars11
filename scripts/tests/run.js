@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { ScriptUtils } from '../utils/script-utils.js';
+import { ScriptUtils, BASE_DIR } from '../utils/script-utils.js';
 
 const { args, helpRequested } = ScriptUtils.parseArgs(process.argv.slice(2));
 

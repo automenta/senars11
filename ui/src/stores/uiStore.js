@@ -107,14 +107,7 @@ const useUiStore = create((set, get) => ({
   // Reasoning engine state
   reasoningSteps: [],
   addReasoningStep: (step) => set(createListSetter('reasoningSteps')(step)),
-  updateReasoningStep: (id, updates) => set(state => {
-    const index = state.reasoningSteps.findIndex(step => step.id === id);
-    if (index === -1) return { reasoningSteps: state.reasoningSteps }; // Not found, return unchanged
-    
-    const newList = [...state.reasoningSteps];
-    newList[index] = { ...newList[index], ...updates };
-    return { reasoningSteps: newList };
-  }),
+  updateReasoningStep: (id, updates) => set(createItemUpdater('reasoningSteps', 'id')(id, updates)),
   clearReasoningSteps: () => set({reasoningSteps: []}),
 
   // Task state

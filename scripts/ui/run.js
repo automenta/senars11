@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { ScriptUtils } from '../utils/script-utils.js';
+import { ScriptUtils, BASE_DIR } from '../utils/script-utils.js';
 
 const { args, helpRequested } = ScriptUtils.parseArgs(process.argv.slice(2));
 
@@ -75,7 +75,7 @@ console.log(`UI Port: ${port}, WebSocket Port: ${wsPort}, Host: ${host}`);
 
 const spawnArgs = ['--port', port.toString(), '--ws-port', wsPort.toString(), '--host', host];
 
-ScriptUtils.spawnProcess('node', ['webui.js', ...spawnArgs], {
+ScriptUtils.spawnProcess('node', [BASE_DIR + '/webui.js', ...spawnArgs], {
     env: {
         ...process.env,
         WS_PORT: wsPort.toString(),

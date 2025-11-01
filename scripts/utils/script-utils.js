@@ -14,6 +14,7 @@ const BASE_DIR = join(__dirname, '../..');
  * Common utilities for script execution
  */
 export { 
+    BASE_DIR,
     getBaseDir,
     getScriptDir,
     parseArgs,

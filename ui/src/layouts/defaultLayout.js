@@ -80,40 +80,29 @@ const GLOBAL_CONFIG = {
 };
 
 // Modular layout section builder functions
-const buildNavigationSection = () => 
-  createBorder('left', 250, 
-    PANELS.NAVIGATION.map(panel => createTab(panel.name, panel.component))
+const buildSection = (location, size, panelGroup) => 
+  createBorder(location, size, 
+    PANELS[panelGroup].map(panel => createTab(panel.name, panel.component))
   );
 
-const buildMonitoringSection = () => 
-  createBorder('bottom', 250, 
-    PANELS.MONITORING.map(panel => createTab(panel.name, panel.component))
-  );
-
-const buildDashboardArea = () => 
+// Modular layout area builder functions
+const buildArea = (panelGroup, weight, id) => 
   createTabSet(
-    PANELS.DASHBOARD.map(panel => createTab(panel.name, panel.component)),
-    60,
-    'dashboard-area'
-  );
-
-const buildExecutionArea = () => 
-  createTabSet(
-    PANELS.EXECUTION.map(panel => createTab(panel.name, panel.component)),
-    40,
-    'execution-area'
+    PANELS[panelGroup].map(panel => createTab(panel.name, panel.component)),
+    weight,
+    id
   );
 
 // Main layout definition
 const defaultLayout = {
   global: GLOBAL_CONFIG,
   borders: [
-    buildNavigationSection(),
-    buildMonitoringSection()
+    buildSection('left', 250, 'NAVIGATION'),
+    buildSection('bottom', 250, 'MONITORING')
   ],
   layout: createRow([
-    buildDashboardArea(),
-    buildExecutionArea()
+    buildArea('DASHBOARD', 60, 'dashboard-area'),
+    buildArea('EXECUTION', 40, 'execution-area')
   ])
 };
 

@@ -10,6 +10,11 @@
 const randomInRange = (min, max) => Math.random() * (max - min) + min;
 
 /**
+ * Generate a unique ID using timestamp and random components
+ */
+const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+/**
  * Parse string from value
  */
 const parseString = (value) => String(value);
@@ -78,6 +83,7 @@ export const ConfigUtils = {
         return result;
     },
 
+    generateId,
     randomInRange,
     parseString,
     parseInt,
