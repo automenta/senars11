@@ -127,9 +127,5 @@ export {
   createColumn,
   createBorder,
   PANELS,
-  GLOBAL_CONFIG,
-  createNavigationBorder,
-  createMonitoringBorder,
-  createDashboardArea,
-  createExecutionArea
+  GLOBAL_CONFIG
 };

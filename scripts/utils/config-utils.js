@@ -4,6 +4,35 @@
  * Configuration utilities for autonomous development and other parameterized processes
  */
 
+/**
+ * Generate random value within a range
+ */
+const randomInRange = (min, max) => Math.random() * (max - min) + min;
+
+/**
+ * Parse string from value
+ */
+const parseString = (value) => String(value);
+
+/**
+ * Parse integer from value
+ */
+const parseInt = (value) => parseInt(value, 10);
+
+/**
+ * Parse float from value
+ */
+const parseFloat = (value) => parseFloat(value);
+
+/**
+ * Parse boolean from value
+ */
+const parseBoolean = (value) => {
+    if (typeof value === 'boolean') return value;
+    const str = String(value).toLowerCase();
+    return str === 'true' || str === '1' || str === 'yes';
+};
+
 export const ConfigUtils = {
     /**
      * Create a configuration by combining defaults with custom values
@@ -49,34 +78,11 @@ export const ConfigUtils = {
         return result;
     },
 
-    /**
-     * Generate random value within a range
-     */
-    randomInRange: (min, max) => Math.random() * (max - min) + min,
-
-    /**
-     * Parse string from value
-     */
-    parseString: (value) => String(value),
-
-    /**
-     * Parse integer from value
-     */
-    parseInt: (value) => parseInt(value, 10),
-
-    /**
-     * Parse float from value
-     */
-    parseFloat: (value) => parseFloat(value),
-
-    /**
-     * Parse boolean from value
-     */
-    parseBoolean: (value) => {
-        if (typeof value === 'boolean') return value;
-        const str = String(value).toLowerCase();
-        return str === 'true' || str === '1' || str === 'yes';
-    }
+    randomInRange,
+    parseString,
+    parseInt,
+    parseFloat,
+    parseBoolean
 };
 
 export default ConfigUtils;

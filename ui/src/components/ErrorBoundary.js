@@ -31,7 +31,8 @@ class ErrorBoundary extends React.Component {
     };
 
     render() {
-        if (this.state.hasError) {
+        const {hasError} = this.state;
+        if (hasError) {
             const {error, errorInfo} = this.state;
             return React.createElement(
                 'div',

@@ -40,9 +40,7 @@ function App() {
 
         return () => {
             // Clean up global reference and store
-            if (window.wsService === wsService.current) {
-                window.wsService = null;
-            }
+            if (window.wsService === wsService.current) window.wsService = null;
             useUiStore.getState().setWsService(null);
             wsService.current?.disconnect();
         };
@@ -56,19 +54,16 @@ function App() {
 
     const componentFactory = (node) => {
         const component = node.getComponent();
-        const ContentComponent = contentMap[component];
+        const ContentComponent = contentMap[component] || (() => `Content for ${component}`);
+        const title = component.replace('Panel', '') || 'Panel';
 
-        return React.createElement(Panel, {
-            title: component.replace('Panel', '') || 'Panel'
-        }, 
-            ContentComponent 
-                ? React.createElement(ContentComponent) 
-                : `Content for ${component}`
+        return React.createElement(Panel, { title }, 
+            React.createElement(ContentComponent)
         );
     };
 
     return React.createElement(ErrorBoundary, null,
-        model
+        model 
             ? React.createElement(Layout, {
                 model,
                 ref: layoutRef,

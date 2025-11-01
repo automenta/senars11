@@ -1,5 +1,5 @@
 import React, { memo, useState, useEffect, useMemo } from 'react';
-import {format} from 'date-fns';
+import { TimeDisplay } from './GenericComponents.js';
 
 /**
  * Generic panel component for displaying lists of items
@@ -78,7 +78,7 @@ const GenericPanel = memo(({
       marginTop: '0.25rem',
       paddingRight: '0.5rem'
     }
-  }, format(new Date(), 'HH:mm:ss')) : null;
+  }, React.createElement(TimeDisplay, { timestamp: Date.now(), formatType: 'time' })) : null;
 
   return React.createElement('div', { className: 'genericPanel' },
     titleElement,

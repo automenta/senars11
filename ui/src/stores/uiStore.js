@@ -190,10 +190,9 @@ const useUiStore = create((set, get) => ({
 
   // Notification state
   notifications: [],
-  addNotification: (notification) => set(state => {
-    const newNotification = { ...notification, id: Date.now() };
-    return { notifications: [...state.notifications, newNotification] };
-  }),
+  addNotification: (notification) => set(state => ({
+    notifications: [...state.notifications, { ...notification, id: Date.now() }]
+  })),
   updateNotification: (id, updates) => set(createItemUpdater('notifications', 'id')(id, updates)),
   removeNotification: (id) => set(createItemRemover('notifications', 'id')(id)),
   clearNotifications: () => set({notifications: []}),

@@ -1,7 +1,83 @@
+#!/usr/bin/env node
+
 /**
- * Extended utility functions for common operations in the application
- * Note: Some utilities are available in ../utils/common.js - import from there if needed
+ * Unified utilities for both UI and script operations
  */
+
+/**
+ * Generate a unique ID using timestamp and random components
+ * @returns {string} A unique identifier
+ */
+export const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+/**
+ * Debounce function to limit how often a function is called
+ * @param {Function} func - Function to debounce
+ * @param {number} wait - Wait time in milliseconds
+ * @returns {Function} Debounced function
+ */
+export const debounce = (func, wait) => {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+};
+
+/**
+ * Throttle function to limit frequency of function calls
+ * @param {Function} func - Function to throttle
+ * @param {number} limit - Throttle limit in milliseconds
+ * @returns {Function} Throttled function
+ */
+export const throttle = (func, limit) => {
+    let inThrottle;
+    return function (...args) {
+        if (!inThrottle) {
+            func.apply(this, args);
+            inThrottle = true;
+            setTimeout(() => inThrottle = false, limit);
+        }
+    };
+};
+
+/**
+ * Deep clone an object using structured cloning algorithm
+ * @param {any} obj - Object to clone
+ * @returns {any} Deep cloned object
+ */
+export const deepClone = (obj) => {
+    if (obj === null || typeof obj !== "object") return obj;
+    
+    // Handle Date
+    if (obj instanceof Date) {
+        const copy = new Date();
+        copy.setTime(obj.getTime());
+        return copy;
+    }
+    
+    // Handle Array
+    if (Array.isArray(obj)) {
+        return obj.map(item => deepClone(item));
+    }
+    
+    // Handle Object
+    if (typeof obj === "object") {
+        const copy = {};
+        for (const key in obj) {
+            if (obj.hasOwnProperty(key)) {
+                copy[key] = deepClone(obj[key]);
+            }
+        }
+        return copy;
+    }
+    
+    return obj;
+};
 
 /**
  * Check if a value is empty
@@ -108,4 +184,42 @@ export const memoize = (fn) => {
         cache.set(key, result);
         return result;
     };
+};
+
+/**
+ * Format timestamp to a readable time string
+ * @param {number} timestamp - Unix timestamp
+ * @returns {string} Formatted time string
+ */
+export const formatTimestamp = (timestamp) =>
+    new Date(timestamp).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', second: '2-digit'});
+
+/**
+ * Format timestamp to a readable date and time string
+ * @param {number} timestamp - Unix timestamp
+ * @returns {string} Formatted date and time string
+ */
+export const formatDateTime = (timestamp) =>
+    new Date(timestamp).toLocaleString([], { 
+        month: '2-digit', 
+        day: '2-digit', 
+        year: 'numeric',
+        hour: '2-digit', 
+        minute: '2-digit' 
+    });
+
+// Export all utilities
+export default {
+    generateId,
+    debounce,
+    throttle,
+    deepClone,
+    isEmpty,
+    deepEqual,
+    delay,
+    getNestedProperty,
+    setNestedProperty,
+    memoize,
+    formatTimestamp,
+    formatDateTime
 };
