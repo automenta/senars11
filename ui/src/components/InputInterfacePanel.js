@@ -6,9 +6,10 @@ const InputInterfacePanel = () => {
   const [inputText, setInputText] = useState('');
   const [history, setHistory] = useState([]);
   const wsService = useUiStore(state => state.wsService);
+  const wsConnected = useUiStore(state => state.wsConnected);
     
   const sendInput = useCallback(() => {
-    if (!inputText.trim() || !wsService) return;
+    if (!inputText.trim() || !wsService || !wsConnected) return;
         
     const narseseInput = {
       type: 'narseseInput',
@@ -44,7 +45,7 @@ const InputInterfacePanel = () => {
             
       setHistory(prev => [errorEntry, ...prev].slice(0, 20));
     }
-  }, [inputText, wsService]);
+  }, [inputText, wsService, wsConnected]);
     
   const handleKeyPress = useCallback((e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -101,16 +102,16 @@ const InputInterfacePanel = () => {
     React.createElement('div', {style: {display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem'}},
       React.createElement('button', {
         onClick: sendInput,
-        disabled: !inputText.trim() || !wsService,
+        disabled: !inputText.trim() || !wsService || !wsConnected,
         style: {
           padding: '0.5rem 1rem',
-          backgroundColor: wsService ? '#007bff' : '#6c757d',
+          backgroundColor: (wsService && wsConnected) ? '#007bff' : '#6c757d',
           color: 'white',
           border: 'none',
           borderRadius: '4px',
-          cursor: inputText.trim() && wsService ? 'pointer' : 'not-allowed'
+          cursor: (inputText.trim() && wsService && wsConnected) ? 'pointer' : 'not-allowed'
         }
-      }, 'Submit Input')
+      }, wsConnected ? 'Submit Input' : 'Disconnected')
     )
   );
 

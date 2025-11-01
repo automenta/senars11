@@ -1,10 +1,13 @@
 import {create} from 'zustand';
 
 // Helper functions to reduce duplication
-const findItemIndex = (list, item) => list.findIndex(i => i.id === item.id || i.term === item.term);
+const findItemIndex = (list, item) => {
+  if (!list || !item) return -1;
+  return list.findIndex(i => i?.id === item?.id || i?.term === item?.term);
+};
 
 const createListSetter = (listName) => (item) => (state) => {
-  const currentList = state[listName];
+  const currentList = state[listName] || [];
   const existingIndex = findItemIndex(currentList, item);
   
   if (existingIndex !== -1) {
@@ -17,12 +20,12 @@ const createListSetter = (listName) => (item) => (state) => {
 };
 
 const createLimitedListSetter = (listName, limit) => (item) => (state) => ({
-  [listName]: [...state[listName], item].slice(-limit)
+  [listName]: [...(state[listName] || []), item].slice(-limit)
 });
 
 const createItemUpdater = (listName, key) => (keyValue, updates) => (state) => {
   const currentList = state[listName];
-  const index = currentList.findIndex(item => item[key] === keyValue);
+  const index = currentList?.findIndex?.(item => item?.[key] === keyValue);
   
   if (index === -1) return {[listName]: currentList}; // Item not found, return unchanged
   
@@ -33,21 +36,23 @@ const createItemUpdater = (listName, key) => (keyValue, updates) => (state) => {
 
 const createItemRemover = (listName, key) => (keyValue) => (state) => {
   const currentList = state[listName];
-  const indexToRemove = currentList.findIndex(item => item[key] === keyValue);
+  const indexToRemove = currentList?.findIndex?.(item => item?.[key] === keyValue);
   
   if (indexToRemove === -1) return {[listName]: currentList}; // Item not found, return unchanged
   
   const newList = [...currentList];
-  newList.splice(indexToRemove, 1);
+  if (indexToRemove !== -1) newList.splice(indexToRemove, 1);
   return {[listName]: newList};
 };
 
 const createObjectSetter = (objName) => (key, value) => (prev) => ({
-  [objName]: {...prev[objName], [key]: value}
+  [objName]: {...(prev[objName] || {}), [key]: value}
 });
 
 // Batch update function to update multiple related properties at once
 const batchUpdate = (set, updates) => {
+  if (!updates || typeof updates !== 'object') return;
+  
   set(prevState => {
     const newState = {...prevState};
     for (const [key, value] of Object.entries(updates)) {

@@ -1,15 +1,9 @@
-/**
- * Layout configuration following PLAN.ui.md architecture
- */
-
-// Base layout building blocks - simple and extensible
 const createTab = (name, component) => ({ type: 'tab', name, component });
 const createTabSet = (children, weight = 50, id = null) => ({ type: 'tabset', weight, children, ...(id && { id }) });
 const createRow = (children, weight = 100) => ({ type: 'row', weight, children });
 const createColumn = (children, weight = 100) => ({ type: 'column', weight, children });
 const createBorder = (location, size, children) => ({ type: 'border', location, size, children });
 
-// Panel definitions - organized by purpose
 const PANELS = {
   NAVIGATION: [
     { name: 'Tasks', component: 'TaskPanel' },
@@ -40,7 +34,6 @@ const PANELS = {
   ]
 };
 
-// Global layout configuration
 const GLOBAL_CONFIG = {
   tabEnableClose: true,
   tabEnableFloat: true,
@@ -49,20 +42,18 @@ const GLOBAL_CONFIG = {
   tabSetEnableDrop: true
 };
 
-// Builder functions for creating flexible layouts
 const buildBorderArea = (location, size, panelGroup) => 
   createBorder(location, size, 
-    PANELS[panelGroup].map(panel => createTab(panel.name, panel.component))
+    PANELS[panelGroup]?.map(panel => createTab(panel.name, panel.component)) || []
   );
 
 const buildMainArea = (panelGroup, weight, id) => 
   createTabSet(
-    PANELS[panelGroup].map(panel => createTab(panel.name, panel.component)),
+    PANELS[panelGroup]?.map(panel => createTab(panel.name, panel.component)) || [],
     weight,
     id
   );
 
-// Default IDE-like layout following PLAN.ui.md
 const defaultLayout = {
   global: GLOBAL_CONFIG,
   borders: [
@@ -77,7 +68,6 @@ const defaultLayout = {
 
 export default defaultLayout;
 
-// Export helpers for dynamic layout creation
 export {
   createTab,
   createTabSet,

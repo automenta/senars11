@@ -12,15 +12,13 @@ import {
   getStore
 } from './messageHandlers';
 
-// Connection state management
-const ConnectionState = {
+const ConnectionState = Object.freeze({
   DISCONNECTED: 0,
   CONNECTING: 1,
   CONNECTED: 2,
   RECONNECTING: 3,
-};
+});
 
-// Message handlers map for cleaner code
 const messageHandlers = {
   layoutUpdate: createMessageHandler('setLayout'),
   panelUpdate: createMessageHandlerWithParams('addPanel'),
@@ -44,9 +42,6 @@ const messageHandlers = {
   narseseInput: createNarseseInputHandler,
 };
 
-/**
- * WebSocket service class that manages the connection and message handling
- */
 class WebSocketService {
   constructor(url, options = {}) {
     this.url = url;
@@ -340,24 +335,23 @@ class WebSocketService {
   }
 
   routeMessage(data) {
-    const { type, payload } = data;
+    const { type, payload } = data || {};
     
-    // In test mode, also handle demo control commands
-    if (this.isTestEnvironment && type === 'demoControl') {
-      this.handleDemoControl({ type, payload });
+    if (!type) {
+      console.warn('Received message without type:', data);
       return;
     }
     
-    // Handle system commands
-    if (type === 'systemCommand') {
-      this.handleSystemCommand({ type, payload });
-      return;
-    }
+    // Handle special command types with dedicated handlers
+    const commandHandlers = {
+      demoControl: () => this.isTestEnvironment ? this.handleDemoControl({ type, payload }) : null,
+      systemCommand: () => this.handleSystemCommand({ type, payload }),
+      panelCommand: () => this.handlePanelCommand({ type, payload })
+    };
     
-    // Handle panel commands
-    if (type === 'panelCommand') {
-      this.handlePanelCommand({ type, payload });
-      return;
+    // Check if it's a special command type
+    if (commandHandlers[type]) {
+      return commandHandlers[type]?.();
     }
     
     try {
@@ -367,17 +361,16 @@ class WebSocketService {
       } else {
         // In test mode, we may have additional message types
         if (this.isTestEnvironment && type === 'narseseInput') {
-          this.handleNarseseInput({ type, payload });
-          return;
+          return this.handleNarseseInput({ type, payload });
         }
         console.log('Unknown message type:', type, data);
       }
     } catch (error) {
       console.error('Error in message handler:', error, 'for message:', data);
-      getStore().addNotification({
+      getStore().addNotification?.({
         type: 'error',
         title: 'Message handler error',
-        message: error.message,
+        message: error?.message || 'Unknown error in message handler',
         timestamp: Date.now()
       });
     }

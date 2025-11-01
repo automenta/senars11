@@ -34,9 +34,15 @@ function App() {
         
     wsService.current.connect();
 
-    import('./utils/consoleBridge').then(module => {
-      if (wsService.current?.ws) module.setConsoleBridge(wsService.current.ws);
-    });
+    // Set up console bridge once WebSocket is connected
+    const setupConsoleBridge = () => {
+      import('./utils/consoleBridge').then(module => {
+        if (wsService.current?.ws) module.setConsoleBridge(wsService.current.ws);
+      });
+    };
+
+    // Try to set up console bridge immediately, and again when connection is established
+    setupConsoleBridge();
 
     return () => {
       // Clean up global reference and store

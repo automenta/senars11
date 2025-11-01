@@ -201,9 +201,9 @@ export const validateMessage = (data) => {
     // Extract detailed error information
     if (error && typeof error === 'object' && error.issues) {
       const validationErrors = error.issues.map(issue => ({
-        path: issue.path.join('.'),
-        message: issue.message,
-        code: issue.code
+        path: issue.path?.join('.') || 'unknown',
+        message: issue.message || 'Unknown validation error',
+        code: issue.code || 'unknown'
       }));
 
       console.error('Message validation error:', {
@@ -214,7 +214,7 @@ export const validateMessage = (data) => {
     } else {
       console.error('Message validation error:', {
         type: data.type,
-        error: error?.message || error
+        error: error?.message || error || 'Unknown validation error'
       });
     }
 

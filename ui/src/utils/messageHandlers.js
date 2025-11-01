@@ -1,15 +1,10 @@
-/**
- * Message handler utilities for WebSocket communication
- */
 import useUiStore from '../stores/uiStore';
 
-// Utility function to get store methods
 const getStore = () => useUiStore.getState();
 
-// Message handler factory functions
 const createMessageHandler = (action) => (data) => {
   try {
-    return getStore()[action](data.payload);
+    return getStore()[action]?.(data.payload);
   } catch (error) {
     handleHandlerError(action, error);
   }
@@ -18,7 +13,7 @@ const createMessageHandler = (action) => (data) => {
 const createMessageHandlerWithParams = (action) => (data) => {
   try {
     const {id, config} = data.payload;
-    return getStore()[action](id, config);
+    return getStore()[action]?.(id, config);
   } catch (error) {
     handleHandlerError(action, error);
   }
@@ -27,7 +22,7 @@ const createMessageHandlerWithParams = (action) => (data) => {
 const createDemoStateHandler = (data) => {
   try {
     const {demoId, ...payload} = data.payload;
-    return getStore().setDemoState(demoId, payload);
+    return getStore().setDemoState?.(demoId, payload);
   } catch (error) {
     handleHandlerError('demoState', error);
   }
@@ -36,7 +31,7 @@ const createDemoStateHandler = (data) => {
 const createDemoMetricsHandler = (data) => {
   try {
     const {demoId, ...payload} = data.payload;
-    return getStore().setDemoMetrics(demoId, payload);
+    return getStore().setDemoMetrics?.(demoId, payload);
   } catch (error) {
     handleHandlerError('demoMetrics', error);
   }
@@ -51,7 +46,7 @@ const createNarseseInputHandler = (data) => {
       message: success ? `Processed: ${input}` : (msg || 'Failed to process input'),
       timestamp: Date.now()
     };
-    return getStore().addNotification(notification);
+    return getStore().addNotification?.(notification);
   } catch (error) {
     handleHandlerError('narseseInput', error);
   }
@@ -61,8 +56,8 @@ const createSessionUpdateHandler = (data) => {
   try {
     const {action, session} = data.payload;
     return action === 'start'
-      ? getStore().setActiveSession(session)
-      : getStore().endSession();
+      ? getStore().setActiveSession?.(session)
+      : getStore().endSession?.();
   } catch (error) {
     handleHandlerError('sessionUpdate', error);
   }
@@ -72,8 +67,8 @@ const createConceptUpdateHandler = (data) => {
   try {
     const {concept, changeType} = data.payload;
     return changeType === 'removed'
-      ? getStore().removeConcept(concept.term)
-      : getStore().addConcept(concept);
+      ? getStore().removeConcept?.(concept.term)
+      : getStore().addConcept?.(concept);
   } catch (error) {
     handleHandlerError('conceptUpdate', error);
   }
@@ -81,19 +76,18 @@ const createConceptUpdateHandler = (data) => {
 
 const createLogHandler = ({level = 'log', data: logData}) => {
   try {
-    console[level](...(logData || []));
+    console[level]?.(...(logData || []));
   } catch (error) {
     console.error('Error handling log:', error);
   }
 };
 
-// Generic error handler with consistent notification
 const handleHandlerError = (action, error) => {
   console.error(`Error handling ${action}:`, error);
-  getStore().addNotification({
+  getStore().addNotification?.({
     type: 'error',
     title: `Error handling ${action}`,
-    message: error.message,
+    message: error?.message || 'Unknown error occurred',
     timestamp: Date.now()
   });
 };
