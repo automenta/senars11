@@ -1,14 +1,14 @@
-# SeNARS Development Plan (Functional Prototype Focus)
+# SeNARS Development Plan (Vision-Aligned Prototype Focus)
 
 ## Executive Summary
 
-This document provides a complete, self-contained, and actionable implementation plan for SeNARS that focuses on delivering a functional prototype with essential features. The approach emphasizes rapid development, working functionality, and practical implementation over perfection.
+This document provides a complete, self-contained, and actionable implementation plan for SeNARS that focuses on delivering a **living demonstration of hybrid NARS-Language Model reasoning**. The approach emphasizes rapid development of working functionality that makes abstract intelligence concepts tangible and understandable.
 
 **Key Principles:**
-- **Essentialism**: Focus on core features that deliver maximum user value
-- **Simplicity**: Eliminate complexity that doesn't add proportional value
-- **Integration**: Leverage existing systems rather than rebuilding
-- **Pragmatism**: Prioritize working functionality over theoretical perfection
+- **Vision-Alignment**: Every feature directly supports the core vision of observable hybrid intelligence
+- **Essentialism**: Focus on core features that deliver maximum user value and understanding
+- **Transparency**: Make the reasoning process visible, explorable, and understandable
+- **Demonstrability**: Enable compelling educational demonstrations and real-world showcases
 - **Rapid Prototyping**: Deliver working features quickly for feedback and iteration
 
 ---
@@ -58,11 +58,11 @@ This document provides a complete, self-contained, and actionable implementation
 
 ---
 
-## Implementation Roadmap (Prototype Focus)
+## Implementation Roadmap (Vision-Aligned)
 
-### Phase 1: Essential Core Functionality
+### Phase 1: Foundation for Observable Hybrid Intelligence
 
-**Agile Focus**: Establish working communication between UI and core systems with basic error handling.
+**Vision Focus**: Establish the basic infrastructure that enables users to observe and understand hybrid NARS-LM reasoning.
 
 **Project Structure Reference:**
 ```
@@ -84,33 +84,31 @@ This document provides a complete, self-contained, and actionable implementation
 └── README.md                # Setup instructions
 ```
 
-**Implementation Steps (Essential First):**
+**Implementation Steps (Vision-First):**
 
-1. **Basic WebSocket Integration** (`ui/src/utils/websocket.js`)
+1. **Observable WebSocket Bridge** (`ui/src/utils/websocket.js`)
    - Ensure existing WebSocket client can connect to SeNARS core
-   - Implement basic message sending/receiving functionality
-   - Add simple connection status indicator
+   - Implement message logging that shows what's being communicated
+   - Add connection status that helps users understand system health
    - **Dependencies**: Existing WebSocket implementation
-   - **Success Criteria**: UI can connect to core, send/receive basic messages
+   - **Vision Alignment**: Users can see the communication between UI and core, making the system transparent
 
-2. **LM Provider Configuration** (`ui/src/components/LMConfigPanel.js`)
-   - Create basic panel for managing Language Model providers
-   - Implement simple form controls for API keys and model selection
-   - Add basic validation for required fields
-   - **Dependencies**: `ui/src/stores/uiStore.js` for state management
-   - **Success Criteria**: Users can configure and save LM provider settings
+2. **Configurable Intelligence Sources** (`ui/src/components/LMConfigPanel.js`)
+   - Create panel for managing Language Model providers
+   - Implement form controls for API keys and model selection
+   - Add validation and test connection functionality
+   - **Vision Alignment**: Users can configure different AI sources and see which ones are active
 
-3. **Core Data Display** (`ui/src/components/CoreDataPanel.js`)
-   - Create basic panel to display incoming reasoning data
-   - Implement simple list/table view for reasoning events
-   - Add basic filtering capabilities
-   - **Dependencies**: WebSocket message subscription
-   - **Success Criteria**: Reasoning data visible in UI, basic filtering works
+3. **Transparent Reasoning Display** (`ui/src/components/ReasoningTracePanel.js`)
+   - Create panel to display incoming reasoning data in a human-readable way
+   - Implement chronological view of reasoning steps
+   - Add basic filtering to focus on specific types of reasoning
+   - **Vision Alignment**: Users can observe the actual reasoning process step-by-step
 
-4. **Error Handling Basics** (`ui/src/components/ErrorBoundary.js`)
-   - Create simple error boundary to prevent complete crashes
-   - Implement basic error display with reload option
-   - **Success Criteria**: UI doesn't crash completely on component errors
+4. **Graceful System Resilience** (`ui/src/components/ErrorBoundary.js`)
+   - Create error boundary to prevent complete crashes
+   - Implement informative error display that helps users understand what went wrong
+   - **Vision Alignment**: Even when errors occur, users understand what happened and the system remains usable
 
 **Integration Points:**
 - **WebUI Bridge**: `/webui.js` - WebSocket connection between NAR and UI
@@ -118,109 +116,113 @@ This document provides a complete, self-contained, and actionable implementation
 - **WebSocket Server**: `/src/server/WebSocketMonitor.js` - Server-side monitoring
 - **Language Models**: `/src/lm/LM.js` - LM integration and configuration
 
-**Acceptance Criteria:**
-- [ ] UI can connect to SeNARS core via WebSocket
-- [ ] Users can configure LM providers and settings
-- [ ] Basic reasoning data is visible in the UI
-- [ ] UI handles basic errors without complete crashes
+**Vision-Aligned Success Criteria:**
+- [ ] Users can observe communication between UI and core systems
+- [ ] Users can configure and monitor different AI sources
+- [ ] Users can see the actual reasoning process unfolding in real-time
+- [ ] Users understand system status and can recover from errors
 
-### Phase 2: Essential Reasoning Visualization
+### Phase 2: Making Intelligence Tangible
 
-**Agile Focus**: Implement core visualization capabilities to observe and understand actual reasoning activity.
+**Vision Focus**: Implement visualization capabilities that make the abstract reasoning process tangible, explorable, and understandable.
 
-**Implementation Steps (Essential First):**
+**Implementation Steps (Insight-First):**
 
-1. **Reasoning Trace Display** (`ui/src/components/ReasoningTracePanel.js`)
-   - Create panel to display basic inference steps and decision-making process
-   - Implement real-time updating as reasoning events arrive via WebSocket
-   - Add simple filtering for different event types (input, deduction, induction, etc.)
+1. **Interactive Reasoning Explorer** (`ui/src/components/ReasoningTracePanel.js`)
+   - Create panel that shows inference steps as an explorable timeline
+   - Implement expandable details for each reasoning step showing inputs, process, and outputs
+   - Add search and filtering to help users find specific types of reasoning
    - **Dependencies**: `ui/src/utils/websocket.js` for event subscription
-   - **Success Criteria**: Users can see reasoning process step-by-step, events displayed in order
+   - **Vision Alignment**: Users can explore the reasoning process like navigating a story, diving deeper into interesting moments
 
-2. **Task Flow Display** (`ui/src/components/TaskPanel.js`)
-   - Create panel to visualize input → processing → output chains
-   - Implement basic task lifecycle tracking (created, processed, completed)
+2. **Task Lifecycle Journey** (`ui/src/components/TaskPanel.js`)
+   - Create visualization showing how individual tasks travel through the system
+   - Implement tracking of task transformations and influences from different reasoning sources
+   - Add ability to follow a specific task from creation to completion
    - **Dependencies**: WebSocket event subscription for task events
-   - **Success Criteria**: Task flow clearly visible, basic lifecycle tracking works
+   - **Vision Alignment**: Users can follow individual reasoning threads and see how they evolve
 
-3. **Concept Display** (`ui/src/components/ConceptPanel.js`)
-   - Create panel to show basic concept information and evolution over time
-   - Implement simple relationship mapping between related concepts
+3. **Concept Evolution Map** (`ui/src/components/ConceptPanel.js`)
+   - Create interactive map showing how concepts connect, influence, and evolve over time
+   - Implement timeline view showing concept development
+   - Add relationship visualization showing how concepts relate to each other
    - **Dependencies**: Concept event subscription
-   - **Success Criteria**: Concept relationships visible, evolution over time trackable
+   - **Vision Alignment**: Users can see how ideas connect and evolve, making abstract concept relationships tangible
 
-4. **Simple Metrics Display** (`ui/src/components/DashboardPanel.js`)
-   - Create basic dashboard with key indicators
-   - Implement simple metrics for reasoning speed, task throughput
+4. **Intelligence Performance Insights** (`ui/src/components/DashboardPanel.js`)
+   - Create dashboard showing how effectively the hybrid system is working
+   - Implement metrics comparing NARS-only vs LM-assisted reasoning
+   - Add visual indicators showing when the hybrid approach adds value
    - **Dependencies**: Metrics event subscription
-   - **Success Criteria**: Key metrics visible in real-time
+   - **Vision Alignment**: Users can see when and how the hybrid approach outperforms individual components
 
-**Acceptance Criteria:**
-- [ ] Basic reasoning process visible step-by-step
-- [ ] Task flow visualization shows lifecycle
-- [ ] Concept relationships and evolution displayed
-- [ ] Key metrics visible in real-time
+**Vision-Aligned Success Criteria:**
+- [ ] Users can explore reasoning like navigating an interactive story
+- [ ] Users can follow individual reasoning threads and see their journey
+- [ ] Users can visualize how concepts connect and evolve over time
+- [ ] Users can see when and how hybrid intelligence adds value
 
-### Phase 3: Essential Educational Tools
+### Phase 3: Enabling Compelling Demonstrations
 
-**Agile Focus**: Create basic tools that enable understanding and demonstration of the system.
+**Vision Focus**: Create tools that enable compelling educational demonstrations and real-world showcases that make hybrid intelligence accessible and understandable.
 
-**Implementation Steps (Essential First):**
+**Implementation Steps (Showcase-First):**
 
-1. **Basic Screenshot Capability** (`ui/src/utils/screenshot.js`)
-   - Implement simple screenshot capture functionality for demonstrations
-   - Add basic export capability for captured images (PNG)
-   - **Dependencies**: Browser canvas APIs
-   - **Success Criteria**: Users can capture and export basic screenshots
+1. **Educational Capture Toolkit** (`ui/src/utils/screenshot.js`, `ui/src/utils/recording.js`)
+   - Implement screenshot capture functionality for creating educational materials
+   - Add recording capability to capture reasoning sequences in action
+   - Create annotation tools for explaining key moments in captures
+   - **Dependencies**: Browser media APIs, canvas utilities
+   - **Vision Alignment**: Users can create compelling educational content that demonstrates hybrid intelligence in action
 
-2. **Simple Demonstration Mode** (`ui/src/components/DemoModePanel.js`)
-   - Create basic demonstration mode showing step-by-step reasoning
-   - Add simple controls for play/pause/step through reasoning
-   - **Dependencies**: Existing reasoning trace display
-   - **Success Criteria**: Basic demonstration mode works with play/pause controls
+2. **Interactive Exploration Mode** (`ui/src/components/ExplorationMode.js`)
+   - Create guided exploration mode that walks users through interesting reasoning examples
+   - Implement interactive storytelling that explains key insights and patterns
+   - Add ability to pause, step, and replay interesting reasoning sequences
+   - **Dependencies**: Existing reasoning visualization components
+   - **Vision Alignment**: Users can explore hybrid intelligence through guided, engaging experiences
 
-3. **Basic Help System** (`ui/src/components/HelpPanel.js`)
-   - Create simple help panel with basic usage instructions
-   - Add links to key documentation
-   - **Dependencies**: Markdown rendering utilities
-   - **Success Criteria**: Users can access basic help information
+3. **Insight Discovery & Sharing** (`ui/src/components/DiscoveryPanel.js`)
+   - Create tools for identifying and documenting interesting reasoning patterns
+   - Implement sharing capabilities to let users share their discoveries
+   - Add annotation tools for explaining why certain patterns are noteworthy
+   - **Dependencies**: Reasoning visualization and capture utilities
+   - **Vision Alignment**: Users can discover, document, and share interesting insights about hybrid intelligence
 
-**Acceptance Criteria:**
-- [ ] Basic screenshots can be captured and exported
-- [ ] Simple demonstration mode works
-- [ ] Basic help system available
+**Vision-Aligned Success Criteria:**
+- [ ] Users can create compelling educational content showcasing hybrid intelligence
+- [ ] Users can explore hybrid intelligence through engaging, guided experiences
+- [ ] Users can discover, document, and share insights about hybrid reasoning
 
-### Phase 4: Basic Quality Assurance (Defer Performance)
+### Phase 4: Ensuring Reliable Demonstration Platform
 
-**Agile Focus**: Establish basic testing and quality assurance systems, deferring performance optimization to later phases.
+**Vision Focus**: Establish quality assurance systems that ensure the prototype reliably demonstrates hybrid intelligence without frustrating users with crashes or instability.
 
-**Implementation Steps (Essential First):**
+**Implementation Steps (Reliability-First):**
 
-1. **Basic Unit Testing** (`ui/src/__tests__/`)
-   - Implement basic unit tests for core UI components and utilities
-   - Create simple tests for critical functions
+1. **Essential Functionality Testing** (`ui/src/__tests__/`)
+   - Implement tests for core UI components that enable the vision
+   - Create tests for critical visualization and communication functions
    - **Dependencies**: Jest testing framework
-   - **Success Criteria**: Core functionality has basic test coverage
+   - **Vision Alignment**: Core demonstration capabilities work reliably
 
-2. **Basic Integration Testing** (`ui/tests/`)
-   - Create basic integration tests for UI ↔ Core communication via WebSocket
-   - Add simple tests for critical workflows
+2. **User Experience Validation** (`ui/tests/`)
+   - Create tests that validate the user can actually observe and understand the reasoning
+   - Add tests for critical demonstration workflows
    - **Dependencies**: Jest testing framework
-   - **Success Criteria**: Basic integration functionality tested
+   - **Vision Alignment**: Users can successfully explore and understand hybrid intelligence
 
-3. **Manual Quality Assurance**
-   - Perform manual testing of core functionality
-   - Create basic test scripts for key user workflows
-   - Document known issues and limitations
-   - **Success Criteria**: Core functionality works as expected, issues documented
+3. **Stability Assurance**
+   - Perform manual testing focused on demonstration scenarios
+   - Create validation scripts for key showcase capabilities
+   - Document limitations that might confuse users
+   - **Vision Alignment**: Prototype reliably demonstrates core value without confusing failures
 
-**Note on Performance**: Performance optimization, accessibility compliance, and advanced testing will be deferred to later phases when the prototype is functioning and feedback has been gathered.
-
-**Acceptance Criteria:**
-- [ ] Core functionality has basic unit test coverage
-- [ ] Critical integration paths tested
-- [ ] Manual testing confirms basic functionality works
-- [ ] Known issues and limitations documented
+**Vision-Aligned Success Criteria:**
+- [ ] Core demonstration capabilities work reliably and predictably
+- [ ] Users can successfully explore and understand hybrid intelligence concepts
+- [ ] Prototype reliably showcases core value without distracting failures
+- [ ] Known limitations are documented so users understand what to expect
 
 ---
 
@@ -367,34 +369,40 @@ Since this is a prototype, extensive risk mitigation is not required. Focus on:
 
 ---
 
-## Development Approach (No Fixed Timeline)
+## Vision-Driven Development Approach
 
-Since this is a prototype focused on essential functionality, rigid timelines are not appropriate. Instead, development will proceed iteratively:
+Development proceeds iteratively, with each phase delivering tangible progress toward the core vision of making hybrid intelligence observable and understandable:
 
-### Iterative Development Approach:
-1. **Implement core functionality first** - Get basic UI ↔ Core communication working
-2. **Add essential visualization** - Display reasoning process in a basic way
-3. **Create simple educational tools** - Enable basic demonstration and explanation
-4. **Ensure basic quality** - Add simple tests and documentation
-5. **Gather feedback and iterate** - Use the working prototype to guide further development
+### Vision-Aligned Iterative Development:
+1. **Foundation for Observation** - Enable users to see communication between UI and core systems
+2. **Making Reasoning Tangible** - Display reasoning processes in ways users can explore and understand
+3. **Enabling Compelling Demonstrations** - Create tools that showcase hybrid intelligence effectively
+4. **Ensuring Reliable Showcase** - Validate that the prototype reliably demonstrates core value
 
-### Prototype Focus:
-- Deliver working features quickly rather than perfect features slowly
-- Keep scope focused on essential functionality
-- Defer performance optimization, extensive testing, and advanced features
-- Use feedback from the working prototype to guide future development
+### Vision-First Development Principles:
+- **Deliver observable value quickly** - Each iteration should make some aspect of hybrid intelligence more visible
+- **Focus on user understanding** - Every feature should help users grasp how hybrid intelligence works
+- **Enable compelling demonstrations** - Prioritize features that make great educational content or showcases
+- **Use feedback to refine the vision** - Let user interactions guide which aspects of hybrid intelligence to illuminate next
+
+### Vision Success Measurement:
+Instead of rigid timelines, success is measured by:
+- **Observability Milestones** - Can users see more aspects of hybrid intelligence working?
+- **Understanding Indicators** - Do users grasp how NARS and LMs collaborate?
+- **Demonstration Quality** - Can users create compelling content showcasing the system?
+- **Engagement Evidence** - Do users spend time exploring and discovering insights?
 
 ---
 
-## Conclusion
+## Conclusion: Building Toward Observable Hybrid Intelligence
 
-This prototype-focused implementation plan provides a clear roadmap for developing the SeNARS system with focus on essential features and rapid delivery. By following this approach:
+This vision-aligned implementation plan provides a clear roadmap for developing the SeNARS system as a **living demonstration of hybrid NARS-Language Model reasoning**. By following this approach:
 
-1. **Essential functionality** is prioritized and delivered first
-2. **Working software** is emphasized over comprehensive documentation
-3. **Simple solutions** are preferred over complex architectures
-4. **Basic quality** ensures the prototype is usable and reliable
-5. **Feedback-driven development** uses the working prototype to guide future improvements
-6. **Scope focus** keeps development concentrated on core value
+1. **Observable functionality** is prioritized - users can see and understand how hybrid intelligence works
+2. **Tangible insights** are emphasized - abstract concepts become explorable and understandable
+3. **Compelling demonstrations** are enabled - users can create educational content showcasing the system
+4. **Reliable exploration** ensures users can discover insights without frustrating failures
+5. **Feedback-driven refinement** uses user interactions to illuminate more aspects of hybrid intelligence
+6. **Vision focus** keeps development concentrated on making intelligence observable and understandable
 
-The approach ensures that the SeNARS system becomes a functional prototype that demonstrates core capabilities while maintaining flexibility for future enhancement. Each phase includes specific implementation steps, file references, and clear acceptance criteria to guide development toward a working prototype that can be used for feedback and further development.
+The approach ensures that the SeNARS system becomes a **compelling prototype that demonstrates the core vision** of observable hybrid intelligence - making abstract AI concepts tangible, enabling educational discovery, and showcasing the unique value of NARS-LM collaboration. Each phase includes specific implementation steps, file references, and clear acceptance criteria designed to move closer to the vision of a **living demonstration of hybrid intelligence that makes complex concepts accessible and understandable**.
