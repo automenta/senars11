@@ -1,8 +1,11 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import useUiStore from '../stores/uiStore.js';
 import GenericPanel from './GenericPanel.js';
+import { getPerformanceMetricColor, formatPercentage } from '../utils/performanceUtils.js';
 
 const DashboardPanel = () => {
+  const [viewMode, setViewMode] = useState('overview'); // 'overview', 'performance'
+  
   const systemMetrics = useUiStore(state => state.systemMetrics);
   const demoMetrics = useUiStore(state => state.demoMetrics);
   const concepts = useUiStore(state => state.concepts);
@@ -14,7 +17,16 @@ const DashboardPanel = () => {
   // Calculate summary metrics
   const metrics = useMemo(() => {
     // System metrics from demo metrics
-    let systemStats = { tasksProcessed: 0, conceptsActive: 0, cyclesCompleted: 0, memoryUsage: 0 };
+    let systemStats = { 
+      tasksProcessed: 0, 
+      conceptsActive: 0, 
+      cyclesCompleted: 0, 
+      memoryUsage: 0,
+      narsOnlySolutions: 0,
+      lmAssistedSolutions: 0,
+      hybridSolutions: 0,
+      solutionQuality: 0
+    };
         
     if (demoMetrics && Object.keys(demoMetrics).length > 0) {
       const allMetrics = Object.values(demoMetrics).map(m => m.systemMetrics).filter(m => m);
@@ -25,6 +37,10 @@ const DashboardPanel = () => {
           conceptsActive: allMetrics.reduce((sum, m) => sum + (m.conceptsActive || 0), 0),
           cyclesCompleted: allMetrics.reduce((sum, m) => sum + (m.cyclesCompleted || 0), 0),
           memoryUsage: allMetrics.reduce((sum, m) => sum + (m.memoryUsage || 0), 0),
+          narsOnlySolutions: allMetrics.reduce((sum, m) => sum + (m.narsOnlySolutions || 0), 0),
+          lmAssistedSolutions: allMetrics.reduce((sum, m) => sum + (m.lmAssistedSolutions || 0), 0),
+          hybridSolutions: allMetrics.reduce((sum, m) => sum + (m.hybridSolutions || 0), 0),
+          solutionQuality: allMetrics.reduce((sum, m) => sum + (m.solutionQuality || 0), 0) / allMetrics.length
         };
       }
     }
@@ -38,6 +54,12 @@ const DashboardPanel = () => {
     const beliefs = tasks.filter(t => t.type === 'belief').length;
     const questions = tasks.filter(t => t.type === 'question').length;
     const goals = tasks.filter(t => t.type === 'goal').length;
+    
+    // Calculate performance metrics
+    const totalSolutions = systemStats.narsOnlySolutions + systemStats.lmAssistedSolutions + systemStats.hybridSolutions;
+    const narsOnlyPercentage = totalSolutions > 0 ? (systemStats.narsOnlySolutions / totalSolutions) * 100 : 0;
+    const lmAssistedPercentage = totalSolutions > 0 ? (systemStats.lmAssistedSolutions / totalSolutions) * 100 : 0;
+    const hybridPercentage = totalSolutions > 0 ? (systemStats.hybridSolutions / totalSolutions) * 100 : 0;
         
     return {
       systemStats,
@@ -49,7 +71,10 @@ const DashboardPanel = () => {
       goals,
       totalConcepts: concepts.length,
       totalTasks: tasks.length,
-      wsConnected
+      wsConnected,
+      narsOnlyPercentage,
+      lmAssistedPercentage,
+      hybridPercentage
     };
   }, [demoMetrics, concepts, tasks, wsConnected, demos, demoStates]);
     
@@ -113,7 +138,37 @@ const DashboardPanel = () => {
     );
   }, []);
 
-  // Create metric cards
+  // View mode selector
+  const renderViewSelector = useCallback(() => 
+    React.createElement('div', 
+      {style: {display: 'flex', marginBottom: '1rem', padding: '0.5rem', backgroundColor: '#f8f9fa', borderRadius: '4px'}},
+      React.createElement('button', {
+        onClick: () => setViewMode('overview'),
+        style: {
+          padding: '0.5rem 1rem',
+          backgroundColor: viewMode === 'overview' ? '#007bff' : '#e9ecef',
+          color: viewMode === 'overview' ? 'white' : '#495057',
+          border: '1px solid #ddd',
+          borderRadius: '4px 0 0 4px',
+          cursor: 'pointer',
+          fontWeight: viewMode === 'overview' ? 'bold' : 'normal'
+        }
+      }, 'System Overview'),
+      React.createElement('button', {
+        onClick: () => setViewMode('performance'),
+        style: {
+          padding: '0.5rem 1rem',
+          backgroundColor: viewMode === 'performance' ? '#007bff' : '#e9ecef',
+          color: viewMode === 'performance' ? 'white' : '#495057',
+          border: '1px solid #ddd',
+          borderRadius: '0 4px 4px 0',
+          cursor: 'pointer',
+          fontWeight: viewMode === 'performance' ? 'bold' : 'normal'
+        }
+      }, 'Performance Insights')
+    ), [viewMode]);
+
+  // Create metric cards (overview view)
   const metricCards = useMemo(() => 
     React.createElement('div', 
       {style: {display: 'flex', flexWrap: 'wrap', marginBottom: '1rem'}},
@@ -198,16 +253,112 @@ const DashboardPanel = () => {
       )
     ), [metrics, renderMetricCard]);
     
-  const items = useMemo(() => [
-    { type: 'header', content: 'System Dashboard' },
-    { type: 'metrics', content: metricCards },
-    { type: 'taskDistribution', content: taskDistribution },
-    { type: 'demoSummary', content: demoSummary },
-    { type: 'systemStats', content: systemStats }
-  ], [metricCards, taskDistribution, demoSummary, systemStats]);
+  // Performance comparison view
+  const performanceView = useMemo(() => 
+    React.createElement('div', null,
+      React.createElement('h4', {style: {margin: '0 0 1rem 0', fontSize: '1rem', color: '#007bff'}}, 'Intelligence Performance Insights'),
+      
+      // Comparison chart
+      React.createElement('div', {style: {marginBottom: '1rem', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '4px'}},
+        React.createElement('h5', {style: {margin: '0 0 0.5rem 0', fontSize: '0.9rem'}}, 'Solution Types Distribution'),
+        React.createElement('div', 
+          {style: {display: 'flex', height: '2rem', borderRadius: '4px', overflow: 'hidden', border: '1px solid #ced4da', marginBottom: '0.5rem'}},
+          React.createElement('div', 
+            {
+              style: {
+                width: `${metrics.narsOnlyPercentage}%`,
+                backgroundColor: getPerformanceMetricColor('nars'),
+                minWidth: metrics.systemStats.narsOnlySolutions > 0 ? '10px' : '0'
+              }
+            },
+            metrics.systemStats.narsOnlySolutions > 0 && React.createElement('span', 
+              {style: {color: 'white', fontSize: '0.7rem', padding: '0 0.5rem'}}, 
+              `NARS Only: ${formatPercentage(metrics.narsOnlyPercentage)}`
+            )
+          ),
+          React.createElement('div', 
+            {
+              style: {
+                width: `${metrics.lmAssistedPercentage}%`,
+                backgroundColor: getPerformanceMetricColor('lm'),
+                minWidth: metrics.systemStats.lmAssistedSolutions > 0 ? '10px' : '0'
+              }
+            },
+            metrics.systemStats.lmAssistedSolutions > 0 ? React.createElement('span', 
+              {style: {color: 'white', fontSize: '0.7rem', padding: '0 0.5rem'}}, 
+              `LM Assisted: ${formatPercentage(metrics.lmAssistedPercentage)}`
+            ) : null
+          ),
+          React.createElement('div', 
+            {
+              style: {
+                width: `${metrics.hybridPercentage}%`,
+                backgroundColor: getPerformanceMetricColor('hybrid'),
+                minWidth: metrics.systemStats.hybridSolutions > 0 ? '10px' : '0'
+              }
+            },
+            metrics.systemStats.hybridSolutions > 0 && React.createElement('span', 
+              {style: {color: 'white', fontSize: '0.7rem', padding: '0 0.5rem'}}, 
+              `Hybrid: ${formatPercentage(metrics.hybridPercentage)}`
+            )
+          )
+        ),
+        React.createElement('div', {style: {display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', fontSize: '0.9rem'}},
+          React.createElement('div', {style: {padding: '0.5rem', border: `1px solid ${getPerformanceMetricColor('nars')}`, borderRadius: '4px'}},
+            React.createElement('div', {style: {fontWeight: 'bold', color: getPerformanceMetricColor('nars')}}, 'NARS Only Solutions'),
+            React.createElement('div', null, `Count: ${metrics.systemStats.narsOnlySolutions}`)
+          ),
+          React.createElement('div', {style: {padding: '0.5rem', border: `1px solid ${getPerformanceMetricColor('lm')}`, borderRadius: '4px'}},
+            React.createElement('div', {style: {fontWeight: 'bold', color: getPerformanceMetricColor('lm')}}, 'LM Assisted Solutions'),
+            React.createElement('div', null, `Count: ${metrics.systemStats.lmAssistedSolutions}`)
+          ),
+          React.createElement('div', {style: {padding: '0.5rem', border: `1px solid ${getPerformanceMetricColor('hybrid')}`, borderRadius: '4px'}},
+            React.createElement('div', {style: {fontWeight: 'bold', color: getPerformanceMetricColor('hybrid')}}, 'Hybrid Solutions'),
+            React.createElement('div', null, `Count: ${metrics.systemStats.hybridSolutions}`)
+          )
+        )
+      ),
+      
+      // Performance metrics
+      React.createElement('div', {style: {marginBottom: '1rem'}},
+        React.createElement('h5', {style: {margin: '0 0 0.5rem 0', fontSize: '0.9rem'}}, 'Performance Metrics'),
+        React.createElement('div', {style: {display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem'}},
+          renderMetricCard('NARS Efficiency', formatPercentage(metrics.narsOnlyPercentage), 'Pure NARS reasoning effectiveness'),
+          renderMetricCard('LM Impact', formatPercentage(metrics.lmAssistedPercentage), 'LM assistance utilization'),
+          renderMetricCard('Hybrid Value', formatPercentage(metrics.hybridPercentage), 'Combined intelligence effectiveness'),
+          renderMetricCard('Solution Quality', `${(metrics.systemStats.solutionQuality || 0).toFixed(2)}`, 'Average solution quality score', '#17a2b8')
+        )
+      )
+    ), [metrics, renderMetricCard]);
+    
+  // Build items based on view mode
+  const items = useMemo(() => {
+    const baseItems = [
+      { type: 'viewSelector', content: renderViewSelector() }
+    ];
+    
+    if (viewMode === 'overview') {
+      baseItems.push(
+        { type: 'header', content: 'System Dashboard' },
+        { type: 'metrics', content: metricCards },
+        { type: 'taskDistribution', content: taskDistribution },
+        { type: 'demoSummary', content: demoSummary },
+        { type: 'systemStats', content: systemStats }
+      );
+    } else { // performance view
+      baseItems.push(
+        { type: 'header', content: 'Performance Insights' },
+        { type: 'performance', content: performanceView }
+      );
+    }
+    
+    return baseItems;
+  }, [viewMode, renderViewSelector, metricCards, taskDistribution, demoSummary, systemStats, performanceView]);
 
   const renderDashboardItem = useCallback((item, index) => {
-    if (item.type === 'header') {
+    if (item.type === 'viewSelector') {
+      return item.content;
+    } else if (item.type === 'header') {
       return React.createElement('div', {
         style: {
           fontWeight: 'bold',
@@ -228,7 +379,9 @@ const DashboardPanel = () => {
     maxHeight: 'calc(100% - 2rem)',
     items,
     renderItem: renderDashboardItem,
-    emptyMessage: 'System dashboard will display metrics once the reasoning engine is active.'
+    emptyMessage: viewMode === 'performance'
+      ? 'Performance metrics will be populated as the hybrid system processes inputs and generates solutions.'
+      : 'System dashboard will display metrics once the reasoning engine is active.'
   });
 };
 
