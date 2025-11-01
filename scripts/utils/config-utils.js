@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { generateId } from './shared-utils.js';
+
 /**
  * Configuration utilities for autonomous development and other parameterized processes
  */
@@ -8,11 +10,6 @@
  * Generate random value within a range
  */
 const randomInRange = (min, max) => Math.random() * (max - min) + min;
-
-/**
- * Generate a unique ID using timestamp and random components
- */
-const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
 /**
  * Parse string from value

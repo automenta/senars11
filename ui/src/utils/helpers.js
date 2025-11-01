@@ -1,6 +1,5 @@
 /**
  * Extended utility functions for common operations in the application
- * Note: Some utilities are available in ../utils/common.js - import from there if needed
  */
 
 /**

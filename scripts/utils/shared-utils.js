@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
 /**
- * Unified utilities for both UI and script operations
+ * Shared utility functions used across the script modules
+ * Following DRY and modularization principles from AGENTS.md
  */
 
 /**

@@ -1,24 +1,7 @@
 /**
  * Performance utility functions for optimizing component rendering
  */
-
-/**
- * Memoized selector creator to prevent unnecessary re-renders
- * @param {Function} selector - Function to extract data from state
- * @returns {Function} Memoized selector function
- */
-export const createMemoizedSelector = (selector) => {
-  let lastArgs = null;
-  let lastResult = null;
-  
-  return (...args) => {
-    if (!lastArgs || !deepEqual(lastArgs, args)) {
-      lastArgs = args;
-      lastResult = selector(...args);
-    }
-    return lastResult;
-  };
-};
+import { debounce, throttle, memoize } from './helpers.js';
 
 /**
  * Deep equality check for objects
@@ -47,55 +30,20 @@ const deepEqual = (obj1, obj2) => {
 };
 
 /**
- * Debounced function execution
- * @param {Function} func - Function to debounce
- * @param {number} wait - Wait time in milliseconds
- * @returns {Function} Debounced function
+ * Memoized selector creator to prevent unnecessary re-renders
+ * @param {Function} selector - Function to extract data from state
+ * @returns {Function} Memoized selector function
  */
-export const debounce = (func, wait) => {
-  let timeout;
-  return function executedFunction(...args) {
-    const later = () => {
-      clearTimeout(timeout);
-      func(...args);
-    };
-    clearTimeout(timeout);
-    timeout = setTimeout(later, wait);
-  };
-};
-
-/**
- * Throttled function execution
- * @param {Function} func - Function to throttle
- * @param {number} limit - Throttle limit in milliseconds
- * @returns {Function} Throttled function
- */
-export const throttle = (func, limit) => {
-  let inThrottle;
-  return function (...args) {
-    if (!inThrottle) {
-      func.apply(this, args);
-      inThrottle = true;
-      setTimeout(() => inThrottle = false, limit);
-    }
-  };
-};
-
-/**
- * Memoize function results to prevent unnecessary recalculations
- * @param {Function} fn - Function to memoize
- * @returns {Function} Memoized function
- */
-export const memoize = (fn) => {
-  const cache = new Map();
+export const createMemoizedSelector = (selector) => {
+  let lastArgs = null;
+  let lastResult = null;
+  
   return (...args) => {
-    const key = JSON.stringify(args);
-    if (cache.has(key)) {
-      return cache.get(key);
+    if (!lastArgs || !deepEqual(lastArgs, args)) {
+      lastArgs = args;
+      lastResult = selector(...args);
     }
-    const result = fn(...args);
-    cache.set(key, result);
-    return result;
+    return lastResult;
   };
 };
 
