@@ -31,9 +31,15 @@ This document provides a complete, self-contained, and actionable implementation
 - ✅ WebSocketMonitor.js provides real-time communication bridge
 - ✅ UI stack (Vite+React+Zustand+FlexLayout) already implemented
 - ✅ Data processing pipeline with DataProcessor class implemented
-- ⏳ ConsoleBridge mechanism (browser logs → WebSocket server) needs implementation
-- ⏳ Error boundary system with fallback UIs needs implementation
-- ⏳ Rich reasoning visualization components need implementation
+- ✅ `websocket.js` bridge provides connection and status.
+- ✅ `ErrorBoundary.js` provides graceful error handling.
+- 🟡 `ReasoningTracePanel.js` is implemented but lacks filtering.
+- ⏳ ConsoleBridge mechanism (browser logs → WebSocket server) needs implementation.
+- ❌ `LMConfigPanel.js` for configuring intelligence sources is not implemented.
+
+### Current Gaps:
+- **LM Configuration UI**: The `LMConfigPanel.js` component, which is critical for the "hybrid intelligence" vision, is missing.
+- **Reasoning Trace Filtering**: The `ReasoningTracePanel.js` lacks the planned filtering functionality, which is needed to improve usability.
 
 ---
 
@@ -86,26 +92,26 @@ This document provides a complete, self-contained, and actionable implementation
 
 **Implementation Steps (Vision-First):**
 
-1. **Observable WebSocket Bridge** (`ui/src/utils/websocket.js`)
+1. **[Done] Observable WebSocket Bridge** (`ui/src/utils/websocket.js`)
    - Ensure existing WebSocket client can connect to SeNARS core
    - Implement message logging that shows what's being communicated
    - Add connection status that helps users understand system health
    - **Dependencies**: Existing WebSocket implementation
    - **Vision Alignment**: Users can see the communication between UI and core, making the system transparent
 
-2. **Configurable Intelligence Sources** (`ui/src/components/LMConfigPanel.js`)
+2. **[To Do] Configurable Intelligence Sources** (`ui/src/components/LMConfigPanel.js`)
    - Create panel for managing Language Model providers
    - Implement form controls for API keys and model selection
    - Add validation and test connection functionality
    - **Vision Alignment**: Users can configure different AI sources and see which ones are active
 
-3. **Transparent Reasoning Display** (`ui/src/components/ReasoningTracePanel.js`)
-   - Create panel to display incoming reasoning data in a human-readable way
-   - Implement chronological view of reasoning steps
-   - Add basic filtering to focus on specific types of reasoning
+3. **[In Progress] Transparent Reasoning Display** (`ui/src/components/ReasoningTracePanel.js`)
+   - **Done**: Create panel to display incoming reasoning data in a human-readable way
+   - **Done**: Implement chronological view of reasoning steps
+   - **To Do**: Add basic filtering to focus on specific types of reasoning
    - **Vision Alignment**: Users can observe the actual reasoning process step-by-step
 
-4. **Graceful System Resilience** (`ui/src/components/ErrorBoundary.js`)
+4. **[Done] Graceful System Resilience** (`ui/src/components/ErrorBoundary.js`)
    - Create error boundary to prevent complete crashes
    - Implement informative error display that helps users understand what went wrong
    - **Vision Alignment**: Even when errors occur, users understand what happened and the system remains usable
@@ -117,10 +123,11 @@ This document provides a complete, self-contained, and actionable implementation
 - **Language Models**: `/src/lm/LM.js` - LM integration and configuration
 
 **Vision-Aligned Success Criteria:**
-- [ ] Users can observe communication between UI and core systems
-- [ ] Users can configure and monitor different AI sources
+- [X] Users can observe communication between UI and core systems
+- [ ] Users can configure and monitor different AI sources via a dedicated UI panel
 - [ ] Users can see the actual reasoning process unfolding in real-time
-- [ ] Users understand system status and can recover from errors
+- [ ] Users can filter the reasoning trace to focus on specific events
+- [X] Users understand system status and can recover from errors
 
 ### Phase 2: Making Intelligence Tangible
 
