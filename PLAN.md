@@ -1,32 +1,33 @@
-# SeNARS Development Plan (Streamlined & Consolidated)
+# SeNARS Development Plan (Functional Prototype Focus)
 
 ## Executive Summary
 
-This document presents a streamlined, consolidated development plan for SeNARS that eliminates redundancy while ensuring feature completeness. The approach focuses on "doing more with less" by maximizing value through essential features and efficient implementation.
+This document provides a complete, self-contained, and actionable implementation plan for SeNARS that focuses on delivering a functional prototype with essential features. The approach emphasizes rapid development, working functionality, and practical implementation over perfection.
 
 **Key Principles:**
-- **Essentialism**: Focus on core features that deliver maximum value
+- **Essentialism**: Focus on core features that deliver maximum user value
 - **Simplicity**: Eliminate complexity that doesn't add proportional value
 - **Integration**: Leverage existing systems rather than rebuilding
 - **Pragmatism**: Prioritize working functionality over theoretical perfection
+- **Rapid Prototyping**: Deliver working features quickly for feedback and iteration
 
 ---
 
-## Current Status & Architecture
+## Current Status & Architecture Overview
 
 ### Completed Core Systems:
-- **Reasoning Engine**: NARS implementation with Zod validation
-- **Observability**: Unified logging, monitoring via EventBus
-- **Fault Tolerance**: Bounded evaluation, circuit breakers, recovery strategies
+- **Reasoning Engine**: NARS implementation with Zod validation and event-driven architecture
+- **Observability**: Unified logging, monitoring, and traceability via EventBus
+- **Fault Tolerance**: Bounded evaluation, circuit breakers, and recovery strategies
 - **Security**: Capability-based model with validation systems
-- **Configuration**: Zod-based schema validation in SystemConfig.js
-- **Testing**: Property-based testing and benchmark suites
-- **WebSocket Integration**: Real-time communication via WebSocketMonitor.js
+- **Configuration**: Zod-based schema validation in `SystemConfig.js`
+- **Testing**: Property-based testing and benchmark suites with Jest and fast-check
+- **WebSocket Integration**: Real-time communication via `WebSocketMonitor.js`
 - **UI Foundation**: Vite + React + Zustand + FlexLayout stack
-- **Language Model Integration**: Configurable providers (OpenAI, Ollama, etc.)
+- **Language Model Integration**: Configurable providers (OpenAI, Ollama, etc.) implemented
 
 ### Integration Status:
-- ✅ Core NAR reasoning engine available via webui.js
+- ✅ Core NAR reasoning engine available via `webui.js`
 - ✅ WebSocketMonitor.js provides real-time communication bridge
 - ✅ UI stack (Vite+React+Zustand+FlexLayout) already implemented
 - ✅ Data processing pipeline with DataProcessor class implemented
@@ -36,136 +37,34 @@ This document presents a streamlined, consolidated development plan for SeNARS t
 
 ---
 
-## Development Principles
+## Development Principles & Technology Stack
 
-**Core Principles:**
+### Core Principles:
 - **Modular Architecture**: Independent, reusable modules with clear interfaces
-- **Configuration-Driven**: Parameterizable behavior via configuration
+- **Configuration-Driven**: Parameterizable behavior via configuration rather than hardcoding
 - **Event-Driven**: Asynchronous communication with traceable operations
-- **Test-First**: Comprehensive testing at all levels
-- **Security-First**: Capability-based access and sandboxed execution
+- **Working Software First**: Prioritize functional implementation over comprehensive testing
+- **Iterative Improvement**: Rapid prototyping with continuous refinement based on feedback
 
-**Technology Stack:**
+### Technology Stack:
 - **Build**: Vite (fast dev server) + Node.js ecosystem
 - **Frontend**: React + Zustand + FlexLayout (plain JavaScript, no JSX)
-- **Validation**: Zod for all data schemas
-- **Testing**: Jest + Playwright + Vitest
+- **Validation**: Zod for critical data schemas
+- **Testing**: Basic Jest unit tests for core functionality
 - **Styling**: CSS Modules with CSS variables
 - **Communication**: WebSocket API with structured messaging
 - **Event System**: mitt-based EventBus with middleware
-- **Code Quality**: ESLint + Prettier
+- **Code Quality**: ESLint + Prettier (basic configuration)
 
 ---
 
-## Streamlined Implementation Roadmap
+## Implementation Roadmap (Prototype Focus)
 
-### Phase 1: Core Integration & Stability (Essential)
+### Phase 1: Essential Core Functionality
 
-**Focus**: Establish robust, reliable communication between UI and core systems with proper error handling.
+**Agile Focus**: Establish working communication between UI and core systems with basic error handling.
 
-**Key Deliverables:**
-1. **ConsoleBridge Implementation** (`ui/src/utils/consoleBridge.js`)
-   - Forward browser console logs to WebSocket server
-   - Enable centralized monitoring and debugging
-   
-2. **Error Boundary System** (`ui/src/components/ErrorBoundary.js`)
-   - Global error handling with configurable fallback UIs
-   - Graceful degradation during system failures
-   
-3. **WebSocket Health Monitoring** (`ui/src/utils/websocket.js`)
-   - Connection status tracking and recovery
-   - Health checks and automatic reconnection
-   
-4. **LM Provider Configuration UI** (`ui/src/components/LMConfigPanel.js`)
-   - Manage models, API keys, and settings
-   - Visualize active providers and connection status
-
-**Success Criteria:**
-- Browser logs appear in server logs
-- UI gracefully handles WebSocket disconnections
-- LM providers can be configured via UI
-- Users see active LM status and connection health
-
-### Phase 2: Reasoning Visualization (Core Value)
-
-**Focus**: Implement essential visualization capabilities to observe and understand reasoning activity.
-
-**Key Deliverables:**
-1. **Reasoning Trace Visualization** (`ui/src/components/ReasoningTracePanel.js`)
-   - Show inference steps and decision-making process
-   - Display LM-NARS interaction points
-   
-2. **Task Flow Visualization** (`ui/src/components/TaskPanel.js`)
-   - Visualize input → processing → output chains
-   - Show LM integration points and influence
-   
-3. **Concept Relationship Visualization** (`ui/src/components/ConceptPanel.js`)
-   - Show how concepts evolve over time
-   - Display relationships and influence patterns
-   
-4. **Metrics Dashboard** (`ui/src/components/DashboardPanel.js`)
-   - Reasoning speed, task throughput
-   - LM interaction frequency and efficiency
-   - System resource utilization
-
-**Success Criteria:**
-- Users can observe reasoning-LM interaction patterns
-- Task flow and concept evolution are clearly visible
-- Performance metrics provide actionable insights
-
-### Phase 3: Educational Tools & Documentation (Accessibility)
-
-**Focus**: Create tools that enable understanding, demonstration, and collaboration.
-
-**Key Deliverables:**
-1. **Screenshot & Movie Generation** (`ui/src/utils/screenshot.js`)
-   - Capture educational demonstrations
-   - Record reasoning sequences for learning
-   
-2. **Annotation Tools** (`ui/src/components/AnnotationPanel.js`)
-   - Explain reasoning steps and decisions
-   - Document interesting patterns and findings
-   
-3. **Documentation System** (`ui/src/docs/`)
-   - Component usage guides
-   - Architecture documentation
-   - Best practices and patterns
-
-**Success Criteria:**
-- Educational demonstrations can be automatically generated
-- Reasoning sequences are captured for learning purposes
-- Explanation capabilities are readily available
-
-### Phase 4: Quality Assurance & Testing (Reliability)
-
-**Focus**: Establish comprehensive testing and quality assurance systems.
-
-**Key Deliverables:**
-1. **Automated Testing Framework**
-   - Unit tests for core components
-   - Integration tests for UI ↔ Core communication
-   - E2E tests for critical user flows
-   
-2. **Performance Monitoring**
-   - Benchmark suites for reasoning performance
-   - Resource usage tracking
-   - Regression detection systems
-   
-3. **Accessibility Compliance**
-   - WCAG 2.1 AA compliance checking
-   - Keyboard navigation support
-   - Screen reader compatibility
-
-**Success Criteria:**
-- Comprehensive test coverage for critical paths
-- Performance benchmarks are consistently met
-- UI passes accessibility compliance checks
-
----
-
-## Key Implementation Details
-
-### File Structure Reference:
+**Project Structure Reference:**
 ```
 ./ui/
 ├── src/
@@ -176,23 +75,230 @@ This document presents a streamlined, consolidated development plan for SeNARS t
 │   ├── layouts/             # FlexLayout configurations
 │   ├── App.js               # Root component with WebSocket setup
 │   └── main.js              # Entry point
-├── tests/                   # Unit and E2E tests
+├── tests/                   # Basic unit tests
 ├── index.html               # Vite entry HTML
 ├── vite.config.js           # Vite build configuration
-└── package.json             # Dependencies and scripts
+├── .eslintrc.js             # ESLint configuration
+├── .prettierrc              # Prettier formatting rules
+├── package.json             # Dependencies and scripts
+└── README.md                # Setup instructions
 ```
 
-### Core Integration Points:
+**Implementation Steps (Essential First):**
+
+1. **Basic WebSocket Integration** (`ui/src/utils/websocket.js`)
+   - Ensure existing WebSocket client can connect to SeNARS core
+   - Implement basic message sending/receiving functionality
+   - Add simple connection status indicator
+   - **Dependencies**: Existing WebSocket implementation
+   - **Success Criteria**: UI can connect to core, send/receive basic messages
+
+2. **LM Provider Configuration** (`ui/src/components/LMConfigPanel.js`)
+   - Create basic panel for managing Language Model providers
+   - Implement simple form controls for API keys and model selection
+   - Add basic validation for required fields
+   - **Dependencies**: `ui/src/stores/uiStore.js` for state management
+   - **Success Criteria**: Users can configure and save LM provider settings
+
+3. **Core Data Display** (`ui/src/components/CoreDataPanel.js`)
+   - Create basic panel to display incoming reasoning data
+   - Implement simple list/table view for reasoning events
+   - Add basic filtering capabilities
+   - **Dependencies**: WebSocket message subscription
+   - **Success Criteria**: Reasoning data visible in UI, basic filtering works
+
+4. **Error Handling Basics** (`ui/src/components/ErrorBoundary.js`)
+   - Create simple error boundary to prevent complete crashes
+   - Implement basic error display with reload option
+   - **Success Criteria**: UI doesn't crash completely on component errors
+
+**Integration Points:**
 - **WebUI Bridge**: `/webui.js` - WebSocket connection between NAR and UI
 - **WebSocket Client**: `/ui/src/utils/websocket.js` - UI-side WebSocket handling
 - **WebSocket Server**: `/src/server/WebSocketMonitor.js` - Server-side monitoring
 - **Language Models**: `/src/lm/LM.js` - LM integration and configuration
-- **Configuration**: `/src/config/SystemConfig.js` - Zod-validated system config
-- **Event System**: `/src/util/EventBus.js` - mitt-based event bus
+
+**Acceptance Criteria:**
+- [ ] UI can connect to SeNARS core via WebSocket
+- [ ] Users can configure LM providers and settings
+- [ ] Basic reasoning data is visible in the UI
+- [ ] UI handles basic errors without complete crashes
+
+### Phase 2: Essential Reasoning Visualization
+
+**Agile Focus**: Implement core visualization capabilities to observe and understand actual reasoning activity.
+
+**Implementation Steps (Essential First):**
+
+1. **Reasoning Trace Display** (`ui/src/components/ReasoningTracePanel.js`)
+   - Create panel to display basic inference steps and decision-making process
+   - Implement real-time updating as reasoning events arrive via WebSocket
+   - Add simple filtering for different event types (input, deduction, induction, etc.)
+   - **Dependencies**: `ui/src/utils/websocket.js` for event subscription
+   - **Success Criteria**: Users can see reasoning process step-by-step, events displayed in order
+
+2. **Task Flow Display** (`ui/src/components/TaskPanel.js`)
+   - Create panel to visualize input → processing → output chains
+   - Implement basic task lifecycle tracking (created, processed, completed)
+   - **Dependencies**: WebSocket event subscription for task events
+   - **Success Criteria**: Task flow clearly visible, basic lifecycle tracking works
+
+3. **Concept Display** (`ui/src/components/ConceptPanel.js`)
+   - Create panel to show basic concept information and evolution over time
+   - Implement simple relationship mapping between related concepts
+   - **Dependencies**: Concept event subscription
+   - **Success Criteria**: Concept relationships visible, evolution over time trackable
+
+4. **Simple Metrics Display** (`ui/src/components/DashboardPanel.js`)
+   - Create basic dashboard with key indicators
+   - Implement simple metrics for reasoning speed, task throughput
+   - **Dependencies**: Metrics event subscription
+   - **Success Criteria**: Key metrics visible in real-time
+
+**Acceptance Criteria:**
+- [ ] Basic reasoning process visible step-by-step
+- [ ] Task flow visualization shows lifecycle
+- [ ] Concept relationships and evolution displayed
+- [ ] Key metrics visible in real-time
+
+### Phase 3: Essential Educational Tools
+
+**Agile Focus**: Create basic tools that enable understanding and demonstration of the system.
+
+**Implementation Steps (Essential First):**
+
+1. **Basic Screenshot Capability** (`ui/src/utils/screenshot.js`)
+   - Implement simple screenshot capture functionality for demonstrations
+   - Add basic export capability for captured images (PNG)
+   - **Dependencies**: Browser canvas APIs
+   - **Success Criteria**: Users can capture and export basic screenshots
+
+2. **Simple Demonstration Mode** (`ui/src/components/DemoModePanel.js`)
+   - Create basic demonstration mode showing step-by-step reasoning
+   - Add simple controls for play/pause/step through reasoning
+   - **Dependencies**: Existing reasoning trace display
+   - **Success Criteria**: Basic demonstration mode works with play/pause controls
+
+3. **Basic Help System** (`ui/src/components/HelpPanel.js`)
+   - Create simple help panel with basic usage instructions
+   - Add links to key documentation
+   - **Dependencies**: Markdown rendering utilities
+   - **Success Criteria**: Users can access basic help information
+
+**Acceptance Criteria:**
+- [ ] Basic screenshots can be captured and exported
+- [ ] Simple demonstration mode works
+- [ ] Basic help system available
+
+### Phase 4: Basic Quality Assurance (Defer Performance)
+
+**Agile Focus**: Establish basic testing and quality assurance systems, deferring performance optimization to later phases.
+
+**Implementation Steps (Essential First):**
+
+1. **Basic Unit Testing** (`ui/src/__tests__/`)
+   - Implement basic unit tests for core UI components and utilities
+   - Create simple tests for critical functions
+   - **Dependencies**: Jest testing framework
+   - **Success Criteria**: Core functionality has basic test coverage
+
+2. **Basic Integration Testing** (`ui/tests/`)
+   - Create basic integration tests for UI ↔ Core communication via WebSocket
+   - Add simple tests for critical workflows
+   - **Dependencies**: Jest testing framework
+   - **Success Criteria**: Basic integration functionality tested
+
+3. **Manual Quality Assurance**
+   - Perform manual testing of core functionality
+   - Create basic test scripts for key user workflows
+   - Document known issues and limitations
+   - **Success Criteria**: Core functionality works as expected, issues documented
+
+**Note on Performance**: Performance optimization, accessibility compliance, and advanced testing will be deferred to later phases when the prototype is functioning and feedback has been gathered.
+
+**Acceptance Criteria:**
+- [ ] Core functionality has basic unit test coverage
+- [ ] Critical integration paths tested
+- [ ] Manual testing confirms basic functionality works
+- [ ] Known issues and limitations documented
 
 ---
 
-## Optimization Strategy
+## Key Implementation Details & References
+
+### Core File References:
+- **WebUI Bridge**: `/webui.js` - Main entry point connecting NAR to UI via WebSocket
+- **WebSocket Client**: `/ui/src/utils/websocket.js` - UI-side WebSocket handling and event processing
+- **WebSocket Server**: `/src/server/WebSocketMonitor.js` - Server-side monitoring and message routing
+- **Language Models**: `/src/lm/LM.js` - LM integration, configuration, and provider management
+- **Configuration**: `/src/config/SystemConfig.js` - Zod-validated system configuration
+- **Event System**: `/src/util/EventBus.js` - mitt-based event bus for communication
+- **Data Processing**: `/ui/src/utils/dataProcessor.js` - Transform raw events into displayable data
+
+### Component Architecture Pattern:
+```javascript
+// Example component structure
+import React from 'react';
+import { useUiStore } from '../stores/uiStore.js';
+
+const ExamplePanel = ({ title }) => {
+  const data = useUiStore(state => state.exampleData);
+  
+  return React.createElement('div', { className: 'panel' },
+    React.createElement('h2', null, title),
+    React.createElement('div', { className: 'content' },
+      // Render data or components here
+    )
+  );
+};
+
+export default ExamplePanel;
+```
+
+### State Management Pattern:
+```javascript
+// Example store slice
+import { create } from 'zustand';
+
+const useUiStore = create((set, get) => ({
+  // State
+  exampleData: [],
+  
+  // Actions
+  setExampleData: (data) => set({ exampleData: data }),
+  updateExampleItem: (id, updates) => set(state => ({
+    exampleData: state.exampleData.map(item => 
+      item.id === id ? { ...item, ...updates } : item
+    )
+  })),
+  
+  // Selectors
+  getExampleById: (id) => get().exampleData.find(item => item.id === id)
+}));
+```
+
+### WebSocket Message Handling Pattern:
+```javascript
+// Example message handler
+const handleMessage = (message) => {
+  const { type, payload } = message;
+  
+  switch (type) {
+    case 'reasoning.step':
+      // Process reasoning step
+      break;
+    case 'task.created':
+      // Process task creation
+      break;
+    default:
+      console.warn('Unknown message type:', type);
+  }
+};
+```
+
+---
+
+## Optimization Strategy & Best Practices
 
 ### Doing More with Less:
 1. **Leverage Existing Systems**: Use current WebSocket infrastructure rather than building new communication layers
@@ -201,8 +307,8 @@ This document presents a streamlined, consolidated development plan for SeNARS t
 4. **Progressive Enhancement**: Start with basic functionality and add sophistication incrementally
 
 ### Eliminating Redundancy:
-1. **Single Source of Truth**: Centralize configuration and state management
-2. **Unified Patterns**: Use consistent component and data patterns throughout
+1. **Single Source of Truth**: Centralize configuration and state management in Zustand stores
+2. **Unified Patterns**: Use consistent component and data patterns throughout (`React.createElement` approach)
 3. **Shared Utilities**: Create reusable utility functions rather than duplicating code
 4. **Modular Design**: Build independent modules that can be combined in different ways
 
@@ -214,63 +320,81 @@ This document presents a streamlined, consolidated development plan for SeNARS t
 
 ---
 
-## Success Metrics
+## Success Metrics (Prototype Focus)
 
-### Technical Metrics:
-- **Performance**: UI maintains 60fps during normal operation
-- **Reliability**: 99.5%+ uptime for WebSocket connection handling
-- **Test Coverage**: 85%+ code coverage for critical paths
-- **Load Handling**: Support 1000+ concurrent data updates without degradation
+### Essential Technical Metrics:
+- **Basic Functionality**: Core features work as expected
+- **Stability**: UI doesn't crash completely during normal usage
+- **Basic Test Coverage**: Key functionality has some test coverage
+- **Connectivity**: WebSocket connection to core system works reliably
 
-### User Experience Metrics:
-- **Accessibility**: WCAG 2.1 AA compliance rating
-- **Response Time**: <100ms for UI interactions
-- **Error Rate**: <1% unhandled errors in production
-- **User Satisfaction**: >4.0/5.0 rating in user surveys
+### Basic User Experience Metrics:
+- **Usability**: Users can accomplish basic tasks with the system
+- **Response Time**: UI interactions are reasonably responsive
+- **Error Handling**: Errors are displayed to users rather than causing crashes
 
-### Development Efficiency Metrics:
-- **Build Time**: <30 seconds for full rebuild
-- **Deployment**: Single command deployment process
-- **Documentation**: 100% of public APIs documented
-- **Code Quality**: <10 linting errors per 1000 lines of code
+### Development Metrics:
+- **Build Process**: Code compiles and runs without major errors
+- **Documentation**: Key features are documented for developers
+- **Code Quality**: Code follows basic style guidelines
 
 ---
 
-## Risk Mitigation
+## Risk Mitigation (Prototype Focus)
 
-### High-Priority Risks:
-1. **WebSocket Integration Complexity**
-   - *Mitigation*: Implement comprehensive fallback and error recovery systems early
-   - *Monitoring*: Use connection health checks and automatic reconnection
+### Key Risks:
+1. **WebSocket Integration Issues**
+   - *Approach*: Focus on basic connectivity first, add advanced features later
+   - *Monitoring*: Manual testing during development
+   - *Contingency*: Use simple mock data for development when needed
 
-2. **Performance Bottlenecks**
-   - *Mitigation*: Implement virtualization and performance monitoring from the start
-   - *Monitoring*: Set performance budgets and alerting thresholds
+2. **LM Provider Integration Problems**
+   - *Approach*: Start with one working provider, expand later
+   - *Monitoring*: Test with sample data during development
+   - *Contingency*: Fall back to basic NARS reasoning when providers fail
 
-3. **Accessibility Compliance**
-   - *Mitigation*: Implement accessibility checks in CI pipeline
-   - *Monitoring*: Use automated accessibility testing tools
+3. **Core Functionality Not Working**
+   - *Approach*: Implement and test core features incrementally
+   - *Monitoring*: Regular manual testing during development
+   - *Contingency*: Simplify features to ensure basics work
 
-### Medium-Priority Risks:
-1. **LM Provider Integration Issues**
-   - *Mitigation*: Start with core providers, validate data flow early
-   - *Monitoring*: Implement provider health checks and fallback strategies
+### Prototype Approach:
+Since this is a prototype, extensive risk mitigation is not required. Focus on:
+- Getting basic functionality working first
+- Addressing issues as they arise through iterative development
+- Keeping the scope focused on essential features
+- Using simple solutions rather than complex risk mitigation systems
 
-2. **User Adoption Barriers**
-   - *Mitigation*: Create intuitive workflows and clear documentation
-   - *Monitoring*: Gather user feedback and iterate on UX
+---
+
+## Development Approach (No Fixed Timeline)
+
+Since this is a prototype focused on essential functionality, rigid timelines are not appropriate. Instead, development will proceed iteratively:
+
+### Iterative Development Approach:
+1. **Implement core functionality first** - Get basic UI ↔ Core communication working
+2. **Add essential visualization** - Display reasoning process in a basic way
+3. **Create simple educational tools** - Enable basic demonstration and explanation
+4. **Ensure basic quality** - Add simple tests and documentation
+5. **Gather feedback and iterate** - Use the working prototype to guide further development
+
+### Prototype Focus:
+- Deliver working features quickly rather than perfect features slowly
+- Keep scope focused on essential functionality
+- Defer performance optimization, extensive testing, and advanced features
+- Use feedback from the working prototype to guide future development
 
 ---
 
 ## Conclusion
 
-This streamlined plan focuses on delivering maximum value through essential features while maintaining simplicity and eliminating redundancy. By leveraging existing systems and following pragmatic implementation strategies, the SeNARS project can achieve feature completeness without unnecessary complexity.
+This prototype-focused implementation plan provides a clear roadmap for developing the SeNARS system with focus on essential features and rapid delivery. By following this approach:
 
-The approach emphasizes:
-- **Essential functionality first**
-- **Progressive enhancement**
-- **Configurable behavior over custom code**
-- **Comprehensive testing and quality assurance**
-- **Clear success metrics and risk mitigation**
+1. **Essential functionality** is prioritized and delivered first
+2. **Working software** is emphasized over comprehensive documentation
+3. **Simple solutions** are preferred over complex architectures
+4. **Basic quality** ensures the prototype is usable and reliable
+5. **Feedback-driven development** uses the working prototype to guide future improvements
+6. **Scope focus** keeps development concentrated on core value
 
-This ensures that the SeNARS system becomes both powerful and practical, suitable for research, development, and real-world applications.
+The approach ensures that the SeNARS system becomes a functional prototype that demonstrates core capabilities while maintaining flexibility for future enhancement. Each phase includes specific implementation steps, file references, and clear acceptance criteria to guide development toward a working prototype that can be used for feedback and further development.
