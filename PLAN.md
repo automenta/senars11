@@ -177,65 +177,181 @@ expose it to the outside world or persist its state.
 
 ---
 
-### Phase 12: The Usable & Transparent Agent
+### Phase 12: Foundation Enhancement (UI Development)
 
-* **Agile Focus:** Implement the features required for a human to interact with the agent, observe its behavior in
-  real-time, and trust that its knowledge will persist.
+**Agile Focus**: Maximize reliability and usability of the web-based user interface to establish a robust user experience foundation.
 
-* **Key Initiatives (In Priority Order):**
+**Technology Stack & Architecture**:
+- **Build Tool/Dev Server**: Vite - Lightning-fast development server with live reload/hot module replacement (HMR) for instant updates.
+- **Frontend Framework**: React (using plain JavaScript, no JSX) - Component-based architecture ideal for logic-oriented hierarchies and shared elements, using `React.createElement()` exclusively.
+- **Docking Framework**: FlexLayout - Provides IDE-like features such as drag-and-drop panels, nested tabs, splits, and persistence.
+- **State Management**: Zustand - Lightweight, minimal boilerplate compared to Redux, ideal for complex hierarchies with slice state by component or feature.
+- **Styling**: Vanilla CSS Modules - Scoped styling per component with no extra build steps beyond Vite's built-in CSS handling.
+- **WebSocket Integration**: Native WebSocket API - Simple, direct for real-time server communication with Zod schema validation.
+- **Testing Framework**: Playwright + Vitest - End-to-end browser emulation and unit tests on components/state.
+- **Linting and Formatting**: ESLint + Prettier - Enforce code consistency and catch issues early.
 
-    * **12.0: Standardize on `zod` for validation:**
-        * Replace the `joi` implementation in `SystemConfig.js` with `zod`.
-        * Remove `joi` from `package.json` dependencies and add `zod`.
-    * **12.1: Replace custom `EventBus` with `mitt`:**
-        * Replace the custom `EventBus` implementation with `mitt`.
-        * **Implementation Detail:** A wrapper module will be created around `mitt` to re-implement middleware and error
-          handling hooks, ensuring compatibility with existing components like `LoggingSubscriber`.
-    * **12.2: Develop a Command-Line Interface (CLI):**
-        * Create a simple, interactive CLI for sending Narsese statements to the agent and viewing the output. This will
-          be the primary interface for interacting with the agent.
-        * **Implementation Detail:** The CLI will be built by enhancing `src/io/ReplInterface.js` using Node.js's
-          built-in `readline` module.
-    * **12.3: Implement State Persistence and Recovery:**
-        * Design and build an adapter-based system for persisting the agent's memory and state to durable storage.
-        * **Implementation Detail:** The default adapter will serialize the agent's state to a root `agent.json` file,
-          triggered by a `.save` command in the CLI or on graceful shutdown.
-    * **12.4: Develop a WebSocket API for Real-Time Monitoring:**
-        * Implement a secure WebSocket endpoint that streams key events and metrics from the observability pipeline.
-          This will be used by the future web UI.
-        * **Implementation Detail:** The `ws` library will be added as a dependency to create the WebSocket server.
+**Project Structure**:
+```
+./ui/
+├── src/
+│   ├── components/          # React components (e.g., Panel.js using createElement)
+│   │   └── Panel.module.css # Scoped styles
+│   ├── stores/              # Zustand stores (e.g., uiStore.js)
+│   ├── utils/               # Helpers (e.g., websocket.js, consoleBridge.js)
+│   ├── schemas/             # Shared Zod schemas (e.g., messages.js)
+│   ├── layouts/             # FlexLayout configs (JSON or JS exports)
+│   ├── App.js               # Root component with FlexLayout and WebSocket setup
+│   └── main.js              # Entry point (ReactDOM.render)
+├── tests/                   # Playwright tests (e.g., ui.test.js)
+├── index.html               # Vite entry HTML (optional Pico.css CDN)
+├── vite.config.js           # Vite config (plugins for React, CSS modules)
+├── playwright.config.js     # Playwright config
+├── .eslintrc.js             # ESLint rules
+├── .prettierrc              # Prettier config
+├── package.json             # Dependencies/scripts
+└── README.md                # Setup instructions
+```
+
+**Current Architecture Status**:
+- **Core Framework**: Vite + React + Zustand + FlexLayout
+- **Advanced Data Processing**: Fluent API with DataProcessor class supporting filtering, sorting, mapping, and transformation
+- **Sophisticated Component Architecture**: DataPanel with advanced filtering, sorting, pagination, and virtualization
+- **Message Processing Pipeline**: Middleware-based architecture with validation and error handling
+- **Unified Theming System**: themeUtils for consistent styling across all components
+- **Factory Functions**: createTaskDataPanel, createConceptDataPanel for rapid panel creation
+- **State Management**: Action creators and organized state patterns in Zustand store
+- **Component Utilities**: Panel utilities for standardized component creation
+
+**Key Initiatives (In Priority Order):**
+
+* **12.1: Reliability & Robustness:**
+    * **Action:** Implement global error boundary system with graceful failure modes based on React's componentDidCatch
+    * **Action:** Develop automatic recovery mechanisms for connection and data validation failures
+    * **Action:** Create proactive WebSocket diagnostics and connection health monitoring
+    * **Action:** Implement state persistence with serialization/deserialization for session continuity using localStorage
+    * **Action:** Add comprehensive error reporting with enhanced logging and diagnostic capabilities
+    * **Action:** Implement ConsoleBridge to forward browser console logs to WebSocket server for centralized monitoring
+    * **Implementation Detail:** Build a centralized error handling system that can catch, log, and recover from various failure modes across the UI
+
+* **12.2: Usability & Accessibility:**
+    * **Action:** Implement advanced theming system with light/dark/auto modes and user preference persistence using CSS variables
+    * **Action:** Develop full keyboard navigation with power-user shortcuts and accessibility compliance
+    * **Action:** Create responsive design for adaptive layouts across various screen sizes and devices
+    * **Action:** Build contextual help system with tooltips and assistance throughout the UI
+    * **Action:** Add smooth animations and transitions for enhanced user experience
+    * **Action:** Apply WCAG 2.1 AA standards compliance for accessibility
+    * **Implementation Detail:** Use WCAG 2.1 AA standards compliance to ensure accessibility for all users
+
+* **12.3: Web UI Integration:**
+    * **Action:** Complete the WebSocket API integration from Phase 12 of the original plan for real-time monitoring
+    * **Action:** Connect the UI components to actual agent data streams using Zod schema validation
+    * **Action:** Implement real-time visualization of agent's reasoning processes
+    * **Action:** Share Zod schemas between server and client for type safety without TypeScript
+    * **Implementation Detail:** The web-based UI connects to the WebSocket API to provide a real-time view into the agent's mind
+
+* **12.4: Component Architecture Enhancement:**
+    * **Action:** Optimize component performance with React.memo and useMemo for expensive computations
+    * **Action:** Implement virtualized lists for handling large datasets efficiently
+    * **Action:** Create standardized panels with consistent theming using the themeUtils system
+    * **Action:** Build error boundaries wrapping root and key components to catch errors gracefully
+    * **Implementation Detail:** Use FlexLayout's features for drag-and-drop panels, nested tabs, splits, and persistence
 
 ---
 
-### Phase 13: Advanced Interaction & Visualization
+### Phase 13: Versatility & Performance Enhancement
 
-* **Agile Focus:** Enhance the user experience with a web-based visualization suite and more advanced CLI capabilities.
+**Agile Focus**: Expand applicability and optimize for high-performance operation across diverse use cases.
 
-* **Key Initiatives:**
+**Key Initiatives (In Priority Order):**
 
-    * **13.1: Build an Interactive Visualization Suite:**
-        * Develop a web-based UI that connects to the WebSocket API to provide a real-time view into the agent's mind.
-    * **13.2: Enhance the CLI:**
-        * Add features to the CLI for managing the agent's state (e.g., saving/loading memory, inspecting concepts).
+* **13.1: Versatility & Extensibility:**
+    * **Action:** Build plugin architecture framework for extending UI functionality
+    * **Action:** Create API abstraction layers supporting different backend implementations
+    * **Action:** Implement real-time collaboration features for multi-user interaction
+    * **Action:** Develop data import/export system with multiple format support for interchange
+    * **Action:** Create custom visualization components for domain-specific data
+    * **Action:** Add export capabilities for data and visualizations
+    * **Implementation Detail:** Design modular architecture to support different reasoning engine backends
+
+* **13.2: Performance & Scalability:**
+    * **Action:** Implement sophisticated virtualization for large datasets processing
+    * **Action:** Apply memoization strategies optimizing expensive computations with React.memo and useMemo
+    * **Action:** Create lazy loading components using dynamic imports for non-critical UI elements
+    * **Action:** Establish performance benchmarking with continuous tracking and optimization
+    * **Action:** Implement granular state slices for performance isolation of application features
+    * **Implementation Detail:** Optimize rendering performance for real-time data updates
+
+* **13.3: Interactive Dashboards:**
+    * **Action:** Build real-time data dashboards with drill-down capabilities
+    * **Action:** Create customizable dashboard layouts
+    * **Action:** Implement dynamic panel configurations
+    * **Implementation Detail:** Enable users to create personalized views of agent data
 
 ---
 
-### Phase 14: Full Autonomy
+### Phase 14: Quality & Flexibility
 
-*Goal: Achieve the final capstone of the project: an agent that exhibits genuine curiosity and self-directed learning.*
+**Agile Focus**: Ensure high-quality delivery and maximize architectural flexibility for future enhancements.
 
-**Agile Focus:** Implement the curiosity mechanism that drives autonomous knowledge acquisition.
+**Key Initiatives (In Priority Order):**
+
+* **14.1: Quality Assurance:**
+    * **Action:** Implement integration tests verifying complete user flows and component interactions
+    * **Action:** Create visual regression testing for automatic UI change detection
+    * **Action:** Develop property-based testing for data processing function validation
+    * **Action:** Establish comprehensive linting and quality standards enforcement
+    * **Implementation Detail:** Automated testing pipeline ensures UI stability and functionality
+
+* **14.2: Development Experience:**
+    * **Action:** Build component storybook for development environment and documentation
+    * **Action:** Create development utilities for testing various data scenarios
+    * **Action:** Implement hot-reload capabilities for faster development cycles
+    * **Implementation Detail:** Developer tools accelerate UI development and maintenance
+
+---
+
+### Phase 15: Ubiquity & Innovation
+
+**Agile Focus**: Maximize accessibility and introduce advanced features for broader adoption.
+
+**Key Initiatives (In Priority Order):**
+
+* **15.1: Ubiquity & Accessibility:**
+    * **Action:** Implement cross-platform support ensuring web, mobile, and desktop compatibility
+    * **Action:** Achieve WCAG 2.1 AA standards compliance for accessibility
+    * **Action:** Build internationalization framework for multi-language support
+    * **Action:** Develop offline-first capabilities with local storage and synchronization
+    * **Action:** Create comprehensive API documentation auto-generated from code
+    * **Implementation Detail:** UI accessible across all devices and user capabilities
+
+* **15.2: Flexibility & Innovation:**
+    * **Action:** Build feature flags system for gradual rollout and A/B testing
+    * **Action:** Implement machine learning integration for intelligent UI adaptation and recommendations
+    * **Action:** Create advanced analytics for usage patterns and performance insights
+    * **Action:** Develop interactive tutorials for guided user onboarding
+    * **Action:** Build customizable interfaces with user-configurable dashboards and workflows
+    * **Implementation Detail:** Adaptive UI that learns and responds to user behavior patterns
+
+---
+
+### Phase 16: Full Autonomy Visualization
+
+**Agile Focus**: Enable visualization and interaction with the agent's curiosity and autonomous learning mechanisms.
 
 **Key Initiatives:**
 
-* **14.1: Develop a Curiosity Mechanism:**
-    * **Action:** Implement a mechanism for the system to autonomously generate questions to explore gaps in its
-      knowledge.
+* **16.1: Curiosity Mechanism Visualization:**
+    * **Action:** Implement UI components to visualize the agent's curiosity-driven learning
+    * **Action:** Display autonomous question generation and exploration patterns
+    * **Action:** Visualize knowledge gap identification processes
+    * **Implementation Detail:** Connect to the curiosity mechanism from the original Phase 14 to provide real-time visualization
 
 **Acceptance Criteria:**
 
-- [ ] The system can demonstrate self-improvement by identifying a performance issue and creating a goal to address it.
-- [ ] The system can demonstrate curiosity by autonomously generating and attempting to answer novel questions.
+- [ ] The UI provides real-time insight into the agent's reasoning processes
+- [ ] Users can interact with and influence the agent's autonomous learning
+- [ ] The system's curiosity and self-improvement mechanisms are visible and understandable
 
 ---
 
@@ -244,65 +360,70 @@ expose it to the outside world or persist its state.
 These phases represent additional enhancements that could be implemented to further improve the system's capabilities
 and performance:
 
-### Phase 15: Advanced Memory Operations (Optional)
+### Phase 17: Advanced UI Capabilities (Optional)
 
-*Goal: Implement advanced memory management capabilities for improved performance and scalability.*
+*Goal: Extend the UI with advanced capabilities for handling complex user interactions and data presentations.*
 
-**Agile Focus:** Enhance the core memory subsystem with bulk operations and advanced indexing capabilities.
+**Agile Focus:** Enable the UI to handle increasingly sophisticated user workflows and data visualization needs.
 
 **Key Initiatives:**
 
-* **15.1: Implement Bulk Operation Support:**
-    * **Action:** Add efficient batch processing methods for adding, removing, and updating multiple concepts
-      simultaneously.
-    * **Benefits:** Dramatically improved performance for large-scale operations and reduced overhead from individual
-      method calls.
+* **17.1: Advanced Interaction Patterns:**
+    * **Action:** Implement gesture-based controls and advanced interaction paradigms
+    * **Action:** Add voice command integration for accessibility
+    * **Benefits:** Enhanced user experience and broader accessibility options
 
-* **15.2: Add Temporal and Contextual Indexing:**
-    * **Action:** Enhance indexing with time-based and context-aware capabilities for more sophisticated reasoning.
-    * **Benefits:** Improved temporal reasoning capabilities and better context isolation for multi-domain reasoning.
+* **17.2: Advanced Visualization:**
+    * **Action:** Add 3D visualization capabilities for complex data relationships
+    * **Action:** Implement advanced graph visualization for concept relationships
+    * **Benefits:** More intuitive understanding of complex reasoning processes
 
-* **15.3: Implement Serialization and Persistence:**
-    * **Action:** Add robust serialization mechanisms for state management and cross-process communication.
-    * **Benefits:** Persistent state management across sessions and efficient checkpointing and recovery.
+* **17.3: Collaborative Features:**
+    * **Action:** Implement real-time collaborative editing and shared workspaces
+    * **Action:** Add role-based access controls and permissions
+    * **Benefits:** Multi-user support with appropriate security and collaboration features
 
-### Phase 16: Performance Optimization (Optional)
+### Phase 18: Performance Optimization (Optional)
 
-*Goal: Optimize system performance through advanced caching, indexing, and resource management.*
+*Goal: Optimize UI performance through advanced caching, rendering, and resource management.*
 
-**Agile Focus:** Maximize system throughput and minimize resource consumption through sophisticated optimization
+**Agile Focus:** Maximize UI responsiveness and minimize resource consumption through sophisticated optimization
 techniques.
 
 **Key Initiatives:**
 
-* **16.1: Implement Advanced Caching Strategies:**
-    * **Action:** Add multi-level caching with LRU eviction and adaptive cache sizing.
-    * **Benefits:** Reduced computation time for frequently accessed data and improved response times.
+* **18.1: Advanced Caching Strategies:**
+    * **Action:** Add multi-level caching with LRU eviction and adaptive cache sizing for UI components
+    * **Benefits:** Reduced rendering time for frequently accessed components and improved response times
 
-* **16.2: Add Query Optimization:**
-    * **Action:** Implement query planning and optimization for complex reasoning operations.
-    * **Benefits:** More efficient execution of complex reasoning tasks and reduced resource consumption.
+* **18.2: Advanced Rendering Optimization:**
+    * **Action:** Implement virtualization for large-scale component rendering
+    * **Action:** Add WebAssembly integration for performance-critical operations
+    * **Benefits:** More efficient rendering of complex UI elements and reduced browser resource consumption
 
-* **16.3: Implement Resource Management:**
-    * **Action:** Add sophisticated resource monitoring and management capabilities.
-    * **Benefits:** Better system stability under load and more predictable performance characteristics.
+* **18.3: Resource Management:**
+    * **Action:** Add sophisticated resource monitoring and management capabilities for the UI
+    * **Benefits:** Better system stability under load and more predictable performance characteristics
 
-### Phase 17: Advanced Reasoning Capabilities (Optional)
+### Phase 19: Advanced Agent Integration (Optional)
 
-*Goal: Extend the reasoning engine with advanced capabilities for handling complex logical structures.*
+*Goal: Extend the UI to support advanced agent capabilities and complex reasoning patterns.*
 
-**Agile Focus:** Enable the system to handle increasingly sophisticated reasoning tasks and logical constructs.
+**Agile Focus:** Enable the UI to handle increasingly sophisticated agent behaviors and reasoning processes.
 
 **Key Initiatives:**
 
-* **17.1: Implement Higher-Order Reasoning:**
-    * **Action:** Add support for reasoning about reasoning and meta-cognitive operations.
-    * **Benefits:** Enhanced self-awareness and ability to optimize its own reasoning processes.
+* **19.1: Multi-Agent Support:**
+    * **Action:** Add support for visualizing multiple interacting agents
+    * **Action:** Implement coordination and communication visualization
+    * **Benefits:** Better understanding of complex multi-agent systems
 
-* **17.2: Add Probabilistic Programming Support:**
-    * **Action:** Extend the system to handle probabilistic programming constructs and uncertainty reasoning.
-    * **Benefits:** Improved handling of uncertain information and more sophisticated probabilistic reasoning.
+* **19.2: Advanced Reasoning Visualization:**
+    * **Action:** Add support for visualizing complex reasoning chains and inference patterns
+    * **Action:** Implement debugging tools for reasoning processes
+    * **Benefits:** Enhanced understanding and debugging of complex reasoning operations
 
-* **17.3: Implement Advanced Inference Patterns:**
-    * **Action:** Add support for advanced logical inference patterns and reasoning strategies.
-    * **Benefits:** More powerful reasoning capabilities and ability to solve complex logical problems.
+* **19.3: Predictive Analytics:**
+    * **Action:** Add predictive capabilities to anticipate user needs
+    * **Action:** Implement intelligent recommendation systems
+    * **Benefits:** More proactive and intelligent user interface
