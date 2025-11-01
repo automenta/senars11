@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
-import { ScriptUtils, BASE_DIR } from '../utils/script-utils.js';
+import { parseArgs, showUsageAndExit, spawnProcess, BASE_DIR } from '../utils/script-utils.js';
 
 // CLI runner that can handle different CLI operations
-const { args, helpRequested } = ScriptUtils.parseArgs(process.argv.slice(2));
+const { args, helpRequested } = parseArgs(process.argv.slice(2));
 
 const USAGE_MESSAGE = `
 Usage: node scripts/cli/run.js [options]
@@ -44,8 +44,8 @@ const processArgs = args => {
 };
 
 if (helpRequested) {
-    ScriptUtils.showUsageAndExit(USAGE_MESSAGE);
+    showUsageAndExit(USAGE_MESSAGE);
 }
 
 const { nodeArgs, remainingArgs } = processArgs(args);
-ScriptUtils.spawnProcess('node', [...nodeArgs, CLI_CONFIG.module, ...remainingArgs]);
+spawnProcess('node', [...nodeArgs, CLI_CONFIG.module, ...remainingArgs]);

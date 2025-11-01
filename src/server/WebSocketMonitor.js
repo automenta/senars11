@@ -270,6 +270,12 @@ class WebSocketMonitor {
                 case 'narseseInput':
                     this._handleNarseseInput(client, message);
                     break;
+                case 'testLMConnection':
+                    this._handleTestLMConnection(client, message);
+                    break;
+                case 'log':
+                    this._handleClientLog(client, message);
+                    break;
                 default:
                     // Check if this is a custom client message type
                     if (this.clientMessageHandlers && this.clientMessageHandlers.has(message.type)) {
@@ -405,6 +411,120 @@ class WebSocketMonitor {
         });
 
         console.log('WebSocket monitor now listening to NAR events');
+    }
+
+    // Handler for testing LM connection
+    async _handleTestLMConnection(client, message) {
+        try {
+            const config = message.payload;
+            
+            if (!config || !config.provider) {
+                this._sendToClient(client, {
+                    type: 'testLMConnection',
+                    success: false,
+                    message: 'Missing configuration or provider in payload'
+                });
+                return;
+            }
+
+            // Check if we have access to the LM instance in the NAR
+            if (!this._nar || !this._nar.lm) {
+                this._sendToClient(client, {
+                    type: 'testLMConnection',
+                    success: false,
+                    message: 'LM component not available'
+                });
+                return;
+            }
+
+            try {
+                // Try to register a temporary provider with the test config
+                let testProvider;
+                
+                // Create provider based on type
+                if (config.provider === 'openai') {
+                    const {LangChainProvider} = await import('../lm/LangChainProvider.js');
+                    testProvider = new LangChainProvider({
+                        provider: 'openai',
+                        modelName: config.model,
+                        apiKey: config.apiKey,
+                        temperature: config.temperature,
+                        maxTokens: config.maxTokens
+                    });
+                } else if (config.provider === 'ollama') {
+                    const {LangChainProvider} = await import('../lm/LangChainProvider.js');
+                    testProvider = new LangChainProvider({
+                        provider: 'ollama',
+                        modelName: config.model,
+                        baseURL: config.baseURL,
+                        temperature: config.temperature,
+                        maxTokens: config.maxTokens
+                    });
+                } else if (config.provider === 'anthropic') {
+                    // For now, we'll use a dummy implementation since we don't have an Anthropic provider
+                    // In a real implementation, you'd have an Anthropic provider
+                    testProvider = new (await import('../lm/DummyProvider.js')).DummyProvider({
+                        id: 'test-anthropic',
+                        responseTemplate: `Anthropic test response for: {prompt}`
+                    });
+                } else {
+                    // For other providers, try to create a dummy provider or return error
+                    testProvider = new (await import('../lm/DummyProvider.js')).DummyProvider({
+                        id: `test-${config.provider}`,
+                        responseTemplate: `Test response for ${config.provider}: {prompt}`
+                    });
+                }
+
+                // Try to generate a simple test response
+                const testResponse = await testProvider.generateText('Hello, can you respond to this test message?', {
+                    maxTokens: 20
+                });
+
+                // If we get a response without error, the connection is successful
+                this._sendToClient(client, {
+                    type: 'testLMConnection',
+                    success: true,
+                    message: `Successfully connected to ${config.name || config.provider} provider`,
+                    model: config.model,
+                    baseURL: config.baseURL,
+                    responseSample: testResponse.substring(0, 100) + (testResponse.length > 100 ? '...' : '')
+                });
+            } catch (error) {
+                console.error('LM connection test failed:', error);
+                this._sendToClient(client, {
+                    type: 'testLMConnection',
+                    success: false,
+                    message: `Connection failed: ${error.message || 'Unknown error'}`,
+                    error: error.message
+                });
+            }
+        } catch (error) {
+            console.error('Error in _handleTestLMConnection:', error);
+            this._sendToClient(client, {
+                type: 'testLMConnection',
+                success: false,
+                message: `Internal error: ${error.message}`
+            });
+        }
+    }
+
+    // Handler for client log messages
+    _handleClientLog(client, message) {
+        // Log the client message to server console for debugging
+        const logMessage = `[CLIENT-${client.clientId}] ${message.level.toUpperCase()}: ${message.data.join(' ')}`;
+        console.log(logMessage);
+        
+        // Optionally broadcast this log to other connected clients or store for debugging
+        if (message.level === 'error' || message.level === 'warn') {
+            // Broadcast error/warning logs to all clients for debugging purposes
+            this.broadcastEvent('clientLog', {
+                level: message.level,
+                clientId: client.clientId,
+                data: message.data,
+                timestamp: message.timestamp,
+                meta: message.meta
+            });
+        }
     }
 
     on(event, listener) {

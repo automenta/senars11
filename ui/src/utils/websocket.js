@@ -41,6 +41,9 @@ const messageHandlers = {
   
   // Narsese input handler
   narseseInput: createNarseseInputHandler,
+  
+  // LM configuration handlers
+  testLMConnection: createMessageHandler('setLMTestResult'),
 };
 
 class WebSocketService {

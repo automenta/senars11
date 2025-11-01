@@ -222,10 +222,16 @@ const useUiStore = create((set, get) => ({
 
   // Notification state
   notifications: [],
-  addNotification: (notification) => set(createListSetter('notifications')(notification, 'id')),
+  addNotification: (notification) => set(state => ({
+    notifications: [...state.notifications, { ...notification, id: notification.id || Date.now() + Math.random() }]
+  })),
   updateNotification: (id, updates) => set(createItemUpdater('notifications', 'id')(id, updates)),
   removeNotification: (id) => set(createItemRemover('notifications', 'id')(id)),
   clearNotifications: () => set({notifications: []}),
+
+  // LM configuration state - store the test result temporarily
+  lmTestResult: null,
+  setLMTestResult: (result) => set({lmTestResult: result}),
 
   // Batch update function for multiple state changes
   batchUpdate: (updates) => batchUpdate(set, updates),

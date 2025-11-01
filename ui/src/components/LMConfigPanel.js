@@ -37,6 +37,7 @@ const LMConfigPanel = () => {
   const [isTesting, setIsTesting] = useState(false);
   const [showSecrets, setShowSecrets] = useState(false);
   const wsService = useUiStore(state => state.wsService);
+  const lmTestResult = useUiStore(state => state.lmTestResult);
 
   // Load saved configuration if available
   useEffect(() => {
@@ -57,6 +58,16 @@ const LMConfigPanel = () => {
     const defaultConfig = DEFAULT_PROVIDER_CONFIGS[selectedProvider] || DEFAULT_PROVIDER_CONFIGS.openai;
     setConfig(prev => ({ ...defaultConfig, provider: selectedProvider, ...prev }));
   }, [selectedProvider]);
+
+  // Handle test result from the store
+  useEffect(() => {
+    if (lmTestResult) {
+      setTestResult(lmTestResult);
+      setIsTesting(false);
+      // Clear the test result from store to avoid showing it again
+      useUiStore.getState().setLMTestResult(null);
+    }
+  }, [lmTestResult]);
 
   const handleInputChange = useCallback((field, value) => {
     setConfig(prev => ({ ...prev, [field]: value }));
@@ -90,23 +101,11 @@ const LMConfigPanel = () => {
         type: 'testLMConnection',
         payload: testConfig
       });
-
-      // In a real implementation, we'd wait for a response from the backend
-      // For now, we'll simulate the result
-      setTimeout(() => {
-        setIsTesting(false);
-        setTestResult({
-          success: true,
-          message: `Successfully connected to ${config.name} provider`,
-          model: config.model,
-          baseURL: config.baseURL
-        });
-      }, 1500);
     } catch (error) {
       setIsTesting(false);
       setTestResult({
         success: false,
-        message: `Connection failed: ${error.message || 'Unknown error'}`
+        message: `Test failed: ${error.message || 'Unknown error'}` 
       });
     }
   }, [wsService, config, selectedProvider]);
