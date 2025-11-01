@@ -237,6 +237,16 @@ This document provides a complete, self-contained, and actionable implementation
 - **Event System**: `/src/util/EventBus.js` - mitt-based event bus for communication
 - **Data Processing**: `/ui/src/utils/dataProcessor.js` - Transform raw events into displayable data
 
+### Demonstration & Capture Capabilities:
+The system includes built-in capabilities for creating educational demonstrations that align with our vision:
+
+1. **Screenshot Capture**: `scripts/utils/screenshot-generator.js` - Generates screenshots of UI states for educational content
+2. **Movie Generation**: `scripts/utils/visualize.js` - Creates animated sequences showing reasoning processes in action
+3. **Interactive Demos**: `src/demo/DemoWrapper.js` - Provides pre-built demonstration scenarios that showcase hybrid intelligence
+4. **Data Export**: `scripts/utils/data-management.js` - Exports reasoning data for analysis, sharing, and creating compelling demonstrations
+
+These capabilities are essential for achieving the vision of a living demonstration that makes hybrid intelligence observable, understandable, and shareable.
+
 ### Component Architecture Pattern:
 ```javascript
 // Example component structure
