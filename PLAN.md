@@ -12,168 +12,60 @@ priority.
 
 ---
 
-## Core Development Principles & Technology Choices
+## Current Development Status
 
-To align with the JavaScript platform and modern development practices, we will adhere to the following principles:
+The SeNARS project has successfully completed core foundational development (Phases 1-11) and is now focused on UI development and advanced features. The core reasoning engine, observability systems, fault tolerance, and security have been established.
 
-1. **Flexible Configuration:** Configuration can be provided via inline JSON within `.js` initialization code,
-   overriding sane defaults. For sensitive information like API keys, `.env` files (or similar conventions) will be
-   consulted. This approach simplifies testing by unifying configuration within the code, while still allowing for
-   external configuration files in application-level functionality.
+### Completed Core Foundation:
+- **Core Reasoning Engine**: NARS reasoning system implementation
+- **Observability**: Event-driven architecture with unified logging and monitoring
+- **Fault Tolerance**: Bounded evaluation, circuit breakers, fallback strategies
+- **Security**: Capability-based security model and validation systems
+- **Configuration**: Unified Zod-based schema validation
+- **Testing**: Property-based testing and benchmark suite establishment
 
-2. **Jest for Testing:** The project will standardize on the **Jest** testing framework. Instead of building custom test
-   runners or fluent APIs, we will leverage Jest's powerful ecosystem for assertions, mocking, and coverage reporting,
-   which is already established in the project.
+### Development Principles & Architecture
 
-3. **Zod for Validation:** For all data validation (configuration schemas, API inputs, event payloads), we will use *
-   *Zod**. Its schema-first approach provides robust, static, and runtime type safety with minimal boilerplate,
-   improving reliability and developer experience.
+**Core Principles:**
+- **Refactored Architecture**: Modular, parameterized, and abstracted design patterns
+- **Configuration-Driven**: Flexible configuration via Zod schemas and JSON
+- **Event-Driven**: Asynchronous communication with traceable operations
+- **Test-First**: Comprehensive testing at all levels (unit, integration, e2e)
+- **Security-First**: Capability-based access and sandboxed execution
 
-4. **Lightweight Event Emitter:** The `EventBus` will be implemented using a minimal, well-tested library like `mitt` or
-   `tiny-emitter`. This avoids reinventing core eventing logic and ensures high performance.
+**Technology Stack:**
+- **Build**: Vite (fast dev server) + Node.js ecosystem
+- **Frontend**: React + Zustand + FlexLayout (plain JavaScript, no JSX)
+- **Validation**: Zod for all data schemas
+- **Testing**: Jest + Playwright + Vitest
+- **Styling**: CSS Modules with CSS variables
+- **Communication**: WebSocket API with structured messaging
+- **Code Quality**: ESLint + Prettier
 
-5. **Functional Core, Imperative Shell:** The reasoning engine, evaluation logic, and truth-value functions will be
-   implemented as **pure functions**. The "shell" will manage state and side effects (I/O, etc.). This separation is
-   critical for testability and reliability.
+### Current Focus: Phase 12 - Foundation Enhancement (UI Development)
 
-6. **Configuration as Code:** All agent behaviors, rule sets, and plugin configurations will be defined declaratively in
-   the `config.json`, not hard-coded. The `AgentBuilder` is the mechanism that enforces this principle.
+**Agile Focus**: Maximize reliability and usability of the web-based user interface to establish a robust user experience foundation.
 
----
-
-### Phase 9: Observability & Foundational Engineering
-
-*Goal: Establish a comprehensive, unified observability framework and a formal plugin architecture.*
-
-**Agile Focus:** Establish the event-driven backbone and implement the minimum viable logging and developer tools
-necessary to observe and debug the core reasoning loop.
-
-**Key Initiatives (In Priority Order):**
-
-* **9.1: Enforce Event-Driven Communication & Define Ubiquitous Language:**
-    * **Action:** Mandate the use of the `EventBus` for all cross-component communication. Refactor to publish events.
-    * **Implementation Details:**
-        * **Ubiquitous Language**: Events (`task.new`, `cycle.start`, etc.) will carry a `traceId` to allow for tracing
-          a single causal chain of operations through the asynchronous system.
-
-* **9.2: Implement Basic Structured Logging:**
-    * **Action:** Create a single `LoggingSubscriber` that listens to all events on the bus and outputs structured JSON
-      logs to the console.
-
-* **9.3: Establish a Unified Configuration Schema with Zod:**
-    * **Action:** Consolidate all configuration into a single, hierarchical JSON schema. Use **Zod** to parse and
-      validate the configuration object at startup.
-    * **Example Snippet (`config.json`):**
-      ```json
-      {
-        "agent": {
-          "observability": { "logging": { "level": "info" } },
-          "plugins": [ { "name": "my-plugin", "config": { "apiKey": "${ENV_VAR}" } } ]
-        }
-      }
-      ```
-
-* **9.4: Define and Implement the Formal Plugin API:**
-    * **Action:** Specify a formal `Plugin` interface and integrate it into the `AgentBuilder`.
-
-* **9.5: Create a Core Agent Factory:**
-    * **Action:** Develop a simple factory function (e.g., `createAgent(config)`) that abstracts the `AgentBuilder` for
-      common use cases, making it easier for researchers to start experiments.
-
-**Acceptance Criteria:**
-
-- [ ] All core reasoning loop communication is mediated by the `EventBus` and includes a `traceId`.
-- [ ] A `LoggingSubscriber` outputs structured logs for all core events.
-- [ ] All system configuration is managed through a single, Zod-validated JSON schema.
-
----
-
-### Phase 10: Fault Tolerance & Reliability Architecture
-
-*Goal: Architect and implement a robust fault tolerance system that ensures predictable behavior in the face of internal
-and external failures.*
-
-**Agile Focus:** Eliminate the most immediate and critical stability risks: infinite loops and cascading failures from
-external API calls.
-
-**Key Initiatives (In Priority Order):**
-
-* **10.1: Implement Bounded Evaluation:**
-    * **Action:** Modify the `Task` object to include a `budget`. The `Cycle.js` loop must decrement this budget and
-      halt processing of a task if it is exhausted.
-    * **Pattern:**
-      ```javascript
-      const task = {
-        term: '(A ==> B)',
-        truth: { f: 0.9, c: 0.9 },
-        budget: { cycles: 100, depth: 10 }
-      };
-      ```
-
-* **10.2: Implement Circuit Breakers for External Dependencies:**
-    * **Action:** Wrap all external calls (especially to LM providers) in a Circuit Breaker pattern.
-
-* **10.3: Design and Implement Fallback Strategies:**
-    * **Action:** Develop intelligent fallback mechanisms, such as degrading to pure NAL reasoning when an LM is
-      unavailable.
-
-* **10.4: Memory Corruption Detection:**
-    * **Action:** Implement checksums or other validation mechanisms for critical memory structures. (Note: Recovery
-      will depend on persistence, but detection can be implemented first).
-
-**Acceptance Criteria:**
-
-- [ ] All reasoning tasks are subject to configurable resource and time bounds.
-- [ ] All external API calls are protected by a configurable circuit breaker.
-
----
-
-### Phase 11: Security & Advanced Validation
-
-*Goal: Secure the agent's execution environment and rigorously validate the correctness of its reasoning on ephemeral
-test cases.*
-
-**Agile Focus:** Prove that the core reasoning system is both secure and logically correct *before* adding features that
-expose it to the outside world or persist its state.
-
-**Key Initiatives (In Priority Order):**
-
-* **11.1: Design a Capability-Based Security Model:**
-    * **Action:** Implement a security model where tools and plugins are granted specific, limited capabilities defined
-      in a manifest.
-
-* **11.2: Implement a Sandboxed Tool Execution Environment:**
-    * **Action:** Execute all external tools in a sandboxed environment with strict resource limits.
-
-* **11.3: Implement Property-Based Testing for NAL Rules:**
-    * **Action:** Use **Jest** with a library like `fast-check` to test the logical invariants of the NAL rule engine
-      and truth-value functions.
-
-* **11.4: Establish a Reasoning Benchmark Suite:**
-    * **Action:** Create a dedicated test harness and a suite of complex, ephemeral problems stored in JSON files. The
-      CI pipeline will run these benchmarks to validate the *quality* and *correctness* of NAL-LM hybrid reasoning and
-      catch regressions.
-    * **Validation Scenario Example (`/benchmarks/tesla_premise.json`):**
-      ```json
-      {
-        "name": "Tesla Premise Injection",
-        "input": [
-          "(my_car --> Tesla).",
-          "(Tesla --> car).",
-          "my_car needs electricity?"
-        ],
-        "expected": {
-          "answer": "(my_car --> needs_electricity).",
-          "trace": [ "lm.request", "nal.deduction" ]
-        }
-      }
-      ```
-
-**Acceptance Criteria:**
-
-- [ ] Tools and plugins operate under a capability-based security model.
-- [ ] The quality and correctness of hybrid reasoning are validated against a JSON-based benchmark suite.
-- [ ] NAL rules are validated by property-based tests.
+**Refactored Project Structure:**
+```
+./ui/
+├── src/
+│   ├── components/          # Modular UI components (createElement-based)
+│   ├── stores/              # Zustand state modules
+│   ├── utils/               # Reusable utilities (processors, themes, etc.)
+│   ├── schemas/             # Shared Zod schemas
+│   ├── layouts/             # FlexLayout configurations
+│   ├── App.js               # Root composition
+│   └── main.js              # Entry point
+├── tests/                   # Comprehensive test suite
+├── index.html               # Vite entry
+├── vite.config.js           # Build configuration
+├── playwright.config.js     # E2E test configuration
+├── .eslintrc.js             # Code standards
+├── .prettierrc              # Formatting rules
+├── package.json             # Dependencies and scripts
+└── README.md                # Setup instructions
+```
 
 ---
 
@@ -223,135 +115,117 @@ expose it to the outside world or persist its state.
 - **State Management**: Action creators and organized state patterns in Zustand store
 - **Component Utilities**: Panel utilities for standardized component creation
 
-**Key Initiatives (In Priority Order):**
+**Modular Enhancement Initiatives (In Priority Order):**
 
-* **12.1: Reliability & Robustness:**
-    * **Action:** Implement global error boundary system with graceful failure modes based on React's componentDidCatch
-    * **Action:** Develop automatic recovery mechanisms for connection and data validation failures
-    * **Action:** Create proactive WebSocket diagnostics and connection health monitoring
-    * **Action:** Implement state persistence with serialization/deserialization for session continuity using localStorage
-    * **Action:** Add comprehensive error reporting with enhanced logging and diagnostic capabilities
-    * **Action:** Implement ConsoleBridge to forward browser console logs to WebSocket server for centralized monitoring
-    * **Implementation Detail:** Build a centralized error handling system that can catch, log, and recover from various failure modes across the UI
+* **12.1: Error Handling & Reliability (Abstracted Framework):**
+    * **Modular Action:** Implement configurable error boundary system with parameterized fallback UIs
+    * **Modular Action:** Develop recoverable connection mechanisms with configurable retry strategies
+    * **Modular Action:** Create WebSocket health monitoring with configurable thresholds and alerts
+    * **Modular Action:** Implement state persistence with configurable storage backends
+    * **Modular Action:** Add centralized logging with configurable output destinations
+    * **Implementation Pattern:** Abstracted error handling modules with parameterized configuration options
 
-* **12.2: Usability & Accessibility:**
-    * **Action:** Implement advanced theming system with light/dark/auto modes and user preference persistence using CSS variables
-    * **Action:** Develop full keyboard navigation with power-user shortcuts and accessibility compliance
-    * **Action:** Create responsive design for adaptive layouts across various screen sizes and devices
-    * **Action:** Build contextual help system with tooltips and assistance throughout the UI
-    * **Action:** Add smooth animations and transitions for enhanced user experience
-    * **Action:** Apply WCAG 2.1 AA standards compliance for accessibility
-    * **Implementation Detail:** Use WCAG 2.1 AA standards compliance to ensure accessibility for all users
+* **12.2: Accessibility & User Experience (Parameterized):**
+    * **Modular Action:** Implement theme system with configurable color schemes and user preferences
+    * **Modular Action:** Develop keyboard navigation with configurable shortcut mappings
+    * **Modular Action:** Create responsive layouts with configurable breakpoints
+    * **Modular Action:** Build contextual assistance system with configurable help content
+    * **Modular Action:** Add UI transitions with configurable animation parameters
+    * **Implementation Pattern:** Parameterized styling and interaction systems
 
-* **12.3: Web UI Integration:**
-    * **Action:** Complete the WebSocket API integration from Phase 12 of the original plan for real-time monitoring
-    * **Action:** Connect the UI components to actual agent data streams using Zod schema validation
-    * **Action:** Implement real-time visualization of agent's reasoning processes
-    * **Action:** Share Zod schemas between server and client for type safety without TypeScript
-    * **Implementation Detail:** The web-based UI connects to the WebSocket API to provide a real-time view into the agent's mind
-
-* **12.4: Component Architecture Enhancement:**
-    * **Action:** Optimize component performance with React.memo and useMemo for expensive computations
-    * **Action:** Implement virtualized lists for handling large datasets efficiently
-    * **Action:** Create standardized panels with consistent theming using the themeUtils system
-    * **Action:** Build error boundaries wrapping root and key components to catch errors gracefully
-    * **Implementation Detail:** Use FlexLayout's features for drag-and-drop panels, nested tabs, splits, and persistence
+* **12.3: Integration & Data Flow (Modularized):**
+    * **Modular Action:** Complete WebSocket integration with configurable endpoint parameters
+    * **Modular Action:** Establish data streaming with configurable validation schemas
+    * **Modular Action:** Implement real-time visualization with configurable data processors
+    * **Modular Action:** Create schema sharing system with configurable validation rules
+    * **Implementation Pattern:** Modular data processing pipeline with configurable transformations
 
 ---
 
 ### Phase 13: Versatility & Performance Enhancement
 
-**Agile Focus**: Expand applicability and optimize for high-performance operation across diverse use cases.
+**Agile Focus**: Maximize flexibility and optimize performance through modular, parameterized architecture.
 
-**Key Initiatives (In Priority Order):**
+**Consolidated Initiatives (In Priority Order):**
 
-* **13.1: Versatility & Extensibility:**
-    * **Action:** Build plugin architecture framework for extending UI functionality
-    * **Action:** Create API abstraction layers supporting different backend implementations
-    * **Action:** Implement real-time collaboration features for multi-user interaction
-    * **Action:** Develop data import/export system with multiple format support for interchange
-    * **Action:** Create custom visualization components for domain-specific data
-    * **Action:** Add export capabilities for data and visualizations
-    * **Implementation Detail:** Design modular architecture to support different reasoning engine backends
+* **13.1: Modular Extensibility (Plugin Architecture):**
+    * **Modular Action:** Implement configurable plugin system with standardized interfaces
+    * **Modular Action:** Create abstraction layers supporting different backend implementations
+    * **Modular Action:** Develop parameterized import/export system for multiple data formats
+    * **Implementation Pattern:** Standardized plugin interfaces with configurable capabilities
 
-* **13.2: Performance & Scalability:**
-    * **Action:** Implement sophisticated virtualization for large datasets processing
-    * **Action:** Apply memoization strategies optimizing expensive computations with React.memo and useMemo
-    * **Action:** Create lazy loading components using dynamic imports for non-critical UI elements
-    * **Action:** Establish performance benchmarking with continuous tracking and optimization
-    * **Action:** Implement granular state slices for performance isolation of application features
-    * **Implementation Detail:** Optimize rendering performance for real-time data updates
+* **13.2: Performance Optimization (Abstracted Strategies):**
+    * **Modular Action:** Implement configurable virtualization for dataset processing
+    * **Modular Action:** Apply memoization strategies with configurable caching policies
+    * **Modular Action:** Establish performance monitoring with configurable benchmarks
+    * **Implementation Pattern:** Parameterized optimization strategies with configurable parameters
 
-* **13.3: Interactive Dashboards:**
-    * **Action:** Build real-time data dashboards with drill-down capabilities
-    * **Action:** Create customizable dashboard layouts
-    * **Action:** Implement dynamic panel configurations
-    * **Implementation Detail:** Enable users to create personalized views of agent data
+* **13.3: Interactive Visualization (Modular Dashboards):**
+    * **Modular Action:** Build configurable dashboard system with customizable layouts
+    * **Modular Action:** Create parameterized visualization components with configurable views
+    * **Implementation Pattern:** Modular dashboard architecture with configurable panel configurations
 
 ---
 
 ### Phase 14: Quality & Flexibility
 
-**Agile Focus**: Ensure high-quality delivery and maximize architectural flexibility for future enhancements.
+**Agile Focus**: Establish comprehensive quality assurance and architectural flexibility through parameterized systems.
 
-**Key Initiatives (In Priority Order):**
+**Consolidated Initiatives (In Priority Order):**
 
-* **14.1: Quality Assurance:**
-    * **Action:** Implement integration tests verifying complete user flows and component interactions
-    * **Action:** Create visual regression testing for automatic UI change detection
-    * **Action:** Develop property-based testing for data processing function validation
-    * **Action:** Establish comprehensive linting and quality standards enforcement
-    * **Implementation Detail:** Automated testing pipeline ensures UI stability and functionality
+* **14.1: Quality Assurance (Automated Framework):**
+    * **Modular Action:** Implement configurable test pipeline with parameterized validation rules
+    * **Modular Action:** Create automated visual regression testing with configurable thresholds
+    * **Modular Action:** Establish comprehensive linting with configurable quality standards
+    * **Implementation Pattern:** Abstracted quality assurance framework with parameterized rules
 
-* **14.2: Development Experience:**
-    * **Action:** Build component storybook for development environment and documentation
-    * **Action:** Create development utilities for testing various data scenarios
-    * **Action:** Implement hot-reload capabilities for faster development cycles
-    * **Implementation Detail:** Developer tools accelerate UI development and maintenance
+* **14.2: Development Experience (Parameterized Tools):**
+    * **Modular Action:** Build component development environment with configurable documentation
+    * **Modular Action:** Create testing utilities with configurable scenario parameters
+    * **Modular Action:** Implement development workflow with configurable hot-reload settings
+    * **Implementation Pattern:** Parameterized development tools with configurable preferences
 
 ---
 
-### Phase 15: Ubiquity & Innovation
+### Phase 15: Universal Access & Innovation
 
-**Agile Focus**: Maximize accessibility and introduce advanced features for broader adoption.
+**Agile Focus**: Maximize accessibility and introduce advanced features through configurable, adaptable systems.
 
-**Key Initiatives (In Priority Order):**
+**Consolidated Initiatives (In Priority Order):**
 
-* **15.1: Ubiquity & Accessibility:**
-    * **Action:** Implement cross-platform support ensuring web, mobile, and desktop compatibility
-    * **Action:** Achieve WCAG 2.1 AA standards compliance for accessibility
-    * **Action:** Build internationalization framework for multi-language support
-    * **Action:** Develop offline-first capabilities with local storage and synchronization
-    * **Action:** Create comprehensive API documentation auto-generated from code
-    * **Implementation Detail:** UI accessible across all devices and user capabilities
+* **15.1: Universal Access (Configurable Framework):**
+    * **Modular Action:** Implement cross-platform support with configurable device targeting
+    * **Modular Action:** Achieve configurable accessibility compliance with parameterized standards
+    * **Modular Action:** Build internationalization framework with configurable language support
+    * **Modular Action:** Develop offline capabilities with configurable synchronization
+    * **Implementation Pattern:** Parameterized accessibility system with configurable compliance levels
 
-* **15.2: Flexibility & Innovation:**
-    * **Action:** Build feature flags system for gradual rollout and A/B testing
-    * **Action:** Implement machine learning integration for intelligent UI adaptation and recommendations
-    * **Action:** Create advanced analytics for usage patterns and performance insights
-    * **Action:** Develop interactive tutorials for guided user onboarding
-    * **Action:** Build customizable interfaces with user-configurable dashboards and workflows
-    * **Implementation Detail:** Adaptive UI that learns and responds to user behavior patterns
+* **15.2: Adaptive Innovation (Learning Systems):**
+    * **Modular Action:** Build feature flags system with configurable rollout parameters
+    * **Modular Action:** Implement intelligent adaptation with configurable recommendation algorithms
+    * **Modular Action:** Create analytics framework with configurable tracking and insights
+    * **Modular Action:** Build customizable interfaces with configurable user workflows
+    * **Implementation Pattern:** Self-adapting UI with configurable behavior patterns
 
 ---
 
 ### Phase 16: Full Autonomy Visualization
 
-**Agile Focus**: Enable visualization and interaction with the agent's curiosity and autonomous learning mechanisms.
+**Agile Focus**: Enable visualization and interaction with the agent's curiosity and autonomous learning mechanisms through configurable visualization systems.
 
-**Key Initiatives:**
+**Consolidated Initiative:**
 
-* **16.1: Curiosity Mechanism Visualization:**
-    * **Action:** Implement UI components to visualize the agent's curiosity-driven learning
-    * **Action:** Display autonomous question generation and exploration patterns
-    * **Action:** Visualize knowledge gap identification processes
-    * **Implementation Detail:** Connect to the curiosity mechanism from the original Phase 14 to provide real-time visualization
+* **16.1: Curiosity Visualization (Configurable):**
+    * **Modular Action:** Implement parameterized UI components for curiosity-driven learning visualization
+    * **Modular Action:** Display configurable autonomous question generation patterns
+    * **Modular Action:** Visualize configurable knowledge gap identification processes
+    * **Implementation Pattern:** Parameterized visualization system connecting to curiosity mechanisms
 
 **Acceptance Criteria:**
 
-- [ ] The UI provides real-time insight into the agent's reasoning processes
-- [ ] Users can interact with and influence the agent's autonomous learning
-- [ ] The system's curiosity and self-improvement mechanisms are visible and understandable
+- [ ] The UI provides real-time insight into the agent's reasoning processes through configurable visualization
+- [ ] Users can interact with and influence the agent's autonomous learning via parameterized controls
+- [ ] The system's curiosity and self-improvement mechanisms are visible and configurable through the UI
 
 ---
 
@@ -360,70 +234,123 @@ expose it to the outside world or persist its state.
 These phases represent additional enhancements that could be implemented to further improve the system's capabilities
 and performance:
 
-### Phase 17: Advanced UI Capabilities (Optional)
+### Phase 17: Advanced Interaction & Visualization (Optional)
 
-*Goal: Extend the UI with advanced capabilities for handling complex user interactions and data presentations.*
+*Goal: Extend the UI with sophisticated interaction patterns and visualization capabilities.*
 
-**Agile Focus:** Enable the UI to handle increasingly sophisticated user workflows and data visualization needs.
+**Agile Focus:** Enable sophisticated user interactions and data presentations through modular, configurable systems.
 
-**Key Initiatives:**
+**Consolidated Initiatives:**
 
-* **17.1: Advanced Interaction Patterns:**
-    * **Action:** Implement gesture-based controls and advanced interaction paradigms
-    * **Action:** Add voice command integration for accessibility
-    * **Benefits:** Enhanced user experience and broader accessibility options
+* **17.1: Advanced Interaction (Parameterized):**
+    * **Modular Action:** Implement configurable gesture-based controls and interaction paradigms
+    * **Modular Action:** Add configurable voice command integration for accessibility
+    * **Benefits:** Enhanced experience through configurable interaction options
 
-* **17.2: Advanced Visualization:**
-    * **Action:** Add 3D visualization capabilities for complex data relationships
-    * **Action:** Implement advanced graph visualization for concept relationships
-    * **Benefits:** More intuitive understanding of complex reasoning processes
+* **17.2: Advanced Visualization (Modular):**
+    * **Modular Action:** Add configurable 3D visualization capabilities for complex relationships
+    * **Modular Action:** Implement parameterized graph visualization for concept relationships
+    * **Benefits:** Intuitive understanding through configurable visualization options
 
-* **17.3: Collaborative Features:**
-    * **Action:** Implement real-time collaborative editing and shared workspaces
-    * **Action:** Add role-based access controls and permissions
-    * **Benefits:** Multi-user support with appropriate security and collaboration features
+* **17.3: Collaborative Features (Configurable):**
+    * **Modular Action:** Implement configurable collaborative editing with parameterized permissions
+    * **Benefits:** Multi-user support with configurable security and collaboration
 
-### Phase 18: Performance Optimization (Optional)
+### Phase 18: Performance & Resource Optimization (Optional)
 
-*Goal: Optimize UI performance through advanced caching, rendering, and resource management.*
+*Goal: Optimize UI performance through advanced caching, rendering, and configurable resource management.*
 
-**Agile Focus:** Maximize UI responsiveness and minimize resource consumption through sophisticated optimization
-techniques.
+**Agile Focus:** Maximize responsiveness while minimizing resource consumption through configurable optimization strategies.
 
-**Key Initiatives:**
+**Consolidated Initiatives:**
 
-* **18.1: Advanced Caching Strategies:**
-    * **Action:** Add multi-level caching with LRU eviction and adaptive cache sizing for UI components
-    * **Benefits:** Reduced rendering time for frequently accessed components and improved response times
+* **18.1: Advanced Caching (Configurable):**
+    * **Modular Action:** Implement multi-level caching with configurable eviction and sizing policies
+    * **Benefits:** Improved performance through configurable caching strategies
 
-* **18.2: Advanced Rendering Optimization:**
-    * **Action:** Implement virtualization for large-scale component rendering
-    * **Action:** Add WebAssembly integration for performance-critical operations
-    * **Benefits:** More efficient rendering of complex UI elements and reduced browser resource consumption
+* **18.2: Rendering Optimization (Parameterized):**
+    * **Modular Action:** Implement configurable virtualization for large-scale rendering
+    * **Modular Action:** Add configurable WebAssembly integration for critical operations
+    * **Benefits:** Efficient rendering through parameterized optimization
 
-* **18.3: Resource Management:**
-    * **Action:** Add sophisticated resource monitoring and management capabilities for the UI
-    * **Benefits:** Better system stability under load and more predictable performance characteristics
+* **18.3: Resource Management (Configurable):**
+    * **Modular Action:** Add configurable resource monitoring and management capabilities
+    * **Benefits:** Stable performance through configurable resource control
 
-### Phase 19: Advanced Agent Integration (Optional)
+### Phase 19: Advanced Integration & Intelligence (Optional)
 
-*Goal: Extend the UI to support advanced agent capabilities and complex reasoning patterns.*
+*Goal: Extend UI to support sophisticated agent capabilities and reasoning patterns through configurable integration.*
 
-**Agile Focus:** Enable the UI to handle increasingly sophisticated agent behaviors and reasoning processes.
+**Agile Focus:** Enable sophisticated agent interactions through modular, configurable visualization and intelligence systems.
 
-**Key Initiatives:**
+**Consolidated Initiatives:**
 
-* **19.1: Multi-Agent Support:**
-    * **Action:** Add support for visualizing multiple interacting agents
-    * **Action:** Implement coordination and communication visualization
-    * **Benefits:** Better understanding of complex multi-agent systems
+* **19.1: Multi-Agent Support (Configurable):**
+    * **Modular Action:** Add configurable multi-agent visualization and coordination
+    * **Benefits:** Understanding of complex multi-agent systems through configurable views
 
-* **19.2: Advanced Reasoning Visualization:**
-    * **Action:** Add support for visualizing complex reasoning chains and inference patterns
-    * **Action:** Implement debugging tools for reasoning processes
-    * **Benefits:** Enhanced understanding and debugging of complex reasoning operations
+* **19.2: Advanced Reasoning Visualization (Parameterized):**
+    * **Modular Action:** Add configurable reasoning chain visualization and debugging tools
+    * **Benefits:** Enhanced debugging through parameterized reasoning insights
 
-* **19.3: Predictive Analytics:**
-    * **Action:** Add predictive capabilities to anticipate user needs
-    * **Action:** Implement intelligent recommendation systems
-    * **Benefits:** More proactive and intelligent user interface
+* **19.3: Predictive Intelligence (Configurable):**
+    * **Modular Action:** Add configurable predictive capabilities and recommendation systems
+    * **Benefits:** Intelligent interface through configurable prediction algorithms
+
+
+## Optimized Implementation Architecture
+
+### Core Design Principles
+
+**Modular Architecture:**
+- **Abstraction**: All components should be abstracted with clear interfaces and minimal dependencies
+- **Parameterization**: All configurable behavior should accept parameters rather than hardcoded values  
+- **Configurability**: Systems should be driven by configuration rather than hardcoded logic
+- **Reusability**: Code should be designed for maximum reuse across different contexts
+- **Composability**: Components should be designed to work together in different combinations
+
+**Quality Assurance:**
+- **Test-First Development**: Write tests before implementation to ensure quality
+- **Automated Validation**: Implement automated checks for all critical systems
+- **Error Prevention**: Build systems that prevent errors rather than just handling them
+- **Performance Validation**: Continuously validate performance metrics
+
+**User-Centric Design:**
+- **Accessibility-First**: Design for accessibility as a fundamental requirement
+- **Adaptive Interfaces**: Build interfaces that adapt to user preferences and contexts
+- **Intuitive Workflows**: Create intuitive user journeys with progressive disclosure
+- **Responsive Design**: Ensure optimal experience across all device types
+
+### Implementation Guidelines
+
+1. **Modular Development**: Build independent, reusable modules with clear interfaces
+2. **Configuration-Driven**: Use configuration over hardcoding for all parameterizable behavior
+3. **Abstracted Architecture**: Create abstractions for common patterns and reusable components
+4. **Parameterized Systems**: Design all systems to accept parameterized inputs for maximum flexibility
+5. **Comprehensive Testing**: Implement testing at unit, integration, and end-to-end levels
+6. **Performance Conscious**: Optimize for performance at every layer of the application
+
+### Development Workflow
+
+1. Initialize: `npm create vite@latest my-ui --template react` (adapt for plain JS).
+2. Install Dependencies: `npm install react react-dom flexlayout-react zustand zod @playwright/test vitest`.
+3. Setup Scripts in package.json:
+    - `dev`: `vite`
+    - `test`: `vitest`
+    - `e2e`: `playwright test`
+    - `lint`: `eslint src`
+4. Develop: Code components with `createElement`, connect WebSocket in App.js, define layouts in FlexLayout.
+5. Test: Write/run Playwright scripts to emulate browser, mock WebSockets, assert no runtime errors.
+6. Extend: For agent control/demos, expose WebSocket endpoints for external commands (e.g., updatePanel).
+
+## Assumptions and Extensibility
+
+- Server: Assumes a Node.js backend with WebSocket support (e.g., ws library). Zod schemas shared via monorepo or copied
+  file.
+- No Production Build Details: Focus on dev; use `vite build` for dist when ready.
+- Future-Proof: Architecture supports adding features like interaction demos or AI control without rework—e.g.,
+  dedicated WebSocket channels per panel.
+- Constraints: No TypeScript, no JSX, minimal build steps. If needs evolve, revisit (e.g., add Redux if Zustand
+  insufficient).
+
+This optimized plan emphasizes modularity, parameterization, and configurability to ensure the system is elegant, maintainable, and highly adaptable to changing requirements.
