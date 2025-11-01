@@ -1,43 +1,16 @@
 /**
- * Layout configuration utilities and default layout definition
+ * Layout configuration following PLAN.ui.md architecture
  */
 
-// Layout building blocks
-const createTab = (name, component) => ({
-  type: 'tab',
-  name,
-  component
-});
+// Base layout building blocks - simple and extensible
+const createTab = (name, component) => ({ type: 'tab', name, component });
+const createTabSet = (children, weight = 50, id = null) => ({ type: 'tabset', weight, children, ...(id && { id }) });
+const createRow = (children, weight = 100) => ({ type: 'row', weight, children });
+const createColumn = (children, weight = 100) => ({ type: 'column', weight, children });
+const createBorder = (location, size, children) => ({ type: 'border', location, size, children });
 
-const createTabSet = (children, weight = 50, id = null) => ({
-  type: 'tabset',
-  weight,
-  children,
-  ...(id && { id }) // Add ID only if provided
-});
-
-const createRow = (children, weight = 100) => ({
-  type: 'row',
-  weight,
-  children
-});
-
-const createColumn = (children, weight = 100) => ({
-  type: 'column',
-  weight,
-  children
-});
-
-const createBorder = (location, size, children) => ({
-  type: 'border',
-  location,
-  size,
-  children
-});
-
-// Panel definitions for consistent naming and component mapping
+// Panel definitions - organized by purpose
 const PANELS = {
-  // Left sidebar panels
   NAVIGATION: [
     { name: 'Tasks', component: 'TaskPanel' },
     { name: 'Concepts', component: 'ConceptPanel' },
@@ -45,24 +18,21 @@ const PANELS = {
     { name: 'System', component: 'SystemStatusPanel' }
   ],
   
-  // Bottom panels
   MONITORING: [
     { name: 'Console', component: 'ConsolePanel' },
     { name: 'Priorities', component: 'PriorityFluctuationPanel' },
-    { name: 'Priority Histogram', component: 'PriorityHistogramPanel' },
+    { name: 'Priority Histogram', component: 'PriorityHistogram' },
     { name: 'Relationships', component: 'ConceptRelationshipPanel' },
     { name: 'Trace', component: 'ReasoningTracePanel' },
     { name: 'Time Series', component: 'TimeSeriesPanel' }
   ],
   
-  // Left main area panels
   DASHBOARD: [
     { name: 'Dashboard', component: 'DashboardPanel' },
     { name: 'Main', component: 'MainPanel' },
     { name: 'Task Monitor', component: 'TaskMonitorPanel' }
   ],
   
-  // Right main area panels
   EXECUTION: [
     { name: 'Cycles', component: 'CyclePanel' },
     { name: 'Variables', component: 'VariablesPanel' },
@@ -79,42 +49,40 @@ const GLOBAL_CONFIG = {
   tabSetEnableDrop: true
 };
 
-// Modular layout section builder functions
-const buildSection = (location, size, panelGroup) => 
+// Builder functions for creating flexible layouts
+const buildBorderArea = (location, size, panelGroup) => 
   createBorder(location, size, 
     PANELS[panelGroup].map(panel => createTab(panel.name, panel.component))
   );
 
-// Modular layout area builder functions
-const buildArea = (panelGroup, weight, id) => 
+const buildMainArea = (panelGroup, weight, id) => 
   createTabSet(
     PANELS[panelGroup].map(panel => createTab(panel.name, panel.component)),
     weight,
     id
   );
 
-// Main layout definition
+// Default IDE-like layout following PLAN.ui.md
 const defaultLayout = {
   global: GLOBAL_CONFIG,
   borders: [
-    buildSection('left', 250, 'NAVIGATION'),
-    buildSection('bottom', 250, 'MONITORING')
+    buildBorderArea('left', 250, 'NAVIGATION'),
+    buildBorderArea('bottom', 250, 'MONITORING')
   ],
   layout: createRow([
-    buildArea('DASHBOARD', 60, 'dashboard-area'),
-    buildArea('EXECUTION', 40, 'execution-area')
+    buildMainArea('DASHBOARD', 60, 'dashboard-area'),
+    buildMainArea('EXECUTION', 40, 'execution-area')
   ])
 };
 
 export default defaultLayout;
 
-// Export utility functions for dynamic layout creation
+// Export helpers for dynamic layout creation
 export {
   createTab,
   createTabSet,
   createRow,
   createColumn,
   createBorder,
-  PANELS,
-  GLOBAL_CONFIG
+  PANELS
 };

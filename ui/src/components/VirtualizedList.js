@@ -55,19 +55,19 @@ const VirtualizedList = ({
     },
     onScroll: handleScroll
   },
-    // Spacer element to maintain scroll range
-    React.createElement('div', { style: { height: totalHeight, position: 'relative' } },
-      // Positioned container for visible items
-      React.createElement('div', { 
-        style: { 
-          position: 'absolute',
-          top: offsetY,
-          left: 0,
-          width: '100%',
-          height: visibleItems.length * itemHeight
-        }
-      }, ...visibleItems)
-    )
+  // Spacer element to maintain scroll range
+  React.createElement('div', { style: { height: totalHeight, position: 'relative' } },
+    // Positioned container for visible items
+    React.createElement('div', { 
+      style: { 
+        position: 'absolute',
+        top: offsetY,
+        left: 0,
+        width: '100%',
+        height: visibleItems.length * itemHeight
+      }
+    }, ...visibleItems)
+  )
   );
 };
 

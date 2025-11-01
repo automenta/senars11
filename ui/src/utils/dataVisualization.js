@@ -28,21 +28,21 @@ export const ChartContainer = ({
       ...style
     }
   },
-    title && React.createElement('h4', {
-      style: { 
-        margin: '0 0 0.5rem 0', 
-        fontSize: '1rem',
-        fontWeight: 'bold'
-      }
-    }, title),
-    description && React.createElement('p', {
-      style: { 
-        margin: '0 0 0.5rem 0', 
-        fontSize: '0.8rem',
-        color: '#666'
-      }
-    }, description),
-    children
+  title && React.createElement('h4', {
+    style: { 
+      margin: '0 0 0.5rem 0', 
+      fontSize: '1rem',
+      fontWeight: 'bold'
+    }
+  }, title),
+  description && React.createElement('p', {
+    style: { 
+      margin: '0 0 0.5rem 0', 
+      fontSize: '0.8rem',
+      color: '#666'
+    }
+  }, description),
+  children
   );
 };
 
@@ -79,16 +79,16 @@ export const DataVisualizer = ({
   // Select rendering function based on type
   const renderChart = () => {
     switch (type.toLowerCase()) {
-      case 'bar':
-        return renderBarChart(displayData, { xKey, yKey, color, width, height });
-      case 'line':
-        return renderLineChart(displayData, { xKey, yKey, color, width, height });
-      case 'pie':
-        return renderPieChart(displayData, { xKey, yKey, color, width, height });
-      case 'scatter':
-        return renderScatterChart(displayData, { xKey, yKey, color, width, height });
-      default:
-        return renderBarChart(displayData, { xKey, yKey, color, width, height });
+    case 'bar':
+      return renderBarChart(displayData, { xKey, yKey, color, width, height });
+    case 'line':
+      return renderLineChart(displayData, { xKey, yKey, color, width, height });
+    case 'pie':
+      return renderPieChart(displayData, { xKey, yKey, color, width, height });
+    case 'scatter':
+      return renderScatterChart(displayData, { xKey, yKey, color, width, height });
+    default:
+      return renderBarChart(displayData, { xKey, yKey, color, width, height });
     }
   };
 
@@ -117,40 +117,40 @@ const renderBarChart = (data, { xKey, yKey, color, width, height }) => {
       overflowX: 'auto'
     }
   }, 
-    data.map((item, index) => {
-      const value = item[yKey] || 0;
-      const heightPercent = maxValue > 0 ? (value / maxValue) * 90 : 0;
+  data.map((item, index) => {
+    const value = item[yKey] || 0;
+    const heightPercent = maxValue > 0 ? (value / maxValue) * 90 : 0;
       
-      return React.createElement('div', {
-        key: index,
-        style: {
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          width: `${barWidth}px`
-        }
-      },
-        React.createElement('div', {
-          style: {
-            width: `${barWidth * 0.8}px`,
-            height: `${heightPercent}%`,
-            backgroundColor: color,
-            border: '1px solid #2980b9',
-            borderRadius: '2px 2px 0 0'
-          }
-        }),
-        React.createElement('div', {
-          style: {
-            marginTop: '5px',
-            fontSize: '0.7rem',
-            textAlign: 'center',
-            wordBreak: 'break-word',
-            transform: 'rotate(-45deg)',
-            width: `${barWidth}px`
-          }
-        }, item[xKey])
-      );
-    })
+    return React.createElement('div', {
+      key: index,
+      style: {
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        width: `${barWidth}px`
+      }
+    },
+    React.createElement('div', {
+      style: {
+        width: `${barWidth * 0.8}px`,
+        height: `${heightPercent}%`,
+        backgroundColor: color,
+        border: '1px solid #2980b9',
+        borderRadius: '2px 2px 0 0'
+      }
+    }),
+    React.createElement('div', {
+      style: {
+        marginTop: '5px',
+        fontSize: '0.7rem',
+        textAlign: 'center',
+        wordBreak: 'break-word',
+        transform: 'rotate(-45deg)',
+        width: `${barWidth}px`
+      }
+    }, item[xKey])
+    );
+  })
   );
 };
 
@@ -185,78 +185,78 @@ const renderLineChart = (data, { xKey, yKey, color, width, height }) => {
       width: '100%'
     }
   },
-    React.createElement('svg', {
-      width: chartWidth,
-      height: chartHeight,
-      style: { position: 'absolute', top: '20px', left: '20px' }
-    },
-      // Draw the line
-      React.createElement('path', {
-        d: pathD,
-        fill: 'none',
-        stroke: color,
-        strokeWidth: '2'
-      }),
-      // Draw data points
-      data.map((item, index) => {
-        const x = index * pointSpacing;
-        const y = chartHeight - ((item[yKey] || 0) / maxValue) * chartHeight * 0.9;
+  React.createElement('svg', {
+    width: chartWidth,
+    height: chartHeight,
+    style: { position: 'absolute', top: '20px', left: '20px' }
+  },
+  // Draw the line
+  React.createElement('path', {
+    d: pathD,
+    fill: 'none',
+    stroke: color,
+    strokeWidth: '2'
+  }),
+  // Draw data points
+  data.map((item, index) => {
+    const x = index * pointSpacing;
+    const y = chartHeight - ((item[yKey] || 0) / maxValue) * chartHeight * 0.9;
         
-        return React.createElement('circle', {
-          key: index,
-          cx: x,
-          cy: y,
-          r: 4,
-          fill: color
-        });
-      }),
-      // Draw grid lines and labels
-      React.createElement('g', null,
-        // Y-axis labels
-        [0, 0.25, 0.5, 0.75, 1].map((ratio, i) => {
-          const y = chartHeight - (ratio * chartHeight * 0.9);
-          return React.createElement('g', { key: i },
-            React.createElement('line', {
-              x1: 0,
-              y1: y,
-              x2: chartWidth,
-              y2: y,
-              stroke: '#e0e0e0',
-              strokeWidth: 1,
-              strokeDasharray: '2,2'
-            }),
-            React.createElement('text', {
-              x: -10,
-              y: y + 4,
-              fontSize: '10px',
-              textAnchor: 'end'
-            }, Math.round(maxValue * (1 - ratio)))
-          );
-        })
-      )
-    ),
-    // X-axis labels
+    return React.createElement('circle', {
+      key: index,
+      cx: x,
+      cy: y,
+      r: 4,
+      fill: color
+    });
+  }),
+  // Draw grid lines and labels
+  React.createElement('g', null,
+    // Y-axis labels
+    [0, 0.25, 0.5, 0.75, 1].map((ratio, i) => {
+      const y = chartHeight - (ratio * chartHeight * 0.9);
+      return React.createElement('g', { key: i },
+        React.createElement('line', {
+          x1: 0,
+          y1: y,
+          x2: chartWidth,
+          y2: y,
+          stroke: '#e0e0e0',
+          strokeWidth: 1,
+          strokeDasharray: '2,2'
+        }),
+        React.createElement('text', {
+          x: -10,
+          y: y + 4,
+          fontSize: '10px',
+          textAnchor: 'end'
+        }, Math.round(maxValue * (1 - ratio)))
+      );
+    })
+  )
+  ),
+  // X-axis labels
+  React.createElement('div', {
+    style: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      marginTop: chartHeight,
+      marginLeft: '20px',
+      marginRight: '20px'
+    }
+  },
+  data.map((item, index) => 
     React.createElement('div', {
+      key: index,
       style: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        marginTop: chartHeight,
-        marginLeft: '20px',
-        marginRight: '20px'
+        fontSize: '0.7rem',
+        textAlign: 'center',
+        transform: 'rotate(-45deg)',
+        width: `${pointSpacing}px`
       }
-    },
-      data.map((item, index) => 
-        React.createElement('div', {
-          key: index,
-          style: {
-            fontSize: '0.7rem',
-            textAlign: 'center',
-            transform: 'rotate(-45deg)',
-            width: `${pointSpacing}px`
-          }
-        }, item[xKey])
-      )
-    )
+    }, item[xKey])
+  )
+  )
   );
 };
 
@@ -282,59 +282,59 @@ const renderPieChart = (data, { xKey, yKey, color, width, height }) => {
     height: height,
     style: { marginTop: '20px' }
   },
-    data.map((item, index) => {
-      const value = item[yKey] || 0;
-      const sliceAngle = (value / total) * 2 * Math.PI;
-      const endAngle = startAngle + sliceAngle;
+  data.map((item, index) => {
+    const value = item[yKey] || 0;
+    const sliceAngle = (value / total) * 2 * Math.PI;
+    const endAngle = startAngle + sliceAngle;
 
-      // Calculate start and end points of the arc
-      const x1 = centerX + radius * Math.cos(startAngle);
-      const y1 = centerY + radius * Math.sin(startAngle);
-      const x2 = centerX + radius * Math.cos(endAngle);
-      const y2 = centerY + radius * Math.sin(endAngle);
+    // Calculate start and end points of the arc
+    const x1 = centerX + radius * Math.cos(startAngle);
+    const y1 = centerY + radius * Math.sin(startAngle);
+    const x2 = centerX + radius * Math.cos(endAngle);
+    const y2 = centerY + radius * Math.sin(endAngle);
 
-      // Large arc flag: 1 if angle > π, 0 otherwise
-      const largeArcFlag = sliceAngle > Math.PI ? 1 : 0;
+    // Large arc flag: 1 if angle > π, 0 otherwise
+    const largeArcFlag = sliceAngle > Math.PI ? 1 : 0;
 
-      const pathData = [
-        `M ${centerX} ${centerY}`,
-        `L ${x1} ${y1}`,
-        `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2}`,
-        'Z'
-      ].join(' ');
+    const pathData = [
+      `M ${centerX} ${centerY}`,
+      `L ${x1} ${y1}`,
+      `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2}`,
+      'Z'
+    ].join(' ');
 
-      const sliceColor = colors[index % colors.length];
+    const sliceColor = colors[index % colors.length];
       
-      const result = React.createElement('path', {
-        key: index,
-        d: pathData,
-        fill: sliceColor,
-        stroke: '#fff',
-        strokeWidth: 1
-      });
+    const result = React.createElement('path', {
+      key: index,
+      d: pathData,
+      fill: sliceColor,
+      stroke: '#fff',
+      strokeWidth: 1
+    });
 
-      startAngle = endAngle;
-      return result;
-    }),
-    // Add labels
-    data.map((item, index) => {
-      const value = item[yKey] || 0;
-      const sliceAngle = (value / total) * 2 * Math.PI;
-      const midAngle = startAngle + sliceAngle / 2;
+    startAngle = endAngle;
+    return result;
+  }),
+  // Add labels
+  data.map((item, index) => {
+    const value = item[yKey] || 0;
+    const sliceAngle = (value / total) * 2 * Math.PI;
+    const midAngle = startAngle + sliceAngle / 2;
 
-      const labelX = centerX + (radius * 0.6) * Math.cos(midAngle);
-      const labelY = centerY + (radius * 0.6) * Math.sin(midAngle);
+    const labelX = centerX + (radius * 0.6) * Math.cos(midAngle);
+    const labelY = centerY + (radius * 0.6) * Math.sin(midAngle);
 
-      return React.createElement('text', {
-        key: `label-${index}`,
-        x: labelX,
-        y: labelY,
-        textAnchor: 'middle',
-        fontSize: '12px',
-        fill: '#fff',
-        fontWeight: 'bold'
-      }, `${Math.round((value / total) * 100)}%`);
-    })
+    return React.createElement('text', {
+      key: `label-${index}`,
+      x: labelX,
+      y: labelY,
+      textAnchor: 'middle',
+      fontSize: '12px',
+      fill: '#fff',
+      fontWeight: 'bold'
+    }, `${Math.round((value / total) * 100)}%`);
+  })
   );
 };
 
@@ -363,72 +363,72 @@ const renderScatterChart = (data, { xKey, yKey, color, width, height }) => {
       width: '100%'
     }
   },
-    React.createElement('svg', {
-      width: chartWidth,
-      height: chartHeight,
-      style: { position: 'absolute', top: '20px', left: '20px' }
-    },
-      // Draw grid
-      React.createElement('g', null,
-        // X-axis grid
-        [0, 0.25, 0.5, 0.75, 1].map((ratio, i) => {
-          const x = ratio * chartWidth;
-          return React.createElement('g', { key: `xgrid-${i}` },
-            React.createElement('line', {
-              x1: x,
-              y1: 0,
-              x2: x,
-              y2: chartHeight,
-              stroke: '#e0e0e0',
-              strokeWidth: 1,
-              strokeDasharray: '2,2'
-            }),
-            React.createElement('text', {
-              x: x,
-              y: chartHeight + 15,
-              fontSize: '10px',
-              textAnchor: 'middle'
-            }, Math.round(xMin + (xRange * ratio)))
-          );
+  React.createElement('svg', {
+    width: chartWidth,
+    height: chartHeight,
+    style: { position: 'absolute', top: '20px', left: '20px' }
+  },
+  // Draw grid
+  React.createElement('g', null,
+    // X-axis grid
+    [0, 0.25, 0.5, 0.75, 1].map((ratio, i) => {
+      const x = ratio * chartWidth;
+      return React.createElement('g', { key: `xgrid-${i}` },
+        React.createElement('line', {
+          x1: x,
+          y1: 0,
+          x2: x,
+          y2: chartHeight,
+          stroke: '#e0e0e0',
+          strokeWidth: 1,
+          strokeDasharray: '2,2'
         }),
-        // Y-axis grid
-        [0, 0.25, 0.5, 0.75, 1].map((ratio, i) => {
-          const y = chartHeight - (ratio * chartHeight);
-          return React.createElement('g', { key: `ygrid-${i}` },
-            React.createElement('line', {
-              x1: 0,
-              y1: y,
-              x2: chartWidth,
-              y2: y,
-              stroke: '#e0e0e0',
-              strokeWidth: 1,
-              strokeDasharray: '2,2'
-            }),
-            React.createElement('text', {
-              x: -10,
-              y: y + 4,
-              fontSize: '10px',
-              textAnchor: 'end'
-            }, Math.round(yMin + (yRange * (1 - ratio))))
-          );
-        })
-      ),
-      // Draw points
-      data.map((item, index) => {
-        const x = ((item[xKey] - xMin) / xRange) * chartWidth;
-        const y = chartHeight - ((item[yKey] - yMin) / yRange) * chartHeight;
+        React.createElement('text', {
+          x: x,
+          y: chartHeight + 15,
+          fontSize: '10px',
+          textAnchor: 'middle'
+        }, Math.round(xMin + (xRange * ratio)))
+      );
+    }),
+    // Y-axis grid
+    [0, 0.25, 0.5, 0.75, 1].map((ratio, i) => {
+      const y = chartHeight - (ratio * chartHeight);
+      return React.createElement('g', { key: `ygrid-${i}` },
+        React.createElement('line', {
+          x1: 0,
+          y1: y,
+          x2: chartWidth,
+          y2: y,
+          stroke: '#e0e0e0',
+          strokeWidth: 1,
+          strokeDasharray: '2,2'
+        }),
+        React.createElement('text', {
+          x: -10,
+          y: y + 4,
+          fontSize: '10px',
+          textAnchor: 'end'
+        }, Math.round(yMin + (yRange * (1 - ratio))))
+      );
+    })
+  ),
+  // Draw points
+  data.map((item, index) => {
+    const x = ((item[xKey] - xMin) / xRange) * chartWidth;
+    const y = chartHeight - ((item[yKey] - yMin) / yRange) * chartHeight;
         
-        return React.createElement('circle', {
-          key: index,
-          cx: x,
-          cy: y,
-          r: 4,
-          fill: color,
-          stroke: '#2980b9',
-          strokeWidth: 1
-        });
-      })
-    )
+    return React.createElement('circle', {
+      key: index,
+      cx: x,
+      cy: y,
+      r: 4,
+      fill: color,
+      stroke: '#2980b9',
+      strokeWidth: 1
+    });
+  })
+  )
   );
 };
 
@@ -451,16 +451,16 @@ export const ListDisplay = ({
       ...style
     }
   },
-    displayItems.length > 0 
-      ? displayItems.map((item, index) => renderItem(item, index))
-      : React.createElement('div', {
-          style: { 
-            padding: '1rem', 
-            textAlign: 'center', 
-            color: '#999',
-            fontStyle: 'italic'
-          }
-        }, emptyMessage)
+  displayItems.length > 0 
+    ? displayItems.map((item, index) => renderItem(item, index))
+    : React.createElement('div', {
+      style: { 
+        padding: '1rem', 
+        textAlign: 'center', 
+        color: '#999',
+        fontStyle: 'italic'
+      }
+    }, emptyMessage)
   );
 };
 
@@ -481,17 +481,17 @@ export const TableDisplay = ({
       className: `table-display ${className}`,
       style
     },
-      title && React.createElement('h4', {
-        style: { margin: '0 0 0.5rem 0' }
-      }, title),
-      React.createElement('div', {
-        style: { 
-          padding: '1rem', 
-          textAlign: 'center', 
-          color: '#999',
-          fontStyle: 'italic'
-        }
-      }, emptyMessage)
+    title && React.createElement('h4', {
+      style: { margin: '0 0 0.5rem 0' }
+    }, title),
+    React.createElement('div', {
+      style: { 
+        padding: '1rem', 
+        textAlign: 'center', 
+        color: '#999',
+        fontStyle: 'italic'
+      }
+    }, emptyMessage)
     );
   }
 
@@ -499,58 +499,58 @@ export const TableDisplay = ({
     className: `table-display ${className}`,
     style
   },
-    title && React.createElement('h4', {
-      style: { margin: '0 0 0.5rem 0' }
-    }, title),
-    React.createElement('table', {
-      style: {
-        width: '100%',
-        borderCollapse: 'collapse',
-        border: '1px solid #ddd',
-        fontSize: '0.9rem'
-      }
-    },
-      React.createElement('thead', null,
-        React.createElement('tr', null,
-          columns.map((col, idx) => 
-            React.createElement('th', {
-              key: idx,
-              style: {
-                border: '1px solid #ddd',
-                padding: '0.5rem',
-                backgroundColor: '#f8f9fa',
-                fontWeight: 'bold',
-                textAlign: 'left'
-              }
-            }, col.header || col.key)
-          )
-        )
-      ),
-      React.createElement('tbody', null,
-        displayData.map((row, rowIndex) => 
-          React.createElement('tr', {
-            key: row.id || rowIndex,
-            style: { 
-              backgroundColor: rowIndex % 2 === 0 ? '#fff' : '#f9f9f9' 
-            }
-          },
-            columns.map((col, colIndex) => 
-              React.createElement('td', {
-                key: colIndex,
-                style: {
-                  border: '1px solid #ddd',
-                  padding: '0.5rem'
-                }
-              },
-                col.render 
-                  ? col.render(row[col.key], row, rowIndex) 
-                  : row[col.key]
-              )
-            )
-          )
-        )
+  title && React.createElement('h4', {
+    style: { margin: '0 0 0.5rem 0' }
+  }, title),
+  React.createElement('table', {
+    style: {
+      width: '100%',
+      borderCollapse: 'collapse',
+      border: '1px solid #ddd',
+      fontSize: '0.9rem'
+    }
+  },
+  React.createElement('thead', null,
+    React.createElement('tr', null,
+      columns.map((col, idx) => 
+        React.createElement('th', {
+          key: idx,
+          style: {
+            border: '1px solid #ddd',
+            padding: '0.5rem',
+            backgroundColor: '#f8f9fa',
+            fontWeight: 'bold',
+            textAlign: 'left'
+          }
+        }, col.header || col.key)
       )
     )
+  ),
+  React.createElement('tbody', null,
+    displayData.map((row, rowIndex) => 
+      React.createElement('tr', {
+        key: row.id || rowIndex,
+        style: { 
+          backgroundColor: rowIndex % 2 === 0 ? '#fff' : '#f9f9f9' 
+        }
+      },
+      columns.map((col, colIndex) => 
+        React.createElement('td', {
+          key: colIndex,
+          style: {
+            border: '1px solid #ddd',
+            padding: '0.5rem'
+          }
+        },
+        col.render 
+          ? col.render(row[col.key], row, rowIndex) 
+          : row[col.key]
+        )
+      )
+      )
+    )
+  )
+  )
   );
 };
 
@@ -574,42 +574,42 @@ export const SearchAndFilter = ({
     className: `search-filter ${className}`,
     style
   },
-    React.createElement('input', {
-      type: 'text',
-      value: searchTerm,
-      onChange: handleChange,
-      placeholder: placeholder,
+  React.createElement('input', {
+    type: 'text',
+    value: searchTerm,
+    onChange: handleChange,
+    placeholder: placeholder,
+    style: {
+      width: '100%',
+      padding: '0.5rem',
+      border: '1px solid #ccc',
+      borderRadius: '4px',
+      fontSize: '0.9rem'
+    }
+  }),
+  filters.length > 0 && React.createElement('div', {
+    style: {
+      marginTop: '0.5rem',
+      display: 'flex',
+      gap: '0.5rem',
+      flexWrap: 'wrap'
+    }
+  },
+  filters.map((filter, index) => 
+    React.createElement('button', {
+      key: index,
+      onClick: () => filter.action && filter.action(),
       style: {
-        width: '100%',
-        padding: '0.5rem',
+        padding: '0.25rem 0.5rem',
         border: '1px solid #ccc',
         borderRadius: '4px',
-        fontSize: '0.9rem'
+        backgroundColor: '#f8f9fa',
+        cursor: 'pointer',
+        fontSize: '0.8rem'
       }
-    }),
-    filters.length > 0 && React.createElement('div', {
-      style: {
-        marginTop: '0.5rem',
-        display: 'flex',
-        gap: '0.5rem',
-        flexWrap: 'wrap'
-      }
-    },
-      filters.map((filter, index) => 
-        React.createElement('button', {
-          key: index,
-          onClick: () => filter.action && filter.action(),
-          style: {
-            padding: '0.25rem 0.5rem',
-            border: '1px solid #ccc',
-            borderRadius: '4px',
-            backgroundColor: '#f8f9fa',
-            cursor: 'pointer',
-            fontSize: '0.8rem'
-          }
-        }, filter.label)
-      )
-    )
+    }, filter.label)
+  )
+  )
   );
 };
 

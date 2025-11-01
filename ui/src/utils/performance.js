@@ -100,38 +100,27 @@ export const memoize = (fn) => {
 };
 
 /**
- * Virtualized list rendering function
+ * Virtualized list rendering helper
  * @param {Array} items - Items to render
  * @param {Function} renderItem - Function to render each item
  * @param {number} itemHeight - Height of each item in pixels
  * @param {number} containerHeight - Height of the container in pixels
  * @param {number} startIndex - Index to start rendering from
  * @param {number} endIndex - Index to stop rendering at
- * @returns {Array} Array of rendered items
+ * @returns {Object} Virtualized list configuration
  */
 export const virtualizeList = (items, renderItem, itemHeight, containerHeight, startIndex, endIndex) => {
   const visibleItems = items.slice(startIndex, endIndex + 1);
   const translateY = startIndex * itemHeight;
   
-  return React.createElement('div', {
-    style: {
-      height: containerHeight,
-      overflow: 'hidden',
-      position: 'relative'
-    }
-  },
-    React.createElement('div', {
-      style: {
-        transform: `translateY(${translateY}px)`,
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: '100%'
-      }
-    },
-      ...visibleItems.map((item, index) => renderItem(item, startIndex + index))
-    )
-  );
+  return {
+    visibleItems,
+    translateY,
+    containerHeight,
+    itemHeight,
+    startIndex,
+    endIndex
+  };
 };
 
 /**
@@ -142,11 +131,12 @@ export const virtualizeList = (items, renderItem, itemHeight, containerHeight, s
  */
 export const withPerformanceMonitoring = (componentName, renderFn) => {
   return (...args) => {
-    const startTime = performance.now();
+    const startTime = typeof performance !== 'undefined' ? performance.now() : Date.now();
     const result = renderFn(...args);
-    const endTime = performance.now();
+    const endTime = typeof performance !== 'undefined' ? performance.now() : Date.now();
     
-    if (process.env.NODE_ENV === 'development' || process.env.VITE_TEST_MODE === 'true') {
+    if ((typeof process !== 'undefined' && process.env.NODE_ENV === 'development') || 
+        (typeof import.meta !== 'undefined' && import.meta.env.VITE_TEST_MODE === 'true')) {
       console.debug(`Render time for ${componentName}: ${endTime - startTime}ms`);
     }
     

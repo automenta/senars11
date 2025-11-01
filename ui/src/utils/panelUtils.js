@@ -45,7 +45,7 @@ export const createPanelWithState = (config) => {
             height: '200px' 
           } 
         },
-          React.createElement('div', null, loadingMessage)
+        React.createElement('div', null, loadingMessage)
         )
       );
     }
@@ -128,8 +128,8 @@ export const createDataFetchingPanel = (config) => {
             borderRadius: '4px'
           }
         }, 
-          React.createElement('strong', null, 'Error: '), 
-          error
+        React.createElement('strong', null, 'Error: '), 
+        error
         )
       );
     }
@@ -144,7 +144,7 @@ export const createDataFetchingPanel = (config) => {
             height: '200px' 
           } 
         },
-          React.createElement('div', null, loadingMessage)
+        React.createElement('div', null, loadingMessage)
         )
       );
     }
@@ -167,10 +167,10 @@ export const createDataFetchingPanel = (config) => {
       React.createElement('div', null, 
         Array.isArray(data) 
           ? data.map((item, index) => 
-              React.createElement('div', { key: item.id || index, style: { marginBottom: '0.5rem' } }, 
-                typeof item === 'object' ? JSON.stringify(item, null, 2) : String(item)
-              )
+            React.createElement('div', { key: item.id || index, style: { marginBottom: '0.5rem' } }, 
+              typeof item === 'object' ? JSON.stringify(item, null, 2) : String(item)
             )
+          )
           : typeof data === 'object' ? JSON.stringify(data, null, 2) : String(data)
       )
     );
@@ -237,46 +237,46 @@ export const createWebSocketPanel = (config) => {
 
     const content = isLoading 
       ? React.createElement('div', { 
-          style: { 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center', 
-            height: '200px' 
-          } 
-        },
-          React.createElement('div', null, loadingMessage)
-        )
+        style: { 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          height: '200px' 
+        } 
+      },
+      React.createElement('div', null, loadingMessage)
+      )
       : messages.length === 0
         ? React.createElement('div', { 
-            style: { 
-              padding: '1rem', 
-              textAlign: 'center', 
-              color: '#999',
-              fontStyle: 'italic'
-            }
-          }, emptyMessage)
+          style: { 
+            padding: '1rem', 
+            textAlign: 'center', 
+            color: '#999',
+            fontStyle: 'italic'
+          }
+        }, emptyMessage)
         : renderContent 
           ? renderContent(messages)
           : React.createElement('div', null, 
-              messages.map((msg, idx) => 
-                React.createElement('div', { 
-                  key: idx, 
-                  style: { 
-                    padding: '0.5rem', 
-                    borderBottom: '1px solid #eee',
-                    fontFamily: 'monospace',
-                    fontSize: '0.8rem'
-                  } 
-                }, JSON.stringify(msg))
-              )
-            );
+            messages.map((msg, idx) => 
+              React.createElement('div', { 
+                key: idx, 
+                style: { 
+                  padding: '0.5rem', 
+                  borderBottom: '1px solid #eee',
+                  fontFamily: 'monospace',
+                  fontSize: '0.8rem'
+                } 
+              }, JSON.stringify(msg))
+            )
+          );
 
     return React.createElement(Panel, { 
       title, 
       showWebSocketStatus: true,
       ...otherProps 
     },
-      content
+    content
     );
   };
 

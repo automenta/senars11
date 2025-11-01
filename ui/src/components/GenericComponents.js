@@ -48,17 +48,17 @@ const LoadingSpinner = memo(({ size = '1.5rem', color = '#3498db', ...props }) =
       ...props.style
     }
   },
-    React.createElement('div', {
-      style: {
-        width: size,
-        height: size,
-        border: `2px solid ${color}40`, // 25% opacity
-        borderTop: `2px solid ${color}`,
-        borderRadius: '50%',
-        animation: 'spin 1s linear infinite',
-        ...props.spinnerStyle
-      }
-    })
+  React.createElement('div', {
+    style: {
+      width: size,
+      height: size,
+      border: `2px solid ${color}40`, // 25% opacity
+      borderTop: `2px solid ${color}`,
+      borderRadius: '50%',
+      animation: 'spin 1s linear infinite',
+      ...props.spinnerStyle
+    }
+  })
   );
 });
 
@@ -81,8 +81,8 @@ const EmptyState = memo(({ message = 'No data to display', icon = '🔍', ...pro
       ...props.style
     }
   },
-    React.createElement('div', { style: { fontSize: '2rem', marginBottom: '1rem' }}, icon),
-    React.createElement('div', null, message)
+  React.createElement('div', { style: { fontSize: '2rem', marginBottom: '1rem' }}, icon),
+  React.createElement('div', null, message)
   );
 });
 
@@ -105,20 +105,20 @@ const ErrorState = memo(({ message = 'An error occurred', onRetry = null, ...pro
       ...props.style
     }
   },
-    React.createElement('div', { style: { fontSize: '2rem', marginBottom: '1rem' }}, '❌'),
-    React.createElement('div', null, message),
-    onRetry && React.createElement('button', {
-      onClick: onRetry,
-      style: {
-        marginTop: '1rem',
-        padding: '0.25rem 0.5rem',
-        backgroundColor: '#dc3545',
-        color: 'white',
-        border: 'none',
-        borderRadius: '4px',
-        cursor: 'pointer'
-      }
-    }, 'Retry')
+  React.createElement('div', { style: { fontSize: '2rem', marginBottom: '1rem' }}, '❌'),
+  React.createElement('div', null, message),
+  onRetry && React.createElement('button', {
+    onClick: onRetry,
+    style: {
+      marginTop: '1rem',
+      padding: '0.25rem 0.5rem',
+      backgroundColor: '#dc3545',
+      color: 'white',
+      border: 'none',
+      borderRadius: '4px',
+      cursor: 'pointer'
+    }
+  }, 'Retry')
   );
 });
 
@@ -159,16 +159,16 @@ const WebSocketStatus = memo(({ showLabel = true, ...props }) => {
     className: 'websocket-status',
     style: { display: 'flex', alignItems: 'center', ...props.style }
   },
-    React.createElement('div', {
-      style: {
-        width: '0.75rem',
-        height: '0.75rem',
-        borderRadius: '50%',
-        backgroundColor: wsConnected ? '#28a745' : '#dc3545',
-        marginRight: '0.5rem'
-      }
-    }),
-    showLabel && React.createElement('span', null, wsConnected ? 'Connected' : 'Disconnected')
+  React.createElement('div', {
+    style: {
+      width: '0.75rem',
+      height: '0.75rem',
+      borderRadius: '50%',
+      backgroundColor: wsConnected ? '#28a745' : '#dc3545',
+      marginRight: '0.5rem'
+    }
+  }),
+  showLabel && React.createElement('span', null, wsConnected ? 'Connected' : 'Disconnected')
   );
 });
 

@@ -10,9 +10,6 @@ const __dirname = dirname(__filename);
 // Base configuration
 const BASE_DIR = join(__dirname, '../..');
 
-/**
- * Common utilities for script execution
- */
 export { 
     BASE_DIR,
     getBaseDir,
@@ -24,22 +21,13 @@ export {
     findArgValue
 };
 
-/**
- * Get base directory path
- */
 const getBaseDir = () => BASE_DIR;
 
-/**
- * Get the current directory for a script file
- */
 const getScriptDir = (scriptFileURL) => {
     const scriptFilename = fileURLToPath(scriptFileURL);
     return dirname(scriptFilename);
 };
 
-/**
- * Parse arguments and extract help flag
- */
 const parseArgs = (rawArgs, helpFlags = ['--help', '-h']) => {
     const args = [...rawArgs];
     const helpRequested = args.some(arg => helpFlags.includes(arg));
@@ -47,17 +35,11 @@ const parseArgs = (rawArgs, helpFlags = ['--help', '-h']) => {
     return { args, helpRequested };
 };
 
-/**
- * Show usage message and exit
- */
 const showUsageAndExit = (message, exitCode = 0) => {
     console.log(message);
     process.exit(exitCode);
 };
 
-/**
- * Spawn a child process
- */
 const spawnProcess = (command, args, options = {}) => {
     const defaultOptions = {
         stdio: 'inherit',
@@ -78,9 +60,6 @@ const spawnProcess = (command, args, options = {}) => {
     return child;
 };
 
-/**
- * Parse key-value arguments like --port 3000
- */
 const parseKeyValueArgs = (args, keyMap) => {
     const result = {};
     
@@ -97,9 +76,6 @@ const parseKeyValueArgs = (args, keyMap) => {
     return result;
 };
 
-/**
- * Find the first matching argument value from a list of possible options
- */
 const findArgValue = (args, optionList) => {
     for (let i = 0; i < args.length; i++) {
         if (optionList.includes(args[i].replace(/^--/, ''))) {

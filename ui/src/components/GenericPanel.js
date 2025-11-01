@@ -57,18 +57,18 @@ const GenericPanel = memo(({
       alignItems: 'center'
     } 
   },
-    React.createElement('span', null, title),
-    showCount && React.createElement('span', { 
-      style: { fontSize: '0.8rem', color: '#666' } 
-    }, `(${displayItems.length})`)
+  React.createElement('span', null, title),
+  showCount && React.createElement('span', { 
+    style: { fontSize: '0.8rem', color: '#666' } 
+  }, `(${displayItems.length})`)
   ) : null;
 
   const contentElement = displayItems.length > 0
     ? displayItems.map((item, index) => renderItem(item, index))
     : React.createElement('div', {
-        className: 'emptyState',
-        style: { padding: '1rem', textAlign: 'center', color: '#999' }
-      }, emptyMessage);
+      className: 'emptyState',
+      style: { padding: '1rem', textAlign: 'center', color: '#999' }
+    }, emptyMessage);
 
   const timestampElement = withTimestamp ? React.createElement('div', {
     style: { 

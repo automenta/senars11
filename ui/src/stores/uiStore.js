@@ -8,12 +8,10 @@ const createListSetter = (listName) => (item) => (state) => {
   const existingIndex = findItemIndex(currentList, item);
   
   if (existingIndex !== -1) {
-    // Update existing item - use spread to create new array but only change the one item
     const newList = [...currentList];
     newList[existingIndex] = item;
     return {[listName]: newList};
   } else {
-    // Add new item
     return {[listName]: [...currentList, item]};
   }
 };
@@ -39,7 +37,6 @@ const createItemRemover = (listName, key) => (keyValue) => (state) => {
   
   if (indexToRemove === -1) return {[listName]: currentList}; // Item not found, return unchanged
   
-  // Create new array without the item to remove
   const newList = [...currentList];
   newList.splice(indexToRemove, 1);
   return {[listName]: newList};

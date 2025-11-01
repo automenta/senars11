@@ -16,9 +16,13 @@ export default [
                 localStorage: true,
                 setTimeout: true,
                 clearTimeout: true,
+                setInterval: true,
+                clearInterval: true,
                 WebSocket: true,
                 React: true,
-                zustand: true
+                zustand: true,
+                performance: true,
+                process: true
             },
             ecmaVersion: 'latest',
             sourceType: 'module',

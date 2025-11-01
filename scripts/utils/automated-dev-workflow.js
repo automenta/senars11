@@ -67,123 +67,19 @@ console.log(`Running automated development workflow: ${operation}`);
 
 async function runWorkflow() {
     try {
-        if (operation === 'visual-inspection' || operation === 'all') {
-            console.log('\\n🔍 Running visual inspection tests...');
-            const visualTest = spawn('npm', ['run', 'capture'], {
-                stdio: 'inherit',
-                cwd: join(__dirname, '../..')
-            });
-            
-            await new Promise((resolve) => {
-                visualTest.on('close', (code) => {
-                    if (code !== 0) {
-                        console.error('Visual inspection failed');
-                        process.exit(code);
-                    }
-                    resolve();
-                });
-            });
-        }
+        const workflowTasks = [
+            { op: 'visual-inspection', fn: runVisualInspection },
+            { op: 'tune-heuristics', fn: runHeuristicTuning },
+            { op: 'regression-tests', fn: runRegressionTests },
+            { op: 'performance-bench', fn: runPerformanceBench },
+            { op: 'analysis', fn: runAnalysis },
+            { op: 'demo-run', fn: runDemo }
+        ];
 
-        if (operation === 'tune-heuristics' || operation === 'all') {
-            console.log('\\n⚙️  Running heuristic tuning...');
-            for (let i = 0; i < iterations; i++) {
-                console.log(`\\nIteration ${i + 1}/${iterations}`);
-                
-                // Run analysis to gather data
-                const analysis = spawn('npm', ['run', 'analyze'], {
-                    stdio: 'pipe',
-                    cwd: join(__dirname, '../..')
-                });
-                
-                let analysisOutput = '';
-                analysis.stdout.on('data', (data) => {
-                    analysisOutput += data.toString();
-                });
-                
-                await new Promise((resolve) => {
-                    analysis.on('close', (code) => {
-                        console.log(`Analysis iteration ${i + 1} completed with code: ${code}`);
-                        resolve();
-                    });
-                });
-                
-                // Capture visualizations after each analysis
-                const visual = spawn('npm', ['run', 'capture'], {
-                    stdio: 'inherit',
-                    cwd: join(__dirname, '../..')
-                });
-                
-                await new Promise((resolve) => {
-                    visual.on('close', (code) => {
-                        console.log(`Visualization capture completed with code: ${code}`);
-                        resolve();
-                    });
-                });
+        for (const { op, fn } of workflowTasks) {
+            if (operation === op || operation === 'all') {
+                await fn();
             }
-        }
-
-        if (operation === 'regression-tests' || operation === 'all') {
-            console.log('\\n🧪 Running regression tests...');
-            const testResult = spawn('npm', ['run', 'test:all'], {
-                stdio: 'inherit',
-                cwd: join(__dirname, '../..')
-            });
-            
-            await new Promise((resolve) => {
-                testResult.on('close', (code) => {
-                    if (code !== 0) {
-                        console.error('Regression tests failed');
-                        process.exit(code);
-                    }
-                    resolve();
-                });
-            });
-        }
-
-        if (operation === 'performance-bench' || operation === 'all') {
-            console.log('\\n⏱️  Running performance benchmarks...');
-            const benchResult = spawn('npm', ['run', 'benchmark'], {
-                stdio: 'inherit',
-                cwd: join(__dirname, '../..')
-            });
-            
-            await new Promise((resolve) => {
-                benchResult.on('close', (code) => {
-                    console.log(`Benchmark completed with code: ${code}`);
-                    resolve();
-                });
-            });
-        }
-
-        if (operation === 'analysis' || operation === 'all') {
-            console.log('\\n🧠 Running comprehensive analysis...');
-            const analysisResult = spawn('npm', ['run', 'analyze'], {
-                stdio: 'inherit',
-                cwd: join(__dirname, '../..')
-            });
-            
-            await new Promise((resolve) => {
-                analysisResult.on('close', (code) => {
-                    console.log(`Analysis completed with code: ${code}`);
-                    resolve();
-                });
-            });
-        }
-
-        if (operation === 'demo-run' || operation === 'all') {
-            console.log('\\n🎬 Running demonstration...');
-            const demoResult = spawn('npm', ['run', 'demo'], {
-                stdio: 'inherit',
-                cwd: join(__dirname, '../..')
-            });
-            
-            await new Promise((resolve) => {
-                demoResult.on('close', (code) => {
-                    console.log(`Demo completed with code: ${code}`);
-                    resolve();
-                });
-            });
         }
 
         console.log('\\n✅ Automated development workflow completed successfully!');
@@ -192,5 +88,68 @@ async function runWorkflow() {
         process.exit(1);
     }
 }
+
+// Helper function to run a spawn process with promise
+const runSpawnProcess = (cmd, args, opts = {}) => {
+    const spawnOpts = {
+        stdio: 'inherit',
+        cwd: join(__dirname, '../..'),
+        ...opts
+    };
+    
+    return new Promise((resolve, reject) => {
+        const child = spawn(cmd, args, spawnOpts);
+        
+        child.on('error', reject);
+        child.on('close', (code) => {
+            if (code !== 0) reject(new Error(`${cmd} failed with code ${code}`));
+            else resolve(code);
+        });
+    });
+};
+
+// Visual inspection task
+const runVisualInspection = async () => {
+    console.log('\\n🔍 Running visual inspection tests...');
+    await runSpawnProcess('npm', ['run', 'capture']);
+};
+
+// Heuristic tuning task
+const runHeuristicTuning = async () => {
+    console.log('\\n⚙️  Running heuristic tuning...');
+    for (let i = 0; i < iterations; i++) {
+        console.log(`\\nIteration ${i + 1}/${iterations}`);
+        
+        // Run analysis to gather data
+        await runSpawnProcess('npm', ['run', 'analyze'], { stdio: 'pipe' });
+        
+        // Capture visualizations after each analysis
+        await runSpawnProcess('npm', ['run', 'capture']);
+    }
+};
+
+// Regression tests task
+const runRegressionTests = async () => {
+    console.log('\\n🧪 Running regression tests...');
+    await runSpawnProcess('npm', ['run', 'test:all']);
+};
+
+// Performance benchmark task
+const runPerformanceBench = async () => {
+    console.log('\\n⏱️  Running performance benchmarks...');
+    await runSpawnProcess('npm', ['run', 'benchmark']);
+};
+
+// Analysis task
+const runAnalysis = async () => {
+    console.log('\\n🧠 Running comprehensive analysis...');
+    await runSpawnProcess('npm', ['run', 'analyze']);
+};
+
+// Demo task
+const runDemo = async () => {
+    console.log('\\n🎬 Running demonstration...');
+    await runSpawnProcess('npm', ['run', 'demo']);
+};
 
 runWorkflow();

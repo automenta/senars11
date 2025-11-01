@@ -66,14 +66,14 @@ const PriorityHistogram = ({ type = 'concepts', buckets = 10, title = 'Priority 
   const totalItems = items.length;
   const avgPriority = totalItems > 0 
     ? items.reduce((sum, item) => {
-        let priority = item.priority || item.budget?.priority || item.truth?.priority;
-        if (priority === undefined && type === 'concepts') {
-          priority = item.priority;
-        } else if (priority === undefined && type === 'tasks') {
-          priority = item.budget?.priority || item.priority;
-        }
-        return sum + (priority || 0);
-      }, 0) / totalItems
+      let priority = item.priority || item.budget?.priority || item.truth?.priority;
+      if (priority === undefined && type === 'concepts') {
+        priority = item.priority;
+      } else if (priority === undefined && type === 'tasks') {
+        priority = item.budget?.priority || item.priority;
+      }
+      return sum + (priority || 0);
+    }, 0) / totalItems
     : 0;
 
   // Use the DataVisualizer for the chart
@@ -87,52 +87,52 @@ const PriorityHistogram = ({ type = 'concepts', buckets = 10, title = 'Priority 
       color: 'var(--text-primary)'
     } 
   },
-    React.createElement('div', { 
-      style: { 
-        display: 'flex', 
-        justifyContent: 'space-around', 
-        fontSize: '0.9rem', 
-        marginBottom: '1rem',
-        padding: '0.5rem',
-        backgroundColor: 'var(--bg-secondary)',
-        borderRadius: '4px'
-      } 
-    },
-      React.createElement('div', { style: { textAlign: 'center' } },
-        React.createElement('div', { style: { fontSize: '1.2rem', fontWeight: 'bold' }}, totalItems),
-        React.createElement('div', { style: { fontSize: '0.8rem', color: 'var(--text-secondary)' }}, type)
-      ),
-      React.createElement('div', { style: { textAlign: 'center' } },
-        React.createElement('div', { style: { fontSize: '1.2rem', fontWeight: 'bold' }}, buckets),
-        React.createElement('div', { style: { fontSize: '0.8rem', color: 'var(--text-secondary)' }}, 'buckets')
-      ),
-      React.createElement('div', { style: { textAlign: 'center' } },
-        React.createElement('div', { style: { fontSize: '1.2rem', fontWeight: 'bold' }}, avgPriority.toFixed(2)),
-        React.createElement('div', { style: { fontSize: '0.8rem', color: 'var(--text-secondary)' }}, 'avg priority')
-      )
-    ),
-    React.createElement(DataVisualizer, {
-      data: histogramData,
-      type: 'bar',
-      xKey: 'range',
-      yKey: 'count',
-      title: title,
-      width: '100%',
-      height: '300px',
-      maxItems: 20
-    }),
-    React.createElement('div', { 
-      style: { 
-        marginTop: '1rem', 
-        fontSize: '0.8rem', 
-        textAlign: 'center',
-        color: 'var(--text-secondary)',
-        borderTop: '1px solid var(--border-color)',
-        paddingTop: '0.5rem'
-      } 
-    },
-      `${totalItems} total ${type} showing priority distribution across ${buckets} ranges`
-    )
+  React.createElement('div', { 
+    style: { 
+      display: 'flex', 
+      justifyContent: 'space-around', 
+      fontSize: '0.9rem', 
+      marginBottom: '1rem',
+      padding: '0.5rem',
+      backgroundColor: 'var(--bg-secondary)',
+      borderRadius: '4px'
+    } 
+  },
+  React.createElement('div', { style: { textAlign: 'center' } },
+    React.createElement('div', { style: { fontSize: '1.2rem', fontWeight: 'bold' }}, totalItems),
+    React.createElement('div', { style: { fontSize: '0.8rem', color: 'var(--text-secondary)' }}, type)
+  ),
+  React.createElement('div', { style: { textAlign: 'center' } },
+    React.createElement('div', { style: { fontSize: '1.2rem', fontWeight: 'bold' }}, buckets),
+    React.createElement('div', { style: { fontSize: '0.8rem', color: 'var(--text-secondary)' }}, 'buckets')
+  ),
+  React.createElement('div', { style: { textAlign: 'center' } },
+    React.createElement('div', { style: { fontSize: '1.2rem', fontWeight: 'bold' }}, avgPriority.toFixed(2)),
+    React.createElement('div', { style: { fontSize: '0.8rem', color: 'var(--text-secondary)' }}, 'avg priority')
+  )
+  ),
+  React.createElement(DataVisualizer, {
+    data: histogramData,
+    type: 'bar',
+    xKey: 'range',
+    yKey: 'count',
+    title: title,
+    width: '100%',
+    height: '300px',
+    maxItems: 20
+  }),
+  React.createElement('div', { 
+    style: { 
+      marginTop: '1rem', 
+      fontSize: '0.8rem', 
+      textAlign: 'center',
+      color: 'var(--text-secondary)',
+      borderTop: '1px solid var(--border-color)',
+      paddingTop: '0.5rem'
+    } 
+  },
+  `${totalItems} total ${type} showing priority distribution across ${buckets} ranges`
+  )
   );
 };
 

@@ -21,7 +21,6 @@ const Panel = memo(({
   // Create header if showHeader is true
   const panelHeader = showHeader && React.createElement('div', { className: styles['panel-header'] },
     React.createElement('h3', { className: styles['panel-title'] }, title),
-    // Show connection status if enabled
     showWebSocketStatus && React.createElement('div', { className: styles['panel-status'] },
       React.createElement(WebSocketStatus, { 
         showLabel: true,
@@ -34,7 +33,6 @@ const Panel = memo(({
         }
       })
     ),
-    // Render additional header content if provided
     headerExtra
   );
 
@@ -42,12 +40,10 @@ const Panel = memo(({
     className: panelClassName,
     style
   },
-    panelHeader,
-    React.createElement('div', { className: styles['panel-content'] }, 
-      React.createElement(ErrorBoundary, null,
-        children
-      )
-    )
+  panelHeader,
+  React.createElement('div', { className: styles['panel-content'] }, 
+    React.createElement(ErrorBoundary, null, children)
+  )
   );
 });
 

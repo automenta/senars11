@@ -8,10 +8,10 @@
  * @returns {string} Formatted truth string
  */
 export const formatTruth = (truth) => {
-    if (!truth) return 'N/A';
-    const frequency = (truth.frequency || 0) * 100;
-    const confidence = (truth.confidence || 0) * 100;
-    return `${frequency.toFixed(1)}% @ ${confidence.toFixed(1)}%`;
+  if (!truth) return 'N/A';
+  const frequency = (truth.frequency || 0) * 100;
+  const confidence = (truth.confidence || 0) * 100;
+  return `${frequency.toFixed(1)}% @ ${confidence.toFixed(1)}%`;
 };
 
 /**
@@ -20,11 +20,11 @@ export const formatTruth = (truth) => {
  * @returns {string} Formatted budget string
  */
 export const formatBudget = (budget) => {
-    if (!budget) return 'N/A';
-    const priority = budget.priority || 0;
-    const durability = budget.durability || 0;
-    const quality = budget.quality || 0;
-    return `P:${priority.toFixed(2)} D:${durability.toFixed(2)} Q:${quality.toFixed(2)}`;
+  if (!budget) return 'N/A';
+  const priority = budget.priority || 0;
+  const durability = budget.durability || 0;
+  const quality = budget.quality || 0;
+  return `P:${priority.toFixed(2)} D:${durability.toFixed(2)} Q:${quality.toFixed(2)}`;
 };
 
 /**
@@ -33,7 +33,7 @@ export const formatBudget = (budget) => {
  * @returns {string} Formatted time string
  */
 export const formatDate = (timestamp) =>
-    new Date(timestamp).toLocaleTimeString();
+  new Date(timestamp).toLocaleTimeString();
 
 /**
  * Format a number with specified decimal places
@@ -42,7 +42,7 @@ export const formatDate = (timestamp) =>
  * @returns {string} Formatted number string
  */
 export const formatNumber = (num, decimals = 2) =>
-    num?.toFixed(decimals) || 'N/A';
+  num?.toFixed(decimals) || 'N/A';
 
 /**
  * Format a number with commas as thousand separators
@@ -50,8 +50,8 @@ export const formatNumber = (num, decimals = 2) =>
  * @returns {string} Formatted number string
  */
 export const formatNumberWithCommas = (num) => {
-    if (num == null) return 'N/A';
-    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  if (num == null) return 'N/A';
+  return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 };
 
 /**
@@ -61,11 +61,11 @@ export const formatNumberWithCommas = (num) => {
  * @returns {string} Formatted number string with units
  */
 export const formatNumberWithUnits = (num, decimals = 2) => {
-    if (num == null) return 'N/A';
-    if (num >= 1e9) return (num / 1e9).toFixed(decimals) + 'B';
-    if (num >= 1e6) return (num / 1e6).toFixed(decimals) + 'M';
-    if (num >= 1e3) return (num / 1e3).toFixed(decimals) + 'K';
-    return num.toFixed(decimals);
+  if (num == null) return 'N/A';
+  if (num >= 1e9) return (num / 1e9).toFixed(decimals) + 'B';
+  if (num >= 1e6) return (num / 1e6).toFixed(decimals) + 'M';
+  if (num >= 1e3) return (num / 1e3).toFixed(decimals) + 'K';
+  return num.toFixed(decimals);
 };
 
 /**
@@ -75,8 +75,8 @@ export const formatNumberWithUnits = (num, decimals = 2) => {
  * @returns {string} Formatted percentage string
  */
 export const formatPercentage = (value, decimals = 2) => {
-    if (value == null) return 'N/A';
-    return `${(value * 100).toFixed(decimals)}%`;
+  if (value == null) return 'N/A';
+  return `${(value * 100).toFixed(decimals)}%`;
 };
 
 /**
@@ -85,8 +85,8 @@ export const formatPercentage = (value, decimals = 2) => {
  * @returns {string} Formatted date string
  */
 export const formatDateLong = (timestamp) => {
-    if (!timestamp) return 'N/A';
-    return new Date(timestamp).toLocaleString();
+  if (!timestamp) return 'N/A';
+  return new Date(timestamp).toLocaleString();
 };
 
 /**
@@ -95,18 +95,18 @@ export const formatDateLong = (timestamp) => {
  * @returns {string} Formatted duration string
  */
 export const formatDuration = (ms) => {
-    if (ms < 0) ms = 0;
+  if (ms < 0) ms = 0;
     
-    const seconds = Math.floor(ms / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const hours = Math.floor(minutes / 60);
-    const days = Math.floor(hours / 24);
+  const seconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
     
-    if (days) return `${days}d ${hours % 24}h`;
-    if (hours) return `${hours}h ${minutes % 60}m`;
-    if (minutes) return `${minutes}m ${seconds % 60}s`;
-    if (seconds) return `${seconds}s`;
-    return `${ms}ms`;
+  if (days) return `${days}d ${hours % 24}h`;
+  if (hours) return `${hours}h ${minutes % 60}m`;
+  if (minutes) return `${minutes}m ${seconds % 60}s`;
+  if (seconds) return `${seconds}s`;
+  return `${ms}ms`;
 };
 
 /**
@@ -117,8 +117,8 @@ export const formatDuration = (ms) => {
  * @returns {string} Truncated string
  */
 export const truncateString = (str, maxLength, suffix = '...') => {
-    if (!str || str.length <= maxLength) return str;
-    return str.slice(0, maxLength) + suffix;
+  if (!str || str.length <= maxLength) return str;
+  return str.slice(0, maxLength) + suffix;
 };
 
 /**
@@ -127,9 +127,9 @@ export const truncateString = (str, maxLength, suffix = '...') => {
  * @returns {string} Formatted size string
  */
 export const formatFileSize = (bytes) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };

@@ -134,17 +134,17 @@ export const Components = {
         ...props.style
       }
     },
-      React.createElement('div', {
-        style: {
-          width: size,
-          height: size,
-          border: `2px solid ${color}40`, // 25% opacity
-          borderTop: `2px solid ${color}`,
-          borderRadius: '50%',
-          animation: 'spin 1s linear infinite',
-          ...props.spinnerStyle
-        }
-      })
+    React.createElement('div', {
+      style: {
+        width: size,
+        height: size,
+        border: `2px solid ${color}40`, // 25% opacity
+        borderTop: `2px solid ${color}`,
+        borderRadius: '50%',
+        animation: 'spin 1s linear infinite',
+        ...props.spinnerStyle
+      }
+    })
     );
   },
 
@@ -164,8 +164,8 @@ export const Components = {
         ...props.style
       }
     },
-      React.createElement('div', { style: { fontSize: '2rem', marginBottom: UI_CONSTANTS.SPACING.MD }}, icon),
-      React.createElement('div', null, message)
+    React.createElement('div', { style: { fontSize: '2rem', marginBottom: UI_CONSTANTS.SPACING.MD }}, icon),
+    React.createElement('div', null, message)
     );
   },
 
@@ -185,20 +185,20 @@ export const Components = {
         ...props.style
       }
     },
-      React.createElement('div', { style: { fontSize: '2rem', marginBottom: UI_CONSTANTS.SPACING.MD }}, '❌'),
-      React.createElement('div', null, message),
-      onRetry && React.createElement('button', {
-        onClick: onRetry,
-        style: {
-          marginTop: UI_CONSTANTS.SPACING.MD,
-          padding: `${UI_CONSTANTS.SPACING.XS} ${UI_CONSTANTS.SPACING.SM}`,
-          backgroundColor: UI_CONSTANTS.COLORS.DANGER,
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'pointer'
-        }
-      }, 'Retry')
+    React.createElement('div', { style: { fontSize: '2rem', marginBottom: UI_CONSTANTS.SPACING.MD }}, '❌'),
+    React.createElement('div', null, message),
+    onRetry && React.createElement('button', {
+      onClick: onRetry,
+      style: {
+        marginTop: UI_CONSTANTS.SPACING.MD,
+        padding: `${UI_CONSTANTS.SPACING.XS} ${UI_CONSTANTS.SPACING.SM}`,
+        backgroundColor: UI_CONSTANTS.COLORS.DANGER,
+        color: 'white',
+        border: 'none',
+        borderRadius: '4px',
+        cursor: 'pointer'
+      }
+    }, 'Retry')
     );
   },
 
@@ -218,7 +218,7 @@ export const Components = {
     
     return React.createElement('span', {
       style: {
-        padding: `0.125rem 0.5rem`,
+        padding: '0.125rem 0.5rem',
         borderRadius: '12px',
         backgroundColor: config.bg,
         color: config.color,

@@ -48,11 +48,6 @@ const messageHandlers = {
  * WebSocket service class that manages the connection and message handling
  */
 class WebSocketService {
-  /**
-   * Creates a new WebSocket service instance
-   * @param {string} url - The WebSocket URL to connect to
-   * @param {Object} options - Configuration options
-   */
   constructor(url, options = {}) {
     this.url = url;
     this.ws = null;
@@ -68,16 +63,11 @@ class WebSocketService {
     this.connectionTimeout = null;
     
     // Check if we're in a test environment
-    // Playwright sets navigator.webdriver to true in automated browsers
-    // Also check VITE_TEST_MODE if set
     this.isTestEnvironment = typeof window !== 'undefined' && 
                              (window.navigator.webdriver || 
                               import.meta.env.VITE_TEST_MODE === 'true');
   }
 
-  /**
-   * Initiates the WebSocket connection
-   */
   connect() {
     if (this.state === ConnectionState.CONNECTING || this.state === ConnectionState.CONNECTED) {
       console.warn('WebSocket is already connecting or connected');
@@ -90,9 +80,7 @@ class WebSocketService {
       console.log(`Simulating WebSocket connection in test mode: ${this.url}`);
       
       // Simulate connection after a short delay to mimic real behavior
-      setTimeout(() => {
-        this.handleOpen();
-      }, 100);
+      setTimeout(() => this.handleOpen(), 100);
       return;
     }
 
@@ -139,9 +127,6 @@ class WebSocketService {
     }
   }
 
-  /**
-   * Handles successful connection opening
-   */
   handleOpen() {
     console.log('WebSocket connected');
     getStore().setWsConnected(true);
@@ -151,14 +136,9 @@ class WebSocketService {
     this.processMessageQueue(); // Send any queued messages
     
     // In test mode, simulate some initial data that tests expect
-    if (this.isTestEnvironment) {
-      this.simulateTestData();
-    }
+    if (this.isTestEnvironment) this.simulateTestData();
   }
 
-  /**
-   * Helper method to simulate test data in test environments
-   */
   simulateTestData() {
     // Send initial demo list that tests expect - do this immediately
     const demoList = [
@@ -167,115 +147,59 @@ class WebSocketService {
       { id: 'complex-inference', name: 'Complex Inference', description: 'Advanced inference chaining' }
     ];
     
-    const data = {
-      type: 'demoList',
-      payload: demoList
-    };
-    
     // Simulate the message being received immediately
-    this.routeMessage(data);
+    this.routeMessage({ type: 'demoList', payload: demoList });
     
     // Also send other initial data with short delays
     setTimeout(() => {
       // Simulate some concept updates to show activity
-      const conceptUpdate = {
+      this.routeMessage({
         type: 'conceptUpdate',
         payload: {
-          concept: {
-            term: 'cat',
-            priority: 0.8,
-            occurrenceTime: Date.now(),
-            truth: { frequency: 0.9, confidence: 0.9 }
-          },
+          concept: { term: 'cat', priority: 0.8, occurrenceTime: Date.now(), truth: { frequency: 0.9, confidence: 0.9 } },
           changeType: 'added'
         }
-      };
-      this.routeMessage(conceptUpdate);
+      });
       
-      const conceptUpdate2 = {
+      this.routeMessage({
         type: 'conceptUpdate',
         payload: {
-          concept: {
-            term: 'animal',
-            priority: 0.7,
-            occurrenceTime: Date.now(),
-            truth: { frequency: 0.8, confidence: 0.85 }
-          },
+          concept: { term: 'animal', priority: 0.7, occurrenceTime: Date.now(), truth: { frequency: 0.8, confidence: 0.85 } },
           changeType: 'added'
         }
-      };
-      this.routeMessage(conceptUpdate2);
+      });
     }, 100);
     
-    // Simulate some tasks to populate the task panel
-    setTimeout(() => {
-      // Simulate some concept updates to show activity
-      const conceptUpdate = {
-        type: 'conceptUpdate',
-        payload: {
-          concept: {
-            term: 'cat',
-            priority: 0.8,
-            occurrenceTime: Date.now(),
-            truth: { frequency: 0.9, confidence: 0.9 }
-          },
-          changeType: 'added'
-        }
-      };
-      this.routeMessage(conceptUpdate);
-      
-      const conceptUpdate2 = {
-        type: 'conceptUpdate',
-        payload: {
-          concept: {
-            term: 'animal',
-            priority: 0.7,
-            occurrenceTime: Date.now(),
-            truth: { frequency: 0.8, confidence: 0.85 }
-          },
-          changeType: 'added'
-        }
-      };
-      this.routeMessage(conceptUpdate2);
-    }, 400);
+    // Simulate some tasks and reasoning steps to populate the UI
+    setTimeout(() => this.routeMessage({
+      type: 'taskUpdate',
+      payload: {
+        id: `task_${Date.now()}`,
+        content: '<cat --> animal>.',
+        priority: 0.85,
+        creationTime: Date.now(),
+        type: 'belief'
+      }
+    }), 200);
     
-    // Simulate some tasks to populate the task panel
-    setTimeout(() => {
-      const taskUpdate = {
-        type: 'taskUpdate',
-        payload: {
-          id: `task_${Date.now()}`,
-          content: '<cat --> animal>.',
-          priority: 0.85,
-          creationTime: Date.now(),
-          type: 'belief'
-        }
-      };
-      this.routeMessage(taskUpdate);
-    }, 200);
+    setTimeout(() => this.routeMessage({
+      type: 'reasoningStep',
+      payload: {
+        id: `step_${Date.now()}`,
+        timestamp: Date.now(),
+        input: '<cat --> animal>.',
+        output: '<animal <-- cat>?',
+        rule: 'deduction',
+        confidence: 0.8,
+        priority: 0.75
+      }
+    }), 300);
     
-    // Simulate some reasoning steps
-    setTimeout(() => {
-      const reasoningStep = {
-        type: 'reasoningStep',
-        payload: {
-          id: `step_${Date.now()}`,
-          timestamp: Date.now(),
-          input: '<cat --> animal>.',
-          output: '<animal <-- cat>?',
-          rule: 'deduction',
-          confidence: 0.8,
-          priority: 0.75
-        }
-      };
-      this.routeMessage(reasoningStep);
-    }, 300);
-    
-    // Simulate some periodic updates for realistic activity
+    // Simulate periodic updates for realistic activity
     const interval = setInterval(() => {
       if (this.state === ConnectionState.CONNECTED) {
-        // Send some system metrics to show activity
-        const metrics = {
+        // Send system metrics
+        this.routeMessage({
           type: 'systemMetrics',
           payload: {
             wsConnected: true,
@@ -284,13 +208,11 @@ class WebSocketService {
             activeTasks: Math.floor(Math.random() * 5),
             reasoningSpeed: Math.floor(Math.random() * 100) + 50
           }
-        };
+        });
         
-        this.routeMessage(metrics);
-        
-        // Send occasional task updates to keep the UI active
+        // Occasionally send task updates
         if (Math.random() > 0.7) {  // 30% chance each interval
-          const taskUpdate = {
+          this.routeMessage({
             type: 'taskUpdate',
             payload: {
               id: `task_${Date.now()}_${Math.random()}`,
@@ -299,8 +221,7 @@ class WebSocketService {
               creationTime: Date.now(),
               type: ['belief', 'question', 'goal'][Math.floor(Math.random() * 3)]
             }
-          };
-          this.routeMessage(taskUpdate);
+          });
         }
       } else {
         clearInterval(interval);
@@ -308,10 +229,6 @@ class WebSocketService {
     }, 1500); // Every 1.5 seconds instead of 2 seconds for more activity
   }
 
-  /**
-   * Handles connection closing
-   * @param {CloseEvent} event - The close event
-   */
   handleClose(event) {
     console.log(`WebSocket disconnected: ${event.code} - ${event.reason}`);
     getStore().setWsConnected(false);
@@ -320,10 +237,6 @@ class WebSocketService {
     this.attemptReconnect();
   }
 
-  /**
-   * Handles connection errors
-   * @param {Event} error - The error event
-   */
   handleError(error) {
     console.error('WebSocket error:', error);
     getStore().setError({
@@ -332,9 +245,6 @@ class WebSocketService {
     });
   }
 
-  /**
-   * Sets up the heartbeat mechanism to maintain connection
-   */
   setupHeartbeat() {
     // Clear any existing heartbeat
     this.clearHeartbeat();
@@ -354,9 +264,6 @@ class WebSocketService {
     }, 30000); // Ping every 30 seconds
   }
   
-  /**
-   * Clears the heartbeat mechanism
-   */
   clearHeartbeat() {
     if (this.heartbeatInterval) {
       clearInterval(this.heartbeatInterval);
@@ -368,18 +275,12 @@ class WebSocketService {
     }
   }
   
-  /**
-   * Handles heartbeat timeout
-   */
   handleHeartbeatTimeout() {
     console.warn('Heartbeat timeout detected, attempting to reconnect');
     this.disconnect();
     this.attemptReconnect();
   }
 
-  /**
-   * Attempts to reconnect to the WebSocket server
-   */
   attemptReconnect = () => {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.state = ConnectionState.RECONNECTING;
@@ -397,10 +298,6 @@ class WebSocketService {
     }
   };
 
-  /**
-   * Handles incoming WebSocket messages
-   * @param {MessageEvent} event - The message event
-   */
   async handleMessage(event) {
     try {
       if (!event?.data) {
@@ -442,10 +339,6 @@ class WebSocketService {
     }
   }
 
-  /**
-   * Routes messages to appropriate handlers
-   * @param {Object} data - The validated message data
-   */
   routeMessage(data) {
     const { type, payload } = data;
     
@@ -490,23 +383,17 @@ class WebSocketService {
     }
   }
 
-  /**
-   * Handles demo control commands in test mode
-   * @param {Object} data - The demo control message data
-   */
   handleDemoControl({ payload }) {
-    const { command, demoId, parameters } = payload;
+    const { command, demoId } = payload;
     
     console.log(`Handling demo control: ${command} for demo ${demoId}`);
     
     if (command === 'start') {
       // Simulate demo starting
-      setTimeout(() => {
-        this.routeMessage({
-          type: 'demoState',
-          payload: { demoId, status: 'running', progress: 0, currentStep: 'Initializing' }
-        });
-      }, 100);
+      setTimeout(() => this.routeMessage({
+        type: 'demoState',
+        payload: { demoId, status: 'running', progress: 0, currentStep: 'Initializing' }
+      }), 100);
       
       // Simulate concept activity during demo
       setTimeout(() => {
@@ -517,12 +404,10 @@ class WebSocketService {
           { term: `concept_${demoId}_C`, priority: 0.91, occurrenceTime: Date.now(), taskCount: 4, beliefCount: 3, questionCount: 2, lastAccess: Date.now() }
         ];
         
-        concepts.forEach(concept => {
-          this.routeMessage({
-            type: 'conceptUpdate',
-            payload: { concept, changeType: 'added' }
-          });
-        });
+        concepts.forEach(concept => this.routeMessage({
+          type: 'conceptUpdate',
+          payload: { concept, changeType: 'added' }
+        }));
       }, 150);
       
       // Simulate task activity during demo
@@ -544,60 +429,49 @@ class WebSocketService {
           }
         ];
         
-        tasks.forEach(task => {
-          this.routeMessage({
-            type: 'taskUpdate',
-            payload: { task, changeType: 'input' }
-          });
-        });
+        tasks.forEach(task => this.routeMessage({
+          type: 'taskUpdate',
+          payload: { task, changeType: 'input' }
+        }));
       }, 250);
       
       // Simulate progress with additional data
-      setTimeout(() => {
-        this.routeMessage({
-          type: 'demoState',
-          payload: { demoId, status: 'running', progress: 25, currentStep: 'Processing input' }
-        });
-      }, 300);
+      setTimeout(() => this.routeMessage({
+        type: 'demoState',
+        payload: { demoId, status: 'running', progress: 25, currentStep: 'Processing input' }
+      }), 300);
       
       // More concepts during processing
-      setTimeout(() => {
-        const concept = {
-          term: `derived_${demoId}_X`,
-          priority: 0.68,
-          occurrenceTime: Date.now(),
-          taskCount: 1,
-          beliefCount: 1,
-          questionCount: 0,
-          lastAccess: Date.now()
-        };
-        
-        this.routeMessage({
-          type: 'conceptUpdate',
-          payload: { concept, changeType: 'added' }
-        });
-      }, 400);
+      setTimeout(() => this.routeMessage({
+        type: 'conceptUpdate',
+        payload: {
+          concept: {
+            term: `derived_${demoId}_X`,
+            priority: 0.68,
+            occurrenceTime: Date.now(),
+            taskCount: 1,
+            beliefCount: 1,
+            questionCount: 0,
+            lastAccess: Date.now()
+          },
+          changeType: 'added'
+        }
+      }), 400);
       
-      setTimeout(() => {
-        this.routeMessage({
-          type: 'demoState',
-          payload: { demoId, status: 'running', progress: 50, currentStep: 'Running inference' }
-        });
-      }, 600);
+      setTimeout(() => this.routeMessage({
+        type: 'demoState',
+        payload: { demoId, status: 'running', progress: 50, currentStep: 'Running inference' }
+      }), 600);
       
-      setTimeout(() => {
-        this.routeMessage({
-          type: 'demoState',
-          payload: { demoId, status: 'running', progress: 75, currentStep: 'Generating output' }
-        });
-      }, 900);
+      setTimeout(() => this.routeMessage({
+        type: 'demoState',
+        payload: { demoId, status: 'running', progress: 75, currentStep: 'Generating output' }
+      }), 900);
       
-      setTimeout(() => {
-        this.routeMessage({
-          type: 'demoState', 
-          payload: { demoId, status: 'completed', progress: 100, currentStep: 'Completed' }
-        });
-      }, 1200);
+      setTimeout(() => this.routeMessage({
+        type: 'demoState', 
+        payload: { demoId, status: 'completed', progress: 100, currentStep: 'Completed' }
+      }), 1200);
     } else if (command === 'stop') {
       this.routeMessage({
         type: 'demoState',
@@ -616,10 +490,6 @@ class WebSocketService {
     }
   }
 
-  /**
-   * Handles Narsese input in test mode
-   * @param {Object} data - The Narsese input message data
-   */
   handleNarseseInput({ payload }) {
     const { input } = payload;
     
@@ -665,12 +535,10 @@ class WebSocketService {
           { term: 'sample_concept_3', priority: 0.92, occurrenceTime: Date.now(), taskCount: 3, beliefCount: 2, questionCount: 1, lastAccess: Date.now() }
         ];
         
-        sampleConcepts.forEach(concept => {
-          this.routeMessage({
-            type: 'conceptUpdate',
-            payload: { concept, changeType: 'added' }
-          });
-        });
+        sampleConcepts.forEach(concept => this.routeMessage({
+          type: 'conceptUpdate',
+          payload: { concept, changeType: 'added' }
+        }));
       }
       
       if (!targetPanels || targetPanels.includes('tasks')) {
@@ -680,12 +548,10 @@ class WebSocketService {
           { id: `task_${Date.now()}_sample2`, content: '<another --> example>?', priority: 0.62, creationTime: Date.now(), type: 'question' }
         ];
         
-        sampleTasks.forEach(task => {
-          this.routeMessage({
-            type: 'taskUpdate',
-            payload: { task, changeType: 'input' }
-          });
-        });
+        sampleTasks.forEach(task => this.routeMessage({
+          type: 'taskUpdate',
+          payload: { task, changeType: 'input' }
+        }));
       }
     }
   }
@@ -702,33 +568,35 @@ class WebSocketService {
           // The panel will visualize existing data, so just ensure there's data
         } else if (panelName === 'ConceptPanel') {
           // Add some concepts specific to this demo
-          const concept = {
-            term: `demo_${demoId}_${Date.now()}`,
-            priority: Math.random(), // Random priority to show distribution
-            occurrenceTime: Date.now(),
-            taskCount: Math.floor(Math.random() * 3),
-            beliefCount: Math.floor(Math.random() * 2),
-            questionCount: Math.floor(Math.random() * 2),
-            lastAccess: Date.now()
-          };
-          
           this.routeMessage({
             type: 'conceptUpdate',
-            payload: { concept, changeType: 'added' }
+            payload: {
+              concept: {
+                term: `demo_${demoId}_${Date.now()}`,
+                priority: Math.random(), // Random priority to show distribution
+                occurrenceTime: Date.now(),
+                taskCount: Math.floor(Math.random() * 3),
+                beliefCount: Math.floor(Math.random() * 2),
+                questionCount: Math.floor(Math.random() * 2),
+                lastAccess: Date.now()
+              },
+              changeType: 'added'
+            }
           });
         } else if (panelName === 'TaskPanel') {
           // Add some tasks specific to this demo
-          const task = {
-            id: `demo_task_${demoId}_${Date.now()}`,
-            content: `<demo_${demoId} --> example>.`,
-            priority: Math.random(), // Random priority to show distribution
-            creationTime: Date.now(),
-            type: ['belief', 'question', 'goal'][Math.floor(Math.random() * 3)]
-          };
-          
           this.routeMessage({
             type: 'taskUpdate',
-            payload: { task, changeType: 'input' }
+            payload: {
+              task: {
+                id: `demo_task_${demoId}_${Date.now()}`,
+                content: `<demo_${demoId} --> example>.`,
+                priority: Math.random(), // Random priority to show distribution
+                creationTime: Date.now(),
+                type: ['belief', 'question', 'goal'][Math.floor(Math.random() * 3)]
+              },
+              changeType: 'input'
+            }
           });
         }
       });
@@ -738,10 +606,6 @@ class WebSocketService {
     }
   }
 
-  /**
-   * Handles invalid messages
-   * @param {Object} data - The invalid message data
-   */
   handleInvalidMessage(data) {
     console.error('Invalid message format:', data);
     // Don't setError for every invalid message to avoid UI flooding
@@ -754,9 +618,6 @@ class WebSocketService {
     });
   }
 
-  /**
-   * Disconnects from the WebSocket
-   */
   disconnect() {
     if (this.connectionTimeout) {
       clearTimeout(this.connectionTimeout);
@@ -775,10 +636,6 @@ class WebSocketService {
     this.clearHeartbeat();
   }
 
-  /**
-   * Sends a message through the WebSocket
-   * @param {Object} message - The message to send
-   */
   sendMessage(message) {
     if (!message) {
       console.warn('Attempted to send null/undefined message');
@@ -815,10 +672,6 @@ class WebSocketService {
     }
   }
 
-  /**
-   * Queues a message for later sending when connection is restored
-   * @param {Object} message - The message to queue
-   */
   queueMessage(message) {
     // Add message to queue
     this.messageQueue.push(message);
@@ -835,9 +688,6 @@ class WebSocketService {
     }
   }
 
-  /**
-   * Processes messages that were queued while disconnected
-   */
   processMessageQueue() {
     // Process messages that were queued while disconnected
     while (this.messageQueue.length > 0) {

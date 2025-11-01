@@ -40,40 +40,40 @@ const ListPanel = memo(({
       ? filterFn 
         ? items.filter(item => filterFn(item, searchTerm))
         : items.filter(item => {
-            if (typeof item === 'string') {
-              return item.toLowerCase().includes(searchTerm.toLowerCase());
-            } else if (typeof item === 'object') {
-              return Object.values(item).some(value => 
-                String(value).toLowerCase().includes(searchTerm.toLowerCase())
-              );
-            }
-            return false;
-          })
+          if (typeof item === 'string') {
+            return item.toLowerCase().includes(searchTerm.toLowerCase());
+          } else if (typeof item === 'object') {
+            return Object.values(item).some(value => 
+              String(value).toLowerCase().includes(searchTerm.toLowerCase())
+            );
+          }
+          return false;
+        })
       : items;
     
     // Sort items
     return sortBy 
       ? [...filteredItems].sort((a, b) => {
-          let valueA = typeof sortBy === 'string' && sortBy.includes('.') 
-            ? sortBy.split('.').reduce((obj, key) => obj?.[key], a)
-            : a[sortBy];
-          let valueB = typeof sortBy === 'string' && sortBy.includes('.') 
-            ? sortBy.split('.').reduce((obj, key) => obj?.[key], b)
-            : b[sortBy];
+        let valueA = typeof sortBy === 'string' && sortBy.includes('.') 
+          ? sortBy.split('.').reduce((obj, key) => obj?.[key], a)
+          : a[sortBy];
+        let valueB = typeof sortBy === 'string' && sortBy.includes('.') 
+          ? sortBy.split('.').reduce((obj, key) => obj?.[key], b)
+          : b[sortBy];
           
-          // Handle different data types
-          let comparison = 0;
-          if (typeof valueA === 'string' && typeof valueB === 'string') {
-            comparison = valueA.toLowerCase().localeCompare(valueB.toLowerCase());
-          } else if (typeof valueA === 'number' && typeof valueB === 'number') {
-            comparison = valueA - valueB;
-          } else {
-            // Fallback comparison
-            comparison = String(valueA).localeCompare(String(valueB));
-          }
+        // Handle different data types
+        let comparison = 0;
+        if (typeof valueA === 'string' && typeof valueB === 'string') {
+          comparison = valueA.toLowerCase().localeCompare(valueB.toLowerCase());
+        } else if (typeof valueA === 'number' && typeof valueB === 'number') {
+          comparison = valueA - valueB;
+        } else {
+          // Fallback comparison
+          comparison = String(valueA).localeCompare(String(valueB));
+        }
           
-          return sortDirection === 'asc' ? comparison : -comparison;
-        })
+        return sortDirection === 'asc' ? comparison : -comparison;
+      })
       : [...filteredItems];
   }, [items, searchTerm, filterFn, sortBy, sortDirection]);
 
@@ -103,42 +103,42 @@ const ListPanel = memo(({
       alignItems: 'center'
     } 
   },
-    React.createElement('input', {
-      type: 'text',
-      placeholder: searchPlaceholder,
-      value: searchTerm,
-      onChange: handleSearchChange,
+  React.createElement('input', {
+    type: 'text',
+    placeholder: searchPlaceholder,
+    value: searchTerm,
+    onChange: handleSearchChange,
+    style: {
+      padding: '0.25rem 0.5rem',
+      border: '1px solid #ccc',
+      borderRadius: '3px',
+      fontSize: '0.9rem',
+      flex: 1
+    }
+  }),
+  sortOptions.map(option => 
+    React.createElement('button', {
+      key: option.key,
+      onClick: () => handleSortChange(option.key),
       style: {
         padding: '0.25rem 0.5rem',
         border: '1px solid #ccc',
+        backgroundColor: sortBy === option.key ? '#007bff' : '#f8f9fa',
+        color: sortBy === option.key ? 'white' : '#333',
         borderRadius: '3px',
-        fontSize: '0.9rem',
-        flex: 1
+        fontSize: '0.8rem',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.25rem'
       }
-    }),
-    sortOptions.map(option => 
-      React.createElement('button', {
-        key: option.key,
-        onClick: () => handleSortChange(option.key),
-        style: {
-          padding: '0.25rem 0.5rem',
-          border: '1px solid #ccc',
-          backgroundColor: sortBy === option.key ? '#007bff' : '#f8f9fa',
-          color: sortBy === option.key ? 'white' : '#333',
-          borderRadius: '3px',
-          fontSize: '0.8rem',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.25rem'
-        }
-      },
-        option.label,
-        sortBy === option.key && React.createElement('span', { style: { fontSize: '0.7rem' }}, 
-          sortDirection === 'asc' ? '↑' : '↓'
-        )
-      )
+    },
+    option.label,
+    sortBy === option.key && React.createElement('span', { style: { fontSize: '0.7rem' }}, 
+      sortDirection === 'asc' ? '↑' : '↓'
     )
+    )
+  )
   ), [sortOptions, searchTerm, handleSearchChange, sortBy, sortDirection, handleSortChange]);
 
   // Render item count
@@ -150,26 +150,26 @@ const ListPanel = memo(({
       marginBottom: '0.25rem' 
     } 
   },
-    `${processedItems.length} item${processedItems.length !== 1 ? 's' : ''} (${items.length} total)`
+  `${processedItems.length} item${processedItems.length !== 1 ? 's' : ''} (${items.length} total)`
   ), [processedItems.length, items.length]);
 
   // Choose between virtualized and regular rendering based on configuration
   const content = useMemo(() => useVirtualization && processedItems.length > 100
     ? React.createElement(VirtualizedList, {
-        items: processedItems,
-        renderItem: renderItem,
-        itemHeight: itemHeight,
-        containerHeight: 400, // Default height, could be made configurable
-        overscan: 5
-      })
+      items: processedItems,
+      renderItem: renderItem,
+      itemHeight: itemHeight,
+      containerHeight: 400, // Default height, could be made configurable
+      overscan: 5
+    })
     : React.createElement(GenericPanel, {
-        items: processedItems,
-        renderItem: renderItem,
-        maxHeight: 'calc(100% - 4rem)', // Account for title, controls, and count display
-        emptyMessage: emptyMessage,
-        autoScroll: autoScroll,
-        maxItems: maxItems
-      }), [useVirtualization, processedItems, renderItem, itemHeight, autoScroll, maxItems, emptyMessage]);
+      items: processedItems,
+      renderItem: renderItem,
+      maxHeight: 'calc(100% - 4rem)', // Account for title, controls, and count display
+      emptyMessage: emptyMessage,
+      autoScroll: autoScroll,
+      maxItems: maxItems
+    }), [useVirtualization, processedItems, renderItem, itemHeight, autoScroll, maxItems, emptyMessage]);
 
   return React.createElement('div', { style: { height: '100%', display: 'flex', flexDirection: 'column' } },
     React.createElement('div', { style: { fontWeight: 'bold', marginBottom: '0.5rem' }}, title),
