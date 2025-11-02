@@ -83,13 +83,13 @@ This roadmap is divided into phases, each with a clear set of functional goals. 
     -   `Term` class with strict immutability, equality, and hashing.
     -   `TermFactory` with initial caching and normalization for commutative operators (e.g., `&`, `|`).
     -   Implementation of `Term` visitor and reducer patterns.
-    -   Core utilities: `EventBus` for component communication and a basic configuration management system.
+    -   Core utilities: `EventBus` for component communication, a basic `SystemConfig` for managing parameters, and validation helpers.
 -   **Acceptance Criteria**: Achieve >95% unit test coverage for `Term` immutability and normalization logic for all implemented operators.
 
 ### Phase 2: Memory System and Task Management
 -   **Goal**: Implement the core components for storing and managing knowledge.
 -   **Deliverables**:
-    -   Immutable `Task`, `Truth`, and `Stamp` classes.
+    -   Immutable `Task`, `Truth`, and `Stamp` classes with full property implementation.
     -   `Memory` class with a concept-based storage map (`Map<Term, Concept>`).
     -   `Focus` component for short-term memory management.
     -   Initial implementation of the dual-memory architecture and task consolidation.
@@ -99,28 +99,30 @@ This roadmap is divided into phases, each with a clear set of functional goals. 
 -   **Goal**: Build the engine for applying inference rules.
 -   **Deliverables**:
     -   A base `Rule` framework with a clear interface (`canApply()`, `apply()`).
-    -   Implementation of core NAL inference rules (deduction, revision) with their corresponding truth functions.
+    -   Implementation of core NAL inference rules (deduction, revision) and their corresponding truth functions.
+    -   Implementation of the full suite of NAL truth value operations: revision, deduction, induction, abduction, negation, and expectation.
     -   A `RuleEngine` to select and apply rules to tasks.
     -   A `Cycle` component to orchestrate the overall reasoning flow (task selection -> rule application -> memory update).
--   **Acceptance Criteria**: The system can perform basic logical inferences and derive new beliefs from existing ones, with truth values correctly propagated.
+-   **Acceptance Criteria**: The system can perform basic logical inferences and derive new beliefs from existing ones, with truth values correctly propagated according to NAL specifications.
 
 ### Phase 4: Parser and Input Processing
 -   **Goal**: Enable the system to understand the Narsese language.
 -   **Deliverables**:
     -   A robust Narsese parser capable of handling all specified NAL operator types.
     -   Support for parsing statements with terms, punctuation (`.`, `!`, `?`), and truth values (`%f;c%`).
-    -   Comprehensive validation of Narsese syntax with clear error messages.
+    -   Comprehensive validation of Narsese syntax with clear error messages and truth value range validation `[0,1]`.
     -   Error recovery mechanisms for malformed input.
 -   **Acceptance Criteria**: The parser correctly handles all documented Narsese syntax, with property-based tests verifying its robustness against a wide range of inputs.
 
 ### Phase 5: NAR Main Component and API
 -   **Goal**: Assemble all components into a unified system with a public API.
 -   **Deliverables**:
-    -   `NAR` class as the central system orchestrator.
+    -   `NAR` class as the central system orchestrator, with a detailed API (see *Technical Specifications*).
     -   `input(narseseString)` method for feeding knowledge into the system.
-    -   `on(eventName, callback)` for subscribing to system events (e.g., `'output'`).
+    -   `on(eventName, callback)` for subscribing to a comprehensive set of system events (e.g., `'output'`, `'belief_updated'`, `'cycle_end'`).
     -   Control methods: `start()`, `stop()`, `step()`.
     -   Query methods: `getBeliefs()`, `query()`.
+    -   Initial "metacognitive" capabilities: The event system will emit detailed metrics about cycle performance and rule application, making the system's internal state observable.
 -   **Acceptance Criteria**: A fully integrated NAR system that can be controlled and queried through a well-defined API, demonstrated via end-to-end tests.
 
 ### Phase 6: Advanced Features and NARS-LM Integration
@@ -129,8 +131,9 @@ This roadmap is divided into phases, each with a clear set of functional goals. 
     -   An `LM` integration component with a provider registry.
     -   Protocols for NARS-LM collaboration, focusing on synergistic reasoning (e.g., using the LM to generate hypotheses that NAL then validates).
     -   Cross-validation mechanisms to ensure consistency between NAL and LM outputs.
-    -   Advanced memory management: priority decay and more sophisticated forgetting algorithms.
--   **Acceptance Criteria**: The system can successfully use an LLM to generate candidate beliefs and validate them using its internal NAL logic.
+    -   Advanced memory management: priority decay, more sophisticated forgetting algorithms, and specialized indexing for different term types (inheritance, implication, etc.).
+    -   A basic plugin architecture to allow for the dynamic registration of new inference rules.
+-   **Acceptance Criteria**: The system can successfully use an LLM to generate candidate beliefs and validate them using its internal NAL logic. The plugin system can load a custom rule at runtime.
 
 ### Phase 7: Testing and Quality Assurance
 -   **Goal**: Ensure the system is robust, reliable, and correct.
@@ -138,7 +141,7 @@ This roadmap is divided into phases, each with a clear set of functional goals. 
     -   Comprehensive unit test coverage (>95%) for all core components.
     -   Integration tests simulating real-world input sequences and reasoning chains.
     -   Property-based testing for the `Term` normalization and `Truth` function logic.
-    -   A fluent "Reasoner Test API" to simplify the writing of integration tests.
+    -   A fluent "Reasoner Test API" to simplify the writing of integration tests, abstracting away cycle management and memory inspection for clearer test cases.
 -   **Acceptance Criteria**: The test suite is automated and passes consistently, providing high confidence in the correctness of the system's logic.
 
 ### Phase 8: Deployment, Documentation, and Optimization
@@ -146,16 +149,27 @@ This roadmap is divided into phases, each with a clear set of functional goals. 
 -   **Deliverables**:
     -   Detailed API documentation and comprehensive user guides.
     -   Containerization support (Docker) for easy deployment.
+    -   **Security Hardening**: Implementation of input sanitization and resource limits to prevent abuse.
+    -   **Reliability Engineering**: Implementation of robust error handling, graceful degradation, and circuit breaker patterns for external services (like LMs).
+    -   **Internationalization**: Basic support for different Narsese syntax variants and natural language translation hooks.
     -   **Performance Profiling**: A systematic analysis to identify and quantify performance bottlenecks in the now-functional system.
-    -   **Targeted Optimization**: Code changes to address the identified bottlenecks in areas like `TermFactory`, memory consolidation, and the reasoning cycle.
+    -   **Targeted Optimization**: Code changes to address the identified bottlenecks.
     -   Establishment of performance benchmarks for regression testing.
--   **Acceptance Criteria**: The system is deployable via Docker, is well-documented, and meets defined performance targets for key operations.
+-   **Acceptance Criteria**: The system is deployable via Docker, is well-documented, secure, reliable, and meets defined performance targets for key operations.
 
 ---
 
 ## Coherent Technical Specifications
 
-This section provides more detailed specifications for key components to guide implementation.
+### NAR API Specification
+-   `constructor(config: SystemConfig)`: Initializes all components with a validated configuration object.
+-   `input(narseseString: string)`: Parses a Narsese string, creates a `Task`, and adds it to memory.
+-   `on(eventName: string, callback: Function)`: Registers listeners for system events.
+-   `start()` / `stop()`: Initiates/halts the continuous reasoning cycle.
+-   `step()`: Executes a single reasoning cycle for debugging.
+-   `getBeliefs(queryTerm?: Term)`: Returns current beliefs, optionally filtered.
+-   `query(questionTerm: Term)`: Submits a question and returns a promise that resolves with the answer.
+-   `reset()`: Clears memory and resets the system state.
 
 ### Parser System Specifications
 -   **Narsese Syntax Support**: Must parse all NAL operator types, including:
@@ -167,10 +181,8 @@ This section provides more detailed specifications for key components to guide i
 -   **Integration**: The parser must use the `TermFactory` to create all `Term` objects, ensuring normalization is applied at the point of creation.
 
 ### Rule Engine Framework
--   **NAL Truth Functions**: The engine must correctly implement the full set of NAL truth functions for inference, including revision, deduction, induction, and abduction.
--   **Rule Interface**: All rules will implement a common interface:
-    -   `canApply(task)`: Checks if the rule is applicable.
-    -   `apply(task)`: Executes the rule and returns derived tasks.
+-   **NAL Truth Functions**: The engine must correctly implement the full set of NAL truth functions for inference.
+-   **Rule Interface**: All rules will implement a common interface: `canApply(task)` and `apply(task)`.
 -   **Hybrid Coordination**: The engine will orchestrate NAL-LM interaction. A potential workflow:
     1.  NAL engine processes a task.
     2.  If no NAL rule can be applied or confidence is low, the engine can formulate a prompt for an LM.
