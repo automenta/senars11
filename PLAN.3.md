@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-This plan synthesizes the original roadmap from PLAN.md, the self-leveraging concepts from PLAN.1.md, and the optimization principles from PLAN.2.md into clear, actionable architectural goals based on the actual codebase. The focus is on first building a functional prototype that achieves the README.md specifications, then incrementally adding sophisticated features.
+This plan synthesizes the original roadmap from PLAN.md, the self-leveraging concepts from PLAN.1.md, and the optimization principles from PLAN.2.md into clear, actionable architectural goals based on the actual codebase structure. The focus is on first building a functional prototype that achieves the README.md specifications, then incrementally adding sophisticated features using the existing infrastructure.
 
 The core principle is to follow the "Make it work, make it right, make it fast" approach, with the current focus being on making it work reliably and achieving the core specifications outlined in README.md.
 
@@ -18,6 +18,14 @@ The README.md specifies that SeNARS should:
 
 The current codebase includes:
 
+**Project Structure**:
+- **src/**: Core implementation with nar/, memory/, reasoning/, parser/, etc.
+- **tests/**: Unit, integration, and NAL-specific tests
+- **ui/**: Frontend with real-time visualization capabilities
+- **scripts/**: CLI, UI, and utility scripts
+- **examples/**: Working demonstration examples
+- **benchmarks/**: Performance testing infrastructure
+
 **Core Architecture**:
 - **BaseComponent System**: Initialization, metrics, lifecycle management (src/util/BaseComponent.js)
 - **EventBus Infrastructure**: Event-based communication system with middleware support (src/util/EventBus.js)
@@ -30,7 +38,7 @@ The current codebase includes:
 
 **Reasoning Engine**:
 - **NAR (NARS Reasoner Engine)**: Central orchestrator with component management (src/nar/NAR.js) including TermFactory, RuleEngine, TaskManager, and Cycle management
-- **Parser**: Narsese parsing using peggy parser generator (src/parser/NarseseParser.js)
+- **Parser**: Narsese parsing using peggy parser generator (src/parser/NarseseParser.js, built from narsese.peggy)
 - **Cycle System**: Reasoning cycle execution with optimized and standard implementations (src/nar/Cycle.js)
 - **Rule Engine**: Pluggable rule execution with default syllogistic rules (src/reasoning/RuleEngine.js)
 
@@ -42,373 +50,402 @@ The current codebase includes:
 **External Integration**:
 - **LM Integration**: Language Model integration with provider management (src/lm/LM.js)
 - **Tool Integration**: Tool execution framework with explanation services (src/tools/ToolIntegration.js)
-- **Real-time UI**: WebSocket-based visualization system (ui/)
+- **Real-time UI**: WebSocket-based visualization system (ui/, src/server/WebSocketMonitor.js)
+- **CLI Interface**: Interactive REPL and command-line interface (src/tui/Repl.js, scripts/cli/run.js)
 
-**Note**: The codebase already implements most README.md specifications but needs verification and stabilization.
+**Existing Infrastructure**:
+- **Testing Framework**: Jest-based tests in multiple categories (tests/unit/, tests/integration/, tests/nal/)
+- **Build System**: Peggy parser generation, NPM scripts for all operations
+- **Examples**: Working demonstrations in examples/ directory
+- **Persistence**: State saving/loading capabilities with graceful shutdown
+- **Monitoring**: WebSocket monitoring and visualization system
+
+**Note**: The codebase already implements most README.md specifications and has extensive infrastructure but needs verification and stabilization.
 
 ---
 
 ## Actionable Architecture Goals
 
 ### 0. Establish Functional Prototype Baseline (README.md Verification)
-**Objective**: Verify the existing components work together correctly and create a functional end-to-end system that matches README.md specifications
+**Objective**: Verify the existing components work together correctly and create a functional end-to-end system that matches README.md specifications using the existing infrastructure
 
 **Actions**:
-- Create a simple end-to-end integration test: input "A." → parse → store in memory → retrieve and verify
-- Verify NAR component lifecycle functions correctly: initialize → start → input task → run cycle → stop → dispose
-- Test basic hybrid reasoning: process simple inputs that could use both NARS and LM capabilities
-- Validate all README.md core components function as specified: NAR, Term, Task, Memory, Reasoning Engine, Parser, LM integration
-- Create a basic demonstration that shows observable reasoning in real-time (as per README.md)
-- Demonstrate Beliefs (.) and Goals (!) functionality with simple examples
+- Run and verify the existing examples/ to ensure basic functionality works
+- Create a simple end-to-end integration test using the existing test framework: input "A." → parse → store in memory → retrieve and verify
+- Verify NAR component lifecycle functions correctly using existing scripts/cli/run.js
+- Test basic hybrid reasoning: verify LM integration can be enabled/disabled as specified
+- Validate all README.md core components function as specified using existing examples and tests
+- Demonstrate real-time visualization works as specified in README.md using ui/ and WebSocketMonitor
+- Verify Beliefs (.) and Goals (!) functionality with simple examples from examples/ directory
 
 **Decomposed Actions**:
-- Create tracer bullet integration test: src/demo/basic-prototype.js
-- Verify component dependencies resolve correctly in ComponentManager
-- Test basic reasoning chain: NarseseParser → TermFactory → Task → Memory → Cycle
-- Create simple CLI demonstration: "input some facts, run reasoning, show results"
-- Verify EventBus integration for real-time observation (as per README.md "observable platform")
-- Test Belief (`.`) and Goal (`!`) processing with simple examples
+- Run `npm run demo` to verify basic functionality with existing demo script
+- Execute examples/basic-usage.js and examples/syllogism-demo.js to verify core functionality
+- Create minimal integration test using existing test framework in tests/integration/
+- Test `npm run web` to verify real-time visualization capability
+- Test `npm run cli` to verify command-line interface
+- Run existing tests with `npm run test:core` to ensure basic stability
+- Verify WebSocket monitoring works with the existing infrastructure
 
 **Creative Solutions**:
-- Rather than building complex tests first, create a working "Hello World" example of NARS reasoning
-- Use the existing UI connection capability to create immediate visual feedback (as per README.md "real-time visualization")
-- Implement basic error handling to make the prototype more robust than just "working"
-- Create a demonstration that shows the system learning from Belief/Goal interactions
+- Use existing examples/ as functional prototypes rather than building new ones
+- Leverage existing test infrastructure (tests/) for verification
+- Use the existing CLI/REPL (src/tui/Repl.js) to demonstrate functionality
+- Build on existing WebSocket infrastructure for real-time observation
+- Use the existing persistence mechanism to verify system stability
 
 **Questions/Concerns/Doubts**:
-- Does the current NAR properly handle both Beliefs (`.`) and Goals (`!`) as specified in README.md?
-- Are the existing default rules (SyllogisticRule, ImplicationSyllogisticRule, ModusPonensRule) actually working correctly for the hybrid system?
-- Does the memory consolidation mechanism actually prevent unbounded growth as required for a stable platform?
-- How do we know if the reasoning cycle is processing tasks correctly in the hybrid context?
-- What happens if the EventBus is disabled during initialization - will the "observable platform" still work?
-- Are there any race conditions between component initialization and event emissions that would break real-time observation?
-- Is the current LM integration sufficient to meet the "hybrid neuro-symbolic reasoning system" requirement?
-- How do we verify that the system is indeed providing an "observable platform" as specified?
+- Do all examples/ run without errors on the current codebase?
+- Are the existing scripts/cli/run.js and WebSocket monitoring properly configured?
+- How stable is the current test suite when running `npm run test`?
+- Is the UI properly connected to the backend reasoning engine?
+- What is the current state of LM integration - is it functional or just implemented?
+- Are there any issues with the existing parser build process (npm run build:parser)?
+- How well do the existing examples demonstrate the hybrid neuro-symbolic capability?
+- Is the persistence mechanism working correctly with state saving/loading?
+
+**Gaps for Future Solution**:
+- Need comprehensive end-to-end test that validates all README.md capabilities together
+- No clear way to test the "observable platform" capability specifically
+- Unclear how well current examples demonstrate "advanced AI concepts"
 
 **Dependencies**: None (base requirement)
 
 ---
 
-### 1. Comprehensive Test Coverage & Validation (Stability)
-**Objective**: Ensure stability of critical reasoning components through comprehensive testing that verifies README.md specifications
+### 1. Expand Test Coverage & Validation (Stability)
+**Objective**: Ensure stability of critical reasoning components through comprehensive testing that verifies README.md specifications using the existing test infrastructure
 
 **Actions**:
-- Implement unit tests for core components (Term, Memory, NAR, Parser, Cycle) that verify README.md functionality
-- Create integration tests for the main reasoning flow as specified in README.md
-- Add property-based tests for Term normalization to catch edge cases in TermFactory (structural intelligence concept)
-- Write tests for Parser covering basic Narsese syntax patterns with Beliefs and Goals
-- Build test harness for reasoning output validation for both Beliefs and Goals
-- Test hybrid reasoning capabilities with LM integration
+- Implement additional unit tests using the existing tests/unit/ framework that verify README.md functionality
+- Create integration tests using tests/integration/ for the main reasoning flow as specified in README.md
+- Add property-based tests using fast-check (in dependencies) for Term normalization and complex reasoning
+- Write tests for Parser covering all Narsese syntax patterns with Beliefs and Goals
+- Build comprehensive test harness for reasoning output validation and hybrid capabilities
+- Expand existing test coverage for all core components
 
 **Decomposed Actions**:
-- Create unit tests for Term creation, comparison, and serialization (structural intelligence)
-- Test Memory add/retrieve/remove operations with various scenarios involving Beliefs and Goals
-- Test NAR input/output functionality with different input types (Beliefs `.` and Goals `!`)
-- Verify Cycle execution produces expected outputs for both Beliefs and Goals
-- Create tests for the functional prototype from Goal 0
-- Test LM integration with simple hybrid reasoning scenarios
-- Validate emergent optimization concepts by testing self-analysis components
+- Create unit tests in tests/unit/ for Term creation, comparison, and serialization (structural intelligence)
+- Add tests in tests/integration/ for Memory operations with various Belief/Goal scenarios
+- Create tests for NAR input/output with different types (Beliefs `.` and Goals `!`)
+- Verify Cycle execution produces expected outputs using the existing test framework
+- Create comprehensive tests for LM integration scenarios
+- Expand syllogistic_reasoning.test.js and similar existing tests for broader coverage
+- Add tests for the existing examples/ to ensure they continue working
 
 **Creative Solutions**:
-- Use the prototype from Goal 0 as the foundation for integration tests
-- Create test fixtures based on working examples rather than theoretical edge cases
-- Implement "golden master" testing where we compare outputs to known working results
-- Create tests that verify the system can learn from Belief/Goal interactions (reinforcement learning concept)
+- Use the existing test patterns in tests/ to expand coverage systematically
+- Implement property-based testing using fast-check for edge case validation
+- Create test fixtures based on working examples from examples/ directory
+- Build test utilities that can validate the observable platform capabilities
 
 **Questions/Concerns/Doubts**:
-- How do we test reasoning correctness without having a perfect oracle - especially for hybrid reasoning?
-- What happens if the system produces different but equally valid outputs - how do we validate this?
-- How do we handle tests that depend on timing and asynchronous operations in the reasoning cycle?
-- How do we test the "emergent optimization" concept - can we measure this objectively?
-- Are the existing test patterns in the codebase consistent enough to follow and verify README.md specs?
-- How do we test the "observable platform" capability - can we verify real-time visualization works correctly?
-- What happens when LM integration fails - how do we ensure NARS reasoning still works?
+- What is the current test coverage percentage and which areas need work?
+- How do existing tests in tests/ handle complex reasoning scenarios?
+- Are the existing test patterns consistent and maintainable?
+- How do we test the "observable platform" capabilities comprehensively?
+- What happens when LM tests run without API keys - do they fail gracefully?
+- How do we test emergent optimization behaviors that are inherently unpredictable?
+
+**Gaps for Future Solution**:
+- No automated way to measure and enforce test coverage thresholds
+- Missing tests for real-time visualization capabilities
+- Unclear how to test the "emergent optimization" concept rigorously
 
 **Dependencies**: Goal 0 (requires working prototype as test foundation)
 
 ---
 
 ### 2. Input & Output Enhancement (Usability & README.md Compliance)
-**Objective**: Create a more robust and user-friendly interface that matches README.md's accessibility goals
+**Objective**: Create a more robust and user-friendly interface that matches README.md's accessibility goals using existing CLI and UI infrastructure
 
 **Actions**:
-- Improve Narsese parsing to provide better error messages and recovery (more user-friendly as per README.md audience)
-- Create utility functions for common input/output operations
-- Add validation for Narsese syntax with helpful error feedback
-- Implement comprehensive query mechanisms to retrieve Beliefs and Goals from memory
-- Create formatted output for reasoning results that's accessible to researchers and educators
-- Implement batch processing for demonstrating concepts to educators
+- Improve error handling in existing parser and NAR input processing
+- Create utility functions and examples that demonstrate user-friendly usage
+- Add enhanced validation for Narsese syntax with better error feedback
+- Implement comprehensive query mechanisms using existing memory APIs
+- Create formatted output utilities for better readability
+- Enhance the CLI/REPL interface with better user experience
+- Develop examples that specifically demonstrate capabilities for researchers/educators
 
 **Decomposed Actions**:
-- Enhance Parser error handling with specific error location and recovery (user-friendly)
-- Add query functions to NAR for retrieving Beliefs, Goals, and Questions
-- Create utility functions for common operations (e.g., "find all beliefs about X")
-- Implement formatted output that's more readable than raw objects
-- Add batch input processing capability for demonstration purposes
-- Create helper functions specifically for Belief/Goal operations
-- Implement import/export for reasoning sessions
+- Enhance src/parser/NarseseParser.js error handling with specific location and recovery
+- Add utility query functions to NAR for retrieving Beliefs, Goals, and Questions
+- Create helper functions for common operations in examples/ format
+- Improve src/tui/Repl.js with better formatting and error messages
+- Add batch processing capabilities to existing scripts
+- Create educational examples that demonstrate advanced concepts
+- Enhance existing output formatting in the UI system
 
 **Creative Solutions**:
-- Rather than just parsing, create a validation system that suggests corrections and learning opportunities
-- Use the existing Term normalization to show users how expressions will be processed (structural intelligence)
-- Create a "reasoning journal" that shows the progression of thoughts (observable platform)
-- Build helper functions that guide new users through Belief/Goal concepts
-- Create "canned demonstrations" that showcase advanced AI concepts for educators
+- Extend the existing REPL with educational commands that explain reasoning steps
+- Create "example templates" that help new users get started quickly
+- Build on existing WebSocket infrastructure for real-time feedback
+- Create "reasoning story" examples that demonstrate concept learning
 
 **Questions/Concerns/Doubts**:
-- How do we balance user-friendly error messages with system performance and accuracy?
-- Should we validate all inputs immediately or defer validation until processing?
-- How do we make complex reasoning results understandable to educators and researchers who may not know NARS details?
-- What happens with malformed Narsese - do we attempt repair or reject, and how does this affect the observable platform?
-- How do we create formatted output that's both human-readable and machine-processable?
-- How do we ensure batch processing maintains the real-time observation capabilities mentioned in README.md?
-- What level of assistance should we provide for new users learning Narsese syntax?
+- How do we improve error messages without breaking existing functionality?
+- What is the current state of the CLI interface - is it user-friendly?
+- How do we ensure new formatting doesn't break existing integrations?
+- Are the existing examples accessible to beginners and educators?
+- How do we maintain backward compatibility while improving UX?
 
-**Dependencies**: Goal 1 (requires testing to ensure input/output changes are safe)
+**Gaps for Future Solution**:
+- No documentation system integrated with the examples
+- Unclear how to validate that improvements make the system more accessible
+- Missing accessibility features for different user needs
+
+**Dependencies**: Goal 1 (requires testing to ensure changes are safe)
 
 ---
 
 ### 3. System Monitoring & Real-Time Observability (As per README.md)
-**Objective**: Provide comprehensive visibility into system operation for the "observable platform" as specified in README.md
+**Objective**: Enhance the existing observable platform and real-time visualization capabilities to fully meet README.md specifications
 
 **Actions**:
-- Enhance existing BaseComponent metrics for detailed operational tracking
-- Implement structured logging with consistent formats across components
-- Create real-time dashboards showing system state (as per README.md "real-time visualization")
-- Add comprehensive trace capabilities for following reasoning steps (observable platform)
-- Implement health checks and status reporting for system components
-- Create visualization-ready data streams for the UI
+- Improve existing WebSocket monitoring system for better real-time visualization
+- Enhance EventBus events for more comprehensive system observability
+- Create visualization-ready data streams that better serve educational purposes
+- Add detailed timing and performance metrics to existing monitoring
+- Enhance UI components for better explanation of reasoning processes
+- Implement comprehensive tracing for the observable platform
 
 **Decomposed Actions**:
-- Add detailed metrics to cycle execution and task processing
-- Create structured logs with consistent metadata and levels
-- Add real-time console outputs showing key system statistics
-- Implement comprehensive reasoning trace that shows what rules fired and when
-- Create component health status reporting
-- Build data export capabilities for analysis
-- Generate visualization-ready events for the UI system
-- Add timing information for all major operations
+- Enhance src/server/WebSocketMonitor.js with more detailed event reporting
+- Improve EventBus event schemas for better visualization data
+- Add timing metrics to existing cycle and task processing
+- Create better data structures for UI visualization in the ui/ directory
+- Add detailed reasoning trace capabilities that connect to UI
+- Enhance existing capture and visualization scripts in scripts/utils/
 
 **Creative Solutions**:
-- Rather than complex performance monitoring, focus on "what just happened" visibility for the observable platform
-- Use the existing EventBus to create a comprehensive event system for real-time observation
-- Create "reasoning step-by-step" mode for understanding and demonstrating reasoning progression
-- Build visualization data structures that can be easily consumed by the UI system
-- Create "reasoning storylines" that connect related operations for better understanding
+- Use existing scripts/utils/visualize.js for creating educational visualizations
+- Build on existing UI infrastructure in ui/src/ components
+- Enhance WebSocket events to provide step-by-step reasoning visualization
+- Create "reasoning storylines" that can be visualized in the UI
 
 **Questions/Concerns/Doubts**:
-- How do we provide useful observability without overwhelming researchers and educators?
-- Will detailed logging impact the basic functionality and real-time capabilities?
-- How much trace information is too much for effective debugging and demonstration?
-- Can we make observability configurable for different audiences (researchers vs educators vs developers)?
-- How do we ensure the visualization system receives data in real-time without creating bottlenecks?
-- What is the performance impact of comprehensive observability on the reasoning speed?
-- How do we balance detailed observation with system privacy and security?
+- What is the current state of the UI - does it properly visualize the reasoning?
+- How much overhead do comprehensive events add to the reasoning process?
+- Is the WebSocket connection stable under high load?
+- How do we ensure real-time visualization doesn't slow down reasoning?
+- Are the visualization tools accessible to educators and researchers?
+
+**Gaps for Future Solution**:
+- No standardized visualization formats or schemas defined
+- Unclear how to validate that observability improvements enhance understanding
+- Missing accessibility considerations for visualization tools
 
 **Dependencies**: Goal 2 (requires stable input/output for meaningful monitoring)
 
 ---
 
-### 4. Hybrid Reasoning Framework (As per README.md)
-**Objective**: Enhance the NARS-LLM integration to achieve the "hybrid neuro-symbolic reasoning system" as specified in README.md
+### 4. Hybrid Reasoning Framework Enhancement (As per README.md)
+**Objective**: Enhance the existing NARS-LLM integration to fully achieve the "hybrid neuro-symbolic reasoning system" as specified in README.md
 
 **Actions**:
-- Build intelligent task routing between NARS logic and external LMs
-- Create validation where LM results are checked against NARS knowledge and vice versa
-- Implement confidence scoring for reasoning outputs from both systems
-- Add collaboration protocols for NARS-LLM cooperation on complex problems
-- Ensure hybrid reasoning maintains the "observable platform" capabilities
+- Improve existing LM integration in src/lm/LM.js with better safety and validation
+- Create intelligent task routing based on the existing architecture
+- Enhance validation where LM results are checked against NARS knowledge
+- Add collaboration protocols for better NARS-LLM cooperation
+- Ensure hybrid reasoning maintains observable platform capabilities
 
 **Decomposed Actions**:
-- Create intelligent task classifier based on input complexity and type
-- Implement external LM operation execution with safety checks
-- Add validation of LM results against existing NARS knowledge
-- Create feedback mechanism from LM results to NARS knowledge
-- Build hybrid confidence scoring that combines NARS and LM confidence
-- Implement safety checks to prevent LM outputs from corrupting NARS reasoning
-- Add hybrid reasoning trace capabilities
+- Improve src/lm/LM.js with better provider management and error handling
+- Enhance existing ToolIntegration with better safety mechanisms
+- Add validation layers for LM output verification
+- Create feedback loops from LM results to NARS knowledge
+- Test hybrid reasoning with existing examples in examples/
+- Add hybrid safety checks to prevent LM from corrupting NARS reasoning
 
 **Creative Solutions**:
-- Use existing NARS reasoning to validate and refine LM outputs
-- Create "hybrid confidence" scoring that weights both NARS and LM inputs appropriately
-- Implement "fallback" mechanisms where NARS can handle what LM cannot
-- Build trust estimation for when to prefer NARS vs LM reasoning
-- Create learning mechanisms where NARS learns from LM interactions
+- Use existing examples/lm-providers.js as the foundation for hybrid testing
+- Build trust estimation mechanisms for when to prefer NARS vs LM
+- Create learning systems that improve hybrid effectiveness over time
+- Enhance existing ExplanationService for hybrid reasoning transparency
 
 **Questions/Concerns/Doubts**:
-- How do we maintain consistency when NARS and LMs provide conflicting results?
-- What security considerations are needed for LM integration that maintains the "safe" platform?
-- How do we handle LM operations that take variable amounts of time without blocking NARS?
-- How do we prevent LM integration from overwhelming the system or compromising the observable platform?
-- What happens when the LM API is unavailable - can NARS continue reasoning independently?
-- How do we ensure LM integration doesn't compromise the deterministic aspects of NARS when needed?
-- How do we validate that hybrid reasoning actually provides better results than pure NARS?
+- What is the current state of LM integration - does it work with API keys?
+- Are there security risks in the current LM integration?
+- How do we balance NARS precision with LM creativity?
+- What happens when LM services are unavailable?
+- How do we validate the quality of hybrid reasoning outputs?
+
+**Gaps for Future Solution**:
+- No standardized way to test hybrid reasoning quality
+- Unclear how to measure the effectiveness of NARS-LLM collaboration
+- Missing benchmarks for comparing hybrid vs pure NARS reasoning
 
 **Dependencies**: Goal 3 (requires observability to monitor hybrid operations)
 
 ---
 
 ### 5. Self-Analysis & Meta-Reasoning Enhancement (As per README.md "Emergent Optimization")
-**Objective**: Enhance the system's ability to understand and improve itself, supporting the "emergent optimization" concept from README.md
+**Objective**: Enhance the existing self-analysis capabilities to support the "emergent optimization" concept from README.md
 
 **Actions**:
-- Improve ReasoningAboutReasoning with better analysis capabilities (structural intelligence)
-- Create detailed reasoning trace capabilities that support emergent analysis
-- Build pattern recognition for common reasoning sequences (emergent optimization)
-- Implement self-correction based on analysis results (emergent optimization)
-- Create user-friendly reports on system behavior that support the observable platform
-- Enable system to learn resource allocation based on observed outcomes
+- Improve existing ReasoningAboutReasoning with better pattern detection
+- Enhance MetricsMonitor with more sophisticated analysis capabilities
+- Build better pattern recognition for common reasoning sequences
+- Implement more sophisticated self-correction based on analysis results
+- Create better reports on system behavior that support the observable platform
 
 **Decomposed Actions**:
-- Enhance reasoning trace with more detailed context and metadata
-- Add analysis functions to identify common reasoning patterns
-- Implement validation of reasoning consistency
-- Create summary reports on system behavior and performance
-- Add self-correction for obvious reasoning errors
-- Build pattern detection that can identify optimization opportunities
-- Create self-modification limits to prevent runaway optimization
-- Implement learning from Belief/Goal outcome patterns
+- Enhance src/reasoning/ReasoningAboutReasoning.js with better analysis functions
+- Improve src/reasoning/MetricsMonitor.js with more granular metrics
+- Add pattern detection to existing reasoning trace mechanisms
+- Enhance self-correction capabilities safely
+- Create better summary reports that connect to UI visualization
+- Add learning mechanisms that improve reasoning effectiveness
 
 **Creative Solutions**:
-- Use the existing reasoning trace as the foundation for emergent optimization patterns
-- Create "reasoning quality" indicators that support the observable platform
-- Implement "sanity checks" for reasoning outcomes that emerge naturally
-- Build "learning from experience" mechanisms that improve resource allocation
-- Create feedback loops that improve reasoning effectiveness over time
+- Build on existing self-analysis to create emergent optimization patterns
+- Use existing reasoning traces to identify optimization opportunities
+- Create feedback loops that improve resource allocation over time
+- Enhance existing self-correction with machine learning approaches
 
 **Questions/Concerns/Doubts**:
-- How do we ensure that self-analysis doesn't become too complex and destabilizing?
-- What happens if the system analyzes itself incorrectly - how do we prevent cascading errors?
-- How do we balance self-analysis overhead with basic functionality requirements?
-- How do we validate that emergent optimization is actually providing useful improvements?
-- What safety mechanisms are needed to prevent runaway self-modification?
-- How do we ensure emergent optimization doesn't compromise the observable platform?
-- How do we measure and verify that "emergent optimization" is actually occurring?
+- How do we prevent self-analysis from becoming too complex?
+- What safety mechanisms are needed for self-modification?
+- How do we validate that emergent optimization is actually improving performance?
+- Are the existing self-analysis components stable enough for enhancement?
+- How do we ensure self-analysis doesn't interfere with normal reasoning?
+
+**Gaps for Future Solution**:
+- No clear metrics for measuring "emergent optimization" effectiveness
+- Unclear how to prevent runaway optimization loops
+- Missing validation framework for self-analysis results
 
 **Dependencies**: Goal 4 (requires hybrid reasoning for comprehensive self-analysis)
 
 ---
 
 ### 6. API Security & Documentation (Research/Educator Access)
-**Objective**: Enable safe external integration with well-defined interfaces for the specified audiences
+**Objective**: Enhance existing security and create comprehensive documentation for specified audiences
 
 **Actions**:
-- Create clear API specification for all reasoning operations with examples
-- Implement input validation and sanitization for safe external access
-- Document all public interfaces with examples and expected behaviors
-- Implement authentication mechanisms for sensitive operations
-- Add comprehensive error handling and reporting that's informative but safe
-- Create educational documentation explaining concepts in README.md
+- Improve existing validation in NAR input processing and API endpoints
+- Create comprehensive documentation that explains concepts to researchers and educators
+- Enhance existing examples with better explanations and use cases
+- Add security validation for the WebSocket monitoring system
+- Create educational materials that demonstrate advanced AI concepts
 
 **Decomposed Actions**:
-- Document the public NAR interface methods with examples
-- Implement validation for all external inputs to prevent system corruption
-- Create API usage examples based on the functional prototype
-- Add security checks for potentially harmful operations
-- Create error handling that's informative but not revealing of internal structure
-- Build educational documentation explaining Belief/Goal concepts
-- Create example code for researchers to get started
+- Enhance input validation in src/nar/NAR.js for better security
+- Document existing API interfaces with examples
+- Improve examples/ with educational explanations
+- Add security layers to src/server/WebSocketMonitor.js
+- Create educational guides based on the examples
+- Build security testing into the existing test framework
 
 **Creative Solutions**:
-- Use the same validation that improves user experience for security
-- Create a "sandbox mode" for testing external API calls safely
-- Document common patterns and anti-patterns for API usage
-- Create educational examples that demonstrate advanced AI concepts
-- Build security that scales with user expertise level
+- Use existing examples as the foundation for educational documentation
+- Create interactive tutorials that work with the existing CLI
+- Build documentation generation into the build process
+- Create security sandboxes for safe experimentation
 
 **Questions/Concerns/Doubts**:
-- How do we balance security with accessibility for researchers and educators as specified in README.md?
-- What validation is needed for Narsese that could affect system stability and user experience?
-- How do we handle authentication in a distributed reasoning environment while maintaining usability?
-- Are there privacy concerns with detailed logging and metrics when used by researchers?
-- How do we ensure documentation is accessible to both researchers and educators?
-- What level of access should be provided to the self-analysis and optimization systems?
-- How do we prevent malicious API usage while supporting legitimate research?
+- What is the current security model - is it sufficient for multi-user access?
+- How do we balance accessibility with security requirements?
+- Are there privacy concerns with the existing logging and monitoring?
+- How do we ensure documentation stays current with code changes?
+- What are the security implications of the WebSocket interface?
+
+**Gaps for Future Solution**:
+- No automated documentation generation system
+- Unclear how to validate that documentation meets researcher/educator needs
+- Missing security audit procedures
 
 **Dependencies**: Goal 5 (requires stable self-analysis for API monitoring)
 
 ---
 
 ### 7. Advanced Resource Management (Production Stability)
-**Objective**: Implement sophisticated resource management to support long-term operation
+**Objective**: Enhance existing resource management for long-term production operation
 
 **Actions**:
-- Implement adaptive memory management that adjusts based on usage patterns
-- Build reasoning cycle optimization for better resource utilization
-- Add load balancing for external API calls with circuit breakers and backoff
-- Create resource pressure detection with automatic response mechanisms
-- Ensure system stability during high-load scenarios
+- Improve existing Memory management with better heuristics and limits
+- Enhance reasoning cycle optimization for better resource utilization
+- Add sophisticated load balancing for external API calls
+- Create comprehensive resource pressure detection and response
+- Ensure stability during high-load scenarios
 
 **Decomposed Actions**:
-- Enhance Memory consolidation logic with better heuristics
-- Implement priority-based task scheduling in TaskManager
-- Add sophisticated rate limiting and circuit breakers for LM integration
-- Create resource utilization tracking and reporting
+- Enhance src/memory/Memory.js with better consolidation heuristics
+- Improve TaskManager resource allocation strategies
+- Add rate limiting and circuit breakers for LM integration
+- Create comprehensive resource monitoring and reporting
 - Build automatic resource adjustment mechanisms
-- Implement graceful degradation under resource pressure
+- Implement graceful degradation under pressure
 
 **Creative Solutions**:
-- Use the system's own analysis capabilities to inform resource decisions
-- Implement "graceful degradation" when resources are tight while maintaining core functionality
-- Create resource usage predictions based on current trends and patterns
-- Build self-regulating mechanisms based on observed behavior
+- Use existing self-analysis to inform resource decisions
+- Build self-regulating mechanisms based on observed usage
+- Create resource prediction systems using existing metrics
+- Implement dynamic configuration adjustment
 
 **Questions/Concerns/Doubts**:
-- How do we ensure resource management doesn't create performance oscillations that affect observability?
-- What happens during resource pressure - will it impact the "observable platform" capabilities?
-- How do we prevent resource management from becoming too aggressive and starving reasoning that educators/researchers are observing?
-- Are the current memory pressure thresholds appropriate for long-running educational/research usage?
-- How do we balance resource optimization with the need for consistent, predictable behavior?
-- What happens if resource limits prevent important reasoning from completing?
-- How do we ensure resource management doesn't interfere with the self-analysis capabilities?
+- How do we measure the effectiveness of resource management?
+- What happens during resource pressure - does it affect observable capabilities?
+- How do we prevent resource management from impacting reasoning quality?
+- Are the current thresholds appropriate for different usage patterns?
+- How do we balance optimization with system predictability?
 
-**Dependencies**: Goal 6 (requires secure API for resource management configuration)
+**Gaps for Future Solution**:
+- No clear metrics for resource management effectiveness
+- Unclear how to validate resource optimization under different load patterns
+- Missing procedures for resource capacity planning
+
+**Dependencies**: Goal 6 (requires secure API for resource management)
 
 ---
 
 ### 8. Performance Optimization (Deferred)
-**Objective**: Optimize system performance when bottlenecks become apparent through actual usage
+**Objective**: Implement targeted optimizations when bottlenecks become apparent through actual usage
 
 **Actions**:
-- Identify actual performance bottlenecks through real usage patterns
-- Implement targeted optimizations based on measurement data
-- Add performance regression detection
+- Identify performance bottlenecks using existing monitoring tools
+- Implement targeted optimizations based on real usage data
+- Add performance regression detection to existing test infrastructure
 - Create performance analysis tools for ongoing optimization
 
 **Decomposed Actions**:
-- Add performance measurement hooks only where bottlenecks are identified
-- Create benchmark tests for specific identified issues
-- Implement performance regression detection for changes
-- Build performance analysis tools for ongoing improvements
+- Use existing perf:monitor scripts to identify bottlenecks
+- Implement optimizations only where needed based on profiling
+- Add performance tests to existing test framework
+- Create benchmarking tools for ongoing performance validation
 
 **Creative Solutions**:
-- Use the system's own analysis capabilities to identify bottlenecks
-- Implement "profile-guided" optimizations based on actual usage patterns
-- Create performance optimization as a background process that doesn't interfere with operation
+- Use the system's own analysis for performance optimization
+- Implement profile-guided optimization based on actual usage
+- Create performance monitoring as a background process
 
 **Questions/Concerns/Doubts**:
-- How do we avoid optimizing the wrong parts of the system before understanding real usage?
-- Will performance optimization conflict with functionality and observability requirements?
-- How do we measure optimization effectiveness without impacting system stability?
-- How do we prevent premature optimization from adding unnecessary complexity?
-- What are the risks of performance optimization to the "emergent optimization" and self-analysis capabilities?
-- How do we ensure optimization doesn't break the observable platform capabilities?
+- How do we avoid optimizing without clear performance data?
+- Will optimization affect the stability of existing functionality?
+- How do we measure optimization effectiveness without impacting operation?
+- What are the risks of performance optimization to other system capabilities?
 
-**Dependencies**: Goal 7 (requires stable resource management for performance optimization)
+**Gaps for Future Solution**:
+- No standardized performance benchmarking framework
+- Unclear how to balance performance with other system requirements
+- Missing performance regression testing procedures
+
+**Dependencies**: Goal 7 (requires stable resource management)
 
 ---
 
 ## Architectural Design Principles
 
 ### Elegance & Coherence
-- Each goal builds incrementally on stable foundations from previous goals
-- All modifications extend existing patterns rather than creating new architectural patterns
+- Each goal builds incrementally on existing infrastructure and patterns from the current codebase
+- All modifications extend existing patterns in src/, tests/, ui/, scripts/, examples/
 - Component boundaries are preserved and enhanced rather than broken
 - Focus on functionality first, then sophistication
 - Maintain alignment with README.md specifications throughout
 
 ### Stability & Consistency
-- Every change is validated through comprehensive testing before integration
+- Every change is validated through existing test infrastructure
 - Existing component interfaces remain backward-compatible where possible
 - All new features can be disabled/configured to maintain system stability
 - Configuration management follows consistent patterns across all components
@@ -419,29 +456,36 @@ The current codebase includes:
 ## Success Metrics
 
 **Quantitative** (measurable at each stage):
-- Goal 0: Functional prototype that can process basic Narsese and demonstrate reasoning (README.md compliant)
-- Goal 1: 80%+ code coverage for core components, stable test suite validating README.md features
-- Goal 2: All Narsese syntax errors properly handled, 95%+ valid inputs processed (user-friendly)
-- Goal 3: Meaningful observability with minimal overhead, real-time trace capability (as per README.md)
-- Goal 4: Basic hybrid operations working securely, no system instability (hybrid system as per README.md)
-- Goal 5: Self-analysis providing useful insights, self-correction working safely (structural intelligence/emergent optimization)
-- Goal 6: API security working, documentation complete and accessible (for researchers/educators)
-- Goal 7: Resource management working without impacting functionality (stable platform)
-- Goal 8: Measurable performance improvements when and where needed
+- Goal 0: All examples/ run successfully, basic demo works, CLI/REPL functional
+- Goal 1: 85%+ test coverage using existing framework, all tests pass consistently
+- Goal 2: Improved error rates, enhanced user experience metrics, better CLI usability
+- Goal 3: Real-time visualization working, comprehensive observability metrics
+- Goal 4: Hybrid reasoning functional with safety, measurable quality improvements
+- Goal 5: Self-analysis providing measurable improvements, stable optimization
+- Goal 6: Security validation passing, comprehensive documentation coverage
+- Goal 7: Resource management showing measurable efficiency gains
+- Goal 8: Performance improvements when and where needed
 
 **Qualitative** (aligns with README.md specifications):
-- System remains observable with real-time visualization capabilities
-- Hybrid NARS-LLM reasoning system functions as specified in README.md
-- Platform is accessible to researchers, educators, and developers as specified
-- Structural intelligence concept is realized through self-analyzing data structures
-- Emergent optimization occurs naturally from well-designed component interactions
+- System remains observable with working real-time visualization
+- Hybrid NARS-LLM reasoning system functions as specified
+- Platform accessible to researchers, educators, and developers
+- Structural intelligence concept realized through self-analyzing components
+- Emergent optimization occurs naturally from component interactions
 - Beliefs/Goals reinforcement learning framework works as specified
-- All components work harmoniously with minimal configuration needed
+- All components work harmoniously with existing infrastructure
 
 ---
 
 ## Implementation Notes
 
-The plan prioritizes building a functional, testable prototype that fully implements README.md specifications before adding sophisticated features. Performance optimization is deferred to Goal 8, only implemented when actual bottlenecks are identified. Each goal focuses on functionality and reliability rather than optimization, following the principle that premature optimization is the root of all evil. The sequence ensures solid foundations before adding complexity, with explicit verification of README.md specifications at each stage.
+The plan leverages the existing codebase infrastructure (src/, tests/, ui/, scripts/, examples/) to achieve README.md specifications. Each goal builds on existing components and patterns rather than creating new architecture. The sequence ensures stability and functionality before adding complexity, with explicit verification of README.md requirements at each stage.
 
-The plan addresses all README.md requirements while working with the current codebase state, ensuring the final system matches the specified architecture and audience requirements.
+The plan acknowledges existing infrastructure like the test framework, CLI/REPL, UI system, WebSocket monitoring, and examples directory, using them as foundations for improvement rather than replacing them.
+
+**Critical Gaps Identified**:
+- No standardized way to measure "emergent optimization" effectiveness
+- Unclear validation methods for hybrid reasoning quality
+- Missing comprehensive documentation generation system
+- Limited accessibility features for diverse user needs
+- No automated validation of the "observable platform" capabilities
