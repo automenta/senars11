@@ -290,6 +290,31 @@ The `Task` class represents a unit of work or information within the system, als
     - `derive(newTruth, newStamp)`: Creates a new `Task` instance based on the current one but with updated truth and
       stamp, ensuring immutability.
 
+### Belief vs. Goal: Foundational Concepts for Reinforcement Learning
+
+Understanding the distinction between Belief and Goal tasks is fundamental to SeNARS's capability as a general-purpose reinforcement learning system:
+
+**Belief Tasks (.)** represent declarative knowledge about the world:
+- **Purpose**: Encode what the system believes to be true about its environment
+- **Truth Values**: Represent frequency (how often something is observed) and confidence (reliability of that observation)
+- **Function**: Serve as the system's model of the world, informing decision-making
+- **Example**: `<door_open --> visible>{0.8, 0.9}.` (The system believes with 80% frequency and 90% confidence that the door is visible)
+
+**Goal Tasks (!)** represent procedural objectives the system seeks to achieve:
+- **Purpose**: Define desired outcomes that guide the system's actions and learning
+- **Truth Values**: Represent desire (how much the outcome is wanted) and confidence (strength of that desire)
+- **Function**: Drive reinforcement learning through reward signals and action selection
+- **Example**: `<key_picked_up --> achieved>!{0.9, 0.8}.` (The system desires with 90% intensity and 80% confidence to pick up the key)
+
+**Reinforcement Learning Integration**:
+This distinction enables SeNARS to function as a general-purpose reinforcement learning system where:
+- **Beliefs** form the world model that predicts outcomes of actions
+- **Goals** define the reward structure that guides policy learning
+- **Interaction**: The system learns by attempting to achieve goals and updating beliefs based on outcomes
+- **Adaptation**: Truth value revision mechanisms allow continuous learning from experience
+
+The separation of these concept types with distinct truth semantics enables SeNARS to naturally implement the exploration-exploitation balance fundamental to reinforcement learning, where beliefs guide exploitation of known knowledge while goals drive exploration toward desired outcomes.
+
 ---
 
 ## Core System Components
@@ -1324,3 +1349,25 @@ Based on analysis of the current implementation, several technical challenges an
 - Complex reasoning pattern documentation can be enhanced with automated tools
 
 These implementation challenges and design considerations should guide development priorities and help ensure the system evolves toward its ambitious vision while maintaining practical implementation focus.
+---
+
+## General-Purpose Reinforcement Learning Foundation
+
+The SeNARS architecture naturally supports general-purpose reinforcement learning through its foundational Belief-Goal distinction:
+
+- **World Model Learning**: Belief tasks with frequency-confidence truth semantics form predictive models of environment dynamics
+- **Reward Structure Definition**: Goal tasks with desire-confidence truth semantics define reward functions for policy learning
+- **Exploration-Exploitation Balance**: Truth value revision mechanisms naturally implement the fundamental RL tradeoff
+- **Policy Learning**: Task processing adapts action selection based on predicted outcomes and desired goals
+- **Continuous Adaptation**: The system learns through experience by updating beliefs from environmental feedback while pursuing goals
+- **Transfer Learning**: Knowledge gained in one domain transfers to related domains through structural similarity
+
+This enables SeNARS to function as a general-purpose reinforcement learning system where:
+- **Beliefs** form the world model that predicts outcomes of actions
+- **Goals** define the reward structure that guides policy learning
+- **Interaction** enables the system to learn by attempting to achieve goals and updating beliefs based on outcomes
+- **Adaptation** allows continuous learning from experience through truth value revision mechanisms
+
+The separation of these concept types with distinct truth semantics enables SeNARS to naturally implement the exploration-exploitation balance fundamental to reinforcement learning, where beliefs guide exploitation of known knowledge while goals drive exploration toward desired outcomes.
+
+---
