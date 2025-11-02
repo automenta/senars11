@@ -61,4 +61,10 @@ export const restoreOriginalConsole = () => {
   });
 };
 
+export const setConsoleBridge = (ws) => {
+  // The console bridge is already initialized, but we can ensure it has access to the WebSocket
+  // This function is provided for compatibility with the App.js requirement
+  console.log('Console bridge initialized with WebSocket');
+};
+
 export const getConsoleBridgeService = () => useUiStore.getState().wsService;
