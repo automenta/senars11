@@ -477,3 +477,344 @@ The approach ensures that the SeNARS system becomes a **compelling prototype tha
 
 ---
 
+## Phase 5: Performance Optimization & Scaling
+
+**Vision Focus**: Enhance system performance and scalability to handle complex reasoning tasks, larger datasets, and concurrent users while maintaining the observability and transparency established in earlier phases. This phase leverages existing architecture for self-improvement through performance insights.
+
+**Implementation Steps (Performance-Driven):**
+
+1. **Performance Profiling & Optimization** (`src/performance/Profiler.js`, `ui/src/utils/performance.js`)
+   - Implement comprehensive performance monitoring for reasoning cycles and UI rendering
+   - Profile critical execution paths and identify bottlenecks in NARS reasoning
+   - Optimize memory management and garbage collection for long-running sessions
+   - Add performance metrics visualization in DashboardPanel using existing UI patterns
+   - **Dependencies**: Existing EventBus, reasoning engine, UI store, Zod validation
+   - **Vision Alignment**: Users can observe and understand system performance characteristics alongside reasoning processes
+   - **Self-Leverage**: Performance insights feed back into system optimization strategies
+
+2. **Memory & Processing Scalability** (`src/memory/ScalableMemory.js`, `src/reasoning/ScalableReasoning.js`)
+   - Implement memory partitioning and efficient retrieval mechanisms using existing Bag structures
+   - Add concept forgetting strategies to maintain performance over time based on priority metrics
+   - Create efficient indexing for large concept collections using existing MemoryIndex
+   - Implement distributed concept processing for complex reasoning using existing TermLayer
+   - **Dependencies**: Existing Memory.js, Concept.js, Reasoner.js, Bag.js, MemoryIndex.js, TermLayer.js
+   - **Vision Alignment**: System remains responsive and observable even under heavy load
+   - **Self-Leverage**: Scalable memory supports more complex reasoning patterns discovered in later phases
+
+3. **WebSocket Connection Scaling** (`src/server/WebSocketMonitor.js`, `ui/src/utils/websocketEnhanced.js`)
+   - Implement connection pooling and message batching for multiple clients using existing WebSocket infrastructure
+   - Add event filtering and subscription management for scalable communication
+   - Create message compression for high-volume data transmission using existing messageProcessor
+   - Add connection health monitoring and automatic reconnection with existing EventBus
+   - **Dependencies**: WebSocketMonitor.js, ui websocket utils, messageProcessor.js, EventBus.js
+   - **Vision Alignment**: Multiple users can observe and interact with reasoning simultaneously
+   - **Self-Leverage**: Scalable communication enables collaborative features in later phases
+
+4. **UI Rendering Optimization** (`ui/src/components/VirtualizedList.js`, `ui/src/utils/performanceUtils.js`)
+   - Implement virtualized rendering for large reasoning trace lists using existing dataProcessor
+   - Add efficient data diffing and minimal re-rendering strategies with existing React patterns
+   - Create performance-conscious visualization components following existing component architecture
+   - Optimize rendering of complex task relationship graphs using existing VirtualizedList
+   - **Dependencies**: Existing panel components, dataProcessor.js, React patterns from other components
+   - **Vision Alignment**: Even large reasoning sessions remain interactive and observable
+   - **Self-Leverage**: Optimized UI supports more complex visualizations in later phases
+
+**Integration Points:**
+- **Performance Monitoring**: `/src/performance/Profiler.js` - System-wide performance tracking
+- **Scalable Memory**: `/src/memory/ScalableMemory.js` - Efficient memory management for large datasets
+- **Enhanced WebSocket**: `/ui/src/utils/websocketEnhanced.js` - Optimized communication layer
+- **Virtualized UI**: `/ui/src/components/VirtualizedList.js` - Efficient rendering of large data sets
+
+**Vision-Aligned Success Criteria:**
+- [ ] System maintains responsive performance with 1000+ concepts and 10000+ reasoning steps
+- [ ] Multiple concurrent users can observe reasoning without performance degradation
+- [ ] UI remains smooth and interactive during complex reasoning sessions
+- [ ] Performance metrics are clearly visible and understandable to users
+
+### Phase 6: Metacognitive Reasoning & Self-Improvement
+
+**Vision Focus**: Implement sophisticated self-reasoning capabilities that allow the system to understand, monitor, and improve its own reasoning processes. This phase creates the foundation for truly intelligent, self-evolving systems.
+
+**Implementation Steps (Self-Awareness-First):**
+
+1. **Metacognitive Reasoning Engine** (`src/reasoning/MetaCognition.js`, `src/reasoning/MetaReasoner.js`)
+   - Implement reasoning about reasoning processes and strategies using existing NAL rules
+   - Create self-monitoring and self-regulation capabilities with performance metrics
+   - Add confidence assessment and uncertainty management using existing TruthValue systems
+   - Implement reasoning strategy selection and adaptation based on past performance
+   - **Dependencies**: Existing Reasoner.js, TruthValue.js, EventBus.js, performance metrics from Phase 5
+   - **Vision Alignment**: Users can observe the system thinking about its own thinking processes
+   - **Self-Leverage**: Meta-reasoning capabilities improve all other reasoning processes
+
+2. **Self-Monitoring & Reflection System** (`src/memory/SelfMonitor.js`, `ui/src/components/MetaCognitionPanel.js`)
+   - Create comprehensive reasoning process logging and analysis
+   - Implement success/failure prediction and learning from reasoning outcomes
+   - Add reasoning strategy effectiveness tracking and optimization
+   - Implement reflective reasoning about past successes and failures
+   - **Dependencies**: Memory.js, reasoning history, performance monitoring, UI store
+   - **Vision Alignment**: System's self-awareness is transparent and observable to users
+   - **Self-Leverage**: Self-reflection leads to continuous improvement in reasoning quality
+
+3. **Adaptive Reasoning Strategies** (`src/reasoning/AdaptiveStrategy.js`, `src/reasoning/StrategyLearning.js`)
+   - Implement dynamic reasoning strategy selection based on problem characteristics
+   - Create learned heuristics for problem-solving approaches from successful reasoning
+   - Add meta-learning of reasoning patterns using existing memory systems
+   - Implement transfer learning between reasoning domains using concept similarities
+   - **Dependencies**: Existing reasoning engine, concept memory, success metrics, truth value learning
+   - **Vision Alignment**: Users observe increasingly sophisticated reasoning strategy selection
+   - **Self-Leverage**: Learned strategies improve all subsequent reasoning processes
+
+4. **Reasoning Quality Assessment** (`src/reasoning/QualityAssessment.js`, `ui/src/components/QualityPanel.js`)
+   - Implement confidence tracking and uncertainty propagation
+   - Create reasoning path quality evaluation and improvement suggestions
+   - Add consistency checking and contradiction detection
+   - Implement reasoning explanation and justification capabilities
+   - **Dependencies**: TruthValue systems, reasoning engine, existing visualization patterns
+   - **Vision Alignment**: Reasoning quality and confidence are clearly visible to users
+   - **Self-Leverage**: Quality assessment feeds back into strategy improvement
+
+**Integration Points:**
+- **Metacognition Engine**: `/src/reasoning/MetaCognition.js` - Self-reasoning capabilities
+- **Self Monitor**: `/src/memory/SelfMonitor.js` - Reasoning process analysis
+- **Adaptive Strategies**: `/src/reasoning/AdaptiveStrategy.js` - Dynamic strategy selection
+- **Quality Assessment**: `/src/reasoning/QualityAssessment.js` - Reasoning quality evaluation
+
+**Vision-Aligned Success Criteria:**
+- [ ] System demonstrates metacognitive awareness and self-regulation
+- [ ] Self-monitoring leads to improved reasoning effectiveness over time
+- [ ] Reasoning strategies adapt intelligently to different problem types
+- [ ] Quality assessment metrics are clearly visible and improve with use
+
+### Phase 7: Advanced Hybrid Collaboration & Intelligence Orchestration
+
+**Vision Focus**: Implement sophisticated orchestration of hybrid reasoning capabilities with intelligent task routing, real-time approach optimization, and advanced collaboration patterns that leverage both NARS and LM strengths.
+
+**Implementation Steps (Orchestration-First):**
+
+1. **Intelligent Hybrid Reasoning Router** (`src/lm/IntelligentRouter.js`, `src/reasoning/CoordinatedReasoningStrategy.js`)
+   - Implement context-aware task routing between NARS and LMs based on problem characteristics
+   - Create dynamic approach selection using performance metrics from Phase 5 and quality metrics from Phase 6
+   - Add real-time model switching based on task requirements and success predictions
+   - Implement hybrid approach effectiveness tracking and optimization
+   - **Dependencies**: Existing LM.js, reasoning engine, performance monitoring, quality assessment
+   - **Vision Alignment**: Users can see when and why different reasoning approaches are selected
+   - **Self-Leverage**: Intelligent routing optimizes performance across all reasoning tasks
+
+2. **Advanced Hybrid Cooperation Protocols** (`src/lm/AdvancedCooperation.js`, `src/reasoning/HybridProtocolManager.js`)
+   - Implement sophisticated collaboration protocols between NARS and LMs using existing cooperation
+   - Create iterative refinement and verification processes across reasoning systems
+   - Add consensus-building between different reasoning approaches with conflict resolution
+   - Implement cross-system inference chaining and knowledge transfer
+   - **Dependencies**: Existing LM cooperation mechanisms, reasoning engine, EventBus
+   - **Vision Alignment**: Hybrid collaboration becomes more sophisticated and effective
+   - **Self-Leverage**: Collaboration protocols improve reasoning quality across systems
+
+3. **Fine-Tuned Model Integration & Domain Adaptation** (`src/lm/FineTunedIntegration.js`, `src/lm/DomainAdaptor.js`)
+   - Add support for domain-specific fine-tuned models with adapter patterns
+   - Create model-specific reasoning optimization based on domain characteristics
+   - Enable model performance calibration and tuning using historical success data
+   - Implement domain knowledge transfer between models and NARS concepts
+   - **Dependencies**: Existing LM provider system, performance monitoring, concept memory
+   - **Vision Alignment**: Reasoning quality improves with specialized models and domains
+   - **Self-Leverage**: Domain adaptation improves performance across all user interactions
+
+4. **Real-Time Performance Optimization** (`src/lm/PerformanceOptimizer.js`, `ui/src/components/HybridPerformancePanel.js`)
+   - Implement comprehensive cross-system performance tracking and comparison
+   - Create real-time optimization of resource allocation between NARS and LMs
+   - Add cost and latency optimization for hybrid reasoning workflows
+   - Enable adaptive system configuration based on performance and user requirements
+   - **Dependencies**: Performance monitoring, hybrid router, resource management, UI store
+   - **Vision Alignment**: Users can observe and understand system optimization decisions
+   - **Self-Leverage**: Optimization feedback improves all system performance metrics
+
+**Integration Points:**
+- **Hybrid Router**: `/src/lm/IntelligentRouter.js` - Intelligent task routing
+- **Cooperation Protocols**: `/src/reasoning/HybridProtocolManager.js` - Advanced collaboration
+- **Domain Adaptors**: `/src/lm/DomainAdaptor.js` - Specialized model integration
+- **Performance Optimizer**: `/src/lm/PerformanceOptimizer.js` - Real-time optimization
+
+**Vision-Aligned Success Criteria:**
+- [ ] System automatically selects optimal reasoning approaches based on context
+- [ ] Hybrid collaboration adapts intelligently and achieves superior results
+- [ ] Fine-tuned models improve domain-specific reasoning quality significantly
+- [ ] Real-time optimization maintains optimal performance across all tasks
+
+### Phase 8: Advanced Visualization & Pattern Discovery
+
+**Vision Focus**: Create sophisticated visualization and analytics capabilities that reveal complex reasoning patterns, enable deep analysis, and provide intuitive understanding of advanced hybrid intelligence. This phase leverages insights from earlier phases to create powerful discovery tools.
+
+**Implementation Steps (Pattern-Discovery-First):**
+
+1. **Advanced Pattern Recognition & Visualization** (`ui/src/components/PatternVisualizer.js`, `src/reasoning/PatternDiscovery.js`)
+   - Create pattern detection algorithms for temporal reasoning using existing temporal systems
+   - Implement concept clustering and relationship mapping with advanced visualization
+   - Add anomaly detection visualizations based on established patterns
+   - Create predictive pattern visualization using metacognitive insights
+   - **Dependencies**: Reasoning history, concept memory, temporal reasoning, dataProcessor.js
+   - **Vision Alignment**: Hidden patterns in reasoning become visible and understandable
+   - **Self-Leverage**: Pattern discovery feeds back into reasoning strategy improvement
+
+2. **3D Reasoning Visualization Engine** (`ui/src/components/3DVisualization.js`, `ui/src/utils/visualization3d.js`)
+   - Implement interactive 3D representations of concept spaces using Three.js
+   - Create dynamic visualization of reasoning process flows from metacognitive data
+   - Add spatial reasoning pattern visualization based on detected patterns
+   - Implement immersive exploration of complex reasoning structures using virtualized rendering
+   - **Dependencies**: Three.js, existing data processing, VirtualizedList, UI store
+   - **Vision Alignment**: Users can explore reasoning in intuitive spatial contexts
+   - **Self-Leverage**: 3D visualization reveals patterns not visible in 2D representations
+
+3. **Comprehensive Analytics Dashboard** (`ui/src/components/AnalyticsDashboard.js`, `src/analytics/AnalyticsEngine.js`)
+   - Implement comprehensive reasoning performance metrics combining all previous phases
+   - Create comparative analysis between different reasoning approaches using hybrid router data
+   - Add trend analysis for concept evolution over time using memory systems
+   - Implement user interaction and exploration analytics with performance data
+   - **Dependencies**: Performance monitoring, hybrid router, concept memory, UI store
+   - **Vision Alignment**: Detailed insights into reasoning effectiveness and evolution
+   - **Self-Leverage**: Analytics provide insights for continuous system improvement
+
+4. **Collaborative & Multi-User Visualization Spaces** (`ui/src/components/CollaborativeView.js`, `src/server/CollaborativeMonitor.js`)
+   - Enable shared visualization spaces for multiple users using WebSocket scaling
+   - Implement collaborative annotation and discussion features with real-time sync
+   - Create multi-user reasoning exploration capabilities based on workspace patterns
+   - Add shared annotation and insight discovery with conflict resolution
+   - **Dependencies**: WebSocket server, UI state management, existing annotation systems, Phase 5 scaling
+   - **Vision Alignment**: Multiple users can jointly explore and understand reasoning
+   - **Self-Leverage**: Collaborative insights accelerate pattern discovery and system improvement
+
+**Integration Points:**
+- **Pattern Discovery**: `/src/reasoning/PatternDiscovery.js` - Advanced pattern detection
+- **3D Visualization**: `/ui/src/components/3DVisualization.js` - Immersive reasoning visualization
+- **Analytics Engine**: `/src/analytics/AnalyticsEngine.js` - Comprehensive analysis
+- **Collaborative Spaces**: `/ui/src/components/CollaborativeView.js` - Multi-user visualization
+
+**Vision-Aligned Success Criteria:**
+- [ ] Complex reasoning patterns are automatically detected and visualized
+- [ ] 3D visualization reveals insights not visible in traditional representations
+- [ ] Comprehensive analytics provide deep insights into system effectiveness
+- [ ] Multiple users can collaboratively explore and discover reasoning insights
+
+### Phase 9: Responsive & Mobile-First Interface
+
+**Vision Focus**: Make the hybrid reasoning system accessible on all devices with optimized experiences. This phase ensures that insights and benefits from earlier phases are accessible to the widest possible audience.
+
+**Implementation Steps (Universal-Access-First):**
+
+1. **Responsive UI Framework & Layout System** (`ui/src/layouts/ResponsiveLayout.js`, `ui/src/styles/responsive.js`)
+   - Implement adaptive layouts for different screen sizes using existing FlexLayout patterns
+   - Create touch-optimized interfaces for mobile devices following mobile UX patterns
+   - Optimize UI components for various screen dimensions while maintaining functionality
+   - Add gesture-based interaction patterns for complex visualization components
+   - **Dependencies**: FlexLayout, CSS modules, existing components, VirtualizedList
+   - **Vision Alignment**: Reasoning exploration is accessible on any device
+   - **Self-Leverage**: Mobile access increases user engagement and system improvement data
+
+2. **Mobile-Optimized Visualization & Interaction** (`ui/src/components/MobileVisualization.js`, `ui/src/utils/touchGestures.js`)
+   - Create touch-friendly versions of complex visualization controls
+   - Implement gesture-based navigation for reasoning traces and pattern discovery
+   - Optimize 3D visualization for mobile performance using mobile-optimized rendering
+   - Add mobile-specific interaction patterns for complex reasoning exploration
+   - **Dependencies**: 3D visualization, existing visualizations, touch APIs, performance optimization
+   - **Vision Alignment**: Complex reasoning remains explorable on mobile devices
+   - **Self-Leverage**: Mobile access enables anytime reasoning and discovery
+
+3. **Progressive Web App & Offline Capabilities** (`ui/src/App.js`, `public/service-worker.js`)
+   - Implement offline capability for core reasoning and visualization using caching
+   - Add push notifications for reasoning events using Service Workers
+   - Create app-like experience across all devices using PWA patterns
+   - Optimize for installation as standalone application with native-like performance
+   - **Dependencies**: Service worker APIs, Web APIs, existing UI systems, caching mechanisms
+   - **Vision Alignment**: Reasoning system accessible anywhere, anytime
+   - **Self-Leverage**: Offline capability extends system reach and usage contexts
+
+4. **Cross-Device Synchronization & Continuity** (`ui/src/utils/deviceSync.js`, `src/server/DeviceSync.js`)
+   - Implement seamless experience across multiple user devices using existing state management
+   - Add session state synchronization between desktop and mobile contexts
+   - Enable cross-device collaborative work with real-time sync
+   - Create device-aware interface optimization based on capabilities
+   - **Dependencies**: WebSocket server, UI state management, collaborative systems, Phase 8 features
+   - **Vision Alignment**: Users can continue reasoning exploration on any device
+   - **Self-Leverage**: Cross-device synchronization increases user engagement and collaboration
+
+**Integration Points:**
+- **Responsive Layout**: `/ui/src/layouts/ResponsiveLayout.js` - Adaptive interface system
+- **Mobile Visualization**: `/ui/src/components/MobileVisualization.js` - Touch-optimized displays
+- **PWA Features**: `public/service-worker.js` - Offline and app-like capabilities
+- **Device Sync**: `/src/server/DeviceSync.js` - Cross-device synchronization
+
+**Vision-Aligned Success Criteria:**
+- [ ] Fully responsive interface works optimally on all device types without sacrificing functionality
+- [ ] Touch interactions are intuitive and efficient, matching desktop capabilities
+- [ ] Core functionality works offline and provides app-like experience
+- [ ] Seamless experience across multiple user devices maintains system context
+
+### Phase 10: Knowledge Integration & External Systems
+
+**Vision Focus**: Connect the SeNARS system to external knowledge bases, APIs, and real-world data sources, creating a truly intelligent system that can reason about the world beyond its internal representations.
+
+**Implementation Steps (Integration-First):**
+
+1. **External Knowledge Base Integration** (`src/integration/KnowledgeBaseConnector.js`, `src/memory/ExternalMemory.js`)
+   - Implement connectors for major knowledge bases (Wikipedia, Wikidata, etc.) using API integration patterns
+   - Create bidirectional mapping between external knowledge and internal concepts
+   - Add real-time fact checking and verification against external sources
+   - Implement knowledge base query optimization and caching using existing memory systems
+   - **Dependencies**: Existing memory systems, API integration patterns, concept processing
+   - **Vision Alignment**: System can reason with real-world knowledge beyond internal representations
+   - **Self-Leverage**: External knowledge improves reasoning quality and relevance
+
+2. **API & Data Source Integration Framework** (`src/integration/APIFramework.js`, `src/integration/DataSourceManager.js`)
+   - Create pluggable framework for integrating various external APIs and data sources
+   - Implement secure credential management and access control for external integrations
+   - Add data format normalization and concept mapping for diverse sources
+   - Create real-time data ingestion and concept creation from external sources
+   - **Dependencies**: Security systems, concept memory, data processing utilities
+   - **Vision Alignment**: System can integrate with diverse external systems and data
+   - **Self-Leverage**: More data sources improve reasoning accuracy and coverage
+
+3. **Real-World Reasoning & Application Framework** (`src/applications/RealWorldReasoning.js`, `ui/src/components/ApplicationPanel.js`)
+   - Implement reasoning about real-world scenarios using external data integration
+   - Create application frameworks for specific domains (science, finance, etc.)
+   - Add decision support and recommendation capabilities based on hybrid reasoning
+   - Implement action-taking and external system control through reasoning
+   - **Dependencies**: Knowledge integration, hybrid reasoning, API framework, UI components
+   - **Vision Alignment**: System demonstrates practical value in real-world contexts
+   - **Self-Leverage**: Real-world applications provide feedback for system improvement
+
+4. **Semantic Web & Ontology Integration** (`src/integration/SemanticWebConnector.js`, `src/memory/OntologyManager.js`)
+   - Implement RDF and semantic web data integration using existing concept systems
+   - Create ontology mapping and reasoning for structured knowledge
+   - Add semantic search and reasoning over linked data
+   - Implement OWL reasoning support alongside NARS reasoning
+   - **Dependencies**: Memory systems, reasoning engine, semantic web libraries
+   - **Vision Alignment**: System can reason with structured, semantic knowledge
+   - **Self-Leverage**: Semantic integration improves knowledge quality and reasoning accuracy
+
+**Integration Points:**
+- **Knowledge Connectors**: `/src/integration/KnowledgeBaseConnector.js` - External data integration
+- **API Framework**: `/src/integration/APIFramework.js` - Pluggable integration system
+- **Real-World Applications**: `/src/applications/RealWorldReasoning.js` - Practical applications
+- **Semantic Integration**: `/src/integration/SemanticWebConnector.js` - Structured knowledge
+
+**Vision-Aligned Success Criteria:**
+- [ ] System can effectively integrate with major external knowledge bases
+- [ ] API integration framework supports diverse data sources securely
+- [ ] Real-world applications demonstrate practical reasoning value
+- [ ] Semantic web integration enhances knowledge quality and reasoning accuracy
+
+---
+
+## Long-Term Vision: Self-Evolving Hybrid Intelligence Ecosystem
+
+The ultimate vision for SeNARS is to create a **self-evolving hybrid intelligence ecosystem** that continuously improves through experience, user interaction, external knowledge integration, and collaborative development. Each phase builds upon the observability, transparency, and demonstration capabilities established in the early phases, creating an increasingly sophisticated and valuable system that demonstrates the full potential of hybrid intelligence.
+
+**Self-Leveraging Success Metrics:**
+- **Intelligence Growth**: The system's reasoning capabilities improve through experience, user interaction, and external knowledge integration
+- **User Empowerment**: Users become more capable of understanding and leveraging AI reasoning through increasingly sophisticated tools
+- **Community Intelligence**: Collective insights and collaborative improvements enhance system capabilities
+- **Real-World Impact**: Demonstrated value in solving complex real-world problems through hybrid reasoning
+- **System Autonomy**: The system becomes increasingly capable of self-improvement and self-optimization
+
+The SeNARS platform will continue to evolve as a **living demonstration** of the possibilities of hybrid intelligence, always maintaining its core commitment to observability, transparency, and user understanding while pushing the boundaries of what hybrid NARS-LM systems can achieve. Each implemented phase strengthens the foundation for the next, creating a self-reinforcing cycle of improvement and capability expansion.
+
+---
+
