@@ -4,6 +4,15 @@
 
 This document defines the comprehensive SeNARS architecture that achieves **"infinite more with finite less"** through compound intelligence emerging from ideal data structures, while ensuring complete functionality with robust safety, security, performance, and quality guarantees. The system embodies the core NARS principles of non-axiomatic reasoning by leveraging the self-improving properties of its fundamental data representations, with comprehensive support for all operational requirements.
 
+**Key Objectives:**
+
+- **Simplicity:** Reduce complexity and eliminate over-engineering.
+- **Robustness:** Create stable, predictable, and error-resistant core components.
+- **Consistency:** Establish clear conventions for API design, data structures, and code style.
+- **Testability:** Ensure all parts of the system are comprehensively testable with unit and integration tests.
+- **Extensibility:** Design for easy addition of new features, reasoning capabilities, and rule sets.
+- **Performance:** Optimize critical paths, especially for `Term` and `Memory` operations.
+
 **Core Data Structure Principles:**
 - **Term Self-Analysis**: Terms contain structural intelligence that enables automatic analysis and optimization
 - **Task Self-Optimization**: Tasks carry information that enables automatic resource and process optimization  
@@ -62,6 +71,42 @@ The Term represents the compound intelligence foundation with self-improving cha
 
 **Implementation**: src/term/Term.js, src/term/TermFactory.js
 
+**Term Class Key Features:**
+- **Strict Immutability:** Once created, a `Term` instance cannot be modified. All internal data structures will be
+  frozen or deeply immutable. This simplifies reasoning about state and enables efficient caching.
+- **Equality, Comparators, and Hashcode:**
+    - `equals(otherTerm)`: Deep equality comparison, considering structure and content.
+    - `hashCode()`: A consistent hash code generation for efficient use in `Map`s and `Set`s. This will be
+      pre-calculated upon creation and stored.
+    - `compareTo(otherTerm)`: For ordered collections (if needed).
+- **Factory Construction (`TermFactory`):**
+    - All `Term` instances will be created via `TermFactory.create(termExpression)`.
+    - The factory will handle parsing of Narsese-like string expressions into concrete `Term` objects.
+    - **Reduction and Normalization:** The factory will automatically perform canonical reductions for compound terms,
+      such as:
+        - Commutativity for operators like `&` (conjunction), `|` (disjunction): `(&, B, A)` will normalize to
+          `(&, A, B)`.
+        - Associativity for operators: `(&, A, (&, B, C))` will normalize to `(&, A, B, C)`.
+        - Elimination of redundancies: `(&, A, A)` normalizes to `A`.
+    - **Caching:** The factory will cache `Term` instances to ensure that identical terms (after normalization) always
+      refer to the same object, optimizing memory and equality checks.
+- **Properties:**
+    - `id`: A unique identifier (e.g., hash code or canonical string representation).
+    - `operator`: The main operator of the term (e.g., `&`, `-->`, `_`).
+    - `arity`: Number of direct sub-terms.
+    - `complexity`: A numerical measure of the term's structural complexity.
+    - `isAtomic`, `isCompound`, `isVariable`, `isStatement`, etc.
+- **Sub-term Accessors:**
+    - `getComponent(index)`: Access a direct sub-term by its 0-based index.
+    - `getComponents()`: Returns an immutable array of direct sub-terms.
+    - `getAllSubTerms()`: Returns a flattened, unique list of all sub-terms (including nested ones).
+- **Sub-term Visitors:**
+    - `visit(visitorFunction)`: Traverses the term structure, applying a function to each sub-term (pre-order, in-order,
+      post-order options).
+- **Sub-term Reducers:**
+    - `reduce(reducerFunction, initialValue)`: Applies a reducer function across the term structure to aggregate a
+      result.
+
 ### Compound Task Intelligence: Self-Optimizing Processing Units
 Tasks represent the compound processing foundation with self-improving properties:
 - **Punctuation System**: Clear type distinction (Belief `.`, Goal `!`, Question `?`) that enables compound processing optimization (more task types improve type-based optimization for all tasks)
@@ -78,6 +123,20 @@ Tasks represent the compound processing foundation with self-improving propertie
 
 **Implementation**: src/task/Task.js, src/Stamp.js, src/Truth.js
 
+**Task Class Key Features:**
+- **Immutability:** `Task` instances will be immutable.
+- **Properties:**
+    - `term`: The `Term` instance associated with this task.
+    - `truth`: An object representing the truth value (e.g., `{ frequency: 0.9, confidence: 0.8 }`).
+    - `stamp`: An object containing metadata about the task's origin and evidence, including creation timestamp, source,
+      and derivation history.
+    - `priority`: A numerical value indicating the task's urgency or importance in memory.
+    - `type`: An enum or string indicating the task's nature (e.g., `INHERITANCE`, `BELIEF`, `GOAL`, `QUESTION`).
+    - `budget`: Resources allocated to the task for processing.
+- **Methods:**
+    - `derive(newTruth, newStamp)`: Creates a new `Task` instance based on the current one but with updated truth and
+      stamp, ensuring immutability.
+
 ### Compound Memory Intelligence: Self-Organizing Knowledge System
 Memory implements the compound organization system with self-improving characteristics:
 - **Concept-Based Storage**: All knowledge organized around terms in concepts (association and retrieval improve as more relationships are discovered)
@@ -93,6 +152,19 @@ Memory implements the compound organization system with self-improving character
 - **Forgetting Optimization**: Automatic adjustment based on importance patterns (resource management improves with more examples)
 
 **Implementation**: src/memory/Memory.js, src/memory/Concept.js
+
+**Memory Component Overview:**
+- **Structure:** Uses a `Map<Term, Concept>` for efficient lookup of concepts by their associated terms.
+- **Dual Memory Architecture:** Separates focus sets (short-term memory) from long-term memory:
+    - **Focus Sets:** Priority-based attention focus sets for immediate processing
+    - **Long-term Memory:** Storage for all other tasks and concepts
+- **Index Management:** Specialized indexes for different term types (inheritance, implication, similarity, etc.)
+- **Concept:** Each concept holds related tasks, ordered by priority, and stores metadata.
+- **Operations:**
+    - `addConcept(term: Term)`: Creates and adds a new concept.
+    - `getConcept(term: Term)`: Retrieves a concept.
+    - `addOrUpdateTask(task: Task)`: Adds a task to the relevant concept's storage.
+    - `consolidate(currentTime)`: Moves tasks between focus and long-term memory based on priority.
 
 ### Compound Event Intelligence: Self-Aware Communication System
 EventBus enables the compound self-awareness system:
@@ -112,6 +184,156 @@ EventBus enables the compound self-awareness system:
 ---
 
 ## Implementation Roadmap: Achieving the Ideal Architecture
+
+### Phase 1: Foundation and Core Infrastructure
+- **1.1: Basic Term Structure**
+    - Implement `Term` class with strict immutability
+    - Implement basic equality and hash code methods for Terms
+    - Create basic Term factory construction
+- **1.2: Term Visitor/Reducer Pattern**
+    - Implement visitor pattern for Term traversal
+    - Implement reducer pattern for Term aggregation
+    - Add sub-term accessors
+    - Add properties: `id`, `operator`, `arity`, `complexity`, `isAtomic`, `isCompound`, `isVariable`, `isStatement`, etc.
+- **1.3: Term Normalization**
+    - Implement canonical normalization algorithms (commutativity, associativity)
+    - Add caching mechanisms to TermFactory
+    - Add complexity calculation methods
+- **1.4: Core Utilities**
+    - Implement EventBus for component communication
+    - Create basic configuration management
+    - Implement validation utilities
+- **Phase 1 Targets**: Complete Term structural intelligence with immutability, normalization, visitor/reducer patterns, and hashing. Achieve compound intelligence foundations with structural self-analysis capabilities.
+
+### Phase 2: Memory System and Task Management
+- **2.1: Basic Task Structure**
+    - Implement `Task` class with immutability
+    - Add `Truth` value representation with frequency and confidence
+    - Add `Stamp` and evidence handling with derivation tracking
+- **2.2: Memory Architecture**
+    - Implement `Memory` class with dual architecture (focus/long-term)
+    - Create `Concept` class for knowledge organization around Terms
+    - Add concept-based storage with priority ordering
+- **2.3: Task Management**
+    - Implement `TaskManager` for lifecycle and priority management
+    - Add attention mechanisms with dynamic metrics
+    - Implement task selection strategies based on priority
+- **2.4: Focus Management**
+    - Create attention focus sets (short-term memory)
+    - Implement priority-based selection with urgency and cognitive diversity
+    - Add concept activation and forgetting mechanisms
+- **Phase 2 Targets**: Complete Task/Truth/Stamp foundations with self-optimization capabilities. Establish dual memory architecture with compound intelligence through usage patterns.
+
+### Phase 3: Rule Engine and Reasoning
+- **3.1: Basic Rule Framework**
+    - Implement base `Rule` class with interface (`canApply()`, `apply()`)
+    - Create rule registration and management system
+    - Add performance metrics tracking
+- **3.2: NAL Rule Implementation**
+    - Implement core NAL inference rules with truth functions
+    - Add complete truth value operations: revision, deduction, induction, abduction, negation, expectation
+    - Implement pattern matching for rules with NAL operators
+- **3.3: Rule Application Engine**
+    - Create `RuleEngine` for coordinated NAL and LM rule application
+    - Implement rule selection and prioritization with enable/disable controls
+    - Add output filtering with truth value thresholds
+- **3.4: Cycle Management**
+    - Implement reasoning cycle execution with task selection
+    - Add `Cycle` component to orchestrate reasoning flow
+    - Connect rule engine to memory integration with proper feedback
+- **Phase 3 Targets**: Complete hybrid NAL-LM reasoning with proper truth value operations and compound validation.
+
+### Phase 4: Parser and Input Processing
+- **4.1: Narsese Parser Foundation**
+    - Implement basic Narsese syntax parsing with statement structure
+    - Add statement parsing with term, punctuation (., !, ?), and optional truth values `%f;c%`
+    - Support for atomic terms with proper validation
+- **4.2: Compound Term Support**
+    - Add recursive parsing for complex term structures
+    - Support all NAL operator types: inheritance `(A --> B)`, similarity `(A <-> B)`, implication `(A ==> B)`, equivalence `(A <=> B)`, conjunction `(&, A, B, ...)`, disjunction `(|, A, B, ...)`, negation `(--, A)`, sets `{A, B, C}`, `[A, B, C]`, operations `(A ^ B)`, sequential conjunction `(&/, A, B)`, instance `(--{ A)`, property `(-->} B)`, products `(A, B, C)`
+    - Handle nested compound terms with proper grouping and precedence
+- **4.3: Parser Validation and Error Recovery**
+    - Implement comprehensive validation of Narsese syntax with error messages
+    - Add error recovery mechanisms for malformed input with graceful degradation
+    - Ensure proper truth value syntax recognition and range validation [0,1]
+- **Phase 4 Targets**: Complete Narsese syntax support with error recovery, validation, and proper integration with TermFactory normalization.
+
+### Phase 5: NAR Main Component and API
+- **5.1: Core NAR Interface (Self-Actualization)**
+    - Implement `NAR` class as central orchestrator with all components
+    - Add `constructor(config: SystemConfig)` with rule sets, memory params, system settings
+    - Implement `input(narseseString: string)` parsing to Task creation
+- **5.2: Event System Integration**
+    - Add `on(eventName: string, callback: Function)` registration for system events
+    - Implement comprehensive event system: `'output'`, `'belief_updated'`, `'question_answered'`, `'cycle_start'`, `'cycle_end'`, `task.processed`, `reasoning.cycle.completed`
+    - Add event-driven communication patterns between components
+- **5.3: Control and Query Methods**
+    - Implement `start()` and `stop()` for continuous reasoning control
+    - Add `step()` for single cycle execution for debugging
+    - Implement `getBeliefs(queryTerm?: Term)` and `query(questionTerm: Term)` with promise-based answers
+- **5.4: System Management**
+    - Add `reset()` for system reset functionality clearing memory
+    - Implement configuration validation and management with defaults
+    - Create diagnostic and monitoring utilities with metrics collection
+- **Phase 5 Targets**: Complete NAR API with event system, control methods, and query interfaces for complete compound intelligence.
+
+### Phase 6: Advanced Features and Integration
+- **6.1: Language Model Integration (`LM`)**
+    - Implement LM provider management registry with selection mechanisms
+    - Create workflow engine for complex LM-based reasoning workflows
+    - Add metrics tracking for LM usage, token counts, and processing times
+    - Implement Narsese translation between Narsese and natural language
+- **6.2: Hybrid Reasoning Coordination**
+    - Implement NARS-LM collaboration protocols with cognitive strengths matching
+    - Create cross-validation mechanisms between NAL and LM outputs
+    - Add dynamic rule selection based on task characteristics, evidence, and performance metrics
+- **6.3: Advanced Memory Management**
+    - Implement memory consolidation algorithms based on usage patterns
+    - Add priority decay and forgetting mechanisms with importance metrics
+    - Create efficient indexing for different term types (inheritance, implication, similarity, etc.)
+- **Phase 6 Targets**: Complete hybrid NARS-LM integration with coordinated reasoning and compound intelligence through collaboration.
+
+### Phase 7: Testing and Quality Assurance
+- **7.1: Unit Tests**
+    - Implement comprehensive tests for Term immutability, equality, hash, visitor/reducer patterns
+    - Add extensive tests for Task immutability, `derive()` method, property access
+    - Test Truth operations, Stamp derivations, and Memory operations with full coverage
+- **7.2: Integration Tests**
+    - Create NAR integration tests simulating real-world input sequences
+    - Test NAL-LM hybrid reasoning coordination and cross-validation
+    - Validate compound intelligence behaviors with fluent test API
+- **7.3: Quality Assurance**
+    - Implement property-based testing for structural and algorithm validation
+    - Add performance regression testing for Term normalization, Task processing, Memory operations
+    - Create fluent Reasoner API for expressive integration tests
+- **Phase 7 Targets**: Complete testing coverage (>95%) with property-based, unit, integration, and performance testing.
+
+### Phase 8: Deployment and Documentation
+- **8.1: Production Readiness**
+    - Implement containerization support with Docker configuration
+    - Add comprehensive monitoring and logging with automated alerting
+    - Create backup and recovery mechanisms with data persistence
+- **8.2: Documentation and Examples**
+    - Provide detailed API documentation with examples for all components
+    - Create usage examples and comprehensive demonstrations
+    - Add user guides with configuration and operation instructions
+- **8.3: Security and Reliability**
+    - Implement security-first design with input sanitization and resource limits
+    - Add robust error handling with graceful degradation and recovery
+    - Ensure 99.9%+ system reliability with circuit breakers and fault isolation
+- **Phase 8 Targets**: Complete production-ready deployment with monitoring, security, reliability, and comprehensive documentation.
+
+### Phase-Specific Metrics for Compound Intelligence
+- **Phase 1**: 30:1 structural self-analysis ratio, 90% structural intelligence foundation
+- **Phase 2**: 25:1 process self-optimization ratio, 85% self-leveraging optimization
+- **Phase 3**: 100% NAL rule implementation, 100% truth function operations
+- **Phase 4**: 100% Narsese syntax support, 100% error recovery capability
+- **Phase 5**: Complete NAR API functionality, 100% event system integration
+- **Phase 6**: 100% LM integration, 100% hybrid reasoning coordination
+- **Phase 7**: >95% test coverage, 100% critical path coverage
+- **Phase 8**: 99.9% reliability, 0 critical vulnerabilities, production deployment
+
+---
 
 ### Phase 5.1: Idealized Reflective Engine (Self-Actualization)
 
@@ -562,7 +784,32 @@ EventBus enables the compound self-awareness system:
 - **Compound Potential**: Each parsed expression improves normalization and structural analysis
 - **Maximize by**: Implementing robust syntax validation, normalization during parsing, error recovery mechanisms
 - **Requirements & Concerns**: Complete Narsese syntax support, error handling for malformed input, performance optimization for frequent parsing, integration with TermFactory normalization
-- **Implementation Details**: Recursive descent parser implementation, syntax validation algorithms, error recovery, Narsese operator support (inheritance, implication, conjunction, etc.)
+- **Implementation Details**: Recursive descent parser implementation, syntax validation algorithms, error recovery, Narsese operator support (inheritance, implication, conjunction, disjunction, etc.)
+
+**Parser System Specification:**
+- **Statement Parsing**: Complete parsing of Narsese statements including term, punctuation, and optional truth value
+- **Truth Value Extraction**: Recognition and parsing of truth value syntax `%f;c%` where f is frequency and c is
+  confidence
+- **Punctuation Recognition**: Support for belief (.), goal (!), and question (?) punctuation
+- **Term Parsing**: Recursive parsing of complex term structures
+- **Atomic Term Handling**: Recognition of simple atomic terms
+- **Compound Term Parsing**: Support for all NAL operator types:
+    - Inheritance: `(A --> B)`
+    - Similarity: `(A <-> B)`
+    - Implication: `(A ==> B)`
+    - Equivalence: `(A <=> B)`
+    - Conjunction: `(&, A, B, ...)`
+    - Disjunction: `(|, A, B, ...)`
+    - Negation: `(--, A)`
+    - Extensional sets: `{A, B, C}`
+    - Intensional sets: `[A, B, C]`
+    - Operations: `(A ^ B)`
+    - Sequential conjunction: `(&/, A, B)`
+    - Instance: `(A {{-- B)`
+    - Property: `(A --}} B)`
+    - Products: `(A, B, C)`
+- **Nested Structure Support**: Proper parsing of nested compound terms with appropriate grouping
+- **List Parsing**: Handling of comma-separated lists with respect for nested parentheses
 
 ### 8. Rule Engine Framework (src/reasoning/)
 - **Current Function**: NAL and LM rule application for inference generation
@@ -570,6 +817,21 @@ EventBus enables the compound self-awareness system:
 - **Maximize by**: Implementing rule selection algorithms, performance metrics collection, adaptive rule application
 - **Requirements & Concerns**: NAL truth function accuracy, LM integration reliability, rule prioritization, performance optimization, hybrid reasoning coordination
 - **Implementation Details**: Rule selection algorithms, truth value propagation, LM interaction protocols, performance metrics tracking
+
+**Rule Engine Framework Specification:**
+- **Rule Types:** Supports both NAL inference rules and LM integration rules
+- **Rule Registration:** System for adding and categorizing different types of rules
+- **Enable/Disable Control:** Fine-grained control over which rules are active
+- **Group Management:** Ability to organize rules into groups and manage them collectively
+- **Rule Validation:** Validation of rule structure and functionality
+- **Performance Metrics:** Comprehensive tracking of rule execution performance
+- **Hybrid Reasoning:** Orchestrates NAL-LM integration through coordinated rule application
+- **Base Rule Interface:** Common interface defining `canApply()` and `apply()` methods
+
+**Rule Classifications:**
+- **NAL Rules:** Implement logical inference using NAL truth functions with pattern matching
+- **LM Rules:** Interact with language models for enhanced reasoning, including prompt generation and response
+  processing
 
 ### 9. Configuration Management Engine (src/config/)
 - **Current Function**: System-wide configuration and parameter management
@@ -641,6 +903,482 @@ EventBus enables the compound self-awareness system:
 - **Hook Systems**: Extension points for custom behavior
 - **Component Registration**: Dynamic component loading and management
 - **Implementation Details**: Plugin framework, extension point definition, component lifecycle management
+
+### 9. Core System Components Details
+- **NAR (NARS Reasoner Engine)**: The main entry point and orchestrator
+- **Memory**: Manages concepts, tasks, and knowledge representation
+- **Focus Manager**: Handles attention focus sets (short-term memory)
+- **Term**: Core data structure for representing knowledge elements
+- **Task**: Represents units of work or information processed by the system
+- **Reasoning Engine**: Applies NAL and LM rules to generate inferences
+- **Parser**: Handles Narsese syntax parsing and generation
+- **LM (Language Model Integration)**: Provides language model capabilities
+
+**NAR API Specification:**
+- `constructor(config: SystemConfig)`: Initializes the `Memory`, `Focus`, `RuleEngine`, `TaskManager`, and `Cycle` with the provided configuration. `SystemConfig` will specify rule sets (NAL, LM), memory parameters, and other system-wide settings.
+- `input(narseseString: string)`: Parses a Narsese string, creates a `Task`, and adds it to the `TaskManager` and `Memory`.
+- `on(eventName: string, callback: Function)`: Registers event listeners for various system outputs and internal events (e.g., `'output'`, `'belief_updated'`, `'question_answered'`, `'cycle_start'`, `'cycle_end'`).
+- `start()`: Initiates the continuous reasoning cycle.
+- `stop()`: Halts the reasoning cycle.
+- `step()`: Executes a single reasoning cycle, useful for debugging and controlled execution.
+- `getBeliefs(queryTerm?: Term)`: Returns a collection of current beliefs from memory, optionally filtered by a query term.
+- `query(questionTerm: Term)`: Submits a question to the system and returns a promise that resolves with the answer.
+- `reset()`: Clears memory and resets the system to its initial state.
+
+### 10. Focus and FocusSetSelector Components
+- **Short-term Memory Management**: Implements attention focus sets that represent short-term memory
+- **Focus Set Management**: Creating and managing multiple named focus sets with configurable sizes
+- **Priority-Based Selection**: Selecting high-priority tasks from focus sets using configurable selection strategies
+- **Attention Scoring**: Maintaining attention scores for focus sets to determine their relevance
+- **Task Promotion**: Mechanism for promoting high-priority tasks from focus (short-term) to long-term memory
+
+The `FocusSetSelector` implements advanced task selection:
+- **Composite Scoring**: Combining priority, urgency (time since last access), and cognitive diversity
+- **Adaptive Selection**: Configurable parameters for priority thresholds, urgency weighting, and diversity factors
+- **Cognitive Diversity**: Consideration of term complexity to promote reasoning diversity
+
+### 11. Cycle and Task Processing
+The `Cycle` orchestrates the flow of reasoning within the `NAR` system:
+1. **Task Selection:** Uses the `FocusSetSelector` to choose tasks from the focus set.
+2. **Rule Application:** The selected tasks are passed to the `RuleEngine`.
+3. **Inference & Derivation:** The `RuleEngine` applies relevant NAL and LM rules, generating new `Task`s (inferences, derivations, questions, goals).
+4. **Memory Update:** New and updated `Task`s are integrated back into `Memory`.
+5. **Output Generation:** Significant inferences or answers trigger output events.
+
+### 12. Language Model Integration (`LM`) Component
+Provides comprehensive language model capabilities:
+- **Provider Management**: Registry and selection of multiple LM providers
+- **Workflow Engine**: Support for complex LM-based reasoning workflows
+- **Metrics Tracking**: Monitoring of LM usage, token counts, and processing times
+- **Narsese Translation**: Conversion between Narsese and natural language
+- **Resource Management**: Handling of LM resources and capacity
+
+### 13. Algorithms Implementation Details
+**Term Normalization Algorithm:**
+The normalization algorithm in `TermFactory` must handle commutativity, associativity, and redundancy elimination efficiently:
+1. **Parse Components:** If the term is compound, parse its components.
+2. **Recursive Normalization:** Recursively normalize all sub-terms.
+3. **Apply Operator Rules:**
+    - For commutative operators (`&`, `|`, `+`, `*`): Sort components lexicographically by their string representation.
+    - For associative operators (`&`, `|`): Flatten nested structures.
+    - For redundancy: Remove duplicate components.
+4. **Reconstruct Term:** Build the normalized term from the processed components.
+5. **Cache Check:** Check the factory's cache for an existing equivalent term.
+6. **Store/Return:** If found in cache, return the cached instance; otherwise, freeze the new term, store it in the cache, and return it.
+
+**Memory Management Algorithms:**
+- **Consolidation:** Mechanism for moving tasks between short-term and long-term memory based on priority
+- **Priority Decay:** Gradual reduction of task priority over time
+- **Index Management:** Efficient indexes for different term types (inheritance, implication, similarity, etc.)
+
+**Truth Value Operations:**
+Implement NAL-specific truth value calculations:
+1. **Revision:** Combine two truth values with the same content but different evidence bases.
+2. **Deduction:** Apply deduction rules with proper truth value propagation.
+3. **Induction/Abduction:** Implement induction and abduction truth value calculations.
+4. **Negation:** Properly calculate negated truth values.
+5. **Expectation:** Calculate expectation values for decision making.
+
+---
+
+## Testing Strategy Implementation
+
+### Unit Tests
+- **Granularity:** Each class and significant function will have its own dedicated unit test file.
+- **Focus:** Unit tests will verify the correctness of individual components in isolation.
+- **`Term` Class:** Extensive unit tests for `Term`'s immutability, equality, hash code, factory construction (including all reduction and commutativity rules), properties, and sub-term access/visitor/reducer methods.
+- **`Task` Class:** Unit tests for immutability, property access, and `derive` method.
+- **`Bag` and `Memory`:** Tests for correct priority-based storage, retrieval, and updates.
+- **`RuleEngine` and Rules:** Tests for individual rule application and correct inference generation.
+
+### Integration Tests
+- **Focus:** Verify the correct interaction between multiple components and the overall system behavior.
+- **`NAR` Integration:** Tests will primarily target the `NAR` class, simulating real-world input sequences and asserting expected outputs and changes in the belief base.
+- **NAL-LM Hybrid:** Specific integration tests will ensure the seamless interplay between NAL and LM rules within the `RuleEngine`.
+
+### Fluent Reasoner Test API
+
+A fluent, expressive API will be developed to simplify the writing and reading of integration tests for the `NAR` system.
+
+**Example Usage:**
+```javascript
+import { createReasoner } from '../support/fluentReasonerAPI';
+
+describe('NAR System Deductions', () => {
+  let nar;
+
+  beforeEach(() => {
+    nar = createReasoner();
+  });
+
+  test('should deduce a simple conclusion from two premises', async () => {
+    nar.input('<A --> B>.');
+    nar.input('<B --> C>.');
+
+    await nar.cycles(5); // Run for a few cycles to allow inference
+
+    nar.expectBelief('<A --> C>.').toHaveTruth({ frequency: 1.0, confidence: 0.9 });
+  });
+
+  test('should answer a question based on existing beliefs', async () => {
+    nar.input('<dog --> animal>.');
+    nar.input('<cat --> animal>.');
+
+    await nar.cycles(10);
+
+    const answer = await nar.query('<dog --> ?x>.');
+    expect(answer).toBeInferred('<dog --> animal>.');
+  });
+
+  test('should handle contradictory evidence', async () => {
+    nar.input('<sky --> blue>{1.0, 0.9}.');
+    nar.input('<sky --> blue>{0.0, 0.9}.'); // Contradictory evidence
+
+    await nar.cycles(5);
+
+    nar.expectBelief('<sky --> blue>.').toHaveTruth({ frequency: 0.5, confidence: expect.any(Number) });
+  });
+});
+```
+
+This API will abstract away the complexities of direct memory inspection and cycle management, allowing tests to focus on the logical behavior of the reasoner.
+
+---
+
+## Supporting Components Details
+
+### `Truth` Value Representation
+
+The `Truth` class will encapsulate the frequency and confidence values associated with beliefs and tasks.
+
+**Key Features:**
+- **Immutability:** `Truth` instances will be immutable.
+- **Properties:**
+    - `frequency`: A number between 0 and 1, representing the proportion of positive evidence.
+    - `confidence`: A number between 0 and 1, representing the reliability of the frequency.
+- **Operations:**
+    - `combine(otherTruth)`: Static method to combine two truth values according to NAL truth functions.
+    - `negate()`: Returns a new `Truth` instance representing the negation of the current truth value.
+    - `equals(otherTruth)`: Deep equality comparison.
+
+### `Stamp` and Evidence Handling
+
+The `Stamp` class will track the origin and derivation history of `Task`s and `Belief`s.
+
+**Key Features:**
+- **Immutability:** `Stamp` instances will be immutable.
+- **Properties:**
+    - `id`: A unique identifier for the stamp (e.g., a UUID or a hash of its components).
+    - `occurrenceTime`: Timestamp of when the task was created or observed.
+    - `source`: An identifier for the source of the task (e.g., `INPUT`, `INFERENCE`, `LM_GENERATED`).
+    - `derivations`: An immutable array of `Stamp` IDs from which this task was derived, forming a directed acyclic graph (DAG) of evidence.
+    - `evidentialBase`: A set of `Term` IDs that form the direct evidential base for this task.
+- **Operations:**
+    - `derive(parentStamps: Stamp[], newSource: string)`: Static method to create a new `Stamp` based on parent stamps and a new source. This will correctly merge derivation histories.
+
+### Configuration Management (`SystemConfig`)
+
+A centralized and immutable configuration system for the `NAR` instance.
+
+**Key Features:**
+- **Immutability:** Configuration objects are immutable once created.
+- **Properties:**
+    - `nalRuleSets`: Array of NAL rule identifiers to load.
+    - `lmRuleSets`: Array of LM rule identifiers to load.
+    - `memoryCapacity`: Maximum number of concepts/tasks in memory.
+    - `cycleSpeed`: Delay between reasoning cycles.
+    - `truthFunctions`: Custom truth combination functions (if overriding defaults).
+    - `debugMode`: Boolean for enabling verbose logging.
+- **Validation:** Ensures that provided configuration values are valid.
+- **Default Values:** Provides sensible default values for all configuration parameters.
+
+### Event System (`EventBus`)
+
+A lightweight, internal event bus for decoupled communication between components.
+
+**Key Features:**
+- **Centralized Dispatch:** A single `EventBus` instance (or a module with event methods) accessible throughout the system.
+- **`emit(eventName: string, data: any)`:** Dispatches an event with associated data.
+- **`on(eventName: string, listener: Function)`:** Registers a listener for a specific event.
+- **`off(eventName: string, listener: Function)`:** Removes a registered listener.
+- **Event Types:** Standardized event names (e.g., `NAR.Output`, `Memory.BeliefUpdated`, `Task.Created`).
+
+### Utilities (`util/`)
+
+A collection of general-purpose utility functions and helper classes.
+
+- **`collections.js`:** Implementations of common data structures like `Bag`, `PriorityQueue`, `ImmutableMap`, `ImmutableSet`.
+- **`constants.js`:** System-wide constants (e.g., Narsese operators, default truth values).
+- **`validation.js`:** Helper functions for input validation and assertion.
+- **`logger.js`:** A simple, configurable logging utility.
+
+---
+
+## API Conventions and Code Quality
+
+### API Design Conventions
+- **Clear Naming:** Use descriptive and unambiguous names for classes, methods, and variables.
+- **Functional Purity:** Favor pure functions where possible, especially for `Term` operations.
+- **Asynchronous Operations:** Use `async/await` for operations that involve I/O or significant computation.
+- **Configuration Objects:** Pass configuration via single, well-defined objects rather than multiple positional arguments.
+- **Event-Driven Output:** Use an event emitter pattern for system outputs and notifications.
+
+### Code Quality and Maintainability
+- **Type Safety:** Implement robust type checking through comprehensive JSDoc annotations with type information and runtime type checking for critical operations.
+- **Code Organization:** Clear separation of concerns between modules, consistent naming conventions, well-defined module interfaces, and proper encapsulation of internal state.
+
+---
+
+## Error Handling and Robustness
+
+### Input Validation
+1. **Narsese Parsing:** Comprehensive validation of Narsese syntax before term construction.
+2. **Truth Value Validation:** Ensure truth values are within valid ranges [0,1].
+3. **Task Validation:** Validate task structure and components before processing.
+
+### Graceful Degradation
+1. **Rule Application Errors:** Continue processing if a rule encounters an error, logging the issue and proceeding.
+2. **Memory Errors:** Implement fallback mechanisms for memory allocation failures.
+3. **Parser Errors:** Provide detailed error messages for malformed input while continuing system operation.
+
+---
+
+## Configuration and Extensibility
+
+### Plugin Architecture
+1. **Rule Plugins:** Support dynamic loading of custom NAL and LM rules.
+2. **Adapter Plugins:** Allow custom IO adapters and LM adapters.
+3. **Event Hooks:** Provide hooks for custom processing during reasoning cycles.
+
+### Parameter Tuning
+
+The `SystemConfig` should expose parameters for fine-tuning system behavior:
+
+- Memory capacity and forgetting thresholds
+- Truth value thresholds for task acceptance
+- Rule application priority and frequency
+- Cycle timing and processing limits
+- Activation propagation parameters
+
+---
+
+## Performance and Optimization
+
+### Data Structure Optimizations
+- **Efficient Term Indexing:** Use hash-based indexes for O(1) lookup with multiple indexing strategies (prefix trees, inverted indexes)
+- **Memory-Efficient Task Storage:** Structural sharing for tasks with similar terms, compression for metadata where possible
+- **Caching Strategies:** Term caching in TermFactory, rule result caching, inference path caching, query result caching
+
+### Performance Monitoring and Profiling
+- **Built-in Metrics Collection:** Track cycles, tasks, rules, and memory metrics
+- **Debugging Tools:** Interactive term inspector, rule application tracer, memory visualization tools
+
+---
+
+## Implementation Examples
+
+### Term Class Structure
+```javascript
+class Term {
+    constructor(components, operator = null) {
+        // Store components as immutable array
+        this._components = Object.freeze([...components]);
+        this._operator = operator;
+        this._id = this.calculateId(); // Cache immutable ID
+        this._hashCode = this.calculateHashCode(); // Cache hash code
+        this._complexity = this.calculateComplexity(); // Cache complexity
+
+        // Freeze the entire object to ensure strict immutability
+        Object.freeze(this);
+    }
+
+    // Getters return immutable data
+    get components() {
+        return this._components;
+    }
+
+    get operator() {
+        return this._operator;
+    }
+
+    get id() {
+        return this._id;
+    }
+
+    // Immutable operations return new Term instances
+    withAddedComponent(component) {
+        return TermFactory.create([...this._components, component]);
+    }
+
+    // Structural comparison
+    equals(otherTerm) {
+        if (!(otherTerm instanceof Term)) return false;
+        if (this._hashCode !== otherTerm._hashCode) return false;
+        // Deep comparison logic here
+    }
+
+    hashCode() {
+        return this._hashCode;
+    }
+
+    // Sub-term operations
+    visit(visitorFn, order = 'pre-order') {
+        visitorFn(this);
+        this._components.forEach(comp => comp.visit(visitorFn, order));
+    }
+
+    reduce(reducerFn, initialValue) {
+        let result = reducerFn(initialValue, this);
+        for (const comp of this._components) {
+            result = comp.reduce(reducerFn, result);
+        }
+        return result;
+    }
+
+    // Generate string representation
+    toString() {
+        if (this._operator) {
+            return `(${this._operator}, ${this._components.map(c => c.toString()).join(', ')})`;
+        } else {
+            return this._components.join('');
+        }
+    }
+}
+```
+
+### NAR Main Class Structure
+```javascript
+class NAR {
+    constructor(config = {}) {
+        this.config = SystemConfig.from(config);
+        this.memory = new Memory(this.config.memory);
+        this.focus = new Focus();  // Initialize focus component
+        this.focus.createFocusSet('default');
+        this.focus.setFocus('default');
+        this.ruleEngine = new RuleEngine(this.config.rules);
+        this.taskManager = new TaskManager(this.memory, this.focus, this.config.taskManager);
+        this.cycle = new Cycle({
+            memory: this.memory,
+            focus: this.focus,  // Include focus in cycle
+            ruleEngine: this.ruleEngine,
+            taskManager: this.taskManager,
+            config: this.config.cycle
+        });
+
+        this.eventBus = new EventBus();
+        this.isRunning = false;
+    }
+
+    async input(narseseString) {
+        try {
+            const parser = new NarseseParser();
+            const taskData = parser.parse(narseseString);
+            const task = new Task({
+                term: TermFactory.create(taskData.term),
+                truth: taskData.truth,
+                type: taskData.type,
+                priority: this.calculateInputPriority(taskData)
+            });
+
+            this.taskManager.addTask(task);
+            this.memory.addTask(task, Date.now());  // Add to memory
+            this.focus.addTaskToFocus(task, task.priority);  // Add to short-term memory
+
+            this.eventBus.emit('task.input', {task, source: 'user'});
+        } catch (error) {
+            this.handleError('Input parsing failed', error, {input: narseseString});
+        }
+    }
+
+    on(event, callback) {
+        this.eventBus.on(event, callback);
+    }
+
+    start() {
+        if (this.isRunning) return;
+        this.isRunning = true;
+        this.runCycle();
+    }
+
+    stop() {
+        this.isRunning = false;
+    }
+
+    async step() {
+        await this.cycle.execute();
+        return this.getSystemState();
+    }
+
+    async runCycle() {
+        if (!this.isRunning) return;
+
+        await this.cycle.execute();
+
+        // Schedule next cycle based on configuration
+        setTimeout(() => this.runCycle(), this.config.cycle.delay);
+    }
+
+    async query(questionTerm) {
+        return new Promise((resolve, reject) => {
+            const questionTask = new Task({
+                term: questionTerm,
+                type: 'QUESTION',
+                priority: this.config.query.priority
+            });
+
+            // Register callback for when question is answered
+            const answerCallback = (result) => {
+                if (result.questionId === questionTask.id) {
+                    this.eventBus.off('question.answered', answerCallback);
+                    resolve(result.answer);
+                }
+            };
+
+            this.eventBus.on('question.answered', answerCallback);
+            this.taskManager.addTask(questionTask);
+        });
+    }
+
+    getBeliefs(queryTerm = null) {
+        if (queryTerm) {
+            const concept = this.memory.getConcept(queryTerm);
+            return concept ? concept.getBeliefs() : [];
+        }
+        return this.memory.getAllBeliefs();
+    }
+}
+```
+
+---
+
+## Hybrid NAL-LM Reasoning Integration
+
+### LM-Enhanced Term Generation
+
+The system will use language models to suggest new terms or relationships when NAL alone cannot make progress:
+
+1. **Gap Detection:** Identify reasoning gaps where NAL rules cannot derive new knowledge
+2. **LM Query Generation:** Convert the reasoning context to natural language for LM input
+3. **Response Processing:** Parse LM responses back to Narsese terms
+4. **Validation:** Validate LM-generated terms against consistency constraints
+5. **Integration:** Merge validated terms with existing knowledge base
+
+### Cross-Validation Between NAL and LM
+
+Implement mechanisms to validate LM-generated inferences against NAL consistency:
+
+- Use NAL to verify logical consistency of LM-proposed relationships
+- Use statistical confidence from LM to weight NAL-derived truth values
+- Detect and resolve contradictions between NAL and LM outputs
+
+### Dynamic Rule Selection
+
+The system will adaptively select between NAL and LM reasoning based on:
+
+- Task complexity and type
+- Available evidence in memory
+- Performance metrics of previous inferences
+- Confidence thresholds for different reasoning paths
 
 ---
 
