@@ -83,6 +83,23 @@ async function startWebSocketServer(config = DEFAULT_CONFIG) {
     const monitor = new WebSocketMonitor(config.webSocket);
     await monitor.start();
     nar.connectToWebSocketMonitor(monitor);
+    
+    // Register a handler for NAR instance requests from the UI
+    monitor.registerClientMessageHandler('requestNAR', async (message, client, monitorInstance) => {
+        // For security reasons, we only send information that's safe for the UI, not the full NAR instance
+        const narInfo = {
+            cycleCount: nar.cycleCount,
+            isRunning: nar.isRunning,
+            config: nar.config.toJSON(),
+            stats: nar.getStats(),
+            reasoningState: nar.getReasoningState ? nar.getReasoningState() : null
+        };
+        
+        monitorInstance._sendToClient(client, {
+            type: 'narInstance',
+            payload: narInfo
+        });
+    });
 
     // Initialize DemoWrapper to provide remote control and introspection
     const demoWrapper = new DemoWrapper();

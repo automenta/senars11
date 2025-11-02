@@ -48,7 +48,11 @@ const initialState = Object.freeze({
   isLoading: false,
   theme: 'light',
   notifications: [],
-  lmTestResult: null
+  lmTestResult: null,
+  reasoningState: null,
+  metaCognitiveResults: null,
+  corrections: [],
+  nar: null
 });
 
 // Main store definition with optimized methods
@@ -64,6 +68,14 @@ const useUiStore = create((set, get) => ({
   // WebSocket state management
   setWsConnected: (connected) => set({wsConnected: connected}),
   setWsService: (wsService) => set({wsService}),
+
+  // Meta-cognitive state management
+  setNar: (nar) => set({nar}),
+  setReasoningState: (state) => set({reasoningState: state}),
+  setMetaCognitiveResults: (results) => set({metaCognitiveResults: results}),
+  setCorrections: (corrections) => set({corrections}),
+  addCorrection: (correction) => set(state => ({corrections: [...state.corrections, correction]})),
+  clearCorrections: () => set({corrections: []}),
 
   // Panel management with optimized updates
   addPanel: (id, config) => set(state => ({

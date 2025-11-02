@@ -562,6 +562,34 @@ export class NAR extends BaseComponent {
 
         monitor.listenToNAR(this);
         this.logInfo('Connected to WebSocket monitor for real-time monitoring');
+        
+        // Set up periodic updates of reasoning state for UI
+        if (this._reasoningAboutReasoning) {
+            this._reasoningStateInterval = setInterval(() => {
+                try {
+                    if (this._reasoningAboutReasoning?.getReasoningState) {
+                        const state = this._reasoningAboutReasoning.getReasoningState();
+                        this._eventBus.emit('reasoningState', state, {source: 'periodic'});
+                    }
+                } catch (error) {
+                    this.logError('Error in reasoning state update:', error);
+                }
+            }, 5000); // Update every 5 seconds
+        }
+    }
+
+    disconnectFromWebSocketMonitor() {
+        if (this._reasoningStateInterval) {
+            clearInterval(this._reasoningStateInterval);
+            this._reasoningStateInterval = null;
+        }
+    }
+
+    getReasoningState() {
+        if (this._reasoningAboutReasoning && typeof this._reasoningAboutReasoning.getReasoningState === 'function') {
+            return this._reasoningAboutReasoning.getReasoningState();
+        }
+        return null;
     }
 
     async initializeTools() {

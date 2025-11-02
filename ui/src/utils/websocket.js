@@ -45,6 +45,12 @@ const createOptimizedMessageHandlers = () => Object.freeze({
   
   // LM configuration handlers
   testLMConnection: createMessageHandler('setLMTestResult'),
+  
+  // Meta-cognitive reasoning handlers
+  reasoningState: createMessageHandler('setReasoningState'),
+  metaCognitiveAnalysis: createMessageHandler('setMetaCognitiveResults'),
+  selfCorrection: createMessageHandler('setCorrections'),
+  narInstance: createMessageHandler('setNar'),
 });
 
 // Handler registry for dynamic message type registration

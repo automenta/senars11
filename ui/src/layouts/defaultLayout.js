@@ -18,7 +18,8 @@ const PANELS = {
     { name: 'Priority Histogram', component: 'PriorityHistogram' },
     { name: 'Relationships', component: 'ConceptRelationshipPanel' },
     { name: 'Trace', component: 'ReasoningTracePanel' },
-    { name: 'Time Series', component: 'TimeSeriesPanel' }
+    { name: 'Time Series', component: 'TimeSeriesPanel' },
+    { name: 'Meta-Cognition', component: 'MetaCognitionPanel' }
   ],
   
   DASHBOARD: [

@@ -17,6 +17,7 @@ import TimeSeriesPanel from './TimeSeriesPanel.js';
 import DashboardPanel from './DashboardPanel.js';
 import PriorityHistogram from './PriorityHistogram.js';
 import LMConfigPanel from './LMConfigPanel.js';
+import MetaCognitionPanel from './MetaCognitionPanel.js';
 
 export const contentMap = {
   'ExplorerPanel': ExplorerPanel,
@@ -37,4 +38,5 @@ export const contentMap = {
   'TimeSeriesPanel': TimeSeriesPanel,
   'PriorityHistogram': PriorityHistogram,
   'LMConfigPanel': LMConfigPanel,
+  'MetaCognitionPanel': MetaCognitionPanel,
 };
