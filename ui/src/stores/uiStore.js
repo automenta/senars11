@@ -5,70 +5,58 @@ const findItemIndex = (list, item, idField = 'id') =>
   list?.findIndex?.(i => i?.[idField] === item?.[idField]) ?? -1;
 
 // Generic collection management utilities
-const createCollectionManager = (collectionName) => {
-  return {
-    add: (item, idField = 'id') => (state) => {
-      const currentList = state[collectionName] || [];
-      const existingIndex = findItemIndex(currentList, item, idField);
-      
-      if (existingIndex !== -1) {
-        const newList = [...currentList];
-        newList[existingIndex] = { ...newList[existingIndex], ...item };
-        return {[collectionName]: newList};
-      } else {
-        return {[collectionName]: [...currentList, item]};
-      }
-    },
+const createCollectionManager = (collectionName) => ({
+  add: (item, idField = 'id') => (state) => {
+    const currentList = state[collectionName] || [];
+    const existingIndex = findItemIndex(currentList, item, idField);
     
-    update: (key, keyField, updates) => (state) => {
-      const currentList = state[collectionName];
-      if (!currentList) return {[collectionName]: currentList};
-      
-      const index = currentList?.findIndex?.(item => item?.[keyField] === key);
-      if (index === -1) return {[collectionName]: currentList}; // Item not found
-      
-      const newList = [...currentList];
-      newList[index] = { ...newList[index], ...updates };
-      return {[collectionName]: newList};
-    },
+    return existingIndex !== -1
+      ? {[collectionName]: currentList.map((cur, idx) => idx === existingIndex ? { ...cur, ...item } : cur)}
+      : {[collectionName]: [...currentList, item]};
+  },
+  
+  update: (key, keyField, updates) => (state) => {
+    const currentList = state[collectionName];
+    if (!currentList) return {[collectionName]: currentList};
     
-    remove: (key, keyField) => (state) => {
-      const currentList = state[collectionName];
-      if (!currentList) return {[collectionName]: currentList};
-      
-      const indexToRemove = currentList?.findIndex?.(item => item?.[keyField] === key);
-      if (indexToRemove === -1) return {[collectionName]: currentList}; // Item not found
-      
-      const newList = [...currentList];
-      newList.splice(indexToRemove, 1);
-      return {[collectionName]: newList};
-    },
+    const index = currentList?.findIndex?.(item => item?.[keyField] === key);
+    return index === -1 
+      ? {[collectionName]: currentList} 
+      : {[collectionName]: currentList.map((cur, idx) => idx === index ? { ...cur, ...updates } : cur)};
+  },
+  
+  remove: (key, keyField) => (state) => {
+    const currentList = state[collectionName];
+    if (!currentList) return {[collectionName]: currentList};
     
-    clear: () => ({[collectionName]: []}),
-    
-    addLimited: (item, limit, idField = 'id') => (state) => ({
-      [collectionName]: [...(state[collectionName] || []), item].slice(-limit)
-    })
-  };
-};
+    const indexToRemove = currentList?.findIndex?.(item => item?.[keyField] === key);
+    return indexToRemove === -1 
+      ? {[collectionName]: currentList} 
+      : {[collectionName]: currentList.filter((_, idx) => idx !== indexToRemove)};
+  },
+  
+  clear: () => ({[collectionName]: []}),
+  
+  addLimited: (item, limit, idField = 'id') => (state) => ({
+    [collectionName]: [...(state[collectionName] || []), item].slice(-limit)
+  })
+});
 
 // Specialized utilities for object-based state (like demo states, metrics, etc.)
-const createObjectManager = (objectName) => {
-  return {
-    set: (key, value) => (prev) => ({
-      [objectName]: {...(prev[objectName] || {}), [key]: value}
-    }),
-    
-    update: (key, updates) => (state) => ({
-      [objectName]: {
-        ...state[objectName],
-        [key]: {...state[objectName]?.[key], ...updates}
-      }
-    }),
-    
-    clear: () => ({[objectName]: {}})
-  };
-};
+const createObjectManager = (objectName) => ({
+  set: (key, value) => (prev) => ({
+    [objectName]: {...(prev[objectName] || {}), [key]: value}
+  }),
+  
+  update: (key, updates) => (state) => ({
+    [objectName]: {
+      ...state[objectName],
+      [key]: {...state[objectName]?.[key], ...updates}
+    }
+  }),
+  
+  clear: () => ({[objectName]: {}})
+});
 
 // Batch update utility for multiple state changes
 const batchUpdate = (set, updates) => {

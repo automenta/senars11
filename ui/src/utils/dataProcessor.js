@@ -3,11 +3,10 @@
  */
 
 // Type filter predicate function
-const createTypeFilter = (typeField, filterType) => {
-  if (filterType === 'all') return () => true;
-  const lowerFilterType = filterType.toLowerCase();
-  return (item) => item[typeField] && item[typeField].toLowerCase() === lowerFilterType;
-};
+const createTypeFilter = (typeField, filterType) => 
+  filterType === 'all' 
+    ? () => true 
+    : (item) => item[typeField] && item[typeField].toLowerCase() === filterType.toLowerCase();
 
 // Text search predicate function
 const createTextFilter = (searchFields, filterText) => {
@@ -71,10 +70,7 @@ export const groupRelatedItems = (items, groupingStrategy = 'timestamp') => {
       items.forEach(item => {
         const timestamp = item.timestamp || item.creationTime || Date.now();
         const interval = Math.floor(timestamp / 10000); // 10-second intervals
-        if (!groupedByTime[interval]) {
-          groupedByTime[interval] = [];
-        }
-        groupedByTime[interval].push(item);
+        (groupedByTime[interval] = groupedByTime[interval] || []).push(item);
       });
       return Object.values(groupedByTime).flat(); // For this case, return flattened
     },
@@ -83,10 +79,7 @@ export const groupRelatedItems = (items, groupingStrategy = 'timestamp') => {
       const groupedByType = {};
       items.forEach(item => {
         const type = item.type || 'unknown';
-        if (!groupedByType[type]) {
-          groupedByType[type] = [];
-        }
-        groupedByType[type].push(item);
+        (groupedByType[type] = groupedByType[type] || []).push(item);
       });
       return Object.values(groupedByType).flat(); // Flatten for now
     },
@@ -94,35 +87,18 @@ export const groupRelatedItems = (items, groupingStrategy = 'timestamp') => {
     relationship: (items) => items // Placeholder for relationship grouping
   };
 
-  return groupingStrategies[groupingStrategy] ? groupingStrategies[groupingStrategy](items) : items;
+  return groupingStrategies[groupingStrategy]?.(items) ?? items;
 };
 
 // Function to extract common properties for display
-export const extractDisplayProperties = (item, propertyList = ['id', 'term', 'type', 'timestamp']) => {
-  const displayProps = {};
-  propertyList.forEach(prop => {
-    if (item[prop] !== undefined) {
-      displayProps[prop] = item[prop];
-    }
-  });
-  return displayProps;
-};
+export const extractDisplayProperties = (item, propertyList = ['id', 'term', 'type', 'timestamp']) => 
+  propertyList.reduce((acc, prop) => {
+    if (item[prop] !== undefined) acc[prop] = item[prop];
+    return acc;
+  }, {});
 
 // Style definitions for different display types
 const getDisplayStyles = (displayType, isCompact) => {
-  const baseStyle = {
-    padding: isCompact ? '0.25rem 0.5rem' : '0.5rem',
-    margin: '0.25rem 0',
-    border: '1px solid #ddd',
-    borderRadius: '4px',
-    fontSize: '0.85rem'
-  };
-  
-  const compactStyle = {
-    padding: '0.25rem',
-    fontSize: '0.75rem'
-  };
-  
   const typeSpecificStyles = {
     reasoningStep: { backgroundColor: '#f8f9ff', border: '1px solid #b8daff' },
     task: { backgroundColor: '#f0f8f0', border: '1px solid #c3e6c3' },
@@ -130,8 +106,12 @@ const getDisplayStyles = (displayType, isCompact) => {
   };
 
   return {
-    ...baseStyle,
-    ...(isCompact ? compactStyle : {}),
+    padding: isCompact ? '0.25rem 0.5rem' : '0.5rem',
+    margin: '0.25rem 0',
+    border: '1px solid #ddd',
+    borderRadius: '4px',
+    fontSize: '0.85rem',
+    ...(isCompact && { padding: '0.25rem', fontSize: '0.75rem' }),
     ...typeSpecificStyles[displayType] || typeSpecificStyles.default
   };
 };
@@ -189,8 +169,7 @@ export const createDataSummary = (data, summaryFields = ['count', 'types', 'time
   }
   
   if (summaryFields.includes('types') && data.length > 0) {
-    const types = [...new Set(data.map(item => item.type || 'unknown'))];
-    summary.types = types;
+    summary.types = [...new Set(data.map(item => item.type || 'unknown'))];
   }
   
   if (summaryFields.includes('timeRange') && data.length > 0) {
@@ -216,9 +195,6 @@ export const safeTransformData = (data, transformFn, errorHandler = null) => {
     return transformFn(data);
   } catch (error) {
     console.error('Error in data transformation:', error);
-    if (errorHandler) {
-      return errorHandler(error);
-    }
-    return data; // Return original data if transformation fails
+    return errorHandler?.(error) ?? data; // Return original data if transformation fails
   }
 };

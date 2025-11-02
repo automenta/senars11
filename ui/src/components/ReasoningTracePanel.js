@@ -16,24 +16,25 @@ const ReasoningTracePanel = () => {
   const tasks = useUiStore(state => state.tasks);
     
   const traceGroups = useMemo(() => {
-    const combinedData = [
-      ...reasoningSteps.map((step, index) => ({
-        id: `step-${index}`,
-        type: 'reasoningStep',
-        data: step,
-        timestamp: step.timestamp || 0,
-        description: step.description || 'No description'
-      })),
-      ...tasks
-        .filter(task => task.creationTime)
-        .map((task, index) => ({
-          id: `task-${index + reasoningSteps.length}`,
-          type: 'task',
-          data: task,
-          timestamp: task.creationTime,
-          description: `Task: ${task.term || 'Unknown'} (${task.type || 'Unknown'})`
-        }))
-    ];
+    const reasoningData = reasoningSteps.map((step, index) => ({
+      id: `step-${index}`,
+      type: 'reasoningStep',
+      data: step,
+      timestamp: step.timestamp || 0,
+      description: step.description || 'No description'
+    }));
+    
+    const taskData = tasks
+      .filter(task => task.creationTime)
+      .map((task, index) => ({
+        id: `task-${index + reasoningSteps.length}`,
+        type: 'task',
+        data: task,
+        timestamp: task.creationTime,
+        description: `Task: ${task.term || 'Unknown'} (${task.type || 'Unknown'})`
+      }));
+    
+    const combinedData = [...reasoningData, ...taskData];
         
     return processDataWithFilters(combinedData, {
       filterType,

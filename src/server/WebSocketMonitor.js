@@ -32,6 +32,23 @@ class WebSocketMonitor {
         this.clients = new Set();
         this.eventEmitter = new EventEmitter();
         this.server = null;
+        
+        // Performance and scalability metrics for Phase 5+
+        this.metrics = {
+            startTime: Date.now(),
+            messagesSent: 0,
+            messagesReceived: 0,
+            errorCount: 0,
+            clientConnectionCount: 0,
+            clientDisconnectionCount: 0,
+            broadcastPerformance: []
+        };
+        
+        // Rate limiting to prevent flooding
+        this.broadcastRateLimiter = {
+            lastBroadcastTime: new Map(), // type -> timestamp
+            minInterval: options.minBroadcastInterval || 10 // milliseconds between broadcasts of same type
+        };
     }
 
     async start() {
@@ -49,6 +66,8 @@ class WebSocketMonitor {
                 }
 
                 this.clients.add(ws);
+                this.metrics.clientConnectionCount++;
+                
                 const clientId = this._generateClientId();
                 ws.clientId = clientId;
 
@@ -61,9 +80,13 @@ class WebSocketMonitor {
                     }
                 });
 
-                ws.on('message', (data) => this._handleClientMessage(ws, data));
+                ws.on('message', (data) => {
+                    this.metrics.messagesReceived++;
+                    this._handleClientMessage(ws, data);
+                });
                 ws.on('close', () => {
                     this.clients.delete(ws);
+                    this.metrics.clientDisconnectionCount++;
                     this.eventEmitter.emit('clientDisconnected', {clientId, timestamp: Date.now()});
                 });
 
@@ -104,6 +127,14 @@ class WebSocketMonitor {
 
     broadcastEvent(eventType, data, options = {}) {
         try {
+            // Rate limiting to prevent flooding
+            const now = Date.now();
+            const lastBroadcast = this.broadcastRateLimiter.lastBroadcastTime.get(eventType) || 0;
+            if (now - lastBroadcast < this.broadcastRateLimiter.minInterval) {
+                return; // Skip this broadcast to respect rate limit
+            }
+            this.broadcastRateLimiter.lastBroadcastTime.set(eventType, now);
+
             if (this.eventFilter && typeof this.eventFilter === 'function') {
                 if (!this.eventFilter(eventType, data)) {
                     return;
@@ -118,15 +149,31 @@ class WebSocketMonitor {
                 ...options
             };
 
+            // Only process if we have clients to send to
+            if (this.clients.size === 0) return;
+
             const jsonMessage = JSON.stringify(message);
+            let sentCount = 0;
 
             for (const client of this.clients) {
                 if (client.readyState === client.OPEN) {
-                    client.send(jsonMessage);
+                    try {
+                        client.send(jsonMessage);
+                        sentCount++;
+                    } catch (sendError) {
+                        console.error('Error sending to client:', sendError);
+                        // Remove problematic client
+                        this.clients.delete(client);
+                        client.close(1011, 'Sending error');
+                    }
                 }
             }
+            
+            // Update metrics
+            this.metrics.messagesSent += sentCount;
         } catch (error) {
             console.error('Error broadcasting event:', error);
+            this.metrics.errorCount++;
         }
     }
 
@@ -168,8 +215,31 @@ class WebSocketMonitor {
             host: this.host,
             connections: this.clients.size,
             maxConnections: this.maxConnections,
-            uptime: this.server ? Date.now() - this.server._handle.fd : 0,
-            path: this.path
+            uptime: this.server ? Date.now() - this.metrics.startTime : 0,
+            path: this.path,
+            // Additional metrics for Phase 5+
+            metrics: {
+                messagesSent: this.metrics.messagesSent,
+                messagesReceived: this.metrics.messagesReceived,
+                errorCount: this.metrics.errorCount,
+                clientConnectionCount: this.metrics.clientConnectionCount,
+                clientDisconnectionCount: this.metrics.clientDisconnectionCount
+            }
+        };
+    }
+    
+    // Get detailed performance metrics for Phase 5+ optimization
+    getPerformanceMetrics() {
+        const stats = this.getStats();
+        const uptime = stats.uptime;
+        
+        return {
+            ...stats.metrics,
+            uptime,
+            messagesPerSecond: uptime > 0 ? (stats.metrics.messagesSent / (uptime / 1000)).toFixed(2) : 0,
+            connectionRate: uptime > 0 ? (stats.metrics.clientConnectionCount / (uptime / 1000)).toFixed(4) : 0,
+            errorRate: stats.metrics.messagesSent > 0 ? 
+                ((stats.metrics.errorCount / stats.metrics.messagesSent) * 100).toFixed(4) : 0
         };
     }
 
@@ -210,6 +280,14 @@ class WebSocketMonitor {
     // Method to broadcast custom events (not NAR events)
     broadcastCustomEvent(eventType, data, options = {}) {
         try {
+            // Rate limiting to prevent flooding
+            const now = Date.now();
+            const lastBroadcast = this.broadcastRateLimiter.lastBroadcastTime.get(eventType) || 0;
+            if (now - lastBroadcast < this.broadcastRateLimiter.minInterval) {
+                return; // Skip this broadcast to respect rate limit
+            }
+            this.broadcastRateLimiter.lastBroadcastTime.set(eventType, now);
+
             if (this.eventFilter && typeof this.eventFilter === 'function') {
                 if (!this.eventFilter(eventType, data)) {
                     return;
@@ -223,15 +301,31 @@ class WebSocketMonitor {
                 ...options
             };
 
+            // Only process if we have clients to send to
+            if (this.clients.size === 0) return;
+
             const jsonMessage = JSON.stringify(message);
+            let sentCount = 0;
 
             for (const client of this.clients) {
                 if (client.readyState === client.OPEN) {
-                    client.send(jsonMessage);
+                    try {
+                        client.send(jsonMessage);
+                        sentCount++;
+                    } catch (sendError) {
+                        console.error('Error sending custom event to client:', sendError);
+                        // Remove problematic client
+                        this.clients.delete(client);
+                        client.close(1011, 'Sending error');
+                    }
                 }
             }
+            
+            // Update metrics
+            this.metrics.messagesSent += sentCount;
         } catch (error) {
             console.error('Error broadcasting custom event:', error);
+            this.metrics.errorCount++;
         }
     }
 
@@ -278,12 +372,12 @@ class WebSocketMonitor {
                     break;
                 default:
                     // Check if this is a custom client message type
-                    if (this.clientMessageHandlers && this.clientMessageHandlers.has(message.type)) {
+                    if (this.clientMessageHandlers?.has(message.type)) {
                         const handler = this.clientMessageHandlers.get(message.type);
                         // Ensure handler exists and is a function
                         if (typeof handler === 'function') {
                             try {
-                                handler(message);
+                                handler(message, client, this);
                             } catch (handlerError) {
                                 console.error(`Error in handler for message type ${message.type}:`, handlerError);
                                 this._sendToClient(client, {
@@ -291,6 +385,7 @@ class WebSocketMonitor {
                                     message: `Handler error for ${message.type}`,
                                     error: handlerError.message
                                 });
+                                this.metrics.errorCount++;
                             }
                         } else {
                             console.error(`Invalid handler for message type: ${message.type}`);
@@ -298,6 +393,7 @@ class WebSocketMonitor {
                                 type: 'error',
                                 message: `Invalid handler for message type: ${message.type}`
                             });
+                            this.metrics.errorCount++;
                         }
                     } else {
                         console.warn('Unknown message type:', message.type);
@@ -305,9 +401,11 @@ class WebSocketMonitor {
                             type: 'error',
                             message: `Unknown message type: ${message.type}`
                         });
+                        this.metrics.errorCount++;
                     }
             }
         } catch (error) {
+            this.metrics.errorCount++;
             if (error instanceof SyntaxError) {
                 console.error('Invalid JSON received:', error.message);
                 this._sendToClient(client, {

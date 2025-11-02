@@ -20,7 +20,7 @@ const ConnectionState = Object.freeze({
   RECONNECTING: 3,
 });
 
-const messageHandlers = {
+const messageHandlers = Object.freeze({
   layoutUpdate: createMessageHandler('setLayout'),
   panelUpdate: createMessageHandlerWithParams('addPanel'),
   reasoningStep: createMessageHandler('addReasoningStep'),
@@ -44,17 +44,24 @@ const messageHandlers = {
   
   // LM configuration handlers
   testLMConnection: createMessageHandler('setLMTestResult'),
-};
+});
 
 class WebSocketService {
   constructor(url, options = {}) {
+    // Core connection properties
     this.url = url;
     this.ws = null;
     this.state = ConnectionState.DISCONNECTED;
+    
+    // Reconnection configuration
     this.reconnectInterval = options.reconnectInterval || 5000;
     this.maxReconnectAttempts = options.maxReconnectAttempts || 10;
     this.reconnectAttempts = 0;
+    
+    // Message queue for offline buffering
     this.messageQueue = [];
+    
+    // Heartbeat and monitoring
     this.heartbeatInterval = null;
     this.heartbeatTimeout = null;
     this.heartbeatTimeoutDuration = options.heartbeatTimeout || 15000; // 15 seconds
@@ -75,7 +82,7 @@ class WebSocketService {
         });
       });
     
-    // Check if we're in a test environment
+    // Test environment detection
     this.isTestEnvironment = typeof window !== 'undefined' && 
                              (window.navigator.webdriver || 
                               import.meta.env.VITE_TEST_MODE === 'true');
@@ -293,6 +300,15 @@ class WebSocketService {
     this.disconnect();
     this.attemptReconnect();
   }
+  
+  _notifyError(title, message) {
+    getStore().addNotification?.({
+      type: 'error',
+      title,
+      message,
+      timestamp: Date.now()
+    });
+  }
 
   attemptReconnect = () => {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
@@ -390,21 +406,11 @@ class WebSocketService {
         }
       } else {
         console.error('Message processing failed:', result.error, data);
-        getStore().addNotification?.({
-          type: 'error',
-          title: 'Message processing failed',
-          message: result.error,
-          timestamp: Date.now()
-        });
+        this._notifyError('Message processing failed', result.error);
       }
     } catch (error) {
       console.error('Error in message processing pipeline:', error, 'for message:', data);
-      getStore().addNotification?.({
-        type: 'error',
-        title: 'Message processing error',
-        message: error?.message || 'Unknown error in message processing',
-        timestamp: Date.now()
-      });
+      this._notifyError('Message processing error', error?.message || 'Unknown error in message processing');
     }
   }
 
