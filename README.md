@@ -4,32 +4,31 @@ SeNARS is a research project and software implementation of a hybrid neuro-symbo
 
 The system is designed for researchers, educators, and developers interested in Explainable AI (XAI), knowledge representation, and the emergent behaviors of hybrid intelligence. It provides a comprehensive toolset for running, visualizing, and analyzing the reasoning process in real-time.
 
-See [PLAN.md](./PLAN.md) for the detailed architectural vision and development roadmap.
+For the detailed architectural vision and development roadmap, see **[PLAN.md](./PLAN.md)**.
 
 ---
 
-## Architectural Vision: Towards Compound Intelligence
+## Architectural Vision: Self-Improving Intelligence
 
-The long-term goal of SeNARS is to build a system with **Compound Intelligence**. This is an architectural principle where the system's fundamental data structures are designed to make its reasoning processes inherently more efficient and effective over time.
+The architectural goal of SeNARS is to build a system guided by the principle of **Self-Improving Intelligence**. This principle posits that a system's reasoning processes can become inherently more effective over time if its fundamental data structures are designed to support emergent optimization.
 
 This vision is based on a few core ideas:
 
-1.  **Structural Intelligence**: The data structures themselves—`Term`, `Task`, `Truth`, and `Stamp`—are designed to contain information that allows for automatic analysis and optimization. For example, immutable, normalized `Terms` can be efficiently cached and reused, compounding performance gains.
-2.  **Self-Leveraging Algorithms**: The system will be equipped with algorithms that use this structural intelligence to improve their own performance. For instance, the system might learn to allocate processing resources more effectively based on the observed success of past reasoning patterns.
-3.  **Emergent Optimization**: The goal is for system-wide improvements to emerge naturally from the interaction of these components, rather than being explicitly hand-coded for every scenario.
+1.  **Structural Intelligence**: The data structures themselves—`Term`, `Task`, `Truth`, and `Stamp`—are designed to contain information that allows for automatic analysis. For example, immutable, canonically normalized `Terms` can be efficiently cached and reused, improving performance and logical consistency.
+2.  **Emergent Optimization**: System-wide improvements can emerge naturally from the interaction of these well-designed components, rather than being explicitly hand-coded for every scenario. For instance, the system can learn to allocate processing resources more effectively by observing the outcomes of past reasoning patterns.
 
-**Note:** This is the aspirational vision for the project. The current implementation provides the foundational architecture for this goal, but many of the advanced self-improving algorithms are still under active development.
+**Note:** This is the aspirational vision for the project. The current implementation provides the foundational architecture to pursue this goal. The specific algorithms for autonomous self-improvement are a primary subject of the ongoing research and development detailed in the project's plan.
 
 ---
 
-## Current Status & Known Challenges
+## Current State of the Implementation
 
-This project is an active reimplementation and is under continuous development. While the core components are functional, it's important for users and contributors to be aware of the current state:
+This project is under active development. The core architecture is in place and many components are functional, but it is important for users and contributors to understand the current status:
 
--   **Term Normalization:** The canonical normalization of `Term` objects is a critical feature for achieving the "Compound Intelligence" vision (e.g., ensuring `(&, A, B)` is treated as identical to `(&, B, A)`). This is partially implemented but requires further work to cover all logical operators and edge cases.
--   **NARS-LM Integration:** The current hybrid reasoning is functional but primarily sequential. More sophisticated protocols for cross-validation and synergistic reasoning between the NAL engine and LLMs are part of the future roadmap.
--   **Performance:** The system includes extensive validation and monitoring, which is invaluable for research but introduces performance overhead. While the architecture is designed for high performance, achieving the sub-millisecond processing targets mentioned in the plan will require dedicated optimization cycles.
--   **"Self-Improvement":** The architecture is *designed* to support self-improvement, but the current implementation does not yet feature fully autonomous, self-optimizing algorithms. This remains a primary research and development goal.
+-   **Term Normalization:** The canonical normalization of `Term` objects is a critical feature for logical consistency (e.g., ensuring `(&, A, B)` is treated as identical to `(&, B, A)`). This is partially implemented, but does not yet cover all logical operators and edge cases.
+-   **NARS-LM Integration:** The hybrid reasoning capability is functional but operates primarily in a sequential manner. More sophisticated protocols for synergistic, cross-validating reasoning between the NAL engine and LLMs are a key part of the system's design but are not yet fully implemented.
+-   **Performance:** The system includes extensive validation and monitoring, which is invaluable for research but introduces performance overhead. The architecture is designed for high performance, but the current implementation is not yet optimized for production-level speed.
+-   **Self-Improvement:** The architecture is *designed* to support self-improvement. However, the current implementation does not yet feature autonomous, self-optimizing algorithms. This capability is the project's primary long-term research and development goal.
 
 ---
 
@@ -46,19 +45,17 @@ The best way to experience SeNARS is through its web interface, which provides a
 -   `npm run demo`: Run a live, interactive demonstration.
 -   `npm run dev`: Run the core engine in watch mode for development.
 
-For a full list of scripts, including for analysis, visualization, and data management, please see the `package.json` file.
+For a full list of scripts, see the `package.json` file.
 
 ---
 
-## System Architecture
+## System Architecture Overview
 
 ### Core Components
 
 -   **NAR (NARS Reasoner Engine)**: The central orchestrator and public API for the system.
--   **Term**: The immutable, foundational data structure for representing all knowledge.
-    -   **Key Features**: `Terms` are strictly immutable and created via a `TermFactory` that handles canonical normalization and caching. This is critical for efficient pattern matching and achieving the "Compound Intelligence" goal. They provide methods like `.visit()` and `.reduce()` for structural analysis.
--   **Task**: An immutable wrapper around a `Term` that represents a unit of work (e.g., a belief to be processed, a question to be answered).
-    -   **Key Properties**: A `Task` contains the `term` (content), a NAL `truth` value, a `stamp` for tracking its origin, and a `budget` for resource allocation.
+-   **Term**: The immutable, foundational data structure for representing all knowledge. `Terms` are created via a `TermFactory` that handles canonical normalization and caching.
+-   **Task**: An immutable wrapper around a `Term` that represents a unit of work (e.g., a belief to be processed, a question to be answered). It contains the `term` (content), a NAL `truth` value, a `stamp` for tracking its origin, and a `budget` for resource allocation.
 -   **Memory**: The main knowledge base, organizing `Concepts` (collections of `Tasks` related to a `Term`).
 -   **Reasoning Engine**: Applies inference rules (both from NAL and from integrated LMs) to derive new knowledge.
 -   **Parser**: Translates the Narsese language into `Term` structures.
@@ -68,7 +65,7 @@ For a full list of scripts, including for analysis, visualization, and data mana
 
 ## Foundational Concepts for Reinforcement Learning
 
-SeNARS is designed to be a general-purpose reinforcement learning system, a capability rooted in the distinction between **Beliefs** and **Goals**:
+SeNARS is designed as a general-purpose reinforcement learning system, a capability rooted in the distinction between **Beliefs** and **Goals**:
 
 -   **Beliefs (`.`):** Represent the system's knowledge about the world. Their truth values express probability (frequency) and certainty (confidence). Beliefs form the system's internal "world model."
 -   **Goals (`!`):** Represent desired states or outcomes. Their truth values express desirability and the intensity of that desire. Goals define the system's reward structure and drive its actions.
