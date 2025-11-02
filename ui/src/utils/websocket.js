@@ -47,6 +47,45 @@ const createOptimizedMessageHandlers = () => Object.freeze({
   testLMConnection: createMessageHandler('setLMTestResult'),
 });
 
+// Handler registry for dynamic message type registration
+const createHandlerRegistry = () => {
+  const handlers = new Map();
+  const defaultHandlers = createOptimizedMessageHandlers();
+  
+  // Initialize with default handlers
+  Object.entries(defaultHandlers).forEach(([type, handler]) => {
+    handlers.set(type, handler);
+  });
+  
+  return {
+    register: (type, handler) => {
+      handlers.set(type, handler);
+      return () => handlers.delete(type); // Return unregister function
+    },
+    
+    get: (type) => handlers.get(type),
+    
+    has: (type) => handlers.has(type),
+    
+    getAll: () => handlers,
+    
+    process: (data) => {
+      const { type, payload } = data || {};
+      if (!type) {
+        console.warn('Received message without type:', data);
+        return false;
+      }
+      
+      const handler = handlers.get(type);
+      if (handler) {
+        handler(data);
+        return true;
+      }
+      return false;
+    }
+  };
+};
+
 class WebSocketService {
   constructor(url, options = {}) {
     // Core connection properties
@@ -100,8 +139,8 @@ class WebSocketService {
                              (window.navigator.webdriver || 
                               import.meta.env.VITE_TEST_MODE === 'true');
     
-    // Cache message handlers to avoid recreation
-    this.messageHandlers = createOptimizedMessageHandlers();
+    // Create and initialize handler registry
+    this.handlerRegistry = createHandlerRegistry();
   }
 
   connect() {
@@ -412,10 +451,10 @@ class WebSocketService {
       
       if (result.success) {
         const processedData = result.data;
-        const handler = this.messageHandlers[processedData.type];
-        if (handler) {
-          return handler(processedData);
-        } else {
+        // Try to use handler registry to process the message
+        const handlerProcessed = this.handlerRegistry.process(processedData);
+        
+        if (!handlerProcessed) {
           // In test mode, we may have additional message types
           if (this.isTestEnvironment && processedData.type === 'narseseInput') {
             return this.handleNarseseInput({ type: processedData.type, payload: processedData.payload });
@@ -741,19 +780,14 @@ class WebSocketService {
 
   processMessageQueue() {
     // Process messages that were queued while disconnected
-    while (this.messageQueue.length > 0) {
-      const message = this.messageQueue[0]; // Peek at first message
-      if (this.state === ConnectionState.CONNECTED && this.ws?.readyState === WebSocket.OPEN) {
-        try {
-          this.ws.send(JSON.stringify(message));
-          this.messageQueue.shift(); // Remove successfully sent message
-          this.metrics.messagesSent++;
-        } catch (error) {
-          console.error('Error sending queued message:', error);
-          break; // Stop processing if we can't send
-        }
-      } else {
-        break; // Stop if no longer connected
+    while (this.messageQueue.length > 0 && this.state === ConnectionState.CONNECTED && this.ws?.readyState === WebSocket.OPEN) {
+      const message = this.messageQueue.shift(); // Remove and get first message
+      try {
+        this.ws.send(JSON.stringify(message));
+        this.metrics.messagesSent++;
+      } catch (error) {
+        console.error('Error sending queued message:', error);
+        break; // Stop processing if we can't send
       }
     }
   }

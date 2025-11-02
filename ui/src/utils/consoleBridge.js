@@ -31,11 +31,12 @@ const sendLogToWebSocket = (currentWsService, level, args) => {
       meta: getLogMetadata()
     };
     
-    if (typeof currentWsService.sendMessage === 'function') {
-      currentWsService.sendMessage(message);
-    } else if (currentWsService.ws?.readyState === WebSocket.OPEN) {
-      currentWsService.ws.send(JSON.stringify(message));
-    }
+    const sender = currentWsService.sendMessage || 
+                   (currentWsService.ws?.readyState === WebSocket.OPEN ? 
+                     (msg) => currentWsService.ws.send(JSON.stringify(msg)) : 
+                     null);
+    
+    sender && sender(message);
   } catch (error) {
     originalConsole.error('Failed to send console log to WebSocket:', error);
   }

@@ -1,14 +1,4 @@
-/**
- * Optimized data processing utilities following AGENT.md principles
- * DRY, modular, parameterized, with performance optimization for large datasets
- */
-
-/**
- * Abstract function for filtering and sorting data with multiple criteria
- * @param {Array} data - Input data array
- * @param {Object} options - Processing options
- * @returns {Array} - Processed result array
- */
+// Optimized data processing with filtering, sorting, and custom filters
 export const processDataWithFilters = (data, options = {}) => {
   const {
     filterType = 'all',
@@ -16,15 +6,17 @@ export const processDataWithFilters = (data, options = {}) => {
     sortKey = null,
     sortOrder = 'asc',
     typeField = 'type',
-    searchFields = ['description', 'term']
+    searchFields = ['description', 'term'],
+    customFilters = []
   } = options;
 
   // Create filter functions with memoization for performance
   const typeFilter = createTypeFilter(typeField, filterType);
   const textFilter = createTextFilter(searchFields, filterText);
+  const customFilter = createCustomFilters(customFilters);
 
   // Apply filters in sequence for efficiency
-  let result = data.filter(typeFilter).filter(textFilter);
+  let result = data.filter(typeFilter).filter(textFilter).filter(customFilter);
 
   // Apply sorting if specified
   if (sortKey) {
@@ -37,23 +29,11 @@ export const processDataWithFilters = (data, options = {}) => {
   return result;
 };
 
-/**
- * Type filter predicate function
- * @param {string} typeField - Field name for type comparison
- * @param {string} filterType - Type to filter by
- * @returns {Function} - Filter predicate function
- */
 const createTypeFilter = (typeField, filterType) => 
   filterType === 'all' 
     ? () => true 
     : (item) => item[typeField] && item[typeField].toLowerCase() === filterType.toLowerCase();
 
-/**
- * Text search predicate function with optimized matching
- * @param {Array} searchFields - Fields to search in
- * @param {string} filterText - Text to search for
- * @returns {Function} - Filter predicate function
- */
 const createTextFilter = (searchFields, filterText) => {
   if (!filterText.trim()) return () => true;
   const searchText = filterText.toLowerCase();
@@ -61,11 +41,37 @@ const createTextFilter = (searchFields, filterText) => {
   
   return (item) => 
     searchFields.some(field => {
-      const value = item[field];
+      const value = getNestedValue(item, field);
       if (!value) return false;
       const stringValue = String(value).toLowerCase();
       return stringValue.includes(searchText);
     });
+};
+
+const getNestedValue = (obj, path) => path.split('.').reduce((current, key) => current?.[key], obj);
+
+const createCustomFilters = (customFilters = []) => {
+  if (!customFilters.length) return () => true;
+  
+  return (item) => customFilters.every(filter => {
+    // If filter is a function, call it directly
+    if (typeof filter === 'function') {
+      return filter(item);
+    }
+    // If filter is an object with test function
+    if (filter && typeof filter.test === 'function') {
+      return filter.test(item);
+    }
+    // If filter is an object with property and value to test
+    if (filter && filter.property && filter.value !== undefined) {
+      const itemValue = getNestedValue(item, filter.property);
+      if (filter.matcher) {
+        return filter.matcher(itemValue, filter.value);
+      }
+      return itemValue === filter.value;
+    }
+    return true;
+  });
 };
 
 /**
@@ -75,22 +81,20 @@ const createTextFilter = (searchFields, filterText) => {
  * @returns {number} - Comparison result (-1, 0, 1)
  */
 const compareValues = (a, b) => {
-  // Handle null/undefined values
   if (a == null && b == null) return 0;
   if (a == null) return -1;
   if (b == null) return 1;
 
-  // Handle different data types for comparison
-  if (typeof a === 'string' && typeof b === 'string') {
-    return a.toLowerCase().localeCompare(b.toLowerCase());
-  } else if (typeof a === 'number' && typeof b === 'number') {
-    return a - b;
-  } else if (a instanceof Date && b instanceof Date) {
-    return a.getTime() - b.getTime();
-  } else {
-    // Convert to string for comparison
-    return String(a).toLowerCase().localeCompare(String(b).toLowerCase());
+  const typeA = typeof a;
+  const typeB = typeof b;
+  
+  if (typeA === typeB) {
+    if (a instanceof Date && b instanceof Date) return a.getTime() - b.getTime();
+    if (typeA === 'string') return a.toLowerCase().localeCompare(b.toLowerCase());
+    if (typeA === 'number') return a - b;
   }
+  
+  return String(a).toLowerCase().localeCompare(String(b).toLowerCase());
 };
 
 /**
@@ -278,13 +282,6 @@ export const safeTransformData = (data, transformFn, errorHandler = null) => {
   }
 };
 
-/**
- * Optimized pagination utility for large datasets
- * @param {Array} data - Array to paginate
- * @param {number} page - Page number (1-indexed)
- * @param {number} pageSize - Items per page
- * @returns {Object} - Pagination result with data and metadata
- */
 export const paginateData = (data, page = 1, pageSize = 20) => {
   const startIndex = (page - 1) * pageSize;
   const endIndex = startIndex + pageSize;

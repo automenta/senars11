@@ -53,9 +53,15 @@ const ReasoningTracePanel = () => {
       typeField: 'type',
       searchFields: ['description', 'data.term', 'data.type', 'data.result', 'rule', 'taskType'],
       sortKey: 'timestamp',
-      sortOrder: 'desc' // Show most recent first
+      sortOrder: 'desc', // Show most recent first
+      customFilters: [createPriorityFilter(0)] // Example of custom filter pattern
     });
   }, [reasoningSteps, tasks, filterType, filterText]);
+
+  // Create parameterized priority filter function
+  const createPriorityFilter = (minPriority = 0) => {
+    return (item) => item.priority >= minPriority;
+  };
 
   // Paginate the processed data
   const paginatedData = useMemo(() => 

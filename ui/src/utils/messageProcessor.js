@@ -147,6 +147,40 @@ const messageProcessorUtils = {
       
       return message;
     };
+  },
+  
+  // Create a conditional processing middleware
+  createConditionalMiddleware: (condition, trueMiddleware, falseMiddleware = null) => {
+    return async (message, context) => {
+      if (condition(message, context)) {
+        return await Promise.resolve(trueMiddleware(message, context));
+      } else if (falseMiddleware) {
+        return await Promise.resolve(falseMiddleware(message, context));
+      }
+      return message;
+    };
+  },
+  
+  // Create a filter middleware that can conditionally process or skip messages
+  createFilterMiddleware: (filterFn) => {
+    return (message, context) => {
+      if (filterFn(message, context)) {
+        return message;
+      }
+      return null; // Skip processing
+    };
+  },
+  
+  // Create a composite middleware that runs multiple middlewares
+  createCompositeMiddleware: (middlewares) => {
+    return async (message, context) => {
+      let processedMessage = message;
+      for (const middleware of middlewares) {
+        processedMessage = await Promise.resolve(middleware(processedMessage, context));
+        if (processedMessage === null) break; // Stop if middleware returns null
+      }
+      return processedMessage;
+    };
   }
 };
 
