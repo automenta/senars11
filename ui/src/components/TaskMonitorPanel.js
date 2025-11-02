@@ -4,7 +4,6 @@ import {formatBudget, formatTruth} from '../utils/formatters.js';
 import GenericPanel from './GenericPanel.js';
 import TaskRelationshipGraph from './TaskRelationshipGraph.js';
 import TaskFlowDiagram from './TaskFlowDiagram.js';
-import { createTaskDisplayElement } from '../utils/taskUtils.js';
 
 const TaskMonitorPanel = () => {
   const [expandedTask, setExpandedTask] = useState(null);
@@ -28,39 +27,66 @@ const TaskMonitorPanel = () => {
       );
     });
   }, [reasoningSteps]);
+
+  const getTaskStyle = useCallback((taskType) => {
+    const bgColors = {
+      'question': '#e7f3ff',
+      'QUESTION': '#e7f3ff',
+      'goal': '#fff3cd',
+      'GOAL': '#fff3cd',
+      'belief': '#e8f5e8',
+      'BELIEF': '#e8f5e8'
+    };
+    const borderColors = {
+      'question': '#b8daff',
+      'QUESTION': '#b8daff',
+      'goal': '#ffeaa7',
+      'GOAL': '#ffeaa7',
+      'belief': '#a3d9a5',
+      'BELIEF': '#a3d9a5'
+    };
     
+    return {
+      backgroundColor: bgColors[taskType] || 'white',
+      border: `1px solid ${borderColors[taskType] || '#ddd'}`
+    };
+  }, []);
+
+  const renderTransformations = useCallback((transformations) => {
+    if (!transformations?.length) return null;
+    return React.createElement('div', {style: {marginTop: '0.5rem', padding: '0.5rem', backgroundColor: '#f9f9f9', border: '1px solid #eee', borderRadius: '4px'}},
+      React.createElement('div', {style: {fontWeight: 'bold', marginBottom: '0.25rem', color: '#007bff'}}, 'Transformations:'),
+      transformations.map((transform, idx) => 
+        React.createElement('div', {key: idx, style: {padding: '0.25rem 0', fontSize: '0.75rem', borderLeft: '2px solid #007bff', paddingLeft: '0.5rem'}},
+          React.createElement('div', {style: {fontWeight: '500'}}, transform.description || 'Transformation'),
+          transform.result && React.createElement('div', {style: {fontStyle: 'italic', fontSize: '0.7rem'}}, `Result: ${transform.result}`)
+        )
+      )
+    );
+  }, []);
+
+  const renderDependencies = useCallback((dependencies) => {
+    if (!dependencies || !Array.isArray(dependencies) || !dependencies.length) return null;
+    return React.createElement('div', {style: {marginTop: '0.5rem', padding: '0.5rem', backgroundColor: '#f0f8f0', border: '1px solid #c3e6c3', borderRadius: '4px'}},
+      React.createElement('div', {style: {fontWeight: 'bold', marginBottom: '0.25rem', color: '#155724'}}, 'Dependencies:'),
+      React.createElement('div', {style: {fontSize: '0.75rem'}}, dependencies.join(', '))
+    );
+  }, []);
+
   const renderTask = useCallback((task, index) => {
+    if (filterType !== 'all' && filterType !== task.type?.toLowerCase()) return null;
+    
     const isExpanded = expandedTask === (task.id || `task-${index}`);
     const transformations = getTaskTransformations(task);
     const hasTransformations = transformations.length > 0;
     
-    // If we're filtering and this doesn't match, return null
-    if (filterType !== 'all' && filterType !== task.type?.toLowerCase()) {
-      return null;
-    }
-    
-    // Create base task display element
-    const baseTaskElement = createTaskDisplayElement(React, task, {
-      onClick: () => setExpandedTask(isExpanded ? null : (task.id || `task-${index}`)),
-      isExpanded: false, // We'll handle expansion separately
-      showTruth: false, // We'll show truth details manually when expanded
-      showBudget: false, // We'll show budget details manually when expanded
-      showTime: false  // We'll show time details manually when expanded
-    });
-    
-    // Build the full element
     return React.createElement('div',
       {
         key: task.id || `task-${index}`,
         style: {
           padding: '0.5rem',
           margin: '0.25rem 0',
-          backgroundColor: task.type === 'question' || task.type === 'QUESTION' ? '#e7f3ff' : 
-            task.type === 'goal' || task.type === 'GOAL' ? '#fff3cd' : 
-              task.type === 'belief' || task.type === 'BELIEF' ? '#e8f5e8' : 'white',
-          border: `1px solid ${task.type === 'question' || task.type === 'QUESTION' ? '#b8daff' : 
-            task.type === 'goal' || task.type === 'GOAL' ? '#ffeaa7' : 
-              task.type === 'belief' || task.type === 'BELIEF' ? '#a3d9a5' : '#ddd'}`,
+          ...getTaskStyle(task.type),
           borderRadius: '4px',
           fontSize: '0.85rem'
         }
@@ -84,27 +110,12 @@ const TaskMonitorPanel = () => {
         task.occurrenceTime && React.createElement('div', {style: {fontSize: '0.7rem', color: '#666', marginTop: '0.25rem'}},
           `Time: ${new Date(task.occurrenceTime).toLocaleTimeString()}`
         ),
-        // Show transformations if available
-        showTransformations && hasTransformations && React.createElement('div', {style: {marginTop: '0.5rem', padding: '0.5rem', backgroundColor: '#f9f9f9', border: '1px solid #eee', borderRadius: '4px'}},
-          React.createElement('div', {style: {fontWeight: 'bold', marginBottom: '0.25rem', color: '#007bff'}}, 'Transformations:'),
-          transformations.map((transform, idx) => 
-            React.createElement('div', {key: idx, style: {padding: '0.25rem 0', fontSize: '0.75rem', borderLeft: '2px solid #007bff', paddingLeft: '0.5rem'}},
-              React.createElement('div', {style: {fontWeight: '500'}}, transform.description || 'Transformation'),
-              transform.result && React.createElement('div', {style: {fontStyle: 'italic', fontSize: '0.7rem'}}, `Result: ${transform.result}`)
-            )
-          )
-        ),
-        // Show dependencies if available
-        task.dependencies && Array.isArray(task.dependencies) && task.dependencies.length > 0 && 
-          React.createElement('div', {style: {marginTop: '0.5rem', padding: '0.5rem', backgroundColor: '#f0f8f0', border: '1px solid #c3e6c3', borderRadius: '4px'}},
-            React.createElement('div', {style: {fontWeight: 'bold', marginBottom: '0.25rem', color: '#155724'}}, 'Dependencies:'),
-            React.createElement('div', {style: {fontSize: '0.75rem'}}, task.dependencies.join(', '))
-          )
+        showTransformations && hasTransformations && renderTransformations(transformations),
+        renderDependencies(task.dependencies)
       )
     );
-  }, [expandedTask, showTransformations, getTaskTransformations, formatTruth, formatBudget, filterType]);
+  }, [expandedTask, showTransformations, getTaskTransformations, filterType, getTaskStyle, formatTruth, formatBudget, renderTransformations, renderDependencies]);
 
-  // Render reasoning steps as well
   const renderReasoningStep = useCallback((step, index) =>
     React.createElement('div',
       {
@@ -182,7 +193,6 @@ const TaskMonitorPanel = () => {
       )
     ), [filterType, showTransformations, showRelationships, showFlowDiagram]);
 
-  // Combine tasks and reasoning steps
   const items = useMemo(() => {
     const result = [
       { type: 'controls', controlBar: renderControlBar() }
@@ -203,13 +213,10 @@ const TaskMonitorPanel = () => {
   }, [tasks, reasoningSteps, renderControlBar, showRelationships, showFlowDiagram]);
 
   const renderMonitorItem = useCallback((item, index) => {
-    if (item.type === 'controls') {
-      return item.controlBar;
-    } else if (item.type === 'flowDiagram') {
-      return React.createElement('div', {style: {marginBottom: '1rem'}}, item.content);
-    } else if (item.type === 'relationships') {
-      return React.createElement('div', {style: {marginBottom: '1rem'}}, item.content);
-    } else if (item.type === 'header') {
+    if (item.type === 'controls') return item.controlBar;
+    if (item.type === 'flowDiagram') return React.createElement('div', {style: {marginBottom: '1rem'}}, item.content);
+    if (item.type === 'relationships') return React.createElement('div', {style: {marginBottom: '1rem'}}, item.content);
+    if (item.type === 'header') {
       return React.createElement('div', {
         style: {
           fontWeight: 'bold',
@@ -220,11 +227,9 @@ const TaskMonitorPanel = () => {
           color: '#333'
         }
       }, item.content);
-    } else if (item.type === 'task') {
-      return renderTask(item.data, index);
-    } else if (item.type === 'reasoningStep') {
-      return renderReasoningStep(item.data, index);
     }
+    if (item.type === 'task') return renderTask(item.data, index);
+    if (item.type === 'reasoningStep') return renderReasoningStep(item.data, index);
     return null;
   }, [renderTask, renderReasoningStep]);
 

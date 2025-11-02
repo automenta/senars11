@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { captureScreenshot } from '../utils/screenshot.js';
 
 const sampleInsights = [
@@ -35,36 +35,36 @@ const sampleInsights = [
 ];
 
 const DiscoveryPanel = () => {
-  const [insights, setInsights] = React.useState([]);
-  const [activeTab, setActiveTab] = React.useState('discover');
-  const [newInsight, setNewInsight] = React.useState({
+  const [insights, setInsights] = useState([]);
+  const [activeTab, setActiveTab] = useState('discover');
+  const [newInsight, setNewInsight] = useState({
     title: '',
     description: '',
     tags: [],
     reasoningPattern: '',
     timestamp: null
   });
-  const [selectedInsight, setSelectedInsight] = React.useState(null);
-  const [tagInput, setTagInput] = React.useState('');
+  const [selectedInsight, setSelectedInsight] = useState(null);
+  const [tagInput, setTagInput] = useState('');
   
-  React.useEffect(() => {
+  useEffect(() => {
     if (insights.length === 0) setInsights(sampleInsights);
   }, [insights]);
 
-  const handleInputChange = (field, value) => 
-    setNewInsight(prev => ({ ...prev, [field]: value }));
+  const handleInputChange = useCallback((field, value) => 
+    setNewInsight(prev => ({ ...prev, [field]: value })), []);
 
-  const addTag = () => {
+  const addTag = useCallback(() => {
     if (tagInput.trim() && !newInsight.tags.includes(tagInput.trim())) {
       setNewInsight(prev => ({ ...prev, tags: [...prev.tags, tagInput.trim()] }));
       setTagInput('');
     }
-  };
+  }, [tagInput, newInsight.tags]);
 
-  const removeTag = (tagToRemove) => 
-    setNewInsight(prev => ({ ...prev, tags: prev.tags.filter(tag => tag !== tagToRemove) }));
+  const removeTag = useCallback((tagToRemove) => 
+    setNewInsight(prev => ({ ...prev, tags: prev.tags.filter(tag => tag !== tagToRemove) })), []);
 
-  const saveInsight = () => {
+  const saveInsight = useCallback(() => {
     if (!newInsight.title.trim() || !newInsight.description.trim()) {
       alert('Please provide a title and description for the insight');
       return;
@@ -81,16 +81,16 @@ const DiscoveryPanel = () => {
     setInsights(prev => [insight, ...prev]);
     setNewInsight({ title: '', description: '', tags: [], reasoningPattern: '', timestamp: null });
     console.log('Saved new insight:', insight.title);
-  };
+  }, [newInsight]);
 
   const selectInsight = setSelectedInsight;
 
-  const shareInsight = (insightId) => {
+  const shareInsight = useCallback((insightId) => {
     console.log('Sharing insight:', insightId);
     alert(`Insight ${insightId} shared successfully! (Simulated)`);
-  };
+  }, []);
 
-  const exportInsights = async () => {
+  const exportInsights = useCallback(async () => {
     try {
       const dataStr = JSON.stringify(insights, null, 2);
       const dataBlob = new Blob([dataStr], { type: 'application/json' });
@@ -106,9 +106,9 @@ const DiscoveryPanel = () => {
     } catch (error) {
       console.error('Insights export failed:', error);
     }
-  };
+  }, [insights]);
 
-  const captureInsightVisualization = async (insight) => {
+  const captureInsightVisualization = useCallback(async (insight) => {
     try {
       const element = document.getElementById('discovery-panel');
       if (element) {
@@ -118,11 +118,11 @@ const DiscoveryPanel = () => {
     } catch (error) {
       console.error('Failed to capture insight visualization:', error);
     }
-  };
+  }, []);
 
-  const formatDate = (timestamp) => new Date(timestamp).toLocaleString();
+  const formatDate = useCallback((timestamp) => new Date(timestamp).toLocaleString(), []);
 
-  const tabButtonStyle = (isActive) => ({
+  const tabButtonStyle = useCallback((isActive) => ({
     padding: '10px 15px',
     backgroundColor: isActive ? '#3498db' : '#ecf0f1',
     color: isActive ? 'white' : '#2c3e50',
@@ -130,18 +130,18 @@ const DiscoveryPanel = () => {
     borderBottom: isActive ? '2px solid #3498db' : '1px solid #ddd',
     cursor: 'pointer',
     borderRadius: '4px 4px 0 0'
-  });
+  }), []);
 
-  const tagStyle = {
+  const tagStyle = useMemo(() => ({
     display: 'inline-block',
     padding: '4px 8px',
     backgroundColor: '#3498db',
     color: 'white',
     borderRadius: '12px',
     fontSize: '12px'
-  };
+  }), []);
 
-  const insightCard = (insight) => 
+  const insightCard = useCallback((insight) => 
     React.createElement('div', {
       key: insight.id,
       onClick: () => selectInsight(insight),
@@ -174,137 +174,112 @@ const DiscoveryPanel = () => {
           }, 'Visualize')
         )
       )
-    );
+    ), [selectInsight, selectedInsight, tagStyle, formatDate, shareInsight, captureInsightVisualization]);
 
-  return React.createElement('div', { 
-    className: 'discovery-panel panel', 
-    id: 'discovery-panel',
-    style: { 
-      padding: '20px', 
-      border: '1px solid #ddd', 
-      backgroundColor: '#f9f9f9',
-      borderRadius: '8px',
-      minHeight: '500px',
-      display: 'flex',
-      flexDirection: 'column'
-    } 
-  },
-    React.createElement('div', { style: { marginBottom: '20px' } },
-      React.createElement('h2', { style: { color: '#2c3e50', marginBottom: '10px' } }, 'Insight Discovery & Sharing'),
-      React.createElement('p', { style: { color: '#7f8c8d' } }, 
-        'Discover, document, and share interesting patterns in hybrid NARS-LM reasoning'
-      )
-    ),
-
-    React.createElement('div', { style: { display: 'flex', marginBottom: '20px', borderBottom: '1px solid #ddd' } },
-      React.createElement('button', { onClick: () => setActiveTab('discover'), style: tabButtonStyle(activeTab === 'discover') }, 'Discover'),
-      React.createElement('button', { onClick: () => setActiveTab('saved'), style: { ...tabButtonStyle(activeTab === 'saved'), marginLeft: '5px' } }, 'Saved Insights'),
-      React.createElement('button', { onClick: () => setActiveTab('shared'), style: { ...tabButtonStyle(activeTab === 'shared'), marginLeft: '5px' } }, 'Shared Insights')
-    ),
-
-    activeTab === 'discover' && React.createElement('div', null,
-      React.createElement('div', { style: { border: '1px solid #ddd', borderRadius: '8px', padding: '15px', marginBottom: '20px', backgroundColor: '#fff' } },
-        React.createElement('h3', { style: { color: '#2c3e50', marginBottom: '15px' } }, 'Document New Insight'),
-        
-        React.createElement('div', { style: { marginBottom: '10px' } },
-          React.createElement('label', { style: { display: 'block', marginBottom: '5px', fontWeight: 'bold' } }, 'Title:'),
+  const renderNewInsightForm = useCallback(() => 
+    React.createElement('div', { style: { border: '1px solid #ddd', borderRadius: '8px', padding: '15px', marginBottom: '20px', backgroundColor: '#fff' } },
+      React.createElement('h3', { style: { color: '#2c3e50', marginBottom: '15px' } }, 'Document New Insight'),
+      
+      React.createElement('div', { style: { marginBottom: '10px' } },
+        React.createElement('label', { style: { display: 'block', marginBottom: '5px', fontWeight: 'bold' } }, 'Title:'),
+        React.createElement('input', {
+          type: 'text',
+          value: newInsight.title,
+          onChange: (e) => handleInputChange('title', e.target.value),
+          placeholder: 'Enter insight title',
+          style: { width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }
+        })
+      ),
+      
+      React.createElement('div', { style: { marginBottom: '10px' } },
+        React.createElement('label', { style: { display: 'block', marginBottom: '5px', fontWeight: 'bold' } }, 'Description:'),
+        React.createElement('textarea', {
+          value: newInsight.description,
+          onChange: (e) => handleInputChange('description', e.target.value),
+          placeholder: 'Describe the interesting reasoning pattern you observed',
+          rows: 3,
+          style: { width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }
+        })
+      ),
+      
+      React.createElement('div', { style: { marginBottom: '10px' } },
+        React.createElement('label', { style: { display: 'block', marginBottom: '5px', fontWeight: 'bold' } }, 'Reasoning Pattern:'),
+        React.createElement('input', {
+          type: 'text',
+          value: newInsight.reasoningPattern,
+          onChange: (e) => handleInputChange('reasoningPattern', e.target.value),
+          placeholder: 'Describe the pattern of reasoning',
+          style: { width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }
+        })
+      ),
+      
+      React.createElement('div', { style: { marginBottom: '10px' } },
+        React.createElement('label', { style: { display: 'block', marginBottom: '5px', fontWeight: 'bold' } }, 'Tags:'),
+        React.createElement('div', { style: { display: 'flex', marginBottom: '5px' } },
           React.createElement('input', {
             type: 'text',
-            value: newInsight.title,
-            onChange: (e) => handleInputChange('title', e.target.value),
-            placeholder: 'Enter insight title',
-            style: { width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }
-          })
+            value: tagInput,
+            onChange: (e) => setTagInput(e.target.value),
+            onKeyPress: (e) => e.key === 'Enter' && addTag(),
+            placeholder: 'Add a tag and press Enter',
+            style: { flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '4px 0 0 4px' }
+          }),
+          React.createElement('button', {
+            onClick: addTag,
+            style: { padding: '8px 12px', backgroundColor: '#3498db', color: 'white', border: '1px solid #ddd', borderLeft: 'none', borderRadius: '0 4px 4px 0', cursor: 'pointer' }
+          }, '+')
         ),
-        
-        React.createElement('div', { style: { marginBottom: '10px' } },
-          React.createElement('label', { style: { display: 'block', marginBottom: '5px', fontWeight: 'bold' } }, 'Description:'),
-          React.createElement('textarea', {
-            value: newInsight.description,
-            onChange: (e) => handleInputChange('description', e.target.value),
-            placeholder: 'Describe the interesting reasoning pattern you observed',
-            rows: 3,
-            style: { width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }
-          })
-        ),
-        
-        React.createElement('div', { style: { marginBottom: '10px' } },
-          React.createElement('label', { style: { display: 'block', marginBottom: '5px', fontWeight: 'bold' } }, 'Reasoning Pattern:'),
-          React.createElement('input', {
-            type: 'text',
-            value: newInsight.reasoningPattern,
-            onChange: (e) => handleInputChange('reasoningPattern', e.target.value),
-            placeholder: 'Describe the pattern of reasoning',
-            style: { width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }
-          })
-        ),
-        
-        React.createElement('div', { style: { marginBottom: '10px' } },
-          React.createElement('label', { style: { display: 'block', marginBottom: '5px', fontWeight: 'bold' } }, 'Tags:'),
-          React.createElement('div', { style: { display: 'flex', marginBottom: '5px' } },
-            React.createElement('input', {
-              type: 'text',
-              value: tagInput,
-              onChange: (e) => setTagInput(e.target.value),
-              onKeyPress: (e) => e.key === 'Enter' && addTag(),
-              placeholder: 'Add a tag and press Enter',
-              style: { flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '4px 0 0 4px' }
-            }),
-            React.createElement('button', {
-              onClick: addTag,
-              style: { padding: '8px 12px', backgroundColor: '#3498db', color: 'white', border: '1px solid #ddd', borderLeft: 'none', borderRadius: '0 4px 4px 0', cursor: 'pointer' }
-            }, '+')
-          ),
-          React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '5px' } },
-            newInsight.tags.map((tag, index) => 
-              React.createElement('span', {
-                key: index,
-                style: tagStyle
-              },
-                tag,
-                React.createElement('button', {
-                  onClick: () => removeTag(tag),
-                  style: { marginLeft: '5px', backgroundColor: 'rgba(255,255,255,0.3)', border: 'none', borderRadius: '50%', width: '16px', height: '16px', cursor: 'pointer', fontSize: '10px', lineHeight: '14px' }
-                }, '×')
-              )
+        React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '5px' } },
+          newInsight.tags.map((tag, index) => 
+            React.createElement('span', {
+              key: index,
+              style: tagStyle
+            },
+              tag,
+              React.createElement('button', {
+                onClick: () => removeTag(tag),
+                style: { marginLeft: '5px', backgroundColor: 'rgba(255,255,255,0.3)', border: 'none', borderRadius: '50%', width: '16px', height: '16px', cursor: 'pointer', fontSize: '10px', lineHeight: '14px' }
+              }, '×')
             )
           )
-        ),
+        )
+      ),
+      
+      React.createElement('button', {
+        onClick: saveInsight,
+        style: { padding: '10px 15px', backgroundColor: '#2ecc71', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }
+      }, 'Save Insight')
+    ), [newInsight, tagInput, handleInputChange, setTagInput, addTag, removeTag, saveInsight, tagStyle]);
+
+  const renderDiscoveryTools = useCallback(() => 
+    React.createElement('div', { style: { border: '1px solid #ddd', borderRadius: '8px', padding: '15px', backgroundColor: '#fff', marginBottom: '20px' } },
+      React.createElement('h3', { style: { color: '#2c3e50', marginBottom: '15px' } }, 'Discovery Tools'),
+      
+      React.createElement('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '15px' } },
+        React.createElement('button', {
+          onClick: () => console.log('Pattern analysis initiated'),
+          style: { padding: '15px', backgroundColor: '#9b59b6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', textAlign: 'center' }
+        }, 'Pattern Analysis'),
         
         React.createElement('button', {
-          onClick: saveInsight,
-          style: { padding: '10px 15px', backgroundColor: '#2ecc71', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }
-        }, 'Save Insight')
-      ),
-
-      React.createElement('div', { style: { border: '1px solid #ddd', borderRadius: '8px', padding: '15px', backgroundColor: '#fff', marginBottom: '20px' } },
-        React.createElement('h3', { style: { color: '#2c3e50', marginBottom: '15px' } }, 'Discovery Tools'),
+          onClick: () => console.log('Anomaly detection initiated'),
+          style: { padding: '15px', backgroundColor: '#e67e22', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', textAlign: 'center' }
+        }, 'Anomaly Detection'),
         
-        React.createElement('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '15px' } },
-          React.createElement('button', {
-            onClick: () => console.log('Pattern analysis initiated'),
-            style: { padding: '15px', backgroundColor: '#9b59b6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', textAlign: 'center' }
-          }, 'Pattern Analysis'),
-          
-          React.createElement('button', {
-            onClick: () => console.log('Anomaly detection initiated'),
-            style: { padding: '15px', backgroundColor: '#e67e22', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', textAlign: 'center' }
-          }, 'Anomaly Detection'),
-          
-          React.createElement('button', {
-            onClick: () => console.log('Trend identification initiated'),
-            style: { padding: '15px', backgroundColor: '#3498db', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', textAlign: 'center' }
-          }, 'Trend Identification'),
-          
-          React.createElement('button', {
-            onClick: () => console.log('Relationship mapping initiated'),
-            style: { padding: '15px', backgroundColor: '#1abc9c', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', textAlign: 'center' }
-          }, 'Relationship Mapping')
-        )
+        React.createElement('button', {
+          onClick: () => console.log('Trend identification initiated'),
+          style: { padding: '15px', backgroundColor: '#3498db', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', textAlign: 'center' }
+        }, 'Trend Identification'),
+        
+        React.createElement('button', {
+          onClick: () => console.log('Relationship mapping initiated'),
+          style: { padding: '15px', backgroundColor: '#1abc9c', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', textAlign: 'center' }
+        }, 'Relationship Mapping')
       )
-    ),
+    ), []);
 
-    activeTab === 'saved' && React.createElement('div', null,
+  const renderSavedInsights = useCallback(() => 
+    React.createElement('div', null,
       React.createElement('div', { style: { marginBottom: '15px', textAlign: 'right' } },
         React.createElement('button', {
           onClick: exportInsights,
@@ -317,9 +292,10 @@ const DiscoveryPanel = () => {
         : React.createElement('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '15px' } },
             insights.map(insightCard)
           )
-    ),
+    ), [insights, exportInsights, insightCard]);
 
-    activeTab === 'shared' && React.createElement('div', null,
+  const renderSharedInsights = useCallback(() => 
+    React.createElement('div', null,
       React.createElement('div', { style: { textAlign: 'center', padding: '40px 20px' } },
         React.createElement('h3', { style: { color: '#2c3e50', marginBottom: '15px' } }, 'Shared Insights'),
         React.createElement('p', { style: { color: '#7f8c8d', marginBottom: '20px' } }, 
@@ -330,9 +306,10 @@ const DiscoveryPanel = () => {
           style: { padding: '10px 20px', backgroundColor: '#3498db', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }
         }, 'Browse Community Insights')
       )
-    ),
+    ), []);
 
-    selectedInsight && React.createElement('div', { 
+  const renderInsightDetailModal = useCallback(() => 
+    React.createElement('div', { 
       style: { 
         position: 'fixed', 
         top: '50%', 
@@ -397,7 +374,44 @@ const DiscoveryPanel = () => {
           style: { padding: '8px 15px', backgroundColor: '#9b59b6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }
         }, 'Share Insight')
       )
+    ), [selectedInsight, tagStyle, formatDate, captureInsightVisualization, shareInsight]);
+
+  return React.createElement('div', { 
+    className: 'discovery-panel panel', 
+    id: 'discovery-panel',
+    style: { 
+      padding: '20px', 
+      border: '1px solid #ddd', 
+      backgroundColor: '#f9f9f9',
+      borderRadius: '8px',
+      minHeight: '500px',
+      display: 'flex',
+      flexDirection: 'column'
+    } 
+  },
+    React.createElement('div', { style: { marginBottom: '20px' } },
+      React.createElement('h2', { style: { color: '#2c3e50', marginBottom: '10px' } }, 'Insight Discovery & Sharing'),
+      React.createElement('p', { style: { color: '#7f8c8d' } }, 
+        'Discover, document, and share interesting patterns in hybrid NARS-LM reasoning'
+      )
     ),
+
+    React.createElement('div', { style: { display: 'flex', marginBottom: '20px', borderBottom: '1px solid #ddd' } },
+      React.createElement('button', { onClick: () => setActiveTab('discover'), style: tabButtonStyle(activeTab === 'discover') }, 'Discover'),
+      React.createElement('button', { onClick: () => setActiveTab('saved'), style: { ...tabButtonStyle(activeTab === 'saved'), marginLeft: '5px' } }, 'Saved Insights'),
+      React.createElement('button', { onClick: () => setActiveTab('shared'), style: { ...tabButtonStyle(activeTab === 'shared'), marginLeft: '5px' } }, 'Shared Insights')
+    ),
+
+    activeTab === 'discover' && React.createElement('div', null,
+      renderNewInsightForm(),
+      renderDiscoveryTools()
+    ),
+
+    activeTab === 'saved' && renderSavedInsights(),
+
+    activeTab === 'shared' && renderSharedInsights(),
+
+    selectedInsight && renderInsightDetailModal(),
 
     selectedInsight && React.createElement('div', {
       style: { position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 999 },

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { captureScreenshot } from '../utils/screenshot.js';
 import { playbackRecording } from '../utils/recording.js';
 
@@ -39,40 +39,40 @@ const reasoningExamples = [
 ];
 
 const ExplorationMode = ({ onExit }) => {
-  const [isExploring, setIsExploring] = React.useState(false);
-  const [currentStep, setCurrentStep] = React.useState(0);
-  const [explorationHistory, setExplorationHistory] = React.useState([]);
-  const [selectedReasoningExample, setSelectedReasoningExample] = React.useState(null);
+  const [isExploring, setIsExploring] = useState(false);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [explorationHistory, setExplorationHistory] = useState([]);
+  const [selectedReasoningExample, setSelectedReasoningExample] = useState(null);
   
-  const startExploration = (exampleId) => {
+  const startExploration = useCallback((exampleId) => {
     const example = reasoningExamples.find(ex => ex.id === exampleId);
     if (example) {
       setSelectedReasoningExample(example);
       setCurrentStep(0);
       setIsExploring(true);
-      setExplorationHistory([...explorationHistory, { exampleId, timestamp: Date.now() }]);
+      setExplorationHistory(prev => [...prev, { exampleId, timestamp: Date.now() }]);
       console.log('Started exploration of:', example.title);
     }
-  };
+  }, []);
 
-  const nextStep = () => {
+  const nextStep = useCallback(() => {
     if (selectedReasoningExample && currentStep < selectedReasoningExample.steps.length - 1) {
-      setCurrentStep(currentStep + 1);
+      setCurrentStep(prev => prev + 1);
     } else {
       endExploration();
     }
-  };
+  }, [selectedReasoningExample, currentStep]);
 
-  const previousStep = () => currentStep > 0 && setCurrentStep(currentStep - 1);
+  const previousStep = useCallback(() => currentStep > 0 && setCurrentStep(prev => prev - 1), [currentStep]);
 
-  const endExploration = () => {
+  const endExploration = useCallback(() => {
     setIsExploring(false);
     setCurrentStep(0);
     setSelectedReasoningExample(null);
     console.log('Ended exploration');
-  };
+  }, []);
 
-  const captureCurrentStep = async () => {
+  const captureCurrentStep = useCallback(async () => {
     try {
       const element = document.getElementById('exploration-container');
       if (element) {
@@ -82,27 +82,37 @@ const ExplorationMode = ({ onExit }) => {
     } catch (error) {
       console.error('Failed to capture exploration step:', error);
     }
-  };
+  }, []);
 
-  const playBackRecording = async (recordingEvents) => {
+  const playBackRecording = useCallback(async (recordingEvents) => {
     await playbackRecording(recordingEvents, (event) => console.log('Playback event:', event.type));
-  };
+  }, []);
 
-  const getCurrentStep = () => 
-    selectedReasoningExample?.steps[currentStep] || null;
+  const getCurrentStep = useMemo(() => 
+    selectedReasoningExample?.steps[currentStep] || null, 
+  [selectedReasoningExample, currentStep]);
 
-  const title = isExploring 
-    ? `Exploring: ${selectedReasoningExample?.title || 'Example'}` 
-    : 'Interactive Exploration Mode';
+  const title = useMemo(() => 
+    isExploring 
+      ? `Exploring: ${selectedReasoningExample?.title || 'Example'}` 
+      : 'Interactive Exploration Mode',
+  [isExploring, selectedReasoningExample]);
 
-  const buttonStyle = (bg) => ({
+  const buttonStyle = useCallback((bg) => ({
     padding: '8px 15px',
     backgroundColor: bg,
     color: 'white',
     border: 'none',
     borderRadius: '4px',
     cursor: 'pointer'
-  });
+  }), []);
+
+  const handleExit = useCallback(() => {
+    if (isExploring) endExploration();
+    else onExit();
+  }, [isExploring, endExploration, onExit]);
+
+  const handleExampleClick = useCallback((exampleId) => startExploration(exampleId), [startExploration]);
 
   return React.createElement('div', { 
     className: 'exploration-mode panel', 
@@ -136,7 +146,7 @@ const ExplorationMode = ({ onExit }) => {
             backgroundColor: '#fff',
             transition: 'background-color 0.3s'
           },
-          onClick: () => startExploration(example.id),
+          onClick: () => handleExampleClick(example.id),
           onMouseEnter: (e) => e.target.style.backgroundColor = '#e3f2fd',
           onMouseLeave: (e) => e.target.style.backgroundColor = '#fff'
         },
@@ -169,7 +179,7 @@ const ExplorationMode = ({ onExit }) => {
         )
       ),
 
-      getCurrentStep() && React.createElement('div', { 
+      getCurrentStep && React.createElement('div', { 
         style: { 
           border: '1px solid #b3c8e3', 
           borderRadius: '8px', 
@@ -179,10 +189,10 @@ const ExplorationMode = ({ onExit }) => {
         } 
       },
         React.createElement('h4', { style: { margin: '0 0 10px 0', color: '#2980b9' } }, 
-          `Step ${getCurrentStep().id}: ${getCurrentStep().description}`
+          `Step ${getCurrentStep.id}: ${getCurrentStep.description}`
         ),
         React.createElement('p', { style: { margin: '0', color: '#2c3e50' } }, 
-          `Explanation: ${getCurrentStep().explanation}`
+          `Explanation: ${getCurrentStep.explanation}`
         )
       ),
 
@@ -227,7 +237,7 @@ const ExplorationMode = ({ onExit }) => {
 
     React.createElement('div', { style: { textAlign: 'center', marginTop: '20px' } },
       React.createElement('button', {
-        onClick: isExploring ? endExploration : onExit,
+        onClick: handleExit,
         style: buttonStyle(isExploring ? '#e74c3c' : '#95a5a6')
       }, isExploring ? 'End Exploration' : 'Exit Exploration Mode')
     )

@@ -49,7 +49,7 @@ export const recordEvent = (event) => {
   console.log('Recorded event:', recordedEvent.type, 'at', formatTimestamp());
 };
 
-export const subscribeToEvents = () => {
+const subscribeToEvents = () => {
   window.addEventListener('reasoning.event', (event) => {
     if (isRecording) recordEvent({ type: 'reasoning.event', data: event.detail, timestamp: Date.now() });
   });
@@ -67,7 +67,7 @@ export const subscribeToEvents = () => {
   }, 5000);
 };
 
-export const unsubscribeFromEvents = () => {
+const unsubscribeFromEvents = () => {
   if (recordingInterval) {
     clearInterval(recordingInterval);
     recordingInterval = null;

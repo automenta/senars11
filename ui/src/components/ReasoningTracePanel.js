@@ -7,17 +7,15 @@ import { processDataWithFilters } from '../utils/dataProcessor.js';
 
 const ReasoningTracePanel = () => {
   const [expandedTrace, setExpandedTrace] = useState(null);
-  const [filterType, setFilterType] = useState('all'); // 'all', 'reasoningStep', 'task'
+  const [filterType, setFilterType] = useState('all');
   const [filterText, setFilterText] = useState('');
   const [exportFormat, setExportFormat] = useState('json');
-  const [annotations, setAnnotations] = useState({}); // Store annotations by trace ID
-  const [editingAnnotation, setEditingAnnotation] = useState(null); // Track which trace is being annotated
+  const [annotations, setAnnotations] = useState({});
+  const [editingAnnotation, setEditingAnnotation] = useState(null);
   const reasoningSteps = useUiStore(state => state.reasoningSteps);
   const tasks = useUiStore(state => state.tasks);
     
-  // Group related reasoning steps and tasks with filtering
   const traceGroups = useMemo(() => {
-    // Prepare combined data with consistent structure
     const combinedData = [
       ...reasoningSteps.map((step, index) => ({
         id: `step-${index}`,
@@ -27,9 +25,9 @@ const ReasoningTracePanel = () => {
         description: step.description || 'No description'
       })),
       ...tasks
-        .filter(task => task.creationTime) // Only include tasks with creation time
+        .filter(task => task.creationTime)
         .map((task, index) => ({
-          id: `task-${index + reasoningSteps.length}`, // Ensure unique IDs
+          id: `task-${index + reasoningSteps.length}`,
           type: 'task',
           data: task,
           timestamp: task.creationTime,
@@ -37,7 +35,6 @@ const ReasoningTracePanel = () => {
         }))
     ];
         
-    // Apply filters using the abstracted function
     return processDataWithFilters(combinedData, {
       filterType,
       filterText,
@@ -51,165 +48,155 @@ const ReasoningTracePanel = () => {
   const exportTraceData = useCallback(() => {
     exportReasoningTraces(traceGroups, filterType, filterText, exportFormat);
   }, [traceGroups, filterType, filterText, exportFormat]);
+
+  const highlightText = useCallback((text, searchTerm) => {
+    if (!searchTerm || !text) return text;
     
-  const renderTraceItem = useCallback((item, index) => {
+    const regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    const parts = text.split(regex);
+    
+    return parts.map((part, i) => 
+      regex.test(part) 
+        ? React.createElement('span', { key: i, style: { backgroundColor: '#ffff00', fontWeight: 'bold' } }, part)
+        : part
+    );
+  }, []);
+
+  const updateAnnotation = useCallback((item, value) => {
+    setAnnotations(prev => ({ ...prev, [item.id]: value }));
+  }, []);
+
+  const saveAnnotation = useCallback(() => setEditingAnnotation(null), []);
+
+  const cancelAnnotation = useCallback((item) => {
+    setAnnotations(prev => ({ ...prev, [item.id]: annotations[item.id] || '' }));
+    setEditingAnnotation(null);
+  }, [annotations]);
+
+  const deleteAnnotation = useCallback((item) => {
+    setAnnotations(prev => {
+      const newAnnotations = { ...prev };
+      delete newAnnotations[item.id];
+      return newAnnotations;
+    });
+  }, []);
+
+  const createReasoningContentElement = useCallback((step, filterText) => 
+    React.createElement('div', null,
+      step.step !== undefined && React.createElement('div', {style: {fontWeight: 'bold'}}, `Step ${step.step}`),
+      step.description && React.createElement('div', null, highlightText(step.description, filterText)),
+      step.result && React.createElement('div', {style: {fontWeight: '500', marginTop: '0.5rem'}}, 
+        `Result: ${highlightText(step.result, filterText)}`
+      ),
+      step.metadata && typeof step.metadata === 'object' && Object.keys(step.metadata).length > 0 && 
+              React.createElement('div', 
+                {style: {fontSize: '0.8rem', marginTop: '0.5rem', color: '#666'}},
+                React.createElement('div', {style: {fontWeight: 'bold'}}, 'Metadata:'),
+                Object.entries(step.metadata).map(([key, value]) => 
+                  React.createElement('div', {key}, `${highlightText(key, filterText)}: ${JSON.stringify(value)}`)
+                )
+              )
+    ), [highlightText]);
+
+  const createTaskContentElement = useCallback((task, filterText) => 
+    React.createElement('div', null,
+      task.term && React.createElement('div', {style: {fontWeight: 'bold'}}, highlightText(task.term, filterText)),
+      task.type && React.createElement('div', {style: {fontSize: '0.8rem', color: '#666'}}, `Type: ${highlightText(task.type, filterText)}`),
+      task.truth && React.createElement('div', null, `Truth: ${highlightText(JSON.stringify(task.truth), filterText)}`),
+      task.budget && React.createElement('div', {style: {fontSize: '0.8rem'}}, 
+        `Priority: ${highlightText((task.budget.priority || 0).toFixed(3), filterText)}`
+      )
+    ), [highlightText]);
+
+  const createAnnotationEditor = useCallback((item, hasAnnotation) => {
+    const handleAnnotationChange = (e) => updateAnnotation(item, e.target.value);
+    
+    return React.createElement('div', {style: {marginTop: '0.5rem', padding: '0.5rem', backgroundColor: '#fff3cd', border: '1px solid #ffeaa7', borderRadius: '4px'}},
+      React.createElement('div', {style: {marginBottom: '0.5rem', fontWeight: 'bold', color: '#856404'}}, 'Add Annotation:'),
+      React.createElement('textarea', {
+        value: annotations[item.id] || '',
+        onChange: handleAnnotationChange,
+        placeholder: 'Explain this reasoning moment...',
+        style: {
+          width: '100%',
+          padding: '0.5rem',
+          border: '1px solid #ddd',
+          borderRadius: '4px',
+          fontSize: '0.9rem',
+          minHeight: '60px',
+          resize: 'vertical'
+        }
+      }),
+      React.createElement('div', {style: {display: 'flex', gap: '0.5rem', marginTop: '0.5rem'}},
+        React.createElement('button', {
+          onClick: saveAnnotation,
+          style: {
+            padding: '0.25rem 0.5rem',
+            backgroundColor: '#28a745',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer'
+          }
+        }, 'Save'),
+        React.createElement('button', {
+          onClick: () => cancelAnnotation(item),
+          style: {
+            padding: '0.25rem 0.5rem',
+            backgroundColor: '#6c757d',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer'
+          }
+        }, 'Cancel')
+      )
+    );
+  }, [annotations, updateAnnotation, saveAnnotation, cancelAnnotation]);
+
+  const createAnnotationDisplay = useCallback((item, hasAnnotation) => 
+    React.createElement('div', {style: {marginTop: '0.5rem', padding: '0.5rem', backgroundColor: '#fff3cd', border: '1px solid #ffeaa7', borderRadius: '4px'}},
+      React.createElement('div', {style: {fontWeight: 'bold', color: '#856404', marginBottom: '0.25rem'}}, 'Annotation:'),
+      React.createElement('div', {style: {fontSize: '0.9rem'}}, annotations[item.id]),
+      React.createElement('div', {style: {display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.5rem'}},
+        React.createElement('button', {
+          onClick: () => setEditingAnnotation(item.id),
+          style: {
+            padding: '0.25rem 0.5rem',
+            backgroundColor: '#17a2b8',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '0.8rem'
+          }
+        }, 'Edit'),
+        React.createElement('button', {
+          onClick: () => deleteAnnotation(item),
+          style: {
+            padding: '0.25rem 0.5rem',
+            backgroundColor: '#dc3545',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '0.8rem'
+          }
+        }, 'Delete')
+      )
+    ), [annotations, deleteAnnotation]);
+
+  const renderTraceItem = useCallback((item) => {
     const isExpanded = expandedTrace === item.id;
     const hasAnnotation = annotations[item.id];
     const isAnnotating = editingAnnotation === item.id;
     
-    // Function to highlight text based on search term
-    const highlightText = useCallback((text, searchTerm) => {
-      if (!searchTerm || !text) return text;
-      
-      const regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-      const parts = text.split(regex);
-      
-      return parts.map((part, i) => 
-        regex.test(part) 
-          ? React.createElement('span', { key: i, style: { backgroundColor: '#ffff00', fontWeight: 'bold' } }, part)
-          : part
-      );
-    }, [filterText]);
+    const contentElement = item.type === 'reasoningStep' 
+      ? createReasoningContentElement(item.data, filterText) 
+      : createTaskContentElement(item.data, filterText);
     
-    // Function to handle annotation changes
-    const handleAnnotationChange = (e) => {
-      setAnnotations(prev => ({
-        ...prev,
-        [item.id]: e.target.value
-      }));
-    };
-    
-    // Function to save annotation
-    const saveAnnotation = () => {
-      setEditingAnnotation(null);
-    };
-    
-    // Function to cancel annotation editing
-    const cancelAnnotation = () => {
-      setAnnotations(prev => ({
-        ...prev,
-        [item.id]: annotations[item.id] || '' // Revert to previous value
-      }));
-      setEditingAnnotation(null);
-    };
-    
-    // Function to delete annotation
-    const deleteAnnotation = () => {
-      setAnnotations(prev => {
-        const newAnnotations = {...prev};
-        delete newAnnotations[item.id];
-        return newAnnotations;
-      });
-    };
-    
-    let contentElement = null;
-    if (item.type === 'reasoningStep') {
-      const step = item.data;
-      contentElement = React.createElement('div', null,
-        step.step !== undefined && React.createElement('div', {style: {fontWeight: 'bold'}}, `Step ${step.step}`),
-        step.description && React.createElement('div', null, highlightText(step.description, filterText)),
-        step.result && React.createElement('div', {style: {fontWeight: '500', marginTop: '0.5rem'}}, 
-          `Result: ${highlightText(step.result, filterText)}`
-        ),
-        step.metadata && typeof step.metadata === 'object' && Object.keys(step.metadata).length > 0 && 
-                React.createElement('div', 
-                  {style: {fontSize: '0.8rem', marginTop: '0.5rem', color: '#666'}},
-                  React.createElement('div', {style: {fontWeight: 'bold'}}, 'Metadata:'),
-                  Object.entries(step.metadata).map(([key, value]) => 
-                    React.createElement('div', {key}, `${highlightText(key, filterText)}: ${JSON.stringify(value)}`)
-                  )
-                )
-      );
-    } else if (item.type === 'task') {
-      const task = item.data;
-      contentElement = React.createElement('div', null,
-        task.term && React.createElement('div', {style: {fontWeight: 'bold'}}, highlightText(task.term, filterText)),
-        task.type && React.createElement('div', {style: {fontSize: '0.8rem', color: '#666'}}, `Type: ${highlightText(task.type, filterText)}`),
-        task.truth && React.createElement('div', null, `Truth: ${highlightText(JSON.stringify(task.truth), filterText)}`),
-        task.budget && React.createElement('div', {style: {fontSize: '0.8rem'}}, 
-          `Priority: ${highlightText((task.budget.priority || 0).toFixed(3), filterText)}`
-        )
-      );
-    }
-    
-    // Annotation editor UI
-    const annotationEditor = isAnnotating 
-      ? React.createElement('div', {style: {marginTop: '0.5rem', padding: '0.5rem', backgroundColor: '#fff3cd', border: '1px solid #ffeaa7', borderRadius: '4px'}},
-          React.createElement('div', {style: {marginBottom: '0.5rem', fontWeight: 'bold', color: '#856404'}}, 'Add Annotation:'),
-          React.createElement('textarea', {
-            value: annotations[item.id] || '',
-            onChange: handleAnnotationChange,
-            placeholder: 'Explain this reasoning moment...',
-            style: {
-              width: '100%',
-              padding: '0.5rem',
-              border: '1px solid #ddd',
-              borderRadius: '4px',
-              fontSize: '0.9rem',
-              minHeight: '60px',
-              resize: 'vertical'
-            }
-          }),
-          React.createElement('div', {style: {display: 'flex', gap: '0.5rem', marginTop: '0.5rem'}},
-            React.createElement('button', {
-              onClick: saveAnnotation,
-              style: {
-                padding: '0.25rem 0.5rem',
-                backgroundColor: '#28a745',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }
-            }, 'Save'),
-            React.createElement('button', {
-              onClick: cancelAnnotation,
-              style: {
-                padding: '0.25rem 0.5rem',
-                backgroundColor: '#6c757d',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }
-            }, 'Cancel')
-          )
-        )
-      : null;
-    
-    // Display annotation if exists
-    const annotationDisplay = hasAnnotation && !isAnnotating
-      ? React.createElement('div', {style: {marginTop: '0.5rem', padding: '0.5rem', backgroundColor: '#fff3cd', border: '1px solid #ffeaa7', borderRadius: '4px'}},
-          React.createElement('div', {style: {fontWeight: 'bold', color: '#856404', marginBottom: '0.25rem'}}, 'Annotation:'),
-          React.createElement('div', {style: {fontSize: '0.9rem'}}, annotations[item.id]),
-          React.createElement('div', {style: {display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.5rem'}},
-            React.createElement('button', {
-              onClick: () => setEditingAnnotation(item.id),
-              style: {
-                padding: '0.25rem 0.5rem',
-                backgroundColor: '#17a2b8',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '0.8rem'
-              }
-            }, 'Edit'),
-            React.createElement('button', {
-              onClick: deleteAnnotation,
-              style: {
-                padding: '0.25rem 0.5rem',
-                backgroundColor: '#dc3545',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '0.8rem'
-              }
-            }, 'Delete')
-          )
-        )
-      : null;
+    const annotationEditor = isAnnotating ? createAnnotationEditor(item, hasAnnotation) : null;
+    const annotationDisplay = hasAnnotation && !isAnnotating ? createAnnotationDisplay(item, hasAnnotation) : null;
         
     return React.createElement('div',
       {
@@ -261,7 +248,7 @@ const ReasoningTracePanel = () => {
       isExpanded && annotationEditor,
       isExpanded && annotationDisplay
     );
-  }, [expandedTrace, filterText, highlightText, annotations, editingAnnotation]);
+  }, [expandedTrace, filterText, highlightText, annotations, editingAnnotation, createReasoningContentElement, createTaskContentElement, createAnnotationEditor, createAnnotationDisplay]);
 
   const items = useMemo(() => [
     { type: 'controls', filterType, setFilterType, filterText, setFilterText, exportFormat, setExportFormat, exportTraceData },
@@ -297,7 +284,7 @@ const ReasoningTracePanel = () => {
         }
       }, item.content);
     } else if (item.type === 'traceItem') {
-      return renderTraceItem(item.data, index);
+      return renderTraceItem(item.data);
     }
     return null;
   }, [renderTraceItem, renderControlBar]);

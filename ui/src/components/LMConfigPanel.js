@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import useUiStore from '../stores/uiStore.js';
-import { GenericInputField, GenericSelectField, Button, Card } from './GenericComponents.js';
+import { GenericInputField, Button, Card } from './GenericComponents.js';
 
-// Default configuration options for different LLM providers
 const DEFAULT_PROVIDER_CONFIGS = {
   openai: {
     name: 'OpenAI',
@@ -39,7 +38,6 @@ const LMConfigPanel = () => {
   const wsService = useUiStore(state => state.wsService);
   const lmTestResult = useUiStore(state => state.lmTestResult);
 
-  // Load saved configuration if available
   useEffect(() => {
     const savedConfig = localStorage.getItem('lmConfig');
     if (savedConfig) {
@@ -53,18 +51,15 @@ const LMConfigPanel = () => {
     }
   }, []);
 
-  // Update config when selected provider changes
   useEffect(() => {
     const defaultConfig = DEFAULT_PROVIDER_CONFIGS[selectedProvider] || DEFAULT_PROVIDER_CONFIGS.openai;
     setConfig(prev => ({ ...defaultConfig, provider: selectedProvider, ...prev }));
   }, [selectedProvider]);
 
-  // Handle test result from the store
   useEffect(() => {
     if (lmTestResult) {
       setTestResult(lmTestResult);
       setIsTesting(false);
-      // Clear the test result from store to avoid showing it again
       useUiStore.getState().setLMTestResult(null);
     }
   }, [lmTestResult]);
@@ -93,13 +88,9 @@ const LMConfigPanel = () => {
     setTestResult(null);
 
     try {
-      // Prepare configuration for testing
-      const testConfig = { ...config, provider: selectedProvider };
-      
-      // Send test configuration to the backend
       wsService.sendMessage({
         type: 'testLMConnection',
-        payload: testConfig
+        payload: { ...config, provider: selectedProvider }
       });
     } catch (error) {
       setIsTesting(false);
@@ -110,16 +101,11 @@ const LMConfigPanel = () => {
     }
   }, [wsService, config, selectedProvider]);
 
-  const handleProviderChange = useCallback((providerId) => {
-    setSelectedProvider(providerId);
-  }, []);
+  const handleProviderChange = useCallback((providerId) => setSelectedProvider(providerId), []);
 
-  const toggleSecretVisibility = useCallback(() => {
-    setShowSecrets(prev => !prev);
-  }, []);
+  const toggleSecretVisibility = useCallback(() => setShowSecrets(prev => !prev), []);
 
-  // Render provider selection buttons
-  const renderProviderSelector = () => React.createElement('div', { style: { marginBottom: '1.5rem' } },
+  const renderProviderSelector = useCallback(() => React.createElement('div', { style: { marginBottom: '1.5rem' } },
     React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '0.5rem' } },
       Object.keys(DEFAULT_PROVIDER_CONFIGS).map(providerId => 
         React.createElement('button', {
@@ -137,10 +123,9 @@ const LMConfigPanel = () => {
         }, DEFAULT_PROVIDER_CONFIGS[providerId].name)
       )
     )
-  );
+  ), [selectedProvider, handleProviderChange]);
 
-  // Render test result
-  const renderTestResult = () => {
+  const renderTestResult = useCallback(() => {
     if (!testResult) return null;
 
     const { success, message, model } = testResult;
@@ -165,10 +150,9 @@ const LMConfigPanel = () => {
         `Model: ${model}`
       )
     );
-  };
+  }, [testResult]);
 
-  // Render action buttons
-  const renderActionButtons = () => React.createElement('div', { 
+  const renderActionButtons = useCallback(() => React.createElement('div', { 
     style: { display: 'flex', gap: '0.5rem', marginTop: '1rem' } 
   },
     React.createElement(Button, {
@@ -187,7 +171,28 @@ const LMConfigPanel = () => {
       variant: showSecrets ? 'warning' : 'secondary',
       style: { flex: 1 }
     }, showSecrets ? 'Hide Secrets' : 'Show Secrets')
-  );
+  ), [saveConfig, testConnection, isTesting, toggleSecretVisibility, showSecrets]);
+
+  const renderInstructionCard = useCallback(() => 
+    React.createElement(Card, {
+      style: { 
+        marginTop: '1.5rem',
+        padding: '1rem', 
+        backgroundColor: '#f8f9fa', 
+        borderRadius: '4px',
+        border: '1px solid #e9ecef',
+        fontSize: '0.85rem'
+      } 
+    },
+      React.createElement('ul', { style: { margin: '0.5rem 0', paddingLeft: '1.2rem' } },
+        React.createElement('li', null, 'Select your preferred language model provider from the options above'),
+        React.createElement('li', null, 'Enter your API key and other configuration details'),
+        React.createElement('li', null, 'Click "Test Connection" to verify the configuration works'),
+        React.createElement('li', null, 'Click "Save Configuration" to store settings in local storage'),
+        React.createElement('li', null, 'Use "Show Secrets" to view sensitive information like API keys')
+      )
+    )
+  , []);
 
   return React.createElement('div', {
     style: {
@@ -257,25 +262,7 @@ const LMConfigPanel = () => {
     
     renderActionButtons(),
     
-    React.createElement(Card, {
-      title: 'Instructions',
-      style: { 
-        marginTop: '1.5rem',
-        padding: '1rem', 
-        backgroundColor: '#f8f9fa', 
-        borderRadius: '4px',
-        border: '1px solid #e9ecef',
-        fontSize: '0.85rem'
-      } 
-    },
-      React.createElement('ul', { style: { margin: '0.5rem 0', paddingLeft: '1.2rem' } },
-        React.createElement('li', null, 'Select your preferred language model provider from the options above'),
-        React.createElement('li', null, 'Enter your API key and other configuration details'),
-        React.createElement('li', null, 'Click "Test Connection" to verify the configuration works'),
-        React.createElement('li', null, 'Click "Save Configuration" to store settings in local storage'),
-        React.createElement('li', null, 'Use "Show Secrets" to view sensitive information like API keys')
-      )
-    )
+    renderInstructionCard()
   );
 };
 
