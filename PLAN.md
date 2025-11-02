@@ -1572,3 +1572,85 @@ The actionable solutions outlined above significantly strengthen the visionary a
 - **Data-Driven Self-Improvement**: Performance metrics and optimization (Phase 8.x) ensure quality improves through use
 - **Production-Ready Intelligence**: The step-by-step implementation plan makes the compound intelligence vision achievable
 
+
+## Core Architecture Design Solutions
+
+### Concept and Memory Architecture Improvements
+- **Phase 2.23**: Enhance Concept class with proper quality assessment mechanisms as specified in design
+- **Phase 2.24**: Improve task priority calculation and storage mechanisms to better align with NARS principles
+- **Phase 2.25**: Implement proper activation spreading between related concepts
+- **Phase 2.26**: Add sophisticated forgetting mechanisms that better preserve important knowledge
+
+### Bag Data Structure Optimizations
+- **Phase 2.27**: Optimize the Bag data structure for priority-based task selection
+- **Phase 2.28**: Implement probabilistic selection based on priority weights instead of strict priority
+- **Phase 2.29**: Add capacity management with proper decay mechanisms for Bag structures
+
+### Parser Architecture Refinements
+- **Phase 4.7**: Implement comprehensive NAL operator support including all specified operators
+- **Phase 4.8**: Enhance error recovery mechanisms to handle malformed Narsese gracefully
+- **Phase 4.9**: Add validation for truth value ranges [0,1] as specified in the design
+- **Phase 4.10**: Implement proper precedence handling for nested compound terms
+
+### Task and Truth Value Processing
+- **Phase 2.30**: Enhance Task class with proper truth value operations as specified in design
+- **Phase 2.31**: Implement complete truth value calculations (revision, expectation, etc.)
+- **Phase 2.32**: Improve Task derivation history tracking as specified in design
+- **Phase 2.33**: Add proper priority management based on truth values and task types
+
+### Rule Engine Architecture
+- **Phase 3.12**: Implement proper pattern matching for NAL rules with correct NARS semantics
+- **Phase 3.13**: Add truth value propagation through inference chains
+- **Phase 3.14**: Implement dynamic rule selection based on task characteristics
+- **Phase 3.15**: Add context building for rule application with related concepts
+
+### Configuration and Extensibility
+- **Phase 8.12**: Implement proper validation for SystemConfig parameters
+- **Phase 8.13**: Add plugin architecture for dynamic rule loading
+- **Phase 8.14**: Create extension points for custom component registration
+- **Phase 8.15**: Add event hook system for custom processing during reasoning cycles
+
+## Deferring Performance Work to End Phases
+
+The following performance- and optimization-related items are deferred to later phases to avoid premature optimization:
+
+### Performance Optimization Phases
+- **Phase 8.5 (Original performance phase)**: Performance profiling and benchmarking based on completed implementation
+- **Phase 8.16**: Cycle execution time optimization after all functionality is implemented
+- **Phase 8.17**: Memory usage optimization after all memory operations are complete
+- **Phase 8.18**: TermFactory cache performance tuning after normalization is complete
+- **Phase 8.19**: Rule application performance optimization after all rules are implemented
+- **Phase 8.20**: Event system optimization after all event hooks are in place
+
+### Scalability Optimizations
+- **Phase 8.21**: Multi-threading and concurrency optimizations
+- **Phase 8.22**: Large-scale knowledge base optimizations
+- **Phase 8.23**: Distributed reasoning capabilities
+
+## Analysis: How Design Solutions Strengthen the Vision
+
+The comprehensive design solutions outlined above systematically strengthen the visionary aspects in README.md:
+
+### Core Data Structure Foundation
+- **Enhanced Term Self-Analysis**: Phases 2.13-2.16 ensure proper structural intelligence with robust normalization
+- **Improved Task Self-Optimization**: Phases 2.23-2.33 ensure tasks carry proper information for optimization
+- **Complete Truth Self-Validation**: Phases 2.30-2.31, 3.13 implement full truth value operations
+- **Enhanced Stamp Self-Evidence**: Phase 2.32 ensures proper derivation tracking
+
+### Architecture and Design Principles
+- **Simplicity**: Phases 4.7-4.10 implement proper parser architecture without over-engineering
+- **Robustness**: Phases 2.25-2.26, 4.8 ensure stable, predictable operation
+- **Consistency**: Phases 8.12-8.15 ensure consistent API design and component interfaces
+- **Extensibility**: Phases 8.13-8.15 provide proper extension points as specified in design
+
+### Compound Intelligence Implementation
+- **Structural Intelligence**: Phases 2.13-2.16, 2.27-2.29 ensure intelligence emerges from data structures
+- **Self-Leveraging Algorithms**: Phases 3.14-3.15 implement algorithms that improve through use
+- **Data-Driven Self-Improvement**: Phases 7.12-7.14 enable optimization from data patterns
+- **Resource Multiplication**: Phases 2.17-2.19 ensure resources become more valuable through use
+
+### Vision Realization
+- **Autopoietic Reasoning**: Phases 5.2-5.3, 5.6-5.8 implement self-generating reasoning improvements
+- **Observable Hybrid Intelligence**: The solutions ensure the NARS-LM integration remains visible and understandable
+- **Infinite Intelligence Growth**: The systematic approach enables recursive self-improvement
+
