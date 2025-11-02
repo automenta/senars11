@@ -3,13 +3,8 @@ import { format } from 'date-fns';
 import useUiStore from '../stores/uiStore.js';
 import { themeUtils } from '../utils/themeUtils.js';
 
-/**
- * Generic status badge component
- * @param {string} status - Status type (success, warning, error, info, etc.)
- * @param {string} label - Display label for the status
- * @param {Object} props - Additional props
- */
-const StatusBadge = memo(({ status, label, ...props }) => {
+// Status badge configuration using centralized theme
+const getStatusConfig = (status) => {
   const statusConfig = {
     success: { color: themeUtils.get('COLORS.SUCCESS'), bg: themeUtils.get('COLORS.SUCCESS') + '20' },
     warning: { color: themeUtils.get('COLORS.WARNING'), bg: themeUtils.get('COLORS.WARNING') + '20' },
@@ -18,7 +13,17 @@ const StatusBadge = memo(({ status, label, ...props }) => {
     default: { color: themeUtils.get('COLORS.SECONDARY'), bg: themeUtils.get('COLORS.GRAY_200') }
   };
   
-  const { color, bg } = statusConfig[status] || statusConfig.default;
+  return statusConfig[status] || statusConfig.default;
+};
+
+/**
+ * Generic status badge component
+ * @param {string} status - Status type (success, warning, error, info, etc.)
+ * @param {string} label - Display label for the status
+ * @param {Object} props - Additional props
+ */
+const StatusBadge = memo(({ status, label, ...props }) => {
+  const { color, bg } = getStatusConfig(status);
   
   return React.createElement('span', {
     style: {
@@ -342,6 +347,21 @@ const ToggleSwitch = ({ checked, onChange, label }) => {
   );
 };
 
+// Button variant styling configuration
+const getButtonVariantStyle = (variant) => {
+  const variantStyles = {
+    primary: { backgroundColor: '#007bff', color: 'white' },
+    secondary: { backgroundColor: '#6c757d', color: 'white' },
+    success: { backgroundColor: '#28a745', color: 'white' },
+    warning: { backgroundColor: '#ffc107', color: '#212529' },
+    danger: { backgroundColor: '#dc3545', color: 'white' },
+    light: { backgroundColor: '#f8f9fa', color: '#212529', border: '1px solid #ced4da' },
+    dark: { backgroundColor: '#343a40', color: 'white' }
+  };
+
+  return variantStyles[variant] || variantStyles.primary;
+};
+
 // Generic Button component
 const Button = ({ children, onClick, variant = 'primary', style = {}, disabled = false }) => {
   const baseStyle = {
@@ -354,20 +374,10 @@ const Button = ({ children, onClick, variant = 'primary', style = {}, disabled =
     fontWeight: 'normal'
   };
 
-  const variantStyles = {
-    primary: { backgroundColor: '#007bff', color: 'white' },
-    secondary: { backgroundColor: '#6c757d', color: 'white' },
-    success: { backgroundColor: '#28a745', color: 'white' },
-    warning: { backgroundColor: '#ffc107', color: '#212529' },
-    danger: { backgroundColor: '#dc3545', color: 'white' },
-    light: { backgroundColor: '#f8f9fa', color: '#212529', border: '1px solid #ced4da' },
-    dark: { backgroundColor: '#343a40', color: 'white' }
-  };
-
   return React.createElement('button', {
     style: {
       ...baseStyle,
-      ...variantStyles[variant],
+      ...getButtonVariantStyle(variant),
       ...style
     },
     onClick,

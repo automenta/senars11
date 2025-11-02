@@ -5,34 +5,26 @@
 
 import { validateMessage } from '../schemas/messages.js';
 
-/**
- * Message processor class that handles the pipeline of message processing
- */
+// Message processor class that handles the pipeline of message processing
 class MessageProcessor {
   constructor() {
     this.middleware = [];
     this.errorHandlers = [];
   }
 
-  /**
-   * Add middleware to the processing pipeline
-   */
+  // Add middleware to the processing pipeline
   use(middlewareFn) {
     this.middleware.push(middlewareFn);
     return this;
   }
 
-  /**
-   * Add error handler to the pipeline
-   */
+  // Add error handler to the pipeline
   onError(errorHandler) {
     this.errorHandlers.push(errorHandler);
     return this;
   }
 
-  /**
-   * Process a message through the pipeline
-   */
+  // Process a message through the pipeline
   async process(message, context = {}) {
     // Validate message
     const validatedMessage = validateMessage(message);
@@ -73,18 +65,12 @@ class MessageProcessor {
   }
 }
 
-/**
- * Create a message processor instance
- */
+// Create a message processor instance
 const createMessageProcessor = () => new MessageProcessor();
 
-/**
- * Common message processing utilities
- */
+// Common message processing utilities
 const messageProcessorUtils = {
-  /**
-   * Create a validation middleware
-   */
+  // Create a validation middleware
   createValidationMiddleware: (validator = validateMessage) => (message, context) => {
     const validated = validator(message);
     if (!validated) {
@@ -93,9 +79,7 @@ const messageProcessorUtils = {
     return validated;
   },
 
-  /**
-   * Create a logging middleware
-   */
+  // Create a logging middleware
   createLoggingMiddleware: (logger = console.log) => (message, context) => {
     logger(`Processing message: ${message.type}`, {
       timestamp: Date.now(),
@@ -104,16 +88,12 @@ const messageProcessorUtils = {
     return message;
   },
 
-  /**
-   * Create a transformation middleware
-   */
+  // Create a transformation middleware
   createTransformMiddleware: (transformer) => (message, context) => {
     return transformer(message, context);
   },
 
-  /**
-   * Create a rate limiting middleware
-   */
+  // Create a rate limiting middleware
   createRateLimitMiddleware: (maxPerInterval = 100, intervalMs = 1000) => {
     const messageCounts = new Map();
     
@@ -140,9 +120,7 @@ const messageProcessorUtils = {
     };
   },
 
-  /**
-   * Create a duplicate detection middleware
-   */
+  // Create a duplicate detection middleware
   createDuplicateDetectionMiddleware: (windowMs = 5000) => {
     const seenMessages = new Map();
     
@@ -172,22 +150,20 @@ const messageProcessorUtils = {
   }
 };
 
-/**
- * Message routing utilities
- */
+// Message routing utilities with centralized route management
 const messageRouter = {
-  /**
-   * Create a message router that maps types to handlers
-   */
+  // Create a message router that maps types to handlers
   createRouter: (routes = {}) => {
-    return {
+    const router = {
       routes,
+      
       addRoute: (type, handler) => {
-        routes[type] = handler;
-        return this;
+        router.routes[type] = handler;
+        return router;
       },
+      
       handle: (message, context) => {
-        const handler = routes[message.type];
+        const handler = router.routes[message.type];
         if (handler) {
           return handler(message, context);
         } else {
@@ -196,6 +172,8 @@ const messageRouter = {
         }
       }
     };
+    
+    return router;
   }
 };
 
