@@ -5,7 +5,11 @@ const DEFAULT_OPTIONS = Object.freeze({
     port: 8080,
     host: 'localhost',
     path: '/ws',
-    maxConnections: 10
+    maxConnections: 50, // Increased default for better scalability
+    minBroadcastInterval: 1, // Reduced for better real-time experience
+    messageBufferSize: 10000, // Max size for message buffer
+    rateLimitWindowMs: 1000, // 1 second window for rate limiting
+    maxMessagesPerWindow: 1000 // Max messages per window per client
 });
 
 const NAR_EVENTS = Object.freeze([
@@ -19,7 +23,10 @@ const NAR_EVENTS = Object.freeze([
     'system.started',
     'system.stopped',
     'system.reset',
-    'system.loaded'
+    'system.loaded',
+    'reasoning.step', // Added for better reasoning trace
+    'concept.created', // Added for concept awareness
+    'task.completed'  // Added for better task tracking
 ]);
 
 class WebSocketMonitor {
@@ -33,7 +40,7 @@ class WebSocketMonitor {
         this.eventEmitter = new EventEmitter();
         this.server = null;
         
-        // Performance and scalability metrics for Phase 5+
+        // Performance and scalability metrics for Phase 5+  
         this.metrics = {
             startTime: Date.now(),
             messagesSent: 0,
@@ -41,14 +48,27 @@ class WebSocketMonitor {
             errorCount: 0,
             clientConnectionCount: 0,
             clientDisconnectionCount: 0,
-            broadcastPerformance: []
+            broadcastPerformance: [],
+            clientMessageCounts: new Map(), // Track per-client message rates
+            lastWindowReset: Date.now()
         };
         
         // Rate limiting to prevent flooding
         this.broadcastRateLimiter = {
             lastBroadcastTime: new Map(), // type -> timestamp
-            minInterval: options.minBroadcastInterval || 10 // milliseconds between broadcasts of same type
+            minInterval: options.minBroadcastInterval || DEFAULT_OPTIONS.minBroadcastInterval
         };
+        
+        // Per-client rate limiting for security
+        this.clientRateLimiters = new Map(); // clientId -> {messageCount, lastReset}
+        this.rateLimitWindowMs = options.rateLimitWindowMs || DEFAULT_OPTIONS.rateLimitWindowMs;
+        this.maxMessagesPerWindow = options.maxMessagesPerWindow || DEFAULT_OPTIONS.maxMessagesPerWindow;
+        
+        // Message processing optimization
+        this.messageBufferSize = options.messageBufferSize || DEFAULT_OPTIONS.messageBufferSize;
+        
+        // Client capability tracking for security
+        this.clientCapabilities = new Map(); // clientId -> capabilities
     }
 
     async start() {
@@ -56,7 +76,8 @@ class WebSocketMonitor {
             this.server = new WebSocketServer({
                 port: this.port,
                 host: this.host,
-                path: this.path
+                path: this.path,
+                maxPayload: 1024 * 1024 // 1MB max payload
             });
 
             this.server.on('connection', (ws, request) => {
@@ -71,21 +92,42 @@ class WebSocketMonitor {
                 const clientId = this._generateClientId();
                 ws.clientId = clientId;
 
+                // Initialize rate limiter for this client
+                this.clientRateLimiters.set(clientId, {
+                    messageCount: 0,
+                    lastReset: Date.now()
+                });
+
                 this._sendToClient(ws, {
                     type: 'connection',
                     data: {
                         clientId,
                         timestamp: Date.now(),
-                        message: 'Connected to SeNARS monitoring server'
+                        message: 'Connected to SeNARS monitoring server',
+                        serverVersion: '10.0.0',
+                        capabilities: ['narseseInput', 'testLMConnection', 'subscribe', 'unsubscribe']
                     }
                 });
 
                 ws.on('message', (data) => {
-                    this.metrics.messagesReceived++;
-                    this._handleClientMessage(ws, data);
+                    // Check rate limiting for this client
+                    if (!this._isClientRateLimited(clientId)) {
+                        this.metrics.messagesReceived++;
+                        this._handleClientMessage(ws, data);
+                    } else {
+                        console.warn(`Rate limit exceeded for client: ${clientId}`);
+                        this._sendToClient(ws, {
+                            type: 'error',
+                            message: 'Rate limit exceeded',
+                            code: 429
+                        });
+                    }
                 });
+                
                 ws.on('close', () => {
                     this.clients.delete(ws);
+                    this.clientRateLimiters.delete(clientId);
+                    this.clientCapabilities.delete(clientId);
                     this.metrics.clientDisconnectionCount++;
                     this.eventEmitter.emit('clientDisconnected', {clientId, timestamp: Date.now()});
                 });
@@ -100,9 +142,30 @@ class WebSocketMonitor {
 
             this.server.on('listening', () => {
                 console.log(`WebSocket monitoring server started on ws://${this.host}:${this.port}${this.path}`);
+                console.log(`Max connections: ${this.maxConnections}, Rate limit: ${this.maxMessagesPerWindow}/${this.rateLimitWindowMs}ms`);
                 resolve();
             });
         });
+    }
+
+    // Check if client has exceeded rate limit
+    _isClientRateLimited(clientId) {
+        const now = Date.now();
+        const clientLimiter = this.clientRateLimiters.get(clientId);
+        
+        if (!clientLimiter) {
+            return false; // Shouldn't happen, but be safe
+        }
+        
+        // Reset counter if window has passed
+        if (now - clientLimiter.lastReset > this.rateLimitWindowMs) {
+            clientLimiter.messageCount = 0;
+            clientLimiter.lastReset = now;
+        }
+        
+        // Increment count and check limit
+        clientLimiter.messageCount++;
+        return clientLimiter.messageCount > this.maxMessagesPerWindow;
     }
 
     async stop() {
@@ -112,6 +175,8 @@ class WebSocketMonitor {
             }
 
             this.clients.clear();
+            this.clientRateLimiters.clear();
+            this.clientCapabilities.clear();
 
             if (this.server) {
                 this.server.close(() => {
@@ -155,16 +220,25 @@ class WebSocketMonitor {
             const jsonMessage = JSON.stringify(message);
             let sentCount = 0;
 
+            // Send to each client in a way that doesn't block other clients if one fails
             for (const client of this.clients) {
                 if (client.readyState === client.OPEN) {
                     try {
-                        client.send(jsonMessage);
-                        sentCount++;
+                        client.send(jsonMessage, { binary: false, compress: true }, (error) => {
+                            if (error) {
+                                console.error('Error sending to client:', error);
+                                // Remove problematic client
+                                this.clients.delete(client);
+                                try { client.close(1011, 'Sending error'); } catch(e) {}
+                            } else {
+                                sentCount++;
+                            }
+                        });
                     } catch (sendError) {
                         console.error('Error sending to client:', sendError);
                         // Remove problematic client
                         this.clients.delete(client);
-                        client.close(1011, 'Sending error');
+                        try { client.close(1011, 'Sending error'); } catch(e) {}
                     }
                 }
             }
@@ -187,20 +261,27 @@ class WebSocketMonitor {
         }
     }
 
-
-
     _handleSubscribe(client, message) {
+        // Store client subscription preferences
+        if (!client.subscriptions) client.subscriptions = new Set();
+        const eventTypes = message.eventTypes || ['all'];
+        eventTypes.forEach(type => client.subscriptions.add(type));
+        
         this._sendToClient(client, {
             type: 'subscription_ack',
-            subscribedTo: message.eventTypes || 'all',
+            subscribedTo: Array.from(client.subscriptions),
             timestamp: Date.now()
         });
     }
 
     _handleUnsubscribe(client, message) {
+        if (!client.subscriptions) client.subscriptions = new Set();
+        const eventTypes = message.eventTypes || ['all'];
+        eventTypes.forEach(type => client.subscriptions.delete(type));
+        
         this._sendToClient(client, {
             type: 'unsubscription_ack',
-            unsubscribedFrom: message.eventTypes || 'all',
+            unsubscribedFrom: eventTypes,
             timestamp: Date.now()
         });
     }
@@ -223,7 +304,8 @@ class WebSocketMonitor {
                 messagesReceived: this.metrics.messagesReceived,
                 errorCount: this.metrics.errorCount,
                 clientConnectionCount: this.metrics.clientConnectionCount,
-                clientDisconnectionCount: this.metrics.clientDisconnectionCount
+                clientDisconnectionCount: this.metrics.clientDisconnectionCount,
+                currentClientCount: this.clients.size
             }
         };
     }
@@ -239,7 +321,8 @@ class WebSocketMonitor {
             messagesPerSecond: uptime > 0 ? (stats.metrics.messagesSent / (uptime / 1000)).toFixed(2) : 0,
             connectionRate: uptime > 0 ? (stats.metrics.clientConnectionCount / (uptime / 1000)).toFixed(4) : 0,
             errorRate: stats.metrics.messagesSent > 0 ? 
-                ((stats.metrics.errorCount / stats.metrics.messagesSent) * 100).toFixed(4) : 0
+                ((stats.metrics.errorCount / stats.metrics.messagesSent) * 100).toFixed(4) : 0,
+            connectionUtilization: (this.clients.size / this.maxConnections * 100).toFixed(2) + '%'
         };
     }
 
@@ -247,7 +330,9 @@ class WebSocketMonitor {
         return Array.from(this.clients).map(client => ({
             id: client.clientId,
             readyState: client.readyState,
-            remoteAddress: client._socket?.remoteAddress
+            remoteAddress: client._socket?.remoteAddress,
+            subscriptions: Array.from(client.subscriptions || []),
+            messageRate: this.clientRateLimiters.get(client.clientId)?.messageCount || 0
         }));
     }
 
@@ -258,6 +343,7 @@ class WebSocketMonitor {
 
         NAR_EVENTS.forEach(eventName => {
             nar.on(eventName, (data, metadata) => {
+                // Apply subscription filtering for this specific client if needed
                 this.broadcastEvent(eventName, {
                     data,
                     metadata: metadata || {},
@@ -308,15 +394,25 @@ class WebSocketMonitor {
             let sentCount = 0;
 
             for (const client of this.clients) {
-                if (client.readyState === client.OPEN) {
+                // Apply subscription filtering
+                if (client.readyState === client.OPEN && 
+                    (!client.subscriptions || client.subscriptions.has('all') || client.subscriptions.has(eventType))) {
                     try {
-                        client.send(jsonMessage);
-                        sentCount++;
+                        client.send(jsonMessage, { binary: false, compress: true }, (error) => {
+                            if (error) {
+                                console.error('Error sending custom event to client:', error);
+                                // Remove problematic client
+                                this.clients.delete(client);
+                                try { client.close(1011, 'Sending error'); } catch(e) {}
+                            } else {
+                                sentCount++;
+                            }
+                        });
                     } catch (sendError) {
                         console.error('Error sending custom event to client:', sendError);
                         // Remove problematic client
                         this.clients.delete(client);
-                        client.close(1011, 'Sending error');
+                        try { client.close(1011, 'Sending error'); } catch(e) {}
                     }
                 }
             }
@@ -351,6 +447,13 @@ class WebSocketMonitor {
                 return;
             }
 
+            // Update client message count for rate limiting
+            const clientId = client.clientId;
+            const clientLimiter = this.clientRateLimiters.get(clientId);
+            if (clientLimiter) {
+                clientLimiter.messageCount = (clientLimiter.messageCount || 0) + 1;
+            }
+
             switch (message.type) {
                 case 'subscribe':
                     this._handleSubscribe(client, message);
@@ -369,6 +472,9 @@ class WebSocketMonitor {
                     break;
                 case 'log':
                     this._handleClientLog(client, message);
+                    break;
+                case 'requestCapabilities':
+                    this._handleRequestCapabilities(client, message);
                     break;
                 default:
                     // Check if this is a custom client message type
@@ -422,6 +528,26 @@ class WebSocketMonitor {
                 });
             }
         }
+    }
+    
+    // Handler for requesting client capabilities
+    _handleRequestCapabilities(client, message) {
+        const clientId = client.clientId;
+        const capabilities = this.clientCapabilities.get(clientId) || [];
+        
+        this._sendToClient(client, {
+            type: 'capabilities',
+            data: {
+                clientId,
+                capabilities,
+                serverVersion: '10.0.0',
+                supportedMessageTypes: [
+                    'narseseInput', 'testLMConnection', 'subscribe', 'unsubscribe', 
+                    'ping', 'log', 'requestCapabilities'
+                ]
+            },
+            timestamp: Date.now()
+        });
     }
     
     // Handler for narsese input messages

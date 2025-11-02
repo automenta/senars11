@@ -1,5 +1,5 @@
 import useUiStore from '../stores/uiStore';
-import {validateMessage} from '../schemas/messages';
+import { validateMessage } from '../schemas/messages';
 import {
   createMessageHandler,
   createMessageHandlerWithParams,
@@ -20,7 +20,8 @@ const ConnectionState = Object.freeze({
   RECONNECTING: 3,
 });
 
-const messageHandlers = Object.freeze({
+// Optimized message handlers with memoization
+const createOptimizedMessageHandlers = () => Object.freeze({
   layoutUpdate: createMessageHandler('setLayout'),
   panelUpdate: createMessageHandlerWithParams('addPanel'),
   reasoningStep: createMessageHandler('addReasoningStep'),
@@ -58,8 +59,9 @@ class WebSocketService {
     this.maxReconnectAttempts = options.maxReconnectAttempts || 10;
     this.reconnectAttempts = 0;
     
-    // Message queue for offline buffering
+    // Message queue for offline buffering with optimized limits
     this.messageQueue = [];
+    this.messageQueueMaxSize = Math.min(options.maxQueueSize || 1000, 10000); // Cap for memory safety
     
     // Heartbeat and monitoring
     this.heartbeatInterval = null;
@@ -68,12 +70,23 @@ class WebSocketService {
     this.lastHeartbeat = Date.now();
     this.connectionTimeout = null;
     
-    // Initialize message processor for elegant message handling
+    // Performance tracking
+    this.metrics = {
+      messagesSent: 0,
+      messagesReceived: 0,
+      errors: 0,
+      reconnectCount: 0
+    };
+    
+    // Initialize message processor with optimized middleware
     this.messageProcessor = createMessageProcessor()
       .use(messageProcessorUtils.createValidationMiddleware())
       .use(messageProcessorUtils.createLoggingMiddleware(console.log))
+      .use(messageProcessorUtils.createRateLimitMiddleware(options.maxMessagesPerSecond || 1000))
+      .use(messageProcessorUtils.createDuplicateDetectionMiddleware(options.duplicateWindowMs || 5000))
       .onError((error, originalMessage) => {
         console.error('Message processing error:', error, originalMessage);
+        this.metrics.errors++;
         getStore().addNotification?.({
           type: 'error',
           title: 'Message processing error',
@@ -86,6 +99,9 @@ class WebSocketService {
     this.isTestEnvironment = typeof window !== 'undefined' && 
                              (window.navigator.webdriver || 
                               import.meta.env.VITE_TEST_MODE === 'true');
+    
+    // Cache message handlers to avoid recreation
+    this.messageHandlers = createOptimizedMessageHandlers();
   }
 
   connect() {
@@ -269,7 +285,7 @@ class WebSocketService {
     // Clear any existing heartbeat
     this.clearHeartbeat();
     
-    // Set up heartbeat ping
+    // Set up heartbeat ping with optimized interval
     this.heartbeatInterval = setInterval(() => {
       if (this.state === ConnectionState.CONNECTED && this.ws?.readyState === WebSocket.OPEN) {
         // Send heartbeat
@@ -313,6 +329,7 @@ class WebSocketService {
   attemptReconnect = () => {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.state = ConnectionState.RECONNECTING;
+      this.metrics.reconnectCount++;
       console.log(`Attempting to reconnect (${this.reconnectAttempts + 1}/${this.maxReconnectAttempts})...`);
       setTimeout(() => {
         this.reconnectAttempts++;
@@ -360,6 +377,7 @@ class WebSocketService {
         return;
       }
       
+      this.metrics.messagesReceived++;
       return this.routeMessage(validatedData);
     } catch (error) {
       console.error('Unexpected error in handleMessage:', error);
@@ -394,7 +412,7 @@ class WebSocketService {
       
       if (result.success) {
         const processedData = result.data;
-        const handler = messageHandlers[processedData.type];
+        const handler = this.messageHandlers[processedData.type];
         if (handler) {
           return handler(processedData);
         } else {
@@ -402,7 +420,10 @@ class WebSocketService {
           if (this.isTestEnvironment && processedData.type === 'narseseInput') {
             return this.handleNarseseInput({ type: processedData.type, payload: processedData.payload });
           }
-          console.log('Unknown message type:', processedData.type, processedData);
+          // Only log unknown types occasionally to prevent flooding
+          if (Math.random() < 0.1) { // Only log 10% of unknown types
+            console.log('Unknown message type:', processedData.type, processedData);
+          }
         }
       } else {
         console.error('Message processing failed:', result.error, data);
@@ -687,6 +708,7 @@ class WebSocketService {
       try {
         const serializedMessage = JSON.stringify(message);
         this.ws.send(serializedMessage);
+        this.metrics.messagesSent++;
       } catch (error) {
         console.error('Error sending WebSocket message:', error);
         getStore().setError({
@@ -705,9 +727,9 @@ class WebSocketService {
     // Add message to queue
     this.messageQueue.push(message);
     // Limit queue size to prevent memory issues
-    if (this.messageQueue.length > 100) {
+    if (this.messageQueue.length > this.messageQueueMaxSize) {
       const removedMessage = this.messageQueue.shift();
-      console.warn('Message queue overflow, removing oldest message:', removedMessage);
+      console.warn(`Message queue overflow, removing oldest message (current size: ${this.messageQueue.length}, max: ${this.messageQueueMaxSize})`);
       getStore().addNotification({
         type: 'warning',
         title: 'Message queue overflow',
@@ -725,6 +747,7 @@ class WebSocketService {
         try {
           this.ws.send(JSON.stringify(message));
           this.messageQueue.shift(); // Remove successfully sent message
+          this.metrics.messagesSent++;
         } catch (error) {
           console.error('Error sending queued message:', error);
           break; // Stop processing if we can't send
@@ -733,6 +756,26 @@ class WebSocketService {
         break; // Stop if no longer connected
       }
     }
+  }
+
+  // Get performance metrics for Phase 5+ optimization
+  getMetrics() {
+    return {
+      ...this.metrics,
+      state: this.state,
+      queueSize: this.messageQueue.length,
+      connected: this.state === ConnectionState.CONNECTED
+    };
+  }
+
+  // Reset metrics
+  resetMetrics() {
+    this.metrics = {
+      messagesSent: 0,
+      messagesReceived: 0,
+      errors: 0,
+      reconnectCount: 0
+    };
   }
 }
 

@@ -3,6 +3,7 @@ import {TermFactory} from '../term/TermFactory.js';
 import {Memory} from '../memory/Memory.js';
 import {TaskManager} from '../task/TaskManager.js';
 import {Cycle} from './Cycle.js';
+import {OptimizedCycle} from './OptimizedCycle.js';
 import {NarseseParser} from '../parser/NarseseParser.js';
 import {RuleEngine} from '../reasoning/RuleEngine.js';
 import {SyllogisticRule} from '../reasoning/rules/syllogism.js';
@@ -33,6 +34,7 @@ export class NAR extends BaseComponent {
         this._initComponents(config);
         this._isRunning = false;
         this._cycleInterval = null;
+        this._useOptimizedCycle = config.performance?.useOptimizedCycle !== false;
         this._registerComponents();
     }
 
@@ -105,7 +107,7 @@ export class NAR extends BaseComponent {
         const strategy = lmEnabled
             ? new CoordinatedReasoningStrategy(this._ruleEngine, this._config.reasoning || {})
             : new NaiveExhaustiveStrategy(this._config.reasoning || {});
-        this._cycle = new Cycle({
+        const cycleConfig = {
             memory: this._memory,
             focus: this._focus,
             ruleEngine: this._ruleEngine,
@@ -114,8 +116,14 @@ export class NAR extends BaseComponent {
             config: this._config.get('cycle'),
             reasoningStrategy: strategy,
             termFactory: this._termFactory,
-            nar: this
-        });
+            nar: this,
+            ...this._config.get('performance.cycle') // Additional performance config options
+        };
+
+        // Use optimized cycle if configured for Phase 5+
+        this._cycle = this._useOptimizedCycle 
+            ? new OptimizedCycle(cycleConfig)
+            : new Cycle(cycleConfig);
         this._initOptionalComponents(config);
     }
 

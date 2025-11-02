@@ -1,81 +1,11 @@
 import {create} from 'zustand';
+import {
+  createCollectionManager,
+  createObjectManager,
+  batchUpdate
+} from '../utils/CollectionManager.js';
 
-// Centralized helper functions to reduce duplication
-const findItemIndex = (list, item, idField = 'id') => 
-  list?.findIndex?.(i => i?.[idField] === item?.[idField]) ?? -1;
-
-// Generic collection management utilities
-const createCollectionManager = (collectionName) => ({
-  add: (item, idField = 'id') => (state) => {
-    const currentList = state[collectionName] || [];
-    const existingIndex = findItemIndex(currentList, item, idField);
-    
-    return existingIndex !== -1
-      ? {[collectionName]: currentList.map((cur, idx) => idx === existingIndex ? { ...cur, ...item } : cur)}
-      : {[collectionName]: [...currentList, item]};
-  },
-  
-  update: (key, keyField, updates) => (state) => {
-    const currentList = state[collectionName];
-    if (!currentList) return {[collectionName]: currentList};
-    
-    const index = currentList?.findIndex?.(item => item?.[keyField] === key);
-    return index === -1 
-      ? {[collectionName]: currentList} 
-      : {[collectionName]: currentList.map((cur, idx) => idx === index ? { ...cur, ...updates } : cur)};
-  },
-  
-  remove: (key, keyField) => (state) => {
-    const currentList = state[collectionName];
-    if (!currentList) return {[collectionName]: currentList};
-    
-    const indexToRemove = currentList?.findIndex?.(item => item?.[keyField] === key);
-    return indexToRemove === -1 
-      ? {[collectionName]: currentList} 
-      : {[collectionName]: currentList.filter((_, idx) => idx !== indexToRemove)};
-  },
-  
-  clear: () => ({[collectionName]: []}),
-  
-  addLimited: (item, limit, idField = 'id') => (state) => ({
-    [collectionName]: [...(state[collectionName] || []), item].slice(-limit)
-  })
-});
-
-// Specialized utilities for object-based state (like demo states, metrics, etc.)
-const createObjectManager = (objectName) => ({
-  set: (key, value) => (prev) => ({
-    [objectName]: {...(prev[objectName] || {}), [key]: value}
-  }),
-  
-  update: (key, updates) => (state) => ({
-    [objectName]: {
-      ...state[objectName],
-      [key]: {...state[objectName]?.[key], ...updates}
-    }
-  }),
-  
-  clear: () => ({[objectName]: {}})
-});
-
-// Batch update utility for multiple state changes
-const batchUpdate = (set, updates) => {
-  if (!updates || typeof updates !== 'object') return;
-  
-  set(prevState => {
-    const newState = {...prevState};
-    for (const [key, value] of Object.entries(updates)) {
-      if (typeof value === 'function') {
-        newState[key] = value(newState);
-      } else {
-        newState[key] = value;
-      }
-    }
-    return newState;
-  });
-};
-
-// Predefined collection managers
+// Predefined collection managers - consolidated for efficiency
 const reasoningStepsManager = createCollectionManager('reasoningSteps');
 const tasksManager = createCollectionManager('tasks');
 const conceptsManager = createCollectionManager('concepts');
@@ -88,42 +18,42 @@ const demoStatesManager = createObjectManager('demoStates');
 const demoMetricsManager = createObjectManager('demoMetrics');
 const savedLayoutsManager = createObjectManager('savedLayouts');
 
-// Selectors for memoized access to parts of state
-const selectors = {
+// Memoized selectors for consistent access patterns
+const selectors = Object.freeze({
   getWebSocketState: (state) => ({wsConnected: state.wsConnected, wsService: state.wsService}),
   getLayoutState: (state) => ({layout: state.layout, savedLayouts: state.savedLayouts}),
   getUiStatus: (state) => ({error: state.error, isLoading: state.isLoading, theme: state.theme}),
   getNotificationState: (state) => ({notifications: state.notifications}),
   getDemoState: (state) => ({demos: state.demos, demoStates: state.demoStates, demoSteps: state.demoSteps}),
-};
+});
 
-// Initial state definition for clarity
-const initialState = {
+// Initial state - using Object.freeze for performance
+const initialState = Object.freeze({
   layout: null,
-  savedLayouts: {},
+  savedLayouts: Object.create(null),
   wsConnected: false,
   wsService: null,
-  panels: {},
+  panels: Object.create(null),
   reasoningSteps: [],
   tasks: [],
   concepts: [],
   cycles: [],
   systemMetrics: null,
   demos: [],
-  demoStates: {},
+  demoStates: Object.create(null),
   demoSteps: [],
-  demoMetrics: {},
+  demoMetrics: Object.create(null),
   activeSession: null,
   error: null,
   isLoading: false,
   theme: 'light',
   notifications: [],
   lmTestResult: null
-};
+});
 
-// Main store definition
+// Main store definition with optimized methods
 const useUiStore = create((set, get) => ({
-  // State initialization
+  // Initial state
   ...initialState,
 
   // UI state management
@@ -135,7 +65,7 @@ const useUiStore = create((set, get) => ({
   setWsConnected: (connected) => set({wsConnected: connected}),
   setWsService: (wsService) => set({wsService}),
 
-  // Panel management
+  // Panel management with optimized updates
   addPanel: (id, config) => set(state => ({
     panels: {...state.panels, [id]: config}
   })),
@@ -148,35 +78,31 @@ const useUiStore = create((set, get) => ({
     return {panels: newPanels};
   }),
 
-  // Reasoning engine state management using collection manager
+  // Optimized collection management with unified patterns
   addReasoningStep: (step) => set(reasoningStepsManager.add(step, 'id')),
   updateReasoningStep: (id, updates) => set(reasoningStepsManager.update(id, 'id', updates)),
   clearReasoningSteps: () => set(reasoningStepsManager.clear()),
 
-  // Task state management using collection manager
   addTask: (task) => set(tasksManager.add(task, 'id')),
   updateTask: (id, updates) => set(tasksManager.update(id, 'id', updates)),
   removeTask: (id) => set(tasksManager.remove(id, 'id')),
   clearTasks: () => set(tasksManager.clear()),
 
-  // Concept state management using collection manager
   addConcept: (concept) => set(conceptsManager.add(concept, 'term')),
   updateConcept: (term, updates) => set(conceptsManager.update(term, 'term', updates)),
   removeConcept: (term) => set(conceptsManager.remove(term, 'term')),
   clearConcepts: () => set(conceptsManager.clear()),
 
-  // Cycle state management using collection manager
   addCycle: (cycle) => set(cyclesManager.addLimited(cycle, 50, 'id')),
   clearCycles: () => set(cyclesManager.clear()),
 
-  // System metrics management
+  // System state management
   setSystemMetrics: (metrics) => set({systemMetrics: metrics}),
   clearSystemMetrics: () => set({systemMetrics: null}),
 
-  // Demo-related state management
+  // Demo management
   setDemoList: (demos) => set({demos}),
-  
-  setDemoState: demoStatesManager.set,
+  setDemoState: (key, value) => set(demoStatesManager.set(key, value)),
   setDemoStateDirect: (demoId, state) => set(prev => ({
     demoStates: {...prev.demoStates, [demoId]: state}
   })),
@@ -189,18 +115,18 @@ const useUiStore = create((set, get) => ({
   updateDemoMetrics: (demoId, updates) => set(demoMetricsManager.update(demoId, updates)),
   clearDemoMetrics: () => set(demoMetricsManager.clear()),
 
-  // Session state management
+  // Session management
   setActiveSession: (session) => set({activeSession: session}),
   endSession: () => set({activeSession: null}),
 
-  // UI status management
+  // UI status
   setError: (error) => set({error}),
   clearError: () => set({error: null}),
   setLoading: (loading) => set({isLoading: loading}),
   setTheme: (theme) => set({theme}),
   toggleTheme: () => set(state => ({theme: state.theme === 'light' ? 'dark' : 'light'})),
 
-  // Notification state management using collection manager
+  // Notifications with optimized ID generation
   addNotification: (notification) => set(state => {
     const id = notification.id || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     return { notifications: [...state.notifications, { ...notification, id }] };
@@ -209,16 +135,12 @@ const useUiStore = create((set, get) => ({
   removeNotification: (id) => set(notificationsManager.remove(id, 'id')),
   clearNotifications: () => set(notificationsManager.clear()),
 
-  // LM configuration state
+  // Configuration state
   setLMTestResult: (result) => set({lmTestResult: result}),
 
-  // Batch update function for multiple state changes
+  // Utility methods
   batchUpdate: (updates) => batchUpdate(set, updates),
-
-  // Selector functions
-  selectors: selectors,
-  
-  // Utility functions
+  selectors,
   resetStore: () => set(initialState)
 }));
 
