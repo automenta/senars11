@@ -22,9 +22,9 @@ export class Truth {
 
     static deduction = (t1, t2) => Truth.op(t1, t2, (t, u) => new Truth(t.frequency * u.frequency, t.confidence * u.confidence));
 
-    static induction = (t1, t2) => Truth.op(t1, t2, (t, u) => new Truth(u.frequency, Truth.weak(t.confidence * u.confidence) * t.frequency));
+    static induction = (t1, t2) => Truth.op(t1, t2, (t, u) => new Truth(u.frequency, t.confidence * u.confidence));
 
-    static abduction = (t1, t2) => Truth.op(t1, t2, (t, u) => new Truth(t.frequency, Truth.weak(t.confidence * u.confidence) * u.frequency));
+    static abduction = (t1, t2) => Truth.op(t1, t2, (t, u) => new Truth(t.frequency, Math.min(t.confidence * u.confidence, u.confidence)));
 
     static detachment = (t1, t2) => Truth.op(t1, t2, (t, u) => new Truth(u.frequency, t.frequency * t.confidence * u.confidence));
 

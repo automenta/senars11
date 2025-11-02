@@ -133,3 +133,67 @@ export const formatFileSize = (bytes) => {
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
+
+/**
+ * Format various data types consistently
+ * @param {any} value - Value to format
+ * @param {Object} options - Formatting options
+ * @returns {string} Formatted value string
+ */
+export const formatValue = (value, options = {}) => {
+  const { 
+    type = typeof value, 
+    decimals = 2, 
+    maxLength = null, 
+    prefix = '', 
+    suffix = '' 
+  } = options;
+  
+  if (value === null || value === undefined) return 'N/A';
+  
+  switch(type) {
+    case 'number':
+      return `${prefix}${Number(value).toFixed(decimals)}${suffix}`;
+    case 'string':
+      if (maxLength && value.length > maxLength) {
+        return `${prefix}${value.substring(0, maxLength)}...${suffix}`;
+      }
+      return `${prefix}${value}${suffix}`;
+    case 'object':
+      return `${prefix}${JSON.stringify(value)}${suffix}`;
+    default:
+      return `${prefix}${String(value)}${suffix}`;
+  }
+};
+
+/**
+ * Standardized way to format complex objects
+ * @param {Object} obj - Object to format
+ * @param {Object} formatters - Formatters for specific properties
+ * @returns {Object} Formatted object
+ */
+export const formatObject = (obj, formatters = {}) => {
+  if (!obj || typeof obj !== 'object') return obj;
+  
+  const formatted = {};
+  for (const [key, value] of Object.entries(obj)) {
+    const formatter = formatters[key];
+    formatted[key] = formatter ? formatter(value) : formatValue(value);
+  }
+  return formatted;
+};
+
+/**
+ * Get color based on truth values for visualization
+ * @param {Object} truth - Truth object with frequency and confidence
+ * @returns {string} RGB color string
+ */
+export const getTruthColor = (truth) => {
+  if (!truth || typeof truth !== 'object') return '#ffffff';
+  const { frequency = 0.5, confidence = 0.5 } = truth;
+  // Calculate a color based on frequency and confidence
+  const r = Math.floor(255 * frequency);
+  const g = Math.floor(128 + Math.floor(127 * confidence));
+  const b = Math.floor(255 * (1 - frequency));
+  return `rgb(${r}, ${g}, ${b})`;
+};

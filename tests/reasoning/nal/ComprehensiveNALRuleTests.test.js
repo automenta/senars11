@@ -31,7 +31,7 @@ describe('Comprehensive NAL Rule Tests - Phase 2 Preparation', () => {
             const result = TruthFunctions.induction(t1, t2);
 
             expect(result.frequency).toBeCloseTo(0.7, 2);   // f2
-            expect(result.confidence).toBeCloseTo(0.29, 2); // Calculated value from system
+            expect(result.confidence).toBeCloseTo(0.56, 2); // c1 * c2 = 0.7 * 0.8
         });
 
         it('should perform abduction with proper truth value calculation', () => {
@@ -41,7 +41,7 @@ describe('Comprehensive NAL Rule Tests - Phase 2 Preparation', () => {
             const result = TruthFunctions.abduction(t1, t2);
 
             expect(result.frequency).toBeCloseTo(0.8, 2);   // f1
-            expect(result.confidence).toBeCloseTo(0.25, 2); // Calculated value from system
+            expect(result.confidence).toBeCloseTo(0.56, 2); // min(c1 * c2, c2) = min(0.7 * 0.8, 0.8) = min(0.56, 0.8) = 0.56
         });
 
         it('should perform revision combining evidence', () => {

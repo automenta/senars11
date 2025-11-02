@@ -342,6 +342,63 @@ const ToggleSwitch = ({ checked, onChange, label }) => {
   );
 };
 
+// Generic Button component
+const Button = ({ children, onClick, variant = 'primary', style = {}, disabled = false }) => {
+  const baseStyle = {
+    padding: '0.5rem 1rem',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: disabled ? 'not-allowed' : 'pointer',
+    opacity: disabled ? 0.6 : 1,
+    fontSize: '0.9rem',
+    fontWeight: 'normal'
+  };
+
+  const variantStyles = {
+    primary: { backgroundColor: '#007bff', color: 'white' },
+    secondary: { backgroundColor: '#6c757d', color: 'white' },
+    success: { backgroundColor: '#28a745', color: 'white' },
+    warning: { backgroundColor: '#ffc107', color: '#212529' },
+    danger: { backgroundColor: '#dc3545', color: 'white' },
+    light: { backgroundColor: '#f8f9fa', color: '#212529', border: '1px solid #ced4da' },
+    dark: { backgroundColor: '#343a40', color: 'white' }
+  };
+
+  return React.createElement('button', {
+    style: {
+      ...baseStyle,
+      ...variantStyles[variant],
+      ...style
+    },
+    onClick,
+    disabled
+  }, children);
+};
+
+// Generic Card component
+const Card = ({ children, title, style = {} }) => {
+  return React.createElement('div', {
+    style: {
+      border: '1px solid #e9ecef',
+      borderRadius: '4px',
+      padding: '1rem',
+      backgroundColor: '#fff',
+      boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+      ...style
+    }
+  }, 
+    title && React.createElement('div', {
+      style: {
+        fontWeight: 'bold',
+        marginBottom: '0.5rem',
+        paddingBottom: '0.5rem',
+        borderBottom: '1px solid #e9ecef'
+      }
+    }, title),
+    children
+  );
+};
+
 export {
   StatusBadge,
   LoadingSpinner,
@@ -353,5 +410,7 @@ export {
   GenericInputField,
   GenericSelectField,
   CollapsibleSection,
-  ToggleSwitch
+  ToggleSwitch,
+  Button,
+  Card
 };

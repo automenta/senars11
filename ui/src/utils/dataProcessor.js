@@ -1,229 +1,215 @@
 /**
- * Data processing utilities for consistent data transformation and filtering
- * Implements elegant architectural patterns for data handling
+ * General data processing utilities following AGENT.md principles
  */
 
-/**
- * Create a data processor with filtering, sorting, and transformation capabilities
- */
-class DataProcessor {
-  constructor(data = []) {
-    this.data = [...data];
+// Abstract function for filtering and sorting data with multiple criteria
+export const processDataWithFilters = (data, options = {}) => {
+  const {
+    filterType = 'all',
+    filterText = '',
+    sortKey = null,
+    sortOrder = 'asc',
+    typeField = 'type',
+    searchFields = ['description', 'term']
+  } = options;
+
+  let result = [...data];
+
+  // Apply type filter
+  if (filterType !== 'all') {
+    result = result.filter(item => 
+      item[typeField] && item[typeField].toLowerCase() === filterType.toLowerCase()
+    );
   }
 
-  /**
-   * Filter data based on a predicate function or search term
-   */
-  filter(predicate) {
-    if (typeof predicate === 'function') {
-      this.data = this.data.filter(predicate);
-    } else if (typeof predicate === 'string') {
-      // Simple search across all stringifiable fields
-      const searchTerm = predicate.toLowerCase();
-      this.data = this.data.filter(item => {
-        if (typeof item === 'string') {
-          return item.toLowerCase().includes(searchTerm);
-        } else if (typeof item === 'object' && item !== null) {
-          return Object.values(item).some(value => 
-            String(value).toLowerCase().includes(searchTerm)
-          );
-        }
-        return false;
-      });
-    }
-    return this;
+  // Apply text filter
+  if (filterText.trim()) {
+    const searchText = filterText.toLowerCase();
+    result = result.filter(item =>
+      searchFields.some(field =>
+        item[field] && item[field].toString().toLowerCase().includes(searchText)
+      )
+    );
   }
 
-  /**
-   * Sort data by a field or custom comparator
-   */
-  sort(sortBy, direction = 'asc') {
-    if (typeof sortBy === 'function') {
-      this.data = this.data.sort(sortBy);
-    } else if (typeof sortBy === 'string') {
-      this.data = [...this.data].sort((a, b) => {
-        let valueA = this._getNestedValue(a, sortBy);
-        let valueB = this._getNestedValue(b, sortBy);
-        
-        let comparison = 0;
-        if (typeof valueA === 'string' && typeof valueB === 'string') {
-          comparison = valueA.toLowerCase().localeCompare(valueB.toLowerCase());
-        } else if (typeof valueA === 'number' && typeof valueB === 'number') {
-          comparison = valueA - valueB;
-        } else {
-          comparison = String(valueA).localeCompare(String(valueB));
-        }
-        
-        return direction === 'asc' ? comparison : -comparison;
-      });
-    }
-    return this;
-  }
-
-  /**
-   * Map data with a transformation function
-   */
-  map(transformFn) {
-    this.data = this.data.map(transformFn);
-    return this;
-  }
-
-  /**
-   * Limit the number of results
-   */
-  limit(count) {
-    this.data = this.data.slice(0, count);
-    return this;
-  }
-
-  /**
-   * Skip a number of results (useful for pagination)
-   */
-  skip(count) {
-    this.data = this.data.slice(count);
-    return this;
-  }
-
-  /**
-   * Get the processed data
-   */
-  get() {
-    return this.data;
-  }
-
-  /**
-   * Get the count of processed data
-   */
-  count() {
-    return this.data.length;
-  }
-
-  /**
-   * Chain multiple operations together
-   */
-  chain(operations) {
-    operations.forEach(op => {
-      if (op.type === 'filter') {
-        this.filter(op.predicate);
-      } else if (op.type === 'sort') {
-        this.sort(op.field, op.direction);
-      } else if (op.type === 'map') {
-        this.map(op.transform);
-      } else if (op.type === 'limit') {
-        this.limit(op.count);
-      } else if (op.type === 'skip') {
-        this.skip(op.count);
+  // Apply sorting
+  if (sortKey) {
+    result.sort((a, b) => {
+      const aValue = a[sortKey];
+      const bValue = b[sortKey];
+      
+      // Handle different data types for comparison
+      let comparison = 0;
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        comparison = aValue.toLowerCase().localeCompare(bValue.toLowerCase());
+      } else if (typeof aValue === 'number' && typeof bValue === 'number') {
+        comparison = aValue - bValue;
+      } else {
+        // Convert to string for comparison
+        comparison = String(aValue).toLowerCase().localeCompare(String(bValue).toLowerCase());
       }
+      
+      return sortOrder === 'desc' ? -comparison : comparison;
     });
-    return this;
   }
 
-  /**
-   * Get nested value using dot notation (e.g., 'user.name')
-   */
-  _getNestedValue(obj, path) {
-    return path.split('.').reduce((current, key) => current?.[key], obj);
-  }
-}
-
-/**
- * Create a data processor instance
- */
-const createDataProcessor = (data) => new DataProcessor(data);
-
-/**
- * Common data utilities
- */
-const dataUtils = {
-  /**
-   * Process data with multiple operations
-   */
-  process: (data, operations) => {
-    return createDataProcessor(data).chain(operations).get();
-  },
-
-  /**
-   * Create a searchable collection with optimized filtering
-   */
-  createSearchableCollection: (data, searchFields) => {
-    return {
-      originalData: data,
-      search: (term) => {
-        if (!term || term.trim() === '') return data;
-        
-        const searchTerm = term.toLowerCase();
-        return data.filter(item => {
-          if (typeof item === 'string') {
-            return item.toLowerCase().includes(searchTerm);
-          } else if (typeof item === 'object' && item !== null) {
-            return searchFields.some(field => {
-              const value = this._getNestedValue(item, field);
-              return value && String(value).toLowerCase().includes(searchTerm);
-            });
-          }
-          return false;
-        });
-      },
-      _getNestedValue: (obj, path) => path.split('.').reduce((current, key) => current?.[key], obj)
-    };
-  },
-
-  /**
-   * Create a paginated collection
-   */
-  createPaginatedCollection: (data, itemsPerPage = 10) => {
-    return {
-      data,
-      itemsPerPage,
-      getPage: (page) => {
-        const start = (page - 1) * itemsPerPage;
-        const end = start + itemsPerPage;
-        return data.slice(start, end);
-      },
-      getTotalPages: () => Math.ceil(data.length / itemsPerPage),
-      getTotalCount: () => data.length
-    };
-  },
-
-  /**
-   * Create a grouped collection
-   */
-  createGroupedCollection: (data, groupByFn) => {
-    return data.reduce((acc, item) => {
-      const key = groupByFn(item);
-      if (!acc[key]) {
-        acc[key] = [];
-      }
-      acc[key].push(item);
-      return acc;
-    }, {});
-  },
-
-  /**
-   * Get unique values for a field
-   */
-  getUniqueValues: (data, field) => {
-    const values = new Set();
-    data.forEach(item => {
-      const value = typeof field === 'string' ? this._getNestedValue(item, field) : field(item);
-      if (value !== undefined && value !== null) {
-        values.add(value);
-      }
-    });
-    return Array.from(values);
-  },
-
-  _getNestedValue: (obj, path) => path.split('.').reduce((current, key) => current?.[key], obj)
+  return result;
 };
 
-export {
-  DataProcessor,
-  createDataProcessor,
-  dataUtils
+// Abstract function to group related items based on common properties
+export const groupRelatedItems = (items, groupingStrategy = 'timestamp') => {
+  switch(groupingStrategy) {
+    case 'timestamp':
+      // Group items by time intervals (e.g., 10-second intervals)
+      const groupedByTime = {};
+      items.forEach(item => {
+        const timestamp = item.timestamp || item.creationTime || Date.now();
+        const interval = Math.floor(timestamp / 10000); // 10-second intervals
+        if (!groupedByTime[interval]) {
+          groupedByTime[interval] = [];
+        }
+        groupedByTime[interval].push(item);
+      });
+      return Object.values(groupedByTime).flat(); // For this case, return flattened but could return grouped
+      
+    case 'type':
+      // Group by type field
+      const groupedByType = {};
+      items.forEach(item => {
+        const type = item.type || 'unknown';
+        if (!groupedByType[type]) {
+          groupedByType[type] = [];
+        }
+        groupedByType[type].push(item);
+      });
+      return Object.values(groupedByType).flat(); // Flatten for now
+      
+    case 'relationship':
+      // Group items by their relationships
+      // This would require more complex logic based on item relationships
+      return items;
+      
+    default:
+      return items;
+  }
 };
 
-export default {
-  DataProcessor,
-  createDataProcessor,
-  dataUtils
+// Function to extract common properties for display
+export const extractDisplayProperties = (item, propertyList = ['id', 'term', 'type', 'timestamp']) => {
+  const displayProps = {};
+  propertyList.forEach(prop => {
+    if (item[prop] !== undefined) {
+      displayProps[prop] = item[prop];
+    }
+  });
+  return displayProps;
+};
+
+// Abstract function to create display elements for various data types
+export const createDataDisplayElement = (React, item, options = {}) => {
+  const {
+    displayType = 'default',
+    onClick = null,
+    isCompact = false,
+    showDetails = true
+  } = options;
+
+  const styles = {
+    base: {
+      padding: isCompact ? '0.25rem 0.5rem' : '0.5rem',
+      margin: '0.25rem 0',
+      border: '1px solid #ddd',
+      borderRadius: '4px',
+      fontSize: '0.85rem'
+    },
+    compact: {
+      padding: '0.25rem',
+      fontSize: '0.75rem'
+    }
+  };
+
+  // Apply compact styling if needed
+  const elementStyle = isCompact 
+    ? { ...styles.base, ...styles.compact } 
+    : styles.base;
+
+  // Enhance element based on type
+  switch(displayType) {
+    case 'reasoningStep':
+      return React.createElement('div', {
+        key: item.id,
+        style: { ...elementStyle, backgroundColor: '#f8f9ff', border: '1px solid #b8daff' },
+        onClick
+      },
+        React.createElement('div', { style: { fontWeight: 'bold' } }, item.description || 'No description'),
+        showDetails && item.result && React.createElement('div', { style: { fontSize: '0.8rem', marginTop: '0.25rem' } }, 
+          `Result: ${item.result.substring(0, 100)}${item.result.length > 100 ? '...' : ''}`
+        )
+      );
+
+    case 'task':
+      return React.createElement('div', {
+        key: item.id,
+        style: { ...elementStyle, backgroundColor: '#f0f8f0', border: '1px solid #c3e6c3' },
+        onClick
+      },
+        React.createElement('div', { style: { fontWeight: 'bold' } }, item.term || 'No term'),
+        item.type && React.createElement('div', { style: { fontSize: '0.7rem', color: '#666' } }, `Type: ${item.type}`),
+        showDetails && item.truth && React.createElement('div', { style: { fontSize: '0.75rem' } }, 
+          `Truth: ${JSON.stringify(item.truth)}`
+        )
+      );
+
+    default:
+      return React.createElement('div', {
+        key: item.id,
+        style: elementStyle,
+        onClick
+      },
+        React.createElement('div', null, item.description || item.term || 'Item')
+      );
+  }
+};
+
+// Function to create a standardized data summary
+export const createDataSummary = (data, summaryFields = ['count', 'types', 'timeRange']) => {
+  const summary = {};
+  
+  if (summaryFields.includes('count')) {
+    summary.count = data.length;
+  }
+  
+  if (summaryFields.includes('types') && data.length > 0) {
+    const types = [...new Set(data.map(item => item.type || 'unknown'))];
+    summary.types = types;
+  }
+  
+  if (summaryFields.includes('timeRange') && data.length > 0) {
+    const timestamps = data
+      .map(item => item.timestamp || item.creationTime || Date.now())
+      .filter(time => time); // Remove undefined/null values
+      
+    if (timestamps.length > 0) {
+      summary.timeRange = {
+        start: Math.min(...timestamps),
+        end: Math.max(...timestamps),
+        duration: Math.max(...timestamps) - Math.min(...timestamps)
+      };
+    }
+  }
+  
+  return summary;
+};
+
+// Generic function to handle data transformation with error handling
+export const safeTransformData = (data, transformFn, errorHandler = null) => {
+  try {
+    return transformFn(data);
+  } catch (error) {
+    console.error('Error in data transformation:', error);
+    if (errorHandler) {
+      return errorHandler(error);
+    }
+    return data; // Return original data if transformation fails
+  }
 };

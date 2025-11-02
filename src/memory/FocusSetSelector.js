@@ -30,11 +30,11 @@ export class FocusSetSelector extends ConfigurableComponent {
     /**
      * Select tasks using composite scoring algorithm with context sensitivity
      * @param {Task[]} tasks - Candidate tasks to select from
-     * @param {object} context - Reasoning context with memory and other info
      * @param {number} currentTime - Current system timestamp
+     * @param {object} context - Reasoning context with memory and other info (optional)
      * @returns {Task[]} Selected tasks ordered by composite score
      */
-    select(tasks, context, currentTime = Date.now()) {
+    select(tasks, currentTime = Date.now(), context = null) {
         if (!tasks?.length) return [];
 
         // Filter by priority threshold

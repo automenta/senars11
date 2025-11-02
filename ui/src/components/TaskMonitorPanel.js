@@ -4,6 +4,7 @@ import {formatBudget, formatTruth} from '../utils/formatters.js';
 import GenericPanel from './GenericPanel.js';
 import TaskRelationshipGraph from './TaskRelationshipGraph.js';
 import TaskFlowDiagram from './TaskFlowDiagram.js';
+import { createTaskDisplayElement } from '../utils/taskUtils.js';
 
 const TaskMonitorPanel = () => {
   const [expandedTask, setExpandedTask] = useState(null);
@@ -38,6 +39,16 @@ const TaskMonitorPanel = () => {
       return null;
     }
     
+    // Create base task display element
+    const baseTaskElement = createTaskDisplayElement(React, task, {
+      onClick: () => setExpandedTask(isExpanded ? null : (task.id || `task-${index}`)),
+      isExpanded: false, // We'll handle expansion separately
+      showTruth: false, // We'll show truth details manually when expanded
+      showBudget: false, // We'll show budget details manually when expanded
+      showTime: false  // We'll show time details manually when expanded
+    });
+    
+    // Build the full element
     return React.createElement('div',
       {
         key: task.id || `task-${index}`,
@@ -119,9 +130,9 @@ const TaskMonitorPanel = () => {
 
   const renderControlBar = useCallback(() => 
     React.createElement('div', 
-      {style: {display: 'flex', gap: '1rem', marginBottom: '1rem', padding: '0.5rem', backgroundColor: '#f8f9fa', borderRadius: '4px'}},
-      React.createElement('div', {style: {flex: 1}},
-        React.createElement('label', {style: {display: 'block', fontSize: '0.8rem', marginBottom: '0.25rem'}}, 'Filter by Type:'),
+      {style: {display: 'flex', gap: '1rem', marginBottom: '1rem', padding: '0.5rem', backgroundColor: '#f8f9fa', borderRadius: '4px', flexWrap: 'wrap'}},
+      React.createElement('div', {style: { flex: 1, minWidth: '150px' } },
+        React.createElement('label', { style: { display: 'block', fontSize: '0.8rem', marginBottom: '0.25rem' } }, 'Filter by Type:'),
         React.createElement('select', {
           value: filterType,
           onChange: (e) => setFilterType(e.target.value),
@@ -133,13 +144,13 @@ const TaskMonitorPanel = () => {
             fontSize: '0.9rem'
           }
         },
-          React.createElement('option', {value: 'all'}, 'All Tasks'),
-          React.createElement('option', {value: 'question'}, 'Questions'),
-          React.createElement('option', {value: 'goal'}, 'Goals'),
-          React.createElement('option', {value: 'belief'}, 'Beliefs')
+          React.createElement('option', { value: 'all' }, 'All Tasks'),
+          React.createElement('option', { value: 'question' }, 'Questions'),
+          React.createElement('option', { value: 'goal' }, 'Goals'),
+          React.createElement('option', { value: 'belief' }, 'Beliefs')
         )
       ),
-      React.createElement('div', {style: {flex: 1, display: 'flex', alignItems: 'center'}},
+      React.createElement('div', {style: {flex: 1, display: 'flex', alignItems: 'center', minWidth: '150px'}},
         React.createElement('label', {style: {display: 'flex', alignItems: 'center', gap: '0.5rem'}},
           React.createElement('input', {
             type: 'checkbox',
@@ -149,7 +160,7 @@ const TaskMonitorPanel = () => {
           React.createElement('span', {style: {fontSize: '0.9rem'}}, 'Show Transformations')
         )
       ),
-      React.createElement('div', {style: {flex: 1, display: 'flex', alignItems: 'center'}},
+      React.createElement('div', {style: {flex: 1, display: 'flex', alignItems: 'center', minWidth: '150px'}},
         React.createElement('label', {style: {display: 'flex', alignItems: 'center', gap: '0.5rem'}},
           React.createElement('input', {
             type: 'checkbox',
@@ -159,7 +170,7 @@ const TaskMonitorPanel = () => {
           React.createElement('span', {style: {fontSize: '0.9rem'}}, 'Show Relationships')
         )
       ),
-      React.createElement('div', {style: {flex: 1, display: 'flex', alignItems: 'center'}},
+      React.createElement('div', {style: {flex: 1, display: 'flex', alignItems: 'center', minWidth: '150px'}},
         React.createElement('label', {style: {display: 'flex', alignItems: 'center', gap: '0.5rem'}},
           React.createElement('input', {
             type: 'checkbox',

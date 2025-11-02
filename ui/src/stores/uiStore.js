@@ -110,7 +110,8 @@ const actions = {
     error: null,
     isLoading: false,
     theme: 'light',
-    notifications: []
+    notifications: [],
+    lmTestResult: null
   })
 };
 

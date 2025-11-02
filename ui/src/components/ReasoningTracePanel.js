@@ -2,6 +2,8 @@ import React, { useState, useCallback, useMemo } from 'react';
 import useUiStore from '../stores/uiStore.js';
 import GenericPanel from './GenericPanel.js';
 import { exportReasoningTraces } from '../utils/exportUtils.js';
+import { createFilterControls, commonFilterOptions } from '../utils/taskUtils.js';
+import { processDataWithFilters } from '../utils/dataProcessor.js';
 
 const ReasoningTracePanel = () => {
   const [expandedTrace, setExpandedTrace] = useState(null);
@@ -15,52 +17,35 @@ const ReasoningTracePanel = () => {
     
   // Group related reasoning steps and tasks with filtering
   const traceGroups = useMemo(() => {
-    let traceGroups = [];
-        
-    // Process reasoning steps
-    reasoningSteps.forEach((step, index) => {
-      traceGroups.push({
+    // Prepare combined data with consistent structure
+    const combinedData = [
+      ...reasoningSteps.map((step, index) => ({
         id: `step-${index}`,
         type: 'reasoningStep',
         data: step,
         timestamp: step.timestamp || 0,
         description: step.description || 'No description'
-      });
-    });
-        
-    // Process tasks that might represent reasoning results
-    tasks.forEach((task, index) => {
-      if (task.creationTime) { // Only include tasks with creation time
-        traceGroups.push({
-          id: `task-${index}`,
+      })),
+      ...tasks
+        .filter(task => task.creationTime) // Only include tasks with creation time
+        .map((task, index) => ({
+          id: `task-${index + reasoningSteps.length}`, // Ensure unique IDs
           type: 'task',
           data: task,
           timestamp: task.creationTime,
           description: `Task: ${task.term || 'Unknown'} (${task.type || 'Unknown'})`
-        });
-      }
+        }))
+    ];
+        
+    // Apply filters using the abstracted function
+    return processDataWithFilters(combinedData, {
+      filterType,
+      filterText,
+      typeField: 'type',
+      searchFields: ['description', 'data.term', 'data.type', 'data.result'],
+      sortKey: 'timestamp',
+      sortOrder: 'asc'
     });
-        
-    // Apply type filter
-    if (filterType !== 'all') {
-      traceGroups = traceGroups.filter(item => item.type === filterType);
-    }
-    
-    // Apply text filter
-    if (filterText.trim()) {
-      const searchText = filterText.toLowerCase();
-      traceGroups = traceGroups.filter(item => 
-        item.description.toLowerCase().includes(searchText) ||
-        (item.data.term && item.data.term.toLowerCase().includes(searchText)) ||
-        (item.data.type && item.data.type.toLowerCase().includes(searchText)) ||
-        (item.data.result && item.data.result.toLowerCase().includes(searchText))
-      );
-    }
-        
-    // Sort by timestamp
-    traceGroups.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
-        
-    return traceGroups;
   }, [reasoningSteps, tasks, filterType, filterText]);
 
   const exportTraceData = useCallback(() => {
@@ -285,85 +270,16 @@ const ReasoningTracePanel = () => {
   ], [traceGroups, filterType, filterText, exportFormat, exportTraceData]);
 
   const renderControlBar = useCallback((controls) => {
-    return React.createElement('div', 
-      {
-        style: {
-          display: 'flex',
-          gap: '1rem',
-          marginBottom: '1rem',
-          padding: '0.5rem',
-          backgroundColor: '#f8f9fa',
-          borderRadius: '4px'
-        }
-      },
-      React.createElement('div', { style: { flex: 1 } },
-        React.createElement('label', { style: { display: 'block', fontSize: '0.8rem', marginBottom: '0.25rem' } }, 'Filter by Type:'),
-        React.createElement('select', {
-          value: controls.filterType,
-          onChange: (e) => controls.setFilterType(e.target.value),
-          style: {
-            width: '100%',
-            padding: '0.25rem',
-            border: '1px solid #ddd',
-            borderRadius: '4px',
-            fontSize: '0.9rem'
-          }
-        },
-          React.createElement('option', { value: 'all' }, 'All Events'),
-          React.createElement('option', { value: 'reasoningStep' }, 'Reasoning Steps'),
-          React.createElement('option', { value: 'task' }, 'Tasks')
-        )
-      ),
-      React.createElement('div', { style: { flex: 1 } },
-        React.createElement('label', { style: { display: 'block', fontSize: '0.8rem', marginBottom: '0.25rem' } }, 'Search:'),
-        React.createElement('input', {
-          type: 'text',
-          value: controls.filterText,
-          onChange: (e) => controls.setFilterText(e.target.value),
-          placeholder: 'Search in events...',
-          style: {
-            width: '100%',
-            padding: '0.25rem',
-            border: '1px solid #ddd',
-            borderRadius: '4px',
-            fontSize: '0.9rem'
-          }
-        })
-      ),
-      React.createElement('div', { style: { flex: 1 } },
-        React.createElement('label', { style: { display: 'block', fontSize: '0.8rem', marginBottom: '0.25rem' } }, 'Export Format:'),
-        React.createElement('select', {
-          value: exportFormat,
-          onChange: (e) => setExportFormat(e.target.value),
-          style: {
-            width: '100%',
-            padding: '0.25rem',
-            border: '1px solid #ddd',
-            borderRadius: '4px',
-            fontSize: '0.9rem'
-          }
-        },
-          React.createElement('option', { value: 'json' }, 'JSON'),
-          React.createElement('option', { value: 'csv' }, 'CSV'),
-          React.createElement('option', { value: 'text' }, 'Text')
-        )
-      ),
-      React.createElement('div', { style: { flex: 0.5, display: 'flex', alignItems: 'flex-end' } },
-        React.createElement('button', {
-          onClick: exportTraceData,
-          style: {
-            width: '100%',
-            padding: '0.5rem',
-            backgroundColor: '#007bff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            fontSize: '0.9rem',
-            cursor: 'pointer'
-          }
-        }, 'Export')
-      )
-    );
+    return createFilterControls(React, {
+      filterType: controls.filterType,
+      setFilterType: controls.setFilterType,
+      filterText: controls.filterText,
+      setFilterText: controls.setFilterText,
+      exportFormat,
+      setExportFormat,
+      exportData: exportTraceData,
+      filterOptions: commonFilterOptions
+    });
   }, [exportFormat, exportTraceData]);
 
   const renderTrace = useCallback((item, index) => {
