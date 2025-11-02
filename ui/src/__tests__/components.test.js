@@ -1,11 +1,10 @@
 import {describe, expect, it, beforeEach} from 'vitest';
 import useUiStore from '../stores/uiStore.js';
 
+const resetStore = () => useUiStore.getState().resetStore();
+
 describe('Core UI Components Functionality Tests', () => {
-  beforeEach(() => {
-    // Reset the store to initial state before each test group
-    useUiStore.getState().resetStore();
-  });
+  beforeEach(resetStore);
 
   describe('Core Store Functionality', () => {
     it('should have proper initial state', () => {
@@ -186,7 +185,6 @@ describe('Core UI Components Functionality Tests', () => {
     });
 
     it('should reset store to initial state', () => {
-      // Modify state
       useUiStore.getState().setWsConnected(true);
       useUiStore.getState().setTheme('dark');
       const testStep = { id: 'step1', description: 'Test' };
@@ -195,7 +193,6 @@ describe('Core UI Components Functionality Tests', () => {
       useUiStore.getState().resetStore();
       
       const state = useUiStore.getState();
-      // Check that state is back to initial
       expect(state.wsConnected).toBe(false);
       expect(state.theme).toBe('light');
       expect(state.reasoningSteps).toEqual([]);
@@ -258,13 +255,9 @@ describe('Core UI Components Functionality Tests', () => {
 });
 
 describe('Critical Demonstration Workflows', () => {
-  beforeEach(() => {
-    // Reset the store to initial state before each test group
-    useUiStore.getState().resetStore();
-  });
+  beforeEach(resetStore);
 
   it('should handle end-to-end reasoning data flow', () => {
-    // Add reasoning data
     const step = { id: 'step1', description: 'Initial belief accepted', timestamp: Date.now() };
     const task = { id: 'task1', term: '<cat --> animal>', type: 'belief', creationTime: Date.now() };
     const concept = { term: 'cat', priority: 0.8 };
@@ -273,14 +266,12 @@ describe('Critical Demonstration Workflows', () => {
     useUiStore.getState().addTask(task);
     useUiStore.getState().addConcept(concept);
     
-    // Verify data is accessible
     expect(useUiStore.getState().reasoningSteps).toEqual([step]);
     expect(useUiStore.getState().tasks).toEqual([task]);
     expect(useUiStore.getState().concepts).toEqual([concept]);
   });
 
   it('should maintain data consistency during updates', () => {
-    // Add and update data
     const task = { id: 'task1', term: '<dog --> animal>', priority: 0.5 };
     useUiStore.getState().addTask(task);
     useUiStore.getState().updateTask('task1', { priority: 0.8, confidence: 0.9 });
@@ -291,7 +282,6 @@ describe('Critical Demonstration Workflows', () => {
   });
 
   it('should support multiple concurrent operations', () => {
-    // Simulate multiple operations happening
     const operations = [
       () => useUiStore.getState().addReasoningStep({ id: 'step1', description: 'Step 1', timestamp: Date.now() }),
       () => useUiStore.getState().addTask({ id: 'task1', term: 'Task 1', type: 'belief', creationTime: Date.now() }),
@@ -303,14 +293,12 @@ describe('Critical Demonstration Workflows', () => {
     
     operations.forEach(op => op());
     
-    // Verify all operations completed successfully
     expect(useUiStore.getState().reasoningSteps[0].result).toBe('Success');
     expect(useUiStore.getState().tasks[0].priority).toBe(0.7);
     expect(useUiStore.getState().concepts[0].priority).toBe(0.6);
   });
 
   it('should handle complex reasoning trace scenarios', () => {
-    // Add a series of reasoning steps to simulate a complex trace
     for (let i = 0; i < 10; i++) {
       useUiStore.getState().addReasoningStep({
         id: `step${i}`,
@@ -320,7 +308,6 @@ describe('Critical Demonstration Workflows', () => {
       });
     }
     
-    // Add related tasks
     for (let i = 0; i < 5; i++) {
       useUiStore.getState().addTask({
         id: `task${i}`,
@@ -331,15 +318,13 @@ describe('Critical Demonstration Workflows', () => {
       });
     }
     
-    // Verify all data was added correctly
     expect(useUiStore.getState().reasoningSteps.length).toBe(10);
     expect(useUiStore.getState().tasks.length).toBe(5);
     
-    // Verify filtering would work correctly
     const narsSteps = useUiStore.getState().reasoningSteps.filter(step => step.source === 'nars');
-    expect(narsSteps.length).toBe(5); // Every other step should be from NARS
+    expect(narsSteps.length).toBe(5);
     
     const goals = useUiStore.getState().tasks.filter(task => task.type === 'goal');
-    expect(goals.length).toBe(2); // tasks 1 and 4 should be goals
+    expect(goals.length).toBe(2);
   });
 });

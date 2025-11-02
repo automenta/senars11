@@ -1,11 +1,10 @@
-import {beforeEach, describe, expect, it, vi} from 'vitest';
+import {beforeEach, describe, expect, it} from 'vitest';
 import useUiStore from '../stores/uiStore.js';
 
+const resetStore = () => useUiStore.getState().resetStore();
+
 describe('User Experience Validation Tests', () => {
-  beforeEach(() => {
-    // Reset the store to initial state before each test group
-    useUiStore.getState().resetStore();
-  });
+  beforeEach(resetStore);
 
   describe('Reasoning Observability', () => {
     it('should allow users to observe reasoning steps in chronological order', () => {
@@ -15,20 +14,16 @@ describe('User Experience Validation Tests', () => {
         { id: 'step3', description: 'Goal processed: <want(cat) --> ??>', timestamp: Date.now() }
       ];
 
-      // Add reasoning steps to store
       mockReasoningSteps.forEach(step => useUiStore.getState().addReasoningStep(step));
       
-      // Verify that steps are stored and can be retrieved
       expect(useUiStore.getState().reasoningSteps.length).toBe(3);
       
-      // Verify chronological order
       const sortedSteps = [...useUiStore.getState().reasoningSteps].sort((a, b) => a.timestamp - b.timestamp);
       expect(sortedSteps[0].description).toBe('Belief accepted: <cat --> animal>');
       expect(sortedSteps[2].description).toBe('Goal processed: <want(cat) --> ??>');
     });
 
     it('should maintain data integrity during filtering scenarios', () => {
-      // Add both steps and tasks
       const steps = [
         { id: 'step1', description: 'Reasoning step', timestamp: Date.now() },
         { id: 'step2', description: 'Another step', timestamp: Date.now() + 1000 }
@@ -41,7 +36,6 @@ describe('User Experience Validation Tests', () => {
       steps.forEach(step => useUiStore.getState().addReasoningStep(step));
       tasks.forEach(task => useUiStore.getState().addTask(task));
 
-      // Verify data was added
       expect(useUiStore.getState().reasoningSteps.length).toBe(2);
       expect(useUiStore.getState().tasks.length).toBe(2);
     });
@@ -54,7 +48,6 @@ describe('User Experience Validation Tests', () => {
 
       mockReasoningSteps.forEach(step => useUiStore.getState().addReasoningStep(step));
       
-      // Verify that search functionality would work with the data
       const searchResults = useUiStore.getState().reasoningSteps.filter(step => 
         step.description.includes('cat') || step.result.includes('0.9')
       );
@@ -73,7 +66,6 @@ describe('User Experience Validation Tests', () => {
 
       useUiStore.getState().addReasoningStep(mockReasoningStep);
       
-      // Verify all details are accessible
       const state = useUiStore.getState();
       expect(state.reasoningSteps[0].id).toBe('step1');
       expect(state.reasoningSteps[0].description).toBe('Complex inference process');
@@ -192,18 +184,15 @@ describe('User Experience Validation Tests', () => {
 
   describe('Configuration and Control', () => {
     it('should manage different AI source configurations', () => {
-      // Verify store has required functions
       expect(typeof useUiStore.getState().addNotification).toBe('function');
       expect(typeof useUiStore.getState().setLMTestResult).toBe('function');
     });
 
     it('should handle connection testing feedback', () => {
-      // Simulate successful test result
       useUiStore.getState().setLMTestResult({ success: true, message: 'Connection successful', model: 'gpt-4' });
       expect(useUiStore.getState().lmTestResult.success).toBe(true);
       expect(useUiStore.getState().lmTestResult.message).toBe('Connection successful');
       
-      // Simulate failed test result
       useUiStore.getState().setLMTestResult({ success: false, message: 'Invalid API key' });
       expect(useUiStore.getState().lmTestResult.success).toBe(false);
       expect(useUiStore.getState().lmTestResult.message).toBe('Invalid API key');
@@ -220,11 +209,9 @@ describe('User Experience Validation Tests', () => {
     });
 
     it('should handle disconnection gracefully', () => {
-      // Even when disconnected, the system should continue operating
       useUiStore.getState().setWsConnected(false);
       expect(useUiStore.getState().wsConnected).toBe(false);
       
-      // Other functionality should still work
       useUiStore.getState().addNotification({ type: 'warning', message: 'Connection lost' });
       expect(useUiStore.getState().notifications.length).toBe(1);
     });
@@ -241,37 +228,31 @@ describe('User Experience Validation Tests', () => {
 
   describe('User Workflow Validation', () => {
     it('should support complete demonstration workflow', () => {
-      // Simulate a complete workflow by adding all necessary data
       useUiStore.getState().setWsConnected(true);
       useUiStore.getState().addReasoningStep({ id: 'step1', description: 'User input processed', timestamp: Date.now() });
       useUiStore.getState().addTask({ id: 'task1', term: '<cat --> animal>', type: 'belief', creationTime: Date.now() });
       useUiStore.getState().addConcept({ term: 'cat', priority: 0.8, creationTime: Date.now() });
       
       const state = useUiStore.getState();
-      // Verify all data is available
       expect(state.wsConnected).toBe(true);
       expect(state.reasoningSteps.length).toBe(1);
       expect(state.tasks.length).toBe(1);
       expect(state.concepts.length).toBe(1);
       
-      // Verify we can clear data when needed
       useUiStore.getState().clearTasks();
       expect(useUiStore.getState().tasks.length).toBe(0);
     });
 
     it('should provide meaningful feedback during operations', () => {
-      // Simulate loading state
       useUiStore.getState().setLoading(true);
       expect(useUiStore.getState().isLoading).toBe(true);
       
-      // Simulate adding a notification
       useUiStore.getState().addNotification({ type: 'info', message: 'Processing request' });
       expect(useUiStore.getState().notifications.length).toBe(1);
       expect(useUiStore.getState().notifications[0].message).toBe('Processing request');
     });
 
     it('should handle normal usage patterns', () => {
-      // Add a significant amount of data to simulate normal usage
       const steps = Array.from({length: 100}, (_, i) => ({
         id: `step${i}`,
         description: `Step ${i} description`,
@@ -282,7 +263,6 @@ describe('User Experience Validation Tests', () => {
       
       expect(useUiStore.getState().reasoningSteps.length).toBe(100);
       
-      // Test that we can update a specific step
       useUiStore.getState().updateReasoningStep('step0', { status: 'completed' });
       const step0 = useUiStore.getState().reasoningSteps.find(s => s.id === 'step0');
       expect(step0.status).toBe('completed');
@@ -291,7 +271,6 @@ describe('User Experience Validation Tests', () => {
 
   describe('User Experience Under Various Conditions', () => {
     it('should maintain responsiveness with moderate data loads', () => {
-      // Add a moderate amount of data
       for (let i = 0; i < 50; i++) {
         useUiStore.getState().addReasoningStep({
           id: `step${i}`,
@@ -307,17 +286,14 @@ describe('User Experience Validation Tests', () => {
         });
       }
       
-      // Verify data was added efficiently
       expect(useUiStore.getState().reasoningSteps.length).toBe(50);
       expect(useUiStore.getState().tasks.length).toBe(50);
       
-      // Verify we can still perform operations
       useUiStore.getState().addConcept({ term: 'test', priority: 0.5 });
       expect(useUiStore.getState().concepts.length).toBe(1);
     });
 
     it('should handle concurrent data updates', () => {
-      // Simulate concurrent updates to different parts of the system
       const updateFunctions = [
         () => useUiStore.getState().addReasoningStep({ id: 'step1', description: 'Concurrent step', timestamp: Date.now() }),
         () => useUiStore.getState().addTask({ id: 'task1', term: 'Concurrent task', type: 'belief', creationTime: Date.now() }),
@@ -326,10 +302,8 @@ describe('User Experience Validation Tests', () => {
         () => useUiStore.getState().setTheme('dark')
       ];
       
-      // Execute all updates
       updateFunctions.forEach(fn => fn());
       
-      // Verify all updates were processed
       const state = useUiStore.getState();
       expect(state.reasoningSteps.length).toBe(1);
       expect(state.tasks.length).toBe(1);
@@ -339,7 +313,6 @@ describe('User Experience Validation Tests', () => {
     });
 
     it('should support common user exploration patterns', () => {
-      // Add sample data that users would typically explore
       const reasoningSteps = Array.from({length: 20}, (_, i) => ({
         id: `step${i}`,
         description: `Reasoning step ${i}`,
@@ -349,17 +322,14 @@ describe('User Experience Validation Tests', () => {
       
       reasoningSteps.forEach(step => useUiStore.getState().addReasoningStep(step));
       
-      // Users might want to filter by source
       const narsSteps = useUiStore.getState().reasoningSteps.filter(step => step.source === 'nars');
       const lmSteps = useUiStore.getState().reasoningSteps.filter(step => step.source === 'lm');
       const hybridSteps = useUiStore.getState().reasoningSteps.filter(step => step.source === 'hybrid');
       
-      // Verify there's a good distribution of sources
       expect(narsSteps.length).toBeGreaterThan(0);
       expect(lmSteps.length).toBeGreaterThan(0);
       expect(hybridSteps.length).toBeGreaterThan(0);
       
-      // Users might want to see most recent steps
       const recentSteps = [...useUiStore.getState().reasoningSteps]
         .sort((a, b) => b.timestamp - a.timestamp)
         .slice(0, 5);
