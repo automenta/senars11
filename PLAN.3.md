@@ -104,11 +104,6 @@ The current codebase includes:
 - How well do the existing examples demonstrate the hybrid neuro-symbolic capability?
 - Is the persistence mechanism working correctly with state saving/loading?
 
-**Gaps for Future Solution**:
-- Need comprehensive end-to-end test that validates all README.md capabilities together
-- No clear way to test the "observable platform" capability specifically
-- Unclear how well current examples demonstrate "advanced AI concepts"
-
 **Dependencies**: None (base requirement)
 
 ---
@@ -146,11 +141,6 @@ The current codebase includes:
 - How do we test the "observable platform" capabilities comprehensively?
 - What happens when LM tests run without API keys - do they fail gracefully?
 - How do we test emergent optimization behaviors that are inherently unpredictable?
-
-**Gaps for Future Solution**:
-- No automated way to measure and enforce test coverage thresholds
-- Missing tests for real-time visualization capabilities
-- Unclear how to test the "emergent optimization" concept rigorously
 
 **Dependencies**: Goal 0 (requires working prototype as test foundation)
 
@@ -190,11 +180,6 @@ The current codebase includes:
 - Are the existing examples accessible to beginners and educators?
 - How do we maintain backward compatibility while improving UX?
 
-**Gaps for Future Solution**:
-- No documentation system integrated with the examples
-- Unclear how to validate that improvements make the system more accessible
-- Missing accessibility features for different user needs
-
 **Dependencies**: Goal 1 (requires testing to ensure changes are safe)
 
 ---
@@ -231,11 +216,6 @@ The current codebase includes:
 - How do we ensure real-time visualization doesn't slow down reasoning?
 - Are the visualization tools accessible to educators and researchers?
 
-**Gaps for Future Solution**:
-- No standardized visualization formats or schemas defined
-- Unclear how to validate that observability improvements enhance understanding
-- Missing accessibility considerations for visualization tools
-
 **Dependencies**: Goal 2 (requires stable input/output for meaningful monitoring)
 
 ---
@@ -270,11 +250,6 @@ The current codebase includes:
 - How do we balance NARS precision with LM creativity?
 - What happens when LM services are unavailable?
 - How do we validate the quality of hybrid reasoning outputs?
-
-**Gaps for Future Solution**:
-- No standardized way to test hybrid reasoning quality
-- Unclear how to measure the effectiveness of NARS-LLM collaboration
-- Missing benchmarks for comparing hybrid vs pure NARS reasoning
 
 **Dependencies**: Goal 3 (requires observability to monitor hybrid operations)
 
@@ -311,11 +286,6 @@ The current codebase includes:
 - Are the existing self-analysis components stable enough for enhancement?
 - How do we ensure self-analysis doesn't interfere with normal reasoning?
 
-**Gaps for Future Solution**:
-- No clear metrics for measuring "emergent optimization" effectiveness
-- Unclear how to prevent runaway optimization loops
-- Missing validation framework for self-analysis results
-
 **Dependencies**: Goal 4 (requires hybrid reasoning for comprehensive self-analysis)
 
 ---
@@ -350,11 +320,6 @@ The current codebase includes:
 - Are there privacy concerns with the existing logging and monitoring?
 - How do we ensure documentation stays current with code changes?
 - What are the security implications of the WebSocket interface?
-
-**Gaps for Future Solution**:
-- No automated documentation generation system
-- Unclear how to validate that documentation meets researcher/educator needs
-- Missing security audit procedures
 
 **Dependencies**: Goal 5 (requires stable self-analysis for API monitoring)
 
@@ -391,11 +356,6 @@ The current codebase includes:
 - Are the current thresholds appropriate for different usage patterns?
 - How do we balance optimization with system predictability?
 
-**Gaps for Future Solution**:
-- No clear metrics for resource management effectiveness
-- Unclear how to validate resource optimization under different load patterns
-- Missing procedures for resource capacity planning
-
 **Dependencies**: Goal 6 (requires secure API for resource management)
 
 ---
@@ -425,11 +385,6 @@ The current codebase includes:
 - Will optimization affect the stability of existing functionality?
 - How do we measure optimization effectiveness without impacting operation?
 - What are the risks of performance optimization to other system capabilities?
-
-**Gaps for Future Solution**:
-- No standardized performance benchmarking framework
-- Unclear how to balance performance with other system requirements
-- Missing performance regression testing procedures
 
 **Dependencies**: Goal 7 (requires stable resource management)
 
@@ -477,15 +432,179 @@ The current codebase includes:
 
 ---
 
+## GAPS & AMBIGUITIES FOR FUTURE SOLUTION
+
+### 1. Measuring "Emergent Optimization" Effectiveness
+**Gap**: Currently, there's no standardized framework to measure whether "emergent optimization" is actually occurring or providing value.
+
+**Details**:
+- The README.md mentions "emergent optimization" but doesn't specify how to measure it
+- The existing MetricsMonitor tracks rule execution but doesn't measure "emergent" improvements
+- There's no baseline against which to compare improvements from self-analysis
+- Self-improvement may be subtle and hard to distinguish from normal variation
+
+**Future Solution Requirements**:
+- Define measurable metrics for "emergent optimization" 
+- Create baseline performance benchmarks to compare against
+- Implement longitudinal tracking to show improvement trends over time
+- Develop statistical methods to validate that improvements are genuine, not coincidental
+- Create control groups or comparison systems to validate effectiveness
+
+### 2. Validating Hybrid Reasoning Quality
+**Gap**: No clear validation framework exists for determining the quality of hybrid NARS-LLM reasoning outputs.
+
+**Details**:
+- How do we know if hybrid reasoning is better than pure NARS or pure LLM?
+- What constitutes "high quality" for hybrid outputs that combine different reasoning paradigms?
+- How do we validate reasoning that involves both symbolic logic and neural responses?
+- Current tests likely can't validate the quality of LLM-generated portions
+
+**Future Solution Requirements**:
+- Define quality metrics for hybrid reasoning outputs
+- Create validation datasets with known correct answers for hybrid tasks
+- Implement peer review mechanisms where NARS and LLM cross-validate each other
+- Develop consistency checking to ensure hybrid outputs maintain logical coherence
+- Build human-in-the-loop validation for subjective quality assessment
+
+### 3. Comprehensive Documentation Generation System
+**Gap**: The system lacks an automated documentation system that keeps pace with code changes.
+
+**Details**:
+- README.md describes capabilities but code may drift from documentation
+- Examples need detailed explanations that can become outdated
+- API documentation needs to be maintained alongside code changes
+- Educational content is manual and not integrated with development workflow
+
+**Future Solution Requirements**:
+- Implement automated documentation generation from code and JSDoc comments
+- Create versioned documentation that matches code releases
+- Build documentation generation into the CI/CD pipeline
+- Generate example-based documentation automatically
+- Implement a system that alerts when documentation falls out of sync with code
+
+### 4. Accessibility Features for Diverse User Needs
+**Gap**: The system lacks comprehensive accessibility features for users with different needs and backgrounds.
+
+**Details**:
+- Visualizations may not be accessible to users with visual impairments
+- Complex terminology may not be accessible to beginners or non-technical users
+- No multilingual support for international researchers
+- UI may not accommodate users with different interaction preferences
+
+**Future Solution Requirements**:
+- Implement WCAG-compliant accessibility features in UI
+- Create simplified interfaces for beginners alongside advanced options
+- Add internationalization capabilities for multiple languages
+- Implement customizable interface options for different user needs
+- Create accessibility-focused visualizations and alternative data representations
+
+### 5. Observable Platform Validation
+**Gap**: No automated way to validate that the "observable platform" capabilities are working as specified.
+
+**Details**:
+- README.md mentions "observable platform" and "real-time visualization" but there's no automated validation
+- UI may disconnect from backend without clear indication
+- Event propagation for monitoring may fail silently
+- There's no test to verify that users can actually observe reasoning in real-time
+
+**Future Solution Requirements**:
+- Create automated tests that verify real-time event propagation
+- Implement event integrity checking to ensure no data is lost in monitoring
+- Build observability validation into the test suite
+- Create mock monitoring clients that can verify all expected data is available
+- Implement health checks for the WebSocket monitoring system
+
+### 6. Multi-User and Security Validation
+**Gap**: The system lacks comprehensive security validation for multi-user scenarios.
+
+**Details**:
+- Current security model appears to be single-user focused
+- No validation of isolation between different user sessions
+- Potential for one user's reasoning to affect another's
+- No validation of API rate limiting or resource allocation between users
+- No clear authentication system for multi-user scenarios
+
+**Future Solution Requirements**:
+- Implement session isolation mechanisms
+- Create comprehensive security testing framework
+- Build authentication and authorization systems
+- Implement resource quotas and isolation for multi-user environments
+- Validate that user A's data cannot affect user B's reasoning
+
+### 7. Hybrid Reasoning Coherence Validation
+**Gap**: No validation system exists to ensure hybrid reasoning maintains logical coherence.
+
+**Details**:
+- NARS reasoning follows strict logical rules
+- LLM responses may introduce inconsistencies
+- No validation that hybrid outputs maintain logical integrity
+- Risk of contradictions between symbolic and neural components
+- No mechanism to detect or resolve hybrid reasoning conflicts
+
+**Future Solution Requirements**:
+- Implement coherence checking for hybrid reasoning outputs
+- Create conflict detection between NARS and LLM results
+- Build validation systems that can verify logical consistency across both paradigms
+- Develop reconciliation mechanisms for hybrid conflicts
+- Create consistency metrics for hybrid reasoning quality
+
+### 8. Performance Benchmarking Standards
+**Gap**: No standardized performance benchmarking framework exists to measure system performance objectively.
+
+**Details**:
+- Performance claims are relative without standardized benchmarks
+- No comparison against other reasoning systems
+- Performance optimization is difficult without proper baseline measurements
+- No standard datasets for performance evaluation
+- Current performance metrics may not reflect real-world usage patterns
+
+**Future Solution Requirements**:
+- Define standard benchmark datasets and scenarios
+- Create performance comparison against other reasoning systems
+- Implement automated performance regression testing
+- Build performance prediction models based on system load
+- Establish performance goals and SLAs for different use cases
+
+### 9. Educational Effectiveness Measurement
+**Gap**: No way to measure whether the system is effective for its educational audience as specified in README.md.
+
+**Details**:
+- README.md targets "educators" but no validation of educational effectiveness exists
+- No metrics for how well the system teaches AI concepts
+- Unclear if examples actually help educators teach concepts
+- No feedback system from educational users
+- No validation that reasoning processes are understandable to students
+
+**Future Solution Requirements**:
+- Create educational effectiveness metrics and validation methods
+- Implement user feedback systems for educators
+- Develop pedagogical validation of examples and explanations
+- Create learning outcome tracking for educational use cases
+- Build educator-focused documentation and teaching materials
+
+### 10. Long-Term Stability and Degradation Detection
+**Gap**: No systematic way to detect long-term degradation in system performance or reasoning quality.
+
+**Details**:
+- Memory consolidation may not prevent all forms of degradation
+- Self-optimization could potentially lead to negative long-term effects
+- No longitudinal studies of system behavior over extended periods
+- Reasoning quality may degrade subtly over time
+- No early warning systems for system decay
+
+**Future Solution Requirements**:
+- Implement longitudinal monitoring for long-term stability
+- Create early warning systems for performance degradation
+- Build long-term reasoning quality tracking
+- Implement system health checks that detect subtle degradation
+- Create automated intervention systems for maintaining long-term stability
+
+---
+
 ## Implementation Notes
 
 The plan leverages the existing codebase infrastructure (src/, tests/, ui/, scripts/, examples/) to achieve README.md specifications. Each goal builds on existing components and patterns rather than creating new architecture. The sequence ensures stability and functionality before adding complexity, with explicit verification of README.md requirements at each stage.
 
 The plan acknowledges existing infrastructure like the test framework, CLI/REPL, UI system, WebSocket monitoring, and examples directory, using them as foundations for improvement rather than replacing them.
 
-**Critical Gaps Identified**:
-- No standardized way to measure "emergent optimization" effectiveness
-- Unclear validation methods for hybrid reasoning quality
-- Missing comprehensive documentation generation system
-- Limited accessibility features for diverse user needs
-- No automated validation of the "observable platform" capabilities
+**Critical Gaps Summary**: The identified gaps represent fundamental challenges that cannot be solved within the current development approach and require dedicated research and development efforts to address.
