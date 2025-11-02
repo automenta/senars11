@@ -1,18 +1,7 @@
 import {Logger} from '../util/Logger.js';
 import {EventBus} from '../util/EventBus.js';
 
-/**
- * Abstract base component that provides common functionality for all system components.
- * Implements standardized patterns for lifecycle, metrics, and logging.
- */
 export class BaseComponent {
-    /**
-     * Creates a new base component
-     * @param {Object} config - Component configuration
-     * @param {string} name - Component name for identification and logging
-     * @param {EventBus} [eventBus] - Optional shared event bus
-     * @param {Joi.ObjectSchema} [validationSchema] - Optional validation schema for configuration
-     */
     constructor(config = {}, name = 'BaseComponent', eventBus = null, validationSchema = null) {
         this._config = config;
         this._name = name;
@@ -34,91 +23,17 @@ export class BaseComponent {
         this._initializeMetrics();
     }
 
-    /**
-     * Gets the component name
-     * @returns {string} Component name
-     */
-    get name() {
-        return this._name;
-    }
+    get name() { return this._name; }
+    get config() { return this._config; }
+    get logger() { return this._logger; }
+    get eventBus() { return this._eventBus; }
+    get metrics() { return this._metrics; }
+    get isInitialized() { return this._initialized; }
+    get isStarted() { return this._started; }
+    get isDisposed() { return this._disposed; }
+    get isRunning() { return this._started && !this._disposed; }
+    get uptime() { return this._startTime ? Date.now() - this._startTime : 0; }
 
-    /**
-     * Gets the component configuration
-     * @returns {Object} Component configuration
-     */
-    get config() {
-        return this._config;
-    }
-
-    /**
-     * Gets the component logger
-     * @returns {Logger} Component logger
-     */
-    get logger() {
-        return this._logger;
-    }
-
-    /**
-     * Gets the component event bus
-     * @returns {EventBus} Component event bus
-     */
-    get eventBus() {
-        return this._eventBus;
-    }
-
-    /**
-     * Gets the component metrics
-     * @returns {Map} Component metrics
-     */
-    get metrics() {
-        return this._metrics;
-    }
-
-    /**
-     * Checks if the component is initialized
-     * @returns {boolean} True if initialized, false otherwise
-     */
-    get isInitialized() {
-        return this._initialized;
-    }
-
-    /**
-     * Checks if the component is started
-     * @returns {boolean} True if started, false otherwise
-     */
-    get isStarted() {
-        return this._started;
-    }
-
-    /**
-     * Checks if the component is disposed
-     * @returns {boolean} True if disposed, false otherwise
-     */
-    get isDisposed() {
-        return this._disposed;
-    }
-
-    /**
-     * Checks if the component is running (both started and not disposed)
-     * @returns {boolean} True if running, false otherwise
-     */
-    get isRunning() {
-        return this._started && !this._disposed;
-    }
-
-    /**
-     * Gets the component uptime in milliseconds
-     * @returns {number} Uptime in milliseconds, or null if not started
-     */
-    get uptime() {
-        return this._startTime ? Date.now() - this._startTime : 0;
-    }
-
-    /**
-     * Validates configuration against the provided schema
-     * @param {Object} config - Configuration to validate
-     * @returns {Object} - Validated and potentially transformed config
-     */
     _validateConfig(config) {
         const schema = typeof this._validationSchema === 'function'
             ? this._validationSchema()
@@ -137,11 +52,6 @@ export class BaseComponent {
         return validationResult.value;
     }
 
-    /**
-     * Validates configuration against the provided schema
-     * @param {Object} config - Configuration to validate
-     * @returns {Object} - Validated and potentially transformed config
-     */
     validateConfig(config = this._config) {
         if (!this._validationSchema) return config;
 
@@ -162,10 +72,6 @@ export class BaseComponent {
         return validationResult.value;
     }
 
-    /**
-     * Initializes the component
-     * @returns {Promise<boolean>} True if initialization was successful
-     */
     async initialize() {
         if (this._initialized) {
             this.logWarn('Component already initialized');
@@ -191,10 +97,6 @@ export class BaseComponent {
         }
     }
 
-    /**
-     * Starts the component
-     * @returns {Promise<boolean>} True if start was successful
-     */
     async start() {
         if (!this._initialized) {
             this._logger.error('Cannot start uninitialized component');
@@ -227,10 +129,6 @@ export class BaseComponent {
         }
     }
 
-    /**
-     * Stops the component
-     * @returns {Promise<boolean>} True if stop was successful
-     */
     async stop() {
         if (!this._started) {
             this.logWarn('Component not started');
@@ -257,10 +155,6 @@ export class BaseComponent {
         }
     }
 
-    /**
-     * Disposes the component, releasing all resources
-     * @returns {Promise<boolean>} True if dispose was successful
-     */
     async dispose() {
         if (this._disposed) {
             this.logWarn('Component already disposed');
@@ -269,9 +163,7 @@ export class BaseComponent {
 
         try {
             // Stop if running
-            if (this._started) {
-                await this.stop();
-            }
+            if (this._started) await this.stop();
 
             await this._dispose();
             this._disposed = true;
@@ -291,46 +183,11 @@ export class BaseComponent {
         }
     }
 
-    /**
-     * Internal initialization method - to be overridden by subclasses
-     * @protected
-     * @returns {Promise<void>}
-     */
-    async _initialize() {
-        // Default implementation - can be overridden
-    }
+    async _initialize() { /* Default implementation - can be overridden */ }
+    async _start() { /* Default implementation - can be overridden */ }
+    async _stop() { /* Default implementation - can be overridden */ }
+    async _dispose() { /* Default implementation - can be overridden */ }
 
-    /**
-     * Internal start method - to be overridden by subclasses
-     * @protected
-     * @returns {Promise<void>}
-     */
-    async _start() {
-        // Default implementation - can be overridden
-    }
-
-    /**
-     * Internal stop method - to be overridden by subclasses
-     * @protected
-     * @returns {Promise<void>}
-     */
-    async _stop() {
-        // Default implementation - can be overridden
-    }
-
-    /**
-     * Internal dispose method - to be overridden by subclasses
-     * @protected
-     * @returns {Promise<void>}
-     */
-    async _dispose() {
-        // Default implementation - can be overridden
-    }
-
-    /**
-     * Initialize common metrics for the component
-     * @private
-     */
     _initializeMetrics() {
         this._metrics.set('initializeCount', 0);
         this._metrics.set('startCount', 0);
@@ -340,40 +197,19 @@ export class BaseComponent {
         this._metrics.set('lastActivity', Date.now());
     }
 
-    /**
-     * Updates a metric value
-     * @param {string} key - Metric key
-     * @param {any} value - Metric value
-     */
     updateMetric(key, value) {
         this._metrics.set(key, value);
         this._metrics.set('lastActivity', Date.now());
     }
 
-    /**
-     * Increments a metric value
-     * @param {string} key - Metric key
-     * @param {number} increment - Value to increment by (default: 1)
-     */
     incrementMetric(key, increment = 1) {
         const currentValue = this._metrics.get(key) || 0;
         this._metrics.set(key, currentValue + increment);
         this._metrics.set('lastActivity', Date.now());
     }
 
-    /**
-     * Gets a metric value
-     * @param {string} key - Metric key
-     * @returns {any} Metric value
-     */
-    getMetric(key) {
-        return this._metrics.get(key);
-    }
+    getMetric(key) { return this._metrics.get(key); }
 
-    /**
-     * Gets all metrics as an object
-     * @returns {Object} All metrics
-     */
     getMetrics() {
         return {
             ...Object.fromEntries(this._metrics),
@@ -382,52 +218,26 @@ export class BaseComponent {
         };
     }
 
-    /**
-     * Logs an info message
-     * @param {string} message - Message to log
-     * @param {Object} [metadata] - Optional metadata to include
-     */
     logInfo(message, metadata) {
         this._logger.info(message, metadata);
         this._metrics.set('lastActivity', Date.now());
     }
 
-    /**
-     * Logs a warning message
-     * @param {string} message - Message to log
-     * @param {Object} [metadata] - Optional metadata to include
-     */
     logWarn(message, metadata) {
         this._logger.warn(message, metadata);
         this._metrics.set('lastActivity', Date.now());
     }
 
-    /**
-     * Logs an error message
-     * @param {string} message - Message to log
-     * @param {Object} [metadata] - Optional metadata to include
-     */
     logError(message, metadata) {
         this._logger.error(message, metadata);
         this.incrementMetric('errorCount');
     }
 
-    /**
-     * Logs a debug message
-     * @param {string} message - Message to log
-     * @param {Object} [metadata] - Optional metadata to include
-     */
     logDebug(message, metadata) {
         this._logger.debug(message, metadata);
         this._metrics.set('lastActivity', Date.now());
     }
 
-    /**
-     * Emits an event through the event bus
-     * @param {string} event - Event name
-     * @param {Object} data - Event data
-     * @param {Object} options - Event options
-     */
     emitEvent(event, data, options = {}) {
         this._eventBus.emit(event, {
             timestamp: Date.now(),
@@ -437,21 +247,6 @@ export class BaseComponent {
         }, options);
     }
 
-    /**
-     * Subscribes to an event
-     * @param {string} event - Event name
-     * @param {Function} handler - Event handler function
-     */
-    onEvent(event, handler) {
-        this._eventBus.on(event, handler);
-    }
-
-    /**
-     * Unsubscribes from an event
-     * @param {string} event - Event name
-     * @param {Function} handler - Event handler function
-     */
-    offEvent(event, handler) {
-        this._eventBus.off(event, handler);
-    }
+    onEvent(event, handler) { this._eventBus.on(event, handler); }
+    offEvent(event, handler) { this._eventBus.off(event, handler); }
 }

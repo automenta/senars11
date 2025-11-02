@@ -335,15 +335,13 @@ export class ReasoningAboutReasoning {
         };
 
         const handler = correctionMap[suggestion.type];
-        if (handler) {
-            handler();
-        } else if (['task_distribution_imbalance', 'high_goal_pressure', 'high_query_load'].includes(suggestion.type)) {
+        handler ? handler() : 
+            ['task_distribution_imbalance', 'high_goal_pressure', 'high_query_load'].includes(suggestion.type) && 
             corrections.push({
                 action: 'load_balancing_advice',
                 issue: suggestion.type,
                 message: suggestion.message
             });
-        }
     }
 
     setEnabled(enabled) {

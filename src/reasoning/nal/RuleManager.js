@@ -104,59 +104,39 @@ export class RuleManager {
     }
 
     enableCategory(category) {
-        const ruleIds = this._categories.get(category);
-        if (ruleIds) for (const ruleId of ruleIds) this.enable(ruleId);
+        const ruleIds = this._categories.get(category) || new Set();
+        for (const ruleId of ruleIds) this.enable(ruleId);
         return this;
     }
 
     disableCategory(category) {
-        const ruleIds = this._categories.get(category);
-        if (ruleIds) for (const ruleId of ruleIds) this.disable(ruleId);
+        const ruleIds = this._categories.get(category) || new Set();
+        for (const ruleId of ruleIds) this.disable(ruleId);
         return this;
     }
 
     enableGroup(group) {
-        const ruleIds = this._ruleGroups.get(group);
-        if (ruleIds) for (const ruleId of ruleIds) this.enable(ruleId);
+        const ruleIds = this._ruleGroups.get(group) || new Set();
+        for (const ruleId of ruleIds) this.enable(ruleId);
         return this;
     }
 
     disableGroup(group) {
-        const ruleIds = this._ruleGroups.get(group);
-        if (ruleIds) for (const ruleId of ruleIds) this.disable(ruleId);
+        const ruleIds = this._ruleGroups.get(group) || new Set();
+        for (const ruleId of ruleIds) this.disable(ruleId);
         return this;
     }
 
-    get(ruleId) {
-        return this._rules.get(ruleId) || null;
+    get(ruleId) { return this._rules.get(ruleId) || null; }
+    getAll() { return Array.from(this._rules.values()); }
+    getEnabled() { return Array.from(this._enabledRules).map(id => this._rules.get(id)).filter(Boolean); }
+    getByCategory(category) { 
+        const ruleIds = this._categories.get(category) || new Set();
+        return Array.from(ruleIds).map(id => this._rules.get(id)).filter(Boolean);
     }
-
-    getAll() {
-        return Array.from(this._rules.values());
-    }
-
-    getEnabled() {
-        return Array.from(this._enabledRules)
-            .map(id => this._rules.get(id))
-            .filter(Boolean);
-    }
-
-    getByCategory(category) {
-        const ruleIds = this._categories.get(category);
-        if (!ruleIds) return [];
-
-        return Array.from(ruleIds)
-            .map(id => this._rules.get(id))
-            .filter(Boolean);
-    }
-
-    getByGroup(group) {
-        const ruleIds = this._ruleGroups.get(group);
-        if (!ruleIds) return [];
-
-        return Array.from(ruleIds)
-            .map(id => this._rules.get(id))
-            .filter(Boolean);
+    getByGroup(group) { 
+        const ruleIds = this._ruleGroups.get(group) || new Set();
+        return Array.from(ruleIds).map(id => this._rules.get(id)).filter(Boolean);
     }
 
     addValidator(ruleId, validator) {

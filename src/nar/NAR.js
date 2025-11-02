@@ -633,39 +633,20 @@ export class NAR extends BaseComponent {
         };
     }
 
-    getReasoningState() {
-        if (this._reasoningAboutReasoning) {
-            return this._reasoningAboutReasoning.getReasoningState();
-        }
-        return null;
-    }
-
     async performMetaCognitiveReasoning() {
-        if (this._reasoningAboutReasoning) {
-            return await this._reasoningAboutReasoning.performMetaCognitiveReasoning();
-        }
-        return null;
+        return this._reasoningAboutReasoning ? await this._reasoningAboutReasoning.performMetaCognitiveReasoning() : null;
     }
 
     async performSelfCorrection() {
-        if (this._reasoningAboutReasoning) {
-            return await this._reasoningAboutReasoning.performSelfCorrection();
-        }
-        return null;
+        return this._reasoningAboutReasoning ? await this._reasoningAboutReasoning.performSelfCorrection() : null;
     }
 
     querySystemState(query) {
-        if (this._reasoningAboutReasoning) {
-            return this._reasoningAboutReasoning.querySystemState(query);
-        }
-        return null;
+        return this._reasoningAboutReasoning?.querySystemState(query) ?? null;
     }
 
     getReasoningTrace() {
-        if (this._reasoningAboutReasoning) {
-            return this._reasoningAboutReasoning.getReasoningTrace();
-        }
-        return [];
+        return this._reasoningAboutReasoning?.getReasoningTrace() ?? [];
     }
 
     async executeTool(toolId, params, context = {}) {
@@ -706,7 +687,7 @@ export class NAR extends BaseComponent {
     }
 
     getAvailableTools() {
-        return this._toolIntegration ? this._toolIntegration.getAvailableTools() : [];
+        return this._toolIntegration?.getAvailableTools() ?? [];
     }
 
     async explainToolResult(toolResult, context = {}) {
