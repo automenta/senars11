@@ -4,7 +4,7 @@ SeNARS is a research project and software implementation of a hybrid neuro-symbo
 
 The system is designed for researchers, educators, and developers interested in Explainable AI (XAI), knowledge representation, and the emergent behaviors of hybrid intelligence. It provides a comprehensive toolset for running, visualizing, and analyzing the reasoning process in real-time.
 
-For the detailed architectural vision and development roadmap, see **[PLAN.md](./PLAN.md)**.
+For the detailed architectural vision and development roadmap, see **[PLAN.2.md](./PLAN.2.md)**.
 
 ---
 
@@ -16,19 +16,6 @@ This vision is based on a few core ideas:
 
 1.  **Structural Intelligence**: The data structures themselves—`Term`, `Task`, `Truth`, and `Stamp`—are designed to contain information that allows for automatic analysis. For example, immutable, canonically normalized `Terms` can be efficiently cached and reused, improving performance and logical consistency.
 2.  **Emergent Optimization**: System-wide improvements can emerge naturally from the interaction of these well-designed components, rather than being explicitly hand-coded for every scenario. For instance, the system can learn to allocate processing resources more effectively by observing the outcomes of past reasoning patterns.
-
-**Note:** This is the aspirational vision for the project. The current implementation provides the foundational architecture to pursue this goal. The specific algorithms for autonomous self-improvement are a primary subject of the ongoing research and development detailed in the project's plan.
-
----
-
-## Current State of the Implementation
-
-This project is under active development. The core architecture is in place and many components are functional, but it is important for users and contributors to understand the current status:
-
--   **Term Normalization:** The canonical normalization of `Term` objects is a critical feature for logical consistency (e.g., ensuring `(&, A, B)` is treated as identical to `(&, B, A)`). This is partially implemented, but does not yet cover all logical operators and edge cases.
--   **NARS-LM Integration:** The hybrid reasoning capability is functional but operates primarily in a sequential manner. More sophisticated protocols for synergistic, cross-validating reasoning between the NAL engine and LLMs are a key part of the system's design but are not yet fully implemented.
--   **Performance:** The system includes extensive validation and monitoring, which is invaluable for research but introduces performance overhead. The architecture is designed for high performance, but the current implementation is not yet optimized for production-level speed.
--   **Self-Improvement:** The architecture is *designed* to support self-improvement. However, the current implementation does not yet feature autonomous, self-optimizing algorithms. This capability is the project's primary long-term research and development goal.
 
 ---
 

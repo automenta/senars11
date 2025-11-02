@@ -1,200 +1,149 @@
-# SeNARS Development Plan: A Self-Improving Architecture
+# SeNARS Development Plan: A Code-Aligned Roadmap
 
 > **Document Purpose**
 >
-> This document is the definitive development roadmap for SeNARS. It details the architectural principles, phased implementation plan, and technical specifications that guide the project's engineering efforts. Its focus is on the **how and when** of development.
+> This document is the definitive development roadmap for SeNARS, starting from the project's current codebase. It is organized into a series of goal-oriented **initiatives** that are explicitly tied to the files and directories within the `src/`, `tests/`, and `docs/` folders.
 >
-> For a high-level overview of the project's goals, current status, and usage instructions, please see the **[README.md](../README.md)**.
+> The primary goal is to provide a clear, actionable path to transform the existing components into a robust, reliable, and fully-functional reasoning system.
 
-## Executive Summary: A Practical Roadmap for Hybrid Intelligence
+## Executive Summary: From a Codebase to a System
 
-This document outlines the development plan for SeNARS, a hybrid neuro-symbolic reasoning system. It prioritizes a phased, practical approach to realizing the system's long-term architectural vision. The core goal is to build a robust, observable, and extensible platform for AI research by focusing on correctness, clear architecture, and comprehensive testing.
+The current SeNARS codebase contains many foundational components but requires focused work on correctness, testing, and integration. This plan outlines the initiatives to complete this work, framed to provide maximum clarity for developers navigating the repository.
 
-The plan is guided by a central architectural principle: creating **self-improving** data structures. The system's components (`Term`, `Task`, `Memory`) are designed to contain structural information that allows for emergent optimization, making the system more effective as it processes more information.
+The roadmap prioritizes tackling the biggest risks first: ensuring the existing components are correct and can be integrated successfully. Each initiative details the specific "Codebase Impact," pointing to the exact files and directories that will be affected.
 
-**Key Engineering Objectives:**
+**Key Guiding Principles:**
 
--   **Simplicity:** Reduce complexity and avoid over-engineering in core components.
--   **Robustness:** Create stable, predictable, and error-resistant modules.
--   **Consistency:** Establish clear conventions for APIs, data structures, and code style.
--   **Testability:** Ensure all components are covered by unit and integration tests.
--   **Extensibility:** Design for the straightforward addition of new features and reasoning capabilities.
--   **Functionality First:** Prioritize the correct implementation of all features before focusing on performance optimization.
+1.  **Integrate Early and Often:** Prove that components can work together before investing heavily in their individual features.
+2.  **Test What Exists:** Bring the existing code under a comprehensive test harness before extending it.
+3.  **Deliver Capabilities, Not Just Components:** Each initiative should result in a more capable and demonstrably functional system.
+4.  **Separate Engineering from Research:** Build the stable platform (engineering) required to conduct novel experiments (research).
 
 ---
 
-## Core Architecture: The Self-Improving Data Structure Foundation
+## Initiative 1: Establish an End-to-End Integration Baseline
 
-The foundation of SeNARS rests on a set of core data structures designed to enable emergent improvements in the reasoning process.
+**Goal:** Prove that the major existing components can be wired together to pass data from input to retrieval. This "tracer bullet" initiative is the highest priority as it de-risks the entire project by exposing fundamental integration flaws immediately.
 
-### Term: The Foundational Knowledge Structure
-The `Term` is the immutable, canonical representation of all knowledge in the system.
+**Actionable Tasks:**
 
--   **Core Principles:**
-    -   **Strict Immutability**: Once created, a `Term` object is never modified. This enables safe caching, prevents side effects, and simplifies state management.
-    -   **Canonical Normalization**: Logically equivalent terms (e.g., `(&, A, B)` vs. `(&, B, A)`) are normalized to a single, identical object representation by the `TermFactory`. This is critical for efficient pattern matching and knowledge consolidation.
-    -   **Structural Intelligence**: `Term` objects provide methods for traversal (`.visit()`) and analysis (`.reduce()`), allowing algorithms to leverage their structure directly.
--   **Concerns & Requirements:**
-    -   The normalization logic must correctly handle all Narsese operators, including edge cases for commutativity and associativity. An incomplete implementation would undermine the system's logical consistency.
-    -   The `TermFactory` could become a performance bottleneck if caching and normalization are not implemented efficiently. This will be a key area for profiling in later optimization phases.
--   **Implementation Details:**
-    -   All `Term` creation must be routed through a `TermFactory` to enforce normalization and caching.
-    -   The `hashCode` will be pre-calculated and cached upon creation.
-    -   Normalization will handle commutativity (sorting components) and associativity (flattening nested structures).
+1.  **Create the "Tracer Bullet" Integration Test:**
+    -   Write a single test that instantiates the main `NAR` class, inputs a simple atomic belief (e.g., `"A."`), and asserts that the corresponding belief can be retrieved from memory.
+    -   **Codebase Impact:**
+        -   **Create/Modify:** `tests/integration/baseline.test.js`
+        -   **Files Under Test:** `src/NAR.js`, `src/parser/`, `src/term/TermFactory.js`, `src/task/Task.js`, `src/memory/Memory.js`
 
-### Task: The Unit of Processing
-A `Task` is an immutable wrapper around a `Term` that represents a unit of work for the system, such as a belief to process or a question to answer.
+**Acceptance Criteria:**
 
--   **Core Principles:**
-    -   **Descriptive State**: Each `Task` contains a `Term` (the content), a `Truth` value, a `Stamp` (for evidence tracking), and a `budget` (for resource allocation).
-    -   **Evidence Tracking**: The `Stamp` system provides a complete derivation history, allowing for traceability and learning from reasoning paths.
-    -   **Resource Allocation**: The `budget` system (priority, durability, etc.) allows the system to manage attention and processing resources.
--   **Concerns & Requirements:**
-    -   Calibrating the budget and attention allocation algorithms is a significant challenge. Poor heuristics could lead to important tasks being starved of processing time.
-    -   The evidence-tracking mechanism (Stamps) could consume significant memory if not managed properly, especially for long reasoning chains.
--   **Implementation Details:**
-    -   `Task` objects will be strictly immutable. Any modification (e.g., updating a truth value) will result in a new `Task` instance.
-    -   The `Stamp` will form a directed acyclic graph (DAG) of evidence.
+-   A single, passing integration test in `tests/integration/baseline.test.js` demonstrates the full, unbroken data flow from the `NAR.input()` method to the `Memory` store. This test will serve as a regression harness for all subsequent initiatives.
 
-### Memory: The Knowledge Organization System
-The `Memory` component organizes all knowledge into `Concepts`, which are collections of `Tasks` related to a specific `Term`.
+## Initiative 2: Solidify Core Components
 
--   **Core Principles:**
-    -   **Concept-Based Storage**: All information related to a `Term` is clustered within a corresponding `Concept`, enabling efficient, associative access.
-    -   **Dual-Memory Architecture**: The system separates a `Focus` set (short-term, active processing) from the main `Memory` (long-term storage).
-    -   **Attention-Based Consolidation**: An attention mechanism determines which tasks are moved into the focus set for active processing and which are forgotten over time.
--   **Concerns & Requirements:**
-    -   The dual-memory architecture adds complexity. The process of consolidating tasks between focus and long-term memory must be efficient to avoid becoming a system bottleneck.
-    -   The forgetting mechanism is critical for managing memory usage but must be designed carefully to avoid the premature loss of important, but infrequently accessed, knowledge.
--   **Implementation Details:**
-    -   The core data structure will be a `Map<Term, Concept>`.
-    -   The `Focus` will be implemented as a priority-based selection mechanism.
-    -   Consolidation algorithms will run periodically as part of the main reasoning cycle.
+**Goal:** Address the known weaknesses in the existing `Term` and `Parser` components. This initiative focuses on correctness, completeness, and test coverage for the foundational data structures.
 
----
+**Actionable Tasks:**
 
-## Implementation Roadmap: A Phased Approach to Functionality
+1.  **`Term` Normalization:**
+    -   Refactor the existing `TermFactory` to implement complete canonical normalization for all specified NAL operators.
+    -   **Codebase Impact:**
+        -   **Modify:** `src/term/TermFactory.js`, `src/term/Term.js`
+2.  **`Term` Testing:**
+    -   Achieve >95% unit test coverage for the `Term` and `TermFactory` classes. Implement property-based tests for normalization.
+    -   **Codebase Impact:**
+        -   **Create/Modify:** `tests/unit/Term.test.js`, `tests/unit/TermFactory.test.js`
+3.  **`Parser` Enhancement:**
+    -   Refactor the existing `Parser` to correctly handle all Narsese syntax and implement robust error recovery.
+    -   **Codebase Impact:**
+        -   **Modify:** `src/parser/` (relevant parser implementation files)
+        -   **Create/Modify:** `tests/unit/Parser.test.js`
+4.  **Core Component Documentation:**
+    -   Write comprehensive JSDoc/TSDoc for all public methods in the core `Term`, `TermFactory`, and `Parser` modules.
+    -   **Codebase Impact:**
+        -   **Modify:** `src/term/Term.js`, `src/term/TermFactory.js`, `src/parser/` (add comments)
 
-This roadmap is divided into phases, each with a clear set of functional goals. Performance optimization is explicitly deferred to the final phases to avoid premature optimization.
+**Acceptance Criteria:**
 
-### Phase 1: Foundation and Core Infrastructure
--   **Goal**: Establish the foundational data structures and utilities.
--   **Deliverables**:
-    -   `Term` class with strict immutability, equality, and hashing.
-    -   `TermFactory` with initial caching and normalization for commutative operators (e.g., `&`, `|`).
-    -   Implementation of `Term` visitor and reducer patterns.
-    -   Core utilities: `EventBus` for component communication, a basic `SystemConfig` for managing parameters, and validation helpers.
--   **Acceptance Criteria**: Achieve >95% unit test coverage for `Term` immutability and normalization logic for all implemented operators.
+-   The `TermFactory` correctly normalizes all documented Narsese term types, verified by tests in `tests/unit/TermFactory.test.js`.
+-   The core component test suite passes with >95% coverage.
 
-### Phase 2: Memory System and Task Management
--   **Goal**: Implement the core components for storing and managing knowledge.
--   **Deliverables**:
-    -   Immutable `Task`, `Truth`, and `Stamp` classes with full property implementation.
-    -   `Memory` class with a concept-based storage map (`Map<Term, Concept>`).
-    -   `Focus` component for short-term memory management.
-    -   Initial implementation of the dual-memory architecture and task consolidation.
--   **Acceptance Criteria**: The system can correctly store, retrieve, and prioritize tasks based on their budget. Integration tests verify task flow from input to memory.
+## Initiative 3: Implement Foundational Reasoning
 
-### Phase 3: Rule Engine and Reasoning
--   **Goal**: Build the engine for applying inference rules.
--   **Deliverables**:
-    -   A base `Rule` framework with a clear interface (`canApply()`, `apply()`).
-    -   Implementation of core NAL inference rules (deduction, revision) and their corresponding truth functions.
-    -   Implementation of the full suite of NAL truth value operations: revision, deduction, induction, abduction, negation, and expectation.
-    -   A `RuleEngine` to select and apply rules to tasks.
-    -   A `Cycle` component to orchestrate the overall reasoning flow (task selection -> rule application -> memory update).
--   **Acceptance Criteria**: The system can perform basic logical inferences and derive new beliefs from existing ones, with truth values correctly propagated according to NAL specifications.
+**Goal:** Transform the system from a data storage mechanism into a true reasoning engine by implementing a complete, end-to-end reasoning capability.
 
-### Phase 4: Parser and Input Processing
--   **Goal**: Enable the system to understand the Narsese language.
--   **Deliverables**:
-    -   A robust Narsese parser capable of handling all specified NAL operator types.
-    -   Support for parsing statements with terms, punctuation (`.`, `!`, `?`), and truth values (`%f;c%`).
-    -   Comprehensive validation of Narsese syntax with clear error messages and truth value range validation `[0,1]`.
-    -   Error recovery mechanisms for malformed input.
--   **Acceptance Criteria**: The parser correctly handles all documented Narsese syntax, with property-based tests verifying its robustness against a wide range of inputs.
+**Actionable Tasks:**
 
-### Phase 5: NAR Main Component and API
--   **Goal**: Assemble all components into a unified system with a public API.
--   **Deliverables**:
-    -   `NAR` class as the central system orchestrator, with a detailed API (see *Technical Specifications*).
-    -   `input(narseseString)` method for feeding knowledge into the system.
-    -   `on(eventName, callback)` for subscribing to a comprehensive set of system events (e.g., `'output'`, `'belief_updated'`, `'cycle_end'`).
-    -   Control methods: `start()`, `stop()`, `step()`.
-    -   Query methods: `getBeliefs()`, `query()`.
-    -   Initial "metacognitive" capabilities: The event system will emit detailed metrics about cycle performance and rule application, making the system's internal state observable.
--   **Acceptance Criteria**: A fully integrated NAR system that can be controlled and queried through a well-defined API, demonstrated via end-to-end tests.
+1.  **Implement Core NAL Rules & Truth Functions:**
+    -   Implement the NAL rules for **deduction** and **revision** and their corresponding truth value functions.
+    -   **Codebase Impact:**
+        -   **Create:** `src/reasoning/rules/nal/Deduction.js`, `src/reasoning/rules/nal/Revision.js`
+        -   **Modify:** `src/reasoning/RuleEngine.js` (to register new rules)
+        -   **Modify:** `src/Truth.js` (to add truth functions)
+        -   **Create/Modify:** `tests/unit/Truth.test.js`, `tests/unit/rules/Deduction.test.js`
+2.  **Create Syllogism Integration Test:**
+    -   Build upon the baseline test to verify a simple syllogism (e.g., `A-->B`, `B-->C` |- `A-->C`).
+    -   **Codebase Impact:**
+        -   **Create/Modify:** `tests/integration/syllogism.test.js`
 
-### Phase 6: Advanced Features and NARS-LM Integration
--   **Goal**: Implement advanced reasoning capabilities and hybrid NAL-LM logic.
--   **Deliverables**:
-    -   An `LM` integration component with a provider registry.
-    -   Protocols for NARS-LM collaboration, focusing on synergistic reasoning (e.g., using the LM to generate hypotheses that NAL then validates).
-    -   Cross-validation mechanisms to ensure consistency between NAL and LM outputs.
-    -   Advanced memory management: priority decay, more sophisticated forgetting algorithms, and specialized indexing for different term types (inheritance, implication, etc.).
-    -   A basic plugin architecture to allow for the dynamic registration of new inference rules.
--   **Acceptance Criteria**: The system can successfully use an LLM to generate candidate beliefs and validate them using its internal NAL logic. The plugin system can load a custom rule at runtime.
+**Acceptance Criteria:**
 
-### Phase 7: Testing and Quality Assurance
--   **Goal**: Ensure the system is robust, reliable, and correct.
--   **Deliverables**:
-    -   Comprehensive unit test coverage (>95%) for all core components.
-    -   Integration tests simulating real-world input sequences and reasoning chains.
-    -   Property-based testing for the `Term` normalization and `Truth` function logic.
-    -   A fluent "Reasoner Test API" to simplify the writing of integration tests, abstracting away cycle management and memory inspection for clearer test cases.
--   **Acceptance Criteria**: The test suite is automated and passes consistently, providing high confidence in the correctness of the system's logic.
+-   The system can successfully perform a syllogistic deduction, verified by the test in `tests/integration/syllogism.test.js`, proving the `Parser`, `Memory`, `RuleEngine`, and `NAR` orchestrator are all working together correctly.
 
-### Phase 8: Deployment, Documentation, and Optimization
--   **Goal**: Prepare the system for production use and perform targeted performance tuning.
--   **Deliverables**:
-    -   Detailed API documentation and comprehensive user guides.
-    -   Containerization support (Docker) for easy deployment.
-    -   **Security Hardening**: Implementation of input sanitization and resource limits to prevent abuse.
-    -   **Reliability Engineering**: Implementation of robust error handling, graceful degradation, and circuit breaker patterns for external services (like LMs).
-    -   **Internationalization**: Basic support for different Narsese syntax variants and natural language translation hooks.
-    -   **Performance Profiling**: A systematic analysis to identify and quantify performance bottlenecks in the now-functional system.
-    -   **Targeted Optimization**: Code changes to address the identified bottlenecks.
-    -   Establishment of performance benchmarks for regression testing.
--   **Acceptance Criteria**: The system is deployable via Docker, is well-documented, secure, reliable, and meets defined performance targets for key operations.
+## Initiative 4: NARS-LM Hybrid Integration
 
----
+**Goal:** Build the robust engineering framework required for NARS-LM experimentation and implement a baseline for hybrid reasoning.
 
-## Coherent Technical Specifications
+**Actionable Tasks (Engineering Track):**
 
-### NAR API Specification
--   `constructor(config: SystemConfig)`: Initializes all components with a validated configuration object.
--   `input(narseseString: string)`: Parses a Narsese string, creates a `Task`, and adds it to memory.
--   `on(eventName: string, callback: Function)`: Registers listeners for system events.
--   `start()` / `stop()`: Initiates/halts the continuous reasoning cycle.
--   `step()`: Executes a single reasoning cycle for debugging.
--   `getBeliefs(queryTerm?: Term)`: Returns current beliefs, optionally filtered.
--   `query(questionTerm: Term)`: Submits a question and returns a promise that resolves with the answer.
--   `reset()`: Clears memory and resets the system state.
+1.  **Build the LM Integration Framework:**
+    -   Implement a provider-agnostic `LM` component, a provider registry, and a circuit breaker for handling API failures.
+    -   **Codebase Impact:**
+        -   **Modify:** `src/lm/LM.js`, `src/config/SystemConfig.js`
+        -   **Create:** `src/lm/ProviderRegistry.js`, `src/lm/util/CircuitBreaker.js`
+        -   **Create:** `src/lm/providers/` (e.g., `OpenAIProvider.js`)
+2.  **Implement a Baseline Hybrid Workflow:**
+    -   Create a new "LM Hypothesis" rule that queries an LM and injects the response back into the system.
+    -   **Codebase Impact:**
+        -   **Create:** `src/reasoning/rules/lm/Hypothesis.js`
+        -   **Create/Modify:** `tests/integration/lm_hybrid.test.js`
 
-### Parser System Specifications
--   **Narsese Syntax Support**: Must parse all NAL operator types, including:
-    -   Inheritance `(A --> B)`, Similarity `(A <-> B)`, Implication `(A ==> B)`, Equivalence `(A <=> B)`
-    -   Conjunction `(&, A, B, ...)`, Disjunction `(|, A, B, ...)`, Negation `(--, A)`
-    -   Sets `{A, B, C}`, `[A, B, C]`, Sequential conjunction `(&/, A, B)`, Instance `(--{ A)`, Property `(-->} B)`
-    -   Operations `(A ^ B)`, Products `(A, B, C)`
--   **Error Handling**: The parser must not crash on invalid input. It should report a clear error and allow the system to continue running.
--   **Integration**: The parser must use the `TermFactory` to create all `Term` objects, ensuring normalization is applied at the point of creation.
+**Parallel Research Spike:**
 
-### Rule Engine Framework
--   **NAL Truth Functions**: The engine must correctly implement the full set of NAL truth functions for inference.
--   **Rule Interface**: All rules will implement a common interface: `canApply(task)` and `apply(task)`.
--   **Hybrid Coordination**: The engine will orchestrate NAL-LM interaction. A potential workflow:
-    1.  NAL engine processes a task.
-    2.  If no NAL rule can be applied or confidence is low, the engine can formulate a prompt for an LM.
-    3.  The LM response is parsed back into Narsese.
-    4.  The new Narsese statement is input into the NAL engine, which checks it for consistency with existing beliefs (cross-validation).
+-   **Goal:** Use the new framework to explore and document more advanced synergistic reasoning protocols.
+-   **Deliverable:** A research report summarizing findings.
+-   **Codebase Impact:**
+    -   **Create:** `docs/research/hybrid_reasoning_protocols.md`
 
-### Memory and Attention Management
--   **Concept Structure**: Each `Concept` will contain collections of `Tasks` (e.g., beliefs, goals) and links to related concepts.
--   **Focus Selection**: The `FocusSetSelector` will use a composite score based on a task's priority, urgency (time since last access), and novelty to promote cognitive diversity.
--   **Forgetting Policy**: The initial policy will be a simple priority decay over time. More advanced, usage-based policies will be implemented in Phase 6.
+**Acceptance Criteria:**
 
-### Configuration Management
--   **Structure**: A single, immutable `SystemConfig` object will be passed to the `NAR` constructor.
--   **Validation**: The configuration system will validate the provided settings (e.g., checking for valid ranges, required parameters) and provide clear error messages.
--   **Defaults**: The system will provide sensible default values for all parameters to facilitate ease of use.
+-   The engineering framework is complete and can successfully query an external LM, verified by the test in `tests/integration/lm_hybrid.test.js`.
+-   The research spike deliverable is completed.
+
+## Initiative 5: Prepare for External Use
+
+**Goal:** Harden the system by implementing features related to documentation, deployment, security, reliability, and performance.
+
+**Actionable Tasks:**
+
+1.  **Documentation:**
+    -   Write a comprehensive user guide and generate complete API documentation.
+    -   **Codebase Impact:**
+        -   **Create:** `docs/user-guide.md`, `docs/api-reference.md`
+2.  **Deployment:**
+    -   Create a `Dockerfile` for easy, one-command deployment.
+    -   **Codebase Impact:**
+        -   **Create:** `Dockerfile`, `docker-compose.yml` (in project root)
+3.  **Security & Reliability:**
+    -   Implement input sanitization and resource limits.
+    -   **Codebase Impact:**
+        -   **Modify:** `src/parser/` (sanitization), `src/NAR.js` (resource limits), `src/lm/LM.js` (circuit breaker)
+4.  **Performance Optimization:**
+    -   Conduct systematic performance profiling, then implement targeted optimizations. Establish benchmarks.
+    -   **Codebase Impact:**
+        -   **Create:** `benchmarks/` (new benchmark files, e.g., `term_normalization.js`)
+        -   **Modify:** Files identified as bottlenecks (e.g., `src/term/TermFactory.js`, `src/memory/Memory.js`)
+
+**Acceptance Criteria:**
+
+-   The system is fully documented and can be deployed via a single `docker-compose up` command.
+-   The system is resilient to common failure modes and invalid input.
+-   Performance has been measurably improved in at least two identified bottleneck areas, with new files in `benchmarks/` to prove it.
