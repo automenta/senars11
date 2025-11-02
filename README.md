@@ -1224,4 +1224,103 @@ Beyond the immediate compound prototype, the ultimate vision for SeNARS is to cr
 - **Adaptive Interfaces**: Universal access across all devices and platforms
 - **Community Extensions**: Plugin architecture for community-contributed capabilities
 
-The SeNARS platform will continue to evolve as a **living demonstration** of the possibilities of compound intelligence, always maintaining its core commitment to observability, transparency, and user understanding while pushing the boundaries of what compound NARS-LM systems can achieve. Each implemented compound phase strengthens the compound intelligence foundation for the next, creating a self-reinforcing cycle of compound improvement and compound capability expansion that approaches infinite intelligence growth with finite resources.
+
+## Critical Concerns and Questions for Future Development
+
+Based on analysis of the current implementation, several concerns and questions have emerged that require careful attention for the project's continued development:
+
+### Technical Architecture Concerns
+
+**Term Normalization and Equality:**
+## Critical Concerns and Questions for Future Development
+
+Based on analysis of the current implementation, several concerns and questions have emerged that require careful attention for the project's continued development:
+
+### Technical Architecture Concerns
+
+**Term Normalization and Equality:**
+- The current Term implementation is not fully immutable as specified in the design - some properties like `_id` and `_hash` are calculated but not frozen
+- The equality method `equals()` does not implement the canonical normalization specified in the design for commutative and associative operators
+- This could lead to logical equivalent terms (e.g., `(&, A, B)` vs `(&, B, A)`) being treated as different objects, contradicting the fundamental design principle
+
+**Performance Reality vs. Vision:**
+- The performance targets (sub-millisecond operations) may be overly optimistic given the complexity of the full NARS reasoning cycle
+- The current implementation includes extensive validation and metrics collection that may impact performance
+- Complex reasoning chains with multiple rule applications could be significantly slower than the targeted thresholds
+
+**Memory Management Complexity:**
+- The dual memory architecture (focus/long-term) is implemented but the consolidation mechanisms may not scale as efficiently as envisioned
+- Memory pressure handling and forgetting policies may not adequately preserve important knowledge
+- The memory index system may become a performance bottleneck as the knowledge base grows
+
+### Implementation Reality Check
+
+**Compound Intelligence Claims:**
+- The "compound intelligence" concept in the current implementation is more about component integration than true self-improving algorithms
+- Most "compound improvement" claims are theoretical rather than implemented in the current codebase
+- The self-improving aspects mentioned in the vision are not yet realized in the actual implementation
+
+**NARS-LM Integration:**
+- The hybrid reasoning coordination is basic and mainly involves applying LM and NAL rules sequentially
+- True cross-validation and synergistic enhancement between NAL and LM outputs is not fully implemented
+- Language model integration is primarily through fallback mechanisms rather than true collaborative reasoning
+
+**Parser Limitations:**
+- The parser implementation handles basic Narsese syntax but may not fully support all NAL operators specified in the design
+- Error recovery mechanisms are not as robust as specified in the design document
+- Recursive parsing of deeply nested compound terms may have stack overflow issues
+
+### System Architecture Questions
+
+**Component Coupling:**
+- The NAR component appears to have tight coupling with many sub-components (Memory, TaskManager, RuleEngine, etc.)
+- This may make it difficult to maintain the "loosely coupled" architecture specified in the design
+- Testing individual components in isolation may be more challenging than anticipated
+
+**Scalability Concerns:**
+- The current memory implementation may not scale to the "10,000+ operations per second" target without significant optimization
+- The event-driven architecture could become a bottleneck under high load
+- Serialization/deserialization performance may not meet requirements for large knowledge bases
+
+**Configuration Complexity:**
+- The SystemConfig has grown quite complex with many interdependent parameters
+- Some configuration values may have unintended side effects when changed
+- The default values may not be appropriate for all use cases
+
+### Observability and Debugging 
+
+**Self-Analysis Capabilities:**
+- The "reasoning about reasoning" capabilities are currently basic and not fully integrated into the core system
+- The self-optimization mechanisms are largely theoretical at this point
+- Monitoring and debugging compound intelligence behaviors remains challenging
+
+**Event System Overhead:**
+- The extensive event emission for monitoring may introduce performance overhead
+- The event-driven architecture may complicate debugging due to asynchronous behavior
+- The cognitive monitoring features may consume significant resources
+
+### Quality Assurance Reality
+
+**Testing Coverage:**
+- While the testing framework exists, comprehensive coverage of complex reasoning chains is challenging to achieve
+- Integration testing of NARS-LM hybrid reasoning is complex and may not catch all edge cases
+- Property-based testing for Term normalization may not fully exercise all operator combinations
+
+**Error Handling:**
+- Some error conditions may cascade and affect system stability despite the circuit breaker implementation
+- Fallback mechanisms (like the LM fallback) may produce unexpected behaviors
+- The graceful degradation mechanisms need more thorough validation
+
+### Practical Considerations
+
+**Resource Requirements:**
+- The memory and computational requirements may be higher than initially estimated for complex reasoning tasks
+- The dual memory architecture requires careful tuning of parameters to avoid resource exhaustion
+- The system may require more sophisticated resource management than currently implemented
+
+**Maintainability:**
+- The complex interplay between components may make debugging and maintenance challenging
+- The self-modifying nature of some components may lead to unexpected behaviors
+- Documentation of complex reasoning patterns is essential but time-consuming
+
+These concerns and questions should inform development priorities and help ensure the system remains grounded in practical implementation realities while working toward the ambitious vision.
