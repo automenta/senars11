@@ -1400,3 +1400,103 @@ This roadmap achieves the compound intelligence SeNARS architecture where the sy
 The result is a system where intelligence compounds through structural properties - a reasoning system where Term/Task/Truth/Stamp structures create intelligence that multiplies with use. The compound intelligence rate approaches exponential as structural properties create more opportunities for optimization and learning, while maintaining robustness, security, and quality.
 
 Each data structure addition strengthens the compound intelligence engine itself, creating a true autopoietic cognitive system that continuously becomes more capable of becoming more intelligently compound - achieving the potential of infinite intelligence growth with finite resources through recursive structural self-improvement and compound pattern recognition, all while maintaining production-ready quality, security, and reliability.
+# Addressing Implementation Concerns: Planned Actions
+
+This section outlines specific planned actions to address the concerns raised in the README.md analysis of the current implementation.
+
+## Technical Architecture Solutions
+
+### Term Normalization and Equality
+- **Phase 2.5 (Enhancement to Phase 2)**: Implement full immutability for Term objects ensuring all properties are frozen
+- **Phase 4.5 (Enhancement to Phase 4)**: Implement canonical normalization algorithms for commutative and associative operators as specified in the design
+- **Phase 2.6**: Add comprehensive equality testing for logically equivalent terms (`(&, A, B)` vs `(&, B, A)`) with proper caching mechanism
+- **Phase 7.5**: Add automated tests to verify that normalized terms are properly identified as equal
+
+### Performance Optimization
+- **Phase 3.5 (Enhancement to Phase 3)**: Conduct performance profiling to establish realistic baselines vs. theoretical targets
+- **Phase 5.5 (Enhancement to Phase 5)**: Implement performance monitoring and benchmarking infrastructure
+- **Phase 8.5 (New phase)**: Performance optimization cycle to achieve realistic performance targets based on profiling data
+- **Phase 3.6**: Optimize the NARS reasoning cycle to reduce computational overhead
+
+### Memory Management
+- **Phase 2.7 (Enhancement to Phase 2)**: Optimize consolidation algorithms for better scalability
+- **Phase 6.5 (Enhancement to Phase 6)**: Implement more efficient memory indexing mechanisms
+- **Phase 2.8**: Add memory pressure monitoring with configurable thresholds
+- **Phase 2.9**: Implement improved forgetting policies that better preserve important knowledge
+
+## Implementation Reality Alignment
+
+### Compound Intelligence Implementation
+- **Phase 5.2 (Enhancement to Phase 5)**: Implement actual self-improving algorithms based on the compound intelligence principles
+- **Phase 5.3**: Add self-optimization capabilities that adapt based on performance metrics
+- **Phase 7.6**: Develop validation tests for compound intelligence claims to ensure they are more than theoretical
+
+### NARS-LM Integration Enhancement
+- **Phase 6.2 (Enhancement to Phase 6)**: Implement true cross-validation between NAL and LM outputs
+- **Phase 6.3**: Develop synergistic enhancement mechanisms for collaborative reasoning
+- **Phase 6.4**: Create proper coordination protocols that go beyond sequential rule application
+
+### Parser Improvements
+- **Phase 4.4 (Enhancement to Phase 4)**: Add support for all NAL operators as specified in the design
+- **Phase 4.5**: Implement more robust error recovery mechanisms
+- **Phase 4.6**: Add stack overflow protection for deeply nested compound terms
+
+## System Architecture Improvements
+
+### Component Decoupling
+- **Phase 1.5 (Enhancement to Phase 1)**: Define clear interfaces between components to reduce coupling
+- **Phase 5.4 (Enhancement to Phase 5)**: Implement dependency injection pattern for better component isolation
+- **Phase 7.7**: Add interface-based tests to validate loose coupling between components
+
+### Scalability Solutions
+- **Phase 8.1 (Enhancement to Phase 8)**: Conduct scalability testing to establish realistic performance metrics
+- **Phase 8.2**: Implement performance optimization for the event-driven architecture
+- **Phase 2.10**: Optimize serialization/deserialization performance for large knowledge bases
+
+### Configuration Management
+- **Phase 8.3**: Simplify SystemConfig by grouping related parameters and providing better defaults
+- **Phase 8.4**: Add validation for interdependent configuration parameters
+
+## Observability and Debugging Enhancements
+
+### Self-Analysis Capabilities
+- **Phase 5.6 (Enhancement to Phase 5)**: Fully implement reasoning about reasoning capabilities
+- **Phase 5.7**: Add self-optimization mechanisms with measurable improvement metrics
+- **Phase 5.8**: Create comprehensive debugging tools for compound intelligence behaviors
+
+### Event System Optimization
+- **Phase 5.9 (Enhancement to Phase 5)**: Optimize event emission for performance while maintaining monitoring capabilities
+- **Phase 5.10**: Add event filtering mechanisms to reduce overhead in production
+
+## Quality Assurance Improvements
+
+### Testing Coverage
+- **Phase 7.8 (Enhancement to Phase 7)**: Add comprehensive test coverage for complex reasoning chains
+- **Phase 7.9**: Implement specialized testing for NARS-LM hybrid reasoning scenarios
+- **Phase 7.10**: Add property-based testing specifically for Term normalization scenarios
+
+### Error Handling
+- **Phase 3.7 (Enhancement to Phase 3)**: Improve circuit breaker configuration and validation
+- **Phase 7.11**: Add comprehensive testing for fallback mechanisms
+- **Phase 3.8**: Implement more thorough validation of graceful degradation mechanisms
+
+## Practical Considerations
+
+### Resource Management
+- **Phase 2.11**: Add sophisticated resource management mechanisms with configurable limits
+- **Phase 2.12**: Implement parameter tuning tools to help with memory architecture optimization
+
+### Maintainability
+- **Phase 8.6**: Add comprehensive documentation for complex reasoning patterns
+- **Phase 8.7**: Implement debugging and analysis tools to make component interactions clearer
+- **Phase 8.8**: Add system behavior visualization tools for complex reasoning chains
+
+## Implementation Priority Matrix
+
+The following matrix establishes the priority for implementing the above solutions:
+
+- **Critical (Phase 2.x)**: Term normalization, memory management, basic performance
+- **High (Phase 3.x-5.x)**: NARS-LM integration, error handling, component decoupling
+- **Medium (Phase 6.x-7.x)**: Self-analysis, testing coverage, compound intelligence features
+- **Low (Phase 8.x)**: Optimization, documentation, advanced features
+
