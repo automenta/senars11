@@ -93,10 +93,13 @@ export class Repl {
     }
 
     _createCommandMap() {
-        return Object.entries(COMMANDS).reduce((map, [method, aliases]) => {
-            aliases.forEach(alias => map.set(alias, this[`_${method}`].bind(this)));
-            return map;
-        }, new Map());
+        const map = new Map();
+        for (const [method, aliases] of Object.entries(COMMANDS)) {
+            for (const alias of aliases) {
+                map.set(alias, this[`_${method}`].bind(this));
+            }
+        }
+        return map;
     }
 
     async start() {
@@ -205,9 +208,9 @@ export class Repl {
     _status() {
         const stats = this.nar.getStats();
         const memoryStats = stats.memoryStats;
-        const conceptCount = memoryStats?.memoryUsage?.concepts || memoryStats?.totalConcepts || 0;
-        const focusTaskCount = memoryStats?.memoryUsage?.focusConcepts || memoryStats?.focusConceptsCount || 0;
-        const totalTasks = memoryStats?.memoryUsage?.totalTasks || memoryStats?.totalTasks || 0;
+        const conceptCount = this._safeGet(memoryStats, ['memoryUsage', 'concepts'], ['totalConcepts'], 0);
+        const focusTaskCount = this._safeGet(memoryStats, ['memoryUsage', 'focusConcepts'], ['focusConceptsCount'], 0);
+        const totalTasks = this._safeGet(memoryStats, ['memoryUsage', 'totalTasks'], ['totalTasks'], 0);
 
         return `📊 System Status:
   ⚡ Running: ${stats.isRunning ? 'Yes' : 'No'}
@@ -219,14 +222,36 @@ export class Repl {
   🕐 Start Time: ${new Date(this.sessionState.startTime).toISOString()}`;
     }
 
+    _safeGet(obj, ...paths) {
+        const defaultValue = paths.pop(); // Last argument is the default value
+        
+        for (const path of paths) {
+            let current = obj;
+            let found = true;
+            
+            for (const prop of path) {
+                if (current == null || typeof current !== 'object' || !(prop in current)) {
+                    found = false;
+                    break;
+                }
+                current = current[prop];
+            }
+            
+            if (found) {
+                return current;
+            }
+        }
+        
+        return defaultValue;
+    }
+
     _memory() {
         const stats = this.nar.getStats();
         const memoryStats = stats.memoryStats;
-        // Map the returned stats to the expected property names for compatibility
-        const conceptCount = memoryStats?.memoryUsage?.concepts || memoryStats?.totalConcepts || 0;
-        const taskCount = memoryStats?.memoryUsage?.totalTasks || memoryStats?.totalTasks || 0;
-        const focusSize = memoryStats?.memoryUsage?.focusConcepts || memoryStats?.focusConceptsCount || 0;
-        const avgPriority = memoryStats?.averageActivation || memoryStats?.averagePriority || 0;
+        const conceptCount = this._safeGet(memoryStats, ['memoryUsage', 'concepts'], ['totalConcepts'], 0);
+        const taskCount = this._safeGet(memoryStats, ['memoryUsage', 'totalTasks'], ['totalTasks'], 0);
+        const focusSize = this._safeGet(memoryStats, ['memoryUsage', 'focusConcepts'], ['focusConceptsCount'], 0);
+        const avgPriority = this._safeGet(memoryStats, ['averageActivation'], ['averagePriority'], 0);
         const capacity = this.nar.config?.memory?.maxConcepts || 'N/A';
         const forgettingThreshold = this.nar.config?.memory?.priorityThreshold || 'N/A';
 
@@ -240,66 +265,63 @@ export class Repl {
 
 📋 Detailed Task Information:\n`;
 
-        // Get tasks from all concepts in memory
-        let tasks = [];
-        try {
-            const concepts = this.nar.memory.getAllConcepts() || [];
-            for (const concept of concepts) {
-                const conceptTasks = concept.getAllTasks();
-                tasks = tasks.concat(conceptTasks);
-            }
-        } catch (e) {
-            // Fallback if method doesn't exist or fails
-            try {
-                // Try to get tasks from memory directly - concepts is a Map
-                if (this.nar.memory?.concepts && this.nar.memory.concepts instanceof Map) {
-                    for (const [key, concept] of this.nar.memory.concepts) {
-                        if (concept.getAllTasks && typeof concept.getAllTasks === 'function') {
-                            const conceptTasks = concept.getAllTasks();
-                            tasks = tasks.concat(conceptTasks);
-                        }
-                    }
-                } else if (this.nar.memory?.concepts && typeof this.nar.memory.concepts === 'object') {
-                    // Handle if concepts is not a Map but an object
-                    for (const [key, concept] of Object.entries(this.nar.memory.concepts)) {
-                        if (concept && concept.getAllTasks && typeof concept.getAllTasks === 'function') {
-                            const conceptTasks = concept.getAllTasks();
-                            tasks = tasks.concat(conceptTasks);
-                        }
-                    }
-                }
-            } catch (e2) {
-                // If all attempts fail, keep tasks as empty array
-            }
-        }
-
+        const tasks = this._getTasksFromMemory();
+        
         if (tasks.length > 0) {
             tasks.slice(-10).forEach((task, index) => {
-                // Format task in NARS style: $priority term<punctuation> %frequency,confidence% occurrence@stamp
-                const priority = task.budget?.priority !== undefined ? `$${task.budget.priority.toFixed(3)} ` : '';
-                const term = task.term?.toString?.() || task.term || 'Unknown';
-                const punctuation = this._getTypePunctuation(task.type || 'TASK');
-
-                let truthStr = '';
-                if (task.truth) {
-                    const freq = task.truth.frequency !== undefined ? task.truth.frequency.toFixed(3) : '1.000';
-                    const conf = task.truth.confidence !== undefined ? task.truth.confidence.toFixed(3) : '0.900';
-                    truthStr = ` %${freq},${conf}%`;
-                } else {
-                    // Use default truth values if not set
-                    truthStr = ' %1.000,0.900%';  // Default truth values
-                }
-
-                const occurrence = task.occurrenceTime !== undefined || task.stamp ?
-                    ` ${task.occurrenceTime || ''}@${task.stamp ? this._encodeShortId(task.stamp.id || task.stamp) : ''}`.trim() : '';
-
-                content += `  [${index + 1}]: ${priority}${term}${punctuation}${truthStr}${occurrence}\n`;
+                content += `  [${index + 1}]: ${this._formatTask(task)}\n`;
             });
         } else {
             content += '  ❌ No tasks in memory\n';
         }
 
         return content;
+    }
+
+    _getTasksFromMemory() {
+        let tasks = [];
+        try {
+            const concepts = this.nar.memory.getAllConcepts() || [];
+            for (const concept of concepts) {
+                if (concept.getAllTasks) {
+                    tasks = tasks.concat(concept.getAllTasks());
+                }
+            }
+        } catch (e) {
+            // Fallback using memory concepts directly
+            if (this.nar.memory?.concepts) {
+                const conceptEntries = this.nar.memory.concepts instanceof Map 
+                    ? Array.from(this.nar.memory.concepts.entries()) 
+                    : Object.entries(this.nar.memory.concepts);
+                
+                for (const [, concept] of conceptEntries) {
+                    if (concept && concept.getAllTasks && typeof concept.getAllTasks === 'function') {
+                        tasks = tasks.concat(concept.getAllTasks());
+                    }
+                }
+            }
+        }
+        return tasks;
+    }
+
+    _formatTask(task) {
+        const priority = task.budget?.priority !== undefined ? `$${task.budget.priority.toFixed(3)} ` : '';
+        const term = task.term?.toString?.() || task.term || 'Unknown';
+        const punctuation = this._getTypePunctuation(task.type || 'TASK');
+        
+        let truthStr = '';
+        if (task.truth) {
+            const freq = task.truth.frequency !== undefined ? task.truth.frequency.toFixed(3) : '1.000';
+            const conf = task.truth.confidence !== undefined ? task.truth.confidence.toFixed(3) : '0.900';
+            truthStr = ` %${freq},${conf}%`;
+        } else {
+            truthStr = ' %1.000,0.900%'; // Default truth values
+        }
+
+        const occurrence = task.occurrenceTime !== undefined || task.stamp ?
+            ` ${task.occurrenceTime || ''}@${task.stamp ? this._encodeShortId(task.stamp.id || task.stamp) : ''}`.trim() : '';
+
+        return `${priority}${term}${punctuation}${truthStr}${occurrence}`;
     }
 
     _trace() {
@@ -310,25 +332,7 @@ export class Repl {
 
         let content = '🔍 Recent Beliefs (last 5):\n';
         beliefs.slice(-5).forEach(task => {
-            // Format task in NARS style: $priority term<punctuation> %frequency,confidence% occurrence@stamp
-            const priority = task.budget?.priority !== undefined ? `$${task.budget.priority.toFixed(3)} ` : '';
-            const term = task.term?.toString?.() || task.term?.name || 'Unknown';
-            const punctuation = this._getTypePunctuation(task.type || 'BELIEF');
-
-            let truthStr = '';
-            if (task.truth) {
-                const freq = task.truth.frequency !== undefined ? task.truth.frequency.toFixed(3) : '1.000';
-                const conf = task.truth.confidence !== undefined ? task.truth.confidence.toFixed(3) : '0.900';
-                truthStr = ` %${freq},${conf}%`;
-            } else {
-                // Use default truth values if not set
-                truthStr = ' %1.000,0.900%';  // Default truth values
-            }
-
-            const occurrence = task.occurrenceTime !== undefined || task.stamp ?
-                ` ${task.occurrenceTime || ''}@${task.stamp ? this._encodeShortId(task.stamp.id || task.stamp) : ''}`.trim() : '';
-
-            content += `  ${priority}${term}${punctuation}${truthStr}${occurrence}\n`;
+            content += `  ${this._formatTask(task)}\n`;
         });
 
         return content.trim();

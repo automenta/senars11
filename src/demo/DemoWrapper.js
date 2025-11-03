@@ -33,32 +33,39 @@ export class DemoWrapper {
     }
 
     registerBuiltinDemos() {
-        // Register all example demos
-        this.registerDemo('basicUsage', {
-            name: 'Basic Usage Demo',
-            description: 'Demonstrates basic NARS operations',
-            handler: this.runBasicUsageDemo.bind(this),
-            parameters: {
-                stepDelay: {type: 'number', defaultValue: 1000, description: 'Delay between steps in ms'}
+        const demos = [
+            {
+                id: 'basicUsage',
+                name: 'Basic Usage Demo',
+                description: 'Demonstrates basic NARS operations',
+                handler: this.runBasicUsageDemo.bind(this),
+                stepDelay: 1000
+            },
+            {
+                id: 'syllogism',
+                name: 'Syllogistic Reasoning Demo',
+                description: 'Demonstrates syllogistic reasoning',
+                handler: this.runSyllogismDemo.bind(this),
+                stepDelay: 1500
+            },
+            {
+                id: 'inductive',
+                name: 'Inductive Reasoning Demo',
+                description: 'Demonstrates inductive reasoning',
+                handler: this.runInductiveDemo.bind(this),
+                stepDelay: 2000
             }
-        });
+        ];
 
-        this.registerDemo('syllogism', {
-            name: 'Syllogistic Reasoning Demo',
-            description: 'Demonstrates syllogistic reasoning',
-            handler: this.runSyllogismDemo.bind(this),
-            parameters: {
-                stepDelay: {type: 'number', defaultValue: 1500, description: 'Delay between steps in ms'}
-            }
-        });
-
-        this.registerDemo('inductive', {
-            name: 'Inductive Reasoning Demo',
-            description: 'Demonstrates inductive reasoning',
-            handler: this.runInductiveDemo.bind(this),
-            parameters: {
-                stepDelay: {type: 'number', defaultValue: 2000, description: 'Delay between steps in ms'}
-            }
+        demos.forEach(demo => {
+            this.registerDemo(demo.id, {
+                name: demo.name,
+                description: demo.description,
+                handler: demo.handler,
+                parameters: {
+                    stepDelay: {type: 'number', defaultValue: demo.stepDelay, description: 'Delay between steps in ms'}
+                }
+            });
         });
     }
 
@@ -86,60 +93,25 @@ export class DemoWrapper {
     async handleDemoControl(data) {
         try {
             // Validate input data
-            if (!data || !data.payload) {
-                console.error('Invalid demo control message: missing payload');
+            if (!this._validateDemoControl(data)) {
                 return;
             }
 
             const {command, demoId, parameters} = data.payload;
 
-            // Validate required fields
-            if (!command || typeof command !== 'string') {
-                console.error('Invalid demo control message: missing or invalid command');
-                return;
-            }
+            const commandHandlers = {
+                'start': () => this.startDemo(demoId, parameters || {}),
+                'stop': () => this.stopDemo(demoId),
+                'pause': () => this.pauseDemo(demoId),
+                'resume': () => this.resumeDemo(demoId),
+                'step': () => this.stepDemo(demoId, parameters || {}),
+                'configure': () => this.configureDemo(demoId, parameters || {})
+            };
 
-            if (!demoId || typeof demoId !== 'string') {
-                console.error('Invalid demo control message: missing or invalid demoId');
-                return;
-            }
-
-            // Validate parameters if present
-            if (parameters && typeof parameters !== 'object') {
-                console.error('Invalid demo control message: parameters must be an object');
-                return;
-            }
-
-            switch (command) {
-                case 'start':
-                    await this.startDemo(demoId, parameters || {});
-                    break;
-                case 'stop':
-                    await this.stopDemo(demoId);
-                    break;
-                case 'pause':
-                    await this.pauseDemo(demoId);
-                    break;
-                case 'resume':
-                    await this.resumeDemo(demoId);
-                    break;
-                case 'step':
-                    await this.stepDemo(demoId, parameters || {});
-                    break;
-                case 'configure':
-                    await this.configureDemo(demoId, parameters || {});
-                    break;
-                default:
-                    console.warn(`Unknown demo command: ${command}`);
-                    // Optionally notify the client about the unknown command
-                    if (this.webSocketMonitor) {
-                        this.webSocketMonitor.broadcastCustomEvent('demoError', {
-                            demoId,
-                            error: `Unknown command: ${command}`,
-                            command,
-                            timestamp: Date.now()
-                        });
-                    }
+            if (commandHandlers[command]) {
+                await commandHandlers[command]();
+            } else {
+                await this._handleUnknownCommand(demoId, command);
             }
         } catch (error) {
             console.error('Error handling demo control:', error);
@@ -152,6 +124,47 @@ export class DemoWrapper {
                     stack: error.stack
                 });
             }
+        }
+    }
+
+    _validateDemoControl(data) {
+        if (!data || !data.payload) {
+            console.error('Invalid demo control message: missing payload');
+            return false;
+        }
+
+        const {command, demoId, parameters} = data.payload;
+
+        // Validate required fields
+        if (!command || typeof command !== 'string') {
+            console.error('Invalid demo control message: missing or invalid command');
+            return false;
+        }
+
+        if (!demoId || typeof demoId !== 'string') {
+            console.error('Invalid demo control message: missing or invalid demoId');
+            return false;
+        }
+
+        // Validate parameters if present
+        if (parameters && typeof parameters !== 'object') {
+            console.error('Invalid demo control message: parameters must be an object');
+            return false;
+        }
+
+        return true;
+    }
+
+    async _handleUnknownCommand(demoId, command) {
+        console.warn(`Unknown demo command: ${command}`);
+        // Optionally notify the client about the unknown command
+        if (this.webSocketMonitor) {
+            this.webSocketMonitor.broadcastCustomEvent('demoError', {
+                demoId,
+                error: `Unknown command: ${command}`,
+                command,
+                timestamp: Date.now()
+            });
         }
     }
 
@@ -264,55 +277,34 @@ export class DemoWrapper {
         this.isPaused = false;
         this.currentDemoId = null;
 
-        if (demoId) {
-            this.demoStates[demoId] = {
-                state: 'stopped',
-                demoId
-            };
-
-            await this.sendDemoState(demoId, {
-                state: 'stopped'
-            });
-        } else if (this.currentDemoId) {
-            this.demoStates[this.currentDemoId] = {
-                state: 'stopped',
-                demoId: this.currentDemoId
-            };
-
-            await this.sendDemoState(this.currentDemoId, {
-                state: 'stopped'
-            });
+        const targetDemoId = demoId || this.currentDemoId;
+        if (targetDemoId) {
+            this._updateDemoState(targetDemoId, { state: 'stopped', demoId: targetDemoId });
+            await this.sendDemoState(targetDemoId, { state: 'stopped' });
         }
     }
 
     async pauseDemo(demoId) {
-        if (demoId) {
-            this.demoStates[demoId] = {
-                ...this.demoStates[demoId],
-                state: 'paused'
-            };
-        }
-
         this.isPaused = true;
-
-        await this.sendDemoState(demoId, {
-            state: 'paused'
-        });
+        this._updateDemoState(demoId, { state: 'paused' });
+        await this.sendDemoState(demoId, { state: 'paused' });
     }
 
     async resumeDemo(demoId) {
-        if (demoId) {
+        this.isPaused = false;
+        this._updateDemoState(demoId, { state: 'running' });
+        await this.sendDemoState(demoId, { state: 'running' });
+    }
+
+    _updateDemoState(demoId, stateUpdate) {
+        if (demoId && this.demoStates[demoId]) {
             this.demoStates[demoId] = {
                 ...this.demoStates[demoId],
-                state: 'running'
+                ...stateUpdate
             };
+        } else if (demoId) {
+            this.demoStates[demoId] = stateUpdate;
         }
-
-        this.isPaused = false;
-
-        await this.sendDemoState(demoId, {
-            state: 'running'
-        });
     }
 
     async stepDemo(demoId, parameters = {}) {
@@ -407,137 +399,62 @@ export class DemoWrapper {
 
     // Demo implementations
     async runBasicUsageDemo(params = {}) {
-        const stepDelay = params.stepDelay || 1000;
-
-        this.currentStep = 1;
-        await this.sendDemoStep('basicUsage', this.currentStep, 'Initializing basic usage demo');
-        await this.waitIfNotPaused(stepDelay);
-
-        // Example NARS operations using narsese input
-        await this.sendDemoStep('basicUsage', ++this.currentStep, 'Adding belief: <cat --> animal>.');
-        try {
-            await this.nar.input('cat --> animal.');
-        } catch (error) {
-            console.error('Error adding cat belief:', error);
-            await this.sendDemoStep('basicUsage', this.currentStep, `Error adding cat belief: ${error.message}`);
-        }
-        await this.waitIfNotPaused(stepDelay);
-
-        await this.sendDemoStep('basicUsage', ++this.currentStep, 'Adding belief: <dog --> animal>.');
-        try {
-            await this.nar.input('dog --> animal.');
-        } catch (error) {
-            console.error('Error adding dog belief:', error);
-            await this.sendDemoStep('basicUsage', this.currentStep, `Error adding dog belief: ${error.message}`);
-        }
-        await this.waitIfNotPaused(stepDelay);
-
-        await this.sendDemoStep('basicUsage', ++this.currentStep, 'Asking question: <cat --> animal>?');
-        try {
-            await this.nar.input('cat --> animal?');
-        } catch (error) {
-            console.error('Error asking cat question:', error);
-            await this.sendDemoStep('basicUsage', this.currentStep, `Error asking cat question: ${error.message}`);
-        }
-        await this.waitIfNotPaused(stepDelay);
-
-        await this.sendDemoStep('basicUsage', ++this.currentStep, 'Adding goal: <cat --> pet>!');
-        try {
-            await this.nar.input('cat --> pet!');
-        } catch (error) {
-            console.error('Error adding cat goal:', error);
-            await this.sendDemoStep('basicUsage', this.currentStep, `Error adding cat goal: ${error.message}`);
-        }
-        await this.waitIfNotPaused(stepDelay);
-
-        await this.sendDemoStep('basicUsage', ++this.currentStep, 'Demo completed');
+        const steps = [
+            { description: 'Initializing basic usage demo' },
+            { description: 'Adding belief: <cat --> animal>.', input: 'cat --> animal.' },
+            { description: 'Adding belief: <dog --> animal>.', input: 'dog --> animal.' },
+            { description: 'Asking question: <cat --> animal>?', input: 'cat --> animal?' },
+            { description: 'Adding goal: <cat --> pet>!', input: 'cat --> pet!' },
+            { description: 'Demo completed' }
+        ];
+        await this._executeDemoSteps('basicUsage', steps, params);
     }
 
     async runSyllogismDemo(params = {}) {
-        const stepDelay = params.stepDelay || 1500;
-
-        this.currentStep = 1;
-        await this.sendDemoStep('syllogism', this.currentStep, 'Initializing syllogistic reasoning demo');
-        await this.waitIfNotPaused(stepDelay);
-
-        await this.sendDemoStep('syllogism', ++this.currentStep, 'Adding premise: <bird --> animal>.');
-        try {
-            await this.nar.input('bird --> animal.');
-        } catch (error) {
-            console.error('Error adding bird premise:', error);
-            await this.sendDemoStep('syllogism', this.currentStep, `Error adding bird premise: ${error.message}`);
-        }
-        await this.waitIfNotPaused(stepDelay);
-
-        await this.sendDemoStep('syllogism', ++this.currentStep, 'Adding premise: <robin --> bird>.');
-        try {
-            await this.nar.input('robin --> bird.');
-        } catch (error) {
-            console.error('Error adding robin premise:', error);
-            await this.sendDemoStep('syllogism', this.currentStep, `Error adding robin premise: ${error.message}`);
-        }
-        await this.waitIfNotPaused(stepDelay);
-
-        await this.sendDemoStep('syllogism', ++this.currentStep, 'Deriving conclusion: <robin --> animal>');
-        // The system should derive this automatically
-        await this.waitIfNotPaused(stepDelay);
-
-        await this.sendDemoStep('syllogism', ++this.currentStep, 'Asking: <robin --> animal>?');
-        try {
-            await this.nar.input('robin --> animal?');
-        } catch (error) {
-            console.error('Error asking robin question:', error);
-            await this.sendDemoStep('syllogism', this.currentStep, `Error asking robin question: ${error.message}`);
-        }
-        await this.waitIfNotPaused(stepDelay);
-
-        await this.sendDemoStep('syllogism', ++this.currentStep, 'Syllogistic reasoning demo completed');
+        const steps = [
+            { description: 'Initializing syllogistic reasoning demo' },
+            { description: 'Adding premise: <bird --> animal>.', input: 'bird --> animal.' },
+            { description: 'Adding premise: <robin --> bird>.', input: 'robin --> bird.' },
+            { description: 'Deriving conclusion: <robin --> animal>' },
+            { description: 'Asking: <robin --> animal>?', input: 'robin --> animal?' },
+            { description: 'Syllogistic reasoning demo completed' }
+        ];
+        await this._executeDemoSteps('syllogism', steps, params);
     }
 
     async runInductiveDemo(params = {}) {
-        const stepDelay = params.stepDelay || 2000;
+        const steps = [
+            { description: 'Initializing inductive reasoning demo' },
+            { description: 'Adding observations: <swan1 --> white>.', input: 'swan1 --> white.' },
+            { description: 'Adding observations: <swan2 --> white>.', input: 'swan2 --> white.' },
+            { description: 'Adding observations: <swan3 --> white>.', input: 'swan3 --> white.' },
+            { description: 'Inductive inference: <swan --> white>?', input: 'swan --> white?' },
+            { description: 'Inductive reasoning demo completed' }
+        ];
+        await this._executeDemoSteps('inductive', steps, params);
+    }
 
-        this.currentStep = 1;
-        await this.sendDemoStep('inductive', this.currentStep, 'Initializing inductive reasoning demo');
-        await this.waitIfNotPaused(stepDelay);
+    async _executeDemoSteps(demoId, steps, params = {}) {
+        const stepDelay = params.stepDelay || 1000;
+        this.currentStep = 0;
 
-        await this.sendDemoStep('inductive', ++this.currentStep, 'Adding observations: <swan1 --> white>.');
-        try {
-            await this.nar.input('swan1 --> white.');
-        } catch (error) {
-            console.error('Error adding swan1 observation:', error);
-            await this.sendDemoStep('inductive', this.currentStep, `Error adding swan1 observation: ${error.message}`);
+        for (const step of steps) {
+            this.currentStep++;
+            await this.sendDemoStep(demoId, this.currentStep, step.description);
+            
+            if (step.input) {
+                try {
+                    await this.nar.input(step.input);
+                } catch (error) {
+                    console.error(`Error processing input for step ${this.currentStep}:`, error);
+                    await this.sendDemoStep(demoId, this.currentStep, `Error processing input: ${error.message}`);
+                }
+            }
+            
+            if (this.currentStep < steps.length) { // Don't wait after the last step
+                await this.waitIfNotPaused(stepDelay);
+            }
         }
-        await this.waitIfNotPaused(stepDelay);
-
-        await this.sendDemoStep('inductive', ++this.currentStep, 'Adding observations: <swan2 --> white>.');
-        try {
-            await this.nar.input('swan2 --> white.');
-        } catch (error) {
-            console.error('Error adding swan2 observation:', error);
-            await this.sendDemoStep('inductive', this.currentStep, `Error adding swan2 observation: ${error.message}`);
-        }
-        await this.waitIfNotPaused(stepDelay);
-
-        await this.sendDemoStep('inductive', ++this.currentStep, 'Adding observations: <swan3 --> white>.');
-        try {
-            await this.nar.input('swan3 --> white.');
-        } catch (error) {
-            console.error('Error adding swan3 observation:', error);
-            await this.sendDemoStep('inductive', this.currentStep, `Error adding swan3 observation: ${error.message}`);
-        }
-        await this.waitIfNotPaused(stepDelay);
-
-        await this.sendDemoStep('inductive', ++this.currentStep, 'Inductive inference: <swan --> white>?');
-        try {
-            await this.nar.input('swan --> white?');
-        } catch (error) {
-            console.error('Error asking swan question:', error);
-            await this.sendDemoStep('inductive', this.currentStep, `Error asking swan question: ${error.message}`);
-        }
-        await this.waitIfNotPaused(stepDelay);
-
-        await this.sendDemoStep('inductive', ++this.currentStep, 'Inductive reasoning demo completed');
     }
 
     async waitIfNotPaused(delay = 1000) {
