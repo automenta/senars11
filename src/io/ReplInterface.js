@@ -93,8 +93,16 @@ export class ReplInterface {
         if (beliefs.length === 0) return;
 
         console.log('Latest beliefs:');
-        beliefs.slice(-3).forEach(task =>
-            console.log(`  ${task.term.name} ${task.truth?.toString() || ''}`));
+        this._displayBeliefs(beliefs.slice(-3));
+    }
+    
+    _displayBeliefs(beliefs) {
+        beliefs.forEach(task =>
+            console.log(`  ${this._formatBelief(task)}`));
+    }
+    
+    _formatBelief(task) {
+        return `${task.term.name} ${task.truth?.toString() || ''}`;
     }
 
     _help() {

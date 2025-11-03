@@ -450,15 +450,12 @@ export class EvaluationEngine {
     }
 
     _applyReductionRule(operator, components, rulesMap, errorHandler) {
-        // Validate inputs to prevent undefined operators in normal processing
         const safeOperator = operator || 'UNKNOWN';
         const safeComponents = components || [];
-        const componentNames = safeComponents.map(comp => comp.name || comp.toString());
-        const termName = `(${safeOperator}, ${componentNames.join(', ')})`;
-
+        
         if (!operator) {
             // This should not happen during normal operation - indicates a data flow issue
-            return new Term('compound', termName, safeComponents, safeOperator);
+            return this._createCompoundTerm(safeOperator, safeComponents);
         }
 
         const rule = rulesMap[operator];
@@ -470,9 +467,16 @@ export class EvaluationEngine {
                 return errorHandler(operator, error);
             }
         }
+        
         // If no rule, return original components as a compound term with proper canonical name
         // This is NORMAL operation, not an error
-        return new Term('compound', termName, safeComponents, safeOperator);
+        return this._createCompoundTerm(safeOperator, safeComponents);
+    }
+    
+    _createCompoundTerm(operator, components) {
+        const componentNames = components.map(comp => comp.name || comp.toString());
+        const termName = `(${operator}, ${componentNames.join(', ')})`;
+        return new Term('compound', termName, components, operator);
     }
 
     _reduceAndFunctional(components) {
@@ -975,10 +979,18 @@ export class EvaluationEngine {
     }
 
     _naryBooleanOperation(components, someCheck1, result1, someCheck2, result2, everyCheck, result3, defaultFn) {
-        return components.some(comp => someCheck1(comp)) ? result1 :
-            components.some(comp => someCheck2(comp)) ? result2 :
-                components.every(comp => everyCheck(comp)) ? result3 :
-                    defaultFn();
+        if (this._hasMatchingComponent(components, someCheck1)) return result1;
+        if (this._hasMatchingComponent(components, someCheck2)) return result2;
+        if (this._allComponentsMatch(components, everyCheck)) return result3;
+        return defaultFn();
+    }
+    
+    _hasMatchingComponent(components, checkFn) {
+        return components.some(comp => checkFn(comp));
+    }
+    
+    _allComponentsMatch(components, checkFn) {
+        return components.every(comp => checkFn(comp));
     }
 
     _naryStructuralOperation(components, filterCond, check1, result1, check2, result2, allCaseResult, operator, termType) {

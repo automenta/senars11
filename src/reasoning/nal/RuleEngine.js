@@ -206,29 +206,14 @@ export class RuleEngine extends BaseRuleEngine {
      * @returns {Array} - Array of reasoning paths to use
      */
     _determineReasoningPath(task, context) {
-        const paths = [];
-
-        // Check if the task is suitable for NAL reasoning (structured, formal logic)
-        if (this._isNalSuitable(task, context)) {
-            paths.push('nal');
-        }
-
-        // Check if the task might benefit from LM reasoning (complex, ambiguous, or natural language)
-        if (this._isLmSuitable(task, context)) {
-            paths.push('lm');
-        }
-
-        // Check if the task is suitable for hybrid reasoning
-        if (this._isHybridSuitable(task, context)) {
-            paths.push('hybrid');
-        }
+        const paths = [
+            this._isNalSuitable(task, context) ? 'nal' : null,
+            this._isLmSuitable(task, context) ? 'lm' : null,
+            this._isHybridSuitable(task, context) ? 'hybrid' : null
+        ].filter(path => path !== null);
 
         // Default to NAL if no specific path is identified
-        if (paths.length === 0) {
-            paths.push('nal');
-        }
-
-        return paths;
+        return paths.length > 0 ? paths : ['nal'];
     }
 
     /**
