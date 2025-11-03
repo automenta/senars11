@@ -36,6 +36,7 @@ export class NAR extends BaseComponent {
         this._isRunning = false;
         this._cycleInterval = null;
         this._useOptimizedCycle = config.performance?.useOptimizedCycle !== false;
+        this._goals = new Map(); // Store active system goals
         this._registerComponents();
 
         if (this._config.get('components')) {
@@ -482,6 +483,17 @@ export class NAR extends BaseComponent {
 
     getGoals() {
         return this._taskManager.findTasksByType('GOAL');
+    }
+
+    addGoal(goalTerm) {
+        if (goalTerm) {
+            this._goals.set(goalTerm.name, goalTerm);
+            this._eventBus.emit('system.goal_added', { goal: goalTerm.serialize() });
+        }
+    }
+
+    getActiveSystemGoals() {
+        return this._goals;
     }
 
     getQuestions() {

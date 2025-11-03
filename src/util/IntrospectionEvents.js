@@ -30,9 +30,10 @@ export const IntrospectionEvents = Object.freeze({
     RULE_FIRED: 'rule:fired',
     RULE_NOT_FIRED: 'rule:not_fired',
 
-    // Metacognition
+    // Metacognition & Reinforcement Learning
     META_PATTERN_DETECTED: 'meta:pattern:detected',
     META_SELF_OPTIMIZATION: 'meta:self_optimization',
+    GOAL_SATISFIED: 'goal:satisfied',
 });
 
 /**

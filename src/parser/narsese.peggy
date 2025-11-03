@@ -32,6 +32,7 @@ TruthValue
 Term "term"
   = Statement
   / CompoundTerm
+  / PrefixCompoundTerm
   / PrefixCompound
   / Product
   / Set
@@ -41,6 +42,11 @@ Term "term"
 CompoundTerm
   = operator:AtomicTerm "(" _ components:TermList? _ ")" {
       return options.termFactory.create({ operator: operator.name, components: components || [] });
+  }
+
+PrefixCompoundTerm
+  = "(" _ operator:InfixOperatorOrLogic _ "," _ components:TermList? _ ")" {
+      return options.termFactory.create({ operator: operator.trim(), components: components || [] });
   }
 
 Statement
@@ -59,6 +65,9 @@ ParenthesizedStatement
 
 InfixOperator
   = op:("-->" / "<->" / "==>" / "<=>" / "=/>" / "=|" / "=/=" / "=" / "&&" / "||") { return op; }
+
+InfixOperatorOrLogic
+  = op:("-->" / "<->" / "==>" / "<=>" / "=/>" / "=|" / "=/=" / "=" / "&&" / "||" / "&" / "|") { return op; }
 
 PrefixCompound
   = "(" _ op:("-->," / "<->," / "==>," / "<=>,") _ components:TermList _ ")" {

@@ -304,6 +304,7 @@ export class OptimizedCycle extends BaseComponent {
 
     _updateMemoryWithInferences(inferences, currentTime) {
         const updateStartTime = Date.now();
+        const activeGoals = this._nar.getActiveSystemGoals();
         
         for (const inference of inferences) {
             this._memory.addTask(inference, currentTime);
@@ -311,6 +312,18 @@ export class OptimizedCycle extends BaseComponent {
             
             if (inference.priority >= this._config.priorityThreshold) {
                 this._focus.addTaskToFocus(inference, inference.priority);
+            }
+
+            // Check for goal satisfaction
+            if (activeGoals.size > 0 && inference.punctuation === '.') {
+                for (const goal of activeGoals.values()) {
+                    if (inference.term.equals(goal)) {
+                        this._emitIntrospectionEvent(IntrospectionEvents.GOAL_SATISFIED, {
+                            goal: goal.serialize(),
+                            belief: inference.serialize(),
+                        });
+                    }
+                }
             }
         }
         

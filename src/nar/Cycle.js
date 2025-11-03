@@ -191,12 +191,26 @@ export class Cycle extends BaseComponent {
     }
 
     _updateMemoryWithInferences(inferences, currentTime) {
+        const activeGoals = this._nar.getActiveSystemGoals();
+
         for (const inference of inferences) {
             this._memory.addTask(inference, currentTime);
             this._stats.totalTasksProcessed++;
 
             if (inference.priority >= this._config.priorityThreshold) {
                 this._focus.addTaskToFocus(inference, inference.priority);
+            }
+
+            // Check for goal satisfaction
+            if (activeGoals.size > 0 && inference.punctuation === '.') {
+                for (const goal of activeGoals.values()) {
+                    if (inference.term.equals(goal)) {
+                        this._emitIntrospectionEvent(IntrospectionEvents.GOAL_SATISFIED, {
+                            goal: goal.serialize(),
+                            belief: inference.serialize(),
+                        });
+                    }
+                }
             }
         }
     }

@@ -29,11 +29,11 @@ export class TermFactory extends BaseComponent {
             return this._getOrCreateAtomic(data.name);
         }
 
-        const {operator, components} = this._normalizeTermData(data);
+        const {operator, components: normalizedComponents} = this._normalizeTermData(data);
 
         // Advanced canonicalization with proper commutativity and normalization
-        const normalizedComponents = this._canonicalizeComponents(operator, components);
-        const name = this._buildCanonicalName(operator, normalizedComponents);
+        const canonicalComponents = this._canonicalizeComponents(operator, normalizedComponents);
+        const name = this._buildCanonicalName(operator, canonicalComponents);
 
         // Check if term is already cached
         let term = this._cache.get(name);
@@ -47,7 +47,7 @@ export class TermFactory extends BaseComponent {
         } else {
             this._cacheMisses++;
             this._emitIntrospectionEvent(IntrospectionEvents.TERM_CACHE_MISS, {termName: name});
-            term = this._createAndCache(operator, normalizedComponents, name);
+            term = this._createAndCache(operator, canonicalComponents, name);
 
             // Update access time for the new term
             this._accessTime.set(name, currentTime);

@@ -8,7 +8,7 @@ describe('ComponentManager Integration', () => {
             components: {
                 metacognition: {
                     enabled: true,
-                    path: 'src/reasoning/Metacognition.js',
+                    path: '../reasoning/Metacognition.js',
                     class: 'Metacognition',
                     dependencies: ['nar', 'eventBus'],
                 },
