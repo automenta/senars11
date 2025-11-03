@@ -247,6 +247,40 @@ export class StrategyMetrics {
     }
 
     /**
+     * Record cooperation statistics from cross-type reasoning
+     */
+    recordCooperationStats(stats) {
+        if (!this._metrics.cooperation) {
+            this._metrics.cooperation = {
+                totalFeedbackEvents: 0,
+                agreements: 0,
+                disagreements: 0,
+                feedbackTypeDistribution: {},
+                avgAgreementRate: 0
+            };
+        }
+
+        this._metrics.cooperation.totalFeedbackEvents += stats.total || 0;
+        this._metrics.cooperation.agreements += stats.agreements || 0;
+        this._metrics.cooperation.disagreements += stats.disagreements || 0;
+
+        // Track distribution by type
+        for (const [type, count] of Object.entries(stats.byType || {})) {
+            this._metrics.cooperation.feedbackTypeDistribution[type] = 
+                (this._metrics.cooperation.feedbackTypeDistribution[type] || 0) + count;
+        }
+
+        // Update average agreement rate
+        if (stats.total > 0) {
+            const currentTotal = this._metrics.cooperation.agreements + this._metrics.cooperation.disagreements;
+            if (currentTotal > 0) {
+                this._metrics.cooperation.avgAgreementRate = 
+                    this._metrics.cooperation.agreements / currentTotal;
+            }
+        }
+    }
+
+    /**
      * Generate a performance report
      */
     generateReport() {
@@ -269,7 +303,13 @@ export class StrategyMetrics {
                 },
                 resourceUsage: {
                     peakMemory: `${(metrics.peakMemoryUsage / (1024 * 1024)).toFixed(2)} MB`
-                }
+                },
+                cooperation: metrics.cooperation ? {
+                    totalFeedbackEvents: metrics.cooperation.totalFeedbackEvents,
+                    agreementRate: `${Math.round(metrics.cooperation.avgAgreementRate * 100)}%`,
+                    agreements: metrics.cooperation.agreements,
+                    disagreements: metrics.cooperation.disagreements
+                } : 'No cooperation data collected'
             },
             topRules: topRules.map(rule => ({
                 id: rule.id,

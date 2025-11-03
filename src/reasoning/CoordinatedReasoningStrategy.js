@@ -141,28 +141,77 @@ export class CoordinatedReasoningStrategy extends StrategyInterface {
      */
     async _executeWithCooperationEngine(tasks, memory, termFactory) {
         const allResults = [];
+        const allFeedbackEvents = [];
 
         for (const task of tasks) {
-            const cooperationResult = await this.cooperationEngine.performCooperativeReasoning(
-                task,
-                this.ruleEngine,
-                memory,
-                termFactory
-            );
+            try {
+                const cooperationResult = await this.cooperationEngine.performCooperativeReasoning(
+                    task,
+                    this.ruleEngine,
+                    memory,
+                    termFactory
+                );
 
-            allResults.push(...cooperationResult.finalResults);
+                allResults.push(...cooperationResult.finalResults);
+                allFeedbackEvents.push(...cooperationResult.feedbackEvents || []);
+            } catch (error) {
+                this.logger.error('Error in cooperative reasoning for task:', error);
+                // Continue with other tasks even if one fails
+            }
         }
 
-        // Apply feedback mechanisms if enabled
+        // Process all feedback events for system learning
+        if (allFeedbackEvents.length > 0 && this.config.enableFeedbackLoops) {
+            this._processFeedbackEvents(allFeedbackEvents);
+        }
+
+        // Apply advanced feedback mechanisms
         if (this.config.enableCrossValidation && this.cooperationEngine) {
             const feedbackResults = this.cooperationEngine.applyCrossTypeFeedback(
-                allResults.filter(r => r._ruleType === 'LM'),
-                allResults.filter(r => r._ruleType === 'NAL')
+                allResults.filter(r => r._ruleType === 'LM' || (r._ruleType === undefined && this._isLMResult(r))),
+                allResults.filter(r => r._ruleType === 'NAL' || (r._ruleType === undefined && !this._isLMResult(r)))
             );
             return this._filterAndValidateResults(feedbackResults);
         }
 
         return this._filterAndValidateResults(allResults);
+    }
+
+    /**
+     * Determines if a result likely came from an LM rule
+     */
+    _isLMResult(result) {
+        // Results with high complexity or non-logical characteristics may have come from LM
+        if (result.term?.complexity > 5) return true;
+        if (result._fromLM) return true;
+        if (result._ruleType === 'LM') return true;
+        return false;
+    }
+
+    /**
+     * Processes feedback events to learn from cooperation patterns
+     */
+    _processFeedbackEvents(feedbackEvents) {
+        // Count different types of feedback
+        const feedbackStats = {
+            agreements: 0,
+            disagreements: 0,
+            total: feedbackEvents.length,
+            byType: {}
+        };
+
+        for (const event of feedbackEvents) {
+            if (event.type === 'agreement') feedbackStats.agreements++;
+            else if (event.type === 'disagreement') feedbackStats.disagreements++;
+            
+            const key = `${event.sourceType}->${event.targetType}`;
+            feedbackStats.byType[key] = (feedbackStats.byType[key] || 0) + 1;
+        }
+
+        // Store feedback stats in metrics if available
+        if (this.metrics) {
+            this.metrics.recordCooperationStats(feedbackStats);
+        }
     }
 
     /**

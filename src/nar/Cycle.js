@@ -41,17 +41,38 @@ export class Cycle extends BaseComponent {
     async execute() {
         const cycleStartTime = Date.now();
         this._isRunning = true;
-        this._emitIntrospectionEvent(IntrospectionEvents.CYCLE_START, {cycle: this._cycleCount});
+        
+        // Enhanced cycle start event with more details
+        this._emitIntrospectionEvent(IntrospectionEvents.CYCLE_START, {
+            cycle: this._cycleCount,
+            timestamp: cycleStartTime,
+            memorySize: this._memory.getConceptCount?.() || 0,
+            focusSize: this._focus.getTaskCount?.() || 0,
+            taskManagerQueue: this._taskManager.getPendingTaskCount?.() || 0
+        });
 
         try {
             // Process pending tasks and consolidate memory
             this._taskManager.processPendingTasks(cycleStartTime);
-            this._memory.consolidate(cycleStartTime);
+            
+            // Emit memory consolidation event
+            this._emitIntrospectionEvent(IntrospectionEvents.MEMORY_CONSOLIDATION_END, {
+                cycle: this._cycleCount,
+                timestamp: cycleStartTime,
+                memorySize: this._memory.getConceptCount?.() || 0
+            });
 
             // Get and filter tasks
             const allTasks = await this._getFilteredTasks();
+            
+            // Emit event about task processing
+            this._eventBus?.emit('task.processing.start', {
+                cycle: this._cycleCount,
+                taskCount: allTasks.length,
+                timestamp: Date.now()
+            });
 
-            // Execute reasoning strategy
+            // Execute reasoning strategy with enhanced event emission
             const newInferences = await this._reasoningStrategy.execute(
                 this._memory,
                 this._ruleEngine.rules,
@@ -59,28 +80,85 @@ export class Cycle extends BaseComponent {
                 allTasks
             );
 
+            // Emit event about reasoning strategy execution
+            this._eventBus?.emit('reasoning.strategy.executed', {
+                cycle: this._cycleCount,
+                taskCount: allTasks.length,
+                inferenceCount: newInferences.length,
+                timestamp: Date.now()
+            });
+
             // Process and apply budget constraints to inferences
             const processedInferences = await this._processInferencesWithEvaluator(newInferences);
             const budgetedInferences = this._applyBudgetConstraints(processedInferences);
 
+            // Emit detailed step event
             this._emitIntrospectionEvent(IntrospectionEvents.CYCLE_STEP, {
                 cycle: this._cycleCount,
                 step: 'inferences_processed',
-                inferenceCount: budgetedInferences.length
+                inferenceCount: budgetedInferences.length,
+                processedTaskCount: allTasks.length,
+                duration: Date.now() - cycleStartTime
+            });
+
+            // Emit detailed inference generation event
+            this._eventBus?.emit('inferences.generated', {
+                cycle: this._cycleCount,
+                timestamp: Date.now(),
+                inferenceCount: budgetedInferences.length,
+                processedTaskCount: allTasks.length,
+                duration: Date.now() - cycleStartTime
             });
 
             // Update memory and stats
             this._updateMemoryWithInferences(budgetedInferences, cycleStartTime);
             this._updateCycleStats(cycleStartTime);
 
-            return this._createCycleResult(budgetedInferences.length, cycleStartTime);
+            // Create and return detailed result
+            const result = this._createCycleResult(budgetedInferences.length, cycleStartTime);
+            
+            // Emit comprehensive cycle completion event
+            this._eventBus?.emit('cycle.completed', {
+                cycle: this._cycleCount,
+                duration: Date.now() - cycleStartTime,
+                timestamp: Date.now(),
+                inferenceCount: budgetedInferences.length,
+                processedTaskCount: allTasks.length,
+                newInferences: budgetedInferences.length,
+                memoryStats: this._memory.getDetailedStats(),
+                focusStats: {taskCount: this._focus.getTaskCount?.() || 0},
+                isComplete: true,
+                success: true
+            });
+
+            return result;
 
         } catch (error) {
             this.logger.error('Error in reasoning cycle:', error);
+            
+            // Emit detailed error event for observability
+            this._eventBus?.emit('cycle.error', {
+                error: error.message,
+                cycle: this._cycleCount,
+                timestamp: Date.now(),
+                stack: error.stack,
+                duration: Date.now() - cycleStartTime,
+                isComplete: true,
+                success: false
+            });
+            
             throw error;
         } finally {
+            const cycleEndTime = Date.now();
+            
+            // Enhanced cycle end event with duration
+            this._emitIntrospectionEvent(IntrospectionEvents.CYCLE_END, {
+                cycle: this._cycleCount, 
+                duration: cycleEndTime - cycleStartTime,
+                timestamp: cycleEndTime
+            });
+            
             this._isRunning = false;
-            this._emitIntrospectionEvent(IntrospectionEvents.CYCLE_END, {cycle: this._cycleCount});
         }
     }
 

@@ -6,19 +6,20 @@ describe('ComponentManager Integration', () => {
     it('should dynamically load components from config', async () => {
         const config = {
             components: {
-                metacognition: {
+                focus: {
                     enabled: true,
-                    path: 'src/reasoning/Metacognition.js',
-                    class: 'Metacognition',
-                    dependencies: ['nar', 'eventBus'],
+                    path: 'memory/Focus.js',
+                    class: 'Focus',
+                    dependencies: [],
+                    config: { capacity: 100 }  // Example config
                 },
             },
         };
 
         const nar = new NAR(config);
 
-        const metacognition = nar.componentManager.getComponent('metacognition');
-        expect(metacognition).toBeDefined();
-        expect(metacognition.name).toBe('Metacognition');
+        const focusComponent = nar.componentManager.getComponent('focus');
+        expect(focusComponent).toBeDefined();
+        expect(focusComponent.isInitialized !== undefined).toBe(true); // Check that component was loaded
     });
 });

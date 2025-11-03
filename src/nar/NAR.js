@@ -36,6 +36,7 @@ export class NAR extends BaseComponent {
         this._isRunning = false;
         this._cycleInterval = null;
         this._useOptimizedCycle = config.performance?.useOptimizedCycle !== false;
+        this._startTime = Date.now(); // Track when NAR was initialized for uptime
         this._registerComponents();
 
         if (this._config.get('components')) {
