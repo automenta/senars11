@@ -24,3 +24,4 @@ ui/playwright-report/
 ui/test-results/
 ui/test-results.json
 coverage
+performance-results
