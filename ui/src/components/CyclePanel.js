@@ -1,24 +1,15 @@
 import React from 'react';
 import useUiStore from '../stores/uiStore.js';
 import GenericPanel from './GenericPanel.js';
+import {createListItem} from '../utils/componentUtils.js';
 
 const CyclePanel = () => {
     const systemMetrics = useUiStore(state => state.systemMetrics);
     const cycles = useUiStore(state => state.cycles);
-
-    const renderCycle = (cycle, index) =>
-        React.createElement('div',
-            {
-                key: index,
-                style: {
-                    padding: '0.5rem',
-                    margin: '0.25rem 0',
-                    backgroundColor: 'white',
-                    border: '1px solid #ddd',
-                    borderRadius: '4px',
-                    fontSize: '0.9rem'
-                }
-            },
+const renderCycle = (cycle, index) =>
+    createListItem(React, {
+        key: index,
+        children: [
             React.createElement('div', {style: {fontWeight: 'bold'}}, `Cycle #${cycle.cycle}`),
             React.createElement('div', null,
                 `Tasks: ${cycle.tasksProcessed} | Beliefs: ${cycle.beliefsAdded} | Qs: ${cycle.questionsAnswered}`
@@ -26,7 +17,9 @@ const CyclePanel = () => {
             React.createElement('div', {style: {fontSize: '0.8rem', color: '#666'}},
                 `${new Date(cycle.timestamp).toLocaleTimeString()}`
             )
-        );
+        ]
+    });
+
 
     return React.createElement('div', null,
         systemMetrics && React.createElement('div', {style: {marginBottom: '1rem'}},

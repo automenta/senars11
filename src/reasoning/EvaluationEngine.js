@@ -194,32 +194,41 @@ export class EvaluationEngine {
         return this._createBooleanResult(result, message);
     }
 
-    _evaluateImplicationFunction(term, variableBindings) {
-        if (term.components.length !== 2) return this._createResult(SYSTEM_ATOMS.Null, false, 'Implication requires exactly 2 arguments');
-        const [antVal, consVal] = term.components.map(comp => this._valueFromSubstitutedTerm(comp, variableBindings));
-        const isFalse = antVal === true && consVal === false;
-        const isTrue = antVal === false || consVal === true;
-        const result = isFalse ? SYSTEM_ATOMS.False : isTrue ? SYSTEM_ATOMS.True : SYSTEM_ATOMS.Null;
-        const message = isFalse ? 'Boolean implication: true => false = false' : isTrue ? 'Boolean implication: false => X or X => true = true' : 'Boolean implication: cannot determine with non-boolean values';
+    _evaluateBinaryBooleanFunction(term, operationName, operationFn, variableBindings) {
+        if (term.components.length !== 2) {
+            return this._createResult(SYSTEM_ATOMS.Null, false, `${operationName} requires exactly 2 arguments`);
+        }
+        
+        const [leftVal, rightVal] = term.components.map(comp => this._valueFromSubstitutedTerm(comp, variableBindings));
+        const result = operationFn(leftVal, rightVal);
+        const message = this._getBinaryBooleanMessage(operationName, leftVal, rightVal, result);
+        
         return this._createBooleanResult(result, message);
     }
 
+    _evaluateImplicationFunction(term, variableBindings) {
+        return this._evaluateBinaryBooleanFunction(term, 'Implication', (antVal, consVal) => {
+            const isFalse = antVal === true && consVal === false;
+            const isTrue = antVal === false || consVal === true;
+            return isFalse ? SYSTEM_ATOMS.False : isTrue ? SYSTEM_ATOMS.True : SYSTEM_ATOMS.Null;
+        }, variableBindings);
+    }
+
     _evaluateEquivalenceFunction(term, variableBindings) {
-        if (term.components.length !== 2) {
-            return this._createResult(SYSTEM_ATOMS.Null, false, 'Equivalence requires exactly 2 arguments');
+        return this._evaluateBinaryBooleanFunction(term, 'Equivalence', (leftVal, rightVal) => {
+            return leftVal === rightVal ? SYSTEM_ATOMS.True : SYSTEM_ATOMS.False;
+        }, variableBindings);
+    }
+    
+    _getBinaryBooleanMessage(operationName, leftVal, rightVal, result) {
+        if (operationName === 'Implication') {
+            const isFalse = leftVal === true && rightVal === false;
+            const isTrue = leftVal === false || rightVal === true;
+            return isFalse ? 'Boolean implication: true => false = false' : isTrue ? 'Boolean implication: false => X or X => true = true' : 'Boolean implication: cannot determine with non-boolean values';
+        } else if (operationName === 'Equivalence') {
+            return leftVal === rightVal ? 'Boolean equivalence: values are equal' : 'Boolean equivalence: values are different';
         }
-
-        const [leftVal, rightVal] = term.components.map(comp =>
-            this._valueFromSubstitutedTerm(comp, variableBindings)
-        );
-
-        // Boolean equivalence: A iff B
-        return this._createBooleanResult(
-            leftVal === rightVal ? SYSTEM_ATOMS.True : SYSTEM_ATOMS.False,
-            leftVal === rightVal
-                ? 'Boolean equivalence: values are equal'
-                : 'Boolean equivalence: values are different'
-        );
+        return `${operationName}: evaluation completed`;
     }
 
     /**
@@ -493,7 +502,7 @@ export class EvaluationEngine {
     }
 
     _reduceImplicationFunctional(components) {
-        if (!components?.length === 2) return SYSTEM_ATOMS.Null;
+        if (components?.length !== 2) return SYSTEM_ATOMS.Null;
         const [antecedent, consequent] = components;
         if (isNull(antecedent) || isNull(consequent)) return SYSTEM_ATOMS.Null;
         return (isFalse(antecedent) || isTrue(consequent)) ? SYSTEM_ATOMS.True
@@ -502,7 +511,7 @@ export class EvaluationEngine {
     }
 
     _reduceEquivalenceFunctional(components) {
-        if (!components?.length === 2) return SYSTEM_ATOMS.Null;
+        if (components?.length !== 2) return SYSTEM_ATOMS.Null;
         const [left, right] = components;
         if (isNull(left) || isNull(right)) return SYSTEM_ATOMS.Null;
         return ((isTrue(left) && isTrue(right)) || (isFalse(left) && isFalse(right))) ? SYSTEM_ATOMS.True

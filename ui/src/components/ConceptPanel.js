@@ -8,24 +8,22 @@ import {
     getPriorityChangeColor,
     sortConceptsByTime
 } from '../utils/conceptUtils.js';
+import {createControlBar, createHeader, createListItem, createTimelineItem} from '../utils/componentUtils.js';
 
 const ConceptPanel = () => {
     const [expandedConcept, setExpandedConcept] = useState(null);
     const [showTimeline, setShowTimeline] = useState(false);
     const concepts = useUiStore(state => state.concepts);
+const renderConcept = useCallback((concept, index) => {
+    const isExpanded = expandedConcept === (concept.term || `concept-${index}`);
 
-    const renderConcept = useCallback((concept, index) => {
-        const isExpanded = expandedConcept === (concept.term || `concept-${index}`);
+    const priorityChange = calculatePriorityChange(concept);
+    const priorityChangeColor = getPriorityChangeColor(priorityChange);
+    const details = formatConceptDetails(concept);
 
-        const priorityChange = calculatePriorityChange(concept);
-        const priorityChangeColor = getPriorityChangeColor(priorityChange);
-        const details = formatConceptDetails(concept);
-
-        return React.createElement('div',
-            {
-                key: concept.term || index,
-                style: listItemStyles.base
-            },
+    return createListItem(React, {
+        key: concept.term || index,
+        children: [
             React.createElement('div',
                 {
                     style: {
@@ -58,32 +56,26 @@ const ConceptPanel = () => {
                 React.createElement('div', {style: {fontWeight: 'bold', marginBottom: '0.25rem'}}, 'Evolution Details:'),
                 ...details.map((detail, idx) => React.createElement('div', {key: idx}, detail))
             )
-        );
-    }, [expandedConcept]);
+        ]
+    });
+}, [expandedConcept]);
+
 
     const renderControlBar = useCallback(() =>
-        React.createElement('div',
-            {
-                style: {
-                    display: 'flex',
-                    gap: '1rem',
-                    marginBottom: '1rem',
-                    padding: '0.5rem',
-                    backgroundColor: '#f8f9fa',
-                    borderRadius: '4px'
-                }
-            },
-            React.createElement('div', {style: {flex: 1, display: 'flex', alignItems: 'center'}},
-                React.createElement('label', {style: {display: 'flex', alignItems: 'center', gap: '0.5rem'}},
-                    React.createElement('input', {
-                        type: 'checkbox',
-                        checked: showTimeline,
-                        onChange: (e) => setShowTimeline(e.target.checked)
-                    }),
-                    React.createElement('span', {style: {fontSize: '0.9rem'}}, 'Show Evolution Timeline')
+        createControlBar(React, {
+            children: [
+                React.createElement('div', {style: {flex: 1, display: 'flex', alignItems: 'center'}},
+                    React.createElement('label', {style: {display: 'flex', alignItems: 'center', gap: '0.5rem'}},
+                        React.createElement('input', {
+                            type: 'checkbox',
+                            checked: showTimeline,
+                            onChange: (e) => setShowTimeline(e.target.checked)
+                        }),
+                        React.createElement('span', {style: {fontSize: '0.9rem'}}, 'Show Evolution Timeline')
+                    )
                 )
-            )
-        ), [showTimeline]);
+            ]
+        }), [showTimeline]);
 
     const renderTimelineView = useCallback(() => {
         if (concepts.length === 0) {
@@ -95,52 +87,36 @@ const ConceptPanel = () => {
         const timelineData = sortConceptsByTime(concepts);
 
         return React.createElement('div', null,
-            React.createElement('div', {
-                    style: {
-                        fontWeight: 'bold',
-                        fontSize: '1.1rem',
-                        marginBottom: '1rem',
-                        color: '#007bff'
-                    }
-                },
-                'Concept Evolution Timeline'
-            ),
+            createHeader(React, {content: 'Concept Evolution Timeline'}),
             React.createElement('div', {style: {display: 'flex', flexDirection: 'column', gap: '1rem'}},
                 timelineData.map((item, index) =>
-                    React.createElement('div',
-                        {
-                            key: item.term,
-                            style: {
-                                display: 'flex',
-                                alignItems: 'center',
-                                padding: '0.75rem',
-                                border: '1px solid #ddd',
-                                borderRadius: '4px',
-                                backgroundColor: index % 2 === 0 ? '#f9f9f9' : 'white'
-                            }
-                        },
-                        React.createElement('div', {style: {flex: '0 0 150px', fontWeight: 'bold'}}, item.term),
-                        React.createElement('div', {style: {flex: 1}},
-                            React.createElement('span', {style: {fontWeight: '500'}}, 'Priority:'),
-                            React.createElement('span', {
-                                style: {
-                                    marginLeft: '0.5rem',
-                                    color: '#007bff'
-                                }
-                            }, item.priority.toFixed(3))
-                        ),
-                        React.createElement('div', {style: {flex: 1}},
-                            React.createElement('span', {style: {fontWeight: '500'}}, 'Tasks:'),
-                            React.createElement('span', {style: {marginLeft: '0.5rem'}}, item.taskCount)
-                        ),
-                        React.createElement('div', {style: {flex: 1}},
-                            React.createElement('span', {style: {fontWeight: '500'}}, 'Beliefs:'),
-                            React.createElement('span', {style: {marginLeft: '0.5rem'}}, item.beliefCount)
-                        ),
-                        React.createElement('div', {style: {flex: '0 0 120px', fontSize: '0.8rem', color: '#666'}},
-                            new Date(item.lastAccess).toLocaleTimeString()
-                        )
-                    )
+                    createTimelineItem(React, {
+                        key: item.term,
+                        index,
+                        children: [
+                            React.createElement('div', {style: {flex: '0 0 150px', fontWeight: 'bold'}}, item.term),
+                            React.createElement('div', {style: {flex: 1}},
+                                React.createElement('span', {style: {fontWeight: '500'}}, 'Priority:'),
+                                React.createElement('span', {
+                                    style: {
+                                        marginLeft: '0.5rem',
+                                        color: '#007bff'
+                                    }
+                                }, item.priority.toFixed(3))
+                            ),
+                            React.createElement('div', {style: {flex: 1}},
+                                React.createElement('span', {style: {fontWeight: '500'}}, 'Tasks:'),
+                                React.createElement('span', {style: {marginLeft: '0.5rem'}}, item.taskCount)
+                            ),
+                            React.createElement('div', {style: {flex: 1}},
+                                React.createElement('span', {style: {fontWeight: '500'}}, 'Beliefs:'),
+                                React.createElement('span', {style: {marginLeft: '0.5rem'}}, item.beliefCount)
+                            ),
+                            React.createElement('div', {style: {flex: '0 0 120px', fontSize: '0.8rem', color: '#666'}},
+                                new Date(item.lastAccess).toLocaleTimeString()
+                            )
+                        ]
+                    })
                 )
             )
         );

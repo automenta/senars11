@@ -1,6 +1,7 @@
 import React from 'react';
 import useUiStore from '../stores/uiStore.js';
 import GenericPanel from './GenericPanel.js';
+import {createMetricDisplay} from '../utils/componentUtils.js';
 
 const VariablesPanel = () => {
     // Using system metrics as sample data for variables
@@ -14,25 +15,13 @@ const VariablesPanel = () => {
         {name: 'Runtime (s)', value: (systemMetrics.runtime / 1000).toFixed(1)},
         {name: 'Connected Clients', value: systemMetrics.connectedClients},
     ] : [];
+const renderVariable = (variable, index) =>
+    createMetricDisplay(React, {
+        label: variable.name,
+        value: variable.value,
+        key: variable.name || index
+    });
 
-    const renderVariable = (variable, index) =>
-        React.createElement('div',
-            {
-                key: variable.name || index,
-                style: {
-                    padding: '0.5rem',
-                    margin: '0.25rem 0',
-                    backgroundColor: 'white',
-                    border: '1px solid #ddd',
-                    borderRadius: '4px',
-                    fontSize: '0.9rem'
-                }
-            },
-            React.createElement('div', {style: {fontWeight: 'bold', display: 'flex', justifyContent: 'space-between'}},
-                variable.name,
-                React.createElement('span', {style: {fontWeight: 'normal', color: '#666'}}, variable.value)
-            )
-        );
 
     return React.createElement(GenericPanel, {
         items: variables,
