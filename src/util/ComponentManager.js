@@ -169,52 +169,91 @@ export class ComponentManager extends BaseComponent {
     }
 
     /**
-     * Initializes all registered components in dependency order
-     * @returns {Promise<boolean>} True if all components were initialized successfully
+     * Internal method to execute a lifecycle operation on all components
+     * @param {string} operation - The operation to perform (initialize, start, stop, dispose)
+     * @param {string[]} componentOrder - The order in which to execute the operation
+     * @param {Object} metricUpdate - Metric update configuration
+     * @returns {Promise<boolean>} True if all components were processed successfully
+     * @private
      */
-    async initializeAll() {
-        this.logInfo(`Initializing ${this._components.size} components...`);
+    async _executeLifecycleOperation(operation, componentOrder, metricUpdate = null) {
+        this.logInfo(`${operation.charAt(0).toUpperCase() + operation.slice(1)}ing ${this._components.size} components...`);
 
-        const startupOrder = this.getStartupOrder();
         const failedComponents = [];
+        const operationMethod = operation;
 
-        for (const componentName of startupOrder) {
+        for (const componentName of componentOrder) {
             const component = this._components.get(componentName);
             if (!component) continue;
 
-            this.logDebug(`Initializing component: ${componentName}`);
+            this.logDebug(`${operation.charAt(0).toUpperCase() + operation.slice(1)}ing component: ${componentName}`);
 
             try {
-                const success = await component.initialize();
+                const success = await component[operationMethod]();
                 if (!success) {
                     failedComponents.push(componentName);
-                    this.logError(`Failed to initialize component: ${componentName}`);
-                } else {
-                    this.incrementMetric('initializeCount');
+                    this.logError(`Failed to ${operation} component: ${componentName}`);
+                } else if (metricUpdate) {
+                    this.incrementMetric(metricUpdate.metric);
                 }
             } catch (error) {
                 failedComponents.push(componentName);
-                this.logError(`Exception during initialization of component ${componentName}:`, error);
+                this.logError(`Exception during ${operation} of component ${componentName}:`, error);
             }
         }
 
         const success = failedComponents.length === 0;
+        const total = componentOrder.length;
+        const successful = total - failedComponents.length;
 
-        if (failedComponents.length > 0) {
-            this.logInfo(`Init: ${startupOrder.length - failedComponents.length}/${startupOrder.length} OK, ${failedComponents.length} failed`);
+        this._logOperationResult(operation, successful, total, failedComponents.length);
+        this._emitLifecycleEvent(operation, total, successful, failedComponents, success);
+
+        return success;
+    }
+
+    /**
+     * Helper method to log operation results
+     * @param {string} operation - The operation name
+     * @param {number} successful - Number of successful operations
+     * @param {number} total - Total number of operations
+     * @param {number} failed - Number of failed operations
+     * @private
+     */
+    _logOperationResult(operation, successful, total, failed) {
+        if (failed > 0) {
+            this.logInfo(`${operation.charAt(0).toUpperCase() + operation.slice(1)}: ${successful}/${total} ${operation === 'init' ? 'OK' : 'successful'}, ${failed} failed`);
         } else {
-            this.logInfo(`All ${startupOrder.length} components OK`);
+            this.logInfo(`All ${total} components ${operation === 'init' ? 'OK' : `${operation}ed successfully`}`);
         }
+    }
 
-        this.emitEvent('components.initialized', {
-            total: startupOrder.length,
-            successful: startupOrder.length - failedComponents.length,
+    /**
+     * Helper method to emit lifecycle events
+     * @param {string} operation - The operation name
+     * @param {number} total - Total number of operations
+     * @param {number} successful - Number of successful operations
+     * @param {string[]} failedComponents - Names of failed components
+     * @param {boolean} success - Whether the operation was successful
+     * @private
+     */
+    _emitLifecycleEvent(operation, total, successful, failedComponents, success) {
+        this.emitEvent(`components.${operation}ed`, {
+            total,
+            successful,
             failed: failedComponents.length,
             failedComponents,
             success
         });
+    }
 
-        return success;
+    /**
+     * Initializes all registered components in dependency order
+     * @returns {Promise<boolean>} True if all components were initialized successfully
+     */
+    async initializeAll() {
+        const startupOrder = this.getStartupOrder();
+        return await this._executeLifecycleOperation('initialize', startupOrder, {metric: 'initializeCount'});
     }
 
     /**
@@ -222,48 +261,8 @@ export class ComponentManager extends BaseComponent {
      * @returns {Promise<boolean>} True if all components were started successfully
      */
     async startAll() {
-        this.logInfo(`Starting ${this._components.size} components...`);
-
         const startupOrder = this.getStartupOrder();
-        const failedComponents = [];
-
-        for (const componentName of startupOrder) {
-            const component = this._components.get(componentName);
-            if (!component) continue;
-
-            this.logDebug(`Starting component: ${componentName}`);
-
-            try {
-                const success = await component.start();
-                if (!success) {
-                    failedComponents.push(componentName);
-                    this.logError(`Failed to start component: ${componentName}`);
-                } else {
-                    this.incrementMetric('startCount');
-                }
-            } catch (error) {
-                failedComponents.push(componentName);
-                this.logError(`Exception during start of component ${componentName}:`, error);
-            }
-        }
-
-        const success = failedComponents.length === 0;
-
-        if (failedComponents.length > 0) {
-            this.logInfo(`Start: ${startupOrder.length - failedComponents.length}/${startupOrder.length} successful, ${failedComponents.length} failed`);
-        } else {
-            this.logInfo(`All ${startupOrder.length} components started successfully`);
-        }
-
-        this.emitEvent('components.started', {
-            total: startupOrder.length,
-            successful: startupOrder.length - failedComponents.length,
-            failed: failedComponents.length,
-            failedComponents,
-            success
-        });
-
-        return success;
+        return await this._executeLifecycleOperation('start', startupOrder, {metric: 'startCount'});
     }
 
     /**
@@ -271,48 +270,8 @@ export class ComponentManager extends BaseComponent {
      * @returns {Promise<boolean>} True if all components were stopped successfully
      */
     async stopAll() {
-        this.logInfo(`Stopping ${this._components.size} components...`);
-
         const shutdownOrder = this.getShutdownOrder();
-        const failedComponents = [];
-
-        for (const componentName of shutdownOrder) {
-            const component = this._components.get(componentName);
-            if (!component) continue;
-
-            this.logDebug(`Stopping component: ${componentName}`);
-
-            try {
-                const success = await component.stop();
-                if (!success) {
-                    failedComponents.push(componentName);
-                    this.logError(`Failed to stop component: ${componentName}`);
-                } else {
-                    this.incrementMetric('stopCount');
-                }
-            } catch (error) {
-                failedComponents.push(componentName);
-                this.logError(`Exception during stop of component ${componentName}:`, error);
-            }
-        }
-
-        const success = failedComponents.length === 0;
-
-        if (failedComponents.length > 0) {
-            this.logInfo(`Stop: ${shutdownOrder.length - failedComponents.length}/${shutdownOrder.length} successful, ${failedComponents.length} failed`);
-        } else {
-            this.logInfo(`All ${shutdownOrder.length} components stopped successfully`);
-        }
-
-        this.emitEvent('components.stopped', {
-            total: shutdownOrder.length,
-            successful: shutdownOrder.length - failedComponents.length,
-            failed: failedComponents.length,
-            failedComponents,
-            success
-        });
-
-        return success;
+        return await this._executeLifecycleOperation('stop', shutdownOrder, {metric: 'stopCount'});
     }
 
     /**
@@ -320,46 +279,8 @@ export class ComponentManager extends BaseComponent {
      * @returns {Promise<boolean>} True if all components were disposed successfully
      */
     async disposeAll() {
-        this.logInfo(`Disposing ${this._components.size} components...`);
-
         const shutdownOrder = this.getShutdownOrder();
-        const failedComponents = [];
-
-        for (const componentName of shutdownOrder) {
-            const component = this._components.get(componentName);
-            if (!component) continue;
-
-            this.logDebug(`Disposing component: ${componentName}`);
-
-            try {
-                const success = await component.dispose();
-                if (!success) {
-                    failedComponents.push(componentName);
-                    this.logError(`Failed to dispose component: ${componentName}`);
-                }
-            } catch (error) {
-                failedComponents.push(componentName);
-                this.logError(`Exception during dispose of component ${componentName}:`, error);
-            }
-        }
-
-        const success = failedComponents.length === 0;
-
-        if (failedComponents.length > 0) {
-            this.logInfo(`Dispose: ${shutdownOrder.length - failedComponents.length}/${shutdownOrder.length} successful, ${failedComponents.length} failed`);
-        } else {
-            this.logInfo(`All ${shutdownOrder.length} components disposed successfully`);
-        }
-
-        this.emitEvent('components.disposed', {
-            total: shutdownOrder.length,
-            successful: shutdownOrder.length - failedComponents.length,
-            failed: failedComponents.length,
-            failedComponents,
-            success
-        });
-
-        return success;
+        return await this._executeLifecycleOperation('dispose', shutdownOrder);
     }
 
     /**

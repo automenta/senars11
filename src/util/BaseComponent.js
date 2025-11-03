@@ -102,87 +102,105 @@ export class BaseComponent {
         return validationResult.value;
     }
 
-    async initialize() {
-        if (this._initialized) {
-            this.logWarn('Component already initialized');
-            return true;
+    /**
+     * Internal method to execute a lifecycle operation
+     * @param {string} operation - The operation to perform (initialize, start, stop, dispose)
+     * @param {boolean} checkCondition - Whether to check a condition before proceeding
+     * @param {Function} action - The action to perform
+     * @param {string} conditionMessage - Message for the condition warning
+     * @param {string} metricName - Name of the metric to increment
+     * @returns {Promise<boolean>} True if the operation was successful
+     * @private
+     */
+    async _executeLifecycleOperation(operation, checkCondition, action, conditionMessage, metricName = null) {
+        if (checkCondition) {
+            if (operation === 'start' && !this._initialized) {
+                this._logger.error('Cannot start uninitialized component');
+                return false;
+            }
+            if (operation === 'stop' && !this._started) {
+                this.logWarn('Component not started');
+                return true;
+            }
+            if (operation === 'initialize' && this._initialized) {
+                this.logWarn('Component already initialized');
+                return true;
+            }
+            if (operation === 'dispose' && this._disposed) {
+                this.logWarn('Component already disposed');
+                return true;
+            }
         }
 
         try {
-            await this._initialize();
-            this._initialized = true;
+            // Set start time for start operation
+            if (operation === 'start') {
+                this._startTime = Date.now();
+            }
+            
+            await action();
+            
+            // Update state after successful operation
+            if (operation === 'initialize') this._initialized = true;
+            if (operation === 'start') this._started = true;
+            if (operation === 'stop') this._started = false;
+            if (operation === 'dispose') this._disposed = true;
 
-            // Emit initialization event
-            this._eventBus.emit(`${this._name}.initialized`, {
-                timestamp: Date.now(),
-                component: this._name
-            });
+            // Emit the appropriate event
+            this._emitLifecycleEvent(operation);
 
-            this._logger.info(`${this._name} initialized`);
-            this.incrementMetric('initializeCount');
+            // Log and update metrics
+            this._logger.info(`${this._name} ${operation}${operation === 'e' ? 'd' : (operation === 'stop' || operation === 'dispos' ? 'ped' : 'ed')}`);
+            if (metricName) this.incrementMetric(metricName);
             return true;
         } catch (error) {
-            this._logger.error('Failed to initialize component', error);
+            this._logger.error(`Failed to ${operation} component`, error);
             return false;
         }
+    }
+
+    /**
+     * Emits a lifecycle event for the component
+     * @param {string} operation - The operation that was performed
+     * @private
+     */
+    _emitLifecycleEvent(operation) {
+        const eventPayload = {
+            timestamp: Date.now(),
+            component: this._name,
+            ...(operation !== 'initialize' && operation !== 'dispose' && { uptime: this.uptime })
+        };
+        this._eventBus.emit(`${this._name}.${operation}d`, eventPayload);
+    }
+
+    async initialize() {
+        return await this._executeLifecycleOperation(
+            'initialize',
+            true, // check condition
+            () => this._initialize(),
+            '',
+            'initializeCount'
+        );
     }
 
     async start() {
-        if (!this._initialized) {
-            this._logger.error('Cannot start uninitialized component');
-            return false;
-        }
-
-        if (this._started) {
-            this.logWarn('Component already started');
-            return true;
-        }
-
-        try {
-            this._startTime = Date.now();
-            await this._start();
-            this._started = true;
-
-            // Emit start event
-            this._eventBus.emit(`${this._name}.started`, {
-                timestamp: Date.now(),
-                component: this._name,
-                uptime: this.uptime
-            });
-
-            this._logger.info(`${this._name} started`);
-            this.incrementMetric('startCount');
-            return true;
-        } catch (error) {
-            this._logger.error('Failed to start component', error);
-            return false;
-        }
+        return await this._executeLifecycleOperation(
+            'start',
+            true, // check condition
+            () => this._start(),
+            '',
+            'startCount'
+        );
     }
 
     async stop() {
-        if (!this._started) {
-            this.logWarn('Component not started');
-            return true;
-        }
-
-        try {
-            await this._stop();
-            this._started = false;
-
-            // Emit stop event
-            this._eventBus.emit(`${this._name}.stopped`, {
-                timestamp: Date.now(),
-                component: this._name,
-                uptime: this.uptime
-            });
-
-            this._logger.info(`${this._name} stopped`);
-            this.incrementMetric('stopCount');
-            return true;
-        } catch (error) {
-            this._logger.error('Failed to stop component', error);
-            return false;
-        }
+        return await this._executeLifecycleOperation(
+            'stop',
+            true, // check condition
+            () => this._stop(),
+            '',
+            'stopCount'
+        );
     }
 
     async dispose() {
@@ -195,17 +213,12 @@ export class BaseComponent {
             // Stop if running
             if (this._started) await this.stop();
 
-            await this._dispose();
-            this._disposed = true;
-
-            // Emit dispose event
-            this._eventBus.emit(`${this._name}.disposed`, {
-                timestamp: Date.now(),
-                component: this._name,
-                uptime: this.uptime
-            });
-
-            this._logger.info(`${this._name} disposed`);
+            await this._executeLifecycleOperation(
+                'dispose',
+                false, // no condition check needed for dispose
+                () => this._dispose(),
+                ''
+            );
             return true;
         } catch (error) {
             this._logger.error('Failed to dispose component', error);

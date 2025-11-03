@@ -185,6 +185,42 @@ export class RuleEngine extends BaseComponent {
         return [...lmResults, ...nalResults];
     }
 
+    _toggleRule = (ruleId, enable) => {
+        const rule = this.getRule(ruleId);
+        if (rule) this._rules.set(ruleId, enable ? rule.enable() : rule.disable());
+        return this;
+    };
+
+    enableRule = (ruleId) => this._toggleRule(ruleId, true);
+    disableRule = (ruleId) => this._toggleRule(ruleId, false);
+
+    _getValidRules(ruleIds) {
+        return ruleIds.map(this.getRule).filter(Boolean);
+    }
+
+    _filterByType(rules, ruleType) {
+        return ruleType ? rules.filter(r => ruleType === 'lm' ? r instanceof LMRule : !(r instanceof LMRule)) : rules;
+    }
+
+    _incrementTypeMetric(rule) {
+        this._typeMetrics[rule instanceof LMRule ? 'lmRuleApplications' : 'nalRuleApplications']++;
+    }
+
+    _updateMetrics(success, time) {
+        this._ruleUtilMetrics = MetricsUtil.update(this._ruleUtilMetrics, success, time);
+    }
+
+    _applyRulesWithLogging(rules, task, memory = null) {
+        return rules.flatMap(rule => {
+            try {
+                return this.applyRule(rule, task, memory).results;
+            } catch (error) {
+                this.logger.warn(`Rule ${rule.id} failed:`, error);
+                return [];
+            }
+        });
+    }
+
     async coordinateRules(task, memory = null) {
         // Apply LM rules to original task
         const lmResults = this.applyLMRules(task, null, memory);

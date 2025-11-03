@@ -230,34 +230,29 @@ export class NAR extends BaseComponent {
     _createTask(parsed) {
         const {term, truthValue, punctuation} = parsed;
         const budget = {priority: this._calculateInputPriority(parsed)};
-
-        // Determine task type based on punctuation
         const taskType = this._getTaskTypeFromPunctuation(punctuation);
 
-        let truth;
+        return new Task({
+            term,
+            punctuation,
+            truth: this._createTaskTruth(taskType, truthValue, parsed),
+            budget,
+        });
+    }
 
+    _createTaskTruth(taskType, truthValue, parsed) {
         if (taskType === 'QUESTION') {
             // Questions should not have truth values
             if (truthValue) {
                 throw new Error(`Questions cannot have truth values: input was ${parsed.originalInput || 'unspecified'}`);
             }
-            truth = null; // Questions don't have truth values
-        } else {
-            // Beliefs and Goals must have valid truth values
-            if (truthValue) {
-                truth = new Truth(truthValue.frequency, truthValue.confidence);
-            } else {
-                // Use default truth values for beliefs and goals
-                truth = new Truth(1.0, 0.9); // Default truth values for NARS
-            }
+            return null; // Questions don't have truth values
         }
 
-        return new Task({
-            term,
-            punctuation,
-            truth,
-            budget,
-        });
+        // Beliefs and Goals must have valid truth values
+        return truthValue 
+            ? new Truth(truthValue.frequency, truthValue.confidence)
+            : new Truth(1.0, 0.9); // Default truth values for NARS
     }
 
     _getTaskTypeFromPunctuation(punctuation) {
@@ -518,6 +513,11 @@ export class NAR extends BaseComponent {
         };
     }
 
+    _withComponentCheck(component, message, operation) {
+        if (!component) throw new Error(message);
+        return operation(component);
+    }
+
     _ensureLMEnabled() {
         if (!this._lm) throw new Error('Language Model is not enabled in this NAR instance');
     }
@@ -528,11 +528,6 @@ export class NAR extends BaseComponent {
 
     _ensureExplanationService() {
         if (!this._explanationService) throw new Error('Explanation service is not enabled');
-    }
-
-    _withComponentCheck(component, message, operation) {
-        if (!component) throw new Error(message);
-        return operation(component);
     }
 
     registerLMProvider(id, provider) {
@@ -588,15 +583,19 @@ export class NAR extends BaseComponent {
         // Set up periodic updates of reasoning state for UI
         if (this._reasoningAboutReasoning) {
             this._reasoningStateInterval = setInterval(() => {
-                try {
-                    if (this._reasoningAboutReasoning?.getReasoningState) {
-                        const state = this._reasoningAboutReasoning.getReasoningState();
-                        this._eventBus.emit('reasoningState', state, {source: 'periodic'});
-                    }
-                } catch (error) {
-                    this.logError('Error in reasoning state update:', error);
-                }
+                this._emitPeriodicReasoningState();
             }, 5000); // Update every 5 seconds
+        }
+    }
+
+    _emitPeriodicReasoningState() {
+        try {
+            if (this._reasoningAboutReasoning?.getReasoningState) {
+                const state = this._reasoningAboutReasoning.getReasoningState();
+                this._eventBus.emit('reasoningState', state, {source: 'periodic'});
+            }
+        } catch (error) {
+            this.logError('Error in reasoning state update:', error);
         }
     }
 
@@ -608,10 +607,7 @@ export class NAR extends BaseComponent {
     }
 
     getReasoningState() {
-        if (this._reasoningAboutReasoning && typeof this._reasoningAboutReasoning.getReasoningState === 'function') {
-            return this._reasoningAboutReasoning.getReasoningState();
-        }
-        return null;
+        return this._reasoningAboutReasoning?.getReasoningState?.() ?? null;
     }
 
     async initializeTools() {
@@ -675,12 +671,7 @@ export class NAR extends BaseComponent {
         const startTime = Date.now();
         try {
             const result = await this._withComponentCheck(this._toolIntegration, 'Tool integration is not enabled',
-                toolIntegration => toolIntegration.executeTool(toolId, params, {
-                    nar: this,
-                    memory: this._memory,
-                    timestamp: Date.now(),
-                    ...context
-                }));
+                toolIntegration => toolIntegration.executeTool(toolId, params, this._createToolContext(context)));
             const duration = Date.now() - startTime;
             duration > 1000 && this.logger.warn(`Slow tool execution: ${toolId} took ${duration}ms`, {
                 toolId,
@@ -700,12 +691,7 @@ export class NAR extends BaseComponent {
 
     async executeTools(toolCalls, context = {}) {
         return await this._withComponentCheck(this._toolIntegration, 'Tool integration is not enabled',
-            toolIntegration => toolIntegration.executeTools(toolCalls, {
-                nar: this,
-                memory: this._memory,
-                timestamp: Date.now(),
-                ...context
-            }));
+            toolIntegration => toolIntegration.executeTools(toolCalls, this._createToolContext(context)));
     }
 
     getAvailableTools() {
@@ -714,41 +700,30 @@ export class NAR extends BaseComponent {
 
     async explainToolResult(toolResult, context = {}) {
         return await this._withComponentCheck(this._explanationService, 'Explanation service is not enabled',
-            service => service.explainToolResult(toolResult, {
-                nar: this,
-                memory: this._memory,
-                timestamp: Date.now(),
-                ...context
-            }));
+            service => service.explainToolResult(toolResult, this._createToolContext(context)));
     }
 
     async explainToolResults(toolResults, context = {}) {
         return await this._withComponentCheck(this._explanationService, 'Explanation service is not enabled',
-            service => service.explainToolResults(toolResults, {
-                nar: this,
-                memory: this._memory,
-                timestamp: Date.now(),
-                ...context
-            }));
+            service => service.explainToolResults(toolResults, this._createToolContext(context)));
     }
 
     async summarizeToolExecution(toolResults, context = {}) {
         return await this._withComponentCheck(this._explanationService, 'Explanation service is not enabled',
-            service => service.summarizeToolExecution(toolResults, {
-                nar: this,
-                memory: this._memory,
-                timestamp: Date.now(),
-                ...context
-            }));
+            service => service.summarizeToolExecution(toolResults, this._createToolContext(context)));
     }
 
     async assessToolResults(toolResults, context = {}) {
         return await this._withComponentCheck(this._explanationService, 'Explanation service is not enabled',
-            service => service.assessToolResults(toolResults, {
-                nar: this,
-                memory: this._memory,
-                timestamp: Date.now(),
-                ...context
-            }));
+            service => service.assessToolResults(toolResults, this._createToolContext(context)));
+    }
+
+    _createToolContext(context = {}) {
+        return {
+            nar: this,
+            memory: this._memory,
+            timestamp: Date.now(),
+            ...context
+        };
     }
 }
