@@ -47,7 +47,7 @@ const DataDashboardPanel = ({
     };
 
     wsService.ws.addEventListener('message', handleMessage);
-    wsService.send({ type: dataRequestType, payload: {} });
+    wsService.sendMessage({ type: dataRequestType, payload: {} });
 
     return () => wsService.ws.removeEventListener('message', handleMessage);
   }, [wsService, dataRequestType, dataResponseType, onDataReceived]);
