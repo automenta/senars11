@@ -77,7 +77,8 @@ const SystemStatusPanel = () => {
         React.createElement('div', null,
             Object.entries(demoStates).map(([id, state]) =>
                 React.createElement('div',
-                    {key: id,
+                    {
+                        key: id,
                         style: {
                             marginBottom: '0.5rem',
                             padding: '0.25rem',

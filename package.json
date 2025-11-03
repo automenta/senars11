@@ -19,7 +19,7 @@
     "capture": "node scripts/utils/visualize.js",
     "capture:priority": "node scripts/utils/visualize.js --type priority",
     "capture:derivations": "node scripts/utils/visualize.js --type derivations",
-    "analyze": "node scripts/utils/comprehensive_analysis.js",
+    "analyze": "node self-analyze.js",
     "rule-analysis": "node scripts/utils/deep_rule_analysis.js",
     "test": "npm run test:core",
     "test:all": "npm run test:core && npm run test:ui",
