@@ -16,7 +16,6 @@ describe('ComponentManager Integration', () => {
         };
 
         const nar = new NAR(config);
-        await nar.initialize();
 
         const metacognition = nar.componentManager.getComponent('metacognition');
         expect(metacognition).toBeDefined();

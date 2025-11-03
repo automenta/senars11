@@ -37,13 +37,13 @@ export class NAR extends BaseComponent {
         this._cycleInterval = null;
         this._useOptimizedCycle = config.performance?.useOptimizedCycle !== false;
         this._registerComponents();
+
+        if (this._config.get('components')) {
+            this._componentManager.loadComponentsFromConfig(this._config.get('components'));
+        }
     }
 
     async initialize() {
-        if (this._config.get('components')) {
-            await this._componentManager.loadComponentsFromConfig(this._config.get('components'));
-        }
-
         const success = await this._componentManager.initializeAll();
         if (success) {
             this._setupDefaultRules();
