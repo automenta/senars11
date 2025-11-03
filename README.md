@@ -352,17 +352,20 @@ Handles Narsese syntax parsing and generation:
 
 Provides comprehensive language model capabilities:
 
-- **Provider Management**: Registry and selection of multiple LM providers
-- **Workflow Engine**: Support for complex LM-based reasoning workflows
-- **Metrics Tracking**: Monitoring of LM usage, token counts, and processing times
-- **Narsese Translation**: Conversion between Narsese and natural language
-- **Resource Management**: Handling of LM resources and capacity
+- **Provider Management**: Registry and selection of multiple LM providers with circuit breaker protection
+- **Workflow Engine**: Support for complex LM-based reasoning workflows with performance tracking
+- **Metrics Tracking**: Monitoring of LM usage, token counts, processing times, and performance metrics
+- **Narsese Translation**: Advanced bidirectional conversion between Narsese and natural language with context awareness
+- **Resource Management**: Intelligent handling of LM resources and capacity with fallback mechanisms
+- **Advanced Hybrid Reasoning**: Sophisticated coordination between NAL and LM systems with conflict resolution
+- **Adaptive Integration**: Dynamic selection of optimal reasoning strategies based on task characteristics
 
 **Technical Definitions:**
 - **LM (Language Model Integration)**: The component that interfaces with external language models
 - **Provider Management**: The system for registering and selecting different language model services
 - **Narsese Translation**: The bidirectional conversion between formal Narsese and natural language
 - **Workflow Engine**: The system for managing complex interactions between the reasoning system and language models
+- **Hybrid Reasoning**: The integration of symbolic (NAL) and neural (LM) reasoning approaches with conflict resolution
 
 ---
 
@@ -636,12 +639,29 @@ The specification defines a reasoning system where intelligence properties emerg
 - **Punctuation Support**: Full recognition of belief (.), goal (!), and question (?) punctuation
 - **Error Recovery**: Comprehensive validation and recovery from malformed Narsese input
 
+#### Advanced Observable Platform & Real-Time Visualization
+- **WebSocket-Based Monitoring**: Real-time visualization through WebSocket-based monitoring system with multiple specialized panels
+- **Reasoning Trace Panel**: Detailed visualization of reasoning steps with annotation capabilities and comprehensive event logging
+- **Task Flow Diagram**: Visual representation of task processing chains, dependencies, and reasoning pathways
+- **Concept Panel**: Real-time monitoring of concept activation, priority changes, and attention dynamics
+- **Priority Histogram**: Distribution visualization of task and concept priorities with dynamic updates
+- **System Status Panel**: Real-time metrics for reasoning performance, system health, and resource utilization
+- **Meta-Cognition Panel**: Visualization of self-analysis and optimization processes with automated insight generation
+- **Time Series Panel**: Temporal analysis of reasoning activities and performance metrics with trend analysis
+- **Interactive Exploration**: Interactive exploration mode allowing users to understand compound improvement processes
+- **Flexible Layout Management**: Advanced layout management using flexlayout-react with customizable dashboards
+- **Annotation and Export Capabilities**: Comprehensive annotation system with data export functionality for research and analysis
+
 #### Rule Engine Framework
 - **NAL Rule Integration**: Complete implementation of NAL truth functions and inference rules (deduction, induction, abduction, analogy, comparison, resemblance)
 - **LM Rule Integration**: Framework for language model collaboration with prompt generation and response processing
 - **Dynamic Rule Management**: Runtime rule enable/disable, priority adjustment, and performance tracking
 - **Truth Value Operations**: Complete implementation of revision, deduction, induction, abduction, negation, and expectation functions
 - **Inference Confidence**: Proper confidence propagation through inference chains with compound confidence calculations
+- **Advanced Hybrid Reasoning**: Sophisticated coordination between NAL and LM systems with conflict resolution and cross-validation
+- **Adaptive Coordination**: Dynamic selection of optimal reasoning strategies based on task characteristics and system state
+- **Confidence-Based Integration**: Weighted combination of results based on confidence metrics and performance data
+- **Feedback Loops**: Continuous improvement through meta-cognitive analysis of reasoning failures and successes
 
 #### Memory and Attention Management
 - **Concept-Based Organization**: Associative storage organized around Terms in Concepts with related Task clustering
@@ -663,6 +683,10 @@ The specification defines a reasoning system where intelligence properties emerg
 - **Memory Efficiency**: Sublinear growth in memory usage with knowledge base size through caching mechanisms
 - **Scalability**: Horizontal scaling support for distributed reasoning across multiple nodes
 - **Performance Characteristics**: Performance improvements with each enhancement iteration
+- **Dynamic Rule Prioritization**: Automatic adjustment of rule execution priorities based on effectiveness and performance metrics
+- **Caching Strategies**: Multi-tiered caching with hit-rate optimization and intelligent cache management
+- **Event Processing**: Optimized event handling with middleware pipelines and performance tracking
+- **Batch Processing**: Optimized processing for high-throughput scenarios with performance monitoring
 
 #### Security Implementation Details
 - **Input Sanitization**: Comprehensive validation of all Narsese input to prevent injection attacks
@@ -670,6 +694,7 @@ The specification defines a reasoning system where intelligence properties emerg
 - **Access Controls**: Role-based access controls for system components and data
 - **Secure Defaults**: Secure-by-default configuration with optional enhanced security settings
 - **Audit Logging**: Complete logging of security-relevant events and system operations
+- **Circuit Breaker Pattern**: Robust error handling with fallback mechanisms for external services and LM integration
 
 #### Error Handling Strategies
 - **Graceful Degradation**: System continues operation when individual components fail
@@ -744,6 +769,12 @@ The specification defines a reasoning system where intelligence properties emerg
 - **Performance Metrics**: Detailed metrics collection across all system components
 - **Self-Correction**: Automatic correction of suboptimal behaviors and strategies
 - **Insight Generation**: Automatic generation and visualization of system intelligence insights
+- **ReasoningAboutReasoning**: Real-time meta-cognitive analysis with pattern detection and anomaly identification
+- **Advanced Quality Assessment**: Continuous evaluation of reasoning output quality and coherence with confidence-based validation
+- **Anomaly Detection**: Identification of reasoning gaps and potential improvement opportunities through pattern analysis
+- **Automated Self-Optimization**: Dynamic adjustment of system parameters and rule priorities based on performance metrics
+- **Component Architecture**: Sophisticated component management with lifecycle control, dependency resolution, and standardized interfaces
+- **Event-Driven Architecture**: Comprehensive event system with middleware support, error handling, and performance tracking
 
 ### Key Characteristics of the Ideal Result
 
@@ -754,10 +785,20 @@ The specification defines a reasoning system where intelligence properties emerg
 - **Observable reasoning process** with complete traceability and compound improvement visibility
 
 #### 2. **Self-Improving Visualization Interface**
-- **Compound reasoning traces** showing how intelligence emerges and grows through structural properties
-- **Task flow visualization** illustrating compound optimization and adaptive processing
-- **Concept evolution mapping** displaying how knowledge organization improves with use
-- **Intelligence growth dashboard** showing compound improvement metrics and performance
+- **Compound reasoning traces** showing how intelligence emerges and grows through structural properties with annotation capabilities
+- **Task flow visualization** illustrating compound optimization and adaptive processing with dependency mapping
+- **Concept evolution mapping** displaying how knowledge organization improves with use, including activation and priority changes
+- **Intelligence growth dashboard** showing compound improvement metrics and performance with real-time updates
+- **Reasoning Trace Panel**: Detailed visualization of reasoning steps with comprehensive logging and annotation tools
+- **Task Flow Diagram**: Visual representation of task processing chains and dependencies with interactive exploration
+- **Concept Panel**: Real-time monitoring of concept activation and priority changes with detailed metrics
+- **Priority Histogram**: Distribution visualization of task and concept priorities with dynamic updates
+- **System Status Panel**: Real-time metrics for reasoning performance and system health with resource utilization
+- **Meta-Cognition Panel**: Visualization of self-analysis and optimization processes with automated insight generation
+- **Time Series Panel**: Temporal analysis of reasoning activities and performance metrics with trend analysis
+- **Interactive Exploration Mode**: Allowing users to understand compound improvement processes with detailed drill-down capabilities
+- **Pattern Analysis Tools**: For discovering compound intelligence patterns and optimization opportunities with visual insights
+- **Compound Insight Generation**: With automatic discovery and visualization of improvements and system behaviors
 
 #### 3. **Educational Compound Intelligence Capabilities**
 - **Compound learning demonstrations** showing intelligence emergence from data structures
@@ -796,6 +837,9 @@ The specification defines a reasoning system where intelligence properties emerg
 - **Canonical Representations**: Consistent canonical forms for all knowledge representations
 - **Hash-Optimized Structures**: Efficient hashing and caching mechanisms throughout
 - **Visitor-Reducer Patterns**: Consistent application of structural analysis patterns
+- **Component Lifecycle Management**: Standardized component foundation with metrics, logging, and error handling
+- **Event-Driven Architecture**: Sophisticated event system with middleware support and error handling
+- **Circuit Breaker Pattern**: Robust error handling with fallback mechanisms for external services
 
 #### Compound Capabilities:
 - **Compound reasoning examples** with intelligence that grows through structural properties
@@ -803,9 +847,11 @@ The specification defines a reasoning system where intelligence properties emerg
 - **Compound intelligence demonstration** where combination compounds beyond individual parts
 - **Compound performance metrics** with continuously improving efficiency and quality
 - **Real-time Reasoning Engine**: High-performance engine processing inputs and generating conclusions
-- **Intelligent Visualization**: Step-by-step reasoning traces and interactive exploration tools
-- **Capture and Analysis Tools**: Comprehensive tools for educational content and research
-- **Configurable Interface**: Simple LM provider management and adjustable reasoning parameters
+- **Intelligent Visualization**: Step-by-step reasoning traces, multiple specialized panels, and interactive exploration tools
+- **Capture and Analysis Tools**: Comprehensive tools for educational content and research with annotation and export capabilities
+- **Configurable Interface**: Simple LM provider management, adjustable reasoning parameters, and flexible layout management
+- **Advanced Hybrid Reasoning**: Sophisticated NARS-LLM collaboration with conflict resolution and cross-validation
+- **Self-Analysis and Meta-Reasoning**: Advanced reasoning quality assessment and strategy learning with automatic optimization
 
 ### System Behavior and Properties
 
