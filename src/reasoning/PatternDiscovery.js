@@ -19,26 +19,33 @@ class PatternDiscoveryEngine {
 
     // Discover patterns in reasoning traces
     discoverPatterns(reasoningTrace) {
-        const patterns = [];
+        const patternTypes = [
+            { type: 'sequential', finder: this.findSequentialPatterns.bind(this) },
+            { type: 'temporal', finder: this.findTemporalPatterns.bind(this) },
+            { type: 'structural', finder: this.findStructuralPatterns.bind(this) }
+        ];
 
-        // Look for sequential patterns
-        const sequentialPatterns = this.findSequentialPatterns(reasoningTrace);
-        patterns.push(...sequentialPatterns);
-
-        // Look for temporal patterns
-        const temporalPatterns = this.findTemporalPatterns(reasoningTrace);
-        patterns.push(...temporalPatterns);
-
-        // Look for structural patterns in concepts
-        const structuralPatterns = this.findStructuralPatterns(reasoningTrace);
-        patterns.push(...structuralPatterns);
-
-        // Store discovered patterns
+        const patterns = this._discoverAllPatterns(patternTypes, reasoningTrace);
+        this._storeDiscoveredPatterns(patterns);
+        
+        return patterns;
+    }
+    
+    _discoverAllPatterns(patternTypes, reasoningTrace) {
+        const allPatterns = [];
+        
+        for (const patternType of patternTypes) {
+            const discovered = patternType.finder(reasoningTrace);
+            allPatterns.push(...discovered);
+        }
+        
+        return allPatterns;
+    }
+    
+    _storeDiscoveredPatterns(patterns) {
         for (const pattern of patterns) {
             this.patterns.set(pattern.id, pattern);
         }
-
-        return patterns;
     }
 
     findSequentialPatterns(trace) {

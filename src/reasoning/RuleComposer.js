@@ -9,15 +9,8 @@ export class RuleComposer {
      * @returns {Rule} - A composite rule that chains all the input rules
      */
     static chain(...rules) {
-        if (rules.length === 0) {
-            throw new Error('At least one rule must be provided for chaining');
-        }
-
-        if (rules.length === 1) {
-            return rules[0]; // Return the single rule
-        }
-
-        return new ChainedRule(rules);
+        RuleComposer._validateRules(rules, 'chaining');
+        return rules.length === 1 ? rules[0] : new ChainedRule(rules);
     }
 
     /**
@@ -26,15 +19,8 @@ export class RuleComposer {
      * @returns {Rule} - A composite rule that applies all input rules
      */
     static combine(...rules) {
-        if (rules.length === 0) {
-            throw new Error('At least one rule must be provided for combination');
-        }
-
-        if (rules.length === 1) {
-            return rules[0]; // Return the single rule
-        }
-
-        return new CombinedRule(rules);
+        RuleComposer._validateRules(rules, 'combination');
+        return rules.length === 1 ? rules[0] : new CombinedRule(rules);
     }
 
     /**
@@ -64,6 +50,16 @@ export class RuleComposer {
      */
     static fallback(...rules) {
         return new FallbackRule(rules);
+    }
+    
+    /**
+     * Validate that rules array is valid for operations
+     * @private
+     */
+    static _validateRules(rules, operation) {
+        if (rules.length === 0) {
+            throw new Error(`At least one rule must be provided for ${operation}`);
+        }
     }
 }
 

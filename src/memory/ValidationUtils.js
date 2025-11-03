@@ -40,6 +40,14 @@ export class ValidationUtils {
      */
     validate(indexes, logger = null) {
         const validationStartTime = Date.now();
+        const validationTasks = [
+            { key: 'termConsistency', validator: this.validateTermConsistency, error: true },
+            { key: 'orphanedEntries', validator: this.validateOrphanedEntries, error: false },
+            { key: 'duplicates', validator: this.validateDuplicates, error: false },
+            { key: 'invalidReferences', validator: this.validateReferences, error: true },
+            { key: 'customRules', validator: this.validateCustomRules, error: true }
+        ];
+
         const results = {
             timestamp: validationStartTime,
             passed: true,
@@ -50,37 +58,8 @@ export class ValidationUtils {
         };
 
         try {
-            // Check for consistency between term index and other indexes
-            results.details.termConsistency = this.validateTermConsistency(indexes);
-            if (!results.details.termConsistency.passed) {
-                results.passed = false;
-                results.errors.push(...results.details.termConsistency.errors);
-            }
-
-            // Check for orphaned entries
-            results.details.orphanedEntries = this.validateOrphanedEntries(indexes);
-            if (!results.details.orphanedEntries.passed) {
-                results.warnings.push(...results.details.orphanedEntries.warnings);
-            }
-
-            // Check for duplicate entries
-            results.details.duplicates = this.validateDuplicates(indexes);
-            if (!results.details.duplicates.passed) {
-                results.warnings.push(...results.details.duplicates.warnings);
-            }
-
-            // Check for invalid references
-            results.details.invalidReferences = this.validateReferences(indexes);
-            if (!results.details.invalidReferences.passed) {
-                results.errors.push(...results.details.invalidReferences.errors);
-                results.passed = false;
-            }
-
-            // Run custom validation rules
-            results.details.customRules = this.validateCustomRules(indexes);
-            if (!results.details.customRules.passed) {
-                results.errors.push(...results.details.customRules.errors);
-                results.passed = false;
+            for (const task of validationTasks) {
+                this._executeValidationTask(task, indexes, results);
             }
 
             // Update validation results history
@@ -95,6 +74,23 @@ export class ValidationUtils {
         this._validation.lastValidation = results;
 
         return results;
+    }
+    
+    /**
+     * Execute a single validation task
+     */
+    _executeValidationTask(task, indexes, results) {
+        const validationResult = task.validator.call(this, indexes);
+        results.details[task.key] = validationResult;
+        
+        if (!validationResult.passed) {
+            const target = task.error ? results.errors : results.warnings;
+            target.push(...validationResult[task.error ? 'errors' : 'warnings']);
+            
+            if (task.error) {
+                results.passed = false;
+            }
+        }
     }
 
     /**
@@ -112,58 +108,7 @@ export class ValidationUtils {
             const termIndex = indexes.term;
             for (const [termId, concepts] of termIndex.entries()) {
                 result.checked++;
-
-                for (const concept of concepts) {
-                    // Verify concept exists in other relevant indexes
-                    if (concept.term.isAtomic) {
-                        const atomicIndex = indexes.atomic;
-                        if (!atomicIndex.has(concept.term.name)) {
-                            result.inconsistent++;
-                            result.errors.push(`Atomic concept ${termId} missing from atomic index`);
-                        }
-                    } else {
-                        const compoundByOpIndex = indexes.compoundByOp;
-                        if (!compoundByOpIndex.has(concept.term.operator)) {
-                            result.inconsistent++;
-                            result.errors.push(`Compound concept ${termId} missing from compoundByOp index`);
-                        }
-
-                        // Check operator-specific indexes
-                        switch (concept.term.operator) {
-                            case '-->':
-                                const inheritanceIndex = indexes.inheritance;
-                                if (concept.term.components && concept.term.components.length >= 2) {
-                                    const predicate = concept.term.components[1];
-                                    if (!inheritanceIndex.has(predicate.name)) {
-                                        result.inconsistent++;
-                                        result.errors.push(`Inheritance concept ${termId} missing from inheritance index`);
-                                    }
-                                }
-                                break;
-                            case '==>':
-                                const implicationIndex = indexes.implication;
-                                if (concept.term.components && concept.term.components.length >= 2) {
-                                    const premise = concept.term.components[0];
-                                    if (!implicationIndex.has(premise.name)) {
-                                        result.inconsistent++;
-                                        result.errors.push(`Implication concept ${termId} missing from implication index`);
-                                    }
-                                }
-                                break;
-                            case '<->':
-                                const similarityIndex = indexes.similarity;
-                                if (concept.term.components && concept.term.components.length >= 2) {
-                                    const term1 = concept.term.components[0];
-                                    const term2 = concept.term.components[1];
-                                    if (!similarityIndex.has(term1.name) && !similarityIndex.has(term2.name)) {
-                                        result.inconsistent++;
-                                        result.errors.push(`Similarity concept ${termId} missing from similarity index`);
-                                    }
-                                }
-                                break;
-                        }
-                    }
-                }
+                this._validateConceptConsistency(concepts, termId, indexes, result);
             }
 
             result.passed = result.inconsistent === 0;
@@ -173,6 +118,98 @@ export class ValidationUtils {
         }
 
         return result;
+    }
+    
+    /**
+     * Validate consistency for a specific concept
+     */
+    _validateConceptConsistency(concepts, termId, indexes, result) {
+        for (const concept of concepts) {
+            // Verify concept exists in other relevant indexes
+            if (concept.term.isAtomic) {
+                this._validateAtomicConsistency(concept, termId, indexes, result);
+            } else {
+                this._validateCompoundConsistency(concept, termId, indexes, result);
+            }
+        }
+    }
+    
+    /**
+     * Validate atomic concept consistency
+     */
+    _validateAtomicConsistency(concept, termId, indexes, result) {
+        const atomicIndex = indexes.atomic;
+        if (!atomicIndex.has(concept.term.name)) {
+            result.inconsistent++;
+            result.errors.push(`Atomic concept ${termId} missing from atomic index`);
+        }
+    }
+    
+    /**
+     * Validate compound concept consistency
+     */
+    _validateCompoundConsistency(concept, termId, indexes, result) {
+        const compoundByOpIndex = indexes.compoundByOp;
+        if (!compoundByOpIndex.has(concept.term.operator)) {
+            result.inconsistent++;
+            result.errors.push(`Compound concept ${termId} missing from compoundByOp index`);
+        }
+
+        // Check operator-specific indexes
+        switch (concept.term.operator) {
+            case '-->':
+                this._validateInheritanceConsistency(concept, termId, indexes, result);
+                break;
+            case '==>':
+                this._validateImplicationConsistency(concept, termId, indexes, result);
+                break;
+            case '<->':
+                this._validateSimilarityConsistency(concept, termId, indexes, result);
+                break;
+        }
+    }
+    
+    /**
+     * Validate inheritance concept consistency
+     */
+    _validateInheritanceConsistency(concept, termId, indexes, result) {
+        const inheritanceIndex = indexes.inheritance;
+        if (concept.term.components && concept.term.components.length >= 2) {
+            const predicate = concept.term.components[1];
+            if (!inheritanceIndex.has(predicate.name)) {
+                result.inconsistent++;
+                result.errors.push(`Inheritance concept ${termId} missing from inheritance index`);
+            }
+        }
+    }
+    
+    /**
+     * Validate implication concept consistency
+     */
+    _validateImplicationConsistency(concept, termId, indexes, result) {
+        const implicationIndex = indexes.implication;
+        if (concept.term.components && concept.term.components.length >= 2) {
+            const premise = concept.term.components[0];
+            if (!implicationIndex.has(premise.name)) {
+                result.inconsistent++;
+                result.errors.push(`Implication concept ${termId} missing from implication index`);
+            }
+        }
+    }
+    
+    /**
+     * Validate similarity concept consistency
+     */
+    _validateSimilarityConsistency(concept, termId, indexes, result) {
+        const similarityIndex = indexes.similarity;
+        if (concept.term.components && concept.term.components.length >= 2) {
+            const term1 = concept.term.components[0];
+            const term2 = concept.term.components[1];
+            if (!similarityIndex.has(term1.name) && !similarityIndex.has(term2.name)) {
+                result.inconsistent++;
+                result.errors.push(`Similarity concept ${termId} missing from similarity index`);
+            }
+        }
     }
 
     /**
