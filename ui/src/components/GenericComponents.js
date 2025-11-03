@@ -12,7 +12,7 @@ const getStatusConfig = (status) => {
         info: {color: themeUtils.get('COLORS.INFO'), bg: themeUtils.get('COLORS.INFO') + '20'},
         default: {color: themeUtils.get('COLORS.SECONDARY'), bg: themeUtils.get('COLORS.GRAY_200')}
     };
-
+    
     return statusConfig[status] || statusConfig.default;
 };
 
@@ -24,7 +24,7 @@ const getStatusConfig = (status) => {
  */
 const StatusBadge = memo(({status, label, ...props}) => {
     const {color, bg} = getStatusConfig(status);
-
+    
     return React.createElement('span', {
         style: {
             padding: '0.125rem 0.5rem',
@@ -44,16 +44,16 @@ const StatusBadge = memo(({status, label, ...props}) => {
  * @param {string} color - Color of the spinner
  * @param {Object} props - Additional props
  */
-const LoadingSpinner = memo(({size = '1.5rem', color = '#3498db', ...props}) => {
-    return React.createElement('div', {
-            style: {
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '1rem',
-                ...props.style
-            }
-        },
+const LoadingSpinner = memo(({size = '1.5rem', color = '#3498db', ...props}) =>
+    React.createElement('div', {
+        style: {
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1rem',
+            ...props.style
+        }
+    },
         React.createElement('div', {
             style: {
                 width: size,
@@ -65,8 +65,8 @@ const LoadingSpinner = memo(({size = '1.5rem', color = '#3498db', ...props}) => 
                 ...props.spinnerStyle
             }
         })
-    );
-});
+    )
+);
 
 /**
  * Generic empty state component
@@ -74,23 +74,23 @@ const LoadingSpinner = memo(({size = '1.5rem', color = '#3498db', ...props}) => 
  * @param {string} icon - Icon to show
  * @param {Object} props - Additional props
  */
-const EmptyState = memo(({message = 'No data to display', icon = '🔍', ...props}) => {
-    return React.createElement('div', {
-            style: {
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '1.5rem',
-                textAlign: 'center',
-                color: '#999',
-                ...props.style
-            }
-        },
+const EmptyState = memo(({message = 'No data to display', icon = '🔍', ...props}) =>
+    React.createElement('div', {
+        style: {
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1.5rem',
+            textAlign: 'center',
+            color: '#999',
+            ...props.style
+        }
+    },
         React.createElement('div', {style: {fontSize: '2rem', marginBottom: '1rem'}}, icon),
         React.createElement('div', null, message)
-    );
-});
+    )
+);
 
 /**
  * Generic error state component
@@ -98,19 +98,19 @@ const EmptyState = memo(({message = 'No data to display', icon = '🔍', ...prop
  * @param {Function} onRetry - Callback function to retry
  * @param {Object} props - Additional props
  */
-const ErrorState = memo(({message = 'An error occurred', onRetry = null, ...props}) => {
-    return React.createElement('div', {
-            style: {
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '1.5rem',
-                textAlign: 'center',
-                color: '#dc3545',
-                ...props.style
-            }
-        },
+const ErrorState = memo(({message = 'An error occurred', onRetry = null, ...props}) =>
+    React.createElement('div', {
+        style: {
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1.5rem',
+            textAlign: 'center',
+            color: '#dc3545',
+            ...props.style
+        }
+    },
         React.createElement('div', {style: {fontSize: '2rem', marginBottom: '1rem'}}, '❌'),
         React.createElement('div', null, message),
         onRetry && React.createElement('button', {
@@ -125,8 +125,8 @@ const ErrorState = memo(({message = 'An error occurred', onRetry = null, ...prop
                 cursor: 'pointer'
             }
         }, 'Retry')
-    );
-});
+    )
+);
 
 /**
  * Generic time display component with relative time formatting
@@ -135,14 +135,14 @@ const ErrorState = memo(({message = 'An error occurred', onRetry = null, ...prop
  */
 const TimeDisplay = memo(({timestamp, formatType = 'relative', ...props}) => {
     if (!timestamp) return React.createElement('span', null, '-');
-
+    
     const date = new Date(timestamp);
-
+    
     if (formatType === 'relative') {
         // Calculate relative time
         const now = Date.now();
         const diffInSeconds = Math.floor((now - timestamp) / 1000);
-
+        
         if (diffInSeconds < 60) return React.createElement('span', null, `${diffInSeconds}s ago`);
         if (diffInSeconds < 3600) return React.createElement('span', null, `${Math.floor(diffInSeconds / 60)}m ago`);
         if (diffInSeconds < 86400) return React.createElement('span', null, `${Math.floor(diffInSeconds / 3600)}h ago`);
@@ -160,15 +160,15 @@ const TimeDisplay = memo(({timestamp, formatType = 'relative', ...props}) => {
  */
 const WebSocketStatus = memo(({showLabel = true, ...props}) => {
     const wsConnected = useUiStore(state => state.wsConnected);
-
+    
     return React.createElement('div', {
-            className: 'websocket-status',
-            style: {
-                display: 'flex',
-                alignItems: 'center',
-                ...props.style
-            }
-        },
+        className: 'websocket-status',
+        style: {
+            display: 'flex',
+            alignItems: 'center',
+            ...props.style
+        }
+    },
         React.createElement('div', {
             style: {
                 width: '0.75rem',
@@ -183,28 +183,22 @@ const WebSocketStatus = memo(({showLabel = true, ...props}) => {
 });
 
 // Generic form field component to reduce duplication in forms
-const GenericFormField = ({
-                              label,
-                              children,
-                              required = false,
-                              description = null,
-                              style = {}
-                          }) => {
-    return React.createElement('div', {
+const GenericFormField = ({label, children, required = false, description = null, style = {}}) =>
+    React.createElement('div', {
+        style: {
+            marginBottom: '1rem',
+            ...style
+        }
+    },
+        React.createElement('label', {
             style: {
-                marginBottom: '1rem',
-                ...style
+                display: 'block',
+                fontWeight: 'bold',
+                marginBottom: '0.25rem',
+                fontSize: '0.9rem',
+                color: '#333'
             }
         },
-        React.createElement('label', {
-                style: {
-                    display: 'block',
-                    fontWeight: 'bold',
-                    marginBottom: '0.25rem',
-                    fontSize: '0.9rem',
-                    color: '#333'
-                }
-            },
             label,
             required && React.createElement('span', {style: {color: 'red'}}, ' *')
         ),
@@ -217,20 +211,10 @@ const GenericFormField = ({
             }
         }, description)
     );
-};
 
 // Generic input field component that combines label and input
-const GenericInputField = ({
-                               label,
-                               value,
-                               onChange,
-                               type = 'text',
-                               placeholder = '',
-                               required = false,
-                               description = null,
-                               disabled = false
-                           }) => {
-    return React.createElement(GenericFormField, {label, required, description},
+const GenericInputField = ({label, value, onChange, type = 'text', placeholder = '', required = false, description = null, disabled = false}) =>
+    React.createElement(GenericFormField, {label, required, description},
         React.createElement('input', {
             type,
             value,
@@ -247,66 +231,56 @@ const GenericInputField = ({
             }
         })
     );
-};
 
 // Generic select field component that combines label and select
-const GenericSelectField = ({
-                                label,
-                                value,
-                                onChange,
-                                options,
-                                required = false,
-                                description = null,
-                                disabled = false
-                            }) => {
-    return React.createElement(GenericFormField, {label, required, description},
+const GenericSelectField = ({label, value, onChange, options, required = false, description = null, disabled = false}) =>
+    React.createElement(GenericFormField, {label, required, description},
         React.createElement('select', {
-                value,
-                onChange: (e) => onChange(e.target.value),
-                disabled,
-                style: {
-                    width: '100%',
-                    padding: '0.5rem',
-                    border: '1px solid #ddd',
-                    borderRadius: '4px',
-                    fontSize: '0.9rem'
-                }
-            },
+            value,
+            onChange: (e) => onChange(e.target.value),
+            disabled,
+            style: {
+                width: '100%',
+                padding: '0.5rem',
+                border: '1px solid #ddd',
+                borderRadius: '4px',
+                fontSize: '0.9rem'
+            }
+        },
             options.map(option =>
                 React.createElement('option', {key: option.value, value: option.value}, option.label)
             )
         )
     );
-};
 
 // Collapsible section component
 const CollapsibleSection = ({title, children, defaultOpen = false}) => {
     const [isOpen, setIsOpen] = useState(defaultOpen);
-
+    
     return React.createElement('div', {
-            style: {
-                border: '1px solid #e9ecef',
-                borderRadius: '4px',
-                marginBottom: '1rem'
-            }
-        },
+        style: {
+            border: '1px solid #e9ecef',
+            borderRadius: '4px',
+            marginBottom: '1rem'
+        }
+    },
         React.createElement('div', {
-                style: {
-                    padding: '0.75rem',
-                    backgroundColor: '#f8f9fa',
-                    borderBottom: isOpen ? '1px solid #e9ecef' : 'none',
-                    cursor: 'pointer',
-                    fontWeight: 'bold'
-                },
-                onClick: () => setIsOpen(!isOpen)
+            style: {
+                padding: '0.75rem',
+                backgroundColor: '#f8f9fa',
+                borderBottom: isOpen ? '1px solid #e9ecef' : 'none',
+                cursor: 'pointer',
+                fontWeight: 'bold'
             },
+            onClick: () => setIsOpen(!isOpen)
+        },
             React.createElement('div', {
-                    style: {
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center'
-                    }
-                },
+                style: {
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                }
+            },
                 React.createElement('span', null, title),
                 React.createElement('span', null, isOpen ? '▼' : '▶')
             )
@@ -316,26 +290,26 @@ const CollapsibleSection = ({title, children, defaultOpen = false}) => {
 };
 
 // Toggle switch component
-const ToggleSwitch = ({checked, onChange, label}) => {
-    return React.createElement('label', {
+const ToggleSwitch = ({checked, onChange, label}) =>
+    React.createElement('label', {
+        style: {
+            display: 'flex',
+            alignItems: 'center',
+            cursor: 'pointer',
+            fontSize: '0.9rem'
+        }
+    },
+        React.createElement('div', {
             style: {
-                display: 'flex',
-                alignItems: 'center',
-                cursor: 'pointer',
-                fontSize: '0.9rem'
+                position: 'relative',
+                width: '40px',
+                height: '20px',
+                backgroundColor: checked ? '#007bff' : '#ccc',
+                borderRadius: '10px',
+                marginRight: '0.5rem',
+                transition: 'background-color 0.3s'
             }
         },
-        React.createElement('div', {
-                style: {
-                    position: 'relative',
-                    width: '40px',
-                    height: '20px',
-                    backgroundColor: checked ? '#007bff' : '#ccc',
-                    borderRadius: '10px',
-                    marginRight: '0.5rem',
-                    transition: 'background-color 0.3s'
-                }
-            },
             React.createElement('div', {
                 style: {
                     position: 'absolute',
@@ -351,7 +325,6 @@ const ToggleSwitch = ({checked, onChange, label}) => {
         ),
         label
     );
-};
 
 // Button variant styling configuration
 const getButtonVariantStyle = (variant) => {
@@ -364,7 +337,7 @@ const getButtonVariantStyle = (variant) => {
         light: {backgroundColor: '#f8f9fa', color: '#212529', border: '1px solid #ced4da'},
         dark: {backgroundColor: '#343a40', color: 'white'}
     };
-
+    
     return variantStyles[variant] || variantStyles.primary;
 };
 
@@ -379,7 +352,7 @@ const Button = ({children, onClick, variant = 'primary', style = {}, disabled = 
         fontSize: '0.9rem',
         fontWeight: 'normal'
     };
-
+    
     return React.createElement('button', {
         style: {
             ...baseStyle,
@@ -392,17 +365,17 @@ const Button = ({children, onClick, variant = 'primary', style = {}, disabled = 
 };
 
 // Generic Card component
-const Card = ({children, title, style = {}}) => {
-    return React.createElement('div', {
-            style: {
-                border: '1px solid #e9ecef',
-                borderRadius: '4px',
-                padding: '1rem',
-                backgroundColor: '#fff',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-                ...style
-            }
-        },
+const Card = ({children, title, style = {}}) =>
+    React.createElement('div', {
+        style: {
+            border: '1px solid #e9ecef',
+            borderRadius: '4px',
+            padding: '1rem',
+            backgroundColor: '#fff',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+            ...style
+        }
+    },
         title && React.createElement('div', {
             style: {
                 fontWeight: 'bold',
@@ -413,7 +386,6 @@ const Card = ({children, title, style = {}}) => {
         }, title),
         children
     );
-};
 
 export {
     StatusBadge,

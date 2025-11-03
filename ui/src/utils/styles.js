@@ -1,5 +1,6 @@
 /**
  * Common styling utilities and constants for UI components
+ * Following AGENTS.md principles: DRY, modular, parameterized
  */
 
 // Common CSS variables for consistent theming
@@ -14,13 +15,13 @@ export const themeVariables = {
     '--warning': 'var(--warning, #ffc107)',
     '--error': 'var(--error, #dc3545)',
     '--info': 'var(--info, #17a2b8)',
-
+    
     // Spacing
     '--spacing-xs': 'var(--spacing-xs, 0.25rem)',
     '--spacing-sm': 'var(--spacing-sm, 0.5rem)',
     '--spacing-md': 'var(--spacing-md, 1rem)',
     '--spacing-lg': 'var(--spacing-lg, 1.5rem)',
-
+    
     // Sizing
     '--radius': 'var(--radius, 4px)',
     '--border-width': 'var(--border-width, 1px)',
@@ -90,6 +91,5 @@ export const buildListItemStyle = (compact = false, expandable = false) => {
     return mergeStyles(...styles);
 };
 
-export const buildTextStyle = (type = 'body') => {
-    return mergeStyles(typography[type] || typography.body);
-};
+export const buildTextStyle = (type = 'body') =>
+    mergeStyles(typography[type] || typography.body);

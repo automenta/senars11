@@ -6,6 +6,7 @@ import {VectorOperations} from './VectorOperations.js';
 import {EqualitySolver} from './EqualitySolver.js';
 import {VariableBindingUtils} from './VariableBindingUtils.js';
 import {HigherOrderReasoningEngine} from './nal/HigherOrderReasoningEngine.js';
+import {EquationSolver} from './EquationSolver.js';
 
 /**
  * Unified EvaluationEngine for SeNARS v10 - Phase 5
@@ -16,6 +17,7 @@ export class EvaluationEngine {
         this.functorRegistry = functorRegistry || new FunctorRegistry();
         this.termFactory = termFactory || new TermFactory();
         this.equalitySolver = new EqualitySolver(this.termFactory);
+        this.equationSolver = new EquationSolver(this.termFactory);
         this.higherOrderEngine = new HigherOrderReasoningEngine();
 
         // Advanced features configuration
@@ -356,8 +358,8 @@ export class EvaluationEngine {
             return await this._evaluateOperation(operation, variableBindings);
         }
 
-        // Try to solve the equation - _solveArithmeticEquation returns an object like result
-        const equationResult = this._solveArithmeticEquation(functionName, args, variableIndex, targetValue);
+        // Try to solve the equation using the EquationSolver
+        const equationResult = await this.equationSolver._solveArithmeticEquation(functionName, args, variableIndex, targetValue);
 
         if (equationResult.success) {
             const solvedValue = equationResult.result;
@@ -792,83 +794,12 @@ export class EvaluationEngine {
     }
 
     async solveEquation(leftTerm, rightTerm, variableName, context, variableBindings = new Map()) {
-        // Handle equality operator (=) for back-solving
-        if (leftTerm.isCompound && leftTerm.operator === '=') {
-            // For equality, we pass the equality term as left, and null as right (since right is already part of the equality)
-            return this._solveEqualityEquation(leftTerm, rightTerm, variableName, variableBindings);
-        }
-
-        // Handle operation operator (^) for back-solving
-        if (leftTerm.isCompound && leftTerm.operator === '^') {
-            return this._solveOperationEquation(leftTerm, rightTerm, variableName, variableBindings);
-        }
-
-        if (leftTerm.name?.startsWith('?') && leftTerm.name === variableName) {
-            return this._createResult(rightTerm, true, 'Direct variable assignment', {solvedVariable: variableName});
-        }
-
-        return this._createResult(SYSTEM_ATOMS.Null, false, 'No back-solving pattern matched');
+        return this.equationSolver.solveEquation(leftTerm, rightTerm, variableName, context, variableBindings);
     }
 
     // Enhanced method to solve equality equations and return all variable bindings
     async solveEquality(equalityTerm, variableBindings = new Map()) {
-        if (!equalityTerm.isCompound || equalityTerm.operator !== '=' || equalityTerm.components.length !== 2) {
-            return this._createResult(SYSTEM_ATOMS.Null, false, 'Invalid equality format');
-        }
-
-        const [leftSide, rightSide] = equalityTerm.components;
-
-        // Get all variable bindings from matching the two sides
-        const bindings = VariableBindingUtils.matchAndBindVariables(leftSide, rightSide, variableBindings);
-        if (bindings) {
-            return this._createResult(null, true, 'Equality solved', {bindings});
-        }
-
-        return this._createResult(SYSTEM_ATOMS.Null, false, 'Could not solve equality');
-    }
-
-    _solveEqualityEquation(equalityTerm, targetTerm, variableName, variableBindings) {
-        if (!equalityTerm.isCompound || equalityTerm.operator !== '=' || equalityTerm.components.length !== 2) {
-            return this._createResult(SYSTEM_ATOMS.Null, false, 'Invalid equality format for equation solving');
-        }
-
-        const [leftSide, rightSide] = equalityTerm.components;
-
-        // Check for direct variable assignment in left side
-        if (leftSide.name?.startsWith('?') && leftSide.name === variableName) {
-            // If left side is the variable being solved for, return the right side
-            return this._createResult(rightSide, true, 'Variable found on left side of equality', {solvedVariable: variableName});
-        }
-
-        // Check for direct variable assignment in right side
-        if (rightSide.name?.startsWith('?') && rightSide.name === variableName) {
-            // If right side is the variable being solved for, return the left side
-            return this._createResult(leftSide, true, 'Variable found on right side of equality', {solvedVariable: variableName});
-        }
-
-        // Perform bidirectional matching and variable binding
-        const bindings = VariableBindingUtils.matchAndBindVariables(leftSide, rightSide, variableBindings);
-        if (bindings && bindings.has(variableName)) {
-            const boundValue = bindings.get(variableName);
-            return this._createResult(boundValue, true, 'Variable found through bidirectional matching', {solvedVariable: variableName});
-        }
-
-        // Check if variable is within a compound term on either side and solve recursively
-        if (this._containsVariable(leftSide, variableName)) {
-            // If left side is an operation with the variable, move right side to the other side of equation
-            if (leftSide.operator === '^') {
-                return this._solveOperationEquation(leftSide, rightSide, variableName, variableBindings);
-            }
-        }
-
-        if (this._containsVariable(rightSide, variableName)) {
-            // If right side is an operation with the variable, move left side to the other side of equation
-            if (rightSide.operator === '^') {
-                return this._solveOperationEquation(rightSide, leftSide, variableName, variableBindings);
-            }
-        }
-
-        return this._createResult(SYSTEM_ATOMS.Null, false, 'Target variable not found in equality expression');
+        return this.equationSolver.solveEquality(equalityTerm, variableBindings);
     }
 
 

@@ -28,71 +28,64 @@ const SystemStatusPanel = () => {
     }
     return null;
   }, [demoMetrics]);
-  // Use imported utility instead of local implementation
-
 
   // Status item renderer
   const renderStatusItem = useCallback((label, value, unit = '', color = '#000') =>
-    React.createElement('div',
-      {
-        key: label,
-        style: {
-          display: 'flex',
-          justifyContent: 'space-between',
-          padding: '0.5rem 0',
-          borderBottom: '1px solid #eee'
-        }
-      },
+    React.createElement('div', {
+      key: label,
+      style: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        padding: '0.5rem 0',
+        borderBottom: '1px solid #eee'
+      }
+    },
       React.createElement('span', {style: {fontWeight: '500'}}, label),
       React.createElement('span', {style: {color, fontWeight: 'bold'}}, `${value} ${unit}`)
     ), []);
 
   // System status display
-  const systemStatus = useMemo(() =>
-    React.createElement('div', null,
-      renderStatusItem('WebSocket Connection', wsConnected ? 'Connected' : 'Disconnected', '', wsConnected ? '#28a745' : '#dc3545'),
-      renderStatusItem('Active Demos', demos.length),
-      renderStatusItem('Running Demos', Object.keys(demoStates).filter(id => demoStates[id]?.state === 'running').length, '', getStatusColor(Object.keys(demoStates).filter(id => demoStates[id]?.state === 'running').length, 1))
-    ), [wsConnected, demos.length, demoStates, renderStatusItem, getStatusColor]);
+  const systemStatus = useMemo(() => React.createElement('div', null,
+    renderStatusItem('WebSocket Connection', wsConnected ? 'Connected' : 'Disconnected', '', wsConnected ? '#28a745' : '#dc3545'),
+    renderStatusItem('Active Demos', demos.length),
+    renderStatusItem('Running Demos', Object.keys(demoStates).filter(id => demoStates[id]?.state === 'running').length, '',
+      getStatusColor(Object.keys(demoStates).filter(id => demoStates[id]?.state === 'running').length, 1))
+  ), [wsConnected, demos.length, demoStates, renderStatusItem]);
 
   // Performance metrics display
-  const performanceMetrics = useMemo(() =>
-    React.createElement('div', null,
-      renderStatusItem('Cycles Completed', aggregatedMetrics?.cyclesCompleted || 0),
-      renderStatusItem('Tasks Processed', aggregatedMetrics?.tasksProcessed || 0),
-      renderStatusItem('Active Concepts', aggregatedMetrics?.conceptsActive || 0),
-      renderStatusItem('Priority Fluctuations', aggregatedMetrics?.totalPriorityFluctuations || 0, '', getStatusColor(aggregatedMetrics?.totalPriorityFluctuations, 10))
-    ), [aggregatedMetrics, renderStatusItem, getStatusColor]);
+  const performanceMetrics = useMemo(() => React.createElement('div', null,
+    renderStatusItem('Cycles Completed', aggregatedMetrics?.cyclesCompleted || 0),
+    renderStatusItem('Tasks Processed', aggregatedMetrics?.tasksProcessed || 0),
+    renderStatusItem('Active Concepts', aggregatedMetrics?.conceptsActive || 0),
+    renderStatusItem('Priority Fluctuations', aggregatedMetrics?.totalPriorityFluctuations || 0, '',
+      getStatusColor(aggregatedMetrics?.totalPriorityFluctuations, 10))
+  ), [aggregatedMetrics, renderStatusItem]);
 
   // Memory usage display
-  const memoryUsage = useMemo(() =>
-    React.createElement('div', null,
-      renderStatusItem('Memory Usage', aggregatedMetrics?.memoryUsage?.toFixed(2) || 0, 'units', getStatusColor(aggregatedMetrics?.memoryUsage, 500))
-    ), [aggregatedMetrics, renderStatusItem, getStatusColor]);
+  const memoryUsage = useMemo(() => React.createElement('div', null,
+    renderStatusItem('Memory Usage', aggregatedMetrics?.memoryUsage?.toFixed(2) || 0, 'units',
+      getStatusColor(aggregatedMetrics?.memoryUsage, 500))
+  ), [aggregatedMetrics, renderStatusItem]);
 
   // Active demo states
-  const activeDemoStates = useMemo(() =>
-    React.createElement('div', null,
-      Object.entries(demoStates).map(([id, state]) =>
-        React.createElement('div',
-          {
-            key: id,
-            style: {
-              marginBottom: '0.5rem',
-              padding: '0.25rem',
-              backgroundColor: '#ffffff',
-              border: '1px solid #dee2e6',
-              borderRadius: '3px'
-            }
-          },
-          React.createElement('div', {style: {fontWeight: 'bold', fontSize: '0.9rem'}}, id),
-          renderStatusItem('State', state.state, '', getStatusColor(state.state === 'running' ? 1 : 0, 0.5)),
-          state.progress !== undefined && renderStatusItem('Progress', `${state.progress}%`),
-          state.currentStep && renderStatusItem('Current Step', state.currentStep),
-          state.error && renderStatusItem('Error', state.error, '', '#dc3545')
-        )
-      )
-    ), [demoStates, renderStatusItem, getStatusColor]);
+  const activeDemoStates = useMemo(() => React.createElement('div', null,
+    Object.entries(demoStates).map(([id, state]) => React.createElement('div', {
+      key: id,
+      style: {
+        marginBottom: '0.5rem',
+        padding: '0.25rem',
+        backgroundColor: '#ffffff',
+        border: '1px solid #dee2e6',
+        borderRadius: '3px'
+      }
+    },
+      React.createElement('div', {style: {fontWeight: 'bold', fontSize: '0.9rem'}}, id),
+      renderStatusItem('State', state.state, '', getStatusColor(state.state === 'running' ? 1 : 0, 0.5)),
+      state.progress !== undefined && renderStatusItem('Progress', `${state.progress}%`),
+      state.currentStep && renderStatusItem('Current Step', state.currentStep),
+      state.error && renderStatusItem('Error', state.error, '', '#dc3545')
+    ))
+  ), [demoStates, renderStatusItem]);
 
   const items = useMemo(() => [
     {type: 'header', content: 'System Status'},
@@ -103,20 +96,20 @@ const SystemStatusPanel = () => {
   ], [systemStatus, performanceMetrics, memoryUsage, activeDemoStates]);
 
   const renderStatusItemFinal = useCallback((item, index) => {
-    if (item.type === 'header') {
-      return React.createElement('div', {
-        style: {
-          fontWeight: 'bold',
-          fontSize: '1.2rem',
-          margin: '0 0 1rem 0',
-          padding: '0.5rem 0',
-          borderBottom: '2px solid #007bff',
-          color: '#333'
-        }
-      }, item.content);
-    } else if (item.type === 'section') {
-      return React.createElement('div',
-        {
+    switch (item.type) {
+      case 'header':
+        return React.createElement('div', {
+          style: {
+            fontWeight: 'bold',
+            fontSize: '1.2rem',
+            margin: '0 0 1rem 0',
+            padding: '0.5rem 0',
+            borderBottom: '2px solid #007bff',
+            color: '#333'
+          }
+        }, item.content);
+      case 'section':
+        return React.createElement('div', {
           key: item.title,
           style: {
             marginBottom: '1rem',
@@ -126,14 +119,12 @@ const SystemStatusPanel = () => {
             border: '1px solid #e9ecef'
           }
         },
-        React.createElement('h3',
-          {style: {margin: '0 0 0.5rem 0', fontSize: '1rem', color: '#495057'}},
-          item.title
-        ),
-        item.content
-      );
+          React.createElement('h3', {style: {margin: '0 0 0.5rem 0', fontSize: '1rem', color: '#495057'}}, item.title),
+          item.content
+        );
+      default:
+        return null;
     }
-    return null;
   }, []);
 
   return React.createElement(GenericPanel, {

@@ -1,6 +1,6 @@
 /**
  * Utility functions for efficiently managing collections in state
- * Follows AGENT.md principles: DRY, modular, parameterized
+ * Following AGENTS.md principles: DRY, modular, parameterized
  */
 
 /**
@@ -28,12 +28,12 @@ export const createCollectionManager = (collectionName) => ({
     add: (item, idField = 'id') => (state) => {
         const currentList = state[collectionName] || [];
         const existingIndex = findItemIndex(currentList, item, idField);
-
+        
         return existingIndex !== -1
             ? {[collectionName]: currentList.map((cur, idx) => idx === existingIndex ? {...cur, ...item} : cur)}
             : {[collectionName]: [...currentList, item]};
     },
-
+    
     /**
      * Update specific item in collection
      * @param {any} key - Key to match
@@ -44,13 +44,13 @@ export const createCollectionManager = (collectionName) => ({
     update: (key, keyField, updates) => (state) => {
         const currentList = state[collectionName];
         if (!currentList) return {[collectionName]: currentList};
-
+        
         const index = currentList?.findIndex?.(item => item?.[keyField] === key);
         return index === -1
             ? {[collectionName]: currentList}
             : {[collectionName]: currentList.map((cur, idx) => idx === index ? {...cur, ...updates} : cur)};
     },
-
+    
     /**
      * Remove item from collection
      * @param {any} key - Key to match
@@ -60,19 +60,19 @@ export const createCollectionManager = (collectionName) => ({
     remove: (key, keyField) => (state) => {
         const currentList = state[collectionName];
         if (!currentList) return {[collectionName]: currentList};
-
+        
         const indexToRemove = currentList?.findIndex?.(item => item?.[keyField] === key);
         return indexToRemove === -1
             ? {[collectionName]: currentList}
             : {[collectionName]: currentList.filter((_, idx) => idx !== indexToRemove)};
     },
-
+    
     /**
      * Clear all items from collection
      * @returns {Function} - Zustand state update function
      */
     clear: () => (state) => ({[collectionName]: []}),
-
+    
     /**
      * Add item with limit on collection size
      * @param {any} item - Item to add
@@ -100,7 +100,7 @@ export const createObjectManager = (objectName) => ({
     set: (key, value) => (prev) => ({
         [objectName]: {...(prev[objectName] || {}), [key]: value}
     }),
-
+    
     /**
      * Update specific key in object
      * @param {any} key - Key
@@ -113,7 +113,7 @@ export const createObjectManager = (objectName) => ({
             [key]: {...state[objectName]?.[key], ...updates}
         }
     }),
-
+    
     /**
      * Clear object to empty
      * @returns {Function} - Zustand state update function
@@ -128,7 +128,7 @@ export const createObjectManager = (objectName) => ({
  */
 export const batchUpdate = (set, updates) => {
     if (!updates || typeof updates !== 'object') return;
-
+    
     set(prevState => {
         const newState = {...prevState};
         for (const [key, value] of Object.entries(updates)) {

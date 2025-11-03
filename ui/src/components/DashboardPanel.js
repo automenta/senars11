@@ -103,125 +103,124 @@ const DashboardPanel = () => {
   }, []);
 
   // View mode selector
-  const renderViewSelector = useCallback(() =>
-    React.createElement('div',
-      {
-        style: {
-          display: 'flex',
-          marginBottom: '1rem',
-          padding: '0.5rem',
-          backgroundColor: '#f8f9fa',
-          borderRadius: '4px'
-        }
-      },
-      React.createElement('button', {
-        onClick: () => setViewMode('overview'),
-        style: {
-          padding: '0.5rem 1rem',
-          backgroundColor: viewMode === 'overview' ? '#007bff' : '#e9ecef',
-          color: viewMode === 'overview' ? 'white' : '#495057',
-          border: '1px solid #ddd',
-          borderRadius: '4px 0 0 4px',
-          cursor: 'pointer',
-          fontWeight: viewMode === 'overview' ? 'bold' : 'normal'
-        }
-      }, 'System Overview'),
-      React.createElement('button', {
-        onClick: () => setViewMode('performance'),
-        style: {
-          padding: '0.5rem 1rem',
-          backgroundColor: viewMode === 'performance' ? '#007bff' : '#e9ecef',
-          color: viewMode === 'performance' ? 'white' : '#495057',
-          border: '1px solid #ddd',
-          borderRadius: '0 4px 4px 0',
-          cursor: 'pointer',
-          fontWeight: viewMode === 'performance' ? 'bold' : 'normal'
-        }
-      }, 'Performance Insights')
-    ), [viewMode]);
+  const renderViewSelector = useCallback(() => React.createElement('div', {
+    style: {
+      display: 'flex',
+      marginBottom: '1rem',
+      padding: '0.5rem',
+      backgroundColor: '#f8f9fa',
+      borderRadius: '4px'
+    }
+  },
+    React.createElement('button', {
+      onClick: () => setViewMode('overview'),
+      style: {
+        padding: '0.5rem 1rem',
+        backgroundColor: viewMode === 'overview' ? '#007bff' : '#e9ecef',
+        color: viewMode === 'overview' ? 'white' : '#495057',
+        border: '1px solid #ddd',
+        borderRadius: '4px 0 0 4px',
+        cursor: 'pointer',
+        fontWeight: viewMode === 'overview' ? 'bold' : 'normal'
+      }
+    }, 'System Overview'),
+    React.createElement('button', {
+      onClick: () => setViewMode('performance'),
+      style: {
+        padding: '0.5rem 1rem',
+        backgroundColor: viewMode === 'performance' ? '#007bff' : '#e9ecef',
+        color: viewMode === 'performance' ? 'white' : '#495057',
+        border: '1px solid #ddd',
+        borderRadius: '0 4px 4px 0',
+        cursor: 'pointer',
+        fontWeight: viewMode === 'performance' ? 'bold' : 'normal'
+      }
+    }, 'Performance Insights')
+  ), [viewMode]);
 
   // Create metric cards (overview view)
-  const metricCards = useMemo(() =>
-    React.createElement('div',
-      {style: {display: 'flex', flexWrap: 'wrap', marginBottom: '1rem'}},
-      renderMetricCard('System Status', metrics.wsConnected ? 'Operational' : 'Offline', 'WebSocket Connection', metrics.wsConnected ? '#28a745' : '#dc3545'),
-      renderMetricCard('Active Concepts', metrics.totalConcepts, 'Current concept count'),
-      renderMetricCard('Active Tasks', metrics.totalTasks, 'Total tasks in system'),
-      renderMetricCard('Running Demos', metrics.runningDemos, 'Currently executing demos')
-    ), [metrics, renderMetricCard]);
+  const metricCards = useMemo(() => React.createElement('div', {
+    style: {display: 'flex', flexWrap: 'wrap', marginBottom: '1rem'}
+  },
+    renderMetricCard('System Status', metrics.wsConnected ? 'Operational' : 'Offline', 'WebSocket Connection', metrics.wsConnected ? '#28a745' : '#dc3545'),
+    renderMetricCard('Active Concepts', metrics.totalConcepts, 'Current concept count'),
+    renderMetricCard('Active Tasks', metrics.totalTasks, 'Total tasks in system'),
+    renderMetricCard('Running Demos', metrics.runningDemos, 'Currently executing demos')
+  ), [metrics, renderMetricCard]);
 
   // Task distribution chart using utility
-  const taskDistribution = useMemo(() =>
-    React.createElement('div',
-      {style: {marginBottom: '1rem'}},
-      React.createElement('h4', {style: {margin: '0 0 0.5rem 0', fontSize: '1rem'}}, 'Task Distribution'),
-      createDistributionBar(React, {
-        segments: [
-          {
-            percentage: (metrics.beliefs / Math.max(metrics.totalTasks, 1)) * 100,
-            color: '#28a745',
-            label: metrics.beliefs > 0 ? `Beliefs: ${metrics.beliefs}` : null
-          },
-          {
-            percentage: (metrics.questions / Math.max(metrics.totalTasks, 1)) * 100,
-            color: '#007bff',
-            label: metrics.questions > 0 ? `Questions: ${metrics.questions}` : null
-          },
-          {
-            percentage: (metrics.goals / Math.max(metrics.totalTasks, 1)) * 100,
-            color: '#ffc107',
-            label: metrics.goals > 0 ? `Goals: ${metrics.goals}` : null
-          }
-        ]
-      })
-    ), [metrics]);
+  const taskDistribution = useMemo(() => React.createElement('div', {
+    style: {marginBottom: '1rem'}
+  },
+    React.createElement('h4', {style: {margin: '0 0 0.5rem 0', fontSize: '1rem'}}, 'Task Distribution'),
+    createDistributionBar(React, {
+      segments: [
+        {
+          percentage: (metrics.beliefs / Math.max(metrics.totalTasks, 1)) * 100,
+          color: '#28a745',
+          label: metrics.beliefs > 0 ? `Beliefs: ${metrics.beliefs}` : null
+        },
+        {
+          percentage: (metrics.questions / Math.max(metrics.totalTasks, 1)) * 100,
+          color: '#007bff',
+          label: metrics.questions > 0 ? `Questions: ${metrics.questions}` : null
+        },
+        {
+          percentage: (metrics.goals / Math.max(metrics.totalTasks, 1)) * 100,
+          color: '#ffc107',
+          label: metrics.goals > 0 ? `Goals: ${metrics.goals}` : null
+        }
+      ]
+    })
+  ), [metrics]);
 
   // Demo status summary
-  const demoSummary = useMemo(() =>
-    React.createElement('div',
-      {style: {marginBottom: '1rem'}},
-      React.createElement('h4', {style: {margin: '0 0 0.5rem 0', fontSize: '1rem'}}, 'Demo Status'),
-      React.createElement('div',
-        {style: {display: 'flex', alignItems: 'center', gap: '1rem'}},
-        renderStatusIndicator(metrics.runningDemos > 0, `${metrics.runningDemos} Running`),
-        renderStatusIndicator(metrics.completedDemos > 0, `${metrics.completedDemos} Completed`),
-        renderStatusIndicator(metrics.errorDemos > 0, `${metrics.errorDemos} Errors`)
-      )
-    ), [metrics, renderStatusIndicator]);
+  const demoSummary = useMemo(() => React.createElement('div', {
+    style: {marginBottom: '1rem'}
+  },
+    React.createElement('h4', {style: {margin: '0 0 0.5rem 0', fontSize: '1rem'}}, 'Demo Status'),
+    React.createElement('div', {
+      style: {display: 'flex', alignItems: 'center', gap: '1rem'}
+    },
+      renderStatusIndicator(metrics.runningDemos > 0, `${metrics.runningDemos} Running`),
+      renderStatusIndicator(metrics.completedDemos > 0, `${metrics.completedDemos} Completed`),
+      renderStatusIndicator(metrics.errorDemos > 0, `${metrics.errorDemos} Errors`)
+    )
+  ), [metrics, renderStatusIndicator]);
 
   // System stats
-  const systemStats = useMemo(() =>
-    React.createElement('div',
-      {style: {marginBottom: '1rem'}},
-      React.createElement('h4', {style: {margin: '0 0 0.5rem 0', fontSize: '1rem'}}, 'System Stats'),
-      React.createElement('div',
-        {style: {display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem'}},
-        renderMetricCard('Tasks Processed', metrics.systemStats.tasksProcessed, 'Total tasks processed'),
-        renderMetricCard('Cycles Completed', metrics.systemStats.cyclesCompleted, 'Reasoning cycles'),
-        renderMetricCard('Memory Usage', metrics.systemStats.memoryUsage.toFixed(2), 'System memory units')
-      )
-    ), [metrics, renderMetricCard]);
+  const systemStats = useMemo(() => React.createElement('div', {
+    style: {marginBottom: '1rem'}
+  },
+    React.createElement('h4', {style: {margin: '0 0 0.5rem 0', fontSize: '1rem'}}, 'System Stats'),
+    React.createElement('div', {
+      style: {display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem'}
+    },
+      renderMetricCard('Tasks Processed', metrics.systemStats.tasksProcessed, 'Total tasks processed'),
+      renderMetricCard('Cycles Completed', metrics.systemStats.cyclesCompleted, 'Reasoning cycles'),
+      renderMetricCard('Memory Usage', metrics.systemStats.memoryUsage.toFixed(2), 'System memory units')
+    )
+  ), [metrics, renderMetricCard]);
 
   // Performance comparison view
-  const performanceView = useMemo(() =>
-    React.createElement('div', null,
-      React.createElement('h4', {
-        style: {
-          margin: '0 0 1rem 0',
-          fontSize: '1rem',
-          color: '#007bff'
-        }
-      }, 'Intelligence Performance Insights'),
+  const performanceView = useMemo(() => React.createElement('div', null,
+    React.createElement('h4', {
+      style: {
+        margin: '0 0 1rem 0',
+        fontSize: '1rem',
+        color: '#007bff'
+      }
+    }, 'Intelligence Performance Insights'),
 
-      // Comparison chart
-      React.createElement('div', {
-        style: {
-          marginBottom: '1rem',
-          padding: '1rem',
-          backgroundColor: '#f8f9fa',
-          borderRadius: '4px'
-        }
-      },
+    // Comparison chart
+    React.createElement('div', {
+      style: {
+        marginBottom: '1rem',
+        padding: '1rem',
+        backgroundColor: '#f8f9fa',
+        borderRadius: '4px'
+      }
+    },
       React.createElement('h5', {
         style: {
           margin: '0 0 0.5rem 0',
@@ -259,71 +258,71 @@ const DashboardPanel = () => {
           fontSize: '0.9rem'
         }
       },
-      React.createElement('div', {
-        style: {
-          padding: '0.5rem',
-          border: `1px solid ${getPerformanceMetricColor('nars')}`,
-          borderRadius: '4px'
-        }
-      },
-      React.createElement('div', {
-        style: {
-          fontWeight: 'bold',
-          color: getPerformanceMetricColor('nars')
-        }
-      }, 'NARS Only Solutions'),
-      React.createElement('div', null, `Count: ${metrics.systemStats.narsOnlySolutions}`)
-      ),
-      React.createElement('div', {
-        style: {
-          padding: '0.5rem',
-          border: `1px solid ${getPerformanceMetricColor('lm')}`,
-          borderRadius: '4px'
-        }
-      },
-      React.createElement('div', {
-        style: {
-          fontWeight: 'bold',
-          color: getPerformanceMetricColor('lm')
-        }
-      }, 'LM Assisted Solutions'),
-      React.createElement('div', null, `Count: ${metrics.systemStats.lmAssistedSolutions}`)
-      ),
-      React.createElement('div', {
-        style: {
-          padding: '0.5rem',
-          border: `1px solid ${getPerformanceMetricColor('hybrid')}`,
-          borderRadius: '4px'
-        }
-      },
-      React.createElement('div', {
-        style: {
-          fontWeight: 'bold',
-          color: getPerformanceMetricColor('hybrid')
-        }
-      }, 'Hybrid Solutions'),
-      React.createElement('div', null, `Count: ${metrics.systemStats.hybridSolutions}`)
-      )
-      )
-      ),
-
-      // Performance metrics
-      React.createElement('div', {style: {marginBottom: '1rem'}},
-        React.createElement('h5', {style: {margin: '0 0 0.5rem 0', fontSize: '0.9rem'}}, 'Performance Metrics'),
         React.createElement('div', {
           style: {
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: '1rem'
+            padding: '0.5rem',
+            border: `1px solid ${getPerformanceMetricColor('nars')}`,
+            borderRadius: '4px'
           }
         },
+          React.createElement('div', {
+            style: {
+              fontWeight: 'bold',
+              color: getPerformanceMetricColor('nars')
+            }
+          }, 'NARS Only Solutions'),
+          React.createElement('div', null, `Count: ${metrics.systemStats.narsOnlySolutions}`)
+        ),
+        React.createElement('div', {
+          style: {
+            padding: '0.5rem',
+            border: `1px solid ${getPerformanceMetricColor('lm')}`,
+            borderRadius: '4px'
+          }
+        },
+          React.createElement('div', {
+            style: {
+              fontWeight: 'bold',
+              color: getPerformanceMetricColor('lm')
+            }
+          }, 'LM Assisted Solutions'),
+          React.createElement('div', null, `Count: ${metrics.systemStats.lmAssistedSolutions}`)
+        ),
+        React.createElement('div', {
+          style: {
+            padding: '0.5rem',
+            border: `1px solid ${getPerformanceMetricColor('hybrid')}`,
+            borderRadius: '4px'
+          }
+        },
+          React.createElement('div', {
+            style: {
+              fontWeight: 'bold',
+              color: getPerformanceMetricColor('hybrid')
+            }
+          }, 'Hybrid Solutions'),
+          React.createElement('div', null, `Count: ${metrics.systemStats.hybridSolutions}`)
+        )
+      )
+    ),
+
+    // Performance metrics
+    React.createElement('div', {style: {marginBottom: '1rem'}},
+      React.createElement('h5', {style: {margin: '0 0 0.5rem 0', fontSize: '0.9rem'}}, 'Performance Metrics'),
+      React.createElement('div', {
+        style: {
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          gap: '1rem'
+        }
+      },
         renderMetricCard('NARS Efficiency', formatPercentage(metrics.narsOnlyPercentage), 'Pure NARS reasoning effectiveness'),
         renderMetricCard('LM Impact', formatPercentage(metrics.lmAssistedPercentage), 'LM assistance utilization'),
         renderMetricCard('Hybrid Value', formatPercentage(metrics.hybridPercentage), 'Combined intelligence effectiveness'),
         renderMetricCard('Solution Quality', `${(metrics.systemStats.solutionQuality || 0).toFixed(2)}`, 'Average solution quality score', '#17a2b8')
-        )
       )
-    ), [metrics, renderMetricCard]);
+    )
+  ), [metrics, renderMetricCard]);
 
   // Build items based on view mode
   const items = useMemo(() => {
@@ -350,10 +349,9 @@ const DashboardPanel = () => {
   }, [viewMode, renderViewSelector, metricCards, taskDistribution, demoSummary, systemStats, performanceView]);
 
   const renderDashboardItem = useCallback((item, index) => {
-    if (item.type === 'viewSelector') {
-      return item.content;
-    } else if (item.type === 'header') {
-      return React.createElement('div', {
+    switch (item.type) {
+      case 'viewSelector': return item.content;
+      case 'header': return React.createElement('div', {
         style: {
           fontWeight: 'bold',
           fontSize: '1.2rem',
@@ -363,8 +361,7 @@ const DashboardPanel = () => {
           color: '#333'
         }
       }, item.content);
-    } else {
-      return item.content;
+      default: return item.content;
     }
   }, []);
 

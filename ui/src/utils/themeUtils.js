@@ -1,5 +1,6 @@
 /**
  * Theme utilities for consistent theming across the application
+ * Following AGENTS.md principles: DRY, modular, parameterized
  */
 
 // Theme constants
@@ -81,24 +82,20 @@ const themeUtils = {
     /**
      * Get theme value by path (e.g., 'COLORS.SUCCESS')
      */
-    get: (path) => {
-        return path.split('.').reduce((obj, key) => obj?.[key], THEME);
-    },
-
+    get: (path) => path.split('.').reduce((obj, key) => obj?.[key], THEME),
+    
     /**
      * Get WebSocket status color based on connection state
      */
-    getWebSocketStatusColor: (connected) => {
-        return connected ? THEME.COLORS.CONNECTED : THEME.COLORS.DISCONNECTED;
-    },
-
+    getWebSocketStatusColor: (connected) =>
+        connected ? THEME.COLORS.CONNECTED : THEME.COLORS.DISCONNECTED,
+    
     /**
      * Get WebSocket status background color based on connection state
      */
-    getWebSocketStatusBgColor: (connected) => {
-        return connected ? THEME.COLORS.CONNECTED_BG : THEME.COLORS.DISCONNECTED_BG;
-    },
-
+    getWebSocketStatusBgColor: (connected) =>
+        connected ? THEME.COLORS.CONNECTED_BG : THEME.COLORS.DISCONNECTED_BG,
+    
     /**
      * Apply opacity to a CSS variable color (by appending hex opacity)
      */
@@ -107,7 +104,7 @@ const themeUtils = {
         const hexOpacity = Math.round(opacity * 255).toString(16).padStart(2, '0');
         return `${cssVar}${hexOpacity}`;
     },
-
+    
     /**
      * Get theme object for use in components
      */
