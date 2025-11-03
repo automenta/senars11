@@ -11,13 +11,13 @@ describe('OptimizedCycle - Direct Integration Tests', () => {
     let cycle, memory, focus, ruleEngine, taskManager, termFactory, reasoningStrategy;
 
     beforeEach(() => {
-        memory = new Memory({ capacity: 1000 });
-        focus = new Focus({ size: 10 });
+        memory = new Memory({capacity: 1000});
+        focus = new Focus({size: 10});
         ruleEngine = new RuleEngine();
         taskManager = new TaskManager(memory, focus, {});
         termFactory = new TermFactory();
         reasoningStrategy = new NaiveExhaustiveStrategy({});
-        
+
         cycle = new OptimizedCycle({
             memory,
             focus,
@@ -58,17 +58,17 @@ describe('OptimizedCycle - Direct Integration Tests', () => {
         const task = new Task({
             term,
             punctuation: '.',
-            truth: { frequency: 0.9, confidence: 0.8 },
+            truth: {frequency: 0.9, confidence: 0.8},
             priority: 0.8,
-            budget: { priority: 0.8, durability: 0.5 },
-            stamp: { id: Date.now() }
+            budget: {priority: 0.8, durability: 0.5},
+            stamp: {id: Date.now()}
         });
-        
+
         taskManager.addTask(task);
 
         // Execute the cycle
         const result = await cycle.execute();
-        
+
         expect(result).toBeDefined();
         expect(result.cycleNumber).toBe(1);
         expect(result.cycleTime).toBeGreaterThanOrEqual(0);
@@ -82,10 +82,10 @@ describe('OptimizedCycle - Direct Integration Tests', () => {
             const task = new Task({
                 term,
                 punctuation: '.',
-                truth: { frequency: 0.8, confidence: 0.7 },
+                truth: {frequency: 0.8, confidence: 0.7},
                 priority: 0.7,
-                budget: { priority: 0.7, durability: 0.4 },
-                stamp: { id: Date.now() + i }
+                budget: {priority: 0.7, durability: 0.4},
+                stamp: {id: Date.now() + i}
             });
             taskManager.addTask(task);
         }
@@ -108,10 +108,10 @@ describe('OptimizedCycle - Direct Integration Tests', () => {
         const task = new Task({
             term,
             punctuation: '.',
-            truth: { frequency: 0.9, confidence: 0.8 },
+            truth: {frequency: 0.9, confidence: 0.8},
             priority: 0.8,
-            budget: { priority: 0.8, durability: 0.5 },
-            stamp: { id: 'cache-test' }
+            budget: {priority: 0.8, durability: 0.5},
+            stamp: {id: 'cache-test'}
         });
         taskManager.addTask(task);
 
@@ -120,7 +120,7 @@ describe('OptimizedCycle - Direct Integration Tests', () => {
 
         // Check if tasks were cached
         expect(cycle._taskCache.get('cacheKey')).toBeDefined();
-        
+
         const cachedData = cycle._taskCache.get('cacheKey');
         expect(cachedData).toBeDefined();
         expect(cachedData.tasks).toBeDefined();
@@ -132,26 +132,26 @@ describe('OptimizedCycle - Direct Integration Tests', () => {
         const taskWithCycles = new Task({
             term: termFactory.create('test1'),
             punctuation: '.',
-            truth: { frequency: 0.8, confidence: 0.7 },
-            budget: { cycles: 1, depth: 2 }
+            truth: {frequency: 0.8, confidence: 0.7},
+            budget: {cycles: 1, depth: 2}
         });
-        
+
         const taskWithoutBudget = new Task({
             term: termFactory.create('test2'),
             punctuation: '.',
-            truth: { frequency: 0.9, confidence: 0.8 }
+            truth: {frequency: 0.9, confidence: 0.8}
         });
-        
+
         const taskExhaustedCycles = new Task({
             term: termFactory.create('test3'),
             punctuation: '.',
-            truth: { frequency: 0.7, confidence: 0.6 },
-            budget: { cycles: 0, depth: 1 }
+            truth: {frequency: 0.7, confidence: 0.6},
+            budget: {cycles: 0, depth: 1}
         });
-        
+
         const tasks = [taskWithCycles, taskWithoutBudget, taskExhaustedCycles];
         const filtered = cycle._filterTasksByBudget(tasks);
-        
+
         // Should include tasks with cycles > 0 and those without budget
         expect(filtered.length).toBe(2);
         expect(filtered).toContain(taskWithCycles);
@@ -163,18 +163,18 @@ describe('OptimizedCycle - Direct Integration Tests', () => {
         const inferenceWithBudget = new Task({
             term: termFactory.create('inference'),
             punctuation: '.',
-            truth: { frequency: 0.8, confidence: 0.7 },
-            budget: { 
-                priority: 0.8, 
+            truth: {frequency: 0.8, confidence: 0.7},
+            budget: {
+                priority: 0.8,
                 durability: 0.5,
                 cycles: 5,
                 depth: 3
             }
         });
-        
+
         const inferences = [inferenceWithBudget];
         const result = cycle._applyBudgetConstraints(inferences);
-        
+
         expect(result[0].budget.cycles).toBe(4); // Should be decremented by 1
         expect(result[0].budget.depth).toBe(2);  // Should be decremented by 1
     });
@@ -184,10 +184,10 @@ describe('OptimizedCycle - Direct Integration Tests', () => {
         const task = new Task({
             term,
             punctuation: '.',
-            truth: { frequency: 0.9, confidence: 0.8 },
+            truth: {frequency: 0.9, confidence: 0.8},
             priority: 0.8,
-            budget: { priority: 0.8, durability: 0.5 },
-            stamp: { id: 'metrics-test' }
+            budget: {priority: 0.8, durability: 0.5},
+            stamp: {id: 'metrics-test'}
         });
         taskManager.addTask(task);
 
@@ -207,10 +207,10 @@ describe('OptimizedCycle - Direct Integration Tests', () => {
             const task = new Task({
                 term,
                 punctuation: '.',
-                truth: { frequency: 0.9, confidence: 0.8 },
+                truth: {frequency: 0.9, confidence: 0.8},
                 priority: 0.8,
-                budget: { priority: 0.8, durability: 0.5 },
-                stamp: { id: `insight-test-${i}` }
+                budget: {priority: 0.8, durability: 0.5},
+                stamp: {id: `insight-test-${i}`}
             });
             taskManager.addTask(task);
             await cycle.execute();
@@ -226,10 +226,10 @@ describe('OptimizedCycle - Direct Integration Tests', () => {
         const task = new Task({
             term,
             punctuation: '.',
-            truth: { frequency: 0.9, confidence: 0.8 },
+            truth: {frequency: 0.9, confidence: 0.8},
             priority: 0.8,
-            budget: { priority: 0.8, durability: 0.5 },
-            stamp: { id: 'reset-test' }
+            budget: {priority: 0.8, durability: 0.5},
+            stamp: {id: 'reset-test'}
         });
         taskManager.addTask(task);
 
@@ -244,16 +244,16 @@ describe('OptimizedCycle - Direct Integration Tests', () => {
     });
 
     test('should serialize and deserialize', async () => {
-        const config = { test: true };
+        const config = {test: true};
         cycle._config = config;
         cycle._cycleCount = 5;
-        
+
         const serialized = cycle.serialize();
         expect(serialized).toBeDefined();
         expect(serialized.cycleCount).toBe(5);
         expect(serialized.config).toEqual(config);
         expect(serialized.version).toBe('2.0.0');
-        
+
         const result = await cycle.deserialize(serialized);
         expect(result).toBe(true);
     });
@@ -265,13 +265,13 @@ describe('OptimizedCycle - Direct Integration Tests', () => {
                 throw new Error('Test error in strategy');
             }
         };
-        
+
         const faultyCycle = new OptimizedCycle({
             memory,
             focus,
             ruleEngine,
             taskManager,
-            config: { focusTaskLimit: 10 },
+            config: {focusTaskLimit: 10},
             reasoningStrategy: faultyStrategy,
             termFactory,
             nar: null

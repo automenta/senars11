@@ -35,8 +35,8 @@ const DEFAULT_CONFIG = Object.freeze({
  * Parse command line arguments to support flexible configuration
  */
 function parseArgs(args) {
-    let config = { ...DEFAULT_CONFIG };
-    
+    let config = {...DEFAULT_CONFIG};
+
     for (let i = 0; i < args.length; i++) {
         if (args[i] === '--ws-port' && args[i + 1]) {
             config = {
@@ -67,7 +67,7 @@ function parseArgs(args) {
             i++; // Skip next argument since it's the value
         }
     }
-    
+
     return config;
 }
 
@@ -83,7 +83,7 @@ async function startWebSocketServer(config = DEFAULT_CONFIG) {
     const monitor = new WebSocketMonitor(config.webSocket);
     await monitor.start();
     nar.connectToWebSocketMonitor(monitor);
-    
+
     // Register a handler for NAR instance requests from the UI
     monitor.registerClientMessageHandler('requestNAR', async (message, client, monitorInstance) => {
         // For security reasons, we only send information that's safe for the UI, not the full NAR instance
@@ -94,7 +94,7 @@ async function startWebSocketServer(config = DEFAULT_CONFIG) {
             stats: nar.getStats(),
             reasoningState: nar.getReasoningState ? nar.getReasoningState() : null
         };
-        
+
         monitorInstance._sendToClient(client, {
             type: 'narInstance',
             payload: narInfo
@@ -104,10 +104,10 @@ async function startWebSocketServer(config = DEFAULT_CONFIG) {
     // Initialize DemoWrapper to provide remote control and introspection
     const demoWrapper = new DemoWrapper();
     await demoWrapper.initialize(nar, monitor);
-    
+
     // Send list of available demos to connected UIs
     await demoWrapper.sendDemoList();
-    
+
     // Start periodic metrics updates
     demoWrapper.runPeriodicMetricsUpdate();
 
@@ -214,7 +214,7 @@ async function main() {
     try {
         // Parse command line arguments for flexible configuration
         const config = parseArgs(args);
-        
+
         // Start WebSocket server with the parsed config
         webSocketServer = await startWebSocketServer(config);
 

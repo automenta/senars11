@@ -10,7 +10,7 @@ import {SyllogisticRule} from '../reasoning/rules/syllogism.js';
 import {ImplicationSyllogisticRule} from '../reasoning/rules/implicationSyllogism.js';
 import {ModusPonensRule} from '../reasoning/rules/modusponens.js';
 import {MetacognitionRules} from '../reasoning/rules/metacognition.js';
-import {PRIORITY, TASK} from '../config/constants.js';
+import {PRIORITY} from '../config/constants.js';
 import {BaseComponent} from '../util/BaseComponent.js';
 import {ComponentManager} from '../util/ComponentManager.js';
 import {NaiveExhaustiveStrategy} from '../reasoning/NaiveExhaustiveStrategy.js';
@@ -42,14 +42,6 @@ export class NAR extends BaseComponent {
         if (this._config.get('components')) {
             this._componentManager.loadComponentsFromConfig(this._config.get('components'));
         }
-    }
-
-    async initialize() {
-        const success = await this._componentManager.initializeAll();
-        if (success) {
-            this._setupDefaultRules();
-        }
-        return success;
     }
 
     get config() {
@@ -108,6 +100,14 @@ export class NAR extends BaseComponent {
         return this._reasoningAboutReasoning;
     }
 
+    async initialize() {
+        const success = await this._componentManager.initializeAll();
+        if (success) {
+            this._setupDefaultRules();
+        }
+        return success;
+    }
+
     _initComponents(config) {
         const lmEnabled = config.lm?.enabled === true;
         this._termFactory = new TermFactory(this._config.termFactory, this._eventBus);
@@ -135,7 +135,7 @@ export class NAR extends BaseComponent {
         };
 
         // Use optimized cycle if configured for Phase 5+
-        this._cycle = this._useOptimizedCycle 
+        this._cycle = this._useOptimizedCycle
             ? new OptimizedCycle(cycleConfig)
             : new Cycle(cycleConfig);
         this._initOptionalComponents(config);
@@ -263,7 +263,7 @@ export class NAR extends BaseComponent {
     _getTaskTypeFromPunctuation(punctuation) {
         return {
             '.': 'BELIEF',
-            '!': 'GOAL', 
+            '!': 'GOAL',
             '?': 'QUESTION'
         }[punctuation] || 'BELIEF'; // Default to belief
     }
@@ -477,7 +477,7 @@ export class NAR extends BaseComponent {
     }
 
     getBeliefs(queryTerm = null) {
-        return queryTerm ? this.query(queryTerm) 
+        return queryTerm ? this.query(queryTerm)
             : this._memory.getAllConcepts().flatMap(c => c.getTasksByType('BELIEF'));
     }
 
@@ -584,7 +584,7 @@ export class NAR extends BaseComponent {
 
         monitor.listenToNAR(this);
         this.logInfo('Connected to WebSocket monitor for real-time monitoring');
-        
+
         // Set up periodic updates of reasoning state for UI
         if (this._reasoningAboutReasoning) {
             this._reasoningStateInterval = setInterval(() => {

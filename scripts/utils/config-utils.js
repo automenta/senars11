@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { generateId } from './shared-utils.js';
+import {generateId} from './shared-utils.js';
 
 /**
  * Configuration utilities for autonomous development and other parameterized processes
@@ -40,14 +40,14 @@ export const ConfigUtils = {
      * Create a configuration by combining defaults with custom values
      */
     createConfig: (defaults, customValues = {}) => {
-        const config = { ...defaults };
-        
+        const config = {...defaults};
+
         for (const [key, value] of Object.entries(customValues)) {
             if (config.hasOwnProperty(key)) {
                 config[key] = value;
             }
         }
-        
+
         return config;
     },
 
@@ -56,14 +56,14 @@ export const ConfigUtils = {
      */
     parseArgs: (args, specs) => {
         const result = {};
-        
+
         for (let i = 0; i < args.length; i++) {
             const arg = args[i];
-            
+
             if (specs[arg] && args[i + 1]) {
                 const key = specs[arg].key || arg.replace(/^--/, '');
-                result[key] = specs[arg].parser 
-                    ? specs[arg].parser(args[i + 1]) 
+                result[key] = specs[arg].parser
+                    ? specs[arg].parser(args[i + 1])
                     : args[i + 1];
                 i++; // Skip the next argument since it's the value
             } else if (arg.startsWith('--no-')) {
@@ -76,7 +76,7 @@ export const ConfigUtils = {
                 }
             }
         }
-        
+
         return result;
     },
 

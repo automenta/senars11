@@ -34,7 +34,7 @@ export class CooperationEngine {
             // Step 1: Apply LM rules to initial task
             const lmResults = ruleEngine.applyLMRules(initialTask, null, memory);
             results.lmGenerated = [...lmResults];
-            
+
             // Log LM processing event
             if (this.logger) {
                 this.logger.debug(`LM processing completed for task, generated ${lmResults.length} results`);
@@ -43,7 +43,7 @@ export class CooperationEngine {
             // Step 2: Apply NAL rules to initial task
             const nalResults = ruleEngine.applyNALRules(initialTask, null, memory);
             results.nalGenerated = [...nalResults];
-            
+
             // Log NAL processing event
             if (this.logger) {
                 this.logger.debug(`NAL processing completed for task, generated ${nalResults.length} results`);
@@ -52,12 +52,12 @@ export class CooperationEngine {
             // Step 3: Cross-validation with enhanced validation and feedback
             if (this.config.crossValidationEnabled) {
                 const crossValidationResults = await this.performEnhancedCrossValidation(
-                    lmResults, 
-                    nalResults, 
-                    ruleEngine, 
+                    lmResults,
+                    nalResults,
+                    ruleEngine,
                     memory
                 );
-                
+
                 results.crossValidated = [...crossValidationResults.results];
                 results.feedbackEvents.push(...crossValidationResults.feedbackEvents);
             }
@@ -84,14 +84,14 @@ export class CooperationEngine {
                 {
                     ...results,
                     crossValidated: feedbackEnhancedResults
-                }, 
+                },
                 memory
             );
 
         } catch (error) {
             // In case of error, still try to return best effort results
             this.logger.error('Error in cooperative reasoning:', error);
-            
+
             // Combine all generated results as fallback
             results.finalResults = [
                 ...results.lmGenerated,
@@ -114,7 +114,7 @@ export class CooperationEngine {
         for (const lmResult of lmResults) {
             try {
                 const nalOnLM = ruleEngine.applyNALRules(lmResult, null, memory);
-                
+
                 for (const nalResult of nalOnLM) {
                     const feedbackEvent = {
                         sourceType: 'LM',
@@ -123,7 +123,7 @@ export class CooperationEngine {
                         targetResult: nalResult,
                         timestamp: Date.now()
                     };
-                    
+
                     // Check for agreement or disagreement
                     if (this.resultsAgree(lmResult, nalResult)) {
                         feedbackEvent.type = 'agreement';
@@ -138,7 +138,7 @@ export class CooperationEngine {
                         resolvedResult._cooperationEnhanced = true;
                         crossValidated.push(resolvedResult);
                     }
-                    
+
                     feedbackEvents.push(feedbackEvent);
                 }
             } catch (error) {
@@ -152,16 +152,16 @@ export class CooperationEngine {
         for (const nalResult of nalResults) {
             try {
                 const lmOnNAL = ruleEngine.applyLMRules(nalResult, null, memory);
-                
+
                 for (const lmResult of lmOnNAL) {
                     const feedbackEvent = {
-                        sourceType: 'NAL', 
+                        sourceType: 'NAL',
                         targetType: 'LM',
                         sourceResult: nalResult,
                         targetResult: lmResult,
                         timestamp: Date.now()
                     };
-                    
+
                     // Check for agreement or disagreement
                     if (this.resultsAgree(nalResult, lmResult)) {
                         feedbackEvent.type = 'agreement';
@@ -176,7 +176,7 @@ export class CooperationEngine {
                         resolvedResult._cooperationEnhanced = true;
                         crossValidated.push(resolvedResult);
                     }
-                    
+
                     feedbackEvents.push(feedbackEvent);
                 }
             } catch (error) {
@@ -197,18 +197,18 @@ export class CooperationEngine {
      */
     resultsAgree(result1, result2) {
         if (!result1.term || !result2.term) return false;
-        
+
         // Check if terms match
         const termsMatch = this.termsMatch(result1.term, result2.term);
-        
+
         if (!termsMatch) return false;
-        
+
         // If terms match, check truth value similarity
         if (result1.truth && result2.truth) {
             const similarity = this.truthValueSimilarity(result1.truth, result2.truth);
             return similarity > 0.7; // Consider agreeing if >70% similar
         }
-        
+
         // If no truth values, consider as agreement
         return true;
     }
@@ -220,7 +220,7 @@ export class CooperationEngine {
         // Prefer result with higher confidence
         const conf1 = result1.truth?.c || 0;
         const conf2 = result2.truth?.c || 0;
-        
+
         if (conf1 >= conf2) {
             // Enhance the higher confidence result slightly if both are reasonable
             if (conf1 > 0.1 && conf2 > 0.1) {
@@ -308,11 +308,11 @@ export class CooperationEngine {
             if (matchingNalResults.length > 0) {
                 // Multiple matches possible, so we need to handle conflicts
                 const validMatches = matchingNalResults.filter(nalResult => this.isValidResult(nalResult));
-                
+
                 if (validMatches.length > 0) {
                     // Check for consistency and potential conflicts
                     const consistentMatches = this.filterConsistentResults(lmResult, validMatches);
-                    
+
                     if (consistentMatches.length > 0) {
                         // Results are consistent - boost confidence due to cross-validation
                         const enhancedTask = this.boostTaskConfidence(lmResult, consistentMatches[0]);
@@ -324,7 +324,7 @@ export class CooperationEngine {
                         // Results are contradictory but consistent in meaning - apply cautious enhancement
                         const cautiousTask = this.applyCautiousEnhancement(lmResult, matchingNalResults[0]);
                         enhancedResults.push(cautiousTask);
-                        
+
                         this.recordFeedbackEvent(lmResult, matchingNalResults[0], 'cross_validation_cautionary');
                     }
                 } else {
@@ -342,7 +342,7 @@ export class CooperationEngine {
             const matchingLmResults = lmResults.filter(lmResult =>
                 this.termsMatch(nalResult.term, lmResult.term)
             );
-            
+
             const matchingLmResult = matchingLmResults.length > 0 ? matchingLmResults[0] : null;
 
             if (matchingLmResult) {
@@ -363,10 +363,10 @@ export class CooperationEngine {
      */
     isValidResult(result) {
         if (!result || !result.truth) return false;
-        
+
         const {f: frequency, c: confidence} = result.truth;
         if (frequency === undefined || confidence === undefined) return false;
-        
+
         // Check for valid truth values
         return frequency >= 0 && frequency <= 1 && confidence >= 0 && confidence <= 1;
     }
@@ -376,12 +376,12 @@ export class CooperationEngine {
      */
     filterConsistentResults(sourceResult, candidateResults) {
         if (!sourceResult?.truth) return candidateResults;
-        
+
         // For now, consider results consistent if truth values are close
         // A more sophisticated approach would consider other factors
         return candidateResults.filter(candidate => {
             if (!candidate?.truth) return false;
-            
+
             const similarity = this.truthValueSimilarity(sourceResult.truth, candidate.truth);
             return similarity > 0.7; // Consider consistent if >70% similar
         });
@@ -393,7 +393,7 @@ export class CooperationEngine {
     truthValueSimilarity(truth1, truth2) {
         const freqDiff = Math.abs((truth1.f || 0.5) - (truth2.f || 0.5));
         const confDiff = Math.abs((truth1.c || 0.5) - (truth2.c || 0.5));
-        
+
         // Average the inverse of differences (higher similarity = lower difference)
         return 1 - ((freqDiff + confDiff) / 2);
     }
@@ -419,7 +419,7 @@ export class CooperationEngine {
      */
     resolveConflicts(results) {
         if (results.length <= 1) return results;
-        
+
         // Group results by term to identify potential conflicts
         const groupedByTerm = new Map();
         results.forEach(result => {

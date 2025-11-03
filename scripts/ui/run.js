@@ -1,8 +1,14 @@
 #!/usr/bin/env node
 
-import { parseArgs as parseCliArgs, showUsageAndExit, parseKeyValueArgs, spawnProcess, BASE_DIR } from '../utils/script-utils.js';
+import {
+    BASE_DIR,
+    parseArgs as parseCliArgs,
+    parseKeyValueArgs,
+    showUsageAndExit,
+    spawnProcess
+} from '../utils/script-utils.js';
 
-const { args, helpRequested } = parseCliArgs(process.argv.slice(2));
+const {args, helpRequested} = parseCliArgs(process.argv.slice(2));
 
 const USAGE_MESSAGE = `
 Usage: node scripts/ui/run.js [options]
@@ -40,7 +46,7 @@ const parseArgs = args => {
         '--ws-port': 'wsPort',
         '--host': 'host'
     });
-    
+
     // Override defaults with parsed values if provided
     if (keyValueArgs.port) port = parseInt(keyValueArgs.port);
     if (keyValueArgs.wsPort) wsPort = parseInt(keyValueArgs.wsPort);
@@ -52,13 +58,13 @@ const parseArgs = args => {
     } else if (args.includes('--dev')) {
         isDevMode = true;
     }
-    
+
     // Default to dev mode unless --prod was explicitly specified
     if (!args.includes('--prod') && !args.includes('--dev')) {
         isDevMode = DEFAULT_CONFIG.isDevMode;
     }
 
-    return { isDevMode, port, wsPort, host };
+    return {isDevMode, port, wsPort, host};
 };
 
 if (helpRequested) {
@@ -66,10 +72,10 @@ if (helpRequested) {
 }
 
 const config = parseArgs(args);
-const { port, wsPort, host } = config;
+const {port, wsPort, host} = config;
 
-console.log(`Starting ${port === DEFAULT_CONFIG.port && wsPort === DEFAULT_CONFIG.wsPort && host === DEFAULT_CONFIG.host ? 
-    (DEFAULT_CONFIG.isDevMode ? 'development' : 'production') : 
+console.log(`Starting ${port === DEFAULT_CONFIG.port && wsPort === DEFAULT_CONFIG.wsPort && host === DEFAULT_CONFIG.host ?
+    (DEFAULT_CONFIG.isDevMode ? 'development' : 'production') :
     'custom'} UI server...`);
 console.log(`UI Port: ${port}, WebSocket Port: ${wsPort}, Host: ${host}`);
 

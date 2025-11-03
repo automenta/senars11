@@ -41,7 +41,7 @@ export class Cycle extends BaseComponent {
     async execute() {
         const cycleStartTime = Date.now();
         this._isRunning = true;
-        
+
         // Enhanced cycle start event with more details
         this._emitIntrospectionEvent(IntrospectionEvents.CYCLE_START, {
             cycle: this._cycleCount,
@@ -54,7 +54,7 @@ export class Cycle extends BaseComponent {
         try {
             // Process pending tasks and consolidate memory
             this._taskManager.processPendingTasks(cycleStartTime);
-            
+
             // Emit memory consolidation event
             this._emitIntrospectionEvent(IntrospectionEvents.MEMORY_CONSOLIDATION_END, {
                 cycle: this._cycleCount,
@@ -64,7 +64,7 @@ export class Cycle extends BaseComponent {
 
             // Get and filter tasks
             const allTasks = await this._getFilteredTasks();
-            
+
             // Emit event about task processing
             this._eventBus?.emit('task.processing.start', {
                 cycle: this._cycleCount,
@@ -116,7 +116,7 @@ export class Cycle extends BaseComponent {
 
             // Create and return detailed result
             const result = this._createCycleResult(budgetedInferences.length, cycleStartTime);
-            
+
             // Emit comprehensive cycle completion event
             this._eventBus?.emit('cycle.completed', {
                 cycle: this._cycleCount,
@@ -135,7 +135,7 @@ export class Cycle extends BaseComponent {
 
         } catch (error) {
             this.logger.error('Error in reasoning cycle:', error);
-            
+
             // Emit detailed error event for observability
             this._eventBus?.emit('cycle.error', {
                 error: error.message,
@@ -146,18 +146,18 @@ export class Cycle extends BaseComponent {
                 isComplete: true,
                 success: false
             });
-            
+
             throw error;
         } finally {
             const cycleEndTime = Date.now();
-            
+
             // Enhanced cycle end event with duration
             this._emitIntrospectionEvent(IntrospectionEvents.CYCLE_END, {
-                cycle: this._cycleCount, 
+                cycle: this._cycleCount,
                 duration: cycleEndTime - cycleStartTime,
                 timestamp: cycleEndTime
             });
-            
+
             this._isRunning = false;
         }
     }

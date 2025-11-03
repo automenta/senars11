@@ -68,16 +68,16 @@ export class ReasoningAboutReasoning {
 
     _getPerformanceStats() {
         if (!this.reasoningTrace.length) return null;
-        
+
         const recentEvents = this.reasoningTrace.slice(-50); // Last 50 events for performance analysis
         const cycleEvents = recentEvents.filter(event => event.eventType.includes('cycle'));
-        
+
         if (cycleEvents.length < 2) return null;
-        
+
         const durations = cycleEvents.map(event => event.data?.duration).filter(d => d);
-        const avgDuration = durations.length > 0 ? 
+        const avgDuration = durations.length > 0 ?
             durations.reduce((a, b) => a + b, 0) / durations.length : null;
-        
+
         return {
             avgCycleDuration: avgDuration,
             recentEventsCount: recentEvents.length,
@@ -98,21 +98,21 @@ export class ReasoningAboutReasoning {
 
     _calculateCacheHitRate(cacheMetrics) {
         if (!cacheMetrics) return null;
-        
+
         let totalHits = 0;
         let totalAccesses = 0;
-        
+
         for (const [_, metrics] of Object.entries(cacheMetrics)) {
             totalHits += metrics.hits || 0;
             totalAccesses += (metrics.hits || 0) + (metrics.misses || 0);
         }
-        
+
         return totalAccesses > 0 ? totalHits / totalAccesses : 0;
     }
 
     _getCurrentFocusStats() {
         if (!this.nar.focus) return null;
-        
+
         return {
             focusTaskCount: this.nar.focus.getTaskCount?.() || 0,
             focusCapacity: this.nar.focus.getCapacity?.() || null,
@@ -392,8 +392,8 @@ export class ReasoningAboutReasoning {
         };
 
         const handler = correctionMap[suggestion.type];
-        handler ? handler() : 
-            ['task_distribution_imbalance', 'high_goal_pressure', 'high_query_load'].includes(suggestion.type) && 
+        handler ? handler() :
+            ['task_distribution_imbalance', 'high_goal_pressure', 'high_query_load'].includes(suggestion.type) &&
             corrections.push({
                 action: 'load_balancing_advice',
                 issue: suggestion.type,

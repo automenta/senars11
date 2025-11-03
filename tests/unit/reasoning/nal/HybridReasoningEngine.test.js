@@ -8,7 +8,7 @@ class MockNALEngine {
     constructor() {
         this.metrics = {test: 'metric'};
     }
-    
+
     async applyRules(task) {
         // Return some mock results based on the task
         if (task.term?.toString() === 'A') {
@@ -27,11 +27,11 @@ class MockLM {
         this._registeredLMRules = [];
         this.metrics = {test: 'lm-metric'};
     }
-    
+
     async process(prompt, options) {
         return `Processed: ${prompt}`;
     }
-    
+
     getMetrics() {
         return {calls: 1, responses: 1};
     }
@@ -199,7 +199,7 @@ describe('HybridReasoningEngine', () => {
 
         const simplePath = hybridEngine.selectReasoningPath(simpleTask);
         // Simple atomic tasks should use 'nal'
-        expect(simplePath).toBe('nal'); 
+        expect(simplePath).toBe('nal');
 
         // Question task
         const questionTask = new Task({
@@ -218,7 +218,7 @@ describe('HybridReasoningEngine', () => {
         const subTerm1 = new Term('compound', 'sub1', ['a', 'b'], '&');
         const subTerm2 = new Term('compound', 'sub2', ['c', 'd'], '&');
         const subTerm3 = new Term('compound', 'sub3', ['e', 'f'], '&');
-        
+
         // This complex term will have complexity: 1 + subTerm1.complexity + subTerm2.complexity + subTerm3.complexity
         // subTerm1.complexity = 1 + 1 + 1 = 3 (since 'a' and 'b' are atomic strings)
         // So total = 1 + 3 + 3 + 3 = 10, which is > 3

@@ -11,19 +11,19 @@
  * @returns {Object} Notification object
  */
 export const createNotification = (type, message, title = '', duration = 5000) => {
-  if (!['info', 'success', 'warning', 'error'].includes(type)) {
-    console.warn(`Invalid notification type: ${type}. Using 'info' as default.`);
-    type = 'info';
-  }
-    
-  return {
-    id: Date.now().toString(),
-    type,
-    message,
-    title: title || capitalizeFirst(type),
-    timestamp: Date.now(),
-    duration
-  };
+    if (!['info', 'success', 'warning', 'error'].includes(type)) {
+        console.warn(`Invalid notification type: ${type}. Using 'info' as default.`);
+        type = 'info';
+    }
+
+    return {
+        id: Date.now().toString(),
+        type,
+        message,
+        title: title || capitalizeFirst(type),
+        timestamp: Date.now(),
+        duration
+    };
 };
 
 /**
@@ -39,8 +39,8 @@ const capitalizeFirst = (str) => str.charAt(0).toUpperCase() + str.slice(1);
  * @param {string} title - Optional title for the error
  * @returns {Object} Error notification object
  */
-export const createErrorNotification = (message, title = 'Error') => 
-  createNotification('error', message, title);
+export const createErrorNotification = (message, title = 'Error') =>
+    createNotification('error', message, title);
 
 /**
  * Create a success notification
@@ -48,8 +48,8 @@ export const createErrorNotification = (message, title = 'Error') =>
  * @param {string} title - Optional title for the success
  * @returns {Object} Success notification object
  */
-export const createSuccessNotification = (message, title = 'Success') => 
-  createNotification('success', message, title);
+export const createSuccessNotification = (message, title = 'Success') =>
+    createNotification('success', message, title);
 
 /**
  * Create a warning notification
@@ -57,8 +57,8 @@ export const createSuccessNotification = (message, title = 'Success') =>
  * @param {string} title - Optional title for the warning
  * @returns {Object} Warning notification object
  */
-export const createWarningNotification = (message, title = 'Warning') => 
-  createNotification('warning', message, title);
+export const createWarningNotification = (message, title = 'Warning') =>
+    createNotification('warning', message, title);
 
 /**
  * Create an info notification
@@ -66,8 +66,8 @@ export const createWarningNotification = (message, title = 'Warning') =>
  * @param {string} title - Optional title for the info
  * @returns {Object} Info notification object
  */
-export const createInfoNotification = (message, title = 'Info') => 
-  createNotification('info', message, title);
+export const createInfoNotification = (message, title = 'Info') =>
+    createNotification('info', message, title);
 
 /**
  * Format a message for display
@@ -76,17 +76,17 @@ export const createInfoNotification = (message, title = 'Info') =>
  * @returns {string} Formatted message
  */
 export const formatDisplayMessage = (message, maxLength = 200) => {
-  if (!message) return '';
-    
-  // Ensure the message is a string
-  const str = String(message);
-    
-  // Truncate if too long
-  if (str.length > maxLength) {
-    return str.substring(0, maxLength) + '...';
-  }
-    
-  return str;
+    if (!message) return '';
+
+    // Ensure the message is a string
+    const str = String(message);
+
+    // Truncate if too long
+    if (str.length > maxLength) {
+        return str.substring(0, maxLength) + '...';
+    }
+
+    return str;
 };
 
 /**
@@ -95,15 +95,15 @@ export const formatDisplayMessage = (message, maxLength = 200) => {
  * @returns {string} Sanitized message
  */
 export const sanitizeMessage = (message) => {
-  if (typeof message !== 'string') return String(message);
-    
-  // Basic HTML sanitization
-  return message
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;');
+    if (typeof message !== 'string') return String(message);
+
+    // Basic HTML sanitization
+    return message
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#x27;');
 };
 
 /**
@@ -113,25 +113,25 @@ export const sanitizeMessage = (message) => {
  * @returns {string} User-friendly error message
  */
 export const formatErrorMessage = (error, fallbackMessage = 'An unexpected error occurred') => {
-  if (!error) return fallbackMessage;
-    
-  // Handle different error formats
-  if (typeof error === 'string') {
-    return error;
-  }
-    
-  if (error.message) {
-    return error.message;
-  }
-    
-  if (error.error) {
-    return typeof error.error === 'string' ? error.error : JSON.stringify(error.error);
-  }
-    
-  // For objects, try to extract message or stringify
-  if (typeof error === 'object') {
-    return JSON.stringify(error);
-  }
-    
-  return fallbackMessage;
+    if (!error) return fallbackMessage;
+
+    // Handle different error formats
+    if (typeof error === 'string') {
+        return error;
+    }
+
+    if (error.message) {
+        return error.message;
+    }
+
+    if (error.error) {
+        return typeof error.error === 'string' ? error.error : JSON.stringify(error.error);
+    }
+
+    // For objects, try to extract message or stringify
+    if (typeof error === 'object') {
+        return JSON.stringify(error);
+    }
+
+    return fallbackMessage;
 };

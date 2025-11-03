@@ -203,7 +203,7 @@ export class CoordinatedReasoningStrategy extends StrategyInterface {
         for (const event of feedbackEvents) {
             if (event.type === 'agreement') feedbackStats.agreements++;
             else if (event.type === 'disagreement') feedbackStats.disagreements++;
-            
+
             const key = `${event.sourceType}->${event.targetType}`;
             feedbackStats.byType[key] = (feedbackStats.byType[key] || 0) + 1;
         }

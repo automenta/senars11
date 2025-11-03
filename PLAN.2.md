@@ -2,13 +2,18 @@
 
 ## Executive Summary
 
-This plan establishes a realistic development roadmap from the current codebase state to full implementation of all specifications in README.md. The approach is entirely procedural, with each phase building on verified, working functionality. No claims are made about existing "advanced" capabilities - instead, this document focuses on systematically implementing the README.md specifications using the existing codebase foundation.
+This plan establishes a realistic development roadmap from the current codebase state to full implementation of all
+specifications in README.md. The approach is entirely procedural, with each phase building on verified, working
+functionality. No claims are made about existing "advanced" capabilities - instead, this document focuses on
+systematically implementing the README.md specifications using the existing codebase foundation.
 
-The plan follows the "Make it work, make it right, make it fast" approach, with current focus on "making it work" by completing missing functionality and fixing existing issues.
+The plan follows the "Make it work, make it right, make it fast" approach, with current focus on "making it work" by
+completing missing functionality and fixing existing issues.
 
 The current codebase already has foundational components that align with README.md specifications:
 
 **Project Structure**:
+
 - **src/**: Core implementation with nar/, memory/, reasoning/, parser/, etc.
 - **tests/**: Unit, integration, and NAL-specific tests with 851+ passing tests
 - **ui/**: Frontend with 20+ specialized visualization panels and real-time capabilities
@@ -17,57 +22,79 @@ The current codebase already has foundational components that align with README.
 - **benchmarks/**: Performance testing infrastructure
 
 **Core Architecture**:
+
 - **BaseComponent System**: Initialization, metrics, lifecycle management (src/util/BaseComponent.js)
 - **EventBus Infrastructure**: Event-based communication system (src/util/EventBus.js)
 - **Component Manager**: Handles dependency management and lifecycle across components
 
 **Knowledge Architecture**:
-- **Term**: Immutable data structures for representing all knowledge (src/term/Term.js) with complexity calculation, visitor/reducer patterns, and hash consistency
-- **Memory**: Memory management with dual-architecture (focus/long-term), activation decay, and consolidation (src/memory/Memory.js) with detailed statistics
-- **Task**: Immutable wrappers around terms representing units of work (src/task/Task.js) with budgeting, truth values, and Belief/Goal/Question distinction
+
+- **Term**: Immutable data structures for representing all knowledge (src/term/Term.js) with complexity calculation,
+  visitor/reducer patterns, and hash consistency
+- **Memory**: Memory management with dual-architecture (focus/long-term), activation decay, and consolidation (
+  src/memory/Memory.js) with detailed statistics
+- **Task**: Immutable wrappers around terms representing units of work (src/task/Task.js) with budgeting, truth values,
+  and Belief/Goal/Question distinction
 
 **Reasoning Engine**:
-- **NAR (NARS Reasoner Engine)**: Central orchestrator with component management (src/nar/NAR.js) including TermFactory, RuleEngine, TaskManager, Cycle management
-- **Parser**: Narsese parsing using peggy parser generator (src/parser/NarseseParser.js, built from narsese.peggy) with comprehensive operator support
+
+- **NAR (NARS Reasoner Engine)**: Central orchestrator with component management (src/nar/NAR.js) including TermFactory,
+  RuleEngine, TaskManager, Cycle management
+- **Parser**: Narsese parsing using peggy parser generator (src/parser/NarseseParser.js, built from narsese.peggy) with
+  comprehensive operator support
 - **Cycle System**: Reasoning cycle execution with optimized and standard implementations (src/nar/Cycle.js)
 - **Rule Engine**: Rule execution with NAL and LM integration, performance tracking (src/reasoning/RuleEngine.js)
 
 **Self-Analysis Components**:
-- **MetricsMonitor**: Performance monitoring for rule priorities (src/reasoning/MetricsMonitor.js) with basic rule priority adjustment
-- **ReasoningAboutReasoning**: System introspection and analysis (src/reasoning/ReasoningAboutReasoning.js) with pattern detection
+
+- **MetricsMonitor**: Performance monitoring for rule priorities (src/reasoning/MetricsMonitor.js) with basic rule
+  priority adjustment
+- **ReasoningAboutReasoning**: System introspection and analysis (src/reasoning/ReasoningAboutReasoning.js) with pattern
+  detection
 - **MetaCognition**: Reasoning quality assessment (src/reasoning/MetaCognition.js) with basic effectiveness tracking
 
 **UI/Visualization System**:
+
 - **WebSocketMonitor**: Real-time UI updates with connection management (src/server/WebSocketMonitor.js)
-- **UI System**: Frontend with 20+ specialized visualization panels including ReasoningTracePanel, TaskFlowDiagram, ConceptPanel, PriorityHistogram, SystemStatusPanel, MetaCognitionPanel, and TimeSeriesPanel
+- **UI System**: Frontend with 20+ specialized visualization panels including ReasoningTracePanel, TaskFlowDiagram,
+  ConceptPanel, PriorityHistogram, SystemStatusPanel, MetaCognitionPanel, and TimeSeriesPanel
 - **TUI/REPL**: Text-based interface with interaction capabilities (src/tui/Repl.js)
 
 **External Integration**:
+
 - **LM Integration**: Language model integration with provider management and circuit breakers (src/lm/LM.js)
 - **Tool Integration**: Tool execution framework with explanation services (src/tools/ToolIntegration.js)
 - **CLI Interface**: Interactive REPL and command-line interface (src/tui/Repl.js, scripts/cli/run.js)
 
 **Infrastructure**:
-- **Testing Framework**: Jest-based tests with 851+ passing tests in multiple categories (tests/unit/, tests/integration/, tests/nal/)
+
+- **Testing Framework**: Jest-based tests with 851+ passing tests in multiple categories (tests/unit/,
+  tests/integration/, tests/nal/)
 - **Build System**: Peggy parser generation, NPM scripts for all operations
 - **Examples**: Working demonstrations in examples/ directory
 - **Monitoring**: WebSocket monitoring and visualization system
 
 **Current State Alignment with README.md Specifications**:
+
 - **Hybrid Neuro-Symbolic Reasoning**: Implementation exists with NAL-LM collaboration
 - **Observable Platform**: Implementation exists with 20+ visualization panels and real-time monitoring
 - **Designed for Researchers/Educators/Developers**: UI and TUI interfaces support all target audiences
 - **Real-time Visualization**: Implementation exists with WebSocket monitoring and multiple specialized panels
-- **Core Components**: All specified components implemented (NAR, Term, Task, Memory, Reasoning Engine, Parser, LM integration)
-- **Beliefs/Goals for RL**: Implementation exists with different truth value semantics for Beliefs (frequency/confidence) and Goals (desire/confidence)
+- **Core Components**: All specified components implemented (NAR, Term, Task, Memory, Reasoning Engine, Parser, LM
+  integration)
+- **Beliefs/Goals for RL**: Implementation exists with different truth value semantics for Beliefs (
+  frequency/confidence) and Goals (desire/confidence)
 
-**Current Status**: The codebase implements foundational capabilities that align with README.md specifications. The core test suite is passing, and the UI builds and runs without errors. The codebase is now in a stable state, ready for the systematic completion of the remaining functionality to fully satisfy all requirements.
+**Current Status**: The codebase implements foundational capabilities that align with README.md specifications. The core
+test suite is passing, and the UI builds and runs without errors. The codebase is now in a stable state, ready for the
+systematic completion of the remaining functionality to fully satisfy all requirements.
 
 ---
 
 ## Current Codebase Analysis
 
 ### Existing Components
+
 - **NAR**: Basic NARS Reasoner Engine exists with core API structure
 - **Term**: Core data structure exists but with incomplete normalization and equality
 - **Task**: Basic task structure exists with truth values and stamps
@@ -80,6 +107,7 @@ The current codebase already has foundational components that align with README.
 - **Server**: WebSocket monitoring exists but with basic event broadcasting
 
 ### Current Issues Identified
+
 - Term normalization and equality not fully implemented (canonical forms missing)
 - Performance targets not verified (<1ms for Term, <2ms for Task, <5ms for Memory)
 - Dual memory architecture not fully implemented (focus/long-term separation)
@@ -88,6 +116,7 @@ The current codebase already has foundational components that align with README.
 - Comprehensive testing missing for complex reasoning scenarios
 
 ### Project Structure Details
+
 - **src/**: Core implementation with dedicated directories for each major component
 - **tests/**: Comprehensive test suite with unit, integration, and NAL-specific tests
 - **ui/**: React-based UI with 20+ specialized visualization panels
@@ -97,6 +126,7 @@ The current codebase already has foundational components that align with README.
 - **docs/**: Documentation files
 
 ### Component Architecture Details
+
 - **BaseComponent**: Foundation for all system components with standardized lifecycle (initialize, start, stop, dispose)
 - **EventBus**: Centralized event system for component communication
 - **Component Manager**: Handles dependency management and lifecycle orchestration
@@ -106,14 +136,17 @@ The current codebase already has foundational components that align with README.
 ## Procedural Implementation Plan
 
 ### PHASE 1: Core Data Structure Implementation (Make It Work)
+
 **Objective**: Complete implementation of all fundamental data structures to README.md specifications
 
 **Focus**:
+
 - Complete Term normalization and canonical representation
 - Implement proper immutable data structures
 - Optimize basic operations for performance targets
 
 **Actions**:
+
 - Implement complete Term normalization algorithm for commutative and associative operators
 - Complete TermFactory with proper caching and canonical normalization
 - Fix Term methods to ensure immutable behavior with proper freezing
@@ -130,6 +163,7 @@ The current codebase already has foundational components that align with README.
 - Create benchmarks for Term performance validation
 
 **Verification**:
+
 - Unit tests confirm Term normalization works for all operator combinations
 - Performance benchmarks show Term operations <1ms
 - All Term methods are properly immutable
@@ -143,6 +177,7 @@ The current codebase already has foundational components that align with README.
 **Dependencies**: None (core foundation)
 
 **Success Metrics**:
+
 - Term normalization complete: 100%
 - Performance <1ms: 100% of operations
 - All Term methods immutable: 100%
@@ -151,6 +186,7 @@ The current codebase already has foundational components that align with README.
 - Visitor/reducer patterns functional: 100%
 
 **Concerns**:
+
 - Term normalization algorithm complexity may impact performance
 - Need to ensure computed properties remain frozen after creation
 - Canonical normalization must handle all Narsese operators correctly
@@ -161,14 +197,17 @@ The current codebase already has foundational components that align with README.
 ---
 
 ### PHASE 2: NAR Core API Implementation (Make It Work)
+
 **Objective**: Complete NARS Reasoner Engine API to README.md specifications
 
 **Focus**:
+
 - Complete NAR constructor and initialization
 - Implement all public API methods (input, start, stop, step, getBeliefs, query, reset)
 - Ensure proper component orchestration
 
 **Actions**:
+
 - Complete NAR constructor with SystemConfig integration
 - Implement input() method for Narsese string processing
 - Implement start(), stop(), step() for reasoning cycle control
@@ -187,6 +226,7 @@ The current codebase already has foundational components that align with README.
 - Complete integration with external systems (LM, monitoring)
 
 **Verification**:
+
 - All NAR methods work as specified in README.md
 - Event emission working correctly (belief_updated, question_answered, cycle_complete)
 - Component initialization and startup sequence functional
@@ -202,6 +242,7 @@ The current codebase already has foundational components that align with README.
 **Dependencies**: Phase 1 (requires working Term and Task structures)
 
 **Success Metrics**:
+
 - All NAR API methods implemented: 100%
 - Event emission working: 100%
 - Basic reasoning cycle operational: 100%
@@ -211,6 +252,7 @@ The current codebase already has foundational components that align with README.
 - Error handling comprehensive: 100%
 
 **Concerns**:
+
 - Component initialization order may create dependencies
 - Event system might need refinement for performance
 - Cycle timing and control mechanisms need careful implementation
@@ -222,14 +264,17 @@ The current codebase already has foundational components that align with README.
 ---
 
 ### PHASE 3: Dual Memory Architecture Implementation (Make It Work)
+
 **Objective**: Complete focus/long-term memory system to README.md specifications
 
 **Focus**:
+
 - Complete focus memory with attention mechanisms
 - Implement memory consolidation between systems
 - Create proper task selection and promotion
 
 **Actions**:
+
 - Complete Focus component with priority-based attention
 - Implement memory consolidation with priority-based selection
 - Create TaskPromotionManager for memory transfers
@@ -248,6 +293,7 @@ The current codebase already has foundational components that align with README.
 - Complete memory consolidation timing and frequency controls
 
 **Verification**:
+
 - Focus/long-term memory separation working
 - Task promotion between memories functional
 - Memory consolidation working properly
@@ -262,6 +308,7 @@ The current codebase already has foundational components that align with README.
 **Dependencies**: Phase 1, Phase 2 (requires working Term and NAR)
 
 **Success Metrics**:
+
 - Dual memory architecture implemented: 100%
 - Memory consolidation functional: 100%
 - Performance <5ms: 95% of operations
@@ -271,6 +318,7 @@ The current codebase already has foundational components that align with README.
 - Concept management operational: 100%
 
 **Concerns**:
+
 - Memory consolidation timing and frequency need optimization
 - Priority selection algorithms may require refinement
 - Memory pressure handling needs careful design
@@ -282,14 +330,17 @@ The current codebase already has foundational components that align with README.
 ---
 
 ### PHASE 4: Parser and Input Validation (Make It Work)
+
 **Objective**: Complete Narsese parser with comprehensive syntax support as per README.md
 
 **Focus**:
+
 - Complete parser implementation for all specified syntax
 - Implement proper input validation and error handling
 - Ensure truth value and punctuation processing
 
 **Actions**:
+
 - Complete NarseseParser with all operators (inheritance, similarity, etc.)
 - Implement proper truth value parsing {frequency, confidence}
 - Add punctuation support (. for beliefs, ! for goals, ? for questions)
@@ -308,6 +359,7 @@ The current codebase already has foundational components that align with README.
 - Add validation for truth value ranges
 
 **Verification**:
+
 - All Narsese operators parsed correctly
 - Truth values parsed and validated properly
 - Punctuation processed correctly (., !, ?)
@@ -322,6 +374,7 @@ The current codebase already has foundational components that align with README.
 **Dependencies**: Phase 1 (requires working Term structures)
 
 **Success Metrics**:
+
 - All Narsese syntax parsed: 100%
 - Truth value parsing functional: 100%
 - Error handling working: 100%
@@ -331,6 +384,7 @@ The current codebase already has foundational components that align with README.
 - Truth value validation accurate: 100%
 
 **Concerns**:
+
 - Complex nested structures may have parsing edge cases
 - Error recovery might be complex for malformed inputs
 - Performance might be impacted by complex parsing
@@ -342,14 +396,17 @@ The current codebase already has foundational components that align with README.
 ---
 
 ### PHASE 5: Reasoning Engine Implementation (Make It Work)
+
 **Objective**: Complete RuleEngine with proper NAL and LM integration per README.md
 
 **Focus**:
+
 - Complete rule application for NAL reasoning
 - Implement proper LM integration
 - Create sophisticated rule management
 
 **Actions**:
+
 - Complete NALRule implementation with proper NAL inference
 - Implement RuleEngine with proper rule application cycle
 - Add LMRule for language model integration
@@ -368,6 +425,7 @@ The current codebase already has foundational components that align with README.
 - Add rule effectiveness tracking
 
 **Verification**:
+
 - NAL rules apply correctly with proper truth calculations
 - LM integration functional with appropriate fallbacks
 - Rule cooperation working between NAL and LM
@@ -381,6 +439,7 @@ The current codebase already has foundational components that align with README.
 **Dependencies**: Phase 1, Phase 2, Phase 3 (requires core structures and NAR API)
 
 **Success Metrics**:
+
 - NAL rules functional: 100%
 - LM integration working: 100%
 - Hybrid reasoning operational: 100%
@@ -390,6 +449,7 @@ The current codebase already has foundational components that align with README.
 - Performance tracking comprehensive: 100%
 
 **Concerns**:
+
 - NAL inference rules have complex truth calculations
 - Hybrid reasoning may require sophisticated conflict resolution
 - Rule priority and selection need optimization
@@ -401,14 +461,17 @@ The current codebase already has foundational components that align with README.
 ---
 
 ### PHASE 6: LM Integration Refinement (Make It Right)
+
 **Objective**: Implement sophisticated NARS-LM collaboration as specified in README.md
 
 **Focus**:
+
 - Complete circuit breaker protection
 - Implement intelligent routing mechanisms
 - Add cross-validation between reasoning modalities
 
 **Actions**:
+
 - Complete CircuitBreaker implementation for LM calls
 - Implement ModelSelector for intelligent provider selection
 - Add ProviderRegistry with multiple provider support
@@ -427,6 +490,7 @@ The current codebase already has foundational components that align with README.
 - Add caching mechanisms for LM responses
 
 **Verification**:
+
 - Circuit breaker protection working correctly
 - Provider selection functional with multiple options
 - Cross-validation preventing inconsistent results
@@ -441,6 +505,7 @@ The current codebase already has foundational components that align with README.
 **Dependencies**: Phase 5 (requires working reasoning engine)
 
 **Success Metrics**:
+
 - Circuit breaker protecting LM calls: 100%
 - Multi-provider support functional: 100%
 - Cross-validation operational: 100%
@@ -450,6 +515,7 @@ The current codebase already has foundational components that align with README.
 - Provider health monitoring active: 100%
 
 **Concerns**:
+
 - Cross-validation might be complex to implement correctly
 - Circuit breaker timing and thresholds need tuning
 - Provider selection logic might be complex
@@ -461,14 +527,17 @@ The current codebase already has foundational components that align with README.
 ---
 
 ### PHASE 7: Observable Platform Implementation (Make It Right)
+
 **Objective**: Create comprehensive visualization and monitoring per README.md specifications
 
 **Focus**:
+
 - Fix broken UI components
 - Implement real-time monitoring
 - Create educational visualization tools
 
 **Actions**:
+
 - Fix broken UI imports and dependencies (e.g., dataUtils in DataPanel.js)
 - Complete ReasoningTracePanel with detailed reasoning steps
 - Implement TaskFlowDiagram for task processing visualization
@@ -489,6 +558,7 @@ The current codebase already has foundational components that align with README.
 - Add task relationship mapping
 
 **Verification**:
+
 - All UI components functional without errors
 - Real-time monitoring working correctly
 - Visualizations update properly during reasoning
@@ -503,6 +573,7 @@ The current codebase already has foundational components that align with README.
 **Dependencies**: Phase 2 (requires working NAR for data)
 
 **Success Metrics**:
+
 - All UI components functional: 100%
 - Real-time updates working: 100%
 - Visualizations accurate: 100%
@@ -512,6 +583,7 @@ The current codebase already has foundational components that align with README.
 - System status monitoring comprehensive: 100%
 
 **Concerns**:
+
 - UI performance may be impacted by real-time updates
 - Data serialization for UI might impact main thread
 - Complex visualizations may need optimization
@@ -523,14 +595,17 @@ The current codebase already has foundational components that align with README.
 ---
 
 ### PHASE 8: Performance Optimization (Make It Fast)
+
 **Objective**: Optimize for README.md performance targets
 
 **Focus**:
+
 - Profile and optimize critical path operations
 - Implement caching and performance improvements
 - Validate performance targets
 
 **Actions**:
+
 - Profile Term operations to identify bottlenecks (target <1ms)
 - Profile Task operations to optimize processing (target <2ms)
 - Profile Memory operations for performance (target <5ms)
@@ -549,6 +624,7 @@ The current codebase already has foundational components that align with README.
 - Add performance validation for all operations
 
 **Verification**:
+
 - Term operations <1ms achieved
 - Task operations <2ms achieved
 - Memory operations <5ms achieved
@@ -563,6 +639,7 @@ The current codebase already has foundational components that align with README.
 **Dependencies**: All previous phases (requires complete system)
 
 **Success Metrics**:
+
 - Term performance <1ms: 95%
 - Task performance <2ms: 95%
 - Memory performance <5ms: 95%
@@ -572,6 +649,7 @@ The current codebase already has foundational components that align with README.
 - Performance regression testing comprehensive: 100%
 
 **Concerns**:
+
 - Performance optimization might impact code complexity
 - Profiling needs realistic workloads
 - Caching strategies need careful design
@@ -583,14 +661,17 @@ The current codebase already has foundational components that align with README.
 ---
 
 ### PHASE 9: Comprehensive Testing (Make It Solid)
+
 **Objective**: Implement comprehensive test coverage for all functionality
 
 **Focus**:
+
 - Expand unit tests for all components
 - Create integration and end-to-end tests
 - Implement property-based testing
 
 **Actions**:
+
 - Expand unit tests for core data structures (Term, Task, Truth, Stamp)
 - Create integration tests for component interactions
 - Implement property-based tests using fast-check
@@ -609,6 +690,7 @@ The current codebase already has foundational components that align with README.
 - Add boundary condition testing
 
 **Verification**:
+
 - Unit test coverage >90% for all components
 - Integration tests cover major workflows
 - Property-based tests validate invariants
@@ -623,6 +705,7 @@ The current codebase already has foundational components that align with README.
 **Dependencies**: All previous phases (requires complete functionality)
 
 **Success Metrics**:
+
 - Unit test coverage: >90%
 - Integration tests: 100% critical workflows covered
 - Property-based tests: 100% invariants validated
@@ -632,6 +715,7 @@ The current codebase already has foundational components that align with README.
 - End-to-end tests comprehensive: 100%
 
 **Concerns**:
+
 - Property-based testing for NAL logic might be complex
 - Integration test scenarios need careful design
 - Performance test accuracy needs verification
@@ -643,14 +727,17 @@ The current codebase already has foundational components that align with README.
 ---
 
 ### PHASE 10: Quality Assurance and Verification (Make It Production)
+
 **Objective**: Ensure production-ready quality and specification compliance
 
 **Focus**:
+
 - Complete security validation
 - Verify full README.md compliance
 - Conduct final system validation
 
 **Actions**:
+
 - Implement comprehensive input validation and sanitization
 - Add security testing for all system components
 - Validate full README.md specification compliance
@@ -669,6 +756,7 @@ The current codebase already has foundational components that align with README.
 - Add operational testing scenarios
 
 **Verification**:
+
 - Security validation passed
 - Full README.md compliance verified
 - Performance targets met across all metrics
@@ -683,6 +771,7 @@ The current codebase already has foundational components that align with README.
 **Dependencies**: All previous phases (requires complete system)
 
 **Success Metrics**:
+
 - Security validation: 100% passed
 - README.md compliance: 100%
 - Performance targets: 100% met
@@ -693,6 +782,7 @@ The current codebase already has foundational components that align with README.
 - Operational procedures: 100% validated
 
 **Concerns**:
+
 - Security validation might reveal implementation issues
 - Load testing might identify scalability problems
 - Final verification might find integration issues
@@ -704,6 +794,7 @@ The current codebase already has foundational components that align with README.
 ## Implementation Approach
 
 ### Sequential Development
+
 - Each phase must be completed and validated before proceeding
 - Dependencies clearly defined and managed
 - Regular validation checkpoints throughout development
@@ -713,6 +804,7 @@ The current codebase already has foundational components that align with README.
 - Clear handoffs between phase implementations
 
 ### Quality Focus
+
 - All functionality must be testable and validated
 - Performance metrics tracked throughout development
 - Error handling designed into all components
@@ -723,6 +815,7 @@ The current codebase already has foundational components that align with README.
 - Documentation integrated with implementation
 
 ### Risk Management
+
 - Identify and address critical path dependencies
 - Implement fallback and graceful degradation
 - Maintain backward compatibility where possible
@@ -733,6 +826,7 @@ The current codebase already has foundational components that align with README.
 - Impact analysis for each implementation decision
 
 ### Development Phases
+
 - Phases are structured to allow systematic implementation and validation
 - Complex features are built with performance in mind
 - Each phase builds on the previous capabilities while maintaining system stability
@@ -741,6 +835,7 @@ The current codebase already has foundational components that align with README.
 ## Architectural Design Principles Maintained
 
 ### Elegance & Coherence
+
 - Each phase builds on existing infrastructure and patterns from the current codebase
 - All modifications enhance existing patterns in src/, tests/, ui/, scripts/, examples/
 - Component boundaries are preserved and enhanced rather than broken
@@ -749,6 +844,7 @@ The current codebase already has foundational components that align with README.
 - Maintain alignment with updated README.md specifications throughout
 
 ### Stability & Consistency
+
 - Every implementation is validated through comprehensive test infrastructure
 - Existing component interfaces remain backward-compatible
 - All features can be configured to maintain system stability
@@ -757,6 +853,7 @@ The current codebase already has foundational components that align with README.
 - Error handling and safety mechanisms are maintained throughout
 
 ### Self-Leveraging
+
 - Use the system's own reasoning capabilities to validate implementations
 - Implement self-validation and self-verification for all capabilities
 - Build feedback loops that improve quality over time using verification mechanisms
@@ -765,6 +862,7 @@ The current codebase already has foundational components that align with README.
 - Apply system analysis to implementation optimization
 
 ### Achieve More with Less Philosophy
+
 - Prioritize implementations that provide maximum benefit with minimal effort
 - Leverage existing mechanisms to improve system completeness
 - Focus on structural improvements that enhance capabilities without adding complexity
@@ -776,18 +874,39 @@ The current codebase already has foundational components that align with README.
 ## Success Metrics
 
 **Quantitative** (measurable at each phase):
-- Phase 1: Term normalization complete (100%), performance <1ms (95%), Term methods immutable (100%), canonical equality working (100%), complexity calculation accurate (100%), visitor/reducer patterns functional (100%)
-- Phase 2: All NAR API methods implemented (100%), event emission working (100%), basic reasoning cycle operational (100%), input/output functionality working (100%), cycle timing accurate (100%), configuration validation functional (100%), error handling comprehensive (100%)
-- Phase 3: Dual memory architecture implemented (100%), memory consolidation functional (100%), performance <5ms (95%), proper term indexing (100%), activation decay working (100%), memory validation functional (100%), concept management operational (100%)
-- Phase 4: All Narsese syntax parsed (100%), truth value parsing functional (100%), error handling working (100%), parser validation passing (100%), error recovery functional (100%), performance targets met (95%), truth value validation accurate (100%)
-- Phase 5: NAL rules functional (100%), LM integration working (100%), hybrid reasoning operational (100%), reasoning examples working (95%), rule conflict resolution functional (100%), truth value calculations accurate (95%), performance tracking comprehensive (100%)
-- Phase 6: Circuit breaker protecting LM calls (100%), multi-provider support functional (100%), cross-validation operational (100%), intelligent routing working (95%), prompt optimization effective (90%), response quality assessment functional (100%), provider health monitoring active (100%)
-- Phase 7: All UI components functional (100%), real-time updates working (100%), visualizations accurate (100%), export functionality working (95%), annotation tools functional (100%), task flow diagrams accurate (95%), system status monitoring comprehensive (100%)
-- Phase 8: Term performance <1ms (95%), Task performance <2ms (95%), Memory performance <5ms (95%), performance monitoring active (100%), scalability requirements met (100%), bottlenecks addressed (90%), performance regression testing comprehensive (100%)
-- Phase 9: Unit test coverage (>90%), integration tests (100% critical workflows covered), property-based tests (100% invariants validated), performance tests (100% targets validated), security tests (100% coverage), regression tests (100% critical functionality covered), end-to-end tests comprehensive (100%)
-- Phase 10: Security validation (100% passed), README.md compliance (100%), performance targets (100% met), production readiness (100%), load testing (100% passed), security hardening (100% complete), documentation (100% comprehensive), operational procedures (100% validated)
+
+- Phase 1: Term normalization complete (100%), performance <1ms (95%), Term methods immutable (100%), canonical equality
+  working (100%), complexity calculation accurate (100%), visitor/reducer patterns functional (100%)
+- Phase 2: All NAR API methods implemented (100%), event emission working (100%), basic reasoning cycle operational (
+  100%), input/output functionality working (100%), cycle timing accurate (100%), configuration validation functional (
+  100%), error handling comprehensive (100%)
+- Phase 3: Dual memory architecture implemented (100%), memory consolidation functional (100%), performance <5ms (95%),
+  proper term indexing (100%), activation decay working (100%), memory validation functional (100%), concept management
+  operational (100%)
+- Phase 4: All Narsese syntax parsed (100%), truth value parsing functional (100%), error handling working (100%),
+  parser validation passing (100%), error recovery functional (100%), performance targets met (95%), truth value
+  validation accurate (100%)
+- Phase 5: NAL rules functional (100%), LM integration working (100%), hybrid reasoning operational (100%), reasoning
+  examples working (95%), rule conflict resolution functional (100%), truth value calculations accurate (95%),
+  performance tracking comprehensive (100%)
+- Phase 6: Circuit breaker protecting LM calls (100%), multi-provider support functional (100%), cross-validation
+  operational (100%), intelligent routing working (95%), prompt optimization effective (90%), response quality
+  assessment functional (100%), provider health monitoring active (100%)
+- Phase 7: All UI components functional (100%), real-time updates working (100%), visualizations accurate (100%), export
+  functionality working (95%), annotation tools functional (100%), task flow diagrams accurate (95%), system status
+  monitoring comprehensive (100%)
+- Phase 8: Term performance <1ms (95%), Task performance <2ms (95%), Memory performance <5ms (95%), performance
+  monitoring active (100%), scalability requirements met (100%), bottlenecks addressed (90%), performance regression
+  testing comprehensive (100%)
+- Phase 9: Unit test coverage (>90%), integration tests (100% critical workflows covered), property-based tests (100%
+  invariants validated), performance tests (100% targets validated), security tests (100% coverage), regression tests (
+  100% critical functionality covered), end-to-end tests comprehensive (100%)
+- Phase 10: Security validation (100% passed), README.md compliance (100%), performance targets (100% met), production
+  readiness (100%), load testing (100% passed), security hardening (100% complete), documentation (100% comprehensive),
+  operational procedures (100% validated)
 
 **Qualitative** (aligns with README.md specifications):
+
 - Belief vs Goal semantics properly implemented with correct truth value handling
 - Hybrid NARS-LM reasoning system functional with intelligent collaboration
 - Observable platform provides real-time visibility into reasoning processes
@@ -806,55 +925,70 @@ The current codebase already has foundational components that align with README.
 ## Implementation Details and Concerns
 
 ### Core Technical Challenges
+
 **Term Normalization and Equality:**
+
 - The Term implementation requires completion of canonical normalization for commutative and associative operators
-- The equality method `equals()` needs implementation of canonical normalization for handling equivalent terms like `(&, A, B)` vs `(&, B, A)`
+- The equality method `equals()` needs implementation of canonical normalization for handling equivalent terms like
+  `(&, A, B)` vs `(&, B, A)`
 - Performance optimization may be required to maintain <1ms operations while implementing normalization
 
 **Performance Optimization:**
+
 - Performance targets (<1ms operations) require optimization of the full NARS reasoning cycle
 - Extensive validation and metrics collection may impact runtime performance
 - Complex reasoning chains with multiple rule applications may require algorithmic improvements
 
 **Memory Management:**
+
 - The dual memory architecture (focus/long-term) consolidation mechanisms need implementation
 - Memory pressure handling and forgetting policies need validation
 - The memory index system may benefit from optimization as the knowledge base grows
 
 ### System Architecture Considerations
+
 **Component Decoupling:**
+
 - The NAR component may exhibit coupling with sub-components (Memory, TaskManager, RuleEngine, etc.)
 - Further decoupling can improve maintainability
 - Testing individual components in isolation can be enhanced through better interface design
 
 **Scalability:**
+
 - The current memory implementation will need optimization for higher throughput
 - The event-driven architecture may need optimization to reduce bottlenecks under high load
 - Serialization/deserialization performance needs improvement for large knowledge bases
 
 **Configuration Management:**
+
 - The SystemConfig may have complex parameters requiring careful management of interdependencies
 - Some configuration values may exhibit unexpected interactions when modified
 - Default values need refinement based on usage patterns and performance data
 
 ### Quality Assurance Requirements
+
 **Testing Coverage:**
+
 - Comprehensive coverage of complex reasoning chains can be expanded
 - Integration testing of NARS-LM hybrid reasoning can be enhanced to catch more edge cases
 - Property-based testing for Term normalization can be extended to exercise more operator combinations
 
 **Error Handling Robustness:**
+
 - Circuit breaker implementation requires additional defensive programming to prevent cascading errors
 - Fallback mechanisms need refinement to produce more predictable behaviors
 - Graceful degradation mechanisms can be strengthened through additional validation
 
 ### Resource and Maintenance Considerations
+
 **Resource Efficiency:**
+
 - Memory and computational requirements for complex reasoning tasks can be optimized through algorithmic improvements
 - The dual memory architecture parameter tuning can be automated for better resource utilization
 - Resource management features can be developed incrementally
 
 **Maintainability:**
+
 - Component interactions can be simplified through better architectural patterns
 - Complex reasoning pattern documentation can be enhanced with automated tools
 - Code structure needs to remain clean and well-documented throughout development
@@ -862,6 +996,7 @@ The current codebase already has foundational components that align with README.
 ## README.md Compliance Verification
 
 ### Core Specifications Achieved:
+
 - **Hybrid Neuro-Symbolic Reasoning**: NAL-LM integration with collaboration and validation
 - **Observable Platform**: Real-time visualization and monitoring capabilities
 - **Belief vs Goal Distinction**: Proper truth semantics (frequency/confidence vs desire/confidence)
@@ -873,6 +1008,7 @@ The current codebase already has foundational components that align with README.
 - **Extensibility**: Plugin architecture and configurable components
 
 ### System Architecture Verification:
+
 - **NAR**: Complete API implementation with proper lifecycle
 - **Term**: Core data structure with normalization and equality
 - **Task**: Proper representation with truth values and processing
@@ -883,6 +1019,7 @@ The current codebase already has foundational components that align with README.
 - **Event System**: Proper component communication and monitoring
 
 ### Key Architectural Patterns Validation:
+
 - **Immutable Data Foundation**: Term, Task, Truth, and Stamp are immutable with canonical normalization
 - **Component-Based Architecture**: BaseComponent foundation with event-driven communication and metrics
 - **Dual Memory Architecture**: Focus/long-term memory with automatic consolidation and prioritization
@@ -890,6 +1027,7 @@ The current codebase already has foundational components that align with README.
 - **Layer-Based Extensibility**: TermLayer and EmbeddingLayer for associative and semantic connections
 
 ### Core Components Validation:
+
 - **NAR**: Central orchestrator with complete API (input, start, stop, step, getBeliefs, query, reset)
 - **Term**: Core immutable data structure with visitor/reducer, normalization, and structural analysis
 - **Task**: Immutable wrapper with truth values, stamps, priorities, and type distinction
@@ -899,39 +1037,53 @@ The current codebase already has foundational components that align with README.
 - **LM Integration**: Provider management, circuit breakers, and hybrid reasoning coordination
 
 ### Specification Requirements Met:
+
 - **Hybrid Neuro-Symbolic Reasoning**: NAL and LM collaboration with cross-validation
 - **Observable Platform**: 20+ visualization panels with real-time monitoring and analysis
 - **Beliefs vs Goals**: Proper truth value semantics (frequency/confidence vs desire/confidence)
 - **General-Purpose RL Foundation**: Belief-Goal distinction enables reinforcement learning
-- **Performance Requirements**: <1ms for Term processing, <2ms for Task processing, <5ms for Memory operations with high throughput (10,000+ ops/sec), memory efficient caching, and resource management (512MB, 100ms/cycle) (target during Phase 8)
+- **Performance Requirements**: <1ms for Term processing, <2ms for Task processing, <5ms for Memory operations with high
+  throughput (10,000+ ops/sec), memory efficient caching, and resource management (512MB, 100ms/cycle) (target during
+  Phase 8)
 - **Comprehensive Testing**: 851+ tests across unit, integration, and property-based categories
 - **Extensibility**: Plugin architecture for rules, adapters, and new layer types
 
 ## GAPS IDENTIFIED IN IMPLEMENTATION
 
 ### 1. Missing Integration Points
+
 **Gap**: Current phases lack explicit integration testing between completed components.
-**Future Solution**: Implement systematic integration validation after each phase completion to ensure previous phases work with new implementations.
+**Future Solution**: Implement systematic integration validation after each phase completion to ensure previous phases
+work with new implementations.
 
 ### 2. Missing Detailed Configuration Management
+
 **Gap**: SystemConfig and configuration validation not specifically addressed in individual phases.
-**Future Solution**: Add dedicated configuration implementation tasks with validation and error handling in appropriate phases.
+**Future Solution**: Add dedicated configuration implementation tasks with validation and error handling in appropriate
+phases.
 
 ### 3. Missing Comprehensive Documentation Plan
+
 **Gap**: No specific documentation tasks for API, user guides, or developer documentation.
-**Future Solution**: Create documentation generation tasks integrated with each implementation phase to ensure documentation stays current with implementation.
+**Future Solution**: Create documentation generation tasks integrated with each implementation phase to ensure
+documentation stays current with implementation.
 
 ### 4. Missing Deployment and Operations Procedures
+
 **Gap**: No specific deployment, monitoring, or operational procedure implementation beyond final phase.
-**Future Solution**: Develop deployment strategies and operational procedures that can be validated throughout the implementation process.
+**Future Solution**: Develop deployment strategies and operational procedures that can be validated throughout the
+implementation process.
 
 ### 5. Insufficient Security Testing Coverage
+
 **Gap**: Security testing only mentioned in Phase 10, but security should be considered throughout.
-**Future Solution**: Integrate security validation and hardening tasks into each phase where relevant system components are implemented.
+**Future Solution**: Integrate security validation and hardening tasks into each phase where relevant system components
+are implemented.
 
 ## DECOMPOSED IMPLEMENTATION IMPROVEMENTS
 
 ### PHASE 3 DECOMPOSITION (Dual Memory Architecture):
+
 Current Phase 3 combines too many complex tasks and should be split into multiple sub-phases:
 
 **Sub-phase 3A: Basic Memory Structure** - Implement core Memory and Concept management
@@ -944,6 +1096,7 @@ Current Phase 3 combines too many complex tasks and should be split into multipl
 **Sub-phase 3H: Performance Validation** - Validate <5ms performance targets
 
 ### PHASE 7 DECOMPOSITION (Observable Platform):
+
 The 20+ UI panels should be implemented incrementally:
 
 **Sub-phase 7A: Core UI Infrastructure** - Fix broken components and establish basic UI framework
@@ -953,6 +1106,7 @@ The 20+ UI panels should be implemented incrementally:
 **Sub-phase 7E: Interactive Features** - Add annotation, export capabilities, and exploration tools
 
 ### PHASE 5 DECOMPOSITION (Reasoning Engine):
+
 Should separate NAL and LM components:
 
 **Sub-phase 5A: NAL Rule Implementation** - Complete core NAL inference rules
@@ -964,26 +1118,32 @@ Should separate NAL and LM components:
 ## CONCERNS REQUIRING FUTURE CLARIFICATION
 
 ### 1. Performance Target Feasibility
+
 **Concern**: <1ms for Term, <2ms for Task, <5ms for Memory targets may not be achievable with current architecture.
 **Clarification Needed**: Realistic performance targets based on profiling of existing implementation.
 
 ### 2. Scalability Under Load
+
 **Concern**: Current architecture may not scale to 10,000+ operations per second as specified.
 **Clarification Needed**: Feasibility analysis of scalability requirements and potential architectural changes needed.
 
 ### 3. Complex Reasoning Validation
+
 **Concern**: Validating NAL reasoning correctness becomes exponentially complex with compound terms.
 **Clarification Needed**: Approach for validating complex reasoning chains and preventing incorrect inferences.
 
 ### 4. Memory Management Under Pressure
+
 **Concern**: Dual memory architecture with activation decay may cause performance degradation under high load.
 **Clarification Needed**: Memory pressure handling strategies and performance impact assessment.
 
 ### 5. UI Performance with Real-Time Updates
+
 **Concern**: 20+ panels with real-time updates may cause UI performance issues.
 **Clarification Needed**: Approach for optimizing UI performance with multiple real-time visualization components.
 
 ### 6. Hybrid Reasoning Coherence
+
 **Concern**: Ensuring logical consistency between NARS symbolic and LM neural reasoning outputs.
 **Clarification Needed**: Validation mechanisms for hybrid reasoning coherence and conflict resolution.
 
@@ -992,45 +1152,54 @@ Should separate NAL and LM components:
 ## REMAINING SPECIFICATION GAPS FOR SYSTEMATIC RESOLUTION
 
 ### 1. Performance Optimization of Core Features
+
 **Gap**: Core system features may have performance bottlenecks that need systematic optimization.
 
 **Details**:
+
 - Term normalization may impact performance during complex reasoning
 - Advanced visualization may affect system responsiveness
 - Hybrid reasoning with validation may add computational overhead
 - Complex analysis operations may consume system resources
 
 **Systematic Resolution Requirements**:
+
 - Conduct profiling to identify performance bottlenecks systematically
 - Optimize critical path operations for reasoning efficiency
 - Implement caching strategies for frequently accessed data
 - Create performance benchmarks for system features
 
 ### 2. Feature Validation in Complex Scenarios
+
 **Gap**: Ensuring all features work as intended in complex multi-component scenarios.
 
 **Details**:
+
 - Multi-component interactions need thorough testing
 - Complex reasoning scenarios need validation
 - Integration between all system components requires verification
 - Complex examples need demonstration of proper functionality
 
 **Systematic Resolution Requirements**:
+
 - Create comprehensive test scenarios for multi-component functionality
 - Develop validation frameworks for integration effectiveness
 - Implement benchmarking for feature performance
 - Create examples that demonstrate proper implementation
 
 ### 3. UI Accessibility
+
 **Gap**: The UI with multiple panels may have accessibility limitations.
 
 **Details**:
+
 - Complex visualization panels may not be accessible to all users
 - Keyboard navigation may not be optimized for UI features
 - Screen reader compatibility may need improvement for visualizations
 - Alternative interfaces for different accessibility needs
 
 **Systematic Resolution Requirements**:
+
 - Implement WCAG 2.1 AA compliance for all visualization panels
 - Optimize keyboard navigation for complex UI layouts
 - Add ARIA labels and semantic structure to visualizations
@@ -1051,6 +1220,7 @@ Should separate NAL and LM components:
 ## Development Methodology
 
 ### Systematic Implementation First
+
 - Focus on completing existing foundational capabilities to specification requirements
 - Validate implementation quality to ensure system functionality
 - Clear milestone definitions and success criteria based on README.md specifications
@@ -1058,24 +1228,30 @@ Should separate NAL and LM components:
 - Emphasize stable completion that preserves system integrity
 
 ### Quality Focus
+
 - Stability and performance prioritized for all features
 - Comprehensive testing of all capabilities at each implementation stage
 - Architectural integrity maintained throughout development
 - User experience and specification compliance emphasized
 
 ### Systematic Approach
+
 - Focus on implementation that enhances existing features to meet specifications
 - Use systematic validation to identify and address bottlenecks automatically
-- Prioritize high-impact implementations that provide maximum specification compliance with minimal implementation effort
+- Prioritize high-impact implementations that provide maximum specification compliance with minimal implementation
+  effort
 - Ensure each implementation contributes to complete specification fulfillment
 
-The plan demonstrates how the system can systematically implement all README.md specifications while maintaining architectural integrity and technical feasibility. The focus is on completing all required functionality rather than adding non-essential features.
+The plan demonstrates how the system can systematically implement all README.md specifications while maintaining
+architectural integrity and technical feasibility. The focus is on completing all required functionality rather than
+adding non-essential features.
 
 ## Final Specification Compliance Summary
 
 The systematic implementation detailed in this plan aligns with all key specifications in README.md:
 
 **Key Architectural Patterns Implemented**:
+
 - **Immutable Data Foundation**: Term, Task, Truth, and Stamp are immutable with canonical normalization (Phase 1)
 - **Component-Based Architecture**: BaseComponent foundation with event-driven communication and metrics (Phase 2)
 - **Dual Memory Architecture**: Focus/long-term memory with automatic consolidation and prioritization (Phase 3)
@@ -1083,6 +1259,7 @@ The systematic implementation detailed in this plan aligns with all key specific
 - **Layer-Based Extensibility**: TermLayer and EmbeddingLayer for associative and semantic connections (existing)
 
 **Core Components Fully Implemented**:
+
 - **NAR**: Central orchestrator with complete API (input, start, stop, step, getBeliefs, query, reset) - Phase 2
 - **Term**: Core immutable data structure with visitor/reducer, normalization, and structural analysis - Phase 1
 - **Task**: Immutable wrapper with truth values, stamps, priorities, and type distinction - Phase 1
@@ -1092,6 +1269,7 @@ The systematic implementation detailed in this plan aligns with all key specific
 - **LM Integration**: Provider management, circuit breakers, and hybrid reasoning coordination - Phase 6
 
 **Specification Requirements Met**:
+
 - **Hybrid Neuro-Symbolic Reasoning**: NAL and LM collaboration with cross-validation - Phase 6
 - **Observable Platform**: 20+ visualization panels with real-time monitoring and analysis - Phase 7
 - **Beliefs vs Goals**: Proper truth value semantics (frequency/confidence vs desire/confidence) - Phase 1, 4
@@ -1100,4 +1278,5 @@ The systematic implementation detailed in this plan aligns with all key specific
 - **Comprehensive Testing**: 851+ tests across unit, integration, and property-based categories - Phase 9
 - **Extensibility**: Plugin architecture for rules, adapters, and new layer types - Phase 2, 5
 
-The systematic implementation approach ensures all README.md specifications are met with production-ready quality, maintainability, and performance.
+The systematic implementation approach ensures all README.md specifications are met with production-ready quality,
+maintainability, and performance.

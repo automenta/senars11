@@ -127,14 +127,24 @@ export class RuleManager {
         return this;
     }
 
-    get(ruleId) { return this._rules.get(ruleId) || null; }
-    getAll() { return Array.from(this._rules.values()); }
-    getEnabled() { return Array.from(this._enabledRules).map(id => this._rules.get(id)).filter(Boolean); }
-    getByCategory(category) { 
+    get(ruleId) {
+        return this._rules.get(ruleId) || null;
+    }
+
+    getAll() {
+        return Array.from(this._rules.values());
+    }
+
+    getEnabled() {
+        return Array.from(this._enabledRules).map(id => this._rules.get(id)).filter(Boolean);
+    }
+
+    getByCategory(category) {
         const ruleIds = this._categories.get(category) || new Set();
         return Array.from(ruleIds).map(id => this._rules.get(id)).filter(Boolean);
     }
-    getByGroup(group) { 
+
+    getByGroup(group) {
         const ruleIds = this._ruleGroups.get(group) || new Set();
         return Array.from(ruleIds).map(id => this._rules.get(id)).filter(Boolean);
     }

@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 
-import { ScriptUtils } from './script-utils.js';
-import { ConfigUtils } from './config-utils.js';
-import { ProcessUtils } from './process-utils.js';
-import { EvolutionUtils } from './evolution-utils.js';
-import { writeFile } from 'fs/promises';
+import {ScriptUtils} from './script-utils.js';
+import {ConfigUtils} from './config-utils.js';
+import {ProcessUtils} from './process-utils.js';
+import {EvolutionUtils} from './evolution-utils.js';
+import {writeFile} from 'fs/promises';
 
-const { args, helpRequested } = ScriptUtils.parseArgs(process.argv.slice(2));
+const {args, helpRequested} = ScriptUtils.parseArgs(process.argv.slice(2));
 
 const USAGE_MESSAGE = `
 Usage: node scripts/utils/autonomous-development.js [options]
@@ -48,16 +48,16 @@ const DEFAULTS = {
 
 // Parse arguments with type conversion
 const argSpecs = {
-    '--mode': { key: 'mode', parser: ConfigUtils.parseString },
-    '--generations': { key: 'generations', parser: ConfigUtils.parseInt },
-    '--population': { key: 'populationSize', parser: ConfigUtils.parseInt },
-    '--visual-feedback': { key: 'useVisualFeedback', boolean: true },
-    '--no-visual-feedback': { key: 'useVisualFeedback', boolean: true },
-    '--performance-goal': { key: 'optimizePerformance', boolean: true },
-    '--ui-goal': { key: 'optimizeUI', boolean: true },
-    '--config-template': { key: 'configTemplate', parser: ConfigUtils.parseString },
-    '--output-dir': { key: 'outputDir', parser: ConfigUtils.parseString },
-    '--iterations': { key: 'iterationsPerGen', parser: ConfigUtils.parseInt }
+    '--mode': {key: 'mode', parser: ConfigUtils.parseString},
+    '--generations': {key: 'generations', parser: ConfigUtils.parseInt},
+    '--population': {key: 'populationSize', parser: ConfigUtils.parseInt},
+    '--visual-feedback': {key: 'useVisualFeedback', boolean: true},
+    '--no-visual-feedback': {key: 'useVisualFeedback', boolean: true},
+    '--performance-goal': {key: 'optimizePerformance', boolean: true},
+    '--ui-goal': {key: 'optimizeUI', boolean: true},
+    '--config-template': {key: 'configTemplate', parser: ConfigUtils.parseString},
+    '--output-dir': {key: 'outputDir', parser: ConfigUtils.parseString},
+    '--iterations': {key: 'iterationsPerGen', parser: ConfigUtils.parseInt}
 };
 
 const parsedArgs = ConfigUtils.parseArgs(args, argSpecs);
@@ -79,108 +79,108 @@ console.log(`Running autonomous development in mode: ${config.mode}`);
 // Define parameter ranges for evolution
 const PARAMETER_RANGES = {
     memory: {
-        maxConcepts: { min: 10, max: 1000 },
-        maxTasksPerConcept: { min: 5, max: 100 },
-        priorityThreshold: { min: 0.01, max: 0.99 },
-        priorityDecayRate: { min: 0.001, max: 0.1 }
+        maxConcepts: {min: 10, max: 1000},
+        maxTasksPerConcept: {min: 5, max: 100},
+        priorityThreshold: {min: 0.01, max: 0.99},
+        priorityDecayRate: {min: 0.001, max: 0.1}
     },
     reasoning: {
-        inferenceThreshold: { min: 0.01, max: 0.99 },
-        conceptForgottenRatio: { min: 0.01, max: 0.5 },
-        taskForgottenRatio: { min: 0.01, max: 0.5 }
+        inferenceThreshold: {min: 0.01, max: 0.99},
+        conceptForgottenRatio: {min: 0.01, max: 0.5},
+        taskForgottenRatio: {min: 0.01, max: 0.5}
     },
     visualization: {
-        updateInterval: { min: 100, max: 5000 },
-        maxDisplayItems: { min: 10, max: 500 }
+        updateInterval: {min: 100, max: 5000},
+        maxDisplayItems: {min: 10, max: 500}
     }
 };
 
 async function evaluateConfiguration(configToEvaluate, generation, individual) {
     console.log(`  Evaluating configuration ${individual} in generation ${generation}...`);
-    
+
     // Create a temporary config file for this evaluation
     const tempConfigFile = `${config.outputDir}/temp-config-${generation}-${individual}.json`;
     await writeFile(tempConfigFile, JSON.stringify(configToEvaluate, null, 2));
-    
+
     const evaluationResult = {};
-    
+
     // If using visual feedback, run visualizations and capture results
     if (config.useVisualFeedback) {
         console.log(`    Running visual analysis...`);
-        
+
         try {
-            const { code, stdout, stderr } = await ProcessUtils.spawnProcess('node', ['run-demo.js'], {
+            const {code, stdout, stderr} = await ProcessUtils.spawnProcess('node', ['run-demo.js'], {
                 env: {
                     ...process.env,
                     SENARS_CONFIG_FILE: tempConfigFile
                 }
             });
-            
+
             evaluationResult.visualSuccess = code === 0;
             evaluationResult.visualOutput = stdout + stderr;
             evaluationResult.visualExitCode = code;
-            
+
             // In a real system, we'd analyze the visual output here
             // For now, we'll just record that it ran successfully
             evaluationResult.visualScore = evaluationResult.visualSuccess ? Math.random() : 0;
-            
+
         } catch (error) {
             console.error(`    Visual evaluation failed: ${error.message}`);
             evaluationResult.visualSuccess = false;
             evaluationResult.visualScore = 0;
         }
     }
-    
+
     // If optimizing for performance, run benchmarks
     if (config.optimizePerformance) {
         console.log(`    Running performance analysis...`);
-        
+
         try {
-            const { code, stdout, stderr } = await ProcessUtils.spawnProcess('node', ['src/testing/runBenchmarks.js'], {
+            const {code, stdout, stderr} = await ProcessUtils.spawnProcess('node', ['src/testing/runBenchmarks.js'], {
                 env: {
                     ...process.env,
                     SENARS_CONFIG_FILE: tempConfigFile
                 }
             });
-            
+
             evaluationResult.perfSuccess = code === 0;
             evaluationResult.perfOutput = stdout + stderr;
             evaluationResult.perfExitCode = code;
-            
+
             // Simple performance scoring based on success and arbitrary metrics
-            evaluationResult.perfScore = evaluationResult.perfSuccess ? 
+            evaluationResult.perfScore = evaluationResult.perfSuccess ?
                 (0.5 + Math.random() * 0.5) : 0; // Random score for demo purposes
-                
+
         } catch (error) {
             console.error(`    Performance evaluation failed: ${error.message}`);
             evaluationResult.perfSuccess = false;
             evaluationResult.perfScore = 0;
         }
     }
-    
+
     // Calculate overall fitness score
     let totalScore = 0;
     let scoreCount = 0;
-    
+
     if (config.useVisualFeedback) {
         totalScore += evaluationResult.visualScore * 0.4; // 40% weight to visual
         scoreCount += 0.4;
     }
-    
+
     if (config.optimizePerformance) {
         totalScore += evaluationResult.perfScore * 0.6; // 60% weight to performance
         scoreCount += 0.6;
     }
-    
+
     evaluationResult.fitness = scoreCount > 0 ? totalScore / scoreCount : 0;
-    
+
     // Clean up temp file
     try {
         await ProcessUtils.executeCommand(`rm -f ${tempConfigFile}`);
     } catch (error) {
         // Ignore cleanup errors
     }
-    
+
     return evaluationResult;
 }
 
@@ -188,14 +188,14 @@ async function runAutonomousDevelopment() {
     try {
         console.log(`\n🤖 Starting autonomous development in mode: ${config.mode}`);
         console.log(`📊 Parameters: generations=${config.generations}, population=${config.populationSize}`);
-        
+
         // Create output directory
         await ProcessUtils.executeCommand(`mkdir -p ${config.outputDir} ${config.outputDir}/generations ${config.outputDir}/configs ${config.outputDir}/results`);
-        
+
         // Initialize population
         let population = [];
         console.log('\n🌱 Initializing population...');
-        
+
         for (let i = 0; i < config.populationSize; i++) {
             const configIndividual = EvolutionUtils.generateRandomConfig(PARAMETER_RANGES);
             population.push({
@@ -203,27 +203,27 @@ async function runAutonomousDevelopment() {
                 id: i
             });
         }
-        
+
         const evolutionHistory = [];
-        
+
         // Main evolution loop
         for (let gen = 0; gen < config.generations; gen++) {
             console.log(`\n GenerationType ${gen + 1}/${config.generations}`);
-            
+
             // Evaluate entire population
             for (let i = 0; i < population.length; i++) {
                 const individual = population[i];
                 const result = await evaluateConfiguration(individual.config, gen, i);
-                
+
                 individual.fitness = result.fitness;
                 individual.evaluation = result;
-                
+
                 console.log(`    Individual ${i}: Fitness = ${individual.fitness.toFixed(4)}`);
             }
-            
+
             // Sort by fitness (descending)
             population.sort((a, b) => (b.fitness || 0) - (a.fitness || 0));
-            
+
             // Record best of generation
             const bestOfGen = population[0];
             evolutionHistory.push({
@@ -232,21 +232,21 @@ async function runAutonomousDevelopment() {
                 averageFitness: population.reduce((sum, ind) => sum + (ind.fitness || 0), 0) / population.length,
                 bestConfig: bestOfGen.config
             });
-            
+
             console.log(`    Best fitness: ${bestOfGen.fitness.toFixed(4)}`);
-            
+
             // Save best config of generation
             await EvolutionUtils.saveConfig(
                 bestOfGen.config,
                 `${config.outputDir}/generations/gen-${gen}-best.json`
             );
-            
+
             // Create next generation (except for the last generation)
             if (gen < config.generations - 1) {
                 population = await EvolutionUtils.createNextGeneration(
-                    population, 
-                    PARAMETER_RANGES, 
-                    { 
+                    population,
+                    PARAMETER_RANGES,
+                    {
                         populationSize: config.populationSize,
                         mutationRate: 0.1,
                         elitismCount: 1
@@ -254,11 +254,11 @@ async function runAutonomousDevelopment() {
                 );
             }
         }
-        
+
         // Select overall best
         population.sort((a, b) => (b.fitness || 0) - (a.fitness || 0));
         const bestOverall = population[0];
-        
+
         // Generate final report
         const finalReport = {
             timestamp: new Date().toISOString(),
@@ -279,13 +279,13 @@ async function runAutonomousDevelopment() {
                 bestFitness: bestOverall.fitness
             }
         };
-        
+
         await writeFile(`${config.outputDir}/final-report.json`, JSON.stringify(finalReport, null, 2));
-        
+
         console.log('\n🎉 Autonomous development completed!');
         console.log(`🏆 Best fitness achieved: ${bestOverall.fitness.toFixed(4)}`);
         console.log(`📊 Results saved to: ${config.outputDir}/`);
-        
+
         // Print summary to console
         console.log('\n📈 Evolution Summary:');
         console.log(`  Initial average fitness: ${finalReport.summary.initialAverage.toFixed(4)}`);
@@ -293,7 +293,7 @@ async function runAutonomousDevelopment() {
         console.log(`  Best fitness: ${finalReport.summary.bestFitness.toFixed(4)}`);
         const improvement = ((finalReport.summary.finalAverage / finalReport.summary.initialAverage - 1) * 100).toFixed(2);
         console.log(`  Improvement: ${improvement}% average`);
-        
+
     } catch (error) {
         console.error('Error running autonomous development:', error);
         process.exit(1);

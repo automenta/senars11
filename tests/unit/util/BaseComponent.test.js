@@ -43,7 +43,7 @@ describe('BaseComponent', () => {
     test('initialize lifecycle method works', async () => {
         const component = new TestComponent();
         const result = await component.initialize();
-        
+
         expect(result).toBe(true);
         expect(component.isInitialized).toBe(true);
         expect(component.testValue).toBe(10);
@@ -52,7 +52,7 @@ describe('BaseComponent', () => {
     test('start lifecycle method works', async () => {
         const component = new TestComponent();
         await component.initialize();
-        
+
         const result = await component.start();
         expect(result).toBe(true);
         expect(component.isStarted).toBe(true);
@@ -63,7 +63,7 @@ describe('BaseComponent', () => {
         const component = new TestComponent();
         await component.initialize();
         await component.start();
-        
+
         const result = await component.stop();
         expect(result).toBe(true);
         expect(component.isStarted).toBe(false);
@@ -74,7 +74,7 @@ describe('BaseComponent', () => {
         const component = new TestComponent();
         await component.initialize();
         await component.start();
-        
+
         const result = await component.dispose();
         expect(result).toBe(true);
         expect(component.isDisposed).toBe(true);
@@ -94,7 +94,7 @@ describe('BaseComponent', () => {
 
     test('logging methods work without errors', () => {
         const component = new TestComponent();
-        
+
         // These should not throw errors
         expect(() => component.logInfo('test info')).not.toThrow();
         expect(() => component.logWarn('test warn')).not.toThrow();
@@ -105,20 +105,20 @@ describe('BaseComponent', () => {
     test('event emission and subscription works', (done) => {
         const component = new TestComponent();
         const testEvent = 'test.event';
-        
+
         component.onEvent(testEvent, (data) => {
             expect(data.component).toBe('TestComponent');
             expect(data.testValue).toBe('testData');
             done();
         });
-        
-        component.emitEvent(testEvent, { testValue: 'testData' });
+
+        component.emitEvent(testEvent, {testValue: 'testData'});
     });
 
     test('getMetrics returns expected structure', () => {
         const component = new TestComponent();
         const metrics = component.getMetrics();
-        
+
         expect(metrics).toHaveProperty('initializeCount');
         expect(metrics).toHaveProperty('startCount');
         expect(metrics).toHaveProperty('stopCount');
@@ -130,10 +130,10 @@ describe('BaseComponent', () => {
     test('uptime property works', async () => {
         const component = new TestComponent();
         expect(component.uptime).toBe(0);
-        
+
         await component.initialize();
         await component.start();
-        
+
         const uptime = component.uptime;
         expect(typeof uptime).toBe('number');
         expect(uptime).toBeGreaterThanOrEqual(0);

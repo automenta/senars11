@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-import { ScriptUtils, BASE_DIR } from '../utils/script-utils.js';
+import {ScriptUtils} from '../utils/script-utils.js';
 
-const { args, helpRequested } = ScriptUtils.parseArgs(process.argv.slice(2));
+const {args, helpRequested} = ScriptUtils.parseArgs(process.argv.slice(2));
 
 const USAGE_MESSAGE = `
 Usage: node scripts/tests/run.js [options]
@@ -54,10 +54,10 @@ const parseArgs = args => {
         testType = foundTestType;
     }
 
-    return { testType, verbose, coverage, watch };
+    return {testType, verbose, coverage, watch};
 };
 
-const buildTestArgs = ({ verbose, coverage, watch }) => [
+const buildTestArgs = ({verbose, coverage, watch}) => [
     ...(verbose ? ['--verbose'] : []),
     ...(coverage ? ['--coverage'] : []),
     ...(watch ? ['--watch'] : [])
@@ -67,7 +67,7 @@ if (helpRequested) {
     ScriptUtils.showUsageAndExit(USAGE_MESSAGE);
 }
 
-const { testType, verbose, coverage, watch } = parseArgs(args);
+const {testType, verbose, coverage, watch} = parseArgs(args);
 
 const npmScript = TEST_COMMANDS[testType];
 if (!npmScript) {
@@ -75,6 +75,6 @@ if (!npmScript) {
     process.exit(1);
 }
 
-const jestArgs = buildTestArgs({ verbose, coverage, watch });
+const jestArgs = buildTestArgs({verbose, coverage, watch});
 console.log(`Running ${npmScript.replace('test:', '')} tests...`);
 ScriptUtils.spawnProcess('npm', ['run', npmScript, '--', ...jestArgs]);

@@ -53,19 +53,19 @@ export const throttle = (func, limit) => {
  */
 export const deepClone = (obj) => {
     if (obj === null || typeof obj !== "object") return obj;
-    
+
     // Handle Date
     if (obj instanceof Date) {
         const copy = new Date();
         copy.setTime(obj.getTime());
         return copy;
     }
-    
+
     // Handle Array
     if (Array.isArray(obj)) {
         return obj.map(item => deepClone(item));
     }
-    
+
     // Handle Object
     if (typeof obj === "object") {
         const copy = {};
@@ -76,7 +76,7 @@ export const deepClone = (obj) => {
         }
         return copy;
     }
-    
+
     return obj;
 };
 
@@ -100,21 +100,21 @@ export const isEmpty = (value) => (
  */
 export const deepEqual = (obj1, obj2) => {
     if (obj1 === obj2) return true;
-    
+
     if (obj1 == null || obj2 == null) return false;
-    
+
     if (typeof obj1 !== 'object' || typeof obj2 !== 'object') return obj1 === obj2;
-    
+
     const keys1 = Object.keys(obj1);
     const keys2 = Object.keys(obj2);
-    
+
     if (keys1.length !== keys2.length) return false;
-    
+
     for (const key of keys1) {
         if (!keys2.includes(key)) return false;
         if (!deepEqual(obj1[key], obj2[key])) return false;
     }
-    
+
     return true;
 };
 
@@ -135,14 +135,14 @@ export const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 export const getNestedProperty = (obj, path, defaultValue = undefined) => {
     const keys = path.split('.');
     let result = obj;
-    
+
     for (const key of keys) {
         if (result === null || result === undefined) {
             return defaultValue;
         }
         result = result[key];
     }
-    
+
     return result !== undefined ? result : defaultValue;
 };
 
@@ -157,14 +157,14 @@ export const setNestedProperty = (obj, path, value) => {
     const keys = path.split('.');
     const lastKey = keys.pop();
     let current = obj;
-    
+
     for (const key of keys) {
         if (!(key in current) || current[key] === null || typeof current[key] !== 'object') {
             current[key] = {};
         }
         current = current[key];
     }
-    
+
     current[lastKey] = value;
     return obj;
 };
@@ -201,12 +201,12 @@ export const formatTimestamp = (timestamp) =>
  * @returns {string} Formatted date and time string
  */
 export const formatDateTime = (timestamp) =>
-    new Date(timestamp).toLocaleString([], { 
-        month: '2-digit', 
-        day: '2-digit', 
+    new Date(timestamp).toLocaleString([], {
+        month: '2-digit',
+        day: '2-digit',
         year: 'numeric',
-        hour: '2-digit', 
-        minute: '2-digit' 
+        hour: '2-digit',
+        minute: '2-digit'
     });
 
 // Export all utilities

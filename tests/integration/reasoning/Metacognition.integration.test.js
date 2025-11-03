@@ -1,7 +1,5 @@
 import {jest} from '@jest/globals';
 import {NAR} from '../../../src/nar/NAR.js';
-import {SystemConfig} from '../../../src/nar/SystemConfig.js';
-import {Metacognition} from '../../../src/reasoning/Metacognition.js';
 
 // Set a longer timeout for this integration test
 jest.setTimeout(10000);

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-import { spawn, exec } from 'child_process';
-import { promisify } from 'util';
+import {exec, spawn} from 'child_process';
+import {promisify} from 'util';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -44,7 +44,7 @@ const logEvent = (demoData, source, message) => {
         message,
         relativeTime: Date.now() - demoData.startTime
     });
-    
+
     updateMetricsFromMessage(demoData, message);
 };
 
@@ -271,8 +271,8 @@ const createProcessWithLogging = (spawnArgs, logPrefix, processes, demoData) => 
 const setupDemoEnvironment = async () => {
     console.log('🚀 Setting up live demo environment...');
 
-    await fs.mkdir('demo-results', { recursive: true });
-    await fs.mkdir('demo-results/logs', { recursive: true });
+    await fs.mkdir('demo-results', {recursive: true});
+    await fs.mkdir('demo-results/logs', {recursive: true});
 
     console.log('✅ Demo environment ready');
 

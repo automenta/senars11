@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-import { spawn, exec } from 'child_process';
-import { promisify } from 'util';
+import {exec, spawn} from 'child_process';
+import {promisify} from 'util';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -22,7 +22,7 @@ const createDirectory = async (dirPath) => {
     try {
         await fs.access(dirPath);
     } catch {
-        await fs.mkdir(dirPath, { recursive: true });
+        await fs.mkdir(dirPath, {recursive: true});
     }
 };
 
@@ -115,7 +115,7 @@ ws.on('close', () => {
 
 const startProcess = (name, spawnArgs, spawnOptions, testResults) => {
     console.log(`Starting ${name}...`);
-    
+
     const process = spawn(...spawnArgs, spawnOptions);
 
     // Handle output
@@ -142,8 +142,8 @@ const startProcess = (name, spawnArgs, spawnOptions, testResults) => {
 };
 
 const startBackend = async (testResults) => {
-    const backendProcess = startProcess('BACKEND', 
-        ['node', ['webui.js']], 
+    const backendProcess = startProcess('BACKEND',
+        ['node', ['webui.js']],
         {
             env: {
                 ...process.env,
@@ -158,14 +158,14 @@ const startBackend = async (testResults) => {
 
     // Wait a bit for backend to start
     await delay(3000);
-    
+
     console.log('✓ WebSocket backend started');
     return backendProcess;
 };
 
 const startDemoUI = async (testResults) => {
-    const uiProcess = startProcess('UI', 
-        ['npx', ['vite', '-c', 'simple-uis/vite.config.js']], 
+    const uiProcess = startProcess('UI',
+        ['npx', ['vite', '-c', 'simple-uis/vite.config.js']],
         {
             env: {
                 ...process.env,
@@ -181,20 +181,20 @@ const startDemoUI = async (testResults) => {
 
     // Wait for UI to start
     await delay(5000);
-    
+
     console.log('✓ Demo UI started');
     return uiProcess;
 };
 
 const startDemoRunner = async (testResults) => {
     const demoScript = generateDemoScript(TEST_CONFIG.WEBSOCKET_PORT);
-    
+
     // Write the demo runner script to a temporary file
     const demoRunnerPath = path.join(process.cwd(), 'demo-runner-tmp.js');
     await fs.writeFile(demoRunnerPath, demoScript);
-    
-    const demoRunnerProcess = startProcess('DEMO RUNNER', 
-        ['node', [demoRunnerPath]], 
+
+    const demoRunnerProcess = startProcess('DEMO RUNNER',
+        ['node', [demoRunnerPath]],
         {
             stdio: ['pipe', 'pipe', 'pipe']
         },
@@ -210,10 +210,10 @@ const captureOutput = (source, output, testResults) => {
     if (output.toLowerCase().includes('error') || output.toLowerCase().includes('exception')) {
         testResults.warnings.push(`${source} output contained potential error: ${output}`);
     }
-    
+
     // Look for successful operations
-    if (output.toLowerCase().includes('connected') || 
-        output.toLowerCase().includes('success') || 
+    if (output.toLowerCase().includes('connected') ||
+        output.toLowerCase().includes('success') ||
         output.toLowerCase().includes('ready')) {
         console.log(`✅ ${source} ${output.trim()}`);
     }
@@ -228,7 +228,7 @@ const generateTestReport = async (testResults, reportPath) => {
     };
 
     await fs.writeFile(reportPath, JSON.stringify(report, null, 2));
-    
+
     console.log('\n📋 Test Report:');
     console.log(`Duration: ${report.duration}ms`);
     console.log(`Errors: ${report.errors.length}`);
@@ -239,21 +239,21 @@ const generateTestReport = async (testResults, reportPath) => {
 
 const cleanup = async (backendProcess, uiProcess, demoRunnerProcess) => {
     console.log('\n🔄 Cleaning up processes...');
-    
+
     [backendProcess, uiProcess, demoRunnerProcess]
         .filter(Boolean)
         .forEach(process => process.kill());
-    
+
     // Kill any remaining processes on our ports
     await killExistingProcesses();
-    
+
     // Remove temporary demo runner file
     try {
         await fs.unlink(path.join(process.cwd(), 'demo-runner-tmp.js'));
     } catch (err) {
         // Ignore if file doesn't exist
     }
-    
+
     console.log('✓ Cleanup completed');
 };
 
@@ -266,11 +266,11 @@ const cleanup = async (backendProcess, uiProcess, demoRunnerProcess) => {
         screenshots: [],
         success: true
     };
-    
+
     let backendProcess = null;
     let uiProcess = null;
     let demoRunnerProcess = null;
-    
+
     // Handle process termination gracefully
     process.on('SIGINT', async () => {
         console.log('\n⚠️  Received SIGINT, cleaning up...');
@@ -280,41 +280,41 @@ const cleanup = async (backendProcess, uiProcess, demoRunnerProcess) => {
 
     try {
         console.log('Setting up automatic test environment...');
-        
+
         // Kill any existing processes on our ports
         await killExistingProcesses();
-        
+
         // Create screenshots directory
         await createDirectory('test-results/screenshots');
         await createDirectory('test-results/videos');
-        
+
         console.log('✓ Test environment ready');
-        
+
         console.log(`\n🚀 Starting automated tests for ${TEST_CONFIG.TEST_DURATION / 1000}s...`);
-        
+
         // Start all services
         backendProcess = await startBackend(testResults);
         uiProcess = await startDemoUI(testResults);
         demoRunnerProcess = await startDemoRunner(testResults);
-        
+
         // Run the test for the specified duration
         await delay(TEST_CONFIG.TEST_DURATION);
-        
+
         console.log('\n📊 Test completed! Generating report...');
         const reportPath = path.join(process.cwd(), 'test-results', 'test-report.json');
         await generateTestReport(testResults, reportPath);
-        
+
         console.log(`\n🏁 Test run ${testResults.success ? 'PASSED' : 'FAILED'}`);
         process.exit(testResults.success ? 0 : 1);
-        
+
     } catch (error) {
         console.error('Test framework error:', error);
         testResults.errors.push(`Test framework error: ${error.message}`);
         testResults.success = false;
-        
+
         const reportPath = path.join(process.cwd(), 'test-results', 'test-report.json');
         await generateTestReport(testResults, reportPath);
-        
+
         process.exit(1);
     } finally {
         await cleanup(backendProcess, uiProcess, demoRunnerProcess);

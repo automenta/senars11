@@ -1,5 +1,4 @@
-import React, { memo, useState, useCallback, useMemo } from 'react';
-import useUiStore from '../stores/uiStore.js';
+import React, {memo, useCallback, useMemo, useState} from 'react';
 import GenericPanel from './GenericPanel.js';
 import VirtualizedList from './VirtualizedList.js';
 
@@ -16,167 +15,167 @@ import VirtualizedList from './VirtualizedList.js';
  * @param {boolean} useVirtualization - Whether to use virtualized rendering
  */
 const ListPanel = memo(({
-  items = [],
-  renderItem,
-  title = 'List',
-  searchPlaceholder = 'Search...',
-  sortOptions = [],
-  defaultSort = null,
-  filterFn = null,
-  emptyMessage = 'No items to display',
-  autoScroll = false,
-  maxItems = null,
-  itemHeight = 50,
-  useVirtualization = false
-}) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sortBy, setSortBy] = useState(defaultSort);
-  const [sortDirection, setSortDirection] = useState('asc'); // 'asc' or 'desc'
-  
-  // Memoize filtered and sorted items to prevent unnecessary computations
-  const processedItems = useMemo(() => {
-    // Filter items based on search term
-    const filteredItems = searchTerm 
-      ? filterFn 
-        ? items.filter(item => filterFn(item, searchTerm))
-        : items.filter(item => {
-          if (typeof item === 'string') {
-            return item.toLowerCase().includes(searchTerm.toLowerCase());
-          } else if (typeof item === 'object') {
-            return Object.values(item).some(value => 
-              String(value).toLowerCase().includes(searchTerm.toLowerCase())
-            );
-          }
-          return false;
-        })
-      : items;
-    
-    // Sort items
-    return sortBy 
-      ? [...filteredItems].sort((a, b) => {
-        let valueA = typeof sortBy === 'string' && sortBy.includes('.') 
-          ? sortBy.split('.').reduce((obj, key) => obj?.[key], a)
-          : a[sortBy];
-        let valueB = typeof sortBy === 'string' && sortBy.includes('.') 
-          ? sortBy.split('.').reduce((obj, key) => obj?.[key], b)
-          : b[sortBy];
-          
-        // Handle different data types
-        let comparison = 0;
-        if (typeof valueA === 'string' && typeof valueB === 'string') {
-          comparison = valueA.toLowerCase().localeCompare(valueB.toLowerCase());
-        } else if (typeof valueA === 'number' && typeof valueB === 'number') {
-          comparison = valueA - valueB;
+                            items = [],
+                            renderItem,
+                            title = 'List',
+                            searchPlaceholder = 'Search...',
+                            sortOptions = [],
+                            defaultSort = null,
+                            filterFn = null,
+                            emptyMessage = 'No items to display',
+                            autoScroll = false,
+                            maxItems = null,
+                            itemHeight = 50,
+                            useVirtualization = false
+                        }) => {
+    const [searchTerm, setSearchTerm] = useState('');
+    const [sortBy, setSortBy] = useState(defaultSort);
+    const [sortDirection, setSortDirection] = useState('asc'); // 'asc' or 'desc'
+
+    // Memoize filtered and sorted items to prevent unnecessary computations
+    const processedItems = useMemo(() => {
+        // Filter items based on search term
+        const filteredItems = searchTerm
+            ? filterFn
+                ? items.filter(item => filterFn(item, searchTerm))
+                : items.filter(item => {
+                    if (typeof item === 'string') {
+                        return item.toLowerCase().includes(searchTerm.toLowerCase());
+                    } else if (typeof item === 'object') {
+                        return Object.values(item).some(value =>
+                            String(value).toLowerCase().includes(searchTerm.toLowerCase())
+                        );
+                    }
+                    return false;
+                })
+            : items;
+
+        // Sort items
+        return sortBy
+            ? [...filteredItems].sort((a, b) => {
+                let valueA = typeof sortBy === 'string' && sortBy.includes('.')
+                    ? sortBy.split('.').reduce((obj, key) => obj?.[key], a)
+                    : a[sortBy];
+                let valueB = typeof sortBy === 'string' && sortBy.includes('.')
+                    ? sortBy.split('.').reduce((obj, key) => obj?.[key], b)
+                    : b[sortBy];
+
+                // Handle different data types
+                let comparison = 0;
+                if (typeof valueA === 'string' && typeof valueB === 'string') {
+                    comparison = valueA.toLowerCase().localeCompare(valueB.toLowerCase());
+                } else if (typeof valueA === 'number' && typeof valueB === 'number') {
+                    comparison = valueA - valueB;
+                } else {
+                    // Fallback comparison
+                    comparison = String(valueA).localeCompare(String(valueB));
+                }
+
+                return sortDirection === 'asc' ? comparison : -comparison;
+            })
+            : [...filteredItems];
+    }, [items, searchTerm, filterFn, sortBy, sortDirection]);
+
+    // Handle sort change
+    const handleSortChange = useCallback((newSortBy) => {
+        if (sortBy === newSortBy) {
+            // Toggle direction if same sort key
+            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
         } else {
-          // Fallback comparison
-          comparison = String(valueA).localeCompare(String(valueB));
+            // New sort key, default to ascending
+            setSortBy(newSortBy);
+            setSortDirection('asc');
         }
-          
-        return sortDirection === 'asc' ? comparison : -comparison;
-      })
-      : [...filteredItems];
-  }, [items, searchTerm, filterFn, sortBy, sortDirection]);
+    }, [sortBy, sortDirection]);
 
-  // Handle sort change
-  const handleSortChange = useCallback((newSortBy) => {
-    if (sortBy === newSortBy) {
-      // Toggle direction if same sort key
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      // New sort key, default to ascending
-      setSortBy(newSortBy);
-      setSortDirection('asc');
-    }
-  }, [sortBy, sortDirection]);
+    // Handle search change with useCallback for performance
+    const handleSearchChange = useCallback((e) => {
+        setSearchTerm(e.target.value);
+    }, []);
 
-  // Handle search change with useCallback for performance
-  const handleSearchChange = useCallback((e) => {
-    setSearchTerm(e.target.value);
-  }, []);
+    // Render sort controls if sort options are provided
+    const sortControls = useMemo(() => sortOptions.length > 0 && React.createElement('div', {
+            style: {
+                display: 'flex',
+                gap: '0.5rem',
+                marginBottom: '0.5rem',
+                alignItems: 'center'
+            }
+        },
+        React.createElement('input', {
+            type: 'text',
+            placeholder: searchPlaceholder,
+            value: searchTerm,
+            onChange: handleSearchChange,
+            style: {
+                padding: '0.25rem 0.5rem',
+                border: '1px solid #ccc',
+                borderRadius: '3px',
+                fontSize: '0.9rem',
+                flex: 1
+            }
+        }),
+        sortOptions.map(option =>
+            React.createElement('button', {
+                    key: option.key,
+                    onClick: () => handleSortChange(option.key),
+                    style: {
+                        padding: '0.25rem 0.5rem',
+                        border: '1px solid #ccc',
+                        backgroundColor: sortBy === option.key ? '#007bff' : '#f8f9fa',
+                        color: sortBy === option.key ? 'white' : '#333',
+                        borderRadius: '3px',
+                        fontSize: '0.8rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.25rem'
+                    }
+                },
+                option.label,
+                sortBy === option.key && React.createElement('span', {style: {fontSize: '0.7rem'}},
+                    sortDirection === 'asc' ? '↑' : '↓'
+                )
+            )
+        )
+    ), [sortOptions, searchTerm, handleSearchChange, sortBy, sortDirection, handleSortChange]);
 
-  // Render sort controls if sort options are provided
-  const sortControls = useMemo(() => sortOptions.length > 0 && React.createElement('div', { 
-    style: { 
-      display: 'flex', 
-      gap: '0.5rem', 
-      marginBottom: '0.5rem',
-      alignItems: 'center'
-    } 
-  },
-  React.createElement('input', {
-    type: 'text',
-    placeholder: searchPlaceholder,
-    value: searchTerm,
-    onChange: handleSearchChange,
-    style: {
-      padding: '0.25rem 0.5rem',
-      border: '1px solid #ccc',
-      borderRadius: '3px',
-      fontSize: '0.9rem',
-      flex: 1
-    }
-  }),
-  sortOptions.map(option => 
-    React.createElement('button', {
-      key: option.key,
-      onClick: () => handleSortChange(option.key),
-      style: {
-        padding: '0.25rem 0.5rem',
-        border: '1px solid #ccc',
-        backgroundColor: sortBy === option.key ? '#007bff' : '#f8f9fa',
-        color: sortBy === option.key ? 'white' : '#333',
-        borderRadius: '3px',
-        fontSize: '0.8rem',
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.25rem'
-      }
-    },
-    option.label,
-    sortBy === option.key && React.createElement('span', { style: { fontSize: '0.7rem' }}, 
-      sortDirection === 'asc' ? '↑' : '↓'
-    )
-    )
-  )
-  ), [sortOptions, searchTerm, handleSearchChange, sortBy, sortDirection, handleSortChange]);
+    // Render item count
+    const itemCount = useMemo(() => React.createElement('div', {
+            style: {
+                fontSize: '0.8rem',
+                color: '#666',
+                textAlign: 'right',
+                marginBottom: '0.25rem'
+            }
+        },
+        `${processedItems.length} item${processedItems.length !== 1 ? 's' : ''} (${items.length} total)`
+    ), [processedItems.length, items.length]);
 
-  // Render item count
-  const itemCount = useMemo(() => React.createElement('div', { 
-    style: { 
-      fontSize: '0.8rem', 
-      color: '#666', 
-      textAlign: 'right', 
-      marginBottom: '0.25rem' 
-    } 
-  },
-  `${processedItems.length} item${processedItems.length !== 1 ? 's' : ''} (${items.length} total)`
-  ), [processedItems.length, items.length]);
+    // Choose between virtualized and regular rendering based on configuration
+    const content = useMemo(() => useVirtualization && processedItems.length > 100
+        ? React.createElement(VirtualizedList, {
+            items: processedItems,
+            renderItem: renderItem,
+            itemHeight: itemHeight,
+            containerHeight: 400, // Default height, could be made configurable
+            overscan: 5
+        })
+        : React.createElement(GenericPanel, {
+            items: processedItems,
+            renderItem: renderItem,
+            maxHeight: 'calc(100% - 4rem)', // Account for title, controls, and count display
+            emptyMessage: emptyMessage,
+            autoScroll: autoScroll,
+            maxItems: maxItems
+        }), [useVirtualization, processedItems, renderItem, itemHeight, autoScroll, maxItems, emptyMessage]);
 
-  // Choose between virtualized and regular rendering based on configuration
-  const content = useMemo(() => useVirtualization && processedItems.length > 100
-    ? React.createElement(VirtualizedList, {
-      items: processedItems,
-      renderItem: renderItem,
-      itemHeight: itemHeight,
-      containerHeight: 400, // Default height, could be made configurable
-      overscan: 5
-    })
-    : React.createElement(GenericPanel, {
-      items: processedItems,
-      renderItem: renderItem,
-      maxHeight: 'calc(100% - 4rem)', // Account for title, controls, and count display
-      emptyMessage: emptyMessage,
-      autoScroll: autoScroll,
-      maxItems: maxItems
-    }), [useVirtualization, processedItems, renderItem, itemHeight, autoScroll, maxItems, emptyMessage]);
-
-  return React.createElement('div', { style: { height: '100%', display: 'flex', flexDirection: 'column' } },
-    React.createElement('div', { style: { fontWeight: 'bold', marginBottom: '0.5rem' }}, title),
-    sortControls,
-    processedItems.length > 0 && itemCount,
-    content
-  );
+    return React.createElement('div', {style: {height: '100%', display: 'flex', flexDirection: 'column'}},
+        React.createElement('div', {style: {fontWeight: 'bold', marginBottom: '0.5rem'}}, title),
+        sortControls,
+        processedItems.length > 0 && itemCount,
+        content
+    );
 });
 
 export default ListPanel;

@@ -1,5 +1,4 @@
 import {Rule} from '../Rule.js';
-import {Term} from '../../term/Term.js';
 
 /**
  * A rule that adjusts the TermFactory's cache size when a low cache hit rate is detected.
@@ -8,6 +7,10 @@ class AdjustCacheSizeRule extends Rule {
     constructor(termFactory) {
         super('AdjustCacheSizeRule', 'nal', 'Adjusts TermFactory cache size based on hit rate.', 0.9);
         this.termFactory = termFactory;
+    }
+
+    static create(termFactory) {
+        return new AdjustCacheSizeRule(termFactory);
     }
 
     canApply(task) {
@@ -29,10 +32,6 @@ class AdjustCacheSizeRule extends Rule {
         }
 
         return {results: [], rule: this};
-    }
-
-    static create(termFactory) {
-        return new AdjustCacheSizeRule(termFactory);
     }
 }
 

@@ -1,6 +1,3 @@
-import {WebSocketMonitor} from '../server/WebSocketMonitor.js';
-import {NAR} from '../nar/NAR.js';
-
 /**
  * DemoWrapper - A system that wraps demos to provide remote control and introspection
  */
@@ -11,7 +8,7 @@ export class DemoWrapper {
             stepInterval: 1000, // ms for auto-stepping if needed
             ...config
         };
-        
+
         this.isRunning = false;
         this.isPaused = false;
         this.currentStep = 0;
@@ -20,21 +17,21 @@ export class DemoWrapper {
         this.demoStates = {}; // Track individual demo states
         this.webSocketMonitor = null;
         this.nar = null;
-        
+
         // Register built-in demos
         this.registerBuiltinDemos();
     }
-    
+
     async initialize(nar, webSocketMonitor) {
         this.nar = nar;
         this.webSocketMonitor = webSocketMonitor;
-        
+
         // Register demo control message handler
         if (webSocketMonitor) {
             webSocketMonitor.registerClientMessageHandler('demoControl', this.handleDemoControl.bind(this));
         }
     }
-    
+
     registerBuiltinDemos() {
         // Register all example demos
         this.registerDemo('basicUsage', {
@@ -42,36 +39,36 @@ export class DemoWrapper {
             description: 'Demonstrates basic NARS operations',
             handler: this.runBasicUsageDemo.bind(this),
             parameters: {
-                stepDelay: { type: 'number', defaultValue: 1000, description: 'Delay between steps in ms' }
+                stepDelay: {type: 'number', defaultValue: 1000, description: 'Delay between steps in ms'}
             }
         });
-        
+
         this.registerDemo('syllogism', {
             name: 'Syllogistic Reasoning Demo',
             description: 'Demonstrates syllogistic reasoning',
             handler: this.runSyllogismDemo.bind(this),
             parameters: {
-                stepDelay: { type: 'number', defaultValue: 1500, description: 'Delay between steps in ms' }
+                stepDelay: {type: 'number', defaultValue: 1500, description: 'Delay between steps in ms'}
             }
         });
-        
+
         this.registerDemo('inductive', {
             name: 'Inductive Reasoning Demo',
             description: 'Demonstrates inductive reasoning',
             handler: this.runInductiveDemo.bind(this),
             parameters: {
-                stepDelay: { type: 'number', defaultValue: 2000, description: 'Delay between steps in ms' }
+                stepDelay: {type: 'number', defaultValue: 2000, description: 'Delay between steps in ms'}
             }
         });
     }
-    
+
     registerDemo(id, config) {
         this.demos.set(id, {
             id,
             ...config
         });
     }
-    
+
     getAvailableDemos() {
         return Array.from(this.demos.values()).map(demo => ({
             id: demo.id,
@@ -85,7 +82,7 @@ export class DemoWrapper {
             }))
         }));
     }
-    
+
     async handleDemoControl(data) {
         try {
             // Validate input data
@@ -93,26 +90,26 @@ export class DemoWrapper {
                 console.error('Invalid demo control message: missing payload');
                 return;
             }
-            
-            const { command, demoId, parameters } = data.payload;
-            
+
+            const {command, demoId, parameters} = data.payload;
+
             // Validate required fields
             if (!command || typeof command !== 'string') {
                 console.error('Invalid demo control message: missing or invalid command');
                 return;
             }
-            
+
             if (!demoId || typeof demoId !== 'string') {
                 console.error('Invalid demo control message: missing or invalid demoId');
                 return;
             }
-            
+
             // Validate parameters if present
             if (parameters && typeof parameters !== 'object') {
                 console.error('Invalid demo control message: parameters must be an object');
                 return;
             }
-            
+
             switch (command) {
                 case 'start':
                     await this.startDemo(demoId, parameters || {});
@@ -157,7 +154,7 @@ export class DemoWrapper {
             }
         }
     }
-    
+
     async startDemo(demoId, parameters = {}) {
         const demo = this.demos.get(demoId);
         if (!demo) {
@@ -168,12 +165,12 @@ export class DemoWrapper {
             });
             return false;
         }
-        
+
         // Stop any currently running demo to avoid conflicts
         if (this.isRunning && this.currentDemoId && this.currentDemoId !== demoId) {
             await this.stopDemo(this.currentDemoId);
         }
-        
+
         this.currentDemoId = demoId;
         this.isRunning = true;
         this.isPaused = false;
@@ -187,7 +184,7 @@ export class DemoWrapper {
             startTime: Date.now(),
             lastUpdateTime: Date.now()
         };
-        
+
         // Notify UI of demo state
         await this.sendDemoState(demoId, {
             state: 'running',
@@ -196,10 +193,10 @@ export class DemoWrapper {
             parameters,
             startTime: Date.now()
         });
-        
+
         try {
             await demo.handler(parameters);
-            
+
             // Update final state when demo completes successfully
             if (this.demoStates[demoId]) {
                 this.demoStates[demoId] = {
@@ -208,7 +205,7 @@ export class DemoWrapper {
                     endTime: Date.now(),
                     progress: 100
                 };
-                
+
                 await this.sendDemoState(demoId, {
                     state: 'completed',
                     progress: 100,
@@ -231,7 +228,7 @@ export class DemoWrapper {
                 errorMessage: error.message,
                 endTime: Date.now()
             });
-            
+
             // Ensure we clean up after an error
             this.isRunning = false;
             this.isPaused = false;
@@ -242,7 +239,7 @@ export class DemoWrapper {
                 this.isRunning = false;
                 this.isPaused = false;
                 this.currentDemoId = null;
-                
+
                 // Ensure the final state is stopped if not already set to completed or error
                 if (this.demoStates[demoId]?.state === 'running') {
                     this.demoStates[demoId] = {
@@ -250,7 +247,7 @@ export class DemoWrapper {
                         demoId,
                         endTime: Date.now()
                     };
-                    
+
                     await this.sendDemoState(demoId, {
                         state: 'stopped',
                         endTime: Date.now()
@@ -258,21 +255,21 @@ export class DemoWrapper {
                 }
             }
         }
-        
+
         return true;
     }
-    
+
     async stopDemo(demoId) {
         this.isRunning = false;
         this.isPaused = false;
         this.currentDemoId = null;
-        
+
         if (demoId) {
             this.demoStates[demoId] = {
                 state: 'stopped',
                 demoId
             };
-            
+
             await this.sendDemoState(demoId, {
                 state: 'stopped'
             });
@@ -281,13 +278,13 @@ export class DemoWrapper {
                 state: 'stopped',
                 demoId: this.currentDemoId
             };
-            
+
             await this.sendDemoState(this.currentDemoId, {
                 state: 'stopped'
             });
         }
     }
-    
+
     async pauseDemo(demoId) {
         if (demoId) {
             this.demoStates[demoId] = {
@@ -295,14 +292,14 @@ export class DemoWrapper {
                 state: 'paused'
             };
         }
-        
+
         this.isPaused = true;
-        
+
         await this.sendDemoState(demoId, {
             state: 'paused'
         });
     }
-    
+
     async resumeDemo(demoId) {
         if (demoId) {
             this.demoStates[demoId] = {
@@ -310,24 +307,24 @@ export class DemoWrapper {
                 state: 'running'
             };
         }
-        
+
         this.isPaused = false;
-        
+
         await this.sendDemoState(demoId, {
             state: 'running'
         });
     }
-    
+
     async stepDemo(demoId, parameters = {}) {
         // For demos that support stepping
         console.log(`Step demo ${demoId} with parameters:`, parameters);
     }
-    
+
     async configureDemo(demoId, parameters) {
         // Update demo configuration
         console.log(`Configure demo ${demoId} with parameters:`, parameters);
     }
-    
+
     async sendDemoState(demoId, state) {
         if (this.webSocketMonitor) {
             this.webSocketMonitor.broadcastEvent('demoState', {
@@ -340,15 +337,15 @@ export class DemoWrapper {
             });
         }
     }
-    
+
     async sendDemoStep(demoId, step, description, data = {}) {
         if (this.webSocketMonitor) {
             // Update the demo state with current step and progress
             if (this.demoStates[demoId]) {
                 // Estimate progress based on step number (assuming ~5-6 steps per demo)
-                const estimatedTotalSteps = 6; 
+                const estimatedTotalSteps = 6;
                 const progress = Math.min(100, Math.round((step / estimatedTotalSteps) * 100));
-                
+
                 this.demoStates[demoId] = {
                     ...this.demoStates[demoId],
                     currentStep: step,
@@ -357,7 +354,7 @@ export class DemoWrapper {
                     lastStepTime: Date.now()
                 };
             }
-            
+
             this.webSocketMonitor.broadcastEvent('demoStep', {
                 type: 'demoStep',
                 payload: {
@@ -371,7 +368,7 @@ export class DemoWrapper {
             });
         }
     }
-    
+
     async sendDemoMetrics(demoId, metrics) {
         if (this.webSocketMonitor) {
             try {
@@ -390,7 +387,7 @@ export class DemoWrapper {
             }
         }
     }
-    
+
     async sendDemoList() {
         if (this.webSocketMonitor) {
             // Send the demo list as an event
@@ -400,22 +397,22 @@ export class DemoWrapper {
                     demos: this.getAvailableDemos()
                 }
             });
-            
+
             // Also send individual demo status updates for currently running demos
             for (const [demoId, state] of Object.entries(this.demoStates || {})) {
                 this.sendDemoState(demoId, state);
             }
         }
     }
-    
+
     // Demo implementations
     async runBasicUsageDemo(params = {}) {
         const stepDelay = params.stepDelay || 1000;
-        
+
         this.currentStep = 1;
         await this.sendDemoStep('basicUsage', this.currentStep, 'Initializing basic usage demo');
         await this.waitIfNotPaused(stepDelay);
-        
+
         // Example NARS operations using narsese input
         await this.sendDemoStep('basicUsage', ++this.currentStep, 'Adding belief: <cat --> animal>.');
         try {
@@ -425,7 +422,7 @@ export class DemoWrapper {
             await this.sendDemoStep('basicUsage', this.currentStep, `Error adding cat belief: ${error.message}`);
         }
         await this.waitIfNotPaused(stepDelay);
-        
+
         await this.sendDemoStep('basicUsage', ++this.currentStep, 'Adding belief: <dog --> animal>.');
         try {
             await this.nar.input('dog --> animal.');
@@ -434,7 +431,7 @@ export class DemoWrapper {
             await this.sendDemoStep('basicUsage', this.currentStep, `Error adding dog belief: ${error.message}`);
         }
         await this.waitIfNotPaused(stepDelay);
-        
+
         await this.sendDemoStep('basicUsage', ++this.currentStep, 'Asking question: <cat --> animal>?');
         try {
             await this.nar.input('cat --> animal?');
@@ -443,7 +440,7 @@ export class DemoWrapper {
             await this.sendDemoStep('basicUsage', this.currentStep, `Error asking cat question: ${error.message}`);
         }
         await this.waitIfNotPaused(stepDelay);
-        
+
         await this.sendDemoStep('basicUsage', ++this.currentStep, 'Adding goal: <cat --> pet>!');
         try {
             await this.nar.input('cat --> pet!');
@@ -452,17 +449,17 @@ export class DemoWrapper {
             await this.sendDemoStep('basicUsage', this.currentStep, `Error adding cat goal: ${error.message}`);
         }
         await this.waitIfNotPaused(stepDelay);
-        
+
         await this.sendDemoStep('basicUsage', ++this.currentStep, 'Demo completed');
     }
-    
+
     async runSyllogismDemo(params = {}) {
         const stepDelay = params.stepDelay || 1500;
-        
+
         this.currentStep = 1;
         await this.sendDemoStep('syllogism', this.currentStep, 'Initializing syllogistic reasoning demo');
         await this.waitIfNotPaused(stepDelay);
-        
+
         await this.sendDemoStep('syllogism', ++this.currentStep, 'Adding premise: <bird --> animal>.');
         try {
             await this.nar.input('bird --> animal.');
@@ -471,7 +468,7 @@ export class DemoWrapper {
             await this.sendDemoStep('syllogism', this.currentStep, `Error adding bird premise: ${error.message}`);
         }
         await this.waitIfNotPaused(stepDelay);
-        
+
         await this.sendDemoStep('syllogism', ++this.currentStep, 'Adding premise: <robin --> bird>.');
         try {
             await this.nar.input('robin --> bird.');
@@ -480,11 +477,11 @@ export class DemoWrapper {
             await this.sendDemoStep('syllogism', this.currentStep, `Error adding robin premise: ${error.message}`);
         }
         await this.waitIfNotPaused(stepDelay);
-        
+
         await this.sendDemoStep('syllogism', ++this.currentStep, 'Deriving conclusion: <robin --> animal>');
         // The system should derive this automatically
         await this.waitIfNotPaused(stepDelay);
-        
+
         await this.sendDemoStep('syllogism', ++this.currentStep, 'Asking: <robin --> animal>?');
         try {
             await this.nar.input('robin --> animal?');
@@ -493,17 +490,17 @@ export class DemoWrapper {
             await this.sendDemoStep('syllogism', this.currentStep, `Error asking robin question: ${error.message}`);
         }
         await this.waitIfNotPaused(stepDelay);
-        
+
         await this.sendDemoStep('syllogism', ++this.currentStep, 'Syllogistic reasoning demo completed');
     }
-    
+
     async runInductiveDemo(params = {}) {
         const stepDelay = params.stepDelay || 2000;
-        
+
         this.currentStep = 1;
         await this.sendDemoStep('inductive', this.currentStep, 'Initializing inductive reasoning demo');
         await this.waitIfNotPaused(stepDelay);
-        
+
         await this.sendDemoStep('inductive', ++this.currentStep, 'Adding observations: <swan1 --> white>.');
         try {
             await this.nar.input('swan1 --> white.');
@@ -512,7 +509,7 @@ export class DemoWrapper {
             await this.sendDemoStep('inductive', this.currentStep, `Error adding swan1 observation: ${error.message}`);
         }
         await this.waitIfNotPaused(stepDelay);
-        
+
         await this.sendDemoStep('inductive', ++this.currentStep, 'Adding observations: <swan2 --> white>.');
         try {
             await this.nar.input('swan2 --> white.');
@@ -521,7 +518,7 @@ export class DemoWrapper {
             await this.sendDemoStep('inductive', this.currentStep, `Error adding swan2 observation: ${error.message}`);
         }
         await this.waitIfNotPaused(stepDelay);
-        
+
         await this.sendDemoStep('inductive', ++this.currentStep, 'Adding observations: <swan3 --> white>.');
         try {
             await this.nar.input('swan3 --> white.');
@@ -530,7 +527,7 @@ export class DemoWrapper {
             await this.sendDemoStep('inductive', this.currentStep, `Error adding swan3 observation: ${error.message}`);
         }
         await this.waitIfNotPaused(stepDelay);
-        
+
         await this.sendDemoStep('inductive', ++this.currentStep, 'Inductive inference: <swan --> white>?');
         try {
             await this.nar.input('swan --> white?');
@@ -539,14 +536,14 @@ export class DemoWrapper {
             await this.sendDemoStep('inductive', this.currentStep, `Error asking swan question: ${error.message}`);
         }
         await this.waitIfNotPaused(stepDelay);
-        
+
         await this.sendDemoStep('inductive', ++this.currentStep, 'Inductive reasoning demo completed');
     }
-    
+
     async waitIfNotPaused(delay = 1000) {
         const checkInterval = 100;
         let waited = 0;
-        
+
         while (waited < delay && this.isRunning) {
             if (!this.isPaused) {
                 await new Promise(resolve => setTimeout(resolve, checkInterval));
@@ -556,27 +553,27 @@ export class DemoWrapper {
                 await new Promise(resolve => setTimeout(resolve, 200));
             }
         }
-        
+
         // Check if we're still running after the delay
         if (!this.isRunning) {
             throw new Error('Demo stopped during wait');
         }
     }
-    
+
     async runPeriodicMetricsUpdate() {
         if (!this.nar || !this.webSocketMonitor) return;
-        
+
         // Track previous concept priorities to detect changes
         let previousPriorities = new Map();
         let previousTaskCounts = new Map();
-        
+
         // Send periodic system metrics to visualize in UI
         const updateMetrics = async () => {
             if (this.isRunning || Object.keys(this.demoStates).some(state => state.state !== 'stopped')) {
                 // Get current system state
                 const stats = this.nar.getStats ? this.nar.getStats() : {};
                 const taskManagerStats = stats.taskManagerStats || {};
-                
+
                 const metrics = {
                     tasksProcessed: taskManagerStats.totalTasks || 0,
                     conceptsActive: this.nar.memory ? this.nar.memory.getAllConcepts().length : 0,
@@ -585,25 +582,25 @@ export class DemoWrapper {
                     activeDemos: Object.keys(this.demoStates).filter(id => this.demoStates[id].state === 'running').length,
                     systemLoad: 0 // Placeholder for system load metric
                 };
-                
+
                 // Track concept priority fluctuations
                 const priorityFluctuations = [];
                 const conceptMetrics = [];
-                
+
                 if (this.nar) {
                     try {
                         const currentConceptPriorities = this.nar.getConceptPriorities();
                         const currentPriorities = new Map();
                         const currentTaskCounts = new Map();
-                        
+
                         for (const concept of currentConceptPriorities) {
                             const conceptName = concept.term;
                             const currentPriority = concept.priority;
                             const currentTaskCount = concept.totalTasks || 0;
-                            
+
                             currentPriorities.set(conceptName, currentPriority);
                             currentTaskCounts.set(conceptName, currentTaskCount);
-                            
+
                             // Check if this concept's priority has changed significantly
                             const previousPriority = previousPriorities.get(conceptName);
                             if (previousPriority !== undefined && Math.abs(currentPriority - previousPriority) > 0.001) { // Reduced threshold for more sensitivity
@@ -615,7 +612,7 @@ export class DemoWrapper {
                                     timestamp: Date.now()
                                 });
                             }
-                            
+
                             // Track concept metrics for visualization
                             conceptMetrics.push({
                                 term: conceptName,
@@ -626,7 +623,7 @@ export class DemoWrapper {
                                 quality: concept.quality || 0
                             });
                         }
-                        
+
                         // Check for task count changes as well
                         for (const [conceptName, taskCount] of currentTaskCounts.entries()) {
                             const previousTaskCount = previousTaskCounts.get(conceptName);
@@ -640,27 +637,27 @@ export class DemoWrapper {
                                 });
                             }
                         }
-                        
+
                         // Update our reference to previous priorities and task counts
                         previousPriorities = currentPriorities;
                         previousTaskCounts = currentTaskCounts;
-                        
+
                     } catch (e) {
                         console.warn('Could not get concepts for priority tracking:', e);
                     }
                 }
-                
+
                 // Add metrics to the data
                 metrics.priorityFluctuations = priorityFluctuations;
                 metrics.conceptMetrics = conceptMetrics;
-                
+
                 // Send metrics to all connected clients
                 this.sendDemoMetrics('system', metrics);
             }
-            
+
             setTimeout(updateMetrics, 500); // Update metrics every 500ms for better visualization
         };
-        
+
         updateMetrics();
     }
 }

@@ -3,8 +3,8 @@
  * @description Abstract configuration management utility
  */
 
-import { validateConfigWithDefaults } from '../config/ConfigValidator.js';
-import { deepFreeze } from '../util/common.js';
+import {validateConfigWithDefaults} from '../config/ConfigValidator.js';
+import {deepFreeze} from '../util/common.js';
 
 // Default configuration values
 const DEFAULT_CONFIG = deepFreeze({
@@ -149,8 +149,8 @@ class ConfigManager {
     }
 
     _deepMerge(target, source) {
-        const result = { ...target };
-        
+        const result = {...target};
+
         for (const key in source) {
             if (source.hasOwnProperty(key)) {
                 if (typeof source[key] === 'object' && source[key] !== null && !Array.isArray(source[key])) {
@@ -160,13 +160,13 @@ class ConfigManager {
                 }
             }
         }
-        
+
         return result;
     }
 
     get(path) {
         if (!path) return this._config;
-        
+
         const pathParts = path.split('.');
         let current = this._config;
 
@@ -192,7 +192,7 @@ class ConfigManager {
         }
 
         current[pathParts[pathParts.length - 1]] = value;
-        
+
         // Re-validate the config after modification
         this._config = this._validateAndMergeConfig(newConfig);
         return this;
@@ -205,14 +205,14 @@ class ConfigManager {
     }
 
     toJSON() {
-        return { ...this._config };
+        return {...this._config};
     }
 
     _deepClone(obj) {
         if (obj === null || typeof obj !== 'object') return obj;
         if (obj instanceof Date) return new Date(obj.getTime());
         if (Array.isArray(obj)) return obj.map(item => this._deepClone(item));
-        
+
         const cloned = {};
         for (const key in obj) {
             if (obj.hasOwnProperty(key)) {
@@ -226,4 +226,4 @@ class ConfigManager {
 // Singleton instance for global config management
 const globalConfigManager = new ConfigManager();
 
-export { ConfigManager, globalConfigManager, DEFAULT_CONFIG };
+export {ConfigManager, globalConfigManager, DEFAULT_CONFIG};

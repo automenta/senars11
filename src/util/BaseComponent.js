@@ -24,16 +24,45 @@ export class BaseComponent {
         this._initializeMetrics();
     }
 
-    get name() { return this._name; }
-    get config() { return this._config; }
-    get logger() { return this._logger; }
-    get eventBus() { return this._eventBus; }
-    get metrics() { return this._metrics; }
-    get isInitialized() { return this._initialized; }
-    get isStarted() { return this._started; }
-    get isDisposed() { return this._disposed; }
-    get isRunning() { return this._started && !this._disposed; }
-    get uptime() { return this._startTime ? Date.now() - this._startTime : 0; }
+    get name() {
+        return this._name;
+    }
+
+    get config() {
+        return this._config;
+    }
+
+    get logger() {
+        return this._logger;
+    }
+
+    get eventBus() {
+        return this._eventBus;
+    }
+
+    get metrics() {
+        return this._metrics;
+    }
+
+    get isInitialized() {
+        return this._initialized;
+    }
+
+    get isStarted() {
+        return this._started;
+    }
+
+    get isDisposed() {
+        return this._disposed;
+    }
+
+    get isRunning() {
+        return this._started && !this._disposed;
+    }
+
+    get uptime() {
+        return this._startTime ? Date.now() - this._startTime : 0;
+    }
 
     _validateConfig(config) {
         const schema = typeof this._validationSchema === 'function'
@@ -184,10 +213,17 @@ export class BaseComponent {
         }
     }
 
-    async _initialize() { /* Default implementation - can be overridden */ }
-    async _start() { /* Default implementation - can be overridden */ }
-    async _stop() { /* Default implementation - can be overridden */ }
-    async _dispose() { /* Default implementation - can be overridden */ }
+    async _initialize() { /* Default implementation - can be overridden */
+    }
+
+    async _start() { /* Default implementation - can be overridden */
+    }
+
+    async _stop() { /* Default implementation - can be overridden */
+    }
+
+    async _dispose() { /* Default implementation - can be overridden */
+    }
 
     _initializeMetrics() {
         this._metrics.set('initializeCount', 0);
@@ -209,7 +245,9 @@ export class BaseComponent {
         this._metrics.set('lastActivity', Date.now());
     }
 
-    getMetric(key) { return this._metrics.get(key); }
+    getMetric(key) {
+        return this._metrics.get(key);
+    }
 
     getMetrics() {
         return {
@@ -256,6 +294,11 @@ export class BaseComponent {
         this._eventBus.emit(eventName, createEventPayload(this._name, payload));
     }
 
-    onEvent(event, handler) { this._eventBus.on(event, handler); }
-    offEvent(event, handler) { this._eventBus.off(event, handler); }
+    onEvent(event, handler) {
+        this._eventBus.on(event, handler);
+    }
+
+    offEvent(event, handler) {
+        this._eventBus.off(event, handler);
+    }
 }

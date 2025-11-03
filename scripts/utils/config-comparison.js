@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
-import { spawn, exec } from 'child_process';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-import { readdir, writeFile, readFile } from 'fs/promises';
+import {exec, spawn} from 'child_process';
+import {fileURLToPath} from 'url';
+import {dirname, join} from 'path';
+import {writeFile} from 'fs/promises';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -75,7 +75,7 @@ function parseArgs(args) {
         runAnalysis = true;
     }
 
-    return { configList, runBenchmark, runAnalysis, runDemo, outputDir, timeout };
+    return {configList, runBenchmark, runAnalysis, runDemo, outputDir, timeout};
 }
 
 /**
@@ -83,7 +83,7 @@ function parseArgs(args) {
  */
 async function runProcess(command, args, env, cwd, timeout, configName, operationName) {
     const processObj = spawn(command, args, {
-        env: { 
+        env: {
             ...process.env,
             ...env
         },
@@ -120,75 +120,75 @@ async function runProcess(command, args, env, cwd, timeout, configName, operatio
 /**
  * Run configuration analysis
  */
-async function runAnalysis(config, { outputDir, timeout }) {
+async function runAnalysis(config, {outputDir, timeout}) {
     console.log(`  Running analysis for ${config}...`);
     try {
         const result = await runProcess(
-            'node', 
-            ['comprehensive_analysis.js'], 
-            { SENARS_CONFIG: config },
+            'node',
+            ['comprehensive_analysis.js'],
+            {SENARS_CONFIG: config},
             join(__dirname, '../..'),
             timeout,
             config,
             'analysis'
         );
-        
+
         // Save analysis output
         await writeFile(`${outputDir}/results/analysis_${config}.txt`, result.output);
         return result;
     } catch (error) {
         console.error(`  Analysis failed for ${config}:`, error.message);
-        return { success: false, error: error.message };
+        return {success: false, error: error.message};
     }
 }
 
 /**
  * Run configuration benchmark
  */
-async function runBenchmark(config, { outputDir, timeout }) {
+async function runBenchmark(config, {outputDir, timeout}) {
     console.log(`  Running benchmarks for ${config}...`);
     try {
         const result = await runProcess(
-            'node', 
-            ['src/testing/runBenchmarks.js'], 
-            { SENARS_CONFIG: config },
+            'node',
+            ['src/testing/runBenchmarks.js'],
+            {SENARS_CONFIG: config},
             join(__dirname, '../..'),
             timeout,
             config,
             'benchmark'
         );
-        
+
         // Save benchmark output
         await writeFile(`${outputDir}/results/benchmark_${config}.txt`, result.output);
         return result;
     } catch (error) {
         console.error(`  Benchmark failed for ${config}:`, error.message);
-        return { success: false, error: error.message };
+        return {success: false, error: error.message};
     }
 }
 
 /**
  * Run configuration demo
  */
-async function runDemo(config, { outputDir, timeout }) {
+async function runDemo(config, {outputDir, timeout}) {
     console.log(`  Running demo for ${config}...`);
     try {
         const result = await runProcess(
-            'node', 
-            ['run-demo.js'], 
-            { SENARS_CONFIG: config },
+            'node',
+            ['run-demo.js'],
+            {SENARS_CONFIG: config},
             join(__dirname, '../..'),
             timeout,
             config,
             'demo'
         );
-        
+
         // Save demo output
         await writeFile(`${outputDir}/results/demo_${config}.txt`, result.output);
         return result;
     } catch (error) {
         console.error(`  Demo failed for ${config}:`, error.message);
-        return { success: false, error: error.message };
+        return {success: false, error: error.message};
     }
 }
 
@@ -238,45 +238,45 @@ async function main() {
         process.exit(0);
     }
 
-    const { configList, runBenchmark, runAnalysis, runDemo, outputDir, timeout } = parseArgs(args);
+    const {configList, runBenchmark, runAnalysis, runDemo, outputDir, timeout} = parseArgs(args);
     console.log(`Running configuration comparison: ${configList.join(', ')}`);
 
     try {
         console.log(`\\n📊 Starting configuration comparison...`);
-        
+
         // Create output directory
         await exec(`mkdir -p ${outputDir} ${outputDir}/configs ${outputDir}/results`);
-        
+
         const results = {};
-        
+
         for (const config of configList) {
             console.log(`\\n🧪 Testing configuration: ${config}`);
-            
+
             const configResult = {};
-            
+
             if (runAnalysis) {
-                configResult.analysis = await runAnalysis(config, { outputDir, timeout });
+                configResult.analysis = await runAnalysis(config, {outputDir, timeout});
             }
-            
+
             if (runBenchmark) {
-                configResult.benchmark = await runBenchmark(config, { outputDir, timeout });
+                configResult.benchmark = await runBenchmark(config, {outputDir, timeout});
             }
-            
+
             if (runDemo) {
-                configResult.demo = await runDemo(config, { outputDir, timeout });
+                configResult.demo = await runDemo(config, {outputDir, timeout});
             }
-            
+
             results[config] = configResult;
         }
-        
+
         const summary = generateSummary(configList, results);
-        
+
         // Write summary report
         await writeFile(`${outputDir}/comparison-summary.json`, JSON.stringify(summary, null, 2));
-        
+
         console.log('\\n✅ Configuration comparison completed!');
         console.log(`📊 Results saved to: ${outputDir}/`);
-        
+
         // Print summary to console
         printSummary(summary);
     } catch (error) {

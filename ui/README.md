@@ -98,34 +98,42 @@ This UI provides an IDE-like environment for interacting with a reasoning engine
 ## Key Improvements
 
 ### Component Architecture
-- **Enhanced Base Panel**: The `Panel.js` component now supports additional props like `showWebSocketStatus`, `showHeader`, `headerExtra`, etc.
+
+- **Enhanced Base Panel**: The `Panel.js` component now supports additional props like `showWebSocketStatus`,
+  `showHeader`, `headerExtra`, etc.
 - **ListPanel Component**: Advanced list component with built-in filtering, sorting, and search capabilities
 - **Virtualized Lists**: Added `VirtualizedList.js` for performance when rendering large datasets
 - **GenericPanel Enhancements**: Improved with auto-scroll, timestamp, count display, and other features
 
 ### State Management
-- **Enhanced Store**: The `uiStore.js` now includes additional update methods for each entity type (updateTask, updateConcept, updateNotification, etc.)
+
+- **Enhanced Store**: The `uiStore.js` now includes additional update methods for each entity type (updateTask,
+  updateConcept, updateNotification, etc.)
 - **Batch Updates**: Added `batchUpdate` function for updating multiple properties at once
 - **Reset Functionality**: Added `resetStore` function to completely reset the store to initial state
 
 ### Performance Optimizations
+
 - **Virtualization**: Implemented virtualized list rendering for components handling large datasets
 - **Memoization**: Added memoization utilities for expensive calculations
 - **Debounced/Throttled Functions**: Optimized user input handling
 - **Proper Keys**: Ensured proper key attributes for efficient rendering
 
 ### Styling System
+
 - **CSS Variables**: Introduced `styles/variables.css` for consistent theming
 - **Theme Consistency**: All components now use shared CSS variables for consistent appearance
 - **Dark/Light Themes**: Improved theme switching with better variable definitions
 
 ### Utility Functions
+
 - **Enhanced Helpers**: The `utils/helpers.js` file now includes more comprehensive utility functions
 - **Formatters**: The `utils/formatters.js` file has additional formatting functions
 - **Message Utilities**: Added `utils/messages.js` for consistent notification creation
 - **Performance Utilities**: Added `utils/performance.js` for rendering optimization
 
 ### Testing
+
 - **Comprehensive Unit Tests**: Added detailed unit tests for store functionality
 - **Utility Function Tests**: Added tests for helper functions
 - **Better Coverage**: Improved test coverage for critical functionality
@@ -171,12 +179,14 @@ To create movies of all demos for visual verification:
 3. For lower disk usage, use FPS control: `node demo-movie-generator.js --fps-control`
 
 The script will:
+
 - Navigate to the UI
 - Run each available demo
 - Record the UI interactions as videos or screenshots
 - Save recordings in the `demo-videos` directory
 
-The FPS control option captures screenshots at a specified rate (default 1 FPS) which significantly reduces disk space usage compared to full video recording.
+The FPS control option captures screenshots at a specified rate (default 1 FPS) which significantly reduces disk space
+usage compared to full video recording.
 
 ## Contributing
 

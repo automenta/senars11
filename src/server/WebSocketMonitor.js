@@ -39,7 +39,7 @@ class WebSocketMonitor {
         this.clients = new Set();
         this.eventEmitter = new EventEmitter();
         this.server = null;
-        
+
         // Performance and scalability metrics for Phase 5+  
         this.metrics = {
             startTime: Date.now(),
@@ -52,21 +52,21 @@ class WebSocketMonitor {
             clientMessageCounts: new Map(), // Track per-client message rates
             lastWindowReset: Date.now()
         };
-        
+
         // Rate limiting to prevent flooding
         this.broadcastRateLimiter = {
             lastBroadcastTime: new Map(), // type -> timestamp
             minInterval: options.minBroadcastInterval || DEFAULT_OPTIONS.minBroadcastInterval
         };
-        
+
         // Per-client rate limiting for security
         this.clientRateLimiters = new Map(); // clientId -> {messageCount, lastReset}
         this.rateLimitWindowMs = options.rateLimitWindowMs || DEFAULT_OPTIONS.rateLimitWindowMs;
         this.maxMessagesPerWindow = options.maxMessagesPerWindow || DEFAULT_OPTIONS.maxMessagesPerWindow;
-        
+
         // Message processing optimization
         this.messageBufferSize = options.messageBufferSize || DEFAULT_OPTIONS.messageBufferSize;
-        
+
         // Client capability tracking for security
         this.clientCapabilities = new Map(); // clientId -> capabilities
     }
@@ -88,7 +88,7 @@ class WebSocketMonitor {
 
                 this.clients.add(ws);
                 this.metrics.clientConnectionCount++;
-                
+
                 const clientId = this._generateClientId();
                 ws.clientId = clientId;
 
@@ -123,7 +123,7 @@ class WebSocketMonitor {
                         });
                     }
                 });
-                
+
                 ws.on('close', () => {
                     this.clients.delete(ws);
                     this.clientRateLimiters.delete(clientId);
@@ -152,17 +152,17 @@ class WebSocketMonitor {
     _isClientRateLimited(clientId) {
         const now = Date.now();
         const clientLimiter = this.clientRateLimiters.get(clientId);
-        
+
         if (!clientLimiter) {
             return false; // Shouldn't happen, but be safe
         }
-        
+
         // Reset counter if window has passed
         if (now - clientLimiter.lastReset > this.rateLimitWindowMs) {
             clientLimiter.messageCount = 0;
             clientLimiter.lastReset = now;
         }
-        
+
         // Increment count and check limit
         clientLimiter.messageCount++;
         return clientLimiter.messageCount > this.maxMessagesPerWindow;
@@ -224,12 +224,15 @@ class WebSocketMonitor {
             for (const client of this.clients) {
                 if (client.readyState === client.OPEN) {
                     try {
-                        client.send(jsonMessage, { binary: false, compress: true }, (error) => {
+                        client.send(jsonMessage, {binary: false, compress: true}, (error) => {
                             if (error) {
                                 console.error('Error sending to client:', error);
                                 // Remove problematic client
                                 this.clients.delete(client);
-                                try { client.close(1011, 'Sending error'); } catch(e) {}
+                                try {
+                                    client.close(1011, 'Sending error');
+                                } catch (e) {
+                                }
                             } else {
                                 sentCount++;
                             }
@@ -238,11 +241,14 @@ class WebSocketMonitor {
                         console.error('Error sending to client:', sendError);
                         // Remove problematic client
                         this.clients.delete(client);
-                        try { client.close(1011, 'Sending error'); } catch(e) {}
+                        try {
+                            client.close(1011, 'Sending error');
+                        } catch (e) {
+                        }
                     }
                 }
             }
-            
+
             // Update metrics
             this.metrics.messagesSent += sentCount;
         } catch (error) {
@@ -266,7 +272,7 @@ class WebSocketMonitor {
         if (!client.subscriptions) client.subscriptions = new Set();
         const eventTypes = message.eventTypes || ['all'];
         eventTypes.forEach(type => client.subscriptions.add(type));
-        
+
         this._sendToClient(client, {
             type: 'subscription_ack',
             subscribedTo: Array.from(client.subscriptions),
@@ -278,7 +284,7 @@ class WebSocketMonitor {
         if (!client.subscriptions) client.subscriptions = new Set();
         const eventTypes = message.eventTypes || ['all'];
         eventTypes.forEach(type => client.subscriptions.delete(type));
-        
+
         this._sendToClient(client, {
             type: 'unsubscription_ack',
             unsubscribedFrom: eventTypes,
@@ -309,18 +315,18 @@ class WebSocketMonitor {
             }
         };
     }
-    
+
     // Get detailed performance metrics for Phase 5+ optimization
     getPerformanceMetrics() {
         const stats = this.getStats();
         const uptime = stats.uptime;
-        
+
         return {
             ...stats.metrics,
             uptime,
             messagesPerSecond: uptime > 0 ? (stats.metrics.messagesSent / (uptime / 1000)).toFixed(2) : 0,
             connectionRate: uptime > 0 ? (stats.metrics.clientConnectionCount / (uptime / 1000)).toFixed(4) : 0,
-            errorRate: stats.metrics.messagesSent > 0 ? 
+            errorRate: stats.metrics.messagesSent > 0 ?
                 ((stats.metrics.errorCount / stats.metrics.messagesSent) * 100).toFixed(4) : 0,
             connectionUtilization: (this.clients.size / this.maxConnections * 100).toFixed(2) + '%'
         };
@@ -395,15 +401,18 @@ class WebSocketMonitor {
 
             for (const client of this.clients) {
                 // Apply subscription filtering
-                if (client.readyState === client.OPEN && 
+                if (client.readyState === client.OPEN &&
                     (!client.subscriptions || client.subscriptions.has('all') || client.subscriptions.has(eventType))) {
                     try {
-                        client.send(jsonMessage, { binary: false, compress: true }, (error) => {
+                        client.send(jsonMessage, {binary: false, compress: true}, (error) => {
                             if (error) {
                                 console.error('Error sending custom event to client:', error);
                                 // Remove problematic client
                                 this.clients.delete(client);
-                                try { client.close(1011, 'Sending error'); } catch(e) {}
+                                try {
+                                    client.close(1011, 'Sending error');
+                                } catch (e) {
+                                }
                             } else {
                                 sentCount++;
                             }
@@ -412,11 +421,14 @@ class WebSocketMonitor {
                         console.error('Error sending custom event to client:', sendError);
                         // Remove problematic client
                         this.clients.delete(client);
-                        try { client.close(1011, 'Sending error'); } catch(e) {}
+                        try {
+                            client.close(1011, 'Sending error');
+                        } catch (e) {
+                        }
                     }
                 }
             }
-            
+
             // Update metrics
             this.metrics.messagesSent += sentCount;
         } catch (error) {
@@ -435,7 +447,7 @@ class WebSocketMonitor {
                 });
                 return;
             }
-            
+
             const message = JSON.parse(rawData);
 
             // Validate message structure
@@ -529,12 +541,12 @@ class WebSocketMonitor {
             }
         }
     }
-    
+
     // Handler for requesting client capabilities
     _handleRequestCapabilities(client, message) {
         const clientId = client.clientId;
         const capabilities = this.clientCapabilities.get(clientId) || [];
-        
+
         this._sendToClient(client, {
             type: 'capabilities',
             data: {
@@ -542,14 +554,14 @@ class WebSocketMonitor {
                 capabilities,
                 serverVersion: '10.0.0',
                 supportedMessageTypes: [
-                    'narseseInput', 'testLMConnection', 'subscribe', 'unsubscribe', 
+                    'narseseInput', 'testLMConnection', 'subscribe', 'unsubscribe',
                     'ping', 'log', 'requestCapabilities'
                 ]
             },
             timestamp: Date.now()
         });
     }
-    
+
     // Handler for narsese input messages
     async _handleNarseseInput(client, message) {
         try {
@@ -564,9 +576,9 @@ class WebSocketMonitor {
                 });
                 return;
             }
-            
+
             const narseseString = message.payload.input;
-            
+
             // Validate that we have a NAR instance to process the input
             if (!this._nar) {
                 this._sendToClient(client, {
@@ -579,11 +591,11 @@ class WebSocketMonitor {
                 });
                 return;
             }
-            
+
             // Process the input with the NAR
             try {
                 const result = await this._nar.input(narseseString);
-                
+
                 this._sendToClient(client, {
                     type: 'narseseInput',
                     payload: {
@@ -615,13 +627,13 @@ class WebSocketMonitor {
             });
         }
     }
-    
+
     // Store reference to NAR for processing inputs
     listenToNAR(nar) {
         if (!nar || !nar.on) {
             throw new Error('NAR instance must have an on() method');
         }
-        
+
         this._nar = nar;
 
         NAR_EVENTS.forEach(eventName => {
@@ -641,7 +653,7 @@ class WebSocketMonitor {
     async _handleTestLMConnection(client, message) {
         try {
             const config = message.payload;
-            
+
             if (!config || !config.provider) {
                 return this._sendToClient(client, this._createTestResult(false, 'Missing configuration or provider in payload'));
             }
@@ -654,22 +666,26 @@ class WebSocketMonitor {
             try {
                 // Try to create a test provider based on the configuration
                 const testProvider = await this._createTestProvider(config);
-                
+
                 // Try to generate a test response
                 const testResponse = await testProvider.generateText('Hello, can you respond to this test message?', {
                     maxTokens: 20
                 });
 
                 // Send success response
-                this._sendToClient(client, this._createTestResult(true, 
+                this._sendToClient(client, this._createTestResult(true,
                     `Successfully connected to ${config.name || config.provider} provider`,
-                    { model: config.model, baseURL: config.baseURL, responseSample: testResponse.substring(0, 100) + (testResponse.length > 100 ? '...' : '') }
+                    {
+                        model: config.model,
+                        baseURL: config.baseURL,
+                        responseSample: testResponse.substring(0, 100) + (testResponse.length > 100 ? '...' : '')
+                    }
                 ));
             } catch (error) {
                 console.error('LM connection test failed:', error);
-                this._sendToClient(client, this._createTestResult(false, 
-                    `Connection failed: ${error.message || 'Unknown error'}`, 
-                    { error: error.message }
+                this._sendToClient(client, this._createTestResult(false,
+                    `Connection failed: ${error.message || 'Unknown error'}`,
+                    {error: error.message}
                 ));
             }
         } catch (error) {
@@ -677,7 +693,7 @@ class WebSocketMonitor {
             this._sendToClient(client, this._createTestResult(false, `Internal error: ${error.message}`));
         }
     }
-    
+
     // Helper method to create standardized test result messages
     _createTestResult(success, message, additionalData = {}) {
         return {
@@ -687,12 +703,12 @@ class WebSocketMonitor {
             ...additionalData
         };
     }
-    
+
     // Helper method to create a test provider based on configuration
     async _createTestProvider(config) {
         const providerType = config.provider;
-        
-        switch(providerType) {
+
+        switch (providerType) {
             case 'openai':
                 const {LangChainProvider} = await import('../lm/LangChainProvider.js');
                 return new LangChainProvider({
@@ -702,7 +718,7 @@ class WebSocketMonitor {
                     temperature: config.temperature,
                     maxTokens: config.maxTokens
                 });
-                
+
             case 'ollama':
                 const {LangChainProvider: OllamaProvider} = await import('../lm/LangChainProvider.js');
                 return new OllamaProvider({
@@ -712,7 +728,7 @@ class WebSocketMonitor {
                     temperature: config.temperature,
                     maxTokens: config.maxTokens
                 });
-                
+
             case 'anthropic':
                 // Use a dummy provider for Anthropic since we don't have a real one
                 const {DummyProvider} = await import('../lm/DummyProvider.js');
@@ -720,7 +736,7 @@ class WebSocketMonitor {
                     id: 'test-anthropic',
                     responseTemplate: `Anthropic test response for: {prompt}`
                 });
-                
+
             default:
                 // For other providers, use a dummy provider
                 const {DummyProvider: GenericDummyProvider} = await import('../lm/DummyProvider.js');
@@ -736,7 +752,7 @@ class WebSocketMonitor {
         // Log the client message to server console for debugging
         const logMessage = `[CLIENT-${client.clientId}] ${message.level.toUpperCase()}: ${message.data.join(' ')}`;
         console.log(logMessage);
-        
+
         // Optionally broadcast this log to other connected clients or store for debugging
         if (message.level === 'error' || message.level === 'warn') {
             // Broadcast error/warning logs to all clients for debugging purposes

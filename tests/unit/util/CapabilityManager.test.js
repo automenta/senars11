@@ -1,4 +1,4 @@
-import {Capability, CapabilityTypes, CapabilityManager} from '../../../src/util/CapabilityManager.js';
+import {Capability, CapabilityManager, CapabilityTypes} from '../../../src/util/CapabilityManager.js';
 
 describe('CapabilityManager', () => {
     describe('Capability class', () => {
@@ -97,7 +97,7 @@ describe('CapabilityManager', () => {
             const capability = new Capability(CapabilityTypes.FILE_SYSTEM_READ);
             await manager.registerCapability('read-cap', capability);
 
-            const result = await manager.grantCapabilities('test-tool', ['read-cap'], { approved: true });
+            const result = await manager.grantCapabilities('test-tool', ['read-cap'], {approved: true});
 
             expect(result.success).toBe(true);
             expect(result.granted).toEqual(['read-cap']);
@@ -106,13 +106,13 @@ describe('CapabilityManager', () => {
         });
 
         test('grantCapabilities fails for unregistered capability', async () => {
-            await expect(manager.grantCapabilities('test-tool', ['non-existent'], { approved: true }))
+            await expect(manager.grantCapabilities('test-tool', ['non-existent'], {approved: true}))
                 .rejects
                 .toThrow('Capability ID "non-existent" does not exist');
         });
 
         test('grantCapabilities fails for capability requiring approval without approval', async () => {
-            const capability = new Capability(CapabilityTypes.COMMAND_EXECUTION, { requiresApproval: true });
+            const capability = new Capability(CapabilityTypes.COMMAND_EXECUTION, {requiresApproval: true});
             await manager.registerCapability('cmd-cap', capability);
 
             await expect(manager.grantCapabilities('test-tool', ['cmd-cap']))
@@ -123,7 +123,7 @@ describe('CapabilityManager', () => {
         test('revokeCapabilities removes granted capability', async () => {
             const capability = new Capability(CapabilityTypes.FILE_SYSTEM_READ);
             await manager.registerCapability('read-cap', capability);
-            await manager.grantCapabilities('test-tool', ['read-cap'], { approved: true });
+            await manager.grantCapabilities('test-tool', ['read-cap'], {approved: true});
 
             const result = await manager.revokeCapabilities('test-tool', ['read-cap']);
 
@@ -138,7 +138,7 @@ describe('CapabilityManager', () => {
             await manager.registerCapability('cap1', cap1);
             await manager.registerCapability('cap2', cap2);
 
-            await manager.grantCapabilities('test-tool', ['cap1', 'cap2'], { approved: true });
+            await manager.grantCapabilities('test-tool', ['cap1', 'cap2'], {approved: true});
 
             const hasAll = await manager.hasAllCapabilities('test-tool', ['cap1', 'cap2']);
             expect(hasAll).toBe(true);
@@ -154,7 +154,7 @@ describe('CapabilityManager', () => {
                 permissions: ['read-files']
             });
             await manager.registerCapability('read-cap', capability);
-            await manager.grantCapabilities('test-tool', ['read-cap'], { approved: true });
+            await manager.grantCapabilities('test-tool', ['read-cap'], {approved: true});
 
             const toolCapabilities = await manager.getToolCapabilities('test-tool');
 
@@ -167,8 +167,8 @@ describe('CapabilityManager', () => {
         test('getToolsWithCapability returns tools with specific capability', async () => {
             const capability = new Capability(CapabilityTypes.FILE_SYSTEM_READ);
             await manager.registerCapability('read-cap', capability);
-            await manager.grantCapabilities('tool1', ['read-cap'], { approved: true });
-            await manager.grantCapabilities('tool2', ['read-cap'], { approved: true });
+            await manager.grantCapabilities('tool1', ['read-cap'], {approved: true});
+            await manager.grantCapabilities('tool2', ['read-cap'], {approved: true});
 
             const tools = await manager.getToolsWithCapability('read-cap');
 
@@ -180,8 +180,8 @@ describe('CapabilityManager', () => {
             const cap2 = new Capability(CapabilityTypes.NETWORK_ACCESS);
             await manager.registerCapability('cap1', cap1);
             await manager.registerCapability('cap2', cap2);
-            await manager.grantCapabilities('tool1', ['cap1'], { approved: true });
-            await manager.grantCapabilities('tool2', ['cap1', 'cap2'], { approved: true });
+            await manager.grantCapabilities('tool1', ['cap1'], {approved: true});
+            await manager.grantCapabilities('tool2', ['cap1', 'cap2'], {approved: true});
 
             const stats = manager.getUsageStats();
 
@@ -209,7 +209,7 @@ describe('CapabilityManager', () => {
             await manager.addPolicyRule('test-rule', rule);
 
             // Should fail due to policy rule
-            await expect(manager.grantCapabilities('test-tool', ['cap1'], { approved: true }))
+            await expect(manager.grantCapabilities('test-tool', ['cap1'], {approved: true}))
                 .rejects
                 .toThrow('Policy violation: Policy restriction');
         });
@@ -223,7 +223,7 @@ describe('CapabilityManager', () => {
                 name: 'Test Manifest',
                 requiredCapabilities: ['cap1'],
                 optionalCapabilities: [],
-                metadata: { version: '1.0' }
+                metadata: {version: '1.0'}
             };
 
             const validated = manager.createSecurityManifest(manifest);

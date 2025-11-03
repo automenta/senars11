@@ -1,6 +1,4 @@
 import {NAR} from '../../../src/nar/NAR.js';
-import {SystemConfig} from '../../../src/nar/SystemConfig.js';
-import {ComponentManager} from '../../../src/util/ComponentManager.js';
 
 describe('ComponentManager Integration', () => {
     it('should dynamically load components from config', async () => {
@@ -11,7 +9,7 @@ describe('ComponentManager Integration', () => {
                     path: 'memory/Focus.js',
                     class: 'Focus',
                     dependencies: [],
-                    config: { capacity: 100 }  // Example config
+                    config: {capacity: 100}  // Example config
                 },
             },
         };

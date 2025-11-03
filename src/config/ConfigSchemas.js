@@ -3,16 +3,16 @@
  * @description Centralized configuration schemas for validation
  */
 
-import { z } from 'zod';
+import {z} from 'zod';
 
 // Zod schema for Language Model configuration
 const lmProviderConfigSchema = z.object({
-  name: z.string().min(1).max(100),
-  apiKey: z.string().optional().default(''),
-  model: z.string().min(1).max(200),
-  baseURL: z.string().url().optional().default(''),
-  temperature: z.number().min(0).max(1).optional().default(0.7),
-  maxTokens: z.number().int().min(1).max(32000).optional().default(1000),
+    name: z.string().min(1).max(100),
+    apiKey: z.string().optional().default(''),
+    model: z.string().min(1).max(200),
+    baseURL: z.string().url().optional().default(''),
+    temperature: z.number().min(0).max(1).optional().default(0.7),
+    maxTokens: z.number().int().min(1).max(32000).optional().default(1000),
 });
 
 const configSchema = z.object({
@@ -105,4 +105,4 @@ const validateConfigWithDefaults = (config) => {
     }
 };
 
-export { validateConfig, validateConfigWithDefaults, configSchema, lmProviderConfigSchema };
+export {validateConfig, validateConfigWithDefaults, configSchema, lmProviderConfigSchema};

@@ -266,7 +266,7 @@ export class StrategyMetrics {
 
         // Track distribution by type
         for (const [type, count] of Object.entries(stats.byType || {})) {
-            this._metrics.cooperation.feedbackTypeDistribution[type] = 
+            this._metrics.cooperation.feedbackTypeDistribution[type] =
                 (this._metrics.cooperation.feedbackTypeDistribution[type] || 0) + count;
         }
 
@@ -274,7 +274,7 @@ export class StrategyMetrics {
         if (stats.total > 0) {
             const currentTotal = this._metrics.cooperation.agreements + this._metrics.cooperation.disagreements;
             if (currentTotal > 0) {
-                this._metrics.cooperation.avgAgreementRate = 
+                this._metrics.cooperation.avgAgreementRate =
                     this._metrics.cooperation.agreements / currentTotal;
             }
         }

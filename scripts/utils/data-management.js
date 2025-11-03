@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 
-import { spawn, exec } from 'child_process';
-import { promisify } from 'util';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-import { readdir, writeFile, readFile, copyFile, rm } from 'fs/promises';
-import { existsSync } from 'fs';
+import {exec} from 'child_process';
+import {promisify} from 'util';
+import {fileURLToPath} from 'url';
+import {dirname, join} from 'path';
+import {readdir, readFile, writeFile} from 'fs/promises';
+import {existsSync} from 'fs';
 
 const execAsync = promisify(exec);
 
@@ -38,10 +38,10 @@ const OPERATION_ARGS = ['--export', '--import', '--backup', '--restore', '--clea
 const FORMAT_ARG = '--format';
 
 const DATA_LOCATIONS = [
-    { dir: 'backups', description: 'Backup files' },
-    { dir: 'demo-results', description: 'Demo result files' },
-    { dir: 'test-results', description: 'Test result files' },
-    { dir: '.', pattern: '*.json', description: 'JSON state files' }
+    {dir: 'backups', description: 'Backup files'},
+    {dir: 'demo-results', description: 'Demo result files'},
+    {dir: 'test-results', description: 'Test result files'},
+    {dir: '.', pattern: '*.json', description: 'JSON state files'}
 ];
 
 const PATTERNS_TO_CLEAN = [
@@ -99,7 +99,7 @@ function parseArgs(args) {
         }
     }
 
-    return { operation, targetPath, format };
+    return {operation, targetPath, format};
 }
 
 /**
@@ -130,12 +130,12 @@ async function parseJsonFile(path) {
  */
 async function exportOperation(targetPath, format) {
     console.log(`\\n📤 Exporting current state to: ${targetPath}`);
-    
+
     const exportDir = dirname(targetPath);
     if (exportDir !== '.') {
         await execAsync(`mkdir -p ${exportDir}`);
     }
-    
+
     // Create a placeholder export file for now
     await writeFile(targetPath, JSON.stringify({
         timestamp: new Date().toISOString(),
@@ -143,7 +143,7 @@ async function exportOperation(targetPath, format) {
         format: format,
         description: 'SeNARS state export'
     }, null, 2));
-    
+
     console.log(`✅ State exported to: ${targetPath}`);
 }
 
@@ -152,12 +152,12 @@ async function exportOperation(targetPath, format) {
  */
 async function importOperation(targetPath) {
     console.log(`\\n📥 Importing state from: ${targetPath}`);
-    
+
     validateFileExists(targetPath);
-    
+
     // Read and validate import file
     const parsedData = await parseJsonFile(targetPath);
-    
+
     console.log(`✅ Successfully read import file: ${targetPath}`);
     console.log(`   Format: ${parsedData.format || 'unknown'}`);
     console.log(`   Timestamp: ${parsedData.timestamp || 'unknown'}`);
@@ -169,13 +169,13 @@ async function importOperation(targetPath) {
  */
 async function backupOperation(format) {
     console.log('\\n📦 Creating backup of current state...');
-    
+
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').replace('T', '_').replace('Z', '');
     const backupDir = 'backups';
     const backupPath = `${backupDir}/senars-backup-${timestamp}.json`;
-    
+
     await execAsync(`mkdir -p ${backupDir}`);
-    
+
     // Create a backup file
     await writeFile(backupPath, JSON.stringify({
         timestamp: new Date().toISOString(),
@@ -187,7 +187,7 @@ async function backupOperation(format) {
             originalPath: backupPath
         }
     }, null, 2));
-    
+
     console.log(`✅ Backup created: ${backupPath}`);
 }
 
@@ -196,9 +196,9 @@ async function backupOperation(format) {
  */
 async function restoreOperation(targetPath) {
     console.log(`\\n📥 Restoring from: ${targetPath}`);
-    
+
     validateFileExists(targetPath);
-    
+
     // Validate backup file
     const parsedBackup = await parseJsonFile(targetPath);
     console.log(`✅ Valid backup file detected`);
@@ -212,17 +212,17 @@ async function restoreOperation(targetPath) {
  */
 async function cleanOperation(cwd) {
     console.log('\\n🧹 Cleaning up old data and test artifacts...');
-    
+
     for (const pattern of PATTERNS_TO_CLEAN) {
         try {
             // Using shell command to handle glob patterns
-            await execAsync(`rm -rf ${pattern} 2>/dev/null || true`, { cwd });
+            await execAsync(`rm -rf ${pattern} 2>/dev/null || true`, {cwd});
             console.log(`  Removed: ${pattern}`);
         } catch (error) {
             // Silently continue if pattern doesn't match any files
         }
     }
-    
+
     console.log('✅ Clean up completed');
 }
 
@@ -231,17 +231,17 @@ async function cleanOperation(cwd) {
  */
 async function listOperation() {
     console.log('\\n📋 Listing available data files...');
-    
+
     for (const location of DATA_LOCATIONS) {
         try {
             if (location.pattern) {
                 // Look for JSON files in root
                 const files = await readdir('.');
-                const jsonFiles = files.filter(f => f.endsWith('.json') && 
-                    !f.includes('package') && 
-                    !f.includes('config') && 
+                const jsonFiles = files.filter(f => f.endsWith('.json') &&
+                    !f.includes('package') &&
+                    !f.includes('config') &&
                     !f.includes('README'));
-                
+
                 if (jsonFiles.length > 0) {
                     console.log(`\\n${location.description}:`);
                     jsonFiles.forEach(file => console.log(`  - ${file}`));
@@ -267,7 +267,7 @@ async function main() {
         process.exit(0);
     }
 
-    const { operation, targetPath, format } = parseArgs(args);
+    const {operation, targetPath, format} = parseArgs(args);
 
     if (!operation) {
         console.log('No operation specified. Use --help for usage information.');
@@ -278,7 +278,7 @@ async function main() {
 
     try {
         const cwd = join(__dirname, '../..');
-        
+
         switch (operation) {
             case 'export':
                 await exportOperation(targetPath, format);

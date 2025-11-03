@@ -24,21 +24,21 @@ class ConflictResolver {
             this.stats.validationErrors++;
             return [];
         }
-        
+
         return results.filter(result => {
             if (!result || typeof result !== 'object') {
                 console.warn(`Invalid result object from ${source}: not an object`);
                 this.stats.validationErrors++;
                 return false;
             }
-            
+
             // Validate that result has required properties
             if (!result.term) {
                 console.warn(`Invalid result from ${source}: missing term property`);
                 this.stats.validationErrors++;
                 return false;
             }
-            
+
             // Validate truth value if present
             if (result.truth) {
                 const {f: frequency, c: confidence} = result.truth;
@@ -47,14 +47,14 @@ class ConflictResolver {
                     this.stats.validationErrors++;
                     return false;
                 }
-                
+
                 if (typeof confidence === 'number' && (confidence < 0 || confidence > 1)) {
                     console.warn(`Invalid confidence value in result from ${source}: ${confidence}`);
                     this.stats.validationErrors++;
                     return false;
                 }
             }
-            
+
             return true;
         });
     }
@@ -68,7 +68,7 @@ class ConflictResolver {
             const validNalResults = this._validateResults(nalResults || [], 'NAL');
             const validLmResults = this._validateResults(lmResults || [], 'LM');
             const validHybridResults = this._validateResults(hybridResults || [], 'hybrid');
-            
+
             const allResults = [...validNalResults, ...validLmResults, ...validHybridResults];
             const resolvedResults = [];
             const potentialConflicts = [];
@@ -171,11 +171,11 @@ export class HybridReasoningEngine {
         if (nalEngine !== null && typeof nalEngine !== 'object') {
             throw new Error('NAL engine must be an object or null');
         }
-        
+
         if (lm !== null && typeof lm !== 'object') {
             throw new Error('LM must be an object or null');
         }
-        
+
         if (config && typeof config !== 'object') {
             throw new Error('Config must be an object');
         }
@@ -200,12 +200,12 @@ export class HybridReasoningEngine {
         if (value === undefined || value === null) {
             return defaultValue;
         }
-        
+
         if (typeof value !== 'number' || value < 0 || value > 1) {
             this.logger.warn(`Invalid threshold value: ${value}, using default: ${defaultValue}`);
             return defaultValue;
         }
-        
+
         return value;
     }
 
@@ -216,11 +216,11 @@ export class HybridReasoningEngine {
         try {
             // Validate input parameters
             this._validateTask(task);
-            
+
             if (context && typeof context !== 'object') {
                 throw new Error('Context must be an object');
             }
-            
+
             const results = {
                 nalResults: [],
                 lmResults: [],
@@ -334,27 +334,27 @@ export class HybridReasoningEngine {
         if (!task) {
             throw new Error('Task cannot be null or undefined');
         }
-        
+
         if (typeof task !== 'object') {
             throw new Error('Task must be an object');
         }
-        
+
         if (!task.term) {
             throw new Error('Task must have a term property');
         }
-        
+
         // Validate truth value if present
         if (task.truth) {
             const {f: frequency, c: confidence} = task.truth;
             if (typeof frequency === 'number' && (frequency < 0 || frequency > 1)) {
                 throw new Error(`Invalid frequency value in task: ${frequency}`);
             }
-            
+
             if (typeof confidence === 'number' && (confidence < 0 || confidence > 1)) {
                 throw new Error(`Invalid confidence value in task: ${confidence}`);
             }
         }
-        
+
         return true;
     }
 
@@ -370,24 +370,24 @@ export class HybridReasoningEngine {
         try {
             // Validate the input task
             this._validateTask(task);
-            
+
             // Apply all applicable NAL rules to the task
             const results = await this.nalEngine.applyRules(task);
-            
+
             // Validate results before returning
             if (!Array.isArray(results)) {
                 this.logger.warn('NAL engine returned non-array results, converting to array');
                 return Array.isArray(results) ? results : [];
             }
-            
+
             return results;
         } catch (error) {
             this.logger.error('Error in NAL reasoning:', error);
             // Return empty array but log more details
-            this.logger.debug('Error details:', { 
+            this.logger.debug('Error details:', {
                 taskValid: task && task.term ? true : false,
                 taskType: typeof task,
-                errorMessage: error.message 
+                errorMessage: error.message
             });
             return [];
         }
@@ -405,14 +405,14 @@ export class HybridReasoningEngine {
         try {
             // Validate the input task
             this._validateTask(task);
-            
+
             // Use LM rules if available, otherwise use direct LM processing
             const lmRules = this._getLMReasoningRules();
             if (!Array.isArray(lmRules)) {
                 this.logger.warn('LM rules is not an array, returning empty results');
                 return [];
             }
-            
+
             const results = [];
             let ruleProcessingErrors = 0;
 
@@ -421,7 +421,7 @@ export class HybridReasoningEngine {
                     this.logger.warn('Null or undefined rule encountered, skipping');
                     continue;
                 }
-                
+
                 try {
                     if (rule.canApply && rule.canApply(task, context)) {
                         const ruleResults = await rule.apply(task, context);
@@ -448,10 +448,10 @@ export class HybridReasoningEngine {
             return results;
         } catch (error) {
             this.logger.error('Error in LM reasoning:', error);
-            this.logger.debug('Error details:', { 
+            this.logger.debug('Error details:', {
                 taskValid: task && task.term ? true : false,
                 taskType: typeof task,
-                errorMessage: error.message 
+                errorMessage: error.message
             });
             return [];
         }
@@ -476,13 +476,13 @@ export class HybridReasoningEngine {
             this.logger.warn(`Invalid ${source} results: not an array`);
             return [];
         }
-        
+
         return results.filter(result => {
             if (!result || typeof result !== 'object') {
                 this.logger.warn(`Invalid result object from ${source}: not an object`);
                 return false;
             }
-            
+
             // Validate truth value if present
             if (result.truth) {
                 const {c: confidence} = result.truth;
@@ -491,7 +491,7 @@ export class HybridReasoningEngine {
                     return false;
                 }
             }
-            
+
             return true;
         });
     }
@@ -503,7 +503,7 @@ export class HybridReasoningEngine {
         try {
             // Validate input
             this._validateTask(task);
-            
+
             // Validate reasoning results
             const validNalResults = this._validateReasoningResults(nalResults, 'NAL');
             const validLmResults = this._validateReasoningResults(lmResults, 'LM');
@@ -634,7 +634,7 @@ export class HybridReasoningEngine {
                 this.logger.warn('NAL results is not an array in cross-validation');
                 nalResults = [];
             }
-            
+
             if (!Array.isArray(lmResults)) {
                 this.logger.warn('LM results is not an array in cross-validation');
                 lmResults = [];
@@ -647,15 +647,15 @@ export class HybridReasoningEngine {
                 if (!nalResult || typeof nalResult !== 'object' || !nalResult.term) {
                     continue; // Skip invalid results
                 }
-                
+
                 for (const lmResult of lmResults) {
                     if (!lmResult || typeof lmResult !== 'object' || !lmResult.term) {
                         continue; // Skip invalid results
                     }
-                    
+
                     try {
                         const similarity = this._calculateSemanticSimilarity(nalResult, lmResult);
-                        
+
                         if (typeof similarity !== 'number' || isNaN(similarity)) {
                             this.logger.warn('Invalid similarity value calculated');
                             continue;

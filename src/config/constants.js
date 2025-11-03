@@ -27,7 +27,6 @@ export const TIMING = Object.freeze({
 });
 
 
-
 // WebSocket constants
 export const WEBSOCKET = Object.freeze({
     DEFAULT_PORT: 8080,

@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
-import { spawn, exec } from 'child_process';
-import { promisify } from 'util';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import {exec, spawn} from 'child_process';
+import {promisify} from 'util';
+import {fileURLToPath} from 'url';
+import {dirname, join} from 'path';
 
 const execAsync = promisify(exec);
 
@@ -28,14 +28,14 @@ export const ProcessUtils = {
                 cwd: ProcessUtils.getBaseDir(),
                 stdio: ['pipe', 'pipe', 'pipe']
             };
-            
-            const execOptions = { ...defaultOptions, ...options };
-            
+
+            const execOptions = {...defaultOptions, ...options};
+
             const child = exec(command, execOptions, (error, stdout, stderr) => {
                 if (error) {
                     reject(error);
                 } else {
-                    resolve({ stdout, stderr });
+                    resolve({stdout, stderr});
                 }
             });
         });
@@ -50,28 +50,28 @@ export const ProcessUtils = {
                 cwd: ProcessUtils.getBaseDir(),
                 stdio: ['pipe', 'pipe', 'pipe']
             };
-            
-            const spawnOptions = { ...defaultOptions, ...options };
-            
+
+            const spawnOptions = {...defaultOptions, ...options};
+
             const child = spawn(command, args, spawnOptions);
-            
+
             let stdout = '';
             let stderr = '';
-            
+
             child.stdout.on('data', (data) => {
                 stdout += data.toString();
             });
-            
+
             child.stderr.on('data', (data) => {
                 stderr += data.toString();
             });
-            
+
             child.on('error', (error) => {
                 reject(error);
             });
-            
+
             child.on('close', (code) => {
-                resolve({ code, stdout, stderr });
+                resolve({code, stdout, stderr});
             });
         });
     },
@@ -81,7 +81,7 @@ export const ProcessUtils = {
      */
     executeNodeScript: (scriptPath, env = {}) => {
         return ProcessUtils.spawnProcess('node', [scriptPath], {
-            env: { ...process.env, ...env }
+            env: {...process.env, ...env}
         });
     }
 };

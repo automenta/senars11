@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { writeFile } from 'fs/promises';
+import {writeFile} from 'fs/promises';
 
 /**
  * Genetic algorithm and evolution utilities
@@ -11,7 +11,7 @@ export const EvolutionUtils = {
      */
     generateRandomConfig: (parameterRanges) => {
         const config = {};
-        
+
         for (const category in parameterRanges) {
             config[category] = {};
             for (const param in parameterRanges[category]) {
@@ -19,7 +19,7 @@ export const EvolutionUtils = {
                 config[category][param] = Math.random() * (range.max - range.min) + range.min;
             }
         }
-        
+
         return config;
     },
 
@@ -28,19 +28,19 @@ export const EvolutionUtils = {
      */
     selectParents: (population, tournamentSize = 3) => {
         const selected = [];
-        
+
         for (let i = 0; i < 2; i++) {
             const tournament = [];
             for (let j = 0; j < tournamentSize; j++) {
                 const randomIdx = Math.floor(Math.random() * population.length);
                 tournament.push(population[randomIdx]);
             }
-            
+
             // Select the best in tournament
             tournament.sort((a, b) => (b.fitness || 0) - (a.fitness || 0));
             selected.push(tournament[0]);
         }
-        
+
         return selected;
     },
 
@@ -50,7 +50,7 @@ export const EvolutionUtils = {
     crossover: (parent1, parent2) => {
         // Deep copy parent1's config
         const child = JSON.parse(JSON.stringify(parent1.config));
-        
+
         for (const category in child) {
             for (const param in child[category]) {
                 // Mix values from both parents
@@ -59,7 +59,7 @@ export const EvolutionUtils = {
                 child[category][param] = (val1 + val2) / 2;
             }
         }
-        
+
         return child;
     },
 
@@ -67,11 +67,11 @@ export const EvolutionUtils = {
      * Apply random mutations to parameters
      */
     mutate: (config, parameterRanges, mutationRate = 0.1) => {
-        const mutatedConfig = { ...config };
-        
+        const mutatedConfig = {...config};
+
         for (const category in parameterRanges) {
-            if (!mutatedConfig[category]) mutatedConfig[category] = { ...config[category] };
-            
+            if (!mutatedConfig[category]) mutatedConfig[category] = {...config[category]};
+
             for (const param in parameterRanges[category]) {
                 if (Math.random() < mutationRate) {
                     const range = parameterRanges[category][param];
@@ -79,7 +79,7 @@ export const EvolutionUtils = {
                 }
             }
         }
-        
+
         return mutatedConfig;
     },
 
@@ -87,30 +87,30 @@ export const EvolutionUtils = {
      * Create next generation using selection, crossover, and mutation
      */
     createNextGeneration: async (population, parameterRanges, options = {}) => {
-        const { 
-            populationSize = 5, 
-            mutationRate = 0.1, 
-            elitismCount = 1 
+        const {
+            populationSize = 5,
+            mutationRate = 0.1,
+            elitismCount = 1
         } = options;
-        
+
         // Sort population by fitness (descending)
         const sortedPop = [...population].sort((a, b) => (b.fitness || 0) - (a.fitness || 0));
-        
+
         // Keep best individuals (elitism)
         const nextPopulation = sortedPop.slice(0, elitismCount);
-        
+
         // Fill the rest through selection, crossover and mutation
         while (nextPopulation.length < populationSize) {
             const [parent1, parent2] = EvolutionUtils.selectParents(population);
             let childConfig = EvolutionUtils.crossover(parent1, parent2);
             childConfig = EvolutionUtils.mutate(childConfig, parameterRanges, mutationRate);
-            
+
             nextPopulation.push({
                 config: childConfig,
                 id: nextPopulation.length
             });
         }
-        
+
         return nextPopulation;
     },
 
@@ -118,11 +118,11 @@ export const EvolutionUtils = {
      * Calculate fitness statistics for a population
      */
     calculatePopulationStats: (population) => {
-        if (population.length === 0) return { best: 0, average: 0, worst: 0 };
-        
+        if (population.length === 0) return {best: 0, average: 0, worst: 0};
+
         const fitnesses = population.map(ind => ind.fitness || 0);
         const sorted = [...fitnesses].sort((a, b) => b - a);
-        
+
         return {
             best: sorted[0],
             average: sorted.reduce((sum, fit) => sum + fit, 0) / sorted.length,

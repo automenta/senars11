@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-import { spawn } from 'child_process';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import {spawn} from 'child_process';
+import {fileURLToPath} from 'url';
+import {dirname, join} from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -68,15 +68,15 @@ console.log(`Running automated development workflow: ${operation}`);
 async function runWorkflow() {
     try {
         const workflowTasks = [
-            { op: 'visual-inspection', fn: runVisualInspection },
-            { op: 'tune-heuristics', fn: runHeuristicTuning },
-            { op: 'regression-tests', fn: runRegressionTests },
-            { op: 'performance-bench', fn: runPerformanceBench },
-            { op: 'analysis', fn: runAnalysis },
-            { op: 'demo-run', fn: runDemo }
+            {op: 'visual-inspection', fn: runVisualInspection},
+            {op: 'tune-heuristics', fn: runHeuristicTuning},
+            {op: 'regression-tests', fn: runRegressionTests},
+            {op: 'performance-bench', fn: runPerformanceBench},
+            {op: 'analysis', fn: runAnalysis},
+            {op: 'demo-run', fn: runDemo}
         ];
 
-        for (const { op, fn } of workflowTasks) {
+        for (const {op, fn} of workflowTasks) {
             if (operation === op || operation === 'all') {
                 await fn();
             }
@@ -96,10 +96,10 @@ const runSpawnProcess = (cmd, args, opts = {}) => {
         cwd: join(__dirname, '../..'),
         ...opts
     };
-    
+
     return new Promise((resolve, reject) => {
         const child = spawn(cmd, args, spawnOpts);
-        
+
         child.on('error', reject);
         child.on('close', (code) => {
             if (code !== 0) reject(new Error(`${cmd} failed with code ${code}`));
@@ -119,10 +119,10 @@ const runHeuristicTuning = async () => {
     console.log('\\n⚙️  Running heuristic tuning...');
     for (let i = 0; i < iterations; i++) {
         console.log(`\\nIteration ${i + 1}/${iterations}`);
-        
+
         // Run analysis to gather data
-        await runSpawnProcess('npm', ['run', 'analyze'], { stdio: 'pipe' });
-        
+        await runSpawnProcess('npm', ['run', 'analyze'], {stdio: 'pipe'});
+
         // Capture visualizations after each analysis
         await runSpawnProcess('npm', ['run', 'capture']);
     }
