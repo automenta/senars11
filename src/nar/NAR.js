@@ -1,4 +1,4 @@
-import {SystemConfig} from './SystemConfig.js';
+import {NARBuilder} from './NARBuilder.js';
 import {TermFactory} from '../term/TermFactory.js';
 import {Memory} from '../memory/Memory.js';
 import {TaskManager} from '../task/TaskManager.js';
@@ -30,7 +30,7 @@ import {ReasoningAboutReasoning} from '../reasoning/ReasoningAboutReasoning.js';
 export class NAR extends BaseComponent {
     constructor(config = {}) {
         super(config, 'NAR');
-        this._config = SystemConfig.from(config);
+        this._config = NARBuilder.from(config);
         this._componentManager = new ComponentManager({}, this._eventBus, this);
         this._initComponents(config);
         this._isRunning = false;
@@ -427,7 +427,7 @@ export class NAR extends BaseComponent {
             }
 
             if (state.config) {
-                this._config = SystemConfig.from(state.config);
+                this._config = NARBuilder.from(state.config);
             }
 
             if (state.memory && this._memory.deserialize) {

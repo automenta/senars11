@@ -8,7 +8,7 @@ import {ConfigManager} from '../config/ConfigManager.js';
 /**
  * SystemConfig class that uses the centralized ConfigManager
  */
-export class SystemConfig {
+export class NARBuilder {
     constructor(userConfig = {}) {
         // Use ConfigManager to handle validation and merging
         this._configManager = new ConfigManager(userConfig);
@@ -16,7 +16,7 @@ export class SystemConfig {
     }
 
     static from(userConfig = {}) {
-        return new SystemConfig(userConfig);
+        return new NARBuilder(userConfig);
     }
 
     get(path) {
