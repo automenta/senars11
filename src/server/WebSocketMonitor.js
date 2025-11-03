@@ -364,11 +364,8 @@ class WebSocketMonitor {
             'requestCapabilities': (msg) => this._handleRequestCapabilities(client, msg)
         };
 
-        if (handlers[message.type]) {
-            handlers[message.type](message);
-        } else {
-            this._handleCustomMessage(client, message);
-        }
+        const handler = handlers[message.type] || this._handleCustomMessage.bind(this, client, message);
+        handler(message);
     }
 
     _handleCustomMessage(client, message) {
@@ -394,40 +391,35 @@ class WebSocketMonitor {
     }
 
     _handleMessageError(client, error) {
-        if (error instanceof SyntaxError) {
-            console.error('Invalid JSON received:', error.message);
-            this._sendToClient(client, {
-                type: 'error',
-                message: 'Invalid JSON format',
-                error: error.message
-            });
-        } else {
-            console.error('Error handling client message:', error);
-            this._sendToClient(client, {
-                type: 'error',
-                message: 'Error processing message',
-                error: error.message
-            });
-        }
+        const isSyntaxError = error instanceof SyntaxError;
+        const message = isSyntaxError ? 'Invalid JSON format' : 'Error processing message';
+        const errorMessage = isSyntaxError ? error.message : error.message;
+        
+        console.error(isSyntaxError ? 'Invalid JSON received:' : 'Error handling client message:', errorMessage);
+        
+        this._sendToClient(client, {
+            type: 'error',
+            message,
+            error: errorMessage
+        });
     }
 
     _sendHandlerError(client, messageType, handlerError) {
         console.error(`Error in handler for message type ${messageType}:`, handlerError);
-        this._sendToClient(client, {
-            type: 'error',
-            message: `Handler error for ${messageType}`,
-            error: handlerError.message
-        });
+        this._sendErrorMessage(client, `Handler error for ${messageType}`, handlerError.message);
         this.metrics.errorCount++;
     }
 
     _sendInvalidHandlerError(client, messageType) {
         console.error(`Invalid handler for message type: ${messageType}`);
-        this._sendToClient(client, {
-            type: 'error',
-            message: `Invalid handler for message type: ${messageType}`
-        });
+        this._sendErrorMessage(client, `Invalid handler for message type: ${messageType}`);
         this.metrics.errorCount++;
+    }
+    
+    _sendErrorMessage(client, message, error = null) {
+        const response = { type: 'error', message };
+        if (error) response.error = error;
+        this._sendToClient(client, response);
     }
 
     // Handler for requesting client capabilities
@@ -656,19 +648,8 @@ class WebSocketMonitor {
 
     _broadcastMessage(message, eventType) {
         try {
-            // Rate limiting to prevent flooding
-            const now = Date.now();
-            const lastBroadcast = this.broadcastRateLimiter.lastBroadcastTime.get(eventType) ?? 0;
-            if (now - lastBroadcast < this.broadcastRateLimiter.minInterval) {
-                return; // Skip this broadcast to respect rate limit
-            }
-            this.broadcastRateLimiter.lastBroadcastTime.set(eventType, now);
-
-            if (this.eventFilter && typeof this.eventFilter === 'function') {
-                if (!this.eventFilter(eventType, message.data)) {
-                    return;
-                }
-            }
+            // Early returns for optimization
+            if (!this._shouldBroadcast(message, eventType)) return;
 
             // Only process if we have clients to send to
             if (this.clients.size === 0) return;
@@ -677,36 +658,8 @@ class WebSocketMonitor {
             let sentCount = 0;
 
             for (const client of this.clients) {
-                // Apply subscription filtering - only for non-event type messages
-                const shouldSend = message.type === 'event' || 
-                    !client.subscriptions || 
-                    client.subscriptions.has('all') || 
-                    client.subscriptions.has(eventType);
-
-                if (shouldSend && client.readyState === client.OPEN) {
-                    try {
-                        client.send(jsonMessage, {binary: false, compress: true}, (error) => {
-                            if (error) {
-                                console.error(`Error sending ${message.type} to client:`, error);
-                                // Remove problematic client
-                                this.clients.delete(client);
-                                try {
-                                    client.close(1011, 'Sending error');
-                                } catch (e) {
-                                }
-                            } else {
-                                sentCount++;
-                            }
-                        });
-                    } catch (sendError) {
-                        console.error(`Error sending ${message.type} to client:`, sendError);
-                        // Remove problematic client
-                        this.clients.delete(client);
-                        try {
-                            client.close(1011, 'Sending error');
-                        } catch (e) {
-                        }
-                    }
+                if (this._shouldSendToClient(client, message, eventType) && client.readyState === client.OPEN) {
+                    sentCount += this._sendToClientSafe(client, jsonMessage, message.type);
                 }
             }
 
@@ -715,6 +668,55 @@ class WebSocketMonitor {
         } catch (error) {
             console.error(`Error broadcasting ${message.type}:`, error);
             this.metrics.errorCount++;
+        }
+    }
+    
+    _shouldBroadcast(message, eventType) {
+        // Rate limiting to prevent flooding
+        const now = Date.now();
+        const lastBroadcast = this.broadcastRateLimiter.lastBroadcastTime.get(eventType) ?? 0;
+        if (now - lastBroadcast < this.broadcastRateLimiter.minInterval) {
+            return false; // Skip this broadcast to respect rate limit
+        }
+        this.broadcastRateLimiter.lastBroadcastTime.set(eventType, now);
+
+        if (this.eventFilter && typeof this.eventFilter === 'function') {
+            if (!this.eventFilter(eventType, message.data)) {
+                return false;
+            }
+        }
+        
+        return true;
+    }
+    
+    _shouldSendToClient(client, message, eventType) {
+        // Apply subscription filtering - only for non-event type messages
+        return message.type === 'event' || 
+            !client.subscriptions || 
+            client.subscriptions.has('all') || 
+            client.subscriptions.has(eventType);
+    }
+    
+    _sendToClientSafe(client, jsonMessage, messageType) {
+        try {
+            client.send(jsonMessage, {binary: false, compress: true}, (error) => {
+                if (error) this._handleClientSendError(client, messageType, error);
+            });
+            return 1;
+        } catch (sendError) {
+            this._handleClientSendError(client, messageType, sendError);
+            return 0;
+        }
+    }
+    
+    _handleClientSendError(client, messageType, error) {
+        console.error(`Error sending ${messageType} to client:`, error);
+        // Remove problematic client
+        this.clients.delete(client);
+        try {
+            client.close(1011, 'Sending error');
+        } catch (e) {
+            // If client is already closed, just ignore
         }
     }
 

@@ -33,7 +33,22 @@ export class DemoWrapper {
     }
 
     registerBuiltinDemos() {
-        const demos = [
+        const builtinDemoConfigs = this._getBuiltinDemoConfigs();
+        
+        builtinDemoConfigs.forEach(config => {
+            this.registerDemo(config.id, {
+                name: config.name,
+                description: config.description,
+                handler: config.handler,
+                parameters: {
+                    stepDelay: {type: 'number', defaultValue: config.stepDelay, description: 'Delay between steps in ms'}
+                }
+            });
+        });
+    }
+    
+    _getBuiltinDemoConfigs() {
+        return [
             {
                 id: 'basicUsage',
                 name: 'Basic Usage Demo',
@@ -56,17 +71,6 @@ export class DemoWrapper {
                 stepDelay: 2000
             }
         ];
-
-        demos.forEach(demo => {
-            this.registerDemo(demo.id, {
-                name: demo.name,
-                description: demo.description,
-                handler: demo.handler,
-                parameters: {
-                    stepDelay: {type: 'number', defaultValue: demo.stepDelay, description: 'Delay between steps in ms'}
-                }
-            });
-        });
     }
 
     registerDemo(id, config) {
@@ -98,18 +102,10 @@ export class DemoWrapper {
             }
 
             const {command, demoId, parameters} = data.payload;
-
-            const commandHandlers = {
-                'start': () => this.startDemo(demoId, parameters || {}),
-                'stop': () => this.stopDemo(demoId),
-                'pause': () => this.pauseDemo(demoId),
-                'resume': () => this.resumeDemo(demoId),
-                'step': () => this.stepDemo(demoId, parameters || {}),
-                'configure': () => this.configureDemo(demoId, parameters || {})
-            };
-
-            if (commandHandlers[command]) {
-                await commandHandlers[command]();
+            const handler = this._getCommandHandler(command, demoId, parameters || {});
+            
+            if (handler) {
+                await handler();
             } else {
                 await this._handleUnknownCommand(demoId, command);
             }
@@ -125,6 +121,19 @@ export class DemoWrapper {
                 });
             }
         }
+    }
+    
+    _getCommandHandler(command, demoId, parameters) {
+        const commandHandlers = {
+            'start': () => this.startDemo(demoId, parameters),
+            'stop': () => this.stopDemo(demoId),
+            'pause': () => this.pauseDemo(demoId),
+            'resume': () => this.resumeDemo(demoId),
+            'step': () => this.stepDemo(demoId, parameters),
+            'configure': () => this.configureDemo(demoId, parameters)
+        };
+
+        return commandHandlers[command] || null;
     }
 
     _validateDemoControl(data) {
@@ -438,22 +447,27 @@ export class DemoWrapper {
         const stepDelay = params.stepDelay || 1000;
         this.currentStep = 0;
 
-        for (const step of steps) {
+        for (const [index, step] of steps.entries()) {
             this.currentStep++;
             await this.sendDemoStep(demoId, this.currentStep, step.description);
             
             if (step.input) {
-                try {
-                    await this.nar.input(step.input);
-                } catch (error) {
-                    console.error(`Error processing input for step ${this.currentStep}:`, error);
-                    await this.sendDemoStep(demoId, this.currentStep, `Error processing input: ${error.message}`);
-                }
+                await this._executeInputSafely(demoId, step.input);
             }
             
-            if (this.currentStep < steps.length) { // Don't wait after the last step
+            // Don't wait after the last step
+            if (index < steps.length - 1) {
                 await this.waitIfNotPaused(stepDelay);
             }
+        }
+    }
+    
+    async _executeInputSafely(demoId, input) {
+        try {
+            await this.nar.input(input);
+        } catch (error) {
+            console.error(`Error processing input for step ${this.currentStep}:`, error);
+            await this.sendDemoStep(demoId, this.currentStep, `Error processing input: ${error.message}`);
         }
     }
 
