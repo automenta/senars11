@@ -54,42 +54,39 @@ class SeNARSSelfAnalyzer {
     
     try {
       // Try to run tests with JSON output for detailed individual test results
-      const testResult = spawnSync('npm', ['test', '--', '--json', '--silent'], {
+      // Use the exact same command as the package.json test script to ensure compatibility
+      let testResult = spawnSync('npx', ['jest', '--json', '--silent'], {
         cwd: process.cwd(),
         timeout: 180000, // 3 minutes timeout for large test suites
         encoding: 'utf8',
-        stdio: ['pipe', 'pipe', 'pipe']
+        stdio: ['pipe', 'pipe', 'pipe'],
+        env: {
+          ...process.env,
+          NODE_NO_WARNINGS: '1',
+          NODE_OPTIONS: '--experimental-vm-modules'
+        }
       });
 
+      let parsedResult = null;
+      
       if (testResult.status === 0 || testResult.status === 1) { // Accept 1 (some tests failed) as valid result
         // Parse the JSON output from Jest
         const output = testResult.stdout || testResult.stderr;
         
         try {
-          // Extract the JSON object from the output (might be embedded in other text)
-          const lines = output.split('\n');
-          let parsedResult = null;
-          
-          for (const line of lines) {
-            const trimmedLine = line.trim();
-            if (trimmedLine.startsWith('{') && trimmedLine.endsWith('}')) {
-              try {
-                parsedResult = JSON.parse(trimmedLine);
-                break;
-              } catch (e) {
-                // Continue to next line if parsing fails
-              }
-            }
-          }
-          
-          if (!parsedResult) {
-            // If the JSON isn't on a single line, try to find JSON block
+          // Try to parse the whole output as JSON (Jest typically outputs complete JSON)
+          try {
+            parsedResult = JSON.parse(output.trim());
+          } catch (e) {
+            // If that fails, try to extract JSON from the output
+            // Look for JSON object in the output
             const jsonMatch = output.match(/\{[\s\S]*\}/);
             if (jsonMatch) {
               try {
                 parsedResult = JSON.parse(jsonMatch[0]);
-              } catch (e) {
-                console.log('Could not parse JSON from test output');
+              } catch (innerError) {
+                console.log('Could not parse JSON from test output:', innerError.message);
+                console.log('Output was:', output.substring(0, 500) + '...');
               }
             }
           }
@@ -341,10 +338,11 @@ class SeNARSSelfAnalyzer {
     const individualResults = [];
     
     for (const testSuite of testResultsArray) {
-      const suiteName = testSuite.testFilePath;
+      const suiteName = testSuite.name || testSuite.testFilePath;
       
-      if (testSuite.testResults) {
-        for (const testResult of testSuite.testResults) {
+      if (testSuite.assertionResults) {
+        // Jest uses assertionResults for individual test results
+        for (const testResult of testSuite.assertionResults) {
           individualResults.push({
             name: testResult.title,
             status: testResult.status, // 'passed', 'failed', 'pending', 'todo'
@@ -353,7 +351,10 @@ class SeNARSSelfAnalyzer {
             ancestorTitles: testResult.ancestorTitles || [],
             failureMessages: testResult.failureMessages || [],
             location: testResult.location || null,
-            fullName: (testResult.ancestorTitles ? testResult.ancestorTitles.join(' > ') + ' > ' : '') + testResult.title
+            fullName: (testResult.ancestorTitles ? testResult.ancestorTitles.join(' > ') + ' > ' : '') + testResult.title,
+            invocations: testResult.invocations || 1,
+            numPassingAsserts: testResult.numPassingAsserts || 0,
+            retryReasons: testResult.retryReasons || []
           });
         }
       }

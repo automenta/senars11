@@ -25,7 +25,8 @@ const PANELS = {
     DASHBOARD: [
         {name: 'Dashboard', component: 'DashboardPanel'},
         {name: 'Main', component: 'MainPanel'},
-        {name: 'Task Monitor', component: 'TaskMonitorPanel'}
+        {name: 'Task Monitor', component: 'TaskMonitorPanel'},
+        {name: 'Self Analysis', component: 'SelfAnalysisPanel'}
     ],
 
     EXECUTION: [

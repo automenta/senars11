@@ -48,7 +48,7 @@ const createTextFilter = (searchFields, filterText) => {
         });
 };
 
-const getNestedValue = (obj, path) => path.split('.').reduce((current, key) => current?.[key], obj);
+export const getNestedValue = (obj, path) => path.split('.').reduce((current, key) => current?.[key], obj);
 
 const createCustomFilters = (customFilters = []) => {
     if (!customFilters.length) return () => true;

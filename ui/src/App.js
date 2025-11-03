@@ -4,6 +4,7 @@ import 'flexlayout-react/style/light.css';
 import useUiStore from './stores/uiStore';
 import WebSocketService from './utils/websocket';
 import defaultLayout from './layouts/defaultLayout';
+import selfAnalysisLayout from './layouts/selfAnalysisLayout';
 import ErrorBoundary from './components/ErrorBoundary';
 import Panel from './components/Panel';
 import {contentMap} from './components/panelContent';
@@ -14,8 +15,14 @@ function App() {
     const wsService = useRef(null);
 
     useEffect(() => {
-        const savedLayout = localStorage.getItem('layout');
-        const initialLayout = savedLayout ? JSON.parse(savedLayout) : defaultLayout;
+        // Check for self-analysis query parameter
+        const layoutMode = new URLSearchParams(window.location.search).get('layout');
+        
+        // Load the appropriate layout based on parameter
+        const initialLayout = layoutMode === 'self-analysis' 
+            ? selfAnalysisLayout 
+            : JSON.parse(localStorage.getItem('layout') || JSON.stringify(defaultLayout));
+        
         setModel(Model.fromJson(initialLayout));
     }, []);
 
