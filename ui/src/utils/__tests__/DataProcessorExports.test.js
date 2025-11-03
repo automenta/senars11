@@ -23,7 +23,7 @@ describe('dataProcessor.js imports', () => {
   });
 
   it('dataProcessor imports all expected functions', async () => {
-    const module = await import('../utils/dataProcessor.js');
+    const module = await import('../dataProcessor.js');
     
     // Check that all the functions dataProcessor tries to import exist
     expect(module.processDataWithFilters).toBeDefined();
