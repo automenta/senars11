@@ -7,22 +7,142 @@ A hybrid neuro-symbolic reasoning system that combines Non-Axiomatic Logic (NAL)
 - **Non-Axiomatic Logic (NAL)**: A logic system that does not rely on fixed axioms but adapts based on experience and evidence
 - **Observable Platform**: A system that provides real-time visibility into its reasoning processes, enabling analysis and understanding of its decision-making
 
-## System Architecture
+---
 
-### Core Components Overview
+## Key Architectural Patterns
 
-The system consists of several interconnected components:
+The SeNARS architecture is built around several fundamental patterns that enable its intelligence and adaptability:
 
-- **NAR (NARS Reasoner Engine)**: The main entry point and orchestrator that manages the reasoning cycle and coordinates all system components
-- **Memory**: Manages concepts, tasks, and knowledge representation; implements both long-term and short-term (focus) memory systems
-- **Focus Manager**: Handles attention focus sets (short-term memory) that prioritize tasks for immediate processing based on attention mechanisms
-- **Term**: Core immutable data structure for representing knowledge elements with structural properties that support reasoning
-- **Task**: Represents units of work or information processed by the system; encapsulates a Term with associated truth values, stamps, and processing priorities
-- **Reasoning Engine**: Applies NAL and LM rules to generate inferences, conclusions, and new knowledge from existing information
-- **Parser**: Handles Narsese syntax parsing and generation; converts between human-readable Narsese notation and internal Term representations
-- **LM (Language Model Integration)**: Provides language model capabilities that complement formal symbolic reasoning with neural pattern recognition
+### 1. Immutable Data Foundation
+- **Core Data Structures** (Terms, Tasks, Truth, Stamps) are immutable, ensuring consistency and enabling efficient caching
+- **Canonical Representation**: Equivalent structures normalize to identical forms for efficient comparison and storage
+- **Functional Processing**: Operations create new instances rather than modifying existing ones
 
-### Directory Structure
+### 2. Component-Based Architecture
+- **BaseComponent Foundation**: All major system components inherit from a common base with standardized lifecycle (initialize, start, stop, dispose)
+- **Event-Driven Communication**: Components communicate through a centralized EventBus for loose coupling
+- **Built-in Metrics**: All components include standardized performance and operational metrics
+
+### 3. Dual Memory Architecture
+- **Short-term Focus Memory**: High-priority, limited-capacity memory for immediate processing
+- **Long-term Memory**: Persistent storage for all other knowledge and tasks
+- **Automatic Consolidation**: Intelligent movement of information between memory types based on priority and usage
+
+### 4. Hybrid Reasoning Integration
+- **NAL-LM Collaboration**: Formal symbolic reasoning combined with neural language model capabilities
+- **Circuit Breaker Protection**: Automatic fallback mechanisms when external services fail
+- **Bidirectional Enhancement**: Each reasoning modality improves the other's effectiveness
+
+### 5. Layer-Based Extensibility
+- **Abstract Layer Interface**: Foundation for different types of associative and semantic connections
+- **Specialized Implementations**: TermLayer for term connections, EmbeddingLayer for semantic similarity
+- **Flexible Extension**: Easy to add new layer types for different reasoning needs
+
+---
+
+## Usage Examples
+
+### Basic Reasoning Example
+
+```javascript
+import { NAR } from './src/nar/NAR.js';
+import { SystemConfig } from './src/nar/SystemConfig.js';
+
+// Create a new reasoning system
+const config = SystemConfig.from({
+  memory: { capacity: 100 },
+  cycle: { delay: 10 }
+});
+
+const nar = new NAR(config);
+
+// Add beliefs about birds
+nar.input('<bird --> animal>{0.9, 0.8}.');
+nar.input('<robin --> bird>{0.95, 0.7}.');
+
+// The system will automatically infer that robins are animals
+// Wait for a few reasoning cycles
+setTimeout(() => {
+  const beliefs = nar.getBeliefs();
+  console.log('System beliefs:', beliefs);
+}, 100);
+```
+
+### Goal-Driven Reasoning
+
+```javascript
+// Set a goal for the system
+nar.input('<clean_house --> done>!{0.8, 0.9}.');
+
+// Provide information about possible actions
+nar.input('<vacuum --> clean_house>{0.7, 0.8}.');
+nar.input('<sweep --> clean_house>{0.6, 0.7}.');
+
+// The system will work toward achieving the goal by selecting appropriate actions
+```
+
+### Using with Language Models
+
+```javascript
+import { LM } from './src/lm/LM.js';
+
+// Configure language model integration
+const lm = new LM({
+  enabled: true,
+  defaultProvider: 'openai',
+  providers: {
+    openai: {
+      apiKey: process.env.OPENAI_API_KEY,
+      model: 'gpt-3.5-turbo'
+    }
+  }
+});
+
+// Register the LM with the NAR system
+nar.lm = lm;
+
+// The system can now use language models to enhance reasoning
+nar.input('Birds typically fly. Can penguins fly?');
+// This would generate appropriate Narsese representations and use LM for enhanced reasoning
+```
+
+### Event-Driven Processing
+
+```javascript
+// Listen for system events
+nar.on('belief_updated', (data) => {
+  console.log('New belief formed:', data.belief);
+});
+
+nar.on('question_answered', (data) => {
+  console.log('Question answered:', data.question, '->', data.answer);
+});
+
+nar.on('cycle_complete', (data) => {
+  console.log(`Cycle ${data.cycleNumber} completed with ${data.tasksProcessed} tasks processed`);
+});
+```
+
+### Practical Use Cases
+
+**Knowledge Discovery:**
+- Input: Domain-specific facts and relationships
+- Process: System discovers implicit connections and patterns
+- Output: Previously unknown relationships or insights
+
+**Decision Support:**
+- Input: Current situation and possible options
+- Process: Weighs pros/cons based on system knowledge
+- Output: Recommended actions with confidence levels
+
+**Educational Tool:**
+- Input: Student questions and knowledge state
+- Process: Explains concepts with logical reasoning chains
+- Output: Step-by-step explanations of how conclusions are reached
+
+---
+
+## Directory Structure
 
 ```
 /
@@ -117,112 +237,130 @@ The system consists of several interconnected components:
 
 ---
 
-## Core Data Structures
+## System Architecture
 
-### `Term` Class
+### Core Components Overview
 
-The `Term` class is the cornerstone of the system, designed for strict immutability and robust operations.
+The system consists of several interconnected components:
+
+- **NAR (NARS Reasoner Engine)**: The main entry point and orchestrator that manages the reasoning cycle and coordinates all system components
+- **Memory**: Manages concepts, tasks, and knowledge representation; implements both long-term and short-term (focus) memory systems
+- **Focus Manager**: Handles attention focus sets (short-term memory) that prioritize tasks for immediate processing based on attention mechanisms
+- **Term**: Core immutable data structure for representing knowledge elements with structural properties that support reasoning
+- **Task**: Represents units of work or information processed by the system; encapsulates a Term with associated truth values, stamps, and processing priorities
+- **Reasoning Engine**: Applies NAL and LM rules to generate inferences, conclusions, and new knowledge from existing information
+- **Parser**: Handles Narsese syntax parsing and generation; converts between human-readable Narsese notation and internal Term representations
+- **LM (Language Model Integration)**: Provides language model capabilities that complement formal symbolic reasoning with neural pattern recognition
+
+### Core Data Structures
+
+#### `Term` Class
+
+The `Term` class represents knowledge in the system and is designed to be immutable for reliability and performance.
 
 **Key Features:**
 
-- **Strict Immutability:** Once created, a `Term` instance cannot be modified. All internal data structures are
-  frozen or deeply immutable. This simplifies reasoning about state and enables efficient caching.
-- **Equality, Comparators, and Hashcode:**
-    - `equals(otherTerm)`: Deep equality comparison, considering structure and content.
-    - `hashCode()`: A consistent hash code generation for efficient use in `Map`s and `Set`s. This is
-      pre-calculated upon creation and stored.
-    - `compareTo(otherTerm)`: For ordered collections (if needed).
+- **Immutability:** Once created, a `Term` cannot be changed. This ensures data consistency and enables efficient caching.
+- **Equality and Hashing:**
+    - `equals(otherTerm)`: Compares two terms for equality, considering their structure and content.
+    - `hashCode()`: Provides a unique hash code for use in collections like Maps and Sets.
 - **Factory Construction (`TermFactory`):**
     - All `Term` instances are created via `TermFactory.create(termExpression)`.
-    - The factory handles parsing of Narsese-like string expressions into concrete `Term` objects.
-    - **Reduction and Normalization:** The factory automatically performs canonical reductions for compound terms,
-      such as:
-        - Commutativity for operators like `&` (conjunction), `|` (disjunction): `(&, B, A)` normalizes to
-          `(&, A, B)`.
-        - Associativity for operators: `(&, A, (&, B, C))` normalizes to `(&, A, B, C)`.
-        - Elimination of redundancies: `(&, A, A)` normalizes to `A`.
-    - **Caching:** The factory caches `Term` instances to ensure that identical terms (after normalization) always
-      refer to the same object, optimizing memory and equality checks.
+    - The factory parses Narsese expressions (like `<A --> B>`) into structured objects.
+    - **Normalization:** Automatically normalizes equivalent terms (e.g., `(&, A, B)` and `(&, B, A)` become the same).
+    - **Caching:** Reuses identical terms to save memory and speed up comparisons.
 - **Properties:**
-    - `id`: A unique identifier (e.g., hash code or canonical string representation).
-    - `operator`: The main operator of the term (e.g., `&`, `-->`, `_`).
-    - `arity`: Number of direct sub-terms.
-    - `complexity`: A numerical measure of the term's structural complexity.
-    - `isAtomic`, `isCompound`, `isVariable`, `isStatement`, etc.
-- **Sub-term Accessors:**
-    - `getComponent(index)`: Access a direct sub-term by its 0-based index.
-    - `getComponents()`: Returns an immutable array of direct sub-terms.
-    - `getAllSubTerms()`: Returns a flattened, unique list of all sub-terms (including nested ones).
-- **Sub-term Visitors:**
-    - `visit(visitorFunction)`: Traverses the term structure, applying a function to each sub-term (pre-order, in-order,
-      post-order options).
-- **Sub-term Reducers:**
-    - `reduce(reducerFunction, initialValue)`: Applies a reducer function across the term structure to aggregate a
-      result.
+    - `id`: Unique identifier for the term.
+    - `operator`: The logical operator (e.g., `&` for conjunction, `-->` for inheritance).
+    - `arity`: Number of sub-components the term has.
+    - `complexity`: A measure of how complex the term structure is.
+    - `isAtomic`, `isCompound`, etc.: Boolean properties describing the term type.
+- **Sub-term Access:**
+    - `getComponent(index)`: Access a specific sub-part of the term.
+    - `getComponents()`: Get all direct sub-parts.
+    - `getAllSubTerms()`: Get all nested parts recursively.
+- **Structural Analysis:**
+    - `visit(visitorFunction)`: Traverse the term structure applying functions to each part.
+    - `reduce(reducerFunction, initialValue)`: Aggregate information across the term structure.
 
 **Technical Definitions:**
-- **Term**: An atomic or compound representation of knowledge in the system, serving as the basic unit of reasoning
-- **Atomic Term**: A simple, indivisible term with no sub-components (e.g., "bird", "red")
-- **Compound Term**: A term constructed from multiple sub-terms using logical operators
-- **Term Normalization**: The process of converting equivalent terms to a canonical form to ensure consistent representation
-- **Term Complexity**: A calculated value representing the structural depth and intricacy of a term
+- **Term**: The fundamental unit of knowledge representation in the system
+- **Atomic Term**: A simple, indivisible term (like "bird" or "red")
+- **Compound Term**: A term built from multiple sub-terms using logical operators
+- **Term Normalization**: Converting equivalent terms to the same canonical form
 
-### `Task` Class
+#### `Task` Class
 
-The `Task` class represents a unit of work or information within the system, designed for robustness and clarity.
+The `Task` class represents a unit of work in the system, containing information to be processed along with metadata.
 
 **Key Features:**
 
-- **Immutability:** `Task` instances are immutable.
+- **Immutability:** `Task` instances cannot be changed after creation.
 - **Properties:**
-    - `term`: The `Term` instance associated with this task.
-    - `truth`: An object representing the truth value (e.g., `{ frequency: 0.9, confidence: 0.8 }`).
-    - `stamp`: An object containing metadata about the task's origin and evidence, including creation timestamp, source,
-      and derivation history.
-    - `priority`: A numerical value indicating the task's urgency or importance in memory.
-    - `type`: An enum or string indicating the task's nature (e.g., `INHERITANCE`, `BELIEF`, `GOAL`, `QUESTION`).
-    - `budget`: Resources allocated to the task for processing.
+    - `term`: The knowledge content of the task (a Term object).
+    - `truth`: The certainty of the information (e.g., `{ frequency: 0.9, confidence: 0.8 }`).
+    - `stamp`: Metadata tracking where the task came from and how it was derived.
+    - `priority`: How important the task is (higher priority tasks get processed first).
+    - `type`: The kind of task (BELIEF, GOAL, QUESTION, etc.).
+    - `budget`: Resources allocated for processing this task.
 - **Methods:**
-    - `derive(newTruth, newStamp)`: Creates a new `Task` instance based on the current one but with updated truth and
-      stamp, ensuring immutability.
+    - `derive(newTruth, newStamp)`: Creates an updated version of the task with new truth values or metadata.
 
 **Technical Definitions:**
-- **Task**: An immutable wrapper around a Term that represents a unit of work or information to be processed by the system
-- **Truth Value**: A representation of the certainty or likelihood associated with a task, with different semantics for Beliefs vs Goals
-- **Stamp**: Metadata tracking the origin, derivation history, and evidence base of a task
-- **Priority**: A numerical value determining the order in which tasks are processed by the reasoning engine
-- **Budget**: Computational resources allocated to process the task
+- **Task**: A unit of work containing knowledge and processing instructions
+- **Truth Value**: Measures certainty or confidence in the task's information
+- **Stamp**: Records the task's origin and derivation history
+- **Priority**: Determines processing order among tasks
 
-### Belief vs. Goal: Foundational Concepts for Reinforcement Learning
+#### `Truth` Value Representation
 
-Understanding the distinction between Belief and Goal tasks is fundamental to SeNARS's capability as a general-purpose reinforcement learning system:
+The `Truth` class represents the certainty of information with two values: frequency and confidence.
 
-**Belief Tasks (.)** represent declarative knowledge about the world:
-- **Purpose**: Encode what the system believes to be true about its environment
-- **Truth Values**: Represent frequency (how often something is observed) and confidence (reliability of that observation)
-- **Function**: Serve as the system's model of the world, informing decision-making
-- **Example**: `<door_open --> visible>{0.8, 0.9}.` (The system believes with 80% frequency and 90% confidence that the door is visible)
+**Key Features:**
 
-**Goal Tasks (!)** represent procedural objectives the system seeks to achieve:
-- **Purpose**: Define desired outcomes that guide the system's actions and learning
-- **Truth Values**: Represent desire (how much the outcome is wanted) and confidence (strength of that desire)
-- **Function**: Drive reinforcement learning through reward signals and action selection
-- **Example**: `<key_picked_up --> achieved>!{0.9, 0.8}.` (The system desires with 90% intensity and 80% confidence to pick up the key)
+- **Immutability:** `Truth` values cannot be changed after creation.
+- **Properties:**
+    - `frequency`: A number 0-1 indicating how often something is observed as true.
+    - `confidence`: A number 0-1 indicating how reliable the frequency value is.
+- **Operations:**
+    - `combine(otherTruth)`: Merges two truth values using logical rules.
+    - `negate()`: Returns the opposite truth value.
+    - `equals(otherTruth)`: Compares two truth values for equality.
 
-**Technical Definitions:**
-- **Belief Task**: A task with frequency-confidence truth semantics representing declarative knowledge about the world
-- **Goal Task**: A task with desire-confidence truth semantics representing procedural objectives to be achieved
-- **Truth Semantics**: Distinct interpretations of truth values based on task type (frequency-confidence for beliefs, desire-confidence for goals)
-- **Reinforcement Learning**: A machine learning paradigm where an agent learns to take actions in an environment to maximize cumulative reward
+#### `Stamp` and Evidence Tracking
 
-**Reinforcement Learning Integration**:
-This distinction enables SeNARS to function as a general-purpose reinforcement learning system where:
-- **Beliefs** form the world model that predicts outcomes of actions
-- **Goals** define the reward structure that guides policy learning
-- **Interaction**: The system learns by attempting to achieve goals and updating beliefs based on outcomes
-- **Adaptation**: Truth value revision mechanisms allow continuous learning from experience
+The `Stamp` class tracks where information came from and how it was derived.
 
-The separation of these concept types with distinct truth semantics enables SeNARS to naturally implement the exploration-exploitation balance fundamental to reinforcement learning, where beliefs guide exploitation of known knowledge while goals drive exploration toward desired outcomes.
+**Key Features:**
+
+- **Immutability:** `Stamp` information is fixed once created.
+- **Properties:**
+    - `id`: Unique identifier for this stamp.
+    - `occurrenceTime`: When this information was created.
+    - `source`: Where it came from (user input, system inference, language model, etc.).
+    - `derivations`: List of previous stamps this information was derived from.
+    - `evidentialBase`: Original evidence that supports this information.
+- **Operations:**
+    - `derive(parentStamps, newSource)`: Creates a new stamp based on existing ones and a new source.
+
+### Belief vs. Goal: Key Concepts
+
+The system distinguishes between beliefs (what the system knows) and goals (what the system wants to achieve):
+
+**Belief Tasks (.)** represent what the system knows about the world:
+- **Purpose**: Store knowledge about the environment
+- **Truth Values**: Frequency (how often something is true) and confidence (how reliable the knowledge is)
+- **Example**: `<bird --> animal>{0.9, 0.8}.` (The system believes birds are animals 90% of the time with 80% confidence)
+
+**Goal Tasks (!)** represent what the system aims to achieve:
+- **Purpose**: Define objectives or desired outcomes
+- **Truth Values**: Desire (how much the goal is wanted) and confidence (how likely it is to be achievable)
+- **Example**: `<task_completed --> desirable>!{0.8, 0.9}.` (The system wants tasks completed with 80% desire intensity and 90% confidence)
+
+This design enables reinforcement learning where:
+- **Beliefs** model the world and predict action outcomes
+- **Goals** drive learning by defining desired behaviors
+- The system learns by pursuing goals and updating beliefs based on results
 
 ---
 
@@ -279,220 +417,164 @@ The `Memory` component manages both long-term memory and short-term attention fo
 
 ### Layer System
 
-The Layer system provides a foundation for associative links and semantic reasoning in the SeNARS architecture through a flexible, extensible interface:
+The Layer system manages connections between concepts and enables semantic reasoning:
 
-- **Layer Interface**: Abstract base class defining the contract for associative link management with methods for adding, retrieving, updating, and removing links between source and target concepts
-- **TermLayer**: Concrete implementation that manages associative links between terms using priority-based storage with capacity management and automatic pruning of low-priority links
-- **EmbeddingLayer**: Specialized layer for semantic reasoning using vector embeddings to enable similarity calculations and semantic search capabilities between terms and concepts
+- **Layer Interface**: Foundation for creating different types of connections between knowledge elements
+- **TermLayer**: Manages connections between terms with priority-based storage and automatic cleanup of low-priority links
+- **EmbeddingLayer**: Uses vector embeddings to find semantic similarities between terms and concepts
 
 **Key Features:**
-- **Associative Linking**: Support for dynamic creation and management of associative links between concepts and terms
-- **Per-Link Data**: Storage of additional metadata and data associated with each link for enhanced reasoning
-- **Capacity Management**: Automatic capacity management with priority-based pruning to maintain optimal performance
-- **Semantic Similarity**: Vector embedding capabilities for semantic reasoning and similarity calculations
-- **Extensible Architecture**: Abstract interface allowing for custom layer implementations tailored to specific reasoning needs
+- **Associative Links**: Create and manage connections between concepts and terms
+- **Priority Management**: Automatically manages storage by keeping important links and removing less important ones
+- **Semantic Reasoning**: Find similarities between terms based on meaning, not just structure
+- **Extensible**: Easy to add new types of layers for different reasoning needs
 
-**Technical Definitions:**
-- **Layer**: Abstract interface for associative link management supporting dynamic implementations and per-link data
-- **TermLayer**: Concrete implementation using priority-based storage for managing associative links between terms
-- **EmbeddingLayer**: Component providing vector embeddings for semantic reasoning and similarity calculations
-- **Associative Links**: Connections between concepts or terms that enable advanced reasoning patterns
-- **Semantic Reasoning**: Reasoning based on semantic similarity and meaning rather than just symbolic structure
+### Focus Management
 
-### `Focus` and `FocusSetSelector`
+Handles short-term memory and attention in the system:
 
-Manages attention focus sets (short-term memory):
+- **Short-term Memory**: Maintains a limited set of high-priority tasks for immediate processing
+- **Priority Selection**: Chooses which tasks to process based on their importance and urgency
+- **Task Promotion**: Moves important tasks from short-term to long-term memory when appropriate
 
-- **Short-term Memory Management**: Implements attention focus sets that represent short-term memory
-- **Focus Set Management**: Creating and managing multiple named focus sets with configurable sizes
-- **Priority-Based Selection**: Selecting high-priority tasks from focus sets using configurable selection strategies
-- **Attention Scoring**: Maintaining attention scores for focus sets to determine their relevance
-- **Task Promotion**: Mechanism for promoting high-priority tasks from focus (short-term) to long-term memory
+The system uses smart selection to:
+- **Balance priorities**: Consider both task importance and how long it's been waiting
+- **Diversify reasoning**: Ensure different types of tasks get processed to prevent tunnel vision
 
-The `FocusSetSelector` implements advanced task selection:
+### Task Processing and Reasoning Cycle
 
-- **Composite Scoring**: Combining priority, urgency (time since last access), and cognitive diversity
-- **Adaptive Selection**: Configurable parameters for priority thresholds, urgency weighting, and diversity factors
-- **Cognitive Diversity**: Consideration of term complexity to promote reasoning diversity
+The system processes tasks in repeating cycles:
 
-**Technical Definitions:**
-- **Focus**: The system component managing short-term memory and attention mechanisms
-- **Focus Set**: A named collection of high-priority tasks requiring immediate processing
-- **Attention Scoring**: The assignment of relevance values to focus sets to guide processing priority
-- **FocusSetSelector**: The component responsible for selecting which tasks from focus sets are processed next
-- **Cognitive Diversity**: A measure of variety in task characteristics to ensure diverse reasoning paths
+1. **Select Tasks:** Choose high-priority tasks from short-term memory
+2. **Apply Rules:** Use logical and language model rules to process the tasks
+3. **Generate New Knowledge:** Create new inferences, conclusions, and questions
+4. **Update Memory:** Store new and updated information
+5. **Output Results:** Share important findings through system events
 
-### `Cycle` and Task Processing
+This cycle repeats continuously, allowing the system to reason and learn over time.
 
-The `Cycle` orchestrates the flow of reasoning within the `NAR` system:
+### Rule Engine
 
-1. **Task Selection:** Uses the `FocusSetSelector` to choose tasks from the focus set.
-2. **Rule Application:** The selected tasks are passed to the `RuleEngine`.
-3. **Inference & Derivation:** The `RuleEngine` applies relevant NAL and LM rules, generating new `Task`s (inferences,
-   derivations, questions, goals).
-4. **Memory Update:** New and updated `Task`s are integrated back into `Memory`.
-5. **Output Generation:** Significant inferences or answers trigger output events.
+The Rule Engine applies logical rules to generate new knowledge:
 
-**Technical Definitions:**
-- **Reasoning Cycle**: The iterative process that executes one complete step of the reasoning process
-- **Task Selection**: The process of choosing which tasks to process in the current cycle based on priority and attention
-- **Inference**: The generation of new knowledge from existing knowledge using logical rules
-- **Derivation**: The creation of new tasks through rule application and logical operations
+- **Rule Types:** Handles both logical inference rules and language model integration rules
+- **Rule Management:** Organize, enable/disable, and track rules efficiently
+- **Performance Tracking:** Monitor which rules are most effective
 
-### `RuleEngine` and Rule Management
-
-The `RuleEngine` manages and applies both NAL and LM rules with sophisticated management capabilities:
-
-- **Rule Types:** Supports both NAL inference rules and LM integration rules
-- **Rule Registration:** System for adding and categorizing different types of rules
-- **Enable/Disable Control:** Fine-grained control over which rules are active
-- **Group Management:** Ability to organize rules into groups and manage them collectively
-- **Rule Validation:** Validation of rule structure and functionality
-- **Performance Metrics:** Comprehensive tracking of rule execution performance
-- **Hybrid Reasoning:** Orchestrates NAL-LM integration through coordinated rule application
-- **Base Rule Interface:** Common interface defining `canApply()` and `apply()` methods
-
-**Rule Classifications:**
-
-- **NAL Rules:** Implement logical inference using NAL truth functions with pattern matching
-- **LM Rules:** Interact with language models for enhanced reasoning, including prompt generation and response
-  processing
-
-**Technical Definitions:**
-- **RuleEngine**: The component responsible for managing and applying inference rules
-- **NAL Rules**: Rules implementing Non-Axiomatic Logic inference patterns and truth-value calculations
-- **LM Rules**: Rules that interface with language models to enhance reasoning capabilities
-- **Rule Application**: The process of matching rules to tasks and generating new inferences
-- **Hybrid Reasoning**: The integration of symbolic (NAL) and neural (LM) reasoning approaches
-
-### Text User Interface (`TUI`)
-
-The Text User Interface provides command-line and REPL-based interaction with the SeNARS system:
-
-- **Interactive REPL**: Read-Eval-Print Loop interface for interactive reasoning sessions through Repl.js
-- **Command Processing**: Command parsing and execution framework for system interaction
-- **SeNARS Interface**: Main interface component (SeNARSInterface.js) for TUI functionality
-- **Input Handling**: Advanced command-line input processing with history and autocomplete
-- **Output Formatting**: Formatted display of reasoning results and system status
-
-**Technical Definitions:**
-- **TUI (Text User Interface)**: Command-line interface for interacting with the SeNARS system
-- **REPL**: Interactive environment for real-time reasoning and system interaction
-- **Command Processing**: System for parsing and executing user commands
-- **Input/Output Formatting**: Mechanisms for presenting system information in text format
-
-### Server Components
-
-The server architecture provides network-based access and monitoring for the SeNARS system:
-
-- **WebSocket Monitoring**: Real-time monitoring and visualization through WebSocket connections
-- **Event Streaming**: Streaming of system events and reasoning traces to connected clients
-- **Remote Access**: Network-based access to system functionality and monitoring capabilities
-- **Monitoring Interface**: WebSocketMonitor.js provides real-time visualization and system monitoring
-
-**Technical Definitions:**
-- **WebSocket Monitor**: Real-time monitoring and visualization system using WebSocket connections
-- **Event Streaming**: Continuous transmission of system events to monitoring interfaces
-- **Remote Monitoring**: Network-based system monitoring and visualization capabilities
-
-### Integration Components
-
-The integration layer provides connectivity with external systems and knowledge sources:
-
-- **Knowledge Base Connector**: Component for connecting with external knowledge bases and data sources
-- **External Data Integration**: Framework for incorporating external knowledge into reasoning
-- **API Connectivity**: Standardized interfaces for connecting with external services and APIs
-- **Data Synchronization**: Mechanisms for keeping external knowledge synchronized with system memory
-
-**Technical Definitions:**
-- **Knowledge Base Connector**: Component that enables connection with external knowledge sources
-- **External Integration**: Framework for incorporating external data and services into the reasoning system
-- **API Connectivity**: Standardized interfaces for external system communication
-- **Data Synchronization**: Mechanisms for maintaining consistency between internal and external knowledge
+**Rule Categories:**
+- **NAL Rules:** Apply formal logic to derive new conclusions from existing knowledge
+- **LM Rules:** Use language models to enhance reasoning with neural pattern recognition
 
 ### Parser System
 
-Handles Narsese syntax parsing and generation:
+Converts between human-readable Narsese language and internal system representations:
 
-- **Statement Parsing**: Complete parsing of Narsese statements including term, punctuation, and optional truth value
-- **Truth Value Extraction**: Recognition and parsing of truth value syntax `%f;c%` where f is frequency and c is
-  confidence
-- **Punctuation Recognition**: Support for belief (.), goal (!), and question (?) punctuation
-- **Term Parsing**: Recursive parsing of complex term structures
-- **Atomic Term Handling**: Recognition of simple atomic terms
-- **Compound Term Parsing**: Support for all NAL operator types:
-    - Inheritance: `(A --> B)`
-    - Similarity: `(A <-> B)`
-    - Implication: `(A ==> B)`
-    - Equivalence: `(A <=> B)`
-    - Conjunction: `(&, A, B, ...)`
-    - Disjunction: `(|, A, B, ...)`
-    - Negation: `(--, A)`
-    - Extensional sets: `{A, B, C}`
-    - Intensional sets: `[A, B, C]`
-    - Operations: `(A ^ B)`
-    - Sequential conjunction: `(&/, A, B)`
-    - Instance: `(A {{-- B)`
-    - Property: `(A --}} B)`
-    - Products: `(A, B, C)`
-- **Nested Structure Support**: Proper parsing of nested compound terms with appropriate grouping
-- **List Parsing**: Handling of comma-separated lists with respect for nested parentheses
-
-**Technical Definitions:**
-- **Parser**: The component that converts Narsese text into internal Term and Task representations
-- **Narsese**: The formal language used to express knowledge in the NARS system
-- **Statement**: A complete Narsese expression including term, punctuation, and optional truth value
-- **Punctuation**: Characters that specify task type (. for Belief, ! for Goal, ? for Question)
-- **NAL Operators**: Logical operators defined by Non-Axiomatic Logic for knowledge representation
+- **Narsese Processing**: Parse input like `<bird --> animal>{0.9, 0.8}.` into internal structures
+- **Truth Value Parsing**: Extract frequency and confidence values from `{f,c}` format
+- **Punctuation Support**: Handle different task types using punctuation (. for beliefs, ! for goals, ? for questions)
+- **Complex Terms**: Parse nested structures with various logical operators like `(&, A, B)` for conjunction
 
 ### Language Model Integration (`LM`)
 
-Provides comprehensive language model capabilities built on the BaseComponent architecture with advanced provider management and circuit breaker protection:
+Connects the system to external language models for enhanced reasoning:
 
-- **BaseComponent Architecture**: Inherits from BaseComponent for standardized lifecycle management, metrics, and event handling
-- **Provider Management**: Registry and selection of multiple LM providers (OpenAI, Ollama, Anthropic) with circuit breaker protection and automatic fallback mechanisms
-- **Model Selection**: Intelligent model selection based on task requirements and performance metrics through ModelSelector
-- **Circuit Breaker Pattern**: Automatic failure detection and fallback mechanisms to ensure system reliability
-- **Metrics Tracking**: Comprehensive monitoring of LM usage, token counts, response times, and provider-specific usage statistics
-- **Narsese Translation**: Bidirectional conversion between Narsese and natural language with AdvancedNarseseTranslator
-- **Embedding Support**: Vector embedding generation and similarity calculations through EmbeddingLayer
-- **Resource Management**: Intelligent handling of concurrent requests and capacity limits with configurable timeouts
-- **Fallback Mechanisms**: Graceful degradation to pure NAL reasoning when LM services are unavailable
-- **Token Counting**: Automatic tracking of input and output tokens for cost and performance monitoring
+- **Provider Management**: Supports multiple providers (OpenAI, Ollama, Anthropic) with automatic failover
+- **Smart Selection**: Chooses the best model for each task based on requirements
+- **Circuit Breakers**: Prevents system failures if language model services become unavailable
+- **Narsese Translation**: Converts between natural language and the system's formal language
+- **Fallbacks**: Continues operating with pure logical reasoning if language models fail
 
-**Provider System:**
-- **Provider Registry:** Centralized registration and management of LM providers with default provider selection
-- **Provider Types:** Support for multiple provider types (OpenAI, Ollama, Anthropic, Dummy) with standardized interfaces
-- **Configuration:** Per-provider configuration including API keys, models, base URLs, temperature, and token limits
-- **Selection Logic:** Dynamic provider selection based on availability and performance metrics
+### Supporting System Components
 
-**Circuit Breaker Features:**
-- **State Management:** Tracks provider availability with OPEN/CLOSED/HALF-OPEN states
-- **Failure Threshold:** Configurable failure count threshold before opening the circuit
-- **Timeout Configuration:** Configurable timeout periods for circuit reset attempts
-- **Fallback Handling:** Automatic fallback to alternative logic when circuits are open
+#### Text User Interface (`TUI`)
 
-**API:**
-- `registerProvider(id, provider)`: Register a new LM provider with the system
-- `generateText(prompt, options, providerId)`: Generate text using specified provider
-- `generateEmbedding(text, providerId)`: Generate vector embeddings for semantic analysis
-- `process(prompt, options, providerId)`: Generic processing method for various LM operations
-- `selectOptimalModel(task, constraints)`: Select the best model for a given task
-- `translateToNarsese(text)`: Convert natural language to Narsese
-- `translateFromNarsese(narsese)`: Convert Narsese to natural language
-- `getMetrics()`: Retrieve usage and performance metrics
-- `getCircuitBreakerState()`: Get current state of the circuit breaker
-- `resetCircuitBreaker()`: Reset the circuit breaker state
+Command-line interface for interacting with the system:
+- **REPL**: Interactive command-line interface for direct system interaction
+- **Command Processing**: Handles user commands and displays results
 
-**Technical Definitions:**
-- **LM (Language Model Integration)**: The component that interfaces with external language models using BaseComponent architecture
-- **Provider Registry**: System for registering and managing different language model services with standardized interfaces
-- **Model Selector**: Component for selecting optimal models based on task characteristics and constraints
-- **Circuit Breaker**: Pattern for protecting against cascading failures in external service calls
-- **Narsese Translation**: Bidirectional conversion between formal Narsese and natural language with context awareness
-- **Provider Fallback**: Automatic degradation mechanism when primary LM services are unavailable
-- **Token Tracking**: Automatic counting and monitoring of input/output tokens for cost and performance analysis
-- **Hybrid Reasoning**: Integration of symbolic (NAL) and neural (LM) reasoning approaches with conflict resolution and validation
+#### Server Components
+
+Network services for remote access and monitoring:
+- **WebSocket Monitoring**: Real-time system monitoring through web connections
+- **Event Streaming**: Continuous updates of system events to connected clients
+
+#### Integration Components
+
+Connectivity with external systems:
+- **Knowledge Base Connector**: Links to external knowledge sources
+- **API Integration**: Standardized interfaces for external service connections
+
+---
+
+## Configuration and Extensibility
+
+### Configuration Management
+
+Centralized system configuration with validation and default values:
+
+**Key Features:**
+- **Immutable:** Configuration values cannot be changed after creation
+- **Centralized:** Single management system for all configuration
+- **Validated:** Checks ensure configuration values are valid
+
+**Common Configuration Areas:**
+- **Memory:** `memory.capacity` (default: 1000), `memory.consolidationThreshold` (default: 0.1)
+- **Focus:** `focus.size` (default: 100), `focus.diversityFactor` (default: 0.3)
+- **Cycles:** `cycle.delay` (default: 50ms), `cycle.maxTasksPerCycle` (default: 10)
+- **Language Models:** `lm.enabled` (default: false), `lm.defaultProvider` (default: 'dummy')
+- **Performance:** `performance.maxExecutionTime` (default: 100ms), `performance.memoryLimit` (default: 512MB)
+
+### Plugin Architecture
+
+1. **Rule Plugins:** Support dynamic loading of custom NAL and LM rules.
+2. **Adapter Plugins:** Allow custom IO adapters and LM adapters.
+3. **Event Hooks:** Provide hooks for custom processing during reasoning cycles.
+
+### Parameter Tuning
+
+The `SystemConfig` exposes parameters for fine-tuning system behavior:
+
+- Memory capacity and forgetting thresholds
+- Truth value thresholds for task acceptance
+- Rule application priority and frequency
+- Cycle timing and processing limits
+- Activation propagation parameters
+
+---
+
+## Component Architecture and Utilities
+
+### BaseComponent Architecture
+
+All system components follow a standardized architecture with consistent lifecycle and features:
+
+**Key Features:**
+- **Lifecycle Management:** All components follow the same pattern: initialize → start → run → stop → dispose
+- **Metrics:** Built-in tracking of component performance and usage
+- **Events:** Standardized communication between components
+- **Logging:** Consistent logging across all components
+- **Error Handling:** Standardized error management
+
+**Component Lifecycle Methods:**
+- `initialize()`: Set up the component
+- `start()`: Begin operations
+- `stop()`: Stop operations gracefully  
+- `dispose()`: Clean up resources
+
+### Event System (`EventBus`)
+
+Components communicate through a central event system:
+- `emit(eventName, data)`: Send an event with data
+- `on(eventName, handler)`: Listen for specific events
+- `off(eventName, handler)`: Stop listening to events
+
+### Utilities (`util/`)
+
+Helper functions for common operations:
+- **Collections:** Specialized data structures like priority queues
+- **Constants:** Shared system-wide values
+- **Validation:** Input validation functions
+- **Logging:** System-wide logging utility
 
 ---
 
@@ -526,57 +608,76 @@ Implement NAL-specific truth value calculations:
 
 1. **Revision:** Combine two truth values with the same content but different evidence bases.
 2. **Deduction:** Apply deduction rules with proper truth value propagation.
-3. **Induction/Abduction:** Implement induction and abduction truth value calculations.
+3. **Induction/Abstraction:** Implement induction and abduction truth value calculations.
 4. **Negation:** Properly calculate negated truth values.
 5. **Expectation:** Calculate expectation values for decision making.
+
+---
+
+## API Conventions and Code Quality
+
+### API Design Conventions
+
+- **Component Architecture:** Use BaseComponent as the foundation for all system components with standardized methods
+- **Clear Naming:** Use descriptive names for classes, methods, and variables
+- **Immutability:** Keep core data structures (Terms, Tasks, Truth, Stamps) unchanged after creation
+- **Async Operations:** Use `async/await` for operations involving I/O or heavy computation
+- **Configuration Objects:** Pass settings as single objects rather than multiple parameters
+- **Event-Driven:** Use events for system outputs and communication
+- **Standardized Metrics:** Include built-in metrics collection in all components
+
+### Code Quality and Maintainability
+
+- **Type Safety:** Use JSDoc annotations for type checking
+- **Clear Organization:** Separate concerns between modules with consistent conventions
+- **Consistent Error Handling:** Standardized error handling across all components
+- **Documentation:** JSDoc comments for all public interfaces
+
+---
+
+## Error Handling and Robustness
+
+### Input Validation
+- **Narsese Parsing:** Check syntax before processing
+- **Truth Values:** Ensure values are between 0 and 1
+- **Task Validation:** Verify structure before processing
+
+### Error Handling Strategies
+- **Graceful Degradation:** System continues working when parts fail
+- **Circuit Breakers:** Prevent cascading failures with automatic recovery
+- **Clear Logging:** Detailed logs for debugging
+- **Automatic Recovery:** System recovers from common failures
+- **User-Friendly Errors:** Helpful error messages for users
+
+### Security Implementation
+- **Input Validation:** Check all inputs to prevent attacks
+- **Resource Limits:** Prevent system overload with timeouts and limits
+- **Secure Configuration:** Safe defaults and environment protection
+- **Security Logging:** Track security-related events
+- **Rate Limiting:** Prevent abuse by limiting requests per client
 
 ---
 
 ## Testing Strategy
 
 ### Unit Tests
-
-- **Granularity:** Each class and significant function has its own dedicated unit test file.
-- **Focus:** Unit tests verify the correctness of individual components in isolation.
-- **`Term` Class:** Extensive unit tests for `Term`'s immutability, equality, hash code, factory construction (including
-  all reduction and commutativity rules), properties, and sub-term access/visitor/reducer methods.
-- **`Task` Class:** Unit tests for immutability, property access, and `derive` method.
-- **`Bag` and `Memory`:** Tests for correct priority-based storage, retrieval, and updates.
-- **`RuleEngine` and Rules:** Tests for individual rule application and correct inference generation.
-- **Component Lifecycle:** Tests for initialization, start, stop, and disposal of BaseComponent-based classes
-- **Configuration Validation:** Tests for proper configuration validation and default value handling
-- **Error Handling:** Tests for proper error handling and graceful degradation
+- **Individual Components:** Test each class and function separately
+- **Core Classes:** Extensive tests for Term, Task, Memory, and RuleEngine functionality
+- **Validation:** Test configuration, error handling, and lifecycle methods
 
 ### Integration Tests
-
-- **Focus:** Verify the correct interaction between multiple components and the overall system behavior.
-- **`NAR` Integration:** Tests primarily target the `NAR` class, simulating real-world input sequences and
-  asserting expected outputs and changes in the belief base.
-- **NAL-LM Hybrid:** Specific integration tests ensure the seamless interplay between NAL and LM rules within the
-  `RuleEngine`.
-- **Memory-Focus Integration:** Tests for the interaction between memory and focus management systems
-- **Performance Integration:** Tests to verify system performance under various load conditions
+- **Component Interaction:** Test how multiple components work together
+- **System Behavior:** Verify overall system behavior under real-world scenarios
+- **Performance:** Test system performance under various loads
 
 ### Property-Based Tests
+- **System Invariants:** Verify that core properties remain consistent across transformations
+- **Term Properties:** Test immutability and equality invariants
+- **Truth Calculations:** Verify truth value operations
 
-- **Fast-Check Integration:** Utilizes fast-check for property-based testing to verify system invariants
-- **Term Invariants:** Tests to ensure that Term properties (immutability, equality consistency, etc.) hold across transformations
-- **Truth Value Properties:** Verification of truth value calculations and invariants
-- **Configuration Properties:** Testing configuration validation and merging properties
+### Testing API
 
-### Component Test Framework
-
-- **General Test Suites:** Reusable test suites for common component behaviors using test frameworks in tests/support/
-- **Parameterized Tests:** Flexible test patterns that can be applied to multiple classes with different configurations
-- **Error Handling Tests:** Standardized tests for verifying proper error handling and validation
-- **Lifecycle Tests:** Verification of component initialization, start, stop, and disposal behaviors
-
-### Fluent Reasoner Test API
-
-A fluent, expressive API is developed to simplify the writing and reading of integration tests for the `NAR`
-system.
-
-**Example Usage:**
+The system provides a fluent API for easy test creation:
 
 ```javascript
 import { createReasoner } from '../support/fluentReasonerAPI';
@@ -606,277 +707,18 @@ describe('NAR System Deductions', () => {
     const answer = await nar.query('<dog --> ?x>.');
     expect(answer).toBeInferred('<dog --> animal>.');
   });
-
-  test('should handle contradictory evidence', async () => {
-    nar.input('<sky --> blue>{1.0, 0.9}.');
-    nar.input('<sky --> blue>{0.0, 0.9}.'); // Contradictory evidence
-
-    await nar.cycles(5);
-
-    nar.expectBelief('<sky --> blue>.').toHaveTruth({ frequency: 0.5, confidence: expect.any(Number) });
-  });
 });
 ```
 
-This API abstracts away the complexities of direct memory inspection and cycle management, allowing tests to focus
-on the logical behavior of the reasoner.
-
-### Testing Utilities and Frameworks
-
-- **Test Support Modules:** Comprehensive test utilities in tests/support/ for creating common test scenarios
-- **Fluent API:** Expressive APIs for writing clear, readable tests
-- **NAR Test Setup:** Standardized test setup utilities for creating and configuring NAR instances
-- **Mock Components:** Mock implementations for external dependencies like language model providers
-- **Automated Test Generation:** Frameworks for generating comprehensive test suites based on class interfaces
-- **Stability and Resilience Tests:** Tests for verifying system stability under various failure conditions
-
 ---
 
-## Supporting Components
+## Performance and Scalability
 
-### Component Architecture and BaseComponent
-
-The system uses a standardized BaseComponent architecture that provides a consistent foundation for all system components with lifecycle management, metrics, logging, and event handling.
-
-**Key Features:**
-
-- **Standardized Lifecycle:** All components follow a consistent lifecycle with initialize(), start(), stop(), and dispose() methods
-- **Metrics Collection:** Built-in metrics tracking for all components with standard metrics like initialization count, start count, error count, and uptime
-- **Event Integration:** Seamless integration with the EventBus for component communication and monitoring
-- **Logging Integration:** Consistent logging across all components using a shared logger
-- **Configuration Validation:** Optional validation schema support for component configuration
-- **Error Handling:** Standardized error handling and metric tracking for all components
-
-**Component Lifecycle:**
-
-- **Initialization:** The initialize() method sets up the component's internal state and validates configuration
-- **Start:** The start() method begins active operations and starts the component's internal timers or processes
-- **Running:** The component operates normally, processing tasks and emitting events
-- **Stop:** The stop() method gracefully stops operations and cleans up active processes
-- **Dispose:** The dispose() method releases all resources and finalizes the component
-
-**API:**
-- `initialize()`: Initialize the component and validate configuration
-- `start()`: Start component operations
-- `stop()`: Stop component operations gracefully
-- `dispose()`: Release all resources and finalize the component
-- `getMetrics()`: Get component metrics including uptime and operation counts
-- `logInfo(message, metadata)`: Log informational messages
-- `logWarn(message, metadata)`: Log warning messages
-- `logError(message, metadata)`: Log error messages
-- `emitEvent(event, data)`: Emit events through the EventBus
-- `onEvent(event, handler)`: Register event handlers
-- `updateMetric(key, value)`: Update custom metrics
-- `incrementMetric(key, increment)`: Increment numeric metrics
-
-**Technical Definitions:**
-- **BaseComponent**: A standard foundation class providing lifecycle management, metrics, and utilities for all system components
-- **Component Lifecycle**: The sequence of initialization, start, running, stop, and dispose phases that all components follow
-- **Metrics Collection**: Automated tracking of component performance and operational statistics
-- **Event Integration**: Standardized event communication between components using the EventBus
-
-### `Truth` Value Representation
-
-The `Truth` class encapsulates the frequency and confidence values associated with beliefs and tasks.
-
-**Key Features:**
-
-- **Immutability:** `Truth` instances are immutable.
-- **Properties:**
-    - `frequency`: A number between 0 and 1, representing the proportion of positive evidence.
-    - `confidence`: A number between 0 and 1, representing the reliability of the frequency.
-- **Operations:**
-    - `combine(otherTruth)`: Static method to combine two truth values according to NAL truth functions.
-    - `negate()`: Returns a new `Truth` instance representing the negation of the current truth value.
-    - `equals(otherTruth)`: Deep equality comparison.
-
-### `Stamp` and Evidence Handling
-
-The `Stamp` class tracks the origin and derivation history of `Task`s and `Belief`s.
-
-**Key Features:**
-
-- **Immutability:** `Stamp` instances are immutable.
-- **Properties:**
-    - `id`: A unique identifier for the stamp (e.g., a UUID or a hash of its components).
-    - `occurrenceTime`: Timestamp of when the task was created or observed.
-    - `source`: An identifier for the source of the task (e.g., `INPUT`, `INFERENCE`, `LM_GENERATED`).
-    - `derivations`: An immutable array of `Stamp` IDs from which this task was derived, forming a directed acyclic
-      graph (DAG) of evidence.
-    - `evidentialBase`: A set of `Term` IDs that form the direct evidential base for this task.
-- **Operations:**
-    - `derive(parentStamps: Stamp[], newSource: string)`: Static method to create a new `Stamp` based on parent stamps
-      and a new source. This correctly merges derivation histories.
-
-### Configuration Management (`SystemConfig`)
-
-A centralized and immutable configuration system for the `NAR` instance using ConfigManager for validation and management.
-
-**Key Features:**
-
-- **Immutability:** Configuration objects are immutable once created.
-- **Centralized Management:** Uses ConfigManager for validation, merging, and management of configuration values
-- **Validation:** Ensures that provided configuration values are valid using schema validation
-- **Default Values:** Provides comprehensive default values for all system components
-- **Deep Merging:** Supports hierarchical configuration with deep merging of user and default values
-- **Path-based Access:** Supports accessing nested configuration values using dot notation (e.g., `memory.capacity`)
-- **Runtime Updates:** Supports updating configuration values at runtime with validation
-- **Component-specific Sections:** Organized configuration for different system components
-
-**Configuration Sections:**
-
-- **Memory Configuration:**
-    - `memory.capacity`: Maximum number of concepts/tasks in memory (default: 1000)
-    - `memory.consolidationThreshold`: Threshold for memory consolidation (default: 0.1)
-    - `memory.forgettingThreshold`: Threshold for forgetting old concepts (default: 0.05)
-    - `memory.conceptActivationDecay`: Decay rate for concept activation (default: 0.95)
-
-- **Focus Configuration:**
-    - `focus.size`: Size of focus sets (default: 100)
-    - `focus.setCount`: Number of focus sets (default: 3)
-    - `focus.attentionDecay`: Attention decay rate (default: 0.98)
-    - `focus.diversityFactor`: Factor for cognitive diversity in focus selection (default: 0.3)
-
-- **Task Manager Configuration:**
-    - `taskManager.defaultPriority`: Default priority for new tasks (default: 0.5)
-    - `taskManager.priorityThreshold`: Minimum priority threshold (default: 0.1)
-    - `taskManager.priority.confidenceMultiplier`: Multiplier for confidence-based priority (default: 0.3)
-    - `taskManager.priority.goalBoost`: Priority boost for goals (default: 0.2)
-    - `taskManager.priority.questionBoost`: Priority boost for questions (default: 0.1)
-
-- **Cycle Configuration:**
-    - `cycle.delay`: Delay between reasoning cycles in milliseconds (default: 50)
-    - `cycle.maxTasksPerCycle`: Maximum tasks to process per cycle (default: 10)
-    - `cycle.ruleApplicationLimit`: Maximum rule applications per cycle (default: 50)
-
-- **Rule Engine Configuration:**
-    - `ruleEngine.enableValidation`: Enable rule validation (default: true)
-    - `ruleEngine.maxRuleApplicationsPerCycle`: Max rule applications per cycle (default: 20)
-    - `ruleEngine.performanceTracking`: Enable performance tracking (default: true)
-
-- **Language Model Configuration:**
-    - `lm.enabled`: Enable language model integration (default: false)
-    - `lm.defaultProvider`: Default LM provider (default: 'dummy')
-    - `lm.maxConcurrentRequests`: Max concurrent LM requests (default: 5)
-    - `lm.timeout`: Request timeout in milliseconds (default: 10000)
-    - `lm.retryAttempts`: Number of retry attempts for failed requests (default: 2)
-    - `lm.cacheEnabled`: Enable LM result caching (default: true)
-    - `lm.cacheSize`: Size of LM result cache (default: 100)
-    - `lm.providers.*`: Configuration for specific LM providers (OpenAI, Ollama, Anthropic)
-
-- **Performance Configuration:**
-    - `performance.enableProfiling`: Enable performance profiling (default: false)
-    - `performance.maxExecutionTime`: Max execution time in milliseconds (default: 100)
-    - `performance.memoryLimit`: Memory limit in bytes (default: 512MB)
-    - `performance.gcThreshold`: Garbage collection threshold (default: 0.8)
-
-- **Logging Configuration:**
-    - `logging.level`: Logging level (default: 'info')
-    - `logging.enableConsole`: Enable console logging (default: true)
-    - `logging.enableFile`: Enable file logging (default: false)
-    - `logging.maxFileSize`: Max log file size in bytes (default: 10MB)
-    - `logging.retentionDays`: Number of days to retain logs (default: 7)
-
-- **Error Handling Configuration:**
-    - `errorHandling.enableGracefulDegradation`: Enable graceful degradation (default: true)
-    - `errorHandling.maxErrorRate`: Maximum acceptable error rate (default: 0.1)
-    - `errorHandling.enableRecovery`: Enable automatic recovery (default: true)
-    - `errorHandling.recoveryAttempts`: Number of recovery attempts (default: 3)
-
-**API:**
-- `get(path)`: Get a configuration value using dot notation path
-- `set(path, value)`: Set a configuration value with validation
-- `update(updates)`: Update multiple configuration values at once
-- `toJSON()`: Get the complete configuration as a plain object
-
-### Event System (`EventBus`)
-
-A lightweight, internal event bus for decoupled communication between components.
-
-**Key Features:**
-
-- **Centralized Dispatch:** A single `EventBus` instance (or a module with event methods) accessible throughout the
-  system.
-- **`emit(eventName: string, data: any)`:** Dispatches an event with associated data.
-- **`on(eventName: string, listener: Function)`:** Registers a listener for a specific event.
-- **`off(eventName: string, listener: Function)`:** Removes a registered listener.
-- **Event Types:** Standardized event names (e.g., `NAR.Output`, `Memory.BeliefUpdated`, `Task.Created`).
-
-### Utilities (`util/`)
-
-A collection of general-purpose utility functions and helper classes.
-
-- **`collections.js`:** Implementations of common data structures like `Bag`, `PriorityQueue`, `ImmutableMap`,
-  `ImmutableSet`.
-- **`constants.js`:** System-wide constants (e.g., Narsese operators, default truth values).
-- **`validation.js`:** Helper functions for input validation and assertion.
-- **`logger.js`:** A simple, configurable logging utility.
-
----
-
-## API Conventions and Code Quality
-
-### API Design Conventions
-
-- **Component-Based Architecture:** Use BaseComponent as the foundation for all system components with standardized lifecycle methods (initialize, start, stop, dispose)
-- **Clear Naming:** Use descriptive and unambiguous names for classes, methods, and variables.
-- **Functional Purity:** Favor pure functions where possible, especially for `Term` operations.
-- **Asynchronous Operations:** Use `async/await` for operations that involve I/O or significant computation.
-- **Configuration Objects:** Pass configuration via single, well-defined objects rather than multiple positional
-  arguments.
-- **Event-Driven Output:** Use an event emitter pattern for system outputs and notifications.
-- **Immutable Data Structures:** Maintain immutability for core data structures (Terms, Tasks, Truth, Stamps) to ensure thread safety and consistency
-- **Standardized Metrics:** Include built-in metrics collection for all components using the BaseComponent architecture
-- **Consistent Error Handling:** Implement standardized error handling and logging across all components
-- **Method Chaining:** Support method chaining (fluent interfaces) where appropriate for better usability
-
-### Code Quality and Maintainability
-
-- **Type Safety:** Implement robust type checking through comprehensive JSDoc annotations with type information and
-  runtime type checking for critical operations.
-- **Code Organization:** Clear separation of concerns between modules, consistent naming conventions, well-defined
-  module interfaces, and proper encapsulation of internal state.
-- **BaseComponent Foundation:** All major components extend BaseComponent for standardized behavior and lifecycle management
-- **Configuration Validation:** Use schema-based validation for configuration objects to ensure correctness
-- **Comprehensive Testing:** Include unit, integration, and property-based tests for all components using JSDoc-based documentation
-- **Logging Integration:** Standardized logging using shared logger across all components
-- **Documentation Standards:** Consistent JSDoc documentation for all public interfaces and methods
-
----
-
-## Error Handling and Robustness
-
-### Input Validation
-
-1. **Narsese Parsing:** Comprehensive validation of Narsese syntax before term construction.
-2. **Truth Value Validation:** Ensure truth values are within valid ranges [0,1].
-3. **Task Validation:** Validate task structure and components before processing.
-
-### Graceful Degradation
-
-1. **Rule Application Errors:** Continue processing if a rule encounters an error, logging the issue and proceeding.
-2. **Memory Errors:** Implement fallback mechanisms for memory allocation failures.
-3. **Parser Errors:** Provide detailed error messages for malformed input while continuing system operation.
-
----
-
-## Configuration and Extensibility
-
-### Plugin Architecture
-
-1. **Rule Plugins:** Support dynamic loading of custom NAL and LM rules.
-2. **Adapter Plugins:** Allow custom IO adapters and LM adapters.
-3. **Event Hooks:** Provide hooks for custom processing during reasoning cycles.
-
-### Parameter Tuning
-
-The `SystemConfig` exposes parameters for fine-tuning system behavior:
-
-- Memory capacity and forgetting thresholds
-- Truth value thresholds for task acceptance
-- Rule application priority and frequency
-- Cycle timing and processing limits
-- Activation propagation parameters
+- **Fast Operations**: <1ms for Term processing, <2ms for Task processing, <5ms for Memory operations
+- **High Throughput**: 10,000+ operations per second
+- **Memory Efficient**: Smart caching reduces memory growth as knowledge base expands
+- **Scalable**: Can distribute across multiple nodes
+- **Resource Management**: Configurable limits prevent resource exhaustion (default: 512MB memory, 100ms per cycle)
 
 ---
 
@@ -899,134 +741,6 @@ The specification defines a reasoning system where intelligence properties emerg
 - **Validation Improvement**: Truth assessment becomes more accurate with additional evidence
 - **Self-Organization**: Knowledge organizes based on usage patterns and relationships
 - **Adaptive Processing**: Task processing adapts based on outcome feedback
-
-### Coherent Technical Specifications
-
-#### Parser System Specifications
-- **Narsese Syntax Support**: Complete support for NAL operator types including inheritance `(A --> B)`, similarity `(A <-> B)`, implication `(A ==> B)`, equivalence `(A <=> B)`, conjunction `(&, A, B, ...)`, disjunction `(|, A, B, ...)`, negation `(--, A)`, sets `{A, B, C}`, `[A, B, C]`, sequential conjunction `(&/, A, B)`, instance `(--{ A)`, property `(-->} B)`, operations `(A ^ B)`, and products `(A, B, C)`
-- **Recursive Parsing**: Support for nested compound terms with appropriate grouping and precedence
-- **Truth Value Recognition**: Parsing of truth value syntax `%f;c%` where f is frequency and c is confidence
-- **Punctuation Support**: Full recognition of belief (.), goal (!), and question (?) punctuation
-- **Error Recovery**: Comprehensive validation and recovery from malformed Narsese input
-
-#### Advanced Observable Platform & Real-Time Visualization
-- **WebSocket-Based Monitoring**: Real-time visualization through WebSocket-based monitoring system with multiple specialized panels
-- **Reasoning Trace Panel**: Detailed visualization of reasoning steps with annotation capabilities and comprehensive event logging
-- **Task Flow Diagram**: Visual representation of task processing chains, dependencies, and reasoning pathways
-- **Concept Panel**: Real-time monitoring of concept activation, priority changes, and attention dynamics
-- **Priority Histogram**: Distribution visualization of task and concept priorities with dynamic updates
-- **System Status Panel**: Real-time metrics for reasoning performance, system health, and resource utilization
-- **Meta-Cognition Panel**: Visualization of self-analysis and optimization processes with automated insight generation
-- **Time Series Panel**: Temporal analysis of reasoning activities and performance metrics with trend analysis
-- **Interactive Exploration**: Interactive exploration mode allowing users to understand compound improvement processes
-- **Flexible Layout Management**: Advanced layout management using flexlayout-react with customizable dashboards
-- **Annotation and Export Capabilities**: Comprehensive annotation system with data export functionality for research and analysis
-
-#### Rule Engine Framework
-- **NAL Rule Integration**: Complete implementation of NAL truth functions and inference rules (deduction, induction, abduction, analogy, comparison, resemblance)
-- **LM Rule Integration**: Framework for language model collaboration with prompt generation and response processing
-- **Dynamic Rule Management**: Runtime rule enable/disable, priority adjustment, and performance tracking
-- **Truth Value Operations**: Complete implementation of revision, deduction, induction, abduction, negation, and expectation functions
-- **Inference Confidence**: Proper confidence propagation through inference chains with compound confidence calculations
-- **Advanced Hybrid Reasoning**: Sophisticated coordination between NAL and LM systems with conflict resolution and cross-validation
-- **Adaptive Coordination**: Dynamic selection of optimal reasoning strategies based on task characteristics and system state
-- **Confidence-Based Integration**: Weighted combination of results based on confidence metrics and performance data
-- **Feedback Loops**: Continuous improvement through meta-cognitive analysis of reasoning failures and successes
-
-#### Memory and Attention Management
-- **Concept-Based Organization**: Associative storage organized around Terms in Concepts with related Task clustering
-- **Dual Memory Architecture**: Short-term focus sets for immediate processing and long-term storage for persistent knowledge
-- **Attention-Based Consolidation**: Automatic prioritization and forgetting based on usage patterns and importance metrics
-- **Index-Based Retrieval**: Efficient access patterns for different knowledge types (inheritance, implication, similarity, etc.)
-- **Adaptive Management**: Dynamic adjustment to resource constraints with compound optimization of memory utilization
-
-#### Configuration Management System
-- **System-Wide Configuration**: Centralized configuration for NAL/LM rule sets, memory parameters, cycle timing, and truth function overrides
-- **Component Configuration**: Per-component configuration with validation and default value management
-- **Runtime Reconfiguration**: Dynamic configuration adjustment without system restart
-- **Environment-Specific Settings**: Different configurations for development, testing, and production environments
-- **Validation Framework**: Comprehensive validation of all configuration parameters with error reporting
-
-#### Performance and Scalability Requirements
-- **Core Operation Performance**: <1ms for Term normalization, <2ms for Task processing, <5ms for Memory retrieval
-- **Throughput Requirements**: 10,000+ operations per second under normal load
-- **Memory Efficiency**: Sublinear growth in memory usage with knowledge base size through caching mechanisms
-- **Scalability**: Horizontal scaling support for distributed reasoning across multiple nodes
-- **Performance Characteristics**: Performance improvements with each enhancement iteration
-- **Dynamic Rule Prioritization**: Automatic adjustment of rule execution priorities based on effectiveness and performance metrics
-- **Caching Strategies**: Multi-tiered caching with hit-rate optimization and intelligent cache management
-- **Event Processing**: Optimized event handling with middleware pipelines and performance tracking
-- **Batch Processing**: Optimized processing for high-throughput scenarios with performance monitoring
-- **Execution Time Limits**: Configurable maximum execution time per cycle (default: 100ms) to prevent long-running operations
-- **Memory Limits**: Configurable memory limits (default: 512MB) with garbage collection threshold management
-- **Concurrent Request Limits**: Configurable limits for concurrent operations to prevent resource exhaustion
-- **Profiling Support**: Built-in profiling capabilities for performance analysis and optimization
-
-#### Security Implementation Details
-- **Input Sanitization**: Comprehensive validation of all Narsese input to prevent injection attacks
-- **Resource Limits**: Protection against resource exhaustion through processing limits and timeouts
-- **Access Controls**: Role-based access controls for system components and data
-- **Secure Defaults**: Secure-by-default configuration with validated defaults and environment protection
-- **Audit Logging**: Complete logging of security-relevant events and system operations
-- **Circuit Breaker Pattern**: Robust error handling with fallback mechanisms for external services and LM integration
-- **Capability Manager**: Fine-grained capability-based security for dynamic operations
-- **Parameter Validation**: Validation of all parameters including detection of potential security risks
-- **Rate Limiting**: Per-client rate limiting for network-based components to prevent abuse
-- **Secure Communication**: Protection of data in transit and at rest with encryption
-- **Client Capability Tracking**: Monitoring and control of client capabilities for security
-
-#### API Specifications
-- **Consistent Interface Patterns**: Standardized APIs following common design principles
-- **Backward Compatibility**: Maintaining API compatibility across versions
-- **Comprehensive Documentation**: Complete API documentation with examples
-- **Event-Driven Communication**: Standard event patterns for component communication
-- **WebSocket Integration**: Real-time event streaming for UI and external system integration
-
-### Operational Excellence Requirements
-
-#### Robustness and Reliability Requirements
-- **High system reliability** with graceful degradation and error recovery
-- **Fault isolation** preventing cascading failures through circuit breakers and recovery mechanisms
-- **Stability under load** supporting 10,000+ operations per second with consistent performance
-- **Comprehensive error handling** with recovery mechanisms
-- **System Health Monitoring**: Continuous monitoring of all system components with alerting
-- **Recovery Procedures**: Defined procedures for system recovery from various failure modes
-- **Resilience Testing**: Testing of system resilience under various failure conditions
-- **Configuration Validation**: Runtime validation of configuration parameters to ensure system integrity
-- **Component Lifecycle Management**: Proper initialization, start, stop, and disposal of all system components
-- **Error Rate Management**: Configurable maximum error rates with automatic degradation mechanisms
-- **Graceful Failure Handling**: Continuation of system operation with reduced functionality when components fail
-
-#### Security and Compliance Requirements
-- **Minimization of critical vulnerabilities** in production systems through security-first design
-- **Secure configuration management** with validated defaults and environment protection
-- **Input sanitization** protecting against injection attacks and malicious inputs
-- **Access control** for all system components and data flows
-- **Data Protection**: Encryption of sensitive data both in transit and at rest
-- **Compliance Standards**: Adherence to industry security standards and best practices
-- **Security Auditing**: Security audits and vulnerability assessments
-- **Capability-Based Security**: Fine-grained access control based on system capabilities
-- **Parameter Sanitization**: Validation and sanitization of all dynamic parameters to detect potential security risks
-- **Client Authentication**: Authentication and authorization mechanisms for network-based access
-- **Rate Limiting**: Protection against DoS attacks through rate limiting and resource management
-
-#### Performance and Scalability
-- **Sub-millisecond response times** for core operations (Term normalization, Task processing)
-- **Scalable architecture** supporting large knowledge bases with intelligent caching
-- **Memory optimization** through intelligent consolidation and attention mechanisms
-- **Resource efficiency** that improves with compound intelligence growth
-- **Load Distribution**: Intelligent distribution of processing load across system resources
-- **Caching Strategies**: Multi-tiered caching for optimal performance with compound intelligence
-- **Performance Monitoring**: Continuous performance monitoring with automated optimization triggers
-
-#### Quality Assurance Requirements
-- **>95% test coverage** with property-based, unit, integration, and performance testing
-- **Performance benchmarks** with defined targets and monitoring
-- **Regression testing** preventing quality degradation during system growth
-- **Validation frameworks** ensuring correctness of reasoning and improvements
-- **Continuous Integration**: Automated testing pipeline with quality gates
-- **Code Quality Standards**: Consistent code quality with automated linting and review
-- **Test Automation**: Automated testing suites for all functionality
 
 ### Hybrid Intelligence Integration
 
@@ -1055,6 +769,120 @@ The specification defines a reasoning system where intelligence properties emerg
 - **Automated Self-Optimization**: Dynamic adjustment of system parameters and rule priorities based on performance metrics
 - **Component Architecture**: Sophisticated component management with lifecycle control, dependency resolution, and standardized interfaces
 - **Event-Driven Architecture**: Comprehensive event system with middleware support, error handling, and performance tracking
+
+---
+
+## General-Purpose Reinforcement Learning Foundation
+
+The SeNARS architecture naturally supports general-purpose reinforcement learning through its foundational Belief-Goal distinction:
+
+- **World Model Learning**: Belief tasks with frequency-confidence truth semantics form predictive models of environment dynamics
+- **Reward Structure Definition**: Goal tasks with desire-confidence truth semantics define reward functions for policy learning
+- **Exploration-Exploitation Balance**: Truth value revision mechanisms naturally implement the fundamental RL tradeoff
+- **Policy Learning**: Task processing adapts action selection based on predicted outcomes and desired goals
+- **Continuous Adaptation**: The system learns through experience by updating beliefs from environmental feedback while pursuing goals
+- **Transfer Learning**: Knowledge gained in one domain transfers to related domains through structural similarity
+
+This enables SeNARS to function as a general-purpose reinforcement learning system where:
+- **Beliefs** form the world model that predicts outcomes of actions
+- **Goals** define the reward structure that guides policy learning
+- **Interaction** enables the system to learn by attempting to achieve goals and updating beliefs based on outcomes
+- **Adaptation** allows continuous learning from experience through truth value revision mechanisms
+
+The separation of these concept types with distinct truth semantics enables SeNARS to naturally implement the exploration-exploitation balance fundamental to reinforcement learning, where beliefs guide exploitation of known knowledge while goals drive exploration toward desired outcomes.
+
+---
+
+## Core Technical Challenges
+
+### Core Technical Challenges
+
+**Term Normalization and Equality:**
+- The Term implementation requires refinement to achieve full immutability - some computed properties need proper freezing
+- The equality method `equals()` needs implementation of canonical normalization for commutative and associative operators
+- Without proper normalization, logically equivalent terms (e.g., `(&, A, B)` vs `(&, B, A)`) may be treated as different objects
+
+**Performance Optimization:**
+- Performance targets (<1ms operations) require optimization in the full NARS reasoning cycle
+- Extensive validation and metrics collection may impact runtime performance
+- Complex reasoning chains with multiple rule applications may require algorithmic improvements
+
+**Memory Management:**
+- The dual memory architecture (focus/long-term) consolidation mechanisms can be optimized for better scalability
+- Memory pressure handling and forgetting policies need refinement to better preserve important knowledge
+- The memory index system may benefit from optimization as the knowledge base grows
+
+### System Architecture Considerations
+
+**Component Decoupling:**
+- The NAR component exhibits coupling with sub-components (Memory, TaskManager, RuleEngine, etc.)
+- Further decoupling can improve maintainability
+- Testing individual components in isolation can be enhanced through better interface design
+
+**Scalability:**
+- The current memory implementation can scale to higher throughput with optimization
+- The event-driven architecture can be optimized to reduce bottlenecks under high load
+- Serialization/deserialization performance can be improved for large knowledge bases
+
+**Configuration Management:**
+- The SystemConfig has grown in complexity with many parameters requiring careful management of interdependencies
+- Some configuration values may exhibit unexpected interactions when modified
+- Default values can be refined based on usage patterns and performance data
+
+### Quality Assurance Requirements
+
+**Testing Coverage:**
+- Comprehensive coverage of complex reasoning chains can be expanded
+- Integration testing of NARS-LM hybrid reasoning can be enhanced to catch more edge cases
+- Property-based testing for Term normalization can be extended to exercise more operator combinations
+
+**Error Handling Robustness:**
+- Circuit breaker implementation requires additional defensive programming to prevent cascading errors
+- Fallback mechanisms need refinement to produce more predictable behaviors
+- Graceful degradation mechanisms can be strengthened through additional validation
+
+### Resource and Maintenance Considerations
+
+**Resource Efficiency:**
+- Memory and computational requirements for complex reasoning tasks can be optimized through algorithmic improvements
+- The dual memory architecture parameter tuning can be automated for better resource utilization
+- Sophisticated resource management features can be developed incrementally
+
+**Maintainability:**
+- Component interactions can be simplified through better architectural patterns
+- Self-modifying behaviors can be made more predictable through better design
+- Complex reasoning pattern documentation can be enhanced with automated tools
+
+These technical challenges and design considerations guide development priorities and ensure the system evolves toward its ambitious vision while maintaining practical implementation focus.
+
+---
+
+## Long-Term Specification: A Self-Evolving Intelligence Ecosystem
+
+The long-term specification for SeNARS defines a self-evolving intelligence ecosystem that adapts through experience, user interaction, external knowledge integration, and collaborative development. The system achieves enhanced intelligence growth with finite resources through recursive structural self-improvement and pattern recognition, all while maintaining production-ready quality, security, and reliability.
+
+### System Success Metrics:
+- **Intelligence Growth**: The system's reasoning capabilities improve through structural properties and experience.
+- **User Empowerment**: Users become more capable of understanding and leveraging AI reasoning through system tools.
+- **Community Intelligence**: Collective insights and collaborative improvements enhance system capabilities.
+- **Real-World Impact**: The system demonstrates value in solving complex real-world problems through hybrid reasoning.
+- **System Autonomy**: The system becomes capable of self-improvement and self-optimization.
+
+### Development and Operational Specifications:
+- **Continuous Integration Pipeline**: Automated testing and deployment with quality gates
+- **Performance Monitoring**: Real-time performance metrics with automated alerting and optimization
+- **Security Compliance**: Regular security assessments and compliance with industry standards
+- **Scalability Planning**: Horizontal and vertical scaling capabilities for growing intelligence
+- **Documentation Standards**: Comprehensive documentation for all components and interfaces
+
+### Future Development Trajectory:
+- **External Knowledge Integration**: Pluggable frameworks for connecting to knowledge bases and APIs
+- **Advanced Visualization**: Interactive, collaborative analysis and exploration tools
+- **Distributed Reasoning**: Multi-node distributed intelligence capabilities
+- **Adaptive Interfaces**: Universal access across all devices and platforms
+- **Community Extensions**: Plugin architecture for community-contributed capabilities
+
+---
 
 ### Key Characteristics of the Ideal Result
 
@@ -1161,112 +989,14 @@ The specified SeNARS system demonstrates principles of autocatalytic artificial 
 
 ---
 
-## Long-Term Specification: A Self-Evolving Intelligence Ecosystem
+## Summary
 
-The long-term specification for SeNARS defines a self-evolving intelligence ecosystem that adapts through experience, user interaction, external knowledge integration, and collaborative development. The system achieves enhanced intelligence growth with finite resources through recursive structural self-improvement and pattern recognition, all while maintaining production-ready quality, security, and reliability.
+SeNARS is a sophisticated hybrid neuro-symbolic reasoning system that combines the precision of formal logic with the flexibility of neural language models. Built on immutable data structures and a component-based architecture, it provides an observable platform for advanced AI reasoning with:
 
-### System Success Metrics:
-- **Intelligence Growth**: The system's reasoning capabilities improve through structural properties and experience.
-- **User Empowerment**: Users become more capable of understanding and leveraging AI reasoning through system tools.
-- **Community Intelligence**: Collective insights and collaborative improvements enhance system capabilities.
-- **Real-World Impact**: The system demonstrates value in solving complex real-world problems through hybrid reasoning.
-- **System Autonomy**: The system becomes capable of self-improvement and self-optimization.
+- **Hybrid Intelligence**: Seamless integration of symbolic (NAL) and neural (LM) reasoning
+- **Self-Improving Architecture**: Intelligence that grows through use and experience
+- **Observable Reasoning**: Clear visibility into how conclusions are reached
+- **Practical Applications**: From knowledge discovery to decision support systems
+- **Robust Design**: Fault-tolerant with graceful degradation and comprehensive error handling
 
-### Development and Operational Specifications:
-- **Continuous Integration Pipeline**: Automated testing and deployment with quality gates
-- **Performance Monitoring**: Real-time performance metrics with automated alerting and optimization
-- **Security Compliance**: Regular security assessments and compliance with industry standards
-- **Scalability Planning**: Horizontal and vertical scaling capabilities for growing intelligence
-- **Documentation Standards**: Comprehensive documentation for all components and interfaces
-
-### Future Development Trajectory:
-- **External Knowledge Integration**: Pluggable frameworks for connecting to knowledge bases and APIs
-- **Advanced Visualization**: Interactive, collaborative analysis and exploration tools
-- **Distributed Reasoning**: Multi-node distributed intelligence capabilities
-- **Adaptive Interfaces**: Universal access across all devices and platforms
-- **Community Extensions**: Plugin architecture for community-contributed capabilities
-
----
-
-## General-Purpose Reinforcement Learning Foundation
-
-The SeNARS architecture naturally supports general-purpose reinforcement learning through its foundational Belief-Goal distinction:
-
-- **World Model Learning**: Belief tasks with frequency-confidence truth semantics form predictive models of environment dynamics
-- **Reward Structure Definition**: Goal tasks with desire-confidence truth semantics define reward functions for policy learning
-- **Exploration-Exploitation Balance**: Truth value revision mechanisms naturally implement the fundamental RL tradeoff
-- **Policy Learning**: Task processing adapts action selection based on predicted outcomes and desired goals
-- **Continuous Adaptation**: The system learns through experience by updating beliefs from environmental feedback while pursuing goals
-- **Transfer Learning**: Knowledge gained in one domain transfers to related domains through structural similarity
-
-This enables SeNARS to function as a general-purpose reinforcement learning system where:
-- **Beliefs** form the world model that predicts outcomes of actions
-- **Goals** define the reward structure that guides policy learning
-- **Interaction** enables the system to learn by attempting to achieve goals and updating beliefs based on outcomes
-- **Adaptation** allows continuous learning from experience through truth value revision mechanisms
-
-The separation of these concept types with distinct truth semantics enables SeNARS to naturally implement the exploration-exploitation balance fundamental to reinforcement learning, where beliefs guide exploitation of known knowledge while goals drive exploration toward desired outcomes.
-
----
-
-## Core Technical Challenges
-
-### Core Technical Challenges
-
-**Term Normalization and Equality:**
-- The Term implementation requires refinement to achieve full immutability - some computed properties need proper freezing
-- The equality method `equals()` needs implementation of canonical normalization for commutative and associative operators
-- Without proper normalization, logically equivalent terms (e.g., `(&, A, B)` vs `(&, B, A)`) may be treated as different objects
-
-**Performance Optimization:**
-- Performance targets (<1ms operations) require optimization in the full NARS reasoning cycle
-- Extensive validation and metrics collection may impact runtime performance
-- Complex reasoning chains with multiple rule applications may require algorithmic improvements
-
-**Memory Management:**
-- The dual memory architecture (focus/long-term) consolidation mechanisms can be optimized for better scalability
-- Memory pressure handling and forgetting policies need refinement to better preserve important knowledge
-- The memory index system may benefit from optimization as the knowledge base grows
-
-### System Architecture Considerations
-
-**Component Decoupling:**
-- The NAR component exhibits coupling with sub-components (Memory, TaskManager, RuleEngine, etc.)
-- Further decoupling can improve maintainability
-- Testing individual components in isolation can be enhanced through better interface design
-
-**Scalability:**
-- The current memory implementation can scale to higher throughput with optimization
-- The event-driven architecture can be optimized to reduce bottlenecks under high load
-- Serialization/deserialization performance can be improved for large knowledge bases
-
-**Configuration Management:**
-- The SystemConfig has grown in complexity with many parameters requiring careful management of interdependencies
-- Some configuration values may exhibit unexpected interactions when modified
-- Default values can be refined based on usage patterns and performance data
-
-### Quality Assurance Requirements
-
-**Testing Coverage:**
-- Comprehensive coverage of complex reasoning chains can be expanded
-- Integration testing of NARS-LM hybrid reasoning can be enhanced to catch more edge cases
-- Property-based testing for Term normalization can be extended to exercise more operator combinations
-
-**Error Handling Robustness:**
-- Circuit breaker implementation requires additional defensive programming to prevent cascading errors
-- Fallback mechanisms need refinement to produce more predictable behaviors
-- Graceful degradation mechanisms can be strengthened through additional validation
-
-### Resource and Maintenance Considerations
-
-**Resource Efficiency:**
-- Memory and computational requirements for complex reasoning tasks can be optimized through algorithmic improvements
-- The dual memory architecture parameter tuning can be automated for better resource utilization
-- Sophisticated resource management features can be developed incrementally
-
-**Maintainability:**
-- Component interactions can be simplified through better architectural patterns
-- Self-modifying behaviors can be made more predictable through better design
-- Complex reasoning pattern documentation can be enhanced with automated tools
-
-These technical challenges and design considerations guide development priorities and ensure the system evolves toward its ambitious vision while maintaining practical implementation focus.
+The system's architecture enables compound intelligence where each addition enhances overall capabilities, making it suitable for research, education, and production applications requiring transparent and adaptable AI reasoning.
