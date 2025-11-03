@@ -64,7 +64,7 @@ const GenericPanel = memo(({
     ) : null;
 
     const contentElement = displayItems.length > 0
-        ? displayItems.map((item, index) => renderItem(item, index))
+        ? displayItems.map((item, index) => React.createElement('div', {key: `item-${index}`}, renderItem(item, index)))
         : React.createElement('div', {
             className: 'emptyState',
             style: {padding: '1rem', textAlign: 'center', color: '#999'}

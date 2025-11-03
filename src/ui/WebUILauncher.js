@@ -8,13 +8,12 @@
 import {spawn} from 'child_process';
 import {fileURLToPath} from 'url';
 import {dirname, join} from 'path';
-import {WebSocketMonitor} from './src/server/WebSocketMonitor.js';
-import {NAR} from './src/nar/NAR.js';
-import {DemoWrapper} from './src/demo/DemoWrapper.js';
+import {WebSocketMonitor} from '../server/WebSocketMonitor.js';
+import {NAR} from '../nar/NAR.js';
+import {DemoWrapper} from '../demo/DemoWrapper.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const args = process.argv.slice(2);
 
 // Default configuration
 const DEFAULT_CONFIG = Object.freeze({
@@ -36,7 +35,7 @@ const DEFAULT_CONFIG = Object.freeze({
 });
 
 // Parse command line arguments
-const parseArgs = args => {
+const parseArgs = (args = process.argv.slice(2)) => {
     let config = {...DEFAULT_CONFIG};
     for (let i = 0; i < args.length; i++) {
         if (args[i] === '--ws-port' && args[i + 1]) {
@@ -90,8 +89,13 @@ const startWebSocketServer = async (config = DEFAULT_CONFIG) => {
 // Start Vite dev server
 const startViteDevServer = (config = DEFAULT_CONFIG) => {
     console.log(`Starting Vite dev server on port ${config.ui.port}...`);
+    
+    // Check if we're in the right directory structure for the ui folder
+    // __dirname is src/ui, so ui directory is at the project root level
+    const uiDir = join(__dirname, '../../ui'); // Go up two levels to project root, then into ui
+    
     const viteProcess = spawn('npx', ['vite', 'dev', '--port', config.ui.port.toString()], {
-        cwd: join(__dirname, 'ui'),
+        cwd: uiDir,
         stdio: 'inherit',
         env: {
             ...process.env,
@@ -104,6 +108,12 @@ const startViteDevServer = (config = DEFAULT_CONFIG) => {
 
     viteProcess.on('error', err => {
         console.error('Error starting Vite server:', err.message);
+        if (err.code === 'ENOENT') {
+            console.error('npx command not found. Make sure Node.js and npm are installed and in your PATH.');
+            console.error('You may need to run `npm install` in the ui directory first.');
+            console.error('Current working directory:', process.cwd());
+            console.error('UI directory path checked:', uiDir);
+        }
         process.exit(1);
     });
 
@@ -157,11 +167,11 @@ const setupGracefulShutdown = async (webSocketServer) => {
 };
 
 // Main launch function - abstracted for any data processor
-export const launchDataDrivenUI = async (dataProcessorFn) => {
+export const launchDataDrivenUI = async (dataProcessorFn, cliArgs = process.argv.slice(2)) => {
     let webSocketServer;
     
     try {
-        const config = parseArgs(args);
+        const config = parseArgs(cliArgs);
         webSocketServer = await startWebSocketServer(config);
         
         await setupGracefulShutdown({
@@ -184,7 +194,9 @@ export const launchDataDrivenUI = async (dataProcessorFn) => {
     }
 };
 
-// For backwards compatibility, run the main function if called directly
-if (import.meta.url === `file://${__filename}`) {
-    launchDataDrivenUI();
-}
+// For backwards compatibility when called directly, don't run the main function automatically
+// Only export the function for import
+
+// For backwards compatibility when called directly as a script
+// Don't run automatically to avoid conflicts when imported
+// Only run when explicitly executed as the main module in a real script context

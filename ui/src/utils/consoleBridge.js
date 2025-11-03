@@ -20,7 +20,8 @@ const getLogMetadata = () => ({
 });
 
 const sendLogToWebSocket = (currentWsService, level, args) => {
-    if (!currentWsService || currentWsService.state !== 2) return; // 2 is ConnectionState.CONNECTED
+    // Check if the currentWsService exists and has the expected structure
+    if (!currentWsService || !currentWsService.sendMessage) return;
 
     try {
         const message = {
@@ -31,12 +32,7 @@ const sendLogToWebSocket = (currentWsService, level, args) => {
             meta: getLogMetadata()
         };
 
-        const sender = currentWsService.sendMessage ||
-            (currentWsService.ws?.readyState === WebSocket.OPEN ?
-                (msg) => currentWsService.ws.send(JSON.stringify(msg)) :
-                null);
-
-        sender && sender(message);
+        currentWsService.sendMessage(message);
     } catch (error) {
         originalConsole.error('Failed to send console log to WebSocket:', error);
     }

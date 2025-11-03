@@ -5,8 +5,16 @@
  * Uses the general WebUILauncher with self-analysis data processing
  */
 
-import SeNARSSelfAnalyzer from '../self-analyze.js';
-import {launchDataDrivenUI} from '../src/ui/WebUILauncher.js';
+import {fileURLToPath} from 'url';
+import {dirname} from 'path';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+import SeNARSSelfAnalyzer from './self-analyze.js';
+import {launchDataDrivenUI} from './src/ui/WebUILauncher.js';
+
+// Need to re-parse arguments to ensure they're from this script context
+const args = process.argv.slice(2);
 
 /**
  * Self-analysis data processor function
@@ -131,7 +139,7 @@ const runSelfAnalysis = async (monitor) => {
 };
 
 // Launch the self-analysis UI
-launchDataDrivenUI(runSelfAnalysis).catch(error => {
+launchDataDrivenUI(runSelfAnalysis, process.argv.slice(2)).catch(error => {
     console.error('Unexpected error:', error.message);
     process.exit(1);
 });
