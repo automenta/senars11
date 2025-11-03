@@ -96,14 +96,7 @@ export class RuleEngine extends BaseRuleEngine {
      * @returns {Array} - Array of derived tasks
      */
     async applyNalRules(task, context = {}) {
-        if (!this._config.enableNal) return [];
-
-        const results = await this._nalRules.applyAllRules(task, context);
-        this._metrics.nalApplications++;
-        this._metrics.totalApplications++;
-        this._metrics.totalDerivations += results.length;
-
-        return results;
+        return this._applyRules('nal', task, context);
     }
 
     /**
@@ -113,14 +106,7 @@ export class RuleEngine extends BaseRuleEngine {
      * @returns {Array} - Array of derived tasks
      */
     async applyLmRules(task, context = {}) {
-        if (!this._config.enableLm) return [];
-
-        const results = await this._lmRules.applyAllRules(task, context);
-        this._metrics.lmApplications++;
-        this._metrics.totalApplications++;
-        this._metrics.totalDerivations += results.length;
-
-        return results;
+        return this._applyRules('lm', task, context);
     }
 
     /**
@@ -130,10 +116,25 @@ export class RuleEngine extends BaseRuleEngine {
      * @returns {Array} - Array of derived tasks
      */
     async applyHybridRules(task, context = {}) {
-        if (!this._config.enableHybrid) return [];
+        return this._applyRules('hybrid', task, context);
+    }
 
-        const results = await this._hybridRules.applyAllRules(task, context);
-        this._metrics.hybridApplications++;
+    /**
+     * Generic method to apply rules of a specific type
+     * @param {string} type - Type of rules to apply (nal, lm, hybrid)
+     * @param {Object} task - The task to apply rules to
+     * @param {Object} context - Context for rule application
+     * @returns {Array} - Array of derived tasks
+     */
+    async _applyRules(type, task, context) {
+        const configKey = `enable${type.charAt(0).toUpperCase() + type.slice(1)}`;
+        if (!this._config[configKey]) return [];
+
+        const ruleManager = this[`_${type}Rules`];
+        const results = await ruleManager.applyAllRules(task, context);
+        
+        // Update metrics
+        this._metrics[`${type}Applications`]++;
         this._metrics.totalApplications++;
         this._metrics.totalDerivations += results.length;
 
@@ -352,14 +353,7 @@ export class RuleEngine extends BaseRuleEngine {
      * @param {string} category - The category to enable
      */
     enableCategory(category) {
-        if (category === 'nal') {
-            this._nalRules.enableCategory('nal');
-        } else if (category === 'lm') {
-            this._lmRules.enableCategory('lm');
-        } else if (category === 'hybrid') {
-            this._hybridRules.enableCategory('hybrid');
-        }
-        return this;
+        return this._updateRuleStatus(category, 'enable', 'Category');
     }
 
     /**
@@ -367,14 +361,7 @@ export class RuleEngine extends BaseRuleEngine {
      * @param {string} category - The category to disable
      */
     disableCategory(category) {
-        if (category === 'nal') {
-            this._nalRules.disableCategory('nal');
-        } else if (category === 'lm') {
-            this._lmRules.disableCategory('lm');
-        } else if (category === 'hybrid') {
-            this._hybridRules.disableCategory('hybrid');
-        }
-        return this;
+        return this._updateRuleStatus(category, 'disable', 'Category');
     }
 
     /**
@@ -383,18 +370,7 @@ export class RuleEngine extends BaseRuleEngine {
      * @param {string} type - The type of rule (nal, lm, hybrid)
      */
     enableRule(ruleId, type) {
-        switch (type) {
-            case 'nal':
-                this._nalRules.enable(ruleId);
-                break;
-            case 'lm':
-                this._lmRules.enable(ruleId);
-                break;
-            case 'hybrid':
-                this._hybridRules.enable(ruleId);
-                break;
-        }
-        return this;
+        return this._updateRuleStatus(type, 'enable', ruleId);
     }
 
     /**
@@ -403,16 +379,23 @@ export class RuleEngine extends BaseRuleEngine {
      * @param {string} type - The type of rule (nal, lm, hybrid)
      */
     disableRule(ruleId, type) {
-        switch (type) {
-            case 'nal':
-                this._nalRules.disable(ruleId);
-                break;
-            case 'lm':
-                this._lmRules.disable(ruleId);
-                break;
-            case 'hybrid':
-                this._hybridRules.disable(ruleId);
-                break;
+        return this._updateRuleStatus(type, 'disable', ruleId);
+    }
+
+    /**
+     * Generic method to update rule status
+     * @param {string} type - Type of rule (nal, lm, hybrid)
+     * @param {string} operation - Operation to perform (enable, disable)
+     * @param {string|boolean} value - Value to pass to the operation (category name or rule ID)
+     */
+    _updateRuleStatus(type, operation, value) {
+        const ruleManager = this[`_${type}Rules`];
+        if (ruleManager) {
+            if (value === 'Category') {
+                ruleManager[`${operation}Category`](type);
+            } else {
+                ruleManager[operation](value);
+            }
         }
         return this;
     }

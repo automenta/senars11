@@ -9,6 +9,13 @@ class KnowledgeBaseConnector {
         this.cache = new Map(); // Cached knowledge to reduce external calls
         this.cacheTTL = config.cacheTTL || 300000; // 5 minutes default
         this.rateLimiter = new RateLimiter(config.rateLimit || {requests: 10, windowMs: 1000});
+        
+        // Define provider mapping for cleaner code
+        this.providerMap = {
+            'wikipedia': WikipediaConnector,
+            'wikidata': WikidataConnector,
+            'custom': CustomAPIConnector
+        };
     }
 
     // Connect to a knowledge base
@@ -17,22 +24,12 @@ class KnowledgeBaseConnector {
             return this.connections.get(providerId);
         }
 
-        let connector;
-
-        switch (providerId) {
-            case 'wikipedia':
-                connector = new WikipediaConnector(credentials, this.config);
-                break;
-            case 'wikidata':
-                connector = new WikidataConnector(credentials, this.config);
-                break;
-            case 'custom':
-                connector = new CustomAPIConnector(credentials, this.config);
-                break;
-            default:
-                throw new Error(`Unknown provider: ${providerId}`);
+        const ConnectorClass = this.providerMap[providerId];
+        if (!ConnectorClass) {
+            throw new Error(`Unknown provider: ${providerId}`);
         }
 
+        const connector = new ConnectorClass(credentials, this.config);
         await connector.initialize();
         this.connections.set(providerId, connector);
         return connector;
@@ -41,10 +38,10 @@ class KnowledgeBaseConnector {
     // Query a knowledge base
     async query(providerId, query, options = {}) {
         // Check cache first
-        const cacheKey = `${providerId}:${JSON.stringify(query)}`;
+        const cacheKey = this._buildCacheKey(providerId, query);
         const cachedResult = this.cache.get(cacheKey);
 
-        if (cachedResult && Date.now() - cachedResult.timestamp < this.cacheTTL) {
+        if (cachedResult && this._isCacheValid(cachedResult)) {
             return cachedResult.data;
         }
 
@@ -58,12 +55,24 @@ class KnowledgeBaseConnector {
         const result = await connector.query(query, options);
 
         // Cache the result
+        this._cacheResult(cacheKey, result);
+
+        return result;
+    }
+
+    _buildCacheKey(providerId, query) {
+        return `${providerId}:${JSON.stringify(query)}`;
+    }
+
+    _isCacheValid(cachedResult) {
+        return Date.now() - cachedResult.timestamp < this.cacheTTL;
+    }
+
+    _cacheResult(cacheKey, result) {
         this.cache.set(cacheKey, {
             data: result,
             timestamp: Date.now()
         });
-
-        return result;
     }
 
     // Batch query multiple knowledge bases
@@ -145,11 +154,9 @@ class WikipediaConnector {
     }
 
     async query(query, options = {}) {
-        if (!this.initialized) {
-            throw new Error('Wikipedia connector not initialized');
-        }
-
-        const searchQuery = typeof query === 'string' ? query : query.search || query.term;
+        this._ensureInitialized();
+        
+        const searchQuery = this._extractSearchQuery(query);
         const searchUrl = `${this.baseUrl}/page/summary/${encodeURIComponent(searchQuery)}`;
 
         try {
@@ -159,15 +166,29 @@ class WikipediaConnector {
             }
 
             const data = await response.json();
-            return {
-                source: 'wikipedia',
-                query: searchQuery,
-                results: [data],
-                timestamp: Date.now()
-            };
+            return this._buildResult('wikipedia', searchQuery, [data]);
         } catch (error) {
             throw new Error(`Wikipedia query failed: ${error.message}`);
         }
+    }
+
+    _ensureInitialized() {
+        if (!this.initialized) {
+            throw new Error(`${this.constructor.name} not initialized`);
+        }
+    }
+
+    _extractSearchQuery(query) {
+        return typeof query === 'string' ? query : query.search || query.term;
+    }
+
+    _buildResult(source, query, results) {
+        return {
+            source,
+            query,
+            results,
+            timestamp: Date.now()
+        };
     }
 }
 
@@ -186,20 +207,11 @@ class WikidataConnector {
     }
 
     async query(query, options = {}) {
-        if (!this.initialized) {
-            throw new Error('Wikidata connector not initialized');
-        }
-
-        // If query is a string, assume it's a SPARQL query
-        // If it's an object, convert to SPARQL
-        let sparqlQuery;
-        if (typeof query === 'string') {
-            sparqlQuery = query;
-        } else {
-            sparqlQuery = this.buildSparqlQuery(query);
-        }
-
+        this._ensureInitialized();
+        
+        const sparqlQuery = this._prepareSparqlQuery(query);
         const url = `${this.baseUrl}?query=${encodeURIComponent(sparqlQuery)}`;
+        
         const response = await fetch(url, {
             headers: {
                 'Accept': 'application/sparql-results+json'
@@ -211,15 +223,17 @@ class WikidataConnector {
         }
 
         const data = await response.json();
-        return {
-            source: 'wikidata',
-            query: sparqlQuery,
-            results: data.results.bindings,
-            timestamp: Date.now()
-        };
+        return this._buildResult('wikidata', sparqlQuery, data.results.bindings);
     }
 
-    buildSparqlQuery(queryObj) {
+    _prepareSparqlQuery(query) {
+        if (typeof query === 'string') {
+            return query;
+        }
+        return this._buildSparqlQuery(query);
+    }
+
+    _buildSparqlQuery(queryObj) {
         // Build a simple SPARQL query from a query object
         // This is a simplified implementation
         const searchTerm = queryObj.search || queryObj.term;
@@ -230,6 +244,21 @@ class WikidataConnector {
       }
       LIMIT 10
     `;
+    }
+
+    _ensureInitialized() {
+        if (!this.initialized) {
+            throw new Error(`${this.constructor.name} not initialized`);
+        }
+    }
+
+    _buildResult(source, query, results) {
+        return {
+            source,
+            query,
+            results,
+            timestamp: Date.now()
+        };
     }
 }
 
@@ -248,12 +277,10 @@ class CustomAPIConnector {
     }
 
     async query(query, options = {}) {
-        if (!this.initialized) {
-            throw new Error('Custom API connector not initialized');
-        }
-
-        const url = this.buildUrl(query, options);
-        const headers = this.buildHeaders();
+        this._ensureInitialized();
+        
+        const url = this._buildUrl(query, options);
+        const headers = this._buildHeaders();
 
         const response = await fetch(url, {
             method: options.method || 'GET',
@@ -265,20 +292,15 @@ class CustomAPIConnector {
         }
 
         const data = await response.json();
-        return {
-            source: 'custom',
-            query,
-            results: Array.isArray(data) ? data : [data],
-            timestamp: Date.now()
-        };
+        return this._buildResult('custom', query, Array.isArray(data) ? data : [data]);
     }
 
-    buildUrl(query, options) {
+    _buildUrl(query, options) {
         // Build URL from query and options
         return `${this.baseUrl}/${query}`;
     }
 
-    buildHeaders() {
+    _buildHeaders() {
         // Build headers with authentication
         const headers = {'Content-Type': 'application/json'};
         if (this.credentials && this.credentials.apiKey) {
@@ -286,15 +308,30 @@ class CustomAPIConnector {
         }
         return headers;
     }
+
+    _ensureInitialized() {
+        if (!this.initialized) {
+            throw new Error(`${this.constructor.name} not initialized`);
+        }
+    }
+
+    _buildResult(source, query, results) {
+        return {
+            source,
+            query,
+            results,
+            timestamp: Date.now()
+        };
+    }
 }
 
 // Data normalizer for different knowledge base formats
 class KnowledgeNormalizer {
     constructor() {
         this.normalizationRules = {
-            'wikipedia': this.normalizeWikipedia,
-            'wikidata': this.normalizeWikidata,
-            'custom': this.normalizeCustom
+            'wikipedia': (data) => this._normalizeData(data, this._normalizeWikipediaItem.bind(this), 'wikipedia'),
+            'wikidata': (data) => this._normalizeData(data, this._normalizeWikidataItem.bind(this), 'wikidata'),
+            'custom': (data) => Array.isArray(data) ? data : [data]
         };
     }
 
@@ -306,44 +343,32 @@ class KnowledgeNormalizer {
         return data; // Return as-is if no normalizer
     }
 
-    normalizeWikipedia(data) {
+    _normalizeData(data, itemNormalizer, source) {
         if (Array.isArray(data)) {
-            return data.map(item => this.normalizeWikipediaItem(item));
+            return data.map(item => itemNormalizer(item, source));
         }
-        return this.normalizeWikipediaItem(data);
+        return itemNormalizer(data, source);
     }
 
-    normalizeWikipediaItem(item) {
+    _normalizeWikipediaItem(item, source) {
         return {
             id: item.pageid,
             title: item.title,
             extract: item.extract,
             url: item.content_urls?.desktop?.page,
             type: 'fact',
-            source: 'wikipedia'
+            source
         };
     }
 
-    normalizeWikidata(data) {
-        if (Array.isArray(data)) {
-            return data.map(item => this.normalizeWikidataItem(item));
-        }
-        return this.normalizeWikidataItem(data);
-    }
-
-    normalizeWikidataItem(item) {
+    _normalizeWikidataItem(item, source) {
         return {
             id: item.item?.value?.split('/').pop(), // Extract ID from URL
             label: item.itemLabel?.value,
             description: item.itemDescription?.value,
             type: 'entity',
-            source: 'wikidata'
+            source
         };
-    }
-
-    normalizeCustom(data) {
-        // Default normalization for custom sources
-        return Array.isArray(data) ? data : [data];
     }
 }
 

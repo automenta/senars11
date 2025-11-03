@@ -47,14 +47,17 @@ export class SeNARSInterface {
     }
 
     _createCommandMap() {
-        return Object.entries(COMMANDS).reduce((map, [method, aliases]) => {
-            aliases.forEach(alias => map.set(alias, this[`_${method}`].bind(this)));
-            return map;
-        }, new Map());
+        const map = new Map();
+        for (const [method, aliases] of Object.entries(COMMANDS)) {
+            for (const alias of aliases) {
+                map.set(alias, this[`_${method}`].bind(this));
+            }
+        }
+        return map;
     }
 
     _setupLayout() {
-        // Header
+        // Define element configurations
         this.header = blessed.box({
             top: '0',
             left: '0',
@@ -62,53 +65,27 @@ export class SeNARSInterface {
             height: '6%',
             content: '{bold}{rainbow}🌈 SeNARS Reasoning Engine 🚀{/rainbow}{/bold}',
             tags: true,
-            border: {
-                type: 'line'
-            },
-            style: {
-                fg: 'white',
-                bg: 'blue',
-                border: {
-                    fg: '#f0f0f0'
-                }
-            }
+            border: { type: 'line' },
+            style: { fg: 'white', bg: 'blue', border: { fg: '#f0f0f0' } }
         });
 
-        // Input box
         this.input = blessed.textarea({
             top: '6%',
             left: '0',
             width: '100%',
             height: '15%',
-            border: {
-                type: 'line'
-            },
-            style: {
-                fg: 'white',
-                bg: 'black',
-                border: {
-                    fg: 'green'
-                }
-            },
+            border: { type: 'line' },
+            style: { fg: 'white', bg: 'black', border: { fg: 'green' } },
             inputOnFocus: true
         });
 
-        // Output/Log box
         this.output = blessed.box({
             top: '21%',
             left: '0',
             width: '70%',
             height: '54%',
-            border: {
-                type: 'line'
-            },
-            style: {
-                fg: 'white',
-                bg: 'black',
-                border: {
-                    fg: 'cyan'
-                }
-            },
+            border: { type: 'line' },
+            style: { fg: 'white', bg: 'black', border: { fg: 'cyan' } },
             scrollable: true,
             alwaysScroll: true,
             mouse: true,
@@ -116,22 +93,13 @@ export class SeNARSInterface {
             vi: true
         });
 
-        // Memory/Tasks display
         this.memoryDisplay = blessed.box({
             top: '21%',
             left: '70%',
             width: '30%',
             height: '54%',
-            border: {
-                type: 'line'
-            },
-            style: {
-                fg: 'white',
-                bg: 'black',
-                border: {
-                    fg: 'magenta'
-                }
-            },
+            border: { type: 'line' },
+            style: { fg: 'white', bg: 'black', border: { fg: 'magenta' } },
             scrollable: true,
             alwaysScroll: true,
             mouse: true,
@@ -139,22 +107,13 @@ export class SeNARSInterface {
             vi: true
         });
 
-        // Status bar
         this.statusBar = blessed.box({
             bottom: '0',
             left: '0',
             width: '100%',
             height: '25%',
-            border: {
-                type: 'line'
-            },
-            style: {
-                fg: 'white',
-                bg: 'red',
-                border: {
-                    fg: 'yellow'
-                }
-            },
+            border: { type: 'line' },
+            style: { fg: 'white', bg: 'red', border: { fg: 'yellow' } },
             content: this._getStatusContent()
         });
 
@@ -296,6 +255,21 @@ export class SeNARSInterface {
 
         content += '{bold}📋 Recent Tasks{/bold}\n';
 
+        const tasks = this._getTasksFromMemory();
+        
+        if (tasks.length > 0) {
+            tasks.slice(-10).forEach((task, index) => {
+                content += `{cyan}[${index + 1}]{/cyan} {green}${task.term?.name || 'Unknown Task'}{/green}\n`;
+                content += `    {blue}| ${this._formatTaskDetails(task)}{/blue}\n`;
+            });
+        } else {
+            content += '{red}No tasks in memory{/red}\n';
+        }
+
+        this.memoryDisplay.setContent(content);
+    }
+
+    _getTasksFromMemory() {
         // Try multiple possible methods to get tasks
         let tasks = [];
         if (this.nar.getTasks && typeof this.nar.getTasks === 'function') {
@@ -314,8 +288,12 @@ export class SeNARSInterface {
             // Try to extract tasks from concepts if available
             try {
                 tasks = [];
-                for (const [key, concept] of Object.entries(this.nar.memory.concepts)) {
-                    if (concept.tasks) {
+                const conceptEntries = this.nar.memory.concepts instanceof Map 
+                    ? Array.from(this.nar.memory.concepts.entries()) 
+                    : Object.entries(this.nar.memory.concepts);
+                
+                for (const [, concept] of conceptEntries) {
+                    if (concept?.tasks) {
                         tasks = tasks.concat(concept.tasks);
                     }
                 }
@@ -323,23 +301,17 @@ export class SeNARSInterface {
                 // Fallback if method doesn't exist or fails
             }
         }
+        return tasks;
+    }
 
-        if (tasks.length > 0) {
-            tasks.slice(-10).forEach((task, index) => {
-                const truthStr = task.truth ? `Truth: ${task.truth.toString()}` : 'Truth: N/A';
-                const priority = task.priority !== undefined ? `Priority: ${task.priority.toFixed(3)}` : 'Priority: N/A';
-                const occurrence = task.stamp ? `Stamp: ${task.stamp}` : 'Stamp: N/A';
-                const occurrenceTime = task.occurrenceTime !== undefined ? `OccTime: ${task.occurrenceTime}` : '';
-                const type = task.type ? `Type: ${task.type}` : 'Type: Task';
+    _formatTaskDetails(task) {
+        const truthStr = task.truth ? `Truth: ${task.truth.toString()}` : 'Truth: N/A';
+        const priority = task.priority !== undefined ? `Priority: ${task.priority.toFixed(3)}` : 'Priority: N/A';
+        const occurrence = task.stamp ? `Stamp: ${task.stamp}` : 'Stamp: N/A';
+        const occurrenceTime = task.occurrenceTime !== undefined ? `OccTime: ${task.occurrenceTime}` : '';
+        const type = task.type ? `Type: ${task.type}` : 'Type: Task';
 
-                content += `{cyan}[${index + 1}]{/cyan} {green}${task.term?.name || 'Unknown Task'}{/green}\n`;
-                content += `    {blue}| ${type} | ${truthStr} | ${priority} | ${occurrence}${occurrenceTime ? ` | ${occurrenceTime}` : ''}{/blue}\n`;
-            });
-        } else {
-            content += '{red}No tasks in memory{/red}\n';
-        }
-
-        this.memoryDisplay.setContent(content);
+        return `${type} | ${truthStr} | ${priority} | ${occurrence}${occurrenceTime ? ` | ${occurrenceTime}` : ''}`;
     }
 
     _help() {
@@ -391,10 +363,7 @@ export class SeNARSInterface {
 
 {bold}📋 Detailed Task Information{/bold}\n`;
 
-        const tasks = this.nar.getTasks && typeof this.nar.getTasks === 'function' ?
-            this.nar.getTasks() :
-            (this.nar.memory?.getTasks && typeof this.nar.memory.getTasks === 'function' ?
-                this.nar.memory.getTasks() : []);
+        const tasks = this._getTasksFromMemory();
 
         if (tasks.length > 0) {
             tasks.slice(-10).forEach((task, index) => {
@@ -421,14 +390,18 @@ export class SeNARSInterface {
 
         let content = '{bold}🔍 Recent Beliefs (last 5){/bold}\n';
         beliefs.slice(-5).forEach(task => {
-            const truthStr = task.truth ? task.truth.toString() : '';
-            const priority = task.priority !== undefined ? ` | P:${task.priority.toFixed(3)}` : '';
-            const occurrence = task.stamp ? ` | Occ:${task.stamp}` : '';
-
-            content += `  {cyan}${task.term.name}{/cyan} {magenta}${truthStr}{/magenta}{yellow}${priority}{/yellow}{blue}${occurrence}{/blue}\n`;
+            content += `  {cyan}${task.term.name}{/cyan} ${this._formatBeliefDetails(task)}\n`;
         });
 
         return content;
+    }
+
+    _formatBeliefDetails(task) {
+        const truthStr = task.truth ? `{magenta}${task.truth.toString()}{/magenta}` : '';
+        const priority = task.priority !== undefined ? `{yellow} | P:${task.priority.toFixed(3)}{/yellow}` : '';
+        const occurrence = task.stamp ? `{blue} | Occ:${task.stamp}{/blue}` : '';
+
+        return `${truthStr}${priority}${occurrence}`;
     }
 
     _reset() {
