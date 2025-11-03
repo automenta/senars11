@@ -5,6 +5,7 @@ import {Bag} from './Bag.js';
 import {BaseComponent} from '../util/BaseComponent.js';
 import {clamp} from '../util/common.js';
 import {MemoryValidator} from '../util/MemoryValidator.js';
+import {IntrospectionEvents} from '../util/IntrospectionEvents.js';
 
 export class Memory extends BaseComponent {
     static SCORING_WEIGHTS = Object.freeze({activation: 0.5, useCount: 0.3, taskCount: 0.2});
@@ -99,6 +100,7 @@ export class Memory extends BaseComponent {
 
         const added = concept.addTask(task);
         if (added) {
+            this._emitIntrospectionEvent(IntrospectionEvents.MEMORY_TASK_ADDED, {task: task.serialize()});
             this._stats.totalTasks++;
             this._updateResourceUsage(concept, 1);
 
@@ -123,11 +125,22 @@ export class Memory extends BaseComponent {
         this._concepts.set(term, concept);
         this._index.addConcept(concept);
         this._stats.totalConcepts++;
+        this._emitIntrospectionEvent(IntrospectionEvents.MEMORY_CONCEPT_CREATED, {concept: concept.serialize()});
         return concept;
     }
 
     getConcept(term) {
-        return !term ? null : this._concepts.get(term) || this._findConceptByEquality(term);
+        if (!term) {
+            return null;
+        }
+
+        const concept = this._concepts.get(term) || this._findConceptByEquality(term);
+
+        if (concept) {
+            this._emitIntrospectionEvent(IntrospectionEvents.MEMORY_CONCEPT_ACCESSED, {concept: concept.serialize()});
+        }
+
+        return concept;
     }
 
     _applyConceptForgetting() {
@@ -377,10 +390,15 @@ export class Memory extends BaseComponent {
         this._stats.lastConsolidation = currentTime;
         this._lastConsolidationTime = currentTime;
 
+        this._emitIntrospectionEvent(IntrospectionEvents.MEMORY_CONSOLIDATION_START, {timestamp: currentTime});
+
         const results = this._consolidation.consolidate(this, currentTime);
         this.applyActivationDecay();
         this._cleanupResourceTracker();
         this._updateFocusConceptsCount();
+
+        this._emitIntrospectionEvent(IntrospectionEvents.MEMORY_CONSOLIDATION_END, {timestamp: Date.now(), results});
+
         return results;
     }
 

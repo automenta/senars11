@@ -27,6 +27,7 @@
     "test:ui": "cd ui && npm test",
     "test:unit": "NODE_NO_WARNINGS=1 NODE_OPTIONS=--experimental-vm-modules npx jest tests/unit",
     "test:integration": "NODE_NO_WARNINGS=1 NODE_OPTIONS=--experimental-vm-modules npx jest tests/integration",
+    "test:debug": "NODE_NO_WARNINGS=1 NODE_OPTIONS=--experimental-vm-modules npx jest --detectOpenHandles tests/integration/reasoning/Metacognition.integration.test.js",
     "test:property": "NODE_NO_WARNINGS=1 NODE_OPTIONS=--experimental-vm-modules npx jest tests/nal/propertyBasedTests.test.js",
     "test:automated": "node scripts/utils/test-framework.js",
     "test:e2e": "cd ui && npm run test:e2e",

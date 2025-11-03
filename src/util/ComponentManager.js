@@ -9,13 +9,52 @@ export class ComponentManager extends BaseComponent {
      * Creates a new component manager
      * @param {Object} config - Configuration for the component manager
      * @param {EventBus} [eventBus] - Optional shared event bus
+     * @param {NAR} [nar] - Optional NAR instance
      */
-    constructor(config = {}, eventBus = null) {
+    constructor(config = {}, eventBus = null, nar = null) {
         super(config, 'ComponentManager', eventBus);
+        this.nar = nar;
         this._components = new Map(); // Map of component names to component instances
         this._dependencyGraph = new Map(); // Map of component dependencies
         this._startupOrder = []; // Order in which components should be started
         this._shutdownOrder = []; // Order in which components should be shut down
+    }
+
+    async loadComponentsFromConfig(componentConfigs) {
+        for (const [name, config] of Object.entries(componentConfigs)) {
+            if (!config.enabled) {
+                this.logDebug(`Component ${name} is disabled in config.`);
+                continue;
+            }
+
+            try {
+                const module = await import(`../${config.path}`);
+                const ComponentClass = module[config.class];
+                if (!ComponentClass) {
+                    throw new Error(`Component class ${config.class} not found in ${config.path}`);
+                }
+
+                const dependencies = {};
+                if (config.dependencies) {
+                    for (const dep of config.dependencies) {
+                        if (dep === 'nar') {
+                            dependencies['nar'] = this.nar;
+                        } else if (dep === 'eventBus') {
+                            dependencies['eventBus'] = this.eventBus;
+                        } else {
+                            dependencies[dep] = this.getComponent(dep);
+                        }
+                    }
+                }
+
+                const instance = new ComponentClass(config.config, dependencies.eventBus, dependencies.nar);
+                this.registerComponent(name, instance, config.dependencies);
+                this.logInfo(`Successfully loaded and registered component: ${name}`);
+
+            } catch (error) {
+                this.logError(`Failed to load component ${name}:`, error);
+            }
+        }
     }
 
     /**

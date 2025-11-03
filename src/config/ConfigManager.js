@@ -92,6 +92,47 @@ const DEFAULT_CONFIG = deepFreeze({
         maxErrorRate: 0.1,
         enableRecovery: true,
         recoveryAttempts: 3
+    },
+    introspection: {
+        enabled: true,
+        perComponent: {
+            TermFactory: true,
+            Memory: true,
+            NAR: true,
+            Cycle: true,
+            RuleEngine: true
+        }
+    },
+    termFactory: {
+        maxCacheSize: 5000
+    },
+    metacognition: {
+        analyzers: ['PerformanceAnalyzer'],
+        selfOptimization: {
+            enabled: true
+        },
+        PerformanceAnalyzer: {
+            avgCycleTimeThreshold: 100,
+            cacheHitRateThreshold: 0.8
+        }
+    },
+    components: {
+        metacognition: {
+            enabled: true,
+            path: 'src/reasoning/Metacognition.js',
+            class: 'Metacognition',
+            dependencies: ['nar', 'eventBus'],
+            config: {
+                analyzers: ['PerformanceAnalyzer'],
+                selfOptimization: {
+                    enabled: true
+                },
+                PerformanceAnalyzer: {
+                    avgCycleTimeThreshold: 100,
+                    cacheHitRateThreshold: 0.8
+                }
+            }
+        }
     }
 });
 

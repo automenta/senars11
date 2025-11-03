@@ -1,5 +1,6 @@
 import {Logger} from '../util/Logger.js';
 import {EventBus} from '../util/EventBus.js';
+import {createEventPayload} from './IntrospectionEvents.js';
 
 export class BaseComponent {
     constructor(config = {}, name = 'BaseComponent', eventBus = null, validationSchema = null) {
@@ -245,6 +246,14 @@ export class BaseComponent {
             uptime: this.uptime,
             ...data
         }, options);
+    }
+
+    _emitIntrospectionEvent(eventName, payload) {
+        if (!this._config.introspection?.enabled) {
+            return;
+        }
+
+        this._eventBus.emit(eventName, createEventPayload(this._name, payload));
     }
 
     onEvent(event, handler) { this._eventBus.on(event, handler); }

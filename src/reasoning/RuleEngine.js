@@ -6,6 +6,7 @@ import {SequentialRuleProcessor} from './SequentialRuleProcessor.js';
 import {ReasoningContext} from './ReasoningContext.js';
 import {PerformanceOptimizer} from './PerformanceOptimizer.js';
 import {BaseComponent} from '../util/BaseComponent.js';
+import {IntrospectionEvents} from '../util/IntrospectionEvents.js';
 
 export class RuleEngine extends BaseComponent {
     constructor(config = {}, lm = null, termFactory = null, ruleProcessor = null) {
@@ -131,6 +132,20 @@ export class RuleEngine extends BaseComponent {
             });
 
             const {results, rule: updatedRule} = rule.apply(task, context);
+
+            if (results && results.length > 0) {
+                this._emitIntrospectionEvent(IntrospectionEvents.RULE_FIRED, {
+                    rule: rule.id,
+                    task: task.serialize(),
+                    results: results.map(r => r.serialize())
+                });
+            } else {
+                this._emitIntrospectionEvent(IntrospectionEvents.RULE_NOT_FIRED, {
+                    rule: rule.id,
+                    task: task.serialize()
+                });
+            }
+
             this._rules.set(rule.id, updatedRule);
             success = true;
             this._incrementTypeMetric(rule);

@@ -1,5 +1,6 @@
 import {BaseComponent} from '../util/BaseComponent.js';
 import {EvaluationEngine} from '../reasoning/EvaluationEngine.js';
+import {IntrospectionEvents} from '../util/IntrospectionEvents.js';
 
 const DEFAULT_FOCUS_TASK_LIMIT = 10;
 
@@ -40,6 +41,7 @@ export class Cycle extends BaseComponent {
     async execute() {
         const cycleStartTime = Date.now();
         this._isRunning = true;
+        this._emitIntrospectionEvent(IntrospectionEvents.CYCLE_START, {cycle: this._cycleCount});
 
         try {
             // Process pending tasks and consolidate memory
@@ -61,6 +63,12 @@ export class Cycle extends BaseComponent {
             const processedInferences = await this._processInferencesWithEvaluator(newInferences);
             const budgetedInferences = this._applyBudgetConstraints(processedInferences);
 
+            this._emitIntrospectionEvent(IntrospectionEvents.CYCLE_STEP, {
+                cycle: this._cycleCount,
+                step: 'inferences_processed',
+                inferenceCount: budgetedInferences.length
+            });
+
             // Update memory and stats
             this._updateMemoryWithInferences(budgetedInferences, cycleStartTime);
             this._updateCycleStats(cycleStartTime);
@@ -72,6 +80,7 @@ export class Cycle extends BaseComponent {
             throw error;
         } finally {
             this._isRunning = false;
+            this._emitIntrospectionEvent(IntrospectionEvents.CYCLE_END, {cycle: this._cycleCount});
         }
     }
 

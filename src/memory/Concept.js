@@ -1,11 +1,11 @@
 import {Bag} from './Bag.js';
 import {clamp} from '../util/common.js';
-import {ConfigurableComponent} from '../util/ConfigurableComponent.js';
+import {BaseComponent} from '../util/BaseComponent.js';
 
 const TASK_TYPES = Object.freeze({BELIEF: 'BELIEF', GOAL: 'GOAL', QUESTION: 'QUESTION'});
 const CAPACITY_DISTRIBUTION = Object.freeze({BELIEF: 0.6, GOAL: 0.3, QUESTION: 0.1});
 
-export class Concept extends ConfigurableComponent {
+export class Concept extends BaseComponent {
     static DEFAULT_CONFIG = {
         maxBeliefs: 100,
         maxGoals: 50,
@@ -18,15 +18,14 @@ export class Concept extends ConfigurableComponent {
     };
 
     constructor(term, config = {}) {
-        super(Concept.DEFAULT_CONFIG);
-        this.configure(config);
+        super({...Concept.DEFAULT_CONFIG, ...config}, `Concept<${term.toString()}>`);
 
         this._term = term;
         this._createdAt = Date.now();
         this._lastAccessed = Date.now();
-        this._beliefs = new Bag(this.getConfigValue('maxBeliefs'));
-        this._goals = new Bag(this.getConfigValue('maxGoals'));
-        this._questions = new Bag(this.getConfigValue('maxQuestions'));
+        this._beliefs = new Bag(this.config.maxBeliefs);
+        this._goals = new Bag(this.config.maxGoals);
+        this._questions = new Bag(this.config.maxQuestions);
         this._activation = 0;
         this._useCount = 0;
         this._quality = 0;
@@ -168,14 +167,14 @@ export class Concept extends ConfigurableComponent {
         return removed || false;
     }
 
-    applyDecay(decayRate = this.getConfigValue('defaultDecayRate')) {
+    applyDecay(decayRate = this.config.defaultDecayRate) {
         [this._beliefs, this._goals, this._questions].forEach(bag => bag.applyDecay(decayRate));
         this._activation *= (1 - decayRate);
         this._updateLastAccessed();
     }
 
-    boostActivation(activationBoost = this.getConfigValue('defaultActivationBoost')) {
-        this._activation = clamp(this._activation + activationBoost, 0, this.getConfigValue('maxActivation'));
+    boostActivation(activationBoost = this.config.defaultActivationBoost) {
+        this._activation = clamp(this._activation + activationBoost, 0, this.config.maxActivation);
         this._updateLastAccessed();
         this.incrementUseCount();
     }
@@ -185,7 +184,7 @@ export class Concept extends ConfigurableComponent {
     }
 
     updateQuality(qualityChange) {
-        this._quality = clamp(this._quality + qualityChange, this.getConfigValue('minQuality'), this.getConfigValue('maxQuality'));
+        this._quality = clamp(this._quality + qualityChange, this.config.minQuality, this.config.maxQuality);
     }
 
     containsTask(task) {
@@ -237,7 +236,7 @@ export class Concept extends ConfigurableComponent {
             beliefs: this._beliefs.serialize ? this._beliefs.serialize() : null,
             goals: this._goals.serialize ? this._goals.serialize() : null,
             questions: this._questions.serialize ? this._questions.serialize() : null,
-            config: this.getConfig(),
+            config: this.config,
             version: '1.0.0'
         };
     }

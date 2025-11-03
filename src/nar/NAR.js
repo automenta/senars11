@@ -9,6 +9,7 @@ import {RuleEngine} from '../reasoning/RuleEngine.js';
 import {SyllogisticRule} from '../reasoning/rules/syllogism.js';
 import {ImplicationSyllogisticRule} from '../reasoning/rules/implicationSyllogism.js';
 import {ModusPonensRule} from '../reasoning/rules/modusponens.js';
+import {MetacognitionRules} from '../reasoning/rules/metacognition.js';
 import {PRIORITY, TASK} from '../config/constants.js';
 import {BaseComponent} from '../util/BaseComponent.js';
 import {ComponentManager} from '../util/ComponentManager.js';
@@ -30,12 +31,24 @@ export class NAR extends BaseComponent {
     constructor(config = {}) {
         super(config, 'NAR');
         this._config = SystemConfig.from(config);
-        this._componentManager = new ComponentManager({}, this._eventBus);
+        this._componentManager = new ComponentManager({}, this._eventBus, this);
         this._initComponents(config);
         this._isRunning = false;
         this._cycleInterval = null;
         this._useOptimizedCycle = config.performance?.useOptimizedCycle !== false;
         this._registerComponents();
+    }
+
+    async initialize() {
+        if (this._config.get('components')) {
+            await this._componentManager.loadComponentsFromConfig(this._config.get('components'));
+        }
+
+        const success = await this._componentManager.initializeAll();
+        if (success) {
+            this._setupDefaultRules();
+        }
+        return success;
     }
 
     get config() {
@@ -96,7 +109,7 @@ export class NAR extends BaseComponent {
 
     _initComponents(config) {
         const lmEnabled = config.lm?.enabled === true;
-        this._termFactory = new TermFactory();
+        this._termFactory = new TermFactory(this._config.termFactory, this._eventBus);
         this._memory = new Memory(this._config.memory);
         this._parser = new NarseseParser(this._termFactory);
         this._focus = new Focus(this._config.focus);
@@ -175,6 +188,12 @@ export class NAR extends BaseComponent {
             this._ruleEngine.register(SyllogisticRule.create(this._termFactory));
             this._ruleEngine.register(ImplicationSyllogisticRule.create(this._termFactory));
             this._ruleEngine.register(ModusPonensRule.create(this._termFactory));
+
+            if (this._config.get('metacognition.selfOptimization.enabled')) {
+                for (const Rule of MetacognitionRules) {
+                    this._ruleEngine.register(Rule.create(this._termFactory));
+                }
+            }
         } catch (error) {
             this.logWarn('Error setting up default rules:', error);
         }
@@ -278,6 +297,7 @@ export class NAR extends BaseComponent {
         }, this._config.get('cycle.delay'));
 
         this._eventBus.emit('system.started', {timestamp: Date.now()}, {traceId: options.traceId});
+        this._emitIntrospectionEvent('system:start', {timestamp: Date.now()});
         this.logInfo('NAR started successfully');
         return true;
     }
@@ -305,6 +325,7 @@ export class NAR extends BaseComponent {
         this._stopComponentsAsync();
 
         this._eventBus.emit('system.stopped', {timestamp: Date.now()}, {traceId: options.traceId});
+        this._emitIntrospectionEvent('system:stop', {timestamp: Date.now()});
         this.logInfo('NAR stopped successfully');
         return true;
     }

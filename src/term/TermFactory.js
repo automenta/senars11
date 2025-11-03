@@ -1,19 +1,22 @@
 import {Term, TermType} from './Term.js';
 import {CognitiveDiversity} from './CognitiveDiversity.js';
+import {BaseComponent} from '../util/BaseComponent.js';
+import {IntrospectionEvents} from '../util/IntrospectionEvents.js';
 
 export {Term};
 
 const COMMUTATIVE_OPERATORS = new Set(['&', '|', '+', '*', '<->', '=']);
 const ASSOCIATIVE_OPERATORS = new Set(['&', '|']);
 
-export class TermFactory {
-    constructor() {
+export class TermFactory extends BaseComponent {
+    constructor(config = {}, eventBus = null) {
+        super(config, 'TermFactory', eventBus);
         this._cache = new Map();
         this._complexityCache = new Map(); // Cache for computational complexity metrics
         this._cognitiveDiversity = new CognitiveDiversity(this);
         this._cacheHits = 0;
         this._cacheMisses = 0;
-        this._maxCacheSize = 5000; // Limit cache size to prevent memory issues
+        this._maxCacheSize = this.config.maxCacheSize || 5000; // Limit cache size to prevent memory issues
         this._accessTime = new Map(); // Track access times for LRU eviction
     }
 
@@ -38,10 +41,12 @@ export class TermFactory {
 
         if (term) {
             this._cacheHits++;
+            this._emitIntrospectionEvent(IntrospectionEvents.TERM_CACHE_HIT, {termName: name});
             // Update access time for LRU
             this._accessTime.set(name, currentTime);
         } else {
             this._cacheMisses++;
+            this._emitIntrospectionEvent(IntrospectionEvents.TERM_CACHE_MISS, {termName: name});
             term = this._createAndCache(operator, normalizedComponents, name);
 
             // Update access time for the new term
@@ -93,6 +98,7 @@ export class TermFactory {
             operator
         );
         this._cache.set(name, term);
+        this._emitIntrospectionEvent(IntrospectionEvents.TERM_CREATED, {term: term.serialize()});
         return term;
     }
 
