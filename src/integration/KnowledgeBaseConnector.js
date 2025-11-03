@@ -20,10 +20,18 @@ class KnowledgeBaseConnector {
 
     // Connect to a knowledge base
     async connect(providerId, credentials) {
+        // Return existing connection if available
         if (this.connections.has(providerId)) {
             return this.connections.get(providerId);
         }
 
+        // Validate provider and create new connection
+        const connector = await this._createConnector(providerId, credentials);
+        this.connections.set(providerId, connector);
+        return connector;
+    }
+    
+    async _createConnector(providerId, credentials) {
         const ConnectorClass = this.providerMap[providerId];
         if (!ConnectorClass) {
             throw new Error(`Unknown provider: ${providerId}`);
@@ -31,7 +39,6 @@ class KnowledgeBaseConnector {
 
         const connector = new ConnectorClass(credentials, this.config);
         await connector.initialize();
-        this.connections.set(providerId, connector);
         return connector;
     }
 
@@ -39,25 +46,28 @@ class KnowledgeBaseConnector {
     async query(providerId, query, options = {}) {
         // Check cache first
         const cacheKey = this._buildCacheKey(providerId, query);
-        const cachedResult = this.cache.get(cacheKey);
+        const cachedResult = this._getCachedResult(cacheKey);
+        if (cachedResult) return cachedResult;
 
-        if (cachedResult && this._isCacheValid(cachedResult)) {
-            return cachedResult.data;
-        }
-
-        // Check rate limit
-        if (!this.rateLimiter.allow(providerId)) {
-            throw new Error(`Rate limit exceeded for provider: ${providerId}`);
-        }
-
-        // Connect if needed and query
+        // Check rate limit and query
+        this._checkRateLimit(providerId);
         const connector = await this.connect(providerId);
         const result = await connector.query(query, options);
 
         // Cache the result
         this._cacheResult(cacheKey, result);
-
         return result;
+    }
+    
+    _getCachedResult(cacheKey) {
+        const cachedResult = this.cache.get(cacheKey);
+        return cachedResult && this._isCacheValid(cachedResult) ? cachedResult.data : null;
+    }
+    
+    _checkRateLimit(providerId) {
+        if (!this.rateLimiter.allow(providerId)) {
+            throw new Error(`Rate limit exceeded for provider: ${providerId}`);
+        }
     }
 
     _buildCacheKey(providerId, query) {
@@ -157,19 +167,23 @@ class WikipediaConnector {
         this._ensureInitialized();
         
         const searchQuery = this._extractSearchQuery(query);
-        const searchUrl = `${this.baseUrl}/page/summary/${encodeURIComponent(searchQuery)}`;
+        const searchUrl = this._buildWikipediaUrl(searchQuery);
 
-        try {
-            const response = await fetch(searchUrl);
-            if (!response.ok) {
-                throw new Error(`Wikipedia API error: ${response.status}`);
-            }
-
-            const data = await response.json();
-            return this._buildResult('wikipedia', searchQuery, [data]);
-        } catch (error) {
-            throw new Error(`Wikipedia query failed: ${error.message}`);
+        const response = await this._fetchData(searchUrl);
+        const data = await response.json();
+        return this._buildResult('wikipedia', searchQuery, [data]);
+    }
+    
+    _buildWikipediaUrl(searchQuery) {
+        return `${this.baseUrl}/page/summary/${encodeURIComponent(searchQuery)}`;
+    }
+    
+    async _fetchData(url) {
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`API error: ${response.status}`);
         }
+        return response;
     }
 
     _ensureInitialized() {

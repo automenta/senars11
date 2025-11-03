@@ -305,23 +305,34 @@ export class Repl {
     }
 
     _formatTask(task) {
-        const priority = task.budget?.priority !== undefined ? `$${task.budget.priority.toFixed(3)} ` : '';
+        const priority = this._formatPriority(task.budget?.priority);
         const term = task.term?.toString?.() || task.term || 'Unknown';
         const punctuation = this._getTypePunctuation(task.type || 'TASK');
-        
-        let truthStr = '';
-        if (task.truth) {
-            const freq = task.truth.frequency !== undefined ? task.truth.frequency.toFixed(3) : '1.000';
-            const conf = task.truth.confidence !== undefined ? task.truth.confidence.toFixed(3) : '0.900';
-            truthStr = ` %${freq},${conf}%`;
-        } else {
-            truthStr = ' %1.000,0.900%'; // Default truth values
-        }
-
-        const occurrence = task.occurrenceTime !== undefined || task.stamp ?
-            ` ${task.occurrenceTime || ''}@${task.stamp ? this._encodeShortId(task.stamp.id || task.stamp) : ''}`.trim() : '';
+        const truthStr = this._formatTruth(task.truth);
+        const occurrence = this._formatOccurrence(task);
 
         return `${priority}${term}${punctuation}${truthStr}${occurrence}`;
+    }
+    
+    _formatPriority(priority) {
+        return priority !== undefined ? `$${priority.toFixed(3)} ` : '';
+    }
+    
+    _formatTruth(truth) {
+        if (!truth) return ' %1.000,0.900%'; // Default truth values
+        
+        const freq = truth.frequency !== undefined ? truth.frequency.toFixed(3) : '1.000';
+        const conf = truth.confidence !== undefined ? truth.confidence.toFixed(3) : '0.900';
+        return ` %${freq},${conf}%`;
+    }
+    
+    _formatOccurrence(task) {
+        if (task.occurrenceTime === undefined && !task.stamp) return '';
+        
+        const timeStr = task.occurrenceTime || '';
+        const stampStr = task.stamp ? this._encodeShortId(task.stamp.id || task.stamp) : '';
+        
+        return stampStr ? ` ${timeStr}@${stampStr}`.trim() : timeStr;
     }
 
     _trace() {

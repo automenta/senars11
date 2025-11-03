@@ -305,13 +305,35 @@ export class SeNARSInterface {
     }
 
     _formatTaskDetails(task) {
-        const truthStr = task.truth ? `Truth: ${task.truth.toString()}` : 'Truth: N/A';
-        const priority = task.priority !== undefined ? `Priority: ${task.priority.toFixed(3)}` : 'Priority: N/A';
-        const occurrence = task.stamp ? `Stamp: ${task.stamp}` : 'Stamp: N/A';
-        const occurrenceTime = task.occurrenceTime !== undefined ? `OccTime: ${task.occurrenceTime}` : '';
-        const type = task.type ? `Type: ${task.type}` : 'Type: Task';
+        const details = [
+            this._formatType(task.type),
+            this._formatTruthStr(task.truth),
+            this._formatPriorityStr(task.priority),
+            this._formatStamp(task.stamp),
+            this._formatOccurrenceTime(task.occurrenceTime)
+        ].filter(detail => detail !== null);
 
-        return `${type} | ${truthStr} | ${priority} | ${occurrence}${occurrenceTime ? ` | ${occurrenceTime}` : ''}`;
+        return details.join(' | ');
+    }
+    
+    _formatType(type) {
+        return type ? `Type: ${type}` : 'Type: Task';
+    }
+    
+    _formatTruthStr(truth) {
+        return truth ? `Truth: ${truth.toString()}` : 'Truth: N/A';
+    }
+    
+    _formatPriorityStr(priority) {
+        return priority !== undefined ? `Priority: ${priority.toFixed(3)}` : 'Priority: N/A';
+    }
+    
+    _formatStamp(stamp) {
+        return stamp ? `Stamp: ${stamp}` : 'Stamp: N/A';
+    }
+    
+    _formatOccurrenceTime(occurrenceTime) {
+        return occurrenceTime !== undefined ? `OccTime: ${occurrenceTime}` : null; // null means don't include
     }
 
     _help() {
@@ -397,11 +419,25 @@ export class SeNARSInterface {
     }
 
     _formatBeliefDetails(task) {
-        const truthStr = task.truth ? `{magenta}${task.truth.toString()}{/magenta}` : '';
-        const priority = task.priority !== undefined ? `{yellow} | P:${task.priority.toFixed(3)}{/yellow}` : '';
-        const occurrence = task.stamp ? `{blue} | Occ:${task.stamp}{/blue}` : '';
+        const details = [
+            this._formatBeliefTruth(task.truth),
+            this._formatBeliefPriority(task.priority),
+            this._formatBeliefOccurrence(task.stamp)
+        ].filter(detail => detail !== null);
 
-        return `${truthStr}${priority}${occurrence}`;
+        return details.join('');
+    }
+    
+    _formatBeliefTruth(truth) {
+        return truth ? `{magenta}${truth.toString()}{/magenta}` : null;
+    }
+    
+    _formatBeliefPriority(priority) {
+        return priority !== undefined ? `{yellow} | P:${priority.toFixed(3)}{/yellow}` : null;
+    }
+    
+    _formatBeliefOccurrence(stamp) {
+        return stamp ? `{blue} | Occ:${stamp}{/blue}` : null;
     }
 
     _reset() {
