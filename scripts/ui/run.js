@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-import { ScriptUtils, BASE_DIR } from '../utils/script-utils.js';
+import { parseArgs as parseCliArgs, showUsageAndExit, parseKeyValueArgs, spawnProcess, BASE_DIR } from '../utils/script-utils.js';
 
-const { args, helpRequested } = ScriptUtils.parseArgs(process.argv.slice(2));
+const { args, helpRequested } = parseCliArgs(process.argv.slice(2));
 
 const USAGE_MESSAGE = `
 Usage: node scripts/ui/run.js [options]
@@ -35,7 +35,7 @@ const parseArgs = args => {
     let host = DEFAULT_CONFIG.host;
 
     // Parse key-value arguments
-    const keyValueArgs = ScriptUtils.parseKeyValueArgs(args, {
+    const keyValueArgs = parseKeyValueArgs(args, {
         '--port': 'port',
         '--ws-port': 'wsPort',
         '--host': 'host'
@@ -62,7 +62,7 @@ const parseArgs = args => {
 };
 
 if (helpRequested) {
-    ScriptUtils.showUsageAndExit(USAGE_MESSAGE);
+    showUsageAndExit(USAGE_MESSAGE);
 }
 
 const config = parseArgs(args);
@@ -75,7 +75,7 @@ console.log(`UI Port: ${port}, WebSocket Port: ${wsPort}, Host: ${host}`);
 
 const spawnArgs = ['--port', port.toString(), '--ws-port', wsPort.toString(), '--host', host];
 
-ScriptUtils.spawnProcess('node', [BASE_DIR + '/webui.js', ...spawnArgs], {
+spawnProcess('node', [BASE_DIR + '/webui.js', ...spawnArgs], {
     env: {
         ...process.env,
         WS_PORT: wsPort.toString(),

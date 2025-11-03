@@ -97,6 +97,33 @@ const compareValues = (a, b) => {
   return String(a).toLowerCase().localeCompare(String(b).toLowerCase());
 };
 
+export const createSearchableCollection = (data, fields) => {
+  const searchIndex = new Map(data.map((item, index) => {
+    const searchableText = fields.map(field => getNestedValue(item, field)).join(' ').toLowerCase();
+    return [index, searchableText];
+  }));
+
+  return {
+    search: (term) => {
+      const lowercasedTerm = term.toLowerCase();
+      const results = [];
+      for (const [index, text] of searchIndex.entries()) {
+        if (text.includes(lowercasedTerm)) {
+          results.push(data[index]);
+        }
+      }
+      return results;
+    }
+  };
+};
+
+export const process = (data, pipeline) => {
+  if (typeof pipeline === 'function') {
+    return pipeline(data);
+  }
+  return data;
+};
+
 /**
  * Abstract function to group related items based on common properties
  * @param {Array} items - Items to group

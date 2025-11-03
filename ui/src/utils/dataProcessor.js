@@ -9,7 +9,10 @@ import {
   extractDisplayProperties,
   createDataDisplayElement,
   createDataSummary,
-  safeTransformData
+  safeTransformData,
+  createSearchableCollection,
+  process,
+  getNestedValue
 } from './OptimizedDataProcessor.js';
 
 export {
@@ -18,5 +21,8 @@ export {
   extractDisplayProperties,
   createDataDisplayElement,
   createDataSummary,
-  safeTransformData
+  safeTransformData,
+  createSearchableCollection,
+  process,
+  getNestedValue
 };

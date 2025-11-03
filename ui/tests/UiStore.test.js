@@ -1,5 +1,6 @@
-import useUiStore from '../../../ui/src/stores/uiStore.js';
-import { createCollectionManager, createObjectManager } from '../../../ui/src/utils/CollectionManager.js';
+import { describe, test, expect, beforeEach } from 'vitest';
+import useUiStore from '../src/stores/uiStore.js';
+import { createCollectionManager, createObjectManager } from '../src/utils/CollectionManager.js';
 
 describe('UI Store - Direct Integration Tests', () => {
     beforeEach(() => {

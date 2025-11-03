@@ -7,7 +7,7 @@ import useUiStore from '../stores/uiStore.js';
 import GenericPanel from './GenericPanel.js';
 import VirtualizedList from './VirtualizedList.js';
 import { themeUtils } from '../utils/themeUtils.js';
-import { dataUtils } from '../utils/dataProcessor.js';
+import { createSearchableCollection, process, getNestedValue } from '../utils/dataProcessor.js';
 
 /**
  * Advanced data panel with processing, filtering, sorting, and visualization capabilities
@@ -66,21 +66,21 @@ const DataPanel = memo(({
 
   // Process data with advanced pipeline
   const processedData = useMemo(() => {
-    let processor = dataUtils.createSearchableCollection(rawData, search.fields || []);
+    let processor = createSearchableCollection(rawData, search.fields || []);
     
     // Apply search filtering
     let filteredData = searchTerm ? processor.search(searchTerm) : rawData;
     
     // Apply custom processing pipeline if provided
     if (processPipeline) {
-      filteredData = dataUtils.process(filteredData, processPipeline);
+      filteredData = process(filteredData, processPipeline);
     }
     
     // Apply sorting
     if (sortBy) {
       filteredData = [...filteredData].sort((a, b) => {
-        let valueA = dataUtils._getNestedValue(a, sortBy);
-        let valueB = dataUtils._getNestedValue(b, sortBy);
+        let valueA = getNestedValue(a, sortBy);
+        let valueB = getNestedValue(b, sortBy);
         
         let comparison = 0;
         if (typeof valueA === 'string' && typeof valueB === 'string') {
@@ -128,7 +128,7 @@ const DataPanel = memo(({
     
     let totalItems = rawData.length;
     if (searchTerm) {
-      const processor = dataUtils.createSearchableCollection(rawData, search.fields || []);
+      const processor = createSearchableCollection(rawData, search.fields || []);
       totalItems = processor.search(searchTerm).length;
     }
     return Math.ceil(totalItems / pagination.itemsPerPage);

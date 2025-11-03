@@ -1,4 +1,5 @@
-import WebSocketService from '../../../ui/src/utils/websocket.js';
+import { describe, test, expect, beforeAll, afterAll } from 'vitest';
+import WebSocketService from '../src/utils/websocket.js';
 
 // Create a minimal mock WebSocket class for testing without using Jest mocks
 class SimpleMockWebSocket {
