@@ -164,40 +164,28 @@ export class MemoryIndex {
         });
     }
 
-    /**
-     * Get concepts ordered by relevance score for a given query term
-     */
     findConceptsByRelevance(queryTerm, limit = 10) {
         const allConcepts = this.getAllConcepts();
-        const scoredConcepts = allConcepts.map(concept => {
-            const score = this._calculateRelevanceScore(queryTerm, concept.term);
-            return {concept, score};
-        });
+        const scoredConcepts = allConcepts.map(concept => ({
+            concept,
+            score: this._calculateRelevanceScore(queryTerm, concept.term)
+        }));
 
-        // Sort by score descending and limit results
         return scoredConcepts
             .sort((a, b) => b.score - a.score)
             .slice(0, limit)
             .map(item => item.concept);
     }
 
-    /**
-     * Calculate relevance score between query term and concept term
-     */
     _calculateRelevanceScore(queryTerm, conceptTerm) {
-        // Exact match gets highest score
-        if (queryTerm.toString() === conceptTerm.toString()) {
-            return 1.0;
-        }
+        if (queryTerm.toString() === conceptTerm.toString()) return 1.0;
 
         let score = 0;
 
-        // Operator match
         if (queryTerm.operator && conceptTerm.operator === queryTerm.operator) {
             score += 0.3;
         }
 
-        // Component overlap
         if (queryTerm.components && conceptTerm.components) {
             const queryComponents = new Set(queryTerm.components.map(c => c.toString()));
             const conceptComponents = new Set(conceptTerm.components.map(c => c.toString()));
@@ -210,9 +198,7 @@ export class MemoryIndex {
             }
         }
 
-        // Atomic term name similarity
         if (queryTerm.name && conceptTerm.name) {
-            // Simple string similarity (could be enhanced with more sophisticated algorithms)
             const queryName = queryTerm.name.toLowerCase();
             const conceptName = conceptTerm.name.toLowerCase();
 
@@ -223,7 +209,7 @@ export class MemoryIndex {
             }
         }
 
-        return Math.min(1.0, score); // Cap at 1.0
+        return Math.min(1.0, score);
     }
 
     /**
@@ -666,7 +652,7 @@ export class MemoryIndex {
      */
     getMostActiveConcepts(limit = 10) {
         return this.getAllConcepts()
-            .filter(concept => concept.activation > 0)
+            .filter(concept => (concept.activation || 0) > 0)
             .sort((a, b) => (b.activation || 0) - (a.activation || 0))
             .slice(0, limit);
     }
@@ -878,7 +864,7 @@ export class MemoryIndex {
      * Find concepts by complexity level
      */
     findConceptsByComplexity(level) {
-        return this._compoundIndex.find({ minComplexity: level, maxComplexity: level });
+        return this.findConceptsByCriteria({ minComplexity: level, maxComplexity: level }, 'compound');
     }
 
     /**
@@ -892,7 +878,7 @@ export class MemoryIndex {
      * Find concepts by activation level
      */
     findConceptsByActivation(minActivation, maxActivation) {
-        return this._activationIndex.find({ minActivation, maxActivation });
+        return this.findConceptsByCriteria({ minActivation, maxActivation }, 'activation');
     }
 
     /**
@@ -906,14 +892,14 @@ export class MemoryIndex {
      * Find concepts by temporal range
      */
     findConceptsByTemporal(createdAfter, createdBefore) {
-        return this._temporalIndex.find({ createdAfter, createdBefore });
+        return this.findConceptsByCriteria({ createdAfter, createdBefore }, 'temporal');
     }
 
     /**
      * Find atomic concepts by name
      */
     findAtomicConcepts(name) {
-        return this._atomicIndex.find({ termName: name });
+        return this.findConceptsByCriteria({ termName: name }, 'atomic');
     }
 
     /**

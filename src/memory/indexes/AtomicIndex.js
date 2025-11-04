@@ -1,5 +1,5 @@
 import { BaseIndex } from './BaseIndex.js';
-import { getWithDefaultSet } from '../MemoryUtils.js';
+import { getWithDefaultSet, getOrDefault } from '../MemoryUtils.js';
 
 export class AtomicIndex extends BaseIndex {
     constructor(config = {}) {

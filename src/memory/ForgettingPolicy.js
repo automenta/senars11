@@ -160,7 +160,7 @@ export class ForgettingPolicy {
      */
     _simplePolicy(concept) {
         return concept.activation < this.threshold ||
-            (concept.tasks.length > 0 && concept.tasks[0].budget.priority < this.minPriority);
+            (concept.tasks?.length > 0 && concept.tasks[0].budget.priority < this.minPriority);
     }
 
     /**

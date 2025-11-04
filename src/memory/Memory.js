@@ -211,11 +211,10 @@ export class Memory extends BaseComponent {
 
     getConceptsByCriteria(criteria = {}) {
         return this.getAllConcepts().filter(c => {
-            if (criteria.minActivation !== undefined && c.activation < criteria.minActivation) return false;
-            if (criteria.minTasks !== undefined && c.totalTasks < criteria.minTasks) return false;
-            if (criteria.taskType && c.getTasksByType(criteria.taskType).length === 0) return false;
-            if (criteria.onlyFocus === true && !this._focusConcepts.has(c)) return false;
-            return true;
+            return (criteria.minActivation === undefined || c.activation >= criteria.minActivation) &&
+                   (criteria.minTasks === undefined || c.totalTasks >= criteria.minTasks) &&
+                   (!criteria.taskType || c.getTasksByType(criteria.taskType).length > 0) &&
+                   (criteria.onlyFocus !== true || this._focusConcepts.has(c));
         });
     }
 

@@ -55,33 +55,13 @@ export class CompoundIndex extends BaseIndex {
         const { term } = concept;
         if (!term.isAtomic) {
             // Remove from operator index
-            if (this._index.has(term.operator)) {
-                const concepts = this._index.get(term.operator);
-                concepts.delete(concept);
-                if (concepts.size === 0) {
-                    this._index.delete(term.operator);
-                }
-            }
+            this._removeFromIndex(this._index, term.operator, concept);
 
             // Remove from complexity index
-            const complexityLevel = this._getComplexityLevel(term);
-            if (this._complexityIndex.has(complexityLevel)) {
-                const concepts = this._complexityIndex.get(complexityLevel);
-                concepts.delete(concept);
-                if (concepts.size === 0) {
-                    this._complexityIndex.delete(complexityLevel);
-                }
-            }
+            this._removeFromIndex(this._complexityIndex, this._getComplexityLevel(term), concept);
 
             // Remove from category index
-            const category = TermCategorization.getTermCategory(term);
-            if (this._categoryIndex.has(category)) {
-                const concepts = this._categoryIndex.get(category);
-                concepts.delete(concept);
-                if (concepts.size === 0) {
-                    this._categoryIndex.delete(category);
-                }
-            }
+            this._removeFromIndex(this._categoryIndex, TermCategorization.getTermCategory(term), concept);
 
             // Remove from component index
             if (term.components) {
@@ -112,6 +92,16 @@ export class CompoundIndex extends BaseIndex {
         const complexity = TermCategorization.getTermComplexity(term);
         // Simplified complexity level calculation - would need full config implementation
         return Math.floor(complexity / 10); // Using 10 as bucket size
+    }
+
+    _removeFromIndex(index, key, concept) {
+        const concepts = index.get(key);
+        if (concepts) {
+            concepts.delete(concept);
+            if (concepts.size === 0) {
+                index.delete(key);
+            }
+        }
     }
 
     find(filters = {}) {

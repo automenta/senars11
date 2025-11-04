@@ -290,11 +290,12 @@ export class MemoryConsolidation extends ConfigurableComponent {
 
         // Factor 1: Task recency factor (recent tasks decay slower)
         const taskAge = Date.now() - task.stamp.creationTime;
-        if (taskAge < 60000) { // Less than 1 minute old
-            taskDecayRate *= 0.2; // Much slower decay for very recent tasks
-        } else if (taskAge < 300000) { // Less than 5 minutes old
-            taskDecayRate *= 0.5; // Slower decay for recent tasks
-        }
+        const recencyThresholds = this.getConfigValue('recencyDecayThresholds', { short: 60000, medium: 300000 });
+        const recencyFactors = this.getConfigValue('recencyDecayFactors', { short: 0.2, medium: 0.5, long: 1 });
+        
+        taskDecayRate *= taskAge < recencyThresholds.short ? recencyFactors.short : 
+                         taskAge < recencyThresholds.medium ? recencyFactors.medium : 
+                         recencyFactors.long;
 
         // Factor 2: Task type factor (goals may decay differently than beliefs)
         switch (task.type) {
