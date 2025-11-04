@@ -169,25 +169,22 @@ export class Repl {
         const capacity = this.nar.config?.memory?.maxConcepts || 'N/A';
         const forgettingThreshold = this.nar.config?.memory?.priorityThreshold || 'N/A';
 
-        let content = `💾 Memory Statistics:
-  🧠 Concepts: ${conceptCount}
-  📋 Tasks in Memory: ${taskCount}
-  🎯 Focus Set Size: ${focusSize}
-  📏 Concept Capacity: ${capacity}
-  ⚠️ Forgetting Threshold: ${forgettingThreshold}
-  📊 Average Concept Priority: ${avgPriority.toFixed(3)}
-
-📋 Detailed Task Information:\n`;
-
-        const tasks = this._getTasksFromMemory();
-        
-        if (tasks.length > 0) {
-            tasks.slice(-10).forEach((task, index) => {
-                content += `  [${index + 1}]: ${this._formatTask(task)}\n`;
-            });
-        } else {
-            content += '  ❌ No tasks in memory\n';
-        }
+        const content = [
+            '💾 Memory Statistics:',
+            `  🧠 Concepts: ${conceptCount}`,
+            `  📋 Tasks in Memory: ${taskCount}`,
+            `  🎯 Focus Set Size: ${focusSize}`,
+            `  📏 Concept Capacity: ${capacity}`,
+            `  ⚠️ Forgetting Threshold: ${forgettingThreshold}`,
+            `  📊 Average Concept Priority: ${avgPriority.toFixed(3)}`,
+            '',
+            '📋 Detailed Task Information:',
+            ...this._getTasksFromMemory().length > 0
+                ? this._getTasksFromMemory()
+                    .slice(-10)
+                    .map((task, index) => `  [${index + 1}]: ${this._formatTask(task)}`)
+                : ['  ❌ No tasks in memory']
+        ].join('\n');
 
         return content;
     }
@@ -199,10 +196,10 @@ export class Repl {
         } catch (e) {
             // Fallback using memory concepts directly
             if (this.nar.memory?.concepts) {
-                const conceptEntries = this.nar.memory.concepts instanceof Map 
-                    ? Array.from(this.nar.memory.concepts.entries()) 
-                    : Object.entries(this.nar.memory.concepts);
-                return conceptEntries.flatMap(([, concept]) => 
+                const concepts = this.nar.memory.concepts instanceof Map 
+                    ? Array.from(this.nar.memory.concepts.values()) 
+                    : Object.values(this.nar.memory.concepts);
+                return concepts.flatMap(concept => 
                     concept && concept.getAllTasks && typeof concept.getAllTasks === 'function' 
                         ? concept.getAllTasks() 
                         : []);
@@ -221,12 +218,10 @@ export class Repl {
             return '🔍 No recent beliefs found.';
         }
 
-        let content = '🔍 Recent Beliefs (last 5):\n';
-        beliefs.slice(-5).forEach(task => {
-            content += `  ${this._formatTask(task)}\n`;
-        });
-
-        return content.trim();
+        return [
+            '🔍 Recent Beliefs (last 5):',
+            ...beliefs.slice(-5).map(task => `  ${this._formatTask(task)}`)
+        ].join('\n');
     }
 
     _reset() {
@@ -340,7 +335,7 @@ export class Repl {
         const exampleName = args && args.length > 0 ? args[0] : null;
 
         if (!exampleName) {
-            return `🎭 Available examples:\n${[
+            const examples = [
                 'agent-builder-demo     - Demonstrates building agents with various capabilities',
                 'causal-reasoning       - Shows causal reasoning capabilities',
                 'inductive-reasoning    - Demonstrates inductive inference',
@@ -351,9 +346,14 @@ export class Repl {
                 'phase10-final          - Final comprehensive demonstration',
                 'websocket              - WebSocket monitoring example',
                 'lm-providers           - Language model provider integrations'
-            ].map(line => `  ${line}`).join('\n')}
-
-Usage: /demo <example-name> (without the .js extension)`;
+            ];
+            
+            return [
+                '🎭 Available examples:',
+                ...examples.map(line => `  ${line}`),
+                '',
+                'Usage: /demo <example-name> (without the .js extension)'
+            ].join('\n');
         }
 
         // Map example names to file paths

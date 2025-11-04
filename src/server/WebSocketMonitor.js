@@ -320,7 +320,8 @@ class WebSocketMonitor {
             'requestCapabilities': (msg) => this.messageHandlers.handleRequestCapabilities(client, msg)
         };
 
-        (handlers[message.type] || this._handleCustomMessage.bind(this, client, message))(message);
+        const handler = handlers[message.type] || this._handleCustomMessage.bind(this, client, message);
+        handler(message);
     }
 
     _handleCustomMessage(client, message) {

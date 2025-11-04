@@ -149,18 +149,19 @@ export class TermIndexer {
         try {
             const candidates = new Set();
 
+            // Add terms by operator if pattern is compound
             if (pattern.isCompound && pattern.operator) {
                 this.findByOperator(pattern.operator).forEach(term => candidates.add(term));
             }
 
-            if (pattern.isCompound && pattern.components && pattern.components.length > 0) {
-                for (const comp of pattern.components) {
-                    if (comp.isAtomic) {
-                        this.findByAtomicComponent(comp.name).forEach(term => candidates.add(term));
-                    }
-                }
+            // Add terms by atomic components if pattern is compound
+            if (pattern.isCompound && pattern.components) {
+                pattern.components
+                    .filter(comp => comp.isAtomic)
+                    .forEach(comp => this.findByAtomicComponent(comp.name).forEach(term => candidates.add(term)));
             }
 
+            // Add terms by name if pattern is atomic
             if (pattern.isAtomic) {
                 this.findByName(pattern.name).forEach(term => candidates.add(term));
             }
@@ -230,32 +231,27 @@ export class TermIndexer {
     }
 
     _evictOldest() {
-        let oldestItem = null;
-        let oldestIndexKey = null;
-        let oldestKey = null;
+        const allItems = Object.entries(this.indexes).flatMap(([indexKey, index]) =>
+            Array.from(index.entries()).flatMap(([key, items]) =>
+                items.map(item => ({ item, indexKey, key }))
+            )
+        );
 
-        for (const [indexKey, index] of Object.entries(this.indexes)) {
-            for (const [key, items] of index.entries()) {
-                for (const item of items) {
-                    if (!oldestItem || item.timestamp < oldestItem.timestamp) {
-                        oldestItem = item;
-                        oldestIndexKey = indexKey;
-                        oldestKey = key;
-                    }
-                }
-            }
-        }
+        if (allItems.length === 0) return;
 
-        if (oldestItem) {
-            this._removeFromIndex(this.indexes[oldestIndexKey], oldestKey, oldestItem.term);
+        const oldest = allItems.reduce((oldest, current) =>
+            !oldest || current.item.timestamp < oldest.item.timestamp ? current : oldest
+        );
+
+        if (oldest) {
+            this._removeFromIndex(this.indexes[oldest.indexKey], oldest.key, oldest.item.term);
         }
     }
 
     getStats() {
-        const indexSizes = {};
-        for (const [name, index] of Object.entries(this.indexes)) {
-            indexSizes[name] = index.size;
-        }
+        const indexSizes = Object.fromEntries(
+            Object.entries(this.indexes).map(([name, index]) => [name, index.size])
+        );
 
         const hitRate = this.stats.totalQueries > 0 ?
             this.stats.cacheHits / this.stats.totalQueries : 0;

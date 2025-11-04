@@ -26,10 +26,13 @@ export class ReplInterface {
     }
 
     _createCommandMap() {
-        return Object.entries(COMMANDS).reduce((map, [method, aliases]) => {
-            aliases.forEach(alias => map.set(alias, this[`_${method}`].bind(this)));
-            return map;
-        }, new Map());
+        const commandMap = new Map();
+        for (const [method, aliases] of Object.entries(COMMANDS)) {
+            for (const alias of aliases) {
+                commandMap.set(alias, this[`_${method}`].bind(this));
+            }
+        }
+        return commandMap;
     }
 
     async start() {
@@ -154,10 +157,14 @@ Narsese input examples:
 
     _trace() {
         const beliefs = this.nar.getBeliefs();
-        return beliefs.length === 0
-            ? 'No recent beliefs found.'
-            : `Recent Beliefs (last 5):
-${beliefs.slice(-5).map(task => `  ${task.term.name} ${task.truth?.toString() || ''}`).join('\n')}`;
+        if (beliefs.length === 0) {
+            return 'No recent beliefs found.';
+        }
+
+        return [
+            'Recent Beliefs (last 5):',
+            ...beliefs.slice(-5).map(task => `  ${task.term.name} ${task.truth?.toString() || ''}`)
+        ].join('\n');
     }
 
     _reset() {
@@ -199,19 +206,25 @@ ${beliefs.slice(-5).map(task => `  ${task.term.name} ${task.truth?.toString() ||
         const exampleName = args && args.length > 0 ? args[0] : null;
 
         if (!exampleName) {
-            return `Available examples:
-  agent-builder-demo     - Demonstrates building agents with various capabilities
-  causal-reasoning       - Shows causal reasoning capabilities
-  inductive-reasoning    - Demonstrates inductive inference
-  syllogism              - Classic syllogistic reasoning examples
-  temporal               - Temporal reasoning demonstrations
-  performance            - Performance benchmarking example
-  phase10-complete       - Full phase 10 reasoning demonstration
-  phase10-final          - Final comprehensive demonstration
-  websocket              - WebSocket monitoring example
-  lm-providers           - Language model provider integrations
-
-Usage: :demo <example-name> (without the .js extension)`;
+            const examples = [
+                'agent-builder-demo     - Demonstrates building agents with various capabilities',
+                'causal-reasoning       - Shows causal reasoning capabilities',
+                'inductive-reasoning    - Demonstrates inductive inference',
+                'syllogism              - Classic syllogistic reasoning examples',
+                'temporal               - Temporal reasoning demonstrations',
+                'performance            - Performance benchmarking example',
+                'phase10-complete       - Full phase 10 reasoning demonstration',
+                'phase10-final          - Final comprehensive demonstration',
+                'websocket              - WebSocket monitoring example',
+                'lm-providers           - Language model provider integrations'
+            ];
+            
+            return [
+                'Available examples:',
+                ...examples.map(line => `  ${line}`),
+                '',
+                'Usage: :demo <example-name> (without the .js extension)'
+            ].join('\n');
         }
 
         // Map example names to file paths

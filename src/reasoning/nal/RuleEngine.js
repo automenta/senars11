@@ -11,12 +11,14 @@ export class RuleEngine extends BaseRuleEngine {
         this._nalRules = new RuleManager();
         this._lmRules = new RuleManager();
         this._hybridRules = new RuleManager();
+        
         this._config = {
             enableNal: true,
             enableLm: true,
             enableHybrid: true,
             ...config
         };
+        
         this._metrics = {
             totalApplications: 0,
             nalApplications: 0,
@@ -25,6 +27,7 @@ export class RuleEngine extends BaseRuleEngine {
             totalDerivations: 0,
             startTime: Date.now()
         };
+        
         this._contextProviders = new Map(); // For providing context to rules
     }
 
@@ -149,21 +152,15 @@ export class RuleEngine extends BaseRuleEngine {
      */
     async applyAllRules(task, params = {}) {
         const context = await this.getContext(params);
+        
+        const ruleTypes = [];
+        if (this._config.enableNal) ruleTypes.push(['nal', this.applyNalRules.bind(this)]);
+        if (this._config.enableLm) ruleTypes.push(['lm', this.applyLmRules.bind(this)]);
+        if (this._config.enableHybrid) ruleTypes.push(['hybrid', this.applyHybridRules.bind(this)]);
+        
         let results = [];
-
-        // Apply NAL rules
-        if (this._config.enableNal) {
-            results.push(...await this.applyNalRules(task, context));
-        }
-
-        // Apply LM rules
-        if (this._config.enableLm) {
-            results.push(...await this.applyLmRules(task, context));
-        }
-
-        // Apply hybrid rules
-        if (this._config.enableHybrid) {
-            results.push(...await this.applyHybridRules(task, context));
+        for (const [_, applyRuleFn] of ruleTypes) {
+            results.push(...await applyRuleFn(task, context));
         }
 
         return results;
@@ -177,23 +174,16 @@ export class RuleEngine extends BaseRuleEngine {
      */
     async applyReasoningPath(task, params = {}) {
         const context = await this.getContext(params);
-
-        // Analyze the task to determine the best reasoning path
         const reasoningPath = this._determineReasoningPath(task, context);
 
+        const ruleTypes = [];
+        if (reasoningPath.includes('nal')) ruleTypes.push(['nal', this.applyNalRules.bind(this)]);
+        if (reasoningPath.includes('lm')) ruleTypes.push(['lm', this.applyLmRules.bind(this)]);
+        if (reasoningPath.includes('hybrid')) ruleTypes.push(['hybrid', this.applyHybridRules.bind(this)]);
+        
         let results = [];
-
-        // Apply rules based on the determined path
-        if (reasoningPath.includes('nal')) {
-            results.push(...await this.applyNalRules(task, context));
-        }
-
-        if (reasoningPath.includes('lm')) {
-            results.push(...await this.applyLmRules(task, context));
-        }
-
-        if (reasoningPath.includes('hybrid')) {
-            results.push(...await this.applyHybridRules(task, context));
+        for (const [_, applyRuleFn] of ruleTypes) {
+            results.push(...await applyRuleFn(task, context));
         }
 
         return results;
@@ -207,12 +197,11 @@ export class RuleEngine extends BaseRuleEngine {
      */
     _determineReasoningPath(task, context) {
         const paths = [
-            this._isNalSuitable(task, context) ? 'nal' : null,
-            this._isLmSuitable(task, context) ? 'lm' : null,
-            this._isHybridSuitable(task, context) ? 'hybrid' : null
-        ].filter(path => path !== null);
+            this._isNalSuitable(task, context) && 'nal',
+            this._isLmSuitable(task, context) && 'lm',
+            this._isHybridSuitable(task, context) && 'hybrid'
+        ].filter(Boolean);
 
-        // Default to NAL if no specific path is identified
         return paths.length > 0 ? paths : ['nal'];
     }
 
@@ -308,13 +297,8 @@ export class RuleEngine extends BaseRuleEngine {
      */
     _getTermDepth(term) {
         if (!term || !term.isCompound || !term.components) return 1;
-
-        let maxDepth = 1;
-        for (const component of term.components) {
-            maxDepth = Math.max(maxDepth, 1 + this._getTermDepth(component));
-        }
-
-        return maxDepth;
+        
+        return 1 + Math.max(0, ...term.components.map(comp => this._getTermDepth(comp)));
     }
 
     /**
@@ -376,11 +360,10 @@ export class RuleEngine extends BaseRuleEngine {
     _updateRuleStatus(type, operation, value) {
         const ruleManager = this[`_${type}Rules`];
         if (ruleManager) {
-            if (value === 'Category') {
-                ruleManager[`${operation}Category`](type);
-            } else {
-                ruleManager[operation](value);
-            }
+            const method = value === 'Category' 
+                ? `${operation}Category` 
+                : operation;
+            ruleManager[method](value === 'Category' ? type : value);
         }
         return this;
     }

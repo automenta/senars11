@@ -159,21 +159,23 @@ class MetaCognitiveReasoner {
 
     // Get reasoning quality metrics for monitoring
     getQualityMetrics() {
-        const strategyMetrics = {};
+        const strategyMetrics = Object.fromEntries(
+            Array.from(this.reasoningStrategies.entries()).map(([id, stats]) => [
+                id, {
+                    successRate: stats.successCount / Math.max(1, stats.totalCount),
+                    avgQuality: stats.avgQuality,
+                    usageCount: stats.totalCount
+                }
+            ])
+        );
 
-        for (const [id, stats] of this.reasoningStrategies) {
-            strategyMetrics[id] = {
-                successRate: stats.successCount / Math.max(1, stats.totalCount),
-                avgQuality: stats.avgQuality,
-                usageCount: stats.totalCount
-            };
-        }
+        const overallQuality = this.performanceHistory.length > 0
+            ? this.performanceHistory.reduce((sum, h) => sum + h.quality, 0) / this.performanceHistory.length
+            : 0;
 
         return {
             strategyMetrics,
-            overallQuality: this.performanceHistory.length > 0
-                ? this.performanceHistory.reduce((sum, h) => sum + h.quality, 0) / this.performanceHistory.length
-                : 0,
+            overallQuality,
             totalReasoningSteps: this.performanceHistory.length
         };
     }

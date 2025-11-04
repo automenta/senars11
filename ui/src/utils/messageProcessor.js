@@ -1,4 +1,4 @@
-import {validateMessage} from '../schemas/messages.js';
+import {validateMessage, validateMessageDetailed} from '../schemas/messages.js';
 
 class MessageProcessor {
     constructor() {
@@ -17,19 +17,19 @@ class MessageProcessor {
     }
 
     async process(message, context = {}) {
-        const validatedMessage = validateMessage(message);
-        if (!validatedMessage) {
+        const validation = validateMessageDetailed(message);
+        if (!validation.success) {
             this.errorHandlers.forEach(handler => {
                 try {
-                    handler(new Error('Message validation failed'), message, context);
+                    handler(new Error(`Message validation failed: ${validation.errorMessage}`), message, context);
                 } catch (e) {
                     console.error('Error in error handler:', e);
                 }
             });
-            return {success: false, error: 'Validation failed'};
+            return {success: false, error: validation.errorMessage || 'Validation failed'};
         }
 
-        let processedMessage = {...validatedMessage};
+        let processedMessage = {...validation.data};
 
         try {
             for (const middleware of this.middleware) {

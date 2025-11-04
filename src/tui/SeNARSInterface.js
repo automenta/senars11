@@ -39,75 +39,57 @@ export class SeNARSInterface {
     }
 
     _createCommandMap() {
-        const map = new Map();
+        const commandMap = new Map();
         for (const [method, aliases] of Object.entries(COMMANDS)) {
             for (const alias of aliases) {
-                map.set(alias, this[`_${method}`].bind(this));
+                commandMap.set(alias, this[`_${method}`].bind(this));
             }
         }
-        return map;
+        return commandMap;
     }
 
     _setupLayout() {
-        // Define element configurations
-        this.header = blessed.box({
-            top: '0',
-            left: '0',
-            width: '100%',
-            height: '6%',
-            content: '{bold}{rainbow}🌈 SeNARS Reasoning Engine 🚀{/rainbow}{/bold}',
-            tags: true,
-            border: { type: 'line' },
-            style: { fg: 'white', bg: 'blue', border: { fg: '#f0f0f0' } }
-        });
+        // Define element configurations using a configuration object
+        this.elementConfigs = {
+            header: {
+                top: '0', left: '0', width: '100%', height: '6%',
+                content: '{bold}{rainbow}🌈 SeNARS Reasoning Engine 🚀{/rainbow}{/bold}',
+                tags: true,
+                border: { type: 'line' },
+                style: { fg: 'white', bg: 'blue', border: { fg: '#f0f0f0' } }
+            },
+            input: {
+                top: '6%', left: '0', width: '100%', height: '15%',
+                border: { type: 'line' },
+                style: { fg: 'white', bg: 'black', border: { fg: 'green' } },
+                inputOnFocus: true
+            },
+            output: {
+                top: '21%', left: '0', width: '70%', height: '54%',
+                border: { type: 'line' },
+                style: { fg: 'white', bg: 'black', border: { fg: 'cyan' } },
+                scrollable: true, alwaysScroll: true, mouse: true, keys: true, vi: true
+            },
+            memoryDisplay: {
+                top: '21%', left: '70%', width: '30%', height: '54%',
+                border: { type: 'line' },
+                style: { fg: 'white', bg: 'black', border: { fg: 'magenta' } },
+                scrollable: true, alwaysScroll: true, mouse: true, keys: true, vi: true
+            },
+            statusBar: {
+                bottom: '0', left: '0', width: '100%', height: '25%',
+                border: { type: 'line' },
+                style: { fg: 'white', bg: 'red', border: { fg: 'yellow' } },
+                content: this._getStatusContent()
+            }
+        };
 
-        this.input = blessed.textarea({
-            top: '6%',
-            left: '0',
-            width: '100%',
-            height: '15%',
-            border: { type: 'line' },
-            style: { fg: 'white', bg: 'black', border: { fg: 'green' } },
-            inputOnFocus: true
-        });
-
-        this.output = blessed.box({
-            top: '21%',
-            left: '0',
-            width: '70%',
-            height: '54%',
-            border: { type: 'line' },
-            style: { fg: 'white', bg: 'black', border: { fg: 'cyan' } },
-            scrollable: true,
-            alwaysScroll: true,
-            mouse: true,
-            keys: true,
-            vi: true
-        });
-
-        this.memoryDisplay = blessed.box({
-            top: '21%',
-            left: '70%',
-            width: '30%',
-            height: '54%',
-            border: { type: 'line' },
-            style: { fg: 'white', bg: 'black', border: { fg: 'magenta' } },
-            scrollable: true,
-            alwaysScroll: true,
-            mouse: true,
-            keys: true,
-            vi: true
-        });
-
-        this.statusBar = blessed.box({
-            bottom: '0',
-            left: '0',
-            width: '100%',
-            height: '25%',
-            border: { type: 'line' },
-            style: { fg: 'white', bg: 'red', border: { fg: 'yellow' } },
-            content: this._getStatusContent()
-        });
+        // Create UI elements from configuration
+        this.header = blessed.box(this.elementConfigs.header);
+        this.input = blessed.textarea(this.elementConfigs.input);
+        this.output = blessed.box(this.elementConfigs.output);
+        this.memoryDisplay = blessed.box(this.elementConfigs.memoryDisplay);
+        this.statusBar = blessed.box(this.elementConfigs.statusBar);
 
         // Add elements to screen
         this.screen.append(this.header);
@@ -171,11 +153,7 @@ export class SeNARSInterface {
         this.sessionState.history.push(inputText);
 
         if (inputText.startsWith('/')) {
-            // Extract command and arguments properly
-            const parts = inputText.slice(1).split(' ');
-            const cmd = parts[0];
-            const args = parts.slice(1);
-
+            const [cmd, ...args] = inputText.slice(1).split(' ');
             await this._executeCommand(cmd, ...args);
         } else {
             await this._processNarsese(inputText);
@@ -211,8 +189,8 @@ export class SeNARSInterface {
 
             if (result) {
                 this._addToOutput(`✅ Input processed successfully (${duration}ms)`);
-
-                // Only show latest beliefs in the output, not all tasks
+                
+                // Show latest beliefs
                 const beliefs = this.nar.getBeliefs();
                 if (beliefs.length > 0) {
                     this._addToOutput('🎯 Latest beliefs:');
@@ -240,23 +218,23 @@ export class SeNARSInterface {
 
     _updateMemoryDisplay() {
         const stats = this.nar.getStats();
-        let content = '{bold}🧠 Memory Status{/bold}\n';
-        content += ` Concepts: ${stats.memoryStats.conceptCount}\n`;
-        content += ` Tasks: ${stats.memoryStats.taskCount}\n`;
-        content += ` Focus Size: ${stats.memoryStats.focusSize}\n\n`;
-
-        content += '{bold}📋 Recent Tasks{/bold}\n';
-
-        const tasks = this._getTasksFromMemory();
-        
-        if (tasks.length > 0) {
-            tasks.slice(-10).forEach((task, index) => {
-                content += `{cyan}[${index + 1}]{/cyan} {green}${task.term?.name || 'Unknown Task'}{/green}\n`;
-                content += `    {blue}| ${this._formatTaskDetails(task)}{/blue}\n`;
-            });
-        } else {
-            content += '{red}No tasks in memory{/red}\n';
-        }
+        const content = [
+            '{bold}🧠 Memory Status{/bold}',
+            ` Concepts: ${stats.memoryStats.conceptCount}`,
+            ` Tasks: ${stats.memoryStats.taskCount}`,
+            ` Focus Size: ${stats.memoryStats.focusSize}`,
+            '',
+            '{bold}📋 Recent Tasks{/bold}',
+            ...this._getTasksFromMemory().length > 0
+                ? this._getTasksFromMemory()
+                    .slice(-10)
+                    .map((task, index) => [
+                        `{cyan}[${index + 1}]{/cyan} {green}${task.term?.name || 'Unknown Task'}{/green}`,
+                        `    {blue}| ${this._formatTaskDetails(task)}{/blue}`
+                    ])
+                    .flat()
+                : ['{red}No tasks in memory{/red}']
+        ].join('\n');
 
         this.memoryDisplay.setContent(content);
     }
@@ -264,23 +242,19 @@ export class SeNARSInterface {
     _getTasksFromMemory() {
         // Try multiple possible methods to get tasks
         const methods = [
-            () => this.nar.getTasks && typeof this.nar.getTasks === 'function' ? this.nar.getTasks() : null,
-            () => this.nar.memory?.getTasks && typeof this.nar.memory.getTasks === 'function' ? this.nar.memory.getTasks() : null,
-            () => {
-                if (this.nar.memory?.concepts) {
-                    const conceptEntries = this.nar.memory.concepts instanceof Map 
-                        ? Array.from(this.nar.memory.concepts.entries()) 
-                        : Object.entries(this.nar.memory.concepts);
-                    return conceptEntries.flatMap(([, concept]) => concept?.tasks || []);
-                }
-                return null;
-            }
+            () => this.nar.getTasks?.(),
+            () => this.nar.memory?.getTasks?.(),
+            () => this.nar.memory?.concepts && (
+                this.nar.memory.concepts instanceof Map 
+                    ? Array.from(this.nar.memory.concepts.values())
+                    : Object.values(this.nar.memory.concepts)
+            ).flatMap(concept => concept?.tasks || [])
         ];
 
         for (const method of methods) {
             try {
                 const result = method();
-                if (result !== null) return result;
+                if (result != null) return result;
             } catch (e) {
                 // Continue to next method if current fails
             }
@@ -288,29 +262,13 @@ export class SeNARSInterface {
         return [];
     }
 
-    _formatTaskDetails(task) {
-        return FormattingUtils.formatTaskDetails(task);
-    }
-    
-    _formatType(type) {
-        return FormattingUtils.formatType(type);
-    }
-    
-    _formatTruthStr(truth) {
-        return FormattingUtils.formatTruthStr(truth);
-    }
-    
-    _formatPriorityStr(priority) {
-        return FormattingUtils.formatPriorityStr(priority);
-    }
-    
-    _formatStamp(stamp) {
-        return FormattingUtils.formatStamp(stamp);
-    }
-    
-    _formatOccurrenceTime(occurrenceTime) {
-        return FormattingUtils.formatOccurrenceTime(occurrenceTime);
-    }
+    // Delegating formatting methods to FormattingUtils for better modularity
+    _formatTaskDetails(task) { return FormattingUtils.formatTaskDetails(task); }
+    _formatType(type) { return FormattingUtils.formatType(type); }
+    _formatTruthStr(truth) { return FormattingUtils.formatTruthStr(truth); }
+    _formatPriorityStr(priority) { return FormattingUtils.formatPriorityStr(priority); }
+    _formatStamp(stamp) { return FormattingUtils.formatStamp(stamp); }
+    _formatOccurrenceTime(occurrenceTime) { return FormattingUtils.formatOccurrenceTime(occurrenceTime); }
 
     _help() {
         return `

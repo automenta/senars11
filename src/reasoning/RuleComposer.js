@@ -63,6 +63,19 @@ export class RuleComposer {
     }
 }
 
+// Mixin for enable/disable functionality
+const EnableDisableMixin = {
+    enable() {
+        this.enabled = true;
+        return this;
+    },
+
+    disable() {
+        this.enabled = false;
+        return this;
+    }
+};
+
 /**
  * A rule that chains other rules together
  */
@@ -112,17 +125,10 @@ class ChainedRule {
 
         return {results: currentTasks, rule: currentRule};
     }
-
-    enable() {
-        this.enabled = true;
-        return this;
-    }
-
-    disable() {
-        this.enabled = false;
-        return this;
-    }
 }
+
+// Apply mixin to ChainedRule
+Object.assign(ChainedRule.prototype, EnableDisableMixin);
 
 /**
  * A rule that combines the results of multiple rules
@@ -162,17 +168,10 @@ class CombinedRule {
 
         return {results: allResults, rule: currentRule};
     }
-
-    enable() {
-        this.enabled = true;
-        return this;
-    }
-
-    disable() {
-        this.enabled = false;
-        return this;
-    }
 }
+
+// Apply mixin to CombinedRule
+Object.assign(CombinedRule.prototype, EnableDisableMixin);
 
 /**
  * A rule that applies different rules based on a condition
@@ -212,17 +211,10 @@ class ConditionalRule {
             return {results: [], rule: this};
         }
     }
-
-    enable() {
-        this.enabled = true;
-        return this;
-    }
-
-    disable() {
-        this.enabled = false;
-        return this;
-    }
 }
+
+// Apply mixin to ConditionalRule
+Object.assign(ConditionalRule.prototype, EnableDisableMixin);
 
 /**
  * A rule that dispatches to different rules based on multiple conditions
@@ -265,17 +257,10 @@ class DispatcherRule {
 
         return {results: [], rule: this};
     }
-
-    enable() {
-        this.enabled = true;
-        return this;
-    }
-
-    disable() {
-        this.enabled = false;
-        return this;
-    }
 }
+
+// Apply mixin to DispatcherRule
+Object.assign(DispatcherRule.prototype, EnableDisableMixin);
 
 /**
  * A rule that tries multiple rules in sequence until one succeeds
@@ -315,14 +300,7 @@ class FallbackRule {
 
         return {results: [], rule: this};
     }
-
-    enable() {
-        this.enabled = true;
-        return this;
-    }
-
-    disable() {
-        this.enabled = false;
-        return this;
-    }
 }
+
+// Apply mixin to FallbackRule
+Object.assign(FallbackRule.prototype, EnableDisableMixin);

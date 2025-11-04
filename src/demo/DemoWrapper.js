@@ -306,13 +306,11 @@ export class DemoWrapper {
     }
 
     _updateDemoState(demoId, stateUpdate) {
-        if (demoId && this.demoStates[demoId]) {
+        if (demoId) {
             this.demoStates[demoId] = {
                 ...this.demoStates[demoId],
                 ...stateUpdate
             };
-        } else if (demoId) {
-            this.demoStates[demoId] = stateUpdate;
         }
     }
 
@@ -476,13 +474,9 @@ export class DemoWrapper {
         let waited = 0;
 
         while (waited < delay && this.isRunning) {
-            if (!this.isPaused) {
-                await new Promise(resolve => setTimeout(resolve, checkInterval));
-                waited += checkInterval;
-            } else {
-                // If paused, wait a bit longer before checking again
-                await new Promise(resolve => setTimeout(resolve, 200));
-            }
+            const waitTime = this.isPaused ? 200 : checkInterval;
+            await new Promise(resolve => setTimeout(resolve, waitTime));
+            if (!this.isPaused) waited += checkInterval;
         }
 
         // Check if we're still running after the delay
