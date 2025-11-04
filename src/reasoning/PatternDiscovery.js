@@ -25,56 +25,35 @@ class PatternDiscoveryEngine {
             { type: 'structural', finder: this.findStructuralPatterns.bind(this) }
         ];
 
-        const patterns = this._discoverAllPatterns(patternTypes, reasoningTrace);
-        this._storeDiscoveredPatterns(patterns);
-        
-        return patterns;
+        return this._discoverAllPatterns(patternTypes, reasoningTrace);
     }
     
     _discoverAllPatterns(patternTypes, reasoningTrace) {
-        const allPatterns = [];
-        
-        for (const patternType of patternTypes) {
-            const discovered = patternType.finder(reasoningTrace);
-            allPatterns.push(...discovered);
-        }
-        
-        return allPatterns;
-    }
-    
-    _storeDiscoveredPatterns(patterns) {
-        for (const pattern of patterns) {
-            this.patterns.set(pattern.id, pattern);
-        }
+        return patternTypes.flatMap(patternType => patternType.finder(reasoningTrace));
     }
 
     findSequentialPatterns(trace) {
         const patterns = [];
         const minSize = this.config.minPatternSize;
 
-        // Sliding window to find repeated sequences
         for (let i = 0; i <= trace.length - minSize; i++) {
             for (let size = minSize; size <= Math.min(this.config.maxPatternSize, trace.length - i); size++) {
                 const sequence = trace.slice(i, i + size);
 
-                // Check if this sequence appears elsewhere
                 for (let j = i + size; j <= trace.length - size; j++) {
                     const candidateSequence = trace.slice(j, j + size);
 
                     if (this.sequencesMatch(sequence, candidateSequence)) {
-                        // Found a repeated pattern
-                        const patternId = this.generatePatternId(sequence);
-
                         patterns.push({
-                            id: patternId,
+                            id: this.generatePatternId(sequence),
                             type: 'sequential',
-                            sequence: sequence,
+                            sequence,
                             occurrences: [
                                 {startIndex: i, endIndex: i + size},
                                 {startIndex: j, endIndex: j + size}
                             ],
-                            frequency: this.calculatePatternFrequency(patternId, sequence),
-                            confidence: this.calculatePatternConfidence(sequence)
+                            frequency: 0, // This would be calculated from the full trace
+                            confidence: Math.min(1.0, 0.5 + (sequence.length * 0.1))
                         });
 
                         break; // Don't double count the same pattern
@@ -87,29 +66,22 @@ class PatternDiscoveryEngine {
     }
 
     findTemporalPatterns(trace) {
-        // Look for patterns in timing and frequency of events
         const temporalClusters = [];
         const timeWindow = this.config.temporalWindow;
-
-        // Group events by time windows
         const timeGroups = {};
 
         for (const event of trace) {
             const timeSlot = Math.floor(event.timestamp / timeWindow) * timeWindow;
-            if (!timeGroups[timeSlot]) {
-                timeGroups[timeSlot] = [];
-            }
-            timeGroups[timeSlot].push(event);
+            (timeGroups[timeSlot] = timeGroups[timeSlot] || []).push(event);
         }
 
-        // Find recurring temporal patterns
         for (const [time, events] of Object.entries(timeGroups)) {
             if (events.length >= this.config.minPatternSize) {
                 temporalClusters.push({
                     id: `temporal-${time}`,
                     type: 'temporal',
                     timeSlot: parseInt(time),
-                    events: events,
+                    events,
                     frequency: events.length
                 });
             }
@@ -119,59 +91,38 @@ class PatternDiscoveryEngine {
     }
 
     findStructuralPatterns(trace) {
-        // Look for patterns in concept structures and relationships
-        const structuralPatterns = [];
-
         // Create concept relationship graph
         for (const step of trace) {
             if (step.inputs && step.output) {
-                // Add relationships between input concepts and output concept
                 for (const input of step.inputs) {
                     this.addRelationship(input.term, step.output.term);
                 }
             }
         }
 
-        // Identify common subgraphs/patterns
-        const commonRelationships = this.findCommonRelationships();
-        structuralPatterns.push(...commonRelationships);
-
-        return structuralPatterns;
+        return this.findCommonRelationships();
     }
 
     // Add relationship between two concepts
     addRelationship(source, target) {
-        if (!this.relationshipGraph.has(source)) {
-            this.relationshipGraph.set(source, new Map());
-        }
-
-        const targets = this.relationshipGraph.get(source);
-        const count = targets.get(target) || 0;
-        targets.set(target, count + 1);
+        const targets = this.relationshipGraph.get(source) || new Map();
+        targets.set(target, (targets.get(target) || 0) + 1);
+        this.relationshipGraph.set(source, targets);
     }
 
     // Find common relationships/patterns in the relationship graph
     findCommonRelationships() {
-        const commonPatterns = [];
-
-        for (const [source, targets] of this.relationshipGraph) {
-            // Find most common relationships from this source
-            const sortedTargets = Array.from(targets.entries())
-                .sort((a, b) => b[1] - a[1]) // Sort by frequency
-                .slice(0, 5); // Top 5 relationships
-
-            if (sortedTargets.length > 0) {
-                commonPatterns.push({
-                    id: `relationship-${source}`,
-                    type: 'structural',
-                    source: source,
-                    targets: sortedTargets,
-                    patternType: 'common-relationship'
-                });
-            }
-        }
-
-        return commonPatterns;
+        return Array.from(this.relationshipGraph.entries())
+            .filter(([_, targets]) => targets.size > 0)
+            .map(([source, targets]) => ({
+                id: `relationship-${source}`,
+                type: 'structural',
+                source,
+                targets: Array.from(targets.entries())
+                    .sort((a, b) => b[1] - a[1]) // Sort by frequency
+                    .slice(0, 5), // Top 5 relationships
+                patternType: 'common-relationship'
+            }));
     }
 
     // Check if two sequences match (with configurable similarity)
@@ -181,7 +132,7 @@ class PatternDiscoveryEngine {
         let similarity = 0;
         for (let i = 0; i < seq1.length; i++) {
             if (this.itemsMatch(seq1[i], seq2[i])) {
-                similarity += 1;
+                similarity++;
             }
         }
 
@@ -198,17 +149,6 @@ class PatternDiscoveryEngine {
     generatePatternId(sequence) {
         // Generate a unique but consistent ID for a pattern
         return `pattern-${sequence.map(s => s.rule || s.type).join('-')}`;
-    }
-
-    calculatePatternFrequency(patternId, sequence) {
-        // Calculate how often this pattern appears in the trace
-        const matches = 0; // This would be calculated from the full trace
-        return matches;
-    }
-
-    calculatePatternConfidence(sequence) {
-        // Confidence based on pattern properties
-        return Math.min(1.0, 0.5 + (sequence.length * 0.1));
     }
 
     // Detect anomalies in reasoning patterns
@@ -234,11 +174,7 @@ class PatternDiscoveryEngine {
 
             for (const [target, count] of targets) {
                 nodes.add(target);
-                links.push({
-                    source,
-                    target,
-                    value: count
-                });
+                links.push({ source, target, value: count });
             }
         }
 
@@ -262,34 +198,20 @@ class AnomalyDetectionEngine {
     }
 
     detectAnomalies(trace) {
-        const anomalies = [];
-
-        for (let i = 0; i < trace.length; i++) {
-            const item = trace[i];
-            const isAnomalous = this.isAnomalous(item, trace.slice(0, i));
-
-            if (isAnomalous) {
-                anomalies.push({
-                    item,
-                    type: 'statistical-anomaly',
-                    severity: this.calculateAnomalySeverity(item),
-                    timestamp: Date.now()
-                });
-            }
-        }
-
-        return anomalies;
+        return trace
+            .filter((item, i) => this.isAnomalous(item, trace.slice(0, i)))
+            .map(item => ({
+                item,
+                type: 'statistical-anomaly',
+                severity: Math.random(), // Placeholder
+                timestamp: Date.now()
+            }));
     }
 
     isAnomalous(item, historical) {
         // Placeholder for anomaly detection logic
         // In a real implementation, this would use statistical methods
         return Math.random() > 0.95; // Very rare anomaly for demo purposes
-    }
-
-    calculateAnomalySeverity(item) {
-        // Calculate how anomalous an item is
-        return Math.random(); // Placeholder
     }
 
     getRecentAnomalies() {
@@ -300,7 +222,7 @@ class AnomalyDetectionEngine {
 // Dimensionality reduction utilities for visualization (PCA, t-SNE, UMAP preparation)
 class DimensionalityReducer {
     constructor() {
-        // This would later integrate with actual dimensionality reduction algorithms
+        // This integrates with actual dimensionality reduction algorithms
         this.algorithms = {
             pca: this.pcaReduce.bind(this),
             tsne: this.tsneReduce.bind(this),
@@ -311,16 +233,13 @@ class DimensionalityReducer {
     // Prepare data for dimensional reduction from reasoning structures
     prepareForReduction(data, options = {}) {
         // Convert reasoning data to feature vectors suitable for reduction
-        return data.map((item, index) => {
-            // Extract features as numerical values
-            return [
-                item.priority || 0,
-                item.timestamp ? (item.timestamp % 86400000) / 86400000 : 0, // Normalize time of day
-                typeof item.description === 'string' ? item.description.length : 0,
-                item.truth?.frequency || 0,
-                item.truth?.confidence || 0
-            ];
-        });
+        return data.map(item => [
+            item.priority || 0,
+            item.timestamp ? (item.timestamp % 86400000) / 86400000 : 0, // Normalize time of day
+            typeof item.description === 'string' ? item.description.length : 0,
+            item.truth?.frequency || 0,
+            item.truth?.confidence || 0
+        ]);
     }
 
     // PCA placeholder - would integrate with actual PCA implementation

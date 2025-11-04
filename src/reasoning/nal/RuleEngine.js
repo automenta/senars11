@@ -153,13 +153,16 @@ export class RuleEngine extends BaseRuleEngine {
     async applyAllRules(task, params = {}) {
         const context = await this.getContext(params);
         
-        const ruleTypes = [];
-        if (this._config.enableNal) ruleTypes.push(['nal', this.applyNalRules.bind(this)]);
-        if (this._config.enableLm) ruleTypes.push(['lm', this.applyLmRules.bind(this)]);
-        if (this._config.enableHybrid) ruleTypes.push(['hybrid', this.applyHybridRules.bind(this)]);
-        
-        let results = [];
-        for (const [_, applyRuleFn] of ruleTypes) {
+        const ruleTypes = [
+            [this._config.enableNal, 'nal', this.applyNalRules.bind(this)],
+            [this._config.enableLm, 'lm', this.applyLmRules.bind(this)],
+            [this._config.enableHybrid, 'hybrid', this.applyHybridRules.bind(this)]
+        ];
+
+        const enabledRuleTypes = ruleTypes.filter(([enabled]) => enabled);
+        const results = [];
+
+        for (const [_, type, applyRuleFn] of enabledRuleTypes) {
             results.push(...await applyRuleFn(task, context));
         }
 
@@ -176,13 +179,16 @@ export class RuleEngine extends BaseRuleEngine {
         const context = await this.getContext(params);
         const reasoningPath = this._determineReasoningPath(task, context);
 
-        const ruleTypes = [];
-        if (reasoningPath.includes('nal')) ruleTypes.push(['nal', this.applyNalRules.bind(this)]);
-        if (reasoningPath.includes('lm')) ruleTypes.push(['lm', this.applyLmRules.bind(this)]);
-        if (reasoningPath.includes('hybrid')) ruleTypes.push(['hybrid', this.applyHybridRules.bind(this)]);
-        
-        let results = [];
-        for (const [_, applyRuleFn] of ruleTypes) {
+        const ruleTypes = [
+            [reasoningPath.includes('nal'), 'nal', this.applyNalRules.bind(this)],
+            [reasoningPath.includes('lm'), 'lm', this.applyLmRules.bind(this)],
+            [reasoningPath.includes('hybrid'), 'hybrid', this.applyHybridRules.bind(this)]
+        ];
+
+        const enabledRuleTypes = ruleTypes.filter(([enabled]) => enabled);
+        const results = [];
+
+        for (const [_, type, applyRuleFn] of enabledRuleTypes) {
             results.push(...await applyRuleFn(task, context));
         }
 
@@ -296,7 +302,7 @@ export class RuleEngine extends BaseRuleEngine {
      * @returns {number} - The depth of the term
      */
     _getTermDepth(term) {
-        if (!term || !term.isCompound || !term.components) return 1;
+        if (!term?.isCompound || !term.components) return 1;
         
         return 1 + Math.max(0, ...term.components.map(comp => this._getTermDepth(comp)));
     }

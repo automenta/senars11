@@ -67,16 +67,15 @@ export class RuleManager {
         this._performanceMetrics.delete(ruleId);
         this._validationRules.delete(ruleId);
 
-        // Remove from categories
-        for (const [category, ruleIds] of this._categories.entries()) {
-            ruleIds.delete(ruleId);
-            if (ruleIds.size === 0) this._categories.delete(category);
-        }
+        // Remove from categories and groups
+        this._removeFromMapCollection(this._categories, ruleId);
+        this._removeFromMapCollection(this._ruleGroups, ruleId);
+    }
 
-        // Remove from groups
-        for (const [group, ruleIds] of this._ruleGroups.entries()) {
+    _removeFromMapCollection(map, ruleId) {
+        for (const [key, ruleIds] of map.entries()) {
             ruleIds.delete(ruleId);
-            if (ruleIds.size === 0) this._ruleGroups.delete(group);
+            if (ruleIds.size === 0) map.delete(key);
         }
     }
 
@@ -104,27 +103,29 @@ export class RuleManager {
     }
 
     enableCategory(category) {
-        const ruleIds = this._categories.get(category) || new Set();
-        for (const ruleId of ruleIds) this.enable(ruleId);
+        this._applyToCollection(this._categories.get(category), ruleId => this.enable(ruleId));
         return this;
     }
 
     disableCategory(category) {
-        const ruleIds = this._categories.get(category) || new Set();
-        for (const ruleId of ruleIds) this.disable(ruleId);
+        this._applyToCollection(this._categories.get(category), ruleId => this.disable(ruleId));
         return this;
     }
 
     enableGroup(group) {
-        const ruleIds = this._ruleGroups.get(group) || new Set();
-        for (const ruleId of ruleIds) this.enable(ruleId);
+        this._applyToCollection(this._ruleGroups.get(group), ruleId => this.enable(ruleId));
         return this;
     }
 
     disableGroup(group) {
-        const ruleIds = this._ruleGroups.get(group) || new Set();
-        for (const ruleId of ruleIds) this.disable(ruleId);
+        this._applyToCollection(this._ruleGroups.get(group), ruleId => this.disable(ruleId));
         return this;
+    }
+
+    _applyToCollection(ruleIds, action) {
+        if (ruleIds) {
+            for (const ruleId of ruleIds) action(ruleId);
+        }
     }
 
     get(ruleId) {
@@ -136,17 +137,23 @@ export class RuleManager {
     }
 
     getEnabled() {
-        return Array.from(this._enabledRules).map(id => this._rules.get(id)).filter(Boolean);
+        return Array.from(this._enabledRules)
+            .map(id => this._rules.get(id))
+            .filter(Boolean);
     }
 
     getByCategory(category) {
         const ruleIds = this._categories.get(category) || new Set();
-        return Array.from(ruleIds).map(id => this._rules.get(id)).filter(Boolean);
+        return Array.from(ruleIds)
+            .map(id => this._rules.get(id))
+            .filter(Boolean);
     }
 
     getByGroup(group) {
         const ruleIds = this._ruleGroups.get(group) || new Set();
-        return Array.from(ruleIds).map(id => this._rules.get(id)).filter(Boolean);
+        return Array.from(ruleIds)
+            .map(id => this._rules.get(id))
+            .filter(Boolean);
     }
 
     addValidator(ruleId, validator) {
@@ -221,8 +228,7 @@ export class RuleManager {
         const results = [];
         for (const rule of sortedRules) {
             if (rule.canApply && rule.canApply(task, context)) {
-                const ruleResult = await this._applySingleRule(rule, task, context);
-                results.push(...ruleResult);
+                results.push(...await this._applySingleRule(rule, task, context));
             }
         }
 
