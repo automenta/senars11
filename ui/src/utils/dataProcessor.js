@@ -1,8 +1,3 @@
-/**
- * Data processing utilities - using optimized implementations from OptimizedDataProcessor
- * This file maintains backward compatibility while leveraging optimized functions
- */
-
 import {
     createDataDisplayElement,
     createDataSummary,

@@ -1,46 +1,36 @@
-/**
- * Utility functions for task handling and visualization
- */
 
-// Task color mapping configuration
 const taskColorConfig = {
     'question': {bg: '#e7f3ff', border: '#b8daff'},
     'goal': {bg: '#fff3cd', border: '#ffeaa7'},
     'belief': {bg: '#e8f5e8', border: '#a3d9a5'}
 };
 
-// Get background and border colors based on task type
 const getTaskColors = (taskType) => {
     if (!taskType) return {bg: '#ffffff', border: '#ddd'};
     const lowerType = taskType.toLowerCase();
     return taskColorConfig[lowerType] || {bg: '#ffffff', border: '#ddd'};
 };
 
-// Get background color based on task type
 export const getTaskColor = (taskType) => getTaskColors(taskType).bg;
 
-// Get border color based on task type
 export const getTaskBorderColor = (taskType) => getTaskColors(taskType).border;
 
-// Relationship color mapping
 export const getRelationshipColor = (relationshipType) => {
     const colorMap = {
-        'dependency': '#28a745', // Green for dependencies
-        'influences': '#007bff', // Blue for influences
-        'default': '#ffc107'     // Yellow for term related
+        'dependency': '#28a745',
+        'influences': '#007bff',
+        'default': '#ffc107'
     };
 
     return colorMap[relationshipType] || colorMap.default;
 };
 
-// Get truncated task text
 export const getTaskText = (taskTerm, maxLength = 10) => {
     return taskTerm && taskTerm.length > maxLength
         ? taskTerm.substring(0, maxLength) + '...'
         : taskTerm || 'Task';
 };
 
-// Create consistent task display element
 export const createTaskDisplayElement = (React, task, options = {}) => {
     const {
         showTruth = true,
@@ -117,14 +107,12 @@ export const createTaskDisplayElement = (React, task, options = {}) => {
     );
 };
 
-// Common filter options for different components
 export const commonFilterOptions = [
     {value: 'all', label: 'All Events'},
     {value: 'reasoningStep', label: 'Reasoning Steps'},
     {value: 'task', label: 'Tasks'}
 ];
 
-// Create a standard filter control component
 export const createFilterControls = (React, props) => {
     const {
         filterType,
@@ -138,7 +126,6 @@ export const createFilterControls = (React, props) => {
         showExport = true
     } = props;
 
-    // Define style objects for reusability
     const containerStyle = {
         display: 'flex',
         gap: '1rem',

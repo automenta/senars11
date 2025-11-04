@@ -4,10 +4,10 @@ import {DataPanel} from './DataPanel.js';
 import {themeUtils} from '../utils/themeUtils.js';
 
 const TaskPanel = memo(() => {
-    const renderTask = (task, index) =>
+    const renderTask = (task) =>
         React.createElement('div',
             {
-                key: task.id || index,
+                key: task.id,
                 style: {
                     padding: '0.75rem',
                     borderBottom: `1px solid ${themeUtils.get('BORDERS.COLOR')}`,
@@ -21,7 +21,7 @@ const TaskPanel = memo(() => {
                     fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD'),
                     color: themeUtils.get('TEXT.PRIMARY')
                 }
-            }, task.term || task.id || `Task ${index}`),
+            }, task.term || task.id),
             React.createElement('div', {
                     style: {
                         fontSize: themeUtils.get('FONTS.SIZE.SM'),

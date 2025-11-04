@@ -348,7 +348,7 @@ const DashboardPanel = () => {
     return baseItems;
   }, [viewMode, renderViewSelector, metricCards, taskDistribution, demoSummary, systemStats, performanceView]);
 
-  const renderDashboardItem = useCallback((item, index) => {
+  const renderDashboardItem = useCallback((item) => {
     switch (item.type) {
       case 'viewSelector': return item.content;
       case 'header': return React.createElement('div', {

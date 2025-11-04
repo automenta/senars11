@@ -1,6 +1,7 @@
 import React, {useCallback, useMemo, useState} from 'react';
 import useUiStore from '../stores/uiStore.js';
 import GenericPanel from './GenericPanel.js';
+import {themeUtils} from '../utils/themeUtils.js';
 
 const ConceptRelationshipPanel = () => {
     const concepts = useUiStore(state => state.concepts);
@@ -51,17 +52,17 @@ const ConceptRelationshipPanel = () => {
             {
                 style: {
                     padding: '1rem',
-                    backgroundColor: '#f8f9fa',
-                    border: '1px solid #dee2e6',
-                    borderRadius: '4px',
+                    backgroundColor: themeUtils.get('BACKGROUNDS.SECONDARY'),
+                    border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`,
+                    borderRadius: themeUtils.get('BORDERS.RADIUS.SM'),
                     marginTop: '1rem'
                 }
             },
             React.createElement('h4', {style: {margin: '0 0 0.5rem 0'}}, concept.term),
-            React.createElement('div', {style: {fontSize: '0.9rem'}}, `Priority: ${concept.priority?.toFixed(3)}`),
-            React.createElement('div', {style: {fontSize: '0.9rem'}}, `Tasks: ${concept.taskCount || 0}`),
-            React.createElement('div', {style: {fontSize: '0.9rem'}}, `Beliefs: ${concept.beliefCount || 0}`),
-            React.createElement('div', {style: {fontSize: '0.9rem'}}, `Questions: ${concept.questionCount || 0}`)
+            React.createElement('div', {style: {fontSize: themeUtils.get('FONTS.SIZE.BASE')}}, `Priority: ${concept.priority?.toFixed(3)}`),
+            React.createElement('div', {style: {fontSize: themeUtils.get('FONTS.SIZE.BASE')}}, `Tasks: ${concept.taskCount || 0}`),
+            React.createElement('div', {style: {fontSize: themeUtils.get('FONTS.SIZE.BASE')}}, `Beliefs: ${concept.beliefCount || 0}`),
+            React.createElement('div', {style: {fontSize: themeUtils.get('FONTS.SIZE.BASE')}}, `Questions: ${concept.questionCount || 0}`)
         );
     }, [selectedConcept, concepts]);
 
@@ -69,7 +70,7 @@ const ConceptRelationshipPanel = () => {
     const renderRelationships = useCallback(() => {
         if (relationships.length === 0) {
             return React.createElement('div',
-                {style: {padding: '1rem', fontStyle: 'italic', color: '#6c757d'}},
+                {style: {padding: '1rem', fontStyle: 'italic', color: themeUtils.get('TEXT.SECONDARY')}},
                 'No relationships found between concepts.'
             );
         }
@@ -80,31 +81,31 @@ const ConceptRelationshipPanel = () => {
                     style: {
                         width: '100%',
                         borderCollapse: 'collapse',
-                        fontSize: '0.85rem'
+                        fontSize: themeUtils.get('FONTS.SIZE.SM')
                     }
                 },
                 React.createElement('thead', null,
                     React.createElement('tr',
-                        {style: {backgroundColor: '#f8f9fa'}},
-                        React.createElement('th', {style: {padding: '0.5rem', border: '1px solid #dee2e6'}}, 'Source'),
-                        React.createElement('th', {style: {padding: '0.5rem', border: '1px solid #dee2e6'}}, 'Type'),
-                        React.createElement('th', {style: {padding: '0.5rem', border: '1px solid #dee2e6'}}, 'Target'),
+                        {style: {backgroundColor: themeUtils.get('BACKGROUNDS.SECONDARY')}},
+                        React.createElement('th', {style: {padding: '0.5rem', border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`}}, 'Source'),
+                        React.createElement('th', {style: {padding: '0.5rem', border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`}}, 'Type'),
+                        React.createElement('th', {style: {padding: '0.5rem', border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`}}, 'Target'),
                         React.createElement('th', {
                             style: {
                                 padding: '0.5rem',
-                                border: '1px solid #dee2e6'
+                                border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`
                             }
                         }, 'Strength'),
-                        React.createElement('th', {style: {padding: '0.5rem', border: '1px solid #dee2e6'}}, 'Task')
+                        React.createElement('th', {style: {padding: '0.5rem', border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`}}, 'Task')
                     )
                 ),
                 React.createElement('tbody', null,
-                    relationships.map((rel, index) =>
+                    relationships.map((rel) =>
                         React.createElement('tr',
-                            {key: index, style: {backgroundColor: index % 2 === 0 ? 'white' : '#f8f9fa'}},
+                            {key: `${rel.source}-${rel.target}-${rel.type}`, style: {backgroundColor: themeUtils.get('BACKGROUNDS.PRIMARY')}},
                             React.createElement('td',
                                 {
-                                    style: {padding: '0.5rem', border: '1px solid #dee2e6', cursor: 'pointer'},
+                                    style: {padding: '0.5rem', border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`, cursor: 'pointer'},
                                     onClick: () => setSelectedConcept(rel.source)
                                 },
                                 rel.source
@@ -112,12 +113,12 @@ const ConceptRelationshipPanel = () => {
                             React.createElement('td', {
                                 style: {
                                     padding: '0.5rem',
-                                    border: '1px solid #dee2e6'
+                                    border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`
                                 }
                             }, rel.type),
                             React.createElement('td',
                                 {
-                                    style: {padding: '0.5rem', border: '1px solid #dee2e6', cursor: 'pointer'},
+                                    style: {padding: '0.5rem', border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`, cursor: 'pointer'},
                                     onClick: () => setSelectedConcept(rel.target)
                                 },
                                 rel.target
@@ -125,13 +126,13 @@ const ConceptRelationshipPanel = () => {
                             React.createElement('td', {
                                 style: {
                                     padding: '0.5rem',
-                                    border: '1px solid #dee2e6'
+                                    border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`
                                 }
                             }, rel.strength?.toFixed(2)),
                             React.createElement('td', {
                                     style: {
                                         padding: '0.5rem',
-                                        border: '1px solid #dee2e6',
+                                        border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`,
                                         maxWidth: '150px'
                                     }
                                 },
@@ -153,28 +154,28 @@ const ConceptRelationshipPanel = () => {
     const renderConceptList = useCallback(() => {
         if (concepts.length === 0) {
             return React.createElement('div',
-                {style: {padding: '1rem', fontStyle: 'italic', color: '#6c757d'}},
+                {style: {padding: '1rem', fontStyle: 'italic', color: themeUtils.get('TEXT.SECONDARY')}},
                 'No concepts available.'
             );
         }
 
         return React.createElement('div', null,
-            React.createElement('h4', {style: {margin: '0 0 0.5rem 0', fontSize: '1rem'}}, 'Available Concepts'),
+            React.createElement('h4', {style: {margin: '0 0 0.5rem 0', fontSize: themeUtils.get('FONTS.SIZE.BASE')}}, 'Available Concepts'),
             React.createElement('div',
                 {style: {display: 'flex', flexWrap: 'wrap', gap: '0.5rem'}},
-                concepts.map((concept, index) =>
+                concepts.map((concept) =>
                     React.createElement('span',
                         {
-                            key: concept.term || index, // Use term as key if available, otherwise index
+                            key: concept.term,
                             onClick: () => setSelectedConcept(concept.term),
                             style: {
                                 padding: '0.25rem 0.5rem',
-                                backgroundColor: selectedConcept === concept.term ? '#007bff' : '#e9ecef',
+                                backgroundColor: selectedConcept === concept.term ? themeUtils.get('COLORS.PRIMARY') : '#e9ecef',
                                 color: selectedConcept === concept.term ? 'white' : '#495057',
-                                border: '1px solid #ced4da',
+                                border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`,
                                 borderRadius: '12px',
                                 cursor: 'pointer',
-                                fontSize: '0.8rem'
+                                fontSize: themeUtils.get('FONTS.SIZE.SM')
                             }
                         },
                         `${concept.term} (${(concept.priority || 0).toFixed(2)})`
@@ -191,16 +192,16 @@ const ConceptRelationshipPanel = () => {
         {type: 'details', content: renderConceptDetails()}
     ];
 
-    const renderRelationshipItem = useCallback((item, index) => {
+    const renderRelationshipItem = useCallback((item) => {
         if (item.type === 'header') {
             return React.createElement('div', {
                 style: {
-                    fontWeight: 'bold',
-                    fontSize: '1rem',
+                    fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD'),
+                    fontSize: themeUtils.get('FONTS.SIZE.BASE'),
                     margin: '0 0 1rem 0',
                     padding: '0.5rem 0',
-                    borderBottom: '2px solid #007bff',
-                    color: '#333'
+                    borderBottom: `2px solid ${themeUtils.get('COLORS.PRIMARY')}`,
+                    color: themeUtils.get('TEXT.PRIMARY')
                 }
             }, item.content);
         } else {

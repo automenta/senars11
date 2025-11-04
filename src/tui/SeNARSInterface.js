@@ -2,18 +2,9 @@ import {NAR} from '../nar/NAR.js';
 import blessed from 'blessed';
 import {PersistenceManager} from '../io/PersistenceManager.js';
 import {FormattingUtils} from './FormattingUtils.js';
+import {DEMO_COMMANDS} from '../config/constants.js';
 
-const COMMANDS = Object.freeze({
-    help: ['help', 'h', '?'],
-    quit: ['quit', 'q', 'exit'],
-    status: ['status', 's', 'stats'],
-    memory: ['memory', 'm'],
-    trace: ['trace', 't'],
-    reset: ['reset', 'r'],
-    save: ['save', 'sv'],
-    load: ['load', 'ld'],
-    demo: ['demo', 'd', 'example']
-});
+const COMMANDS = DEMO_COMMANDS;
 
 export class SeNARSInterface {
     constructor(config = {}) {

@@ -1,4 +1,5 @@
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import React, {memo, useCallback, useEffect, useMemo, useState} from 'react';
+import {DataPanel} from './DataPanel.js';
 import {captureScreenshot} from '../utils/screenshot.js';
 
 const sampleInsights = [
@@ -34,7 +35,7 @@ const sampleInsights = [
     }
 ];
 
-const DiscoveryPanel = () => {
+const DiscoveryPanel = memo(() => {
     const [insights, setInsights] = useState([]);
     const [activeTab, setActiveTab] = useState('discover');
     const [newInsight, setNewInsight] = useState({
@@ -165,9 +166,9 @@ const DiscoveryPanel = () => {
                 }
             }, insight.description),
             React.createElement('div', {style: {display: 'flex', flexWrap: 'wrap', gap: '5px', marginBottom: '10px'}},
-                insight.tags.map((tag, idx) =>
+                insight.tags.map((tag) =>
                     React.createElement('span', {
-                        key: idx,
+                        key: tag,
                         style: {...tagStyle, fontSize: '10px', padding: '3px 6px'}
                     }, tag)
                 )
@@ -311,9 +312,9 @@ const DiscoveryPanel = () => {
                     }, '+')
                 ),
                 React.createElement('div', {style: {display: 'flex', flexWrap: 'wrap', gap: '5px'}},
-                    newInsight.tags.map((tag, index) =>
+                    newInsight.tags.map((tag) =>
                         React.createElement('span', {
-                                key: index,
+                                key: tag,
                                 style: tagStyle
                             },
                             tag,
@@ -527,8 +528,8 @@ const DiscoveryPanel = () => {
             React.createElement('div', {style: {marginBottom: '10px'}},
                 React.createElement('strong', {style: {color: '#2c3e50'}}, 'Tags:'),
                 React.createElement('div', {style: {display: 'flex', flexWrap: 'wrap', gap: '5px', marginTop: '5px'}},
-                    selectedInsight.tags.map((tag, idx) =>
-                        React.createElement('span', {key: idx, style: {...tagStyle, fontSize: '12px'}}, tag)
+                    selectedInsight.tags.map((tag) =>
+                        React.createElement('span', {key: tag, style: {...tagStyle, fontSize: '12px'}}, tag)
                     )
                 )
             ),
@@ -584,65 +585,80 @@ const DiscoveryPanel = () => {
             )
         ), [selectedInsight, tagStyle, formatDate, captureInsightVisualization, shareInsight]);
 
-    return React.createElement('div', {
-            className: 'discovery-panel panel',
-            id: 'discovery-panel',
-            style: {
-                padding: '20px',
-                border: '1px solid #ddd',
-                backgroundColor: '#f9f9f9',
-                borderRadius: '8px',
-                minHeight: '500px',
-                display: 'flex',
-                flexDirection: 'column'
-            }
-        },
-        React.createElement('div', {style: {marginBottom: '20px'}},
-            React.createElement('h2', {style: {color: '#2c3e50', marginBottom: '10px'}}, 'Insight Discovery & Sharing'),
-            React.createElement('p', {style: {color: '#7f8c8d'}},
-                'Discover, document, and share interesting patterns in hybrid NARS-LM reasoning'
-            )
-        ),
-
-        React.createElement('div', {style: {display: 'flex', marginBottom: '20px', borderBottom: '1px solid #ddd'}},
-            React.createElement('button', {
-                onClick: () => setActiveTab('discover'),
-                style: tabButtonStyle(activeTab === 'discover')
-            }, 'Discover'),
-            React.createElement('button', {
-                onClick: () => setActiveTab('saved'),
-                style: {...tabButtonStyle(activeTab === 'saved'), marginLeft: '5px'}
-            }, 'Saved Insights'),
-            React.createElement('button', {
-                onClick: () => setActiveTab('shared'),
-                style: {...tabButtonStyle(activeTab === 'shared'), marginLeft: '5px'}
-            }, 'Shared Insights')
-        ),
-
-        activeTab === 'discover' && React.createElement('div', null,
-            renderNewInsightForm(),
-            renderDiscoveryTools()
-        ),
-
-        activeTab === 'saved' && renderSavedInsights(),
-
-        activeTab === 'shared' && renderSharedInsights(),
-
-        selectedInsight && renderInsightDetailModal(),
-
-        selectedInsight && React.createElement('div', {
-            style: {
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '100%',
-                backgroundColor: 'rgba(0,0,0,0.5)',
-                zIndex: 999
+    // Create a wrapper component for the discovery panel content
+    const DiscoveryPanelContent = memo(() =>
+        React.createElement('div', {
+                className: 'discovery-panel panel',
+                id: 'discovery-panel',
+                style: {
+                    padding: '20px',
+                    border: '1px solid #ddd',
+                    backgroundColor: '#f9f9f9',
+                    borderRadius: '8px',
+                    minHeight: '500px',
+                    display: 'flex',
+                    flexDirection: 'column'
+                }
             },
-            onClick: () => setSelectedInsight(null)
-        })
+            React.createElement('div', {style: {marginBottom: '20px'}},
+                React.createElement('h2', {style: {color: '#2c3e50', marginBottom: '10px'}}, 'Insight Discovery & Sharing'),
+                React.createElement('p', {style: {color: '#7f8c8d'}},
+                    'Discover, document, and share interesting patterns in hybrid NARS-LM reasoning'
+                )
+            ),
+
+            React.createElement('div', {style: {display: 'flex', marginBottom: '20px', borderBottom: '1px solid #ddd'}},
+                React.createElement('button', {
+                    onClick: () => setActiveTab('discover'),
+                    style: tabButtonStyle(activeTab === 'discover')
+                }, 'Discover'),
+                React.createElement('button', {
+                    onClick: () => setActiveTab('saved'),
+                    style: {...tabButtonStyle(activeTab === 'saved'), marginLeft: '5px'}
+                }, 'Saved Insights'),
+                React.createElement('button', {
+                    onClick: () => setActiveTab('shared'),
+                    style: {...tabButtonStyle(activeTab === 'shared'), marginLeft: '5px'}
+                }, 'Shared Insights')
+            ),
+
+            activeTab === 'discover' && React.createElement('div', null,
+                renderNewInsightForm(),
+                renderDiscoveryTools()
+            ),
+
+            activeTab === 'saved' && renderSavedInsights(),
+
+            activeTab === 'shared' && renderSharedInsights(),
+
+            selectedInsight && renderInsightDetailModal(),
+
+            selectedInsight && React.createElement('div', {
+                style: {
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    backgroundColor: 'rgba(0,0,0,0.5)',
+                    zIndex: 999
+                },
+                onClick: () => setSelectedInsight(null)
+            })
+        )
     );
-};
+
+    return React.createElement(DataPanel, {
+        title: 'Discovery',
+        dataSource: () => [{type: 'content', component: React.createElement(DiscoveryPanelContent)}],
+        renderItem: (item) => item.component,
+        config: {
+            itemLabel: 'tabs',
+            showItemCount: false,
+            emptyMessage: 'Discovery panel content will be displayed here.',
+            containerHeight: 600
+        }
+    });
+});
 
 export default DiscoveryPanel;

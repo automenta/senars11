@@ -159,19 +159,19 @@ const SelfAnalysisPanel = () => {
           tests.individualTestResults && React.createElement('div', { style: { marginTop: '1rem' } },
             React.createElement('p', null, React.createElement('strong', null, 'Individual Test Results:'), ' ', tests.individualTestResults.length, ' results'),
             React.createElement('div', null,
-              tests.individualTestResults.slice(0, 5).map((test, idx) => 
-                React.createElement('div', { 
-                  key: idx, 
-                  style: { 
-                    fontSize: '0.875rem', 
-                    marginTop: '0.25rem', 
-                    padding: '0.25rem', 
-                    border: '1px solid #dee2e6', 
-                    borderRadius: '4px' 
+              tests.individualTestResults.slice(0, 5).map((test) =>
+                React.createElement('div', {
+                  key: test.fullName,
+                  style: {
+                    fontSize: '0.875rem',
+                    marginTop: '0.25rem',
+                    padding: '0.25rem',
+                    border: '1px solid #dee2e6',
+                    borderRadius: '4px'
                   }
                 },
-                  React.createElement('span', { 
-                    style: { 
+                  React.createElement('span', {
+                    style: {
                       marginRight: '0.5rem',
                       color: test.status === 'passed' ? '#28a745' : test.status === 'failed' ? '#dc3545' : '#ffc107'
                     }
@@ -211,8 +211,8 @@ const SelfAnalysisPanel = () => {
           coverage.fileAnalysis && coverage.fileAnalysis.length > 0 && React.createElement('div', { style: { marginTop: '1rem' } },
             React.createElement('h4', { style: { fontWeight: 'bold', marginBottom: '0.5rem' } }, 'Lowest Coverage Files:'),
             React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '0.25rem' } },
-              coverage.fileAnalysis.slice(0, 3).map((file, idx) => 
-                React.createElement('div', { key: idx, style: { fontSize: '0.875rem' } },
+              coverage.fileAnalysis.slice(0, 3).map((file) =>
+                React.createElement('div', { key: file.filePath, style: { fontSize: '0.875rem' } },
                   React.createElement('span', { style: { fontWeight: 'bold' } }, file.filePath, ': ', file.lineCoverage, '% coverage')
                 )
               )
@@ -268,8 +268,8 @@ const SelfAnalysisPanel = () => {
           requirements.missing && requirements.missing.length > 0 && React.createElement('div', { style: { marginTop: '1rem' } },
             React.createElement('p', null, React.createElement('strong', null, 'Missing Key Sections:')),
             React.createElement('ul', { style: { listStyleType: 'disc', paddingLeft: '1.5rem' } },
-              requirements.missing.map((missing, idx) => 
-                React.createElement('li', { key: idx }, missing)
+              requirements.missing.map((missing) =>
+                React.createElement('li', { key: missing }, missing)
               )
             )
           )
@@ -280,17 +280,17 @@ const SelfAnalysisPanel = () => {
         React.createElement('div', null,
           React.createElement('h4', { style: { fontWeight: 'bold', marginBottom: '0.5rem' } }, 'Priorities:'),
           React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '0.5rem' } },
-            developmentPlan.priorities?.map((priority, idx) => 
-              React.createElement('div', { 
-                key: idx, 
-                style: { 
-                  padding: '0.5rem', 
-                  borderRadius: '4px', 
+            developmentPlan.priorities?.map((priority) =>
+              React.createElement('div', {
+                key: `${priority.priority}-${priority.area}`,
+                style: {
+                  padding: '0.5rem',
+                  borderRadius: '4px',
                   border: '1px solid',
                   ...getStatusStyle(priority.priority)
                 }
               },
-                React.createElement('p', { style: { fontWeight: 'bold' } }, 
+                React.createElement('p', { style: { fontWeight: 'bold' } },
                   '[', priority.priority.toUpperCase(), '] ', priority.area
                 ),
                 React.createElement('p', null, 'Reason: ', priority.reason),
@@ -301,22 +301,22 @@ const SelfAnalysisPanel = () => {
 
           React.createElement('h4', { style: { fontWeight: 'bold', marginTop: '1rem', marginBottom: '0.5rem' } }, 'Action Items:'),
           React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '0.5rem' } },
-            developmentPlan.actionItems?.map((item, idx) => 
-              React.createElement('div', { 
-                key: idx, 
-                style: { 
-                  padding: '0.5rem', 
-                  borderRadius: '4px', 
+            developmentPlan.actionItems?.map((item) =>
+              React.createElement('div', {
+                key: `${item.priority}-${item.area}`,
+                style: {
+                  padding: '0.5rem',
+                  borderRadius: '4px',
                   border: '1px solid #e9ecef',
                   backgroundColor: '#f8f9fa'
                 }
               },
-                React.createElement('p', { style: { fontWeight: 'bold' } }, 
+                React.createElement('p', { style: { fontWeight: 'bold' } },
                   '[', item.priority.toUpperCase(), '] ', item.area
                 ),
                 React.createElement('p', null, 'Action: ', item.task),
                 React.createElement('p', null, 'Estimated time: ', item.estimatedTime),
-                item.dependsOn && item.dependsOn.length > 0 && 
+                item.dependsOn && item.dependsOn.length > 0 &&
                   React.createElement('p', null, 'Depends on: ', item.dependsOn.join(', '))
               )
             )
@@ -326,8 +326,8 @@ const SelfAnalysisPanel = () => {
           React.createElement('ul', { 
             style: { listStyleType: 'disc', paddingLeft: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' } 
           },
-            developmentPlan.recommendations?.map((rec, idx) => 
-              React.createElement('li', { key: idx, style: { fontSize: '0.875rem' } }, rec)
+            developmentPlan.recommendations?.map((rec) =>
+              React.createElement('li', { key: rec, style: { fontSize: '0.875rem' } }, rec)
             )
           )
         )

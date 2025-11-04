@@ -19,8 +19,8 @@ function App() {
         const layoutMode = new URLSearchParams(window.location.search).get('layout');
         
         // Load the appropriate layout based on parameter
-        const initialLayout = layoutMode === 'self-analysis' 
-            ? selfAnalysisLayout 
+        const initialLayout = layoutMode === 'self-analysis'
+            ? selfAnalysisLayout
             : JSON.parse(localStorage.getItem('layout') || JSON.stringify(defaultLayout));
         
         setModel(Model.fromJson(initialLayout));

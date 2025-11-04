@@ -1,9 +1,4 @@
-/**
- * Utility functions for dashboard components and visualizations
- * Following AGENTS.md principles: DRY, modular, parameterized
- */
 
-// Status badge configuration
 const getStatusConfig = (status) => {
   const statusConfig = {
     success: {color: '#28a745', bg: '#d4edda'},
@@ -16,14 +11,6 @@ const getStatusConfig = (status) => {
   return statusConfig[status] || statusConfig.default;
 };
 
-/**
- * Create a status badge component
- * @param {Object} React - React object
- * @param {string} status - Status type (success, warning, error, info)
- * @param {string} label - Display label
- * @param {Object} props - Additional props
- * @returns {ReactElement} - Status badge element
- */
 export const createStatusBadge = (React, {status, label, ...props}) => {
   const {color, bg} = getStatusConfig(status);
   
@@ -41,15 +28,6 @@ export const createStatusBadge = (React, {status, label, ...props}) => {
   }, label);
 };
 
-/**
- * Create a metric card component
- * @param {Object} React - React object
- * @param {string} title - Card title
- * @param {any} value - Metric value
- * @param {string} description - Description text
- * @param {string} color - Accent color
- * @returns {ReactElement} - Metric card element
- */
 export const createMetricCard = (React, {title, value, description, color = '#007bff'}) =>
   React.createElement('div', {
     style: {
@@ -73,14 +51,6 @@ export const createMetricCard = (React, {title, value, description, color = '#00
     }, description)
   );
 
-/**
- * Create a progress bar component
- * @param {Object} React - React object
- * @param {number} percentage - Percentage value (0-100)
- * @param {string} color - Bar color
- * @param {Object} props - Additional props
- * @returns {ReactElement} - Progress bar element
- */
 export const createProgressBar = (React, {percentage, color = '#007bff', ...props}) =>
   React.createElement('div', {
     style: {
@@ -102,13 +72,6 @@ export const createProgressBar = (React, {percentage, color = '#007bff', ...prop
     })
   );
 
-/**
- * Create a distribution bar component
- * @param {Object} React - React object
- * @param {Array} segments - Array of segment objects {percentage, color, label}
- * @param {Object} props - Additional props
- * @returns {ReactElement} - Distribution bar element
- */
 export const createDistributionBar = (React, {segments, ...props}) =>
   React.createElement('div', {
     style: {
@@ -138,35 +101,19 @@ export const createDistributionBar = (React, {segments, ...props}) =>
     )
   );
 
-/**
- * Get status color based on value and threshold
- * @param {number} value - Current value
- * @param {number} threshold - Threshold for warning/error
- * @returns {string} - Color code
- */
 export const getStatusColor = (value, threshold) =>
   value === undefined || value === null ? '#6c757d' :
   value > threshold ? '#dc3545' : value > threshold * 0.7 ? '#ffc107' : '#28a745';
 
-/**
- * Format percentage value
- * @param {number} value - Percentage value
- * @returns {string} - Formatted percentage
- */
 export const formatPercentage = (value) =>
   value.toFixed(1) + '%';
 
-/**
- * Get performance metric color
- * @param {string} metricType - Type of metric (nars, lm, hybrid)
- * @returns {string} - Color code
- */
 export const getPerformanceMetricColor = (metricType) => {
   switch (metricType) {
-    case 'nars': return '#28a745'; // Green for NARS
-    case 'lm': return '#ffc107'; // Yellow for LM
-    case 'hybrid': return '#007bff'; // Blue for Hybrid
-    default: return '#6c757d'; // Gray for default
+    case 'nars': return '#28a745';
+    case 'lm': return '#ffc107';
+    case 'hybrid': return '#007bff';
+    default: return '#6c757d';
   }
 };
 

@@ -1,11 +1,11 @@
-import React, {useCallback, useMemo, useRef, useState} from 'react';
+import React, {memo, useCallback, useMemo, useRef, useState} from 'react';
 import useUiStore from '../stores/uiStore.js';
-import GenericPanel from './GenericPanel.js';
+import {DataPanel} from './DataPanel.js';
 import {exportReasoningTraces} from '../utils/exportUtils.js';
 import {commonFilterOptions, createFilterControls} from '../utils/taskUtils.js';
 import {paginateData, processDataWithFilters} from '../utils/OptimizedDataProcessor.js';
 
-const ReasoningTracePanel = () => {
+const ReasoningTracePanel = memo(() => {
     const [expandedTrace, setExpandedTrace] = useState(null);
     const [filterType, setFilterType] = useState('all');
     const [filterText, setFilterText] = useState('');
@@ -54,14 +54,9 @@ const ReasoningTracePanel = () => {
             searchFields: ['description', 'data.term', 'data.type', 'data.result', 'rule', 'taskType'],
             sortKey: 'timestamp',
             sortOrder: 'desc', // Show most recent first
-            customFilters: [createPriorityFilter(0)] // Example of custom filter pattern
+            customFilters: [(item) => item.priority >= 0] // Priority filter
         });
     }, [reasoningSteps, tasks, filterType, filterText]);
-
-    // Create parameterized priority filter function
-    const createPriorityFilter = (minPriority = 0) => {
-        return (item) => item.priority >= minPriority;
-    };
 
     // Paginate the processed data
     const paginatedData = useMemo(() =>
@@ -546,10 +541,9 @@ const ReasoningTracePanel = () => {
         }
     }, [expandedTrace]);
 
-    return React.createElement(GenericPanel, {
+    return React.createElement(DataPanel, {
         title: `🧠 Reasoning Trace (${processedData.length} events)`,
-        maxHeight: 'calc(100% - 2rem)',
-        items: [
+        dataSource: () => [
             {type: 'controls', component: renderControlBar()},
             ...paginatedData.data.map(item => ({type: 'traceItem', data: item}))
         ],
@@ -561,17 +555,22 @@ const ReasoningTracePanel = () => {
             }
             return null;
         },
-        emptyMessage: React.createElement('div', {style: {textAlign: 'center', padding: '2rem', color: '#6c757d'}},
-            React.createElement('div', {style: {fontSize: '2rem', marginBottom: '1rem'}}, '🧠'),
-            React.createElement('div', {
-                style: {
-                    fontWeight: 'bold',
-                    marginBottom: '0.5rem'
-                }
-            }, 'No reasoning events yet'),
-            React.createElement('div', null, 'Reasoning trace will be populated as the system processes inputs and performs reasoning.')
-        )
+        config: {
+            itemLabel: 'events',
+            showItemCount: true,
+            emptyMessage: React.createElement('div', {style: {textAlign: 'center', padding: '2rem', color: '#6c757d'}},
+                React.createElement('div', {style: {fontSize: '2rem', marginBottom: '1rem'}}, '🧠'),
+                React.createElement('div', {
+                    style: {
+                        fontWeight: 'bold',
+                        marginBottom: '0.5rem'
+                    }
+                }, 'No reasoning events yet'),
+                React.createElement('div', null, 'Reasoning trace will be populated as the system processes inputs and performs reasoning.')
+            ),
+            containerHeight: 500
+        }
     });
-};
+});
 
 export default ReasoningTracePanel;

@@ -1,8 +1,8 @@
-import React, {useCallback, useMemo, useState} from 'react';
+import React, {memo, useCallback, useMemo, useState} from 'react';
 import useUiStore from '../stores/uiStore.js';
-import GenericPanel from './GenericPanel.js';
+import {DataPanel} from './DataPanel.js';
 
-const TimeSeriesPanel = () => {
+const TimeSeriesPanel = memo(() => {
     const [timeRange, setTimeRange] = useState(60); // Last 60 seconds
     const demoMetrics = useUiStore(state => state.demoMetrics);
 
@@ -290,36 +290,36 @@ const TimeSeriesPanel = () => {
             )
         ), [timeRange]);
 
-    const items = [
-        {type: 'header', content: 'Time Series Metrics'},
-        {type: 'controls', content: renderControls()},
-        {type: 'chart', content: renderTimeSeriesChart()}
-    ];
-
-    const renderTimeSeries = useCallback((item, index) => {
-        if (item.type === 'header') {
-            return React.createElement('div', {
-                style: {
-                    fontWeight: 'bold',
-                    fontSize: '1rem',
-                    margin: '0 0 1rem 0',
-                    padding: '0.5rem 0',
-                    borderBottom: '2px solid #007bff',
-                    color: '#333'
-                }
-            }, item.content);
-        } else {
-            return item.content;
-        }
-    }, []);
-
-    return React.createElement(GenericPanel, {
+    return React.createElement(DataPanel, {
         title: 'Time Series Analysis',
-        maxHeight: 'calc(100% - 2rem)',
-        items,
-        renderItem: renderTimeSeries,
-        emptyMessage: 'Time series data will be displayed when system metrics are available.'
+        dataSource: () => [
+            {type: 'header', content: 'Time Series Metrics'},
+            {type: 'controls', content: renderControls()},
+            {type: 'chart', content: renderTimeSeriesChart()}
+        ],
+        renderItem: (item) => {
+            if (item.type === 'header') {
+                return React.createElement('div', {
+                    style: {
+                        fontWeight: 'bold',
+                        fontSize: '1rem',
+                        margin: '0 0 1rem 0',
+                        padding: '0.5rem 0',
+                        borderBottom: '2px solid #007bff',
+                        color: '#333'
+                    }
+                }, item.content);
+            } else {
+                return item.content;
+            }
+        },
+        config: {
+            itemLabel: 'items',
+            showItemCount: false,
+            emptyMessage: 'Time series data will be displayed when system metrics are available.',
+            containerHeight: 400
+        }
     });
-};
+});
 
 export default TimeSeriesPanel;

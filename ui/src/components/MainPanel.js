@@ -1,6 +1,7 @@
 import React, {useMemo} from 'react';
 import GenericPanel from './GenericPanel.js';
 import {createListItem} from '../utils/componentUtils.js';
+import {themeUtils} from '../utils/themeUtils.js';
 
 const MainPanel = () => {
     // Sample data for main panel
@@ -9,10 +10,10 @@ const MainPanel = () => {
         {id: 2, title: 'Status', content: 'System operational'},
     ], []);
 
-    const renderMainItem = (item, index) => createListItem(React, {
-        key: item.id || index,
+    const renderMainItem = (item) => createListItem(React, {
+        key: item.id,
         children: [
-            React.createElement('div', {style: {fontWeight: 'bold'}}, item.title),
+            React.createElement('div', {style: {fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD')}}, item.title),
             React.createElement('div', null, item.content)
         ]
     });

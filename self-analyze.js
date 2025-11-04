@@ -23,6 +23,8 @@ import { spawnSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 
+const TOP_N = 20;
+
 class SeNARSSelfAnalyzer {
   constructor(options = {}) {
     this.options = {
@@ -284,7 +286,7 @@ class SeNARSSelfAnalyzer {
       .sort((a, b) => b.duration - a.duration);
     
     // Return top 10 slowest tests
-    return sortedTests.slice(0, 10).map(test => ({
+    return sortedTests.slice(0, TOP_N).map(test => ({
       name: test.name,
       duration: test.duration,
       suite: test.suite,
@@ -434,7 +436,7 @@ class SeNARSSelfAnalyzer {
         });
         
         // Return top 10 lowest coverage files
-        return files.slice(0, 10);
+        return files.slice(0, TOP_N);
       }
       
       return [];
@@ -554,7 +556,7 @@ class SeNARSSelfAnalyzer {
       
       // Sort files by line count and get largest files
       stats.fileDetails.sort((a, b) => b.lines - a.lines);
-      stats.largestFiles = stats.fileDetails.slice(0, 10); // Top 10 largest files
+      stats.largestFiles = stats.fileDetails.slice(0, TOP_N); // Top 10 largest files
       
       // Calculate statistics
       if (stats.fileDetails.length > 0) {

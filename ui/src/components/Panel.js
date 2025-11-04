@@ -6,20 +6,17 @@ import {themeUtils} from '../utils/themeUtils.js';
 import styles from './Panel.module.css';
 
 const Panel = memo(({
-                        title,
-                        children,
-                        showWebSocketStatus = true,
-                        showHeader = true,
-                        className = '',
-                        style = {},
-                        headerExtra = null
-                    }) => {
+    title,
+    children,
+    showWebSocketStatus = true,
+    showHeader = true,
+    className = '',
+    style = {},
+    headerExtra = null
+}) => {
     const wsConnected = useUiStore(state => state.wsConnected);
-
-    // Construct the class name with base styles and custom className
     const panelClassName = `${styles.panel} ${className || ''}`.trim();
 
-    // Create header if showHeader is true
     const panelHeader = showHeader && React.createElement('div', {className: styles['panel-header']},
         React.createElement('h3', {className: styles['panel-title']}, title),
         showWebSocketStatus && React.createElement('div', {className: styles['panel-status']},

@@ -1,11 +1,12 @@
-import React, {useCallback, useMemo, useState} from 'react';
+import React, {memo, useCallback, useMemo, useState} from 'react';
 import useUiStore from '../stores/uiStore.js';
 import {formatBudget, formatTruth} from '../utils/formatters.js';
-import GenericPanel from './GenericPanel.js';
+import {DataPanel} from './DataPanel.js';
 import TaskRelationshipGraph from './TaskRelationshipGraph.js';
 import TaskFlowDiagram from './TaskFlowDiagram.js';
+import {themeUtils} from '../utils/themeUtils.js';
 
-const TaskMonitorPanel = () => {
+const TaskMonitorPanel = memo(() => {
     const [expandedTask, setExpandedTask] = useState(null);
     const [showTransformations, setShowTransformations] = useState(true);
     const [filterType, setFilterType] = useState('all');
@@ -60,31 +61,31 @@ const TaskMonitorPanel = () => {
                     padding: '0.5rem',
                     backgroundColor: '#f9f9f9',
                     border: '1px solid #eee',
-                    borderRadius: '4px'
+                    borderRadius: themeUtils.get('BORDERS.RADIUS.SM')
                 }
             },
             React.createElement('div', {
                 style: {
-                    fontWeight: 'bold',
+                    fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD'),
                     marginBottom: '0.25rem',
-                    color: '#007bff'
+                    color: themeUtils.get('COLORS.PRIMARY')
                 }
             }, 'Transformations:'),
-            transformations.map((transform, idx) =>
+            transformations.map((transform) =>
                 React.createElement('div', {
-                        key: idx,
+                        key: transform.id || transform.description,
                         style: {
                             padding: '0.25rem 0',
-                            fontSize: '0.75rem',
-                            borderLeft: '2px solid #007bff',
+                            fontSize: themeUtils.get('FONTS.SIZE.XS'),
+                            borderLeft: `2px solid ${themeUtils.get('COLORS.PRIMARY')}`,
                             paddingLeft: '0.5rem'
                         }
                     },
-                    React.createElement('div', {style: {fontWeight: '500'}}, transform.description || 'Transformation'),
+                    React.createElement('div', {style: {fontWeight: themeUtils.get('FONTS.WEIGHT.MEDIUM')}}, transform.description || 'Transformation'),
                     transform.result && React.createElement('div', {
                         style: {
                             fontStyle: 'italic',
-                            fontSize: '0.7rem'
+                            fontSize: themeUtils.get('FONTS.SIZE.XXS')
                         }
                     }, `Result: ${transform.result}`)
                 )
@@ -100,64 +101,63 @@ const TaskMonitorPanel = () => {
                     padding: '0.5rem',
                     backgroundColor: '#f0f8f0',
                     border: '1px solid #c3e6c3',
-                    borderRadius: '4px'
+                    borderRadius: themeUtils.get('BORDERS.RADIUS.SM')
                 }
             },
             React.createElement('div', {
                 style: {
-                    fontWeight: 'bold',
+                    fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD'),
                     marginBottom: '0.25rem',
                     color: '#155724'
                 }
             }, 'Dependencies:'),
-            React.createElement('div', {style: {fontSize: '0.75rem'}}, dependencies.join(', '))
+            React.createElement('div', {style: {fontSize: themeUtils.get('FONTS.SIZE.XS')}}, dependencies.join(', '))
         );
     }, []);
 
-    const renderTask = useCallback((task, index) => {
+    const renderTask = useCallback((task) => {
         if (filterType !== 'all' && filterType !== task.type?.toLowerCase()) return null;
 
-        const isExpanded = expandedTask === (task.id || `task-${index}`);
+        const isExpanded = expandedTask === task.id;
         const transformations = getTaskTransformations(task);
         const hasTransformations = transformations.length > 0;
 
         return React.createElement('div',
             {
-                key: task.id || `task-${index}`,
                 style: {
                     padding: '0.5rem',
                     margin: '0.25rem 0',
                     ...getTaskStyle(task.type),
-                    borderRadius: '4px',
-                    fontSize: '0.85rem'
+                    borderRadius: themeUtils.get('BORDERS.RADIUS.SM'),
+                    fontSize: themeUtils.get('FONTS.SIZE.SM')
                 }
             },
             React.createElement('div', {
-                    style: {fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', cursor: 'pointer'},
-                    onClick: () => setExpandedTask(isExpanded ? null : (task.id || `task-${index}`))
+                    style: {fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD'), display: 'flex', justifyContent: 'space-between', cursor: 'pointer'},
+                    onClick: () => setExpandedTask(isExpanded ? null : task.id)
                 },
                 React.createElement('span', null, task.term || 'No term'),
                 React.createElement('div', {style: {display: 'flex', gap: '0.5rem'}},
-                    React.createElement('span', {style: {fontSize: '0.75rem', color: '#666'}}, task.type || 'Unknown'),
+                    React.createElement('span', {style: {fontSize: themeUtils.get('FONTS.SIZE.XS'), color: themeUtils.get('TEXT.SECONDARY')}}, task.type || 'Unknown'),
                     hasTransformations && React.createElement('span', {
                         style: {
-                            fontSize: '0.75rem',
-                            color: '#007bff'
+                            fontSize: themeUtils.get('FONTS.SIZE.XS'),
+                            color: themeUtils.get('COLORS.PRIMARY')
                         }
                     }, `(${transformations.length} transformations)`)
                 )
             ),
             isExpanded && React.createElement('div', {style: {marginTop: '0.25rem'}},
-                task.truth && React.createElement('div', {style: {fontSize: '0.8rem'}},
+                task.truth && React.createElement('div', {style: {fontSize: themeUtils.get('FONTS.SIZE.SM')}},
                     `Truth: ${formatTruth(task.truth)}`
                 ),
-                task.budget && React.createElement('div', {style: {fontSize: '0.8rem'}},
+                task.budget && React.createElement('div', {style: {fontSize: themeUtils.get('FONTS.SIZE.SM')}},
                     `Budget: ${formatBudget(task.budget)}`
                 ),
                 task.occurrenceTime && React.createElement('div', {
                         style: {
-                            fontSize: '0.7rem',
-                            color: '#666',
+                            fontSize: themeUtils.get('FONTS.SIZE.XXS'),
+                            color: themeUtils.get('TEXT.SECONDARY'),
                             marginTop: '0.25rem'
                         }
                     },
@@ -169,28 +169,27 @@ const TaskMonitorPanel = () => {
         );
     }, [expandedTask, showTransformations, getTaskTransformations, filterType, getTaskStyle, formatTruth, formatBudget, renderTransformations, renderDependencies]);
 
-    const renderReasoningStep = useCallback((step, index) =>
+    const renderReasoningStep = useCallback((step) =>
         React.createElement('div',
             {
-                key: step.id || `step-${index}`,
                 style: {
                     padding: '0.5rem',
                     margin: '0.25rem 0',
-                    backgroundColor: '#f8f9fa',
-                    border: '1px solid #dee2e6',
-                    borderRadius: '4px',
-                    fontSize: '0.85rem'
+                    backgroundColor: themeUtils.get('BACKGROUNDS.SECONDARY'),
+                    border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`,
+                    borderRadius: themeUtils.get('BORDERS.RADIUS.SM'),
+                    fontSize: themeUtils.get('FONTS.SIZE.SM')
                 }
             },
-            step.step && React.createElement('div', {style: {fontWeight: 'bold'}}, `Step ${step.step}`),
+            step.step && React.createElement('div', {style: {fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD')}}, `Step ${step.step}`),
             step.description && React.createElement('div', null, step.description),
             step.result && React.createElement('div', {style: {marginTop: '0.25rem', fontStyle: 'italic'}},
                 `Result: ${step.result}`
             ),
             step.timestamp && React.createElement('div', {
                     style: {
-                        fontSize: '0.7rem',
-                        color: '#666',
+                        fontSize: themeUtils.get('FONTS.SIZE.XXS'),
+                        color: themeUtils.get('TEXT.SECONDARY'),
                         marginTop: '0.25rem'
                     }
                 },
@@ -206,8 +205,8 @@ const TaskMonitorPanel = () => {
                     gap: '1rem',
                     marginBottom: '1rem',
                     padding: '0.5rem',
-                    backgroundColor: '#f8f9fa',
-                    borderRadius: '4px',
+                    backgroundColor: themeUtils.get('BACKGROUNDS.SECONDARY'),
+                    borderRadius: themeUtils.get('BORDERS.RADIUS.SM'),
                     flexWrap: 'wrap'
                 }
             },
@@ -215,7 +214,7 @@ const TaskMonitorPanel = () => {
                 React.createElement('label', {
                     style: {
                         display: 'block',
-                        fontSize: '0.8rem',
+                        fontSize: themeUtils.get('FONTS.SIZE.XS'),
                         marginBottom: '0.25rem'
                     }
                 }, 'Filter by Type:'),
@@ -225,9 +224,9 @@ const TaskMonitorPanel = () => {
                         style: {
                             width: '100%',
                             padding: '0.25rem',
-                            border: '1px solid #ddd',
-                            borderRadius: '4px',
-                            fontSize: '0.9rem'
+                            border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`,
+                            borderRadius: themeUtils.get('BORDERS.RADIUS.SM'),
+                            fontSize: themeUtils.get('FONTS.SIZE.BASE')
                         }
                     },
                     React.createElement('option', {value: 'all'}, 'All Tasks'),
@@ -243,7 +242,7 @@ const TaskMonitorPanel = () => {
                         checked: showTransformations,
                         onChange: (e) => setShowTransformations(e.target.checked)
                     }),
-                    React.createElement('span', {style: {fontSize: '0.9rem'}}, 'Show Transformations')
+                    React.createElement('span', {style: {fontSize: themeUtils.get('FONTS.SIZE.BASE')}}, 'Show Transformations')
                 )
             ),
             React.createElement('div', {style: {flex: 1, display: 'flex', alignItems: 'center', minWidth: '150px'}},
@@ -253,7 +252,7 @@ const TaskMonitorPanel = () => {
                         checked: showRelationships,
                         onChange: (e) => setShowRelationships(e.target.checked)
                     }),
-                    React.createElement('span', {style: {fontSize: '0.9rem'}}, 'Show Relationships')
+                    React.createElement('span', {style: {fontSize: themeUtils.get('FONTS.SIZE.BASE')}}, 'Show Relationships')
                 )
             ),
             React.createElement('div', {style: {flex: 1, display: 'flex', alignItems: 'center', minWidth: '150px'}},
@@ -263,7 +262,7 @@ const TaskMonitorPanel = () => {
                         checked: showFlowDiagram,
                         onChange: (e) => setShowFlowDiagram(e.target.checked)
                     }),
-                    React.createElement('span', {style: {fontSize: '0.9rem'}}, 'Show Flow Diagram')
+                    React.createElement('span', {style: {fontSize: themeUtils.get('FONTS.SIZE.BASE')}}, 'Show Flow Diagram')
                 )
             )
         ), [filterType, showTransformations, showRelationships, showFlowDiagram]);
@@ -287,38 +286,42 @@ const TaskMonitorPanel = () => {
         return result;
     }, [tasks, reasoningSteps, renderControlBar, showRelationships, showFlowDiagram]);
 
-    const renderMonitorItem = useCallback((item, index) => {
+    const renderMonitorItem = useCallback((item) => {
         if (item.type === 'controls') return item.controlBar;
         if (item.type === 'flowDiagram') return React.createElement('div', {style: {marginBottom: '1rem'}}, item.content);
         if (item.type === 'relationships') return React.createElement('div', {style: {marginBottom: '1rem'}}, item.content);
         if (item.type === 'header') {
             return React.createElement('div', {
                 style: {
-                    fontWeight: 'bold',
-                    fontSize: '1rem',
+                    fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD'),
+                    fontSize: themeUtils.get('FONTS.SIZE.BASE'),
                     margin: '1rem 0 0.5rem 0',
                     padding: '0.5rem 0',
-                    borderBottom: '2px solid #007bff',
-                    color: '#333'
+                    borderBottom: `2px solid ${themeUtils.get('COLORS.PRIMARY')}`,
+                    color: themeUtils.get('TEXT.PRIMARY')
                 }
             }, item.content);
         }
-        if (item.type === 'task') return renderTask(item.data, index);
-        if (item.type === 'reasoningStep') return renderReasoningStep(item.data, index);
+        if (item.type === 'task') return renderTask(item.data);
+        if (item.type === 'reasoningStep') return renderReasoningStep(item.data);
         return null;
     }, [renderTask, renderReasoningStep]);
 
-    return React.createElement(GenericPanel, {
+    return React.createElement(DataPanel, {
         title: 'Task Monitor',
-        maxHeight: 'calc(100% - 2rem)',
-        items,
+        dataSource: () => items,
         renderItem: renderMonitorItem,
-        emptyMessage: showFlowDiagram
-            ? 'Task flow diagram will be populated as the reasoning engine processes inputs.'
-            : showRelationships
-                ? 'Task relationship graph will be populated as the reasoning engine processes inputs.'
-                : 'Task information will be populated as the reasoning engine processes inputs.'
+        config: {
+            itemLabel: 'items',
+            showItemCount: false,
+            emptyMessage: showFlowDiagram
+                ? 'Task flow diagram will be populated as the reasoning engine processes inputs.'
+                : showRelationships
+                    ? 'Task relationship graph will be populated as the reasoning engine processes inputs.'
+                    : 'Task information will be populated as the reasoning engine processes inputs.',
+            containerHeight: 500
+        }
     });
-};
+});
 
 export default TaskMonitorPanel;

@@ -1,15 +1,9 @@
-/**
- * Theme utilities for consistent theming across the application
- * Following AGENTS.md principles: DRY, modular, parameterized
- */
-
-// Theme constants
 const THEME = {
     COLORS: {
         CONNECTED: 'var(--success-color)',
         DISCONNECTED: 'var(--danger-color)',
-        CONNECTED_BG: 'var(--success-color)20', // 20% opacity
-        DISCONNECTED_BG: 'var(--danger-color)20', // 20% opacity
+        CONNECTED_BG: 'var(--success-color)20',
+        DISCONNECTED_BG: 'var(--danger-color)20',
         PRIMARY: 'var(--primary-color)',
         SECONDARY: 'var(--secondary-color)',
         SUCCESS: 'var(--success-color)',
@@ -77,37 +71,16 @@ const THEME = {
     },
 };
 
-// Theme utility functions
 const themeUtils = {
-    /**
-     * Get theme value by path (e.g., 'COLORS.SUCCESS')
-     */
     get: (path) => path.split('.').reduce((obj, key) => obj?.[key], THEME),
-    
-    /**
-     * Get WebSocket status color based on connection state
-     */
     getWebSocketStatusColor: (connected) =>
         connected ? THEME.COLORS.CONNECTED : THEME.COLORS.DISCONNECTED,
-    
-    /**
-     * Get WebSocket status background color based on connection state
-     */
     getWebSocketStatusBgColor: (connected) =>
         connected ? THEME.COLORS.CONNECTED_BG : THEME.COLORS.DISCONNECTED_BG,
-    
-    /**
-     * Apply opacity to a CSS variable color (by appending hex opacity)
-     */
     withOpacity: (cssVar, opacity) => {
-        // Convert opacity (0-1) to hex (00-FF)
         const hexOpacity = Math.round(opacity * 255).toString(16).padStart(2, '0');
         return `${cssVar}${hexOpacity}`;
     },
-    
-    /**
-     * Get theme object for use in components
-     */
     getTheme: () => ({...THEME}),
 };
 

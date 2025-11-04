@@ -1,4 +1,3 @@
-// Console bridge to forward logs to WebSocket server
 import useUiStore from '../stores/uiStore.js';
 
 const originalConsole = {
@@ -19,9 +18,36 @@ const getLogMetadata = () => ({
     userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'N/A'
 });
 
+let cachedWsService = null;
+
+// Update the cached WebSocket service when the store changes
+const updateWsServiceCache = () => {
+    try {
+        if (typeof useUiStore.getState === 'function') {
+            const state = useUiStore.getState();
+            cachedWsService = state?.wsService || null;
+        }
+    } catch (error) {
+        // If store isn't ready yet, keep the existing cached value
+    }
+};
+
+// Subscribe to store updates to maintain cache
+try {
+    if (typeof useUiStore.subscribe === 'function') {
+        useUiStore.subscribe(updateWsServiceCache);
+        updateWsServiceCache(); // Initialize cache
+    }
+} catch (error) {
+    console.debug('Could not subscribe to store in console bridge:', error.message);
+}
+
 const sendLogToWebSocket = (currentWsService, level, args) => {
-    // Check if the currentWsService exists and has the expected structure
-    if (!currentWsService || !currentWsService.sendMessage) return;
+    // Prefer the cached WebSocket service, fall back to direct access if needed
+    const wsServiceToUse = currentWsService || cachedWsService;
+    
+    // Check if the wsServiceToUse exists and has the expected structure
+    if (!wsServiceToUse || !wsServiceToUse.sendMessage) return;
 
     try {
         const message = {
@@ -32,7 +58,7 @@ const sendLogToWebSocket = (currentWsService, level, args) => {
             meta: getLogMetadata()
         };
 
-        currentWsService.sendMessage(message);
+        wsServiceToUse.sendMessage(message);
     } catch (error) {
         originalConsole.error('Failed to send console log to WebSocket:', error);
     }
@@ -40,8 +66,13 @@ const sendLogToWebSocket = (currentWsService, level, args) => {
 
 const createLogSender = (level) => (...args) => {
     originalConsole[level](...args);
-    const currentWsService = useUiStore.getState().wsService;
-    sendLogToWebSocket(currentWsService, level, args);
+    try {
+        // Use the cached WebSocket service to avoid store access during console calls
+        sendLogToWebSocket(null, level, args);
+    } catch (error) {
+        // If there's an issue sending the log, just continue with regular console logging
+        originalConsole.warn('Could not send console log via WebSocket:', error.message);
+    }
 };
 
 const initConsoleBridge = () => {
@@ -61,7 +92,7 @@ export const restoreOriginalConsole = () => {
 export const setConsoleBridge = (ws) => {
     // The console bridge is already initialized, but we can ensure it has access to the WebSocket
     // This function is provided for compatibility with the App.js requirement
-    console.log('Console bridge initialized with WebSocket');
+    console.debug('Console bridge initialized with WebSocket');
 };
 
 export const getConsoleBridgeService = () => useUiStore.getState().wsService;

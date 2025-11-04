@@ -1,35 +1,24 @@
-/**
- * Message processing pipeline for WebSocket communication
- * Implements elegant architectural patterns for message handling
- */
-
 import {validateMessage} from '../schemas/messages.js';
 
-// Message processor class that handles the pipeline of message processing
 class MessageProcessor {
     constructor() {
         this.middleware = [];
         this.errorHandlers = [];
     }
 
-    // Add middleware to the processing pipeline
     use(middlewareFn) {
         this.middleware.push(middlewareFn);
         return this;
     }
 
-    // Add error handler to the pipeline
     onError(errorHandler) {
         this.errorHandlers.push(errorHandler);
         return this;
     }
 
-    // Process a message through the pipeline
     async process(message, context = {}) {
-        // Validate message
         const validatedMessage = validateMessage(message);
         if (!validatedMessage) {
-            // Handle validation errors
             this.errorHandlers.forEach(handler => {
                 try {
                     handler(new Error('Message validation failed'), message, context);
@@ -43,15 +32,13 @@ class MessageProcessor {
         let processedMessage = {...validatedMessage};
 
         try {
-            // Run through middleware pipeline
             for (const middleware of this.middleware) {
                 processedMessage = await Promise.resolve(middleware(processedMessage, context));
-                if (!processedMessage) break; // Middleware can halt the chain
+                if (!processedMessage) break;
             }
 
             return {success: true, data: processedMessage};
         } catch (error) {
-            // Handle processing errors
             this.errorHandlers.forEach(handler => {
                 try {
                     handler(error, message, context);
@@ -65,162 +52,97 @@ class MessageProcessor {
     }
 }
 
-// Create a message processor instance
 const createMessageProcessor = () => new MessageProcessor();
 
-// Common message processing utilities
 const messageProcessorUtils = {
-    // Create a validation middleware
-    createValidationMiddleware: (validator = validateMessage) => (message, context) => {
+    createValidationMiddleware: (validator = validateMessage) => (message) => {
         const validated = validator(message);
-        if (!validated) {
-            throw new Error(`Message validation failed for type: ${message?.type}`);
-        }
+        if (!validated) throw new Error(`Message validation failed for type: ${message?.type}`);
         return validated;
     },
 
-    // Create a logging middleware
     createLoggingMiddleware: (logger = console.log) => (message, context) => {
-        logger(`Processing message: ${message.type}`, {
-            timestamp: Date.now(),
-            ...context
-        });
+        logger(`Processing message: ${message.type}`, {timestamp: Date.now(), ...context});
         return message;
     },
 
-    // Create a transformation middleware
-    createTransformMiddleware: (transformer) => (message, context) => {
-        return transformer(message, context);
-    },
+    createTransformMiddleware: (transformer) => (message, context) => transformer(message, context),
 
-    // Create a rate limiting middleware
     createRateLimitMiddleware: (maxPerInterval = 100, intervalMs = 1000) => {
         const messageCounts = new Map();
 
-        return (message, context) => {
+        return (message) => {
             const now = Date.now();
             const type = message.type;
-
-            if (!messageCounts.has(type)) {
-                messageCounts.set(type, []);
-            }
-
-            const counts = messageCounts.get(type);
+            const counts = messageCounts.get(type) || [];
+            
             const recentCount = counts.filter(time => now - time < intervalMs).length;
-
             if (recentCount >= maxPerInterval) {
                 throw new Error(`Rate limit exceeded for message type: ${type}`);
             }
-
-            counts.push(now);
-            // Clean up old timestamps
-            messageCounts.set(type, counts.filter(time => now - time < intervalMs));
-
+            
+            messageCounts.set(type, [...counts, now].filter(time => now - time < intervalMs));
             return message;
         };
     },
 
-    // Create a duplicate detection middleware
     createDuplicateDetectionMiddleware: (windowMs = 5000) => {
         const seenMessages = new Map();
 
-        return (message, context) => {
-            // Create a unique key based on message type and payload
+        return (message) => {
             const key = `${message.type}_${JSON.stringify(message.payload)}`;
             const now = Date.now();
-
-            if (seenMessages.has(key)) {
-                const lastSeen = seenMessages.get(key);
-                if (now - lastSeen < windowMs) {
-                    // This is a duplicate within the window
-                    return null; // Skip processing
-                }
-            }
-
+            const lastSeen = seenMessages.get(key);
+            
+            if (lastSeen && now - lastSeen < windowMs) return null;
+            
             seenMessages.set(key, now);
-            // Clean up old entries
             for (const [k, time] of seenMessages) {
-                if (now - time >= windowMs) {
-                    seenMessages.delete(k);
-                }
+                if (now - time >= windowMs) seenMessages.delete(k);
             }
-
+            
             return message;
         };
     },
 
-    // Create a conditional processing middleware
-    createConditionalMiddleware: (condition, trueMiddleware, falseMiddleware = null) => {
-        return async (message, context) => {
+    createConditionalMiddleware: (condition, trueMiddleware, falseMiddleware = null) =>
+        async (message, context) => {
             if (condition(message, context)) {
                 return await Promise.resolve(trueMiddleware(message, context));
             } else if (falseMiddleware) {
                 return await Promise.resolve(falseMiddleware(message, context));
             }
             return message;
-        };
-    },
+        },
 
-    // Create a filter middleware that can conditionally process or skip messages
-    createFilterMiddleware: (filterFn) => {
-        return (message, context) => {
-            if (filterFn(message, context)) {
-                return message;
-            }
-            return null; // Skip processing
-        };
-    },
+    createFilterMiddleware: (filterFn) => (message, context) =>
+        filterFn(message, context) ? message : null,
 
-    // Create a composite middleware that runs multiple middlewares
-    createCompositeMiddleware: (middlewares) => {
-        return async (message, context) => {
-            let processedMessage = message;
-            for (const middleware of middlewares) {
-                processedMessage = await Promise.resolve(middleware(processedMessage, context));
-                if (processedMessage === null) break; // Stop if middleware returns null
-            }
-            return processedMessage;
-        };
+    createCompositeMiddleware: (middlewares) => async (message, context) => {
+        let processedMessage = message;
+        for (const middleware of middlewares) {
+            processedMessage = await Promise.resolve(middleware(processedMessage, context));
+            if (processedMessage === null) break;
+        }
+        return processedMessage;
     }
 };
 
-// Message routing utilities with centralized route management
 const messageRouter = {
-    // Create a message router that maps types to handlers
-    createRouter: (routes = {}) => {
-        const router = {
-            routes,
-
-            addRoute: (type, handler) => {
-                router.routes[type] = handler;
-                return router;
-            },
-
-            handle: (message, context) => {
-                const handler = router.routes[message.type];
-                if (handler) {
-                    return handler(message, context);
-                } else {
-                    console.warn(`No handler for message type: ${message.type}`);
-                    return null;
-                }
-            }
-        };
-
-        return router;
-    }
+    createRouter: (routes = {}) => ({
+        routes,
+        addRoute(type, handler) {
+            this.routes[type] = handler;
+            return this;
+        },
+        handle(message, context) {
+            const handler = this.routes[message.type];
+            if (handler) return handler(message, context);
+            console.debug(`No handler for message type: ${message.type}`);
+            return null;
+        }
+    })
 };
 
-export {
-    MessageProcessor,
-    createMessageProcessor,
-    messageProcessorUtils,
-    messageRouter
-};
-
-export default {
-    MessageProcessor,
-    createMessageProcessor,
-    messageProcessorUtils,
-    messageRouter
-};
+export {MessageProcessor, createMessageProcessor, messageProcessorUtils, messageRouter};
+export default {MessageProcessor, createMessageProcessor, messageProcessorUtils, messageRouter};

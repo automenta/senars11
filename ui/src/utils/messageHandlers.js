@@ -2,7 +2,6 @@ import useUiStore from '../stores/uiStore';
 
 const getStore = () => useUiStore.getState();
 
-// Functional handler with error wrapping
 const withErrorHandler = (action, handler) => (data) => {
     try {
         return handler(data);
@@ -32,13 +31,12 @@ const createDemoMetricsHandler = withErrorHandler('demoMetrics', (data) => {
 
 const createNarseseInputHandler = withErrorHandler('narseseInput', (data) => {
     const {input, success, message: msg} = data.payload;
-    const notification = {
+    return getStore().addNotification?.({
         type: success ? 'success' : 'error',
         title: success ? 'Narsese Input Success' : 'Narsese Input Error',
         message: success ? `Processed: ${input}` : (msg || 'Failed to process input'),
         timestamp: Date.now()
-    };
-    return getStore().addNotification?.(notification);
+    });
 });
 
 const createSessionUpdateHandler = withErrorHandler('sessionUpdate', (data) => {
@@ -57,6 +55,15 @@ const createConceptUpdateHandler = withErrorHandler('conceptUpdate', (data) => {
 
 const createLogHandler = withErrorHandler('log', ({level = 'log', data: logData}) => {
     console[level]?.(...(logData || []));
+});
+
+const createConnectionHandler = withErrorHandler('connection', (data) => {
+    // Handle connection message - could be used for client identification or other connection-related tasks
+    console.log('WebSocket connection established with server', data.data);
+    // Update store with connection status if needed
+    if (data.data?.status) {
+        getStore().setWsConnected?.(data.data.status === 'connected');
+    }
 });
 
 const handleHandlerError = (action, error) => {
@@ -78,6 +85,7 @@ export {
     createSessionUpdateHandler,
     createConceptUpdateHandler,
     createLogHandler,
+    createConnectionHandler,
     handleHandlerError,
     getStore
 };

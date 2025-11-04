@@ -1,11 +1,5 @@
-// Common UI constants and styling utilities
 import React from 'react';
 
-/**
- * Common UI constants and styling utilities
- */
-
-// Common styling constants
 export const UI_CONSTANTS = {
     COLORS: {
         PRIMARY: '#3498db',
@@ -30,11 +24,7 @@ export const UI_CONSTANTS = {
     }
 };
 
-// Common React components
 export const Components = {
-    /**
-     * Loading spinner component
-     */
     LoadingSpinner: ({size = '1.5rem', color = UI_CONSTANTS.COLORS.PRIMARY, ...props}) => {
         return React.createElement('div', {
                 style: {
@@ -49,7 +39,7 @@ export const Components = {
                 style: {
                     width: size,
                     height: size,
-                    border: `2px solid ${color}40`, // 25% opacity
+                    border: `2px solid ${color}40`,
                     borderTop: `2px solid ${color}`,
                     borderRadius: '50%',
                     animation: 'spin 1s linear infinite',
@@ -59,9 +49,6 @@ export const Components = {
         );
     },
 
-    /**
-     * Empty state component
-     */
     EmptyState: ({message = 'No data to display', icon = '🔍', ...props}) => {
         return React.createElement('div', {
                 style: {
@@ -80,9 +67,6 @@ export const Components = {
         );
     },
 
-    /**
-     * Error state component
-     */
     ErrorState: ({message = 'An error occurred', onRetry = null, ...props}) => {
         return React.createElement('div', {
                 style: {
@@ -113,9 +97,6 @@ export const Components = {
         );
     },
 
-    /**
-     * Status badge component
-     */
     StatusBadge: ({status, label, ...props}) => {
         const statusConfig = {
             success: {color: UI_CONSTANTS.COLORS.SUCCESS, bg: UI_CONSTANTS.COLORS.SUCCESS + '20'},

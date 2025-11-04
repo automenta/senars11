@@ -3,7 +3,7 @@ import {demoSchemas} from './demoMessages.js';
 
 // Base schema
 export const messageSchema = z.object({
-    type: z.string(),
+    type: z.string().optional(),
     payload: z.unknown().optional(),
     timestamp: z.number().optional(),
 });
@@ -40,31 +40,43 @@ export const notificationSchema = z.object({
 export const layoutUpdateSchema = messageSchema.extend({
     type: z.literal('layoutUpdate'),
     payload: z.object({layout: z.record(z.unknown())}),
+}).refine(data => data.type === 'layoutUpdate', {
+    message: "Type must be 'layoutUpdate'",
 });
 
 export const panelUpdateSchema = messageSchema.extend({
     type: z.literal('panelUpdate'),
     payload: z.object({id: z.string(), config: z.record(z.unknown())}),
+}).refine(data => data.type === 'panelUpdate', {
+    message: "Type must be 'panelUpdate'",
 });
 
 export const reasoningStepMessageSchema = messageSchema.extend({
     type: z.literal('reasoningStep'),
     payload: z.object({step: reasoningStepSchema}),
+}).refine(data => data.type === 'reasoningStep', {
+    message: "Type must be 'reasoningStep'",
 });
 
 export const sessionUpdateMessageSchema = messageSchema.extend({
     type: z.literal('sessionUpdate'),
     payload: sessionUpdateSchema,
+}).refine(data => data.type === 'sessionUpdate', {
+    message: "Type must be 'sessionUpdate'",
 });
 
 export const notificationMessageSchema = messageSchema.extend({
     type: z.literal('notification'),
     payload: notificationSchema,
+}).refine(data => data.type === 'notification', {
+    message: "Type must be 'notification'",
 });
 
 export const errorSchema = messageSchema.extend({
     type: z.literal('error'),
     payload: z.object({message: z.string(), code: z.number().optional()}),
+}).refine(data => data.type === 'error', {
+    message: "Type must be 'error'",
 });
 
 export const logSchema = messageSchema.extend({
@@ -72,6 +84,12 @@ export const logSchema = messageSchema.extend({
     level: z.enum(['log', 'info', 'warn', 'error']),
     data: z.array(z.unknown()),
     timestamp: z.number(),
+    meta: z.object({
+        url: z.string().optional(),
+        userAgent: z.string().optional()
+    }).optional(),
+}).refine(data => data.type === 'log', {
+    message: "Type must be 'log'",
 });
 
 // SeNARS-specific schemas
@@ -115,6 +133,8 @@ const createUpdateSchema = (type, payloadSchema) =>
     messageSchema.extend({
         type: z.literal(type),
         payload: payloadSchema,
+    }).refine(data => data.type === type, {
+        message: `Type must be '${type}'`,
     });
 
 export const conceptUpdateSchema = createUpdateSchema('conceptUpdate',
@@ -145,6 +165,8 @@ export const systemMetricsSchema = messageSchema.extend({
         connectedClients: z.number(),
         startTime: z.number(),
     }),
+}).refine(data => data.type === 'systemMetrics', {
+    message: "Type must be 'systemMetrics'",
 });
 
 export const narseseInputSchema = messageSchema.extend({
@@ -154,6 +176,35 @@ export const narseseInputSchema = messageSchema.extend({
         success: z.boolean(),
         message: z.string().optional(),
     }),
+}).refine(data => data.type === 'narseseInput', {
+    message: "Type must be 'narseseInput'",
+});
+
+export const pingSchema = messageSchema.extend({
+    type: z.literal('ping'),
+    timestamp: z.number(),
+}).refine(data => data.type === 'ping', {
+    message: "Type must be 'ping'",
+});
+
+export const pongSchema = messageSchema.extend({
+    type: z.literal('pong'),
+    timestamp: z.number(),
+}).refine(data => data.type === 'pong', {
+    message: "Type must be 'pong'",
+});
+
+export const connectionSchema = messageSchema.extend({
+    type: z.literal('connection'),
+    data: z.object({
+        clientId: z.string().optional(),
+        timestamp: z.number().optional(),
+        message: z.string().optional(),
+        serverVersion: z.string().optional(),
+        capabilities: z.array(z.string()).optional(),
+    }).optional(),
+}).refine(data => data.type === 'connection', {
+    message: "Type must be 'connection'",
 });
 
 // Combine all schemas
@@ -170,6 +221,9 @@ const schemaRegistry = {
     'cycleUpdate': cycleUpdateMessageSchema,
     'systemMetrics': systemMetricsSchema,
     'narseseInput': narseseInputSchema,
+    'ping': pingSchema,
+    'pong': pongSchema,
+    'connection': connectionSchema,
     // Add demo schemas
     ...demoSchemas,
 };
@@ -189,13 +243,20 @@ export const validateMessage = (data) => {
         return null;
     }
 
+    // For connection establishment messages that might be simple objects
+    // return a basic object to allow processing
     if (!data.type) {
-        console.error('Message validation error: Missing message type');
-        return null;
+        // Allow simple connection objects but log them
+        console.debug('Received message without type, treating as connection info:', data);
+        return {
+            type: 'connection_info',
+            data: data,
+            timestamp: Date.now()
+        };
     }
 
     try {
-        const schema = schemaRegistry[data.type] || messageSchema;
+        const schema = (data.type && schemaRegistry[data.type]) || messageSchema;
         return schema.parse(data);
     } catch (error) {
         // Extract detailed error information
@@ -206,19 +267,32 @@ export const validateMessage = (data) => {
                 code: issue.code || 'unknown'
             }));
 
-            console.error('Message validation error:', {
+            console.warn('Message validation error, using basic validation:', {
                 type: data.type,
                 errors: validationErrors,
-                originalData: JSON.stringify(data, null, 2)
+                originalData: data
             });
-        } else {
-            console.error('Message validation error:', {
+            
+            // Return a basic validated structure instead of failing completely
+            return {
                 type: data.type,
-                error: error?.message || error || 'Unknown validation error'
+                payload: data.payload || data,
+                timestamp: data.timestamp || Date.now()
+            };
+        } else {
+            console.warn('Message validation error, using basic structure:', {
+                type: data.type,
+                error: error?.message || error || 'Unknown validation error',
+                originalData: data
             });
+            
+            // Return a basic structure instead of null to prevent complete failure
+            return {
+                type: data.type,
+                payload: data.payload || data,
+                timestamp: data.timestamp || Date.now()
+            };
         }
-
-        return null;
     }
 };
 
@@ -243,7 +317,7 @@ export const validateMessageDetailed = (data) => {
     }
 
     try {
-        const schema = schemaRegistry[data.type] || messageSchema;
+        const schema = (data.type && schemaRegistry[data.type]) || messageSchema;
         const validatedData = schema.parse(data);
 
         return {

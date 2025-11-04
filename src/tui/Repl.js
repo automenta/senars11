@@ -2,21 +2,9 @@ import {NAR} from '../nar/NAR.js';
 import readline from 'readline';
 import {PersistenceManager} from '../io/PersistenceManager.js';
 import {FormattingUtils} from './FormattingUtils.js';
+import {DEMO_COMMANDS} from '../config/constants.js';
 
-const COMMANDS = Object.freeze({
-    help: ['help', 'h', '?'],
-    quit: ['quit', 'q', 'exit'],
-    status: ['status', 's', 'stats'],
-    memory: ['memory', 'm'],
-    trace: ['trace', 't'],
-    reset: ['reset', 'r'],
-    save: ['save', 'sv'],
-    load: ['load', 'ld'],
-    demo: ['demo', 'd', 'example'],
-    next: ['next', 'n'],
-    run: ['run', 'go'],
-    stop: ['stop', 'st']
-});
+const COMMANDS = DEMO_COMMANDS;
 
 export class Repl {
     constructor(config = {}) {

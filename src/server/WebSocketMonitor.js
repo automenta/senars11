@@ -1,33 +1,18 @@
 import {WebSocketServer} from 'ws';
 import {EventEmitter} from 'events';
+import {ClientMessageHandlers} from './ClientMessageHandlers.js';
+import {WEBSOCKET_CONFIG, NAR_EVENTS, DEFAULT_CLIENT_CAPABILITIES} from '../config/constants.js';
 
 const DEFAULT_OPTIONS = Object.freeze({
-    port: 8080,
-    host: 'localhost',
-    path: '/ws',
-    maxConnections: 50, // Increased default for better scalability
-    minBroadcastInterval: 1, // Reduced for better real-time experience
-    messageBufferSize: 10000, // Max size for message buffer
-    rateLimitWindowMs: 1000, // 1 second window for rate limiting
-    maxMessagesPerWindow: 1000 // Max messages per window per client
+    port: WEBSOCKET_CONFIG.defaultPort,
+    host: WEBSOCKET_CONFIG.defaultHost,
+    path: WEBSOCKET_CONFIG.defaultPath,
+    maxConnections: WEBSOCKET_CONFIG.maxConnections, // Increased default for better scalability
+    minBroadcastInterval: WEBSOCKET_CONFIG.minBroadcastInterval, // Reduced for better real-time experience
+    messageBufferSize: WEBSOCKET_CONFIG.messageBufferSize, // Max size for message buffer
+    rateLimitWindowMs: WEBSOCKET_CONFIG.rateLimitWindowMs, // 1 second window for rate limiting
+    maxMessagesPerWindow: WEBSOCKET_CONFIG.maxMessagesPerWindow // Max messages per window per client
 });
-
-const NAR_EVENTS = Object.freeze([
-    'task.input',
-    'task.processed',
-    'cycle.start',
-    'cycle.complete',
-    'task.added',
-    'belief.added',
-    'question.answered',
-    'system.started',
-    'system.stopped',
-    'system.reset',
-    'system.loaded',
-    'reasoning.step', // Added for better reasoning trace
-    'concept.created', // Added for concept awareness
-    'task.completed'  // Added for better task tracking
-]);
 
 class WebSocketMonitor {
     constructor(options = {}) {
@@ -43,6 +28,9 @@ class WebSocketMonitor {
         this.eventEmitter = new EventEmitter();
         this.server = null;
         this.clientMessageHandlers = new Map();
+
+        // Initialize message handlers
+        this.messageHandlers = new ClientMessageHandlers(this);
 
         // Metrics
         this.metrics = this._initializeMetrics();
@@ -81,7 +69,7 @@ class WebSocketMonitor {
                 port: this.port,
                 host: this.host,
                 path: this.path,
-                maxPayload: 1024 * 1024 // 1MB max payload
+                maxPayload: WEBSOCKET_CONFIG.maxPayload // 1MB max payload
             });
 
             this.server.on('connection', (ws, request) => {
@@ -109,7 +97,7 @@ class WebSocketMonitor {
                         timestamp: Date.now(),
                         message: 'Connected to SeNARS monitoring server',
                         serverVersion: '10.0.0',
-                        capabilities: ['narseseInput', 'testLMConnection', 'subscribe', 'unsubscribe']
+                        capabilities: DEFAULT_CLIENT_CAPABILITIES
                     }
                 });
 
@@ -215,36 +203,6 @@ class WebSocketMonitor {
         }
     }
 
-    _handleSubscription(client, message, action) {
-        if (!client.subscriptions) client.subscriptions = new Set();
-        
-        const eventTypes = message.eventTypes ?? ['all'];
-        
-        if (action === 'subscribe') {
-            eventTypes.forEach(type => client.subscriptions.add(type));
-            this._sendToClient(client, {
-                type: 'subscription_ack',
-                subscribedTo: Array.from(client.subscriptions),
-                timestamp: Date.now()
-            });
-        } else if (action === 'unsubscribe') {
-            eventTypes.forEach(type => client.subscriptions.delete(type));
-            this._sendToClient(client, {
-                type: 'unsubscription_ack',
-                unsubscribedFrom: eventTypes,
-                timestamp: Date.now()
-            });
-        }
-    }
-
-    _handleSubscribe(client, message) {
-        this._handleSubscription(client, message, 'subscribe');
-    }
-
-    _handleUnsubscribe(client, message) {
-        this._handleSubscription(client, message, 'unsubscribe');
-    }
-
     _generateClientId() {
         return `client_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     }
@@ -294,8 +252,6 @@ class WebSocketMonitor {
             messageRate: this.clientRateLimiters.get(client.clientId)?.messageCount || 0
         }));
     }
-
-
 
     // Method to register handlers for client messages
     registerClientMessageHandler(messageType, handler) {
@@ -355,13 +311,13 @@ class WebSocketMonitor {
 
     _routeMessage(client, message) {
         const handlers = {
-            'subscribe': (msg) => this._handleSubscribe(client, msg),
-            'unsubscribe': (msg) => this._handleUnsubscribe(client, msg),
-            'ping': () => this._sendToClient(client, {type: 'pong', timestamp: Date.now()}),
-            'narseseInput': (msg) => this._handleNarseseInput(client, msg),
-            'testLMConnection': (msg) => this._handleTestLMConnection(client, msg),
-            'log': (msg) => this._handleClientLog(client, msg),
-            'requestCapabilities': (msg) => this._handleRequestCapabilities(client, msg)
+            'subscribe': (msg) => this.messageHandlers.handleSubscribe(client, msg),
+            'unsubscribe': (msg) => this.messageHandlers.handleUnsubscribe(client, msg),
+            'ping': () => this.messageHandlers.handlePing(client),
+            'narseseInput': (msg) => this.messageHandlers.handleNarseseInput(client, msg),
+            'testLMConnection': (msg) => this.messageHandlers.handleTestLMConnection(client, msg),
+            'log': (msg) => this.messageHandlers.handleLog(client, msg),
+            'requestCapabilities': (msg) => this.messageHandlers.handleRequestCapabilities(client, msg)
         };
 
         (handlers[message.type] || this._handleCustomMessage.bind(this, client, message))(message);
@@ -421,92 +377,6 @@ class WebSocketMonitor {
         this._sendToClient(client, response);
     }
 
-    // Handler for requesting client capabilities
-    _handleRequestCapabilities(client, message) {
-        const clientId = client.clientId;
-        const capabilities = this.clientCapabilities.get(clientId) || [];
-
-        this._sendToClient(client, {
-            type: 'capabilities',
-            data: {
-                clientId,
-                capabilities,
-                serverVersion: '10.0.0',
-                supportedMessageTypes: [
-                    'narseseInput', 'testLMConnection', 'subscribe', 'unsubscribe',
-                    'ping', 'log', 'requestCapabilities'
-                ]
-            },
-            timestamp: Date.now()
-        });
-    }
-
-    // Handler for narsese input messages
-    async _handleNarseseInput(client, message) {
-        try {
-            if (!message.payload || !message.payload.input) {
-                this._sendToClient(client, {
-                    type: 'narseseInput',
-                    payload: {
-                        input: message.payload?.input || '',
-                        success: false,
-                        message: 'Missing input in payload'
-                    }
-                });
-                return;
-            }
-
-            const narseseString = message.payload.input;
-
-            // Validate that we have a NAR instance to process the input
-            if (!this._nar) {
-                this._sendToClient(client, {
-                    type: 'narseseInput',
-                    payload: {
-                        input: narseseString,
-                        success: false,
-                        message: 'NAR instance not available'
-                    }
-                });
-                return;
-            }
-
-            // Process the input with the NAR
-            try {
-                const result = await this._nar.input(narseseString);
-
-                this._sendToClient(client, {
-                    type: 'narseseInput',
-                    payload: {
-                        input: narseseString,
-                        success: result,
-                        message: result ? 'Input processed successfully' : 'Input processing failed'
-                    }
-                });
-            } catch (error) {
-                console.error('Error processing narsese input:', error);
-                this._sendToClient(client, {
-                    type: 'narseseInput',
-                    payload: {
-                        input: narseseString,
-                        success: false,
-                        message: `Error: ${error.message}`
-                    }
-                });
-            }
-        } catch (error) {
-            console.error('Error in _handleNarseseInput:', error);
-            this._sendToClient(client, {
-                type: 'narseseInput',
-                payload: {
-                    input: message.payload?.input || '',
-                    success: false,
-                    message: `Internal error: ${error.message}`
-                }
-            });
-        }
-    }
-
     // Store reference to NAR for processing inputs
     listenToNAR(nar) {
         if (!nar || !nar.on) {
@@ -526,123 +396,6 @@ class WebSocketMonitor {
         });
 
         console.log('WebSocket monitor now listening to NAR events');
-    }
-
-    // Handler for testing LM connection
-    async _handleTestLMConnection(client, message) {
-        try {
-            const config = message.payload;
-
-            if (!config || !config.provider) {
-                return this._sendToClient(client, this._createTestResult(false, 'Missing configuration or provider in payload'));
-            }
-
-            // Check if we have access to the LM instance in the NAR
-            if (!this._nar || !this._nar.lm) {
-                return this._sendToClient(client, this._createTestResult(false, 'LM component not available'));
-            }
-
-            try {
-                // Try to create a test provider based on the configuration
-                const testProvider = await this._createTestProvider(config);
-
-                // Try to generate a test response
-                const testResponse = await testProvider.generateText('Hello, can you respond to this test message?', {
-                    maxTokens: 20
-                });
-
-                // Send success response
-                this._sendToClient(client, this._createTestResult(true,
-                    `Successfully connected to ${config.name || config.provider} provider`,
-                    {
-                        model: config.model,
-                        baseURL: config.baseURL,
-                        responseSample: testResponse.substring(0, 100) + (testResponse.length > 100 ? '...' : '')
-                    }
-                ));
-            } catch (error) {
-                console.error('LM connection test failed:', error);
-                this._sendToClient(client, this._createTestResult(false,
-                    `Connection failed: ${error.message || 'Unknown error'}`,
-                    {error: error.message}
-                ));
-            }
-        } catch (error) {
-            console.error('Error in _handleTestLMConnection:', error);
-            this._sendToClient(client, this._createTestResult(false, `Internal error: ${error.message}`));
-        }
-    }
-
-    // Helper method to create standardized test result messages
-    _createTestResult(success, message, additionalData = {}) {
-        return {
-            type: 'testLMConnection',
-            success,
-            message,
-            ...additionalData
-        };
-    }
-
-    // Helper method to create a test provider based on configuration
-    async _createTestProvider(config) {
-        const providerType = config.provider;
-
-        switch (providerType) {
-            case 'openai':
-                const {LangChainProvider} = await import('../lm/LangChainProvider.js');
-                return new LangChainProvider({
-                    provider: 'openai',
-                    modelName: config.model,
-                    apiKey: config.apiKey,
-                    temperature: config.temperature,
-                    maxTokens: config.maxTokens
-                });
-
-            case 'ollama':
-                const {LangChainProvider: OllamaProvider} = await import('../lm/LangChainProvider.js');
-                return new OllamaProvider({
-                    provider: 'ollama',
-                    modelName: config.model,
-                    baseURL: config.baseURL,
-                    temperature: config.temperature,
-                    maxTokens: config.maxTokens
-                });
-
-            case 'anthropic':
-                // Use a dummy provider for Anthropic since we don't have a real one
-                const {DummyProvider} = await import('../lm/DummyProvider.js');
-                return new DummyProvider({
-                    id: 'test-anthropic',
-                    responseTemplate: `Anthropic test response for: {prompt}`
-                });
-
-            default:
-                // For other providers, use a dummy provider
-                const {DummyProvider: GenericDummyProvider} = await import('../lm/DummyProvider.js');
-                return new GenericDummyProvider({
-                    id: `test-${providerType}`,
-                    responseTemplate: `Test response for ${providerType}: {prompt}`
-                });
-        }
-    }
-
-    // Handler for client log messages
-    _handleClientLog(client, message) {
-        // Log the client message to server console for debugging
-        const logMessage = `[CLIENT-${client.clientId}] ${message.level.toUpperCase()}: ${message.data.join(' ')}`;
-        console.log(logMessage);
-
-        // Optionally broadcast this log to other connected clients or store for debugging
-        if (message.level === 'error' || message.level === 'warn') {
-            // Broadcast error/warning logs to all clients for debugging purposes
-            this.broadcastEvent('clientLog', {
-                level: message.level,
-                clientId: client.clientId,
-                data: message.data,
-                timestamp: message.timestamp,
-                meta: message.meta
-            });
-        }
     }
 
     _broadcastMessage(message, eventType) {

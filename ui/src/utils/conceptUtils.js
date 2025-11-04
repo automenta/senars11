@@ -1,7 +1,3 @@
-/**
- * Utility functions for concept handling and visualization
- * Following AGENTS.md principles: DRY, modular, parameterized
- */
 
 export const calculatePriorityChange = (concept) =>
     concept.priority - (concept.initialPriority || concept.priority);

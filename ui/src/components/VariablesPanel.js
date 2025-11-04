@@ -1,31 +1,35 @@
-import React, {useMemo} from 'react';
-import useUiStore from '../stores/uiStore.js';
-import GenericPanel from './GenericPanel.js';
-import {createMetricDisplay} from '../utils/componentUtils.js';
+import React, {memo} from 'react';
+import {DataPanel} from './DataPanel.js';
+import {themeUtils} from '../utils/themeUtils.js';
+import {createMetricDisplay} from '../utils/panelUtils.js';
 
-const VariablesPanel = () => {
-    const systemMetrics = useUiStore(state => state.systemMetrics);
-
-    const variables = useMemo(() => systemMetrics ? [
-        {name: 'Cycles', value: systemMetrics.cycleCount},
-        {name: 'Tasks', value: systemMetrics.taskCount},
-        {name: 'Concepts', value: systemMetrics.conceptCount},
-        {name: 'Runtime (s)', value: (systemMetrics.runtime / 1000).toFixed(1)},
-        {name: 'Connected Clients', value: systemMetrics.connectedClients},
-    ] : [], [systemMetrics]);
-
-    const renderVariable = (variable, index) => createMetricDisplay(React, {
+const VariablesPanel = memo(() => {
+    const renderVariable = (variable) => createMetricDisplay(React, {
         label: variable.name,
         value: variable.value,
-        key: variable.name || index
+        key: variable.name
     });
 
-    return React.createElement(GenericPanel, {
+    return React.createElement(DataPanel, {
         title: 'System Variables',
-        items: variables,
+        dataSource: (state) => {
+            const metrics = state.systemMetrics;
+            return metrics ? [
+                {name: 'Cycles', value: metrics.cycleCount},
+                {name: 'Tasks', value: metrics.taskCount},
+                {name: 'Concepts', value: metrics.conceptCount},
+                {name: 'Runtime (s)', value: (metrics.runtime / 1000).toFixed(1)},
+                {name: 'Connected Clients', value: metrics.connectedClients},
+            ] : [];
+        },
         renderItem: renderVariable,
-        emptyMessage: 'No variables to inspect'
+        config: {
+            itemLabel: 'variables',
+            showItemCount: false,
+            emptyMessage: 'No variables to inspect',
+            containerHeight: 200
+        }
     });
-};
+});
 
 export default VariablesPanel;

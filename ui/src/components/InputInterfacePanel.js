@@ -1,8 +1,9 @@
-import React, {useCallback, useState} from 'react';
+import React, {memo, useCallback, useState} from 'react';
 import useUiStore from '../stores/uiStore.js';
-import GenericPanel from './GenericPanel.js';
+import {DataPanel} from './DataPanel.js';
+import {themeUtils} from '../utils/themeUtils.js';
 
-const InputInterfacePanel = () => {
+const InputInterfacePanel = memo(() => {
     const [inputText, setInputText] = useState('');
     const [history, setHistory] = useState([]);
     const wsService = useUiStore(state => state.wsService);
@@ -54,35 +55,35 @@ const InputInterfacePanel = () => {
         }
     }, [sendInput]);
 
-    const renderHistoryItem = useCallback((item, index) =>
+    const renderHistoryItem = (item) =>
         React.createElement('div',
             {
                 key: item.id,
                 style: {
                     padding: '0.5rem',
                     margin: '0.25rem 0',
-                    backgroundColor: item.status === 'error' ? '#f8d7da' : '#f8f9fa',
-                    border: `1px solid ${item.status === 'error' ? '#f5c6cb' : '#dee2e6'}`,
-                    borderRadius: '4px',
-                    fontSize: '0.85rem'
+                    backgroundColor: item.status === 'error' ? '#f8d7da' : themeUtils.get('BACKGROUNDS.SECONDARY'),
+                    border: `1px solid ${item.status === 'error' ? '#f5c6cb' : themeUtils.get('BORDERS.COLOR')}`,
+                    borderRadius: themeUtils.get('BORDERS.RADIUS.SM'),
+                    fontSize: themeUtils.get('FONTS.SIZE.SM')
                 }
             },
-            React.createElement('div', {style: {fontWeight: 'bold', display: 'flex', justifyContent: 'space-between'}},
+            React.createElement('div', {style: {fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD'), display: 'flex', justifyContent: 'space-between'}},
                 React.createElement('span', null, item.input),
-                React.createElement('span', {style: {fontSize: '0.7rem', color: '#666'}},
+                React.createElement('span', {style: {fontSize: themeUtils.get('FONTS.SIZE.XXS'), color: themeUtils.get('TEXT.SECONDARY')}},
                     new Date(item.timestamp).toLocaleTimeString()
                 )
             ),
             item.status === 'error' && React.createElement('div',
-                {style: {fontSize: '0.75rem', color: '#dc3545', marginTop: '0.25rem'}},
+                {style: {fontSize: themeUtils.get('FONTS.SIZE.XS'), color: '#dc3545', marginTop: '0.25rem'}},
                 `Error: ${item.error || 'Unknown error'}`
             )
-        ), []);
+        );
 
     // Input form
     const inputForm = React.createElement('div',
-        {style: {marginBottom: '1rem', padding: '0.5rem', backgroundColor: '#f8f9fa', borderRadius: '4px'}},
-        React.createElement('div', {style: {marginBottom: '0.5rem', fontWeight: 'bold'}}, 'Input Narsese:'),
+        {style: {marginBottom: '1rem', padding: '0.5rem', backgroundColor: themeUtils.get('BACKGROUNDS.SECONDARY'), borderRadius: themeUtils.get('BORDERS.RADIUS.SM')}},
+        React.createElement('div', {style: {marginBottom: '0.5rem', fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD')}}, 'Input Narsese:'),
         React.createElement('textarea', {
             value: inputText,
             onChange: (e) => setInputText(e.target.value),
@@ -91,11 +92,11 @@ const InputInterfacePanel = () => {
             style: {
                 width: '100%',
                 padding: '0.5rem',
-                border: '1px solid #ced4da',
-                borderRadius: '4px',
+                border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`,
+                borderRadius: themeUtils.get('BORDERS.RADIUS.SM'),
                 resize: 'vertical',
                 minHeight: '60px',
-                fontSize: '0.9rem',
+                fontSize: themeUtils.get('FONTS.SIZE.BASE'),
                 fontFamily: 'monospace'
             }
         }),
@@ -105,10 +106,10 @@ const InputInterfacePanel = () => {
                 disabled: !inputText.trim() || !wsService || !wsConnected,
                 style: {
                     padding: '0.5rem 1rem',
-                    backgroundColor: (wsService && wsConnected) ? '#007bff' : '#6c757d',
+                    backgroundColor: (wsService && wsConnected) ? themeUtils.get('COLORS.PRIMARY') : '#6c757d',
                     color: 'white',
                     border: 'none',
-                    borderRadius: '4px',
+                    borderRadius: themeUtils.get('BORDERS.RADIUS.SM'),
                     cursor: (inputText.trim() && wsService && wsConnected) ? 'pointer' : 'not-allowed'
                 }
             }, wsConnected ? 'Submit Input' : 'Disconnected')
@@ -117,9 +118,9 @@ const InputInterfacePanel = () => {
 
     // Examples of valid Narsese
     const examples = React.createElement('div',
-        {style: {marginBottom: '1rem', padding: '0.75rem', backgroundColor: '#e9ecef', borderRadius: '4px'}},
-        React.createElement('div', {style: {fontWeight: 'bold', marginBottom: '0.5rem'}}, 'Narsese Examples:'),
-        React.createElement('ul', {style: {margin: 0, paddingLeft: '1rem', fontSize: '0.85rem'}},
+        {style: {marginBottom: '1rem', padding: '0.75rem', backgroundColor: '#e9ecef', borderRadius: themeUtils.get('BORDERS.RADIUS.SM')}},
+        React.createElement('div', {style: {fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD'), marginBottom: '0.5rem'}}, 'Narsese Examples:'),
+        React.createElement('ul', {style: {margin: 0, paddingLeft: '1rem', fontSize: themeUtils.get('FONTS.SIZE.SM')}},
             React.createElement('li', null, '<cat --> animal>. (Belief)'),
             React.createElement('li', null, '<dog --> mammal>? (Question)'),
             React.createElement('li', null, '<bird --> flyer>! (Goal)'),
@@ -129,53 +130,53 @@ const InputInterfacePanel = () => {
 
     // History section
     const historySection = React.createElement('div', null,
-        React.createElement('div', {style: {fontWeight: 'bold', marginBottom: '0.5rem'}}, 'Input History:'),
+        React.createElement('div', {style: {fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD'), marginBottom: '0.5rem'}}, 'Input History:'),
         history.length > 0
             ? React.createElement('div', null, ...history.map(renderHistoryItem))
             : React.createElement('div', {
                 style: {
                     padding: '0.5rem',
                     fontStyle: 'italic',
-                    color: '#6c757d'
+                    color: themeUtils.get('TEXT.SECONDARY')
                 }
             }, 'No input history yet.')
     );
 
-    const items = [
-        {type: 'header', content: 'Direct Input Interface'},
-        {type: 'inputForm', content: inputForm},
-        {type: 'examples', content: examples},
-        {type: 'header', content: 'Input History'},
-        {type: 'history', content: historySection}
-    ];
-
-    const renderInputItem = useCallback((item, index) => {
-        if (item.type === 'header') {
-            return React.createElement('div', {
-                style: {
-                    fontWeight: 'bold',
-                    fontSize: '1rem',
-                    margin: '1rem 0 0.5rem 0',
-                    padding: '0.5rem 0',
-                    borderBottom: '2px solid #007bff',
-                    color: '#333'
-                }
-            }, item.content);
-        } else if (item.type === 'inputForm' || item.type === 'examples') {
-            return item.content;
-        } else if (item.type === 'history') {
-            return item.content;
-        }
-        return null;
-    }, []);
-
-    return React.createElement(GenericPanel, {
+    return React.createElement(DataPanel, {
         title: 'Input Interface',
-        maxHeight: 'calc(100% - 2rem)',
-        items,
-        renderItem: renderInputItem,
-        emptyMessage: 'Enter Narsese commands to interact directly with the reasoning engine.'
+        dataSource: () => [
+            {type: 'header', content: 'Direct Input Interface'},
+            {type: 'inputForm', content: inputForm},
+            {type: 'examples', content: examples},
+            {type: 'header', content: 'Input History'},
+            {type: 'history', content: historySection}
+        ],
+        renderItem: (item) => {
+            if (item.type === 'header') {
+                return React.createElement('div', {
+                    style: {
+                        fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD'),
+                        fontSize: themeUtils.get('FONTS.SIZE.BASE'),
+                        margin: '1rem 0 0.5rem 0',
+                        padding: '0.5rem 0',
+                        borderBottom: `2px solid ${themeUtils.get('COLORS.PRIMARY')}`,
+                        color: themeUtils.get('TEXT.PRIMARY')
+                    }
+                }, item.content);
+            } else if (item.type === 'inputForm' || item.type === 'examples') {
+                return item.content;
+            } else if (item.type === 'history') {
+                return item.content;
+            }
+            return null;
+        },
+        config: {
+            itemLabel: 'items',
+            showItemCount: false,
+            emptyMessage: 'Enter Narsese commands to interact directly with the reasoning engine.',
+            containerHeight: 400
+        }
     });
-};
+});
 
 export default InputInterfacePanel;

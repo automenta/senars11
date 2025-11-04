@@ -1,16 +1,6 @@
-/**
- * Utility functions for common component patterns and reusable UI elements
- * Following AGENTS.md principles: DRY, modular, parameterized
- */
 
 import {listItemStyles, typography} from './styles.js';
 
-/**
- * Creates a standardized list item element with consistent styling
- * @param {Object} React - React object
- * @param {Object} props - Component properties
- * @returns {ReactElement} - Styled list item element
- */
 export const createListItem = (React, props) => {
     const {key, style = {}, children = [], compact = false, expandable = false} = props;
     
@@ -24,12 +14,6 @@ export const createListItem = (React, props) => {
     return React.createElement('div', {key, style: computedStyle}, ...children);
 };
 
-/**
- * Creates a standardized header element
- * @param {Object} React - React object
- * @param {Object} props - Component properties
- * @returns {ReactElement} - Styled header element
- */
 export const createHeader = (React, props) => {
     const {content, style = {}} = props;
     
@@ -45,12 +29,6 @@ export const createHeader = (React, props) => {
     return React.createElement('div', {style: computedStyle}, content);
 };
 
-/**
- * Creates a standardized control bar element
- * @param {Object} React - React object
- * @param {Object} props - Component properties
- * @returns {ReactElement} - Styled control bar element
- */
 export const createControlBar = (React, props) => {
     const {children = [], style = {}} = props;
     
@@ -67,12 +45,6 @@ export const createControlBar = (React, props) => {
     return React.createElement('div', {style: computedStyle}, ...children);
 };
 
-/**
- * Creates a standardized timeline item element
- * @param {Object} React - React object
- * @param {Object} props - Component properties
- * @returns {ReactElement} - Styled timeline item element
- */
 export const createTimelineItem = (React, props) => {
     const {key, children = [], index = 0, style = {}} = props;
     
@@ -89,12 +61,6 @@ export const createTimelineItem = (React, props) => {
     return React.createElement('div', {key, style: computedStyle}, ...children);
 };
 
-/**
- * Creates a standardized metric display element
- * @param {Object} React - React object
- * @param {Object} props - Component properties
- * @returns {ReactElement} - Styled metric element
- */
 export const createMetricDisplay = (React, props) => {
     const {label, value, style = {}} = props;
     
@@ -116,12 +82,6 @@ export const createMetricDisplay = (React, props) => {
     );
 };
 
-/**
- * Creates a standardized progress bar element
- * @param {Object} React - React object
- * @param {Object} props - Component properties
- * @returns {ReactElement} - Styled progress bar element
- */
 export const createProgressBar = (React, props) => {
     const {percentage, color = '#007bff', style = {}} = props;
     

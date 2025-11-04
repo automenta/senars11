@@ -1,18 +1,6 @@
 import React, {memo, useEffect, useMemo, useState} from 'react';
 import {TimeDisplay} from './GenericComponents.js';
 
-/**
- * Generic panel component for displaying lists of items
- * @param {Array} items - Array of items to display
- * @param {Function} renderItem - Function to render each item
- * @param {string} maxHeight - Max height for the scrolling container
- * @param {string} emptyMessage - Message to show when no items
- * @param {Object} containerStyle - Additional styles for the container
- * @param {boolean} withTimestamp - Whether to show a timestamp
- * @param {string} title - Panel title
- * @param {boolean} autoScroll - Whether to auto-scroll to the bottom
- * @param {number} maxItems - Maximum number of items to display (for performance)
- */
 const GenericPanel = memo(({
     items = [],
     renderItem,
@@ -27,15 +15,13 @@ const GenericPanel = memo(({
 }) => {
     const [containerRef, setContainerRef] = useState(null);
     
-    // Truncate items if maxItems is specified
     const displayItems = useMemo(() => maxItems ? items.slice(-maxItems) : items, [items, maxItems]);
     
-    // Auto-scroll to bottom when items change if autoScroll is enabled
     useEffect(() => {
         if (autoScroll && containerRef) {
             containerRef.scrollTop = containerRef.scrollHeight;
         }
-    }, [displayItems.length, autoScroll, containerRef]); // Only check length to avoid unnecessary triggers
+    }, [displayItems.length, autoScroll, containerRef]);
     
     const containerStyleComputed = useMemo(() => ({
         maxHeight,
@@ -45,7 +31,7 @@ const GenericPanel = memo(({
     
     const containerProps = useMemo(() => ({
         style: containerStyleComputed,
-        ref: (el) => setContainerRef(el) // Set ref for auto-scroll functionality
+        ref: (el) => setContainerRef(el)
     }), [containerStyleComputed]);
     
     const titleElement = title ? React.createElement('div', {

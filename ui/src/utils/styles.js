@@ -1,11 +1,5 @@
-/**
- * Common styling utilities and constants for UI components
- * Following AGENTS.md principles: DRY, modular, parameterized
- */
 
-// Common CSS variables for consistent theming
 export const themeVariables = {
-    // Colors
     '--bg-primary': 'var(--bg-primary, #ffffff)',
     '--bg-secondary': 'var(--bg-secondary, #f8f9fa)',
     '--text-primary': 'var(--text-primary, #212529)',
@@ -16,18 +10,15 @@ export const themeVariables = {
     '--error': 'var(--error, #dc3545)',
     '--info': 'var(--info, #17a2b8)',
     
-    // Spacing
     '--spacing-xs': 'var(--spacing-xs, 0.25rem)',
     '--spacing-sm': 'var(--spacing-sm, 0.5rem)',
     '--spacing-md': 'var(--spacing-md, 1rem)',
     '--spacing-lg': 'var(--spacing-lg, 1.5rem)',
     
-    // Sizing
     '--radius': 'var(--radius, 4px)',
     '--border-width': 'var(--border-width, 1px)',
 };
 
-// Common style patterns for list items
 export const listItemStyles = {
     base: {
         padding: 'var(--spacing-sm, 0.5rem)',
@@ -48,7 +39,6 @@ export const listItemStyles = {
     },
 };
 
-// Common typography styles
 export const typography = {
     title: {
         fontWeight: 'bold',
@@ -72,7 +62,6 @@ export const typography = {
     },
 };
 
-// Utility function to merge styles with theme variables
 export const mergeStyles = (...styles) => {
     const merged = {};
     for (const style of styles) {
@@ -83,7 +72,6 @@ export const mergeStyles = (...styles) => {
     return merged;
 };
 
-// Common style builders
 export const buildListItemStyle = (compact = false, expandable = false) => {
     const styles = [listItemStyles.base];
     if (compact) styles.push(listItemStyles.compact);

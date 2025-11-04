@@ -1,6 +1,3 @@
-/**
- * Extended utility functions for common operations in the application
- */
 
 /**
  * Generate a unique ID using timestamp and random components

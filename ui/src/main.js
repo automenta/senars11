@@ -10,7 +10,7 @@ initializeTheme();
 // Add performance monitoring in development
 if (typeof process !== 'undefined' && process.env.NODE_ENV === 'development') {
     import('./utils/performance.js').then(() => {
-        console.log('Performance monitoring enabled in development mode');
+        console.debug('Performance monitoring enabled in development mode');
     });
 }
 

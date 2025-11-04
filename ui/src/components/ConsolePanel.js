@@ -1,42 +1,43 @@
-import React from 'react';
+import React, {memo} from 'react';
 import useUiStore from '../stores/uiStore.js';
-import GenericPanel from './GenericPanel.js';
+import {DataPanel} from './DataPanel.js';
+import {themeUtils} from '../utils/themeUtils.js';
 
-const ConsolePanel = () => {
+const ConsolePanel = memo(() => {
     // For now, we'll add a simulated console log store to the UI store
     // In the real app, this would be populated by consoleBridge
     const consoleMessages = useUiStore(state => state.notifications); // Reusing notifications as sample data
 
-    const renderConsoleMessage = (message, index) =>
+    const renderConsoleMessage = (message) =>
         React.createElement('div',
             {
-                key: message.id || index,
                 style: {
                     padding: '0.25rem 0.5rem',
                     margin: '0.125rem 0',
-                    backgroundColor: message.type === 'error' ? '#ffe6e6' : message.type === 'warning' ? '#fff3e6' : message.type === 'success' ? '#e6ffe6' : '#f0f0f0',
-                    border: '1px solid #ddd',
-                    borderRadius: '2px',
-                    fontSize: '0.8rem',
+                    backgroundColor: message.type === 'error' ? '#ffe6e6' : message.type === 'warning' ? '#fff3e6' : message.type === 'success' ? '#e6ffe6' : themeUtils.get('BACKGROUNDS.SECONDARY'),
+                    border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`,
+                    borderRadius: themeUtils.get('BORDERS.RADIUS.XS'),
+                    fontSize: themeUtils.get('FONTS.SIZE.SM'),
                     fontFamily: 'monospace'
                 }
             },
-            React.createElement('span', {style: {fontWeight: 'bold'}},
+            React.createElement('span', {style: {fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD')}},
                 message.type ? `${(message.type).toUpperCase()}: ` : ''),
             React.createElement('span', null, message.message || message.title || 'Console message')
         );
 
-    return React.createElement(GenericPanel, {
+    return React.createElement(DataPanel, {
         title: 'Console',
-        items: consoleMessages,
+        dataSource: () => consoleMessages,
         renderItem: renderConsoleMessage,
-        maxHeight: 'calc(100% - 2rem)',
-        emptyMessage: 'Console is empty',
-        withTimestamp: true,
-        autoScroll: true,
-        maxItems: 100,
-        showCount: true
+        config: {
+            itemLabel: 'messages',
+            showItemCount: true,
+            emptyMessage: 'Console is empty',
+            autoScroll: true,
+            maxItems: 100
+        }
     });
-};
+});
 
 export default ConsolePanel;
