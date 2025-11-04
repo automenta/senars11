@@ -375,12 +375,7 @@ export class HybridReasoningEngine {
             const results = await this.nalEngine.applyRules(task);
 
             // Validate results before returning
-            if (!Array.isArray(results)) {
-                this.logger.warn('NAL engine returned non-array results, converting to array');
-                return Array.isArray(results) ? results : [];
-            }
-
-            return results;
+            return Array.isArray(results) ? results : [];
         } catch (error) {
             this.logger.error('Error in NAL reasoning:', error);
             // Return empty array but log more details
@@ -644,14 +639,10 @@ export class HybridReasoningEngine {
 
             // Compare NAL and LM results for consistency
             for (const nalResult of nalResults) {
-                if (!nalResult || typeof nalResult !== 'object' || !nalResult.term) {
-                    continue; // Skip invalid results
-                }
+                if (!nalResult || typeof nalResult !== 'object' || !nalResult.term) continue; // Skip invalid results
 
                 for (const lmResult of lmResults) {
-                    if (!lmResult || typeof lmResult !== 'object' || !lmResult.term) {
-                        continue; // Skip invalid results
-                    }
+                    if (!lmResult || typeof lmResult !== 'object' || !lmResult.term) continue; // Skip invalid results
 
                     try {
                         const similarity = this._calculateSemanticSimilarity(nalResult, lmResult);
@@ -664,9 +655,7 @@ export class HybridReasoningEngine {
                         if (similarity > this.config.confidenceThreshold) {
                             // Results are consistent, boost confidence
                             const enhancedResult = this._boostConsistentResult(nalResult, lmResult);
-                            if (enhancedResult) {
-                                validated.push(enhancedResult);
-                            }
+                            if (enhancedResult) validated.push(enhancedResult);
                         } else {
                             // Results differ, flag for conflict resolution
                             this.logger.debug(`Potential consistency issue detected between NAL and LM results with similarity: ${similarity}`);

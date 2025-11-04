@@ -29,7 +29,8 @@ class TestAnalyzer extends BaseAnalyzer {
     if (this.verbose) console.log('\n🔍 Collecting Unit Test Results...');
 
     try {
-      let testResult = spawnSync('npx', ['jest', '--json', '--silent'], {
+      // Try jest first
+      const testResult = spawnSync('npx', ['jest', '--json', '--silent'], {
         cwd: process.cwd(),
         timeout: 180000,
         encoding: 'utf8',
@@ -53,81 +54,73 @@ class TestAnalyzer extends BaseAnalyzer {
           return this.createEmptyTestResult('No output from Jest');
         }
         
-        let parsedResult = this.parseTestOutput(output);
+        const parsedResult = this.parseTestOutput(output);
         
         if (parsedResult && parsedResult.testResults) {
           const individualTestResults = this.extractIndividualTestResults(parsedResult.testResults);
-          return {
-            status: testResult.status === 0 ? 'success' : 'partial',
-            totalTests: parsedResult.numTotalTests || 0,
-            passedTests: parsedResult.numPassedTests || 0,
-            failedTests: parsedResult.numFailedTests || 0,
-            skippedTests: parsedResult.numPendingTests || 0,
-            todoTests: parsedResult.numTodoTests || 0,
-            testSuites: parsedResult.numTotalTestSuites || 0,
-            totalSuites: parsedResult.numTotalTestSuites || 0,
-            passedSuites: parsedResult.numPassedTestSuites || 0,
-            failedSuites: parsedResult.numFailedTestSuites || 0,
-            testDuration: parsedResult.endTime ? (parsedResult.endTime - parsedResult.startTime) : 'unknown',
-            individualTestResults,
-            slowestTests: this.getSlowestTests(individualTestResults),
-            testFiles: getTestFilesList() // Using helper function
-          };
+          return this._buildTestResult(testResult, parsedResult, individualTestResults);
         }
       }
 
       // Fallback to npm test
-      const altTestResult = spawnSync('npm', ['test', '--', '--json'], {
-        cwd: process.cwd(),
-        timeout: 120000,
-        encoding: 'utf8',
-        stdio: ['pipe', 'pipe', 'pipe']
-      });
-      
-      if (altTestResult.error) {
-        if (this.verbose) console.log('❌ NPM test command execution failed:', altTestResult.error.message);
-        return this.createEmptyTestResult('NPM test command execution error');
-      }
-      
-      if (altTestResult.status === 0 || altTestResult.status === 1) {
-        const output = altTestResult.stdout || altTestResult.stderr;
-        if (!output) {
-          if (this.verbose) console.log('❌ No output from NPM test command');
-          return this.createEmptyTestResult('No output from NPM test');
-        }
-        
-        try {
-          let fallbackParsed = JSON.parse(output.trim());
-          if (fallbackParsed.testResults) {
-            const individualTestResults = this.extractIndividualTestResults(fallbackParsed.testResults);
-            return {
-              status: altTestResult.status === 0 ? 'success' : 'partial',
-              totalTests: fallbackParsed.numTotalTests || 0,
-              passedTests: fallbackParsed.numPassedTests || 0,
-              failedTests: fallbackParsed.numFailedTests || 0,
-              skippedTests: fallbackParsed.numPendingTests || 0,
-              todoTests: fallbackParsed.numTodoTests || 0,
-              testSuites: fallbackParsed.numTotalTestSuites || 0,
-              totalSuites: fallbackParsed.numTotalTestSuites || 0,
-              passedSuites: fallbackParsed.numPassedTestSuites || 0,
-              failedSuites: fallbackParsed.numFailedTestSuites || 0,
-              testDuration: fallbackParsed.endTime ? (fallbackParsed.endTime - fallbackParsed.startTime) : 'unknown',
-              individualTestResults,
-              slowestTests: this.getSlowestTests(individualTestResults),
-              testFiles: getTestFilesList()
-            };
-          }
-        } catch (parseError) {
-          if (this.verbose) console.log('❌ Fallback test result parsing failed:', parseError.message);
-        }
-      }
-
-      return this.createEmptyTestResult('Unable to parse test results');
-
+      return await this._runFallbackTest();
     } catch (error) {
       if (this.verbose) console.log(`❌ Test collection error: ${error.message}`);
       return this.createEmptyTestResult(error.message);
     }
+  }
+
+  _buildTestResult(testResult, parsedResult, individualTestResults) {
+    return {
+      status: testResult.status === 0 ? 'success' : 'partial',
+      totalTests: parsedResult.numTotalTests || 0,
+      passedTests: parsedResult.numPassedTests || 0,
+      failedTests: parsedResult.numFailedTests || 0,
+      skippedTests: parsedResult.numPendingTests || 0,
+      todoTests: parsedResult.numTodoTests || 0,
+      testSuites: parsedResult.numTotalTestSuites || 0,
+      totalSuites: parsedResult.numTotalTestSuites || 0,
+      passedSuites: parsedResult.numPassedTestSuites || 0,
+      failedSuites: parsedResult.numFailedTestSuites || 0,
+      testDuration: parsedResult.endTime ? (parsedResult.endTime - parsedResult.startTime) : 'unknown',
+      individualTestResults,
+      slowestTests: this.getSlowestTests(individualTestResults),
+      testFiles: getTestFilesList()
+    };
+  }
+
+  async _runFallbackTest() {
+    const altTestResult = spawnSync('npm', ['test', '--', '--json'], {
+      cwd: process.cwd(),
+      timeout: 120000,
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'pipe']
+    });
+    
+    if (altTestResult.error) {
+      if (this.verbose) console.log('❌ NPM test command execution failed:', altTestResult.error.message);
+      return this.createEmptyTestResult('NPM test command execution error');
+    }
+    
+    if (altTestResult.status === 0 || altTestResult.status === 1) {
+      const output = altTestResult.stdout || altTestResult.stderr;
+      if (!output) {
+        if (this.verbose) console.log('❌ No output from NPM test command');
+        return this.createEmptyTestResult('No output from NPM test');
+      }
+      
+      try {
+        const fallbackParsed = JSON.parse(output.trim());
+        if (fallbackParsed.testResults) {
+          const individualTestResults = this.extractIndividualTestResults(fallbackParsed.testResults);
+          return this._buildTestResult(altTestResult, fallbackParsed, individualTestResults);
+        }
+      } catch (parseError) {
+        if (this.verbose) console.log('❌ Fallback test result parsing failed:', parseError.message);
+      }
+    }
+
+    return this.createEmptyTestResult('Unable to parse test results');
   }
   
   createEmptyTestResult(errorMsg) {
@@ -206,72 +199,10 @@ class CoverageAnalyzer extends BaseAnalyzer {
     if (this.verbose) console.log('\n🔍 Collecting Coverage Data...');
 
     try {
-      let coverageData = null;
-      const coveragePath = './coverage';
+      let coverageData = await this._loadOrCreateCoverage();
       
-      if (fs.existsSync(coveragePath)) {
-        const coverageFile = path.join(coveragePath, 'coverage-summary.json');
-        if (fs.existsSync(coverageFile)) {
-          try {
-            coverageData = JSON.parse(fs.readFileSync(coverageFile, 'utf8'));
-          } catch (parseError) {
-            if (this.verbose) console.log('❌ Error parsing coverage file:', parseError.message);
-            return { available: false, error: `Parse error: ${parseError.message}` };
-          }
-        }
-      }
-
-      if (!coverageData) {
-        if (this.verbose) console.log('No existing coverage data found, attempting to generate...');
-        
-        const result = spawnSync('npm', ['test', '--', '--coverage', '--coverageReporters=json-summary'], {
-          cwd: process.cwd(),
-          timeout: 120000,
-          encoding: 'utf8',
-          stdio: ['pipe', 'pipe', 'pipe']
-        });
-        
-        if (result.error) {
-          if (this.verbose) console.log('❌ Coverage command execution failed:', result.error.message);
-          return { available: false, error: `Command execution error: ${result.error.message}` };
-        }
-        
-        if (result.status === 0) {
-          const coverageFile = './coverage/coverage-summary.json';
-          if (fs.existsSync(coverageFile)) {
-            try {
-              coverageData = JSON.parse(fs.readFileSync(coverageFile, 'utf8'));
-            } catch (parseError) {
-              if (this.verbose) console.log('❌ Error parsing generated coverage file:', parseError.message);
-              return { available: false, error: `Parse error: ${parseError.message}` };
-            }
-          }
-        }
-      }
-
       if (coverageData) {
-        const summary = coverageData.total;
-        const coverageStats = {
-          statements: summary.statements.pct,
-          branches: summary.branches.pct,
-          functions: summary.functions.pct,
-          lines: summary.lines.pct,
-          total: {
-            statements: summary.statements.total,
-            branches: summary.branches.total,
-            functions: summary.functions.total,
-            lines: summary.lines.total
-          },
-          covered: {
-            statements: summary.statements.covered,
-            branches: summary.branches.covered,
-            functions: summary.functions.covered,
-            lines: summary.lines.covered
-          }
-        };
-        
-        coverageStats.fileAnalysis = analyzeCoverageByFile();
-        return coverageStats;
+        return this._buildCoverageStats(coverageData);
       } else {
         if (this.verbose) console.log('❌ No coverage data found or generated');
         return { available: false };
@@ -280,6 +211,78 @@ class CoverageAnalyzer extends BaseAnalyzer {
       if (this.verbose) console.log(`❌ Coverage collection error: ${error.message}`);
       return { error: error.message };
     }
+  }
+
+  async _loadOrCreateCoverage() {
+    let coverageData = null;
+    const coveragePath = './coverage';
+    
+    if (fs.existsSync(coveragePath)) {
+      const coverageFile = path.join(coveragePath, 'coverage-summary.json');
+      if (fs.existsSync(coverageFile)) {
+        try {
+          coverageData = JSON.parse(fs.readFileSync(coverageFile, 'utf8'));
+        } catch (parseError) {
+          if (this.verbose) console.log('❌ Error parsing coverage file:', parseError.message);
+          return null;
+        }
+      }
+    }
+
+    if (!coverageData) {
+      if (this.verbose) console.log('No existing coverage data found, attempting to generate...');
+      
+      const result = spawnSync('npm', ['test', '--', '--coverage', '--coverageReporters=json-summary'], {
+        cwd: process.cwd(),
+        timeout: 120000,
+        encoding: 'utf8',
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
+      
+      if (result.error) {
+        if (this.verbose) console.log('❌ Coverage command execution failed:', result.error.message);
+        return null;
+      }
+      
+      if (result.status === 0) {
+        const coverageFile = './coverage/coverage-summary.json';
+        if (fs.existsSync(coverageFile)) {
+          try {
+            coverageData = JSON.parse(fs.readFileSync(coverageFile, 'utf8'));
+          } catch (parseError) {
+            if (this.verbose) console.log('❌ Error parsing generated coverage file:', parseError.message);
+            return null;
+          }
+        }
+      }
+    }
+    
+    return coverageData;
+  }
+
+  _buildCoverageStats(coverageData) {
+    const summary = coverageData.total;
+    const coverageStats = {
+      statements: summary.statements.pct,
+      branches: summary.branches.pct,
+      functions: summary.functions.pct,
+      lines: summary.lines.pct,
+      total: {
+        statements: summary.statements.total,
+        branches: summary.branches.total,
+        functions: summary.functions.total,
+        lines: summary.lines.total
+      },
+      covered: {
+        statements: summary.statements.covered,
+        branches: summary.branches.covered,
+        functions: summary.functions.covered,
+        lines: summary.lines.covered
+      }
+    };
+    
+    coverageStats.fileAnalysis = analyzeCoverageByFile();
+    return coverageStats;
   }
 }
 
@@ -344,87 +347,93 @@ class StaticAnalyzer extends BaseAnalyzer {
         dependencyInfo: {}
       };
 
-      const countFiles = (dir) => {
-        if (!fs.existsSync(dir)) {
-          if (this.verbose) console.log(`❌ Directory does not exist: ${dir}`);
-          return;
-        }
-        
-        let items;
-        try {
-          items = fs.readdirSync(dir, { withFileTypes: true });
-        } catch (readError) {
-          if (this.verbose) console.log(`❌ Cannot read directory: ${dir}`, readError.message);
-          return;
-        }
-
-        for (const item of items) {
-          const fullPath = path.join(dir, item.name);
-
-          if (item.isDirectory()) {
-            stats.directories++;
-            countFiles(fullPath);
-          } else if (item.isFile()) {
-            const ext = path.extname(item.name).substring(1) || 'no_ext';
-            stats.filesByType[ext] = (stats.filesByType[ext] || 0) + 1;
-
-            if (item.name.endsWith('.js')) {
-              stats.jsFiles++;
-
-              let content;
-              try {
-                content = fs.readFileSync(fullPath, 'utf8');
-              } catch (readError) {
-                if (this.verbose) console.log(`⚠️ Cannot read file: ${fullPath}`, readError.message);
-                continue; // Skip files that can't be read
-              }
-              
-              try {
-                const lines = content.split('\n').length;
-                stats.totalLines += lines;
-
-                const imports = extractImports(content);
-                const complexity = calculateComplexityMetrics(content);
-
-                stats.fileDetails.push({
-                  path: path.relative('.', fullPath),
-                  lines,
-                  size: content.length,
-                  imports,
-                  complexity
-                });
-              } catch (processingError) {
-                if (this.verbose) console.log(`⚠️ Error processing file: ${fullPath}`, processingError.message);
-                continue; // Skip files that cause processing errors
-              }
-            }
-          }
-        }
-      };
-
-      countFiles(srcPath);
+      this._traverseDirectory(srcPath, stats);
 
       stats.fileDetails.sort((a, b) => b.lines - a.lines);
       stats.largestFiles = stats.fileDetails.slice(0, TOP_N);
 
       if (stats.fileDetails.length > 0) {
-        const lineCounts = stats.fileDetails.map(f => f.lines);
-        stats.avgLinesPerFile = Math.round(stats.totalLines / stats.fileDetails.length);
-        stats.medianLinesPerFile = calculateMedian(lineCounts);
-        stats.largestFile = stats.fileDetails[0];
-        stats.smallestFile = stats.fileDetails[stats.fileDetails.length - 1];
-
-        const allComplexity = stats.fileDetails.map(f => f.complexity);
-        if (allComplexity.length > 0) {
-          stats.avgComplexity = allComplexity.reduce((sum, comp) => sum + comp.cyclomatic, 0) / allComplexity.length;
-          stats.avgFunctionCount = allComplexity.reduce((sum, comp) => sum + comp.functionCount, 0) / allComplexity.length;
-        }
+        this._calculateSummaryStats(stats);
       }
 
       return stats;
     } catch (error) {
       if (this.verbose) console.log(`❌ Static analysis error: ${error.message}`);
       return { error: error.message };
+    }
+  }
+
+  _traverseDirectory(dir, stats) {
+    if (!fs.existsSync(dir)) {
+      if (this.verbose) console.log(`❌ Directory does not exist: ${dir}`);
+      return;
+    }
+    
+    let items;
+    try {
+      items = fs.readdirSync(dir, { withFileTypes: true });
+    } catch (readError) {
+      if (this.verbose) console.log(`❌ Cannot read directory: ${dir}`, readError.message);
+      return;
+    }
+
+    for (const item of items) {
+      const fullPath = path.join(dir, item.name);
+
+      if (item.isDirectory()) {
+        stats.directories++;
+        this._traverseDirectory(fullPath, stats);
+      } else if (item.isFile()) {
+        this._processFile(item, fullPath, stats);
+      }
+    }
+  }
+
+  _processFile(item, fullPath, stats) {
+    const ext = path.extname(item.name).substring(1) || 'no_ext';
+    stats.filesByType[ext] = (stats.filesByType[ext] || 0) + 1;
+
+    if (item.name.endsWith('.js')) {
+      stats.jsFiles++;
+      const content = this._readFileContent(fullPath);
+      if (content) {
+        const lines = content.split('\n').length;
+        stats.totalLines += lines;
+
+        const imports = extractImports(content);
+        const complexity = calculateComplexityMetrics(content);
+
+        stats.fileDetails.push({
+          path: path.relative('.', fullPath),
+          lines,
+          size: content.length,
+          imports,
+          complexity
+        });
+      }
+    }
+  }
+
+  _readFileContent(fullPath) {
+    try {
+      return fs.readFileSync(fullPath, 'utf8');
+    } catch (readError) {
+      if (this.verbose) console.log(`⚠️ Cannot read file: ${fullPath}`, readError.message);
+      return null;
+    }
+  }
+
+  _calculateSummaryStats(stats) {
+    const lineCounts = stats.fileDetails.map(f => f.lines);
+    stats.avgLinesPerFile = Math.round(stats.totalLines / stats.fileDetails.length);
+    stats.medianLinesPerFile = calculateMedian(lineCounts);
+    stats.largestFile = stats.fileDetails[0];
+    stats.smallestFile = stats.fileDetails[stats.fileDetails.length - 1];
+
+    const allComplexity = stats.fileDetails.map(f => f.complexity);
+    if (allComplexity.length > 0) {
+      stats.avgComplexity = allComplexity.reduce((sum, comp) => sum + comp.cyclomatic, 0) / allComplexity.length;
+      stats.avgFunctionCount = allComplexity.reduce((sum, comp) => sum + comp.functionCount, 0) / allComplexity.length;
     }
   }
 }
@@ -447,44 +456,8 @@ class RequirementsAnalyzer extends BaseAnalyzer {
       
       const readmeContent = fs.readFileSync('./README.md', 'utf8');
       
-      const requirements = {
-        hasImmutableDataFoundation: readmeContent.includes('Immutable Data Foundation'),
-        hasComponentBasedArchitecture: readmeContent.includes('Component-Based Architecture'),
-        hasDualMemoryArchitecture: readmeContent.includes('Dual Memory Architecture'),
-        hasHybridReasoningIntegration: readmeContent.includes('Hybrid Reasoning Integration'),
-        hasLayerBasedExtensibility: readmeContent.includes('Layer-Based Extensibility'),
-        
-        hasTermClassDocumentation: readmeContent.includes('`Term` Class') || readmeContent.toLowerCase().includes('term') && readmeContent.includes('knowledge'),
-        hasTaskClassDocumentation: readmeContent.includes('`Task` Class') || readmeContent.toLowerCase().includes('task') && readmeContent.includes('unit of work'),
-        hasTruthDocumentation: readmeContent.includes('`Truth` Value Representation') || readmeContent.toLowerCase().includes('truth value'),
-        hasStampDocumentation: readmeContent.includes('`Stamp` and Evidence Tracking') || readmeContent.toLowerCase().includes('stamp') && readmeContent.includes('evidence'),
-        
-        hasNARDocumentation: readmeContent.includes('`NAR` (NARS Reasoner Engine)') || readmeContent.toLowerCase().includes('nar') && readmeContent.includes('orchestrator'),
-        hasMemoryDocumentation: readmeContent.includes('Memory and Focus Management') || readmeContent.toLowerCase().includes('memory') && readmeContent.includes('concept'),
-        hasParserDocumentation: readmeContent.includes('Parser System') || readmeContent.toLowerCase().includes('parser') && readmeContent.includes('narsese'),
-        hasLMDocumentation: readmeContent.includes('Language Model Integration') || readmeContent.toLowerCase().includes('lm integration'),
-        
-        hasBeliefGoalDistinction: readmeContent.includes('Belief vs. Goal') || readmeContent.toLowerCase().includes('belief') && readmeContent.includes('goal'),
-        hasUsageExamples: readmeContent.includes('Usage Examples'),
-        hasTestingStrategy: readmeContent.includes('Testing Strategy'),
-        hasAPIConventions: readmeContent.includes('API Conventions') || readmeContent.includes('conventions'),
-        hasErrorHandling: readmeContent.includes('Error Handling') || readmeContent.includes('robustness'),
-        hasSecurityImplementation: readmeContent.includes('Security Implementation'),
-        
-        hasCompoundIntelligence: readmeContent.includes('Compound Intelligence Architecture') || readmeContent.includes('compound intelligence'),
-        hasReinforcementLearning: readmeContent.includes('General-Purpose Reinforcement Learning') || readmeContent.includes('reinforcement learning'),
-        hasKeyObjectives: readmeContent.includes('Key Design Objectives') || readmeContent.includes('simplicity') || readmeContent.includes('robustness') || readmeContent.includes('consistency'),
-        
-        hasTechnicalChallenges: readmeContent.includes('Core Technical Challenges'),
-        
-        systemSize: readmeContent.length,
-        hasLongTermSpec: readmeContent.includes('Long-Term Specification'),
-        hasUserExperienceGoals: readmeContent.includes('User Experience Goals'),
-        hasTechnicalExcellence: readmeContent.includes('Technical Excellence Standards'),
-        hasDirectoryStructure: readmeContent.includes('Directory Structure'),
-        readmeComplete: readmeContent.length > 5000,
-      };
-
+      const requirements = this._analyzeRequirements(readmeContent);
+      
       const satisfiedCount = Object.values(requirements).filter(value => value === true).length;
       const totalCount = Object.keys(requirements).length;
 
@@ -497,6 +470,46 @@ class RequirementsAnalyzer extends BaseAnalyzer {
       if (this.verbose) console.log(`❌ Requirements analysis error: ${error.message}`);
       return { error: error.message };
     }
+  }
+
+  _analyzeRequirements(readmeContent) {
+    return {
+      hasImmutableDataFoundation: readmeContent.includes('Immutable Data Foundation'),
+      hasComponentBasedArchitecture: readmeContent.includes('Component-Based Architecture'),
+      hasDualMemoryArchitecture: readmeContent.includes('Dual Memory Architecture'),
+      hasHybridReasoningIntegration: readmeContent.includes('Hybrid Reasoning Integration'),
+      hasLayerBasedExtensibility: readmeContent.includes('Layer-Based Extensibility'),
+      
+      hasTermClassDocumentation: readmeContent.includes('`Term` Class') || readmeContent.toLowerCase().includes('term') && readmeContent.includes('knowledge'),
+      hasTaskClassDocumentation: readmeContent.includes('`Task` Class') || readmeContent.toLowerCase().includes('task') && readmeContent.includes('unit of work'),
+      hasTruthDocumentation: readmeContent.includes('`Truth` Value Representation') || readmeContent.toLowerCase().includes('truth value'),
+      hasStampDocumentation: readmeContent.includes('`Stamp` and Evidence Tracking') || readmeContent.toLowerCase().includes('stamp') && readmeContent.includes('evidence'),
+      
+      hasNARDocumentation: readmeContent.includes('`NAR` (NARS Reasoner Engine)') || readmeContent.toLowerCase().includes('nar') && readmeContent.includes('orchestrator'),
+      hasMemoryDocumentation: readmeContent.includes('Memory and Focus Management') || readmeContent.toLowerCase().includes('memory') && readmeContent.includes('concept'),
+      hasParserDocumentation: readmeContent.includes('Parser System') || readmeContent.toLowerCase().includes('parser') && readmeContent.includes('narsese'),
+      hasLMDocumentation: readmeContent.includes('Language Model Integration') || readmeContent.toLowerCase().includes('lm integration'),
+      
+      hasBeliefGoalDistinction: readmeContent.includes('Belief vs. Goal') || readmeContent.toLowerCase().includes('belief') && readmeContent.includes('goal'),
+      hasUsageExamples: readmeContent.includes('Usage Examples'),
+      hasTestingStrategy: readmeContent.includes('Testing Strategy'),
+      hasAPIConventions: readmeContent.includes('API Conventions') || readmeContent.includes('conventions'),
+      hasErrorHandling: readmeContent.includes('Error Handling') || readmeContent.includes('robustness'),
+      hasSecurityImplementation: readmeContent.includes('Security Implementation'),
+      
+      hasCompoundIntelligence: readmeContent.includes('Compound Intelligence Architecture') || readmeContent.includes('compound intelligence'),
+      hasReinforcementLearning: readmeContent.includes('General-Purpose Reinforcement Learning') || readmeContent.includes('reinforcement learning'),
+      hasKeyObjectives: readmeContent.includes('Key Design Objectives') || readmeContent.includes('simplicity') || readmeContent.includes('robustness') || readmeContent.includes('consistency'),
+      
+      hasTechnicalChallenges: readmeContent.includes('Core Technical Challenges'),
+      
+      systemSize: readmeContent.length,
+      hasLongTermSpec: readmeContent.includes('Long-Term Specification'),
+      hasUserExperienceGoals: readmeContent.includes('User Experience Goals'),
+      hasTechnicalExcellence: readmeContent.includes('Technical Excellence Standards'),
+      hasDirectoryStructure: readmeContent.includes('Directory Structure'),
+      readmeComplete: readmeContent.length > 5000,
+    };
   }
 }
 

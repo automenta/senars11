@@ -29,16 +29,10 @@ export class MemoryIndex {
             IndexUtils.addToIndex(this._indexes, 'compoundByOp', term.operator, concept);
         }
 
-        // Add to complexity-based index
+        // Add to additional indexes
         this._indexByComplexity(term, concept);
-
-        // Add to category-based index
         this._indexByCategory(term, concept);
-
-        // Add to activation-based index
         this._indexByActivation(concept);
-
-        // Add to temporal index
         this._indexByTemporal(concept);
     }
 
@@ -97,14 +91,12 @@ export class MemoryIndex {
     _indexByComplexity(term, concept) {
         const complexity = TermCategorization.getTermComplexity(term);
         const complexityLevel = TermCategorization.getComplexityLevel(complexity, this._config);
-
         IndexUtils.addToIndex(this._indexes, 'complexity', complexityLevel, concept);
     }
 
     _removeFromComplexityIndex(term, concept) {
         const complexity = TermCategorization.getTermComplexity(term);
         const complexityLevel = TermCategorization.getComplexityLevel(complexity, this._config);
-
         this._removeFromIndex('complexity', complexityLevel, concept);
     }
 
@@ -129,7 +121,6 @@ export class MemoryIndex {
     }
 
     _indexByTemporal(concept) {
-        // For now, we'll just index by creation time (concept should have a timestamp)
         const timestamp = concept.createdAt || Date.now();
         const temporalBucket = TermCategorization.getTemporalBucket(timestamp, this._config);
         IndexUtils.addToIndex(this._indexes, 'temporal', temporalBucket, concept);
@@ -142,13 +133,8 @@ export class MemoryIndex {
     }
 
     updateConcept(concept, updates) {
-        // Remove from current indexes
         this.removeConcept(concept);
-
-        // Apply updates
         Object.assign(concept, updates);
-
-        // Re-add to indexes with updated properties
         this.addConcept(concept);
     }
 
@@ -164,43 +150,29 @@ export class MemoryIndex {
     findConceptsWithFilters(filters = {}) {
         let results = this.getAllConcepts();
 
-        // Filter by category
-        if (filters.category) {
-            results = results.filter(concept =>
-                TermCategorization.getTermCategory(concept.term) === filters.category);
-        }
-
-        // Filter by complexity range
-        if (filters.minComplexity || filters.maxComplexity) {
-            results = results.filter(concept => {
+        // Apply filters using a filter chain
+        const filterChain = [
+            filters.category && (concept => TermCategorization.getTermCategory(concept.term) === filters.category),
+            (filters.minComplexity || filters.maxComplexity) && (concept => {
                 const complexity = TermCategorization.getTermComplexity(concept.term);
                 return (!filters.minComplexity || complexity >= filters.minComplexity) &&
                     (!filters.maxComplexity || complexity <= filters.maxComplexity);
-            });
-        }
-
-        // Filter by activation range
-        if (filters.minActivation !== undefined || filters.maxActivation !== undefined) {
-            results = results.filter(concept => {
+            }),
+            (filters.minActivation !== undefined || filters.maxActivation !== undefined) && (concept => {
                 const activation = concept.activation || 0;
                 return (filters.minActivation === undefined || activation >= filters.minActivation) &&
                     (filters.maxActivation === undefined || activation <= filters.maxActivation);
-            });
-        }
-
-        // Filter by operator
-        if (filters.operator) {
-            results = results.filter(concept =>
-                concept.term.operator === filters.operator);
-        }
-
-        // Filter by creation time range
-        if (filters.createdAfter || filters.createdBefore) {
-            results = results.filter(concept => {
+            }),
+            filters.operator && (concept => concept.term.operator === filters.operator),
+            (filters.createdAfter || filters.createdBefore) && (concept => {
                 const createdAt = concept.createdAt || 0;
                 return (!filters.createdAfter || createdAt >= filters.createdAfter) &&
                     (!filters.createdBefore || createdAt <= filters.createdBefore);
-            });
+            })
+        ].filter(Boolean);
+
+        for (const filter of filterChain) {
+            results = results.filter(filter);
         }
 
         return results;
@@ -578,17 +550,15 @@ export class MemoryIndex {
         const normalizedSearch = searchTerm.toLowerCase();
         const results = [];
 
-        // Search in term names and components
         for (const concept of this.getAllConcepts()) {
             const term = concept.term;
             let relevance = 0;
 
-            // Check term name
+            // Compute relevance based on different matches
             if (term.name && term.name.toLowerCase().includes(normalizedSearch)) {
                 relevance += 0.5;
             }
 
-            // Check components if it's a compound term
             if (term.components) {
                 for (const component of term.components) {
                     if (component.name && component.name.toLowerCase().includes(normalizedSearch)) {
@@ -598,7 +568,6 @@ export class MemoryIndex {
                 }
             }
 
-            // Check operator
             if (term.operator && term.operator.toLowerCase().includes(normalizedSearch)) {
                 relevance += 0.2;
             }
@@ -628,30 +597,24 @@ export class MemoryIndex {
             total: this._totalConcepts
         };
 
-        // Collect statistics using reduce for better functional style
-        concepts.reduce((dist, concept) => {
-            // Category distribution
+        // Collect statistics
+        for (const concept of concepts) {
             const category = TermCategorization.getTermCategory(concept.term);
-            dist.byCategory[category] = (dist.byCategory[category] || 0) + 1;
+            distribution.byCategory[category] = (distribution.byCategory[category] || 0) + 1;
 
-            // Complexity distribution
             const complexity = TermCategorization.getTermComplexity(concept.term);
             const complexityLevel = Math.floor(complexity);
-            dist.byComplexity[complexityLevel] = (dist.byComplexity[complexityLevel] || 0) + 1;
+            distribution.byComplexity[complexityLevel] = (distribution.byComplexity[complexityLevel] || 0) + 1;
 
-            // Operator distribution (for compound terms)
             if (concept.term.operator) {
                 const operator = concept.term.operator;
-                dist.byOperator[operator] = (dist.byOperator[operator] || 0) + 1;
+                distribution.byOperator[operator] = (distribution.byOperator[operator] || 0) + 1;
             }
 
-            // Activation distribution
             const activation = concept.activation || 0;
             const activationBucket = Math.floor(activation * 10) / 10; // Bucket by 0.1 increments
-            dist.byActivation[activationBucket] = (dist.byActivation[activationBucket] || 0) + 1;
-
-            return dist;
-        }, distribution);
+            distribution.byActivation[activationBucket] = (distribution.byActivation[activationBucket] || 0) + 1;
+        }
 
         return distribution;
     }
@@ -689,10 +652,10 @@ export class MemoryIndex {
         };
 
         const periodMs = periodMappings[period] || periodMappings['day'];
-        const periods = {};
         const periodCount = 10; // Show last 10 periods
 
         // Initialize periods
+        const periods = {};
         for (let i = 0; i < periodCount; i++) {
             const periodStart = now - (i * periodMs);
             const periodEnd = periodStart + periodMs;

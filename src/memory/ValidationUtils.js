@@ -19,7 +19,7 @@ export class ValidationUtils {
 
         this._validation.autoValidation = true;
         this._validation.validationInterval = setInterval(() => {
-            const result = this.validate(callback);
+            const result = this.validate(null, callback);
             if (callback) callback(result);
         }, interval);
     }
@@ -156,17 +156,14 @@ export class ValidationUtils {
         }
 
         // Check operator-specific indexes
-        switch (concept.term.operator) {
-            case '-->':
-                this._validateInheritanceConsistency(concept, termId, indexes, result);
-                break;
-            case '==>':
-                this._validateImplicationConsistency(concept, termId, indexes, result);
-                break;
-            case '<->':
-                this._validateSimilarityConsistency(concept, termId, indexes, result);
-                break;
-        }
+        const validationMap = {
+            '-->': this._validateInheritanceConsistency.bind(this),
+            '==>': this._validateImplicationConsistency.bind(this),
+            '<->': this._validateSimilarityConsistency.bind(this)
+        };
+        
+        const validator = validationMap[concept.term.operator];
+        if (validator) validator(concept, termId, indexes, result);
     }
     
     /**
@@ -479,36 +476,37 @@ export class ValidationUtils {
                 // Attempt to repair inconsistencies
                 results.actions.push('Attempting to repair validation issues...');
 
-                // Repair term consistency issues
-                if (validationResults.details.termConsistency &&
-                    !validationResults.details.termConsistency.passed) {
-                    const repairedCount = this.repairTermConsistency(indexes);
-                    results.repaired += repairedCount;
-                    results.actions.push(`Repaired ${repairedCount} term consistency issues`);
-                }
+                // Define repair operations with their conditions and messages
+                const repairOperations = [
+                    {
+                        condition: validationResults.details.termConsistency && !validationResults.details.termConsistency.passed,
+                        operation: () => this.repairTermConsistency(indexes),
+                        message: (count) => `Repaired ${count} term consistency issues`
+                    },
+                    {
+                        condition: validationResults.details.orphanedEntries && !validationResults.details.orphanedEntries.passed,
+                        operation: () => this.removeOrphanedEntries(indexes),
+                        message: (count) => `Removed ${count} orphaned entries`
+                    },
+                    {
+                        condition: validationResults.details.duplicates && !validationResults.details.duplicates.passed,
+                        operation: () => this.removeDuplicates(indexes),
+                        message: (count) => `Removed ${count} duplicate entries`
+                    },
+                    {
+                        condition: validationResults.details.invalidReferences && !validationResults.details.invalidReferences.passed,
+                        operation: () => this.repairInvalidReferences(indexes, logger),
+                        message: (count) => `Repaired ${count} invalid references`
+                    }
+                ];
 
-                // Remove orphaned entries
-                if (validationResults.details.orphanedEntries &&
-                    !validationResults.details.orphanedEntries.passed) {
-                    const removedCount = this.removeOrphanedEntries(indexes);
-                    results.repaired += removedCount;
-                    results.actions.push(`Removed ${removedCount} orphaned entries`);
-                }
-
-                // Remove duplicates
-                if (validationResults.details.duplicates &&
-                    !validationResults.details.duplicates.passed) {
-                    const removedCount = this.removeDuplicates(indexes);
-                    results.repaired += removedCount;
-                    results.actions.push(`Removed ${removedCount} duplicate entries`);
-                }
-
-                // Repair invalid references
-                if (validationResults.details.invalidReferences &&
-                    !validationResults.details.invalidReferences.passed) {
-                    const repairedCount = this.repairInvalidReferences(indexes, logger);
-                    results.repaired += repairedCount;
-                    results.actions.push(`Repaired ${repairedCount} invalid references`);
+                // Execute repair operations
+                for (const op of repairOperations) {
+                    if (op.condition) {
+                        const count = op.operation();
+                        results.repaired += count;
+                        results.actions.push(op.message(count));
+                    }
                 }
             } else {
                 results.actions.push('No validation issues found, no repairs needed');
@@ -544,43 +542,43 @@ export class ValidationUtils {
                         }
 
                         // Add to operator-specific indexes
-                        switch (concept.term.operator) {
-                            case '-->':
-                                const inheritanceIndex = indexes.inheritance;
+                        const operatorHandlers = {
+                            '-->': (concept) => {
                                 if (concept.term.components && concept.term.components.length >= 2) {
                                     const predicate = concept.term.components[1];
-                                    if (!inheritanceIndex.has(predicate.name)) {
+                                    if (!indexes.inheritance.has(predicate.name)) {
                                         ValidationUtils.addToIndex(indexes, 'inheritance', predicate.name, concept);
                                         repairedCount++;
                                     }
                                 }
-                                break;
-                            case '==>':
-                                const implicationIndex = indexes.implication;
+                            },
+                            '==>': (concept) => {
                                 if (concept.term.components && concept.term.components.length >= 2) {
                                     const premise = concept.term.components[0];
-                                    if (!implicationIndex.has(premise.name)) {
+                                    if (!indexes.implication.has(premise.name)) {
                                         ValidationUtils.addToIndex(indexes, 'implication', premise.name, concept);
                                         repairedCount++;
                                     }
                                 }
-                                break;
-                            case '<->':
-                                const similarityIndex = indexes.similarity;
+                            },
+                            '<->': (concept) => {
                                 if (concept.term.components && concept.term.components.length >= 2) {
                                     const term1 = concept.term.components[0];
                                     const term2 = concept.term.components[1];
-                                    if (!similarityIndex.has(term1.name)) {
+                                    if (!indexes.similarity.has(term1.name)) {
                                         ValidationUtils.addToIndex(indexes, 'similarity', term1.name, concept);
                                         repairedCount++;
                                     }
-                                    if (!similarityIndex.has(term2.name)) {
+                                    if (!indexes.similarity.has(term2.name)) {
                                         ValidationUtils.addToIndex(indexes, 'similarity', term2.name, concept);
                                         repairedCount++;
                                     }
                                 }
-                                break;
-                        }
+                            }
+                        };
+
+                        const handler = operatorHandlers[concept.term.operator];
+                        if (handler) handler(concept);
                     }
                 }
             }

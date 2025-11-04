@@ -62,10 +62,6 @@ export class EvaluationEngine {
             this.functorRegistry.register(name, () => SYSTEM_ATOMS[name], {arity: 0});
         });
 
-        this._initializeArithmeticFunctors();
-    }
-
-    _initializeArithmeticFunctors() {
         const ops = [['add', 2, true], ['subtract', 2, false], ['multiply', 2, true], ['divide', 2, false]];
         ops.forEach(([name, arity, isCommutative]) => {
             this.addFunctor(name, VectorOperations[name], {arity, isCommutative});
@@ -82,9 +78,8 @@ export class EvaluationEngine {
 
         try {
             // Generate cache key if caching is enabled
-            let cacheKey = null;
-            if (this.config.enableCaching) {
-                cacheKey = this._generateCacheKey(term, variableBindings);
+            const cacheKey = this.config.enableCaching ? this._generateCacheKey(term, variableBindings) : null;
+            if (cacheKey) {
                 const cachedResult = this._evaluationCache.get(cacheKey);
                 if (cachedResult) {
                     this._cacheHits++;
@@ -92,45 +87,7 @@ export class EvaluationEngine {
                 }
             }
 
-            if (!term.isCompound) {
-                const result = this._evaluateNonOperation(term, context, variableBindings);
-                this._setCacheResult(cacheKey, result);
-                return result;
-            }
-
-            // Check for higher-order reasoning patterns before standard evaluation
-            const higherOrderResult = this.higherOrderEngine.processHigherOrderTerm(term, context);
-            if (higherOrderResult.success) {
-                const result = this._createResult(higherOrderResult.result, true, `Higher-order reasoning: ${higherOrderResult.message}`,
-                    higherOrderResult.bindings ? {bindings: higherOrderResult.bindings} : {});
-                this._setCacheResult(cacheKey, result);
-                return result;
-            }
-
-            let result;
-            switch (term.operator) {
-                case '&':
-                case '|':
-                case '==>':
-                case '<=>':
-                    result = await this._evaluateUnifiedOperator(term, context, variableBindings);
-                    break;
-                case '^':
-                    result = term.components.length !== 2
-                        ? this._createResult(SYSTEM_ATOMS.Null, false, 'Invalid operation format')
-                        : await this._evaluateOperation(term, variableBindings);
-                    break;
-                case '=':
-                    result = await this._evaluateEquality(term, context, variableBindings);
-                    break;
-                case '--':
-                    result = this.reduce(term);
-                    break;
-                default:
-                    result = this._evaluateNonOperation(term, context, variableBindings);
-                    break;
-            }
-
+            const result = await this._evaluateTerm(term, context, variableBindings);
             this._setCacheResult(cacheKey, result);
             return result;
         } finally {
@@ -138,26 +95,44 @@ export class EvaluationEngine {
         }
     }
 
+    async _evaluateTerm(term, context, variableBindings) {
+        if (!term.isCompound) {
+            return this._evaluateNonOperation(term, context, variableBindings);
+        }
+
+        // Check for higher-order reasoning patterns before standard evaluation
+        const higherOrderResult = this.higherOrderEngine.processHigherOrderTerm(term, context);
+        if (higherOrderResult.success) {
+            return this._createResult(higherOrderResult.result, true, `Higher-order reasoning: ${higherOrderResult.message}`,
+                higherOrderResult.bindings ? {bindings: higherOrderResult.bindings} : {});
+        }
+
+        switch (term.operator) {
+            case '&':
+            case '|':
+            case '==>':
+            case '<=>':
+                return await this._evaluateUnifiedOperator(term, context, variableBindings);
+            case '^':
+                return term.components.length !== 2
+                    ? this._createResult(SYSTEM_ATOMS.Null, false, 'Invalid operation format')
+                    : await this._evaluateOperation(term, variableBindings);
+            case '=':
+                return await this._evaluateEquality(term, context, variableBindings);
+            case '--':
+                return this.reduce(term);
+            default:
+                return this._evaluateNonOperation(term, context, variableBindings);
+        }
+    }
+
     async _evaluateUnifiedOperator(term, context, variableBindings) {
         // Check if all arguments are Boolean atoms (True, False, Null) for functional evaluation
         const isFunctionalEvaluation = this._areAllBooleanValues(term.components, variableBindings);
 
-        if (isFunctionalEvaluation) {
-            // Perform functional evaluation
-            const evaluatorMap = {
-                '&': this._evaluateAndFunction.bind(this),
-                '|': this._evaluateOrFunction.bind(this),
-                '==>': this._evaluateImplicationFunction.bind(this),
-                '<=>': this._evaluateEquivalenceFunction.bind(this)
-            };
-
-            return evaluatorMap[term.operator]?.(term, variableBindings) ||
-                this._evaluateNonOperation(term, context, variableBindings);
-        } else {
-            // Create structural compound (the traditional NAL behavior)
-            // Also perform structural reduction
-            return this._createResult(this.reduce(term), true, 'Structural compound with boolean reduction');
-        }
+        return isFunctionalEvaluation 
+            ? this._evaluateBooleanFunction(term, variableBindings) 
+            : this._createResult(this.reduce(term), true, 'Structural compound with boolean reduction');
     }
 
     _areAllBooleanValues(components, variableBindings) {
@@ -165,6 +140,18 @@ export class EvaluationEngine {
             const boundComp = this._substituteVariables(comp, variableBindings);
             return boundComp.isBoolean || isTrue(boundComp) || isFalse(boundComp) || isNull(boundComp);
         });
+    }
+
+    _evaluateBooleanFunction(term, variableBindings) {
+        const booleanEvaluators = {
+            '&': this._evaluateAndFunction.bind(this),
+            '|': this._evaluateOrFunction.bind(this),
+            '==>': this._evaluateImplicationFunction.bind(this),
+            '<=>': this._evaluateEquivalenceFunction.bind(this)
+        };
+
+        return booleanEvaluators[term.operator]?.(term, variableBindings) 
+            || this._evaluateNonOperation(term, null, variableBindings);
     }
 
     _evaluateAndFunction(term, variableBindings) {
@@ -185,41 +172,32 @@ export class EvaluationEngine {
         return this._createBooleanResult(result, message);
     }
 
-    _evaluateBinaryBooleanFunction(term, operationName, operationFn, variableBindings) {
+    _evaluateImplicationFunction(term, variableBindings) {
         if (term.components.length !== 2) {
-            return this._createResult(SYSTEM_ATOMS.Null, false, `${operationName} requires exactly 2 arguments`);
+            return this._createResult(SYSTEM_ATOMS.Null, false, 'Implication requires exactly 2 arguments');
         }
         
-        const [leftVal, rightVal] = term.components.map(comp => this._valueFromSubstitutedTerm(comp, variableBindings));
-        const result = operationFn(leftVal, rightVal);
-        const message = this._getBinaryBooleanMessage(operationName, leftVal, rightVal, result);
+        const [antVal, consVal] = term.components.map(comp => this._valueFromSubstitutedTerm(comp, variableBindings));
+        const isFalse = antVal === true && consVal === false;
+        const isTrue = antVal === false || consVal === true;
+        const result = isFalse ? SYSTEM_ATOMS.False : isTrue ? SYSTEM_ATOMS.True : SYSTEM_ATOMS.Null;
+        const message = isFalse ? 'Boolean implication: true => false = false' 
+            : isTrue ? 'Boolean implication: false => X or X => true = true' 
+            : 'Boolean implication: cannot determine with non-boolean values';
         
         return this._createBooleanResult(result, message);
     }
 
-    _evaluateImplicationFunction(term, variableBindings) {
-        return this._evaluateBinaryBooleanFunction(term, 'Implication', (antVal, consVal) => {
-            const isFalse = antVal === true && consVal === false;
-            const isTrue = antVal === false || consVal === true;
-            return isFalse ? SYSTEM_ATOMS.False : isTrue ? SYSTEM_ATOMS.True : SYSTEM_ATOMS.Null;
-        }, variableBindings);
-    }
-
     _evaluateEquivalenceFunction(term, variableBindings) {
-        return this._evaluateBinaryBooleanFunction(term, 'Equivalence', (leftVal, rightVal) => {
-            return leftVal === rightVal ? SYSTEM_ATOMS.True : SYSTEM_ATOMS.False;
-        }, variableBindings);
-    }
-    
-    _getBinaryBooleanMessage(operationName, leftVal, rightVal, result) {
-        if (operationName === 'Implication') {
-            const isFalse = leftVal === true && rightVal === false;
-            const isTrue = leftVal === false || rightVal === true;
-            return isFalse ? 'Boolean implication: true => false = false' : isTrue ? 'Boolean implication: false => X or X => true = true' : 'Boolean implication: cannot determine with non-boolean values';
-        } else if (operationName === 'Equivalence') {
-            return leftVal === rightVal ? 'Boolean equivalence: values are equal' : 'Boolean equivalence: values are different';
+        if (term.components.length !== 2) {
+            return this._createResult(SYSTEM_ATOMS.Null, false, 'Equivalence requires exactly 2 arguments');
         }
-        return `${operationName}: evaluation completed`;
+        
+        const [leftVal, rightVal] = term.components.map(comp => this._valueFromSubstitutedTerm(comp, variableBindings));
+        const result = leftVal === rightVal ? SYSTEM_ATOMS.True : SYSTEM_ATOMS.False;
+        const message = leftVal === rightVal ? 'Boolean equivalence: values are equal' : 'Boolean equivalence: values are different';
+        
+        return this._createBooleanResult(result, message);
     }
 
     async _evaluateEquality(term, context, variableBindings) {
@@ -928,23 +906,18 @@ export class EvaluationEngine {
 
             if (this._evaluationCache.size > 1000) {
                 const firstKey = this._evaluationCache.keys().next().value;
-                if (firstKey) {
-                    this._evaluationCache.delete(firstKey);
-                }
+                if (firstKey) this._evaluationCache.delete(firstKey);
             }
         }
     }
 
     getCacheStats() {
-        if (!this.config.enableCaching) {
-            return null;
-        }
+        if (!this.config.enableCaching) return null;
         const total = this._cacheHits + this._cacheMisses;
-        const hitRate = total > 0 ? this._cacheHits / total : 0;
         return {
             hits: this._cacheHits,
             misses: this._cacheMisses,
-            hitRate,
+            hitRate: total > 0 ? this._cacheHits / total : 0,
             cacheSize: this._evaluationCache.size
         };
     }
@@ -958,9 +931,7 @@ export class EvaluationEngine {
     }
 
     analyzeTerm(term) {
-        if (!this.config.enableTypeChecking) {
-            return {isValid: true, type: 'unknown'};
-        }
+        if (!this.config.enableTypeChecking) return {isValid: true, type: 'unknown'};
 
         return {
             isValid: true,
@@ -996,18 +967,14 @@ export class EvaluationEngine {
     }
 
     _isWellFormed(term) {
-        if (term.operator === '-->') {
-            return term.components?.length === 2;
-        } else if (term.operator === '==>') {
+        if (['-->', '==>'].includes(term.operator)) {
             return term.components?.length === 2;
         } else if (['&', '|', '<=>'].includes(term.operator)) {
             return term.components?.length >= 2;
         }
 
-        if (term.components) {
-            return term.components.every(comp => comp !== undefined);
-        }
-
-        return true;
+        return term.components ? 
+            term.components.every(comp => comp !== undefined) : 
+            true;
     }
 }
