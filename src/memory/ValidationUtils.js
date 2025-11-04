@@ -226,36 +226,22 @@ export class ValidationUtils {
         try {
             // Check for entries in secondary indexes that don't exist in primary term index
             const termIndex = indexes.term;
-
-            // Check atomic index
-            const atomicIndex = indexes.atomic;
-            for (const [termName, concepts] of atomicIndex.entries()) {
-                result.checked++;
-                for (const concept of concepts) {
-                    const termId = concept.term.id;
-                    if (!termIndex.has(termId)) {
-                        result.orphaned++;
-                        result.warnings.push(`Orphaned atomic concept in atomic index: ${termName}`);
-                    }
-                }
-            }
-
-            // Check compound indexes
-            const compoundIndexes = [
-                indexes.compoundByOp,
-                indexes.inheritance,
-                indexes.implication,
-                indexes.similarity
+            const indexesToCheck = [
+                { index: indexes.atomic, name: 'atomic' },
+                { index: indexes.compoundByOp, name: 'compoundByOp' },
+                { index: indexes.inheritance, name: 'inheritance' },
+                { index: indexes.implication, name: 'implication' },
+                { index: indexes.similarity, name: 'similarity' }
             ];
 
-            for (const compoundIndex of compoundIndexes) {
-                for (const [key, concepts] of compoundIndex.entries()) {
+            for (const { index, name } of indexesToCheck) {
+                for (const [key, concepts] of index.entries()) {
                     result.checked++;
                     for (const concept of concepts) {
                         const termId = concept.term.id;
                         if (!termIndex.has(termId)) {
                             result.orphaned++;
-                            result.warnings.push(`Orphaned compound concept in compound index: ${key}`);
+                            result.warnings.push(`Orphaned ${name} concept in ${name} index: ${key}`);
                         }
                     }
                 }
@@ -617,40 +603,21 @@ export class ValidationUtils {
 
         try {
             const termIndex = indexes.term;
-
-            // Check atomic index
-            const atomicIndex = indexes.atomic;
-            for (const [termName, concepts] of atomicIndex.entries()) {
-                for (const concept of Array.from(concepts)) { // Use Array.from to avoid modification during iteration
-                    const termId = concept.term.id;
-                    if (!termIndex.has(termId)) {
-                        ValidationUtils.removeFromIndex(indexes, 'atomic', termName, concept);
-                        removedCount++;
-                    }
-                }
-            }
-
-            // Check compound indexes
-            const compoundIndexes = [
-                indexes.compoundByOp,
-                indexes.inheritance,
-                indexes.implication,
-                indexes.similarity
+            const indexesToCheck = [
+                { index: indexes.atomic, name: 'atomic' },
+                { index: indexes.compoundByOp, name: 'compoundByOp' },
+                { index: indexes.inheritance, name: 'inheritance' },
+                { index: indexes.implication, name: 'implication' },
+                { index: indexes.similarity, name: 'similarity' }
             ];
 
-            for (const compoundIndex of compoundIndexes) {
-                for (const [key, concepts] of compoundIndex.entries()) {
+            for (const { index, name } of indexesToCheck) {
+                for (const [key, concepts] of index.entries()) {
                     for (const concept of Array.from(concepts)) { // Use Array.from to avoid modification during iteration
                         const termId = concept.term.id;
                         if (!termIndex.has(termId)) {
-                            // Find the correct index to remove from
-                            for (const [idxName, idx] of Object.entries(indexes)) {
-                                if (idx === compoundIndex) {
-                                    ValidationUtils.removeFromIndex(indexes, idxName, key, concept);
-                                    removedCount++;
-                                    break;
-                                }
-                            }
+                            ValidationUtils.removeFromIndex(indexes, name, key, concept);
+                            removedCount++;
                         }
                     }
                 }

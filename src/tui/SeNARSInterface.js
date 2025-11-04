@@ -1,6 +1,7 @@
 import {NAR} from '../nar/NAR.js';
 import blessed from 'blessed';
 import {PersistenceManager} from '../io/PersistenceManager.js';
+import {FormattingUtils} from './FormattingUtils.js';
 
 const COMMANDS = Object.freeze({
     help: ['help', 'h', '?'],
@@ -271,69 +272,53 @@ export class SeNARSInterface {
 
     _getTasksFromMemory() {
         // Try multiple possible methods to get tasks
-        let tasks = [];
-        if (this.nar.getTasks && typeof this.nar.getTasks === 'function') {
-            try {
-                tasks = this.nar.getTasks();
-            } catch (e) {
-                // Fallback if method doesn't exist or fails
-            }
-        } else if (this.nar.memory?.getTasks && typeof this.nar.memory.getTasks === 'function') {
-            try {
-                tasks = this.nar.memory.getTasks();
-            } catch (e) {
-                // Fallback if method doesn't exist or fails
-            }
-        } else if (this.nar.memory?.concepts) {
-            // Try to extract tasks from concepts if available
-            try {
-                tasks = [];
-                const conceptEntries = this.nar.memory.concepts instanceof Map 
-                    ? Array.from(this.nar.memory.concepts.entries()) 
-                    : Object.entries(this.nar.memory.concepts);
-                
-                for (const [, concept] of conceptEntries) {
-                    if (concept?.tasks) {
-                        tasks = tasks.concat(concept.tasks);
-                    }
+        const methods = [
+            () => this.nar.getTasks && typeof this.nar.getTasks === 'function' ? this.nar.getTasks() : null,
+            () => this.nar.memory?.getTasks && typeof this.nar.memory.getTasks === 'function' ? this.nar.memory.getTasks() : null,
+            () => {
+                if (this.nar.memory?.concepts) {
+                    const conceptEntries = this.nar.memory.concepts instanceof Map 
+                        ? Array.from(this.nar.memory.concepts.entries()) 
+                        : Object.entries(this.nar.memory.concepts);
+                    return conceptEntries.flatMap(([, concept]) => concept?.tasks || []);
                 }
+                return null;
+            }
+        ];
+
+        for (const method of methods) {
+            try {
+                const result = method();
+                if (result !== null) return result;
             } catch (e) {
-                // Fallback if method doesn't exist or fails
+                // Continue to next method if current fails
             }
         }
-        return tasks;
+        return [];
     }
 
     _formatTaskDetails(task) {
-        const details = [
-            this._formatType(task.type),
-            this._formatTruthStr(task.truth),
-            this._formatPriorityStr(task.priority),
-            this._formatStamp(task.stamp),
-            this._formatOccurrenceTime(task.occurrenceTime)
-        ].filter(detail => detail !== null);
-
-        return details.join(' | ');
+        return FormattingUtils.formatTaskDetails(task);
     }
     
     _formatType(type) {
-        return type ? `Type: ${type}` : 'Type: Task';
+        return FormattingUtils.formatType(type);
     }
     
     _formatTruthStr(truth) {
-        return truth ? `Truth: ${truth.toString()}` : 'Truth: N/A';
+        return FormattingUtils.formatTruthStr(truth);
     }
     
     _formatPriorityStr(priority) {
-        return priority !== undefined ? `Priority: ${priority.toFixed(3)}` : 'Priority: N/A';
+        return FormattingUtils.formatPriorityStr(priority);
     }
     
     _formatStamp(stamp) {
-        return stamp ? `Stamp: ${stamp}` : 'Stamp: N/A';
+        return FormattingUtils.formatStamp(stamp);
     }
     
     _formatOccurrenceTime(occurrenceTime) {
-        return occurrenceTime !== undefined ? `OccTime: ${occurrenceTime}` : null; // null means don't include
+        return FormattingUtils.formatOccurrenceTime(occurrenceTime);
     }
 
     _help() {
@@ -419,25 +404,19 @@ export class SeNARSInterface {
     }
 
     _formatBeliefDetails(task) {
-        const details = [
-            this._formatBeliefTruth(task.truth),
-            this._formatBeliefPriority(task.priority),
-            this._formatBeliefOccurrence(task.stamp)
-        ].filter(detail => detail !== null);
-
-        return details.join('');
+        return FormattingUtils.formatBeliefDetails(task);
     }
     
     _formatBeliefTruth(truth) {
-        return truth ? `{magenta}${truth.toString()}{/magenta}` : null;
+        return FormattingUtils.formatBeliefTruth(truth);
     }
     
     _formatBeliefPriority(priority) {
-        return priority !== undefined ? `{yellow} | P:${priority.toFixed(3)}{/yellow}` : null;
+        return FormattingUtils.formatBeliefPriority(priority);
     }
     
     _formatBeliefOccurrence(stamp) {
-        return stamp ? `{blue} | Occ:${stamp}{/blue}` : null;
+        return FormattingUtils.formatBeliefOccurrence(stamp);
     }
 
     _reset() {

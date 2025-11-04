@@ -1,6 +1,7 @@
 import {NAR} from '../nar/NAR.js';
 import readline from 'readline';
 import {PersistenceManager} from '../io/PersistenceManager.js';
+import {FormattingUtils} from './FormattingUtils.js';
 
 const COMMANDS = Object.freeze({
     help: ['help', 'h', '?'],
@@ -36,61 +37,7 @@ export class Repl {
         this.traceEnabled = false;
     }
 
-    /**
-     * Encode a string/number using a high-radix encoding with unicode characters
-     * Uses visible unicode characters for higher density representation
-     */
-    _encodeShortId(input) {
-        if (!input) return 'N/A';
 
-        // Convert input to string if it isn't already
-        const inputStr = String(input);
-
-        // Use a large set of visible unicode characters for high radix encoding
-        const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzαβγδεζηθικλμνξοπρστυφχψωАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдежзийклмнопрстуфхцчшщъыьэюя∀∂∃∅∇∈∉∋∌∏∑∙√∝∞∟∠∡∢∣∤∥∦∧∨∩∪∫∬∭∮∯∰∱∲∳∴∵∶∷∸∹∺∻∼∽∾∿≀≁≂≃≄≅≆≇≈≉≊≋≌≍≎≏≐≑≒≓≔≕≖≗≘≙≚≛≜≝≞≟≠≡≢≣≤≥≦≧≨≩≪≫≬≭≮≯≰≱≲≳≴≵≶≷≸≹≺≻≼≽≾≿⊀⊁⊂⊃⊄⊅⊆⊇⊈⊉⊊⊋⊌⊍⊎⊏⊐⊑⊒⊓⊔⊕⊖⊗⊘⊙⊚⊛⊜⊝⊞⊟⊠⊡⊢⊣⊤⊥⊦⊧⊨⊩⊪⊫⊬⊭⊮⊯⊰⊱⊲⊳⊴⊵⊶⊷⊸⊹⊺⊻⊼⊽⊾⊿⋀⋁⋂⋃⋄⋅⋆⋇⋈⋉⋊⋋⋌⋍⋎⋏⋐⋑⋒⋓⋔⋕⋖⋗⋘⋙⋚⋛⋜⋝⋞⋟⋠⋡⋢⋣⋤⋥⋦⋧⋨⋩⋪⋫⋬⋭⋮⋯⋰⋱⋲⋳⋴⋵⋶⋷⋸⋹⋺⋻⋼⋽⋾⋿';
-
-        // Convert the input to a large number (we'll use the character codes)
-        let hash = 0;
-        for (let i = 0; i < inputStr.length; i++) {
-            const charCode = inputStr.charCodeAt(i);
-            hash = ((hash << 5) - hash) + charCode;
-            hash |= 0; // Convert to 32bit integer
-        }
-
-        // Make sure it's positive
-        hash = Math.abs(hash);
-
-        // Encode using the custom charset
-        if (hash === 0) return chars[0];
-
-        let result = '';
-        const base = chars.length;
-        let num = hash;
-
-        while (num > 0) {
-            result = chars[num % base] + result;
-            num = Math.floor(num / base);
-        }
-
-        // Limit length to 8 characters max for readability
-        return result.length > 8 ? result.substring(0, 8) : result;
-    }
-
-    /**
-     * Convert task type to NARS punctuation character
-     */
-    _getTypePunctuation(type) {
-        switch (type?.toUpperCase()) {
-            case 'BELIEF':
-                return '.';
-            case 'GOAL':
-                return '!';
-            case 'QUESTION':
-                return '?';
-            default:
-                return '.';
-        }
-    }
 
     _createCommandMap() {
         const map = new Map();
@@ -208,9 +155,9 @@ export class Repl {
     _status() {
         const stats = this.nar.getStats();
         const memoryStats = stats.memoryStats;
-        const conceptCount = this._safeGet(memoryStats, ['memoryUsage', 'concepts'], ['totalConcepts'], 0);
-        const focusTaskCount = this._safeGet(memoryStats, ['memoryUsage', 'focusConcepts'], ['focusConceptsCount'], 0);
-        const totalTasks = this._safeGet(memoryStats, ['memoryUsage', 'totalTasks'], ['totalTasks'], 0);
+        const conceptCount = FormattingUtils.safeGet(memoryStats, ['memoryUsage', 'concepts'], ['totalConcepts'], 0);
+        const focusTaskCount = FormattingUtils.safeGet(memoryStats, ['memoryUsage', 'focusConcepts'], ['focusConceptsCount'], 0);
+        const totalTasks = FormattingUtils.safeGet(memoryStats, ['memoryUsage', 'totalTasks'], ['totalTasks'], 0);
 
         return `📊 System Status:
   ⚡ Running: ${stats.isRunning ? 'Yes' : 'No'}
@@ -222,36 +169,15 @@ export class Repl {
   🕐 Start Time: ${new Date(this.sessionState.startTime).toISOString()}`;
     }
 
-    _safeGet(obj, ...paths) {
-        const defaultValue = paths.pop(); // Last argument is the default value
-        
-        for (const path of paths) {
-            let current = obj;
-            let found = true;
-            
-            for (const prop of path) {
-                if (current == null || typeof current !== 'object' || !(prop in current)) {
-                    found = false;
-                    break;
-                }
-                current = current[prop];
-            }
-            
-            if (found) {
-                return current;
-            }
-        }
-        
-        return defaultValue;
-    }
+
 
     _memory() {
         const stats = this.nar.getStats();
         const memoryStats = stats.memoryStats;
-        const conceptCount = this._safeGet(memoryStats, ['memoryUsage', 'concepts'], ['totalConcepts'], 0);
-        const taskCount = this._safeGet(memoryStats, ['memoryUsage', 'totalTasks'], ['totalTasks'], 0);
-        const focusSize = this._safeGet(memoryStats, ['memoryUsage', 'focusConcepts'], ['focusConceptsCount'], 0);
-        const avgPriority = this._safeGet(memoryStats, ['averageActivation'], ['averagePriority'], 0);
+        const conceptCount = FormattingUtils.safeGet(memoryStats, ['memoryUsage', 'concepts'], ['totalConcepts'], 0);
+        const taskCount = FormattingUtils.safeGet(memoryStats, ['memoryUsage', 'totalTasks'], ['totalTasks'], 0);
+        const focusSize = FormattingUtils.safeGet(memoryStats, ['memoryUsage', 'focusConcepts'], ['focusConceptsCount'], 0);
+        const avgPriority = FormattingUtils.safeGet(memoryStats, ['averageActivation'], ['averagePriority'], 0);
         const capacity = this.nar.config?.memory?.maxConcepts || 'N/A';
         const forgettingThreshold = this.nar.config?.memory?.priorityThreshold || 'N/A';
 
@@ -279,60 +205,26 @@ export class Repl {
     }
 
     _getTasksFromMemory() {
-        let tasks = [];
         try {
             const concepts = this.nar.memory.getAllConcepts() || [];
-            for (const concept of concepts) {
-                if (concept.getAllTasks) {
-                    tasks = tasks.concat(concept.getAllTasks());
-                }
-            }
+            return concepts.flatMap(concept => concept.getAllTasks ? concept.getAllTasks() : []);
         } catch (e) {
             // Fallback using memory concepts directly
             if (this.nar.memory?.concepts) {
                 const conceptEntries = this.nar.memory.concepts instanceof Map 
                     ? Array.from(this.nar.memory.concepts.entries()) 
                     : Object.entries(this.nar.memory.concepts);
-                
-                for (const [, concept] of conceptEntries) {
-                    if (concept && concept.getAllTasks && typeof concept.getAllTasks === 'function') {
-                        tasks = tasks.concat(concept.getAllTasks());
-                    }
-                }
+                return conceptEntries.flatMap(([, concept]) => 
+                    concept && concept.getAllTasks && typeof concept.getAllTasks === 'function' 
+                        ? concept.getAllTasks() 
+                        : []);
             }
         }
-        return tasks;
+        return [];
     }
 
     _formatTask(task) {
-        const priority = this._formatPriority(task.budget?.priority);
-        const term = task.term?.toString?.() || task.term || 'Unknown';
-        const punctuation = this._getTypePunctuation(task.type || 'TASK');
-        const truthStr = this._formatTruth(task.truth);
-        const occurrence = this._formatOccurrence(task);
-
-        return `${priority}${term}${punctuation}${truthStr}${occurrence}`;
-    }
-    
-    _formatPriority(priority) {
-        return priority !== undefined ? `$${priority.toFixed(3)} ` : '';
-    }
-    
-    _formatTruth(truth) {
-        if (!truth) return ' %1.000,0.900%'; // Default truth values
-        
-        const freq = truth.frequency !== undefined ? truth.frequency.toFixed(3) : '1.000';
-        const conf = truth.confidence !== undefined ? truth.confidence.toFixed(3) : '0.900';
-        return ` %${freq},${conf}%`;
-    }
-    
-    _formatOccurrence(task) {
-        if (task.occurrenceTime === undefined && !task.stamp) return '';
-        
-        const timeStr = task.occurrenceTime || '';
-        const stampStr = task.stamp ? this._encodeShortId(task.stamp.id || task.stamp) : '';
-        
-        return stampStr ? ` ${timeStr}@${stampStr}`.trim() : timeStr;
+        return FormattingUtils.formatTask(task);
     }
 
     _trace() {
