@@ -1,8 +1,5 @@
 import {v4 as uuidv4} from 'uuid';
 
-/**
- * Trace ID utility for distributed tracing
- */
 export class TraceId {
     static generate() {
         return uuidv4();

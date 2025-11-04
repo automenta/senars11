@@ -3,9 +3,6 @@ import {InductionRule} from './InductionRule.js';
 import {AbductionRule} from './AbductionRule.js';
 import {ComparisonRule} from './ComparisonRule.js';
 
-/**
- * Syllogistic reasoning rules collection
- */
 export class SyllogisticRules {
     static getRules() {
         return [

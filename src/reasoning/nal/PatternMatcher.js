@@ -18,16 +18,22 @@ export class PatternMatcher {
 
     _unifyTerms(pattern, term, bindings) {
         if (this._isVariable(pattern)) {
-            const variableName = pattern.name || pattern.toString();
-            return bindings.has(variableName) ? 
-                this._termsEqual(bindings.get(variableName), term, bindings) : 
-                (bindings.set(variableName, term), true);
+            return this._bindVariable(pattern, term, bindings);
         }
 
         if (pattern.type !== term.type) return false;
         if (pattern.isAtomic) return this._termsEqual(pattern, term, bindings);
         if (pattern.isCompound) return this._unifyCompound(pattern, term, bindings);
         return false;
+    }
+
+    _bindVariable(pattern, term, bindings) {
+        const variableName = pattern.name || pattern.toString();
+        if (bindings.has(variableName)) {
+            return this._termsEqual(bindings.get(variableName), term, bindings);
+        }
+        bindings.set(variableName, term);
+        return true;
     }
 
     _unifyCompound(pattern, term, bindings) {
@@ -38,14 +44,15 @@ export class PatternMatcher {
     substitute(term, bindings) {
         if (this._isVariable(term)) {
             const variableName = term.name || term.toString();
-            return bindings.has(variableName) ? 
-                this.substitute(bindings.get(variableName), bindings) : 
-                term;
+            if (bindings.has(variableName)) {
+                return this.substitute(bindings.get(variableName), bindings);
+            }
+            return term;
         }
 
-        return term.isCompound ? 
-            new Term(term.type, term.name, term.components.map(comp => this.substitute(comp, bindings)), term.operator) : 
-            term;
+        return term.isCompound 
+            ? new Term(term.type, term.name, term.components.map(comp => this.substitute(comp, bindings)), term.operator)
+            : term;
     }
 
     _isVariable = (term) => !!(term?.name?.startsWith?.('?'))
@@ -58,7 +65,7 @@ export class PatternMatcher {
             t2 = this.substitute(t2, bindings);
         }
 
-        if (t1.equals && typeof t1.equals === 'function') return t1.equals(t2);
+        if (typeof t1.equals === 'function') return t1.equals(t2);
         if (t1.name !== t2.name) return false;
 
         if (t1.isAtomic && t2.isAtomic) return true;
@@ -79,31 +86,34 @@ export class PatternMatcher {
 
     _unifyHigherOrderTerms(pattern, term, bindings) {
         if (this._isVariable(pattern)) {
-            const variableName = pattern.name || pattern.toString();
-            return bindings.has(variableName) ? 
-                this._termsEqualHigherOrder(bindings.get(variableName), term, bindings) : 
-                (bindings.set(variableName, term), true);
+            return this._bindVariableHigherOrder(pattern, term, bindings);
         }
 
         if (pattern.isAtomic && term.isAtomic) return this._termsEqualHigherOrder(pattern, term, bindings);
 
-        if (pattern.isCompound && term.isCompound) {
-            if (pattern.operator !== term.operator) {
-                if (this._isVariable(pattern)) {
-                    bindings.set(pattern.name, term);
-                    return true;
-                } else if (this._isVariable(term)) {
-                    bindings.set(term.name, pattern);
-                    return true;
-                }
-                return false;
-            }
+        if (pattern.isCompound && term.isCompound && pattern.operator === term.operator) {
+            return this._unifyCompound(pattern, term, bindings);
+        }
 
-            return pattern.components.length === term.components.length && 
-                   pattern.components.every((comp, i) => this._unifyHigherOrderTerms(comp, term.components[i], bindings));
+        // Handle variable-operator matching
+        if (this._isVariable(pattern)) {
+            bindings.set(pattern.name, term);
+            return true;
+        } else if (this._isVariable(term)) {
+            bindings.set(term.name, pattern);
+            return true;
         }
 
         return false;
+    }
+
+    _bindVariableHigherOrder(pattern, term, bindings) {
+        const variableName = pattern.name || pattern.toString();
+        if (bindings.has(variableName)) {
+            return this._termsEqualHigherOrder(bindings.get(variableName), term, bindings);
+        }
+        bindings.set(variableName, term);
+        return true;
     }
 
     _termsEqualHigherOrder(t1, t2, bindings = null) {
@@ -114,7 +124,7 @@ export class PatternMatcher {
             t2 = this.substitute(t2, bindings);
         }
 
-        if (t1.equals && typeof t1.equals === 'function') return t1.equals(t2);
+        if (typeof t1.equals === 'function') return t1.equals(t2);
         if (t1.name !== t2.name) return false;
 
         if (t1.isAtomic && t2.isAtomic) return t1.name === t2.name;

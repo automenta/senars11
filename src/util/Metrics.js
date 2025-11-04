@@ -1,6 +1,3 @@
-/**
- * Centralized metrics utility for consistent metric tracking across components
- */
 export class Metrics {
     static create() {
         return {

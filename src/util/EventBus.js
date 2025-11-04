@@ -1,9 +1,6 @@
 import mitt from 'mitt';
 import {TraceId} from './TraceId.js';
 
-/**
- * Event bus for managing application events with middleware support
- */
 export class EventBus {
     constructor() {
         this._emitter = mitt();

@@ -1,11 +1,3 @@
-/**
- * @file PropertyBasedTesting.js
- * @description Property-based testing utilities for term normalization and consistency
- */
-
-/**
- * Property-based testing framework for validating system properties
- */
 export class PropertyBasedTester {
     constructor(options = {}) {
         this.maxTests = options.maxTests || 100;
@@ -14,9 +6,6 @@ export class PropertyBasedTester {
         this.failures = [];
     }
 
-    /**
-     * Create a seeded random number generator
-     */
     _createRandomGenerator(seed) {
         // Simple seeded random generator
         let state = seed;
@@ -26,9 +15,6 @@ export class PropertyBasedTester {
         };
     }
 
-    /**
-     * Generate random terms for testing
-     */
     generateTerm(depth = 0, maxDepth = 3) {
         const {Term} = require('../src/term/Term.js'); // Dynamically import to avoid circular deps
         const termTypes = ['atomic', 'compound'];
@@ -53,9 +39,6 @@ export class PropertyBasedTester {
         }
     }
 
-    /**
-     * Generate random truth values for testing
-     */
     generateTruth() {
         return {
             f: this.random(), // frequency between 0 and 1
@@ -63,9 +46,6 @@ export class PropertyBasedTester {
         };
     }
 
-    /**
-     * Run property test
-     */
     check(property, generator, options = {}) {
         const maxTests = options.maxTests || this.maxTests;
         let successes = 0;
@@ -103,9 +83,6 @@ export class PropertyBasedTester {
         };
     }
 
-    /**
-     * Property: Terms should be immutable after creation
-     */
     checkImmutability(term) {
         const originalString = term.toString();
         const originalHash = term.hash;
@@ -132,9 +109,6 @@ export class PropertyBasedTester {
         }
     }
 
-    /**
-     * Property: Term equality should be consistent
-     */
     checkEqualityConsistency(terms) {
         const [t1, t2] = terms;
         if (!t1 || !t2) return false;
@@ -151,9 +125,6 @@ export class PropertyBasedTester {
         return true;
     }
 
-    /**
-     * Property: Truth value operations should produce valid results
-     */
     checkTruthOperations(truthPair) {
         const [t1, t2] = truthPair;
         const {TruthFunctions} = require('../src/reasoning/nal/TruthFunctions.js');
@@ -179,9 +150,6 @@ export class PropertyBasedTester {
         }
     }
 
-    /**
-     * Run multiple property tests on terms
-     */
     runTermPropertyTests() {
         const results = {
             immutability: null,
@@ -213,9 +181,6 @@ export class PropertyBasedTester {
         return results;
     }
 
-    /**
-     * Get failure report
-     */
     getFailureReport() {
         return {
             totalFailures: this.failures.length,

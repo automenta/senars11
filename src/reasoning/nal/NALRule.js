@@ -2,9 +2,6 @@ import {Rule} from '../Rule.js';
 import {PatternMatcher} from './PatternMatcher.js';
 import {TruthFunctions} from './TruthFunctions.js';
 
-/**
- * Base NAL rule class with common functionality
- */
 export class NALRule extends Rule {
     constructor(id, config = {}) {
         super(id, 'nal', config.priority || 1.0, config);
@@ -24,7 +21,7 @@ export class NALRule extends Rule {
             const results = await this._apply(task, context);
             return {results, rule: this._updateMetrics(true, performance.now() - start)};
         } catch (error) {
-            throw {error, rule: this._updateMetrics(false, performance.now() - start)};
+            return {results: [], error, rule: this._updateMetrics(false, performance.now() - start)};
         }
     }
 

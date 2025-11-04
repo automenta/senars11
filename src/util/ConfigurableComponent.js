@@ -1,7 +1,3 @@
-/**
- * Base class for components that support configuration
- * Implements common configuration patterns to reduce code duplication
- */
 export class ConfigurableComponent {
     constructor(defaultConfig = {}, validationSchema = null) {
         this._defaultConfig = defaultConfig;

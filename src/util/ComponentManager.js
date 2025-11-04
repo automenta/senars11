@@ -1,23 +1,13 @@
 import {BaseComponent} from '../util/BaseComponent.js';
 
-/**
- * ComponentManager manages the lifecycle of system components
- * ensuring standardized initialization, startup, and shutdown patterns
- */
 export class ComponentManager extends BaseComponent {
-    /**
-     * Creates a new component manager
-     * @param {Object} config - Configuration for the component manager
-     * @param {EventBus} [eventBus] - Optional shared event bus
-     * @param {NAR} [nar] - Optional NAR instance
-     */
     constructor(config = {}, eventBus = null, nar = null) {
         super(config, 'ComponentManager', eventBus);
         this.nar = nar;
-        this._components = new Map(); // Map of component names to component instances
-        this._dependencyGraph = new Map(); // Map of component dependencies
-        this._startupOrder = []; // Order in which components should be started
-        this._shutdownOrder = []; // Order in which components should be shut down
+        this._components = new Map();
+        this._dependencyGraph = new Map();
+        this._startupOrder = [];
+        this._shutdownOrder = [];
     }
 
     async loadComponentsFromConfig(componentConfigs) {
@@ -57,13 +47,6 @@ export class ComponentManager extends BaseComponent {
         }
     }
 
-    /**
-     * Registers a component with the manager
-     * @param {string} name - Component name
-     * @param {BaseComponent} component - Component instance
-     * @param {string[]} [dependencies] - Names of components this component depends on
-     * @returns {boolean} True if registration was successful
-     */
     registerComponent(name, component, dependencies = []) {
         if (this._components.has(name)) {
             this.logWarn(`Component ${name} already registered`);
@@ -80,27 +63,14 @@ export class ComponentManager extends BaseComponent {
         return true;
     }
 
-    /**
-     * Gets a registered component by name
-     * @param {string} name - Component name
-     * @returns {BaseComponent|null} Component instance or null if not found
-     */
     getComponent(name) {
         return this._components.get(name) || null;
     }
 
-    /**
-     * Gets all registered components
-     * @returns {Map<string, BaseComponent>} Map of component names to instances
-     */
     getComponents() {
         return new Map(this._components);
     }
 
-    /**
-     * Gets the startup order of components
-     * @returns {string[]} Array of component names in startup order
-     */
     getStartupOrder() {
         if (this._startupOrder.length === 0) {
             this._calculateStartupOrder();
@@ -108,10 +78,6 @@ export class ComponentManager extends BaseComponent {
         return [...this._startupOrder];
     }
 
-    /**
-     * Gets the shutdown order of components
-     * @returns {string[]} Array of component names in shutdown order
-     */
     getShutdownOrder() {
         if (this._shutdownOrder.length === 0) {
             this._calculateShutdownOrder();
@@ -119,14 +85,10 @@ export class ComponentManager extends BaseComponent {
         return [...this._shutdownOrder];
     }
 
-    /**
-     * Calculates the startup order based on dependencies
-     * @private
-     */
     _calculateStartupOrder() {
         const result = [];
         const visited = new Set();
-        const visiting = new Set(); // For cycle detection
+        const visiting = new Set();
 
         const visit = (node) => {
             if (visited.has(node)) return;
@@ -157,10 +119,6 @@ export class ComponentManager extends BaseComponent {
         this._startupOrder = result;
     }
 
-    /**
-     * Calculates the shutdown order (reverse of startup order)
-     * @private
-     */
     _calculateShutdownOrder() {
         if (this._startupOrder.length === 0) {
             this._calculateStartupOrder();
@@ -168,14 +126,6 @@ export class ComponentManager extends BaseComponent {
         this._shutdownOrder = [...this._startupOrder].reverse();
     }
 
-    /**
-     * Internal method to execute a lifecycle operation on all components
-     * @param {string} operation - The operation to perform (initialize, start, stop, dispose)
-     * @param {string[]} componentOrder - The order in which to execute the operation
-     * @param {Object} metricUpdate - Metric update configuration
-     * @returns {Promise<boolean>} True if all components were processed successfully
-     * @private
-     */
     async _executeLifecycleOperation(operation, componentOrder, metricUpdate = null) {
         this.logInfo(`${operation.charAt(0).toUpperCase() + operation.slice(1)}ing ${this._components.size} components...`);
 
@@ -212,14 +162,6 @@ export class ComponentManager extends BaseComponent {
         return success;
     }
 
-    /**
-     * Helper method to log operation results
-     * @param {string} operation - The operation name
-     * @param {number} successful - Number of successful operations
-     * @param {number} total - Total number of operations
-     * @param {number} failed - Number of failed operations
-     * @private
-     */
     _logOperationResult(operation, successful, total, failed) {
         if (failed > 0) {
             this.logInfo(`${operation.charAt(0).toUpperCase() + operation.slice(1)}: ${successful}/${total} ${operation === 'init' ? 'OK' : 'successful'}, ${failed} failed`);
@@ -228,15 +170,6 @@ export class ComponentManager extends BaseComponent {
         }
     }
 
-    /**
-     * Helper method to emit lifecycle events
-     * @param {string} operation - The operation name
-     * @param {number} total - Total number of operations
-     * @param {number} successful - Number of successful operations
-     * @param {string[]} failedComponents - Names of failed components
-     * @param {boolean} success - Whether the operation was successful
-     * @private
-     */
     _emitLifecycleEvent(operation, total, successful, failedComponents, success) {
         this.emitEvent(`components.${operation}ed`, {
             total,
@@ -247,46 +180,26 @@ export class ComponentManager extends BaseComponent {
         });
     }
 
-    /**
-     * Initializes all registered components in dependency order
-     * @returns {Promise<boolean>} True if all components were initialized successfully
-     */
     async initializeAll() {
         const startupOrder = this.getStartupOrder();
         return await this._executeLifecycleOperation('initialize', startupOrder, {metric: 'initializeCount'});
     }
 
-    /**
-     * Starts all registered components in dependency order
-     * @returns {Promise<boolean>} True if all components were started successfully
-     */
     async startAll() {
         const startupOrder = this.getStartupOrder();
         return await this._executeLifecycleOperation('start', startupOrder, {metric: 'startCount'});
     }
 
-    /**
-     * Stops all registered components in reverse dependency order
-     * @returns {Promise<boolean>} True if all components were stopped successfully
-     */
     async stopAll() {
         const shutdownOrder = this.getShutdownOrder();
         return await this._executeLifecycleOperation('stop', shutdownOrder, {metric: 'stopCount'});
     }
 
-    /**
-     * Disposes all registered components
-     * @returns {Promise<boolean>} True if all components were disposed successfully
-     */
     async disposeAll() {
         const shutdownOrder = this.getShutdownOrder();
         return await this._executeLifecycleOperation('dispose', shutdownOrder);
     }
 
-    /**
-     * Gets metrics for all components
-     * @returns {Object} Metrics for all components
-     */
     getComponentsMetrics() {
         const allMetrics = {};
 
@@ -302,16 +215,11 @@ export class ComponentManager extends BaseComponent {
         return allMetrics;
     }
 
-    /**
-     * Health check for all components
-     * @returns {Object} Health status for all components
-     */
     async healthCheck() {
         const healthStatus = {};
 
         for (const [name, component] of this._components) {
             try {
-                // Basic health check - verify component is in expected state
                 healthStatus[name] = {
                     isInitialized: component.isInitialized,
                     isStarted: component.isStarted,

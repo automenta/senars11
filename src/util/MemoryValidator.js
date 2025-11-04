@@ -30,7 +30,7 @@ export class MemoryValidator {
 
     storeChecksum(key, obj) {
         if (!this.isEnabled) return;
-
+        
         const checksum = this.calculateChecksum(obj);
         if (checksum) {
             this.checksums.set(key, checksum);
@@ -89,7 +89,7 @@ export class MemoryValidator {
 
     updateChecksum(key, obj) {
         if (!this.isEnabled) return;
-
+        
         const checksum = this.calculateChecksum(obj);
         if (checksum) {
             this.checksums.set(key, checksum);

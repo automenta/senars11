@@ -1,12 +1,7 @@
-// Memory utilities
-
-// Collect tasks from all concepts in memory
-export const collectTasksFromAllConcepts = (memory, filterFn = null) => {
-    return memory.getAllConcepts()
+export const collectTasksFromAllConcepts = (memory, filterFn = null) => 
+    memory.getAllConcepts()
         .flatMap(concept => filterFn ? concept.getAllTasks().filter(filterFn) : concept.getAllTasks());
-};
 
-// Collect concepts with specific criteria
 export const collectConceptsWithCriteria = (memory, criteria = {}) => {
     const {minTaskCount = 0, hasUnresolvedTasks = false, termPattern = null} = criteria;
     
@@ -24,8 +19,7 @@ export const collectConceptsWithCriteria = (memory, criteria = {}) => {
     });
 };
 
-// Get memory statistics
-export const getMemoryStats = (memory) => {
+export const getMemoryStats = memory => {
     const concepts = memory.getAllConcepts();
     const tasks = concepts.flatMap(concept => concept.getAllTasks());
     

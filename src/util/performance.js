@@ -1,6 +1,3 @@
-// Performance utilities
-
-// Debounce function execution
 export const debounce = (func, wait, immediate = false) => {
     let timeoutId = null;
     
@@ -29,7 +26,6 @@ export const debounce = (func, wait, immediate = false) => {
     return debouncedFunc;
 };
 
-// Throttle function execution
 export const throttle = (fn, delay, options = {}) => {
     let lastCall = 0;
     let lastResult;
@@ -52,7 +48,6 @@ export const throttle = (fn, delay, options = {}) => {
     };
 };
 
-// Memoize function results
 export const memoize = (fn, resolver = null) => {
     const cache = new Map();
     return (...args) => {
@@ -64,7 +59,6 @@ export const memoize = (fn, resolver = null) => {
     };
 };
 
-// Rate limiter
 export const rateLimit = (fn, maxCalls, timeWindow) => {
     const calls = [];
     

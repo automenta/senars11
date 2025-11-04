@@ -2,28 +2,21 @@ import {sortByProperty} from '../../util/collections.js';
 
 export class RuleManager {
     constructor() {
-        this._rules = new Map(); // Map of rule ID to rule instance
-        this._categories = new Map(); // Map of category to rule IDs
-        this._enabledRules = new Set(); // Set of enabled rule IDs
-        this._performanceMetrics = new Map(); // Performance metrics by rule
-        this._validationRules = new Map(); // Validation functions by rule ID
-        this._ruleGroups = new Map(); // Grouping of related rules
+        this._rules = new Map();
+        this._categories = new Map();
+        this._enabledRules = new Set();
+        this._performanceMetrics = new Map();
+        this._validationRules = new Map();
+        this._ruleGroups = new Map();
     }
 
     register(rule, category = 'general', groups = []) {
-        if (!rule || !rule.id) throw new Error('Rule must have an ID');
+        if (!rule?.id) throw new Error('Rule must have an ID');
 
-        // Store the rule
         this._rules.set(rule.id, rule);
-
-        // Add to category and groups
         this._addToCategory(rule.id, category);
         this._addToGroups(rule.id, groups);
-
-        // Initialize performance metrics
         this._initializeMetrics(rule.id);
-
-        // Enable the rule by default
         this._enabledRules.add(rule.id);
 
         return this;
@@ -55,8 +48,6 @@ export class RuleManager {
 
     unregister(ruleId) {
         if (!this._rules.has(ruleId)) return false;
-
-        // Remove from all collections
         this._removeFromCollections(ruleId);
         return true;
     }
@@ -66,17 +57,16 @@ export class RuleManager {
         this._enabledRules.delete(ruleId);
         this._performanceMetrics.delete(ruleId);
         this._validationRules.delete(ruleId);
-
-        // Remove from categories and groups
-        this._removeFromMapCollection(this._categories, ruleId);
-        this._removeFromMapCollection(this._ruleGroups, ruleId);
+        this._removeFromMapCollections(ruleId);
     }
 
-    _removeFromMapCollection(map, ruleId) {
-        for (const [key, ruleIds] of map.entries()) {
-            ruleIds.delete(ruleId);
-            if (ruleIds.size === 0) map.delete(key);
-        }
+    _removeFromMapCollections(ruleId) {
+        [this._categories, this._ruleGroups].forEach(map => {
+            for (const [key, ruleIds] of map.entries()) {
+                ruleIds.delete(ruleId);
+                if (ruleIds.size === 0) map.delete(key);
+            }
+        });
     }
 
     enable(ruleId) {
@@ -97,7 +87,7 @@ export class RuleManager {
 
     _updateRuleInstance(ruleId, operation) {
         const rule = this._rules.get(ruleId);
-        if (rule[operation]) {
+        if (rule?.[operation]) {
             this._rules.set(ruleId, rule[operation]());
         }
     }
@@ -163,7 +153,7 @@ export class RuleManager {
 
     validate(ruleId, context) {
         const validator = this._validationRules.get(ruleId);
-        return validator ? validator(context) : true; // Default: pass validation if no validator
+        return validator ? validator(context) : true;
     }
 
     updateMetrics(ruleId, success, executionTime) {
@@ -171,8 +161,6 @@ export class RuleManager {
         if (metrics) {
             metrics.applications++;
             metrics[success ? 'successes' : 'failures']++;
-
-            // Update average time
             metrics.avgTime = (metrics.avgTime * (metrics.applications - 1) + executionTime) / metrics.applications;
             metrics.lastApplied = Date.now();
         }
@@ -186,7 +174,6 @@ export class RuleManager {
         const totalRules = this._rules.size;
         const enabledCount = this._enabledRules.size;
 
-        // Calculate overall performance
         let totalApplications = 0;
         let totalSuccesses = 0;
         let totalFailures = 0;
@@ -227,7 +214,7 @@ export class RuleManager {
 
         const results = [];
         for (const rule of sortedRules) {
-            if (rule.canApply && rule.canApply(task, context)) {
+            if (rule.canApply?.(task, context)) {
                 results.push(...await this._applySingleRule(rule, task, context));
             }
         }
@@ -240,7 +227,6 @@ export class RuleManager {
         try {
             const {results: ruleResults, rule: updatedRule} = await rule.apply(task, context);
 
-            // Update metrics and rule instance if changed
             this.updateMetrics(rule.id, true, performance.now() - start);
             if (updatedRule && updatedRule !== rule) {
                 this._rules.set(rule.id, updatedRule);
@@ -249,7 +235,7 @@ export class RuleManager {
             return ruleResults;
         } catch (error) {
             this.updateMetrics(rule.id, false, performance.now() - start);
-            this.logger?.error(`Rule ${rule.id} failed:`, error);
+            this.logger?.error?.(`Rule ${rule.id} failed:`, error);
             return [];
         }
     }

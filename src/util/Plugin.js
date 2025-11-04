@@ -81,17 +81,10 @@ export class Plugin {
         }
     }
 
-    async _initialize() {
-    }
-
-    async _start() {
-    }
-
-    async _stop() {
-    }
-
-    async _dispose() {
-    }
+    async _initialize() {}
+    async _start() {}
+    async _stop() {}
+    async _dispose() {}
     
     getStatus() {
         return {

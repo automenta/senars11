@@ -1,9 +1,3 @@
-/**
- * Centralized registry for introspection event names.
- *
- * This provides a single source of truth for all introspection events,
- * ensuring consistency and preventing typos.
- */
 export const IntrospectionEvents = Object.freeze({
     // System Lifecycle
     SYSTEM_START: 'system:start',
@@ -35,17 +29,8 @@ export const IntrospectionEvents = Object.freeze({
     META_SELF_OPTIMIZATION: 'meta:self_optimization',
 });
 
-/**
- * Creates a standardized event payload.
- *
- * @param {string} sourceComponent - The name of the component emitting the event.
- * @param {object} payload - The event-specific data.
- * @returns {object} The standardized event object.
- */
-export function createEventPayload(sourceComponent, payload) {
-    return {
-        timestamp: Date.now(),
-        sourceComponent,
-        payload,
-    };
-}
+export const createEventPayload = (sourceComponent, payload) => ({
+    timestamp: Date.now(),
+    sourceComponent,
+    payload,
+});

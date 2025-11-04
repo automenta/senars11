@@ -1,11 +1,7 @@
-// Collection utilities optimized for performance and reusability
-
-// Array utilities
 export const sortByProperty = (items, prop, desc = false) =>
     [...items].sort((a, b) => (desc ? (b[prop] || 0) - (a[prop] || 0) : (a[prop] || 0) - (b[prop] || 0)));
 
 export const filterBy = (items, predicate) => items.filter(predicate);
-
 export const findBy = (items, predicate) => items.find(predicate);
 
 export const groupBy = (items, keyFn) =>
@@ -29,16 +25,11 @@ export const chunk = (array, size) => {
 
 export const flatten = arrays => [].concat(...arrays);
 
-// Numeric array utilities
-export const calculateAverage = (values) => {
-    if (!values || values.length === 0) return 0;
-    return values.reduce((sum, val) => sum + val, 0) / values.length;
-};
+export const calculateAverage = values => 
+    !values?.length ? 0 : values.reduce((sum, val) => sum + val, 0) / values.length;
 
-export const calculateStatistics = (values) => {
-    if (!values || values.length === 0) return {
-        mean: 0, median: 0, std: 0, min: 0, max: 0, count: 0
-    };
+export const calculateStatistics = values => {
+    if (!values?.length) return {mean: 0, median: 0, std: 0, min: 0, max: 0, count: 0};
     
     const sorted = [...values].sort((a, b) => a - b);
     const n = values.length;
@@ -50,18 +41,18 @@ export const calculateStatistics = (values) => {
     const variance = values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / n;
     const std = Math.sqrt(variance);
     
-    return { mean, median, std, min, max, count: n, variance };
+    return {mean, median, std, min, max, count: n, variance};
 };
 
 export const getPercentile = (values, percentile) => {
-    if (!values || values.length === 0) return 0;
+    if (!values?.length) return 0;
     const sorted = [...values].sort((a, b) => a - b);
     const index = Math.floor(percentile * (sorted.length - 1));
     return sorted[index];
 };
 
 export const getOutliers = (values, threshold = 2) => {
-    if (!values || values.length === 0) return [];
+    if (!values?.length) return [];
     
     const mean = calculateAverage(values);
     const std = Math.sqrt(values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / values.length);
@@ -69,9 +60,8 @@ export const getOutliers = (values, threshold = 2) => {
     return values.filter(value => Math.abs(value - mean) > threshold * std);
 };
 
-// Mathematical utilities
 export const correlation = (values1, values2) => {
-    if (!values1 || !values2 || values1.length !== values2.length || values1.length === 0) return 0;
+    if (!values1 || !values2 || values1.length !== values2.length || !values1.length) return 0;
     
     const n = values1.length;
     const avg1 = calculateAverage(values1);
