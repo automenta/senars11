@@ -38,22 +38,17 @@ export class RuleEngine extends BaseRuleEngine {
      * @param {Array} hybridRules - Array of hybrid rules to register
      */
     async initialize(nalRules = [], lmRules = [], hybridRules = []) {
-        // Register NAL rules
-        for (const rule of nalRules) {
-            this._nalRules.register(rule, 'nal');
-        }
-
-        // Register LM rules
-        for (const rule of lmRules) {
-            this._lmRules.register(rule, 'lm');
-        }
-
-        // Register hybrid rules
-        for (const rule of hybridRules) {
-            this._hybridRules.register(rule, 'hybrid');
-        }
-
+        this._registerRules('nal', nalRules);
+        this._registerRules('lm', lmRules);
+        this._registerRules('hybrid', hybridRules);
         return this;
+    }
+
+    _registerRules(type, rules) {
+        const ruleManager = this[`_${type}Rules`];
+        for (const rule of rules) {
+            ruleManager.register(rule, type);
+        }
     }
 
     /**
@@ -152,20 +147,23 @@ export class RuleEngine extends BaseRuleEngine {
      */
     async applyAllRules(task, params = {}) {
         const context = await this.getContext(params);
-        
-        const ruleTypes = [
-            [this._config.enableNal, 'nal', this.applyNalRules.bind(this)],
-            [this._config.enableLm, 'lm', this.applyLmRules.bind(this)],
-            [this._config.enableHybrid, 'hybrid', this.applyHybridRules.bind(this)]
-        ];
+        return await this._applyRulesByTypes(task, context, this._getEnabledRuleTypes());
+    }
 
-        const enabledRuleTypes = ruleTypes.filter(([enabled]) => enabled);
+    _getEnabledRuleTypes() {
+        return [
+            [this._config.enableNal, 'nal'],
+            [this._config.enableLm, 'lm'],
+            [this._config.enableHybrid, 'hybrid']
+        ].filter(([enabled]) => enabled).map(([_, type]) => type);
+    }
+
+    async _applyRulesByTypes(task, context, ruleTypes) {
         const results = [];
-
-        for (const [_, type, applyRuleFn] of enabledRuleTypes) {
-            results.push(...await applyRuleFn(task, context));
+        for (const type of ruleTypes) {
+            const applyFn = this[`apply${type.charAt(0).toUpperCase() + type.slice(1)}Rules`].bind(this);
+            results.push(...await applyFn(task, context));
         }
-
         return results;
     }
 
@@ -178,21 +176,7 @@ export class RuleEngine extends BaseRuleEngine {
     async applyReasoningPath(task, params = {}) {
         const context = await this.getContext(params);
         const reasoningPath = this._determineReasoningPath(task, context);
-
-        const ruleTypes = [
-            [reasoningPath.includes('nal'), 'nal', this.applyNalRules.bind(this)],
-            [reasoningPath.includes('lm'), 'lm', this.applyLmRules.bind(this)],
-            [reasoningPath.includes('hybrid'), 'hybrid', this.applyHybridRules.bind(this)]
-        ];
-
-        const enabledRuleTypes = ruleTypes.filter(([enabled]) => enabled);
-        const results = [];
-
-        for (const [_, type, applyRuleFn] of enabledRuleTypes) {
-            results.push(...await applyRuleFn(task, context));
-        }
-
-        return results;
+        return await this._applyRulesByTypes(task, context, reasoningPath);
     }
 
     /**
@@ -323,39 +307,10 @@ export class RuleEngine extends BaseRuleEngine {
         };
     }
 
-    /**
-     * Enable rules by category
-     * @param {string} category - The category to enable
-     */
-    enableCategory(category) {
-        return this._updateRuleStatus(category, 'enable', 'Category');
-    }
-
-    /**
-     * Disable rules by category
-     * @param {string} category - The category to disable
-     */
-    disableCategory(category) {
-        return this._updateRuleStatus(category, 'disable', 'Category');
-    }
-
-    /**
-     * Enable a specific rule
-     * @param {string} ruleId - The ID of the rule to enable
-     * @param {string} type - The type of rule (nal, lm, hybrid)
-     */
-    enableRule(ruleId, type) {
-        return this._updateRuleStatus(type, 'enable', ruleId);
-    }
-
-    /**
-     * Disable a specific rule
-     * @param {string} ruleId - The ID of the rule to disable
-     * @param {string} type - The type of rule (nal, lm, hybrid)
-     */
-    disableRule(ruleId, type) {
-        return this._updateRuleStatus(type, 'disable', ruleId);
-    }
+    enableCategory(category) { return this._updateRuleStatus(category, 'enable', 'Category'); }
+    disableCategory(category) { return this._updateRuleStatus(category, 'disable', 'Category'); }
+    enableRule(ruleId, type) { return this._updateRuleStatus(type, 'enable', ruleId); }
+    disableRule(ruleId, type) { return this._updateRuleStatus(type, 'disable', ruleId); }
 
     /**
      * Generic method to update rule status

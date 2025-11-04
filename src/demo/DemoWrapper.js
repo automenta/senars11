@@ -78,36 +78,22 @@ export class DemoWrapper {
     async handleDemoControl(data) {
         try {
             // Validate input data using the validator module
-            if (!DemoValidator.validateDemoControl(data)) {
-                return;
-            }
+            if (!DemoValidator.validateDemoControl(data)) return;
 
             const {command, demoId, parameters} = data.payload;
             
-            // Handle the command directly instead of using a handler map
-            switch (command) {
-                case 'start':
-                    await this.startDemo(demoId, parameters);
-                    break;
-                case 'stop':
-                    await this.stopDemo(demoId);
-                    break;
-                case 'pause':
-                    await this.pauseDemo(demoId);
-                    break;
-                case 'resume':
-                    await this.resumeDemo(demoId);
-                    break;
-                case 'step':
-                    await this.stepDemo(demoId, parameters);
-                    break;
-                case 'configure':
-                    await this.configureDemo(demoId, parameters);
-                    break;
-                default:
-                    await this._handleUnknownCommand(demoId, command);
-                    break;
-            }
+            // Use a command map to reduce switch statement
+            const commandMap = {
+                'start': () => this.startDemo(demoId, parameters),
+                'stop': () => this.stopDemo(demoId),
+                'pause': () => this.pauseDemo(demoId),
+                'resume': () => this.resumeDemo(demoId),
+                'step': () => this.stepDemo(demoId, parameters),
+                'configure': () => this.configureDemo(demoId, parameters),
+            };
+            
+            const handler = commandMap[command] || (() => this._handleUnknownCommand(demoId, command));
+            await handler();
         } catch (error) {
             console.error('Error handling demo control:', error);
             // Notify client about the error
@@ -225,29 +211,31 @@ export class DemoWrapper {
     async _executeDemoHandler(demo, parameters) {
         // The demo handler may be from the DemosManager which needs access to nar and other methods
         // For demo-specific handlers, we call them with the necessary context
-        if (demo.id === 'basicUsage') {
-            await this.demosManager.runBasicUsageDemo(
+        const demoMap = {
+            'basicUsage': () => this.demosManager.runBasicUsageDemo(
                 this.nar, 
                 this.sendDemoStep.bind(this), 
                 this.waitIfNotPaused.bind(this), 
                 parameters
-            );
-        } else if (demo.id === 'syllogism') {
-            await this.demosManager.runSyllogismDemo(
+            ),
+            'syllogism': () => this.demosManager.runSyllogismDemo(
                 this.nar, 
                 this.sendDemoStep.bind(this), 
                 this.waitIfNotPaused.bind(this), 
                 parameters
-            );
-        } else if (demo.id === 'inductive') {
-            await this.demosManager.runInductiveDemo(
+            ),
+            'inductive': () => this.demosManager.runInductiveDemo(
                 this.nar, 
                 this.sendDemoStep.bind(this), 
                 this.waitIfNotPaused.bind(this), 
                 parameters
-            );
-        } else if (typeof demo.handler === 'function') {
-            await demo.handler.call(this, parameters);
+            ),
+        };
+        
+        const handler = demoMap[demo.id] || (typeof demo.handler === 'function' ? () => demo.handler.call(this, parameters) : null);
+        
+        if (handler) {
+            await handler();
         }
     }
 
