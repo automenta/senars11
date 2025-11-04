@@ -21,7 +21,7 @@ describe('RuleEngine Integration Tests', () => {
         const result = await new TestNAR()
             .input('(a ==> b)', 0.9, 0.9)
             .input('a', 0.8, 0.8)
-            .run(5)  // Run multiple cycles to ensure inference
+            .run(2)  // Reduced cycles - modus ponens should derive quickly
             .expect(new TaskMatch('b').withTruth(0.71, 0.64))  // Expected from truth calculation
             .execute();
 
@@ -32,7 +32,7 @@ describe('RuleEngine Integration Tests', () => {
         const result = await new TestNAR()
             .input('(a ==> b)', 0.9, 0.9)
             .input('(b ==> c)', 0.8, 0.8)
-            .run(5)  // Run multiple cycles to ensure inference
+            .run(2)  // Reduced cycles - syllogism should derive quickly
             .expect(new TaskMatch('(a ==> c)').withTruth(0.71, 0.51))  // Expected from deduction
             .execute();
 

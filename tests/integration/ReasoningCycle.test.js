@@ -21,7 +21,7 @@ describe('NAL Reasoning Cycle Validation', () => {
         const result = await testNAR
             .input('(a ==> b)', 0.9, 0.9)
             .input('(b ==> c)', 0.9, 0.9)
-            .run(20) // More cycles to ensure inference
+            .run(3) // Reduced cycles - deduction should happen much faster
             .expect(new TaskMatch('(a ==> c)'))
             .execute();
 

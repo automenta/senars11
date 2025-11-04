@@ -11,7 +11,7 @@ describe('Modus Ponens Tests (with new TestNAR)', () => {
         const result = await new TestNAR()
             .input('(a ==> b)', 0.9, 0.9)
             .input('a', 0.8, 0.8)
-            .run(2)
+            .run(1) // Reduced cycles - modus ponens should derive quickly
             .expect(new TaskMatch('b').withFlexibleTruth(0.72, 0.65, 0.05)) // ~0.9*0.8 with 5% tolerance
             .execute();
 
@@ -36,7 +36,7 @@ describe('Modus Ponens Tests (with new TestNAR)', () => {
         const result = await new TestNAR()
             .input('(sunny_day ==> good_mood)', 0.85, 0.9)
             .input('sunny_day', 0.9, 0.85)
-            .run(2)
+            .run(1) // Reduced cycles - complex terms should derive quickly
             .expect(new TaskMatch('good_mood').withFlexibleTruth(0.77, 0.69, 0.05)) // ~0.85*0.9 with 5% tolerance
             .execute();
 

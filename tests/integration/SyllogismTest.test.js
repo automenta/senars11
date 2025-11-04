@@ -11,7 +11,7 @@ describe('Syllogistic Reasoning Tests', () => {
         const result = await new TestNAR()
             .input('(a ==> b)', 0.9, 0.9)
             .input('(b ==> c)', 0.8, 0.8)
-            .run(2)
+            .run(1) // Reduced cycles - syllogism should derive quickly
             .expect(new TaskMatch('(a ==> c)').withFlexibleTruth(0.71, 0.51, 0.25)) // Original expected: 0.71,0.51 with wider tolerance for algorithm changes
             .expectNot('(c ==> a)')
             .execute();

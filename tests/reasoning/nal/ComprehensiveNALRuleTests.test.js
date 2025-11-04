@@ -134,7 +134,7 @@ describe('Comprehensive NAL Rule Tests - Phase 2 Preparation', () => {
             const result = await new TestNAR()
                 .input('(a ==> b)', 0.9, 0.8)  // If a then b
                 .input('a', 0.8, 0.9)         // a is true
-                .run(3)
+                .run(1)  // Reduced cycles - deduction should happen quickly
                 .expect(new TaskMatch('b').withFlexibleTruth(0.72, 0.65, 0.05))  // b follows (based on observed output: 0.72, 0.65)
                 .execute();
 
@@ -145,7 +145,7 @@ describe('Comprehensive NAL Rule Tests - Phase 2 Preparation', () => {
             const result = await new TestNAR()
                 .input('(a ==> b)', 0.8, 0.7)
                 .input('(b ==> c)', 0.7, 0.8)
-                .run(5)
+                .run(2)  // Reduced cycles - syllogism should derive quickly
                 .expect(new TaskMatch('(a ==> c)'))  // Check for syllogistic inference
                 .execute();
 

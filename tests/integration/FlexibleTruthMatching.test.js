@@ -59,7 +59,7 @@ describe('Flexible Truth Matching Tests', () => {
     it('should work for conjunction reasoning with flexible matching', async () => {
         const result = await new TestNAR()
             .input('(&&, (a --> b), (b --> c))', 0.9, 0.9)  // a is b AND b is c
-            .run(3)
+            .run(1)  // Reduced cycles - conjunction should derive quickly
             .expect(
                 new TaskMatch('(&&, (a --> b), (b --> c))')  // Expect the conjunction itself
                     .withFlexibleTruth(0.9, 0.9, 0.1)  // With tolerance

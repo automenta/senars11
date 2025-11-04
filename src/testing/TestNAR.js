@@ -158,12 +158,12 @@ export class TestNAR {
                 }
             },
             reasoning: {
-                maxCombinations: 50, // Smaller limit for tests (was 100)
-                maxRuleApplications: 100, // Smaller limit for tests (was 1000)
-                maxTasksPerBatch: 10 // Smaller batches for tests (was 50)
+                maxCombinations: 25, // Smaller limit for tests (was 100, now 50)
+                maxRuleApplications: 50, // Smaller limit for tests (was 1000, now 100)
+                maxTasksPerBatch: 5 // Smaller batches for tests (was 50, now 10)
             },
             cycle: {
-                delay: 1 // Minimum delay in tests to pass validation
+                delay: 1 // Minimum delay to pass validation but still optimized for tests
             }
         };
         
@@ -171,7 +171,7 @@ export class TestNAR {
         await this.nar.initialize(); // Initialize the NAR to ensure components are set up
 
         // Allow for fewer cycles to ensure reasoning completion (optimized for tests)
-        const maxCycles = 2; // Reduced cycles for tests after inputs
+        const maxCycles = 1; // Reduced cycles for tests after inputs (was 2)
 
         // Process operations
         const expectations = [];
