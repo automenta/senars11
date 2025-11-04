@@ -3,6 +3,8 @@
  * Provides common formatting and display functionality shared between different UI components
  */
 
+import * as dfd from 'danfojs';
+
 export class DisplayUtils {
     /**
      * Creates a formatted table with specified headers and data
@@ -193,5 +195,85 @@ export class DisplayUtils {
     static formatListWithEmoji(items, emoji = '•', prefix = '  ') {
         if (!Array.isArray(items) || items.length === 0) return '';
         return items.map(item => `${prefix}${emoji} ${item}`).join('\n');
+    }
+
+    /**
+     * Prints a danfojs DataFrame as a formatted table
+     * @param {Object} df - danfojs DataFrame to print
+     * @param {Object} options - Printing options
+     * @param {number} options.maxRows - Maximum number of rows to display (default: 20)
+     * @param {number} options.maxCols - Maximum number of columns to display (default: 10)
+     * @param {number} options.precision - Decimal precision for numbers (default: 2)
+     * @returns {string} Formatted table string
+     */
+    static printDataFrame(df, options = {}) {
+        if (!df || typeof df !== 'object') return '';
+        
+        const {
+            maxRows = 20,
+            maxCols = 10,
+            precision = 2
+        } = options;
+        
+        try {
+            // Get DataFrame dimensions
+            const shape = df.shape || [0, 0];
+            const rows = shape[0];
+            const cols = shape[1];
+            
+            // Handle empty DataFrame
+            if (rows === 0 || cols === 0) {
+                return 'Empty DataFrame';
+            }
+            
+            // Get column names
+            const columns = df.columns || [];
+            const displayColumns = columns.slice(0, maxCols);
+            
+            // Prepare headers
+            const headers = displayColumns.map(col => String(col));
+            
+            // Prepare data rows
+            const values = df.values || [];
+            const displayRows = Math.min(rows, maxRows);
+            const dataRows = [];
+            
+            for (let i = 0; i < displayRows; i++) {
+                const row = values[i] || [];
+                const displayRow = [];
+                
+                for (let j = 0; j < displayColumns.length; j++) {
+                    let cell = row[j];
+                    
+                    // Format cell value
+                    if (typeof cell === 'number' && !Number.isInteger(cell)) {
+                        cell = cell.toFixed(precision);
+                    } else if (cell === null || cell === undefined) {
+                        cell = 'null';
+                    } else {
+                        cell = String(cell);
+                    }
+                    
+                    displayRow.push(cell);
+                }
+                
+                dataRows.push(displayRow);
+            }
+            
+            // Create the table
+            let table = this.createTable(headers, dataRows);
+            
+            // Add info about truncated data
+            if (rows > maxRows || cols > maxCols) {
+                const rowInfo = rows > maxRows ? ` (${rows - maxRows} more rows)` : '';
+                const colInfo = cols > maxCols ? ` (${cols - maxCols} more columns)` : '';
+                table += `\n\n[${rows} rows x ${cols} columns]${rowInfo}${colInfo}`;
+            }
+            
+            return table;
+        } catch (error) {
+            // Fallback to simple representation if danfojs operations fail
+            return `DataFrame (${df.shape ? df.shape.join('x') : 'unknown shape'})`;
+        }
     }
 }

@@ -227,5 +227,6 @@ export class NaiveExhaustiveStrategy extends StrategyInterface {
             }
         }
 
+        return uniqueTasks;
     }
 }

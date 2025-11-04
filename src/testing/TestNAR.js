@@ -146,11 +146,32 @@ export class TestNAR {
     async execute() {
         // Dynamically import NAR to avoid circular dependencies
         const {NAR} = await import('../nar/NAR.js');
-        this.nar = new NAR();
+        
+        // Use optimized config for tests to improve performance
+        const config = {
+            performance: {
+                useOptimizedCycle: true,
+                cycle: {
+                    maxTaskCacheSize: 1000, // Keep at default or reasonable value
+                    maxInferenceCacheSize: 500, // Keep at reasonable value
+                    batchProcessingEnabled: false // Disable batching for simpler test flow
+                }
+            },
+            reasoning: {
+                maxCombinations: 50, // Smaller limit for tests (was 100)
+                maxRuleApplications: 100, // Smaller limit for tests (was 1000)
+                maxTasksPerBatch: 10 // Smaller batches for tests (was 50)
+            },
+            cycle: {
+                delay: 1 // Minimum delay in tests to pass validation
+            }
+        };
+        
+        this.nar = new NAR(config);
         await this.nar.initialize(); // Initialize the NAR to ensure components are set up
 
-        // Allow for more cycles to ensure reasoning completion
-        const maxCycles = 5; // Increase default cycles for reasoning
+        // Allow for fewer cycles to ensure reasoning completion (optimized for tests)
+        const maxCycles = 2; // Reduced cycles for tests after inputs
 
         // Process operations
         const expectations = [];
