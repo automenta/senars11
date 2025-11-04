@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-    ReactFlow,
-    MiniMap,
-    Controls,
-    Background,
-    useNodesState,
-    useEdgesState,
-    addEdge,
-    MarkerType
+  ReactFlow,
+  MiniMap,
+  Controls,
+  Background,
+  useNodesState,
+  useEdgesState,
+  addEdge,
+  MarkerType
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import useUiStore from '../stores/uiStore.js';
@@ -349,5 +349,7 @@ const GraphUI = () => {
         selectedNodePanel
     );
 };
+
+export default GraphUI;};
 
 export default GraphUI;

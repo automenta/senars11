@@ -1,4 +1,3 @@
-// src/module.js - ES module exports for library usage
 import {NAR} from './nar/NAR.js';
 import {Agent, InputTasks} from './Agent.js';
 import {EvaluationEngine} from './reasoning/EvaluationEngine.js';
@@ -16,7 +15,6 @@ export {
     MonitoringAPI
 };
 
-// Default export for convenience
 export default {
     NAR,
     Agent,

@@ -36,7 +36,7 @@ export class NAR extends BaseComponent {
         this._isRunning = false;
         this._cycleInterval = null;
         this._useOptimizedCycle = config.performance?.useOptimizedCycle !== false;
-        this._startTime = Date.now(); // Track when NAR was initialized for uptime
+        this._startTime = Date.now();
         this._registerComponents();
 
         if (this._config.get('components')) {
@@ -131,10 +131,9 @@ export class NAR extends BaseComponent {
             reasoningStrategy: strategy,
             termFactory: this._termFactory,
             nar: this,
-            ...this._config.get('performance.cycle') // Additional performance config options
+            ...this._config.get('performance.cycle')
         };
 
-        // Use optimized cycle if configured for Phase 5+
         this._cycle = this._useOptimizedCycle
             ? new OptimizedCycle(cycleConfig)
             : new Cycle(cycleConfig);
@@ -242,17 +241,15 @@ export class NAR extends BaseComponent {
 
     _createTaskTruth(taskType, truthValue, parsed) {
         if (taskType === 'QUESTION') {
-            // Questions should not have truth values
             if (truthValue) {
                 throw new Error(`Questions cannot have truth values: input was ${parsed.originalInput || 'unspecified'}`);
             }
-            return null; // Questions don't have truth values
+            return null;
         }
 
-        // Beliefs and Goals must have valid truth values
         return truthValue 
             ? new Truth(truthValue.frequency, truthValue.confidence)
-            : new Truth(1.0, 0.9); // Default truth values for NARS
+            : new Truth(1.0, 0.9);
     }
 
     _getTaskTypeFromPunctuation(punctuation) {
@@ -260,7 +257,7 @@ export class NAR extends BaseComponent {
             '.': 'BELIEF',
             '!': 'GOAL',
             '?': 'QUESTION'
-        }[punctuation] || 'BELIEF'; // Default to belief
+        }[punctuation] || 'BELIEF';
     }
 
     async initialize() {
@@ -391,7 +388,6 @@ export class NAR extends BaseComponent {
 
     getConceptByName(termString) {
         if (this._memory) {
-            // Look for existing concept
             for (const concept of this._memory.getAllConcepts()) {
                 if (concept.term.toString() === termString) {
                     return concept;
@@ -580,11 +576,10 @@ export class NAR extends BaseComponent {
         monitor.listenToNAR(this);
         this.logInfo('Connected to WebSocket monitor for real-time monitoring');
 
-        // Set up periodic updates of reasoning state for UI
         if (this._reasoningAboutReasoning) {
             this._reasoningStateInterval = setInterval(() => {
                 this._emitPeriodicReasoningState();
-            }, 5000); // Update every 5 seconds
+            }, 5000);
         }
     }
 

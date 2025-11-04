@@ -1,7 +1,6 @@
 import {NAR} from '../nar/NAR.js';
 import readline from 'readline';
 import {PersistenceManager} from '../io/PersistenceManager.js';
-import {FormattingUtils} from './FormattingUtils.js';
 import {CommandProcessor} from './CommandProcessor.js';
 
 export class Repl {
@@ -13,13 +12,9 @@ export class Repl {
             defaultPath: config.persistence?.defaultPath || './agent.json'
         });
         
-        // Create shared command processor
         this.commandProcessor = new CommandProcessor(this.nar, this.persistenceManager, this.sessionState);
 
-        // Animation state for emojis
         this.animationState = {spinningIndex: 0};
-
-        // State for run command
         this.isRunningLoop = false;
         this.originalTraceState = false;
         this.traceEnabled = false;
@@ -29,7 +24,6 @@ export class Repl {
         console.log('SeNARS Reasoning Engine');
         console.log('Type "/help" for available commands, "/quit" to exit');
 
-        // Initialize the NAR to ensure rules are loaded
         try {
             await this.nar.initialize();
             console.log('✅ NAR initialized with default rules');
@@ -42,7 +36,6 @@ export class Repl {
         this.rl.on('line', async (input) => {
             const trimmedInput = input.trim();
             if (!trimmedInput) {
-                // Empty input runs a single cycle (next command)
                 await this._next();
                 this._prompt();
                 return;
@@ -68,7 +61,6 @@ export class Repl {
     }
 
     async _executeCommand(cmd, ...args) {
-        // Handle special commands that need to stay in Repl
         if (cmd === 'next' || cmd === 'n') {
             const result = await this._next();
             if (result) console.log(result.trim());
@@ -87,7 +79,6 @@ export class Repl {
             return;
         }
 
-        // Delegate to shared command processor for standard commands
         const result = await this.commandProcessor.executeCommand(cmd, ...args);
         if (result) {
             console.log(result.trim());
@@ -103,11 +94,8 @@ export class Repl {
                 return;
             }
 
-            // Process at least one reasoning cycle to ensure tasks are processed into concepts
             await this.nar.step();
             const duration = Date.now() - startTime;
-
-            // Input processed silently - no success message
         } catch (error) {
             console.error(`❌ Error: ${error.message}`);
         }
@@ -155,19 +143,16 @@ export class Repl {
             return '⏸️  Already running. Use the "/stop" command to stop.';
         }
 
-        // Save original trace state
         this.originalTraceState = this.traceEnabled;
 
         this.isRunningLoop = true;
         console.log('🏃 Running continuously... Use "/stop" to stop.');
 
-        // Auto-enable trace if it wasn't already enabled
         if (!this.traceEnabled) {
             this.traceEnabled = true;
             console.log('👁️ Trace enabled for this run session');
         }
 
-        // Set up the run interval
         this.runInterval = setInterval(async () => {
             try {
                 await this.nar.step();
@@ -175,9 +160,8 @@ export class Repl {
                 console.error(`❌ Error during run: ${error.message}`);
                 this._stopRun();
             }
-        }, 10); // Run every 10ms
+        }, 10);
 
-        // Don't return anything to keep the REPL responsive
         return null;
     }
 
@@ -192,7 +176,6 @@ export class Repl {
         }
         this.isRunningLoop = false;
 
-        // Restore original trace state
         if (!this.originalTraceState && this.traceEnabled) {
             this.traceEnabled = false;
             console.log('↩️  Trace restored to original state');
@@ -203,7 +186,6 @@ export class Repl {
     }
 
     _isTraceEnabled() {
-        // Return current trace state
         return this.traceEnabled;
     }
 
@@ -232,7 +214,6 @@ export class Repl {
             ].join('\n');
         }
 
-        // Map example names to file paths
         const exampleMap = {
             'agent-builder': '../examples/agent-builder-demo.js',
             'agent-builder-demo': '../examples/agent-builder-demo.js',
@@ -263,19 +244,15 @@ export class Repl {
         }
 
         try {
-            // Import and run the example
             const path = await import('path');
             const url = await import('url');
 
-            // Get the current directory and build the absolute path
             const __filename = url.fileURLToPath(import.meta.url);
             const __dirname = path.dirname(__filename);
             const filePath = path.resolve(__dirname, examplePath);
 
-            // Import using file:// URL protocol
             const exampleModule = await import(`file://${filePath}`);
 
-            // If the example has a default export that's a function, call it with the current NAR instance
             if (exampleModule.default && typeof exampleModule.default === 'function') {
                 console.log(`\n🎭 Running example: ${exampleName}`);
                 console.log('='.repeat(40));
@@ -287,11 +264,9 @@ export class Repl {
 
                 return '✅ Example executed successfully.';
             } else {
-                // If no default function, just show the import was successful
                 return `✅ Example ${exampleName} imported successfully. (No default function to execute)`;
             }
         } catch (error) {
-            // Provide more specific error information
             if (error.code === 'MODULE_NOT_FOUND') {
                 return `📁 Example file not found: ${examplePath}. Make sure the file exists in the examples directory.`;
             }

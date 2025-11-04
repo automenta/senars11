@@ -5,13 +5,8 @@ import {WebSocketMonitor} from './server/WebSocketMonitor.js';
 import {NAR} from './nar/NAR.js';
 
 const DEFAULT_CONFIG = Object.freeze({
-    nar: {
-        lm: {enabled: false},
-        reasoningAboutReasoning: {enabled: true}
-    },
-    persistence: {
-        defaultPath: './agent.json'
-    },
+    nar: {lm: {enabled: false}, reasoningAboutReasoning: {enabled: true}},
+    persistence: {defaultPath: './agent.json'},
     webSocket: {
         port: process.env.WS_PORT || 8080,
         host: process.env.WS_HOST || 'localhost',
@@ -21,7 +16,6 @@ const DEFAULT_CONFIG = Object.freeze({
 
 async function main() {
     console.log('SeNARS starting...');
-
     const nar = new NAR(DEFAULT_CONFIG.nar);
     await nar.initialize();
 
@@ -31,15 +25,13 @@ async function main() {
 
     const repl = new Repl(DEFAULT_CONFIG);
     repl.nar = nar;
-
     setupGracefulShutdown(repl, monitor);
     await repl.start();
 }
 
-function setupGracefulShutdown(repl, monitor) {
+const setupGracefulShutdown = (repl, monitor) => {
     process.on('SIGINT', async () => {
         console.log('\nShutting down gracefully...');
-
         try {
             const state = repl.nar.serialize();
             await repl.persistenceManager.saveToDefault(state);
@@ -47,12 +39,11 @@ function setupGracefulShutdown(repl, monitor) {
         } catch (saveError) {
             console.error('Error saving state on shutdown:', saveError?.message || saveError);
         }
-
         await monitor.stop();
         process.exit(0);
     });
 
-    process.on('uncaughtException', (error) => {
+    process.on('uncaughtException', error => {
         console.error('Uncaught exception:', error?.message || error);
         process.exit(1);
     });
@@ -61,7 +52,7 @@ function setupGracefulShutdown(repl, monitor) {
         console.error('Unhandled rejection at:', promise, 'reason:', reason?.message || reason);
         process.exit(1);
     });
-}
+};
 
 import.meta.url === `file://${process.argv[1]}` && main().catch(error => {
     console.error('Failed to start SeNARS:', error);

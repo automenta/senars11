@@ -7,35 +7,30 @@ const DEFAULT_OPTIONS = Object.freeze({
     port: WEBSOCKET_CONFIG.defaultPort,
     host: WEBSOCKET_CONFIG.defaultHost,
     path: WEBSOCKET_CONFIG.defaultPath,
-    maxConnections: WEBSOCKET_CONFIG.maxConnections, // Increased default for better scalability
-    minBroadcastInterval: WEBSOCKET_CONFIG.minBroadcastInterval, // Reduced for better real-time experience
-    messageBufferSize: WEBSOCKET_CONFIG.messageBufferSize, // Max size for message buffer
-    rateLimitWindowMs: WEBSOCKET_CONFIG.rateLimitWindowMs, // 1 second window for rate limiting
-    maxMessagesPerWindow: WEBSOCKET_CONFIG.maxMessagesPerWindow // Max messages per window per client
+    maxConnections: WEBSOCKET_CONFIG.maxConnections,
+    minBroadcastInterval: WEBSOCKET_CONFIG.minBroadcastInterval,
+    messageBufferSize: WEBSOCKET_CONFIG.messageBufferSize,
+    rateLimitWindowMs: WEBSOCKET_CONFIG.rateLimitWindowMs,
+    maxMessagesPerWindow: WEBSOCKET_CONFIG.maxMessagesPerWindow
 });
 
 class WebSocketMonitor {
     constructor(options = {}) {
-        // Assign options with defaults
         this.port = options.port ?? DEFAULT_OPTIONS.port;
         this.host = options.host ?? DEFAULT_OPTIONS.host;
         this.path = options.path ?? DEFAULT_OPTIONS.path;
         this.maxConnections = options.maxConnections ?? DEFAULT_OPTIONS.maxConnections;
         this.eventFilter = options.eventFilter ?? null;
 
-        // Initialize collections
         this.clients = new Set();
         this.eventEmitter = new EventEmitter();
         this.server = null;
         this.clientMessageHandlers = new Map();
 
-        // Initialize message handlers
         this.messageHandlers = new ClientMessageHandlers(this);
 
-        // Metrics
         this.metrics = this._initializeMetrics();
 
-        // Rate limiting
         this.broadcastRateLimiter = {
             lastBroadcastTime: new Map(),
             minInterval: options.minBroadcastInterval ?? DEFAULT_OPTIONS.minBroadcastInterval
@@ -45,7 +40,6 @@ class WebSocketMonitor {
         this.maxMessagesPerWindow = options.maxMessagesPerWindow ?? DEFAULT_OPTIONS.maxMessagesPerWindow;
         this.messageBufferSize = options.messageBufferSize ?? DEFAULT_OPTIONS.messageBufferSize;
 
-        // Client capabilities
         this.clientCapabilities = new Map();
     }
 
@@ -69,7 +63,7 @@ class WebSocketMonitor {
                 port: this.port,
                 host: this.host,
                 path: this.path,
-                maxPayload: WEBSOCKET_CONFIG.maxPayload // 1MB max payload
+                maxPayload: WEBSOCKET_CONFIG.maxPayload
             });
 
             this.server.on('connection', (ws, request) => {
@@ -84,7 +78,6 @@ class WebSocketMonitor {
                 const clientId = this._generateClientId();
                 ws.clientId = clientId;
 
-                // Initialize rate limiter for this client
                 this.clientRateLimiters.set(clientId, {
                     messageCount: 0,
                     lastReset: Date.now()
@@ -102,7 +95,6 @@ class WebSocketMonitor {
                 });
 
                 ws.on('message', (data) => {
-                    // Check rate limiting for this client
                     if (!this._isClientRateLimited(clientId)) {
                         this.metrics.messagesReceived++;
                         this._handleClientMessage(ws, data);
@@ -140,22 +132,17 @@ class WebSocketMonitor {
         });
     }
 
-    // Check if client has exceeded rate limit
     _isClientRateLimited(clientId) {
         const now = Date.now();
         const clientLimiter = this.clientRateLimiters.get(clientId);
 
-        if (!clientLimiter) {
-            return false; // Shouldn't happen, but be safe
-        }
+        if (!clientLimiter) return false;
 
-        // Reset counter if window has passed
         if (now - clientLimiter.lastReset > this.rateLimitWindowMs) {
             clientLimiter.messageCount = 0;
             clientLimiter.lastReset = now;
         }
 
-        // Increment count and check limit
         clientLimiter.messageCount++;
         return clientLimiter.messageCount > this.maxMessagesPerWindow;
     }
@@ -208,7 +195,6 @@ class WebSocketMonitor {
             maxConnections: this.maxConnections,
             uptime: this.server ? Date.now() - this.metrics.startTime : 0,
             path: this.path,
-            // Additional metrics for Phase 5+
             metrics: {
                 messagesSent: this.metrics.messagesSent,
                 messagesReceived: this.metrics.messagesReceived,
@@ -220,7 +206,6 @@ class WebSocketMonitor {
         };
     }
 
-    // Get detailed performance metrics for Phase 5+ optimization
     getPerformanceMetrics() {
         const stats = this.getStats();
         const uptime = stats.uptime;
@@ -246,7 +231,6 @@ class WebSocketMonitor {
         }));
     }
 
-    // Method to register handlers for client messages
     registerClientMessageHandler(messageType, handler) {
         if (!this.clientMessageHandlers) {
             this.clientMessageHandlers = new Map();
@@ -254,7 +238,6 @@ class WebSocketMonitor {
         this.clientMessageHandlers.set(messageType, handler);
     }
 
-    // Method to broadcast custom events (not NAR events)
     broadcastCustomEvent(eventType, data, options = {}) {
         this._broadcastMessage({ type: eventType, data, timestamp: Date.now(), ...options }, eventType);
     }
@@ -272,7 +255,6 @@ class WebSocketMonitor {
 
             const message = JSON.parse(rawData);
 
-            // Validate message structure
             if (!message.type || typeof message.type !== 'string') {
                 this._sendToClient(client, {
                     type: 'error',
@@ -281,14 +263,12 @@ class WebSocketMonitor {
                 return;
             }
 
-            // Update client message count for rate limiting
             const clientId = client.clientId;
             const clientLimiter = this.clientRateLimiters.get(clientId);
             if (clientLimiter) {
                 clientLimiter.messageCount = (clientLimiter.messageCount ?? 0) + 1;
             }
 
-            // Route to appropriate handler
             this._routeMessage(client, message);
         } catch (error) {
             this.metrics.errorCount++;
@@ -358,7 +338,6 @@ class WebSocketMonitor {
         this._sendToClient(client, { type: 'error', message, error });
     }
 
-    // Store reference to NAR for processing inputs
     listenToNAR(nar) {
         if (!nar || !nar.on) {
             throw new Error('NAR instance must have an on() method');
@@ -381,10 +360,7 @@ class WebSocketMonitor {
 
     _broadcastMessage(message, eventType) {
         try {
-            // Early returns for optimization
             if (!this._shouldBroadcast(message, eventType)) return;
-
-            // Only process if we have clients to send to
             if (this.clients.size === 0) return;
 
             const jsonMessage = JSON.stringify(message);
@@ -396,7 +372,6 @@ class WebSocketMonitor {
                 }
             }
 
-            // Update metrics
             this.metrics.messagesSent += sentCount;
         } catch (error) {
             console.error(`Error broadcasting ${message.type}:`, error);
@@ -405,11 +380,10 @@ class WebSocketMonitor {
     }
     
     _shouldBroadcast(message, eventType) {
-        // Rate limiting to prevent flooding
         const now = Date.now();
         const lastBroadcast = this.broadcastRateLimiter.lastBroadcastTime.get(eventType) ?? 0;
         if (now - lastBroadcast < this.broadcastRateLimiter.minInterval) {
-            return false; // Skip this broadcast to respect rate limit
+            return false;
         }
         this.broadcastRateLimiter.lastBroadcastTime.set(eventType, now);
 
@@ -423,7 +397,6 @@ class WebSocketMonitor {
     }
     
     _shouldSendToClient(client, message, eventType) {
-        // Apply subscription filtering - only for non-event type messages
         return message.type === 'event' || 
             !client.subscriptions || 
             client.subscriptions.has('all') || 
@@ -444,7 +417,6 @@ class WebSocketMonitor {
     
     _handleClientSendError(client, messageType, error) {
         console.error(`Error sending ${messageType} to client:`, error);
-        // Remove problematic client
         this.clients.delete(client);
         try {
             client.close(1011, 'Sending error');

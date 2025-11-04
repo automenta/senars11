@@ -17,31 +17,31 @@ const Panel = memo(({
     const wsConnected = useUiStore(state => state.wsConnected);
     const panelClassName = `${styles.panel} ${className || ''}`.trim();
 
-    const panelHeader = showHeader && React.createElement('div', {className: styles['panel-header']},
-        React.createElement('h3', {className: styles['panel-title']}, title),
-        showWebSocketStatus && React.createElement('div', {className: styles['panel-status']},
-            React.createElement(WebSocketStatus, {
-                showLabel: true,
-                style: {
-                    fontSize: themeUtils.get('FONTS.SIZE.SM'),
-                    marginLeft: themeUtils.get('SPACING.SM'),
-                    padding: `${themeUtils.get('SPACING.XS')} ${themeUtils.get('SPACING.SM')}`,
-                    backgroundColor: themeUtils.getWebSocketStatusBgColor(wsConnected),
-                    borderRadius: themeUtils.get('BORDERS.RADIUS.SM')
-                }
-            })
-        ),
-        headerExtra
-    );
+    const statusStyle = {
+        fontSize: themeUtils.get('FONTS.SIZE.SM'),
+        marginLeft: themeUtils.get('SPACING.SM'),
+        padding: `${themeUtils.get('SPACING.XS')} ${themeUtils.get('SPACING.SM')}`,
+        backgroundColor: themeUtils.getWebSocketStatusBgColor(wsConnected),
+        borderRadius: themeUtils.get('BORDERS.RADIUS.SM')
+    };
 
-    return React.createElement('div', {
-            className: panelClassName,
-            style
-        },
-        panelHeader,
-        React.createElement('div', {className: styles['panel-content']},
-            React.createElement(ErrorBoundary, null, children)
-        )
+    return (
+        <div className={panelClassName} style={style}>
+            {showHeader && (
+                <div className={styles['panel-header']}>
+                    <h3 className={styles['panel-title']}>{title}</h3>
+                    {showWebSocketStatus && (
+                        <div className={styles['panel-status']}>
+                            <WebSocketStatus showLabel style={statusStyle} />
+                        </div>
+                    )}
+                    {headerExtra}
+                </div>
+            )}
+            <div className={styles['panel-content']}>
+                <ErrorBoundary>{children}</ErrorBoundary>
+            </div>
+        </div>
     );
 });
 

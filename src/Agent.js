@@ -5,7 +5,6 @@ export class InputTasks {
         this.tasks = [];
     }
 
-    // Public Task Management Methods
     addTask(task, priority = 0) {
         if (!this._validateTask(task)) throw new Error('Invalid task format');
         this.tasks.push({task, priority, timestamp: Date.now()});
@@ -23,7 +22,6 @@ export class InputTasks {
         return true;
     }
 
-    // Public Query Methods
     getHighestPriorityTask() {
         return this.tasks[0] || null;
     }
@@ -44,7 +42,6 @@ export class InputTasks {
         this.tasks = [];
     }
 
-    // Private Helper Methods
     _validateTask = task => task != null;
 
     _isValidIndex(index) {
@@ -63,10 +60,9 @@ export class Agent {
         this.evaluator = this.nar._evaluator;
         this.isRunning = false;
         this.config = {maxCyclesPerStep: config.maxCyclesPerStep || 100, ...config};
-        this._pluginManager = null; // Initialize plugin manager
+        this._pluginManager = null;
     }
 
-    // Task Management Methods
     addTask(task, priority = 0) {
         this.inputTasks.addTask(task, priority);
     }
@@ -79,7 +75,6 @@ export class Agent {
         return this.inputTasks.updatePriority(index, newPriority);
     }
 
-    // Runtime Control Methods
     async run() {
         this.isRunning = true;
         if (!this.nar.isRunning) this.nar.start();
@@ -93,7 +88,6 @@ export class Agent {
         this.isRunning = false;
     }
 
-    // Task Processing Methods
     async processNextTask() {
         const taskItem = this.inputTasks.getHighestPriorityTask();
         if (taskItem) {
@@ -122,8 +116,7 @@ export class Agent {
         }
     }
 
-    async _processDerivedTasks() {
-    }
+    async _processDerivedTasks() {}
 
     _removeProcessedTask(task) {
         const allTasks = this.inputTasks.getAllTasks();
@@ -131,10 +124,8 @@ export class Agent {
         if (index !== -1) this.inputTasks.removeTask(index);
     }
 
-    // Utility Methods
     _sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-    // Status and Accessor Methods
     getStatus() {
         return {
             isRunning: this.isRunning,
@@ -152,7 +143,6 @@ export class Agent {
         };
     }
 
-    // Component Accessor Methods
     getNAR() {
         return this.nar;
     }
