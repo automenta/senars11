@@ -59,16 +59,10 @@ export class MemoryIndex {
             this._removeFromIndex('compoundByOp', term.operator, concept);
         }
 
-        // Remove from complexity-based index
+        // Remove from all other indexes based on the concept/term
         this._removeFromComplexityIndex(term, concept);
-
-        // Remove from category-based index
         this._removeFromCategoryIndex(term, concept);
-
-        // Remove from activation-based index
         this._removeFromActivationIndex(concept);
-
-        // Remove from temporal index
         this._removeFromTemporalIndex(concept);
     }
 
@@ -487,22 +481,36 @@ export class MemoryIndex {
     getAllConcepts = () => Array.from(this._indexes.term.values()).flat();
 
     getStats() {
+        const indexSizes = {
+            inheritance: this._indexes.inheritance.size,
+            implication: this._indexes.implication.size,
+            similarity: this._indexes.similarity.size,
+            compound: this._indexes.compound.size,
+            atomic: this._indexes.atomic.size,
+            compoundByOp: this._indexes.compoundByOp.size,
+            component: this._indexes.component.size,
+            complexity: this._indexes.complexity.size,
+            category: this._indexes.category.size,
+            temporal: this._indexes.temporal.size,
+            activation: this._indexes.activation.size
+        };
+
         return {
             totalConcepts: this._totalConcepts,
-            inheritanceEntries: this._indexes.inheritance.size,
-            implicationEntries: this._indexes.implication.size,
-            similarityEntries: this._indexes.similarity.size,
-            operatorEntries: this._indexes.compound.size,
+            inheritanceEntries: indexSizes.inheritance,
+            implicationEntries: indexSizes.implication,
+            similarityEntries: indexSizes.similarity,
+            operatorEntries: indexSizes.compound,
+            atomicEntries: indexSizes.atomic,
+            compoundByOpEntries: indexSizes.compoundByOp,
+            componentEntries: indexSizes.component,
+            complexityEntries: indexSizes.complexity,
+            categoryEntries: indexSizes.category,
+            temporalEntries: indexSizes.temporal,
+            activationEntries: indexSizes.activation,
             compoundTermsByOperator: Object.fromEntries(
                 Array.from(this._indexes.compound.entries()).map(([op, terms]) => [op, terms.size])
             ),
-            atomicEntries: this._indexes.atomic.size,
-            compoundByOpEntries: this._indexes.compoundByOp.size,
-            componentEntries: this._indexes.component.size,
-            complexityEntries: this._indexes.complexity.size,
-            categoryEntries: this._indexes.category.size,
-            temporalEntries: this._indexes.temporal.size,
-            activationEntries: this._indexes.activation.size,
             indexDetails: {
                 atomic: this._getMapSizes(this._indexes.atomic),
                 compoundByOp: this._getMapSizes(this._indexes.compoundByOp),
@@ -551,24 +559,16 @@ export class MemoryIndex {
     queryConcepts(query, options = {}) {
         const {limit = 50, sortBy = 'relevance', ascending = false} = options;
 
-        // If query is a function, use it as a filter
-        if (typeof query === 'function') {
-            return this.getAllConcepts()
-                .filter(query)
-                .slice(0, limit);
-        }
+        // Define query handlers based on type
+        const queryHandlers = {
+            'function': () => this.getAllConcepts().filter(query).slice(0, limit),
+            'string': () => this._searchConceptsByText(query, limit),
+            'object': () => this.findConceptsWithFilters(query).slice(0, limit)
+        };
 
-        // If query is a string, treat it as a search term
-        if (typeof query === 'string') {
-            return this._searchConceptsByText(query, limit);
-        }
-
-        // If query is an object, treat it as filter criteria
-        if (typeof query === 'object') {
-            return this.findConceptsWithFilters(query).slice(0, limit);
-        }
-
-        return [];
+        // Get handler based on query type
+        const handler = queryHandlers[typeof query];
+        return handler ? handler() : [];
     }
 
     /**
@@ -619,6 +619,7 @@ export class MemoryIndex {
      * Get statistical summary of concept distribution
      */
     getConceptDistribution() {
+        const concepts = this.getAllConcepts();
         const distribution = {
             byCategory: {},
             byComplexity: {},
@@ -627,28 +628,30 @@ export class MemoryIndex {
             total: this._totalConcepts
         };
 
-        // Collect statistics
-        for (const concept of this.getAllConcepts()) {
+        // Collect statistics using reduce for better functional style
+        concepts.reduce((dist, concept) => {
             // Category distribution
             const category = TermCategorization.getTermCategory(concept.term);
-            distribution.byCategory[category] = (distribution.byCategory[category] || 0) + 1;
+            dist.byCategory[category] = (dist.byCategory[category] || 0) + 1;
 
             // Complexity distribution
             const complexity = TermCategorization.getTermComplexity(concept.term);
             const complexityLevel = Math.floor(complexity);
-            distribution.byComplexity[complexityLevel] = (distribution.byComplexity[complexityLevel] || 0) + 1;
+            dist.byComplexity[complexityLevel] = (dist.byComplexity[complexityLevel] || 0) + 1;
 
             // Operator distribution (for compound terms)
             if (concept.term.operator) {
                 const operator = concept.term.operator;
-                distribution.byOperator[operator] = (distribution.byOperator[operator] || 0) + 1;
+                dist.byOperator[operator] = (dist.byOperator[operator] || 0) + 1;
             }
 
             // Activation distribution
             const activation = concept.activation || 0;
             const activationBucket = Math.floor(activation * 10) / 10; // Bucket by 0.1 increments
-            distribution.byActivation[activationBucket] = (distribution.byActivation[activationBucket] || 0) + 1;
-        }
+            dist.byActivation[activationBucket] = (dist.byActivation[activationBucket] || 0) + 1;
+
+            return dist;
+        }, distribution);
 
         return distribution;
     }
