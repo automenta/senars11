@@ -35,19 +35,21 @@ export class ActivationIndex extends BaseIndex {
     find(filters = {}) {
         const { minActivation, maxActivation } = filters;
 
-        if (minActivation !== undefined || maxActivation !== undefined) {
-            const result = [];
-            for (const [bucket, concepts] of this._index.entries()) {
-                const bucketValue = parseFloat(bucket);
-                if ((minActivation === undefined || bucketValue >= minActivation) &&
-                    (maxActivation === undefined || bucketValue <= maxActivation)) {
-                    result.push(...Array.from(concepts));
-                }
-            }
-            return result;
-        }
+        return (minActivation !== undefined || maxActivation !== undefined)
+            ? this._getConceptsByActivationRange(minActivation, maxActivation)
+            : this.getAll();
+    }
 
-        return this.getAll();
+    _getConceptsByActivationRange(minActivation, maxActivation) {
+        const result = [];
+        for (const [bucket, concepts] of this._index.entries()) {
+            const bucketValue = parseFloat(bucket);
+            if ((minActivation === undefined || bucketValue >= minActivation) &&
+                (maxActivation === undefined || bucketValue <= maxActivation)) {
+                result.push(...Array.from(concepts));
+            }
+        }
+        return result;
     }
 
     clear() {

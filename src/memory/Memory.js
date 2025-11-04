@@ -144,44 +144,57 @@ export class Memory extends BaseComponent {
     }
 
     _applyConceptForgetting() {
-        if (this._config.forgetPolicy === 'priority') {
-            let lowestPriorityConcept = null;
-            let lowestPriority = Infinity;
+        const policies = {
+            'priority': () => this._applyPriorityBasedForgetting(),
+            'lru': () => this._applyLRUBasedForgetting(),
+            'fifo': () => this._applyFIFOBasedForgetting()
+        };
 
-            for (const [term, concept] of this._concepts) {
-                const conceptPriority = concept.activation || 0.1;
-                if (conceptPriority < lowestPriority) {
-                    lowestPriority = conceptPriority;
-                    lowestPriorityConcept = {term, concept};
-                }
-            }
+        const policy = policies[this._config.forgetPolicy];
+        if (policy) policy();
+    }
 
-            if (lowestPriorityConcept) {
-                this._removeConceptInternal(lowestPriorityConcept.term);
-                this._stats.conceptsForgotten++;
-            }
-        } else if (this._config.forgetPolicy === 'lru') {
-            let oldestConcept = null;
-            let oldestTime = Infinity;
+    _applyPriorityBasedForgetting() {
+        let lowestPriorityConcept = null;
+        let lowestPriority = Infinity;
 
-            for (const [term, concept] of this._concepts) {
-                if (concept.lastAccessed < oldestTime) {
-                    oldestTime = concept.lastAccessed;
-                    oldestConcept = {term, concept};
-                }
+        for (const [term, concept] of this._concepts) {
+            const conceptPriority = concept.activation || 0.1;
+            if (conceptPriority < lowestPriority) {
+                lowestPriority = conceptPriority;
+                lowestPriorityConcept = {term, concept};
             }
+        }
 
-            if (oldestConcept) {
-                this._removeConceptInternal(oldestConcept.term);
-                this._stats.conceptsForgotten++;
+        if (lowestPriorityConcept) {
+            this._removeConceptInternal(lowestPriorityConcept.term);
+            this._stats.conceptsForgotten++;
+        }
+    }
+
+    _applyLRUBasedForgetting() {
+        let oldestConcept = null;
+        let oldestTime = Infinity;
+
+        for (const [term, concept] of this._concepts) {
+            if (concept.lastAccessed < oldestTime) {
+                oldestTime = concept.lastAccessed;
+                oldestConcept = {term, concept};
             }
-        } else if (this._config.forgetPolicy === 'fifo') {
-            const firstEntry = this._concepts.entries().next().value;
-            if (firstEntry) {
-                const [term, concept] = firstEntry;
-                this._removeConceptInternal(term);
-                this._stats.conceptsForgotten++;
-            }
+        }
+
+        if (oldestConcept) {
+            this._removeConceptInternal(oldestConcept.term);
+            this._stats.conceptsForgotten++;
+        }
+    }
+
+    _applyFIFOBasedForgetting() {
+        const firstEntry = this._concepts.entries().next().value;
+        if (firstEntry) {
+            const [term, concept] = firstEntry;
+            this._removeConceptInternal(term);
+            this._stats.conceptsForgotten++;
         }
     }
 
@@ -221,11 +234,15 @@ export class Memory extends BaseComponent {
     getMostActiveConcepts(limit = 10, scoringType = 'standard') {
         return scoringType === 'composite'
             ? this._getMostActiveConceptsByCompositeScoring(limit)
-            : this.getAllConcepts()
-                .map(concept => this._calculateConceptScore(concept, ...Object.values(Memory.SCORING_WEIGHTS), ...Object.values(Memory.NORMALIZATION_LIMITS)))
-                .sort((a, b) => b.score - a.score)
-                .slice(0, limit)
-                .map(({concept}) => concept);
+            : this._getMostActiveConceptsByStandardScoring(limit);
+    }
+
+    _getMostActiveConceptsByStandardScoring(limit) {
+        return this.getAllConcepts()
+            .map(concept => this._calculateConceptScore(concept, ...Object.values(Memory.SCORING_WEIGHTS), ...Object.values(Memory.NORMALIZATION_LIMITS)))
+            .sort((a, b) => b.score - a.score)
+            .slice(0, limit)
+            .map(({concept}) => concept);
     }
 
     _calculateConceptScore(concept, activationWeight, useCountWeight, taskCountWeight, useLimit, taskLimit) {
@@ -324,10 +341,15 @@ export class Memory extends BaseComponent {
         }).filter(item => item.score >= minScore);
 
         scoredConcepts.sort((a, b) => {
-            if (sortBy === 'activation') return b.concept.activation - a.concept.activation;
-            if (sortBy === 'complexity') return b.score.complexityScore - a.score.complexityScore;
-            if (sortBy === 'diversity') return b.score.diversityScore - a.score.diversityScore;
-            return b.score.compositeScore - a.score.compositeScore;
+            const sorters = {
+                'activation': () => b.concept.activation - a.concept.activation,
+                'complexity': () => b.score.complexityScore - a.score.complexityScore,
+                'diversity': () => b.score.diversityScore - a.score.diversityScore,
+                'composite': () => b.score.compositeScore - a.score.compositeScore
+            };
+            
+            const sorter = sorters[sortBy];
+            return sorter ? sorter() : b.score.compositeScore - a.score.compositeScore;
         });
 
         return scoredConcepts.slice(0, limit).map(item => item.concept);
@@ -577,13 +599,7 @@ export class Memory extends BaseComponent {
 
     _cleanupResourceTracker() {
         for (const [termStr, usage] of this._resourceTracker.entries()) {
-            let conceptExists = false;
-            for (const [key,] of this._concepts) {
-                if (key.toString() === termStr) {
-                    conceptExists = true;
-                    break;
-                }
-            }
+            const conceptExists = Array.from(this._concepts.keys()).some(key => key.toString() === termStr);
 
             if (!conceptExists) {
                 this._resourceTracker.delete(termStr);
@@ -662,13 +678,10 @@ export class Memory extends BaseComponent {
     }
 
     serialize() {
-        const conceptsData = [];
-        for (const [term, concept] of this._concepts) {
-            conceptsData.push({
-                term: term.serialize ? term.serialize() : term.toString(),
-                concept: concept.serialize ? concept.serialize() : null
-            });
-        }
+        const conceptsData = Array.from(this._concepts).map(([term, concept]) => ({
+            term: term.serialize ? term.serialize() : term.toString(),
+            concept: concept.serialize ? concept.serialize() : null
+        }));
 
         return {
             config: this._config,

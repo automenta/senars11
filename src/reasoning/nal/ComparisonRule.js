@@ -25,7 +25,7 @@ export class ComparisonRule extends NALRule {
     async _apply(task, context) {
         const results = [];
 
-        if (!task.term?.isCompound || task.term.operator !== '-->' || task.term.components?.length !== 2) {
+        if (!this._matches(task, context)) {
             return results;
         }
 
@@ -51,7 +51,7 @@ export class ComparisonRule extends NALRule {
                 results.push(this._createDerivedTask(task, {
                     term: derivedTerm,
                     truth: derivedTruth,
-                    type: compTask.type, // Use same type as the complementary task
+                    type: compTask.type,
                     priority: task.priority * compTask.priority * this.priority
                 }));
             }

@@ -21,7 +21,7 @@ export class InductionRule extends NALRule {
     async _apply(task, context) {
         const results = [];
 
-        if (!task.term?.isCompound || task.term.operator !== '-->' || task.term.components?.length !== 2) {
+        if (!this._matches(task, context)) {
             return results;
         }
 

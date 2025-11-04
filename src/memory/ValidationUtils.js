@@ -552,44 +552,8 @@ export class ValidationUtils {
                             repairedCount++;
                         }
 
-                        // Add to operator-specific indexes
-                        const operatorHandlers = {
-                            '-->': (concept) => {
-                                if (concept.term.components && concept.term.components.length >= 2) {
-                                    const predicate = concept.term.components[1];
-                                    if (!indexes.inheritance.has(predicate.name)) {
-                                        ValidationUtils.addToIndex(indexes, 'inheritance', predicate.name, concept);
-                                        repairedCount++;
-                                    }
-                                }
-                            },
-                            '==>': (concept) => {
-                                if (concept.term.components && concept.term.components.length >= 2) {
-                                    const premise = concept.term.components[0];
-                                    if (!indexes.implication.has(premise.name)) {
-                                        ValidationUtils.addToIndex(indexes, 'implication', premise.name, concept);
-                                        repairedCount++;
-                                    }
-                                }
-                            },
-                            '<->': (concept) => {
-                                if (concept.term.components && concept.term.components.length >= 2) {
-                                    const term1 = concept.term.components[0];
-                                    const term2 = concept.term.components[1];
-                                    if (!indexes.similarity.has(term1.name)) {
-                                        ValidationUtils.addToIndex(indexes, 'similarity', term1.name, concept);
-                                        repairedCount++;
-                                    }
-                                    if (!indexes.similarity.has(term2.name)) {
-                                        ValidationUtils.addToIndex(indexes, 'similarity', term2.name, concept);
-                                        repairedCount++;
-                                    }
-                                }
-                            }
-                        };
-
-                        const handler = operatorHandlers[concept.term.operator];
-                        if (handler) handler(concept);
+                        // Add to operator-specific indexes - use a more compact handler
+                        this._applyOperatorSpecificRepair(concept, indexes, repairedCount);
                     }
                 }
             }
@@ -598,6 +562,56 @@ export class ValidationUtils {
         }
 
         return repairedCount;
+    }
+
+    _applyOperatorSpecificRepair(concept, indexes, repairedCount) {
+        const operatorHandlers = {
+            '-->': () => this._handleInheritanceRepair(concept, indexes),
+            '==>': () => this._handleImplicationRepair(concept, indexes),
+            '<->': () => this._handleSimilarityRepair(concept, indexes)
+        };
+
+        const handler = operatorHandlers[concept.term.operator];
+        if (handler) handler();
+    }
+
+    _handleInheritanceRepair(concept, indexes) {
+        if (concept.term.components && concept.term.components.length >= 2) {
+            const predicate = concept.term.components[1];
+            if (!indexes.inheritance.has(predicate.name)) {
+                ValidationUtils.addToIndex(indexes, 'inheritance', predicate.name, concept);
+                return 1;
+            }
+        }
+        return 0;
+    }
+
+    _handleImplicationRepair(concept, indexes) {
+        if (concept.term.components && concept.term.components.length >= 2) {
+            const premise = concept.term.components[0];
+            if (!indexes.implication.has(premise.name)) {
+                ValidationUtils.addToIndex(indexes, 'implication', premise.name, concept);
+                return 1;
+            }
+        }
+        return 0;
+    }
+
+    _handleSimilarityRepair(concept, indexes) {
+        let repaired = 0;
+        if (concept.term.components && concept.term.components.length >= 2) {
+            const term1 = concept.term.components[0];
+            const term2 = concept.term.components[1];
+            if (!indexes.similarity.has(term1.name)) {
+                ValidationUtils.addToIndex(indexes, 'similarity', term1.name, concept);
+                repaired++;
+            }
+            if (!indexes.similarity.has(term2.name)) {
+                ValidationUtils.addToIndex(indexes, 'similarity', term2.name, concept);
+                repaired++;
+            }
+        }
+        return repaired;
     }
 
     static addToIndex(indexes, index, key, value) {

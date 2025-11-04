@@ -24,7 +24,7 @@ export class SetTheoreticRule extends NALRule {
     async _apply(task, context) {
         const results = [];
 
-        if (!task.term?.isCompound) {
+        if (!this._matches(task, context)) {
             return results;
         }
 
@@ -33,7 +33,7 @@ export class SetTheoreticRule extends NALRule {
             // Extensional set: {a, b, c}
             const elements = task.term.components;
             for (const element of elements) {
-                // For element in extensional set: <element --> {set}> 
+                // For element in extensional set: <element --> {set}>
                 const derivedTerm = new Term('compound', 'INHERITANCE', [element, task.term], '-->');
                 const derivedTruth = this._calculateSetMembershipTruth(task.truth, element);
 
@@ -45,7 +45,7 @@ export class SetTheoreticRule extends NALRule {
                 }));
             }
         } else if (task.term.operator === '[]') {
-            // Intensional set: [a, b, c] 
+            // Intensional set: [a, b, c]
             const elements = task.term.components;
             for (const element of elements) {
                 // For element in intensional set: <[set] --> element>

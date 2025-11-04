@@ -36,31 +36,33 @@ export class TemporalIndex extends BaseIndex {
     find(filters = {}) {
         const { createdAfter, createdBefore } = filters;
 
-        if (createdAfter !== undefined || createdBefore !== undefined) {
-            const result = [];
-            for (const [bucket, concepts] of this._index.entries()) {
-                const bucketStartTime = parseInt(bucket);
-                const bucketEndTime = bucketStartTime + (60 * 60 * 1000); // 1 hour window
+        return (createdAfter !== undefined || createdBefore !== undefined)
+            ? this._getConceptsByTimeRange(createdAfter, createdBefore)
+            : this.getAll();
+    }
 
-                // Check if bucket overlaps with requested time range
-                const bucketOverlaps = (createdBefore === undefined || bucketStartTime <= createdBefore) &&
-                                    (createdAfter === undefined || bucketEndTime >= createdAfter);
+    _getConceptsByTimeRange(createdAfter, createdBefore) {
+        const result = [];
+        for (const [bucket, concepts] of this._index.entries()) {
+            const bucketStartTime = parseInt(bucket);
+            const bucketEndTime = bucketStartTime + (60 * 60 * 1000); // 1 hour window
 
-                if (bucketOverlaps) {
-                    // Additional filtering might be needed inside bucket
-                    for (const concept of concepts) {
-                        const conceptTime = concept.createdAt || Date.now();
-                        if ((createdAfter === undefined || conceptTime >= createdAfter) &&
-                            (createdBefore === undefined || conceptTime <= createdBefore)) {
-                            result.push(concept);
-                        }
+            // Check if bucket overlaps with requested time range
+            const bucketOverlaps = (createdBefore === undefined || bucketStartTime <= createdBefore) &&
+                                (createdAfter === undefined || bucketEndTime >= createdAfter);
+
+            if (bucketOverlaps) {
+                // Additional filtering might be needed inside bucket
+                for (const concept of concepts) {
+                    const conceptTime = concept.createdAt || Date.now();
+                    if ((createdAfter === undefined || conceptTime >= createdAfter) &&
+                        (createdBefore === undefined || conceptTime <= createdBefore)) {
+                        result.push(concept);
                     }
                 }
             }
-            return result;
         }
-
-        return this.getAll();
+        return result;
     }
 
     clear() {

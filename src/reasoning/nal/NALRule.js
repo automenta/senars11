@@ -1,7 +1,6 @@
 import {Rule} from '../Rule.js';
-import {Term} from '../../term/Term.js';
-import {TruthFunctions} from './TruthFunctions.js';
 import {PatternMatcher} from './PatternMatcher.js';
+import {TruthFunctions} from './TruthFunctions.js';
 
 /**
  * Enhanced NALRule base class with sophisticated pattern matching and variable handling
@@ -12,7 +11,7 @@ export class NALRule extends Rule {
         this._patternMatcher = config.patternMatcher || new PatternMatcher();
         this._truthFunction = config.truthFunction || TruthFunctions.deduction;
         this._variableBindings = new Map();
-        this.category = config.category || 'general'; // Add category property
+        this.category = config.category || 'general';
     }
 
     /**

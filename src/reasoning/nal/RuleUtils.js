@@ -54,8 +54,8 @@ export class RuleUtils {
      * @returns {Array} - Array of matching tasks
      */
     static findTasksByTerm(term, context, unifyFn) {
-        const allTasks = RuleUtils.collectTasks(context);
-        return RuleUtils.filterByTerm(allTasks, term, unifyFn);
+        const allTasks = this.collectTasks(context);
+        return this.filterByTerm(allTasks, term, unifyFn);
     }
 
     /**

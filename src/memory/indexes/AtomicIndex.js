@@ -28,11 +28,9 @@ export class AtomicIndex extends BaseIndex {
 
     find(filters = {}) {
         const { termName } = filters;
-        if (termName !== undefined) {
-            const concepts = getOrDefault(this._index, termName, new Set());
-            return Array.from(concepts);
-        }
-        return this.getAll();
+        return termName !== undefined 
+            ? Array.from(getOrDefault(this._index, termName, new Set()))
+            : this.getAll();
     }
 
     clear() {

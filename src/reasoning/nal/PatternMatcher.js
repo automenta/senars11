@@ -222,7 +222,7 @@ export class PatternMatcher {
                 // in some contexts
                 return false;
             }
-            if (t1.components.length !== t2.components) return false;
+            if (t1.components.length !== t2.components?.length) return false;
 
             for (let i = 0; i < t1.components.length; i++) {
                 if (!this._termsEqualHigherOrder(t1.components[i], t2.components[i], bindings)) {

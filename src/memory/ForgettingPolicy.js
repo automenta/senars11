@@ -13,24 +13,22 @@ export class ForgettingPolicy {
         this.maxAge = options.maxAge || 1000000; // Maximum age before forgetting (in ms)
         this.minPriority = options.minPriority || 0.05;
         this.propagationStrength = options.propagationStrength || 0.1;
+        
+        // Policy methods mapping for cleaner switch statement
+        this._policyMethods = {
+            'simple': (concept) => this._simplePolicy(concept),
+            'timeBased': (concept, currentTime) => this._timeBasedPolicy(concept, currentTime),
+            'priorityBased': (concept) => this._priorityBasedPolicy(concept),
+            'adaptive': (concept) => this._adaptivePolicy(concept)
+        };
     }
 
     /**
      * Determine if a concept should be forgotten based on the policy
      */
     shouldForget(concept, currentTime = Date.now()) {
-        switch (this.policyType) {
-            case 'simple':
-                return this._simplePolicy(concept);
-            case 'timeBased':
-                return this._timeBasedPolicy(concept, currentTime);
-            case 'priorityBased':
-                return this._priorityBasedPolicy(concept);
-            case 'adaptive':
-                return this._adaptivePolicy(concept);
-            default:
-                return this._simplePolicy(concept);
-        }
+        const policyMethod = this._policyMethods[this.policyType] || this._policyMethods['simple'];
+        return policyMethod(concept, currentTime);
     }
 
     /**
@@ -215,18 +213,10 @@ export class ForgettingPolicy {
         if (!concept.term) return [];
 
         const allConcepts = memory.getAllConcepts();
-        const related = [];
-
-        for (const otherConcept of allConcepts) {
-            if (otherConcept === concept) continue;
-
-            // Check for term relationships (simplified version)
-            if (this._areTermsRelated(concept.term, otherConcept.term)) {
-                related.push(otherConcept);
-            }
-        }
-
-        return related;
+        return allConcepts.filter(otherConcept => {
+            if (otherConcept === concept) return false;
+            return this._areTermsRelated(concept.term, otherConcept.term);
+        });
     }
 
     /**
@@ -243,9 +233,7 @@ export class ForgettingPolicy {
             const names2 = new Set(term2.components.map(c => c.name));
 
             // If they share at least one component
-            for (const name of names1) {
-                if (names2.has(name)) return true;
-            }
+            return [...names1].some(name => names2.has(name));
         }
 
         return false;

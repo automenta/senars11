@@ -119,21 +119,27 @@ export class Concept extends BaseComponent {
     }
 
     enforceCapacity(maxTasksPerType) {
-        this._enforceBagCapacity(this._beliefs, maxTasksPerType * CAPACITY_DISTRIBUTION.BELIEF);
-        this._enforceBagCapacity(this._goals, maxTasksPerType * CAPACITY_DISTRIBUTION.GOAL);
-        this._enforceBagCapacity(this._questions, maxTasksPerType * CAPACITY_DISTRIBUTION.QUESTION);
+        const capacityCalculations = [
+            { bag: this._beliefs, factor: CAPACITY_DISTRIBUTION.BELIEF },
+            { bag: this._goals, factor: CAPACITY_DISTRIBUTION.GOAL },
+            { bag: this._questions, factor: CAPACITY_DISTRIBUTION.QUESTION }
+        ];
+
+        capacityCalculations.forEach(({ bag, factor }) => {
+            this._enforceBagCapacity(bag, maxTasksPerType * factor);
+        });
     }
 
     _enforceBagCapacity(bag, maxCount) {
-        if (bag.size > maxCount) {
-            while (bag.size > maxCount) {
-                bag._removeLowestPriorityItem();
-            }
+        while (bag.size > maxCount) {
+            bag._removeLowestPriorityItem();
         }
     }
 
     getTask(taskId) {
-        for (const bag of [this._beliefs, this._goals, this._questions]) {
+        const allBags = [this._beliefs, this._goals, this._questions];
+        
+        for (const bag of allBags) {
             for (const task of bag.getItemsInPriorityOrder()) {
                 if (task.stamp.id === taskId) {
                     return task;
@@ -257,16 +263,16 @@ export class Concept extends BaseComponent {
                 this.configure(data.config);
             }
 
-            if (data.beliefs && this._beliefs.deserialize) {
-                await this._beliefs.deserialize(data.beliefs);
-            }
+            const deserializationMap = [
+                { dataKey: 'beliefs', bagKey: '_beliefs' },
+                { dataKey: 'goals', bagKey: '_goals' },
+                { dataKey: 'questions', bagKey: '_questions' }
+            ];
 
-            if (data.goals && this._goals.deserialize) {
-                await this._goals.deserialize(data.goals);
-            }
-
-            if (data.questions && this._questions.deserialize) {
-                await this._questions.deserialize(data.questions);
+            for (const { dataKey, bagKey } of deserializationMap) {
+                if (data[dataKey] && this[bagKey].deserialize) {
+                    await this[bagKey].deserialize(data[dataKey]);
+                }
             }
 
             return true;

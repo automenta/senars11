@@ -268,8 +268,7 @@ export class Bag {
             }
 
             if (data.accessTimes) {
-                for (const [itemKey, time] of Object.entries(data.accessTimes)) {
-                }
+                // Process access times if needed
             }
 
             return true;

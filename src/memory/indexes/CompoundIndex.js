@@ -1,6 +1,6 @@
 import { BaseIndex } from './BaseIndex.js';
 import { TermCategorization } from '../TermCategorization.js';
-import { getWithDefaultSet, addToMapSet } from '../MemoryUtils.js';
+import { addToMapSet } from '../MemoryUtils.js';
 
 export class CompoundIndex extends BaseIndex {
     constructor(config = {}) {
@@ -14,26 +14,24 @@ export class CompoundIndex extends BaseIndex {
     add(concept) {
         const { term } = concept;
         if (!term.isAtomic) {
-            // Index by operator
+            // Index by operator, complexity, category, and components
             addToMapSet(this._index, term.operator, concept);
+            addToMapSet(this._complexityIndex, this._getComplexityLevel(term), concept);
+            addToMapSet(this._categoryIndex, TermCategorization.getTermCategory(term), concept);
 
-            // Index by complexity
-            const complexityLevel = this._getComplexityLevel(term);
-            addToMapSet(this._complexityIndex, complexityLevel, concept);
+            // Index by components (with nested indexing if needed)
+            this._indexComponents(term.components, concept);
+        }
+    }
 
-            // Index by category
-            const category = TermCategorization.getTermCategory(term);
-            addToMapSet(this._categoryIndex, category, concept);
+    _indexComponents(components, concept) {
+        if (components) {
+            for (const comp of components) {
+                addToMapSet(this._componentIndex, comp, concept);
 
-            // Index by components
-            if (term.components) {
-                for (const comp of term.components) {
-                    addToMapSet(this._componentIndex, comp, concept);
-
-                    // Also index nested components
-                    if (comp.isCompound) {
-                        this._indexCompoundRecursively(comp, concept);
-                    }
+                // Also index nested components
+                if (comp.isCompound) {
+                    this._indexCompoundRecursively(comp, concept);
                 }
             }
         }
@@ -54,36 +52,25 @@ export class CompoundIndex extends BaseIndex {
     remove(concept) {
         const { term } = concept;
         if (!term.isAtomic) {
-            // Remove from operator index
+            // Remove from all indexes
             this._removeFromIndex(this._index, term.operator, concept);
-
-            // Remove from complexity index
             this._removeFromIndex(this._complexityIndex, this._getComplexityLevel(term), concept);
-
-            // Remove from category index
             this._removeFromIndex(this._categoryIndex, TermCategorization.getTermCategory(term), concept);
 
             // Remove from component index
-            if (term.components) {
-                for (const comp of term.components) {
-                    this._removeFromComponentIndex(comp, concept);
-                }
-            }
+            this._removeFromComponentIndex(term.components, concept);
         }
     }
 
-    _removeFromComponentIndex(comp, concept) {
-        if (this._componentIndex.has(comp)) {
-            const concepts = this._componentIndex.get(comp);
-            concepts.delete(concept);
-            if (concepts.size === 0) {
-                this._componentIndex.delete(comp);
-            }
-        }
-        // Also remove from nested components
-        if (comp.isCompound && comp.components) {
-            for (const nestedComp of comp.components) {
-                this._removeFromComponentIndex(nestedComp, concept);
+    _removeFromComponentIndex(components, concept) {
+        if (components) {
+            for (const comp of components) {
+                this._removeFromIndex(this._componentIndex, comp, concept);
+
+                // Also remove from nested components
+                if (comp.isCompound && comp.components) {
+                    this._removeFromComponentIndex(comp.components, concept);
+                }
             }
         }
     }
@@ -95,8 +82,8 @@ export class CompoundIndex extends BaseIndex {
     }
 
     _removeFromIndex(index, key, concept) {
-        const concepts = index.get(key);
-        if (concepts) {
+        if (index.has(key)) {
+            const concepts = index.get(key);
             concepts.delete(concept);
             if (concepts.size === 0) {
                 index.delete(key);
@@ -107,56 +94,39 @@ export class CompoundIndex extends BaseIndex {
     find(filters = {}) {
         const { operator, category, minComplexity, maxComplexity, component } = filters;
 
-        let resultConcepts = new Set();
+        // Start with operator search if specified
+        let resultConcepts = operator 
+            ? new Set(this._index.get(operator) || []) 
+            : new Set();
 
-        if (operator) {
-            const concepts = this._index.get(operator);
-            if (concepts) concepts.forEach(c => resultConcepts.add(c));
-        }
-
+        // Apply category filter
         if (category) {
-            const concepts = this._categoryIndex.get(category);
-            if (concepts) {
-                if (resultConcepts.size > 0) {
-                    // Intersect with existing results
-                    resultConcepts = new Set([...resultConcepts].filter(c => concepts.has(c)));
-                } else {
-                    concepts.forEach(c => resultConcepts.add(c));
-                }
-            }
+            const categoryConcepts = this._categoryIndex.get(category) || new Set();
+            resultConcepts = resultConcepts.size > 0
+                ? new Set([...resultConcepts].filter(c => categoryConcepts.has(c)))
+                : categoryConcepts;
         }
 
+        // Apply component filter
         if (component !== undefined) {
-            const concepts = this._componentIndex.get(component);
-            if (concepts) {
-                if (resultConcepts.size > 0) {
-                    // Intersect with existing results
-                    resultConcepts = new Set([...resultConcepts].filter(c => concepts.has(c)));
-                } else {
-                    concepts.forEach(c => resultConcepts.add(c));
-                }
-            }
+            const componentConcepts = this._componentIndex.get(component) || new Set();
+            resultConcepts = resultConcepts.size > 0
+                ? new Set([...resultConcepts].filter(c => componentConcepts.has(c)))
+                : componentConcepts;
         }
 
-        // For complexity filtering, we'd need to apply additional filtering
+        // Apply complexity range filter
         if (minComplexity !== undefined || maxComplexity !== undefined) {
-            const complexityFiltered = this._getAllByComplexityRange(minComplexity, maxComplexity);
-            if (resultConcepts.size > 0) {
-                // Intersect with existing results
-                resultConcepts = new Set([...resultConcepts].filter(c => complexityFiltered.includes(c)));
-            } else {
-                complexityFiltered.forEach(c => resultConcepts.add(c));
-            }
+            const complexityFiltered = this._getConceptsByComplexityRange(minComplexity, maxComplexity);
+            resultConcepts = resultConcepts.size > 0
+                ? new Set([...resultConcepts].filter(c => complexityFiltered.includes(c)))
+                : new Set(complexityFiltered);
         }
 
-        if (resultConcepts.size === 0) {
-            return this.getAll();
-        }
-
-        return Array.from(resultConcepts);
+        return resultConcepts.size > 0 ? Array.from(resultConcepts) : this.getAll();
     }
 
-    _getAllByComplexityRange(minComplexity, maxComplexity) {
+    _getConceptsByComplexityRange(minComplexity, maxComplexity) {
         const result = [];
         for (const [level, concepts] of this._complexityIndex.entries()) {
             // Convert level back to complexity and check range
@@ -177,26 +147,16 @@ export class CompoundIndex extends BaseIndex {
 
     getAll() {
         const allConcepts = new Set();
-        for (const concepts of this._index.values()) {
-            for (const concept of concepts) {
-                allConcepts.add(concept);
+        const indexes = [this._index, this._complexityIndex, this._categoryIndex, this._componentIndex];
+        
+        for (const index of indexes) {
+            for (const concepts of index.values()) {
+                for (const concept of concepts) {
+                    allConcepts.add(concept);
+                }
             }
         }
-        for (const concepts of this._complexityIndex.values()) {
-            for (const concept of concepts) {
-                allConcepts.add(concept);
-            }
-        }
-        for (const concepts of this._categoryIndex.values()) {
-            for (const concept of concepts) {
-                allConcepts.add(concept);
-            }
-        }
-        for (const concepts of this._componentIndex.values()) {
-            for (const concept of concepts) {
-                allConcepts.add(concept);
-            }
-        }
+        
         return Array.from(allConcepts);
     }
 }

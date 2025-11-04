@@ -268,7 +268,6 @@ export class SearchEngine {
      */
     _exportToCSV(data) {
         // This is a simplified CSV export
-        // In practice, this would need more sophisticated handling
         let csv = 'Term,Category,Complexity,Activation,CreatedAt\n';
 
         for (const concept of data.concepts) {
@@ -304,18 +303,18 @@ export class SearchEngine {
 
             visitedTerms.add(currentTerm.toString());
 
-            // Direct relationships
-            if (relationshipTypes.includes('inheritance')) {
-                this._findInheritanceRelated(currentTerm, relatedConcepts);
-            }
+            // Process all relationship types at the current level
+            relationshipTypes.forEach(relType => {
+                const finder = {
+                    'inheritance': () => this.memoryIndex.findInheritanceConcepts(currentTerm),
+                    'implication': () => this.memoryIndex.findImplicationConcepts(currentTerm),
+                    'similarity': () => this.memoryIndex.findSimilarityConcepts(currentTerm)
+                }[relType];
 
-            if (relationshipTypes.includes('implication')) {
-                this._findImplicationRelated(currentTerm, relatedConcepts);
-            }
-
-            if (relationshipTypes.includes('similarity')) {
-                this._findSimilarityRelated(currentTerm, relatedConcepts);
-            }
+                if (finder) {
+                    finder().forEach(concept => relatedConcepts.add(concept));
+                }
+            });
 
             // Indirect relationships (traverse deeper)
             if (includeIndirect && depth < maxDepth) {
@@ -330,30 +329,6 @@ export class SearchEngine {
         traverseRelationships(term, 0);
 
         return Array.from(relatedConcepts);
-    }
-
-    _findInheritanceRelated(term, relatedConcepts) {
-        // Find concepts where this term is a subject or predicate in inheritance
-        const subjectConcepts = this.memoryIndex.findInheritanceConcepts(term);
-        const predicateConcepts = []; // Would need inverse index for this
-
-        [...subjectConcepts, ...predicateConcepts].forEach(concept =>
-            relatedConcepts.add(concept));
-    }
-
-    _findImplicationRelated(term, relatedConcepts) {
-        // Find concepts where this term is a premise or conclusion in implication
-        const premiseConcepts = this.memoryIndex.findImplicationConcepts(term);
-        const conclusionConcepts = []; // Would need inverse index for this
-
-        [...premiseConcepts, ...conclusionConcepts].forEach(concept =>
-            relatedConcepts.add(concept));
-    }
-
-    _findSimilarityRelated(term, relatedConcepts) {
-        // Find concepts where this term is part of a similarity relation
-        const similarConcepts = this.memoryIndex.findSimilarityConcepts(term);
-        similarConcepts.forEach(concept => relatedConcepts.add(concept));
     }
 
     /**
@@ -376,11 +351,7 @@ export class SearchEngine {
             for (const comp of term.components) {
                 const byComponent = this.memoryIndex.findConceptsByComponent(comp);
                 for (const concept of byComponent) {
-                    // Filter by category if specified
-                    const category = this._getTermCategorization().getTermCategory(concept.term);
-                    if (excludeCategories.includes(category)) continue;
-                    if (includeCategories.length > 0 && !includeCategories.includes(category)) continue;
-                    if (concept.activation < minActivation) continue;
+                    if (this._shouldSkipConcept(concept, excludeCategories, includeCategories, minActivation)) continue;
 
                     // Calculate relevance based on component match
                     const relevance = this._calculateRelevance(term, concept.term, 'component');
@@ -423,6 +394,13 @@ export class SearchEngine {
         return sortedResults;
     }
 
+    _shouldSkipConcept(concept, excludeCategories, includeCategories, minActivation) {
+        const category = this._getTermCategorization().getTermCategory(concept.term);
+        return excludeCategories.includes(category) ||
+               (includeCategories.length > 0 && !includeCategories.includes(category)) ||
+               concept.activation < minActivation;
+    }
+
     /**
      * Find semantically similar concepts based on structural similarity
      */
@@ -449,19 +427,13 @@ export class SearchEngine {
      * Calculate relevance score between two terms based on the search method
      */
     _calculateRelevance(term1, term2, method) {
-        switch (method) {
-            case 'component':
-                // Higher relevance for more component overlap
-                return this._calculateStructuralSimilarity(term1, term2);
-            case 'category':
-                // Medium relevance for category match
-                return 0.5;
-            case 'semantic':
-                // Use structural similarity for semantic relevance
-                return this._calculateStructuralSimilarity(term1, term2);
-            default:
-                return 0.1; // Low default relevance
-        }
+        const methods = {
+            'component': () => this._calculateStructuralSimilarity(term1, term2),
+            'category': () => 0.5, // Medium relevance for category match
+            'semantic': () => this._calculateStructuralSimilarity(term1, term2) // Use structural similarity for semantic relevance
+        };
+
+        return methods[method] ? methods[method]() : 0.1; // Low default relevance
     }
 
     /**

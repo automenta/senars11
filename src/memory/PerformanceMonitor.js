@@ -228,17 +228,23 @@ export class PerformanceMonitor {
      * Compact performance data to prevent memory growth
      */
     compactPerformanceData() {
+        const limits = {
+            memoryUsage: 100,
+            queryTimes: 1000,
+            indexUpdateTimes: 1000
+        };
+        
+        const ranges = {
+            memoryUsage: 50,
+            queryTimes: 500,
+            indexUpdateTimes: 500
+        };
+
         // Keep only recent performance data
-        if (this._performance.memoryUsage.length > 100) {
-            this._performance.memoryUsage = this._performance.memoryUsage.slice(-50);
-        }
-
-        if (this._performance.queryTimes.length > 1000) {
-            this._performance.queryTimes = this._performance.queryTimes.slice(-500);
-        }
-
-        if (this._performance.indexUpdateTimes.length > 1000) {
-            this._performance.indexUpdateTimes = this._performance.indexUpdateTimes.slice(-500);
-        }
+        Object.entries(limits).forEach(([key, limit]) => {
+            if (this._performance[key].length > limit) {
+                this._performance[key] = this._performance[key].slice(-ranges[key]);
+            }
+        });
     }
 }

@@ -25,9 +25,7 @@ export class TemporalDeductionRule extends NALRule {
     async _apply(task, context) {
         const results = [];
 
-        if (!task.term?.isCompound ||
-            !['==>', '<=>'].includes(task.term.operator) ||
-            task.term.components?.length !== 2) {
+        if (!this._matches(task, context)) {
             return results;
         }
 

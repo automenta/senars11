@@ -19,6 +19,10 @@ export class AbductionRule extends NALRule {
     async _apply(task, context) {
         const results = [];
 
+        if (!this._matches(task, context)) {
+            return results;
+        }
+
         // If this is an inheritance statement <a --> b>, look for a task matching <b>
         if (task.term?.isCompound && task.term.operator === '-->' && task.term.components?.length === 2) {
             const [subject, predicate] = task.term.components;

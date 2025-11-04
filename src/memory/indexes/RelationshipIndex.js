@@ -6,22 +6,34 @@ export class RelationshipIndex extends BaseIndex {
         this._inheritanceIndex = new Map(); // Maps inheritance relationships
         this._implicationIndex = new Map(); // Maps implication relationships  
         this._similarityIndex = new Map(); // Maps similarity relationships
+        
+        // Index operations mapping to simplify code
+        this._indexOperations = {
+            '-->': (term, concept) => this._indexInheritance(term, concept),
+            '==>': (term, concept) => this._indexImplication(term, concept),
+            '<->': (term, concept) => this._indexSimilarity(term, concept)
+        };
+        
+        // Remove operations mapping
+        this._removeOperations = {
+            '-->': (term, concept) => this._removeInheritance(term, concept),
+            '==>': (term, concept) => this._removeImplication(term, concept),
+            '<->': (term, concept) => this._removeSimilarity(term, concept)
+        };
+        
+        // Find operations mapping
+        this._findOperations = {
+            'inheritance': (filters) => this._findInheritance(filters),
+            'implication': (filters) => this._findImplication(filters),
+            'similarity': (filters) => this._findSimilarity(filters)
+        };
     }
 
     add(concept) {
         const { term } = concept;
-        if (!term.isAtomic) {
-            switch (term.operator) {
-                case '-->': // Inheritance
-                    this._indexInheritance(term, concept);
-                    break;
-                case '==>': // Implication
-                    this._indexImplication(term, concept);
-                    break;
-                case '<->': // Similarity
-                    this._indexSimilarity(term, concept);
-                    break;
-            }
+        if (!term.isAtomic && term.operator) {
+            const operation = this._indexOperations[term.operator];
+            if (operation) operation(term, concept);
         }
     }
 
@@ -29,186 +41,126 @@ export class RelationshipIndex extends BaseIndex {
         // Index concept where this term is subject or predicate
         // For (A-->B), A is subject, B is predicate
         if (term.components && term.components.length >= 2) {
-            const subject = term.components[0];
-            const predicate = term.components[1];
-            
-            let subjectConcepts = this._inheritanceIndex.get(`subject:${subject.toString()}`);
-            if (!subjectConcepts) {
-                subjectConcepts = new Set();
-                this._inheritanceIndex.set(`subject:${subject.toString()}`, subjectConcepts);
-            }
-            subjectConcepts.add(concept);
-            
-            let predicateConcepts = this._inheritanceIndex.get(`predicate:${predicate.toString()}`);
-            if (!predicateConcepts) {
-                predicateConcepts = new Set();
-                this._inheritanceIndex.set(`predicate:${predicate.toString()}`, predicateConcepts);
-            }
-            predicateConcepts.add(concept);
+            const [subject, predicate] = term.components;
+            this._addToIndex(this._inheritanceIndex, `subject:${subject.toString()}`, concept);
+            this._addToIndex(this._inheritanceIndex, `predicate:${predicate.toString()}`, concept);
         }
     }
 
     _indexImplication(term, concept) {
         if (term.components && term.components.length >= 2) {
-            const premise = term.components[0];
-            const conclusion = term.components[1];
-            
-            let premiseConcepts = this._implicationIndex.get(`premise:${premise.toString()}`);
-            if (!premiseConcepts) {
-                premiseConcepts = new Set();
-                this._implicationIndex.set(`premise:${premise.toString()}`, premiseConcepts);
-            }
-            premiseConcepts.add(concept);
-            
-            let conclusionConcepts = this._implicationIndex.get(`conclusion:${conclusion.toString()}`);
-            if (!conclusionConcepts) {
-                conclusionConcepts = new Set();
-                this._implicationIndex.set(`conclusion:${conclusion.toString()}`, conclusionConcepts);
-            }
-            conclusionConcepts.add(concept);
+            const [premise, conclusion] = term.components;
+            this._addToIndex(this._implicationIndex, `premise:${premise.toString()}`, concept);
+            this._addToIndex(this._implicationIndex, `conclusion:${conclusion.toString()}`, concept);
         }
     }
 
     _indexSimilarity(term, concept) {
         if (term.components && term.components.length >= 2) {
-            const first = term.components[0];
-            const second = term.components[1];
-            
-            let firstConcepts = this._similarityIndex.get(`similar:${first.toString()}`);
-            if (!firstConcepts) {
-                firstConcepts = new Set();
-                this._similarityIndex.set(`similar:${first.toString()}`, firstConcepts);
-            }
-            firstConcepts.add(concept);
-            
-            let secondConcepts = this._similarityIndex.get(`similar:${second.toString()}`);
-            if (!secondConcepts) {
-                secondConcepts = new Set();
-                this._similarityIndex.set(`similar:${second.toString()}`, secondConcepts);
-            }
-            secondConcepts.add(concept);
+            const [first, second] = term.components;
+            this._addToIndex(this._similarityIndex, `similar:${first.toString()}`, concept);
+            this._addToIndex(this._similarityIndex, `similar:${second.toString()}`, concept);
         }
+    }
+
+    _addToIndex(index, key, concept) {
+        if (!index.has(key)) {
+            index.set(key, new Set());
+        }
+        index.get(key).add(concept);
     }
 
     remove(concept) {
         const { term } = concept;
-        if (!term.isAtomic) {
-            switch (term.operator) {
-                case '-->': // Inheritance
-                    this._removeInheritance(term, concept);
-                    break;
-                case '==>': // Implication
-                    this._removeImplication(term, concept);
-                    break;
-                case '<->': // Similarity
-                    this._removeSimilarity(term, concept);
-                    break;
-            }
+        if (!term.isAtomic && term.operator) {
+            const operation = this._removeOperations[term.operator];
+            if (operation) operation(term, concept);
         }
     }
 
     _removeInheritance(term, concept) {
         if (term.components && term.components.length >= 2) {
-            const subject = term.components[0];
-            const predicate = term.components[1];
-            
-            if (this._inheritanceIndex.has(`subject:${subject.toString()}`)) {
-                const concepts = this._inheritanceIndex.get(`subject:${subject.toString()}`);
-                concepts.delete(concept);
-                if (concepts.size === 0) {
-                    this._inheritanceIndex.delete(`subject:${subject.toString()}`);
-                }
-            }
-            
-            if (this._inheritanceIndex.has(`predicate:${predicate.toString()}`)) {
-                const concepts = this._inheritanceIndex.get(`predicate:${predicate.toString()}`);
-                concepts.delete(concept);
-                if (concepts.size === 0) {
-                    this._inheritanceIndex.delete(`predicate:${predicate.toString()}`);
-                }
-            }
+            const [subject, predicate] = term.components;
+            this._removeFromIndex(this._inheritanceIndex, `subject:${subject.toString()}`, concept);
+            this._removeFromIndex(this._inheritanceIndex, `predicate:${predicate.toString()}`, concept);
         }
     }
 
     _removeImplication(term, concept) {
         if (term.components && term.components.length >= 2) {
-            const premise = term.components[0];
-            const conclusion = term.components[1];
-            
-            if (this._implicationIndex.has(`premise:${premise.toString()}`)) {
-                const concepts = this._implicationIndex.get(`premise:${premise.toString()}`);
-                concepts.delete(concept);
-                if (concepts.size === 0) {
-                    this._implicationIndex.delete(`premise:${premise.toString()}`);
-                }
-            }
-            
-            if (this._implicationIndex.has(`conclusion:${conclusion.toString()}`)) {
-                const concepts = this._implicationIndex.get(`conclusion:${conclusion.toString()}`);
-                concepts.delete(concept);
-                if (concepts.size === 0) {
-                    this._implicationIndex.delete(`conclusion:${conclusion.toString()}`);
-                }
-            }
+            const [premise, conclusion] = term.components;
+            this._removeFromIndex(this._implicationIndex, `premise:${premise.toString()}`, concept);
+            this._removeFromIndex(this._implicationIndex, `conclusion:${conclusion.toString()}`, concept);
         }
     }
 
     _removeSimilarity(term, concept) {
         if (term.components && term.components.length >= 2) {
-            const first = term.components[0];
-            const second = term.components[1];
-            
-            if (this._similarityIndex.has(`similar:${first.toString()}`)) {
-                const concepts = this._similarityIndex.get(`similar:${first.toString()}`);
-                concepts.delete(concept);
-                if (concepts.size === 0) {
-                    this._similarityIndex.delete(`similar:${first.toString()}`);
-                }
-            }
-            
-            if (this._similarityIndex.has(`similar:${second.toString()}`)) {
-                const concepts = this._similarityIndex.get(`similar:${second.toString()}`);
-                concepts.delete(concept);
-                if (concepts.size === 0) {
-                    this._similarityIndex.delete(`similar:${second.toString()}`);
-                }
+            const [first, second] = term.components;
+            this._removeFromIndex(this._similarityIndex, `similar:${first.toString()}`, concept);
+            this._removeFromIndex(this._similarityIndex, `similar:${second.toString()}`, concept);
+        }
+    }
+
+    _removeFromIndex(index, key, concept) {
+        if (index.has(key)) {
+            const concepts = index.get(key);
+            concepts.delete(concept);
+            if (concepts.size === 0) {
+                index.delete(key);
             }
         }
     }
 
     find(filters = {}) {
-        const { relationshipType, subject, predicate, premise, conclusion } = filters;
+        const { relationshipType } = filters;
 
-        let result = [];
         if (relationshipType) {
-            switch (relationshipType) {
-                case 'inheritance':
-                    if (subject) {
-                        const concepts = this._inheritanceIndex.get(`subject:${subject.toString()}`);
-                        if (concepts) result.push(...Array.from(concepts));
-                    }
-                    if (predicate) {
-                        const concepts = this._inheritanceIndex.get(`predicate:${predicate.toString()}`);
-                        if (concepts) result.push(...Array.from(concepts));
-                    }
-                    break;
-                case 'implication':
-                    if (premise) {
-                        const concepts = this._implicationIndex.get(`premise:${premise.toString()}`);
-                        if (concepts) result.push(...Array.from(concepts));
-                    }
-                    if (conclusion) {
-                        const concepts = this._implicationIndex.get(`conclusion:${conclusion.toString()}`);
-                        if (concepts) result.push(...Array.from(concepts));
-                    }
-                    break;
-                case 'similarity':
-                    // Add logic for similarity relationships
-                    break;
+            const operation = this._findOperations[relationshipType];
+            if (operation) {
+                const result = operation(filters);
+                return result.length > 0 ? result : this.getAll();
             }
         }
 
-        return result.length > 0 ? result : this.getAll();
+        return this.getAll();
+    }
+
+    _findInheritance(filters) {
+        const { subject, predicate } = filters;
+        const result = [];
+        
+        if (subject) {
+            const concepts = this._inheritanceIndex.get(`subject:${subject.toString()}`);
+            if (concepts) result.push(...Array.from(concepts));
+        }
+        if (predicate) {
+            const concepts = this._inheritanceIndex.get(`predicate:${predicate.toString()}`);
+            if (concepts) result.push(...Array.from(concepts));
+        }
+        
+        return result;
+    }
+
+    _findImplication(filters) {
+        const { premise, conclusion } = filters;
+        const result = [];
+        
+        if (premise) {
+            const concepts = this._implicationIndex.get(`premise:${premise.toString()}`);
+            if (concepts) result.push(...Array.from(concepts));
+        }
+        if (conclusion) {
+            const concepts = this._implicationIndex.get(`conclusion:${conclusion.toString()}`);
+            if (concepts) result.push(...Array.from(concepts));
+        }
+        
+        return result;
+    }
+
+    _findSimilarity(filters) {
+        // Add logic for similarity relationships
+        return [];
     }
 
     clear() {
@@ -219,25 +171,13 @@ export class RelationshipIndex extends BaseIndex {
 
     getAll() {
         const allConcepts = new Set();
+        const indexes = [this._inheritanceIndex, this._implicationIndex, this._similarityIndex];
         
-        // Add inheritance concepts
-        for (const concepts of this._inheritanceIndex.values()) {
-            for (const concept of concepts) {
-                allConcepts.add(concept);
-            }
-        }
-        
-        // Add implication concepts
-        for (const concepts of this._implicationIndex.values()) {
-            for (const concept of concepts) {
-                allConcepts.add(concept);
-            }
-        }
-        
-        // Add similarity concepts
-        for (const concepts of this._similarityIndex.values()) {
-            for (const concept of concepts) {
-                allConcepts.add(concept);
+        for (const index of indexes) {
+            for (const concepts of index.values()) {
+                for (const concept of concepts) {
+                    allConcepts.add(concept);
+                }
             }
         }
         
