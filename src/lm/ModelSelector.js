@@ -1,6 +1,3 @@
-/**
- * Selects optimal models based on task requirements and constraints
- */
 export class ModelSelector {
     constructor(providerRegistry) {
         this.providerRegistry = providerRegistry;
@@ -8,38 +5,36 @@ export class ModelSelector {
     }
 
     select(task, constraints = {}) {
-        // Create a cache key based on task and constraints
-        const cacheKey = `${task?.type || 'unknown'}_${JSON.stringify(constraints)}`;
-
-        // Check cache first
+        const cacheKey = this._generateCacheKey(task, constraints);
+        
         if (this.cache.has(cacheKey)) {
             return this.cache.get(cacheKey);
         }
 
-        // Simple selection logic based on constraints
         const availableProviders = Array.from(this.providerRegistry.providers.keys());
+        const result = this._selectBasedOnConstraints(availableProviders, constraints);
+        
+        this.cache.set(cacheKey, result);
+        return result;
+    }
 
-        // If no constraints, return default or first available
+    _generateCacheKey(task, constraints) {
+        return `${task?.type || 'unknown'}_${JSON.stringify(constraints)}`;
+    }
+
+    _selectBasedOnConstraints(availableProviders, constraints) {
         if (Object.keys(constraints).length === 0) {
-            const result = this.providerRegistry.defaultProviderId || availableProviders[0] || null;
-            this.cache.set(cacheKey, result);
-            return result;
+            return this.providerRegistry.defaultProviderId || availableProviders[0] || null;
         }
 
-        // More sophisticated selection logic would go here
-        // For now, return first available that meets basic constraints
         let selected = availableProviders[0] || null;
 
-        // Example: if constraints specify performance requirements
         if (constraints.performance === 'high') {
-            // Select the most capable model (in a real implementation)
-            selected = availableProviders[0]; // Simplified
+            selected = availableProviders[0]; 
         } else if (constraints.performance === 'low') {
-            // Select the most efficient model (in a real implementation)
             selected = availableProviders[availableProviders.length - 1] || null;
         }
 
-        this.cache.set(cacheKey, selected);
         return selected;
     }
 

@@ -1,6 +1,3 @@
-/**
- * Registry for managing LM providers
- */
 export class ProviderRegistry {
     constructor() {
         this.providers = new Map();
@@ -18,7 +15,6 @@ export class ProviderRegistry {
 
         this.providers.set(id, provider);
 
-        // Set as default if none exists
         if (!this.defaultProviderId) {
             this.defaultProviderId = id;
         }
@@ -36,8 +32,9 @@ export class ProviderRegistry {
 
     remove(id) {
         if (this.defaultProviderId === id) {
-            this.defaultProviderId = this.providers.size > 0 ?
-                Array.from(this.providers.keys())[0] : null;
+            const remainingProviders = Array.from(this.providers.keys());
+            this.defaultProviderId = remainingProviders.length > 1 ? 
+                remainingProviders.find(key => key !== id) || null : null;
         }
         return this.providers.delete(id);
     }

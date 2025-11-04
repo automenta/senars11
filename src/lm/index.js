@@ -8,3 +8,4 @@ export {LMRuleFactory} from './LMRuleFactory.js';
 export {DummyProvider} from './DummyProvider.js';
 export {LangChainProvider} from './LangChainProvider.js';
 export {HuggingFaceProvider} from './HuggingFaceProvider.js';
+export {BaseProvider} from './BaseProvider.js';
