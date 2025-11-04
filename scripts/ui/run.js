@@ -1,14 +1,22 @@
 #!/usr/bin/env node
 
+import {spawn} from 'child_process';
+import {fileURLToPath} from 'url';
+import {dirname, join} from 'path';
 import {
     BASE_DIR,
     parseArgs as parseCliArgs,
     parseKeyValueArgs,
-    showUsageAndExit,
-    spawnProcess
+    showUsageAndExit
 } from '../utils/script-utils.js';
+import {WebSocketMonitor} from '../../src/server/WebSocketMonitor.js';
+import {NAR} from '../../src/nar/NAR.js';
+import {DemoWrapper} from '../../src/demo/DemoWrapper.js';
 
-const {args, helpRequested} = parseCliArgs(process.argv.slice(2));
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const {args: cliArgs, helpRequested} = parseCliArgs(process.argv.slice(2));
 
 const USAGE_MESSAGE = `
 Usage: node scripts/ui/run.js [options]
@@ -20,6 +28,7 @@ Options:
   --port <port>     Specify port for the UI server (default: 5173)
   --ws-port <port>  Specify WebSocket port (default: 8080)
   --host <host>     Specify host (default: localhost)
+  --graph-ui        Launch with Graph UI layout
 
 Examples:
   node scripts/ui/run.js --dev
@@ -27,65 +36,247 @@ Examples:
   node scripts/ui/run.js --dev --port 8081 --ws-port 8082
 `;
 
+// Parse arguments to support flexible server configuration
+const args = cliArgs;
+
 const DEFAULT_CONFIG = Object.freeze({
-    isDevMode: true,
-    port: 5173,
-    wsPort: 8080,
-    host: 'localhost'
+    nar: {
+        lm: {enabled: false},
+        reasoningAboutReasoning: {enabled: true}
+    },
+    persistence: {
+        defaultPath: './agent.json'
+    },
+    webSocket: {
+        port: parseInt(process.env.WS_PORT) || 8080,
+        host: process.env.WS_HOST || 'localhost',
+        maxConnections: 20
+    },
+    ui: {
+        port: parseInt(process.env.PORT) || 5173
+    }
 });
 
-const parseArgs = args => {
-    let isDevMode = DEFAULT_CONFIG.isDevMode;
-    let port = DEFAULT_CONFIG.port;
-    let wsPort = DEFAULT_CONFIG.wsPort;
-    let host = DEFAULT_CONFIG.host;
+/**
+ * Parse command line arguments to support flexible configuration
+ */
+function parseArgs(args) {
+    let config = {...DEFAULT_CONFIG};
 
-    // Parse key-value arguments
-    const keyValueArgs = parseKeyValueArgs(args, {
-        '--port': 'port',
-        '--ws-port': 'wsPort',
-        '--host': 'host'
-    });
-
-    // Override defaults with parsed values if provided
-    if (keyValueArgs.port) port = parseInt(keyValueArgs.port);
-    if (keyValueArgs.wsPort) wsPort = parseInt(keyValueArgs.wsPort);
-    if (keyValueArgs.host) host = keyValueArgs.host;
-
-    // Check for boolean flags
-    if (args.includes('--prod')) {
-        isDevMode = false;
-    } else if (args.includes('--dev')) {
-        isDevMode = true;
+    for (let i = 0; i < args.length; i++) {
+        if (args[i] === '--ws-port' && args[i + 1]) {
+            config = {
+                ...config,
+                webSocket: {
+                    ...config.webSocket,
+                    port: parseInt(args[i + 1])
+                }
+            };
+            i++; // Skip next argument since it's the value
+        } else if (args[i] === '--port' && args[i + 1]) {
+            config = {
+                ...config,
+                ui: {
+                    ...config.ui,
+                    port: parseInt(args[i + 1])
+                }
+            };
+            i++; // Skip next argument since it's the value
+        } else if (args[i] === '--host' && args[i + 1]) {
+            config = {
+                ...config,
+                webSocket: {
+                    ...config.webSocket,
+                    host: args[i + 1]
+                }
+            };
+            i++; // Skip next argument since it's the value
+        } else if (args[i] === '--graph-ui') {
+            config = {
+                ...config,
+                ui: {
+                    ...config.ui,
+                    layout: 'graph'
+                }
+            };
+        }
     }
 
-    // Default to dev mode unless --prod was explicitly specified
-    if (!args.includes('--prod') && !args.includes('--dev')) {
-        isDevMode = DEFAULT_CONFIG.isDevMode;
-    }
-
-    return {isDevMode, port, wsPort, host};
-};
+    return config;
+}
 
 if (helpRequested) {
     showUsageAndExit(USAGE_MESSAGE);
 }
 
-const config = parseArgs(args);
-const {port, wsPort, host} = config;
+/**
+ * Initialize and start the WebSocket server
+ */
+async function startWebSocketServer(config = DEFAULT_CONFIG) {
+    console.log(`Starting WebSocket server on ${config.webSocket.host}:${config.webSocket.port}...`);
 
-console.log(`Starting ${port === DEFAULT_CONFIG.port && wsPort === DEFAULT_CONFIG.wsPort && host === DEFAULT_CONFIG.host ?
-    (DEFAULT_CONFIG.isDevMode ? 'development' : 'production') :
-    'custom'} UI server...`);
-console.log(`UI Port: ${port}, WebSocket Port: ${wsPort}, Host: ${host}`);
+    const nar = new NAR(config.nar);
+    await nar.initialize();
 
-const spawnArgs = ['--port', port.toString(), '--ws-port', wsPort.toString(), '--host', host];
+    const monitor = new WebSocketMonitor(config.webSocket);
+    await monitor.start();
+    nar.connectToWebSocketMonitor(monitor);
 
-spawnProcess('node', [BASE_DIR + '/webui.js', ...spawnArgs], {
-    env: {
-        ...process.env,
-        WS_PORT: wsPort.toString(),
-        WS_HOST: host,
-        PORT: port.toString()
+    // Register a handler for NAR instance requests from the UI
+    monitor.registerClientMessageHandler('requestNAR', async (message, client, monitorInstance) => {
+        // For security reasons, we only send information that's safe for the UI, not the full NAR instance
+        const narInfo = {
+            cycleCount: nar.cycleCount,
+            isRunning: nar.isRunning,
+            config: nar.config.toJSON(),
+            stats: nar.getStats(),
+            reasoningState: nar.getReasoningState ? nar.getReasoningState() : null
+        };
+
+        monitorInstance._sendToClient(client, {
+            type: 'narInstance',
+            payload: narInfo
+        });
+    });
+
+    // Initialize DemoWrapper to provide remote control and introspection
+    const demoWrapper = new DemoWrapper();
+    await demoWrapper.initialize(nar, monitor);
+
+    // Send list of available demos to connected UIs
+    await demoWrapper.sendDemoList();
+
+    // Start periodic metrics updates
+    demoWrapper.runPeriodicMetricsUpdate();
+
+    // Start the NAR reasoning cycle
+    nar.start();
+
+    console.log('WebSocket server started successfully');
+
+    return {nar, monitor, demoWrapper};
+}
+
+/**
+ * Start the Vite development server
+ */
+function startViteDevServer(config = DEFAULT_CONFIG) {
+    console.log(`Starting Vite dev server on port ${config.ui.port}...`);
+
+    // Change to ui directory and run vite dev server
+    const viteProcess = spawn('npx', ['vite', 'dev', '--port', config.ui.port.toString()], {
+        cwd: join(__dirname, '../../ui'),
+        stdio: 'inherit', // This allows the Vite server to control the terminal properly
+        env: {
+            ...process.env,
+            // Pass WebSocket connection info to UI
+            VITE_WS_HOST: config.webSocket.host,
+            VITE_WS_PORT: config.webSocket.port.toString(),
+            VITE_WS_PATH: DEFAULT_CONFIG.webSocket.path || undefined,
+            PORT: config.ui.port.toString(), // Also set PORT for compatibility
+            VITE_DEFAULT_LAYOUT: config.ui.layout || 'default'
+        }
+    });
+
+    viteProcess.on('error', (err) => {
+        console.error('Error starting Vite server:', err.message);
+        process.exit(1);
+    });
+
+    viteProcess.on('close', (code) => {
+        console.log(`Vite server exited with code ${code}`);
+        // Don't exit the main process if vite server closes, just log it
+        // This allows graceful shutdown to be triggered by user pressing Ctrl+C
+        console.log('Vite server closed. Press Ctrl+C to shut down the WebSocket server as well.');
+    });
+
+    return viteProcess;
+}
+
+/**
+ * Save the NAR state to file
+ */
+async function saveNarState(nar) {
+    const fs = await import('fs');
+    const state = nar.serialize();
+    await fs.promises.writeFile(DEFAULT_CONFIG.persistence.defaultPath, JSON.stringify(state, null, 2));
+    console.log('Current state saved to agent.json');
+}
+
+/**
+ * Shutdown sequence for all services
+ */
+async function shutdownServices(webSocketServer) {
+    // Save NAR state
+    try {
+        await saveNarState(webSocketServer.nar);
+    } catch (saveError) {
+        console.error('Error saving state on shutdown:', saveError.message);
     }
+
+    // Stop WebSocket server
+    if (webSocketServer.monitor) {
+        await webSocketServer.monitor.stop();
+    }
+
+    if (webSocketServer.nar) {
+        webSocketServer.nar.stop();
+    }
+}
+
+/**
+ * Setup graceful shutdown handlers
+ */
+async function setupGracefulShutdown(webSocketServer) {
+    const shutdown = async () => {
+        console.log('\nShutting down gracefully...');
+        await shutdownServices(webSocketServer);
+        console.log('Servers stopped successfully');
+        process.exit(0);
+    };
+
+    process.on('SIGINT', shutdown);
+    process.on('SIGTERM', shutdown);
+    process.on('uncaughtException', (error) => {
+        console.error('Uncaught exception:', error.message);
+        process.exit(1);
+    });
+    process.on('unhandledRejection', (reason, promise) => {
+        console.error('Unhandled rejection at:', promise, 'reason:', reason);
+        process.exit(1);
+    });
+}
+
+async function main() {
+    let webSocketServer;
+
+    try {
+        // Parse command line arguments for flexible configuration
+        const config = parseArgs(args);
+
+        // Start WebSocket server with the parsed config
+        webSocketServer = await startWebSocketServer(config);
+
+        // Set up graceful shutdown
+        await setupGracefulShutdown({
+            nar: webSocketServer.nar,
+            monitor: webSocketServer.monitor
+        });
+
+        // Start Vite dev server
+        const viteProcess = startViteDevServer(config);
+
+        // Store the websocket server info for shutdown
+        webSocketServer.viteProcess = viteProcess;
+
+        console.log('Both servers are running. Press Ctrl+C to stop.');
+    } catch (error) {
+        console.error('Failed to start servers:', error.message);
+        process.exit(1);
+    }
+}
+
+main().catch(error => {
+    console.error('Unexpected error:', error.message);
+    process.exit(1);
 });

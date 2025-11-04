@@ -19,6 +19,7 @@ import PriorityHistogram from './PriorityHistogram.js';
 import LMConfigPanel from './LMConfigPanel.js';
 import MetaCognitionPanel from './MetaCognitionPanel.js';
 import SelfAnalysisPanel from './SelfAnalysisPanel.js';
+import GraphUI from './GraphUI.js';
 
 export const contentMap = {
     'ExplorerPanel': ExplorerPanel,
@@ -41,4 +42,5 @@ export const contentMap = {
     'LMConfigPanel': LMConfigPanel,
     'MetaCognitionPanel': MetaCognitionPanel,
     'SelfAnalysisPanel': SelfAnalysisPanel,
+    'GraphUI': GraphUI,
 };

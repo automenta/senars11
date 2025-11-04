@@ -1,5 +1,5 @@
 import {jest} from '@jest/globals';
-import {Metacognition} from '../../../src/reasoning/Metacognition.js';
+import {Metacognition} from '../../../src/self/Metacognition.js';
 import {EventBus} from '../../../src/util/EventBus.js';
 import {IntrospectionEvents} from '../../../src/util/IntrospectionEvents.js';
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import * as dfd from 'danfojs';
 import {ScriptUtils} from './script-utils.js';
 import {ConfigUtils} from './config-utils.js';
 import {ProcessUtils} from './process-utils.js';
@@ -226,10 +227,16 @@ async function runAutonomousDevelopment() {
 
             // Record best of generation
             const bestOfGen = population[0];
+            // Extract fitness values for danfojs analysis
+            const fitnessValues = population.map(ind => ind.fitness || 0);
+            const fitnessSeries = new dfd.Series(fitnessValues);
+            
             evolutionHistory.push({
                 generation: gen,
                 bestFitness: bestOfGen.fitness,
-                averageFitness: population.reduce((sum, ind) => sum + (ind.fitness || 0), 0) / population.length,
+                averageFitness: fitnessSeries.mean(),
+                stdFitness: fitnessSeries.std(),
+                medianFitness: fitnessSeries.median(),
                 bestConfig: bestOfGen.config
             });
 
@@ -276,6 +283,8 @@ async function runAutonomousDevelopment() {
             summary: {
                 initialAverage: evolutionHistory[0].averageFitness,
                 finalAverage: evolutionHistory[evolutionHistory.length - 1].averageFitness,
+                initialStd: evolutionHistory[0].stdFitness,
+                finalStd: evolutionHistory[evolutionHistory.length - 1].stdFitness,
                 bestFitness: bestOverall.fitness
             }
         };
@@ -290,6 +299,8 @@ async function runAutonomousDevelopment() {
         console.log('\n📈 Evolution Summary:');
         console.log(`  Initial average fitness: ${finalReport.summary.initialAverage.toFixed(4)}`);
         console.log(`  Final average fitness: ${finalReport.summary.finalAverage.toFixed(4)}`);
+        console.log(`  Initial fitness std: ${finalReport.summary.initialStd.toFixed(4)}`);
+        console.log(`  Final fitness std: ${finalReport.summary.finalStd.toFixed(4)}`);
         console.log(`  Best fitness: ${finalReport.summary.bestFitness.toFixed(4)}`);
         const improvement = ((finalReport.summary.finalAverage / finalReport.summary.initialAverage - 1) * 100).toFixed(2);
         console.log(`  Improvement: ${improvement}% average`);

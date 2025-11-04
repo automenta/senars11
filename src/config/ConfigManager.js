@@ -119,7 +119,7 @@ const DEFAULT_CONFIG = deepFreeze({
     components: {
         metacognition: {
             enabled: true,
-            path: 'src/reasoning/Metacognition.js',
+            path: 'src/self/Metacognition.js',
             class: 'Metacognition',
             dependencies: ['nar', 'eventBus'],
             config: {

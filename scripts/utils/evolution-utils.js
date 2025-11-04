@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import * as dfd from 'danfojs';
 import {writeFile} from 'fs/promises';
 
 /**
@@ -118,15 +119,21 @@ export const EvolutionUtils = {
      * Calculate fitness statistics for a population
      */
     calculatePopulationStats: (population) => {
-        if (population.length === 0) return {best: 0, average: 0, worst: 0};
+        if (population.length === 0) return {best: 0, average: 0, worst: 0, std: 0, median: 0};
 
         const fitnesses = population.map(ind => ind.fitness || 0);
-        const sorted = [...fitnesses].sort((a, b) => b - a);
-
+        
+        // Use danfojs for more comprehensive statistical analysis
+        const fitnessSeries = new dfd.Series(fitnesses);
+        
         return {
-            best: sorted[0],
-            average: sorted.reduce((sum, fit) => sum + fit, 0) / sorted.length,
-            worst: sorted[sorted.length - 1]
+            best: fitnessSeries.max(),
+            average: fitnessSeries.mean(),
+            worst: fitnessSeries.min(),
+            std: fitnessSeries.std(),
+            median: fitnessSeries.median(),
+            variance: fitnessSeries.var(),
+            count: fitnesses.length
         };
     },
 

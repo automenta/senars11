@@ -1,3 +1,4 @@
+import * as dfd from 'danfojs';
 import {Concept} from './Concept.js';
 import {MemoryIndex} from './MemoryIndex.js';
 import {MemoryConsolidation} from './MemoryConsolidation.js';
@@ -418,6 +419,29 @@ export class Memory extends BaseComponent {
         const conceptStats = this.getAllConcepts().map(c => c.getStats());
         const hasConcepts = conceptStats.length > 0;
 
+        // Use danfojs for advanced statistical calculations
+        let averageActivation = 0;
+        let averageQuality = 0;
+        let activationStd = 0;
+        let qualityStd = 0;
+        let activationMedian = 0;
+        let qualityMedian = 0;
+
+        if (hasConcepts) {
+            const activations = conceptStats.map(s => s.activation);
+            const qualities = conceptStats.map(s => s.quality);
+            
+            const activationSeries = new dfd.Series(activations);
+            const qualitySeries = new dfd.Series(qualities);
+            
+            averageActivation = activationSeries.mean();
+            averageQuality = qualitySeries.mean();
+            activationStd = activationSeries.std();
+            qualityStd = qualitySeries.std();
+            activationMedian = activationSeries.median();
+            qualityMedian = qualitySeries.median();
+        }
+
         return {
             ...this._stats,
             conceptStats,
@@ -429,8 +453,13 @@ export class Memory extends BaseComponent {
             indexStats: this._index.getStats(),
             oldestConcept: hasConcepts ? Math.min(...conceptStats.map(s => s.createdAt)) : null,
             newestConcept: hasConcepts ? Math.max(...conceptStats.map(s => s.createdAt)) : null,
-            averageActivation: hasConcepts ? conceptStats.reduce((sum, s) => sum + s.activation, 0) / conceptStats.length : 0,
-            averageQuality: hasConcepts ? conceptStats.reduce((sum, s) => sum + s.quality, 0) / conceptStats.length : 0
+            averageActivation,
+            averageQuality,
+            activationStd,
+            qualityStd,
+            activationMedian,
+            qualityMedian,
+            conceptCount: hasConcepts ? conceptStats.length : 0
         };
     }
 

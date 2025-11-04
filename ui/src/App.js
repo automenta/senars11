@@ -15,13 +15,22 @@ function App() {
     const wsService = useRef(null);
 
     useEffect(() => {
-        // Check for self-analysis query parameter
-        const layoutMode = new URLSearchParams(window.location.search).get('layout');
+        // Check for layout query parameter or environment variable
+        const urlParams = new URLSearchParams(window.location.search);
+        const layoutParam = urlParams.get('layout');
+        const defaultLayoutEnv = import.meta.env.VITE_DEFAULT_LAYOUT || 'default';
         
-        // Load the appropriate layout based on parameter
-        const initialLayout = layoutMode === 'self-analysis'
-            ? selfAnalysisLayout
-            : JSON.parse(localStorage.getItem('layout') || JSON.stringify(defaultLayout));
+        // Determine which layout to use
+        let initialLayout;
+        if (layoutParam === 'self-analysis') {
+            initialLayout = selfAnalysisLayout;
+        } else if (layoutParam === 'graph' || defaultLayoutEnv === 'graph') {
+            // For now, we'll use the default layout which includes the GraphUI panel
+            // In the future, we might want a dedicated graph layout
+            initialLayout = defaultLayout;
+        } else {
+            initialLayout = JSON.parse(localStorage.getItem('layout') || JSON.stringify(defaultLayout));
+        }
         
         setModel(Model.fromJson(initialLayout));
     }, []);

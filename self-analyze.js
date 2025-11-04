@@ -3,6 +3,18 @@
 import { spawnSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
+import { DisplayUtils } from './src/tui/DisplayUtils.js';
+import * as dfd from 'danfojs';
+
+// For integration with NAR system
+let NAR = null;
+
+// Try to import NAR if available (for integration scenarios)
+try {
+    // This import is optional and only used when integrated with the full system
+} catch (e) {
+    // NAR not available, which is fine for standalone operation
+}
 
 const TOP_N = 20;
 
@@ -16,19 +28,297 @@ class BaseAnalyzer {
   async analyze() {
     throw new Error("analyze method must be implemented");
   }
+  
+  validateResults(results) {
+    if (!results || typeof results !== 'object') {
+      return false;
+    }
+    
+    // Basic validation - results should have meaningful content
+    const hasError = results.error !== undefined;
+    const hasContent = Object.keys(results).some(key => 
+      key !== 'error' && results[key] !== null && results[key] !== undefined
+    );
+    
+    return hasError || hasContent;
+  }
+  
+  safeGet(obj, path, defaultValue = null) {
+    try {
+      return path.reduce((current, key) => current && current[key] !== undefined ? current[key] : defaultValue, obj);
+    } catch (e) {
+      return defaultValue;
+    }
+  }
+  
+  sanitizeString(str) {
+    if (typeof str !== 'string') {
+      return '';
+    }
+    // Remove control characters and normalize
+    return str.replace(/[\x00-\x1F\x7F-\x9F]/g, '').trim();
+  }
 }
 
-class TestAnalyzer extends BaseAnalyzer {
+// StandardAnalyzer extends BaseAnalyzer with common functionality
+class StandardAnalyzer extends BaseAnalyzer {
   constructor(options, verbose) {
     super();
     this.options = options;
     this.verbose = verbose;
   }
+  
+  // Common error handling and result formatting
+  createSuccessResult(data) {
+    return {
+      status: 'success',
+      data,
+      timestamp: Date.now()
+    };
+  }
+  
+  createErrorResult(errorMsg) {
+    if (this.verbose) console.log(`❌ ${errorMsg}`);
+    return {
+      status: 'error',
+      error: errorMsg,
+      timestamp: Date.now()
+    };
+  }
+  
+  // Common try/catch wrapper for analysis methods
+  async safeAnalyze(analysisFunction, errorMessage) {
+    try {
+      return await analysisFunction();
+    } catch (error) {
+      return this.createErrorResult(`${errorMessage}: ${error.message}`);
+    }
+  }
+  
+  // Common file reading with error handling
+  safeReadFile(filePath) {
+    try {
+      return fs.readFileSync(filePath, 'utf8');
+    } catch (error) {
+      if (this.verbose) console.log(`⚠️ Cannot read file: ${filePath}`, error.message);
+      return null;
+    }
+  }
+  
+  // Common JSON parsing with error handling
+  safeParseJSON(content, filePath = 'unknown') {
+    try {
+      if (!content || !content.trim()) {
+        if (this.verbose) console.log(`⚠️ Empty content when parsing JSON from: ${filePath}`);
+        return null;
+      }
+      return JSON.parse(content);
+    } catch (error) {
+      if (this.verbose) console.log(`❌ Error parsing JSON from ${filePath}:`, error.message);
+      return null;
+    }
+  }
+  
+  /**
+   * Normalize analysis results to a standard format
+   * @param {Object} results - Raw analysis results
+   * @param {string} analyzerType - Type of analyzer
+   * @returns {Object} Normalized results
+   */
+  normalizeResults(results, analyzerType) {
+    if (!results) return null;
+    
+    const normalized = {
+      type: analyzerType,
+      timestamp: Date.now(),
+      data: {},
+      metadata: {
+        hasError: !!results.error,
+        error: results.error || null,
+        status: results.status || (results.error ? 'error' : 'completed')
+      }
+    };
+    
+    // Copy relevant data while excluding metadata fields
+    for (const [key, value] of Object.entries(results)) {
+      if (!['status', 'error', 'timestamp', 'type'].includes(key)) {
+        normalized.data[key] = value;
+      }
+    }
+    
+    return normalized;
+  }
+  
+  /**
+   * Standardize metrics for cross-analyzer comparison
+   * @param {Object} metrics - Raw metrics object
+   * @returns {Object} Standardized metrics
+   */
+  standardizeMetrics(metrics) {
+    if (!metrics || typeof metrics !== 'object') return {};
+    
+    const standardized = {};
+    
+    // Standardize common metric names and formats
+    for (const [key, value] of Object.entries(metrics)) {
+      // Convert various percentage formats to 0-100 scale
+      if (key.includes('percentage') || key.includes('coverage') || key.includes('rate')) {
+        standardized[key] = this._normalizePercentage(value);
+      }
+      // Standardize counts
+      else if (key.includes('count') || key.includes('total') || key.includes('number')) {
+        standardized[key] = parseInt(value) || 0;
+      }
+      // Standardize size values
+      else if (key.includes('size') || key.includes('lines') || key.includes('length')) {
+        standardized[key] = parseInt(value) || 0;
+      }
+      // Pass through other values
+      else {
+        standardized[key] = value;
+      }
+    }
+    
+    return standardized;
+  }
+  
+  /**
+   * Normalize a percentage value to 0-100 scale
+   * @private
+   */
+  _normalizePercentage(value) {
+    if (typeof value !== 'number') {
+      // Try to parse as string percentage
+      if (typeof value === 'string') {
+        const match = value.match(/(\d+\.?\d*)%?/);
+        return match ? parseFloat(match[1]) : 0;
+      }
+      return 0;
+    }
+    
+    // If the value is between 0 and 1, convert to percentage
+    if (value >= 0 && value <= 1) {
+      return value * 100;
+    }
+    
+    // Otherwise, return the value as is
+    return value;
+  }
+  
+  /**
+   * Generate quality score based on analysis results
+   * @param {Object} results - Analysis results
+   * @returns {number} Quality score 0-100
+   */
+  calculateQualityScore(results) {
+    if (!results || results.error) return 0;
+    
+    let score = 0;
+    let weightSum = 0;
+    
+    // Calculate score based on various metrics
+    if (results.passRate !== undefined) {
+      score += results.passRate * 0.3;
+      weightSum += 0.3;
+    }
+    
+    if (results.lines !== undefined) {
+      // Higher coverage is better
+      score += results.lines * 0.2;
+      weightSum += 0.2;
+    }
+    
+    // Lower complexity is better (inverse)
+    if (results.avgComplexity !== undefined && results.avgComplexity > 0) {
+      // Normalize to 0-100 scale where lower complexity is higher score
+      const complexityScore = Math.max(0, 100 - (results.avgComplexity * 2));
+      score += complexityScore * 0.15;
+      weightSum += 0.15;
+    }
+    
+    // Higher number of files might indicate complexity (inverse)
+    if (results.jsFiles !== undefined && results.jsFiles > 0) {
+      // Normalize large codebases
+      const fileCountScore = Math.max(10, 100 - (results.jsFiles / 5));
+      score += fileCountScore * 0.1;
+      weightSum += 0.1;
+    }
+    
+    // Debt score (inverse - less debt is better)
+    if (results.totalDebtScore !== undefined && results.totalDebtScore >= 0) {
+      // Lower debt score is better
+      const debtScore = Math.max(0, 100 - (results.totalDebtScore / 50));
+      score += debtScore * 0.25;
+      weightSum += 0.25;
+    }
+    
+    return weightSum > 0 ? Math.round(score / weightSum) : 50; // Default to 50 if no metrics available
+  }
+  
+  /**
+   * Centralized logging method with consistent formatting
+   * @param {string} message - Log message
+   * @param {'info'|'warn'|'error'|'debug'} level - Log level
+   * @param {Object} meta - Additional metadata
+   */
+  log(message, level = 'info', meta = {}) {
+    const timestamp = new Date().toISOString();
+    const levelEmojis = {
+      info: 'ℹ️',
+      warn: '⚠️',
+      error: '❌',
+      debug: '🔍',
+      success: '✅'
+    };
+    
+    const emoji = levelEmojis[level] || 'ℹ️';
+    
+    // Only log if verbose is enabled or it's an error
+    if (this.verbose || level === 'error' || level === 'warn') {
+      if (Object.keys(meta).length > 0) {
+        console.log(`${emoji} [${timestamp}] ${message}`, meta);
+      } else {
+        console.log(`${emoji} [${timestamp}] ${message}`);
+      }
+    }
+  }
+  
+  /**
+   * Log an error with consistent formatting
+   */
+  logError(message, error = null) {
+    const errorInfo = error ? {
+      message: error.message,
+      stack: this.options && this.options.debug ? error.stack : undefined
+    } : null;
+    
+    this.log(message, 'error', errorInfo);
+  }
+  
+  /**
+   * Log a warning with consistent formatting
+   */
+  logWarning(message, meta = {}) {
+    this.log(message, 'warn', meta);
+  }
+  
+  /**
+   * Log info with consistent formatting
+   */
+  logInfo(message, meta = {}) {
+    this.log(message, 'info', meta);
+  }
+}
+
+class TestAnalyzer extends StandardAnalyzer {
+  constructor(options, verbose) {
+    super(options, verbose);
+  }
 
   async analyze() {
     if (this.verbose) console.log('\n🔍 Collecting Unit Test Results...');
 
-    try {
+    return await this.safeAnalyze(async () => {
       // Try jest first
       const testResult = spawnSync('npx', ['jest', '--json', '--silent'], {
         cwd: process.cwd(),
@@ -64,10 +354,7 @@ class TestAnalyzer extends BaseAnalyzer {
 
       // Fallback to npm test
       return await this._runFallbackTest();
-    } catch (error) {
-      if (this.verbose) console.log(`❌ Test collection error: ${error.message}`);
-      return this.createEmptyTestResult(error.message);
-    }
+    }, 'Test collection failed');
   }
 
   _buildTestResult(testResult, parsedResult, individualTestResults) {
@@ -336,51 +623,113 @@ class TestAnalyzer extends BaseAnalyzer {
   getSlowestTests(individualTestResults) {
     if (!individualTestResults || individualTestResults.length === 0) return [];
     
-    const sortedTests = [...individualTestResults]
-      .filter(test => test.duration && test.duration > 0)
-      .sort((a, b) => b.duration - a.duration);
-    
-    // Calculate slowest tests by directory
-    const testsByDirectory = {};
-    for (const test of individualTestResults) {
-      if (test.duration > 0) {
-        if (!testsByDirectory[test.directory]) {
-          testsByDirectory[test.directory] = [];
+    try {
+      // Use danfojs for test analysis
+      const testDf = new dfd.DataFrame(individualTestResults);
+      
+      // Filter tests with duration > 0
+      const durationValues = testDf['duration'].values;
+      const validIndices = [];
+      for (let i = 0; i < durationValues.length; i++) {
+        if (durationValues[i] > 0) {
+          validIndices.push(i);
         }
-        testsByDirectory[test.directory].push(test);
       }
+      
+      if (validIndices.length > 0) {
+        // Create array of valid tests with indices for danfojs operations
+        const validTests = validIndices.map(i => individualTestResults[i]);
+        
+        // Sort by duration manually since danfojs doesn't have direct sort
+        const sortedValidTests = [...validTests].sort((a, b) => b.duration - a.duration);
+        
+        // Get top N slowest tests
+        const slowestTests = sortedValidTests.slice(0, TOP_N).map(test => ({
+          name: test.name,
+          duration: test.duration,
+          suite: test.suite,
+          directory: test.directory,
+          status: test.status
+        }));
+        
+        // Group by directory and sort within each group
+        const testsByDirectory = {};
+        for (const test of validTests) {
+          if (!testsByDirectory[test.directory]) {
+            testsByDirectory[test.directory] = [];
+          }
+          testsByDirectory[test.directory].push(test);
+        }
+        
+        // Sort each directory's tests by duration and take top 3
+        for (const [dir, tests] of Object.entries(testsByDirectory)) {
+          testsByDirectory[dir] = tests.sort((a, b) => b.duration - a.duration).slice(0, 3)
+            .map(test => ({
+              name: test.name,
+              duration: test.duration,
+              suite: test.suite,
+              directory: test.directory,
+              status: test.status
+            }));
+        }
+        
+        return {
+          all: slowestTests,
+          byDirectory: testsByDirectory
+        };
+      }
+      
+      return {
+        all: slowestTests,
+        byDirectory: testsByDirectory
+      };
+    } catch (error) {
+      if (this.verbose) console.log(`⚠️ Error processing tests with danfojs: ${error.message}`);
+      // Fallback to original implementation
+      const sortedTests = [...individualTestResults]
+        .filter(test => test.duration && test.duration > 0)
+        .sort((a, b) => b.duration - a.duration);
+      
+      // Calculate slowest tests by directory
+      const testsByDirectory = {};
+      for (const test of individualTestResults) {
+        if (test.duration > 0) {
+          if (!testsByDirectory[test.directory]) {
+            testsByDirectory[test.directory] = [];
+          }
+          testsByDirectory[test.directory].push(test);
+        }
+      }
+      
+      const slowestTestsByDir = {};
+      for (const [dir, tests] of Object.entries(testsByDirectory)) {
+        const sortedDirTests = tests.sort((a, b) => b.duration - a.duration);
+        slowestTestsByDir[dir] = sortedDirTests.slice(0, 3); // Top 3 slowest per directory
+      }
+      
+      return {
+        all: sortedTests.slice(0, TOP_N).map(test => ({
+          name: test.name,
+          duration: test.duration,
+          suite: test.suite,
+          directory: test.directory,
+          status: test.status
+        })),
+        byDirectory: slowestTestsByDir
+      };
     }
-    
-    const slowestTestsByDir = {};
-    for (const [dir, tests] of Object.entries(testsByDirectory)) {
-      const sortedDirTests = tests.sort((a, b) => b.duration - a.duration);
-      slowestTestsByDir[dir] = sortedDirTests.slice(0, 3); // Top 3 slowest per directory
-    }
-    
-    return {
-      all: sortedTests.slice(0, TOP_N).map(test => ({
-        name: test.name,
-        duration: test.duration,
-        suite: test.suite,
-        directory: test.directory,
-        status: test.status
-      })),
-      byDirectory: slowestTestsByDir
-    };
   }
 }
 
-class CoverageAnalyzer extends BaseAnalyzer {
+class CoverageAnalyzer extends StandardAnalyzer {
   constructor(options, verbose) {
-    super();
-    this.options = options;
-    this.verbose = verbose;
+    super(options, verbose);
   }
 
   async analyze() {
     if (this.verbose) console.log('\n🔍 Collecting Coverage Data...');
 
-    try {
+    return await this.safeAnalyze(async () => {
       let coverageData = await this._loadOrCreateCoverage();
       
       if (coverageData) {
@@ -389,10 +738,7 @@ class CoverageAnalyzer extends BaseAnalyzer {
         if (this.verbose) console.log('❌ No coverage data found or generated');
         return { available: false };
       }
-    } catch (error) {
-      if (this.verbose) console.log(`❌ Coverage collection error: ${error.message}`);
-      return { error: error.message };
-    }
+    }, 'Coverage collection failed');
   }
 
   async _loadOrCreateCoverage() {
@@ -403,7 +749,10 @@ class CoverageAnalyzer extends BaseAnalyzer {
       const coverageFile = path.join(coveragePath, 'coverage-summary.json');
       if (fs.existsSync(coverageFile)) {
         try {
-          coverageData = JSON.parse(fs.readFileSync(coverageFile, 'utf8'));
+          const fileContent = fs.readFileSync(coverageFile, 'utf8');
+          if (fileContent.trim()) {
+            coverageData = JSON.parse(fileContent);
+          }
         } catch (parseError) {
           if (this.verbose) console.log('❌ Error parsing coverage file:', parseError.message);
           return null;
@@ -430,7 +779,10 @@ class CoverageAnalyzer extends BaseAnalyzer {
         const coverageFile = './coverage/coverage-summary.json';
         if (fs.existsSync(coverageFile)) {
           try {
-            coverageData = JSON.parse(fs.readFileSync(coverageFile, 'utf8'));
+            const fileContent = fs.readFileSync(coverageFile, 'utf8');
+            if (fileContent.trim()) {
+              coverageData = JSON.parse(fileContent);
+            }
           } catch (parseError) {
             if (this.verbose) console.log('❌ Error parsing generated coverage file:', parseError.message);
             return null;
@@ -478,6 +830,9 @@ class CoverageAnalyzer extends BaseAnalyzer {
       uncoveredBlocks: []
     };
 
+    // Collect file-level data for DataFrame processing
+    const fileCoverageData = [];
+
     // Analyze each file in detail
     for (const [filePath, fileCoverage] of Object.entries(coverageData)) {
       if (filePath === 'total') continue; // Skip summary entry
@@ -511,6 +866,16 @@ class CoverageAnalyzer extends BaseAnalyzer {
         });
       }
       
+      // Store for DataFrame processing
+      fileCoverageData.push({
+        filePath: relativePath,
+        directory: directory,
+        coverage: fileCoveragePercent,
+        statements: total,
+        covered: covered,
+        uncovered: total - covered
+      });
+      
       // Update directory stats
       detailedAnalysis.coverageByDirectory[directory].files++;
       detailedAnalysis.coverageByDirectory[directory].statements += total;
@@ -522,35 +887,92 @@ class CoverageAnalyzer extends BaseAnalyzer {
       stats.coveragePercent = stats.statements > 0 ? (stats.covered / stats.statements) * 100 : 100;
     }
     
-    // Sort low coverage files by coverage percentage
-    detailedAnalysis.lowCoverageFiles.sort((a, b) => a.coverage - b.coverage);
+    // Use danfojs for advanced analysis
+    try {
+      if (fileCoverageData.length > 0) {
+        const coverageDf = new dfd.DataFrame(fileCoverageData);
+        
+        // Filter low coverage files using danfojs
+        const coverageSeries = coverageDf['coverage'];
+        const lowCoverageIndices = [];
+        for (let i = 0; i < coverageSeries.values.length; i++) {
+          if (coverageSeries.values[i] < 50) {
+            lowCoverageIndices.push(i);
+          }
+        }
+        
+        if (lowCoverageIndices.length > 0) {
+          const lowCoverageDf = coverageDf.iloc({ rows: lowCoverageIndices });
+          const sortedLowCoverage = lowCoverageDf.sort_values("coverage", { ascending: true });
+          
+          detailedAnalysis.lowCoverageFiles = [];
+          for (let i = 0; i < sortedLowCoverage.shape[0]; i++) {
+            const row = sortedLowCoverage.row(i);
+            detailedAnalysis.lowCoverageFiles.push({
+              filePath: row['filePath'],
+              coverage: parseFloat(row['coverage'].toFixed(2)),
+              statements: row['statements'],
+              covered: row['covered']
+            });
+          }
+        }
+      }
+    } catch (error) {
+      if (this.verbose) console.log(`⚠️ Error processing coverage with danfojs: ${error.message}`);
+      // Fallback to original sorting
+      detailedAnalysis.lowCoverageFiles.sort((a, b) => a.coverage - b.coverage);
+    }
     
-    // Sort directories by coverage percentage
-    detailedAnalysis.directoriesSorted = Object.entries(detailedAnalysis.coverageByDirectory)
-      .map(([dir, stats]) => ({ directory: dir, ...stats }))
-      .sort((a, b) => a.coveragePercent - b.coveragePercent);
+    // Use danfojs for directory analysis as well
+    try {
+      const dirData = Object.entries(detailedAnalysis.coverageByDirectory)
+        .map(([dir, stats]) => ({ directory: dir, ...stats }));
+      
+      if (dirData.length > 0) {
+        const dirDf = new dfd.DataFrame(dirData);
+        const sortedDirDf = dirDf.sort_values("coveragePercent", { ascending: true });
+        
+        detailedAnalysis.directoriesSorted = [];
+        for (let i = 0; i < sortedDirDf.shape[0]; i++) {
+          const row = sortedDirDf.row(i);
+          detailedAnalysis.directoriesSorted.push(row);
+        }
+      }
+    } catch (error) {
+      if (this.verbose) console.log(`⚠️ Error processing directory data with danfojs: ${error.message}`);
+      // Fallback to original sorting
+      detailedAnalysis.directoriesSorted = Object.entries(detailedAnalysis.coverageByDirectory)
+        .map(([dir, stats]) => ({ directory: dir, ...stats }))
+        .sort((a, b) => a.coveragePercent - b.coveragePercent);
+    }
     
     return detailedAnalysis;
   }
 }
 
-class ProjectAnalyzer extends BaseAnalyzer {
+class ProjectAnalyzer extends StandardAnalyzer {
   constructor(options, verbose) {
-    super();
-    this.options = options;
-    this.verbose = verbose;
+    super(options, verbose);
   }
 
   async analyze() {
     if (this.verbose) console.log('\n🔍 Collecting Project Information...');
 
-    try {
+    return await this.safeAnalyze(async () => {
       if (!fs.existsSync('./package.json')) {
         if (this.verbose) console.log('❌ package.json not found');
         return { error: 'package.json not found' };
       }
       
-      const packageJson = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
+      const packageJsonContent = this.safeReadFile('./package.json');
+      if (!packageJsonContent) {
+        return { error: 'Could not read package.json' };
+      }
+      
+      const packageJson = this.safeParseJSON(packageJsonContent, './package.json');
+      if (!packageJson) {
+        return { error: 'Could not parse package.json' };
+      }
       
       return {
         name: packageJson.name,
@@ -560,30 +982,21 @@ class ProjectAnalyzer extends BaseAnalyzer {
         devDependencies: Object.keys(packageJson.devDependencies || {}).length,
         scripts: Object.keys(packageJson.scripts || {}).length
       };
-    } catch (error) {
-      if (this.verbose) console.log(`❌ Project info collection error: ${error.message}`);
-      return { error: error.message };
-    }
+    }, 'Project info collection failed');
   }
 }
 
-class StaticAnalyzer extends BaseAnalyzer {
+class StaticAnalyzer extends StandardAnalyzer {
   constructor(options, verbose) {
-    super();
-    this.options = options;
-    this.verbose = verbose;
+    super(options, verbose);
   }
 
   async analyze() {
     if (this.verbose) console.log('\n🔍 Collecting Static Analysis...');
 
-    try {
-      const srcPath = './src';
-      if (!fs.existsSync(srcPath)) {
-        if (this.verbose) console.log('❌ Source directory not found');
-        return { error: 'src directory not found' };
-      }
-
+    return await this.safeAnalyze(async () => {
+      const directoriesToAnalyze = ['./src', './ui', './tests', './scripts'];
+      
       const stats = {
         jsFiles: 0,
         totalLines: 0,
@@ -597,20 +1010,112 @@ class StaticAnalyzer extends BaseAnalyzer {
         riskMetrics: {}
       };
 
-      this._traverseDirectory(srcPath, stats);
+      // Analyze multiple directories with timeout protection
+      const analysisTimeout = 30000; // 30 seconds timeout
+      const startTime = Date.now();
+      
+      for (const dirPath of directoriesToAnalyze) {
+        if (Date.now() - startTime > analysisTimeout) {
+          if (this.verbose) console.log(`⏰ Static analysis timeout reached, stopping...`);
+          break;
+        }
+        
+        if (fs.existsSync(dirPath)) {
+          if (this.verbose) console.log(`🔍 Analyzing directory: ${dirPath}`);
+          this._traverseDirectory(dirPath, stats, 0, 8); // Start at depth 0, max 8 levels
+        } else if (this.verbose) {
+          console.log(`⚠️ Directory ${dirPath} not found, skipping...`);
+        }
+      }
 
-      stats.fileDetails.sort((a, b) => b.lines - a.lines);
-      stats.largestFiles = stats.fileDetails.slice(0, TOP_N);
-
+      // Use danfojs for advanced data processing
       if (stats.fileDetails.length > 0) {
+        try {
+          // Convert file details to DataFrame for advanced processing
+          const fileDf = new dfd.DataFrame(stats.fileDetails);
+          
+          // Calculate advanced statistics using danfojs
+          stats.fileDetailsDataFrame = await this._createFileAnalysisDataFrame(stats.fileDetails);
+          
+          // Danfojs doesn't have a direct sort method based on our test
+          // So we'll use JavaScript sorting but can still use danfojs for analysis
+          // Create indices array and sort based on lines column
+          const indices = Array.from({ length: fileDf.shape[0] }, (_, i) => i);
+          const linesValues = fileDf['lines'].values;
+          
+          // Sort indices based on lines values in descending order
+          indices.sort((a, b) => linesValues[b] - linesValues[a]);
+          
+          // Reorder the data based on sorted indices
+          stats.fileDetails = indices.map(i => stats.fileDetails[i]);
+        } catch (error) {
+          if (this.verbose) console.log(`⚠️ Error processing with danfojs: ${error.message}`);
+          // Fallback to original sorting
+          stats.fileDetails.sort((a, b) => b.lines - a.lines);
+        }
+        
+        stats.largestFiles = stats.fileDetails.slice(0, TOP_N);
+
         this._calculateSummaryStats(stats);
         this._calculateRiskMetrics(stats);
       }
 
       return stats;
+    }, 'Static analysis failed');
+  }
+
+  /**
+   * Create a DataFrame representation of file analysis data using danfojs
+   * @private
+   */
+  async _createFileAnalysisDataFrame(fileDetails) {
+    if (!fileDetails || fileDetails.length === 0) {
+      return null;
+    }
+
+    try {
+      // Create DataFrame from file details
+      const df = new dfd.DataFrame(fileDetails);
+
+      // Calculate additional metrics using danfojs
+      if (df.shape[0] > 0) {
+        // Extract data using available danfojs methods
+        const allData = [];
+        for (let i = 0; i < df.shape[0]; i++) {
+          // Extract row data - since .row() doesn't exist, build from columns
+          const row = {};
+          for (const col of df.columns) {
+            row[col] = df[col].values[i];
+          }
+          allData.push(row);
+        }
+        
+        const complexityPerLine = [];
+        const sizePerLine = [];
+        
+        for (let i = 0; i < allData.length; i++) {
+          const item = allData[i];
+          const lines = item.lines || 0;
+          const complexityObj = item.complexity || { cyclomatic: 0 };
+          const cyclomatic = complexityObj.cyclomatic || 0;
+          const size = item.size || 0;
+          
+          complexityPerLine.push(lines > 0 ? cyclomatic / lines : 0);
+          sizePerLine.push(lines > 0 ? size / lines : 0);
+        }
+        
+        // Add the computed columns back to the DataFrame if addColumn exists
+        if (typeof df.addColumn === 'function') {
+          df.addColumn('complexity_per_line', complexityPerLine);
+          df.addColumn('size_per_line', sizePerLine);
+        }
+      }
+
+      return df;
     } catch (error) {
-      if (this.verbose) console.log(`❌ Static analysis error: ${error.message}`);
-      return { error: error.message };
+      if (this.verbose) console.log(`⚠️ Error creating DataFrame: ${error.message}`);
+      // Fallback to original array if DataFrame creation fails
+      return null;
     }
   }
 
@@ -676,9 +1181,15 @@ class StaticAnalyzer extends BaseAnalyzer {
     stats.riskMetrics.changeRisk = stats.riskMetrics.complexityRisk * 0.6 + stats.riskMetrics.sizeRisk * 0.4;
   }
 
-  _traverseDirectory(dir, stats) {
+  _traverseDirectory(dir, stats, currentDepth = 0, maxDepth = 8) {
     if (!fs.existsSync(dir)) {
       if (this.verbose) console.log(`❌ Directory does not exist: ${dir}`);
+      return;
+    }
+    
+    // Prevent excessive recursion
+    if (currentDepth > maxDepth) {
+      if (this.verbose) console.log(`⚠️ Maximum depth (${maxDepth}) reached, skipping: ${dir}`);
       return;
     }
     
@@ -703,7 +1214,7 @@ class StaticAnalyzer extends BaseAnalyzer {
         subdirectories: 0,
         parentDirectory: path.dirname(relativeDir) !== '.' ? path.dirname(relativeDir) : null, // Store parent directory
         subdirectories: [], // List of subdirectories
-        depth: relativeDir.split(path.sep).length || 1 // Depth of directory
+        depth: Math.min(relativeDir.split(path.sep).length || 1, maxDepth) // Depth of directory
       };
     }
     
@@ -711,11 +1222,18 @@ class StaticAnalyzer extends BaseAnalyzer {
       const fullPath = path.join(dir, item.name);
 
       if (item.isDirectory()) {
+        // Skip node_modules, .git, build directories to avoid performance issues
+        if (item.name === 'node_modules' || item.name === '.git' || item.name === 'dist' || 
+            item.name === 'build' || item.name === '.next' || item.name === 'coverage' ||
+            item.name.startsWith('.')) {
+          continue;
+        }
+        
         stats.directories++;
         const subDirPath = path.relative('.', fullPath);
         // Add subdirectory to parent's subdirectory list
         stats.directoryStats[relativeDir].subdirectories.push(subDirPath);
-        this._traverseDirectory(fullPath, stats);
+        this._traverseDirectory(fullPath, stats, currentDepth + 1, maxDepth);
       } else if (item.isFile()) {
         this._processFile(item, fullPath, stats, relativeDir);
       }
@@ -725,6 +1243,16 @@ class StaticAnalyzer extends BaseAnalyzer {
   _processFile(item, fullPath, stats, parentDir) {
     const ext = path.extname(item.name).substring(1) || 'no_ext';
     stats.filesByType[ext] = (stats.filesByType[ext] || 0) + 1;
+
+    // Define files to exclude from analysis
+    const excludeSet = new Set(['src/parser/peggy-parser.js']); // Add more exclusions here as needed
+    const relativePath = path.relative('.', fullPath);
+
+    // Skip excluded files
+    if (excludeSet.has(relativePath)) {
+      if (this.verbose) console.log(`⚠️ Excluding file from analysis: ${relativePath}`);
+      return;
+    }
 
     if (item.name.endsWith('.js')) {
       stats.jsFiles++;
@@ -799,6 +1327,18 @@ class StaticAnalyzer extends BaseAnalyzer {
     } catch (readError) {
       if (this.verbose) console.log(`⚠️ Cannot read file: ${fullPath}`, readError.message);
       return null;
+    }
+  }
+
+  _isValidPath(path) {
+    return path && typeof path === 'string' && path.length > 0;
+  }
+  
+  _isReadableFile(filePath) {
+    try {
+      return fs.statSync(filePath).isFile();
+    } catch (e) {
+      return false;
     }
   }
 
@@ -887,23 +1427,24 @@ class StaticAnalyzer extends BaseAnalyzer {
   }
 }
 
-class RequirementsAnalyzer extends BaseAnalyzer {
+class RequirementsAnalyzer extends StandardAnalyzer {
   constructor(options, verbose) {
-    super();
-    this.options = options;
-    this.verbose = verbose;
+    super(options, verbose);
   }
 
   async analyze() {
     if (this.verbose) console.log('\n🔍 Collecting Requirements Analysis...');
 
-    try {
+    return await this.safeAnalyze(async () => {
       if (!fs.existsSync('./README.md')) {
         if (this.verbose) console.log('❌ README.md not found');
         return { error: 'README.md not found' };
       }
       
-      const readmeContent = fs.readFileSync('./README.md', 'utf8');
+      const readmeContent = this.safeReadFile('./README.md');
+      if (!readmeContent) {
+        return { error: 'Could not read README.md' };
+      }
       
       const requirements = this._analyzeRequirements(readmeContent);
       
@@ -915,10 +1456,7 @@ class RequirementsAnalyzer extends BaseAnalyzer {
       requirements.totalRequirements = totalCount;
 
       return requirements;
-    } catch (error) {
-      if (this.verbose) console.log(`❌ Requirements analysis error: ${error.message}`);
-      return { error: error.message };
-    }
+    }, 'Requirements analysis failed');
   }
 
   _analyzeRequirements(readmeContent) {
@@ -962,17 +1500,15 @@ class RequirementsAnalyzer extends BaseAnalyzer {
   }
 }
 
-class PlanningAnalyzer extends BaseAnalyzer {
+class PlanningAnalyzer extends StandardAnalyzer {
   constructor(options, verbose) {
-    super();
-    this.options = options;
-    this.verbose = verbose;
+    super(options, verbose);
   }
 
   async analyze() {
     if (this.verbose) console.log('\n🔍 Collecting Planning and Roadmap Indicators...');
 
-    try {
+    return await this.safeAnalyze(async () => {
       const planning = {
         projectHealth: {},
         developmentVelocity: {},
@@ -991,10 +1527,7 @@ class PlanningAnalyzer extends BaseAnalyzer {
       planning.futureEstimates = await this._analyzeFutureEstimates();
 
       return planning;
-    } catch (error) {
-      if (this.verbose) console.log(`❌ Planning analysis error: ${error.message}`);
-      return { error: error.message };
-    }
+    }, 'Planning analysis failed');
   }
 
   async _analyzeProjectHealth() {
@@ -1095,17 +1628,15 @@ class PlanningAnalyzer extends BaseAnalyzer {
   }
 }
 
-class ArchitectureAnalyzer extends BaseAnalyzer {
+class ArchitectureAnalyzer extends StandardAnalyzer {
   constructor(options, verbose) {
-    super();
-    this.options = options;
-    this.verbose = verbose;
+    super(options, verbose);
   }
 
   async analyze() {
     if (this.verbose) console.log('\n🔍 Collecting Architecture and Dependency Analysis...');
 
-    try {
+    return await this.safeAnalyze(async () => {
       const srcPath = './src';
       if (!fs.existsSync(srcPath)) {
         if (this.verbose) console.log('❌ Source directory not found');
@@ -1143,10 +1674,7 @@ class ArchitectureAnalyzer extends BaseAnalyzer {
       this._identifyEntryPoints(architecture);
 
       return architecture;
-    } catch (error) {
-      if (this.verbose) console.log(`❌ Architecture analysis error: ${error.message}`);
-      return { error: error.message };
-    }
+    }, 'Architecture analysis failed');
   }
 
   _buildDependencyGraph(dir, architecture) {
@@ -1226,10 +1754,25 @@ class ArchitectureAnalyzer extends BaseAnalyzer {
       return null;
     }
   }
+  
+  _isValidPath(path) {
+    return path && typeof path === 'string' && path.length > 0;
+  }
+  
+  _isReadableFile(filePath) {
+    try {
+      return fs.statSync(filePath).isFile();
+    } catch (e) {
+      return false;
+    }
+  }
 
   _analyzeLayers(architecture) {
     // Group files by directory to identify architectural layers
     const layers = {};
+    
+    // Prepare data for danfojs processing
+    const dependencyData = [];
     
     for (const [filePath, dependencies] of Object.entries(architecture.dependencyGraph)) {
       const dirPath = path.dirname(filePath);
@@ -1244,12 +1787,43 @@ class ArchitectureAnalyzer extends BaseAnalyzer {
       
       layers[dirPath].files.push(filePath);
       
-      // Record dependencies between layers
+      // Record dependencies between layers and collect for DataFrame
       for (const depPath of dependencies) {
         const depDir = path.dirname(depPath);
         if (depDir !== dirPath) {
           layers[dirPath].dependencies.add(depDir);
+          dependencyData.push({
+            sourceDir: dirPath,
+            targetDir: depDir,
+            sourceFile: filePath,
+            targetFile: depPath
+          });
         }
+      }
+    }
+    
+    // Use danfojs to analyze dependency patterns
+    if (dependencyData.length > 0) {
+      try {
+        const depDf = new dfd.DataFrame(dependencyData);
+        
+        // Group by source directory to count dependencies
+        const sourceCounts = depDf.groupby(['sourceDir']).count();
+        for (const [idx, row] of sourceCounts.toDict('row').data.entries()) {
+          const dir = sourceCounts.toDict('dict')['data'][idx]['sourceDir'];
+          if (layers[dir]) {
+            // The count is already captured in the Set size, but we can analyze patterns
+          }
+        }
+        
+        // Group by target directory to count dependents
+        const targetCounts = depDf.groupby(['targetDir']).count();
+        for (const [idx, row] of targetCounts.toDict('row').data.entries()) {
+          const dir = targetCounts.toDict('dict')['data'][idx]['targetDir'];
+          // This is already handled in the nested loop below
+        }
+      } catch (error) {
+        if (this.verbose) console.log(`⚠️ Error processing layers with danfojs: ${error.message}`);
       }
     }
     
@@ -1360,17 +1934,15 @@ class ArchitectureAnalyzer extends BaseAnalyzer {
   }
 }
 
-class TechnicalDebtAnalyzer extends BaseAnalyzer {
+class TechnicalDebtAnalyzer extends StandardAnalyzer {
   constructor(options, verbose) {
-    super();
-    this.options = options;
-    this.verbose = verbose;
+    super(options, verbose);
   }
 
   async analyze() {
     if (this.verbose) console.log('\n🔍 Collecting Technical Debt Indicators...');
 
-    try {
+    return await this.safeAnalyze(async () => {
       const srcPath = './src';
       if (!fs.existsSync(srcPath)) {
         if (this.verbose) console.log('❌ Source directory not found');
@@ -1408,10 +1980,7 @@ class TechnicalDebtAnalyzer extends BaseAnalyzer {
         .slice(0, 10);
 
       return debtIndicators;
-    } catch (error) {
-      if (this.verbose) console.log(`❌ Technical debt analysis error: ${error.message}`);
-      return { error: error.message };
-    }
+    }, 'Technical debt analysis failed');
   }
 
   _analyzeDirectory(dir, debtIndicators) {
@@ -1523,6 +2092,18 @@ class TechnicalDebtAnalyzer extends BaseAnalyzer {
       return null;
     }
   }
+  
+  _isValidPath(path) {
+    return path && typeof path === 'string' && path.length > 0;
+  }
+  
+  _isReadableFile(filePath) {
+    try {
+      return fs.statSync(filePath).isFile();
+    } catch (e) {
+      return false;
+    }
+  }
 
   _countLargeFunctions(content) {
     const lines = content.split('\n');
@@ -1586,11 +2167,9 @@ class TechnicalDebtAnalyzer extends BaseAnalyzer {
   }
 }
 
-class FeatureSpecificationAnalyzer extends BaseAnalyzer {
+class FeatureSpecificationAnalyzer extends StandardAnalyzer {
   constructor(options, verbose) {
-    super();
-    this.options = options;
-    this.verbose = verbose;
+    super(options, verbose);
     this.specDir = './specifications';
     this.featureSpecs = new Map();
   }
@@ -1598,7 +2177,7 @@ class FeatureSpecificationAnalyzer extends BaseAnalyzer {
   async analyze() {
     if (this.verbose) console.log('\n🔍 Collecting Feature Specifications...');
 
-    try {
+    return await this.safeAnalyze(async () => {
       // First, look for existing specification files
       if (fs.existsSync(this.specDir)) {
         await this._loadSpecFiles();
@@ -1633,10 +2212,7 @@ class FeatureSpecificationAnalyzer extends BaseAnalyzer {
         coverageByFeature: this._calculateCoverageByFeature(implementationConnections),
         overallFeatureCompliance: this._calculateFeatureCompliance()
       };
-    } catch (error) {
-      if (this.verbose) console.log(`❌ Feature specification collection error: ${error.message}`);
-      return { error: error.message };
-    }
+    }, 'Feature specification analysis failed');
   }
 
   async _loadSpecFiles() {
@@ -1871,6 +2447,21 @@ function getTestFilesList() {
   return testFiles;
 }
 
+function calculateMedian(values) {
+  if (values.length === 0) return 0;
+  
+  try {
+    // Use danfojs for median calculation
+    const series = new dfd.Series(values);
+    return series.median();
+  } catch (error) {
+    // Fallback to original implementation
+    const sorted = [...values].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+  }
+}
+
 function collectTestFilesRecursively(dir, testFiles) {
   if (!fs.existsSync(dir)) return;
 
@@ -1954,13 +2545,6 @@ function calculateComplexityMetrics(content) {
   };
 }
 
-function calculateMedian(values) {
-  if (values.length === 0) return 0;
-  const sorted = [...values].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
-}
-
 function analyzeCoverageByFile() {
   try {
     const coverageDetailPath = './coverage/coverage-final.json';
@@ -1968,48 +2552,71 @@ function analyzeCoverageByFile() {
 
     let coverageDetail;
     try {
-      coverageDetail = JSON.parse(fs.readFileSync(coverageDetailPath, 'utf8'));
+      const fileContent = fs.readFileSync(coverageDetailPath, 'utf8');
+      if (!fileContent.trim()) {
+        console.log('❌ Coverage file is empty');
+        return [];
+      }
+      coverageDetail = JSON.parse(fileContent);
     } catch (parseError) {
       console.log('❌ Error parsing coverage-final.json:', parseError.message);
       return [];
     }
     
-    const files = Object.entries(coverageDetail).map(([filePath, coverage]) => {
-      if (filePath.startsWith('./')) {
-        filePath = path.resolve(filePath);
-      }
-      
-      // Validate coverage structure before accessing properties
-      if (!coverage || !coverage.s) {
-        console.log(`⚠️ Invalid coverage structure for file: ${filePath}`);
-        return null;
-      }
-      
-      const summary = coverage.s;
-      const statementKeys = Object.keys(summary);
-      const coveredStatements = statementKeys.filter(key => summary[key] > 0).length;
-      const statementCount = statementKeys.length;
-      
-      const lineCoverage = statementCount > 0 ? (coveredStatements / statementCount) * 100 : 100;
-      
-      let fileSize = 0;
+    const files = [];
+    for (const [filePath, coverage] of Object.entries(coverageDetail)) {
       try {
-        if (fs.existsSync(filePath)) {
-          fileSize = fs.statSync(filePath).size;
+        if (!filePath || typeof filePath !== 'string') {
+          continue; // Skip invalid file paths
         }
-      } catch (e) {
-        // If we can't get file size, continue with 0
+        
+        if (filePath.startsWith('./')) {
+          filePath = path.resolve(filePath);
+        }
+        
+        // Validate coverage structure before accessing properties
+        if (!coverage || typeof coverage !== 'object' || !coverage.s) {
+          if (globalThis.verbose) console.log(`⚠️ Invalid coverage structure for file: ${filePath}`);
+          continue;
+        }
+        
+        const summary = coverage.s;
+        if (typeof summary !== 'object') {
+          continue; // Skip if summary is not an object
+        }
+        
+        const statementKeys = Object.keys(summary);
+        const coveredStatements = statementKeys.filter(key => {
+          const value = summary[key];
+          return typeof value === 'number' && value > 0;
+        }).length;
+        const statementCount = statementKeys.length;
+        
+        const lineCoverage = statementCount > 0 ? (coveredStatements / statementCount) * 100 : 100;
+        
+        let fileSize = 0;
+        try {
+          if (fs.existsSync(filePath)) {
+            fileSize = fs.statSync(filePath).size;
+          }
+        } catch (e) {
+          // If we can't get file size, continue with 0
+        }
+        
+        files.push({
+          filePath: path.relative(process.cwd(), filePath),
+          lineCoverage: parseFloat(lineCoverage.toFixed(2)),
+          statements: statementCount,
+          covered: coveredStatements,
+          uncovered: statementCount - coveredStatements,
+          size: fileSize
+        });
+      } catch (fileError) {
+        // Skip this file if there's an error processing it
+        if (globalThis.verbose) console.log(`⚠️ Error processing coverage for ${filePath}:`, fileError.message);
+        continue;
       }
-      
-      return {
-        filePath: path.relative(process.cwd(), filePath),
-        lineCoverage: parseFloat(lineCoverage.toFixed(2)),
-        statements: statementCount,
-        covered: coveredStatements,
-        uncovered: statementCount - coveredStatements,
-        size: fileSize
-      };
-    }).filter(Boolean); // Remove null entries
+    }
     
     files.sort((a, b) => {
       if (a.lineCoverage !== b.lineCoverage) {
@@ -2049,16 +2656,16 @@ class ResultDisplay {
     
     if (results.project && !results.project.error) {
       console.log(`  📦 ${results.project.name} v${results.project.version}`);
-      console.log(`     Dependencies: ${results.project.dependencies} regular, ${results.project.devDependencies} dev`);
+      console.log(`     Dependencies: ${DisplayUtils.formatNumber(results.project.dependencies)} regular, ${DisplayUtils.formatNumber(results.project.devDependencies)} dev`);
     }
     
     if (results.tests && !results.tests.error) {
       const passRate = Math.round((results.tests.passedTests / Math.max(results.tests.totalTests, 1)) * 100);
       const statusEmoji = passRate >= 95 ? '✅' : passRate >= 80 ? '⚠️' : '❌';
-      console.log(`  🧪 Tests: ${results.tests.passedTests}/${results.tests.totalTests} (${passRate}%) ${statusEmoji}`);
+      console.log(`  🧪 Tests: ${DisplayUtils.formatNumber(results.tests.passedTests)}/${DisplayUtils.formatNumber(results.tests.totalTests)} (${DisplayUtils.formatPercentage(passRate / 100)}) ${statusEmoji}`);
       
       if (results.tests.failedTests > 0) {
-        console.log(`     ⚠️  ${results.tests.failedTests} failed tests need attention`);
+        console.log(`     ⚠️  ${DisplayUtils.formatNumber(results.tests.failedTests)} failed tests need attention`);
       }
       if (results.tests.failedTests === 0 && results.tests.passedTests > 0) {
         console.log(`     ✅ All tests passing - good stability`);
@@ -2067,7 +2674,7 @@ class ResultDisplay {
     
     if (results.coverage && !results.coverage.error && results.coverage.available !== false) {
       const coverageStatus = results.coverage.lines >= 80 ? '✅' : results.coverage.lines >= 50 ? '⚠️' : '❌';
-      console.log(`  📊 Coverage: ${results.coverage.lines}% lines ${coverageStatus}`);
+      console.log(`  📊 Coverage: ${DisplayUtils.formatPercentage(results.coverage.lines / 100)} lines ${coverageStatus}`);
       
       if (results.coverage.lines < 80) {
         console.log(`     ⚠️  Consider adding more tests for better coverage`);
@@ -2077,8 +2684,8 @@ class ResultDisplay {
     }
     
     if (results.static && !results.static.error) {
-      console.log(`  📁 Code: ${results.static.jsFiles} files, ~${results.static.totalLines} lines`);
-      console.log(`     Avg: ${results.static.avgLinesPerFile}/file, ${results.static.directories} dirs`);
+      console.log(`  📁 Code: ${DisplayUtils.formatNumber(results.static.jsFiles)} files, ~${DisplayUtils.formatNumber(results.static.totalLines)} lines`);
+      console.log(`     Avg: ${results.static.avgLinesPerFile}/file, ${DisplayUtils.formatNumber(results.static.directories)} dirs`);
       
       // Add insights about code health
       if (results.static.avgLinesPerFile > 300) {
@@ -2089,12 +2696,12 @@ class ResultDisplay {
       
       // Identify potentially risky areas
       if (results.static.largestFile && results.static.largestFile.lines > 1000) {
-        console.log(`     ⚠️  Largest file: ${results.static.largestFile.path} (${results.static.largestFile.lines} lines) - potential refactoring target`);
+        console.log(`     ⚠️  Largest file: ${results.static.largestFile.path} (${DisplayUtils.formatNumber(results.static.largestFile.lines)} lines) - potential refactoring target`);
       }
       
       if (results.static.largestDirectories && results.static.largestDirectories.length > 0) {
         const largestDir = results.static.largestDirectories[0];
-        console.log(`     🏗️  Largest directory: ${largestDir.path} (${largestDir.lines} lines) - major code area`);
+        console.log(`     🏗️  Largest directory: ${largestDir.path} (${DisplayUtils.formatNumber(largestDir.lines)} lines) - major code area`);
       }
       
       if (results.static.avgComplexity && results.static.avgComplexity > 20) {
@@ -2106,7 +2713,7 @@ class ResultDisplay {
     
     if (results.requirements && !results.requirements.error) {
       const complianceStatus = results.requirements.complianceScore >= 90 ? '✅' : results.requirements.complianceScore >= 70 ? '⚠️' : '❌';
-      console.log(`  📋 README: ${results.requirements.complianceScore}% compliance ${complianceStatus}`);
+      console.log(`  📋 README: ${DisplayUtils.formatPercentage(results.requirements.complianceScore / 100)} compliance ${complianceStatus}`);
       
       if (results.requirements.complianceScore < 80) {
         console.log(`     ⚠️  Consider improving documentation coverage`);
@@ -2130,12 +2737,12 @@ class ResultDisplay {
     // Test insights
     if (results.tests && !results.tests.error) {
       if (results.tests.failedTests > 0) {
-        insights.push(`Fix ${results.tests.failedTests} failing tests to ensure stability`);
-        risks.push(`${results.tests.failedTests} failing tests indicate potential instability`);
+        insights.push(`Fix ${DisplayUtils.formatNumber(results.tests.failedTests)} failing tests to ensure stability`);
+        risks.push(`${DisplayUtils.formatNumber(results.tests.failedTests)} failing tests indicate potential instability`);
       }
       if (results.coverage && results.coverage.lines < 80) {
-        insights.push(`Improve test coverage (${results.coverage.lines}% < 80%) to catch potential issues`);
-        risks.push(`Low test coverage (${results.coverage.lines}%) increases bug risk`);
+        insights.push(`Improve test coverage (${DisplayUtils.formatPercentage(results.coverage.lines / 100)} < 80%) to catch potential issues`);
+        risks.push(`Low test coverage (${DisplayUtils.formatPercentage(results.coverage.lines / 100)}) increases bug risk`);
       }
     }
     
@@ -2143,21 +2750,21 @@ class ResultDisplay {
     if (results.static && !results.static.error) {
       if (results.static.avgLinesPerFile > 300) {
         insights.push(`Refactor large files (avg > 300 lines) to improve maintainability`);
-        risks.push(`High avg file size (${results.static.avgLinesPerFile}) may complicate maintenance`);
+        risks.push(`High avg file size (${DisplayUtils.formatNumber(results.static.avgLinesPerFile)}) may complicate maintenance`);
       }
       if (results.static.avgComplexity > 20) {
         insights.push(`Simplify complex code (avg complexity > 20) to reduce bugs`);
         risks.push(`High avg complexity (${results.static.avgComplexity.toFixed(2)}) increases bug risk`);
       }
       if (results.static.largestFile && results.static.largestFile.lines > 1000) {
-        insights.push(`Split ${results.static.largestFile.path} (${results.static.largestFile.lines} lines) into smaller modules`);
+        insights.push(`Split ${results.static.largestFile.path} (${DisplayUtils.formatNumber(results.static.largestFile.lines)} lines) into smaller modules`);
         risks.push(`Very large file (${results.static.largestFile.path}) is a maintenance risk`);
       }
       
       // Risk metrics insights
       if (results.static.riskMetrics) {
         if (results.static.riskMetrics.highRiskFiles.length > 0) {
-          risks.push(`${results.static.riskMetrics.highRiskFiles.length} high-risk files need attention`);
+          risks.push(`${DisplayUtils.formatNumber(results.static.riskMetrics.highRiskFiles.length)} high-risk files need attention`);
           recommendations.push(`Focus on refactoring high-risk files: ${results.static.riskMetrics.highRiskFiles.slice(0, 3).map(f => path.basename(f.path)).join(', ')}`);
         }
         
@@ -2171,7 +2778,7 @@ class ResultDisplay {
     if (results.static && results.static.largestDirectories && results.static.largestDirectories.length > 0) {
       const largestDir = results.static.largestDirectories[0];
       if (largestDir.lines > 5000) {
-        insights.push(`Consider splitting ${largestDir.path} (${largestDir.lines} lines) for better organization`);
+        insights.push(`Consider splitting ${largestDir.path} (${DisplayUtils.formatNumber(largestDir.lines)} lines) for better organization`);
         risks.push(`Large directory (${largestDir.path}) may benefit from modularization`);
       }
     }
@@ -2180,15 +2787,15 @@ class ResultDisplay {
     if (results.coverage && results.coverage.detailedAnalysis && results.coverage.detailedAnalysis.lowCoverageFiles) {
       const lowCoverageCount = results.coverage.detailedAnalysis.lowCoverageFiles.filter(f => f.coverage < 30).length;
       if (lowCoverageCount > 0) {
-        insights.push(`Focus on testing ${lowCoverageCount} critically low-coverage files (<30%)`);
-        risks.push(`${lowCoverageCount} low-coverage files pose quality risks`);
+        insights.push(`Focus on testing ${DisplayUtils.formatNumber(lowCoverageCount)} critically low-coverage files (<30%)`);
+        risks.push(`${DisplayUtils.formatNumber(lowCoverageCount)} low-coverage files pose quality risks`);
       }
     }
     
     // Technical debt insights
     if (results.technicaldebt && !results.technicaldebt.error && results.technicaldebt.highRiskFiles) {
       if (results.technicaldebt.highRiskFiles.length > 0) {
-        insights.push(`Address technical debt in ${results.technicaldebt.highRiskFiles.length} high-debt files`);
+        insights.push(`Address technical debt in ${DisplayUtils.formatNumber(results.technicaldebt.highRiskFiles.length)} high-debt files`);
         risks.push(`High technical debt (${results.technicaldebt.totalDebtScore.toFixed(1)} score) slows development`);
         recommendations.push(`Target top debt files: ${results.technicaldebt.highRiskFiles.slice(0, 3).map(f => path.basename(f.path)).join(', ')}`);
       }
@@ -2197,12 +2804,12 @@ class ResultDisplay {
     // Architecture insights
     if (results.architecture && !results.architecture.error) {
       if (results.architecture.cyclicDependencies.length > 0) {
-        risks.push(`${results.architecture.cyclicDependencies.length} cyclic dependencies detected`);
+        risks.push(`${DisplayUtils.formatNumber(results.architecture.cyclicDependencies.length)} cyclic dependencies detected`);
         recommendations.push(`Resolve cyclic dependencies to improve modularity`);
       }
       
       if (results.architecture.apiEntryPoints.length > 0) {
-        planningIndicators.push(`Identified ${results.architecture.apiEntryPoints.length} main entry points`);
+        planningIndicators.push(`Identified ${DisplayUtils.formatNumber(results.architecture.apiEntryPoints.length)} main entry points`);
       }
     }
     
@@ -2280,25 +2887,25 @@ class ResultDisplay {
   printDetailed(results) {
     console.log('\n📊 PROJECT METRICS:');
     if (results.project && !results.project.error) {
-      console.log(`  Name: ${results.project.name}`);
-      console.log(`  Version: ${results.project.version}`);
-      console.log(`  Description: ${results.project.description || 'No description'}`);
-      console.log(`  Dependencies: ${results.project.dependencies} regular, ${results.project.devDependencies} dev`);
-      console.log(`  Scripts: ${results.project.scripts} defined`);
+      console.log(DisplayUtils.formatKeyValuePairs(results.project, '  ', true));
     } else {
       console.log('  ❌ Project info unavailable');
     }
     
     console.log('\n🧪 TESTING METRICS:');
     if (results.tests && !results.tests.error) {
+      const testMetrics = {
+        totalTests: results.tests.totalTests,
+        passed: results.tests.passedTests,
+        failed: results.tests.failedTests,
+        skipped: results.tests.skippedTests || 0,
+        todo: results.tests.todoTests || 0,
+        suites: results.tests.testSuites,
+        passRate: `${Math.round((results.tests.passedTests / Math.max(results.tests.totalTests, 1)) * 100)}%`
+      };
+      console.log(DisplayUtils.formatKeyValuePairs(testMetrics));
+      
       const passRate = Math.round((results.tests.passedTests / Math.max(results.tests.totalTests, 1)) * 100);
-      console.log(`  Total Tests: ${results.tests.totalTests}`);
-      console.log(`  Passed: ${results.tests.passedTests}`);
-      console.log(`  Failed: ${results.tests.failedTests}`);
-      if (results.tests.skippedTests !== undefined) console.log(`  Skipped: ${results.tests.skippedTests}`);
-      if (results.tests.todoTests !== undefined) console.log(`  Todo: ${results.tests.todoTests}`);
-      console.log(`  Suites: ${results.tests.testSuites}`);
-      console.log(`  Pass Rate: ${passRate}%`);
       const status = passRate >= 95 ? '✅ Excellent' : passRate >= 80 ? '⚠️ Good but needs improvement' : '❌ Needs attention';
       console.log(`  Status: ${status}`);
       
@@ -2345,10 +2952,13 @@ class ResultDisplay {
     
     console.log('\n🔍 COVERAGE METRICS:');
     if (results.coverage && !results.coverage.error && results.coverage.available !== false) {
-      console.log(`  Lines: ${results.coverage.lines}%`);
-      console.log(`  Functions: ${results.coverage.functions}%`);
-      console.log(`  Branches: ${results.coverage.branches}%`);
-      console.log(`  Statements: ${results.coverage.statements}%`);
+      const coverageMetrics = {
+        lines: `${results.coverage.lines}%`,
+        functions: `${results.coverage.functions}%`,
+        branches: `${results.coverage.branches}%`,
+        statements: `${results.coverage.statements}%`
+      };
+      console.log(DisplayUtils.formatKeyValuePairs(coverageMetrics));
       
       if (results.coverage.fileAnalysis && results.coverage.fileAnalysis.length > 0) {
         console.log(`  Lowest coverage files:`);
@@ -2385,17 +2995,19 @@ class ResultDisplay {
     
     console.log('\n📁 CODE STRUCTURE:');
     if (results.static && !results.static.error) {
-      console.log(`  JS Files: ${results.static.jsFiles}`);
-      console.log(`  Total Lines: ${results.static.totalLines}`);
-      console.log(`  Directories: ${results.static.directories}`);
-      console.log(`  Avg Lines/File: ${results.static.avgLinesPerFile}`);
-      console.log(`  Median Lines/File: ${results.static.medianLinesPerFile}`);
+      const structureMetrics = {
+        jsFiles: results.static.jsFiles,
+        totalLines: results.static.totalLines,
+        directories: results.static.directories,
+        avgLinesPerFile: results.static.avgLinesPerFile,
+        medianLinesPerFile: results.static.medianLinesPerFile,
+        avgComplexity: results.static.avgComplexity ? results.static.avgComplexity.toFixed(2) : undefined,
+        avgFunctionsPerFile: results.static.avgFunctionCount ? results.static.avgFunctionCount.toFixed(2) : undefined
+      };
+      console.log(DisplayUtils.formatKeyValuePairs(structureMetrics));
+      
       if (results.static.largestFile) console.log(`  Largest File: ${results.static.largestFile.path} (${results.static.largestFile.lines} lines)`);
       if (results.static.smallestFile) console.log(`  Smallest File: ${results.static.smallestFile.path} (${results.static.smallestFile.lines} lines)`);
-      if (results.static.avgComplexity !== undefined) {
-        console.log(`  Avg Cyclomatic Complexity: ${results.static.avgComplexity.toFixed(2)}`);
-        console.log(`  Avg Functions/File: ${results.static.avgFunctionCount.toFixed(2)}`);
-      }
       
       console.log(`  File types: ${Object.entries(results.static.filesByType).map(([ext, count]) => `${ext}:${count}`).join(', ')}`);
       
@@ -2432,7 +3044,7 @@ class ResultDisplay {
         if (results.static.largestSizeDirectories && results.static.largestSizeDirectories.length > 0) {
           console.log(`    Largest directories by size:`);
           results.static.largestSizeDirectories.slice(0, 5).forEach(dir => {
-            const size = dir.size > 1024 ? `${Math.round(dir.size / 1024)}KB` : `${dir.size}B`;
+            const size = DisplayUtils.formatFileSize(dir.size);
             console.log(`      - ${dir.path}: ${size} (${dir.files} files)`);
           });
         }
@@ -2464,8 +3076,12 @@ class ResultDisplay {
     
     console.log('\n📋 README COMPLIANCE:');
     if (results.requirements && !results.requirements.error) {
-      console.log(`  Compliance Score: ${results.requirements.complianceScore}%`);
-      console.log(`  Satisfied: ${results.requirements.satisfiedRequirements}/${results.requirements.totalRequirements}`);
+      const complianceMetrics = {
+        complianceScore: `${results.requirements.complianceScore}%`,
+        satisfied: `${results.requirements.satisfiedRequirements}/${results.requirements.totalRequirements}`
+      };
+      console.log(DisplayUtils.formatKeyValuePairs(complianceMetrics));
+      
       const status = results.requirements.complianceScore >= 90 ? '✅ Excellent compliance' : results.requirements.complianceScore >= 70 ? '⚠️ Good compliance but needs improvement' : '❌ Needs significant improvement';
       console.log(`  Status: ${status}`);
       
@@ -2486,12 +3102,12 @@ class ResultDisplay {
     // Feature specifications analysis
     if (results.featurespecs && !results.featurespecs.error) {
       console.log('\n🎯 FEATURE SPECIFICATIONS:');
-      console.log(`  Specifications Found: ${results.featurespecs.specificationsFound}`);
-      console.log(`  Feature Compliance: ${results.featurespecs.overallFeatureCompliance}%`);
-      
-      const implementedFeatures = Object.values(results.featurespecs.coverageByFeature)
-        .filter(f => f.implemented).length;
-      console.log(`  Implemented Features: ${implementedFeatures}/${results.featurespecs.features.length}`);
+      const featureMetrics = {
+        specificationsFound: results.featurespecs.specificationsFound,
+        featureCompliance: `${results.featurespecs.overallFeatureCompliance}%`,
+        implementedFeatures: `${Object.values(results.featurespecs.coverageByFeature).filter(f => f.implemented).length}/${results.featurespecs.features.length}`
+      };
+      console.log(DisplayUtils.formatKeyValuePairs(featureMetrics));
       
       if (results.featurespecs.testConnections && results.featurespecs.testConnections.length > 0) {
         console.log(`  Feature-to-Test Connections: ${results.featurespecs.testConnections.length}`);
@@ -2507,15 +3123,18 @@ class ResultDisplay {
     // Technical debt analysis
     if (results.technicaldebt && !results.technicaldebt.error) {
       console.log('\n💳 TECHNICAL DEBT:');
-      console.log(`  Total Debt Score: ${results.technicaldebt.totalDebtScore.toFixed(1)}`);
-      console.log(`  Avg Debt per File: ${results.technicaldebt.avgDebtScore ? results.technicaldebt.avgDebtScore.toFixed(2) : 'N/A'}`);
-      console.log(`  High Risk Files: ${results.technicaldebt.highRiskFiles ? results.technicaldebt.highRiskFiles.length : 0}`);
-      console.log(`  Refactoring Targets: ${results.technicaldebt.refactoringTargets ? results.technicaldebt.refactoringTargets.length : 0}`);
+      const debtMetrics = {
+        totalDebtScore: DisplayUtils.formatNumber(results.technicaldebt.totalDebtScore.toFixed(1)),
+        avgDebtPerFile: results.technicaldebt.avgDebtScore ? results.technicaldebt.avgDebtScore.toFixed(2) : 'N/A',
+        highRiskFiles: results.technicaldebt.highRiskFiles ? results.technicaldebt.highRiskFiles.length : 0,
+        refactoringTargets: results.technicaldebt.refactoringTargets ? results.technicaldebt.refactoringTargets.length : 0
+      };
+      console.log(DisplayUtils.formatKeyValuePairs(debtMetrics));
       
       if (results.technicaldebt.highRiskFiles && results.technicaldebt.highRiskFiles.length > 0) {
         console.log(`  Top High Risk Files:`);
         results.technicaldebt.highRiskFiles.slice(0, 3).forEach(file => {
-          console.log(`    - ${path.basename(file.path)}: ${file.debtScore.toFixed(1)} debt score`);
+          console.log(`    - ${path.basename(file.path)}: ${DisplayUtils.formatNumber(file.debtScore.toFixed(1))} debt score`);
         });
       }
     } else {
@@ -2525,10 +3144,13 @@ class ResultDisplay {
     // Architecture analysis
     if (results.architecture && !results.architecture.error) {
       console.log('\n🏗️  ARCHITECTURE ANALYSIS:');
-      console.log(`  Files in Dependency Graph: ${Object.keys(results.architecture.dependencyGraph).length}`);
-      console.log(`  Cyclic Dependencies: ${results.architecture.cyclicDependencies.length}`);
-      console.log(`  Architectural Layers: ${Object.keys(results.architecture.architecturalLayers).length}`);
-      console.log(`  API Entry Points: ${results.architecture.apiEntryPoints.length}`);
+      const archMetrics = {
+        filesInDependencyGraph: Object.keys(results.architecture.dependencyGraph).length,
+        cyclicDependencies: results.architecture.cyclicDependencies.length,
+        architecturalLayers: Object.keys(results.architecture.architecturalLayers).length,
+        apiEntryPoints: results.architecture.apiEntryPoints.length
+      };
+      console.log(DisplayUtils.formatKeyValuePairs(archMetrics));
       
       if (results.architecture.cyclicDependencies.length > 0) {
         console.log(`  Cycles found (require resolution):`);
@@ -2543,9 +3165,12 @@ class ResultDisplay {
     // Planning indicators
     if (results.planning && !results.planning.error) {
       console.log('\n📋 PLANNING INDICATORS:');
-      console.log(`  Development Pace: ${results.planning.developmentVelocity.developmentPace || 'Unknown'}`);
-      console.log(`  Refactoring Time Estimate: ${results.planning.futureEstimates.refactoringTime || 'Unknown'}`);
-      console.log(`  Maintenance Effort: ${results.planning.futureEstimates.maintenanceEffort || 'Unknown'}`);
+      const planningMetrics = {
+        developmentPace: results.planning.developmentVelocity.developmentPace || 'Unknown',
+        refactoringTimeEstimate: results.planning.futureEstimates.refactoringTime || 'Unknown',
+        maintenanceEffort: results.planning.futureEstimates.maintenanceEffort || 'Unknown'
+      };
+      console.log(DisplayUtils.formatKeyValuePairs(planningMetrics));
       
       if (results.planning.priorityRecommendations && results.planning.priorityRecommendations.length > 0) {
         console.log(`  Priority Recommendations:`);
@@ -2566,17 +3191,17 @@ class ResultDisplay {
       
       if (slowestTests && slowestTests.length > 0) {
         console.log('\n🐢 SLOWEST TESTS:');
-        console.log('  ┌─────┬──────────────────────────────────────────────────────┬──────────┬─────────┬─────────────────────────────────────────┐');
-        console.log('  │ No. │ Test Name                                            │ Duration │ Status  │ Suite                                   │');
-        console.log('  ├─────┼──────────────────────────────────────────────────────┼──────────┼─────────┼─────────────────────────────────────────┤');
-        slowestTests.forEach((test, idx) => {
-          const name = test.name.length > 44 ? test.name.substring(0, 41) + '...' : test.name;
-          const suite = test.suite.length > 44 ? test.suite.substring(0, 41) + '...' : test.suite;
-          const duration = test.duration.toString().padStart(6);
-          const status = test.status.padEnd(7);
-          console.log(`  │ ${String(idx + 1).padStart(3)} │ ${name.padEnd(48)} │ ${duration}ms │ ${status} │ ${suite.padEnd(39)} │`);
-        });
-        console.log('  └─────┴──────────────────────────────────────────────────────┴──────────┴─────────┴─────────────────────────────────────────┘');
+        
+        const headers = ['No.', 'Test Name', 'Duration', 'Status', 'Suite'];
+        const rows = slowestTests.slice(0, 20).map((test, idx) => [
+          String(idx + 1),
+          DisplayUtils.truncateText(test.name, 46),
+          `${test.duration}ms`,
+          test.status,
+          DisplayUtils.truncateText(test.suite, 37)
+        ]);
+        
+        console.log(DisplayUtils.createTable(headers, rows));
       } else {
         console.log('\n🐢 No slow tests data available');
       }
@@ -2589,16 +3214,16 @@ class ResultDisplay {
     const staticData = results.static;
     if (staticData && staticData.largestFiles && staticData.largestFiles.length > 0) {
       console.log('\n📄 LARGEST FILES:');
-      console.log('  ┌─────┬────────────────────────────────────────┬─────────┬──────────┐');
-      console.log('  │ No. │ File Path                              │ Lines   │ Size     │');
-      console.log('  ├─────┼────────────────────────────────────────┼─────────┼──────────┤');
-      staticData.largestFiles.forEach((file, idx) => {
-        const filePath = file.path.length > 38 ? file.path.substring(0, 35) + '...' : file.path;
-        const lines = file.lines.toString().padStart(7);
-        const size = (file.size > 1024 ? `${Math.round(file.size / 1024)}KB` : `${file.size}B`).padStart(8);
-        console.log(`  │ ${String(idx + 1).padStart(3)} │ ${filePath.padEnd(38)} │ ${lines} │ ${size} │`);
-      });
-      console.log('  └─────┴────────────────────────────────────────┴─────────┴──────────┘');
+      
+      const headers = ['No.', 'File Path', 'Lines', 'Size'];
+      const rows = staticData.largestFiles.slice(0, 20).map((file, idx) => [
+        String(idx + 1),
+        DisplayUtils.truncateText(file.path, 40),
+        String(file.lines),
+        DisplayUtils.formatFileSize(file.size)
+      ]);
+      
+      console.log(DisplayUtils.createTable(headers, rows));
     } else {
       console.log('\n📄 No largest files data available');
     }
@@ -2608,19 +3233,19 @@ class ResultDisplay {
     const coverage = results.coverage;
     if (coverage && coverage.fileAnalysis && coverage.fileAnalysis.length > 0) {
       console.log('\n📉 LOWEST COVERAGE FILES:');
-      console.log('  ┌─────┬────────────────────────────────────────┬─────────┬─────────┬─────────┬─────────┬─────────┐');
-      console.log('  │ No. │ File Path                              │ Lines   │ Covered │ Uncover │ Size    │ %       │');
-      console.log('  ├─────┼────────────────────────────────────────┼─────────┼─────────┼─────────┼─────────┼─────────┤');
-      coverage.fileAnalysis.forEach((file, idx) => {
-        const filePath = file.filePath.length > 38 ? file.filePath.substring(0, 35) + '...' : file.filePath;
-        const statements = file.statements.toString().padStart(7);
-        const covered = file.covered.toString().padStart(7);
-        const uncover = file.uncovered.toString().padStart(7);
-        const size = (file.size > 1024 ? `${Math.round(file.size / 1024)}KB` : `${file.size}B`).padStart(7);
-        const percent = file.lineCoverage.toFixed(1).padStart(5) + '%';
-        console.log(`  │ ${String(idx + 1).padStart(3)} │ ${filePath.padEnd(38)} │ ${statements} │ ${covered} │ ${uncover} │ ${size} │ ${percent} │`);
-      });
-      console.log('  └─────┴────────────────────────────────────────┴─────────┴─────────┴─────────┴─────────┴─────────┘');
+      
+      const headers = ['No.', 'File Path', 'Lines', 'Covered', 'Uncover', 'Size', '%'];
+      const rows = coverage.fileAnalysis.slice(0, 20).map((file, idx) => [
+        String(idx + 1),
+        DisplayUtils.truncateText(file.filePath, 32),
+        String(file.statements),
+        String(file.covered),
+        String(file.uncovered),
+        DisplayUtils.formatFileSize(file.size),
+        DisplayUtils.formatPercentage(file.lineCoverage / 100, 1)
+      ]);
+      
+      console.log(DisplayUtils.createTable(headers, rows));
     } else {
       console.log('\n📉 No lowest coverage files data available');
     }
@@ -2630,17 +3255,17 @@ class ResultDisplay {
     const coverage = results.coverage;
     if (coverage && coverage.detailedAnalysis && coverage.detailedAnalysis.directoriesSorted) {
       console.log('\n📁 COVERAGE BY DIRECTORY:');
-      console.log('  ┌─────┬────────────────────────────────────────┬─────────┬─────────┬─────────┐');
-      console.log('  │ No. │ Directory                              │ Files   │ Stmts   │ %       │');
-      console.log('  ├─────┼────────────────────────────────────────┼─────────┼─────────┼─────────┤');
-      coverage.detailedAnalysis.directoriesSorted.forEach((dir, idx) => {
-        const dirPath = dir.directory.length > 38 ? dir.directory.substring(0, 35) + '...' : dir.directory;
-        const files = dir.files.toString().padStart(7);
-        const statements = dir.statements.toString().padStart(7);
-        const percent = dir.coveragePercent.toFixed(1).padStart(5) + '%';
-        console.log(`  │ ${String(idx + 1).padStart(3)} │ ${dirPath.padEnd(38)} │ ${files} │ ${statements} │ ${percent} │`);
-      });
-      console.log('  └─────┴────────────────────────────────────────┴─────────┴─────────┴─────────┘');
+      
+      const headers = ['No.', 'Directory', 'Files', 'Stmts', '%'];
+      const rows = coverage.detailedAnalysis.directoriesSorted.slice(0, 20).map((dir, idx) => [
+        String(idx + 1),
+        DisplayUtils.truncateText(dir.directory, 32),
+        String(dir.files),
+        String(dir.statements),
+        DisplayUtils.formatPercentage(dir.coveragePercent / 100, 1)
+      ]);
+      
+      console.log(DisplayUtils.createTable(headers, rows));
     } else {
       console.log('\n📁 No directory coverage data available');
     }
@@ -2650,17 +3275,17 @@ class ResultDisplay {
     const staticData = results.static;
     if (staticData && staticData.largestDirectories && staticData.largestDirectories.length > 0) {
       console.log('\n🏗️  LARGEST DIRECTORIES (by lines):');
-      console.log('  ┌─────┬────────────────────────────────────────┬─────────┬─────────┬─────────┐');
-      console.log('  │ No. │ Directory                              │ Lines   │ Files   │ JS Files│');
-      console.log('  ├─────┼────────────────────────────────────────┼─────────┼─────────┼─────────┤');
-      staticData.largestDirectories.forEach((dir, idx) => {
-        const dirPath = dir.path.length > 38 ? dir.path.substring(0, 35) + '...' : dir.path;
-        const lines = dir.lines.toString().padStart(7);
-        const files = dir.files.toString().padStart(7);
-        const jsFiles = dir.jsFiles.toString().padStart(9);
-        console.log(`  │ ${String(idx + 1).padStart(3)} │ ${dirPath.padEnd(38)} │ ${lines} │ ${files} │ ${jsFiles} │`);
-      });
-      console.log('  └─────┴────────────────────────────────────────┴─────────┴─────────┴─────────┘');
+      
+      const headers = ['No.', 'Directory', 'Lines', 'Files', 'JS Files'];
+      const rows = staticData.largestDirectories.slice(0, 20).map((dir, idx) => [
+        String(idx + 1),
+        DisplayUtils.truncateText(dir.path, 32),
+        String(dir.lines),
+        String(dir.files),
+        String(dir.jsFiles)
+      ]);
+      
+      console.log(DisplayUtils.createTable(headers, rows));
     } else {
       console.log('\n🏗️  No largest directories data available');
     }
@@ -2670,17 +3295,17 @@ class ResultDisplay {
     const staticData = results.static;
     if (staticData && staticData.largestFileCountDirectories && staticData.largestFileCountDirectories.length > 0) {
       console.log('\n📂 DIRECTORIES WITH MOST FILES:');
-      console.log('  ┌─────┬────────────────────────────────────────┬─────────┬─────────┬─────────┐');
-      console.log('  │ No. │ Directory                              │ Files   │ Lines   │ JS Files│');
-      console.log('  ├─────┼────────────────────────────────────────┼─────────┼─────────┼─────────┤');
-      staticData.largestFileCountDirectories.forEach((dir, idx) => {
-        const dirPath = dir.path.length > 38 ? dir.path.substring(0, 35) + '...' : dir.path;
-        const files = dir.files.toString().padStart(7);
-        const lines = dir.lines.toString().padStart(7);
-        const jsFiles = dir.jsFiles.toString().padStart(9);
-        console.log(`  │ ${String(idx + 1).padStart(3)} │ ${dirPath.padEnd(38)} │ ${files} │ ${lines} │ ${jsFiles} │`);
-      });
-      console.log('  └─────┴────────────────────────────────────────┴─────────┴─────────┴─────────┘');
+      
+      const headers = ['No.', 'Directory', 'Files', 'Lines', 'JS Files'];
+      const rows = staticData.largestFileCountDirectories.slice(0, 20).map((dir, idx) => [
+        String(idx + 1),
+        DisplayUtils.truncateText(dir.path, 32),
+        String(dir.files),
+        String(dir.lines),
+        String(dir.jsFiles)
+      ]);
+      
+      console.log(DisplayUtils.createTable(headers, rows));
     } else {
       console.log('\n📂 No most files directories data available');
     }
@@ -2690,17 +3315,17 @@ class ResultDisplay {
     const staticData = results.static;
     if (staticData && staticData.complexityByDirectory && staticData.complexityByDirectory.length > 0) {
       console.log('\n🧩 COMPLEXITY BY DIRECTORY:');
-      console.log('  ┌─────┬────────────────────────────────────────┬─────────┬─────────┬─────────┐');
-      console.log('  │ No. │ Directory                              │ Complexity│Files  │ JS Files│');
-      console.log('  ├─────┼────────────────────────────────────────┼─────────┼─────────┼─────────┤');
-      staticData.complexityByDirectory.forEach((dir, idx) => {
-        const dirPath = dir.path.length > 38 ? dir.path.substring(0, 35) + '...' : dir.path;
-        const complexity = dir.complexity.toString().padStart(9);
-        const files = dir.files.toString().padStart(7);
-        const jsFiles = dir.jsFiles.toString().padStart(9);
-        console.log(`  │ ${String(idx + 1).padStart(3)} │ ${dirPath.padEnd(38)} │ ${complexity} │ ${files} │ ${jsFiles} │`);
-      });
-      console.log('  └─────┴────────────────────────────────────────┴─────────┴─────────┴─────────┘');
+      
+      const headers = ['No.', 'Directory', 'Complexity', 'Files', 'JS Files'];
+      const rows = staticData.complexityByDirectory.slice(0, 20).map((dir, idx) => [
+        String(idx + 1),
+        DisplayUtils.truncateText(dir.path, 32),
+        String(dir.complexity),
+        String(dir.files),
+        String(dir.jsFiles)
+      ]);
+      
+      console.log(DisplayUtils.createTable(headers, rows));
     } else {
       console.log('\n🧩 No complexity by directory data available');
     }
@@ -2730,32 +3355,243 @@ class AnalyzerFactory {
   }
 }
 
+// Configuration management for self-analyzer
+class SelfAnalyzerConfig {
+  constructor(options = {}) {
+    this.defaults = {
+      all: true,
+      verbose: false,
+      summaryOnly: false,
+      slowest: false,
+      timeout: 180000, // 3 minutes default timeout
+      cacheEnabled: true,
+      cacheTTL: 600000, // 10 minutes default cache time
+      maxResultSize: 10000, // Maximum number of results to store
+      debug: false,
+      analyzeConcurrency: 1 // Number of concurrent analyses (1 = sequential)
+    };
+    
+    // Merge options with defaults
+    this.settings = { ...this.defaults, ...options };
+    
+    // Validate configuration
+    this.validate();
+  }
+  
+  validate() {
+    // Validate timeout
+    if (typeof this.settings.timeout !== 'number' || this.settings.timeout <= 0) {
+      this.settings.timeout = this.defaults.timeout;
+    }
+    
+    // Validate cache settings
+    if (typeof this.settings.cacheTTL !== 'number' || this.settings.cacheTTL <= 0) {
+      this.settings.cacheTTL = this.defaults.cacheTTL;
+    }
+    
+    // Validate concurrency
+    if (typeof this.settings.analyzeConcurrency !== 'number' || this.settings.analyzeConcurrency < 1) {
+      this.settings.analyzeConcurrency = this.defaults.analyzeConcurrency;
+    }
+  }
+  
+  update(options = {}) {
+    this.settings = { ...this.settings, ...options };
+    this.validate();
+  }
+  
+  get(key) {
+    return this.settings[key];
+  }
+  
+  set(key, value) {
+    this.settings[key] = value;
+    this.validate();
+  }
+  
+  getAll() {
+    return { ...this.settings };
+  }
+}
+
 class SeNARSSelfAnalyzer {
   constructor(options = {}) {
-    this.options = { all: true, verbose: false, summaryOnly: false, slowest: false, ...options };
+    this.config = new SelfAnalyzerConfig(options);
     
     // If any specific analysis is requested, turn off 'all' mode
-    if (AnalyzerFactory.getAllAnalyzerTypes().some(category => this.options[category])) {
-      this.options.all = false;
+    if (AnalyzerFactory.getAllAnalyzerTypes().some(category => this.config.get(category))) {
+      this.config.set('all', false);
     }
     
     this.analyzers = {};
     for (const type of AnalyzerFactory.getAllAnalyzerTypes()) {
-      this.analyzers[type] = AnalyzerFactory.createAnalyzer(type, this.options, this.options.verbose);
+      this.analyzers[type] = AnalyzerFactory.createAnalyzer(type, this.config.getAll(), this.config.get('verbose'));
     }
     
-    this.display = new ResultDisplay(this.options);
+    this.display = new ResultDisplay(this.config.getAll());
+    
+    // NAR integration properties
+    this.nar = null;
+    this.integrationEnabled = false;
+    
+    // Result caching
+    this.resultCache = new Map();
+    this.cacheTimestamps = new Map();
   }
 
+  /**
+   * Connect to a NAR instance for reasoning integration
+   * @param {Object} narInstance - The NAR instance to connect to
+   */
+  connectToNAR(narInstance) {
+    this.nar = narInstance;
+    this.integrationEnabled = !!narInstance;
+  }
+
+  /**
+   * Enable or disable NAR integration
+   * @param {boolean} enabled - Whether to enable integration
+   */
+  setIntegrationEnabled(enabled) {
+    this.integrationEnabled = enabled;
+  }
+
+  /**
+   * Get cache key for the current configuration
+   */
+  _getCacheKey() {
+    const activeAnalyses = Object.keys(this.analyzers)
+      .filter(category => this.config.get('all') || this.config.get(category))
+      .sort()
+      .join(',');
+    
+    return `analysis_${activeAnalyses}_v1`;
+  }
+  
+  /**
+   * Check if results are cached and valid
+   */
+  _getCachedResults() {
+    if (!this.config.get('cacheEnabled')) {
+      return null;
+    }
+    
+    const cacheKey = this._getCacheKey();
+    const cachedResults = this.resultCache.get(cacheKey);
+    const cachedTime = this.cacheTimestamps.get(cacheKey);
+    
+    if (cachedResults && cachedTime) {
+      const age = Date.now() - cachedTime;
+      if (age < this.config.get('cacheTTL')) {
+        if (this.config.get('verbose')) {
+          console.log(`📊 Using cached results (age: ${(age/1000).toFixed(1)}s)`);
+        }
+        return cachedResults;
+      } else {
+        // Remove expired cache
+        this.resultCache.delete(cacheKey);
+        this.cacheTimestamps.delete(cacheKey);
+      }
+    }
+    
+    return null;
+  }
+  
+  /**
+   * Cache the results
+   */
+  _cacheResults(results) {
+    if (!this.config.get('cacheEnabled')) {
+      return;
+    }
+    
+    const cacheKey = this._getCacheKey();
+    this.resultCache.set(cacheKey, results);
+    this.cacheTimestamps.set(cacheKey, Date.now());
+    
+    // Limit cache size
+    if (this.resultCache.size > 10) { // Keep only recent 10 caches
+      const keys = Array.from(this.resultCache.keys());
+      for (let i = 0; i < keys.length - 10; i++) {
+        this.resultCache.delete(keys[i]);
+        this.cacheTimestamps.delete(keys[i]);
+      }
+    }
+  }
+  
   async runAnalysis() {
-    if (!this.options.summaryOnly && !this.options.verbose) console.log('🔍 SeNARS Self-Analysis');
+    // Check cache first
+    const cachedResults = this._getCachedResults();
+    if (cachedResults) {
+      const results = cachedResults;
+      
+      // Display results based on requested analyses
+      this.display.display(results);
+      
+      // Show additional tables if requested or in default mode
+      if (this.config.get('slowest') || (this.config.get('all') && !this.config.get('summaryOnly'))) {
+        this.display.printSlowestTests(results);
+      }
+      
+      if (this.config.get('all') && !this.config.get('summaryOnly') && results.static) {
+        this.display.printLargestFiles(results);
+        this.display.printLargestDirectories(results);
+        this.display.printMostFilesDirectories(results);
+        this.display.printComplexityByDirectory(results);
+      }
+      
+      if (this.config.get('all') && !this.config.get('summaryOnly') && results.coverage) {
+        this.display.printLowestCoverageFiles(results);
+        this.display.printCoverageByDirectory(results);
+      }
+      
+      // If NAR integration is enabled, send results to NAR for reasoning
+      if (this.integrationEnabled && this.nar) {
+        await this._integrateWithNAR(results);
+      }
+      
+      return results;
+    }
+    
+    // Run analysis if not cached
+    if (!this.config.get('summaryOnly') && !this.config.get('verbose')) {
+      console.log('🔍 SeNARS Self-Analysis');
+    }
 
     const results = {};
     
     // Run only the analyses requested via flags
-    for (const [category, analyzer] of Object.entries(this.analyzers)) {
-      if (this.options.all || this.options[category]) {
-        results[category] = await analyzer.analyze();
+    // Use concurrency setting to determine if analyses run in parallel or sequence
+    if (this.config.get('analyzeConcurrency') > 1) {
+      // Run analyses in parallel (up to the concurrency limit)
+      const categoriesToRun = Object.entries(this.analyzers)
+        .filter(([category, analyzer]) => this.config.get('all') || this.config.get(category))
+        .map(([category, analyzer]) => ({ category, analyzer }));
+      
+      // Split into batches based on concurrency
+      for (let i = 0; i < categoriesToRun.length; i += this.config.get('analyzeConcurrency')) {
+        const batch = categoriesToRun.slice(i, i + this.config.get('analyzeConcurrency'));
+        const batchPromises = batch.map(async ({ category, analyzer }) => {
+          try {
+            const result = await analyzer.analyze();
+            results[category] = result;
+          } catch (error) {
+            results[category] = { error: `Analysis failed: ${error.message}` };
+          }
+        });
+        
+        await Promise.all(batchPromises);
+      }
+    } else {
+      // Run analyses sequentially
+      for (const [category, analyzer] of Object.entries(this.analyzers)) {
+        if (this.config.get('all') || this.config.get(category)) {
+          try {
+            results[category] = await analyzer.analyze();
+          } catch (error) {
+            results[category] = { error: `Analysis failed: ${error.message}` };
+          }
+        }
       }
     }
 
@@ -2763,21 +3599,228 @@ class SeNARSSelfAnalyzer {
     this.display.display(results);
     
     // Show additional tables if requested or in default mode
-    if (this.options.slowest || (this.options.all && !this.options.summaryOnly)) {
+    if (this.config.get('slowest') || (this.config.get('all') && !this.config.get('summaryOnly'))) {
       this.display.printSlowestTests(results);
     }
     
-    if (this.options.all && !this.options.summaryOnly && results.static) {
+    if (this.config.get('all') && !this.config.get('summaryOnly') && results.static) {
       this.display.printLargestFiles(results);
       this.display.printLargestDirectories(results);
       this.display.printMostFilesDirectories(results);
       this.display.printComplexityByDirectory(results);
     }
     
-    if (this.options.all && !this.options.summaryOnly && results.coverage) {
+    if (this.config.get('all') && !this.config.get('summaryOnly') && results.coverage) {
       this.display.printLowestCoverageFiles(results);
       this.display.printCoverageByDirectory(results);
     }
+    
+    // If NAR integration is enabled, send results to NAR for reasoning
+    if (this.integrationEnabled && this.nar) {
+      await this._integrateWithNAR(results);
+    }
+    
+    // Cache the results
+    this._cacheResults(results);
+    
+    return results;
+  }
+  
+  /**
+   * Clear the result cache
+   */
+  clearCache() {
+    this.resultCache.clear();
+    this.cacheTimestamps.clear();
+  }
+  
+  /**
+   * Get configuration instance
+   */
+  getConfig() {
+    return this.config;
+  }
+
+  /**
+   * Integrate analysis results with the NAR system
+   * @private
+   */
+  async _integrateWithNAR(results) {
+    if (!this.nar) return;
+
+    try {
+      // Convert key metrics to Narsese statements
+      const narseseStatements = this._convertToNarsese(results);
+      
+      // Input each statement to the NAR
+      for (const statement of narseseStatements) {
+        await this.nar.input(statement);
+      }
+      
+      console.log(`📊 Integrated ${narseseStatements.length} analysis facts with NAR`);
+      
+      // Additionally, convert actionable insights to goals
+      const goalStatements = this._convertInsightsToGoals(results);
+      for (const goal of goalStatements) {
+        await this.nar.input(goal);
+      }
+      
+      if (goalStatements.length > 0) {
+        console.log(`🎯 Added ${goalStatements.length} improvement goals to NAR`);
+      }
+    } catch (error) {
+      console.error('❌ Error integrating with NAR:', error);
+    }
+  }
+
+  /**
+   * Convert analysis results to Narsese statements
+   * @private
+   */
+  _convertToNarsese(results) {
+    const statements = [];
+
+    // Convert test results
+    if (results.tests && !results.tests.error) {
+      const passRate = results.tests.passedTests / Math.max(results.tests.totalTests, 1);
+      const qualityLevel = passRate > 0.95 ? 'high' : passRate > 0.8 ? 'medium' : 'low';
+      statements.push(`<test_quality --> ${qualityLevel}>. %${passRate.toFixed(2)};0.90%`);
+      
+      // System stability
+      const stability = results.tests.failedTests === 0 ? 'stable' : 'unstable';
+      statements.push(`<system_stability --> ${stability}>. %${(1 - results.tests.failedTests/results.tests.totalTests).toFixed(2)};0.90%`);
+    }
+
+    // Convert coverage results
+    if (results.coverage && !results.coverage.error && results.coverage.available !== false) {
+      const coverageLevel = results.coverage.lines > 80 ? 'high' : 
+                           results.coverage.lines > 50 ? 'medium' : 'low';
+      statements.push(`<test_coverage --> ${coverageLevel}>. %${(results.coverage.lines/100).toFixed(2)};0.90%`);
+    }
+
+    // Convert static analysis results
+    if (results.static && !results.static.error) {
+      // Code complexity
+      if (results.static.avgComplexity !== undefined) {
+        const complexityLevel = results.static.avgComplexity > 30 ? 'high' : 
+                               results.static.avgComplexity > 15 ? 'medium' : 'low';
+        statements.push(`<code_complexity --> ${complexityLevel}>. %${Math.min(1.0, results.static.avgComplexity/50).toFixed(2)};0.90%`);
+      }
+      
+      // Code size
+      if (results.static.totalLines !== undefined) {
+        const sizeLevel = results.static.totalLines > 50000 ? 'large' : 
+                         results.static.totalLines > 20000 ? 'medium' : 'small';
+        statements.push(`<code_size --> ${sizeLevel}>. %${Math.min(1.0, results.static.totalLines/50000).toFixed(2)};0.90%`);
+      }
+    }
+
+    // Convert technical debt results
+    if (results.technicaldebt && !results.technicaldebt.error) {
+      const debtLevel = results.technicaldebt.totalDebtScore > 2000 ? 'high' : 
+                       results.technicaldebt.totalDebtScore > 1000 ? 'medium' : 'low';
+      statements.push(`<technical_debt --> ${debtLevel}>. %${Math.min(1.0, results.technicaldebt.totalDebtScore/3000).toFixed(2)};0.90%`);
+    }
+
+    // Convert architecture results
+    if (results.architecture && !results.architecture.error) {
+      const dependencyQuality = results.architecture.cyclicDependencies === 0 ? 'good' : 'poor';
+      statements.push(`<architecture_quality --> ${dependencyQuality}>. %${(1 - results.architecture.cyclicDependencies/10).toFixed(2)};0.90%`);
+    }
+
+    return statements;
+  }
+
+  /**
+   * Convert actionable insights from results to goals
+   * @private
+   */
+  _convertInsightsToGoals(results) {
+    const goals = [];
+
+    // Add improvement goals based on analysis results
+    if (results.tests && results.tests.failedTests > 0) {
+      goals.push(`(improve_test_stability)! %0.9;0.9%`);
+    }
+
+    if (results.coverage && results.coverage.lines < 80) {
+      goals.push(`(increase_test_coverage)! %0.8;0.9%`);
+    }
+
+    if (results.static && results.static.avgComplexity > 20) {
+      goals.push(`(reduce_code_complexity)! %0.7;0.9%`);
+    }
+
+    if (results.technicaldebt && results.technicaldebt.totalDebtScore > 1000) {
+      goals.push(`(reduce_technical_debt)! %0.9;0.9%`);
+    }
+
+    if (results.architecture && results.architecture.cyclicDependencies.length > 0) {
+      goals.push(`(resolve_cyclic_dependencies)! %0.8;0.9%`);
+    }
+
+    return goals;
+  }
+
+  /**
+   * Get structured analysis results for external consumption
+   */
+  async getStructuredResults() {
+    const results = await this.runAnalysis();
+    
+    return {
+      metadata: {
+        timestamp: Date.now(),
+        type: 'self-analysis',
+        version: '1.0'
+      },
+      results: results,
+      summary: this._createSummary(results)
+    };
+  }
+
+  /**
+   * Create a summary of the analysis results
+   * @private
+   */
+  _createSummary(results) {
+    const summary = {};
+
+    if (results.tests && !results.tests.error) {
+      summary.tests = {
+        passed: results.tests.passedTests,
+        total: results.tests.totalTests,
+        passRate: Math.round((results.tests.passedTests / results.tests.totalTests) * 100),
+        status: results.tests.status
+      };
+    }
+
+    if (results.coverage && !results.coverage.error && results.coverage.available !== false) {
+      summary.coverage = {
+        lines: results.coverage.lines,
+        functions: results.coverage.functions,
+        branches: results.coverage.branches
+      };
+    }
+
+    if (results.static && !results.static.error) {
+      summary.code = {
+        files: results.static.jsFiles,
+        lines: results.static.totalLines,
+        avgLinesPerFile: results.static.avgLinesPerFile,
+        avgComplexity: results.static.avgComplexity
+      };
+    }
+
+    if (results.technicaldebt && !results.technicaldebt.error) {
+      summary.debt = {
+        totalScore: results.technicaldebt.totalDebtScore,
+        avgPerFile: results.technicaldebt.avgDebtScore,
+        highRisk: results.technicaldebt.highRiskFiles?.length || 0
+      };
+    }
+
+    return summary;
   }
 }
 

@@ -1,3 +1,4 @@
+import * as dfd from 'danfojs';
 import {PERFORMANCE} from '../config/constants.js';
 
 export class SystemMetrics {
@@ -14,6 +15,7 @@ export class SystemMetrics {
             totalProcessingTime: 0,
         };
         this.cycleTimes = [];
+        this.cycleTimesDf = null; // danfojs DataFrame for advanced analytics
         this.reset();
     }
 
@@ -26,7 +28,11 @@ export class SystemMetrics {
             this.cycleTimes.shift();
         }
 
-        this.metrics.averageCycleTime = this.cycleTimes.reduce((a, b) => a + b, 0) / this.cycleTimes.length;
+        // Use danfojs for more sophisticated statistics calculation
+        if (this.cycleTimes.length > 0) {
+            const df = new dfd.Series(this.cycleTimes);
+            this.metrics.averageCycleTime = df.mean();
+        }
         this.metrics.totalProcessingTime += cycleTime;
     }
 
@@ -62,11 +68,34 @@ export class SystemMetrics {
     }
 
     getPerformanceMetrics() {
+        // Use danfojs for advanced statistical calculations
+        let cycleTimeVariance = 0;
+        let cycleTimeStd = 0;
+        let cycleTimeMedian = 0;
+        let cycleTimePercentiles = { p25: 0, p75: 0, p95: 0 };
+        
+        if (this.cycleTimes.length > 0) {
+            const df = new dfd.Series(this.cycleTimes);
+            cycleTimeVariance = df.var();
+            cycleTimeStd = df.std();
+            cycleTimeMedian = df.median();
+            
+            // Calculate percentiles using danfojs
+            cycleTimePercentiles = {
+                p25: df.quantile(0.25),
+                p75: df.quantile(0.75),
+                p95: df.quantile(0.95)
+            };
+        }
+
         return {
             averageCycleTime: this.metrics.averageCycleTime,
             cyclesPerSecond: this.metrics.averageCycleTime > 0 ? 1000 / this.metrics.averageCycleTime : 0,
             totalProcessingTime: this.metrics.totalProcessingTime,
-            cycleTimeVariance: this._calculateVariance(this.cycleTimes),
+            cycleTimeVariance,
+            cycleTimeStd,
+            cycleTimeMedian,
+            cycleTimePercentiles,
             memoryEfficiency: this.metrics.memoryUsage > 0 ? this.metrics.taskCount / this.metrics.memoryUsage : 0,
         };
     }
@@ -83,11 +112,47 @@ export class SystemMetrics {
         };
     }
 
-    _calculateVariance(values) {
-        if (values.length === 0) return 0;
-        const mean = values.reduce((a, b) => a + b, 0) / values.length;
-        const squaredDiffs = values.map(value => Math.pow(value - mean, 2));
-        return squaredDiffs.reduce((a, b) => a + b, 0) / values.length;
+    // Advanced statistical analysis methods using danfojs
+    getAdvancedPerformanceMetrics() {
+        if (this.cycleTimes.length === 0) {
+            return {
+                trend: 'stable',
+                outliers: [],
+                stability: 'unknown'
+            };
+        }
+
+        const df = new dfd.Series(this.cycleTimes);
+        const mean = df.mean();
+        const std = df.std();
+        
+        // Identify outliers (values more than 2 standard deviations from mean)
+        const outliers = this.cycleTimes.filter(value => 
+            Math.abs(value - mean) > 2 * std
+        );
+        
+        // Simple trend analysis based on last 10% vs first 10% of data
+        const recentCount = Math.max(1, Math.floor(this.cycleTimes.length * 0.1));
+        const recentSlice = this.cycleTimes.slice(-recentCount);
+        const recentAvg = recentSlice.reduce((sum, val) => sum + val, 0) / recentSlice.length;
+        const earlySlice = this.cycleTimes.slice(0, recentCount);
+        const earlyAvg = earlySlice.reduce((sum, val) => sum + val, 0) / earlySlice.length;
+        
+        let trend = 'stable';
+        if (recentAvg > earlyAvg * 1.1) trend = 'degrading';
+        else if (recentAvg < earlyAvg * 0.9) trend = 'improving';
+        
+        // Stability based on coefficient of variation
+        const coefVariation = mean > 0 ? std / mean : Infinity;
+        const stability = coefVariation < 0.1 ? 'high' : 
+                         coefVariation < 0.2 ? 'medium' : 'low';
+        
+        return {
+            trend,
+            outliers,
+            stability,
+            coefficientOfVariation: coefVariation
+        };
     }
 
     reset() {
@@ -103,6 +168,7 @@ export class SystemMetrics {
             totalProcessingTime: 0,
         };
         this.cycleTimes = [];
+        this.cycleTimesDf = null;
     }
 
     exportMetrics() {
@@ -110,6 +176,7 @@ export class SystemMetrics {
             system: this.getSystemMetrics(),
             performance: this.getPerformanceMetrics(),
             health: this.getHealthMetrics(),
+            advanced: this.getAdvancedPerformanceMetrics(),
             timestamp: Date.now(),
         };
     }

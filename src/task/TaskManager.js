@@ -1,3 +1,4 @@
+import * as dfd from 'danfojs';
 import {Task} from './Task.js';
 import {Truth} from '../Truth.js';
 import {collectTasksFromAllConcepts} from '../util/memory.js';
@@ -155,7 +156,8 @@ export class TaskManager extends BaseComponent {
         const stats = {
             tasksByType: {BELIEF: 0, GOAL: 0, QUESTION: 0},
             priorityDistribution: {low: 0, medium: 0, high: 0},
-            totalPriority: 0,
+            priorities: [],
+            creationTimes: [],
             oldestTask: Date.now(),
             newestTask: 0
         };
@@ -163,23 +165,41 @@ export class TaskManager extends BaseComponent {
         collectTasksFromAllConcepts(this._memory, task => {
             stats.tasksByType[task.type]++;
             stats.priorityDistribution[this._getPriorityBucket(task.budget.priority)]++;
-            stats.totalPriority += task.budget.priority;
+            stats.priorities.push(task.budget.priority);
+            stats.creationTimes.push(task.stamp.creationTime);
             stats.oldestTask = Math.min(stats.oldestTask, task.stamp.creationTime);
             stats.newestTask = Math.max(stats.newestTask, task.stamp.creationTime);
             return true;
         });
 
         const totalTasks = Object.values(stats.tasksByType).reduce((sum, count) => sum + count, 0);
-        const averagePriority = totalTasks > 0 ? stats.totalPriority / totalTasks : 0;
+        
+        // Using danfojs for advanced statistical calculations
+        let averagePriority = 0, priorityStd = 0, priorityMedian = 0, priorityPercentiles = {};
+        if (stats.priorities.length > 0) {
+            const prioritySeries = new dfd.Series(stats.priorities);
+            averagePriority = prioritySeries.mean();
+            priorityStd = prioritySeries.std();
+            priorityMedian = prioritySeries.median();
+            priorityPercentiles = {
+                p25: prioritySeries.quantile(0.25),
+                p75: prioritySeries.quantile(0.75),
+                p95: prioritySeries.quantile(0.95)
+            };
+        }
 
         return {
             ...this._stats,
             tasksByType: stats.tasksByType,
             priorityDistribution: stats.priorityDistribution,
             averagePriority,
+            priorityStd,
+            priorityMedian,
+            priorityPercentiles,
             oldestTask: stats.oldestTask,
             newestTask: stats.newestTask,
-            ageRange: stats.newestTask - stats.oldestTask
+            ageRange: stats.newestTask - stats.oldestTask,
+            taskCount: totalTasks
         };
     }
 
