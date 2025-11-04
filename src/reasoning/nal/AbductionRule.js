@@ -17,53 +17,61 @@ export class AbductionRule extends NALRule {
     }
 
     async _apply(task, context) {
+        if (!this._matches(task, context)) return [];
+
+        if (task.term?.isCompound && task.term.operator === '-->' && task.term.components?.length === 2) {
+            return this._deriveFromInheritance(task, context);
+        }
+        
+        if (task.term?.isAtomic) {
+            return this._deriveFromSimpleTerm(task, context);
+        }
+
+        return [];
+    }
+
+    async _deriveFromInheritance(task, context) {
+        const [subject, predicate] = task.term.components;
+        const complementaryTasks = RuleUtils.findTasksByTerm(predicate, context, this._unify.bind(this));
         const results = [];
 
-        if (!this._matches(task, context)) {
-            return results;
-        }
+        for (const compTask of complementaryTasks) {
+            const bindings = this._unify(predicate, compTask.term);
+            if (bindings) {
+                const derivedTerm = this._substitute(subject, bindings);
+                const derivedTruth = this._calculateTruth(task.truth, compTask.truth);
 
-        // If this is an inheritance statement <a --> b>, look for a task matching <b>
-        if (task.term?.isCompound && task.term.operator === '-->' && task.term.components?.length === 2) {
-            const [subject, predicate] = task.term.components;
-            const complementaryTasks = RuleUtils.findTasksByTerm(predicate, context, this._unify.bind(this));
-
-            for (const compTask of complementaryTasks) {
-                const bindings = this._unify(predicate, compTask.term);
-
-                if (bindings) {
-                    const derivedTerm = this._substitute(subject, bindings);
-                    const derivedTruth = this._calculateTruth(task.truth, compTask.truth);
-
-                    results.push(this._createDerivedTask(task, {
-                        term: derivedTerm,
-                        truth: derivedTruth,
-                        type: compTask.type,
-                        priority: task.priority * compTask.priority * this.priority
-                    }));
-                }
+                results.push(this._createDerivedTask(task, {
+                    term: derivedTerm,
+                    truth: derivedTruth,
+                    type: compTask.type,
+                    priority: task.priority * compTask.priority * this.priority
+                }));
             }
         }
-        // If this is a simple term, look for inheritance statements where it matches the predicate
-        else if (task.term?.isAtomic) {
-            const allTasks = RuleUtils.collectTasks(context);
-            const inheritanceTasks = RuleUtils.filterByInheritance(allTasks);
 
-            for (const inheritanceTask of inheritanceTasks) {
-                const [, predicate] = inheritanceTask.term.components;
-                const bindings = this._unify(predicate, task.term);
+        return results;
+    }
 
-                if (bindings) {
-                    const derivedTerm = this._substitute(inheritanceTask.term.components[0], bindings);
-                    const derivedTruth = this._calculateTruth(inheritanceTask.truth, task.truth);
+    async _deriveFromSimpleTerm(task, context) {
+        const allTasks = RuleUtils.collectTasks(context);
+        const inheritanceTasks = RuleUtils.filterByInheritance(allTasks);
+        const results = [];
 
-                    results.push(this._createDerivedTask(inheritanceTask, {
-                        term: derivedTerm,
-                        truth: derivedTruth,
-                        type: task.type,
-                        priority: inheritanceTask.priority * task.priority * this.priority
-                    }));
-                }
+        for (const inheritanceTask of inheritanceTasks) {
+            const [, predicate] = inheritanceTask.term.components;
+            const bindings = this._unify(predicate, task.term);
+
+            if (bindings) {
+                const derivedTerm = this._substitute(inheritanceTask.term.components[0], bindings);
+                const derivedTruth = this._calculateTruth(inheritanceTask.truth, task.truth);
+
+                results.push(this._createDerivedTask(inheritanceTask, {
+                    term: derivedTerm,
+                    truth: derivedTruth,
+                    type: task.type,
+                    priority: inheritanceTask.priority * task.priority * this.priority
+                }));
             }
         }
 

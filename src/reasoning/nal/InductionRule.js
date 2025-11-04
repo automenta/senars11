@@ -13,28 +13,22 @@ export class InductionRule extends NALRule {
     }
 
     _matches(task, context) {
-        return task.term?.isCompound &&
-            task.term.operator === '-->' &&
-            task.term.components?.length === 2;
+        const {term} = task || {};
+        return term?.isCompound && term.operator === '-->' && term.components?.length === 2;
     }
 
     async _apply(task, context) {
-        const results = [];
-
-        if (!this._matches(task, context)) {
-            return results;
-        }
+        if (!this._matches(task, context)) return [];
 
         const [subject, predicate] = task.term.components;
-
         const allTasks = RuleUtils.collectTasks(context);
         const inheritanceTasks = RuleUtils.filterByInheritance(allTasks);
+        const results = [];
 
         for (const compTask of inheritanceTasks) {
             const [compSubject, compPredicate] = compTask.term.components;
-
-            // Check if it's the reverse: <b --> a> where task is <a --> b>
-            if (this._termsMatch(compSubject, predicate) && this._termsMatch(compPredicate, subject)) {
+            
+            if (this._unify(compSubject, predicate) && this._unify(compPredicate, subject)) {
                 const derivedTerm = new Term('compound', 'SIMILARITY', [subject, predicate], '<->');
                 const derivedTruth = this._calculateTruth(task.truth, compTask.truth);
 
@@ -48,10 +42,5 @@ export class InductionRule extends NALRule {
         }
 
         return results;
-    }
-
-    _termsMatch(t1, t2) {
-        const bindings = this._unify(t1, t2);
-        return bindings !== null;
     }
 }

@@ -12,7 +12,7 @@ const ERROR_TYPES = {
 const SEVERITY_LEVELS = {HIGH: 'high', MEDIUM: 'medium', LOW: 'low'};
 
 class ErrorClassifier {
-    static classify = error => {
+    static classify(error) {
         const logicErrors = ['TypeError', 'ReferenceError'];
         if (logicErrors.includes(error.name)) return ERROR_TYPES.LOGIC;
         if (/(timeout|network)/.test(error.message)) return ERROR_TYPES.NETWORK;
@@ -20,16 +20,18 @@ class ErrorClassifier {
         if (error.name === 'SyntaxError') return ERROR_TYPES.SYNTAX;
         if (/(validation|invalid)/.test(error.message.toLowerCase())) return ERROR_TYPES.VALIDATION;
         return ERROR_TYPES.UNKNOWN;
-    };
+    }
 
-    static determineSeverity = (error, provided) => provided || {
-        [ERROR_TYPES.LOGIC]: SEVERITY_LEVELS.HIGH,
-        [ERROR_TYPES.NETWORK]: SEVERITY_LEVELS.MEDIUM,
-        [ERROR_TYPES.RESOURCE]: SEVERITY_LEVELS.HIGH,
-        [ERROR_TYPES.SYNTAX]: SEVERITY_LEVELS.HIGH,
-        [ERROR_TYPES.VALIDATION]: SEVERITY_LEVELS.LOW,
-        [ERROR_TYPES.UNKNOWN]: SEVERITY_LEVELS.MEDIUM,
-    }[ErrorClassifier.classify(error)];
+    static determineSeverity(error, provided) {
+        return provided || {
+            [ERROR_TYPES.LOGIC]: SEVERITY_LEVELS.HIGH,
+            [ERROR_TYPES.NETWORK]: SEVERITY_LEVELS.MEDIUM,
+            [ERROR_TYPES.RESOURCE]: SEVERITY_LEVELS.HIGH,
+            [ERROR_TYPES.SYNTAX]: SEVERITY_LEVELS.HIGH,
+            [ERROR_TYPES.VALIDATION]: SEVERITY_LEVELS.LOW,
+            [ERROR_TYPES.UNKNOWN]: SEVERITY_LEVELS.MEDIUM,
+        }[this.classify(error)];
+    }
 }
 
 class ErrorTracker {
@@ -39,25 +41,25 @@ class ErrorTracker {
         this.logger = Logger;
     }
 
-    track = errorInfo => {
+    track(errorInfo) {
         this.errorRateWindow.push({timestamp: errorInfo.timestamp, severity: errorInfo.severity});
         this._cleanup();
         if (this.getErrorRate() > this.maxErrorRate) {
             this.logger.warn(`High error rate: ${(this.getErrorRate() * 100).toFixed(2)}%`);
         }
-    };
+    }
 
-    getErrorRate = () => {
+    getErrorRate() {
         if (this.errorRateWindow.length === 0) return 0;
         const recentErrors = this.errorRateWindow.filter(err =>
             [SEVERITY_LEVELS.HIGH, SEVERITY_LEVELS.MEDIUM].includes(err.severity));
         return recentErrors.length / this.errorRateWindow.length;
-    };
+    }
 
-    _cleanup = () => {
+    _cleanup() {
         const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
         this.errorRateWindow = this.errorRateWindow.filter(err => err.timestamp > fiveMinutesAgo);
-    };
+    }
 }
 
 class ErrorRecovery {
@@ -67,7 +69,7 @@ class ErrorRecovery {
         this.logger = logger;
     }
 
-    attemptRecovery = async (errorInfo, options) => {
+    async attemptRecovery(errorInfo, options) {
         const errorKey = `${errorInfo.type}:${errorInfo.message.substring(0, 30)}`;
         const attempts = this.recoveryAttempts.get(errorKey) || 0;
 
@@ -90,9 +92,9 @@ class ErrorRecovery {
         }
 
         return {success: false, degraded: true, error: errorInfo};
-    };
+    }
 
-    _executeRecovery = async (errorInfo, options) => {
+    async _executeRecovery(errorInfo, options) {
         const strategies = {
             [ERROR_TYPES.NETWORK]: this._recoverNetwork,
             [ERROR_TYPES.RESOURCE]: this._recoverResource,
@@ -101,18 +103,16 @@ class ErrorRecovery {
 
         const strategy = strategies[errorInfo.type] || this._recoverGeneric;
         return await strategy.call(this, errorInfo, options);
-    };
+    }
 
-    _recoverNetwork = async () => ({success: false, needsRetry: true});
-    _recoverResource = async () => ({success: false, degraded: true});
-    _recoverValidation = async (errorInfo, options) =>
-        options.defaultValue !== undefined ? {success: true, value: options.defaultValue} : {
-            success: false,
-            skip: true
-        };
-    _recoverGeneric = async () => ({success: false, degraded: true});
-
-    _delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+    async _recoverNetwork() { return {success: false, needsRetry: true}; }
+    async _recoverResource() { return {success: false, degraded: true}; }
+    async _recoverValidation(errorInfo, options) {
+        return options.defaultValue !== undefined
+            ? {success: true, value: options.defaultValue}
+            : {success: false, skip: true};
+    }
+    async _recoverGeneric() { return {success: false, degraded: true}; }
 }
 
 export class ErrorHandling {
@@ -128,7 +128,7 @@ export class ErrorHandling {
         this.enableRecovery = errorConfig.enableRecovery;
     }
 
-    handleError = async (error, context = {}, options = {}) => {
+    async handleError(error, context = {}, options = {}) {
         const errorInfo = this._createErrorInfo(error, context, options);
 
         this._logError(errorInfo);
@@ -145,39 +145,43 @@ export class ErrorHandling {
         }
 
         throw error;
-    };
+    }
 
-    _createErrorInfo = (error, context, options) => ({
-        error, message: error.message || 'Unknown error', stack: error.stack,
-        context, timestamp: Date.now(), type: ErrorClassifier.classify(error),
-        severity: ErrorClassifier.determineSeverity(error, options.severity)
-    });
+    _createErrorInfo(error, context, options) {
+        return {
+            error,
+            message: error.message || 'Unknown error',
+            stack: error.stack,
+            context,
+            timestamp: Date.now(),
+            type: ErrorClassifier.classify(error),
+            severity: ErrorClassifier.determineSeverity(error, options.severity)
+        };
+    }
 
-    _logError = errorInfo => {
+    _logError(errorInfo) {
         const level = {high: 'error', medium: 'warn', low: 'info'}[errorInfo.severity];
         this.logger[level](`Error [${errorInfo.type}][${errorInfo.severity}]: ${errorInfo.message}`, {
             context: errorInfo.context, stack: errorInfo.stack, timestamp: errorInfo.timestamp
         });
-    };
+    }
 
-    _registerError = errorInfo => {
+    _registerError(errorInfo) {
         const key = `${errorInfo.type}:${errorInfo.message.substring(0, 50)}`;
         const entry = this.errorRegistry.get(key) || {count: 0, lastSeen: 0, instances: []};
 
-        Object.assign(entry, {
-            count: entry.count + 1,
-            lastSeen: errorInfo.timestamp,
-            instances: [...entry.instances.slice(-9), {
-                timestamp: errorInfo.timestamp,
-                context: errorInfo.context,
-                severity: errorInfo.severity
-            }]
-        });
+        entry.count++;
+        entry.lastSeen = errorInfo.timestamp;
+        entry.instances = [...entry.instances.slice(-9), {
+            timestamp: errorInfo.timestamp,
+            context: errorInfo.context,
+            severity: errorInfo.severity
+        }];
 
         this.errorRegistry.set(key, entry);
-    };
+    }
 
-    _assessDegradation = () => {
+    _assessDegradation() {
         const currentErrorRate = this.tracker.getErrorRate();
         const maxErrorRate = this.config.get('errorHandling.maxErrorRate');
 
@@ -187,21 +191,23 @@ export class ErrorHandling {
         } else if (this.degradationLevel > 0 && currentErrorRate < maxErrorRate * 0.5) {
             this.degradationLevel = Math.max(0, this.degradationLevel - 0.05);
         }
-    };
+    }
 
-    getDegradationLevel = () => this.degradationLevel;
-    isDegraded = () => this.degradationLevel > 0.5;
+    getDegradationLevel() { return this.degradationLevel; }
+    isDegraded() { return this.degradationLevel > 0.5; }
 
-    getStats = () => ({
-        degradationLevel: this.degradationLevel,
-        errorRate: this.tracker.getErrorRate(),
-        totalErrors: this.tracker.errorRateWindow.length,
-        errorRegistrySize: this.errorRegistry.size,
-        recoveryAttempts: new Map(this.recovery.recoveryAttempts),
-        registeredErrors: Array.from(this.errorRegistry.entries()).map(([key, value]) => ({
-            key, count: value.count, lastSeen: value.lastSeen, instances: value.instances.length
-        }))
-    });
+    getStats() {
+        return {
+            degradationLevel: this.degradationLevel,
+            errorRate: this.tracker.getErrorRate(),
+            totalErrors: this.tracker.errorRateWindow.length,
+            errorRegistrySize: this.errorRegistry.size,
+            recoveryAttempts: new Map(this.recovery.recoveryAttempts),
+            registeredErrors: Array.from(this.errorRegistry.entries()).map(([key, value]) => ({
+                key, count: value.count, lastSeen: value.lastSeen, instances: value.instances.length
+            }))
+        };
+    }
 }
 
 export const GlobalErrorHandler = new ErrorHandling();

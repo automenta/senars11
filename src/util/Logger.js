@@ -14,18 +14,18 @@ class Logger {
         if (this.silent) return;
 
         const consoleMethod = console[level] || console.log;
-        const logWithPrefix = (msg, d) => consoleMethod(`[${level.toUpperCase()}]`, msg, d);
+        const prefixedMsg = `[${level.toUpperCase()}] ${message}`;
 
         if (this.isTestEnv) {
             const hasMock = consoleMethod._isMockFunction || (consoleMethod.mock && Array.isArray(consoleMethod.mock.calls));
-            hasMock && logWithPrefix(message, data);
+            hasMock && consoleMethod(prefixedMsg, data);
         } else {
-            logWithPrefix(message, data);
+            consoleMethod(prefixedMsg, data);
         }
     }
 
     shouldLog(level) {
-        return !this.silent && 
+        return !this.silent &&
                (level !== 'debug' || (process.env.NODE_ENV === 'development' || process.env.DEBUG)) &&
                (level !== 'info' || !this.isTestEnv);
     }

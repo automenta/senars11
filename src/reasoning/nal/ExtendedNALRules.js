@@ -2,10 +2,6 @@ import {NALRule} from './NALRule.js';
 import {Term} from '../../term/Term.js';
 import {Truth} from '../../Truth.js';
 
-/**
- * ExtendedNALRule: Implements additional NAL reasoning patterns beyond basic syllogism
- * Includes conditional reasoning, equivalence transformations, and more complex patterns
- */
 export class ExtendedNALRule extends NALRule {
     constructor(name, config) {
         super(name, config || {
@@ -19,18 +15,13 @@ export class ExtendedNALRule extends NALRule {
     }
 
     _matches(task, context) {
-        // This is a base class - specific implementations will override
         return false;
     }
 
     async _apply(task, context) {
-        // This is a base class - specific implementations will override
         return [];
     }
 
-    /**
-     * Helper: Check if two terms are structurally equivalent
-     */
     _structuralEquivalence(term1, term2) {
         if (!term1 || !term2) return false;
         if (term1.operator !== term2.operator) return false;
@@ -41,9 +32,6 @@ export class ExtendedNALRule extends NALRule {
             this._structuralEquivalence(comp, term2.components[i]));
     }
 
-    /**
-     * Helper: Calculate truth value based on NAL principles
-     */
     _calculateNALTruth(truth1, truth2, operation = 'intersection') {
         if (!truth1 && !truth2) return new Truth(0.5, 0.5);
         if (!truth1) return truth2;
@@ -67,52 +55,32 @@ export class ExtendedNALRule extends NALRule {
         return new Truth(f, c);
     }
 
-    /**
-     * Transform an inheritance statement (-->)
-     */
     _transformInheritance(term) {
-        if (!term.isCompound || term.operator !== '-->') {
-            return null;
-        }
+        if (!term.isCompound || term.operator !== '-->') return null;
 
         const [subject, predicate] = term.components || [];
         if (!subject || !predicate) return null;
 
-        // Conversion: <S --> P> ⊣⊢ <P --> S> (with lower confidence)
-        const converted = new Term('compound',
+        return new Term('compound',
             `(--> ${predicate.name}, ${subject.name})`,
             [predicate, subject],
             '-->');
-
-        return converted;
     }
 
-    /**
-     * Transform an implication statement (==>)
-     */
     _transformImplication(term) {
-        if (!term.isCompound || term.operator !== '==>') {
-            return null;
-        }
+        if (!term.isCompound || term.operator !== '==>') return null;
 
         const [antecedent, consequent] = term.components || [];
         if (!antecedent || !consequent) return null;
 
-        // Contraposition: (A ==> B) ⊢ (¬B ==> ¬A)
-        const contrapositive = new Term('compound',
+        return new Term('compound',
             `(==> (not ${consequent.name}), (not ${antecedent.name}))`,
             [new Term('compound', `(not ${consequent.name})`, [consequent], 'not'),
                 new Term('compound', `(not ${antecedent.name})`, [antecedent], 'not')],
             '==>');
-
-        return contrapositive;
     }
 }
 
-/**
- * ConversionRule: Implements conversion between subject-predicate relationships
- * <S --> P> ⊣⊢ <P --> S>
- */
 export class ConversionRule extends ExtendedNALRule {
     constructor() {
         super('conversion', {
@@ -124,27 +92,22 @@ export class ConversionRule extends ExtendedNALRule {
     }
 
     _matches(task, context) {
-        return task.term?.isCompound &&
-            task.term.operator === '-->' &&
-            task.term.components?.length === 2;
+        const {term} = task || {};
+        return term?.isCompound && term.operator === '-->' && term.components?.length === 2;
     }
 
     async _apply(task, context) {
-        if (!this._matches(task, context)) {
-            return [];
-        }
+        if (!this._matches(task, context)) return [];
 
         const [subject, predicate] = task.term.components;
-
-        // Create the converted statement <P --> S>
         const convertedTerm = new Term('compound',
             `(--> ${predicate.name}, ${subject.name})`,
             [predicate, subject],
             '-->');
 
         const derivedTruth = new Truth(
-            task.truth.frequency,  // Same frequency
-            task.truth.confidence * 0.8  // Lower confidence due to conversion
+            task.truth.frequency,
+            task.truth.confidence * 0.8
         );
 
         return [this._createDerivedTask(task, {
@@ -156,11 +119,6 @@ export class ConversionRule extends ExtendedNALRule {
     }
 }
 
-/**
- * EquivalenceRule: Handles equivalence relationships and their implications
- * <A <=> B> ≡ (<A ==> B> AND <B ==> A>)
- * This rule derives implications from equivalences and vice versa
- */
 export class EquivalenceRule extends ExtendedNALRule {
     constructor() {
         super('equivalence', {
@@ -172,20 +130,16 @@ export class EquivalenceRule extends ExtendedNALRule {
     }
 
     _matches(task, context) {
-        return task.term?.isCompound &&
-            task.term.operator === '<=>' &&
-            task.term.components?.length === 2;
+        const {term} = task || {};
+        return term?.isCompound && term.operator === '<=>' && term.components?.length === 2;
     }
 
     async _apply(task, context) {
-        if (!this._matches(task, context)) {
-            return [];
-        }
+        if (!this._matches(task, context)) return [];
 
         const [left, right] = task.term.components;
         const results = [];
 
-        // From <A <=> B>, derive <A ==> B>
         const implication1 = new Term('compound',
             `(==> ${left.name}, ${right.name})`,
             [left, right],
@@ -198,7 +152,6 @@ export class EquivalenceRule extends ExtendedNALRule {
             priority: task.priority * this.priority * 0.9
         }));
 
-        // From <A <=> B>, derive <B ==> A>
         const implication2 = new Term('compound',
             `(==> ${right.name}, ${left.name})`,
             [right, left],
@@ -215,9 +168,6 @@ export class EquivalenceRule extends ExtendedNALRule {
     }
 }
 
-/**
- * NegationRule: Handles negation operations in NAL
- */
 export class NegationRule extends ExtendedNALRule {
     constructor() {
         super('negation', {
@@ -229,25 +179,21 @@ export class NegationRule extends ExtendedNALRule {
     }
 
     _matches(task, context) {
-        return task.term?.isCompound &&
-            task.term.operator === '--' &&  // NAL negation operator
-            task.term.components?.length >= 1;
+        const {term} = task || {};
+        return term?.isCompound && term.operator === '--' && term.components?.length >= 1;
     }
 
     async _apply(task, context) {
-        if (!this._matches(task, context)) {
-            return [];
-        }
+        if (!this._matches(task, context)) return [];
 
         const operand = task.term.components[0];
         const results = [];
 
-        // Double negation elimination: ¬¬A ⊢ A
         if (operand.isCompound && operand.operator === '--' && operand.components?.length >= 1) {
             const doubleNegationTerm = operand.components[0];
             const derivedTruth = new Truth(
                 operand.truth?.frequency || 0.5,
-                (operand.truth?.confidence || 0.5) * 0.9  // Slightly reduced confidence
+                (operand.truth?.confidence || 0.5) * 0.9
             );
 
             results.push(this._createDerivedTask(task, {
@@ -262,9 +208,6 @@ export class NegationRule extends ExtendedNALRule {
     }
 }
 
-/**
- * ConjunctionRule: Handles conjunction operations in NAL
- */
 export class ConjunctionRule extends ExtendedNALRule {
     constructor() {
         super('conjunction', {
@@ -276,24 +219,20 @@ export class ConjunctionRule extends ExtendedNALRule {
     }
 
     _matches(task, context) {
-        return task.term?.isCompound &&
-            task.term.operator === '&' &&
-            task.term.components?.length >= 2;
+        const {term} = task || {};
+        return term?.isCompound && term.operator === '&' && term.components?.length >= 2;
     }
 
     async _apply(task, context) {
-        if (!this._matches(task, context)) {
-            return [];
-        }
+        if (!this._matches(task, context)) return [];
 
         const results = [];
         const components = task.term.components;
 
-        // Extract components: from (A & B & C...), derive A, B, C individually
         for (const component of components) {
             const derivedTruth = new Truth(
-                task.truth.frequency,  // Preserve frequency
-                task.truth.confidence * 0.9  // Slightly reduced confidence for extraction
+                task.truth.frequency,
+                task.truth.confidence * 0.9
             );
 
             results.push(this._createDerivedTask(task, {
@@ -308,9 +247,6 @@ export class ConjunctionRule extends ExtendedNALRule {
     }
 }
 
-/**
- * DisjunctionRule: Handles disjunction operations in NAL
- */
 export class DisjunctionRule extends ExtendedNALRule {
     constructor() {
         super('disjunction', {
@@ -322,18 +258,12 @@ export class DisjunctionRule extends ExtendedNALRule {
     }
 
     _matches(task, context) {
-        return task.term?.isCompound &&
-            task.term.operator === '|' &&
-            task.term.components?.length >= 2;
+        const {term} = task || {};
+        return term?.isCompound && term.operator === '|' && term.components?.length >= 2;
     }
 
     async _apply(task, context) {
-        if (!this._matches(task, context)) {
-            return [];
-        }
-
-        // For disjunction, we typically can't derive individual components without additional information
-        // This is a placeholder for more sophisticated disjunction handling
+        if (!this._matches(task, context)) return [];
         return [];
     }
 }

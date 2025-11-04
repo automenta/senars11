@@ -2,10 +2,6 @@ import {NALRule} from './NALRule.js';
 import {Term} from '../../term/Term.js';
 import {RuleUtils} from './RuleUtils.js';
 
-/**
- * Comparison Rule: If <a --> c> and <b --> c> then <a <-> b>
- * Implements comparison inference in NAL to determine similarity between terms
- */
 export class ComparisonRule extends NALRule {
     constructor() {
         super('comparison', {
@@ -17,23 +13,17 @@ export class ComparisonRule extends NALRule {
     }
 
     _matches(task, context) {
-        return task.term?.isCompound &&
-            task.term.operator === '-->' &&
-            task.term.components?.length === 2;
+        const {term} = task || {};
+        return term?.isCompound && term.operator === '-->' && term.components?.length === 2;
     }
 
     async _apply(task, context) {
-        const results = [];
-
-        if (!this._matches(task, context)) {
-            return results;
-        }
+        if (!this._matches(task, context)) return [];
 
         const [subject, predicate] = task.term.components;
-
-        // Look for tasks with the same predicate but different subjects
         const allTasks = RuleUtils.collectTasks(context);
         const inheritanceTasks = RuleUtils.filterByInheritance(allTasks);
+        const results = [];
 
         for (const compTask of inheritanceTasks) {
             if (!compTask.term?.isCompound || compTask.term.operator !== '-->' || compTask.term.components?.length !== 2) {
@@ -42,9 +32,7 @@ export class ComparisonRule extends NALRule {
 
             const [compSubject, compPredicate] = compTask.term.components;
 
-            // Check if the predicates match but subjects are different
-            if (this._termsMatch(predicate, compPredicate) && !this._termsMatch(subject, compSubject)) {
-                // Create similarity term: <subject <-> compSubject>
+            if (this._unify(predicate, compPredicate) && !this._unify(subject, compSubject)) {
                 const derivedTerm = new Term('compound', 'SIMILARITY', [subject, compSubject], '<->');
                 const derivedTruth = this._calculateTruth(task.truth, compTask.truth);
 
@@ -58,10 +46,5 @@ export class ComparisonRule extends NALRule {
         }
 
         return results;
-    }
-
-    _termsMatch(t1, t2) {
-        const bindings = this._unify(t1, t2);
-        return bindings !== null;
     }
 }

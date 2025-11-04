@@ -1,23 +1,19 @@
 /**
- * Base class for objects that should be frozen after construction.
- * Provides an optional validation hook.
+ * Abstract base class for immutable objects with optional validation.
+ * Enforces immutability via Object.freeze after construction.
  */
 export class FrozenBase {
     /**
-     * @param {Object} [props] - Properties to assign to the instance.
-     * @param {Function} [validator] - An optional function to validate the instance before freezing.
+     * @param {Object} [props={}] - Properties to assign to the instance
+     * @param {Function} [validator=null] - Optional validation function
      */
     constructor(props = {}, validator = null) {
         if (this.constructor === FrozenBase) {
-            throw new Error("FrozenBase is an abstract class and cannot be instantiated directly");
+            throw new Error("FrozenBase is abstract and cannot be instantiated directly");
         }
 
         Object.assign(this, props);
-
-        if (validator) {
-            validator(this);
-        }
-
+        validator?.(this);
         Object.freeze(this);
     }
 }

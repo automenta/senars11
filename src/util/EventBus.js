@@ -20,8 +20,7 @@ export class EventBus {
             this.off(eventName, onceWrapper);
             callback(data);
         };
-        this.on(eventName, onceWrapper);
-        return this;
+        return this.on(eventName, onceWrapper);
     }
 
     off(eventName, callback) {
@@ -37,12 +36,12 @@ export class EventBus {
 
     removeMiddleware(middleware) {
         const index = this._middleware.indexOf(middleware);
-        index !== -1 && this._middleware.splice(index, 1);
+        if (index !== -1) this._middleware.splice(index, 1);
         return this;
     }
 
     onError(handler) {
-        typeof handler === 'function' && this._errorHandlers.add(handler);
+        if (typeof handler === 'function') this._errorHandlers.add(handler);
         return this;
     }
 
@@ -51,18 +50,19 @@ export class EventBus {
 
         this._stats.eventsEmitted++;
         const traceId = options.traceId || TraceId.generate();
+        let processedData = {...data, eventName, traceId};
 
-        let processedData = { ...data, eventName, traceId };
-
+        // Process middleware
         for (const middleware of this._middleware) {
             try {
                 processedData = await middleware(processedData);
-                if (processedData === null) return; // Middleware can stop propagation
+                if (processedData === null) return;
             } catch (error) {
                 return this._handleError('middleware', error, {eventName, data, traceId});
             }
         }
 
+        // Emit event
         try {
             this._emitter.emit(eventName, processedData);
             this._stats.eventsHandled++;
@@ -73,7 +73,7 @@ export class EventBus {
     }
 
     _handleError(type, error, context) {
-        // Process all error handlers
+        // Process error handlers
         for (const handler of this._errorHandlers) {
             try {
                 handler(error, type, context);
@@ -82,7 +82,7 @@ export class EventBus {
             }
         }
 
-        // Default error logging if no handlers are registered
+        // Default error logging
         if (this._errorHandlers.size === 0) {
             console.error(`EventBus error in ${type}:`, error, context);
         }
