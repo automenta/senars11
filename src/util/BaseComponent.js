@@ -83,35 +83,9 @@ export class BaseComponent {
     }
 
     validateConfig(config = this._config) {
-        if (!this._validationSchema) return config;
-
-        const schema = typeof this._validationSchema === 'function'
-            ? this._validationSchema()
-            : this._validationSchema;
-
-        const validationResult = schema.validate(config, {
-            stripUnknown: true,
-            allowUnknown: false,
-            convert: true
-        });
-
-        if (validationResult.error) {
-            throw new Error(`Configuration validation failed for ${this._name}: ${validationResult.error.message}`);
-        }
-
-        return validationResult.value;
+        return this._validationSchema ? this._validateConfig(config) : config;
     }
 
-    /**
-     * Internal method to execute a lifecycle operation
-     * @param {string} operation - The operation to perform (initialize, start, stop, dispose)
-     * @param {boolean} checkCondition - Whether to check a condition before proceeding
-     * @param {Function} action - The action to perform
-     * @param {string} conditionMessage - Message for the condition warning
-     * @param {string} metricName - Name of the metric to increment
-     * @returns {Promise<boolean>} True if the operation was successful
-     * @private
-     */
     async _executeLifecycleOperation(operation, checkCondition, action, conditionMessage, metricName = null) {
         if (checkCondition) {
             if (operation === 'start' && !this._initialized) {
@@ -133,10 +107,7 @@ export class BaseComponent {
         }
 
         try {
-            // Set start time for start operation
-            if (operation === 'start') {
-                this._startTime = Date.now();
-            }
+            if (operation === 'start') this._startTime = Date.now();
             
             await action();
             
@@ -175,31 +146,19 @@ export class BaseComponent {
 
     async initialize() {
         return await this._executeLifecycleOperation(
-            'initialize',
-            true, // check condition
-            () => this._initialize(),
-            '',
-            'initializeCount'
+            'initialize', true, () => this._initialize(), '', 'initializeCount'
         );
     }
 
     async start() {
         return await this._executeLifecycleOperation(
-            'start',
-            true, // check condition
-            () => this._start(),
-            '',
-            'startCount'
+            'start', true, () => this._start(), '', 'startCount'
         );
     }
 
     async stop() {
         return await this._executeLifecycleOperation(
-            'stop',
-            true, // check condition
-            () => this._stop(),
-            '',
-            'stopCount'
+            'stop', true, () => this._stop(), '', 'stopCount'
         );
     }
 

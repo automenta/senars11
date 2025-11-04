@@ -39,40 +39,25 @@ export class EvaluationEngine {
 
         // Unified rules for both functional and structural evaluation
         this.operatorRules = {
-            '&': {
-                functional: this._reduceAndFunctional.bind(this),
-                structural: this._reduceAndStructural.bind(this)
-            },
-            '|': {
-                functional: this._reduceOrFunctional.bind(this),
-                structural: this._reduceOrStructural.bind(this)
-            },
-            '--': {
-                functional: this._reduceNegationFunctional.bind(this),
-                structural: this._reduceNegationStructural.bind(this)
-            },
-            '==>': {
-                functional: this._reduceImplicationFunctional.bind(this),
-                structural: this._reduceImplicationStructural.bind(this)
-            },
-            '<=>': {
-                functional: this._reduceEquivalenceFunctional.bind(this),
-                structural: this._reduceEquivalenceStructural.bind(this)
-            }
+            '&': {functional: this._reduceAndFunctional.bind(this), structural: this._reduceAndStructural.bind(this)},
+            '|': {functional: this._reduceOrFunctional.bind(this), structural: this._reduceOrStructural.bind(this)},
+            '--': {functional: this._reduceNegationFunctional.bind(this), structural: this._reduceNegationStructural.bind(this)},
+            '==>': {functional: this._reduceImplicationFunctional.bind(this), structural: this._reduceImplicationStructural.bind(this)},
+            '<=>': {functional: this._reduceEquivalenceFunctional.bind(this), structural: this._reduceEquivalenceStructural.bind(this)}
         };
 
         this._initializeDefaultFunctors();
     }
 
-    _initializeDefaultFunctors() {
-        ['True', 'False', 'Null'].forEach(name => {
-            this.functorRegistry.register(name, () => SYSTEM_ATOMS[name], {arity: 0});
-        });
+    _initializeDefaultFunctors = () => {
+        ['True', 'False', 'Null'].forEach(name => 
+            this.functorRegistry.register(name, () => SYSTEM_ATOMS[name], {arity: 0})
+        );
 
         const ops = [['add', 2, true], ['subtract', 2, false], ['multiply', 2, true], ['divide', 2, false]];
-        ops.forEach(([name, arity, isCommutative]) => {
-            this.addFunctor(name, VectorOperations[name], {arity, isCommutative});
-        });
+        ops.forEach(([name, arity, isCommutative]) => 
+            this.addFunctor(name, VectorOperations[name], {arity, isCommutative})
+        );
         this.addFunctor('cmp', VectorOperations.compare, {arity: 2});
     }
 
@@ -102,7 +87,7 @@ export class EvaluationEngine {
         }
     }
 
-    async _evaluateTerm(term, context, variableBindings) {
+    _evaluateTerm = async (term, context, variableBindings) => {
         if (!term.isCompound) {
             return this._evaluateNonOperation(term, context, variableBindings);
         }
@@ -141,14 +126,13 @@ export class EvaluationEngine {
             : this._createResult(this.reduce(term), true, 'Structural compound with boolean reduction');
     }
 
-    _areAllBooleanValues(components, variableBindings) {
-        return components.every(comp => {
+    _areAllBooleanValues = (components, variableBindings) => 
+        components.every(comp => {
             const boundComp = this._substituteVariables(comp, variableBindings);
             return boundComp.isBoolean || isTrue(boundComp) || isFalse(boundComp) || isNull(boundComp);
-        });
-    }
+        })
 
-    _evaluateBooleanFunction(term, variableBindings) {
+    _evaluateBooleanFunction = (term, variableBindings) => {
         const { operator, components } = term;
         
         // Ensure we have exactly 2 components for binary operations or at least 1 for others
@@ -208,7 +192,7 @@ export class EvaluationEngine {
         return this._createResult(SYSTEM_ATOMS.False, true, 'Equality: structures do not match');
     }
 
-    _evaluateAtomicEquality(leftBound, rightBound) {
+    _evaluateAtomicEquality = (leftBound, rightBound) => {
         const leftVal = this._termToValue(leftBound);
         const rightVal = this._termToValue(rightBound);
 
@@ -218,7 +202,7 @@ export class EvaluationEngine {
             : this._createResult(SYSTEM_ATOMS.False, true, 'Equality: atomic values do not match');
     }
 
-    async _attemptEquationSolving(left, right, variableBindings) {
+    _attemptEquationSolving = async (left, right, variableBindings) => {
         if (this._isOperationWithVariable(left) && this._isAtomicOrNumeric(right)) {
             return await this._solveForVariableInOperation(left, right, variableBindings);
         }
@@ -234,26 +218,23 @@ export class EvaluationEngine {
         return null;
     }
 
-    _isOperationWithVariable(term) {
-        return term.isCompound && 
-               term.operator === '^' && 
-               term.components?.length === 2 &&
-               term.components[1].isCompound && 
-               term.components[1].operator === ',' &&
-               term.components[1].components?.some(arg => arg.name?.startsWith('?'));
-    }
+    _isOperationWithVariable = (term) => 
+        term.isCompound && 
+        term.operator === '^' && 
+        term.components?.length === 2 &&
+        term.components[1].isCompound && 
+        term.components[1].operator === ',' &&
+        term.components[1].components?.some(arg => arg.name?.startsWith('?'))
 
-    _isAtomicOrNumeric(term) {
-        return term.isAtomic || this._isNumericValue(term);
-    }
+    _isAtomicOrNumeric = (term) => term.isAtomic || this._isNumericValue(term)
     
-    _isNumericValue(term) {
+    _isNumericValue = (term) => {
         const value = this._termToValue(term);
         return typeof value === 'number' || 
                (Array.isArray(value) && value.every(v => typeof v === 'number'));
     }
 
-    async _solveForVariableInOperation(operation, target, variableBindings) {
+    _solveForVariableInOperation = async (operation, target, variableBindings) => {
         if (!operation.isCompound || operation.operator !== '^' || operation.components.length !== 2) {
             return null;
         }
@@ -297,11 +278,9 @@ export class EvaluationEngine {
         return null;
     }
 
-    async _solveOperationOperationEquation(leftOperation, rightOperation, variableBindings) {
-        return null;
-    }
+    _solveOperationOperationEquation = async (leftOperation, rightOperation, variableBindings) => null
 
-    reduce(term) {
+    reduce = (term) => {
         if (!term || !term.isCompound) return term;
 
         if (this._isFunctionalEvaluation(term)) {
@@ -311,7 +290,7 @@ export class EvaluationEngine {
         }
     }
 
-    _isFunctionalEvaluation(term) {
+    _isFunctionalEvaluation = (term) => {
         if (!term.isCompound || !this.operatorRules[term.operator]) return false;
         
         return term.operator === '--' 
@@ -319,11 +298,9 @@ export class EvaluationEngine {
             : term.components?.every(comp => this._isBooleanValue(comp));
     }
 
-    _isBooleanValue(term) {
-        return isTrue(term) || isFalse(term) || isNull(term) || term.isBoolean;
-    }
+    _isBooleanValue = (term) => isTrue(term) || isFalse(term) || isNull(term) || term.isBoolean
 
-    _applyFunctionalRule(operator, components) {
+    _applyFunctionalRule = (operator, components) => {
         try {
             const rule = this.operatorRules[operator]?.functional;
             return rule ? rule(components) : BooleanEvaluator.functionalReduction(operator, components).result;
@@ -333,7 +310,7 @@ export class EvaluationEngine {
         }
     }
 
-    _applyStructuralRule(operator, components) {
+    _applyStructuralRule = (operator, components) => {
         const rule = this.operatorRules[operator]?.structural;
         if (rule) {
             try {
@@ -351,7 +328,7 @@ export class EvaluationEngine {
     }
 
     // Functional reduction rules (boolean evaluation)
-    _reduceAndFunctional(components) {
+    _reduceAndFunctional = (components) => {
         if (!components?.length) return SYSTEM_ATOMS.True;
         return this._naryBooleanOperation(components,
             isFalse, SYSTEM_ATOMS.False,
@@ -360,7 +337,7 @@ export class EvaluationEngine {
             () => new Term('compound', 'AND', components, '&'));
     }
 
-    _reduceOrFunctional(components) {
+    _reduceOrFunctional = (components) => {
         if (!components?.length) return SYSTEM_ATOMS.False;
         return this._naryBooleanOperation(components,
             isTrue, SYSTEM_ATOMS.True,
@@ -369,7 +346,7 @@ export class EvaluationEngine {
             () => new Term('compound', 'OR', components, '|'));
     }
 
-    _reduceNegationFunctional(components) {
+    _reduceNegationFunctional = (components) => {
         if (!components?.length) return SYSTEM_ATOMS.Null;
         const [operand] = components;
         return isTrue(operand) ? SYSTEM_ATOMS.False :
@@ -377,7 +354,7 @@ export class EvaluationEngine {
                isNull(operand) ? SYSTEM_ATOMS.Null : SYSTEM_ATOMS.Null;
     }
 
-    _reduceImplicationFunctional(components) {
+    _reduceImplicationFunctional = (components) => {
         if (components?.length !== 2) return SYSTEM_ATOMS.Null;
         const [ant, cons] = components;
         return isNull(ant) || isNull(cons) ? SYSTEM_ATOMS.Null :
@@ -385,7 +362,7 @@ export class EvaluationEngine {
                isTrue(ant) && isFalse(cons) ? SYSTEM_ATOMS.False : SYSTEM_ATOMS.Null;
     }
 
-    _reduceEquivalenceFunctional(components) {
+    _reduceEquivalenceFunctional = (components) => {
         if (components?.length !== 2) return SYSTEM_ATOMS.Null;
         const [left, right] = components;
         return isNull(left) || isNull(right) ? SYSTEM_ATOMS.Null :

@@ -64,4 +64,27 @@ export class Metrics {
     static round(value, decimals = 2) {
         return Number(value.toFixed(decimals));
     }
+    
+    static format(stats) {
+        const formatted = {...stats};
+        Object.keys(formatted).forEach(key => {
+            if (typeof formatted[key] === 'number' && !Number.isInteger(formatted[key])) {
+                formatted[key] = this.round(formatted[key]);
+            }
+        });
+        return formatted;
+    }
+    
+    static reset(metrics) {
+        return {
+            executions: 0,
+            successes: 0,
+            failures: 0,
+            totalTime: 0,
+            avgTime: 0,
+            lastRun: null,
+            lastError: null,
+            createdAt: Date.now()
+        };
+    }
 }

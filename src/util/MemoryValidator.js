@@ -42,28 +42,26 @@ export class MemoryValidator {
         if (!this.isEnabled || !this.options.enableChecksums) {
             return {valid: true, message: 'Validation disabled'};
         }
-
+        
         const expectedChecksum = this.checksums.get(key);
         if (!expectedChecksum) {
             this.storeChecksum(key, obj);
             return {valid: true, message: 'First validation - stored checksum'};
         }
-
+        
         const actualChecksum = this.calculateChecksum(obj);
         if (!actualChecksum) {
             return {valid: false, message: 'Could not calculate checksum'};
         }
-
-        if (expectedChecksum !== actualChecksum) {
-            return {
+        
+        return expectedChecksum === actualChecksum
+            ? {valid: true, message: 'Valid'}
+            : {
                 valid: false,
                 message: 'Memory corruption detected',
                 expected: expectedChecksum,
                 actual: actualChecksum
             };
-        }
-
-        return {valid: true, message: 'Valid'};
     }
 
     validateBatch(validations) {

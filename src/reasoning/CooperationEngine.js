@@ -110,31 +110,45 @@ export class CooperationEngine {
         const crossValidated = [];
         const feedbackEvents = [];
 
-        // Cross-validate: apply NAL rules to LM results
-        for (const lmResult of lmResults) {
-            try {
-                const nalOnLM = ruleEngine.applyNALRules(lmResult, null, memory);
+        // Process LM results with NAL validation
+        await this._processCrossValidation(lmResults, nalResults, ruleEngine, memory, 'LM', 'NAL', crossValidated, feedbackEvents);
+        
+        // Process NAL results with LM validation
+        await this._processCrossValidation(nalResults, lmResults, ruleEngine, memory, 'NAL', 'LM', crossValidated, feedbackEvents);
 
-                for (const nalResult of nalOnLM) {
+        return { results: crossValidated, feedbackEvents };
+    }
+    
+    /**
+     * Helper method to process cross-validation between rule types
+     */
+    async _processCrossValidation(sourceResults, targetResults, ruleEngine, memory, sourceType, targetType, crossValidated, feedbackEvents) {
+        for (const sourceResult of sourceResults) {
+            try {
+                const targetOnSource = sourceType === 'LM' 
+                    ? ruleEngine.applyNALRules(sourceResult, null, memory)
+                    : ruleEngine.applyLMRules(sourceResult, null, memory);
+
+                for (const targetResult of targetOnSource) {
                     const feedbackEvent = {
-                        sourceType: 'LM',
-                        targetType: 'NAL',
-                        sourceResult: lmResult,
-                        targetResult: nalResult,
+                        sourceType,
+                        targetType,
+                        sourceResult,
+                        targetResult,
                         timestamp: Date.now()
                     };
 
                     // Check for agreement or disagreement
-                    if (this.resultsAgree(lmResult, nalResult)) {
+                    if (this.resultsAgree(sourceResult, targetResult)) {
                         feedbackEvent.type = 'agreement';
                         // Boost confidence for agreeing results
-                        const enhancedResult = this.boostTaskConfidence(lmResult, nalResult);
+                        const enhancedResult = this.boostTaskConfidence(sourceResult, targetResult);
                         enhancedResult._cooperationEnhanced = true;
                         crossValidated.push(enhancedResult);
                     } else {
                         feedbackEvent.type = 'disagreement';
                         // Apply conflict resolution for disagreeing results
-                        const resolvedResult = this.resolveResultConflict(lmResult, nalResult);
+                        const resolvedResult = this.resolveResultConflict(sourceResult, targetResult);
                         resolvedResult._cooperationEnhanced = true;
                         crossValidated.push(resolvedResult);
                     }
@@ -142,54 +156,11 @@ export class CooperationEngine {
                     feedbackEvents.push(feedbackEvent);
                 }
             } catch (error) {
-                this.logger.warn('Error applying NAL rules to LM result:', error.message);
-                // Still include the original LM result
-                crossValidated.push(lmResult);
+                this.logger.warn(`Error applying ${targetType} rules to ${sourceType} result:`, error.message);
+                // Still include the original source result
+                crossValidated.push(sourceResult);
             }
         }
-
-        // Cross-validate: apply LM rules to NAL results
-        for (const nalResult of nalResults) {
-            try {
-                const lmOnNAL = ruleEngine.applyLMRules(nalResult, null, memory);
-
-                for (const lmResult of lmOnNAL) {
-                    const feedbackEvent = {
-                        sourceType: 'NAL',
-                        targetType: 'LM',
-                        sourceResult: nalResult,
-                        targetResult: lmResult,
-                        timestamp: Date.now()
-                    };
-
-                    // Check for agreement or disagreement
-                    if (this.resultsAgree(nalResult, lmResult)) {
-                        feedbackEvent.type = 'agreement';
-                        // Boost confidence for agreeing results
-                        const enhancedResult = this.boostTaskConfidence(nalResult, lmResult);
-                        enhancedResult._cooperationEnhanced = true;
-                        crossValidated.push(enhancedResult);
-                    } else {
-                        feedbackEvent.type = 'disagreement';
-                        // Apply conflict resolution for disagreeing results
-                        const resolvedResult = this.resolveResultConflict(nalResult, lmResult);
-                        resolvedResult._cooperationEnhanced = true;
-                        crossValidated.push(resolvedResult);
-                    }
-
-                    feedbackEvents.push(feedbackEvent);
-                }
-            } catch (error) {
-                this.logger.warn('Error applying LM rules to NAL result:', error.message);
-                // Still include the original NAL result
-                crossValidated.push(nalResult);
-            }
-        }
-
-        return {
-            results: crossValidated,
-            feedbackEvents
-        };
     }
 
     /**
@@ -200,13 +171,11 @@ export class CooperationEngine {
 
         // Check if terms match
         const termsMatch = this.termsMatch(result1.term, result2.term);
-
         if (!termsMatch) return false;
 
         // If terms match, check truth value similarity
         if (result1.truth && result2.truth) {
-            const similarity = this.truthValueSimilarity(result1.truth, result2.truth);
-            return similarity > 0.7; // Consider agreeing if >70% similar
+            return this.truthValueSimilarity(result1.truth, result2.truth) > 0.7; // Consider agreeing if >70% similar
         }
 
         // If no truth values, consider as agreement
@@ -221,26 +190,16 @@ export class CooperationEngine {
         const conf1 = result1.truth?.c || 0;
         const conf2 = result2.truth?.c || 0;
 
-        if (conf1 >= conf2) {
-            // Enhance the higher confidence result slightly if both are reasonable
-            if (conf1 > 0.1 && conf2 > 0.1) {
-                const enhancedTruth = {
-                    f: (result1.truth.f + result2.truth.f) / 2,
-                    c: Math.min(0.9, conf1 * 1.1) // Boost slightly but not too much
-                };
-                return {...result1, truth: enhancedTruth};
-            }
-            return result1;
-        } else {
-            if (conf1 > 0.1 && conf2 > 0.1) {
-                const enhancedTruth = {
-                    f: (result1.truth.f + result2.truth.f) / 2,
-                    c: Math.min(0.9, conf2 * 1.1)
-                };
-                return {...result2, truth: enhancedTruth};
-            }
-            return result2;
-        }
+        const higherResult = conf1 >= conf2 ? result1 : result2;
+        const lowerResult = conf1 >= conf2 ? result2 : result1;
+        
+        // Enhance the higher confidence result slightly if both are reasonable
+        return conf1 > 0.1 && conf2 > 0.1
+            ? { ...higherResult, truth: { 
+                f: (result1.truth.f + result2.truth.f) / 2,
+                c: Math.min(0.9, (conf1 >= conf2 ? conf1 : conf2) * 1.1) // Boost slightly but not too much
+            }}
+            : higherResult;
     }
 
     /**
@@ -252,8 +211,10 @@ export class CooperationEngine {
         const deeperResults = [];
         for (const task of tasks) {
             // Apply both rule types to each task to find more inferences
-            const lmMore = ruleEngine.applyLMRules(task, null, memory);
-            const nalMore = ruleEngine.applyNALRules(task, null, memory);
+            const [lmMore, nalMore] = [
+                ruleEngine.applyLMRules(task, null, memory),
+                ruleEngine.applyNALRules(task, null, memory)
+            ];
 
             deeperResults.push(...lmMore, ...nalMore);
 
@@ -283,13 +244,9 @@ export class CooperationEngine {
         ];
 
         // Filter by confidence threshold if configured
-        if (this.config.confidenceThreshold > 0) {
-            return allResults.filter(task =>
-                task.truth?.c !== undefined && task.truth.c >= this.config.confidenceThreshold
-            );
-        }
-
-        return allResults;
+        return this.config.confidenceThreshold > 0
+            ? allResults.filter(task => task.truth?.c !== undefined && task.truth.c >= this.config.confidenceThreshold)
+            : allResults;
     }
 
     /**
@@ -301,9 +258,7 @@ export class CooperationEngine {
 
         // Enhanced feedback with conflict detection and resolution
         for (const lmResult of lmResults) {
-            const matchingNalResults = nalResults.filter(nalResult =>
-                this.termsMatch(lmResult.term, nalResult.term)
-            );
+            const matchingNalResults = nalResults.filter(nalResult => this.termsMatch(lmResult.term, nalResult.term));
 
             if (matchingNalResults.length > 0) {
                 // Multiple matches possible, so we need to handle conflicts
@@ -317,14 +272,12 @@ export class CooperationEngine {
                         // Results are consistent - boost confidence due to cross-validation
                         const enhancedTask = this.boostTaskConfidence(lmResult, consistentMatches[0]);
                         enhancedResults.push(enhancedTask);
-
                         // Record feedback event
                         this.recordFeedbackEvent(lmResult, consistentMatches[0], 'cross_validation');
                     } else {
                         // Results are contradictory but consistent in meaning - apply cautious enhancement
                         const cautiousTask = this.applyCautiousEnhancement(lmResult, matchingNalResults[0]);
                         enhancedResults.push(cautiousTask);
-
                         this.recordFeedbackEvent(lmResult, matchingNalResults[0], 'cross_validation_cautionary');
                     }
                 } else {
@@ -337,22 +290,10 @@ export class CooperationEngine {
             }
         }
 
-        // Process NAL results with LM context
-        for (const nalResult of nalResults) {
-            const matchingLmResults = lmResults.filter(lmResult =>
-                this.termsMatch(nalResult.term, lmResult.term)
-            );
-
-            const matchingLmResult = matchingLmResults.length > 0 ? matchingLmResults[0] : null;
-
-            if (matchingLmResult) {
-                // Already processed above (in LM results), so skip to avoid duplication
-                continue;
-            } else {
-                // Add NAL results that didn't have LM matches (to preserve all reasoning)
-                enhancedResults.push(nalResult);
-            }
-        }
+        // Process NAL results that didn't have LM matches (to preserve all reasoning)
+        enhancedResults.push(...nalResults.filter(nalResult => 
+            !lmResults.some(lmResult => this.termsMatch(nalResult.term, lmResult.term))
+        ));
 
         // Apply advanced conflict resolution for any contradictory results
         return this.resolveConflicts(enhancedResults);
@@ -365,10 +306,9 @@ export class CooperationEngine {
         if (!result || !result.truth) return false;
 
         const {f: frequency, c: confidence} = result.truth;
-        if (frequency === undefined || confidence === undefined) return false;
-
         // Check for valid truth values
-        return frequency >= 0 && frequency <= 1 && confidence >= 0 && confidence <= 1;
+        return frequency !== undefined && confidence !== undefined && 
+               frequency >= 0 && frequency <= 1 && confidence >= 0 && confidence <= 1;
     }
 
     /**
@@ -379,12 +319,9 @@ export class CooperationEngine {
 
         // For now, consider results consistent if truth values are close
         // A more sophisticated approach would consider other factors
-        return candidateResults.filter(candidate => {
-            if (!candidate?.truth) return false;
-
-            const similarity = this.truthValueSimilarity(sourceResult.truth, candidate.truth);
-            return similarity > 0.7; // Consider consistent if >70% similar
-        });
+        return candidateResults.filter(candidate => 
+            candidate?.truth && this.truthValueSimilarity(sourceResult.truth, candidate.truth) > 0.7 // Consider consistent if >70% similar
+        );
     }
 
     /**
@@ -403,14 +340,12 @@ export class CooperationEngine {
      */
     applyCautiousEnhancement(baseResult, validationResult) {
         // Apply minimal confidence boost for cautious enhancement
-        const enhancedTruth = {
-            f: (baseResult.truth.f + validationResult.truth.f) / 2,
-            c: Math.min(0.7, (baseResult.truth.c + validationResult.truth.c) / 2)
-        };
-
         return {
             ...baseResult,
-            truth: enhancedTruth
+            truth: {
+                f: (baseResult.truth.f + validationResult.truth.f) / 2,
+                c: Math.min(0.7, (baseResult.truth.c + validationResult.truth.c) / 2)
+            }
         };
     }
 
@@ -424,21 +359,12 @@ export class CooperationEngine {
         const groupedByTerm = new Map();
         results.forEach(result => {
             const termKey = result.term ? result.term.toString() : 'unknown';
-            if (!groupedByTerm.has(termKey)) {
-                groupedByTerm.set(termKey, []);
-            }
-            groupedByTerm.get(termKey).push(result);
+            (groupedByTerm.get(termKey) || groupedByTerm.set(termKey, []).get(termKey)).push(result);
         });
 
         const resolvedResults = [];
         for (const [termKey, termResults] of groupedByTerm) {
-            if (termResults.length === 1) {
-                resolvedResults.push(termResults[0]);
-            } else {
-                // Multiple results for the same term - resolve conflicts
-                const resolved = this.resolveConflictsForTerm(termResults);
-                resolvedResults.push(resolved);
-            }
+            resolvedResults.push(termResults.length === 1 ? termResults[0] : this.resolveConflictsForTerm(termResults));
         }
 
         return resolvedResults;
@@ -450,10 +376,10 @@ export class CooperationEngine {
     resolveConflictsForTerm(results) {
         // For now, select the result with highest confidence
         // More sophisticated approaches could consider other factors
-        return results.reduce((best, current) => {
-            if (!best.truth || !current.truth) return current;
-            return (current.truth.c || 0) > (best.truth.c || 0) ? current : best;
-        });
+        return results.reduce((best, current) => 
+            (!best.truth || !current.truth) ? current : 
+            ((current.truth.c || 0) > (best.truth.c || 0) ? current : best)
+        );
     }
 
     /**
@@ -483,14 +409,12 @@ export class CooperationEngine {
      * Boosts the confidence of a task based on cross-validation
      */
     boostTaskConfidence(task1, task2) {
-        const combinedTruth = {
-            f: ((task1.truth?.f || 0.5) + (task2.truth?.f || 0.5)) / 2,
-            c: Math.min(0.95, (task1.truth?.c || 0.5) + (task2.truth?.c || 0.5))
-        };
-
         return {
             ...task1,
-            truth: combinedTruth
+            truth: {
+                f: ((task1.truth?.f || 0.5) + (task2.truth?.f || 0.5)) / 2,
+                c: Math.min(0.95, (task1.truth?.c || 0.5) + (task2.truth?.c || 0.5))
+            }
         };
     }
 
