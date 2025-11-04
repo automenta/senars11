@@ -1,34 +1,27 @@
 import {Term} from '../../term/Term.js';
 
 export class PatternMatcher {
-    unify(pattern, term, existingBindings = null) {
+    unify = (pattern, term, existingBindings = null) => {
         const bindings = existingBindings || new Map();
         return this._unifyTerms(pattern, term, bindings) ? bindings : null;
     }
 
-    unifyMultiple(patternTermPairs, initialBindings = new Map()) {
+    unifyMultiple = (patternTermPairs, initialBindings = new Map()) => {
         let currentBindings = new Map(initialBindings);
-
         for (const {pattern, term} of patternTermPairs) {
             const result = this.unify(pattern, term, currentBindings);
             if (!result) return null;
             currentBindings = result;
         }
-
         return currentBindings;
     }
 
     _unifyTerms(pattern, term, bindings) {
         if (this._isVariable(pattern)) {
             const variableName = pattern.name || pattern.toString();
-
-            if (bindings.has(variableName)) {
-                const boundValue = bindings.get(variableName);
-                return this._termsEqual(boundValue, term, bindings);
-            } else {
-                bindings.set(variableName, term);
-                return true;
-            }
+            return bindings.has(variableName) ? 
+                this._termsEqual(bindings.get(variableName), term, bindings) : 
+                (bindings.set(variableName, term), true);
         }
 
         if (pattern.type !== term.type) return false;
@@ -38,36 +31,24 @@ export class PatternMatcher {
     }
 
     _unifyCompound(pattern, term, bindings) {
-        if (pattern.operator !== term.operator) return false;
-        if (pattern.components.length !== term.components.length) return false;
-
-        for (let i = 0; i < pattern.components.length; i++) {
-            if (!this._unifyTerms(pattern.components[i], term.components[i], bindings)) return false;
-        }
-        return true;
+        if (pattern.operator !== term.operator || pattern.components.length !== term.components.length) return false;
+        return pattern.components.every((comp, i) => this._unifyTerms(comp, term.components[i], bindings));
     }
 
     substitute(term, bindings) {
         if (this._isVariable(term)) {
             const variableName = term.name || term.toString();
-            if (bindings.has(variableName)) {
-                let boundValue = bindings.get(variableName);
-                return this.substitute(boundValue, bindings);
-            }
-            return term;
+            return bindings.has(variableName) ? 
+                this.substitute(bindings.get(variableName), bindings) : 
+                term;
         }
 
-        if (term.isCompound) {
-            const newComponents = term.components.map(comp => this.substitute(comp, bindings));
-            return new Term(term.type, term.name, newComponents, term.operator);
-        }
-
-        return term;
+        return term.isCompound ? 
+            new Term(term.type, term.name, term.components.map(comp => this.substitute(comp, bindings)), term.operator) : 
+            term;
     }
 
-    _isVariable(term) {
-        return !!(term?.name?.startsWith?.('?'));
-    }
+    _isVariable = (term) => !!(term?.name?.startsWith?.('?'))
 
     _termsEqual(t1, t2, bindings = null) {
         if (!t1 || !t2) return t1 === t2;
@@ -83,19 +64,15 @@ export class PatternMatcher {
         if (t1.isAtomic && t2.isAtomic) return true;
 
         if (t1.isCompound && t2.isCompound) {
-            if (t1.operator !== t2.operator) return false;
-            if (t1.components.length !== t2.components.length) return false;
-
-            for (let i = 0; i < t1.components.length; i++) {
-                if (!this._termsEqual(t1.components[i], t2.components[i], bindings)) return false;
-            }
-            return true;
+            return t1.operator === t2.operator && 
+                   t1.components.length === t2.components.length && 
+                   t1.components.every((comp, i) => this._termsEqual(comp, t2.components[i], bindings));
         }
 
         return false;
     }
 
-    unifyHigherOrder(pattern, term, existingBindings = null) {
+    unifyHigherOrder = (pattern, term, existingBindings = null) => {
         const bindings = existingBindings || new Map();
         return this._unifyHigherOrderTerms(pattern, term, bindings) ? bindings : null;
     }
@@ -103,38 +80,27 @@ export class PatternMatcher {
     _unifyHigherOrderTerms(pattern, term, bindings) {
         if (this._isVariable(pattern)) {
             const variableName = pattern.name || pattern.toString();
-
-            if (bindings.has(variableName)) {
-                const boundValue = bindings.get(variableName);
-                return this._termsEqualHigherOrder(boundValue, term, bindings);
-            } else {
-                bindings.set(variableName, term);
-                return true;
-            }
+            return bindings.has(variableName) ? 
+                this._termsEqualHigherOrder(bindings.get(variableName), term, bindings) : 
+                (bindings.set(variableName, term), true);
         }
 
         if (pattern.isAtomic && term.isAtomic) return this._termsEqualHigherOrder(pattern, term, bindings);
 
         if (pattern.isCompound && term.isCompound) {
             if (pattern.operator !== term.operator) {
-                if (this._isVariable(pattern) || this._isVariable(term)) {
-                    if (this._isVariable(pattern)) {
-                        bindings.set(pattern.name, term);
-                        return true;
-                    } else if (this._isVariable(term)) {
-                        bindings.set(term.name, pattern);
-                        return true;
-                    }
+                if (this._isVariable(pattern)) {
+                    bindings.set(pattern.name, term);
+                    return true;
+                } else if (this._isVariable(term)) {
+                    bindings.set(term.name, pattern);
+                    return true;
                 }
                 return false;
             }
 
-            if (pattern.components.length !== term.components.length) return false;
-
-            for (let i = 0; i < pattern.components.length; i++) {
-                if (!this._unifyHigherOrderTerms(pattern.components[i], term.components[i], bindings)) return false;
-            }
-            return true;
+            return pattern.components.length === term.components.length && 
+                   pattern.components.every((comp, i) => this._unifyHigherOrderTerms(comp, term.components[i], bindings));
         }
 
         return false;
@@ -154,13 +120,9 @@ export class PatternMatcher {
         if (t1.isAtomic && t2.isAtomic) return t1.name === t2.name;
 
         if (t1.isCompound && t2.isCompound) {
-            if (t1.operator !== t2.operator) return false;
-            if (t1.components.length !== t2.components?.length) return false;
-
-            for (let i = 0; i < t1.components.length; i++) {
-                if (!this._termsEqualHigherOrder(t1.components[i], t2.components[i], bindings)) return false;
-            }
-            return true;
+            return t1.operator === t2.operator && 
+                   t1.components.length === t2.components?.length && 
+                   t1.components.every((comp, i) => this._termsEqualHigherOrder(comp, t2.components[i], bindings));
         }
 
         return false;

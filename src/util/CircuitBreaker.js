@@ -1,4 +1,13 @@
+/**
+ * Circuit breaker pattern implementation for fault tolerance
+ */
 export class CircuitBreaker {
+    static STATES = {
+        CLOSED: 'CLOSED',
+        OPEN: 'OPEN',
+        HALF_OPEN: 'HALF_OPEN'
+    };
+    
     constructor(options = {}) {
         this.options = {
             failureThreshold: options.failureThreshold || 5,
@@ -7,24 +16,24 @@ export class CircuitBreaker {
             halfOpenAttempts: options.halfOpenAttempts || 1,
             ...options
         };
-
-        this.state = 'CLOSED';
+        
+        this.state = CircuitBreaker.STATES.CLOSED;
         this.failureCount = 0;
         this.lastFailureTime = null;
         this.successCount = 0;
     }
-
+    
     async execute(fn, context = {}) {
-        if (this.state === 'OPEN' && this.isResetTimeoutExpired()) {
-            this.transitionTo('HALF_OPEN');
+        if (this.state === CircuitBreaker.STATES.OPEN && this.isResetTimeoutExpired()) {
+            this.transitionTo(CircuitBreaker.STATES.HALF_OPEN);
             this.successCount = 0;
         }
-
-        if (this.state !== 'HALF_OPEN' && this.shouldOpen()) {
+        
+        if (this.state !== CircuitBreaker.STATES.HALF_OPEN && this.shouldOpen()) {
             this.forceOpen();
             throw new Error('Circuit breaker is OPEN');
         }
-
+        
         try {
             const result = await fn(context);
             this.onSuccess();
@@ -34,35 +43,35 @@ export class CircuitBreaker {
             throw error;
         }
     }
-
+    
     onSuccess() {
         this.failureCount = 0;
         this.successCount++;
         
-        if (this.state === 'HALF_OPEN' && this.successCount >= this.options.halfOpenAttempts) {
-            this.transitionTo('CLOSED');
+        if (this.state === CircuitBreaker.STATES.HALF_OPEN && this.successCount >= this.options.halfOpenAttempts) {
+            this.transitionTo(CircuitBreaker.STATES.CLOSED);
             this.successCount = 0;
         }
     }
-
+    
     onFailure() {
         this.failureCount++;
         this.failureCount >= this.options.failureThreshold && this.forceOpen();
     }
-
+    
     shouldOpen() {
         return this.failureCount >= this.options.failureThreshold;
     }
-
+    
     isResetTimeoutExpired() {
         return Date.now() - this.lastFailureTime >= this.options.resetTimeout;
     }
-
+    
     transitionTo(newState) {
         this.state = newState;
-        this.lastFailureTime = newState === 'OPEN' ? Date.now() : this.lastFailureTime;
+        this.lastFailureTime = newState === CircuitBreaker.STATES.OPEN ? Date.now() : this.lastFailureTime;
     }
-
+    
     getState() {
         return {
             state: this.state,
@@ -73,28 +82,40 @@ export class CircuitBreaker {
             isResetTimeoutExpired: this.isResetTimeoutExpired()
         };
     }
-
+    
     reset() {
-        this.transitionTo('CLOSED');
+        this.transitionTo(CircuitBreaker.STATES.CLOSED);
         this.failureCount = 0;
         this.successCount = 0;
         this.lastFailureTime = null;
     }
-
+    
     forceOpen() {
-        this.transitionTo('OPEN');
+        this.transitionTo(CircuitBreaker.STATES.OPEN);
     }
-
+    
     forceClose() {
-        this.transitionTo('CLOSED');
+        this.transitionTo(CircuitBreaker.STATES.CLOSED);
         this.failureCount = 0;
         this.successCount = 0;
         this.lastFailureTime = null;
+    }
+    
+    isOpen() {
+        return this.state === CircuitBreaker.STATES.OPEN;
+    }
+    
+    isClosed() {
+        return this.state === CircuitBreaker.STATES.CLOSED;
+    }
+    
+    isHalfOpen() {
+        return this.state === CircuitBreaker.STATES.HALF_OPEN;
     }
 }
 
 export const withCircuitBreaker = (fn, circuitBreakerOptions = {}) => {
     const circuitBreaker = new CircuitBreaker(circuitBreakerOptions);
-
+    
     return async (...args) => circuitBreaker.execute(() => fn(...args));
 };

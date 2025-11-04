@@ -69,16 +69,16 @@ export class PropertyBasedTester {
     check(property, generator, options = {}) {
         const maxTests = options.maxTests || this.maxTests;
         let successes = 0;
-
+        
         for (let i = 0; i < maxTests; i++) {
             try {
                 const input = generator(this.random);
                 const result = property(input);
-
+                
                 if (!result) {
                     this.failures.push({
                         testNumber: i,
-                        input: input,
+                        input,
                         property: property.name || 'anonymous'
                     });
                     return false;
@@ -87,14 +87,14 @@ export class PropertyBasedTester {
             } catch (error) {
                 this.failures.push({
                     testNumber: i,
-                    input: input,
-                    error: error,
+                    input,
+                    error,
                     property: property.name || 'anonymous'
                 });
                 return false;
             }
         }
-
+        
         return {
             passed: true,
             successes,

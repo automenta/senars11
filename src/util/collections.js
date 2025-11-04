@@ -13,11 +13,21 @@ export const groupBy = (items, keyFn) =>
 
 export const applyToAll = (items, fn) => items.forEach(fn);
 
-export const createMap = (items, keyFn, valueFn = x => x) => 
+export const createMap = (items, keyFn, valueFn = x => x) =>
     new Map(items.map(item => [keyFn(item), valueFn(item)]));
 
-export const createSet = (items, keyFn = x => x) => 
+export const createSet = (items, keyFn = x => x) =>
     new Set(items.map(keyFn));
+
+export const chunk = (array, size) => {
+    const chunks = [];
+    for (let i = 0; i < array.length; i += size) {
+        chunks.push(array.slice(i, i + size));
+    }
+    return chunks;
+};
+
+export const flatten = arrays => [].concat(...arrays);
 
 // Numeric array utilities
 export const calculateAverage = (values) => {
@@ -26,8 +36,8 @@ export const calculateAverage = (values) => {
 };
 
 export const calculateStatistics = (values) => {
-    if (!values || values.length === 0) return { 
-        mean: 0, median: 0, std: 0, min: 0, max: 0, count: 0 
+    if (!values || values.length === 0) return {
+        mean: 0, median: 0, std: 0, min: 0, max: 0, count: 0
     };
     
     const sorted = [...values].sort((a, b) => a - b);
@@ -82,3 +92,7 @@ export const correlation = (values1, values2) => {
     const denominator = Math.sqrt(sumSq1 * sumSq2);
     return denominator === 0 ? 0 : numerator / denominator;
 };
+
+export const sum = values => values.reduce((acc, val) => acc + val, 0);
+export const min = values => Math.min(...values);
+export const max = values => Math.max(...values);

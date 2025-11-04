@@ -195,7 +195,7 @@ export class ErrorHandling {
 
     getDegradationLevel() { return this.degradationLevel; }
     isDegraded() { return this.degradationLevel > 0.5; }
-
+    
     getStats() {
         return {
             degradationLevel: this.degradationLevel,
@@ -207,6 +207,17 @@ export class ErrorHandling {
                 key, count: value.count, lastSeen: value.lastSeen, instances: value.instances.length
             }))
         };
+    }
+    
+    resetStats() {
+        this.errorRegistry.clear();
+        this.tracker.errorRateWindow = [];
+        this.recovery.recoveryAttempts.clear();
+        this.degradationLevel = 0;
+    }
+    
+    getErrorTypes() {
+        return Object.values(ERROR_TYPES);
     }
 }
 

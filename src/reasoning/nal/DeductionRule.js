@@ -21,23 +21,21 @@ export class DeductionRule extends NALRule {
 
         const [subject, predicate] = task.term.components;
         const complementaryTasks = RuleUtils.findTasksByTerm(subject, context, this._unify.bind(this));
-        const results = [];
 
-        for (const compTask of complementaryTasks) {
-            const bindings = this._unify(subject, compTask.term);
-            if (bindings) {
-                const derivedTerm = predicate;
-                const derivedTruth = this._calculateTruth(task.truth, compTask.truth);
-                
-                results.push(this._createDerivedTask(task, {
-                    term: derivedTerm,
-                    truth: derivedTruth,
-                    type: compTask.type,
-                    priority: task.priority * compTask.priority * this.priority
-                }));
-            }
-        }
-
-        return results;
+        return complementaryTasks
+            .map(compTask => {
+                const bindings = this._unify(subject, compTask.term);
+                if (bindings) {
+                    const derivedTruth = this._calculateTruth(task.truth, compTask.truth);
+                    return this._createDerivedTask(task, {
+                        term: predicate,
+                        truth: derivedTruth,
+                        type: compTask.type,
+                        priority: task.priority * compTask.priority * this.priority
+                    });
+                }
+                return null;
+            })
+            .filter(Boolean);
     }
 }

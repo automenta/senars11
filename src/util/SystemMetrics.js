@@ -186,4 +186,13 @@ export class SystemMetrics {
             timestamp: Date.now(),
         };
     }
+    
+    getRecentCycleTimes(count = 10) {
+        return this.cycleTimes.slice(-count);
+    }
+    
+    getErrorRate() {
+        const uptime = Date.now() - this.metrics.startTime;
+        return uptime > 0 ? this.metrics.errorCount / (uptime / 1000) : 0;
+    }
 }

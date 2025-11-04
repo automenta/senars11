@@ -38,9 +38,9 @@ export class RuleEngine extends BaseRuleEngine {
      * @param {Array} hybridRules - Array of hybrid rules to register
      */
     async initialize(nalRules = [], lmRules = [], hybridRules = []) {
-        this._registerRules('nal', nalRules);
-        this._registerRules('lm', lmRules);
-        this._registerRules('hybrid', hybridRules);
+        ['nal', 'lm', 'hybrid'].forEach((type, i) => 
+            this._registerRules(type, [nalRules, lmRules, hybridRules][i])
+        );
         return this;
     }
 
@@ -56,10 +56,7 @@ export class RuleEngine extends BaseRuleEngine {
      * @param {string} name - Name of the context provider
      * @param {Function} provider - Function that provides context given parameters
      */
-    addContextProvider(name, provider) {
-        this._contextProviders.set(name, provider);
-        return this;
-    }
+    addContextProvider = (name, provider) => (this._contextProviders.set(name, provider), this)
 
     /**
      * Get context for rule application
@@ -93,9 +90,7 @@ export class RuleEngine extends BaseRuleEngine {
      * @param {Object} context - Context for rule application
      * @returns {Array} - Array of derived tasks
      */
-    async applyNalRules(task, context = {}) {
-        return this._applyRules('nal', task, context);
-    }
+    applyNalRules = async (task, context = {}) => this._applyRules('nal', task, context)
 
     /**
      * Apply LM rules to a task
@@ -103,9 +98,7 @@ export class RuleEngine extends BaseRuleEngine {
      * @param {Object} context - Context for rule application
      * @returns {Array} - Array of derived tasks
      */
-    async applyLmRules(task, context = {}) {
-        return this._applyRules('lm', task, context);
-    }
+    applyLmRules = async (task, context = {}) => this._applyRules('lm', task, context)
 
     /**
      * Apply hybrid NAL-LM rules to a task
@@ -113,9 +106,7 @@ export class RuleEngine extends BaseRuleEngine {
      * @param {Object} context - Context for rule application
      * @returns {Array} - Array of derived tasks
      */
-    async applyHybridRules(task, context = {}) {
-        return this._applyRules('hybrid', task, context);
-    }
+    applyHybridRules = async (task, context = {}) => this._applyRules('hybrid', task, context)
 
     /**
      * Generic method to apply rules of a specific type
@@ -150,13 +141,9 @@ export class RuleEngine extends BaseRuleEngine {
         return await this._applyRulesByTypes(task, context, this._getEnabledRuleTypes());
     }
 
-    _getEnabledRuleTypes() {
-        return [
-            [this._config.enableNal, 'nal'],
-            [this._config.enableLm, 'lm'],
-            [this._config.enableHybrid, 'hybrid']
-        ].filter(([enabled]) => enabled).map(([_, type]) => type);
-    }
+    _getEnabledRuleTypes = () => 
+        [['nal', this._config.enableNal], ['lm', this._config.enableLm], ['hybrid', this._config.enableHybrid]]
+            .filter(([_, enabled]) => enabled).map(([type, _]) => type)
 
     async _applyRulesByTypes(task, context, ruleTypes) {
         const results = [];
@@ -203,9 +190,7 @@ export class RuleEngine extends BaseRuleEngine {
      */
     _isNalSuitable(task, context) {
         // NAL is suitable for structured, symbolic tasks
-        return task.term &&
-            task.term.isCompound &&
-            !this._isAmbiguous(task.term);
+        return task.term && task.term.isCompound && !this._isAmbiguous(task.term);
     }
 
     /**
@@ -216,9 +201,7 @@ export class RuleEngine extends BaseRuleEngine {
      */
     _isLmSuitable(task, context) {
         // LM is suitable for complex, ambiguous, or natural language tasks
-        return this._isAmbiguous(task.term) ||
-            this._isComplex(task) ||
-            this._requiresCreativity(task, context);
+        return this._isAmbiguous(task.term) || this._isComplex(task) || this._requiresCreativity(task, context);
     }
 
     /**
@@ -229,8 +212,8 @@ export class RuleEngine extends BaseRuleEngine {
      */
     _isHybridSuitable(task, context) {
         // Hybrid is suitable when both NAL and LM can contribute
-        return this._hasPartialInformation(task, context) &&
-            (this._isNalSuitable(task, context) || this._isLmSuitable(task, context));
+        return this._hasPartialInformation(task, context) && 
+               (this._isNalSuitable(task, context) || this._isLmSuitable(task, context));
     }
 
     /**
@@ -242,8 +225,7 @@ export class RuleEngine extends BaseRuleEngine {
         if (!term) return false;
 
         // Check for variables or highly general terms
-        return term.isVariable ||
-            (term.name && (term.name === 'any' || term.name === '?'));
+        return term.isVariable || (term.name && (term.name === 'any' || term.name === '?'));
     }
 
     /**
@@ -262,10 +244,7 @@ export class RuleEngine extends BaseRuleEngine {
      * @param {Object} context - Context for analysis
      * @returns {boolean} - Whether the task requires creativity
      */
-    _requiresCreativity(task, context) {
-        // For now, assume open-ended questions or goals require creativity
-        return task.type === 'QUESTION' || task.type === 'GOAL';
-    }
+    _requiresCreativity = (task, context) => task.type === 'QUESTION' || task.type === 'GOAL'
 
     /**
      * Check if the task has partial information that could benefit from LM
@@ -275,9 +254,8 @@ export class RuleEngine extends BaseRuleEngine {
      */
     _hasPartialInformation(task, context) {
         // Check if there's not enough information in memory for pure NAL reasoning
-        return context.memory &&
-            context.memory.getRelevantTasks &&
-            context.memory.getRelevantTasks(task.term).length < 2;
+        return context.memory?.getRelevantTasks && 
+               context.memory.getRelevantTasks(task.term)?.length < 2;
     }
 
     /**
@@ -307,10 +285,10 @@ export class RuleEngine extends BaseRuleEngine {
         };
     }
 
-    enableCategory(category) { return this._updateRuleStatus(category, 'enable', 'Category'); }
-    disableCategory(category) { return this._updateRuleStatus(category, 'disable', 'Category'); }
-    enableRule(ruleId, type) { return this._updateRuleStatus(type, 'enable', ruleId); }
-    disableRule(ruleId, type) { return this._updateRuleStatus(type, 'disable', ruleId); }
+    enableCategory = (category) => this._updateRuleStatus(category, 'enable', 'Category')
+    disableCategory = (category) => this._updateRuleStatus(category, 'disable', 'Category')
+    enableRule = (ruleId, type) => this._updateRuleStatus(type, 'enable', ruleId)
+    disableRule = (ruleId, type) => this._updateRuleStatus(type, 'disable', ruleId)
 
     /**
      * Generic method to update rule status
@@ -321,9 +299,7 @@ export class RuleEngine extends BaseRuleEngine {
     _updateRuleStatus(type, operation, value) {
         const ruleManager = this[`_${type}Rules`];
         if (ruleManager) {
-            const method = value === 'Category' 
-                ? `${operation}Category` 
-                : operation;
+            const method = value === 'Category' ? `${operation}Category` : operation;
             ruleManager[method](value === 'Category' ? type : value);
         }
         return this;

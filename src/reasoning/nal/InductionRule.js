@@ -21,26 +21,23 @@ export class InductionRule extends NALRule {
         if (!this._matches(task, context)) return [];
 
         const [subject, predicate] = task.term.components;
-        const allTasks = RuleUtils.collectTasks(context);
-        const inheritanceTasks = RuleUtils.filterByInheritance(allTasks);
-        const results = [];
+        const inheritanceTasks = RuleUtils.filterByInheritance(RuleUtils.collectTasks(context));
 
-        for (const compTask of inheritanceTasks) {
-            const [compSubject, compPredicate] = compTask.term.components;
-            
-            if (this._unify(compSubject, predicate) && this._unify(compPredicate, subject)) {
+        return inheritanceTasks
+            .filter(compTask => {
+                const [compSubject, compPredicate] = compTask.term.components;
+                return this._unify(compSubject, predicate) && this._unify(compPredicate, subject);
+            })
+            .map(compTask => {
                 const derivedTerm = new Term('compound', 'SIMILARITY', [subject, predicate], '<->');
                 const derivedTruth = this._calculateTruth(task.truth, compTask.truth);
-
-                results.push(this._createDerivedTask(task, {
+                
+                return this._createDerivedTask(task, {
                     term: derivedTerm,
                     truth: derivedTruth,
                     type: 'BELIEF',
                     priority: task.priority * compTask.priority * this.priority
-                }));
-            }
-        }
-
-        return results;
+                });
+            });
     }
 }

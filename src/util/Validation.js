@@ -141,6 +141,6 @@ export class SpecValidator {
             total: report.total, passed: report.passed, failed: report.failed,
             rate: `${(report.passRate * 100).toFixed(2)}%`, valid: report.isValid
         });
-        if (report.failed > 0) this.logger.warn('FAILED TESTS:', report.details);
+        report.failed > 0 && this.logger.warn('FAILED TESTS:', report.details);
     };
 }

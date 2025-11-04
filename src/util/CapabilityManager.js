@@ -418,8 +418,31 @@ export class CapabilityManager {
             data,
             timestamp: new Date().toISOString()
         };
-
+        
         this.auditLog.push(event);
         this.auditLog.length > 10000 && (this.auditLog = this.auditLog.slice(-5000));
+    }
+    
+    hasCapabilityType(toolId, capabilityType) {
+        const toolGrants = this.grants.get(toolId);
+        if (!toolGrants) return false;
+        
+        for (const capId of toolGrants) {
+            const capability = this.capabilities.get(capId);
+            if (capability?.type === capabilityType) return true;
+        }
+        return false;
+    }
+    
+    getCapabilityTypesForTool(toolId) {
+        const toolGrants = this.grants.get(toolId);
+        if (!toolGrants) return [];
+        
+        const types = new Set();
+        for (const capId of toolGrants) {
+            const capability = this.capabilities.get(capId);
+            capability?.type && types.add(capability.type);
+        }
+        return Array.from(types);
     }
 }

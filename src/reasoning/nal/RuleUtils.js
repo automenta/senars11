@@ -1,19 +1,14 @@
 export class RuleUtils {
     static collectTasks(context) {
         const {memory, focus} = context || {};
-        const tasks = [];
-
-        if (memory?.getAllTasks) tasks.push(...memory.getAllTasks());
-        if (focus?.getCurrentTasks) tasks.push(...focus.getCurrentTasks());
-
-        return tasks;
+        return [
+            ...(memory?.getAllTasks ? memory.getAllTasks() : []),
+            ...(focus?.getCurrentTasks ? focus.getCurrentTasks() : [])
+        ];
     }
 
     static filterByTerm(tasks, term, unifyFn) {
-        return tasks.filter(task => {
-            if (!task?.term) return false;
-            return unifyFn(term, task.term) !== null;
-        });
+        return tasks.filter(task => task?.term && unifyFn(term, task.term) !== null);
     }
 
     static filterByInheritance(tasks, operator = '-->') {
@@ -24,12 +19,7 @@ export class RuleUtils {
         );
     }
 
-    static findTasksByTerm(term, context, unifyFn) {
-        const allTasks = this.collectTasks(context);
-        return this.filterByTerm(allTasks, term, unifyFn);
-    }
+    static findTasksByTerm = (term, context, unifyFn) => this.filterByTerm(this.collectTasks(context), term, unifyFn);
 
-    static applyTruthOperation(operation, t1, t2) {
-        return operation(t1, t2);
-    }
+    static applyTruthOperation = (operation, t1, t2) => operation(t1, t2);
 }

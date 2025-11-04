@@ -14,9 +14,7 @@ export class NALRule extends Rule {
         this.category = config.category || 'general';
     }
 
-    canApply(task, context = {}) {
-        return super.canApply(task) && this._matches(task, context);
-    }
+    canApply = (task, context = {}) => super.canApply(task) && this._matches(task, context)
 
     async apply(task, context = {}) {
         if (!this.canApply(task, context)) return {results: [], rule: this};
@@ -38,29 +36,19 @@ export class NALRule extends Rule {
         return []; // Override in subclasses
     }
 
-    _unify(pattern, term) {
-        return this._patternMatcher.unify(pattern, term);
-    }
-
-    _unifyHigherOrder(pattern, term) {
-        return this._patternMatcher.unifyHigherOrder(pattern, term);
-    }
-
-    _substitute(term, bindings) {
-        return this._patternMatcher.substitute(term, bindings);
-    }
+    _unify = (pattern, term) => this._patternMatcher.unify(pattern, term)
+    _unifyHigherOrder = (pattern, term) => this._patternMatcher.unifyHigherOrder(pattern, term)
+    _substitute = (term, bindings) => this._patternMatcher.substitute(term, bindings)
 
     _calculateTruth(truth1, truth2) {
         return this._truthFunction ? this._truthFunction(truth1, truth2) : truth1;
     }
 
-    _createDerivedTask(originalTask, properties) {
-        return {
-            term: properties.term || originalTask.term,
-            truth: properties.truth || originalTask.truth,
-            type: properties.type || originalTask.type,
-            stamp: properties.stamp || originalTask.stamp,
-            priority: properties.priority || (originalTask.priority * this.priority)
-        };
-    }
+    _createDerivedTask = (originalTask, properties) => ({
+        term: properties.term || originalTask.term,
+        truth: properties.truth || originalTask.truth,
+        type: properties.type || originalTask.type,
+        stamp: properties.stamp || originalTask.stamp,
+        priority: properties.priority || (originalTask.priority * this.priority)
+    })
 }
