@@ -18,250 +18,397 @@ try {
 
 const TOP_N = 20;
 
-class BaseAnalyzer {
-  constructor() {
-    if (this.constructor === BaseAnalyzer) {
-      throw new Error("Cannot instantiate abstract class BaseAnalyzer");
-    }
-  }
-
-  async analyze() {
-    throw new Error("analyze method must be implemented");
+// Common utilities
+class FileUtils {
+  static readonlyExclusions = new Set([
+    'src/parser/peggy-parser.js',
+    'peggy-parser.js',
+    './peggy-parser.js',
+    'peggy-parser.js',
+    'node_modules/**/*',
+    '.git/**/*',
+    'dist/**/*',
+    'build/**/*',
+    '.next/**/*',
+    'coverage/**/*',
+    'node_modules/*',
+    '.git/*',
+    'dist/*',
+    'build/*',
+    '.next/*',
+    'coverage/*'
+  ]);
+  
+  static isExcludedPath(filePath) {
+    const normalizedPath = path.normalize(filePath).replace(/\\/g, '/');
+    return Array.from(this.readonlyExclusions).some(exclusion => {
+      if (exclusion.startsWith('**/')) {
+        return normalizedPath.includes(exclusion.substring(3));
+      } else if (exclusion.endsWith('/*')) {
+        const prefix = exclusion.slice(0, -2);
+        return normalizedPath.startsWith(prefix) || normalizedPath.includes('/' + prefix);
+      } else {
+        return normalizedPath.includes(exclusion);
+      }
+    });
   }
   
-  validateResults(results) {
-    if (!results || typeof results !== 'object') {
-      return false;
-    }
-    
-    // Basic validation - results should have meaningful content
-    const hasError = results.error !== undefined;
-    const hasContent = Object.keys(results).some(key => 
-      key !== 'error' && results[key] !== null && results[key] !== undefined
-    );
-    
-    return hasError || hasContent;
-  }
-  
-  safeGet(obj, path, defaultValue = null) {
+  static readJSONFile(filePath) {
     try {
-      return path.reduce((current, key) => current && current[key] !== undefined ? current[key] : defaultValue, obj);
-    } catch (e) {
-      return defaultValue;
-    }
-  }
-  
-  sanitizeString(str) {
-    if (typeof str !== 'string') {
-      return '';
-    }
-    // Remove control characters and normalize
-    return str.replace(/[\x00-\x1F\x7F-\x9F]/g, '').trim();
-  }
-}
-
-// StandardAnalyzer extends BaseAnalyzer with common functionality
-class StandardAnalyzer extends BaseAnalyzer {
-  constructor(options, verbose) {
-    super();
-    this.options = options;
-    this.verbose = verbose;
-  }
-  
-  // Common error handling and result formatting
-  createSuccessResult(data) {
-    return {
-      status: 'success',
-      data,
-      timestamp: Date.now()
-    };
-  }
-  
-  createErrorResult(errorMsg) {
-    if (this.verbose) console.log(`❌ ${errorMsg}`);
-    return {
-      status: 'error',
-      error: errorMsg,
-      timestamp: Date.now()
-    };
-  }
-  
-  // Common try/catch wrapper for analysis methods
-  async safeAnalyze(analysisFunction, errorMessage) {
-    try {
-      return await analysisFunction();
-    } catch (error) {
-      return this.createErrorResult(`${errorMessage}: ${error.message}`);
-    }
-  }
-  
-  // Common file reading with error handling
-  safeReadFile(filePath) {
-    try {
-      return fs.readFileSync(filePath, 'utf8');
-    } catch (error) {
-      if (this.verbose) console.log(`⚠️ Cannot read file: ${filePath}`, error.message);
-      return null;
-    }
-  }
-  
-  // Common JSON parsing with error handling
-  safeParseJSON(content, filePath = 'unknown') {
-    try {
-      if (!content || !content.trim()) {
-        if (this.verbose) console.log(`⚠️ Empty content when parsing JSON from: ${filePath}`);
+      const content = fs.readFileSync(filePath, 'utf8');
+      if (!content.trim()) {
+        console.log(`⚠️ Empty content when parsing JSON from: ${filePath}`);
         return null;
       }
       return JSON.parse(content);
     } catch (error) {
-      if (this.verbose) console.log(`❌ Error parsing JSON from ${filePath}:`, error.message);
+      console.log(`❌ Error parsing JSON from ${filePath}:`, error.message);
       return null;
     }
   }
-  
-  /**
-   * Normalize analysis results to a standard format
-   * @param {Object} results - Raw analysis results
-   * @param {string} analyzerType - Type of analyzer
-   * @returns {Object} Normalized results
-   */
-  normalizeResults(results, analyzerType) {
-    if (!results) return null;
-    
-    const normalized = {
-      type: analyzerType,
-      timestamp: Date.now(),
-      data: {},
-      metadata: {
-        hasError: !!results.error,
-        error: results.error || null,
-        status: results.status || (results.error ? 'error' : 'completed')
+
+  static analyzeCoverageByFile(verbose = false) {
+    try {
+      const coverageDetailPath = './coverage/coverage-final.json';
+      if (!fs.existsSync(coverageDetailPath)) return [];
+
+      let coverageDetail;
+      try {
+        const fileContent = fs.readFileSync(coverageDetailPath, 'utf8');
+        if (!fileContent.trim()) {
+          console.log('❌ Coverage file is empty');
+          return [];
+        }
+        coverageDetail = JSON.parse(fileContent);
+      } catch (parseError) {
+        console.log('❌ Error parsing coverage-final.json:', parseError.message);
+        return [];
       }
+      
+      const files = [];
+      for (const [filePath, coverage] of Object.entries(coverageDetail)) {
+        try {
+          if (!filePath || typeof filePath !== 'string') {
+            continue; // Skip invalid file paths
+          }
+          
+          if (filePath.startsWith('./')) {
+            filePath = path.resolve(filePath);
+          }
+          
+          // Skip excluded files
+          const relativePath = path.relative(process.cwd(), filePath);
+          if (this.isExcludedPath(relativePath)) {
+            continue;
+          }
+          
+          // Validate coverage structure before accessing properties
+          if (!coverage || typeof coverage !== 'object' || !coverage.s) {
+            if (verbose) console.log(`⚠️ Invalid coverage structure for file: ${filePath}`);
+            continue;
+          }
+          
+          const summary = coverage.s;
+          if (typeof summary !== 'object') {
+            continue; // Skip if summary is not an object
+          }
+          
+          const statementKeys = Object.keys(summary);
+          const coveredStatements = statementKeys.filter(key => {
+            const value = summary[key];
+            return typeof value === 'number' && value > 0;
+          }).length;
+          const statementCount = statementKeys.length;
+          
+          const lineCoverage = statementCount > 0 ? (coveredStatements / statementCount) * 100 : 100;
+          
+          let fileSize = 0;
+          try {
+            if (fs.existsSync(filePath)) {
+              fileSize = fs.statSync(filePath).size;
+            }
+          } catch (e) {
+            // If we can't get file size, continue with 0
+          }
+          
+          files.push({
+            filePath: path.relative(process.cwd(), filePath),
+            lineCoverage: parseFloat(lineCoverage.toFixed(2)),
+            statements: statementCount,
+            covered: coveredStatements,
+            uncovered: statementCount - coveredStatements,
+            size: fileSize
+          });
+        } catch (fileError) {
+          // Skip this file if there's an error processing it
+          if (verbose) console.log(`⚠️ Error processing coverage for ${filePath}:`, fileError.message);
+          continue;
+        }
+      }
+      
+      files.sort((a, b) => {
+        if (a.lineCoverage !== b.lineCoverage) {
+          return a.lineCoverage - b.lineCoverage;
+        }
+        if (a.size !== b.size) {
+          return b.size - a.size;
+        }
+        return b.statements - a.statements;
+      });
+      
+      return files.slice(0, TOP_N);
+    } catch (error) {
+      console.log('❌ Error in analyzeCoverageByFile:', error.message);
+      return [];
+    }
+  }
+}
+
+class CoverageUtils {
+  static findCoverageFile() {
+    const possiblePaths = [
+      './coverage/coverage-summary.json',
+      './coverage/coverage-final.json',
+      './.nyc_output/coverage-summary.json',
+      './.nyc_output/coverage-final.json'
+    ];
+    
+    for (const path of possiblePaths) {
+      if (fs.existsSync(path)) {
+        return path;
+      }
+    }
+    return null;
+  }
+
+  static async generateCoverage() {
+    console.log('📦 Generating coverage data...');
+    
+    // Try different methods to generate coverage
+    const methods = [
+      () => spawnSync('npm', ['test', '--', '--coverage', '--coverageReporters=json-summary', '--coverageReporters=text'], { 
+        cwd: process.cwd(), 
+        timeout: 120000,
+        encoding: 'utf8',
+        stdio: ['pipe', 'pipe', 'pipe']
+      }),
+      () => spawnSync('npx', ['jest', '--coverage', '--coverageReporters=json-summary', '--coverageReporters=text'], {
+        cwd: process.cwd(),
+        timeout: 120000,
+        encoding: 'utf8',
+        stdio: ['pipe', 'pipe', 'pipe']
+      })
+    ];
+    
+    for (const method of methods) {
+      try {
+        const result = method();
+        if (result.status === 0 || result.status === 1) { // 1 might mean tests passed with coverage
+          if (this.findCoverageFile()) {
+            console.log('✅ Coverage generated successfully');
+            return true;
+          }
+        }
+      } catch (error) {
+        console.log(`⚠️ Coverage generation method failed: ${error.message}`);
+      }
+    }
+    
+    console.log('❌ Failed to generate coverage data');
+    return false;
+  }
+}
+
+class TestUtils {
+  static async runTestsAndGetCoverage() {
+    // Try running tests with coverage enabled
+    const testResult = spawnSync('npx', ['jest', '--json', '--coverage', '--coverageReporters=json-summary'], {
+      cwd: process.cwd(),
+      timeout: 180000,
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+      env: {
+        ...process.env,
+        NODE_NO_WARNINGS: '1',
+        NODE_OPTIONS: '--experimental-vm-modules'
+      }
+    });
+
+    if (testResult.error || (testResult.status !== 0 && testResult.status !== 1)) {
+      console.log('⚠️ Jest coverage failed, trying fallback methods...');
+      return null;
+    }
+
+    return testResult;
+  }
+}
+
+class FileAnalyzer {
+  static collectTestFiles() {
+    const testFiles = [];
+    const searchPaths = ['./tests', './test', './src'];
+    
+    const isTestFile = (fileName) => {
+      return fileName.endsWith('.test.js') || 
+             fileName.endsWith('.spec.js') ||
+             fileName.includes('_test.js') || 
+             fileName.includes('_spec.js');
     };
     
-    // Copy relevant data while excluding metadata fields
-    for (const [key, value] of Object.entries(results)) {
-      if (!['status', 'error', 'timestamp', 'type'].includes(key)) {
-        normalized.data[key] = value;
+    for (const searchPath of searchPaths) {
+      if (fs.existsSync(searchPath)) {
+        this._collectTestFilesRecursively(searchPath, testFiles, isTestFile);
       }
     }
     
-    return normalized;
+    return testFiles;
   }
-  
-  /**
-   * Standardize metrics for cross-analyzer comparison
-   * @param {Object} metrics - Raw metrics object
-   * @returns {Object} Standardized metrics
-   */
-  standardizeMetrics(metrics) {
-    if (!metrics || typeof metrics !== 'object') return {};
-    
-    const standardized = {};
-    
-    // Standardize common metric names and formats
-    for (const [key, value] of Object.entries(metrics)) {
-      // Convert various percentage formats to 0-100 scale
-      if (key.includes('percentage') || key.includes('coverage') || key.includes('rate')) {
-        standardized[key] = this._normalizePercentage(value);
-      }
-      // Standardize counts
-      else if (key.includes('count') || key.includes('total') || key.includes('number')) {
-        standardized[key] = parseInt(value) || 0;
-      }
-      // Standardize size values
-      else if (key.includes('size') || key.includes('lines') || key.includes('length')) {
-        standardized[key] = parseInt(value) || 0;
-      }
-      // Pass through other values
-      else {
-        standardized[key] = value;
+
+  static _collectTestFilesRecursively(dir, testFiles, isTestFile) {
+    if (!fs.existsSync(dir)) return;
+
+    const items = fs.readdirSync(dir, { withFileTypes: true });
+
+    for (const item of items) {
+      const fullPath = path.join(dir, item.name);
+
+      if (item.isDirectory()) {
+        this._collectTestFilesRecursively(fullPath, testFiles, isTestFile);
+      } else if (item.isFile() && isTestFile(item.name)) {
+        const relPath = path.relative('.', fullPath);
+        testFiles.push(relPath);
       }
     }
-    
-    return standardized;
   }
-  
-  /**
-   * Normalize a percentage value to 0-100 scale
-   * @private
-   */
-  _normalizePercentage(value) {
-    if (typeof value !== 'number') {
-      // Try to parse as string percentage
-      if (typeof value === 'string') {
-        const match = value.match(/(\d+\.?\d*)%?/);
-        return match ? parseFloat(match[1]) : 0;
+
+  static readJSONFile(filePath) {
+    try {
+      const content = fs.readFileSync(filePath, 'utf8');
+      if (!content.trim()) {
+        console.log(`⚠️ Empty content when parsing JSON from: ${filePath}`);
+        return null;
       }
-      return 0;
+      return JSON.parse(content);
+    } catch (error) {
+      console.log(`❌ Error parsing JSON from ${filePath}:`, error.message);
+      return null;
     }
-    
-    // If the value is between 0 and 1, convert to percentage
-    if (value >= 0 && value <= 1) {
-      return value * 100;
-    }
-    
-    // Otherwise, return the value as is
-    return value;
   }
-  
-  /**
-   * Generate quality score based on analysis results
-   * @param {Object} results - Analysis results
-   * @returns {number} Quality score 0-100
-   */
-  calculateQualityScore(results) {
-    if (!results || results.error) return 0;
-    
-    let score = 0;
-    let weightSum = 0;
-    
-    // Calculate score based on various metrics
-    if (results.passRate !== undefined) {
-      score += results.passRate * 0.3;
-      weightSum += 0.3;
+
+  static analyzeCoverageByFile(verbose = false) {
+    try {
+      const coverageDetailPath = './coverage/coverage-final.json';
+      if (!fs.existsSync(coverageDetailPath)) return [];
+
+      let coverageDetail;
+      try {
+        const fileContent = fs.readFileSync(coverageDetailPath, 'utf8');
+        if (!fileContent.trim()) {
+          console.log('❌ Coverage file is empty');
+          return [];
+        }
+        coverageDetail = JSON.parse(fileContent);
+      } catch (parseError) {
+        console.log('❌ Error parsing coverage-final.json:', parseError.message);
+        return [];
+      }
+      
+      const files = [];
+      for (const [filePath, coverage] of Object.entries(coverageDetail)) {
+        try {
+          if (!filePath || typeof filePath !== 'string') {
+            continue; // Skip invalid file paths
+          }
+          
+          if (filePath.startsWith('./')) {
+            filePath = path.resolve(filePath);
+          }
+          
+          // Validate coverage structure before accessing properties
+          if (!coverage || typeof coverage !== 'object' || !coverage.s) {
+            if (verbose) console.log(`⚠️ Invalid coverage structure for file: ${filePath}`);
+            continue;
+          }
+          
+          const summary = coverage.s;
+          if (typeof summary !== 'object') {
+            continue; // Skip if summary is not an object
+          }
+          
+          const statementKeys = Object.keys(summary);
+          const coveredStatements = statementKeys.filter(key => {
+            const value = summary[key];
+            return typeof value === 'number' && value > 0;
+          }).length;
+          const statementCount = statementKeys.length;
+          
+          const lineCoverage = statementCount > 0 ? (coveredStatements / statementCount) * 100 : 100;
+          
+          let fileSize = 0;
+          try {
+            if (fs.existsSync(filePath)) {
+              fileSize = fs.statSync(filePath).size;
+            }
+          } catch (e) {
+            // If we can't get file size, continue with 0
+          }
+          
+          files.push({
+            filePath: path.relative(process.cwd(), filePath),
+            lineCoverage: parseFloat(lineCoverage.toFixed(2)),
+            statements: statementCount,
+            covered: coveredStatements,
+            uncovered: statementCount - coveredStatements,
+            size: fileSize
+          });
+        } catch (fileError) {
+          // Skip this file if there's an error processing it
+          if (verbose) console.log(`⚠️ Error processing coverage for ${filePath}:`, fileError.message);
+          continue;
+        }
+      }
+      
+      files.sort((a, b) => {
+        if (a.lineCoverage !== b.lineCoverage) {
+          return a.lineCoverage - b.lineCoverage;
+        }
+        if (a.size !== b.size) {
+          return b.size - a.size;
+        }
+        return b.statements - a.statements;
+      });
+      
+      return files.slice(0, TOP_N);
+    } catch (error) {
+      console.log('❌ Error in analyzeCoverageByFile:', error.message);
+      return [];
     }
-    
-    if (results.lines !== undefined) {
-      // Higher coverage is better
-      score += results.lines * 0.2;
-      weightSum += 0.2;
-    }
-    
-    // Lower complexity is better (inverse)
-    if (results.avgComplexity !== undefined && results.avgComplexity > 0) {
-      // Normalize to 0-100 scale where lower complexity is higher score
-      const complexityScore = Math.max(0, 100 - (results.avgComplexity * 2));
-      score += complexityScore * 0.15;
-      weightSum += 0.15;
-    }
-    
-    // Higher number of files might indicate complexity (inverse)
-    if (results.jsFiles !== undefined && results.jsFiles > 0) {
-      // Normalize large codebases
-      const fileCountScore = Math.max(10, 100 - (results.jsFiles / 5));
-      score += fileCountScore * 0.1;
-      weightSum += 0.1;
-    }
-    
-    // Debt score (inverse - less debt is better)
-    if (results.totalDebtScore !== undefined && results.totalDebtScore >= 0) {
-      // Lower debt score is better
-      const debtScore = Math.max(0, 100 - (results.totalDebtScore / 50));
-      score += debtScore * 0.25;
-      weightSum += 0.25;
-    }
-    
-    return weightSum > 0 ? Math.round(score / weightSum) : 50; // Default to 50 if no metrics available
   }
-  
-  /**
-   * Centralized logging method with consistent formatting
-   * @param {string} message - Log message
-   * @param {'info'|'warn'|'error'|'debug'} level - Log level
-   * @param {Object} meta - Additional metadata
-   */
+}
+
+// Base analyzer with common functionality
+class BaseAnalyzer {
+  constructor(options, verbose) {
+    this.options = options;
+    this.verbose = verbose;
+  }
+
+  async safeAnalyze(analysisFunction, errorMessage) {
+    try {
+      return await analysisFunction();
+    } catch (error) {
+      if (this.verbose) console.log(`❌ ${errorMessage}: ${error.message}`);
+      return { 
+        status: 'error', 
+        error: `${errorMessage}: ${error.message}`, 
+        timestamp: Date.now() 
+      };
+    }
+  }
+
   log(message, level = 'info', meta = {}) {
+    if (!this.verbose) return;
+    
     const timestamp = new Date().toISOString();
     const levelEmojis = {
       info: 'ℹ️',
@@ -272,87 +419,46 @@ class StandardAnalyzer extends BaseAnalyzer {
     };
     
     const emoji = levelEmojis[level] || 'ℹ️';
+    const fullMessage = `${emoji} [${timestamp}] ${message}`;
     
-    // Only log if verbose is enabled or it's an error
-    if (this.verbose || level === 'error' || level === 'warn') {
-      if (Object.keys(meta).length > 0) {
-        console.log(`${emoji} [${timestamp}] ${message}`, meta);
-      } else {
-        console.log(`${emoji} [${timestamp}] ${message}`);
-      }
+    if (Object.keys(meta).length > 0) {
+      console.log(fullMessage, meta);
+    } else {
+      console.log(fullMessage);
     }
   }
-  
-  /**
-   * Log an error with consistent formatting
-   */
+
   logError(message, error = null) {
     const errorInfo = error ? {
       message: error.message,
-      stack: this.options && this.options.debug ? error.stack : undefined
+      stack: this.options?.debug ? error.stack : undefined
     } : null;
     
     this.log(message, 'error', errorInfo);
   }
-  
-  /**
-   * Log a warning with consistent formatting
-   */
-  logWarning(message, meta = {}) {
-    this.log(message, 'warn', meta);
-  }
-  
-  /**
-   * Log info with consistent formatting
-   */
-  logInfo(message, meta = {}) {
-    this.log(message, 'info', meta);
-  }
 }
 
-class TestAnalyzer extends StandardAnalyzer {
-  constructor(options, verbose) {
-    super(options, verbose);
-  }
-
+class TestAnalyzer extends BaseAnalyzer {
   async analyze() {
-    if (this.verbose) console.log('\n🔍 Collecting Unit Test Results...');
+    this.log('Collecting Unit Test Results...');
 
     return await this.safeAnalyze(async () => {
-      // Try jest first
-      const testResult = spawnSync('npx', ['jest', '--json', '--silent'], {
-        cwd: process.cwd(),
-        timeout: 180000,
-        encoding: 'utf8',
-        stdio: ['pipe', 'pipe', 'pipe'],
-        env: {
-          ...process.env,
-          NODE_NO_WARNINGS: '1',
-          NODE_OPTIONS: '--experimental-vm-modules'
-        }
-      });
-
-      if (testResult.error) {
-        if (this.verbose) console.log('❌ Jest command execution failed:', testResult.error.message);
-        return this.createEmptyTestResult('Command execution error');
-      }
+      // Try to run tests with coverage
+      const testResult = await TestUtils.runTestsAndGetCoverage();
       
-      if (testResult.status === 0 || testResult.status === 1) {
+      if (testResult && (testResult.status === 0 || testResult.status === 1)) {
         const output = testResult.stdout || testResult.stderr;
-        if (!output) {
-          if (this.verbose) console.log('❌ No output from Jest command');
-          return this.createEmptyTestResult('No output from Jest');
-        }
-        
-        const parsedResult = this.parseTestOutput(output);
-        
-        if (parsedResult && parsedResult.testResults) {
-          const individualTestResults = this.extractIndividualTestResults(parsedResult.testResults);
-          return this._buildTestResult(testResult, parsedResult, individualTestResults);
+        if (output) {
+          const parsedResult = this.parseTestOutput(output);
+          
+          if (parsedResult && parsedResult.testResults) {
+            const individualTestResults = this.extractIndividualTestResults(parsedResult.testResults);
+            return this._buildTestResult(testResult, parsedResult, individualTestResults);
+          }
         }
       }
 
-      // Fallback to npm test
+      // Fallback: try running tests without coverage
       return await this._runFallbackTest();
     }, 'Test collection failed');
   }
@@ -372,7 +478,7 @@ class TestAnalyzer extends StandardAnalyzer {
       testDuration: parsedResult.endTime ? (parsedResult.endTime - parsedResult.startTime) : 'unknown',
       individualTestResults,
       slowestTests: this.getSlowestTests(individualTestResults),
-      testFiles: getTestFilesList(),
+      testFiles: FileAnalyzer.collectTestFiles(),
       failureAnalysis: this._analyzeFailures(individualTestResults)
     };
   }
@@ -542,14 +648,14 @@ class TestAnalyzer extends StandardAnalyzer {
     });
     
     if (altTestResult.error) {
-      if (this.verbose) console.log('❌ NPM test command execution failed:', altTestResult.error.message);
+      this.log('❌ NPM test command execution failed:', 'error', { error: altTestResult.error.message });
       return this.createEmptyTestResult('NPM test command execution error');
     }
     
     if (altTestResult.status === 0 || altTestResult.status === 1) {
       const output = altTestResult.stdout || altTestResult.stderr;
       if (!output) {
-        if (this.verbose) console.log('❌ No output from NPM test command');
+        this.log('❌ No output from NPM test command', 'error');
         return this.createEmptyTestResult('No output from NPM test');
       }
       
@@ -560,7 +666,7 @@ class TestAnalyzer extends StandardAnalyzer {
           return this._buildTestResult(altTestResult, fallbackParsed, individualTestResults);
         }
       } catch (parseError) {
-        if (this.verbose) console.log('❌ Fallback test result parsing failed:', parseError.message);
+        this.log('❌ Fallback test result parsing failed:', 'error', { error: parseError.message });
       }
     }
 
@@ -575,7 +681,7 @@ class TestAnalyzer extends StandardAnalyzer {
       failedTests: 0,
       skippedTests: 0,
       testSuites: 0,
-      testFiles: getTestFilesList(),
+      testFiles: FileAnalyzer.collectTestFiles(),
       error: errorMsg
     };
   }
@@ -619,7 +725,7 @@ class TestAnalyzer extends StandardAnalyzer {
     }
     return individualResults;
   }
-
+  
   getSlowestTests(individualTestResults) {
     if (!individualTestResults || individualTestResults.length === 0) return [];
     
@@ -684,7 +790,7 @@ class TestAnalyzer extends StandardAnalyzer {
         byDirectory: testsByDirectory
       };
     } catch (error) {
-      if (this.verbose) console.log(`⚠️ Error processing tests with danfojs: ${error.message}`);
+      this.log(`⚠️ Error processing tests with danfojs: ${error.message}`, 'warn');
       // Fallback to original implementation
       const sortedTests = [...individualTestResults]
         .filter(test => test.duration && test.duration > 0)
@@ -721,81 +827,42 @@ class TestAnalyzer extends StandardAnalyzer {
   }
 }
 
-class CoverageAnalyzer extends StandardAnalyzer {
-  constructor(options, verbose) {
-    super(options, verbose);
-  }
-
+class CoverageAnalyzer extends BaseAnalyzer {
   async analyze() {
-    if (this.verbose) console.log('\n🔍 Collecting Coverage Data...');
+    this.log('Collecting Coverage Data...');
 
-    return await this.safeAnalyze(async () => {
-      let coverageData = await this._loadOrCreateCoverage();
-      
-      if (coverageData) {
-        return this._buildCoverageStats(coverageData);
-      } else {
-        if (this.verbose) console.log('❌ No coverage data found or generated');
-        return { available: false };
-      }
-    }, 'Coverage collection failed');
-  }
-
-  async _loadOrCreateCoverage() {
-    let coverageData = null;
-    const coveragePath = './coverage';
+    // First, try to find existing coverage data
+    let coverageFile = CoverageUtils.findCoverageFile();
     
-    if (fs.existsSync(coveragePath)) {
-      const coverageFile = path.join(coveragePath, 'coverage-summary.json');
-      if (fs.existsSync(coverageFile)) {
-        try {
-          const fileContent = fs.readFileSync(coverageFile, 'utf8');
-          if (fileContent.trim()) {
-            coverageData = JSON.parse(fileContent);
-          }
-        } catch (parseError) {
-          if (this.verbose) console.log('❌ Error parsing coverage file:', parseError.message);
-          return null;
-        }
+    if (!coverageFile) {
+      this.log('No existing coverage data found, generating...');
+      const generated = await CoverageUtils.generateCoverage();
+      if (!generated) {
+        this.log('❌ Failed to generate coverage data', 'error');
+        return { available: false, error: 'Could not generate coverage data' };
+      }
+      
+      coverageFile = CoverageUtils.findCoverageFile();
+      if (!coverageFile) {
+        this.log('❌ Coverage file not found after generation', 'error');
+        return { available: false, error: 'Coverage file not found after generation' };
       }
     }
 
-    if (!coverageData) {
-      if (this.verbose) console.log('No existing coverage data found, attempting to generate...');
-      
-      const result = spawnSync('npm', ['test', '--', '--coverage', '--coverageReporters=json-summary'], {
-        cwd: process.cwd(),
-        timeout: 120000,
-        encoding: 'utf8',
-        stdio: ['pipe', 'pipe', 'pipe']
-      });
-      
-      if (result.error) {
-        if (this.verbose) console.log('❌ Coverage command execution failed:', result.error.message);
-        return null;
-      }
-      
-      if (result.status === 0) {
-        const coverageFile = './coverage/coverage-summary.json';
-        if (fs.existsSync(coverageFile)) {
-          try {
-            const fileContent = fs.readFileSync(coverageFile, 'utf8');
-            if (fileContent.trim()) {
-              coverageData = JSON.parse(fileContent);
-            }
-          } catch (parseError) {
-            if (this.verbose) console.log('❌ Error parsing generated coverage file:', parseError.message);
-            return null;
-          }
-        }
-      }
+    // Load coverage summary
+    const summaryPath = './coverage/coverage-summary.json';
+    if (!fs.existsSync(summaryPath)) {
+      this.log('❌ Coverage summary file not found', 'error');
+      return { available: false, error: 'Coverage summary file not found' };
     }
     
-    return coverageData;
-  }
-
-  _buildCoverageStats(coverageData) {
-    const summary = coverageData.total;
+    const coverageSummary = FileAnalyzer.readJSONFile(summaryPath);
+    if (!coverageSummary || !coverageSummary.total) {
+      this.log('❌ Invalid coverage summary format', 'error');
+      return { available: false, error: 'Invalid coverage summary format' };
+    }
+    
+    const summary = coverageSummary.total;
     const coverageStats = {
       statements: summary.statements.pct,
       branches: summary.branches.pct,
@@ -815,15 +882,33 @@ class CoverageAnalyzer extends StandardAnalyzer {
       }
     };
     
-    coverageStats.fileAnalysis = analyzeCoverageByFile();
+    coverageStats.fileAnalysis = FileAnalyzer.analyzeCoverageByFile(this.verbose);
     
     // Additional detailed analysis
-    coverageStats.detailedAnalysis = this._analyzeDetailedCoverage(coverageData);
+    coverageStats.detailedAnalysis = this._analyzeDetailedCoverage();
     
     return coverageStats;
   }
 
-  _analyzeDetailedCoverage(coverageData) {
+  _analyzeDetailedCoverage() {
+    const finalCoveragePath = './coverage/coverage-final.json';
+    if (!fs.existsSync(finalCoveragePath)) {
+      return {
+        lowCoverageFiles: [],
+        coverageByDirectory: {},
+        uncoveredBlocks: []
+      };
+    }
+
+    const coverageData = FileAnalyzer.readJSONFile(finalCoveragePath);
+    if (!coverageData) {
+      return {
+        lowCoverageFiles: [],
+        coverageByDirectory: {},
+        uncoveredBlocks: []
+      };
+    }
+
     const detailedAnalysis = {
       lowCoverageFiles: [],
       coverageByDirectory: {},
@@ -851,35 +936,37 @@ class CoverageAnalyzer extends StandardAnalyzer {
       }
       
       // Calculate file coverage
-      const statements = fileCoverage.s;
-      const covered = Object.values(statements).filter(count => count > 0).length;
-      const total = Object.keys(statements).length;
-      const fileCoveragePercent = total > 0 ? (covered / total) * 100 : 100;
-      
-      // Add to low coverage files if below threshold
-      if (fileCoveragePercent < 50) {
-        detailedAnalysis.lowCoverageFiles.push({
+      if (fileCoverage && fileCoverage.s) {
+        const statements = fileCoverage.s;
+        const covered = Object.values(statements).filter(count => count > 0).length;
+        const total = Object.keys(statements).length;
+        const fileCoveragePercent = total > 0 ? (covered / total) * 100 : 100;
+        
+        // Add to low coverage files if below threshold
+        if (fileCoveragePercent < 50) {
+          detailedAnalysis.lowCoverageFiles.push({
+            filePath: relativePath,
+            coverage: parseFloat(fileCoveragePercent.toFixed(2)),
+            statements: total,
+            covered: covered
+          });
+        }
+        
+        // Store for DataFrame processing
+        fileCoverageData.push({
           filePath: relativePath,
-          coverage: parseFloat(fileCoveragePercent.toFixed(2)),
+          directory: directory,
+          coverage: fileCoveragePercent,
           statements: total,
-          covered: covered
+          covered: covered,
+          uncovered: total - covered
         });
+        
+        // Update directory stats
+        detailedAnalysis.coverageByDirectory[directory].files++;
+        detailedAnalysis.coverageByDirectory[directory].statements += total;
+        detailedAnalysis.coverageByDirectory[directory].covered += covered;
       }
-      
-      // Store for DataFrame processing
-      fileCoverageData.push({
-        filePath: relativePath,
-        directory: directory,
-        coverage: fileCoveragePercent,
-        statements: total,
-        covered: covered,
-        uncovered: total - covered
-      });
-      
-      // Update directory stats
-      detailedAnalysis.coverageByDirectory[directory].files++;
-      detailedAnalysis.coverageByDirectory[directory].statements += total;
-      detailedAnalysis.coverageByDirectory[directory].covered += covered;
     }
     
     // Calculate directory coverage percentages
@@ -903,22 +990,26 @@ class CoverageAnalyzer extends StandardAnalyzer {
         
         if (lowCoverageIndices.length > 0) {
           const lowCoverageDf = coverageDf.iloc({ rows: lowCoverageIndices });
-          const sortedLowCoverage = lowCoverageDf.sort_values("coverage", { ascending: true });
           
-          detailedAnalysis.lowCoverageFiles = [];
-          for (let i = 0; i < sortedLowCoverage.shape[0]; i++) {
-            const row = sortedLowCoverage.row(i);
-            detailedAnalysis.lowCoverageFiles.push({
-              filePath: row['filePath'],
-              coverage: parseFloat(row['coverage'].toFixed(2)),
-              statements: row['statements'],
-              covered: row['covered']
-            });
-          }
+          // danfojs may not support sort_values directly, use JavaScript sort for compatibility
+          // Extract the rows and sort them manually
+          const filteredData = lowCoverageDf.values.map((row, idx) => ({
+            filePath: lowCoverageDf.columns.includes('filePath') ? row[lowCoverageDf.columns.indexOf('filePath')] : fileCoverageData[lowCoverageIndices[idx]].filePath,
+            coverage: lowCoverageDf.columns.includes('coverage') ? row[lowCoverageDf.columns.indexOf('coverage')] : fileCoverageData[lowCoverageIndices[idx]].coverage,
+            statements: lowCoverageDf.columns.includes('statements') ? row[lowCoverageDf.columns.indexOf('statements')] : fileCoverageData[lowCoverageIndices[idx]].statements,
+            covered: lowCoverageDf.columns.includes('covered') ? row[lowCoverageDf.columns.indexOf('covered')] : fileCoverageData[lowCoverageIndices[idx]].covered
+          })).sort((a, b) => a.coverage - b.coverage);
+          
+          detailedAnalysis.lowCoverageFiles = filteredData.map(item => ({
+            filePath: item.filePath,
+            coverage: parseFloat(item.coverage.toFixed(2)),
+            statements: item.statements,
+            covered: item.covered
+          }));
         }
       }
     } catch (error) {
-      if (this.verbose) console.log(`⚠️ Error processing coverage with danfojs: ${error.message}`);
+      this.log(`⚠️ Error processing coverage with danfojs: ${error.message}`, 'warn');
       // Fallback to original sorting
       detailedAnalysis.lowCoverageFiles.sort((a, b) => a.coverage - b.coverage);
     }
@@ -929,17 +1020,11 @@ class CoverageAnalyzer extends StandardAnalyzer {
         .map(([dir, stats]) => ({ directory: dir, ...stats }));
       
       if (dirData.length > 0) {
-        const dirDf = new dfd.DataFrame(dirData);
-        const sortedDirDf = dirDf.sort_values("coveragePercent", { ascending: true });
-        
-        detailedAnalysis.directoriesSorted = [];
-        for (let i = 0; i < sortedDirDf.shape[0]; i++) {
-          const row = sortedDirDf.row(i);
-          detailedAnalysis.directoriesSorted.push(row);
-        }
+        // danfojs may not support sort_values directly, use JavaScript sort for compatibility
+        detailedAnalysis.directoriesSorted = dirData.sort((a, b) => a.coveragePercent - b.coveragePercent);
       }
     } catch (error) {
-      if (this.verbose) console.log(`⚠️ Error processing directory data with danfojs: ${error.message}`);
+      this.log(`⚠️ Error processing directory data with danfojs: ${error.message}`, 'warn');
       // Fallback to original sorting
       detailedAnalysis.directoriesSorted = Object.entries(detailedAnalysis.coverageByDirectory)
         .map(([dir, stats]) => ({ directory: dir, ...stats }))
@@ -950,26 +1035,17 @@ class CoverageAnalyzer extends StandardAnalyzer {
   }
 }
 
-class ProjectAnalyzer extends StandardAnalyzer {
-  constructor(options, verbose) {
-    super(options, verbose);
-  }
-
+class ProjectAnalyzer extends BaseAnalyzer {
   async analyze() {
-    if (this.verbose) console.log('\n🔍 Collecting Project Information...');
+    this.log('Collecting Project Information...');
 
     return await this.safeAnalyze(async () => {
       if (!fs.existsSync('./package.json')) {
-        if (this.verbose) console.log('❌ package.json not found');
+        this.log('package.json not found', 'error');
         return { error: 'package.json not found' };
       }
       
-      const packageJsonContent = this.safeReadFile('./package.json');
-      if (!packageJsonContent) {
-        return { error: 'Could not read package.json' };
-      }
-      
-      const packageJson = this.safeParseJSON(packageJsonContent, './package.json');
+      const packageJson = FileAnalyzer.readJSONFile('./package.json');
       if (!packageJson) {
         return { error: 'Could not parse package.json' };
       }
@@ -986,13 +1062,9 @@ class ProjectAnalyzer extends StandardAnalyzer {
   }
 }
 
-class StaticAnalyzer extends StandardAnalyzer {
-  constructor(options, verbose) {
-    super(options, verbose);
-  }
-
+class StaticAnalyzer extends BaseAnalyzer {
   async analyze() {
-    if (this.verbose) console.log('\n🔍 Collecting Static Analysis...');
+    this.log('Collecting Static Analysis...');
 
     return await this.safeAnalyze(async () => {
       const directoriesToAnalyze = ['./src', './ui', './tests', './scripts'];
@@ -1016,44 +1088,22 @@ class StaticAnalyzer extends StandardAnalyzer {
       
       for (const dirPath of directoriesToAnalyze) {
         if (Date.now() - startTime > analysisTimeout) {
-          if (this.verbose) console.log(`⏰ Static analysis timeout reached, stopping...`);
+          this.log('Static analysis timeout reached, stopping...', 'warn');
           break;
         }
         
         if (fs.existsSync(dirPath)) {
-          if (this.verbose) console.log(`🔍 Analyzing directory: ${dirPath}`);
+          this.log(`Analyzing directory: ${dirPath}`);
           this._traverseDirectory(dirPath, stats, 0, 8); // Start at depth 0, max 8 levels
-        } else if (this.verbose) {
-          console.log(`⚠️ Directory ${dirPath} not found, skipping...`);
+        } else {
+          this.log(`Directory ${dirPath} not found, skipping...`, 'warn');
         }
       }
 
-      // Use danfojs for advanced data processing
+      // Process file details if we have any data
       if (stats.fileDetails.length > 0) {
-        try {
-          // Convert file details to DataFrame for advanced processing
-          const fileDf = new dfd.DataFrame(stats.fileDetails);
-          
-          // Calculate advanced statistics using danfojs
-          stats.fileDetailsDataFrame = await this._createFileAnalysisDataFrame(stats.fileDetails);
-          
-          // Danfojs doesn't have a direct sort method based on our test
-          // So we'll use JavaScript sorting but can still use danfojs for analysis
-          // Create indices array and sort based on lines column
-          const indices = Array.from({ length: fileDf.shape[0] }, (_, i) => i);
-          const linesValues = fileDf['lines'].values;
-          
-          // Sort indices based on lines values in descending order
-          indices.sort((a, b) => linesValues[b] - linesValues[a]);
-          
-          // Reorder the data based on sorted indices
-          stats.fileDetails = indices.map(i => stats.fileDetails[i]);
-        } catch (error) {
-          if (this.verbose) console.log(`⚠️ Error processing with danfojs: ${error.message}`);
-          // Fallback to original sorting
-          stats.fileDetails.sort((a, b) => b.lines - a.lines);
-        }
-        
+        // Sort file details by lines for largest files
+        stats.fileDetails.sort((a, b) => b.lines - a.lines);
         stats.largestFiles = stats.fileDetails.slice(0, TOP_N);
 
         this._calculateSummaryStats(stats);
@@ -1062,61 +1112,6 @@ class StaticAnalyzer extends StandardAnalyzer {
 
       return stats;
     }, 'Static analysis failed');
-  }
-
-  /**
-   * Create a DataFrame representation of file analysis data using danfojs
-   * @private
-   */
-  async _createFileAnalysisDataFrame(fileDetails) {
-    if (!fileDetails || fileDetails.length === 0) {
-      return null;
-    }
-
-    try {
-      // Create DataFrame from file details
-      const df = new dfd.DataFrame(fileDetails);
-
-      // Calculate additional metrics using danfojs
-      if (df.shape[0] > 0) {
-        // Extract data using available danfojs methods
-        const allData = [];
-        for (let i = 0; i < df.shape[0]; i++) {
-          // Extract row data - since .row() doesn't exist, build from columns
-          const row = {};
-          for (const col of df.columns) {
-            row[col] = df[col].values[i];
-          }
-          allData.push(row);
-        }
-        
-        const complexityPerLine = [];
-        const sizePerLine = [];
-        
-        for (let i = 0; i < allData.length; i++) {
-          const item = allData[i];
-          const lines = item.lines || 0;
-          const complexityObj = item.complexity || { cyclomatic: 0 };
-          const cyclomatic = complexityObj.cyclomatic || 0;
-          const size = item.size || 0;
-          
-          complexityPerLine.push(lines > 0 ? cyclomatic / lines : 0);
-          sizePerLine.push(lines > 0 ? size / lines : 0);
-        }
-        
-        // Add the computed columns back to the DataFrame if addColumn exists
-        if (typeof df.addColumn === 'function') {
-          df.addColumn('complexity_per_line', complexityPerLine);
-          df.addColumn('size_per_line', sizePerLine);
-        }
-      }
-
-      return df;
-    } catch (error) {
-      if (this.verbose) console.log(`⚠️ Error creating DataFrame: ${error.message}`);
-      // Fallback to original array if DataFrame creation fails
-      return null;
-    }
   }
 
   _calculateRiskMetrics(stats) {
@@ -1183,13 +1178,13 @@ class StaticAnalyzer extends StandardAnalyzer {
 
   _traverseDirectory(dir, stats, currentDepth = 0, maxDepth = 8) {
     if (!fs.existsSync(dir)) {
-      if (this.verbose) console.log(`❌ Directory does not exist: ${dir}`);
+      this.log(`Directory does not exist: ${dir}`, 'error');
       return;
     }
     
     // Prevent excessive recursion
     if (currentDepth > maxDepth) {
-      if (this.verbose) console.log(`⚠️ Maximum depth (${maxDepth}) reached, skipping: ${dir}`);
+      this.log(`Maximum depth (${maxDepth}) reached, skipping: ${dir}`, 'warn');
       return;
     }
     
@@ -1197,7 +1192,7 @@ class StaticAnalyzer extends StandardAnalyzer {
     try {
       items = fs.readdirSync(dir, { withFileTypes: true });
     } catch (readError) {
-      if (this.verbose) console.log(`❌ Cannot read directory: ${dir}`, readError.message);
+      this.log(`Cannot read directory: ${dir}`, 'error', { error: readError.message });
       return;
     }
 
@@ -1244,13 +1239,11 @@ class StaticAnalyzer extends StandardAnalyzer {
     const ext = path.extname(item.name).substring(1) || 'no_ext';
     stats.filesByType[ext] = (stats.filesByType[ext] || 0) + 1;
 
-    // Define files to exclude from analysis
-    const excludeSet = new Set(['src/parser/peggy-parser.js']); // Add more exclusions here as needed
     const relativePath = path.relative('.', fullPath);
 
-    // Skip excluded files
-    if (excludeSet.has(relativePath)) {
-      if (this.verbose) console.log(`⚠️ Excluding file from analysis: ${relativePath}`);
+    // Skip excluded files using global exclusion
+    if (FileUtils.isExcludedPath(relativePath)) {
+      this.log(`Excluding file from analysis: ${relativePath}`, 'warn');
       return;
     }
 
@@ -1261,8 +1254,8 @@ class StaticAnalyzer extends StandardAnalyzer {
         const lines = content.split('\n').length;
         stats.totalLines += lines;
 
-        const imports = extractImports(content);
-        const complexity = calculateComplexityMetrics(content);
+        const imports = this.extractImports(content);
+        const complexity = this.calculateComplexityMetrics(content);
 
         stats.fileDetails.push({
           path: path.relative('.', fullPath),
@@ -1321,103 +1314,134 @@ class StaticAnalyzer extends StandardAnalyzer {
     }
   }
 
+  extractImports(content) {
+    const imports = [];
+    const importRegex = /(import\s+|from\s+|require\(\s*)["'](.*?\.(js|ts))["']/gi;
+    let match;
+
+    while ((match = importRegex.exec(content)) !== null) {
+      const imp = match[2];
+      if (imp && !imp.startsWith('.') && !imp.startsWith('/')) {
+        imports.push(imp);
+      }
+    }
+
+    const relativeImportRegex = /(import\s+|from\s+|require\(\s*)["'](\.{1,2}\/.*?\.(js|ts))["']/gi;
+    while ((match = relativeImportRegex.exec(content)) !== null) {
+      imports.push(match[2]);
+    }
+
+    return [...new Set(imports)];
+  }
+
+  calculateComplexityMetrics(content) {
+    const lines = content.split('\n');
+    
+    let functionCount = 0;
+    let classCount = 0;
+    let conditionalCount = 0;
+    let cyclomatic = 1;
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      
+      const hasFunction = trimmed.startsWith('function ') || 
+                         trimmed.includes('function(') || 
+                         trimmed.includes('=>') || 
+                         trimmed.includes('function*');
+      if (hasFunction) functionCount++;
+      
+      if (trimmed.includes('class ')) classCount++;
+      
+      const conditions = ['if (', 'else if', 'for (', 'while (', 'do {', 'switch (', 'try ', 'catch ('];
+      for (const condition of conditions) {
+        if (trimmed.includes(condition)) {
+          conditionalCount++;
+          cyclomatic++;
+        }
+      }
+      
+      if (trimmed.includes(' && ') || trimmed.includes(' || ')) cyclomatic++;
+    }
+
+    return {
+      lines: lines.length,
+      functionCount,
+      classCount,
+      conditionalCount,
+      cyclomatic
+    };
+  }
+
   _readFileContent(fullPath) {
     try {
       return fs.readFileSync(fullPath, 'utf8');
     } catch (readError) {
-      if (this.verbose) console.log(`⚠️ Cannot read file: ${fullPath}`, readError.message);
+      this.log(`Cannot read file: ${fullPath}`, 'warn', { error: readError.message });
       return null;
     }
   }
 
-  _isValidPath(path) {
-    return path && typeof path === 'string' && path.length > 0;
-  }
-  
-  _isReadableFile(filePath) {
-    try {
-      return fs.statSync(filePath).isFile();
-    } catch (e) {
-      return false;
-    }
-  }
-
   _calculateSummaryStats(stats) {
-    // Use danfojs for more efficient data analysis
-    if (stats.fileDetails && stats.fileDetails.length > 0) {
-      const fileDetailsDf = new dfd.DataFrame(stats.fileDetails);
+    // Calculate statistical metrics
+    stats.avgLinesPerFile = stats.fileDetails.length > 0 
+      ? Math.round(stats.totalLines / stats.fileDetails.length)
+      : 0;
+    
+    const lineCounts = stats.fileDetails.map(f => f.lines);
+    if (lineCounts.length > 0) {
+      // Calculate median manually
+      const sortedLines = [...lineCounts].sort((a, b) => a - b);
+      const mid = Math.floor(sortedLines.length / 2);
+      stats.medianLinesPerFile = sortedLines.length % 2 !== 0 
+        ? sortedLines[mid] 
+        : (sortedLines[mid - 1] + sortedLines[mid]) / 2;
       
-      // Extract line counts and calculate statistics using danfojs
-      const lineCountsSeries = fileDetailsDf['lines'];
-      stats.avgLinesPerFile = Math.round(stats.totalLines / stats.fileDetails.length);
-      stats.medianLinesPerFile = lineCountsSeries.median();
-      
-      // Find largest and smallest files using danfojs
-      const maxLinesIdx = lineCountsSeries.idxmax();
-      const minLinesIdx = lineCountsSeries.idxmin();
+      // Find largest and smallest files
+      const maxLinesIdx = lineCounts.indexOf(Math.max(...lineCounts));
+      const minLinesIdx = lineCounts.indexOf(Math.min(...lineCounts));
       stats.largestFile = stats.fileDetails[maxLinesIdx];
       stats.smallestFile = stats.fileDetails[minLinesIdx];
 
-      // Process complexity data with danfojs
-      if (fileDetailsDf['complexity'] !== undefined) {
-        const complexityData = stats.fileDetails.map(f => f.complexity);
-        if (complexityData.length > 0) {
-          const cyclomaticValues = complexityData.map(comp => comp.cyclomatic);
-          const functionCountValues = complexityData.map(comp => comp.functionCount);
-          
-          if (cyclomaticValues.length > 0) {
-            const cyclomaticSeries = new dfd.Series(cyclomaticValues);
-            stats.avgComplexity = cyclomaticSeries.mean();
-          }
-          
-          if (functionCountValues.length > 0) {
-            const functionCountSeries = new dfd.Series(functionCountValues);
-            stats.avgFunctionCount = functionCountSeries.mean();
-          }
-        }
+      // Calculate average complexity
+      const complexityValues = stats.fileDetails.map(f => f.complexity.cyclomatic);
+      if (complexityValues.length > 0) {
+        stats.avgComplexity = complexityValues.reduce((sum, val) => sum + val, 0) / complexityValues.length;
       }
     }
     
-    // Calculate directory averages and detailed stats using danfojs where beneficial
+    // Calculate directory averages and detailed stats
     const directoryEntries = Object.entries(stats.directoryStats);
     if (directoryEntries.length > 0) {
-      // Create DataFrame for directory statistics for easier manipulation
-      const dirStatsData = directoryEntries.map(([, dirStats]) => dirStats);
-      const dirStatsDf = new dfd.DataFrame(dirStatsData);
+      // Calculate directory metrics
+      const dirLines = directoryEntries.map(([, dirStats]) => dirStats.lines);
+      const dirFiles = directoryEntries.map(([, dirStats]) => dirStats.files);
       
-      if (dirStatsDf['lines'] !== undefined) {
-        stats.directoryAvgLines = dirStatsDf['lines'].mean();
-      }
-      if (dirStatsDf['files'] !== undefined) {
-        stats.directoryAvgFiles = dirStatsDf['files'].mean();
-      }
+      stats.directoryAvgLines = dirLines.reduce((sum, val) => sum + val, 0) / dirLines.length;
+      stats.directoryAvgFiles = dirFiles.reduce((sum, val) => sum + val, 0) / dirFiles.length;
       
       // Find largest directory by lines
-      if (dirStatsDf['lines'] !== undefined) {
-        const maxLinesDirIdx = dirStatsDf['lines'].idxmax();
-        stats.largestDirectory = dirStatsData[maxLinesDirIdx];
-      }
+      const maxLinesDirIdx = dirLines.indexOf(Math.max(...dirLines));
+      stats.largestDirectory = directoryEntries[maxLinesDirIdx][1];
       
       // Find directory with most files
-      if (dirStatsDf['files'] !== undefined) {
-        const maxFilesDirIdx = dirStatsDf['files'].idxmax();
-        stats.mostFilesDirectory = dirStatsData[maxFilesDirIdx];
-      }
+      const maxFilesDirIdx = dirFiles.indexOf(Math.max(...dirFiles));
+      stats.mostFilesDirectory = directoryEntries[maxFilesDirIdx][1];
       
-      // Create arrays for detailed directory analysis (still using native JS for sorting operations)
-      stats.largestDirectories = dirStatsData
+      // Create arrays for detailed directory analysis
+      stats.largestDirectories = Object.values(stats.directoryStats)
         .sort((a, b) => (b.lines || 0) - (a.lines || 0))
         .slice(0, TOP_N);
       
-      stats.largestFileCountDirectories = dirStatsData
+      stats.largestFileCountDirectories = Object.values(stats.directoryStats)
         .sort((a, b) => (b.files || 0) - (a.files || 0))
         .slice(0, TOP_N);
       
-      stats.complexityByDirectory = dirStatsData
+      stats.complexityByDirectory = Object.values(stats.directoryStats)
         .sort((a, b) => (b.complexity || 0) - (a.complexity || 0))
         .slice(0, TOP_N);
       
-      stats.largestSizeDirectories = dirStatsData
+      stats.largestSizeDirectories = Object.values(stats.directoryStats)
         .sort((a, b) => (b.size || 0) - (a.size || 0))
         .slice(0, TOP_N);
       
@@ -1439,7 +1463,7 @@ class StaticAnalyzer extends StandardAnalyzer {
         .sort((a, b) => (b.files || 0) - (a.files || 0))
         .slice(0, TOP_N);
       
-      // Calculate directory averages by type
+      // Calculate directory averages by depth
       stats.directoryStatsByDepth = {};
       directoryEntries.forEach(([, dirStats]) => {
         const depth = dirStats.depth;
@@ -1449,19 +1473,16 @@ class StaticAnalyzer extends StandardAnalyzer {
         stats.directoryStatsByDepth[depth].push(dirStats);
       });
       
-      // Calculate avg metrics by depth using danfojs for arrays
+      // Calculate avg metrics by depth
       for (const [depth, dirs] of Object.entries(stats.directoryStatsByDepth)) {
         if (dirs.length > 0) {
-          // Create DataFrame for this depth's directory data
-          const depthDf = new dfd.DataFrame(dirs);
-          
           stats.directoryStatsByDepth[depth] = {
             count: dirs.length,
-            avgLines: depthDf['lines'] ? depthDf['lines'].mean() : 0,
-            avgFiles: depthDf['files'] ? depthDf['files'].mean() : 0,
-            avgComplexity: depthDf['complexity'] ? depthDf['complexity'].mean() : 0,
-            totalLines: depthDf['lines'] ? depthDf['lines'].sum() : 0,
-            totalFiles: depthDf['files'] ? depthDf['files'].sum() : 0
+            avgLines: dirs.reduce((sum, d) => sum + (d.lines || 0), 0) / dirs.length,
+            avgFiles: dirs.reduce((sum, d) => sum + (d.files || 0), 0) / dirs.length,
+            avgComplexity: dirs.reduce((sum, d) => sum + (d.complexity || 0), 0) / dirs.length,
+            totalLines: dirs.reduce((sum, d) => sum + (d.lines || 0), 0),
+            totalFiles: dirs.reduce((sum, d) => sum + (d.files || 0), 0)
           };
         }
       }
@@ -1469,21 +1490,17 @@ class StaticAnalyzer extends StandardAnalyzer {
   }
 }
 
-class RequirementsAnalyzer extends StandardAnalyzer {
-  constructor(options, verbose) {
-    super(options, verbose);
-  }
-
+class RequirementsAnalyzer extends BaseAnalyzer {
   async analyze() {
-    if (this.verbose) console.log('\n🔍 Collecting Requirements Analysis...');
+    this.log('Collecting Requirements Analysis...');
 
     return await this.safeAnalyze(async () => {
       if (!fs.existsSync('./README.md')) {
-        if (this.verbose) console.log('❌ README.md not found');
+        this.log('README.md not found', 'error');
         return { error: 'README.md not found' };
       }
       
-      const readmeContent = this.safeReadFile('./README.md');
+      const readmeContent = this._readFileContent('./README.md');
       if (!readmeContent) {
         return { error: 'Could not read README.md' };
       }
@@ -1540,15 +1557,20 @@ class RequirementsAnalyzer extends StandardAnalyzer {
       readmeComplete: readmeContent.length > 5000,
     };
   }
+
+  _readFileContent(filePath) {
+    try {
+      return fs.readFileSync(filePath, 'utf8');
+    } catch (readError) {
+      this.log(`Cannot read file: ${filePath}`, 'warn', { error: readError.message });
+      return null;
+    }
+  }
 }
 
-class PlanningAnalyzer extends StandardAnalyzer {
-  constructor(options, verbose) {
-    super(options, verbose);
-  }
-
+class PlanningAnalyzer extends BaseAnalyzer {
   async analyze() {
-    if (this.verbose) console.log('\n🔍 Collecting Planning and Roadmap Indicators...');
+    this.log('Collecting Planning and Roadmap Indicators...');
 
     return await this.safeAnalyze(async () => {
       const planning = {
@@ -1670,18 +1692,14 @@ class PlanningAnalyzer extends StandardAnalyzer {
   }
 }
 
-class ArchitectureAnalyzer extends StandardAnalyzer {
-  constructor(options, verbose) {
-    super(options, verbose);
-  }
-
+class ArchitectureAnalyzer extends BaseAnalyzer {
   async analyze() {
-    if (this.verbose) console.log('\n🔍 Collecting Architecture and Dependency Analysis...');
+    this.log('Collecting Architecture and Dependency Analysis...');
 
     return await this.safeAnalyze(async () => {
       const srcPath = './src';
       if (!fs.existsSync(srcPath)) {
-        if (this.verbose) console.log('❌ Source directory not found');
+        this.log('Source directory not found', 'error');
         return { error: 'src directory not found' };
       }
 
@@ -1731,6 +1749,13 @@ class ArchitectureAnalyzer extends StandardAnalyzer {
         this._buildDependencyGraph(fullPath, architecture);
       } else if (item.isFile() && item.name.endsWith('.js')) {
         const relativePath = path.relative('.', fullPath);
+
+        // Skip excluded files using global exclusion
+        if (FileUtils.isExcludedPath(relativePath)) {
+          this.log(`Excluding file from architecture analysis: ${relativePath}`, 'warn');
+          continue;
+        }
+
         const content = this._readFileContent(fullPath);
         
         if (content) {
@@ -1792,29 +1817,14 @@ class ArchitectureAnalyzer extends StandardAnalyzer {
     try {
       return fs.readFileSync(filePath, 'utf8');
     } catch (readError) {
-      if (this.verbose) console.log(`⚠️ Cannot read file: ${filePath}`, readError.message);
+      this.log(`Cannot read file: ${filePath}`, 'warn', { error: readError.message });
       return null;
     }
   }
   
-  _isValidPath(path) {
-    return path && typeof path === 'string' && path.length > 0;
-  }
-  
-  _isReadableFile(filePath) {
-    try {
-      return fs.statSync(filePath).isFile();
-    } catch (e) {
-      return false;
-    }
-  }
-
   _analyzeLayers(architecture) {
     // Group files by directory to identify architectural layers
     const layers = {};
-    
-    // Prepare data for danfojs processing
-    const dependencyData = [];
     
     for (const [filePath, dependencies] of Object.entries(architecture.dependencyGraph)) {
       const dirPath = path.dirname(filePath);
@@ -1829,43 +1839,12 @@ class ArchitectureAnalyzer extends StandardAnalyzer {
       
       layers[dirPath].files.push(filePath);
       
-      // Record dependencies between layers and collect for DataFrame
+      // Record dependencies between layers
       for (const depPath of dependencies) {
         const depDir = path.dirname(depPath);
         if (depDir !== dirPath) {
           layers[dirPath].dependencies.add(depDir);
-          dependencyData.push({
-            sourceDir: dirPath,
-            targetDir: depDir,
-            sourceFile: filePath,
-            targetFile: depPath
-          });
         }
-      }
-    }
-    
-    // Use danfojs to analyze dependency patterns
-    if (dependencyData.length > 0) {
-      try {
-        const depDf = new dfd.DataFrame(dependencyData);
-        
-        // Group by source directory to count dependencies
-        const sourceCounts = depDf.groupby(['sourceDir']).count();
-        for (const [idx, row] of sourceCounts.toDict('row').data.entries()) {
-          const dir = sourceCounts.toDict('dict')['data'][idx]['sourceDir'];
-          if (layers[dir]) {
-            // The count is already captured in the Set size, but we can analyze patterns
-          }
-        }
-        
-        // Group by target directory to count dependents
-        const targetCounts = depDf.groupby(['targetDir']).count();
-        for (const [idx, row] of targetCounts.toDict('row').data.entries()) {
-          const dir = targetCounts.toDict('dict')['data'][idx]['targetDir'];
-          // This is already handled in the nested loop below
-        }
-      } catch (error) {
-        if (this.verbose) console.log(`⚠️ Error processing layers with danfojs: ${error.message}`);
       }
     }
     
@@ -1976,18 +1955,14 @@ class ArchitectureAnalyzer extends StandardAnalyzer {
   }
 }
 
-class TechnicalDebtAnalyzer extends StandardAnalyzer {
-  constructor(options, verbose) {
-    super(options, verbose);
-  }
-
+class TechnicalDebtAnalyzer extends BaseAnalyzer {
   async analyze() {
-    if (this.verbose) console.log('\n🔍 Collecting Technical Debt Indicators...');
+    this.log('Collecting Technical Debt Indicators...');
 
     return await this.safeAnalyze(async () => {
       const srcPath = './src';
       if (!fs.existsSync(srcPath)) {
-        if (this.verbose) console.log('❌ Source directory not found');
+        this.log('Source directory not found', 'error');
         return { error: 'src directory not found' };
       }
 
@@ -2042,12 +2017,19 @@ class TechnicalDebtAnalyzer extends StandardAnalyzer {
   }
 
   _analyzeFile(filePath, debtIndicators) {
+    const relativePath = path.relative('.', filePath);
+
+    // Skip excluded files using global exclusion
+    if (FileUtils.isExcludedPath(relativePath)) {
+      this.log(`Excluding file from debt analysis: ${relativePath}`, 'warn');
+      return;
+    }
+
     const content = this._readFileContent(filePath);
     if (!content) return;
 
-    const relativePath = path.relative('.', filePath);
     const lines = content.split('\n');
-    const complexityMetrics = calculateComplexityMetrics(content);
+    const complexityMetrics = this.calculateComplexityMetrics(content);
     
     // Calculate debt score based on multiple factors
     let debtScore = 0;
@@ -2130,21 +2112,48 @@ class TechnicalDebtAnalyzer extends StandardAnalyzer {
     try {
       return fs.readFileSync(filePath, 'utf8');
     } catch (readError) {
-      if (this.verbose) console.log(`⚠️ Cannot read file: ${filePath}`, readError.message);
+      this.log(`Cannot read file: ${filePath}`, 'warn', { error: readError.message });
       return null;
     }
   }
   
-  _isValidPath(path) {
-    return path && typeof path === 'string' && path.length > 0;
-  }
-  
-  _isReadableFile(filePath) {
-    try {
-      return fs.statSync(filePath).isFile();
-    } catch (e) {
-      return false;
+  calculateComplexityMetrics(content) {
+    const lines = content.split('\n');
+    
+    let functionCount = 0;
+    let classCount = 0;
+    let conditionalCount = 0;
+    let cyclomatic = 1;
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      
+      const hasFunction = trimmed.startsWith('function ') || 
+                         trimmed.includes('function(') || 
+                         trimmed.includes('=>') || 
+                         trimmed.includes('function*');
+      if (hasFunction) functionCount++;
+      
+      if (trimmed.includes('class ')) classCount++;
+      
+      const conditions = ['if (', 'else if', 'for (', 'while (', 'do {', 'switch (', 'try ', 'catch ('];
+      for (const condition of conditions) {
+        if (trimmed.includes(condition)) {
+          conditionalCount++;
+          cyclomatic++;
+        }
+      }
+      
+      if (trimmed.includes(' && ') || trimmed.includes(' || ')) cyclomatic++;
     }
+
+    return {
+      lines: lines.length,
+      functionCount,
+      classCount,
+      conditionalCount,
+      cyclomatic
+    };
   }
 
   _countLargeFunctions(content) {
@@ -2209,7 +2218,7 @@ class TechnicalDebtAnalyzer extends StandardAnalyzer {
   }
 }
 
-class FeatureSpecificationAnalyzer extends StandardAnalyzer {
+class FeatureSpecificationAnalyzer extends BaseAnalyzer {
   constructor(options, verbose) {
     super(options, verbose);
     this.specDir = './specifications';
@@ -2217,7 +2226,7 @@ class FeatureSpecificationAnalyzer extends StandardAnalyzer {
   }
 
   async analyze() {
-    if (this.verbose) console.log('\n🔍 Collecting Feature Specifications...');
+    this.log('Collecting Feature Specifications...');
 
     return await this.safeAnalyze(async () => {
       // First, look for existing specification files
@@ -2280,7 +2289,7 @@ class FeatureSpecificationAnalyzer extends StandardAnalyzer {
             this._parseMarkdownSpec(content, item.name);
           }
         } catch (parseError) {
-          if (this.verbose) console.log(`⚠️ Error parsing spec file ${fullPath}:`, parseError.message);
+          this.log(`Error parsing spec file ${fullPath}:`, 'warn', { error: parseError.message });
         }
       }
     }
@@ -2365,7 +2374,7 @@ class FeatureSpecificationAnalyzer extends StandardAnalyzer {
   }
 
   async _mapFeaturesToTests() {
-    const testFiles = getTestFilesList();
+    const testFiles = FileAnalyzer.collectTestFiles();
     const connections = [];
     
     for (const testFile of testFiles) {
@@ -2388,7 +2397,7 @@ class FeatureSpecificationAnalyzer extends StandardAnalyzer {
           }
         }
       } catch (e) {
-        if (this.verbose) console.log(`⚠️ Could not read test file ${testFile}:`, e.message);
+        this.log(`Could not read test file ${testFile}:`, 'warn', { error: e.message });
       }
     }
     
@@ -2416,9 +2425,16 @@ class FeatureSpecificationAnalyzer extends StandardAnalyzer {
       if (item.isDirectory()) {
         await this._traverseAndMapFeatures(fullPath, connections);
       } else if (item.isFile() && item.name.endsWith('.js')) {
+        const relativePath = path.relative('.', fullPath);
+
+        // Skip excluded files using global exclusion
+        if (FileUtils.isExcludedPath(relativePath)) {
+          this.log(`Excluding file from feature mapping: ${relativePath}`, 'warn');
+          continue;
+        }
+
         try {
           const content = fs.readFileSync(fullPath, 'utf8');
-          const relativePath = path.relative('.', fullPath);
 
           for (const [featureId, spec] of this.featureSpecs.entries()) {
             // Check if implementation file relates to feature
@@ -2436,7 +2452,7 @@ class FeatureSpecificationAnalyzer extends StandardAnalyzer {
             }
           }
         } catch (e) {
-          if (this.verbose) console.log(`⚠️ Could not read implementation file ${fullPath}:`, e.message);
+          this.log(`Could not read implementation file ${fullPath}:`, 'warn', { error: e.message });
         }
       }
     }
@@ -2475,208 +2491,6 @@ class FeatureSpecificationAnalyzer extends StandardAnalyzer {
   }
 }
 
-// Helper functions
-function getTestFilesList() {
-  const testFiles = [];
-  const searchPaths = ['./tests', './test', './src'];
-  
-  for (const searchPath of searchPaths) {
-    if (fs.existsSync(searchPath)) {
-      collectTestFilesRecursively(searchPath, testFiles);
-    }
-  }
-  
-  return testFiles;
-}
-
-function calculateMedian(values) {
-  if (values.length === 0) return 0;
-  
-  try {
-    // Use danfojs for median calculation
-    const series = new dfd.Series(values);
-    return series.median();
-  } catch (error) {
-    // Fallback to original implementation
-    const sorted = [...values].sort((a, b) => a - b);
-    const mid = Math.floor(sorted.length / 2);
-    return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
-  }
-}
-
-function collectTestFilesRecursively(dir, testFiles) {
-  if (!fs.existsSync(dir)) return;
-
-  const items = fs.readdirSync(dir, { withFileTypes: true });
-
-  for (const item of items) {
-    const fullPath = path.join(dir, item.name);
-
-    if (item.isDirectory()) {
-      collectTestFilesRecursively(fullPath, testFiles);
-    } else if (item.isFile()) {
-      const isTestFile = item.name.endsWith('.test.js') || 
-                        item.name.endsWith('.spec.js') ||
-                        item.name.includes('_test.js') || 
-                        item.name.includes('_spec.js');
-      
-      if (isTestFile) {
-        const relPath = path.relative('.', fullPath);
-        testFiles.push(relPath);
-      }
-    }
-  }
-}
-
-function extractImports(content) {
-  const imports = [];
-  const importRegex = /(import\s+|from\s+|require\(\s*)["'](.*?\.(js|ts))["']/gi;
-  let match;
-
-  while ((match = importRegex.exec(content)) !== null) {
-    const imp = match[2];
-    if (imp && !imp.startsWith('.') && !imp.startsWith('/')) {
-      imports.push(imp);
-    }
-  }
-
-  const relativeImportRegex = /(import\s+|from\s+|require\(\s*)["'](\.{1,2}\/.*?\.(js|ts))["']/gi;
-  while ((match = relativeImportRegex.exec(content)) !== null) {
-    imports.push(match[2]);
-  }
-
-  return [...new Set(imports)];
-}
-
-function calculateComplexityMetrics(content) {
-  const lines = content.split('\n');
-  
-  let functionCount = 0;
-  let classCount = 0;
-  let conditionalCount = 0;
-  let cyclomatic = 1;
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    
-    const hasFunction = trimmed.startsWith('function ') || 
-                       trimmed.includes('function(') || 
-                       trimmed.includes('=>') || 
-                       trimmed.includes('function*');
-    if (hasFunction) functionCount++;
-    
-    if (trimmed.includes('class ')) classCount++;
-    
-    const conditions = ['if (', 'else if', 'for (', 'while (', 'do {', 'switch (', 'try ', 'catch ('];
-    for (const condition of conditions) {
-      if (trimmed.includes(condition)) {
-        conditionalCount++;
-        cyclomatic++;
-      }
-    }
-    
-    if (trimmed.includes(' && ') || trimmed.includes(' || ')) cyclomatic++;
-  }
-
-  return {
-    lines: lines.length,
-    functionCount,
-    classCount,
-    conditionalCount,
-    cyclomatic
-  };
-}
-
-function analyzeCoverageByFile() {
-  try {
-    const coverageDetailPath = './coverage/coverage-final.json';
-    if (!fs.existsSync(coverageDetailPath)) return [];
-
-    let coverageDetail;
-    try {
-      const fileContent = fs.readFileSync(coverageDetailPath, 'utf8');
-      if (!fileContent.trim()) {
-        console.log('❌ Coverage file is empty');
-        return [];
-      }
-      coverageDetail = JSON.parse(fileContent);
-    } catch (parseError) {
-      console.log('❌ Error parsing coverage-final.json:', parseError.message);
-      return [];
-    }
-    
-    const files = [];
-    for (const [filePath, coverage] of Object.entries(coverageDetail)) {
-      try {
-        if (!filePath || typeof filePath !== 'string') {
-          continue; // Skip invalid file paths
-        }
-        
-        if (filePath.startsWith('./')) {
-          filePath = path.resolve(filePath);
-        }
-        
-        // Validate coverage structure before accessing properties
-        if (!coverage || typeof coverage !== 'object' || !coverage.s) {
-          if (globalThis.verbose) console.log(`⚠️ Invalid coverage structure for file: ${filePath}`);
-          continue;
-        }
-        
-        const summary = coverage.s;
-        if (typeof summary !== 'object') {
-          continue; // Skip if summary is not an object
-        }
-        
-        const statementKeys = Object.keys(summary);
-        const coveredStatements = statementKeys.filter(key => {
-          const value = summary[key];
-          return typeof value === 'number' && value > 0;
-        }).length;
-        const statementCount = statementKeys.length;
-        
-        const lineCoverage = statementCount > 0 ? (coveredStatements / statementCount) * 100 : 100;
-        
-        let fileSize = 0;
-        try {
-          if (fs.existsSync(filePath)) {
-            fileSize = fs.statSync(filePath).size;
-          }
-        } catch (e) {
-          // If we can't get file size, continue with 0
-        }
-        
-        files.push({
-          filePath: path.relative(process.cwd(), filePath),
-          lineCoverage: parseFloat(lineCoverage.toFixed(2)),
-          statements: statementCount,
-          covered: coveredStatements,
-          uncovered: statementCount - coveredStatements,
-          size: fileSize
-        });
-      } catch (fileError) {
-        // Skip this file if there's an error processing it
-        if (globalThis.verbose) console.log(`⚠️ Error processing coverage for ${filePath}:`, fileError.message);
-        continue;
-      }
-    }
-    
-    files.sort((a, b) => {
-      if (a.lineCoverage !== b.lineCoverage) {
-        return a.lineCoverage - b.lineCoverage;
-      }
-      if (a.size !== b.size) {
-        return b.size - a.size;
-      }
-      return b.statements - a.statements;
-    });
-    
-    return files.slice(0, TOP_N);
-  } catch (error) {
-    console.log('❌ Error in analyzeCoverageByFile:', error.message);
-    return [];
-  }
-}
-
 // Result display classes
 class ResultDisplay {
   constructor(options) {
@@ -2690,6 +2504,8 @@ class ResultDisplay {
       this.printDetailed(results);
     } else {
       this.printConcise(results);
+      // Always show actionable insights by default (not just in summary mode)
+      this._printActionableInsights(results);
     }
   }
 
@@ -3374,7 +3190,6 @@ class ResultDisplay {
   }
 }
 
-// Main analyzer class
 // Factory for creating analyzers
 class AnalyzerFactory {
   static createAnalyzer(type, options, verbose) {
