@@ -23,10 +23,8 @@ export class TermFactory extends BaseComponent {
     create(data) {
         if (!data) throw new Error('TermFactory.create: data is required');
 
-        if (typeof data === 'string') return this._getOrCreateAtomic(data);
-
-        if (data.name && !data.components && data.operator === undefined) {
-            return this._getOrCreateAtomic(data.name);
+        if (typeof data === 'string' || (data.name && !data.components && data.operator === undefined)) {
+            return this._getOrCreateAtomic(typeof data === 'string' ? data : data.name);
         }
 
         const {operator, components} = this._normalizeTermData(data);
@@ -219,7 +217,9 @@ export class TermFactory extends BaseComponent {
         return canonicalizer ? canonicalizer.call(this, components) : [...components];
     }
 
-    /**\n     * Get canonicalizer function for the given operator\n     */
+    /**
+     * Get canonicalizer function for the given operator
+     */
     _getCanonicalizer(operator) {
         const canonicalizers = {
             '<->': this._canonicalizeEquivalence,
@@ -232,22 +232,9 @@ export class TermFactory extends BaseComponent {
         if (COMMUTATIVE_OPERATORS.has(operator)) {
             // Special case for '=' operator: don't remove redundancy
             // because (5=5) and (5=3) both need 2 components
-            if (operator === '=') {
-                return (components) => {
-                    let canonicalComponents = [...components];
-                    // Don't remove redundancy for equality - keep both operands
-                    // But still sort for consistent ordering
-                    canonicalComponents = canonicalComponents.sort((a, b) => this._compareTermsAlphabetically(a, b));
-                    return canonicalComponents;
-                };
-            } else {
-                return (components) => {
-                    let canonicalComponents = [...components];
-                    canonicalComponents = this._removeRedundancy(canonicalComponents);
-                    canonicalComponents = this._normalizeCommutative(canonicalComponents);
-                    return canonicalComponents;
-                };
-            }
+            return operator === '='
+                ? (components) => [...components].sort((a, b) => this._compareTermsAlphabetically(a, b))
+                : (components) => this._removeRedundancy(this._normalizeCommutative([...components]));
         }
 
         return canonicalizers[operator] || null;
@@ -263,21 +250,14 @@ export class TermFactory extends BaseComponent {
             return components; // Return as-is if not enough components for equivalence
         }
 
-        // Only handle the first 2 components, which is the standard form
-        const validComponents = components.length > 2 ?
-            components.slice(0, 2) : components;
+        const validComponents = components.length > 2 ? components.slice(0, 2) : components;
 
         // Sort components by structural complexity, putting more complex terms first
         // If equal complexity, sort alphabetically by name
         return validComponents.sort((a, b) => {
             const complexityA = this._getStructuralComplexity(a);
             const complexityB = this._getStructuralComplexity(b);
-
-            if (complexityA !== complexityB) {
-                return complexityB - complexityA; // More complex first
-            }
-
-            return a.name.localeCompare(b.name);
+            return complexityA !== complexityB ? complexityB - complexityA : a.name.localeCompare(b.name); // More complex first
         });
     }
 
@@ -287,16 +267,7 @@ export class TermFactory extends BaseComponent {
     _canonicalizeImplication(components) {
         // For implication (A --> B), we expect exactly 2 components
         // For property-based testing, if we have fewer than 2, just return as-is
-        if (components.length < 2) {
-            return components; // Return as-is if not enough components for implication
-        }
-
-        // Only handle the first 2 components, which is the standard form
-        const validComponents = components.length > 2 ?
-            components.slice(0, 2) : components;
-
-        // Don't reorder components for implication as order matters (subject --> predicate)
-        return validComponents;
+        return components.length < 2 ? components : components.slice(0, 2); // Don't reorder for implication
     }
 
     _removeRedundancy(comps) {
@@ -358,15 +329,8 @@ export class TermFactory extends BaseComponent {
      */
     _handleNestedOperators(operator, components) {
         // For nested operators with same precedence, ensure they are properly normalized
-        if (ASSOCIATIVE_OPERATORS.has(operator)) {
-            // Already handled by _flatten
-            return components;
-        }
-
-        // For commutative operators, order is handled in _normalizeCommutative
-        // Don't re-sort here to avoid conflicts with canonical ordering
-        if (COMMUTATIVE_OPERATORS.has(operator)) {
-            return components;
+        if (ASSOCIATIVE_OPERATORS.has(operator) || COMMUTATIVE_OPERATORS.has(operator)) {
+            return components; // Already handled by _flatten or _normalizeCommutative
         }
 
         // For non-commutative operators, preserve original order
@@ -400,32 +364,25 @@ export class TermFactory extends BaseComponent {
      * @private
      */
     _evictLRUEntries() {
-        if (this._cache.size <= this._maxCacheSize) {
-            return; // No eviction needed
-        }
+        while (this._cache.size > this._maxCacheSize) {
+            // Find the oldest accessed term to evict
+            let oldestKey = null;
+            let oldestTime = Infinity;
 
-        // Find the oldest accessed term to evict
-        let oldestKey = null;
-        let oldestTime = Infinity;
-
-        for (const [key, accessTime] of this._accessTime.entries()) {
-            if (accessTime < oldestTime) {
-                oldestTime = accessTime;
-                oldestKey = key;
+            for (const [key, accessTime] of this._accessTime.entries()) {
+                if (accessTime < oldestTime) {
+                    oldestTime = accessTime;
+                    oldestKey = key;
+                }
             }
-        }
 
-        // Remove the oldest entry if found
-        if (oldestKey) {
-            this._cache.delete(oldestKey);
-            this._accessTime.delete(oldestKey);
-            this._complexityCache.delete(oldestKey); // Also remove from complexity cache
-            this._cognitiveDiversity.unregisterTerm(oldestKey); // Unregister from cognitive diversity
-        }
-
-        // Continue evicting until cache is within size limit
-        if (this._cache.size > this._maxCacheSize) {
-            this._evictLRUEntries(); // Recursively evict if still over the limit
+            // Remove the oldest entry if found
+            if (oldestKey) {
+                this._cache.delete(oldestKey);
+                this._accessTime.delete(oldestKey);
+                this._complexityCache.delete(oldestKey); // Also remove from complexity cache
+                this._cognitiveDiversity.unregisterTerm(oldestKey); // Unregister from cognitive diversity
+            }
         }
     }
 
@@ -463,9 +420,8 @@ export class TermFactory extends BaseComponent {
      * Get statistics about the factory
      */
     getStats() {
-        const cacheHitRate = this._cacheMisses + this._cacheHits > 0
-            ? this._cacheHits / (this._cacheMisses + this._cacheHits)
-            : 0;
+        const totalRequests = this._cacheMisses + this._cacheHits;
+        const cacheHitRate = totalRequests > 0 ? this._cacheHits / totalRequests : 0;
 
         return {
             cacheSize: this._cache.size,
@@ -513,8 +469,7 @@ export class TermFactory extends BaseComponent {
      * Get most complex terms in cache (for cognitive diversity analysis)
      */
     getMostComplexTerms(limit = 10) {
-        const entries = Array.from(this._complexityCache.entries());
-        return entries
+        return Array.from(this._complexityCache.entries())
             .sort((a, b) => b[1] - a[1])  // Sort by complexity descending
             .slice(0, limit)
             .map(([name, complexity]) => ({name, complexity}));
@@ -524,8 +479,7 @@ export class TermFactory extends BaseComponent {
      * Get least complex terms in cache (for simplicity analysis)
      */
     getSimplestTerms(limit = 10) {
-        const entries = Array.from(this._complexityCache.entries());
-        return entries
+        return Array.from(this._complexityCache.entries())
             .sort((a, b) => a[1] - b[1])  // Sort by complexity ascending
             .slice(0, limit)
             .map(([name, complexity]) => ({name, complexity}));
@@ -584,7 +538,6 @@ export class TermFactory extends BaseComponent {
      * @returns {boolean} - True if the term is a system atom
      */
     isSystemAtom(term) {
-        return term && term.isAtomic &&
-            (term.name === 'True' || term.name === 'False' || term.name === 'Null');
+        return term?.isAtomic && ['True', 'False', 'Null'].includes(term.name);
     }
 }
