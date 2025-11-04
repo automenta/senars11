@@ -1,4 +1,5 @@
 import { BaseIndex } from './BaseIndex.js';
+import { getWithDefaultSet } from '../MemoryUtils.js';
 
 export class AtomicIndex extends BaseIndex {
     constructor(config = {}) {
@@ -9,9 +10,8 @@ export class AtomicIndex extends BaseIndex {
     add(concept) {
         const { term } = concept;
         if (term.isAtomic) {
-            const concepts = this._index.get(term.name) || new Set();
+            const concepts = getWithDefaultSet(this._index, term.name);
             concepts.add(concept);
-            this._index.set(term.name, concepts);
         }
     }
 
@@ -29,8 +29,8 @@ export class AtomicIndex extends BaseIndex {
     find(filters = {}) {
         const { termName } = filters;
         if (termName !== undefined) {
-            const concepts = this._index.get(termName);
-            return concepts ? Array.from(concepts) : [];
+            const concepts = getOrDefault(this._index, termName, new Set());
+            return Array.from(concepts);
         }
         return this.getAll();
     }

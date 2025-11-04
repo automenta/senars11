@@ -1,5 +1,6 @@
 import { BaseIndex } from './BaseIndex.js';
 import { TermCategorization } from '../TermCategorization.js';
+import { getWithDefaultSet } from '../MemoryUtils.js';
 
 export class ActivationIndex extends BaseIndex {
     constructor(config = {}) {
@@ -9,9 +10,8 @@ export class ActivationIndex extends BaseIndex {
 
     add(concept) {
         const activationBucket = this._getActivationBucket(concept.activation);
-        const concepts = this._index.get(activationBucket) || new Set();
+        const concepts = getWithDefaultSet(this._index, activationBucket);
         concepts.add(concept);
-        this._index.set(activationBucket, concepts);
     }
 
     remove(concept) {

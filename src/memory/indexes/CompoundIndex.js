@@ -1,5 +1,6 @@
 import { BaseIndex } from './BaseIndex.js';
 import { TermCategorization } from '../TermCategorization.js';
+import { getWithDefaultSet, addToMapSet } from '../MemoryUtils.js';
 
 export class CompoundIndex extends BaseIndex {
     constructor(config = {}) {
@@ -14,28 +15,20 @@ export class CompoundIndex extends BaseIndex {
         const { term } = concept;
         if (!term.isAtomic) {
             // Index by operator
-            const concepts = this._index.get(term.operator) || new Set();
-            concepts.add(concept);
-            this._index.set(term.operator, concepts);
+            addToMapSet(this._index, term.operator, concept);
 
             // Index by complexity
             const complexityLevel = this._getComplexityLevel(term);
-            const complexityConcepts = this._complexityIndex.get(complexityLevel) || new Set();
-            complexityConcepts.add(concept);
-            this._complexityIndex.set(complexityLevel, complexityConcepts);
+            addToMapSet(this._complexityIndex, complexityLevel, concept);
 
             // Index by category
             const category = TermCategorization.getTermCategory(term);
-            const categoryConcepts = this._categoryIndex.get(category) || new Set();
-            categoryConcepts.add(concept);
-            this._categoryIndex.set(category, categoryConcepts);
+            addToMapSet(this._categoryIndex, category, concept);
 
             // Index by components
             if (term.components) {
                 for (const comp of term.components) {
-                    const componentConcepts = this._componentIndex.get(comp) || new Set();
-                    componentConcepts.add(concept);
-                    this._componentIndex.set(comp, componentConcepts);
+                    addToMapSet(this._componentIndex, comp, concept);
 
                     // Also index nested components
                     if (comp.isCompound) {
@@ -49,9 +42,7 @@ export class CompoundIndex extends BaseIndex {
     _indexCompoundRecursively(term, concept) {
         if (term.components) {
             for (const comp of term.components) {
-                const componentConcepts = this._componentIndex.get(comp) || new Set();
-                componentConcepts.add(concept);
-                this._componentIndex.set(comp, componentConcepts);
+                addToMapSet(this._componentIndex, comp, concept);
 
                 if (comp.isCompound) {
                     this._indexCompoundRecursively(comp, concept);
