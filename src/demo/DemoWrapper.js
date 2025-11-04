@@ -1,3 +1,7 @@
+import { DemosManager } from './DemosManager.js';
+import { DemoStateManager } from './DemoStateManager.js';
+import { DemoValidator } from './DemoValidator.js';
+
 /**
  * DemoWrapper - A system that wraps demos to provide remote control and introspection
  */
@@ -14,9 +18,12 @@ export class DemoWrapper {
         this.currentStep = 0;
         this.currentDemoId = null;
         this.demos = new Map();
-        this.demoStates = {}; // Track individual demo states
         this.webSocketMonitor = null;
         this.nar = null;
+
+        // Initialize the modules
+        this.demosManager = new DemosManager();
+        this.demoStateManager = new DemoStateManager();
 
         // Register built-in demos
         this.registerBuiltinDemos();
@@ -33,9 +40,9 @@ export class DemoWrapper {
     }
 
     registerBuiltinDemos() {
-        const builtinDemoConfigs = this._getBuiltinDemoConfigs();
+        const builtinDemos = this.demosManager.getAvailableDemos();
         
-        builtinDemoConfigs.forEach(config => {
+        builtinDemos.forEach(config => {
             this.registerDemo(config.id, {
                 name: config.name,
                 description: config.description,
@@ -45,32 +52,6 @@ export class DemoWrapper {
                 }
             });
         });
-    }
-    
-    _getBuiltinDemoConfigs() {
-        return [
-            {
-                id: 'basicUsage',
-                name: 'Basic Usage Demo',
-                description: 'Demonstrates basic NARS operations',
-                handler: this.runBasicUsageDemo.bind(this),
-                stepDelay: 1000
-            },
-            {
-                id: 'syllogism',
-                name: 'Syllogistic Reasoning Demo',
-                description: 'Demonstrates syllogistic reasoning',
-                handler: this.runSyllogismDemo.bind(this),
-                stepDelay: 1500
-            },
-            {
-                id: 'inductive',
-                name: 'Inductive Reasoning Demo',
-                description: 'Demonstrates inductive reasoning',
-                handler: this.runInductiveDemo.bind(this),
-                stepDelay: 2000
-            }
-        ];
     }
 
     registerDemo(id, config) {
@@ -96,18 +77,36 @@ export class DemoWrapper {
 
     async handleDemoControl(data) {
         try {
-            // Validate input data
-            if (!this._validateDemoControl(data)) {
+            // Validate input data using the validator module
+            if (!DemoValidator.validateDemoControl(data)) {
                 return;
             }
 
             const {command, demoId, parameters} = data.payload;
-            const handler = this._getCommandHandler(command, demoId, parameters || {});
             
-            if (handler) {
-                await handler();
-            } else {
-                await this._handleUnknownCommand(demoId, command);
+            // Handle the command directly instead of using a handler map
+            switch (command) {
+                case 'start':
+                    await this.startDemo(demoId, parameters);
+                    break;
+                case 'stop':
+                    await this.stopDemo(demoId);
+                    break;
+                case 'pause':
+                    await this.pauseDemo(demoId);
+                    break;
+                case 'resume':
+                    await this.resumeDemo(demoId);
+                    break;
+                case 'step':
+                    await this.stepDemo(demoId, parameters);
+                    break;
+                case 'configure':
+                    await this.configureDemo(demoId, parameters);
+                    break;
+                default:
+                    await this._handleUnknownCommand(demoId, command);
+                    break;
             }
         } catch (error) {
             console.error('Error handling demo control:', error);
@@ -123,47 +122,6 @@ export class DemoWrapper {
         }
     }
     
-    _getCommandHandler(command, demoId, parameters) {
-        const commandHandlers = {
-            'start': () => this.startDemo(demoId, parameters),
-            'stop': () => this.stopDemo(demoId),
-            'pause': () => this.pauseDemo(demoId),
-            'resume': () => this.resumeDemo(demoId),
-            'step': () => this.stepDemo(demoId, parameters),
-            'configure': () => this.configureDemo(demoId, parameters)
-        };
-
-        return commandHandlers[command] || null;
-    }
-
-    _validateDemoControl(data) {
-        if (!data || !data.payload) {
-            console.error('Invalid demo control message: missing payload');
-            return false;
-        }
-
-        const {command, demoId, parameters} = data.payload;
-
-        // Validate required fields
-        if (!command || typeof command !== 'string') {
-            console.error('Invalid demo control message: missing or invalid command');
-            return false;
-        }
-
-        if (!demoId || typeof demoId !== 'string') {
-            console.error('Invalid demo control message: missing or invalid demoId');
-            return false;
-        }
-
-        // Validate parameters if present
-        if (parameters && typeof parameters !== 'object') {
-            console.error('Invalid demo control message: parameters must be an object');
-            return false;
-        }
-
-        return true;
-    }
-
     async _handleUnknownCommand(demoId, command) {
         console.warn(`Unknown demo command: ${command}`);
         // Optionally notify the client about the unknown command
@@ -189,23 +147,18 @@ export class DemoWrapper {
         }
 
         // Stop any currently running demo to avoid conflicts
-        if (this.isRunning && this.currentDemoId && this.currentDemoId !== demoId) {
-            await this.stopDemo(this.currentDemoId);
+        const runningDemoId = this.demoStateManager.getRunningDemoId();
+        if (runningDemoId && runningDemoId !== demoId) {
+            await this.stopDemo(runningDemoId);
         }
 
         this.currentDemoId = demoId;
         this.isRunning = true;
         this.isPaused = false;
         this.currentStep = 0;
-        this.demoStates[demoId] = {
-            state: 'running',
-            progress: 0,
-            currentStep: 0,
-            parameters,
-            demoId,
-            startTime: Date.now(),
-            lastUpdateTime: Date.now()
-        };
+
+        // Use the DemoStateManager to initialize state
+        this.demoStateManager.initializeDemoState(demoId, parameters);
 
         // Notify UI of demo state
         await this.sendDemoState(demoId, {
@@ -217,33 +170,25 @@ export class DemoWrapper {
         });
 
         try {
-            await demo.handler(parameters);
-
+            // Execute the demo handler with proper context
+            await this._executeDemoHandler(demo, parameters);
+            
             // Update final state when demo completes successfully
-            if (this.demoStates[demoId]) {
-                this.demoStates[demoId] = {
-                    ...this.demoStates[demoId],
-                    state: 'completed',
-                    endTime: Date.now(),
-                    progress: 100
-                };
-
-                await this.sendDemoState(demoId, {
-                    state: 'completed',
-                    progress: 100,
-                    endTime: Date.now()
-                });
-            }
+            this.demoStateManager.finalizeDemoState(demoId, 'completed');
+            await this.sendDemoState(demoId, {
+                state: 'completed',
+                progress: 100,
+                endTime: Date.now()
+            });
         } catch (error) {
             console.error(`Error running demo ${demoId}:`, error);
-            this.demoStates[demoId] = {
-                state: 'error',
+            
+            this.demoStateManager.finalizeDemoState(demoId, 'error', {
                 error: error.message,
-                demoId,
-                endTime: Date.now(),
                 errorMessage: error.message,
                 errorStack: error.stack
-            };
+            });
+            
             await this.sendDemoState(demoId, {
                 state: 'error',
                 error: error.message,
@@ -263,13 +208,9 @@ export class DemoWrapper {
                 this.currentDemoId = null;
 
                 // Ensure the final state is stopped if not already set to completed or error
-                if (this.demoStates[demoId]?.state === 'running') {
-                    this.demoStates[demoId] = {
-                        state: 'stopped',
-                        demoId,
-                        endTime: Date.now()
-                    };
-
+                const currentState = this.demoStateManager.getDemoState(demoId);
+                if (currentState?.state === 'running') {
+                    this.demoStateManager.finalizeDemoState(demoId, 'stopped');
                     await this.sendDemoState(demoId, {
                         state: 'stopped',
                         endTime: Date.now()
@@ -281,6 +222,35 @@ export class DemoWrapper {
         return true;
     }
 
+    async _executeDemoHandler(demo, parameters) {
+        // The demo handler may be from the DemosManager which needs access to nar and other methods
+        // For demo-specific handlers, we call them with the necessary context
+        if (demo.id === 'basicUsage') {
+            await this.demosManager.runBasicUsageDemo(
+                this.nar, 
+                this.sendDemoStep.bind(this), 
+                this.waitIfNotPaused.bind(this), 
+                parameters
+            );
+        } else if (demo.id === 'syllogism') {
+            await this.demosManager.runSyllogismDemo(
+                this.nar, 
+                this.sendDemoStep.bind(this), 
+                this.waitIfNotPaused.bind(this), 
+                parameters
+            );
+        } else if (demo.id === 'inductive') {
+            await this.demosManager.runInductiveDemo(
+                this.nar, 
+                this.sendDemoStep.bind(this), 
+                this.waitIfNotPaused.bind(this), 
+                parameters
+            );
+        } else if (typeof demo.handler === 'function') {
+            await demo.handler.call(this, parameters);
+        }
+    }
+
     async stopDemo(demoId) {
         this.isRunning = false;
         this.isPaused = false;
@@ -288,30 +258,21 @@ export class DemoWrapper {
 
         const targetDemoId = demoId || this.currentDemoId;
         if (targetDemoId) {
-            this._updateDemoState(targetDemoId, { state: 'stopped', demoId: targetDemoId });
+            this.demoStateManager.updateDemoState(targetDemoId, { state: 'stopped', demoId: targetDemoId });
             await this.sendDemoState(targetDemoId, { state: 'stopped' });
         }
     }
 
     async pauseDemo(demoId) {
         this.isPaused = true;
-        this._updateDemoState(demoId, { state: 'paused' });
+        this.demoStateManager.updateDemoState(demoId, { state: 'paused' });
         await this.sendDemoState(demoId, { state: 'paused' });
     }
 
     async resumeDemo(demoId) {
         this.isPaused = false;
-        this._updateDemoState(demoId, { state: 'running' });
+        this.demoStateManager.updateDemoState(demoId, { state: 'running' });
         await this.sendDemoState(demoId, { state: 'running' });
-    }
-
-    _updateDemoState(demoId, stateUpdate) {
-        if (demoId) {
-            this.demoStates[demoId] = {
-                ...this.demoStates[demoId],
-                ...stateUpdate
-            };
-        }
     }
 
     async stepDemo(demoId, parameters = {}) {
