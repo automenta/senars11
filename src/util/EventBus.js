@@ -37,14 +37,12 @@ export class EventBus {
 
     removeMiddleware(middleware) {
         const index = this._middleware.indexOf(middleware);
-        if (index !== -1) {
-            this._middleware.splice(index, 1);
-        }
+        index !== -1 && this._middleware.splice(index, 1);
         return this;
     }
 
     onError(handler) {
-        if (typeof handler === 'function') this._errorHandlers.add(handler);
+        typeof handler === 'function' && this._errorHandlers.add(handler);
         return this;
     }
 
@@ -52,22 +50,16 @@ export class EventBus {
         if (!this._enabled) return;
 
         this._stats.eventsEmitted++;
-
         const traceId = options.traceId || TraceId.generate();
 
-        let processedData = {
-            ...data,
-            eventName,
-            traceId
-        };
+        let processedData = { ...data, eventName, traceId };
 
         for (const middleware of this._middleware) {
             try {
                 processedData = await middleware(processedData);
                 if (processedData === null) return; // Middleware can stop propagation
             } catch (error) {
-                this._handleError('middleware', error, {eventName, data, traceId});
-                return;
+                return this._handleError('middleware', error, {eventName, data, traceId});
             }
         }
 
@@ -81,6 +73,7 @@ export class EventBus {
     }
 
     _handleError(type, error, context) {
+        // Process all error handlers
         for (const handler of this._errorHandlers) {
             try {
                 handler(error, type, context);
@@ -89,6 +82,7 @@ export class EventBus {
             }
         }
 
+        // Default error logging if no handlers are registered
         if (this._errorHandlers.size === 0) {
             console.error(`EventBus error in ${type}:`, error, context);
         }

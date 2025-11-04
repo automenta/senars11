@@ -1,5 +1,5 @@
-import {Logger} from './util/Logger.js';
-import {SystemConfig} from './nar/SystemConfig.js';
+import {Logger} from './Logger.js';
+import {SystemConfig} from '../nar/SystemConfig.js';
 
 const ERROR_TYPES = {
     LOGIC: 'logic',

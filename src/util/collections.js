@@ -1,31 +1,6 @@
-import * as dfd from 'danfojs';
+// Collection utilities optimized for performance and reusability
 
-// danfojs-enhanced statistical functions
-export const calculateAverage = (values) => {
-    if (!values || values.length === 0) return 0;
-    if (Array.isArray(values)) {
-        return new dfd.Series(values).mean();
-    }
-    return 0;
-};
-
-export const calculateStatistics = (values) => {
-    if (!values || values.length === 0) return { 
-        mean: 0, median: 0, std: 0, min: 0, max: 0, count: 0 
-    };
-    
-    const series = new dfd.Series(values);
-    return {
-        mean: series.mean(),
-        median: series.median(),
-        std: series.std(),
-        min: series.min(),
-        max: series.max(),
-        count: series.size,
-        variance: series.var()
-    };
-};
-
+// Array utilities
 export const sortByProperty = (items, prop, desc = false) =>
     [...items].sort((a, b) => (desc ? (b[prop] || 0) - (a[prop] || 0) : (a[prop] || 0) - (b[prop] || 0)));
 
@@ -36,27 +11,6 @@ export const findBy = (items, predicate) => items.find(predicate);
 export const groupBy = (items, keyFn) =>
     items.reduce((groups, item) => ((groups[keyFn(item) || 'unknown'] ||= []).push(item), groups), {});
 
-// danfojs-enhanced groupBy with statistical aggregation
-export const groupByWithStats = (items, keyFn, valueFn = item => item) => {
-    if (!items || items.length === 0) return {};
-    
-    // Convert to DataFrame for advanced processing
-    const df = new dfd.DataFrame(items);
-    
-    // Group and calculate statistics if values are numeric
-    const grouped = df.groupby(keyFn);
-    const result = {};
-    
-    // Fallback to original groupBy for complex objects
-    for (const item of items) {
-        const key = keyFn(item);
-        if (!result[key]) result[key] = [];
-        result[key].push(item);
-    }
-    
-    return result;
-};
-
 export const applyToAll = (items, fn) => items.forEach(fn);
 
 export const createMap = (items, keyFn, valueFn = x => x) => 
@@ -65,27 +19,66 @@ export const createMap = (items, keyFn, valueFn = x => x) =>
 export const createSet = (items, keyFn = x => x) => 
     new Set(items.map(keyFn));
 
-// danfojs-enhanced operations
+// Numeric array utilities
+export const calculateAverage = (values) => {
+    if (!values || values.length === 0) return 0;
+    return values.reduce((sum, val) => sum + val, 0) / values.length;
+};
+
+export const calculateStatistics = (values) => {
+    if (!values || values.length === 0) return { 
+        mean: 0, median: 0, std: 0, min: 0, max: 0, count: 0 
+    };
+    
+    const sorted = [...values].sort((a, b) => a - b);
+    const n = values.length;
+    const mean = calculateAverage(values);
+    const min = sorted[0];
+    const max = sorted[n - 1];
+    const median = n % 2 === 0 ? (sorted[n / 2 - 1] + sorted[n / 2]) / 2 : sorted[Math.floor(n / 2)];
+    
+    const variance = values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / n;
+    const std = Math.sqrt(variance);
+    
+    return { mean, median, std, min, max, count: n, variance };
+};
+
 export const getPercentile = (values, percentile) => {
     if (!values || values.length === 0) return 0;
-    const series = new dfd.Series(values);
-    return series.quantile(percentile);
+    const sorted = [...values].sort((a, b) => a - b);
+    const index = Math.floor(percentile * (sorted.length - 1));
+    return sorted[index];
 };
 
 export const getOutliers = (values, threshold = 2) => {
     if (!values || values.length === 0) return [];
     
-    const series = new dfd.Series(values);
-    const mean = series.mean();
-    const std = series.std();
+    const mean = calculateAverage(values);
+    const std = Math.sqrt(values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / values.length);
     
     return values.filter(value => Math.abs(value - mean) > threshold * std);
 };
 
+// Mathematical utilities
 export const correlation = (values1, values2) => {
-    if (!values1 || !values2 || values1.length !== values2.length) return 0;
+    if (!values1 || !values2 || values1.length !== values2.length || values1.length === 0) return 0;
     
-    const df = new dfd.DataFrame({x: values1, y: values2});
-    const corrMatrix = df.corr();
-    return corrMatrix['x']['y'];
+    const n = values1.length;
+    const avg1 = calculateAverage(values1);
+    const avg2 = calculateAverage(values2);
+    
+    let numerator = 0;
+    let sumSq1 = 0;
+    let sumSq2 = 0;
+    
+    for (let i = 0; i < n; i++) {
+        const diff1 = values1[i] - avg1;
+        const diff2 = values2[i] - avg2;
+        numerator += diff1 * diff2;
+        sumSq1 += diff1 * diff1;
+        sumSq2 += diff2 * diff2;
+    }
+    
+    const denominator = Math.sqrt(sumSq1 * sumSq2);
+    return denominator === 0 ? 0 : numerator / denominator;
 };

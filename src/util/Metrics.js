@@ -38,9 +38,9 @@ export class Metrics {
             executions: metrics.executions,
             successes: metrics.successes,
             failures: metrics.failures,
-            successRate: Math.round(successRate * 100) / 100,
-            avgTime: Math.round(metrics.avgTime * 100) / 100,
-            totalTime: Math.round(metrics.totalTime * 100) / 100,
+            successRate: Number((successRate).toFixed(2)),
+            avgTime: Number((metrics.avgTime).toFixed(2)),
+            totalTime: Number((metrics.totalTime).toFixed(2)),
             lastRun: metrics.lastRun,
             lastError: metrics.lastError,
             uptime: Date.now() - metrics.createdAt
@@ -59,5 +59,9 @@ export class Metrics {
         }
         merged.avgTime = merged.executions > 0 ? merged.totalTime / merged.executions : 0;
         return merged;
+    }
+    
+    static round(value, decimals = 2) {
+        return Number(value.toFixed(decimals));
     }
 }

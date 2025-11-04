@@ -1,3 +1,5 @@
+// Performance utilities
+
 // Debounce function execution
 export const debounce = (func, wait) => {
     let timeoutId = null;
@@ -8,10 +10,8 @@ export const debounce = (func, wait) => {
     };
 
     debouncedFunc.cancel = () => {
-        if (timeoutId) {
-            clearTimeout(timeoutId);
-            timeoutId = null;
-        }
+        timeoutId && clearTimeout(timeoutId);
+        timeoutId = null;
     };
 
     return debouncedFunc;
@@ -26,5 +26,17 @@ export const throttle = (fn, delay) => {
             lastCall = now;
             fn(...args);
         }
+    };
+};
+
+// Memoize function results
+export const memoize = (fn) => {
+    const cache = new Map();
+    return (...args) => {
+        const key = JSON.stringify(args);
+        if (cache.has(key)) return cache.get(key);
+        const result = fn(...args);
+        cache.set(key, result);
+        return result;
     };
 };

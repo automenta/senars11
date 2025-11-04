@@ -1,4 +1,3 @@
-import * as dfd from 'danfojs';
 import {PERFORMANCE} from '../config/constants.js';
 
 export class SystemMetrics {
@@ -15,7 +14,6 @@ export class SystemMetrics {
             totalProcessingTime: 0,
         };
         this.cycleTimes = [];
-        this.cycleTimesDf = null; // danfojs DataFrame for advanced analytics
         this.reset();
     }
 
@@ -28,10 +26,9 @@ export class SystemMetrics {
             this.cycleTimes.shift();
         }
 
-        // Use danfojs for more sophisticated statistics calculation
+        // Calculate average cycle time manually without danfojs
         if (this.cycleTimes.length > 0) {
-            const df = new dfd.Series(this.cycleTimes);
-            this.metrics.averageCycleTime = df.mean();
+            this.metrics.averageCycleTime = this.cycleTimes.reduce((sum, time) => sum + time, 0) / this.cycleTimes.length;
         }
         this.metrics.totalProcessingTime += cycleTime;
     }
@@ -68,23 +65,32 @@ export class SystemMetrics {
     }
 
     getPerformanceMetrics() {
-        // Use danfojs for advanced statistical calculations
+        // Manual statistical calculations without danfojs
         let cycleTimeVariance = 0;
         let cycleTimeStd = 0;
         let cycleTimeMedian = 0;
         let cycleTimePercentiles = { p25: 0, p75: 0, p95: 0 };
         
         if (this.cycleTimes.length > 0) {
-            const df = new dfd.Series(this.cycleTimes);
-            cycleTimeVariance = df.var();
-            cycleTimeStd = df.std();
-            cycleTimeMedian = df.median();
+            const sorted = [...this.cycleTimes].sort((a, b) => a - b);
+            const n = sorted.length;
             
-            // Calculate percentiles using danfojs
+            // Median
+            cycleTimeMedian = n % 2 === 0 
+                ? (sorted[n / 2 - 1] + sorted[n / 2]) / 2 
+                : sorted[Math.floor(n / 2)];
+            
+            // Variance and standard deviation
+            const mean = this.metrics.averageCycleTime;
+            const varianceSum = this.cycleTimes.reduce((sum, time) => sum + Math.pow(time - mean, 2), 0);
+            cycleTimeVariance = varianceSum / n;
+            cycleTimeStd = Math.sqrt(cycleTimeVariance);
+            
+            // Percentiles
             cycleTimePercentiles = {
-                p25: df.quantile(0.25),
-                p75: df.quantile(0.75),
-                p95: df.quantile(0.95)
+                p25: sorted[Math.floor(0.25 * n)],
+                p75: sorted[Math.floor(0.75 * n)],
+                p95: sorted[Math.floor(0.95 * n)]
             };
         }
 
@@ -112,7 +118,7 @@ export class SystemMetrics {
         };
     }
 
-    // Advanced statistical analysis methods using danfojs
+    // Advanced statistical analysis methods without danfojs
     getAdvancedPerformanceMetrics() {
         if (this.cycleTimes.length === 0) {
             return {
@@ -122,9 +128,10 @@ export class SystemMetrics {
             };
         }
 
-        const df = new dfd.Series(this.cycleTimes);
-        const mean = df.mean();
-        const std = df.std();
+        // Calculate mean and standard deviation
+        const mean = this.cycleTimes.reduce((sum, time) => sum + time, 0) / this.cycleTimes.length;
+        const varianceSum = this.cycleTimes.reduce((sum, time) => sum + Math.pow(time - mean, 2), 0);
+        const std = Math.sqrt(varianceSum / this.cycleTimes.length);
         
         // Identify outliers (values more than 2 standard deviations from mean)
         const outliers = this.cycleTimes.filter(value => 
@@ -168,7 +175,6 @@ export class SystemMetrics {
             totalProcessingTime: 0,
         };
         this.cycleTimes = [];
-        this.cycleTimesDf = null;
     }
 
     exportMetrics() {

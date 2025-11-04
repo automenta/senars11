@@ -30,3 +30,7 @@ export const clampAndFreeze = (obj, min = 0, max = 1) =>
 // Configuration utilities
 export const mergeConfig = (base, ...overrides) =>
     freeze(overrides.reduce((acc, cfg) => ({...acc, ...cfg}), {...base}));
+
+// Number utilities
+export const isNumber = val => typeof val === 'number' && !isNaN(val);
+export const round = (val, decimals = 2) => Number(Math.round(val * Math.pow(10, decimals)) + 'e-' + decimals);

@@ -16,13 +16,12 @@ export class CircuitBreaker {
 
     async execute(fn, context = {}) {
         if (this.state === 'OPEN' && this.isResetTimeoutExpired()) {
-            this.state = 'HALF_OPEN';
+            this.transitionTo('HALF_OPEN');
             this.successCount = 0;
         }
 
         if (this.state !== 'HALF_OPEN' && this.shouldOpen()) {
-            this.state = 'OPEN';
-            this.lastFailureTime = Date.now();
+            this.forceOpen();
             throw new Error('Circuit breaker is OPEN');
         }
 
@@ -39,18 +38,16 @@ export class CircuitBreaker {
     onSuccess() {
         this.failureCount = 0;
         this.successCount++;
+        
         if (this.state === 'HALF_OPEN' && this.successCount >= this.options.halfOpenAttempts) {
-            this.state = 'CLOSED';
+            this.transitionTo('CLOSED');
             this.successCount = 0;
         }
     }
 
     onFailure() {
         this.failureCount++;
-        if (this.failureCount >= this.options.failureThreshold) {
-            this.state = 'OPEN';
-            this.lastFailureTime = Date.now();
-        }
+        this.failureCount >= this.options.failureThreshold && this.forceOpen();
     }
 
     shouldOpen() {
@@ -59,6 +56,11 @@ export class CircuitBreaker {
 
     isResetTimeoutExpired() {
         return Date.now() - this.lastFailureTime >= this.options.resetTimeout;
+    }
+
+    transitionTo(newState) {
+        this.state = newState;
+        this.lastFailureTime = newState === 'OPEN' ? Date.now() : this.lastFailureTime;
     }
 
     getState() {
@@ -73,19 +75,18 @@ export class CircuitBreaker {
     }
 
     reset() {
-        this.state = 'CLOSED';
+        this.transitionTo('CLOSED');
         this.failureCount = 0;
         this.successCount = 0;
         this.lastFailureTime = null;
     }
 
     forceOpen() {
-        this.state = 'OPEN';
-        this.lastFailureTime = Date.now();
+        this.transitionTo('OPEN');
     }
 
     forceClose() {
-        this.state = 'CLOSED';
+        this.transitionTo('CLOSED');
         this.failureCount = 0;
         this.successCount = 0;
         this.lastFailureTime = null;

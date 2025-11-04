@@ -150,7 +150,7 @@ export class BaseComponent {
             this._emitLifecycleEvent(operation);
 
             // Log and update metrics
-            this._logger.info(`${this._name} ${operation}${operation === 'e' ? 'd' : (operation === 'stop' || operation === 'dispos' ? 'ped' : 'ed')}`);
+            this._logger.info(`${this._name} ${operation}${operation === 'initialize' ? 'd' : operation === 'start' ? 'ed' : operation === 'stop' ? 'ped' : 'd'}`);
             if (metricName) this.incrementMetric(metricName);
             return true;
         } catch (error) {
