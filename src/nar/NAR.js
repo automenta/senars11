@@ -26,6 +26,7 @@ import {MetricsMonitor} from '../reasoning/MetricsMonitor.js';
 import {EmbeddingLayer} from '../lm/EmbeddingLayer.js';
 import {TermLayer} from '../memory/TermLayer.js';
 import {ReasoningAboutReasoning} from '../reasoning/ReasoningAboutReasoning.js';
+import {SYSTEM_ATOMS} from '../reasoning/SystemAtoms.js';
 
 export class NAR extends BaseComponent {
     constructor(config = {}) {
@@ -258,14 +259,6 @@ export class NAR extends BaseComponent {
             '!': 'GOAL',
             '?': 'QUESTION'
         }[punctuation] || 'BELIEF';
-    }
-
-    async initialize() {
-        const success = await this._componentManager.initializeAll();
-        if (success) {
-            this._setupDefaultRules();
-        }
-        return success;
     }
 
     start(options = {}) {
@@ -640,7 +633,7 @@ export class NAR extends BaseComponent {
         }
 
         return {
-            result: SYSTEM_ATOMS.Null,
+            result: null,
             success: false,
             message: 'No operation evaluation engine available'
         };

@@ -3,8 +3,6 @@
  * Provides common formatting and display functionality shared between different UI components
  */
 
-import * as dfd from 'danfojs';
-
 export class DisplayUtils {
     /**
      * Creates a formatted table with specified headers and data
@@ -198,8 +196,8 @@ export class DisplayUtils {
     }
 
     /**
-     * Prints a danfojs DataFrame as a formatted table
-     * @param {Object} df - danfojs DataFrame to print
+     * Prints a DataFrame-like object as a formatted table
+     * @param {Object} df - DataFrame-like object with shape, columns and values
      * @param {Object} options - Printing options
      * @param {number} options.maxRows - Maximum number of rows to display (default: 20)
      * @param {number} options.maxCols - Maximum number of columns to display (default: 10)
@@ -272,7 +270,7 @@ export class DisplayUtils {
             
             return table;
         } catch (error) {
-            // Fallback to simple representation if danfojs operations fail
+            // Fallback to simple representation if operations fail
             return `DataFrame (${df.shape ? df.shape.join('x') : 'unknown shape'})`;
         }
     }

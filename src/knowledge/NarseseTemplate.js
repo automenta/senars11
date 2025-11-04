@@ -2,8 +2,44 @@
  * Task/Term/Truth Template API for flexible Narsese generation
  * Provides abstracted and consolidated templates for creating tasks and relationships
  */
-import { TruthValueUtils } from './Knowledge.js';
 
+class TruthValueUtils {
+  static normalizeMetric(value, min, max) {
+    if (value < min) return 0;
+    if (value > max) return 1;
+    if (max === min) return 0.5;
+    return (value - min) / (max - min);
+  }
+
+  static calculateFrequencyFromMetric(value, min, max) {
+    return this.normalizeMetric(value, min, max);
+  }
+
+  static calculateConfidenceFromMetric(value, min, max) {
+    return this.normalizeMetric(value, min, max);
+  }
+
+  static calculateTruthValue(value, min, max, defaultValue = 0.5) {
+    const normalized = this.normalizeMetric(value, min, max);
+    return isNaN(normalized) ? defaultValue : normalized;
+  }
+
+  static createTruthValue(frequency, confidence = 0.9) {
+    return `%${frequency.toFixed(2)};${confidence.toFixed(2)}%`;
+  }
+
+  static calculateWeightedTruthValue(metrics) {
+    let weightedSum = 0, totalWeight = 0;
+    for (const { value, weight, min, max } of metrics) {
+      const normalizedValue = this.normalizeMetric(value, min, max);
+      weightedSum += normalizedValue * weight;
+      totalWeight += weight;
+    }
+    return totalWeight > 0 ? weightedSum / totalWeight : 0.5;
+  }
+}
+
+export { TruthValueUtils };
 export class NarseseTemplate {
   constructor() {
     this.templates = new Map();

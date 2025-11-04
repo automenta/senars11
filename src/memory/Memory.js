@@ -1,4 +1,3 @@
-import * as dfd from 'danfojs';
 import {Concept} from './Concept.js';
 import {MemoryIndex} from './MemoryIndex.js';
 import {MemoryConsolidation} from './MemoryConsolidation.js';
@@ -419,7 +418,7 @@ export class Memory extends BaseComponent {
         const conceptStats = this.getAllConcepts().map(c => c.getStats());
         const hasConcepts = conceptStats.length > 0;
 
-        // Use danfojs for advanced statistical calculations
+        // Calculate statistics without danfojs
         let averageActivation = 0;
         let averageQuality = 0;
         let activationStd = 0;
@@ -431,15 +430,27 @@ export class Memory extends BaseComponent {
             const activations = conceptStats.map(s => s.activation);
             const qualities = conceptStats.map(s => s.quality);
             
-            const activationSeries = new dfd.Series(activations);
-            const qualitySeries = new dfd.Series(qualities);
+            // Calculate averages
+            averageActivation = activations.reduce((sum, val) => sum + val, 0) / activations.length;
+            averageQuality = qualities.reduce((sum, val) => sum + val, 0) / qualities.length;
             
-            averageActivation = activationSeries.mean();
-            averageQuality = qualitySeries.mean();
-            activationStd = activationSeries.std();
-            qualityStd = qualitySeries.std();
-            activationMedian = activationSeries.median();
-            qualityMedian = qualitySeries.median();
+            // Calculate standard deviations
+            const activationVariance = activations.reduce((sum, val) => sum + Math.pow(val - averageActivation, 2), 0) / activations.length;
+            const qualityVariance = qualities.reduce((sum, val) => sum + Math.pow(val - averageQuality, 2), 0) / qualities.length;
+            activationStd = Math.sqrt(activationVariance);
+            qualityStd = Math.sqrt(qualityVariance);
+            
+            // Calculate medians
+            const sortedActivations = [...activations].sort((a, b) => a - b);
+            const sortedQualities = [...qualities].sort((a, b) => a - b);
+            const mid = Math.floor(sortedActivations.length / 2);
+            
+            activationMedian = sortedActivations.length % 2 === 0 
+                ? (sortedActivations[mid - 1] + sortedActivations[mid]) / 2 
+                : sortedActivations[mid];
+            qualityMedian = sortedQualities.length % 2 === 0 
+                ? (sortedQualities[mid - 1] + sortedQualities[mid]) / 2 
+                : sortedQualities[mid];
         }
 
         return {

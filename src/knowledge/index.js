@@ -1,4 +1,5 @@
-export { Knowledge, DataTableKnowledge, TruthValueUtils } from './Knowledge.js';
+export { Knowledge, TruthValueUtils } from './Knowledge.js';
+export { DataTableKnowledge } from './DataTableKnowledge.js';
 export { NarseseTemplate, defaultNarseseTemplate, TemplateBasedKnowledge } from './NarseseTemplate.js';
 export { FileAnalysisKnowledge, TestResultKnowledge, DirectoryStructureKnowledge, DependencyGraphKnowledge, FlexibleDataTableKnowledge } from './SelfAnalysisKnowledge.js';
 export { KnowledgeFactory } from './KnowledgeFactory.js';

@@ -92,7 +92,8 @@ export class Knowing {
     this.stats.knowledgeByType = {};
     this.stats.lastUpdated = new Date().toISOString();
 
-    for (const knowledge of this.knowledgeItems) {
+    // Use Promise.all for better performance when collecting stats
+    const statsPromises = this.knowledgeItems.map(async (knowledge) => {
       const typeName = knowledge.constructor.name;
       
       if (!this.stats.knowledgeByType[typeName]) {
@@ -106,19 +107,24 @@ export class Knowing {
       this.stats.knowledgeByType[typeName].count++;
       
       try {
-        const tasks = await knowledge.toTasks();
-        const taskCount = Array.isArray(tasks) ? tasks.length : 0;
+        const [tasks, relationships] = await Promise.allSettled([
+          knowledge.toTasks(),
+          knowledge.createRelationships()
+        ]);
+        
+        const taskCount = tasks.status === 'fulfilled' && Array.isArray(tasks.value) ? tasks.value.length : 0;
         this.stats.totalTasks += taskCount;
         this.stats.knowledgeByType[typeName].tasks += taskCount;
         
-        const relationships = await knowledge.createRelationships();
-        const relationshipCount = Array.isArray(relationships) ? relationships.length : 0;
+        const relationshipCount = relationships.status === 'fulfilled' && Array.isArray(relationships.value) ? relationships.value.length : 0;
         this.stats.totalRelationships += relationshipCount;
         this.stats.knowledgeByType[typeName].relationships += relationshipCount;
       } catch (error) {
         console.error(`❌ Error calculating stats for ${typeName}: ${error.message}`);
       }
-    }
+    });
+    
+    await Promise.all(statsPromises);
   }
 
   async getSummary() {

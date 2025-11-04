@@ -3,6 +3,7 @@
  * Tests for the Knowledge factory and registration system
  */
 import { Knowledge, KnowledgeFactory } from '../../../src/knowledge/index.js';
+import { DataTableKnowledge } from '../../../src/knowledge/DataTableKnowledge.js';
 
 // Test knowledge class
 class TestKnowledge extends Knowledge {

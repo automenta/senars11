@@ -1,4 +1,5 @@
-import { Knowledge, DataTableKnowledge, TruthValueUtils } from './Knowledge.js';
+import { Knowledge, TruthValueUtils } from './Knowledge.js';
+import { DataTableKnowledge } from './DataTableKnowledge.js';
 
 export class KnowledgeFactory {
   static knowledgeRegistry = {};

@@ -1,5 +1,8 @@
-import { DataTableKnowledge, TruthValueUtils } from './Knowledge.js';
+import { TruthValueUtils } from './NarseseTemplate.js';
 import * as dfd from 'danfojs';
+
+// Since DataTableKnowledge uses danfojs, we import it separately
+import { DataTableKnowledge } from './DataTableKnowledge.js';
 
 export class FileAnalysisKnowledge extends DataTableKnowledge {
   constructor(data = null, options = {}) {
