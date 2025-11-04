@@ -1,46 +1,25 @@
 import React, {memo} from 'react';
 import {DataPanel} from './DataPanel.js';
+import DataItem from './DataItem.js';
 import {themeUtils} from '../utils/themeUtils.js';
 import {createSection, createMetricDisplay} from '../utils/panelUtils.js';
 
 const CyclePanel = memo(() => {
     const renderCycle = (cycle) =>
-        React.createElement('div',
-            {
-                key: cycle.cycle,
-                style: {
-                    padding: '0.75rem',
-                    borderBottom: `1px solid ${themeUtils.get('BORDERS.COLOR')}`,
-                    backgroundColor: themeUtils.get('BACKGROUNDS.PRIMARY'),
-                    borderRadius: themeUtils.get('BORDERS.RADIUS.SM'),
-                    marginBottom: '0.25rem'
-                }
-            },
-            React.createElement('div', {
-                style: {
-                    fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD'),
-                    color: themeUtils.get('TEXT.PRIMARY')
-                }
-            }, `Cycle #${cycle.cycle}`),
-            React.createElement('div', {
-                    style: {
-                        fontSize: themeUtils.get('FONTS.SIZE.SM'),
-                        color: themeUtils.get('TEXT.SECONDARY'),
-                        marginTop: '0.25rem'
-                    }
+        React.createElement(DataItem, {
+            key: cycle.cycle,
+            title: `Cycle #${cycle.cycle}`,
+            fields: [
+                {
+                    label: 'Details',
+                    value: `Tasks: ${cycle.tasksProcessed} | Beliefs: ${cycle.beliefsAdded} | Qs: ${cycle.questionsAnswered}`
                 },
-                `Tasks: ${cycle.tasksProcessed} | Beliefs: ${cycle.beliefsAdded} | Qs: ${cycle.questionsAnswered}`
-            ),
-            React.createElement('div', {
-                    style: {
-                        fontSize: themeUtils.get('FONTS.SIZE.SM'),
-                        color: themeUtils.get('TEXT.MUTED'),
-                        marginTop: '0.125rem'
-                    }
-                },
-                `${new Date(cycle.timestamp).toLocaleTimeString()}`
-            )
-        );
+                {
+                    label: 'Time',
+                    value: new Date(cycle.timestamp).toLocaleTimeString()
+                }
+            ]
+        });
 
     return React.createElement(DataPanel, {
         title: 'Cycles',

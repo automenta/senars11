@@ -1,5 +1,6 @@
 import React, {memo, useEffect, useMemo, useState} from 'react';
 import {TimeDisplay} from './GenericComponents.js';
+import {themeUtils} from '../utils/themeUtils.js';
 
 const GenericPanel = memo(({
     items = [],
@@ -36,8 +37,8 @@ const GenericPanel = memo(({
     
     const titleElement = title ? React.createElement('div', {
         style: {
-            fontWeight: 'bold',
-            marginBottom: '0.5rem',
+            fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD'),
+            marginBottom: themeUtils.get('SPACING.SM'),
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center'
@@ -45,7 +46,7 @@ const GenericPanel = memo(({
     },
         React.createElement('span', null, title),
         showCount && React.createElement('span', {
-            style: {fontSize: '0.8rem', color: '#666'}
+            style: {fontSize: themeUtils.get('FONTS.SIZE.SM'), color: themeUtils.get('TEXT.SECONDARY')}
         }, `(${displayItems.length})`)
     ) : null;
     
@@ -53,16 +54,16 @@ const GenericPanel = memo(({
         ? displayItems.map((item, index) => React.createElement('div', {key: `item-${index}`}, renderItem(item, index)))
         : React.createElement('div', {
             className: 'emptyState',
-            style: {padding: '1rem', textAlign: 'center', color: '#999'}
+            style: {padding: themeUtils.get('SPACING.MD'), textAlign: 'center', color: themeUtils.get('TEXT.MUTED')}
         }, emptyMessage);
     
     const timestampElement = withTimestamp ? React.createElement('div', {
         style: {
-            fontSize: '0.7rem',
-            color: '#666',
+            fontSize: themeUtils.get('FONTS.SIZE.SM'),
+            color: themeUtils.get('TEXT.SECONDARY'),
             textAlign: 'right',
-            marginTop: '0.25rem',
-            paddingRight: '0.5rem'
+            marginTop: themeUtils.get('SPACING.XS'),
+            paddingRight: themeUtils.get('SPACING.SM')
         }
     }, React.createElement(TimeDisplay, {timestamp: Date.now(), formatType: 'time'})) : null;
     

@@ -37,12 +37,9 @@ const DataPanel = memo(({
 }) => {
     const rawData = useMemo(() => {
         if (typeof dataSource === 'function') {
-            return dataSource(useUiStore.getState());
-        } else if (Array.isArray(dataSource)) {
-            return dataSource;
-        } else {
-            return [];
+            return dataSource(useUiStore.getState()) || [];
         }
+        return Array.isArray(dataSource) ? dataSource : [];
     }, [dataSource]);
 
     const [searchTerm, setSearchTerm] = useState('');
@@ -51,42 +48,39 @@ const DataPanel = memo(({
     const [currentPage, setCurrentPage] = useState(1);
 
     const processedData = useMemo(() => {
-        let processor = createSearchableCollection(rawData, search.fields || []);
-        let filteredData = searchTerm ? processor.search(searchTerm) : rawData;
-
-        // Ensure filteredData is always an array after search
-        if (!Array.isArray(filteredData)) {
-            console.debug('Search returned non-array result, using empty array', filteredData);
-            filteredData = [];
+        let filteredData = rawData;
+        
+        // Apply search filter
+        if (searchTerm && search.fields?.length > 0) {
+            const processor = createSearchableCollection(rawData, search.fields);
+            const result = processor.search(searchTerm);
+            filteredData = Array.isArray(result) ? result : [];
         }
 
+        // Apply processing pipeline
         if (processPipeline) {
-            filteredData = process(filteredData, processPipeline);
-            // Ensure result is array after processing
-            if (!Array.isArray(filteredData)) {
-                console.debug('Process pipeline returned non-array result, using empty array', filteredData);
-                filteredData = [];
-            }
+            const result = process(filteredData, processPipeline);
+            filteredData = Array.isArray(result) ? result : [];
         }
 
+        // Apply sorting
         if (sortBy) {
             filteredData = [...filteredData].sort((a, b) => {
-                let valueA = getNestedValue(a, sortBy);
-                let valueB = getNestedValue(b, sortBy);
-
-                let comparison = 0;
-                if (typeof valueA === 'string' && typeof valueB === 'string') {
-                    comparison = valueA.toLowerCase().localeCompare(valueB.toLowerCase());
-                } else if (typeof valueA === 'number' && typeof valueB === 'number') {
-                    comparison = valueA - valueB;
-                } else {
-                    comparison = String(valueA).localeCompare(String(valueB));
-                }
-
+                const valueA = getNestedValue(a, sortBy);
+                const valueB = getNestedValue(b, sortBy);
+                
+                // Determine comparison based on data types
+                const comparison = typeof valueA === 'string' && typeof valueB === 'string'
+                    ? valueA.toLowerCase().localeCompare(valueB.toLowerCase())
+                    : typeof valueA === 'number' && typeof valueB === 'number'
+                        ? valueA - valueB
+                        : String(valueA).localeCompare(String(valueB));
+                
                 return sortDirection === 'asc' ? comparison : -comparison;
             });
         }
 
+        // Apply pagination
         if (pagination.enabled) {
             const start = (currentPage - 1) * pagination.itemsPerPage;
             const end = start + pagination.itemsPerPage;
@@ -94,7 +88,7 @@ const DataPanel = memo(({
         }
 
         return filteredData;
-    }, [rawData, searchTerm, sortBy, sortDirection, currentPage, pagination, processPipeline, search]);
+    }, [rawData, searchTerm, search.fields, sortBy, sortDirection, currentPage, pagination, processPipeline]);
 
     const handleSearchChange = useCallback((e) => {
         setSearchTerm(e.target.value);
@@ -102,12 +96,8 @@ const DataPanel = memo(({
     }, [pagination.enabled]);
 
     const handleSortChange = useCallback((field) => {
-        if (sortBy === field) {
-            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-        } else {
-            setSortBy(field);
-            setSortDirection(sort.defaultDirection);
-        }
+        setSortDirection(sortBy === field ? (sortDirection === 'asc' ? 'desc' : 'asc') : sort.defaultDirection);
+        if (sortBy !== field) setSortBy(field);
         if (pagination.enabled) setCurrentPage(1);
     }, [sortBy, sortDirection, sort.defaultDirection, pagination.enabled]);
 
@@ -123,13 +113,12 @@ const DataPanel = memo(({
     }, [rawData, searchTerm, search.fields, pagination]);
 
     const controls = useMemo(() => {
-        if (!search.enabled && sort.options.length === 0) return null;
-
-        return React.createElement('div', {
+        const hasControls = search.enabled || (sort.enabled && sort.options.length > 0) || pagination.enabled;
+        return hasControls ? React.createElement('div', {
                 style: {
                     display: 'flex',
-                    gap: '0.5rem',
-                    marginBottom: '0.5rem',
+                    gap: themeUtils.get('SPACING.SM'),
+                    marginBottom: themeUtils.get('SPACING.SM'),
                     alignItems: 'center',
                     flexWrap: 'wrap'
                 }
@@ -152,7 +141,7 @@ const DataPanel = memo(({
                 totalPages,
                 onPageChange: (newPage) => setCurrentPage(newPage)
             })
-        );
+        ) : null;
     }, [search, searchTerm, handleSearchChange, sort, sortBy, sortDirection,
         handleSortChange, pagination, currentPage, totalPages]);
 
@@ -173,12 +162,14 @@ const DataPanel = memo(({
     }, [rawData, searchTerm, search.fields, processedData.length, config]);
 
     const content = useMemo(() => {
+        // Show empty state if no data
         if (processedData.length === 0) {
             return createEmptyState({
                 message: config.emptyMessage || 'No items to display'
             });
         }
 
+        // Use virtualization for large datasets
         if (virtualization.enabled && processedData.length > 100) {
             return React.createElement(VirtualizedList, {
                 items: processedData,
@@ -189,6 +180,7 @@ const DataPanel = memo(({
             });
         }
 
+        // Default to generic panel
         return React.createElement(GenericPanel, {
             items: processedData,
             renderItem: renderItem,

@@ -8,10 +8,10 @@ export const createSearchInput = ({searchTerm, onSearchChange, placeholder, styl
         value: searchTerm,
         onChange: onSearchChange,
         style: {
-            padding: '0.25rem 0.5rem',
+            padding: `${themeUtils.get('SPACING.XS')} ${themeUtils.get('SPACING.SM')}`,
             border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`,
             borderRadius: themeUtils.get('BORDERS.RADIUS.SM'),
-            fontSize: '0.9rem',
+            fontSize: themeUtils.get('FONTS.SIZE.BASE'),
             flex: '1 1 200px',
             ...style
         }
@@ -22,16 +22,16 @@ export const createSortButton = ({option, isActive, direction, onClick, style = 
         key: option.key,
         onClick,
         style: {
-            padding: '0.25rem 0.5rem',
+            padding: `${themeUtils.get('SPACING.XS')} ${themeUtils.get('SPACING.SM')}`,
             border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`,
             backgroundColor: isActive ? themeUtils.get('COLORS.PRIMARY') : themeUtils.get('BACKGROUNDS.SECONDARY'),
             color: isActive ? themeUtils.get('TEXT.LIGHT') : themeUtils.get('TEXT.PRIMARY'),
             borderRadius: themeUtils.get('BORDERS.RADIUS.SM'),
-            fontSize: '0.8rem',
+            fontSize: themeUtils.get('FONTS.SIZE.SM'),
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
-            gap: '0.25rem',
+            gap: themeUtils.get('SPACING.XS'),
             ...style
         }
     },
@@ -57,7 +57,7 @@ export const createPaginationControls = ({currentPage, totalPages, onPageChange,
         onClick: () => onPageChange(Math.max(currentPage - 1, 1)),
         disabled: currentPage === 1,
         style: {
-            padding: '0.25rem 0.5rem',
+            padding: `${themeUtils.get('SPACING.XS')} ${themeUtils.get('SPACING.SM')}`,
             border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`,
             borderRadius: themeUtils.get('BORDERS.RADIUS.SM'),
             backgroundColor: currentPage === 1 ? themeUtils.get('COLORS.GRAY_300') : themeUtils.get('BACKGROUNDS.SECONDARY'),
@@ -71,7 +71,7 @@ export const createPaginationControls = ({currentPage, totalPages, onPageChange,
         onClick: () => onPageChange(Math.min(currentPage + 1, totalPages)),
         disabled: currentPage === totalPages,
         style: {
-            padding: '0.25rem 0.5rem',
+            padding: `${themeUtils.get('SPACING.XS')} ${themeUtils.get('SPACING.SM')}`,
             border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`,
             borderRadius: themeUtils.get('BORDERS.RADIUS.SM'),
             backgroundColor: currentPage === totalPages ? themeUtils.get('COLORS.GRAY_300') : themeUtils.get('BACKGROUNDS.SECONDARY'),
@@ -84,10 +84,10 @@ export const createPaginationControls = ({currentPage, totalPages, onPageChange,
 export const createItemCount = ({visibleCount, totalCount, itemLabel, style = {}}) =>
     React.createElement('div', {
         style: {
-            fontSize: '0.8rem',
+            fontSize: themeUtils.get('FONTS.SIZE.SM'),
             color: themeUtils.get('TEXT.MUTED'),
             textAlign: 'right',
-            marginBottom: '0.25rem',
+            marginBottom: themeUtils.get('SPACING.XS'),
             ...style
         }
     },
@@ -101,7 +101,7 @@ export const createEmptyState = ({message, style = {}}) =>
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: '1rem',
+            padding: themeUtils.get('SPACING.MD'),
             color: themeUtils.get('TEXT.MUTED'),
             textAlign: 'center',
             height: '200px',
@@ -109,6 +109,6 @@ export const createEmptyState = ({message, style = {}}) =>
             ...style
         }
     },
-    React.createElement('div', {style: {fontSize: '2rem', marginBottom: '0.5rem'}}, '🔍'),
+    React.createElement('div', {style: {fontSize: '2rem', marginBottom: themeUtils.get('SPACING.SM')}}, '🔍'),
     React.createElement('div', null, message)
     );

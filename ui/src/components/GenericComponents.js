@@ -44,7 +44,7 @@ const StatusBadge = memo(({status, label, ...props}) => {
  * @param {string} color - Color of the spinner
  * @param {Object} props - Additional props
  */
-const LoadingSpinner = memo(({size = '1.5rem', color = '#3498db', ...props}) =>
+const LoadingSpinner = memo(({size = '1.5rem', color = themeUtils.get('COLORS.PRIMARY'), ...props}) =>
     React.createElement('div', {
         style: {
             display: 'flex',
@@ -83,7 +83,7 @@ const EmptyState = memo(({message = 'No data to display', icon = '🔍', ...prop
             justifyContent: 'center',
             padding: '1.5rem',
             textAlign: 'center',
-            color: '#999',
+            color: themeUtils.get('TEXT.MUTED'),
             ...props.style
         }
     },
@@ -107,23 +107,16 @@ const ErrorState = memo(({message = 'An error occurred', onRetry = null, ...prop
             justifyContent: 'center',
             padding: '1.5rem',
             textAlign: 'center',
-            color: '#dc3545',
+            color: themeUtils.get('COLORS.DANGER'),
             ...props.style
         }
     },
         React.createElement('div', {style: {fontSize: '2rem', marginBottom: '1rem'}}, '❌'),
         React.createElement('div', null, message),
-        onRetry && React.createElement('button', {
+        onRetry && React.createElement(Button, {
             onClick: onRetry,
-            style: {
-                marginTop: '1rem',
-                padding: '0.25rem 0.5rem',
-                backgroundColor: '#dc3545',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer'
-            }
+            variant: 'danger',
+            style: {marginTop: '1rem'}
         }, 'Retry')
     )
 );
@@ -143,15 +136,14 @@ const TimeDisplay = memo(({timestamp, formatType = 'relative', ...props}) => {
         const now = Date.now();
         const diffInSeconds = Math.floor((now - timestamp) / 1000);
         
-        if (diffInSeconds < 60) return React.createElement('span', null, `${diffInSeconds}s ago`);
-        if (diffInSeconds < 3600) return React.createElement('span', null, `${Math.floor(diffInSeconds / 60)}m ago`);
-        if (diffInSeconds < 86400) return React.createElement('span', null, `${Math.floor(diffInSeconds / 3600)}h ago`);
-        return React.createElement('span', null, `${Math.floor(diffInSeconds / 86400)}d ago`);
-    } else if (formatType === 'datetime') {
-        return React.createElement('span', null, format(date, 'MM/dd/yyyy HH:mm:ss'));
-    } else {
-        return React.createElement('span', null, format(date, 'HH:mm:ss'));
+        return diffInSeconds < 60 ? React.createElement('span', null, `${diffInSeconds}s ago`) :
+               diffInSeconds < 3600 ? React.createElement('span', null, `${Math.floor(diffInSeconds / 60)}m ago`) :
+               diffInSeconds < 86400 ? React.createElement('span', null, `${Math.floor(diffInSeconds / 3600)}h ago`) :
+               React.createElement('span', null, `${Math.floor(diffInSeconds / 86400)}d ago`);
     }
+    return formatType === 'datetime'
+        ? React.createElement('span', null, format(date, 'MM/dd/yyyy HH:mm:ss'))
+        : React.createElement('span', null, format(date, 'HH:mm:ss'));
 });
 
 /**
@@ -195,18 +187,18 @@ const GenericFormField = ({label, children, required = false, description = null
                 display: 'block',
                 fontWeight: 'bold',
                 marginBottom: '0.25rem',
-                fontSize: '0.9rem',
-                color: '#333'
+                fontSize: themeUtils.get('FONTS.SIZE.SM'),
+                color: themeUtils.get('TEXT.PRIMARY')
             }
         },
             label,
-            required && React.createElement('span', {style: {color: 'red'}}, ' *')
+            required && React.createElement('span', {style: {color: themeUtils.get('COLORS.DANGER')}}, ' *')
         ),
         children,
         description && React.createElement('div', {
             style: {
-                fontSize: '0.8rem',
-                color: '#666',
+                fontSize: themeUtils.get('FONTS.SIZE.SM'),
+                color: themeUtils.get('TEXT.SECONDARY'),
                 marginTop: '0.25rem'
             }
         }, description)
@@ -225,9 +217,11 @@ const GenericInputField = ({label, value, onChange, type = 'text', placeholder =
             style: {
                 width: '100%',
                 padding: '0.5rem',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-                fontSize: '0.9rem'
+                border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`,
+                borderRadius: themeUtils.get('BORDERS.RADIUS.MD'),
+                fontSize: themeUtils.get('FONTS.SIZE.SM'),
+                backgroundColor: disabled ? themeUtils.get('BACKGROUNDS.TERTIARY') : themeUtils.get('BACKGROUNDS.PRIMARY'),
+                color: themeUtils.get('TEXT.PRIMARY')
             }
         })
     );
@@ -242,9 +236,11 @@ const GenericSelectField = ({label, value, onChange, options, required = false, 
             style: {
                 width: '100%',
                 padding: '0.5rem',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-                fontSize: '0.9rem'
+                border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`,
+                borderRadius: themeUtils.get('BORDERS.RADIUS.MD'),
+                fontSize: themeUtils.get('FONTS.SIZE.SM'),
+                backgroundColor: disabled ? themeUtils.get('BACKGROUNDS.TERTIARY') : themeUtils.get('BACKGROUNDS.PRIMARY'),
+                color: themeUtils.get('TEXT.PRIMARY')
             }
         },
             options.map(option =>
@@ -259,18 +255,18 @@ const CollapsibleSection = ({title, children, defaultOpen = false}) => {
     
     return React.createElement('div', {
         style: {
-            border: '1px solid #e9ecef',
-            borderRadius: '4px',
+            border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`,
+            borderRadius: themeUtils.get('BORDERS.RADIUS.MD'),
             marginBottom: '1rem'
         }
     },
         React.createElement('div', {
             style: {
                 padding: '0.75rem',
-                backgroundColor: '#f8f9fa',
-                borderBottom: isOpen ? '1px solid #e9ecef' : 'none',
+                backgroundColor: themeUtils.get('BACKGROUNDS.SECONDARY'),
+                borderBottom: isOpen ? `1px solid ${themeUtils.get('BORDERS.COLOR')}` : 'none',
                 cursor: 'pointer',
-                fontWeight: 'bold'
+                fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD')
             },
             onClick: () => setIsOpen(!isOpen)
         },
@@ -296,7 +292,7 @@ const ToggleSwitch = ({checked, onChange, label}) =>
             display: 'flex',
             alignItems: 'center',
             cursor: 'pointer',
-            fontSize: '0.9rem'
+            fontSize: themeUtils.get('FONTS.SIZE.SM')
         }
     },
         React.createElement('div', {
@@ -304,7 +300,7 @@ const ToggleSwitch = ({checked, onChange, label}) =>
                 position: 'relative',
                 width: '40px',
                 height: '20px',
-                backgroundColor: checked ? '#007bff' : '#ccc',
+                backgroundColor: checked ? themeUtils.get('COLORS.PRIMARY') : themeUtils.get('COLORS.GRAY_400'),
                 borderRadius: '10px',
                 marginRight: '0.5rem',
                 transition: 'background-color 0.3s'
@@ -329,28 +325,33 @@ const ToggleSwitch = ({checked, onChange, label}) =>
 // Button variant styling configuration
 const getButtonVariantStyle = (variant) => {
     const variantStyles = {
-        primary: {backgroundColor: '#007bff', color: 'white'},
-        secondary: {backgroundColor: '#6c757d', color: 'white'},
-        success: {backgroundColor: '#28a745', color: 'white'},
-        warning: {backgroundColor: '#ffc107', color: '#212529'},
-        danger: {backgroundColor: '#dc3545', color: 'white'},
-        light: {backgroundColor: '#f8f9fa', color: '#212529', border: '1px solid #ced4da'},
-        dark: {backgroundColor: '#343a40', color: 'white'}
+        primary: {backgroundColor: themeUtils.get('COLORS.PRIMARY'), color: themeUtils.get('TEXT.LIGHT')},
+        secondary: {backgroundColor: themeUtils.get('COLORS.SECONDARY'), color: themeUtils.get('TEXT.LIGHT')},
+        success: {backgroundColor: themeUtils.get('COLORS.SUCCESS'), color: themeUtils.get('TEXT.LIGHT')},
+        warning: {backgroundColor: themeUtils.get('COLORS.WARNING'), color: themeUtils.get('TEXT.PRIMARY')},
+        danger: {backgroundColor: themeUtils.get('COLORS.DANGER'), color: themeUtils.get('TEXT.LIGHT')},
+        light: {backgroundColor: themeUtils.get('BACKGROUNDS.SECONDARY'), color: themeUtils.get('TEXT.PRIMARY'), border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`},
+        dark: {backgroundColor: themeUtils.get('COLORS.DARK'), color: themeUtils.get('TEXT.LIGHT')}
     };
     
     return variantStyles[variant] || variantStyles.primary;
 };
 
 // Generic Button component
-const Button = ({children, onClick, variant = 'primary', style = {}, disabled = false}) => {
+const Button = ({children, onClick, variant = 'primary', style = {}, disabled = false, size = 'md'}) => {
+    const sizeStyles = {
+        sm: {padding: '0.25rem 0.5rem', fontSize: themeUtils.get('FONTS.SIZE.SM')},
+        md: {padding: '0.5rem 1rem', fontSize: themeUtils.get('FONTS.SIZE.SM')},
+        lg: {padding: '0.75rem 1.5rem', fontSize: themeUtils.get('FONTS.SIZE.BASE')}
+    };
+    
     const baseStyle = {
-        padding: '0.5rem 1rem',
         border: 'none',
-        borderRadius: '4px',
+        borderRadius: themeUtils.get('BORDERS.RADIUS.MD'),
         cursor: disabled ? 'not-allowed' : 'pointer',
         opacity: disabled ? 0.6 : 1,
-        fontSize: '0.9rem',
-        fontWeight: 'normal'
+        fontWeight: themeUtils.get('FONTS.WEIGHT.NORMAL'),
+        ...sizeStyles[size]
     };
     
     return React.createElement('button', {
@@ -368,20 +369,21 @@ const Button = ({children, onClick, variant = 'primary', style = {}, disabled = 
 const Card = ({children, title, style = {}}) =>
     React.createElement('div', {
         style: {
-            border: '1px solid #e9ecef',
-            borderRadius: '4px',
+            border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`,
+            borderRadius: themeUtils.get('BORDERS.RADIUS.MD'),
             padding: '1rem',
-            backgroundColor: '#fff',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+            backgroundColor: themeUtils.get('BACKGROUNDS.PRIMARY'),
+            boxShadow: themeUtils.get('SHADOWS.SM'),
             ...style
         }
     },
         title && React.createElement('div', {
             style: {
-                fontWeight: 'bold',
+                fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD'),
                 marginBottom: '0.5rem',
                 paddingBottom: '0.5rem',
-                borderBottom: '1px solid #e9ecef'
+                borderBottom: `1px solid ${themeUtils.get('BORDERS.COLOR')}`,
+                color: themeUtils.get('TEXT.PRIMARY')
             }
         }, title),
         children

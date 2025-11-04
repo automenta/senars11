@@ -1,46 +1,21 @@
 import React, {memo} from 'react';
 import {formatBudget, formatTruth} from '../utils/formatters.js';
 import {DataPanel} from './DataPanel.js';
+import DataItem from './DataItem.js';
 import {themeUtils} from '../utils/themeUtils.js';
 
 const TaskPanel = memo(() => {
     const renderTask = (task) =>
-        React.createElement('div',
-            {
-                key: task.id,
-                style: {
-                    padding: '0.75rem',
-                    borderBottom: `1px solid ${themeUtils.get('BORDERS.COLOR')}`,
-                    backgroundColor: themeUtils.get('BACKGROUNDS.PRIMARY'),
-                    borderRadius: themeUtils.get('BORDERS.RADIUS.SM'),
-                    marginBottom: '0.25rem'
-                }
-            },
-            React.createElement('div', {
-                style: {
-                    fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD'),
-                    color: themeUtils.get('TEXT.PRIMARY')
-                }
-            }, task.term || task.id),
-            React.createElement('div', {
-                    style: {
-                        fontSize: themeUtils.get('FONTS.SIZE.SM'),
-                        color: themeUtils.get('TEXT.SECONDARY'),
-                        marginTop: '0.25rem'
-                    }
-                },
-                `Type: ${task.type || 'N/A'} | Truth: ${formatTruth(task.truth)} | Budget: ${formatBudget(task.budget)}`
-            ),
-            task.occurrenceTime && React.createElement('div', {
-                    style: {
-                        fontSize: themeUtils.get('FONTS.SIZE.SM'),
-                        color: themeUtils.get('TEXT.MUTED'),
-                        marginTop: '0.125rem'
-                    }
-                },
-                `Time: ${new Date(task.occurrenceTime).toLocaleTimeString()}`
-            )
-        );
+        React.createElement(DataItem, {
+            key: task.id,
+            title: task.term || task.id,
+            fields: [
+                {label: 'Type', value: task.type || 'N/A'},
+                {label: 'Truth', value: formatTruth(task.truth)},
+                {label: 'Budget', value: formatBudget(task.budget)},
+                task.occurrenceTime && {label: 'Time', value: new Date(task.occurrenceTime).toLocaleTimeString()}
+            ].filter(Boolean)
+        });
 
     return React.createElement(DataPanel, {
         title: 'Tasks',

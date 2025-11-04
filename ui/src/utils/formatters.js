@@ -18,7 +18,7 @@ export const formatDate = (timestamp) =>
     new Date(timestamp).toLocaleTimeString();
 
 export const formatNumber = (num, decimals = 2) =>
-    num?.toFixed(decimals) || 'N/A';
+    num != null ? Number(num).toFixed(decimals) : 'N/A';
 
 export const formatNumberWithCommas = (num) => {
     if (num == null) return 'N/A';
@@ -38,10 +38,8 @@ export const formatPercentage = (value, decimals = 2) => {
     return `${(value * 100).toFixed(decimals)}%`;
 };
 
-export const formatDateLong = (timestamp) => {
-    if (!timestamp) return 'N/A';
-    return new Date(timestamp).toLocaleString();
-};
+export const formatDateLong = (timestamp) =>
+    timestamp ? new Date(timestamp).toLocaleString() : 'N/A';
 
 export const formatDuration = (ms) => {
     if (ms < 0) ms = 0;
@@ -58,10 +56,8 @@ export const formatDuration = (ms) => {
     return `${ms}ms`;
 };
 
-export const truncateString = (str, maxLength, suffix = '...') => {
-    if (!str || str.length <= maxLength) return str;
-    return str.slice(0, maxLength) + suffix;
-};
+export const truncateString = (str, maxLength, suffix = '...') =>
+    !str || str.length <= maxLength ? str : str.slice(0, maxLength) + suffix;
 
 export const formatFileSize = (bytes) => {
     if (bytes === 0) return '0 Bytes';

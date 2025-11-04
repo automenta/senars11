@@ -1,5 +1,6 @@
 import React, {memo} from 'react';
 import {DataPanel} from './DataPanel.js';
+import DataItem from './DataItem.js';
 import {themeUtils} from '../utils/themeUtils.js';
 import {
     calculatePriorityChange,
@@ -11,49 +12,26 @@ const ConceptPanel = memo(() => {
         const priorityChange = calculatePriorityChange(concept);
         const priorityChangeColor = getPriorityChangeColor(priorityChange);
         
-        return React.createElement('div',
-            {
-                key: concept.term,
-                style: {
-                    padding: '0.75rem',
-                    borderBottom: `1px solid ${themeUtils.get('BORDERS.COLOR')}`,
-                    backgroundColor: themeUtils.get('BACKGROUNDS.PRIMARY'),
-                    borderRadius: themeUtils.get('BORDERS.RADIUS.SM'),
-                    marginBottom: '0.25rem'
-                }
-            },
-            React.createElement('div', {
-                style: {
-                    fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD'),
-                    color: themeUtils.get('TEXT.PRIMARY'),
-                    display: 'flex',
-                    justifyContent: 'space-between'
-                }
-            },
-                React.createElement('span', null, concept.term),
-                React.createElement('span', {style: {fontSize: '0.8rem', color: priorityChangeColor}},
-                    `${priorityChange >= 0 ? '+' : ''}${priorityChange.toFixed(3)}`
-                )
-            ),
-            React.createElement('div', {
-                    style: {
-                        fontSize: themeUtils.get('FONTS.SIZE.SM'),
-                        color: themeUtils.get('TEXT.SECONDARY'),
-                        marginTop: '0.25rem'
-                    }
+        return React.createElement(DataItem, {
+            key: concept.term,
+            title: concept.term,
+            fields: [
+                {
+                    label: 'Priority Change',
+                    value: priorityChange.toFixed(3),
+                    render: (value) => React.createElement('span', {
+                        style: { color: priorityChangeColor }
+                    }, `${priorityChange >= 0 ? '+' : ''}${value}`)
                 },
-                `Priority: ${(concept.priority || 0).toFixed(3)} | Tasks: ${concept.taskCount || 0} | Beliefs: ${concept.beliefCount || 0}`
-            ),
-            concept.lastAccess && React.createElement('div', {
-                    style: {
-                        fontSize: themeUtils.get('FONTS.SIZE.SM'),
-                        color: themeUtils.get('TEXT.MUTED'),
-                        marginTop: '0.125rem'
-                    }
-                },
-                `Last access: ${new Date(concept.lastAccess).toLocaleTimeString()}`
-            )
-        );
+                { label: 'Priority', value: (concept.priority || 0).toFixed(3) },
+                { label: 'Tasks', value: concept.taskCount || 0 },
+                { label: 'Beliefs', value: concept.beliefCount || 0 },
+                concept.lastAccess && {
+                    label: 'Last Access',
+                    value: new Date(concept.lastAccess).toLocaleTimeString()
+                }
+            ].filter(Boolean)
+        });
     };
 
     return React.createElement(DataPanel, {

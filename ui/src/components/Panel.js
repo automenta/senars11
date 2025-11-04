@@ -23,11 +23,11 @@ const Panel = memo(({
             React.createElement(WebSocketStatus, {
                 showLabel: true,
                 style: {
-                    fontSize: '0.8rem',
-                    marginLeft: '0.5rem',
-                    padding: '0.1rem 0.3rem',
+                    fontSize: themeUtils.get('FONTS.SIZE.SM'),
+                    marginLeft: themeUtils.get('SPACING.SM'),
+                    padding: `${themeUtils.get('SPACING.XS')} ${themeUtils.get('SPACING.SM')}`,
                     backgroundColor: themeUtils.getWebSocketStatusBgColor(wsConnected),
-                    borderRadius: '3px'
+                    borderRadius: themeUtils.get('BORDERS.RADIUS.SM')
                 }
             })
         ),
