@@ -3,6 +3,7 @@ import {format} from 'date-fns';
 import useUiStore from '../stores/uiStore.js';
 import {themeUtils} from '../utils/themeUtils.js';
 
+// Helper function to get status configuration
 const getStatusConfig = (status) => ({
     success: {color: themeUtils.get('COLORS.SUCCESS'), bg: themeUtils.get('COLORS.SUCCESS') + '20'},
     warning: {color: themeUtils.get('COLORS.WARNING'), bg: themeUtils.get('COLORS.WARNING') + '20'},
@@ -27,7 +28,7 @@ const StatusBadge = memo(({status, label, ...props}) => {
     }, label || status);
 });
 
-const LoadingSpinner = memo(({size = '1.5rem', color = themeUtils.get('COLORS.PRIMARY'), ...props}) => 
+const LoadingSpinner = memo(({size = '1.5rem', color = themeUtils.get('COLORS.PRIMARY'), ...props}) =>
     React.createElement('div', {
         style: {
             display: 'flex',
@@ -51,7 +52,7 @@ const LoadingSpinner = memo(({size = '1.5rem', color = themeUtils.get('COLORS.PR
     )
 );
 
-const EmptyState = memo(({message = 'No data to display', icon = '🔍', ...props}) => 
+const EmptyState = memo(({message = 'No data to display', icon = '🔍', ...props}) =>
     React.createElement('div', {
         style: {
             display: 'flex',
@@ -69,7 +70,7 @@ const EmptyState = memo(({message = 'No data to display', icon = '🔍', ...prop
     )
 );
 
-const ErrorState = memo(({message = 'An error occurred', onRetry = null, ...props}) => 
+const ErrorState = memo(({message = 'An error occurred', onRetry = null, ...props}) =>
     React.createElement('div', {
         style: {
             display: 'flex',
@@ -125,7 +126,8 @@ const WebSocketStatus = memo(({showLabel = true, ...props}) => {
     );
 });
 
-const GenericFormField = ({label, children, required = false, description = null, style = {}}) => 
+// Form components
+const GenericFormField = ({label, children, required = false, description = null, style = {}}) =>
     React.createElement('div', {style: {marginBottom: '1rem', ...style}},
         React.createElement('label', {
             style: {
@@ -149,7 +151,7 @@ const GenericFormField = ({label, children, required = false, description = null
         }, description)
     );
 
-const GenericInputField = ({label, value, onChange, type = 'text', placeholder = '', required = false, description = null, disabled = false}) => 
+const GenericInputField = ({label, value, onChange, type = 'text', placeholder = '', required = false, description = null, disabled = false}) =>
     React.createElement(GenericFormField, {label, required, description},
         React.createElement('input', {
             type,
@@ -170,7 +172,7 @@ const GenericInputField = ({label, value, onChange, type = 'text', placeholder =
         })
     );
 
-const GenericSelectField = ({label, value, onChange, options, required = false, description = null, disabled = false}) => 
+const GenericSelectField = ({label, value, onChange, options, required = false, description = null, disabled = false}) =>
     React.createElement(GenericFormField, {label, required, description},
         React.createElement('select', {
             value,
@@ -186,32 +188,33 @@ const GenericSelectField = ({label, value, onChange, options, required = false, 
                 color: themeUtils.get('TEXT.PRIMARY')
             }
         },
-            options.map(option => 
+            options.map(option =>
                 React.createElement('option', {key: option.value, value: option.value}, option.label)
             )
         )
     );
 
+// UI Components
 const CollapsibleSection = ({title, children, defaultOpen = false}) => {
     const [isOpen, setIsOpen] = useState(defaultOpen);
 
     return React.createElement('div', {
-        style: {
-            border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`,
-            borderRadius: themeUtils.get('BORDERS.RADIUS.MD'),
-            marginBottom: '1rem'
-        }
-    },
-        React.createElement('div', {
             style: {
-                padding: '0.75rem',
-                backgroundColor: themeUtils.get('BACKGROUNDS.SECONDARY'),
-                borderBottom: isOpen ? `1px solid ${themeUtils.get('BORDERS.COLOR')}` : 'none',
-                cursor: 'pointer',
-                fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD')
-            },
-            onClick: () => setIsOpen(!isOpen)
+                border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`,
+                borderRadius: themeUtils.get('BORDERS.RADIUS.MD'),
+                marginBottom: '1rem'
+            }
         },
+        React.createElement('div', {
+                style: {
+                    padding: '0.75rem',
+                    backgroundColor: themeUtils.get('BACKGROUNDS.SECONDARY'),
+                    borderBottom: isOpen ? `1px solid ${themeUtils.get('BORDERS.COLOR')}` : 'none',
+                    cursor: 'pointer',
+                    fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD')
+                },
+                onClick: () => setIsOpen(!isOpen)
+            },
             React.createElement('div', {style: {display: 'flex', justifyContent: 'space-between', alignItems: 'center'}},
                 React.createElement('span', null, title),
                 React.createElement('span', null, isOpen ? '▼' : '▶')
@@ -221,7 +224,7 @@ const CollapsibleSection = ({title, children, defaultOpen = false}) => {
     );
 };
 
-const ToggleSwitch = ({checked, onChange, label}) => 
+const ToggleSwitch = ({checked, onChange, label}) =>
     React.createElement('label', {
         style: {
             display: 'flex',
@@ -257,6 +260,7 @@ const ToggleSwitch = ({checked, onChange, label}) =>
         label
     );
 
+// Button component with variants
 const getButtonVariantStyle = (variant) => ({
     primary: {backgroundColor: themeUtils.get('COLORS.PRIMARY'), color: themeUtils.get('TEXT.LIGHT')},
     secondary: {backgroundColor: themeUtils.get('COLORS.SECONDARY'), color: themeUtils.get('TEXT.LIGHT')},
@@ -290,7 +294,7 @@ const Button = ({children, onClick, variant = 'primary', style = {}, disabled = 
     }, children);
 };
 
-const Card = ({children, title, style = {}}) => 
+const Card = ({children, title, style = {}}) =>
     React.createElement('div', {
         style: {
             border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`,

@@ -38,9 +38,7 @@ export class FileOperationsTool extends BaseTool {
     async execute(params, context) {
         const {operation, filePath, content, encoding = this.defaultEncoding} = params;
 
-        if (!operation || !filePath) {
-            throw new Error('Operation and filePath are required parameters');
-        }
+        if (!operation || !filePath) throw new Error('Operation and filePath are required parameters');
 
         // Ensure the file path is within safe directories
         this._validateFilePath(filePath);
@@ -81,19 +79,9 @@ export class FileOperationsTool extends BaseTool {
             }
 
             const content = await fs.readFile(filePath, encoding);
-            return {
-                success: true,
-                operation: 'read',
-                filePath,
-                content,
-                size: stats.size,
-                type: 'file'
-            };
+            return this._createFileResult('read', filePath, { content, size: stats.size });
         } catch (error) {
-            if (error.code === 'ENOENT') {
-                throw new Error(`File not found: ${filePath}`);
-            }
-            throw new Error(`Failed to read file: ${error.message}`);
+            this._handleFileError(error, filePath, 'read');
         }
     }
 
@@ -103,34 +91,21 @@ export class FileOperationsTool extends BaseTool {
      */
     async _writeFile(filePath, content, encoding) {
         try {
-            // Create backup if enabled and file exists
-            if (this.backupEnabled) {
-                try {
-                    await fs.access(filePath);
-                    const backupPath = `${filePath}.backup.${Date.now()}`;
-                    await fs.copyFile(filePath, backupPath);
-                } catch (error) {
-                    // File doesn't exist, no backup needed
-                }
-            }
+            await this._createBackupIfNeeded(filePath);
 
             // Ensure directory exists
             const dir = path.dirname(filePath);
             await fs.mkdir(dir, {recursive: true});
 
             // Convert content to string if not already
-            const fileContent = typeof content === 'string' ? content : JSON.stringify(content);
+            const fileContent = this._ensureStringContent(content);
 
             await fs.writeFile(filePath, fileContent, encoding);
 
-            return {
-                success: true,
-                operation: 'write',
-                filePath,
+            return this._createFileResult('write', filePath, { 
                 size: Buffer.byteLength(fileContent, encoding),
-                type: 'file',
                 backupCreated: this.backupEnabled
-            };
+            });
         } catch (error) {
             throw new Error(`Failed to write file: ${error.message}`);
         }
@@ -143,17 +118,13 @@ export class FileOperationsTool extends BaseTool {
     async _appendFile(filePath, content, encoding) {
         try {
             // Convert content to string if not already
-            const fileContent = typeof content === 'string' ? content : JSON.stringify(content);
+            const fileContent = this._ensureStringContent(content);
 
             await fs.appendFile(filePath, fileContent, encoding);
 
-            return {
-                success: true,
-                operation: 'append',
-                filePath,
-                size: Buffer.byteLength(fileContent, encoding),
-                type: 'file'
-            };
+            return this._createFileResult('append', filePath, {
+                size: Buffer.byteLength(fileContent, encoding)
+            });
         } catch (error) {
             throw new Error(`Failed to append to file: ${error.message}`);
         }
@@ -166,18 +137,9 @@ export class FileOperationsTool extends BaseTool {
     async _deleteFile(filePath) {
         try {
             await fs.unlink(filePath);
-
-            return {
-                success: true,
-                operation: 'delete',
-                filePath,
-                type: 'file'
-            };
+            return this._createFileResult('delete', filePath);
         } catch (error) {
-            if (error.code === 'ENOENT') {
-                throw new Error(`File not found: ${filePath}`);
-            }
-            throw new Error(`Failed to delete file: ${error.message}`);
+            this._handleFileError(error, filePath, 'delete');
         }
     }
 
@@ -235,10 +197,7 @@ export class FileOperationsTool extends BaseTool {
                 type: 'file'
             };
         } catch (error) {
-            if (error.code === 'ENOENT') {
-                throw new Error(`File not found: ${filePath}`);
-            }
-            throw new Error(`Failed to get file info: ${error.message}`);
+            this._handleFileError(error, filePath, 'stat');
         }
     }
 
@@ -248,24 +207,16 @@ export class FileOperationsTool extends BaseTool {
      */
     async _editFile(filePath, content, encoding) {
         try {
-            // Create backup if enabled
-            if (this.backupEnabled) {
-                const backupPath = `${filePath}.backup.${Date.now()}`;
-                await fs.copyFile(filePath, backupPath);
-            }
+            await this._createBackupIfNeeded(filePath);
 
             // Convert content to string if not already
-            const fileContent = typeof content === 'string' ? content : JSON.stringify(content);
+            const fileContent = this._ensureStringContent(content);
 
             await fs.writeFile(filePath, fileContent, encoding);
 
-            return {
-                success: true,
-                operation: 'edit',
-                filePath,
-                type: 'file',
+            return this._createFileResult('edit', filePath, {
                 backupCreated: this.backupEnabled
-            };
+            });
         } catch (error) {
             throw new Error(`Failed to edit file: ${error.message}`);
         }
@@ -337,10 +288,7 @@ export class FileOperationsTool extends BaseTool {
             }
         }
 
-        return {
-            isValid: errors.length === 0,
-            errors
-        };
+        return { isValid: errors.length === 0, errors };
     }
 
     /**
@@ -378,5 +326,54 @@ export class FileOperationsTool extends BaseTool {
         }
 
         return true;
+    }
+
+    /**
+     * Create a standard file operation result
+     * @private
+     */
+    _createFileResult(operation, filePath, additionalProps = {}) {
+        return {
+            success: true,
+            operation,
+            filePath,
+            type: 'file',
+            ...additionalProps
+        };
+    }
+
+    /**
+     * Handle file system errors consistently
+     * @private
+     */
+    _handleFileError(error, filePath, operation) {
+        if (error.code === 'ENOENT') {
+            throw new Error(`File not found: ${filePath}`);
+        }
+        throw new Error(`Failed to ${operation} file: ${error.message}`);
+    }
+
+    /**
+     * Ensure content is a string (convert objects to JSON if needed)
+     * @private
+     */
+    _ensureStringContent(content) {
+        return typeof content === 'string' ? content : JSON.stringify(content);
+    }
+
+    /**
+     * Create a backup if enabled and file exists
+     * @private
+     */
+    async _createBackupIfNeeded(filePath) {
+        if (this.backupEnabled) {
+            try {
+                await fs.access(filePath);
+                const backupPath = `${filePath}.backup.${Date.now()}`;
+                await fs.copyFile(filePath, backupPath);
+            } catch (error) {
+                // File doesn't exist, no backup needed
+            }
+        }
     }
 }

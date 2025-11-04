@@ -7,6 +7,16 @@ import {createSearchableCollection, getNestedValue, process} from '../utils/data
 import {createPanelHeader} from '../utils/panelUtils.js';
 import {createSearchInput, createSortButton, createPaginationControls, createItemCount, createEmptyState} from '../utils/dataPanelUtils.js';
 
+// Helper function to compare values for sorting
+const compareValues = (valueA, valueB) => {
+    // Determine comparison based on data types
+    return typeof valueA === 'string' && typeof valueB === 'string'
+        ? valueA.toLowerCase().localeCompare(valueB.toLowerCase())
+        : typeof valueA === 'number' && typeof valueB === 'number'
+            ? valueA - valueB
+            : String(valueA).localeCompare(String(valueB));
+};
+
 const DataPanel = memo(({
     title = 'Data',
     dataSource,
@@ -69,13 +79,7 @@ const DataPanel = memo(({
                 const valueA = getNestedValue(a, sortBy);
                 const valueB = getNestedValue(b, sortBy);
                 
-                // Determine comparison based on data types
-                const comparison = typeof valueA === 'string' && typeof valueB === 'string'
-                    ? valueA.toLowerCase().localeCompare(valueB.toLowerCase())
-                    : typeof valueA === 'number' && typeof valueB === 'number'
-                        ? valueA - valueB
-                        : String(valueA).localeCompare(String(valueB));
-                
+                const comparison = compareValues(valueA, valueB);
                 return sortDirection === 'asc' ? comparison : -comparison;
             });
         }

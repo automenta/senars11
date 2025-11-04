@@ -1,10 +1,34 @@
 import {beforeEach, describe, expect, it} from 'vitest';
 import useUiStore from '../stores/uiStore.js';
 
+// Mock localStorage for tests
+const localStorageMock = (() => {
+  let store = {};
+  return {
+    getItem: (key) => store[key] || null,
+    setItem: (key, value) => {
+      store[key] = value.toString();
+    },
+    removeItem: (key) => {
+      delete store[key];
+    },
+    clear: () => {
+      store = {};
+    }
+  };
+})();
+
+Object.defineProperty(window, 'localStorage', {
+  value: localStorageMock
+});
+
 const resetStore = () => useUiStore.getState().resetStore();
 
 describe('LM Configuration Panel Functionality Tests', () => {
-    beforeEach(resetStore);
+    beforeEach(() => {
+        resetStore();
+        localStorage.clear();
+    });
 
     it('should store and retrieve LM test results', () => {
         const testResult = {
@@ -41,6 +65,8 @@ describe('LM Configuration Panel Functionality Tests', () => {
 
         // Clean up
         localStorage.removeItem('lmConfig');
+        // Reset mock localStorage
+        localStorage.clear();
     });
 
     it('should support multiple provider configurations', () => {
@@ -78,6 +104,8 @@ describe('LM Configuration Panel Functionality Tests', () => {
 
         // Clean up
         localStorage.removeItem('lmConfig');
+        // Reset mock localStorage
+        localStorage.clear();
     });
 
     it('should handle LM connection test result processing', () => {
@@ -130,7 +158,10 @@ describe('LM Configuration Panel Functionality Tests', () => {
 });
 
 describe('LM Configuration Integration Tests', () => {
-    beforeEach(resetStore);
+    beforeEach(() => {
+        resetStore();
+        localStorage.clear();
+    });
 
     it('should integrate LM configuration with reasoning workflow', () => {
         // Simulate the full workflow: configure LM -> connect -> use in reasoning
@@ -158,6 +189,8 @@ describe('LM Configuration Integration Tests', () => {
 
         // Clean up
         localStorage.removeItem('lmConfig');
+        // Reset mock localStorage
+        localStorage.clear();
     });
 
     it('should handle concurrent LM and reasoning operations', () => {
@@ -183,6 +216,8 @@ describe('LM Configuration Integration Tests', () => {
 
         // Clean up
         localStorage.removeItem('lmConfig');
+        // Reset mock localStorage
+        localStorage.clear();
     });
 
     it('should maintain LM configuration state across application lifecycle', () => {
@@ -210,5 +245,7 @@ describe('LM Configuration Integration Tests', () => {
 
         // Clean up
         localStorage.removeItem('lmConfig');
+        // Reset mock localStorage
+        localStorage.clear();
     });
 });

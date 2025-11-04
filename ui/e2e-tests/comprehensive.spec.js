@@ -6,7 +6,7 @@ test.describe('Reasoning Engine UI Comprehensive Tests', () => {
         await page.goto('/');
 
         // 2. Verify WebSocket connection is established
-        await expect(page.locator('text=WebSocket Connection: Online')).toBeVisible({timeout: 10000});
+        await expect(page.locator('text=Connected')).toBeVisible({timeout: 10000});
 
         // 3. Verify Demo Panel functionality
         const demoPanel = page.locator('div[aria-label="Demos"]');
@@ -23,12 +23,12 @@ test.describe('Reasoning Engine UI Comprehensive Tests', () => {
         await expect(firstDemo.locator('text=(running)')).toBeVisible();
 
         // 4. Verify Narsese Input functionality
-        const inputPanel = page.locator('div[aria-label="Input"]');
+        const inputPanel = page.locator('div[aria-label="Input Interface"]');
         await expect(inputPanel).toBeVisible();
 
         const narseseInput = '<a --> b>.';
         await inputPanel.getByRole('textbox').fill(narseseInput);
-        await inputPanel.getByRole('button', {name: 'Submit'}).click();
+        await inputPanel.getByRole('button', {name: 'Submit Input'}).click();
 
         // 5. Verify Task Panel is updated
         const taskPanel = page.locator('div[aria-label="Tasks"]');

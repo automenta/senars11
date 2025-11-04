@@ -5,7 +5,7 @@ test.describe('Narsese Input End-to-End', () => {
         await page.goto('/');
 
         // 1. Locate the InputInterfacePanel and submit a Narsese statement.
-        const inputPanel = page.locator('.flexlayout__layout').locator('div', {hasText: 'Input'}).first();
+        const inputPanel = page.locator('.flexlayout__layout').locator('div[aria-label="Input Interface"]').first();
         await expect(inputPanel).toBeVisible();
 
         const inputField = inputPanel.locator('input[type="text"]');

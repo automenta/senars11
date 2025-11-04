@@ -103,12 +103,7 @@ export class ToolRegistry {
                     registered.push(toolId);
 
                     // Log registration in history
-                    this.registrationHistory.push({
-                        toolId,
-                        timestamp: Date.now(),
-                        action: 'register',
-                        metadata: mergedMetadata
-                    });
+                    this._logRegistration(toolId, mergedMetadata);
 
                     this.logger.info(`Registered tool: ${toolId} (${mergedMetadata.category || 'unknown'})`);
                 } catch (error) {
@@ -123,6 +118,19 @@ export class ToolRegistry {
     }
 
     /**
+     * Log tool registration to history
+     * @private
+     */
+    _logRegistration(toolId, metadata) {
+        this.registrationHistory.push({
+            toolId,
+            timestamp: Date.now(),
+            action: 'register',
+            metadata: metadata
+        });
+    }
+
+    /**
      * Registers a single tool
      * @param {string} id - Tool ID
      * @param {object} tool - Tool instance
@@ -132,13 +140,7 @@ export class ToolRegistry {
     registerTool(id, tool, metadata = {}) {
         try {
             this.engine.registerTool(id, tool, metadata);
-
-            this.registrationHistory.push({
-                toolId: id,
-                timestamp: Date.now(),
-                action: 'register',
-                metadata: metadata
-            });
+            this._logRegistration(id, metadata);
 
             this.logger.info(`Manually registered tool: ${id} (${metadata.category || 'unknown'})`);
             return this;
@@ -168,8 +170,7 @@ export class ToolRegistry {
         for (const [key, value] of Object.entries(toolModule)) {
             if (this._isToolLike(value)) {
                 // Generate a tool ID based on the key or class name
-                const toolId = key.toLowerCase().replace(/tool$/, '') ||
-                    (value.name ? value.name.toLowerCase().replace(/tool$/, '') : key);
+                const toolId = this._generateToolId(key, value);
 
                 // Skip if excluded or not included (if include list is provided)
                 if ((exclude && exclude.includes(toolId)) ||
@@ -178,13 +179,7 @@ export class ToolRegistry {
                 }
 
                 // Add to discovery list with default metadata
-                const toolMetadata = {
-                    id: toolId,
-                    name: value.name || key,
-                    description: value.getDescription?.() || `Auto-registered tool: ${key}`,
-                    category: value.getCategory?.() || 'general',
-                    ...metadata
-                };
+                const toolMetadata = this._createToolMetadata(key, value, metadata);
 
                 this.discoveredTools.set(toolId, {
                     class: value,
@@ -196,6 +191,29 @@ export class ToolRegistry {
         }
 
         return this.registerAll(include, config, metadata);
+    }
+
+    /**
+     * Generate a tool ID based on the key or class name
+     * @private
+     */
+    _generateToolId(key, value) {
+        return key.toLowerCase().replace(/tool$/, '') ||
+            (value.name ? value.name.toLowerCase().replace(/tool$/, '') : key);
+    }
+
+    /**
+     * Create tool metadata
+     * @private
+     */
+    _createToolMetadata(key, value, metadata) {
+        return {
+            id: this._generateToolId(key, value),
+            name: value.name || key,
+            description: value.getDescription?.() || `Auto-registered tool: ${key}`,
+            category: value.getCategory?.() || 'general',
+            ...metadata
+        };
     }
 
     /**
@@ -247,20 +265,28 @@ export class ToolRegistry {
                 .replace(/([a-z])([A-Z])/g, '$1-$2')
                 .toLowerCase();
 
-            return {
-                id: toolId,
-                name: className,
-                description: toolInstance.getDescription(),
-                category: toolInstance.getCategory?.() || 'general',
-                parameters: toolInstance.getParameterSchema?.() || {type: 'object', properties: {}},
-                capabilities: toolInstance.getCapabilities?.() || [],
-                parameterSchema: toolInstance.getParameterSchema ? toolInstance.getParameterSchema() : null,
-                supportsStreaming: typeof toolInstance.stream === 'function',
-                supportsValidation: typeof toolInstance.validate === 'function'
-            };
+            return this._createToolMetadataObject(toolClass, toolInstance, className, toolId);
         } catch (error) {
             return null;
         }
+    }
+
+    /**
+     * Create a tool metadata object
+     * @private
+     */
+    _createToolMetadataObject(toolClass, toolInstance, className, toolId) {
+        return {
+            id: toolId,
+            name: className,
+            description: toolInstance.getDescription(),
+            category: toolInstance.getCategory?.() || 'general',
+            parameters: toolInstance.getParameterSchema?.() || {type: 'object', properties: {}},
+            capabilities: toolInstance.getCapabilities?.() || [],
+            parameterSchema: toolInstance.getParameterSchema ? toolInstance.getParameterSchema() : null,
+            supportsStreaming: typeof toolInstance.stream === 'function',
+            supportsValidation: typeof toolInstance.validate === 'function'
+        };
     }
 
     /**
@@ -311,27 +337,7 @@ export class ToolRegistry {
         const matching = [];
 
         for (const [id, {class: ToolClass, metadata}] of this.discoveredTools.entries()) {
-            let matches = true;
-
-            if (criteria.category && metadata.category !== criteria.category) {
-                matches = false;
-            }
-
-            if (criteria.supportsStreaming !== undefined &&
-                metadata.supportsStreaming !== criteria.supportsStreaming) {
-                matches = false;
-            }
-
-            if (criteria.requiredCapabilities && Array.isArray(criteria.requiredCapabilities)) {
-                for (const cap of criteria.requiredCapabilities) {
-                    if (!metadata.capabilities || !metadata.capabilities.includes(cap)) {
-                        matches = false;
-                        break;
-                    }
-                }
-            }
-
-            if (matches) {
+            if (this._matchesCriteria(metadata, criteria)) {
                 matching.push({
                     id,
                     class: ToolClass,
@@ -341,6 +347,31 @@ export class ToolRegistry {
         }
 
         return matching;
+    }
+
+    /**
+     * Check if metadata matches criteria
+     * @private
+     */
+    _matchesCriteria(metadata, criteria) {
+        if (criteria.category && metadata.category !== criteria.category) {
+            return false;
+        }
+
+        if (criteria.supportsStreaming !== undefined &&
+            metadata.supportsStreaming !== criteria.supportsStreaming) {
+            return false;
+        }
+
+        if (criteria.requiredCapabilities && Array.isArray(criteria.requiredCapabilities)) {
+            for (const cap of criteria.requiredCapabilities) {
+                if (!metadata.capabilities || !metadata.capabilities.includes(cap)) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     /**

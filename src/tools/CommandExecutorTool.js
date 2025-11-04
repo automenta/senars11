@@ -48,29 +48,27 @@ export class CommandExecutorTool extends BaseTool {
     async execute(params, context) {
         const {command, args = [], cwd, env = {}} = params;
 
-        if (!command) {
-            throw new Error('Command is required');
-        }
+        if (!command) throw new Error('Command is required');
 
         // Validate and sanitize the command
         this._validateCommand(command, args, cwd, env);
 
         // Use exec for safety since it prevents shell injection better than spawn
-        return await this._executeWithTimeout(command, args, cwd, env, this.timeout);
+        return await this._executeWithTimeout(command, args, cwd, env);
     }
 
     /**
      * Execute command with timeout and safety
      * @private
      */
-    async _executeWithTimeout(command, args, cwd, env, timeout) {
-        return new Promise((resolve, reject) => {
-            const commandString = [command, ...args].join(' ');
-            const startTime = Date.now();
+    async _executeWithTimeout(command, args, cwd, env) {
+        const commandString = [command, ...args].join(' ');
+        const startTime = Date.now();
 
+        return new Promise((resolve) => {
             const execOptions = {
                 cwd: cwd || this.workingDir,
-                timeout: timeout,
+                timeout: this.timeout,
                 maxBuffer: this.maxOutputSize,
                 env: {...process.env, ...env}, // Merge with system env
                 reject: false // Don't throw on non-zero exit code
@@ -80,19 +78,11 @@ export class CommandExecutorTool extends BaseTool {
                 const executionTime = Date.now() - startTime;
 
                 if (error) {
-                    // Filter out potentially unsafe information in error messages
-                    const safeError = {
-                        message: error.message ? error.message.replace(/(password|token|key|secret)/gi, '[REDACTED]') : 'Unknown error',
-                        code: error.code,
-                        signal: error.signal,
-                        executionTime
-                    };
-
                     resolve({
                         success: false,
                         command: commandString,
                         exitCode: error.code === 'ETIMEDOUT' ? null : (typeof error.killed !== 'undefined' ? 1 : null),
-                        error: safeError,
+                        error: this._createSafeError(error, executionTime),
                         stdout: this._sanitizeOutput(stdout),
                         stderr: this._sanitizeOutput(stderr),
                         executionTime,
@@ -115,22 +105,43 @@ export class CommandExecutorTool extends BaseTool {
             setTimeout(() => {
                 if (!child.killed) {
                     child.kill();
-                    resolve({
-                        success: false,
-                        command: commandString,
-                        exitCode: null,
-                        error: {
-                            message: `Command timed out after ${this.timeout}ms`,
-                            code: 'ETIMEDOUT',
-                            executionTime: Date.now() - startTime
-                        },
-                        stdout: '',
-                        stderr: '',
-                        duration: Date.now() - startTime
-                    });
+                    resolve(this._createTimeoutResult(commandString, startTime));
                 }
             }, this.timeout);
         });
+    }
+
+    /**
+     * Create a safe error object that redacts sensitive information
+     * @private
+     */
+    _createSafeError(error, executionTime) {
+        return {
+            message: error.message ? error.message.replace(/(password|token|key|secret)/gi, '[REDACTED]') : 'Unknown error',
+            code: error.code,
+            signal: error.signal,
+            executionTime
+        };
+    }
+
+    /**
+     * Create a timeout result object
+     * @private
+     */
+    _createTimeoutResult(commandString, startTime) {
+        return {
+            success: false,
+            command: commandString,
+            exitCode: null,
+            error: {
+                message: `Command timed out after ${this.timeout}ms`,
+                code: 'ETIMEDOUT',
+                executionTime: Date.now() - startTime
+            },
+            stdout: '',
+            stderr: '',
+            duration: Date.now() - startTime
+        };
     }
 
     /**
@@ -201,10 +212,7 @@ export class CommandExecutorTool extends BaseTool {
             }
         }
 
-        return {
-            isValid: errors.length === 0,
-            errors
-        };
+        return { isValid: errors.length === 0, errors };
     }
 
     /**
@@ -233,17 +241,13 @@ export class CommandExecutorTool extends BaseTool {
             throw new Error(`Command '${normalizedCommand}' is explicitly disallowed`);
         }
 
-        // Check for allowed commands
         if (!this.allowedCommands.has(normalizedCommand)) {
             throw new Error(`Command '${normalizedCommand}' is not in the allowed list`);
         }
 
         // Check working directory if provided
-        if (cwd) {
-            this._validateWorkingDir(cwd);
-        }
+        if (cwd) this._validateWorkingDir(cwd);
 
-        // Check for dangerous patterns in arguments
         const allArgs = [command, ...args].join(' ');
 
         // Check for shell injection patterns
@@ -271,11 +275,11 @@ export class CommandExecutorTool extends BaseTool {
         }
 
         // Additional checks for specific commands
-        if (normalizedCommand === 'rm' || normalizedCommand === 'rmdir' || normalizedCommand === 'del') {
+        if (['rm', 'rmdir', 'del'].includes(normalizedCommand)) {
             throw new Error(`File deletion commands are not allowed`);
         }
 
-        if (normalizedCommand === 'chmod' || normalizedCommand === 'chown') {
+        if (['chmod', 'chown'].includes(normalizedCommand)) {
             throw new Error(`File permission modification commands are not allowed`);
         }
     }
@@ -286,15 +290,11 @@ export class CommandExecutorTool extends BaseTool {
      */
     _validateWorkingDir(dirPath) {
         const resolvedPath = path.resolve(dirPath);
-        let isAllowed = false;
 
-        for (const allowedDir of this.allowedWorkingDirs) {
+        const isAllowed = Array.from(this.allowedWorkingDirs).some(allowedDir => {
             const resolvedAllowedDir = path.resolve(allowedDir);
-            if (resolvedPath === resolvedAllowedDir || resolvedPath.startsWith(resolvedAllowedDir + path.sep)) {
-                isAllowed = true;
-                break;
-            }
-        }
+            return resolvedPath === resolvedAllowedDir || resolvedPath.startsWith(resolvedAllowedDir + path.sep);
+        });
 
         if (!isAllowed) {
             throw new Error(`Working directory is not in allowed list: ${dirPath}`);

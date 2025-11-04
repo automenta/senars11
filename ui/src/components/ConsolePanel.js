@@ -13,16 +13,16 @@ const getMessageStyle = (type) => ({
     fontFamily: 'monospace'
 });
 
+const renderConsoleMessage = (message) =>
+    React.createElement('div', {style: getMessageStyle(message.type)},
+        React.createElement('span', {style: {fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD')}},
+            message.type ? `${message.type.toUpperCase()}: ` : ''
+        ),
+        React.createElement('span', null, message.message || message.title || 'Console message')
+    );
+
 const ConsolePanel = memo(() => {
     const consoleMessages = useUiStore(state => state.notifications);
-
-    const renderConsoleMessage = (message) => 
-        React.createElement('div', {style: getMessageStyle(message.type)},
-            React.createElement('span', {style: {fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD')}},
-                message.type ? `${message.type.toUpperCase()}: ` : ''
-            ),
-            React.createElement('span', null, message.message || message.title || 'Console message')
-        );
 
     return React.createElement(DataPanel, {
         title: "Console",

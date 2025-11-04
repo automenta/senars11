@@ -40,9 +40,7 @@ export class WebAutomationTool extends BaseTool {
     async execute(params, context) {
         const {operation, url, method = 'GET', headers = {}, body, options = {}} = params;
 
-        if (!operation) {
-            throw new Error('Operation is required');
-        }
+        if (!operation) throw new Error('Operation is required');
 
         switch (operation.toLowerCase()) {
             case 'get':
@@ -101,18 +99,7 @@ export class WebAutomationTool extends BaseTool {
                 throw new Error(`Response exceeds maximum size: ${this.maxResponseSize} bytes`);
             }
 
-            return {
-                success: true,
-                operation: 'fetch',
-                url,
-                status: response.status,
-                statusText: response.statusText,
-                headers: Object.fromEntries(response.headers.entries()),
-                content: this._sanitizeContent(content),
-                size: content.length,
-                contentType: response.headers.get('content-type') || 'unknown',
-                duration: Date.now() - (Date.now() - this.timeout) // Approximate duration
-            };
+            return this._createWebResponse('fetch', url, response, content);
         } catch (error) {
             clearTimeout(timeoutId);
 
@@ -175,16 +162,7 @@ export class WebAutomationTool extends BaseTool {
 
             clearTimeout(timeoutId);
 
-            return {
-                success: response.ok,
-                operation: 'check',
-                url,
-                status: response.status,
-                statusText: response.statusText,
-                headers: Object.fromEntries(response.headers.entries()),
-                accessible: response.ok,
-                contentType: response.headers.get('content-type') || 'unknown'
-            };
+            return this._createCheckResponse(url, response);
         } catch (error) {
             clearTimeout(timeoutId);
 
@@ -228,15 +206,7 @@ export class WebAutomationTool extends BaseTool {
 
             clearTimeout(timeoutId);
 
-            return {
-                success: response.ok,
-                operation: 'head',
-                url,
-                status: response.status,
-                statusText: response.statusText,
-                headers: Object.fromEntries(response.headers.entries()),
-                accessible: response.ok
-            };
+            return this._createHeadResponse(url, response);
         } catch (error) {
             clearTimeout(timeoutId);
 
@@ -252,6 +222,58 @@ export class WebAutomationTool extends BaseTool {
                 accessible: false
             };
         }
+    }
+
+    /**
+     * Create a web response object
+     * @private
+     */
+    _createWebResponse(operation, url, response, content) {
+        return {
+            success: true,
+            operation,
+            url,
+            status: response.status,
+            statusText: response.statusText,
+            headers: Object.fromEntries(response.headers.entries()),
+            content: this._sanitizeContent(content),
+            size: content.length,
+            contentType: response.headers.get('content-type') || 'unknown',
+            duration: Date.now() - (Date.now() - this.timeout) // Approximate duration
+        };
+    }
+
+    /**
+     * Create a check response object
+     * @private
+     */
+    _createCheckResponse(url, response) {
+        return {
+            success: response.ok,
+            operation: 'check',
+            url,
+            status: response.status,
+            statusText: response.statusText,
+            headers: Object.fromEntries(response.headers.entries()),
+            accessible: response.ok,
+            contentType: response.headers.get('content-type') || 'unknown'
+        };
+    }
+
+    /**
+     * Create a HEAD response object
+     * @private
+     */
+    _createHeadResponse(url, response) {
+        return {
+            success: response.ok,
+            operation: 'head',
+            url,
+            status: response.status,
+            statusText: response.statusText,
+            headers: Object.fromEntries(response.headers.entries()),
+            accessible: response.ok
+        };
     }
 
     /**
@@ -324,10 +346,7 @@ export class WebAutomationTool extends BaseTool {
             }
         }
 
-        return {
-            isValid: errors.length === 0,
-            errors
-        };
+        return { isValid: errors.length === 0, errors };
     }
 
     /**
@@ -354,13 +373,9 @@ export class WebAutomationTool extends BaseTool {
             const domain = parsedUrl.hostname.toLowerCase();
 
             // Check if domain is in allowed list
-            let isAllowed = false;
-            for (const allowed of this.allowedDomains) {
-                if (domain === allowed || domain.endsWith('.' + allowed)) {
-                    isAllowed = true;
-                    break;
-                }
-            }
+            const isAllowed = Array.from(this.allowedDomains).some(allowed => 
+                domain === allowed || domain.endsWith('.' + allowed)
+            );
 
             if (!isAllowed) {
                 throw new Error(`Domain "${domain}" is not in the allowed list`);

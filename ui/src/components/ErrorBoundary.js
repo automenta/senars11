@@ -2,6 +2,7 @@ import React from 'react';
 import {useStore} from 'zustand';
 import useUiStore from '../stores/uiStore';
 import styles from './ErrorBoundary.module.css';
+import {themeUtils} from '../utils/themeUtils.js';
 
 class ErrorBoundary extends React.Component {
     constructor(props) {
@@ -45,7 +46,18 @@ class ErrorBoundary extends React.Component {
                     React.createElement('div', null, error?.toString()),
                     React.createElement('div', null, errorInfo?.componentStack)
                 ),
-                React.createElement('button', {onClick: this.handleRetry}, 'Try Again')
+                React.createElement('button', {
+                    onClick: this.handleRetry,
+                    style: {
+                        padding: '0.5rem 1rem',
+                        backgroundColor: themeUtils.get('COLORS.PRIMARY'),
+                        color: themeUtils.get('TEXT.LIGHT'),
+                        border: 'none',
+                        borderRadius: themeUtils.get('BORDERS.RADIUS.MD'),
+                        cursor: 'pointer',
+                        marginTop: themeUtils.get('SPACING.MD')
+                    }
+                }, 'Try Again')
             );
         }
 
@@ -71,7 +83,18 @@ export const GlobalErrorDisplay = () => {
             React.createElement('div', null, error.message || error.toString()),
             error.stack && React.createElement('div', null, error.stack)
         ),
-        React.createElement('button', {onClick: clearError}, 'Dismiss')
+        React.createElement('button', {
+            onClick: clearError,
+            style: {
+                padding: '0.5rem 1rem',
+                backgroundColor: themeUtils.get('COLORS.PRIMARY'),
+                color: themeUtils.get('TEXT.LIGHT'),
+                border: 'none',
+                borderRadius: themeUtils.get('BORDERS.RADIUS.MD'),
+                cursor: 'pointer',
+                marginTop: themeUtils.get('SPACING.MD')
+            }
+        }, 'Dismiss')
     );
 };
 

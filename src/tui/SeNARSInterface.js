@@ -21,7 +21,7 @@ export class SeNARSInterface {
         // Create blessed screen
         this.screen = blessed.screen({
             smartCSR: true,
-            title: '🌈 SeNARS Terminal Interface 🚀',
+            title: 'SeNARS Terminal Interface 🚀',
             dockBorders: true
         });
 
@@ -59,7 +59,7 @@ export class SeNARSInterface {
         this.elementConfigs = {
             header: {
                 top: '0', left: '0', width: '100%', height: '6%',
-                content: '{bold}{rainbow}🌈 SeNARS Reasoning Engine 🚀{/rainbow}{/bold}',
+                content: '{bold}{rainbow}SeNARS Reasoning Engine 🚀{/rainbow}{/bold}',
                 tags: true,
                 border: { type: 'line' },
                 style: { fg: 'white', bg: 'blue', border: { fg: '#f0f0f0' } }
@@ -137,7 +137,7 @@ export class SeNARSInterface {
     }
 
     async start() {
-        this.output.setContent('🌈 Welcome to SeNARS! Type {bold}/help{/bold} for commands or enter Narsese statements.\n');
+        this.output.setContent('Welcome to SeNARS! Type {bold}/help{/bold} for commands or enter Narsese statements.\n');
         this.screen.render();
 
         // Setup event handlers

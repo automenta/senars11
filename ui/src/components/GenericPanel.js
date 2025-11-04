@@ -64,10 +64,10 @@ const GenericPanel = memo(({
         ),
         React.createElement('div', {
             style: containerStyleComputed,
-            ref: (el) => setContainerRef(el)
+            ref: setContainerRef
         },
             displayItems.length > 0
-                ? displayItems.map((item, index) => React.createElement('div', {key: `item-${index}`}, renderItem(item, index)))
+                ? displayItems.map((item, index) => React.createElement('div', {key: index}, renderItem(item, index)))
                 : React.createElement('div', {className: "emptyState", style: emptyStateStyle}, emptyMessage)
         ),
         withTimestamp && React.createElement('div', {style: timestampStyle},

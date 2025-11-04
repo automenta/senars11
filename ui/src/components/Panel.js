@@ -15,7 +15,7 @@ const Panel = memo(({
     headerExtra = null
 }) => {
     const wsConnected = useUiStore(state => state.wsConnected);
-    const panelClassName = `${styles.panel} ${className || ''}`.trim();
+    const panelClassName = `${styles.panel} ${className}`.trim();
 
     const statusStyle = {
         fontSize: themeUtils.get('FONTS.SIZE.SM'),

@@ -33,7 +33,7 @@ export class SandboxedTool extends BaseTool {
     }
 
     async execute(params, context) {
-        if (!context.engine || !context.engine.capabilityManager) {
+        if (!context?.engine?.capabilityManager) {
             throw new Error('SandboxedTool requires an engine with capability manager');
         }
 
@@ -98,8 +98,9 @@ export class SandboxedTool extends BaseTool {
     }
 
     async executeRestrictedCommand(command, args = [], options = {}) {
-        return new Promise((resolve, reject) => {
-            const startTime = Date.now();
+        const startTime = Date.now();
+
+        return new Promise((resolve) => {
             let stdout = '';
             let stderr = '';
             let stdoutSize = 0;
@@ -119,7 +120,7 @@ export class SandboxedTool extends BaseTool {
                 stdoutSize += data.length;
                 if (stdoutSize > this.stdoutSizeLimit) {
                     child.kill();
-                    reject(new Error(`STDOUT exceeded size limit of ${this.stdoutSizeLimit} bytes`));
+                    resolve(this._createOutputLimitError('STDOUT', this.stdoutSizeLimit));
                     return;
                 }
                 stdout += data.toString();
@@ -129,14 +130,21 @@ export class SandboxedTool extends BaseTool {
                 stderrSize += data.length;
                 if (stderrSize > this.stderrSizeLimit) {
                     child.kill();
-                    reject(new Error(`STDERR exceeded size limit of ${this.stderrSizeLimit} bytes`));
+                    resolve(this._createOutputLimitError('STDERR', this.stderrSizeLimit));
                     return;
                 }
                 stderr += data.toString();
             });
 
             child.on('error', (error) => {
-                reject(new Error(`Command execution failed: ${error.message}`));
+                resolve({
+                    success: false,
+                    exitCode: null,
+                    error: { message: `Command execution failed: ${error.message}` },
+                    stdout: this.sanitizeOutput(stdout),
+                    stderr: this.sanitizeOutput(stderr),
+                    executionTime: Date.now() - startTime
+                });
             });
 
             child.on('close', (code, signal) => {
@@ -185,6 +193,21 @@ export class SandboxedTool extends BaseTool {
                 }
             }, timeout);
         });
+    }
+
+    /**
+     * Create a standard error for output size limits
+     * @private
+     */
+    _createOutputLimitError(outputType, limit) {
+        return {
+            success: false,
+            exitCode: null,
+            error: { message: `${outputType} exceeded size limit of ${limit} bytes` },
+            stdout: '',
+            stderr: '',
+            executionTime: Date.now() - (Date.now() - this.runtimeLimit) // Approximate execution time
+        };
     }
 
     _getSandboxEnv(additionalEnv = {}) {

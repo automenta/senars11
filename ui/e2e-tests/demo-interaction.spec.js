@@ -5,7 +5,7 @@ test.describe('DemoPanel Interaction', () => {
         await page.goto('/');
 
         // 1. Wait for the demo list to be populated.
-        const demoPanel = page.locator('.flexlayout__layout').locator('div', {hasText: 'Demos'}).first();
+        const demoPanel = page.locator('.flexlayout__layout').locator('div[aria-label="Demos"]').first();
         await expect(demoPanel).toBeVisible();
 
         const firstDemo = demoPanel.locator('div[key^="demo-"]').first();

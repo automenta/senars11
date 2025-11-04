@@ -41,6 +41,26 @@ export class ToolEngine {
     async registerTool(id, tool, metadata = {}) {
         if (this.tools.has(id)) throw new Error(`Tool with ID "${id}" already exists`);
 
+        this._validateToolInterface(id, tool);
+
+        const toolCapabilities = tool.getCapabilities?.() || [];
+        const toolData = this._createToolData(id, tool, metadata, toolCapabilities);
+
+        this.tools.set(id, toolData);
+
+        await this._registerToolCapabilities(toolCapabilities);
+        await this._grantToolCapabilities(id, toolCapabilities);
+
+        this.logger.info(`Registered tool: ${id} (${toolData.category})`, {
+            name: tool.constructor.name,
+            description: toolData.description,
+            capabilities: toolData.capabilities
+        });
+
+        return this;
+    }
+
+    _validateToolInterface(id, tool) {
         if (!tool.execute || typeof tool.execute !== 'function') {
             throw new Error(`Tool "${id}" must have an execute method`);
         }
@@ -48,25 +68,26 @@ export class ToolEngine {
         if (!tool.getDescription || typeof tool.getDescription !== 'function') {
             throw new Error(`Tool "${id}" must have a getDescription method`);
         }
+    }
 
-        const toolCapabilities = tool.getCapabilities?.() || [];
-        const toolData = {
+    _createToolData(id, tool, metadata, capabilities) {
+        return {
             id,
             instance: tool,
             name: tool.constructor.name,
             description: tool.getDescription(),
             parameters: tool.getParameterSchema?.() || {type: 'object', properties: {}},
             category: tool.getCategory?.() || 'general',
-            capabilities: toolCapabilities,
+            capabilities,
             createdAt: Date.now(),
             usageCount: 0,
             lastUsed: null,
             ...metadata
         };
+    }
 
-        this.tools.set(id, toolData);
-
-        for (const capability of toolCapabilities) {
+    async _registerToolCapabilities(capabilities) {
+        for (const capability of capabilities) {
             if (!this.capabilityManager.capabilities.has(capability)) {
                 await this.capabilityManager.registerCapability(capability,
                     new Capability(capability, {
@@ -77,21 +98,15 @@ export class ToolEngine {
                 );
             }
         }
+    }
 
-        if (toolCapabilities.length > 0) {
-            await this.capabilityManager.grantCapabilities(id, toolCapabilities, {
+    async _grantToolCapabilities(id, capabilities) {
+        if (capabilities.length > 0) {
+            await this.capabilityManager.grantCapabilities(id, capabilities, {
                 grantedBy: 'system',
                 approved: true
             });
         }
-
-        this.logger.info(`Registered tool: ${id} (${toolData.category})`, {
-            name: tool.constructor.name,
-            description: toolData.description,
-            capabilities: toolData.capabilities
-        });
-
-        return this;
     }
 
     unregisterTool(id) {
@@ -106,30 +121,18 @@ export class ToolEngine {
     async executeTool(toolId, params = {}, context = {}) {
         const startTime = Date.now();
         const executionId = this._generateExecutionId();
-
         const tool = this.tools.get(toolId);
+        
         if (!tool) throw new Error(`Tool "${toolId}" not found`);
 
-        const hasRequiredCapabilities = await this.capabilityManager.hasAllCapabilities(toolId, tool.capabilities || []);
-        if (!hasRequiredCapabilities) {
-            const missingCaps = tool.capabilities.filter(cap =>
-                !this.capabilityManager.hasCapability(toolId, cap)
-            );
-            throw new Error(`Tool "${toolId}" lacks required capabilities: ${missingCaps.join(', ')}`);
-        }
-
+        await this._validateToolCapabilities(toolId, tool);
         const executionContext = this._createExecutionContext(executionId, toolId, params, context, startTime);
+        
         this.activeExecutions.set(executionId, executionContext);
 
         try {
             this._validateSafety(params);
-
-            if (tool.instance.validate && typeof tool.instance.validate === 'function') {
-                const validationResult = tool.instance.validate(params);
-                if (!validationResult.isValid) {
-                    throw new Error(`Tool parameters validation failed: ${validationResult.errors?.join(', ') || 'Unknown error'}`);
-                }
-            }
+            await this._validateToolParams(tool, params);
 
             const timeout = context.timeout || this.config.defaultTimeout;
             const result = await this._executeWithTimeout(
@@ -145,6 +148,25 @@ export class ToolEngine {
             return this._handleExecutionError(executionContext, error, startTime, tool);
         } finally {
             this.activeExecutions.delete(executionId);
+        }
+    }
+
+    async _validateToolCapabilities(toolId, tool) {
+        const hasRequiredCapabilities = await this.capabilityManager.hasAllCapabilities(toolId, tool.capabilities || []);
+        if (!hasRequiredCapabilities) {
+            const missingCaps = tool.capabilities.filter(cap =>
+                !this.capabilityManager.hasCapability(toolId, cap)
+            );
+            throw new Error(`Tool "${toolId}" lacks required capabilities: ${missingCaps.join(', ')}`);
+        }
+    }
+
+    async _validateToolParams(tool, params) {
+        if (tool.instance.validate && typeof tool.instance.validate === 'function') {
+            const validationResult = tool.instance.validate(params);
+            if (!validationResult.isValid) {
+                throw new Error(`Tool parameters validation failed: ${validationResult.errors?.join(', ') || 'Unknown error'}`);
+            }
         }
     }
 

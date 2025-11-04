@@ -39,21 +39,12 @@ export class EmbeddingTool extends BaseTool {
     async execute(params, context) {
         const {operation, text, texts, model = this.defaultModel, options = {}} = params;
 
-        if (!operation) {
-            throw new Error('Operation is required');
-        }
+        if (!operation) throw new Error('Operation is required');
 
         switch (operation.toLowerCase()) {
             case 'generate':
             case 'embed':
-                if (!text && !texts) throw new Error('Either text or texts array is required for embed operation');
-                if (text && texts) throw new Error('Provide either text or texts array, not both');
-
-                if (text) {
-                    return await this._generateEmbedding(text, model, options);
-                } else {
-                    return await this._generateBatchEmbeddings(texts, model, options);
-                }
+                return await this._handleEmbedOperation(text, texts, model, options);
             case 'compare':
                 if (!text || !params.compareWith) throw new Error('text and compareWith are required for compare operation');
                 return await this._compareEmbeddings(text, params.compareWith, model, options);
@@ -72,6 +63,19 @@ export class EmbeddingTool extends BaseTool {
     }
 
     /**
+     * Handle the embed operation (single or batch)
+     * @private
+     */
+    async _handleEmbedOperation(text, texts, model, options) {
+        if (!text && !texts) throw new Error('Either text or texts array is required for embed operation');
+        if (text && texts) throw new Error('Provide either text or texts array, not both');
+
+        return text 
+            ? this._generateEmbedding(text, model, options)
+            : this._generateBatchEmbeddings(texts, model, options);
+    }
+
+    /**
      * Generate a single embedding
      * @private
      */
@@ -83,19 +87,7 @@ export class EmbeddingTool extends BaseTool {
         // For this example, we'll simulate the embedding process
         const embedding = this._simulateEmbedding(text, model);
 
-        return {
-            success: true,
-            operation: 'embed',
-            model,
-            textLength: text.length,
-            embeddingDimension: embedding.length,
-            embedding: embedding,
-            metadata: {
-                model,
-                inputLength: text.length,
-                timestamp: new Date().toISOString()
-            }
-        };
+        return this._createEmbeddingResult('embed', model, text.length, embedding);
     }
 
     /**
@@ -103,17 +95,7 @@ export class EmbeddingTool extends BaseTool {
      * @private
      */
     async _generateBatchEmbeddings(texts, model, options = {}) {
-        if (!Array.isArray(texts)) {
-            throw new Error('texts must be an array');
-        }
-
-        if (texts.length > this.maxBatchSize) {
-            throw new Error(`Batch size exceeds maximum limit: ${this.maxBatchSize}`);
-        }
-
-        for (let i = 0; i < texts.length; i++) {
-            this._validateText(texts[i], `text at index ${i}`);
-        }
+        this._validateTextsArray(texts);
 
         // Generate embeddings for each text
         const embeddings = texts.map(text => ({
@@ -200,17 +182,7 @@ export class EmbeddingTool extends BaseTool {
      * @private
      */
     async _clusterEmbeddings(texts, model, options = {}) {
-        if (!Array.isArray(texts)) {
-            throw new Error('texts must be an array for clustering');
-        }
-
-        if (texts.length > this.maxBatchSize) {
-            throw new Error(`Batch size exceeds maximum limit for clustering: ${this.maxBatchSize}`);
-        }
-
-        for (let i = 0; i < texts.length; i++) {
-            this._validateText(texts[i], `text at index ${i} for clustering`);
-        }
+        this._validateTextsArray(texts, 'clustering');
 
         // Generate embeddings for all texts
         const embeddings = texts.map(text => ({
@@ -241,19 +213,9 @@ export class EmbeddingTool extends BaseTool {
      * @private
      */
     async _searchEmbeddings(query, searchSpace, model, options = {}) {
-        if (!Array.isArray(searchSpace)) {
-            throw new Error('searchSpace must be an array');
-        }
-
+        if (!Array.isArray(searchSpace)) throw new Error('searchSpace must be an array');
         this._validateText(query, 'query text');
-
-        for (let i = 0; i < searchSpace.length; i++) {
-            this._validateText(searchSpace[i], `search space text at index ${i}`);
-        }
-
-        if (searchSpace.length > this.maxBatchSize) {
-            throw new Error(`Search space size exceeds maximum limit: ${this.maxBatchSize}`);
-        }
+        this._validateTextsArray(searchSpace, 'search space', this.maxBatchSize);
 
         // Generate embedding for the query
         const queryEmbedding = this._simulateEmbedding(query, model);
@@ -438,10 +400,7 @@ export class EmbeddingTool extends BaseTool {
             }
         }
 
-        return {
-            isValid: errors.length === 0,
-            errors
-        };
+        return { isValid: errors.length === 0, errors };
     }
 
     /**
@@ -473,6 +432,44 @@ export class EmbeddingTool extends BaseTool {
 
         // Additional safety checks could be added here
         return true;
+    }
+
+    /**
+     * Validate a texts array with appropriate error messages
+     * @private
+     */
+    _validateTextsArray(texts, context = '', maxBatchSize = this.maxBatchSize) {
+        if (!Array.isArray(texts)) {
+            throw new Error(`${context ? `${context} ` : ''}texts must be an array`);
+        }
+
+        if (texts.length > maxBatchSize) {
+            throw new Error(`${context ? `${context} ` : ''}Batch size exceeds maximum limit: ${maxBatchSize}`);
+        }
+
+        for (let i = 0; i < texts.length; i++) {
+            this._validateText(texts[i], `text at index ${i}${context ? ` for ${context}` : ''}`);
+        }
+    }
+
+    /**
+     * Create a standard embedding result object
+     * @private
+     */
+    _createEmbeddingResult(operation, model, textLength, embedding) {
+        return {
+            success: true,
+            operation,
+            model,
+            textLength: textLength,
+            embeddingDimension: embedding.length,
+            embedding: embedding,
+            metadata: {
+                model,
+                inputLength: textLength,
+                timestamp: new Date().toISOString()
+            }
+        };
     }
 
     /**

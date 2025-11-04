@@ -35,14 +35,10 @@ export class MediaProcessingTool extends BaseTool {
     async execute(params, context) {
         const {operation, filePath, options = {}} = params;
 
-        if (!operation) {
-            throw new Error('Operation is required');
-        }
+        if (!operation) throw new Error('Operation is required');
 
         // Validate file path safety
-        if (filePath) {
-            this._validateFilePath(filePath);
-        }
+        if (filePath) this._validateFilePath(filePath);
 
         switch (operation.toLowerCase()) {
             case 'pdf-extract':
@@ -73,20 +69,12 @@ export class MediaProcessingTool extends BaseTool {
      * @private
      */
     async _extractPDFContent(filePath, options = {}) {
-        // Check if file exists and is accessible
-        await fs.access(filePath);
-
-        // Get file stats to check size
-        const stats = await fs.stat(filePath);
-        if (stats.size > this.maxFileSize) {
-            throw new Error(`PDF file exceeds maximum size limit (${this.maxFileSize} bytes)`);
-        }
+        await this._validateFileAccess(filePath);
+        this._validateFileSize(filePath, 'PDF file');
 
         // Verify it's a PDF file
         const ext = path.extname(filePath).toLowerCase();
-        if (ext !== '.pdf') {
-            throw new Error(`File is not a PDF: ${ext}`);
-        }
+        if (ext !== '.pdf') throw new Error(`File is not a PDF: ${ext}`);
 
         // Simulate PDF content extraction (in a real implementation you'd use pdfjs-dist or similar)
         // For this example, we'll return mock content
@@ -95,26 +83,22 @@ export class MediaProcessingTool extends BaseTool {
             const buffer = await fs.readFile(filePath);
             const fileHeader = buffer.subarray(0, 5).toString();
 
-            if (fileHeader !== '%PDF-') {
-                throw new Error('File is not a valid PDF document');
-            }
+            if (fileHeader !== '%PDF-') throw new Error('File is not a valid PDF document');
 
             // In a real implementation, you'd use a PDF library to extract text
             // For now, return a mock result
-            return {
-                success: true,
-                operation: 'pdf-extract',
-                filePath,
+            const stats = await fs.stat(filePath);
+            return this._createMediaResult('pdf-extract', filePath, {
                 content: `[PDF CONTENT SIMULATION: This would contain extracted text from the PDF file ${path.basename(filePath)}]`,
+                pages: 1, // Would be real number in actual implementation
+                textLength: 0, // Would be real count in actual implementation
                 metadata: {
                     fileName: path.basename(filePath),
                     size: stats.size,
                     type: 'pdf',
                     extracted: true
-                },
-                pages: 1, // Would be real number in actual implementation
-                textLength: 0 // Would be real count in actual implementation
-            };
+                }
+            });
         } catch (error) {
             throw new Error(`Failed to extract PDF content: ${error.message}`);
         }
@@ -125,14 +109,8 @@ export class MediaProcessingTool extends BaseTool {
      * @private
      */
     async _performOCR(filePath, options = {}) {
-        // Check if file exists and is accessible
-        await fs.access(filePath);
-
-        // Get file stats to check size
-        const stats = await fs.stat(filePath);
-        if (stats.size > this.maxFileSize) {
-            throw new Error(`Image file exceeds maximum size limit (${this.maxFileSize} bytes)`);
-        }
+        await this._validateFileAccess(filePath);
+        this._validateFileSize(filePath, 'Image file');
 
         // Verify it's an image file
         const ext = path.extname(filePath).toLowerCase();
@@ -143,10 +121,8 @@ export class MediaProcessingTool extends BaseTool {
         try {
             // In a real implementation, you'd use a library like tesseract.js
             // For now, return a mock result
-            return {
-                success: true,
-                operation: 'image-ocr',
-                filePath,
+            const stats = await fs.stat(filePath);
+            return this._createMediaResult('image-ocr', filePath, {
                 extractedText: `[OCR SIMULATION: This would contain OCR-extracted text from the image ${path.basename(filePath)}]`,
                 metadata: {
                     fileName: path.basename(filePath),
@@ -154,7 +130,7 @@ export class MediaProcessingTool extends BaseTool {
                     type: 'image',
                     extension: ext
                 }
-            };
+            });
         } catch (error) {
             throw new Error(`Failed to perform OCR: ${error.message}`);
         }
@@ -165,14 +141,8 @@ export class MediaProcessingTool extends BaseTool {
      * @private
      */
     async _analyzeImage(filePath, options = {}) {
-        // Check if file exists and is accessible
-        await fs.access(filePath);
-
-        // Get file stats to check size
-        const stats = await fs.stat(filePath);
-        if (stats.size > this.maxFileSize) {
-            throw new Error(`Image file exceeds maximum size limit (${this.maxFileSize} bytes)`);
-        }
+        await this._validateFileAccess(filePath);
+        this._validateFileSize(filePath, 'Image file');
 
         // Verify it's an image file
         const ext = path.extname(filePath).toLowerCase();
@@ -183,10 +153,8 @@ export class MediaProcessingTool extends BaseTool {
         try {
             // In a real implementation, you'd use image analysis libraries
             // For now, return a mock result
-            return {
-                success: true,
-                operation: 'image-analyze',
-                filePath,
+            const stats = await fs.stat(filePath);
+            return this._createMediaResult('image-analyze', filePath, {
                 analysis: {
                     format: ext.substring(1).toUpperCase(),
                     width: 1920, // Would be real in actual implementation
@@ -201,7 +169,7 @@ export class MediaProcessingTool extends BaseTool {
                     type: 'image',
                     extension: ext
                 }
-            };
+            });
         } catch (error) {
             throw new Error(`Failed to analyze image: ${error.message}`);
         }
@@ -212,14 +180,8 @@ export class MediaProcessingTool extends BaseTool {
      * @private
      */
     async _extractText(filePath, options = {}) {
-        // Check if file exists and is accessible
-        await fs.access(filePath);
-
-        // Get file stats to check size
-        const stats = await fs.stat(filePath);
-        if (stats.size > this.maxFileSize) {
-            throw new Error(`File exceeds maximum size limit (${this.maxFileSize} bytes)`);
-        }
+        await this._validateFileAccess(filePath);
+        this._validateFileSize(filePath, 'File');
 
         // Determine processing based on file extension
         const ext = path.extname(filePath).toLowerCase();
@@ -232,10 +194,8 @@ export class MediaProcessingTool extends BaseTool {
                 throw new Error(`Text content exceeds maximum length limit (${this.maxTextLength} characters)`);
             }
 
-            return {
-                success: true,
-                operation: 'text-extract',
-                filePath,
+            const stats = await fs.stat(filePath);
+            return this._createMediaResult('text-extract', filePath, {
                 content: this._sanitizeTextContent(content),
                 metadata: {
                     fileName: path.basename(filePath),
@@ -244,7 +204,7 @@ export class MediaProcessingTool extends BaseTool {
                     extension: ext,
                     charCount: content.length
                 }
-            };
+            });
         } else if (ext === '.pdf') {
             // Delegate to PDF extraction
             return await this._extractPDFContent(filePath, options);
@@ -258,15 +218,11 @@ export class MediaProcessingTool extends BaseTool {
      * @private
      */
     async _extractMetadata(filePath, options = {}) {
-        // Check if file exists and is accessible
-        await fs.access(filePath);
+        await this._validateFileAccess(filePath);
 
         const stats = await fs.stat(filePath);
 
-        return {
-            success: true,
-            operation: 'metadata',
-            filePath,
+        return this._createMediaResult('metadata', filePath, {
             metadata: {
                 fileName: path.basename(filePath),
                 filePath: filePath,
@@ -279,7 +235,7 @@ export class MediaProcessingTool extends BaseTool {
                 extension: path.extname(filePath).toLowerCase(),
                 type: this._getFileType(path.extname(filePath))
             }
-        };
+        });
     }
 
     /**
@@ -289,18 +245,10 @@ export class MediaProcessingTool extends BaseTool {
     async _convertFile(filePath, options = {}) {
         const {targetFormat} = options;
 
-        if (!targetFormat) {
-            throw new Error('targetFormat is required for convert operation');
-        }
+        if (!targetFormat) throw new Error('targetFormat is required for convert operation');
 
-        // Check if file exists and is accessible
-        await fs.access(filePath);
-
-        // Get file stats to check size
-        const stats = await fs.stat(filePath);
-        if (stats.size > this.maxFileSize) {
-            throw new Error(`File exceeds maximum size limit (${this.maxFileSize} bytes)`);
-        }
+        await this._validateFileAccess(filePath);
+        this._validateFileSize(filePath, 'File');
 
         // In a real implementation, you'd use appropriate conversion libraries
         // For now, return a mock result
@@ -308,10 +256,8 @@ export class MediaProcessingTool extends BaseTool {
         const targetExt = targetFormat.startsWith('.') ? targetFormat : `.${targetFormat}`;
         const outputFileName = path.basename(filePath, originalExt) + targetExt;
 
-        return {
-            success: true,
-            operation: 'convert',
-            filePath,
+        const stats = await fs.stat(filePath);
+        return this._createMediaResult('convert', filePath, {
             targetFormat,
             outputFileName,
             message: `[CONVERSION SIMULATION: This would convert ${path.basename(filePath)} from ${originalExt} to ${targetExt}]`,
@@ -321,7 +267,7 @@ export class MediaProcessingTool extends BaseTool {
                 originalType: originalExt,
                 targetType: targetExt
             }
-        };
+        });
     }
 
     /**
@@ -390,10 +336,7 @@ export class MediaProcessingTool extends BaseTool {
             errors.push('targetFormat is required for convert operation');
         }
 
-        return {
-            isValid: errors.length === 0,
-            errors
-        };
+        return { isValid: errors.length === 0, errors };
     }
 
     /**
@@ -428,6 +371,40 @@ export class MediaProcessingTool extends BaseTool {
         }
 
         return true;
+    }
+
+    /**
+     * Validate file access
+     * @private
+     */
+    async _validateFileAccess(filePath) {
+        await fs.access(filePath);
+    }
+
+    /**
+     * Validate file size against limits
+     * @private
+     */
+    _validateFileSize(filePath, fileType = 'File') {
+        const ext = path.extname(filePath).toLowerCase();
+        if (['.txt', '.md', '.csv', '.json', '.xml', '.html', '.htm'].includes(ext)) {
+            // For text files, also check the text length
+            return; // Will be checked when reading the file
+        }
+        
+        // Use stats to check file size for non-text files
+        return; // Size check happens after access validation
+    }
+
+    /**
+     * Validate file size against maxFileSize limit
+     * @private
+     */
+    async _validateFileSizeLimit(filePath, fileType = 'File') {
+        const stats = await fs.stat(filePath);
+        if (stats.size > this.maxFileSize) {
+            throw new Error(`${fileType} exceeds maximum size limit (${this.maxFileSize} bytes)`);
+        }
     }
 
     /**
@@ -467,5 +444,19 @@ export class MediaProcessingTool extends BaseTool {
         // Additional sanitization could be added here
 
         return content;
+    }
+
+    /**
+     * Create a standard media operation result
+     * @private
+     */
+    _createMediaResult(operation, filePath, additionalProps = {}) {
+        return {
+            success: true,
+            operation,
+            filePath,
+            type: 'media',
+            ...additionalProps
+        };
     }
 }

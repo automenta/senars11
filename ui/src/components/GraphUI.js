@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import {
   ReactFlow,
   MiniMap,
@@ -23,7 +23,7 @@ const nodeTypes = {
 };
 
 // Custom node components
-function ConceptNode({ data }) {
+const ConceptNode = memo(({ data }) => {
     return React.createElement('div', {
             style: {
                 padding: '10px',
@@ -38,9 +38,9 @@ function ConceptNode({ data }) {
         React.createElement('div', { style: { fontWeight: 'bold', marginBottom: '5px' } }, data.label),
         React.createElement('div', { style: { fontSize: '0.8em' } }, `Priority: ${(data.priority || 0).toFixed(2)}`)
     );
-}
+});
 
-function TaskNode({ data }) {
+const TaskNode = memo(({ data }) => {
     return React.createElement('div', {
             style: {
                 padding: '8px',
@@ -55,9 +55,9 @@ function TaskNode({ data }) {
         React.createElement('div', { style: { fontWeight: 'bold', marginBottom: '3px' } }, data.type),
         React.createElement('div', { style: { fontSize: '0.7em' } }, data.label)
     );
-}
+});
 
-function BeliefNode({ data }) {
+const BeliefNode = memo(({ data }) => {
     return React.createElement('div', {
             style: {
                 padding: '8px',
@@ -73,9 +73,9 @@ function BeliefNode({ data }) {
         React.createElement('div', { style: { fontSize: '0.7em' } }, data.label),
         React.createElement('div', { style: { fontSize: '0.6em' } }, `Freq: ${(data.frequency || 0).toFixed(2)}`)
     );
-}
+});
 
-function GoalNode({ data }) {
+const GoalNode = memo(({ data }) => {
     return React.createElement('div', {
             style: {
                 padding: '8px',
@@ -91,7 +91,7 @@ function GoalNode({ data }) {
         React.createElement('div', { style: { fontSize: '0.7em' } }, data.label),
         React.createElement('div', { style: { fontSize: '0.6em' } }, `Desire: ${(data.desire || 0).toFixed(2)}`)
     );
-}
+});
 
 const GraphUI = () => {
     const [nodes, setNodes, onNodesChange] = useNodesState([]);

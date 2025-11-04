@@ -53,28 +53,7 @@ export class ToolIntegration extends BaseComponent {
             const {FileOperationsTool, CommandExecutorTool, WebAutomationTool, MediaProcessingTool, EmbeddingTool} =
                 await import('./index.js');
 
-            const toolsConfig = [
-                {
-                    id: 'file-operations', toolClass: FileOperationsTool, category: 'file-operations',
-                    description: 'File operations including read, write, append, delete, list, and stat'
-                },
-                {
-                    id: 'command-executor', toolClass: CommandExecutorTool, category: 'command-execution',
-                    description: 'Safe command execution in sandboxed environment'
-                },
-                {
-                    id: 'web-automation', toolClass: WebAutomationTool, category: 'web-automation',
-                    description: 'Web automation including fetch, scrape, and check operations'
-                },
-                {
-                    id: 'media-processing', toolClass: MediaProcessingTool, category: 'media-processing',
-                    description: 'Media processing including PDF, image, and text extraction'
-                },
-                {
-                    id: 'embedding', toolClass: EmbeddingTool, category: 'embedding',
-                    description: 'Text embedding, similarity, and comparison operations'
-                }
-            ];
+            const toolsConfig = this._getToolsConfig(FileOperationsTool, CommandExecutorTool, WebAutomationTool, MediaProcessingTool, EmbeddingTool);
 
             // Try to instantiate and register each tool individually to isolate failures
             for (const {id, toolClass, category, description} of toolsConfig) {
@@ -101,6 +80,35 @@ export class ToolIntegration extends BaseComponent {
     }
 
     /**
+     * Get configuration for all tools
+     * @private
+     */
+    _getToolsConfig(FileOperationsTool, CommandExecutorTool, WebAutomationTool, MediaProcessingTool, EmbeddingTool) {
+        return [
+            {
+                id: 'file-operations', toolClass: FileOperationsTool, category: 'file-operations',
+                description: 'File operations including read, write, append, delete, list, and stat'
+            },
+            {
+                id: 'command-executor', toolClass: CommandExecutorTool, category: 'command-execution',
+                description: 'Safe command execution in sandboxed environment'
+            },
+            {
+                id: 'web-automation', toolClass: WebAutomationTool, category: 'web-automation',
+                description: 'Web automation including fetch, scrape, and check operations'
+            },
+            {
+                id: 'media-processing', toolClass: MediaProcessingTool, category: 'media-processing',
+                description: 'Media processing including PDF, image, and text extraction'
+            },
+            {
+                id: 'embedding', toolClass: EmbeddingTool, category: 'embedding',
+                description: 'Text embedding, similarity, and comparison operations'
+            }
+        ];
+    }
+
+    /**
      * Execute a tool as part of reasoning process
      * @param {string} toolId - Tool ID to execute
      * @param {object} params - Tool parameters
@@ -115,16 +123,7 @@ export class ToolIntegration extends BaseComponent {
                 reasoningContext: context
             });
 
-            this.toolUsageHistory.push({
-                toolId,
-                params,
-                result: {...result},
-                executionTime: Date.now() - startTime,
-                timestamp: Date.now(),
-                context: context
-            });
-
-            this.toolUsageHistory.length > 1000 && (this.toolUsageHistory = this.toolUsageHistory.slice(-500));
+            this._addToolUsageToHistory(toolId, params, result, startTime, context);
 
             return result;
         } catch (error) {
@@ -133,13 +132,41 @@ export class ToolIntegration extends BaseComponent {
                 params: JSON.stringify(params).substring(0, 200) + '...'
             });
 
-            return {
-                success: false,
-                error: error.message,
-                executionTime: Date.now() - startTime,
-                toolId
-            };
+            return this._createErrorResult(error.message, startTime, toolId);
         }
+    }
+
+    /**
+     * Add tool usage to history
+     * @private
+     */
+    _addToolUsageToHistory(toolId, params, result, startTime, context) {
+        this.toolUsageHistory.push({
+            toolId,
+            params,
+            result: {...result},
+            executionTime: Date.now() - startTime,
+            timestamp: Date.now(),
+            context: context
+        });
+
+        // Maintain history size
+        if (this.toolUsageHistory.length > 1000) {
+            this.toolUsageHistory = this.toolUsageHistory.slice(-500);
+        }
+    }
+
+    /**
+     * Create a standard error result
+     * @private
+     */
+    _createErrorResult(errorMessage, startTime, toolId) {
+        return {
+            success: false,
+            error: errorMessage,
+            executionTime: Date.now() - startTime,
+            toolId
+        };
     }
 
     /**

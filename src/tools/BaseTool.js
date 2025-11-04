@@ -62,11 +62,11 @@ export class BaseTool {
 
         // Validate required parameters
         if (Array.isArray(schema.required)) {
-            for (const requiredParam of schema.required) {
-                if (!(requiredParam in params)) {
-                    errors.push(`Missing required parameter: ${requiredParam}`);
-                }
-            }
+            errors.push(
+                ...schema.required
+                    .filter(requiredParam => !(requiredParam in params))
+                    .map(requiredParam => `Missing required parameter: ${requiredParam}`)
+            );
         }
 
         // Validate parameter types and enums
@@ -86,10 +86,7 @@ export class BaseTool {
             }
         }
 
-        return {
-            isValid: errors.length === 0,
-            errors
-        };
+        return { isValid: errors.length === 0, errors };
     }
 
     /**
@@ -115,7 +112,6 @@ export class BaseTool {
      * @returns {Promise<void>} - Async setup
      */
     async beforeExecute(params, context) {
-        // Default implementation - override as needed
         this.usageCount++;
         this.lastUsed = Date.now();
     }
@@ -128,7 +124,6 @@ export class BaseTool {
      * @returns {Promise<any>} - Potentially modified result
      */
     async afterExecute(result, params, context) {
-        // Default implementation - return result as-is
         return result;
     }
 
@@ -157,7 +152,5 @@ export class BaseTool {
      * Shutdown the tool and clean up resources
      * @returns {Promise<void>} - Async cleanup
      */
-    async shutdown() {
-        // Default implementation - override as needed
-    }
+    async shutdown() {}
 }

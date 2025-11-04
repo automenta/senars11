@@ -6,7 +6,7 @@ test.describe('Comprehensive UI Functionality Tests', () => {
         await page.goto('/');
 
         // Wait for the connection status to be "Online"
-        const connectionStatus = page.locator('text=WebSocket Connection: Online');
+        const connectionStatus = page.locator('text=Connected');
         await expect(connectionStatus).toBeVisible({timeout: 10000});
 
         // 2. Verify DemoPanel functionality.
@@ -23,12 +23,12 @@ test.describe('Comprehensive UI Functionality Tests', () => {
 
         // 3. Verify Narsese input and its effects.
         // Find the input panel textarea and submit a Narsese statement.
-        const narseseInput = page.locator('textarea[placeholder="Enter Narsese input here..."]');
+        const narseseInput = page.locator('textarea[placeholder="Enter Narsese input (e.g., <cat --> animal>. or <dog --> mammal>? or <bird --> flyer>!)"]');
         await expect(narseseInput).toBeVisible();
         const inputStatement = '<a --> b>.';
         await narseseInput.fill(inputStatement);
 
-        const submitButton = page.locator('button:has-text("Submit")');
+        const submitButton = page.locator('button:has-text("Submit Input")');
         await submitButton.click();
 
         // 4. Verify that the submitted task appears in the TaskPanel.
