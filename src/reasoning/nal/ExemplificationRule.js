@@ -2,9 +2,6 @@ import {NALRule} from './NALRule.js';
 import {Term} from '../../term/Term.js';
 import {RuleUtils} from './RuleUtils.js';
 
-/**
- * Exemplification Rule: If <a --> b> and <b --> c> then <c --> a>
- */
 export class ExemplificationRule extends NALRule {
     constructor() {
         super('exemplification', {
@@ -16,22 +13,14 @@ export class ExemplificationRule extends NALRule {
     }
 
     _matches(task, context) {
-        // Apply to inheritance statements <a --> b>
-        return task.term?.isCompound &&
-            task.term.operator === '-->' &&
-            task.term.components?.length === 2;
+        const {term} = task || {};
+        return term?.isCompound && term.operator === '-->' && term.components?.length === 2;
     }
 
     async _apply(task, context) {
-        const results = [];
-
-        if (!task.term?.isCompound || task.term.operator !== '-->' || task.term.components?.length !== 2) {
-            return results;
-        }
+        if (!this._matches(task, context)) return [];
 
         const [a, b] = task.term.components;
-
-        // Look for another inheritance statement <b --> c>
         const allTasks = RuleUtils.collectTasks(context);
         const inheritanceTasks = allTasks.filter(t =>
             t.term?.isCompound &&
@@ -39,12 +28,12 @@ export class ExemplificationRule extends NALRule {
             t.term.components?.length === 2
         );
 
+        const results = [];
+
         for (const otherTask of inheritanceTasks) {
             const [b2, c] = otherTask.components || otherTask.term.components;
 
-            // Check if b matches b2 (with unification)
-            if (this._termsMatch(b, b2)) {
-                // Create exemplification: <c --> a>
+            if (this._unify(b, b2)) {
                 const exemplificationTerm = new Term(
                     'compound',
                     `(${c.name} --> ${a.name})`,
@@ -52,35 +41,26 @@ export class ExemplificationRule extends NALRule {
                     '-->'
                 );
 
-                // Calculate truth value using exemplification logic
                 const derivedTruth = this._calculateExemplificationTruth(task.truth, otherTask.truth);
 
-                const exemplificationTask = this._createDerivedTask(task, {
+                results.push(this._createDerivedTask(task, {
                     term: exemplificationTerm,
                     truth: derivedTruth,
-                    type: 'BELIEF', // Exemplifications are beliefs
-                    priority: task.budget.priority * otherTask.budget.priority * this.priority
-                });
-
-                results.push(exemplificationTask);
+                    type: 'BELIEF',
+                    priority: task.priority * otherTask.priority * this.priority
+                }));
             }
         }
 
         return results;
     }
 
-    _termsMatch(t1, t2) {
-        const bindings = this._unify(t1, t2);
-        return bindings !== null;
-    }
-
     _calculateExemplificationTruth(t1, t2) {
         if (!t1 || !t2) return t1 || t2;
 
-        // Exemplification: frequency and confidence calculations
-        const frequency = Math.max(t1.f, t2.f) * 0.8; // Reduced frequency
-        const confidence = t1.c * t2.c * 0.3; // Significantly reduced confidence
+        const frequency = Math.max(t1.frequency, t2.frequency) * 0.8;
+        const confidence = t1.confidence * t2.confidence * 0.3;
 
-        return {f: frequency, c: confidence};
+        return {frequency, confidence};
     }
 }

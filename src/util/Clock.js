@@ -1,5 +1,5 @@
 /**
- * Simple clock utility for time management
+ * Time management utility
  */
 export class Clock {
     static now() {
@@ -8,5 +8,9 @@ export class Clock {
     
     static since(timestamp) {
         return Date.now() - timestamp;
+    }
+    
+    static elapsed(start, end = this.now()) {
+        return end - start;
     }
 }

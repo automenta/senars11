@@ -30,4 +30,18 @@ export class BudgetManager {
     getTotalAllocated() {
         return Array.from(this.allocations.values()).reduce((sum, val) => sum + val, 0);
     }
+    
+    getAllocation(id) {
+        return this.allocations.get(id) || 0;
+    }
+    
+    hasBudget(amount) {
+        return this.budget >= amount;
+    }
+    
+    utilization() {
+        const allocated = this.getTotalAllocated();
+        const total = allocated + this.budget;
+        return total > 0 ? allocated / total : 0;
+    }
 }
