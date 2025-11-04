@@ -54,13 +54,12 @@ export class ValidationUtils {
             errors: [],
             warnings: [],
             stats: this.getStats(indexes),
-            details: {}
+            details: {},
+            duration: 0
         };
 
         try {
-            for (const task of validationTasks) {
-                this._executeValidationTask(task, indexes, results);
-            }
+            validationTasks.forEach(task => this._executeValidationTask(task, indexes, results));
 
             // Update validation results history
             this.updateValidationHistory(results);
@@ -85,7 +84,7 @@ export class ValidationUtils {
         
         if (!validationResult.passed) {
             const target = task.error ? results.errors : results.warnings;
-            target.push(...validationResult[task.error ? 'errors' : 'warnings']);
+            target.push(...(validationResult[task.error ? 'errors' : 'warnings'] || []));
             
             if (task.error) {
                 results.passed = false;
@@ -124,14 +123,14 @@ export class ValidationUtils {
      * Validate consistency for a specific concept
      */
     _validateConceptConsistency(concepts, termId, indexes, result) {
-        for (const concept of concepts) {
+        concepts.forEach(concept => {
             // Verify concept exists in other relevant indexes
             if (concept.term.isAtomic) {
                 this._validateAtomicConsistency(concept, termId, indexes, result);
             } else {
                 this._validateCompoundConsistency(concept, termId, indexes, result);
             }
-        }
+        });
     }
     
     /**
@@ -231,7 +230,7 @@ export class ValidationUtils {
                 { index: indexes.similarity, name: 'similarity' }
             ];
 
-            for (const { index, name } of indexesToCheck) {
+            indexesToCheck.forEach(({ index, name }) => {
                 for (const [key, concepts] of index.entries()) {
                     result.checked++;
                     for (const concept of concepts) {
@@ -242,7 +241,7 @@ export class ValidationUtils {
                         }
                     }
                 }
-            }
+            });
 
             result.passed = result.orphaned === 0;
         } catch (error) {
@@ -308,9 +307,9 @@ export class ValidationUtils {
 
             for (const [termId, concepts] of termIndex.entries()) {
                 result.checked++;
-                for (const concept of concepts) {
+                concepts.forEach(concept => {
                     if (concept.term.isCompound && concept.term.components) {
-                        for (const component of concept.term.components) {
+                        concept.term.components.forEach(component => {
                             // Check if component references valid terms
                             if (component.isAtomic) {
                                 // For atomic components, check if they exist in atomic index
@@ -329,9 +328,9 @@ export class ValidationUtils {
                                     result.errors.push(`Invalid compound component reference: ${component.name} in concept ${termId} - ${componentValidity.reason}`);
                                 }
                             }
-                        }
+                        });
                     }
-                }
+                });
             }
 
             result.passed = result.invalid === 0;
@@ -465,7 +464,8 @@ export class ValidationUtils {
             timestamp: repairStartTime,
             repaired: 0,
             errors: [],
-            actions: []
+            actions: [],
+            duration: 0
         };
 
         try {
@@ -473,41 +473,40 @@ export class ValidationUtils {
             const validationResults = this.validate(indexes, logger);
 
             if (!validationResults.passed) {
-                // Attempt to repair inconsistencies
                 results.actions.push('Attempting to repair validation issues...');
 
                 // Define repair operations with their conditions and messages
                 const repairOperations = [
                     {
-                        condition: validationResults.details.termConsistency && !validationResults.details.termConsistency.passed,
+                        condition: validationResults.details.termConsistency?.passed === false,
                         operation: () => this.repairTermConsistency(indexes),
                         message: (count) => `Repaired ${count} term consistency issues`
                     },
                     {
-                        condition: validationResults.details.orphanedEntries && !validationResults.details.orphanedEntries.passed,
+                        condition: validationResults.details.orphanedEntries?.passed === false,
                         operation: () => this.removeOrphanedEntries(indexes),
                         message: (count) => `Removed ${count} orphaned entries`
                     },
                     {
-                        condition: validationResults.details.duplicates && !validationResults.details.duplicates.passed,
+                        condition: validationResults.details.duplicates?.passed === false,
                         operation: () => this.removeDuplicates(indexes),
                         message: (count) => `Removed ${count} duplicate entries`
                     },
                     {
-                        condition: validationResults.details.invalidReferences && !validationResults.details.invalidReferences.passed,
+                        condition: validationResults.details.invalidReferences?.passed === false,
                         operation: () => this.repairInvalidReferences(indexes, logger),
                         message: (count) => `Repaired ${count} invalid references`
                     }
                 ];
 
                 // Execute repair operations
-                for (const op of repairOperations) {
-                    if (op.condition) {
+                repairOperations
+                    .filter(op => op.condition)
+                    .forEach(op => {
                         const count = op.operation();
                         results.repaired += count;
                         results.actions.push(op.message(count));
-                    }
-                }
+                    });
             } else {
                 results.actions.push('No validation issues found, no repairs needed');
             }
@@ -687,30 +686,32 @@ export class ValidationUtils {
     }
 
     getStats(indexes) {
+        const { inheritance, implication, similarity, compound, atomic, compoundByOp, component, complexity, category, temporal, activation } = indexes;
+        
         return {
             totalConcepts: this.countTotalConcepts(indexes),
-            inheritanceEntries: indexes.inheritance.size,
-            implicationEntries: indexes.implication.size,
-            similarityEntries: indexes.similarity.size,
-            operatorEntries: indexes.compound.size,
+            inheritanceEntries: inheritance.size,
+            implicationEntries: implication.size,
+            similarityEntries: similarity.size,
+            operatorEntries: compound.size,
             compoundTermsByOperator: Object.fromEntries(
-                Array.from(indexes.compound.entries()).map(([op, terms]) => [op, terms.size])
+                Array.from(compound.entries()).map(([op, terms]) => [op, terms.size])
             ),
-            atomicEntries: indexes.atomic.size,
-            compoundByOpEntries: indexes.compoundByOp.size,
-            componentEntries: indexes.component.size,
-            complexityEntries: indexes.complexity.size,
-            categoryEntries: indexes.category.size,
-            temporalEntries: indexes.temporal.size,
-            activationEntries: indexes.activation.size,
+            atomicEntries: atomic.size,
+            compoundByOpEntries: compoundByOp.size,
+            componentEntries: component.size,
+            complexityEntries: complexity.size,
+            categoryEntries: category.size,
+            temporalEntries: temporal.size,
+            activationEntries: activation.size,
             indexDetails: {
-                atomic: this.getMapSizes(indexes.atomic),
-                compoundByOp: this.getMapSizes(indexes.compoundByOp),
-                component: this.getMapSizes(indexes.component),
-                complexity: this.getMapSizes(indexes.complexity),
-                category: this.getMapSizes(indexes.category),
-                temporal: this.getMapSizes(indexes.temporal),
-                activation: this.getMapSizes(indexes.activation)
+                atomic: this.getMapSizes(atomic),
+                compoundByOp: this.getMapSizes(compoundByOp),
+                component: this.getMapSizes(component),
+                complexity: this.getMapSizes(complexity),
+                category: this.getMapSizes(category),
+                temporal: this.getMapSizes(temporal),
+                activation: this.getMapSizes(activation)
             }
         };
     }

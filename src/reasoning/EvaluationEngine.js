@@ -37,22 +37,28 @@ export class EvaluationEngine {
         // Current recursion depth tracking
         this._recursionDepth = 0;
 
-        // Rules for functional evaluation (when all arguments are boolean values)
-        this.functionalRules = {
-            '&': this._reduceAndFunctional.bind(this),
-            '|': this._reduceOrFunctional.bind(this),
-            '--': this._reduceNegationFunctional.bind(this),
-            '==>': this._reduceImplicationFunctional.bind(this),
-            '<=>': this._reduceEquivalenceFunctional.bind(this)
-        };
-
-        // Rules for structural reduction (traditional NAL logic)
-        this.structuralRules = {
-            '&': this._reduceAndStructural.bind(this),
-            '|': this._reduceOrStructural.bind(this),
-            '--': this._reduceNegationStructural.bind(this),
-            '==>': this._reduceImplicationStructural.bind(this),
-            '<=>': this._reduceEquivalenceStructural.bind(this)
+        // Unified rules for both functional and structural evaluation
+        this.operatorRules = {
+            '&': {
+                functional: this._reduceAndFunctional.bind(this),
+                structural: this._reduceAndStructural.bind(this)
+            },
+            '|': {
+                functional: this._reduceOrFunctional.bind(this),
+                structural: this._reduceOrStructural.bind(this)
+            },
+            '--': {
+                functional: this._reduceNegationFunctional.bind(this),
+                structural: this._reduceNegationStructural.bind(this)
+            },
+            '==>': {
+                functional: this._reduceImplicationFunctional.bind(this),
+                structural: this._reduceImplicationStructural.bind(this)
+            },
+            '<=>': {
+                functional: this._reduceEquivalenceFunctional.bind(this),
+                structural: this._reduceEquivalenceStructural.bind(this)
+            }
         };
 
         this._initializeDefaultFunctors();
@@ -129,9 +135,8 @@ export class EvaluationEngine {
 
     async _evaluateUnifiedOperator(term, context, variableBindings) {
         // Check if all arguments are Boolean atoms (True, False, Null) for functional evaluation
-        const isFunctionalEvaluation = this._areAllBooleanValues(term.components, variableBindings);
-
-        return isFunctionalEvaluation 
+        const isFunctional = this._areAllBooleanValues(term.components, variableBindings);
+        return isFunctional 
             ? this._evaluateBooleanFunction(term, variableBindings) 
             : this._createResult(this.reduce(term), true, 'Structural compound with boolean reduction');
     }
@@ -145,14 +150,15 @@ export class EvaluationEngine {
 
     _evaluateBooleanFunction(term, variableBindings) {
         const booleanEvaluators = {
-            '&': this._evaluateAndFunction.bind(this),
-            '|': this._evaluateOrFunction.bind(this),
-            '==>': this._evaluateImplicationFunction.bind(this),
-            '<=>': this._evaluateEquivalenceFunction.bind(this)
+            '&': '_evaluateAndFunction',
+            '|': '_evaluateOrFunction',
+            '==>': '_evaluateImplicationFunction',
+            '<=>': '_evaluateEquivalenceFunction'
         };
 
-        return booleanEvaluators[term.operator]?.(term, variableBindings) 
-            || this._evaluateNonOperation(term, null, variableBindings);
+        const evaluator = booleanEvaluators[term.operator];
+        return evaluator ? this[evaluator](term, variableBindings) 
+            : this._evaluateNonOperation(term, null, variableBindings);
     }
 
     _evaluateAndFunction(term, variableBindings) {
@@ -248,13 +254,9 @@ export class EvaluationEngine {
     }
 
     _isOperationWithVariable(term) {
-        if (term.isCompound && term.operator === '^' && term.components?.length === 2) {
-            const args = term.components[1];
-            if (args.isCompound && args.operator === ',') {
-                return args.components.some(arg => arg.name?.startsWith('?'));
-            }
-        }
-        return false;
+        return term.isCompound && term.operator === '^' && term.components?.length === 2 &&
+               term.components[1].isCompound && term.components[1].operator === ',' &&
+               term.components[1].components?.some(arg => arg.name?.startsWith('?'));
     }
 
     _isAtomicOrNumeric(term) {
@@ -323,14 +325,11 @@ export class EvaluationEngine {
     }
 
     _isFunctionalEvaluation(term) {
-        if (!term.isCompound) return false;
-        if (['&', '|', '==>', '<=>', '--'].includes(term.operator)) {
-            if (term.operator === '--') {
-                return term.components?.length > 0 && this._isBooleanValue(term.components[0]);
-            }
-            return term.components?.every(comp => this._isBooleanValue(comp));
+        if (!term.isCompound || !this.operatorRules[term.operator]) return false;
+        if (term.operator === '--') {
+            return term.components?.length > 0 && this._isBooleanValue(term.components[0]);
         }
-        return false;
+        return term.components?.every(comp => this._isBooleanValue(comp));
     }
 
     _isBooleanValue(term) {
@@ -339,44 +338,33 @@ export class EvaluationEngine {
 
     _applyFunctionalRule(operator, components) {
         try {
+            const rule = this.operatorRules[operator]?.functional;
+            if (rule) return rule(components);
+            
             const { result } = BooleanEvaluator.functionalReduction(operator, components);
             return result;
         } catch (error) {
             console.error(`Error during functional reduction for operator ${operator}:`, error.message);
-            console.error('Stack:', error.stack);
             return SYSTEM_ATOMS.Null;
         }
     }
 
     _applyStructuralRule(operator, components) {
-        return this._applyReductionRule(operator, components, this.structuralRules,
-            (op, err) => {
-                console.error(`Error during structural reduction for operator ${op}:`, err.message);
-                console.error('Stack:', err.stack);
+        const rule = this.operatorRules[operator]?.structural;
+        if (rule) {
+            try {
+                return rule(components);
+            } catch (error) {
+                console.error(`Error during structural reduction for operator ${operator}:`, error.message);
                 const safeOperator = operator || 'UNKNOWN';
                 const safeComponents = components || [];
                 const componentNames = safeComponents.map(comp => comp.name || comp.toString());
                 return new Term('compound', `(${safeOperator}, ${componentNames.join(', ')})`, safeComponents, safeOperator);
-            });
-    }
-
-    _applyReductionRule(operator, components, rulesMap, errorHandler) {
-        const safeOperator = operator || 'UNKNOWN';
-        const safeComponents = components || [];
-        
-        if (!operator) {
-            return this._createCompoundTerm(safeOperator, safeComponents);
-        }
-
-        const rule = rulesMap[operator];
-        if (rule) {
-            try {
-                return rule(safeComponents);
-            } catch (error) {
-                return errorHandler(operator, error);
             }
         }
         
+        const safeOperator = operator || 'UNKNOWN';
+        const safeComponents = components || [];
         return this._createCompoundTerm(safeOperator, safeComponents);
     }
     
@@ -386,6 +374,7 @@ export class EvaluationEngine {
         return new Term('compound', termName, components, operator);
     }
 
+    // Functional reduction rules (boolean evaluation)
     _reduceAndFunctional(components) {
         if (!components?.length) return SYSTEM_ATOMS.True;
         return this._naryBooleanOperation(components,
@@ -407,117 +396,90 @@ export class EvaluationEngine {
     _reduceNegationFunctional(components) {
         if (!components?.length) return SYSTEM_ATOMS.Null;
         const [operand] = components;
-        return this._unaryBooleanOperation(operand,
-            val => isTrue(val) ? SYSTEM_ATOMS.False :
-                isFalse(val) ? SYSTEM_ATOMS.True :
-                    isNull(val) ? SYSTEM_ATOMS.Null :
-                        SYSTEM_ATOMS.Null);
+        return isTrue(operand) ? SYSTEM_ATOMS.False :
+               isFalse(operand) ? SYSTEM_ATOMS.True :
+               isNull(operand) ? SYSTEM_ATOMS.Null : SYSTEM_ATOMS.Null;
     }
 
     _reduceImplicationFunctional(components) {
         if (components?.length !== 2) return SYSTEM_ATOMS.Null;
         const [ant, cons] = components;
-        if (isNull(ant) || isNull(cons)) return SYSTEM_ATOMS.Null;
-        return (isFalse(ant) || isTrue(cons)) ? SYSTEM_ATOMS.True
-            : (isTrue(ant) && isFalse(cons)) ? SYSTEM_ATOMS.False
-                : SYSTEM_ATOMS.Null;
+        return isNull(ant) || isNull(cons) ? SYSTEM_ATOMS.Null :
+               isFalse(ant) || isTrue(cons) ? SYSTEM_ATOMS.True :
+               isTrue(ant) && isFalse(cons) ? SYSTEM_ATOMS.False : SYSTEM_ATOMS.Null;
     }
 
     _reduceEquivalenceFunctional(components) {
         if (components?.length !== 2) return SYSTEM_ATOMS.Null;
         const [left, right] = components;
-        if (isNull(left) || isNull(right)) return SYSTEM_ATOMS.Null;
-        return ((isTrue(left) && isTrue(right)) || (isFalse(left) && isFalse(right))) ? SYSTEM_ATOMS.True
-            : ((isTrue(left) && isFalse(right)) || (isFalse(left) && isTrue(right))) ? SYSTEM_ATOMS.False
-                : SYSTEM_ATOMS.Null;
+        return isNull(left) || isNull(right) ? SYSTEM_ATOMS.Null :
+               (isTrue(left) && isTrue(right)) || (isFalse(left) && isFalse(right)) ? SYSTEM_ATOMS.True :
+               (isTrue(left) && isFalse(right)) || (isFalse(left) && isTrue(right)) ? SYSTEM_ATOMS.False : SYSTEM_ATOMS.Null;
     }
 
     // Structural reduction rules (NAL logic)
     _reduceAndStructural(components) {
-        if (!components || components.length === 0) return SYSTEM_ATOMS.True;
-
+        if (!components?.length) return SYSTEM_ATOMS.True;
         return this._naryStructuralOperation(
-            components,
-            comp => !isTrue(comp),  // filter condition - keep non-True for AND
-            comp => isFalse(comp), SYSTEM_ATOMS.False,  // if any is False, return False
-            comp => isNull(comp), SYSTEM_ATOMS.Null,    // if any is Null, return Null
-            SYSTEM_ATOMS.True, '&', 'AND'               // all True case, operator, type
+            components, comp => !isTrue(comp), // keep non-True for AND
+            comp => isFalse(comp), SYSTEM_ATOMS.False,  // any False -> False
+            comp => isNull(comp), SYSTEM_ATOMS.Null,    // any Null -> Null
+            SYSTEM_ATOMS.True, '&', 'AND'
         );
     }
 
     _reduceOrStructural(components) {
-        if (!components || components.length === 0) return SYSTEM_ATOMS.False;
-
+        if (!components?.length) return SYSTEM_ATOMS.False;
         return this._naryStructuralOperation(
-            components,
-            comp => !isFalse(comp),  // filter condition - keep non-False for OR
-            comp => isTrue(comp), SYSTEM_ATOMS.True,   // if any is True, return True
-            comp => isNull(comp), SYSTEM_ATOMS.Null,   // if any is Null, return Null
-            SYSTEM_ATOMS.False, '|', 'OR'              // all False case, operator, type
+            components, comp => !isFalse(comp), // keep non-False for OR
+            comp => isTrue(comp), SYSTEM_ATOMS.True,   // any True -> True
+            comp => isNull(comp), SYSTEM_ATOMS.Null,   // any Null -> Null
+            SYSTEM_ATOMS.False, '|', 'OR'
         );
     }
 
     _reduceNegationStructural(components) {
-        if (!components || components.length === 0) return SYSTEM_ATOMS.Null;
-
-        const operand = components[0];
-
-        // Handle boolean values in negation
-        return isTrue(operand) ? SYSTEM_ATOMS.False
-            : isFalse(operand) ? SYSTEM_ATOMS.True
-                : isNull(operand) ? SYSTEM_ATOMS.Null
-                    // Check for double negation elimination in structural context
-                    : (operand.isCompound && operand.operator === '--' && operand.components && operand.components.length > 0)
-                        ? operand.components[0]
-                        // For non-boolean terms, return the negation structure
-                        : new Term('compound', 'NEGATION', [operand], '--');
+        if (!components?.length) return SYSTEM_ATOMS.Null;
+        const [operand] = components;
+        return isTrue(operand) ? SYSTEM_ATOMS.False :
+               isFalse(operand) ? SYSTEM_ATOMS.True :
+               isNull(operand) ? SYSTEM_ATOMS.Null :
+               // Check for double negation elimination
+               operand.isCompound && operand.operator === '--' && operand.components?.length > 0
+                   ? operand.components[0]
+                   : new Term('compound', 'NEGATION', [operand], '--');
     }
 
     _reduceImplicationStructural(components) {
-        if (!components || components.length !== 2) {
-            // If not proper implication, return a compound term with proper canonical name
-            return components && components.length > 0
+        if (components?.length !== 2) {
+            return components?.length 
                 ? new Term('compound', `(==>, ${components.map(comp => comp.name || comp.toString()).join(', ')})`, components, '==>')
                 : SYSTEM_ATOMS.Null;
         }
 
-        const [antecedent, consequent] = components;
-
-        // Check for boolean values in implication (NAL logic)
-        const isAntFalse = isFalse(antecedent);
-        const isConsTrue = isTrue(consequent);
-        const isAntTrue = isTrue(antecedent);
-        const isConsFalse = isFalse(consequent);
-        const isAntOrConsNull = isNull(antecedent) || isNull(consequent);
-
-        return isAntFalse || isConsTrue ? SYSTEM_ATOMS.True      // False -> X is True, X -> True is True
-            : (isAntTrue && isConsFalse) ? SYSTEM_ATOMS.False    // True -> False is False
-                : isAntOrConsNull ? SYSTEM_ATOMS.Null                // Null in either position gives Null
-                    // For NAL concepts, return the implication structure with proper canonical name
-                    : new Term('compound', `(==>, ${antecedent.name}, ${consequent.name})`, [antecedent, consequent], '==>');
+        const [ant, cons] = components;
+        return isFalse(ant) || isTrue(cons) ? SYSTEM_ATOMS.True :
+               isTrue(ant) && isFalse(cons) ? SYSTEM_ATOMS.False :
+               isNull(ant) || isNull(cons) ? SYSTEM_ATOMS.Null :
+               new Term('compound', `(==>, ${ant.name}, ${cons.name})`, [ant, cons], '==>');
     }
 
     _reduceEquivalenceStructural(components) {
-        if (!components || components.length !== 2) {
-            // If not proper equivalence, return first component or compound term
-            return components && components.length > 0
+        if (components?.length !== 2) {
+            return components?.length
                 ? (components.length === 1 ? components[0] : new Term('compound', 'EQUIVALENCE', components, '<=>'))
                 : SYSTEM_ATOMS.Null;
         }
 
         const [left, right] = components;
-
-        // Check for boolean values in equivalence (NAL logic)
         const bothTrue = isTrue(left) && isTrue(right);
         const bothFalse = isFalse(left) && isFalse(right);
         const trueFalse = (isTrue(left) && isFalse(right)) || (isFalse(left) && isTrue(right));
-        const isLeftOrRightNull = isNull(left) || isNull(right);
-
-        return bothTrue || bothFalse ? SYSTEM_ATOMS.True         // Both True or both False
-            : trueFalse ? SYSTEM_ATOMS.False                      // One True, one False
-                : isLeftOrRightNull ? SYSTEM_ATOMS.Null              // Null in either position gives Null
-                    // For NAL concepts, return the equivalence structure
-                    : new Term('compound', 'EQUIVALENCE', [left, right], '<=>');
+        
+        return bothTrue || bothFalse ? SYSTEM_ATOMS.True :
+               trueFalse ? SYSTEM_ATOMS.False :
+               isNull(left) || isNull(right) ? SYSTEM_ATOMS.Null :
+               new Term('compound', 'EQUIVALENCE', [left, right], '<=>');
     }
 
     cascadeReduce(term) {
@@ -864,22 +826,17 @@ export class EvaluationEngine {
         return defaultFn();
     }
     
-    _hasMatchingComponent(components, checkFn) {
-        return components.some(checkFn);
-    }
-    
-    _allComponentsMatch(components, checkFn) {
-        return components.every(checkFn);
-    }
+
 
     _naryStructuralOperation(components, filterCond, check1, result1, check2, result2, allCaseResult, operator, termType) {
         if (components.some(check1)) return result1;
         if (components.some(check2)) return result2;
 
         const filteredComponents = components.filter(filterCond);
-        if (filteredComponents.length === 0) return allCaseResult;
-        if (filteredComponents.length === 1) return filteredComponents[0];
-        return new Term('compound', termType, filteredComponents, operator);
+        const count = filteredComponents.length;
+        return count === 0 ? allCaseResult :
+               count === 1 ? filteredComponents[0] :
+               new Term('compound', termType, filteredComponents, operator);
     }
 
     addFunctor(name, execute, config = {}) {
