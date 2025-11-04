@@ -2,19 +2,19 @@ import {NAR} from '../nar/NAR.js';
 import readline from 'readline';
 import {PersistenceManager} from '../io/PersistenceManager.js';
 import {FormattingUtils} from './FormattingUtils.js';
-import {DEMO_COMMANDS} from '../config/constants.js';
-
-const COMMANDS = DEMO_COMMANDS;
+import {CommandProcessor} from './CommandProcessor.js';
 
 export class Repl {
     constructor(config = {}) {
         this.nar = new NAR(config.nar || {});
         this.rl = readline.createInterface({input: process.stdin, output: process.stdout});
         this.sessionState = {history: [], lastResult: null, startTime: Date.now()};
-        this.commands = this._createCommandMap();
         this.persistenceManager = new PersistenceManager({
             defaultPath: config.persistence?.defaultPath || './agent.json'
         });
+        
+        // Create shared command processor
+        this.commandProcessor = new CommandProcessor(this.nar, this.persistenceManager, this.sessionState);
 
         // Animation state for emojis
         this.animationState = {spinningIndex: 0};
@@ -23,18 +23,6 @@ export class Repl {
         this.isRunningLoop = false;
         this.originalTraceState = false;
         this.traceEnabled = false;
-    }
-
-
-
-    _createCommandMap() {
-        const map = new Map();
-        for (const [method, aliases] of Object.entries(COMMANDS)) {
-            for (const alias of aliases) {
-                map.set(alias, this[`_${method}`].bind(this));
-            }
-        }
-        return map;
     }
 
     async start() {
@@ -80,16 +68,29 @@ export class Repl {
     }
 
     async _executeCommand(cmd, ...args) {
-        const commandFn = this.commands.get(cmd);
-        if (!commandFn) return console.log(`❌ Unknown command: ${cmd}. Type '/help' for available commands.`);
+        // Handle special commands that need to stay in Repl
+        if (cmd === 'next' || cmd === 'n') {
+            const result = await this._next();
+            if (result) console.log(result.trim());
+            return;
+        }
+        
+        if (cmd === 'run' || cmd === 'go') {
+            const result = await this._run();
+            if (result) console.log(result.trim());
+            return;
+        }
+        
+        if (cmd === 'stop' || cmd === 'st') {
+            const result = this._stop();
+            if (result) console.log(result.trim());
+            return;
+        }
 
-        try {
-            const result = await commandFn(args);
-            if (result) {
-                console.log(result.trim());
-            }
-        } catch (error) {
-            console.error(`❌ Error executing command: ${error.message}`);
+        // Delegate to shared command processor for standard commands
+        const result = await this.commandProcessor.executeCommand(cmd, ...args);
+        if (result) {
+            console.log(result.trim());
         }
     }
 
@@ -140,97 +141,6 @@ export class Repl {
         this.rl.close();
     }
 
-    _status() {
-        const stats = this.nar.getStats();
-        const memoryStats = stats.memoryStats;
-        const conceptCount = FormattingUtils.safeGet(memoryStats, ['memoryUsage', 'concepts'], ['totalConcepts'], 0);
-        const focusTaskCount = FormattingUtils.safeGet(memoryStats, ['memoryUsage', 'focusConcepts'], ['focusConceptsCount'], 0);
-        const totalTasks = FormattingUtils.safeGet(memoryStats, ['memoryUsage', 'totalTasks'], ['totalTasks'], 0);
-
-        return `📊 System Status:
-  ⚡ Running: ${stats.isRunning ? 'Yes' : 'No'}
-  🕒 Internal Clock: ${stats.cycleCount}
-  🔄 Cycles: ${stats.cycleCount}
-  🧠 Memory Concepts: ${conceptCount}
-  🎯 Focus Tasks: ${focusTaskCount}
-  📋 Total Tasks: ${totalTasks}
-  🕐 Start Time: ${new Date(this.sessionState.startTime).toISOString()}`;
-    }
-
-
-
-    _memory() {
-        const stats = this.nar.getStats();
-        const memoryStats = stats.memoryStats;
-        const conceptCount = FormattingUtils.safeGet(memoryStats, ['memoryUsage', 'concepts'], ['totalConcepts'], 0);
-        const taskCount = FormattingUtils.safeGet(memoryStats, ['memoryUsage', 'totalTasks'], ['totalTasks'], 0);
-        const focusSize = FormattingUtils.safeGet(memoryStats, ['memoryUsage', 'focusConcepts'], ['focusConceptsCount'], 0);
-        const avgPriority = FormattingUtils.safeGet(memoryStats, ['averageActivation'], ['averagePriority'], 0);
-        const capacity = this.nar.config?.memory?.maxConcepts || 'N/A';
-        const forgettingThreshold = this.nar.config?.memory?.priorityThreshold || 'N/A';
-
-        const content = [
-            '💾 Memory Statistics:',
-            `  🧠 Concepts: ${conceptCount}`,
-            `  📋 Tasks in Memory: ${taskCount}`,
-            `  🎯 Focus Set Size: ${focusSize}`,
-            `  📏 Concept Capacity: ${capacity}`,
-            `  ⚠️ Forgetting Threshold: ${forgettingThreshold}`,
-            `  📊 Average Concept Priority: ${avgPriority.toFixed(3)}`,
-            '',
-            '📋 Detailed Task Information:',
-            ...this._getTasksFromMemory().length > 0
-                ? this._getTasksFromMemory()
-                    .slice(-10)
-                    .map((task, index) => `  [${index + 1}]: ${this._formatTask(task)}`)
-                : ['  ❌ No tasks in memory']
-        ].join('\n');
-
-        return content;
-    }
-
-    _getTasksFromMemory() {
-        try {
-            const concepts = this.nar.memory.getAllConcepts() || [];
-            return concepts.flatMap(concept => concept.getAllTasks ? concept.getAllTasks() : []);
-        } catch (e) {
-            // Fallback using memory concepts directly
-            if (this.nar.memory?.concepts) {
-                const concepts = this.nar.memory.concepts instanceof Map 
-                    ? Array.from(this.nar.memory.concepts.values()) 
-                    : Object.values(this.nar.memory.concepts);
-                return concepts.flatMap(concept => 
-                    concept && concept.getAllTasks && typeof concept.getAllTasks === 'function' 
-                        ? concept.getAllTasks() 
-                        : []);
-            }
-        }
-        return [];
-    }
-
-    _formatTask(task) {
-        return FormattingUtils.formatTask(task);
-    }
-
-    _trace() {
-        const beliefs = this.nar.getBeliefs();
-        if (beliefs.length === 0) {
-            return '🔍 No recent beliefs found.';
-        }
-
-        return [
-            '🔍 Recent Beliefs (last 5):',
-            ...beliefs.slice(-5).map(task => `  ${this._formatTask(task)}`)
-        ].join('\n');
-    }
-
-    _reset() {
-        this.nar.reset();
-        this.sessionState.history = [];
-        this.sessionState.lastResult = null;
-        return '🔄 NAR system reset successfully.';
-    }
-
     async _next() {
         try {
             const result = await this.nar.step();
@@ -244,9 +154,6 @@ export class Repl {
         if (this.isRunningLoop) {
             return '⏸️  Already running. Use the "/stop" command to stop.';
         }
-
-        // Add stop command temporarily to command map
-        this.commands.set('stop', this._stop.bind(this));
 
         // Save original trace state
         this.originalTraceState = this.traceEnabled;
@@ -285,9 +192,6 @@ export class Repl {
         }
         this.isRunningLoop = false;
 
-        // Remove stop command from command map
-        this.commands.delete('stop');
-
         // Restore original trace state
         if (!this.originalTraceState && this.traceEnabled) {
             this.traceEnabled = false;
@@ -301,34 +205,6 @@ export class Repl {
     _isTraceEnabled() {
         // Return current trace state
         return this.traceEnabled;
-    }
-
-    async _save() {
-        try {
-            const state = this.nar.serialize();
-            const result = await this.persistenceManager.saveToDefault(state);
-            return `💾 NAR state saved successfully to ${result.filePath} (${Math.round(result.size / 1024)} KB)`;
-        } catch (error) {
-            return `❌ Error saving NAR state: ${error.message}`;
-        }
-    }
-
-    async _load() {
-        try {
-            const exists = await this.persistenceManager.exists();
-            if (!exists) {
-                return `📁 Save file does not exist: ${this.persistenceManager.defaultPath}`;
-            }
-
-            const state = await this.persistenceManager.loadFromDefault();
-            const success = await this.nar.deserialize(state);
-
-            return success
-                ? `💾 NAR state loaded successfully from ${this.persistenceManager.defaultPath}`
-                : '❌ Failed to load NAR state - deserialization error';
-        } catch (error) {
-            return `❌ Error loading NAR state: ${error.message}`;
-        }
     }
 
     async _demo(args) {

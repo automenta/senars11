@@ -801,25 +801,7 @@ export const testImmutability = (instance, properties) => {
  * @param {*} differentObj - Object that should not equal obj1
  * @returns {void}
  */
-export const testEqualityMethod = (obj1, obj2, differentObj) => {
-    if (obj2 !== undefined) {
-        expect(obj1.equals(obj2)).toBe(true);
-        expect(obj2.equals(obj1)).toBe(true);
-    }
-    if (differentObj) {
-        expect(obj1.equals(differentObj)).toBe(false);
-        expect(differentObj.equals(obj1)).toBe(false);
-    }
-};
 
-/**
- * Common assertion for object string representations
- * @param {Object} obj - Object to test
- * @param {string} expectedString - Expected string representation
- */
-export const testStringRepresentation = (obj, expectedString) => {
-    expect(obj.toString()).toBe(expectedString);
-};
 
 /**
  * Common setup for memory-related tests

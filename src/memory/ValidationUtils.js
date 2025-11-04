@@ -171,31 +171,33 @@ export class ValidationUtils {
     }
     
     /**
+     * Validate relationship concept consistency using a common pattern
+     */
+    _validateRelationshipConsistency(concept, termId, indexes, result, operator, indexName, componentExtractor) {
+        const index = indexes[indexName];
+        if (concept.term.components && concept.term.components.length >= 2) {
+            const targetComponent = componentExtractor(concept.term);
+            if (targetComponent && !index.has(targetComponent.name)) {
+                result.inconsistent++;
+                result.errors.push(`${operator} concept ${termId} missing from ${indexName} index`);
+            }
+        }
+    }
+    
+    /**
      * Validate inheritance concept consistency
      */
     _validateInheritanceConsistency(concept, termId, indexes, result) {
-        const inheritanceIndex = indexes.inheritance;
-        if (concept.term.components && concept.term.components.length >= 2) {
-            const predicate = concept.term.components[1];
-            if (!inheritanceIndex.has(predicate.name)) {
-                result.inconsistent++;
-                result.errors.push(`Inheritance concept ${termId} missing from inheritance index`);
-            }
-        }
+        this._validateRelationshipConsistency(concept, termId, indexes, result, 'Inheritance', 'inheritance', 
+            term => term.components[1]);
     }
     
     /**
      * Validate implication concept consistency
      */
     _validateImplicationConsistency(concept, termId, indexes, result) {
-        const implicationIndex = indexes.implication;
-        if (concept.term.components && concept.term.components.length >= 2) {
-            const premise = concept.term.components[0];
-            if (!implicationIndex.has(premise.name)) {
-                result.inconsistent++;
-                result.errors.push(`Implication concept ${termId} missing from implication index`);
-            }
-        }
+        this._validateRelationshipConsistency(concept, termId, indexes, result, 'Implication', 'implication', 
+            term => term.components[0]);
     }
     
     /**

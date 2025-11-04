@@ -2,18 +2,18 @@ import {NAR} from '../nar/NAR.js';
 import blessed from 'blessed';
 import {PersistenceManager} from '../io/PersistenceManager.js';
 import {FormattingUtils} from './FormattingUtils.js';
-import {DEMO_COMMANDS} from '../config/constants.js';
-
-const COMMANDS = DEMO_COMMANDS;
+import {CommandProcessor} from './CommandProcessor.js';
 
 export class SeNARSInterface {
     constructor(config = {}) {
         this.nar = new NAR(config.nar || {});
         this.sessionState = {history: [], lastResult: null, startTime: Date.now()};
-        this.commands = this._createCommandMap();
         this.persistenceManager = new PersistenceManager({
             defaultPath: config.persistence?.defaultPath || './agent.json'
         });
+        
+        // Create shared command processor
+        this.commandProcessor = new CommandProcessor(this.nar, this.persistenceManager, this.sessionState);
 
         // Animation state
         this.animationState = {spinningIndex: 0, pulsePhase: 0};
@@ -39,12 +39,18 @@ export class SeNARSInterface {
     }
 
     _createCommandMap() {
-        const commandMap = new Map();
-        for (const [method, aliases] of Object.entries(COMMANDS)) {
-            for (const alias of aliases) {
-                commandMap.set(alias, this[`_${method}`].bind(this));
-            }
-        }
+        // Get command map from shared processor
+        const commandMap = this.commandProcessor.getCommandMap();
+        
+        // Override demo command with interface-specific implementation
+        commandMap.set('demo', this._demo.bind(this));
+        commandMap.set('d', this._demo.bind(this));
+        
+        // Add interface-specific commands
+        commandMap.set('quit', this._quit.bind(this));
+        commandMap.set('q', this._quit.bind(this));
+        commandMap.set('exit', this._quit.bind(this));
+        
         return commandMap;
     }
 
@@ -165,14 +171,15 @@ export class SeNARSInterface {
     }
 
     async _executeCommand(cmd, ...args) {
-        const commandFn = this.commands.get(cmd);
-        if (!commandFn) {
-            this._addToOutput(`❌ Unknown command: ${cmd}. Type '{bold}/help{/bold}' for available commands.`);
+        // Handle quit command specially
+        if (cmd === 'quit' || cmd === 'q' || cmd === 'exit') {
+            this._quit();
             return;
         }
 
+        // Delegate to shared command processor for standard commands
         try {
-            const result = await commandFn(args);
+            const result = await this.commandProcessor.executeCommand(cmd, ...args);
             if (result) {
                 this._addToOutput(result);
             }
@@ -274,7 +281,7 @@ export class SeNARSInterface {
         return `
 {rainbow}⚡ Available commands{/rainbow}:
   {yellow}/help, /h, /?     {/yellow}- Show this help message 📚
-  {yellow}/quit, /q, /exit  {/yellow}- Quit the REPL 🚪
+  {yellow}/quit, /q, /exit  {/yellow}- Quit the interface 🚪
   {yellow}/status, /s, /stats {/yellow}- Show system status 📊
   {yellow}/memory, /m       {/yellow}- Show memory statistics 💾
   {yellow}/trace, /t        {/yellow}- Show reasoning trace 🔍
@@ -296,112 +303,6 @@ export class SeNARSInterface {
         process.exit(0);
     }
 
-    _status() {
-        const stats = this.nar.getStats();
-        return `{bold}📊 System Status{/bold}
-  {green}Running:{/green} ${stats.isRunning ? 'Yes' : 'No'}
-  {green}Cycles:{/green} ${stats.cycleCount}
-  {green}Memory Concepts:{/green} ${stats.memoryStats.conceptCount}
-  {green}Focus Tasks:{/green} ${stats.memoryStats.focusTaskCount}
-  {green}Total Tasks:{/green} ${stats.taskManagerStats?.totalTasks || 'N/A'}
-  {green}Start Time:{/green} ${new Date(this.sessionState.startTime).toISOString()}`;
-    }
-
-    _memory() {
-        const stats = this.nar.getStats();
-        let content = `{bold}💾 Memory Statistics{/bold}
-  {cyan}Concepts:{/cyan} ${stats.memoryStats.conceptCount}
-  {cyan}Tasks in Memory:{/cyan} ${stats.memoryStats.taskCount}
-  {cyan}Focus Set Size:{/cyan} ${stats.memoryStats.focusSize}
-  {cyan}Concept Capacity:{/cyan} ${stats.memoryStats.capacity}
-  {cyan}Forgetting Threshold:{/cyan} ${stats.memoryStats.forgettingThreshold}
-  {cyan}Average Concept Priority:{/cyan} ${stats.memoryStats.avgPriority?.toFixed(3) || 'N/A'}
-
-{bold}📋 Detailed Task Information{/bold}\n`;
-
-        const tasks = this._getTasksFromMemory();
-
-        if (tasks.length > 0) {
-            tasks.slice(-10).forEach((task, index) => {
-                const truthStr = task.truth ? `Truth: ${task.truth.toString()}` : 'Truth: N/A';
-                const priority = task.priority !== undefined ? `Priority: ${task.priority.toFixed(3)}` : 'Priority: N/A';
-                const occurrence = task.stamp ? `Occurrence: ${task.stamp}` : 'Occurrence: N/A';
-                const occurrenceTime = task.occurrenceTime !== undefined ? `Occurrence Time: ${task.occurrenceTime}` : '';
-
-                content += `{magenta}[${index + 1}]:{/magenta} {green}${task.term?.name || 'Unknown Task'}{/green}\n`;
-                content += `    {blue}| ${truthStr} | ${priority} | ${occurrence} ${occurrenceTime}{/blue}\n`;
-            });
-        } else {
-            content += '{red}No tasks in memory{/red}\n';
-        }
-
-        return content;
-    }
-
-    _trace() {
-        const beliefs = this.nar.getBeliefs();
-        if (beliefs.length === 0) {
-            return '🔍 No recent beliefs found.';
-        }
-
-        let content = '{bold}🔍 Recent Beliefs (last 5){/bold}\n';
-        beliefs.slice(-5).forEach(task => {
-            content += `  {cyan}${task.term.name}{/cyan} ${this._formatBeliefDetails(task)}\n`;
-        });
-
-        return content;
-    }
-
-    _formatBeliefDetails(task) {
-        return FormattingUtils.formatBeliefDetails(task);
-    }
-    
-    _formatBeliefTruth(truth) {
-        return FormattingUtils.formatBeliefTruth(truth);
-    }
-    
-    _formatBeliefPriority(priority) {
-        return FormattingUtils.formatBeliefPriority(priority);
-    }
-    
-    _formatBeliefOccurrence(stamp) {
-        return FormattingUtils.formatBeliefOccurrence(stamp);
-    }
-
-    _reset() {
-        this.nar.reset();
-        this.sessionState.history = [];
-        this.sessionState.lastResult = null;
-        return '🔄 NAR system reset successfully.';
-    }
-
-    async _save() {
-        try {
-            const state = this.nar.serialize();
-            const result = await this.persistenceManager.saveToDefault(state);
-            return `💾 NAR state saved successfully to {bold}${result.filePath}{/bold} ({bold}${Math.round(result.size / 1024)} KB{/bold})`;
-        } catch (error) {
-            return `❌ Error saving NAR state: ${error.message}`;
-        }
-    }
-
-    async _load() {
-        try {
-            const exists = await this.persistenceManager.exists();
-            if (!exists) {
-                return `📁 Save file does not exist: ${this.persistenceManager.defaultPath}`;
-            }
-
-            const state = await this.persistenceManager.loadFromDefault();
-            const success = await this.nar.deserialize(state);
-
-            return success
-                ? `💾 NAR state loaded successfully from {bold}${this.persistenceManager.defaultPath}{/bold}`
-                : '❌ Failed to load NAR state - deserialization error';
-        } catch (error) {
-            return `❌ Error loading NAR state: ${error.message}`;
-        }
-    }
 
     async _demo(args) {
         const exampleName = args && args.length > 0 ? args[0] : null;

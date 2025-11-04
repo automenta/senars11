@@ -127,22 +127,36 @@ export class MemoryIndex {
             candidates = this.getAllConcepts();
         }
 
-        // Apply remaining filters
-        const filtersMap = {
+        // Define all possible filters in a mapping for efficient application
+        const filterFunctions = {
             category: concept => TermCategorization.getTermCategory(concept.term) === filters.category,
-            minComplexity: concept => TermCategorization.getTermComplexity(concept.term) >= filters.minComplexity,
-            maxComplexity: concept => TermCategorization.getTermComplexity(concept.term) <= filters.maxComplexity,
+            minComplexity: concept => {
+                const complexity = TermCategorization.getTermComplexity(concept.term);
+                return complexity >= filters.minComplexity;
+            },
+            maxComplexity: concept => {
+                const complexity = TermCategorization.getTermComplexity(concept.term);
+                return complexity <= filters.maxComplexity;
+            },
             minActivation: concept => (concept.activation || 0) >= filters.minActivation,
             maxActivation: concept => (concept.activation || 0) <= filters.maxActivation,
-            operator: concept => concept.term.operator === filters.operator,
+            operator: concept => concept.term?.operator === filters.operator,
             createdAfter: concept => (concept.createdAt || 0) >= filters.createdAfter,
             createdBefore: concept => (concept.createdAt || 0) <= filters.createdBefore
         };
 
-        // Apply filters that are defined
+        // Apply only the filters that are specified in the input
+        const activeFilters = Object.keys(filters).filter(key => 
+            filters[key] !== undefined && filterFunctions[key]
+        );
+
+        // If no active filters, return candidates as is
+        if (activeFilters.length === 0) return candidates;
+
+        // Apply filters efficiently
         return candidates.filter(concept => {
-            for (const [filterName, filterValue] of Object.entries(filters)) {
-                if (filterValue !== undefined && filtersMap[filterName] && !filtersMap[filterName](concept)) {
+            for (const filterName of activeFilters) {
+                if (!filterFunctions[filterName](concept)) {
                     return false;
                 }
             }
@@ -232,28 +246,22 @@ export class MemoryIndex {
 
             visitedTerms.add(currentTerm.toString());
 
-            // Direct relationships
-            if (relationshipTypes.includes('inheritance')) {
-                const concepts = this._relationshipIndex.find({ 
-                    relationshipType: 'inheritance', 
-                    subject: currentTerm 
-                });
-                concepts.forEach(c => relatedConcepts.add(c));
-            }
-
-            if (relationshipTypes.includes('implication')) {
-                const concepts = this._relationshipIndex.find({ 
-                    relationshipType: 'implication', 
-                    premise: currentTerm 
-                });
-                concepts.forEach(c => relatedConcepts.add(c));
-            }
-
-            if (relationshipTypes.includes('similarity')) {
-                // Add logic for similarity relationships
-                const concepts = this._relationshipIndex.find({ 
-                    relationshipType: 'similarity' 
-                });
+            // Process all relationship types in a unified way
+            for (const relType of relationshipTypes) {
+                const query = { relationshipType: relType };
+                switch (relType) {
+                    case 'inheritance':
+                        query.subject = currentTerm;
+                        break;
+                    case 'implication':
+                        query.premise = currentTerm;
+                        break;
+                    case 'similarity':
+                        // Similarity doesn't need a specific subject/predicate
+                        break;
+                }
+                
+                const concepts = this._relationshipIndex.find(query);
                 concepts.forEach(c => relatedConcepts.add(c));
             }
 
@@ -270,29 +278,6 @@ export class MemoryIndex {
         traverseRelationships(term, 0);
 
         return Array.from(relatedConcepts);
-    }
-
-    _findInheritanceRelated(term, relatedConcepts) {
-        const concepts = this._relationshipIndex.find({ 
-            relationshipType: 'inheritance', 
-            subject: term 
-        });
-        concepts.forEach(c => relatedConcepts.add(c));
-    }
-
-    _findImplicationRelated(term, relatedConcepts) {
-        const concepts = this._relationshipIndex.find({ 
-            relationshipType: 'implication', 
-            premise: term 
-        });
-        concepts.forEach(c => relatedConcepts.add(c));
-    }
-
-    _findSimilarityRelated(term, relatedConcepts) {
-        const concepts = this._relationshipIndex.find({ 
-            relationshipType: 'similarity' 
-        });
-        concepts.forEach(c => relatedConcepts.add(c));
     }
 
     /**
@@ -628,22 +613,28 @@ export class MemoryIndex {
             total: this._totalConcepts
         };
 
-        // Collect statistics
+        // Collect statistics in a single pass for efficiency
         for (const concept of concepts) {
-            const category = TermCategorization.getTermCategory(concept.term);
+            const term = concept.term;
+            if (!term) continue;
+            
+            // Category distribution
+            const category = TermCategorization.getTermCategory(term);
             distribution.byCategory[category] = (distribution.byCategory[category] || 0) + 1;
 
-            const complexity = TermCategorization.getTermComplexity(concept.term);
+            // Complexity distribution
+            const complexity = TermCategorization.getTermComplexity(term);
             const complexityLevel = Math.floor(complexity);
-            distribution.byComplexity[complexityLevel] = (distribution.byComplexity[complexLevel] || 0) + 1;
+            distribution.byComplexity[complexityLevel] = (distribution.byComplexity[complexityLevel] || 0) + 1;
 
-            if (concept.term.operator) {
-                const operator = concept.term.operator;
-                distribution.byOperator[operator] = (distribution.byOperator[operator] || 0) + 1;
+            // Operator distribution
+            if (term.operator) {
+                distribution.byOperator[term.operator] = (distribution.byOperator[term.operator] || 0) + 1;
             }
 
+            // Activation distribution (bucketed by 0.1 increments)
             const activation = concept.activation || 0;
-            const activationBucket = Math.floor(activation * 10) / 10; // Bucket by 0.1 increments
+            const activationBucket = Math.floor(activation * 10) / 10;
             distribution.byActivation[activationBucket] = (distribution.byActivation[activationBucket] || 0) + 1;
         }
 
@@ -702,16 +693,15 @@ export class MemoryIndex {
         const concepts = this.getAllConcepts();
         for (const concept of concepts) {
             const createdAt = concept.createdAt || 0;
-            const timeDiff = now - createdAt;
+            if (createdAt <= 0) continue; // Skip invalid timestamps
             
+            const timeDiff = now - createdAt;
             // Find the right period index based on time difference
             const periodIndex = Math.floor(timeDiff / periodMs);
             if (periodIndex >= 0 && periodIndex < periodCount) {
                 const period = periods[periodIndex];
-                if (createdAt >= period.start && createdAt < period.end) {
-                    period.concepts.push(concept);
-                    period.count++;
-                }
+                period.concepts.push(concept);
+                period.count++;
             }
         }
 
@@ -843,6 +833,7 @@ export class MemoryIndex {
         });
     }
 
+    // Relationship finding methods using unified approach
     findInheritanceConcepts(term) {
         return this._relationshipIndex.find({ 
             relationshipType: 'inheritance', 
@@ -863,6 +854,7 @@ export class MemoryIndex {
         });
     }
 
+    // Generic finding methods by index
     findConceptsByOperator(operator) {
         return this._compoundIndex.find({ operator });
     }
@@ -916,7 +908,7 @@ export class MemoryIndex {
     }
 
     /**
-     * Find concepts by operator (enhanced)
+     * Find concepts by operator (enhanced) - redundant with findConceptsByOperator
      */
     findConceptsByOperatorEnhanced(operator) {
         return this.findConceptsByOperator(operator);

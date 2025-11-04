@@ -786,10 +786,7 @@ export class EvaluationEngine {
         return VariableBindingUtils.matchAndBindVariables(leftTerm, rightTerm, variableBindings);
     }
 
-    // _matchAndBindVariables is an alias for the utils function
-    _matchAndBindVariables(leftTerm, rightTerm, variableBindings) {
-        return VariableBindingUtils.matchAndBindVariables(leftTerm, rightTerm, variableBindings);
-    }
+
 
     _unaryBooleanOperation(operand, operationFn) {
         return operationFn(operand);
@@ -911,5 +908,10 @@ export class EvaluationEngine {
         return term.components ? 
             term.components.every(comp => comp !== undefined) : 
             true;
+    }
+    
+    // _matchAndBindVariables is an alias for the utils function
+    _matchAndBindVariables(leftTerm, rightTerm, variableBindings) {
+        return VariableBindingUtils.matchAndBindVariables(leftTerm, rightTerm, variableBindings);
     }
 }
