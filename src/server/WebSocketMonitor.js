@@ -183,14 +183,7 @@ class WebSocketMonitor {
     }
 
     broadcastEvent(eventType, data, options = {}) {
-        const message = {
-            type: 'event',
-            eventType,
-            data,
-            timestamp: Date.now(),
-            ...options
-        };
-        this._broadcastMessage(message, eventType);
+        this._broadcastMessage({ type: 'event', eventType, data, timestamp: Date.now(), ...options }, eventType);
     }
 
     _sendToClient(client, message) {
@@ -263,13 +256,7 @@ class WebSocketMonitor {
 
     // Method to broadcast custom events (not NAR events)
     broadcastCustomEvent(eventType, data, options = {}) {
-        const message = {
-            type: eventType,
-            data,
-            timestamp: Date.now(),
-            ...options
-        };
-        this._broadcastMessage(message, eventType);
+        this._broadcastMessage({ type: eventType, data, timestamp: Date.now(), ...options }, eventType);
     }
 
     _handleClientMessage(client, data) {
@@ -320,8 +307,7 @@ class WebSocketMonitor {
             'requestCapabilities': (msg) => this.messageHandlers.handleRequestCapabilities(client, msg)
         };
 
-        const handler = handlers[message.type] || this._handleCustomMessage.bind(this, client, message);
-        handler(message);
+        (handlers[message.type] || this._handleCustomMessage.bind(this, client, message))(message);
     }
 
     _handleCustomMessage(client, message) {
@@ -348,34 +334,28 @@ class WebSocketMonitor {
 
     _handleMessageError(client, error) {
         const isSyntaxError = error instanceof SyntaxError;
-        const message = isSyntaxError ? 'Invalid JSON format' : 'Error processing message';
+        const errorMsg = isSyntaxError ? 'Invalid JSON format' : 'Error processing message';
         const errorMessage = isSyntaxError ? error.message : error.message;
         
         console.error(isSyntaxError ? 'Invalid JSON received:' : 'Error handling client message:', errorMessage);
         
-        this._sendToClient(client, {
-            type: 'error',
-            message,
-            error: errorMessage
-        });
+        this._sendToClient(client, { type: 'error', message: errorMsg, error: errorMessage });
     }
 
     _sendHandlerError(client, messageType, handlerError) {
         console.error(`Error in handler for message type ${messageType}:`, handlerError);
-        this._sendErrorMessage(client, `Handler error for ${messageType}`, handlerError.message);
+        this._sendError(client, `Handler error for ${messageType}`, handlerError.message);
         this.metrics.errorCount++;
     }
 
     _sendInvalidHandlerError(client, messageType) {
         console.error(`Invalid handler for message type: ${messageType}`);
-        this._sendErrorMessage(client, `Invalid handler for message type: ${messageType}`);
+        this._sendError(client, `Invalid handler for message type: ${messageType}`);
         this.metrics.errorCount++;
     }
     
-    _sendErrorMessage(client, message, error = null) {
-        const response = { type: 'error', message };
-        if (error) response.error = error;
-        this._sendToClient(client, response);
+    _sendError(client, message, error = null) {
+        this._sendToClient(client, { type: 'error', message, error });
     }
 
     // Store reference to NAR for processing inputs

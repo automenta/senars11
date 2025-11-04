@@ -433,12 +433,23 @@ export class MemoryIndex {
     getAllConcepts() {
         const allConcepts = new Set();
         
-        // Combine concepts from all indexes
-        [...this._atomicIndex.getAll(), 
-         ...this._compoundIndex.getAll(),
-         ...this._activationIndex.getAll(),
-         ...this._temporalIndex.getAll(),
-         ...this._relationshipIndex.getAll()].forEach(c => allConcepts.add(c));
+        // Use array of indexes to collect concepts from all indexes
+        const indexes = [
+            this._atomicIndex,
+            this._compoundIndex,
+            this._activationIndex,
+            this._temporalIndex,
+            this._relationshipIndex
+        ];
+        
+        for (const index of indexes) {
+            if (index && typeof index.getAll === 'function') {
+                const concepts = index.getAll();
+                for (const concept of concepts) {
+                    allConcepts.add(concept);
+                }
+            }
+        }
         
         return Array.from(allConcepts);
     }
@@ -520,11 +531,20 @@ export class MemoryIndex {
     }
 
     clear() {
-        this._atomicIndex.clear();
-        this._compoundIndex.clear();
-        this._activationIndex.clear();
-        this._temporalIndex.clear();
-        this._relationshipIndex.clear();
+        // Use an array of indexes to iterate and clear
+        const indexes = [
+            this._atomicIndex,
+            this._compoundIndex,
+            this._activationIndex,
+            this._temporalIndex,
+            this._relationshipIndex
+        ];
+        
+        for (const index of indexes) {
+            if (index && typeof index.clear === 'function') {
+                index.clear();
+            }
+        }
         this._totalConcepts = 0;
     }
 
@@ -764,13 +784,7 @@ export class MemoryIndex {
     }
 
     getPerformanceStats() {
-        return this._performanceMonitor.getPerformanceStats({
-            atomic: { size: this._atomicIndex.getAll().length },
-            compound: { size: this._compoundIndex.getAll().length },
-            activation: { size: this._activationIndex.getAll().length },
-            temporal: { size: this._temporalIndex.getAll().length },
-            relationship: { size: this._relationshipIndex.getAll().length }
-        });
+        return this._performanceMonitor.getPerformanceStats(this._getIndexStats());
     }
 
     optimizePerformance() {
@@ -796,23 +810,11 @@ export class MemoryIndex {
     }
 
     validate() {
-        return this._validationUtils.validate({
-            atomic: { size: this._atomicIndex.getAll().length },
-            compound: { size: this._compoundIndex.getAll().length },
-            activation: { size: this._activationIndex.getAll().length },
-            temporal: { size: this._temporalIndex.getAll().length },
-            relationship: { size: this._relationshipIndex.getAll().length }
-        }, console);
+        return this._validationUtils.validate(this._getIndexStats(), console);
     }
 
     repair() {
-        return this._validationUtils.repair({
-            atomic: { size: this._atomicIndex.getAll().length },
-            compound: { size: this._compoundIndex.getAll().length },
-            activation: { size: this._activationIndex.getAll().length },
-            temporal: { size: this._temporalIndex.getAll().length },
-            relationship: { size: this._relationshipIndex.getAll().length }
-        }, console);
+        return this._validationUtils.repair(this._getIndexStats(), console);
     }
 
     registerValidationRule(name, ruleFn) {
@@ -824,13 +826,18 @@ export class MemoryIndex {
     }
 
     getValidationStats() {
-        return this._validationUtils.getValidationStats({
+        return this._validationUtils.getValidationStats(this._getIndexStats());
+    }
+
+    // Helper method to get index statistics
+    _getIndexStats() {
+        return {
             atomic: { size: this._atomicIndex.getAll().length },
             compound: { size: this._compoundIndex.getAll().length },
             activation: { size: this._activationIndex.getAll().length },
             temporal: { size: this._temporalIndex.getAll().length },
             relationship: { size: this._relationshipIndex.getAll().length }
-        });
+        };
     }
 
     // Relationship finding methods using unified approach
@@ -854,7 +861,15 @@ export class MemoryIndex {
         });
     }
 
-    // Generic finding methods by index
+    // Generic relationship finding method
+    findRelationshipConcepts(relationshipType, additionalCriteria = {}) {
+        return this._relationshipIndex.find({ 
+            relationshipType, 
+            ...additionalCriteria
+        });
+    }
+
+    // Generic finding methods by index using factory pattern
     findConceptsByOperator(operator) {
         return this._compoundIndex.find({ operator });
     }
@@ -877,10 +892,7 @@ export class MemoryIndex {
      * Find concepts by activation level
      */
     findConceptsByActivation(minActivation, maxActivation) {
-        return this._activationIndex.find({
-            minActivation,
-            maxActivation
-        });
+        return this._activationIndex.find({ minActivation, maxActivation });
     }
 
     /**
@@ -894,10 +906,7 @@ export class MemoryIndex {
      * Find concepts by temporal range
      */
     findConceptsByTemporal(createdAfter, createdBefore) {
-        return this._temporalIndex.find({
-            createdAfter,
-            createdBefore
-        });
+        return this._temporalIndex.find({ createdAfter, createdBefore });
     }
 
     /**
@@ -912,5 +921,11 @@ export class MemoryIndex {
      */
     findConceptsByOperatorEnhanced(operator) {
         return this.findConceptsByOperator(operator);
+    }
+
+    // Factory method for generic find operations to reduce code duplication
+    findConceptsByCriteria(criteria, indexName = 'compound') {
+        const index = this[`_${indexName}Index`];
+        return index ? index.find(criteria) : [];
     }
 }
