@@ -1343,45 +1343,82 @@ class StaticAnalyzer extends StandardAnalyzer {
   }
 
   _calculateSummaryStats(stats) {
-    const lineCounts = stats.fileDetails.map(f => f.lines);
-    stats.avgLinesPerFile = Math.round(stats.totalLines / stats.fileDetails.length);
-    stats.medianLinesPerFile = calculateMedian(lineCounts);
-    stats.largestFile = stats.fileDetails[0];
-    stats.smallestFile = stats.fileDetails[stats.fileDetails.length - 1];
+    // Use danfojs for more efficient data analysis
+    if (stats.fileDetails && stats.fileDetails.length > 0) {
+      const fileDetailsDf = new dfd.DataFrame(stats.fileDetails);
+      
+      // Extract line counts and calculate statistics using danfojs
+      const lineCountsSeries = fileDetailsDf['lines'];
+      stats.avgLinesPerFile = Math.round(stats.totalLines / stats.fileDetails.length);
+      stats.medianLinesPerFile = lineCountsSeries.median();
+      
+      // Find largest and smallest files using danfojs
+      const maxLinesIdx = lineCountsSeries.idxmax();
+      const minLinesIdx = lineCountsSeries.idxmin();
+      stats.largestFile = stats.fileDetails[maxLinesIdx];
+      stats.smallestFile = stats.fileDetails[minLinesIdx];
 
-    const allComplexity = stats.fileDetails.map(f => f.complexity);
-    if (allComplexity.length > 0) {
-      stats.avgComplexity = allComplexity.reduce((sum, comp) => sum + comp.cyclomatic, 0) / allComplexity.length;
-      stats.avgFunctionCount = allComplexity.reduce((sum, comp) => sum + comp.functionCount, 0) / allComplexity.length;
+      // Process complexity data with danfojs
+      if (fileDetailsDf['complexity'] !== undefined) {
+        const complexityData = stats.fileDetails.map(f => f.complexity);
+        if (complexityData.length > 0) {
+          const cyclomaticValues = complexityData.map(comp => comp.cyclomatic);
+          const functionCountValues = complexityData.map(comp => comp.functionCount);
+          
+          if (cyclomaticValues.length > 0) {
+            const cyclomaticSeries = new dfd.Series(cyclomaticValues);
+            stats.avgComplexity = cyclomaticSeries.mean();
+          }
+          
+          if (functionCountValues.length > 0) {
+            const functionCountSeries = new dfd.Series(functionCountValues);
+            stats.avgFunctionCount = functionCountSeries.mean();
+          }
+        }
+      }
     }
     
-    // Calculate directory averages and detailed stats
+    // Calculate directory averages and detailed stats using danfojs where beneficial
     const directoryEntries = Object.entries(stats.directoryStats);
     if (directoryEntries.length > 0) {
-      stats.directoryAvgLines = directoryEntries.reduce((sum, [, dirStats]) => sum + dirStats.lines, 0) / directoryEntries.length;
-      stats.directoryAvgFiles = directoryEntries.reduce((sum, [, dirStats]) => sum + dirStats.files, 0) / directoryEntries.length;
-      stats.largestDirectory = directoryEntries.reduce((max, current) => current[1].lines > max[1].lines ? current : max)[1];
-      stats.mostFilesDirectory = directoryEntries.reduce((max, current) => current[1].files > max[1].files ? current : max)[1];
+      // Create DataFrame for directory statistics for easier manipulation
+      const dirStatsData = directoryEntries.map(([, dirStats]) => dirStats);
+      const dirStatsDf = new dfd.DataFrame(dirStatsData);
       
-      // Create arrays for detailed directory analysis
-      stats.largestDirectories = directoryEntries
-        .map(([, dirStats]) => dirStats)
-        .sort((a, b) => b.lines - a.lines)
+      if (dirStatsDf['lines'] !== undefined) {
+        stats.directoryAvgLines = dirStatsDf['lines'].mean();
+      }
+      if (dirStatsDf['files'] !== undefined) {
+        stats.directoryAvgFiles = dirStatsDf['files'].mean();
+      }
+      
+      // Find largest directory by lines
+      if (dirStatsDf['lines'] !== undefined) {
+        const maxLinesDirIdx = dirStatsDf['lines'].idxmax();
+        stats.largestDirectory = dirStatsData[maxLinesDirIdx];
+      }
+      
+      // Find directory with most files
+      if (dirStatsDf['files'] !== undefined) {
+        const maxFilesDirIdx = dirStatsDf['files'].idxmax();
+        stats.mostFilesDirectory = dirStatsData[maxFilesDirIdx];
+      }
+      
+      // Create arrays for detailed directory analysis (still using native JS for sorting operations)
+      stats.largestDirectories = dirStatsData
+        .sort((a, b) => (b.lines || 0) - (a.lines || 0))
         .slice(0, TOP_N);
       
-      stats.largestFileCountDirectories = directoryEntries
-        .map(([, dirStats]) => dirStats)
-        .sort((a, b) => b.files - a.files)
+      stats.largestFileCountDirectories = dirStatsData
+        .sort((a, b) => (b.files || 0) - (a.files || 0))
         .slice(0, TOP_N);
       
-      stats.complexityByDirectory = directoryEntries
-        .map(([, dirStats]) => dirStats)
-        .sort((a, b) => b.complexity - a.complexity)
+      stats.complexityByDirectory = dirStatsData
+        .sort((a, b) => (b.complexity || 0) - (a.complexity || 0))
         .slice(0, TOP_N);
       
-      stats.largestSizeDirectories = directoryEntries
-        .map(([, dirStats]) => dirStats)
-        .sort((a, b) => b.size - a.size)
+      stats.largestSizeDirectories = dirStatsData
+        .sort((a, b) => (b.size || 0) - (a.size || 0))
         .slice(0, TOP_N);
       
       // Calculate subdirectories statistics separately
@@ -1395,11 +1432,11 @@ class StaticAnalyzer extends StandardAnalyzer {
       }
       
       stats.largestSubdirectories = allSubdirectories
-        .sort((a, b) => b.lines - a.lines)
+        .sort((a, b) => (b.lines || 0) - (a.lines || 0))
         .slice(0, TOP_N);
       
       stats.subdirectoriesWithMostFiles = allSubdirectories
-        .sort((a, b) => b.files - a.files)
+        .sort((a, b) => (b.files || 0) - (a.files || 0))
         .slice(0, TOP_N);
       
       // Calculate directory averages by type
@@ -1412,16 +1449,21 @@ class StaticAnalyzer extends StandardAnalyzer {
         stats.directoryStatsByDepth[depth].push(dirStats);
       });
       
-      // Calculate avg metrics by depth
+      // Calculate avg metrics by depth using danfojs for arrays
       for (const [depth, dirs] of Object.entries(stats.directoryStatsByDepth)) {
-        stats.directoryStatsByDepth[depth] = {
-          count: dirs.length,
-          avgLines: dirs.reduce((sum, dir) => sum + dir.lines, 0) / dirs.length,
-          avgFiles: dirs.reduce((sum, dir) => sum + dir.files, 0) / dirs.length,
-          avgComplexity: dirs.reduce((sum, dir) => sum + dir.complexity, 0) / dirs.length,
-          totalLines: dirs.reduce((sum, dir) => sum + dir.lines, 0),
-          totalFiles: dirs.reduce((sum, dir) => sum + dir.files, 0)
-        };
+        if (dirs.length > 0) {
+          // Create DataFrame for this depth's directory data
+          const depthDf = new dfd.DataFrame(dirs);
+          
+          stats.directoryStatsByDepth[depth] = {
+            count: dirs.length,
+            avgLines: depthDf['lines'] ? depthDf['lines'].mean() : 0,
+            avgFiles: depthDf['files'] ? depthDf['files'].mean() : 0,
+            avgComplexity: depthDf['complexity'] ? depthDf['complexity'].mean() : 0,
+            totalLines: depthDf['lines'] ? depthDf['lines'].sum() : 0,
+            totalFiles: depthDf['files'] ? depthDf['files'].sum() : 0
+          };
+        }
       }
     }
   }
