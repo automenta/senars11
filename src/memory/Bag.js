@@ -134,12 +134,15 @@ export class Bag {
         }
 
         const priority = item.budget?.priority || 0;
-        this._items.set(item, priority);
-
-        this._insertionOrder.push(item);
-        this._accessTimes.set(item, Date.now());
+        this._addItemToStorage(item, priority);
 
         return true;
+    }
+    
+    _addItemToStorage(item, priority) {
+        this._items.set(item, priority);
+        this._insertionOrder.push(item);
+        this._accessTimes.set(item, Date.now());
     }
 
     remove(item) {

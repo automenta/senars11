@@ -94,12 +94,12 @@ export class Concept extends BaseComponent {
     }
 
     _getStorage(taskType) {
-        const storageMap = {
+        const storage = {
             [TASK_TYPES.BELIEF]: this._beliefs,
             [TASK_TYPES.GOAL]: this._goals,
             [TASK_TYPES.QUESTION]: this._questions
-        };
-        const storage = storageMap[taskType];
+        }[taskType];
+        
         if (!storage) throw new Error(`Unknown task type: ${taskType}. Expected ${Object.values(TASK_TYPES).join(', ')}.`);
         return storage;
     }
@@ -119,14 +119,11 @@ export class Concept extends BaseComponent {
     }
 
     enforceCapacity(maxTasksPerType) {
-        const capacityCalculations = [
-            { bag: this._beliefs, factor: CAPACITY_DISTRIBUTION.BELIEF },
-            { bag: this._goals, factor: CAPACITY_DISTRIBUTION.GOAL },
-            { bag: this._questions, factor: CAPACITY_DISTRIBUTION.QUESTION }
-        ];
-
-        capacityCalculations.forEach(({ bag, factor }) => {
-            this._enforceBagCapacity(bag, maxTasksPerType * factor);
+        Object.entries(CAPACITY_DISTRIBUTION).forEach(([type, factor]) => {
+            const bag = this[`_${type.toLowerCase()}s`]; // Convert BELIEF to _beliefs
+            if (bag) {
+                this._enforceBagCapacity(bag, maxTasksPerType * factor);
+            }
         });
     }
 
@@ -208,11 +205,11 @@ export class Concept extends BaseComponent {
 
     updateTaskBudget(task, newBudget) {
         const storage = this._getStorage(task.type);
-        if (storage.remove(task)) {
-            const updatedTask = task.clone({budget: newBudget});
-            return storage.add(updatedTask);
-        }
-        return false;
+        return this._replaceTaskInStorage(storage, task, task.clone({budget: newBudget}));
+    }
+    
+    _replaceTaskInStorage(storage, oldTask, newTask) {
+        return storage.remove(oldTask) && storage.add(newTask);
     }
 
     getStats() {

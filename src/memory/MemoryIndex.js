@@ -101,17 +101,11 @@ export class MemoryIndex {
         );
 
         // If no active filters, return candidates as is
-        if (activeFilters.length === 0) return candidates;
-
-        // Apply filters efficiently
-        return candidates.filter(concept => {
-            for (const filterName of activeFilters) {
-                if (!filterFunctions[filterName](concept)) {
-                    return false;
-                }
-            }
-            return true;
-        });
+        return activeFilters.length === 0 
+            ? candidates 
+            : candidates.filter(concept => 
+                activeFilters.every(filterName => filterFunctions[filterName](concept))
+            );
     }
 
     _getInitialCandidates(filters) {
@@ -543,9 +537,8 @@ export class MemoryIndex {
             'object': () => this.findConceptsWithFilters(query).slice(0, limit)
         };
 
-        // Get handler based on query type
-        const handler = queryHandlers[typeof query];
-        return handler ? handler() : [];
+        // Get handler based on query type and call it, or return empty array
+        return (queryHandlers[typeof query] || (() => []))();
     }
 
     /**
@@ -593,7 +586,6 @@ export class MemoryIndex {
      * Get statistical summary of concept distribution
      */
     getConceptDistribution() {
-        const concepts = this.getAllConcepts();
         const distribution = {
             byCategory: {},
             byComplexity: {},
@@ -603,31 +595,36 @@ export class MemoryIndex {
         };
 
         // Collect statistics in a single pass for efficiency
-        for (const concept of concepts) {
-            const term = concept.term;
-            if (!term) continue;
+        for (const concept of this.getAllConcepts()) {
+            if (!concept.term) continue;
             
-            // Category distribution
-            const category = TermCategorization.getTermCategory(term);
-            distribution.byCategory[category] = (distribution.byCategory[category] || 0) + 1;
-
-            // Complexity distribution
-            const complexity = TermCategorization.getTermComplexity(term);
-            const complexityLevel = Math.floor(complexity);
-            distribution.byComplexity[complexityLevel] = (distribution.byComplexity[complexityLevel] || 0) + 1;
-
-            // Operator distribution
-            if (term.operator) {
-                distribution.byOperator[term.operator] = (distribution.byOperator[term.operator] || 0) + 1;
-            }
-
-            // Activation distribution (bucketed by 0.1 increments)
-            const activation = concept.activation || 0;
-            const activationBucket = Math.floor(activation * 10) / 10;
-            distribution.byActivation[activationBucket] = (distribution.byActivation[activationBucket] || 0) + 1;
+            this._updateDistributionStats(distribution, concept);
         }
 
         return distribution;
+    }
+    
+    _updateDistributionStats(distribution, concept) {
+        const term = concept.term;
+        const category = TermCategorization.getTermCategory(term);
+        const complexity = TermCategorization.getTermComplexity(term);
+        const activation = concept.activation || 0;
+        
+        // Update category distribution
+        distribution.byCategory[category] = (distribution.byCategory[category] || 0) + 1;
+
+        // Update complexity distribution
+        const complexityLevel = Math.floor(complexity);
+        distribution.byComplexity[complexityLevel] = (distribution.byComplexity[complexityLevel] || 0) + 1;
+
+        // Update operator distribution
+        if (term.operator) {
+            distribution.byOperator[term.operator] = (distribution.byOperator[term.operator] || 0) + 1;
+        }
+
+        // Update activation distribution (bucketed by 0.1 increments)
+        const activationBucket = Math.floor(activation * 10) / 10;
+        distribution.byActivation[activationBucket] = (distribution.byActivation[activationBucket] || 0) + 1;
     }
 
     /**

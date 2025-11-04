@@ -56,17 +56,17 @@ export class MemoryConsolidation extends ConfigurableComponent {
             timestamp: currentTime
         };
 
-        // Phase 1: Activation propagation based on forgetting policy
-        results.activationPropagated = this._propagateActivationWithPolicy(memory);
+        // Execute consolidation phases in sequence
+        const consolidationPhases = [
+            {method: '_propagateActivationWithPolicy', property: 'activationPropagated'},
+            {method: '_applyDecay', property: 'conceptsDecayed'},
+            {method: '_evaluateConceptsForForgetting', property: 'conceptsEvaluatedForForgetting', args: [currentTime]},
+            {method: '_removeForgettingConcepts', property: 'conceptsRemoved'}
+        ];
 
-        // Phase 2: Apply decay to all concepts
-        results.conceptsDecayed = this._applyDecay(memory);
-
-        // Phase 3: Evaluate concepts for forgetting based on policy
-        results.conceptsEvaluatedForForgetting = this._evaluateConceptsForForgetting(memory, currentTime);
-
-        // Phase 4: Remove concepts marked for forgetting
-        results.conceptsRemoved = this._removeForgettingConcepts(memory);
+        for (const {method, property, args = []} of consolidationPhases) {
+            results[property] = this[method].call(this, memory, ...args);
+        }
 
         return results;
     }
@@ -337,32 +337,43 @@ export class MemoryConsolidation extends ConfigurableComponent {
      * @private
      */
     _calculateEnhancedDecayRate(concept, memory) {
-        let baseRate = this.getConfigValue('decayRate');
-
-        // Factor 1: Usage-based decay adjustment
-        const usageFactor = this._calculateUsageDecayFactor(concept, memory);
-
-        // Factor 2: Activation-based decay adjustment
-        const activationFactor = this._calculateActivationDecayFactor(concept, memory);
-
-        // Factor 3: Complexity-based decay adjustment
-        const complexityFactor = this._calculateComplexityDecayFactor(concept, memory);
-
-        // Factor 4: Recency-based decay adjustment
-        const recencyFactor = this._calculateRecencyDecayFactor(concept, memory);
-
-        // Factor 5: Quality-based decay adjustment
-        const qualityFactor = this._calculateQualityDecayFactor(concept, memory);
+        const factors = this._getDecayFactors(concept, memory);
+        const weights = this._getDecayWeights();
 
         // Combine all factors with configurable weights
-        const totalFactor =
-            (usageFactor * 0.25) +
-            (activationFactor * 0.25) +
-            (complexityFactor * 0.2) +
-            (recencyFactor * 0.15) +
-            (qualityFactor * 0.15);
+        const totalFactor = factors.reduce((sum, factor, index) => 
+            sum + (factor * weights[index]), 0
+        );
 
-        return baseRate * totalFactor;
+        return this.getConfigValue('decayRate') * totalFactor;
+    }
+
+    /**
+     * Get all decay factors
+     * @private
+     */
+    _getDecayFactors(concept, memory) {
+        return [
+            this._calculateUsageDecayFactor(concept, memory),
+            this._calculateActivationDecayFactor(concept, memory),
+            this._calculateComplexityDecayFactor(concept, memory),
+            this._calculateRecencyDecayFactor(concept, memory),
+            this._calculateQualityDecayFactor(concept, memory)
+        ];
+    }
+
+    /**
+     * Get configurable weights for decay factors
+     * @private
+     */
+    _getDecayWeights() {
+        return [
+            this.getConfigValue('usageDecayWeight', 0.25),
+            this.getConfigValue('activationDecayWeight', 0.25),
+            this.getConfigValue('complexityDecayWeight', 0.20),
+            this.getConfigValue('recencyDecayWeight', 0.15),
+            this.getConfigValue('qualityDecayWeight', 0.15)
+        ];
     }
 
     /**
@@ -371,17 +382,7 @@ export class MemoryConsolidation extends ConfigurableComponent {
      */
     _calculateUsageDecayFactor(concept, memory) {
         const avgUseCount = this._getAverageUseCount(memory);
-
-        if (concept.useCount < avgUseCount * 0.5) {
-            // Concepts used much less than average decay faster
-            return 1.5;
-        } else if (concept.useCount > avgUseCount * 2) {
-            // Concepts used much more than average decay slower
-            return 0.5;
-        } else {
-            // Average usage gets standard decay
-            return 1.0;
-        }
+        return this._getProportionalFactor(concept.useCount, avgUseCount, 0.5, 2, 1.5, 0.5, 1.0);
     }
 
     /**
@@ -390,30 +391,17 @@ export class MemoryConsolidation extends ConfigurableComponent {
      */
     _calculateActivationDecayFactor(concept, memory) {
         const avgActivation = this._getAverageActivation(memory);
-
-        if (concept.activation < avgActivation * 0.3) {
-            // Low activation concepts decay faster
-            return 1.8;
-        } else if (concept.activation > avgActivation * 2) {
-            // High activation concepts decay slower
-            return 0.3;
-        } else {
-            // Average activation gets standard decay
-            return 1.0;
-        }
+        return this._getProportionalFactor(concept.activation, avgActivation, 0.3, 2, 1.8, 0.3, 1.0);
     }
 
     /**
      * Calculate decay factor based on term complexity
      * @private
      */
-    _calculateComplexityDecayFactor(concept, memory) {
+    _calculateComplexityDecayFactor(concept) {
         // More complex terms might be more important and should decay slower
         // This assumes that more complex terms represent more sophisticated knowledge
-        if (concept.term && concept.term.components && concept.term.components.length > 2) {
-            return 0.7; // Complex terms decay slower
-        }
-        return 1.0; // Simple terms get standard decay
+        return (concept.term && concept.term.components && concept.term.components.length > 2) ? 0.7 : 1.0;
     }
 
     /**
@@ -438,7 +426,7 @@ export class MemoryConsolidation extends ConfigurableComponent {
      * Calculate decay factor based on quality
      * @private
      */
-    _calculateQualityDecayFactor(concept, memory) {
+    _calculateQualityDecayFactor(concept) {
         // Higher quality concepts decay slower
         if (concept.quality > 0.8) {
             return 0.6; // High-quality concepts decay slower
@@ -447,6 +435,23 @@ export class MemoryConsolidation extends ConfigurableComponent {
         }
 
         return 1.0; // Standard decay
+    }
+    
+    /**
+     * Calculate proportional decay factor based on thresholds and values
+     * @private
+     */
+    _getProportionalFactor(currentValue, avgValue, lowThreshold, highThreshold, lowFactor, highFactor, defaultFactor) {
+        const lowBoundary = avgValue * lowThreshold;
+        const highBoundary = avgValue * highThreshold;
+
+        if (currentValue < lowBoundary) {
+            return lowFactor;
+        } else if (currentValue > highBoundary) {
+            return highFactor;
+        } else {
+            return defaultFactor;
+        }
     }
 
     /**

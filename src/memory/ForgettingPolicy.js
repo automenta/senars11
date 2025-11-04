@@ -28,7 +28,7 @@ export class ForgettingPolicy {
      */
     shouldForget(concept, currentTime = Date.now()) {
         const policyMethod = this._policyMethods[this.policyType] || this._policyMethods['simple'];
-        return policyMethod(concept, currentTime);
+        return policyMethod.call(this, concept, currentTime);
     }
 
     /**
@@ -213,10 +213,9 @@ export class ForgettingPolicy {
         if (!concept.term) return [];
 
         const allConcepts = memory.getAllConcepts();
-        return allConcepts.filter(otherConcept => {
-            if (otherConcept === concept) return false;
-            return this._areTermsRelated(concept.term, otherConcept.term);
-        });
+        return allConcepts.filter(otherConcept => 
+            otherConcept !== concept && this._areTermsRelated(concept.term, otherConcept.term)
+        );
     }
 
     /**
