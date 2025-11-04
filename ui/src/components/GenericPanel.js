@@ -57,26 +57,22 @@ const GenericPanel = memo(({
         paddingRight: themeUtils.get('SPACING.SM')
     };
 
-    return (
-        <div className="genericPanel">
-            {title && (
-                <div style={titleStyle}>
-                    <span>{title}</span>
-                    {showCount && <span style={countStyle}>({displayItems.length})</span>}
-                </div>
-            )}
-            <div style={containerStyleComputed} ref={(el) => setContainerRef(el)}>
-                {displayItems.length > 0
-                    ? displayItems.map((item, index) => <div key={`item-${index}`}>{renderItem(item, index)}</div>)
-                    : <div className="emptyState" style={emptyStateStyle}>{emptyMessage}</div>
-                }
-            </div>
-            {withTimestamp && (
-                <div style={timestampStyle}>
-                    <TimeDisplay timestamp={Date.now()} formatType="time" />
-                </div>
-            )}
-        </div>
+    return React.createElement('div', {className: "genericPanel"},
+        title && React.createElement('div', {style: titleStyle},
+            React.createElement('span', null, title),
+            showCount && React.createElement('span', {style: countStyle}, `(${displayItems.length})`)
+        ),
+        React.createElement('div', {
+            style: containerStyleComputed,
+            ref: (el) => setContainerRef(el)
+        },
+            displayItems.length > 0
+                ? displayItems.map((item, index) => React.createElement('div', {key: `item-${index}`}, renderItem(item, index)))
+                : React.createElement('div', {className: "emptyState", style: emptyStateStyle}, emptyMessage)
+        ),
+        withTimestamp && React.createElement('div', {style: timestampStyle},
+            React.createElement(TimeDisplay, {timestamp: Date.now(), formatType: "time"})
+        )
     );
 });
 

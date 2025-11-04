@@ -25,8 +25,8 @@ export const UI_CONSTANTS = {
 };
 
 export const Components = {
-    LoadingSpinner: ({size = '1.5rem', color = UI_CONSTANTS.COLORS.PRIMARY, ...props}) => {
-        return React.createElement('div', {
+    LoadingSpinner: ({size = '1.5rem', color = UI_CONSTANTS.COLORS.PRIMARY, ...props}) =>
+        React.createElement('div', {
                 style: {
                     display: 'flex',
                     alignItems: 'center',
@@ -46,11 +46,10 @@ export const Components = {
                     ...props.spinnerStyle
                 }
             })
-        );
-    },
+        ),
 
-    EmptyState: ({message = 'No data to display', icon = '🔍', ...props}) => {
-        return React.createElement('div', {
+    EmptyState: ({message = 'No data to display', icon = '🔍', ...props}) =>
+        React.createElement('div', {
                 style: {
                     display: 'flex',
                     flexDirection: 'column',
@@ -64,11 +63,10 @@ export const Components = {
             },
             React.createElement('div', {style: {fontSize: '2rem', marginBottom: UI_CONSTANTS.SPACING.MD}}, icon),
             React.createElement('div', null, message)
-        );
-    },
+        ),
 
-    ErrorState: ({message = 'An error occurred', onRetry = null, ...props}) => {
-        return React.createElement('div', {
+    ErrorState: ({message = 'An error occurred', onRetry = null, ...props}) =>
+        React.createElement('div', {
                 style: {
                     display: 'flex',
                     flexDirection: 'column',
@@ -94,8 +92,7 @@ export const Components = {
                     cursor: 'pointer'
                 }
             }, 'Retry')
-        );
-    },
+        ),
 
     StatusBadge: ({status, label, ...props}) => {
         const statusConfig = {

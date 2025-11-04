@@ -81,27 +81,3 @@ export const createMetricDisplay = (React, props) => {
         )
     );
 };
-
-export const createProgressBar = (React, props) => {
-    const {percentage, color = '#007bff', style = {}} = props;
-    
-    const containerStyle = {
-        height: '8px',
-        backgroundColor: '#e0e0e0',
-        borderRadius: '4px',
-        overflow: 'hidden',
-        marginTop: '0.25rem',
-        ...style
-    };
-    
-    const barStyle = {
-        height: '100%',
-        width: `${Math.min(100, percentage)}%`,
-        backgroundColor: color,
-        transition: 'width 0.3s ease'
-    };
-    
-    return React.createElement('div', {style: containerStyle},
-        React.createElement('div', {style: barStyle})
-    );
-};

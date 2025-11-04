@@ -12,18 +12,16 @@ const MainPanel = () => {
     const renderMainItem = (item) => createListItem(React, {
         key: item.id,
         children: [
-            <div style={{fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD')}}>{item.title}</div>,
-            <div>{item.content}</div>
+            React.createElement('div', {style: {fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD')}}, item.title),
+            React.createElement('div', null, item.content)
         ]
     });
 
-    return (
-        <GenericPanel
-            items={mainItems}
-            renderItem={renderMainItem}
-            emptyMessage="No main content to display"
-        />
-    );
+    return React.createElement(GenericPanel, {
+        items: mainItems,
+        renderItem: renderMainItem,
+        emptyMessage: "No main content to display"
+    });
 };
 
 export default MainPanel;

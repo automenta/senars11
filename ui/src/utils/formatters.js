@@ -20,10 +20,8 @@ export const formatDate = (timestamp) =>
 export const formatNumber = (num, decimals = 2) =>
     num != null ? Number(num).toFixed(decimals) : 'N/A';
 
-export const formatNumberWithCommas = (num) => {
-    if (num == null) return 'N/A';
-    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-};
+export const formatNumberWithCommas = (num) =>
+    num == null ? 'N/A' : num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
 export const formatNumberWithUnits = (num, decimals = 2) => {
     if (num == null) return 'N/A';
@@ -59,13 +57,13 @@ export const formatDuration = (ms) => {
 export const truncateString = (str, maxLength, suffix = '...') =>
     !str || str.length <= maxLength ? str : str.slice(0, maxLength) + suffix;
 
-export const formatFileSize = (bytes) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-};
+export const formatFileSize = (bytes) =>
+    bytes === 0 ? '0 Bytes' : (() => {
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    })();
 
 export const formatValue = (value, options = {}) => {
     const {

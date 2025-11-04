@@ -25,23 +25,17 @@ const Panel = memo(({
         borderRadius: themeUtils.get('BORDERS.RADIUS.SM')
     };
 
-    return (
-        <div className={panelClassName} style={style}>
-            {showHeader && (
-                <div className={styles['panel-header']}>
-                    <h3 className={styles['panel-title']}>{title}</h3>
-                    {showWebSocketStatus && (
-                        <div className={styles['panel-status']}>
-                            <WebSocketStatus showLabel style={statusStyle} />
-                        </div>
-                    )}
-                    {headerExtra}
-                </div>
-            )}
-            <div className={styles['panel-content']}>
-                <ErrorBoundary>{children}</ErrorBoundary>
-            </div>
-        </div>
+    return React.createElement('div', {className: panelClassName, style},
+        showHeader && React.createElement('div', {className: styles['panel-header']},
+            React.createElement('h3', {className: styles['panel-title']}, title),
+            showWebSocketStatus && React.createElement('div', {className: styles['panel-status']},
+                React.createElement(WebSocketStatus, {showLabel: true, style: statusStyle})
+            ),
+            headerExtra
+        ),
+        React.createElement('div', {className: styles['panel-content']},
+            React.createElement(ErrorBoundary, null, children)
+        )
     );
 });
 

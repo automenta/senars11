@@ -103,10 +103,8 @@ export const createDistributionBar = (React, {segments, ...props}) =>
 
 export const getStatusColor = (value, threshold) =>
   value === undefined || value === null ? '#6c757d' :
-  value > threshold ? '#dc3545' : value > threshold * 0.7 ? '#ffc107' : '#28a745';
-
-export const formatPercentage = (value) =>
-  value.toFixed(1) + '%';
+  value > threshold ? '#dc3545' :
+  value > threshold * 0.7 ? '#ffc107' : '#28a745';
 
 export const getPerformanceMetricColor = (metricType) => {
   switch (metricType) {
@@ -123,6 +121,5 @@ export default {
   createProgressBar,
   createDistributionBar,
   getStatusColor,
-  formatPercentage,
   getPerformanceMetricColor
 };

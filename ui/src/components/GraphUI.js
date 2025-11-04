@@ -350,6 +350,4 @@ const GraphUI = () => {
     );
 };
 
-export default GraphUI;};
-
 export default GraphUI;

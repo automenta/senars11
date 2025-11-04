@@ -1,16 +1,6 @@
 
-/**
- * Generate a unique ID using timestamp and random components
- * @returns {string} A unique identifier
- */
 export const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-/**
- * Debounce function to limit how often a function is called
- * @param {Function} func - Function to debounce
- * @param {number} wait - Wait time in milliseconds
- * @returns {Function} Debounced function
- */
 export const debounce = (func, wait) => {
     let timeout;
     return function executedFunction(...args) {
@@ -23,12 +13,6 @@ export const debounce = (func, wait) => {
     };
 };
 
-/**
- * Throttle function to limit frequency of function calls
- * @param {Function} func - Function to throttle
- * @param {number} limit - Throttle limit in milliseconds
- * @returns {Function} Throttled function
- */
 export const throttle = (func, limit) => {
     let inThrottle;
     return function (...args) {
@@ -40,11 +24,6 @@ export const throttle = (func, limit) => {
     };
 };
 
-/**
- * Deep clone an object using JSON serialization
- * @param {any} obj - Object to clone
- * @returns {any} Deep cloned object
- */
 export const deepClone = (obj) => {
     if (obj === null || typeof obj !== 'object') return obj;
 
@@ -74,19 +53,9 @@ export const deepClone = (obj) => {
     return obj;
 };
 
-/**
- * Format timestamp to a readable time string
- * @param {number} timestamp - Unix timestamp
- * @returns {string} Formatted time string
- */
 export const formatTimestamp = (timestamp) =>
     new Date(timestamp).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', second: '2-digit'});
 
-/**
- * Format timestamp to a readable date and time string
- * @param {number} timestamp - Unix timestamp
- * @returns {string} Formatted date and time string
- */
 export const formatDateTime = (timestamp) =>
     new Date(timestamp).toLocaleString([], {
         month: '2-digit',
@@ -96,24 +65,12 @@ export const formatDateTime = (timestamp) =>
         minute: '2-digit'
     });
 
-/**
- * Check if a value is empty
- * @param {any} value - Value to check
- * @returns {boolean} True if value is empty, false otherwise
- */
-export const isEmpty = (value) => (
+export const isEmpty = (value) =>
     value == null ||
     (typeof value === 'string' && value.trim() === '') ||
     (Array.isArray(value) && value.length === 0) ||
-    (typeof value === 'object' && Object.keys(value).length === 0)
-);
+    (typeof value === 'object' && Object.keys(value).length === 0);
 
-/**
- * Check if an object is equal to another object
- * @param {Object} obj1 - First object
- * @param {Object} obj2 - Second object
- * @returns {boolean} True if objects are deeply equal, false otherwise
- */
 export const deepEqual = (obj1, obj2) => {
     if (obj1 === obj2) return true;
 
@@ -134,20 +91,8 @@ export const deepEqual = (obj1, obj2) => {
     return true;
 };
 
-/**
- * Create a promise that resolves after a specified time
- * @param {number} ms - Time in milliseconds
- * @returns {Promise} Promise that resolves after the specified time
- */
 export const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-/**
- * Get a nested property from an object using dot notation
- * @param {Object} obj - Object to get property from
- * @param {string} path - Path to property (e.g. 'user.profile.name')
- * @param {*} defaultValue - Default value if property doesn't exist
- * @returns {*} Value at the specified path or default value
- */
 export const getNestedProperty = (obj, path, defaultValue = undefined) => {
     const keys = path.split('.');
     let result = obj;
@@ -162,13 +107,6 @@ export const getNestedProperty = (obj, path, defaultValue = undefined) => {
     return result !== undefined ? result : defaultValue;
 };
 
-/**
- * Set a nested property on an object using dot notation
- * @param {Object} obj - Object to set property on
- * @param {string} path - Path to property (e.g. 'user.profile.name')
- * @param {*} value - Value to set
- * @returns {Object} Modified object
- */
 export const setNestedProperty = (obj, path, value) => {
     const keys = path.split('.');
     const lastKey = keys.pop();
@@ -185,11 +123,6 @@ export const setNestedProperty = (obj, path, value) => {
     return obj;
 };
 
-/**
- * Create a memoized function to cache results based on arguments
- * @param {Function} fn - Function to memoize
- * @returns {Function} Memoized function
- */
 export const memoize = (fn) => {
     const cache = new Map();
     return (...args) => {

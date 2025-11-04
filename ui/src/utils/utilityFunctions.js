@@ -23,26 +23,6 @@ export const paginateData = (data, page = 1, pageSize = 20) => {
     };
 };
 
-export const debounce = (func, delay) => {
-    let timeoutId;
-    return (...args) => {
-        clearTimeout(timeoutId);
-        timeoutId = setTimeout(() => func.apply(null, args), delay);
-    };
-};
-
-export const memoize = (func) => {
-    const cache = new Map();
-    return (...args) => {
-        const key = JSON.stringify(args);
-        if (cache.has(key)) {
-            return cache.get(key);
-        }
-        const result = func(...args);
-        cache.set(key, result);
-        return result;
-    };
-};
 
 const getNestedValue = (obj, path) => path.split('.').reduce((current, key) => current?.[key], obj);
 

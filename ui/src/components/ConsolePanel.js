@@ -16,29 +16,26 @@ const getMessageStyle = (type) => ({
 const ConsolePanel = memo(() => {
     const consoleMessages = useUiStore(state => state.notifications);
 
-    const renderConsoleMessage = (message) => (
-        <div style={getMessageStyle(message.type)}>
-            <span style={{fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD')}}>
-                {message.type ? `${message.type.toUpperCase()}: ` : ''}
-            </span>
-            <span>{message.message || message.title || 'Console message'}</span>
-        </div>
-    );
+    const renderConsoleMessage = (message) => 
+        React.createElement('div', {style: getMessageStyle(message.type)},
+            React.createElement('span', {style: {fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD')}},
+                message.type ? `${message.type.toUpperCase()}: ` : ''
+            ),
+            React.createElement('span', null, message.message || message.title || 'Console message')
+        );
 
-    return (
-        <DataPanel
-            title="Console"
-            dataSource={() => consoleMessages}
-            renderItem={renderConsoleMessage}
-            config={{
-                itemLabel: 'messages',
-                showItemCount: true,
-                emptyMessage: 'Console is empty',
-                autoScroll: true,
-                maxItems: 100
-            }}
-        />
-    );
+    return React.createElement(DataPanel, {
+        title: "Console",
+        dataSource: () => consoleMessages,
+        renderItem: renderConsoleMessage,
+        config: {
+            itemLabel: 'messages',
+            showItemCount: true,
+            emptyMessage: 'Console is empty',
+            autoScroll: true,
+            maxItems: 100
+        }
+    });
 });
 
 export default ConsolePanel;
