@@ -148,34 +148,29 @@ export class MemoryIndex {
      * Find concepts with advanced filtering options
      */
     findConceptsWithFilters(filters = {}) {
-        let results = this.getAllConcepts();
+        const allConcepts = this.getAllConcepts();
 
-        // Apply filters using a filter chain
-        const filterChain = [
-            filters.category && (concept => TermCategorization.getTermCategory(concept.term) === filters.category),
-            (filters.minComplexity || filters.maxComplexity) && (concept => {
-                const complexity = TermCategorization.getTermComplexity(concept.term);
-                return (!filters.minComplexity || complexity >= filters.minComplexity) &&
-                    (!filters.maxComplexity || complexity <= filters.maxComplexity);
-            }),
-            (filters.minActivation !== undefined || filters.maxActivation !== undefined) && (concept => {
-                const activation = concept.activation || 0;
-                return (filters.minActivation === undefined || activation >= filters.minActivation) &&
-                    (filters.maxActivation === undefined || activation <= filters.maxActivation);
-            }),
-            filters.operator && (concept => concept.term.operator === filters.operator),
-            (filters.createdAfter || filters.createdBefore) && (concept => {
-                const createdAt = concept.createdAt || 0;
-                return (!filters.createdAfter || createdAt >= filters.createdAfter) &&
-                    (!filters.createdBefore || createdAt <= filters.createdBefore);
-            })
-        ].filter(Boolean);
+        // Define all possible filters as a map
+        const filtersMap = {
+            category: concept => TermCategorization.getTermCategory(concept.term) === filters.category,
+            minComplexity: concept => TermCategorization.getTermComplexity(concept.term) >= filters.minComplexity,
+            maxComplexity: concept => TermCategorization.getTermComplexity(concept.term) <= filters.maxComplexity,
+            minActivation: concept => (concept.activation || 0) >= filters.minActivation,
+            maxActivation: concept => (concept.activation || 0) <= filters.maxActivation,
+            operator: concept => concept.term.operator === filters.operator,
+            createdAfter: concept => (concept.createdAt || 0) >= filters.createdAfter,
+            createdBefore: concept => (concept.createdAt || 0) <= filters.createdBefore
+        };
 
-        for (const filter of filterChain) {
-            results = results.filter(filter);
-        }
-
-        return results;
+        // Apply filters that are defined
+        return allConcepts.filter(concept => {
+            for (const [filterName, filterValue] of Object.entries(filters)) {
+                if (filterValue !== undefined && filtersMap[filterName] && !filtersMap[filterName](concept)) {
+                    return false;
+                }
+            }
+            return true;
+        });
     }
 
     /**
@@ -472,7 +467,7 @@ export class MemoryIndex {
             inheritanceEntries: indexSizes.inheritance,
             implicationEntries: indexSizes.implication,
             similarityEntries: indexSizes.similarity,
-            operatorEntries: indexSizes.compound,
+            operatorEntries: indexSizes.compound,  // This was the original property name
             atomicEntries: indexSizes.atomic,
             compoundByOpEntries: indexSizes.compoundByOp,
             componentEntries: indexSizes.component,
@@ -604,7 +599,7 @@ export class MemoryIndex {
 
             const complexity = TermCategorization.getTermComplexity(concept.term);
             const complexityLevel = Math.floor(complexity);
-            distribution.byComplexity[complexityLevel] = (distribution.byComplexity[complexityLevel] || 0) + 1;
+            distribution.byComplexity[complexityLevel] = (distribution.byComplexity[complexLevel] || 0) + 1;
 
             if (concept.term.operator) {
                 const operator = concept.term.operator;
@@ -667,15 +662,19 @@ export class MemoryIndex {
             };
         }
 
-        // Categorize concepts into periods
-        for (const concept of this.getAllConcepts()) {
+        // Categorize concepts into periods using optimized approach
+        const concepts = this.getAllConcepts();
+        for (const concept of concepts) {
             const createdAt = concept.createdAt || 0;
-
-            for (let i = 0; i < periodCount; i++) {
-                if (createdAt >= periods[i].start && createdAt < periods[i].end) {
-                    periods[i].concepts.push(concept);
-                    periods[i].count++;
-                    break;
+            const timeDiff = now - createdAt;
+            
+            // Find the right period index based on time difference
+            const periodIndex = Math.floor(timeDiff / periodMs);
+            if (periodIndex >= 0 && periodIndex < periodCount) {
+                const period = periods[periodIndex];
+                if (createdAt >= period.start && createdAt < period.end) {
+                    period.concepts.push(concept);
+                    period.count++;
                 }
             }
         }
@@ -808,19 +807,19 @@ export class MemoryIndex {
     }
 
     _indexInheritance(term, concept) {
-        if (term.components.length >= 2) {
+        if (term.components?.length >= 2) {
             this._addToIndex('inheritance', term.components[1], concept);
         }
     }
 
     _indexImplication(term, concept) {
-        if (term.components.length >= 2) {
+        if (term.components?.length >= 2) {
             this._addToIndex('implication', term.components[0], concept);
         }
     }
 
     _indexSimilarity(term, concept) {
-        if (term.components.length >= 2) {
+        if (term.components?.length >= 2) {
             this._addToIndex('similarity', term.components[0], concept);
             this._addToIndex('similarity', term.components[1], concept);
         }
@@ -829,41 +828,46 @@ export class MemoryIndex {
     _removeCompoundTermIndex(term, concept) {
         this._removeFromIndex('compound', term.operator, term);
 
-        switch (term.operator) {
-            case '-->':
-                this._removeInheritanceIndex(term, concept);
-                break;
-            case '==>':
-                this._removeImplicationIndex(term, concept);
-                break;
-            case '<->':
-                this._removeSimilarityIndex(term, concept);
-                break;
+        const removalMap = {
+            '-->': '_removeInheritanceIndex',
+            '==>': '_removeImplicationIndex',
+            '<->': '_removeSimilarityIndex'
+        };
+
+        const removalMethod = removalMap[term.operator];
+        if (removalMethod) {
+            this[removalMethod](term, concept);
         }
     }
 
     _removeInheritanceIndex(term, concept) {
-        if (term.components.length >= 2) {
+        if (term.components?.length >= 2) {
             this._removeFromIndex('inheritance', term.components[1], concept);
         }
     }
 
     _removeImplicationIndex(term, concept) {
-        if (term.components.length >= 2) {
+        if (term.components?.length >= 2) {
             this._removeFromIndex('implication', term.components[0], concept);
         }
     }
 
     _removeSimilarityIndex(term, concept) {
-        if (term.components.length >= 2) {
+        if (term.components?.length >= 2) {
             this._removeFromIndex('similarity', term.components[0], concept);
             this._removeFromIndex('similarity', term.components[1], concept);
         }
     }
 
-    findInheritanceConcepts = (predicate) => Array.from(this._indexes.inheritance.get(predicate) || []);
-    findImplicationConcepts = (premise) => Array.from(this._indexes.implication.get(premise) || []);
-    findSimilarityConcepts = (term) => Array.from(this._indexes.similarity.get(term) || []);
+    // Unified method to find concepts by index
+    _findConceptsByIndex(indexName, key) {
+        const concepts = this._indexes[indexName]?.get(key) || new Set();
+        return Array.from(concepts);
+    }
+
+    findInheritanceConcepts = (predicate) => this._findConceptsByIndex('inheritance', predicate);
+    findImplicationConcepts = (premise) => this._findConceptsByIndex('implication', premise);
+    findSimilarityConcepts = (term) => this._findConceptsByIndex('similarity', term);
 
     findConceptsByOperator(operator) {
         const terms = this._indexes.compound.get(operator) || new Set();
@@ -876,48 +880,42 @@ export class MemoryIndex {
      * Find concepts by complexity level
      */
     findConceptsByComplexity(level) {
-        const concepts = this._indexes.complexity.get(level) || new Set();
-        return Array.from(concepts);
+        return this._findConceptsByIndex('complexity', level);
     }
 
     /**
      * Find concepts by category
      */
     findConceptsByCategory(category) {
-        const concepts = this._indexes.category.get(category) || new Set();
-        return Array.from(concepts);
+        return this._findConceptsByIndex('category', category);
     }
 
     /**
      * Find concepts by activation level
      */
     findConceptsByActivation(activationBucket) {
-        const concepts = this._indexes.activation.get(activationBucket) || new Set();
-        return Array.from(concepts);
+        return this._findConceptsByIndex('activation', activationBucket);
     }
 
     /**
      * Find concepts by component (subterm matching)
      */
     findConceptsByComponent(componentTerm) {
-        const concepts = this._indexes.component.get(componentTerm) || new Set();
-        return Array.from(concepts);
+        return this._findConceptsByIndex('component', componentTerm);
     }
 
     /**
      * Find concepts by temporal range
      */
     findConceptsByTemporal(temporalBucket) {
-        const concepts = this._indexes.temporal.get(temporalBucket) || new Set();
-        return Array.from(concepts);
+        return this._findConceptsByIndex('temporal', temporalBucket);
     }
 
     /**
      * Find atomic concepts by name
      */
     findAtomicConcepts(name) {
-        const concepts = this._indexes.atomic.get(name) || new Set();
-        return Array.from(concepts);
+        return this._findConceptsByIndex('atomic', name);
     }
 
     /**
@@ -926,7 +924,7 @@ export class MemoryIndex {
     findConceptsByOperatorEnhanced(operator) {
         // Get concepts from both the basic compound index and the enhanced compoundByOp index
         const basicConcepts = this.findConceptsByOperator(operator);
-        const enhancedConcepts = Array.from(this._indexes.compoundByOp.get(operator) || []);
+        const enhancedConcepts = this._findConceptsByIndex('compoundByOp', operator);
 
         // Combine and deduplicate
         const allConcepts = [...basicConcepts, ...enhancedConcepts];
