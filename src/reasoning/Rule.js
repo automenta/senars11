@@ -57,11 +57,14 @@ export class Rule {
     }
 
     _updateIfChanged(prop, val) {
+        if (this[prop] === val) return this;
+        
         if (prop === '_enabled') {
             const newConfig = {...this._config, enabled: val};
-            return this._enabled === val ? this : this._clone({}, newConfig);
+            return this._clone({}, newConfig);
         }
-        return this[prop] === val ? this : this._clone({[prop]: val});
+        
+        return this._clone({[prop]: val});
     }
 
     canApply(task) {

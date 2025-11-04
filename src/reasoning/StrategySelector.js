@@ -12,7 +12,7 @@ export class StrategySelector {
             defaultStrategy: config.defaultStrategy || 'coordinated', // coordinated or naive
             performanceThreshold: config.performanceThreshold || 100, // ms
             taskComplexityThreshold: config.taskComplexityThreshold || 5, // number of premises
-            naive: config.naive || config.naive || {}, // Accept both spellings, fix typo
+            naive: config.naive || {},
             coordinated: config.coordinated || {},
             ...config
         };

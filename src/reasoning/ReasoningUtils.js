@@ -14,15 +14,9 @@ export function createBatches(items, batchSize) {
 }
 
 /**
- * Split array into chunks
+ * Split array into chunks (alias for createBatches)
  */
-export function chunkArray(array, chunkSize) {
-    const chunks = [];
-    for (let i = 0; i < array.length; i += chunkSize) {
-        chunks.push(array.slice(i, i + chunkSize));
-    }
-    return chunks;
-}
+export const chunkArray = createBatches;
 
 /**
  * Flatten results from Promise.all operations

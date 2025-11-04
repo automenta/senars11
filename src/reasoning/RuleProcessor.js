@@ -42,7 +42,7 @@ export class RuleProcessor {
      * Common method to apply a single rule to a task and update metrics
      */
     async _applyRuleToTask(rule, task, context) {
-        if (!rule.canApply || !rule.canApply(task)) return [];
+        if (!rule.canApply?.(task)) return [];
 
         try {
             const {results: ruleResults} = await rule.apply(task, context);

@@ -125,34 +125,6 @@ export class LMRule extends Rule {
     }
 
     /**
-     * Builds the prompt for the language model based on the task
-     */
-    _buildPrompt(task) {
-        const templateVars = this._getTemplateVars(task);
-        return this._promptTemplate.replace(/\{\{(\w+)\}\}/g, (match, key) =>
-            templateVars[key] !== undefined ? templateVars[key] : match
-        );
-    }
-
-    _getTemplateVars(task) {
-        return {
-            taskTerm: task.term?.toString() || 'unknown',
-            taskType: task.type || 'unknown',
-            taskTruth: task.truth ?
-                `(${task.truth.f?.toFixed(2) || task.truth.f || 0.5}, ${task.truth.c?.toFixed(2) || task.truth.c || 0.5})` :
-                'no truth',
-            context: this._getContext(task)
-        };
-    }
-
-    /**
-     * Gets context for prompt building
-     */
-    _getContext(task) {
-        return `Task: ${task.term?.toString() || 'unknown'}, Type: ${task.type || 'unknown'}`;
-    }
-
-    /**
      * Calls the language model with the constructed prompt
      */
     async _callLanguageModel(prompt) {

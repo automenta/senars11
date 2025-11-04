@@ -347,15 +347,6 @@ export class RuleEngine extends BaseComponent {
         if (this._performanceOptimizer) this._performanceOptimizer.clearCache();
     }
 
-    _toggleRule = (ruleId, enable) => {
-        const rule = this.getRule(ruleId);
-        if (rule) this._rules.set(ruleId, enable ? rule.enable() : rule.disable());
-        return this;
-    };
-
-    enableRule = (ruleId) => this._toggleRule(ruleId, true);
-    disableRule = (ruleId) => this._toggleRule(ruleId, false);
-
     clear() {
         this._rules.clear();
         this._ruleSets.clear();
@@ -368,32 +359,5 @@ export class RuleEngine extends BaseComponent {
                 this._rules.set(ruleId, rule.clone({lm: this._lm}));
             }
         }
-    }
-
-    _getValidRules(ruleIds) {
-        return ruleIds.map(this.getRule).filter(Boolean);
-    }
-
-    _filterByType(rules, ruleType) {
-        return ruleType ? rules.filter(r => ruleType === 'lm' ? r instanceof LMRule : !(r instanceof LMRule)) : rules;
-    }
-
-    _incrementTypeMetric(rule) {
-        this._typeMetrics[rule instanceof LMRule ? 'lmRuleApplications' : 'nalRuleApplications']++;
-    }
-
-    _applyRulesWithLogging(rules, task, memory = null) {
-        return rules.flatMap(rule => {
-            try {
-                return this.applyRule(rule, task, memory).results;
-            } catch (error) {
-                this.logger.warn(`Rule ${rule.id} failed:`, error);
-                return [];
-            }
-        });
-    }
-
-    _updateMetrics(success, time) {
-        this._ruleUtilMetrics = MetricsUtil.update(this._ruleUtilMetrics, success, time);
     }
 }

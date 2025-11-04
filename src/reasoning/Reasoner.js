@@ -60,15 +60,22 @@ export class Reasoner {
 
         let allDerivedTasks = [];
 
-        enableSymbolicReasoning && allDerivedTasks.push(...await this._performSymbolicInference(focusSet, maxDerivedTasks - allDerivedTasks.length));
-
-        enableTemporalReasoning && allDerivedTasks.length < maxDerivedTasks && this.temporalReasoner && allDerivedTasks.push(...this._performTemporalInference(focusSet, maxDerivedTasks - allDerivedTasks.length));
-
-        enableModularReasoning && allDerivedTasks.length < maxDerivedTasks && this.systemContext && allDerivedTasks.push(...await this._performModularInference(focusSet, maxDerivedTasks - allDerivedTasks.length));
+        // Apply reasoning sequentially based on enabled modes
+        if (enableSymbolicReasoning) {
+            allDerivedTasks.push(...await this._performSymbolicInference(focusSet, maxDerivedTasks - allDerivedTasks.length));
+        }
+        
+        if (enableTemporalReasoning && allDerivedTasks.length < maxDerivedTasks && this.temporalReasoner) {
+            allDerivedTasks.push(...this._performTemporalInference(focusSet, maxDerivedTasks - allDerivedTasks.length));
+        }
+        
+        if (enableModularReasoning && allDerivedTasks.length < maxDerivedTasks && this.systemContext) {
+            allDerivedTasks.push(...await this._performModularInference(focusSet, maxDerivedTasks - allDerivedTasks.length));
+        }
 
         const finalTasks = allDerivedTasks.slice(0, maxDerivedTasks);
         this.logger.debug(`Total inference produced ${finalTasks.length} derived tasks`);
-
+        
         this.metrics.totalInferences += finalTasks.length;
 
         return finalTasks;
@@ -133,9 +140,7 @@ export class Reasoner {
         const derivedTasks = [];
 
         for (const task of focusSet) {
-            if (derivedTasks.length >= maxModularTasks) {
-                break;
-            }
+            if (derivedTasks.length >= maxModularTasks) break;
 
             try {
                 // Analyze task to determine appropriate strategy

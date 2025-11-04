@@ -14,18 +14,16 @@ export class SequentialRuleProcessor extends RuleProcessor {
      * Process rules against tasks sequentially
      */
     async process(rules, tasks, context) {
-        const results = [];
-
-        // Ensure we have a proper context
         if (!context || typeof context !== 'object') {
             throw new Error('SequentialRuleProcessor requires a valid ReasoningContext');
         }
 
+        const results = [];
+
         // Apply each rule to each task
         for (const rule of rules) {
             for (const task of tasks) {
-                const ruleResults = await this._applyRuleToTask(rule, task, context);
-                results.push(...ruleResults);
+                results.push(...await this._applyRuleToTask(rule, task, context));
             }
         }
 
