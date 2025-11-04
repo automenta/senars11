@@ -168,17 +168,7 @@ class ConflictResolver {
 export class HybridReasoningEngine {
     constructor(nalEngine, lm, config = {}) {
         // Validate constructor arguments
-        if (nalEngine !== null && typeof nalEngine !== 'object') {
-            throw new Error('NAL engine must be an object or null');
-        }
-
-        if (lm !== null && typeof lm !== 'object') {
-            throw new Error('LM must be an object or null');
-        }
-
-        if (config && typeof config !== 'object') {
-            throw new Error('Config must be an object');
-        }
+        this._validateConstructorArgs(nalEngine, lm, config);
 
         this.nalEngine = nalEngine;  // NAL Rule Engine
         this.lm = lm;                // Language Model instance
@@ -191,6 +181,26 @@ export class HybridReasoningEngine {
         this.logger = Logger;
         this.feedbackLoops = new Map(); // Track feedback between systems
         this.conflictResolver = new ConflictResolver();
+    }
+    
+    /**
+     * Validates constructor arguments
+     */
+    _validateConstructorArgs(nalEngine, lm, config) {
+        const validators = [
+            { value: nalEngine, errorMsg: 'NAL engine must be an object or null' },
+            { value: lm, errorMsg: 'LM must be an object or null' }
+        ];
+        
+        validators.forEach(({ value, errorMsg }) => {
+            if (value !== null && typeof value !== 'object') {
+                throw new Error(errorMsg);
+            }
+        });
+
+        if (config && typeof config !== 'object') {
+            throw new Error('Config must be an object');
+        }
     }
 
     /**
@@ -322,8 +332,8 @@ export class HybridReasoningEngine {
      * Fills a reasoning gap using the appropriate system
      */
     async _fillGap(task, gap, context) {
-        return gap.requiresLM
-            ? await this._applyLMForGap(task, gap, context)
+        return gap.requiresLM 
+            ? await this._applyLMForGap(task, gap, context) 
             : await this._applyNALForGap(task, gap, context);
     }
 
@@ -359,26 +369,23 @@ export class HybridReasoningEngine {
     }
 
     /**
-     * Applies NAL reasoning to the given task
+     * Applies reasoning using the specified engine
      */
-    async _applyNALReasoning(task, context) {
-        if (!this.nalEngine) {
-            this.logger.warn('NAL engine not available, returning empty results');
+    async _applyReasoning(task, engine, engineName, context) {
+        if (!engine) {
+            this.logger.warn(`${engineName} engine not available, returning empty results`);
             return [];
         }
 
         try {
-            // Validate the input task
             this._validateTask(task);
-
-            // Apply all applicable NAL rules to the task
-            const results = await this.nalEngine.applyRules(task);
-
-            // Validate results before returning
+            const results = engineName === 'NAL' 
+                ? await engine.applyRules(task)
+                : await this._applyLMProcessing(task, context, engine);
+                
             return Array.isArray(results) ? results : [];
         } catch (error) {
-            this.logger.error('Error in NAL reasoning:', error);
-            // Return empty array but log more details
+            this.logger.error(`Error in ${engineName} reasoning:`, error);
             this.logger.debug('Error details:', {
                 taskValid: task && task.term ? true : false,
                 taskType: typeof task,
@@ -387,69 +394,64 @@ export class HybridReasoningEngine {
             return [];
         }
     }
+    
+    /**
+     * Applies NAL reasoning to the given task
+     */
+    async _applyNALReasoning(task, context) {
+        return this._applyReasoning(task, this.nalEngine, 'NAL', context);
+    }
 
     /**
      * Applies LM reasoning to the given task
      */
     async _applyLMReasoning(task, context) {
-        if (!this.lm) {
-            this.logger.warn('LM not available, returning empty results');
+        return this._applyReasoning(task, this.lm, 'LM', context);
+    }
+    
+    /**
+     * Applies LM processing with rules
+     */
+    async _applyLMProcessing(task, context, lm) {
+        const lmRules = this._getLMReasoningRules();
+        if (!Array.isArray(lmRules)) {
+            this.logger.warn('LM rules is not an array, returning empty results');
             return [];
         }
 
-        try {
-            // Validate the input task
-            this._validateTask(task);
+        const results = [];
+        let ruleProcessingErrors = 0;
 
-            // Use LM rules if available, otherwise use direct LM processing
-            const lmRules = this._getLMReasoningRules();
-            if (!Array.isArray(lmRules)) {
-                this.logger.warn('LM rules is not an array, returning empty results');
-                return [];
+        for (const rule of lmRules) {
+            if (!rule) {
+                this.logger.warn('Null or undefined rule encountered, skipping');
+                continue;
             }
 
-            const results = [];
-            let ruleProcessingErrors = 0;
-
-            for (const rule of lmRules) {
-                if (!rule) {
-                    this.logger.warn('Null or undefined rule encountered, skipping');
-                    continue;
-                }
-
-                try {
-                    if (rule.canApply && rule.canApply(task, context)) {
-                        const ruleResults = await rule.apply(task, context);
-                        if (ruleResults) {
-                            const normalizedResults = Array.isArray(ruleResults.results) ? ruleResults.results : [ruleResults];
-                            results.push(...normalizedResults);
-                        }
+            try {
+                if (rule.canApply && rule.canApply(task, context)) {
+                    const ruleResults = await rule.apply(task, context);
+                    if (ruleResults) {
+                        const normalizedResults = Array.isArray(ruleResults.results) ? ruleResults.results : [ruleResults];
+                        results.push(...normalizedResults);
                     }
-                } catch (ruleError) {
-                    ruleProcessingErrors++;
-                    this.logger.error('Error applying LM rule:', ruleError);
-                    this.logger.debug('Rule error details:', {
-                        ruleName: rule.constructor?.name || rule.id || 'unknown rule',
-                        ruleType: typeof rule
-                    });
-                    // Continue processing other rules
                 }
+            } catch (ruleError) {
+                ruleProcessingErrors++;
+                this.logger.error('Error applying LM rule:', ruleError);
+                this.logger.debug('Rule error details:', {
+                    ruleName: rule.constructor?.name || rule.id || 'unknown rule',
+                    ruleType: typeof rule
+                });
+                // Continue processing other rules
             }
-
-            if (ruleProcessingErrors > 0) {
-                this.logger.warn(`Processed ${lmRules.length} rules with ${ruleProcessingErrors} errors`);
-            }
-
-            return results;
-        } catch (error) {
-            this.logger.error('Error in LM reasoning:', error);
-            this.logger.debug('Error details:', {
-                taskValid: task && task.term ? true : false,
-                taskType: typeof task,
-                errorMessage: error.message
-            });
-            return [];
         }
+
+        if (ruleProcessingErrors > 0) {
+            this.logger.warn(`Processed ${lmRules.length} rules with ${ruleProcessingErrors} errors`);
+        }
+
+        return results;
     }
 
     /**

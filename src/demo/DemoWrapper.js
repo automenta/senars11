@@ -301,18 +301,18 @@ export class DemoWrapper {
     async sendDemoStep(demoId, step, description, data = {}) {
         if (this.webSocketMonitor) {
             // Update the demo state with current step and progress
-            if (this.demoStates[demoId]) {
+            const demoState = this.demoStateManager.getDemoState(demoId);
+            if (demoState) {
                 // Estimate progress based on step number (assuming ~5-6 steps per demo)
                 const estimatedTotalSteps = 6;
                 const progress = Math.min(100, Math.round((step / estimatedTotalSteps) * 100));
 
-                this.demoStates[demoId] = {
-                    ...this.demoStates[demoId],
+                this.demoStateManager.updateDemoState(demoId, {
                     currentStep: step,
                     description,
                     progress,
                     lastStepTime: Date.now()
-                };
+                });
             }
 
             this.webSocketMonitor.broadcastEvent('demoStep', {
@@ -322,7 +322,7 @@ export class DemoWrapper {
                     step,
                     description,
                     data,
-                    progress: this.demoStates[demoId]?.progress || 0,
+                    progress: this.demoStateManager.getDemoState(demoId)?.progress || 0,
                     timestamp: Date.now()
                 }
             });
@@ -359,7 +359,8 @@ export class DemoWrapper {
             });
 
             // Also send individual demo status updates for currently running demos
-            for (const [demoId, state] of Object.entries(this.demoStates || {})) {
+            const allDemoStates = this.demoStateManager.getAllDemoStates();
+            for (const [demoId, state] of Object.entries(allDemoStates)) {
                 this.sendDemoState(demoId, state);
             }
         }
@@ -455,7 +456,7 @@ export class DemoWrapper {
 
         // Send periodic system metrics to visualize in UI
         const updateMetrics = async () => {
-            if (this.isRunning || Object.keys(this.demoStates).some(state => state.state !== 'stopped')) {
+            if (this.isRunning || Object.keys(this.demoStateManager.getAllDemoStates()).some(id => this.demoStateManager.getDemoState(id)?.state !== 'stopped')) {
                 // Get current system state
                 const stats = this.nar.getStats ? this.nar.getStats() : {};
                 const taskManagerStats = stats.taskManagerStats || {};
@@ -465,7 +466,7 @@ export class DemoWrapper {
                     conceptsActive: this.nar.memory ? this.nar.memory.getAllConcepts().length : 0,
                     cyclesCompleted: this.nar.cycleCount || 0,
                     memoryUsage: this.nar.memory ? this.nar.memory.getDetailedStats?.().totalResourceUsage || 0 : 0,
-                    activeDemos: Object.keys(this.demoStates).filter(id => this.demoStates[id].state === 'running').length,
+                    activeDemos: Object.keys(this.demoStateManager.getAllDemoStates()).filter(id => this.demoStateManager.getDemoState(id)?.state === 'running').length,
                     systemLoad: 0 // Placeholder for system load metric
                 };
 

@@ -640,7 +640,36 @@ class TestAnalyzer extends BaseAnalyzer {
   }
 
   async _runFallbackTest() {
-    const altTestResult = spawnSync('npm', ['test', '--', '--json'], {
+    // Try to run the direct jest command first (similar to what the main method does)
+    const jestResult = spawnSync('npx', ['jest', '--json'], {
+      cwd: process.cwd(),
+      timeout: 180000,
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+      env: {
+        ...process.env,
+        NODE_NO_WARNINGS: '1',
+        NODE_OPTIONS: '--experimental-vm-modules'
+      }
+    });
+
+    if (jestResult.status === 0 || jestResult.status === 1) { // 1 might mean tests ran but had failures
+      const output = jestResult.stdout;
+      if (output) {
+        try {
+          const parsedResult = JSON.parse(output.trim());
+          if (parsedResult.testResults) {
+            const individualTestResults = this.extractIndividualTestResults(parsedResult.testResults);
+            return this._buildTestResult(jestResult, parsedResult, individualTestResults);
+          }
+        } catch (parseError) {
+          this.log('⚠️ Jest direct command JSON parsing failed:', 'warn', { error: parseError.message });
+        }
+      }
+    }
+
+    // If the direct jest command didn't work, try npm test but clean the output
+    const altTestResult = spawnSync('npm', ['test', '--silent', '--', '--json'], {
       cwd: process.cwd(),
       timeout: 120000,
       encoding: 'utf8',
@@ -653,20 +682,35 @@ class TestAnalyzer extends BaseAnalyzer {
     }
     
     if (altTestResult.status === 0 || altTestResult.status === 1) {
-      const output = altTestResult.stdout || altTestResult.stderr;
+      let output = altTestResult.stdout || altTestResult.stderr;
       if (!output) {
         this.log('❌ No output from NPM test command', 'error');
         return this.createEmptyTestResult('No output from NPM test');
       }
       
       try {
-        const fallbackParsed = JSON.parse(output.trim());
-        if (fallbackParsed.testResults) {
-          const individualTestResults = this.extractIndividualTestResults(fallbackParsed.testResults);
-          return this._buildTestResult(altTestResult, fallbackParsed, individualTestResults);
+        // Try to extract JSON from mixed output by finding the JSON part
+        // Look for the opening brace and match the closing brace
+        const jsonMatch = output.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const jsonStr = jsonMatch[0];
+          const fallbackParsed = JSON.parse(jsonStr);
+          if (fallbackParsed.testResults) {
+            const individualTestResults = this.extractIndividualTestResults(fallbackParsed.testResults);
+            return this._buildTestResult(altTestResult, fallbackParsed, individualTestResults);
+          }
+        } else {
+          // If we can't find JSON in the output, try parsing the whole thing (fallback)
+          const fallbackParsed = JSON.parse(output.trim());
+          if (fallbackParsed.testResults) {
+            const individualTestResults = this.extractIndividualTestResults(fallbackParsed.testResults);
+            return this._buildTestResult(altTestResult, fallbackParsed, individualTestResults);
+          }
         }
       } catch (parseError) {
         this.log('❌ Fallback test result parsing failed:', 'error', { error: parseError.message });
+        // Log the actual output for debugging purposes
+        this.log('🔍 Actual output that failed to parse:', 'debug', { output: output.substring(0, 200) + '...' });
       }
     }
 

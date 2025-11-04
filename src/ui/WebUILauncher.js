@@ -168,35 +168,44 @@ const setupGracefulShutdown = async (webSocketServer) => {
 
 // Main launch function - abstracted for any data processor
 export const launchDataDrivenUI = async (dataProcessorFn, cliArgs = process.argv.slice(2)) => {
-    let webSocketServer;
+    // Import and use the consolidated launcher
+    const { execFileSync } = await import('child_process');
+    const { fileURLToPath } = await import('url');
+    const { dirname, join } = await import('path');
+    
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = dirname(__filename);
+    
+    // Path to the consolidated launcher
+    const launcherPath = join(__dirname, '../../scripts/ui/launcher.js');
     
     try {
-        const config = parseArgs(cliArgs);
-        webSocketServer = await startWebSocketServer(config);
-        
-        await setupGracefulShutdown({
-            nar: webSocketServer.nar,
-            monitor: webSocketServer.monitor
-        });
-
-        // Process data if provided
-        if (dataProcessorFn && typeof dataProcessorFn === 'function') {
-            await dataProcessorFn(webSocketServer.monitor);
-        }
-
-        const viteProcess = startViteDevServer(config);
-        webSocketServer.viteProcess = viteProcess;
-        
-        console.log('Both servers are running. Press Ctrl+C to stop.');
+        // Execute the consolidated launcher with the provided arguments
+        execFileSync('node', [launcherPath, ...cliArgs], { stdio: 'inherit' });
     } catch (error) {
-        console.error('Failed to start servers:', error.message);
+        console.error('Failed to start UI launcher:', error.message);
         process.exit(1);
     }
 };
 
-// For backwards compatibility when called directly, don't run the main function automatically
-// Only export the function for import
-
-// For backwards compatibility when called directly as a script
-// Don't run automatically to avoid conflicts when imported
-// Only run when explicitly executed as the main module in a real script context
+// For backwards compatibility when called directly, delegate to the consolidated launcher
+if (import.meta.url === `file://${process.argv[1]}`) {
+    // Import and use the consolidated launcher
+    const { execFileSync } = await import('child_process');
+    const { fileURLToPath } = await import('url');
+    const { dirname, join } = await import('path');
+    
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = dirname(__filename);
+    
+    // Path to the consolidated launcher
+    const launcherPath = join(__dirname, '../../scripts/ui/launcher.js');
+    
+    try {
+        // Execute the consolidated launcher with all arguments except the script name
+        execFileSync('node', [launcherPath, ...process.argv.slice(2)], { stdio: 'inherit' });
+    } catch (error) {
+        console.error('Failed to start UI launcher:', error.message);
+        process.exit(1);
+    }
+}

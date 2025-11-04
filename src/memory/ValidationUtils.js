@@ -40,14 +40,6 @@ export class ValidationUtils {
      */
     validate(indexes, logger = null) {
         const validationStartTime = Date.now();
-        const validationTasks = [
-            { key: 'termConsistency', validator: this.validateTermConsistency, error: true },
-            { key: 'orphanedEntries', validator: this.validateOrphanedEntries, error: false },
-            { key: 'duplicates', validator: this.validateDuplicates, error: false },
-            { key: 'invalidReferences', validator: this.validateReferences, error: true },
-            { key: 'customRules', validator: this.validateCustomRules, error: true }
-        ];
-
         const results = {
             timestamp: validationStartTime,
             passed: true,
@@ -59,9 +51,7 @@ export class ValidationUtils {
         };
 
         try {
-            validationTasks.forEach(task => this._executeValidationTask(task, indexes, results));
-
-            // Update validation results history
+            this._runValidationTasks(indexes, results);
             this.updateValidationHistory(results);
         } catch (error) {
             results.passed = false;
@@ -73,6 +63,21 @@ export class ValidationUtils {
         this._validation.lastValidation = results;
 
         return results;
+    }
+    
+    /**
+     * Run all validation tasks
+     */
+    _runValidationTasks(indexes, results) {
+        const validationTasks = [
+            { key: 'termConsistency', validator: this.validateTermConsistency, error: true },
+            { key: 'orphanedEntries', validator: this.validateOrphanedEntries, error: false },
+            { key: 'duplicates', validator: this.validateDuplicates, error: false },
+            { key: 'invalidReferences', validator: this.validateReferences, error: true },
+            { key: 'customRules', validator: this.validateCustomRules, error: true }
+        ];
+
+        validationTasks.forEach(task => this._executeValidationTask(task, indexes, results));
     }
     
     /**
@@ -124,12 +129,12 @@ export class ValidationUtils {
      */
     _validateConceptConsistency(concepts, termId, indexes, result) {
         concepts.forEach(concept => {
-            // Verify concept exists in other relevant indexes
-            if (concept.term.isAtomic) {
-                this._validateAtomicConsistency(concept, termId, indexes, result);
-            } else {
-                this._validateCompoundConsistency(concept, termId, indexes, result);
-            }
+            // Determine if concept is atomic or compound and validate accordingly
+            const validator = concept.term.isAtomic 
+                ? this._validateAtomicConsistency 
+                : this._validateCompoundConsistency;
+            
+            validator.call(this, concept, termId, indexes, result);
         });
     }
     
@@ -474,39 +479,7 @@ export class ValidationUtils {
 
             if (!validationResults.passed) {
                 results.actions.push('Attempting to repair validation issues...');
-
-                // Define repair operations with their conditions and messages
-                const repairOperations = [
-                    {
-                        condition: validationResults.details.termConsistency?.passed === false,
-                        operation: () => this.repairTermConsistency(indexes),
-                        message: (count) => `Repaired ${count} term consistency issues`
-                    },
-                    {
-                        condition: validationResults.details.orphanedEntries?.passed === false,
-                        operation: () => this.removeOrphanedEntries(indexes),
-                        message: (count) => `Removed ${count} orphaned entries`
-                    },
-                    {
-                        condition: validationResults.details.duplicates?.passed === false,
-                        operation: () => this.removeDuplicates(indexes),
-                        message: (count) => `Removed ${count} duplicate entries`
-                    },
-                    {
-                        condition: validationResults.details.invalidReferences?.passed === false,
-                        operation: () => this.repairInvalidReferences(indexes, logger),
-                        message: (count) => `Repaired ${count} invalid references`
-                    }
-                ];
-
-                // Execute repair operations
-                repairOperations
-                    .filter(op => op.condition)
-                    .forEach(op => {
-                        const count = op.operation();
-                        results.repaired += count;
-                        results.actions.push(op.message(count));
-                    });
+                this._executeRepairs(validationResults, indexes, results, logger);
             } else {
                 results.actions.push('No validation issues found, no repairs needed');
             }
@@ -517,6 +490,43 @@ export class ValidationUtils {
 
         results.duration = Date.now() - repairStartTime;
         return results;
+    }
+    
+    /**
+     * Execute repair operations based on validation results
+     */
+    _executeRepairs(validationResults, indexes, results, logger) {
+        const repairOperations = [
+            {
+                condition: validationResults.details.termConsistency?.passed === false,
+                operation: () => this.repairTermConsistency(indexes),
+                message: (count) => `Repaired ${count} term consistency issues`
+            },
+            {
+                condition: validationResults.details.orphanedEntries?.passed === false,
+                operation: () => this.removeOrphanedEntries(indexes),
+                message: (count) => `Removed ${count} orphaned entries`
+            },
+            {
+                condition: validationResults.details.duplicates?.passed === false,
+                operation: () => this.removeDuplicates(indexes),
+                message: (count) => `Removed ${count} duplicate entries`
+            },
+            {
+                condition: validationResults.details.invalidReferences?.passed === false,
+                operation: () => this.repairInvalidReferences(indexes, logger),
+                message: (count) => `Repaired ${count} invalid references`
+            }
+        ];
+
+        // Execute repair operations
+        repairOperations
+            .filter(op => op.condition)
+            .forEach(op => {
+                const count = op.operation();
+                results.repaired += count;
+                results.actions.push(op.message(count));
+            });
     }
 
     repairTermConsistency(indexes) {

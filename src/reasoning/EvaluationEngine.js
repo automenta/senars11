@@ -149,47 +149,28 @@ export class EvaluationEngine {
     }
 
     _evaluateBooleanFunction(term, variableBindings) {
-        const booleanEvaluators = {
-            '&': '_evaluateAndFunction',
-            '|': '_evaluateOrFunction',
-            '==>': '_evaluateImplicationFunction',
-            '<=>': '_evaluateEquivalenceFunction'
+        const { operator, components } = term;
+        
+        // Ensure we have exactly 2 components for binary operations or at least 1 for others
+        if (['==>', '<=>'].includes(operator) && components.length !== 2) {
+            return this._createResult(SYSTEM_ATOMS.Null, false, `${operator} requires exactly 2 arguments`);
+        }
+        
+        const boundComponents = components.map(comp => this._substituteVariables(comp, variableBindings));
+        
+        const evaluators = {
+            '&': () => BooleanEvaluator.evaluateAnd(boundComponents),
+            '|': () => BooleanEvaluator.evaluateOr(boundComponents),
+            '==>': () => BooleanEvaluator.evaluateImplication(boundComponents),
+            '<=>': () => BooleanEvaluator.evaluateEquivalence(boundComponents)
         };
 
-        const evaluator = booleanEvaluators[term.operator];
-        return evaluator ? this[evaluator](term, variableBindings) 
-            : this._evaluateNonOperation(term, null, variableBindings);
-    }
-
-    _evaluateAndFunction(term, variableBindings) {
-        const components = term.components.map(comp => this._substituteVariables(comp, variableBindings));
-        const { result, message } = BooleanEvaluator.evaluateAnd(components);
-        return this._createBooleanResult(result, message);
-    }
-
-    _evaluateOrFunction(term, variableBindings) {
-        const components = term.components.map(comp => this._substituteVariables(comp, variableBindings));
-        const { result, message } = BooleanEvaluator.evaluateOr(components);
-        return this._createBooleanResult(result, message);
-    }
-
-    _evaluateImplicationFunction(term, variableBindings) {
-        if (term.components.length !== 2) {
-            return this._createResult(SYSTEM_ATOMS.Null, false, 'Implication requires exactly 2 arguments');
+        const evaluator = evaluators[operator];
+        if (!evaluator) {
+            return this._evaluateNonOperation(term, null, variableBindings);
         }
         
-        const components = term.components.map(comp => this._substituteVariables(comp, variableBindings));
-        const { result, message } = BooleanEvaluator.evaluateImplication(components);
-        return this._createBooleanResult(result, message);
-    }
-
-    _evaluateEquivalenceFunction(term, variableBindings) {
-        if (term.components.length !== 2) {
-            return this._createResult(SYSTEM_ATOMS.Null, false, 'Equivalence requires exactly 2 arguments');
-        }
-        
-        const components = term.components.map(comp => this._substituteVariables(comp, variableBindings));
-        const { result, message } = BooleanEvaluator.evaluateEquivalence(components);
+        const { result, message } = evaluator();
         return this._createBooleanResult(result, message);
     }
 
@@ -254,16 +235,22 @@ export class EvaluationEngine {
     }
 
     _isOperationWithVariable(term) {
-        return term.isCompound && term.operator === '^' && term.components?.length === 2 &&
-               term.components[1].isCompound && term.components[1].operator === ',' &&
+        return term.isCompound && 
+               term.operator === '^' && 
+               term.components?.length === 2 &&
+               term.components[1].isCompound && 
+               term.components[1].operator === ',' &&
                term.components[1].components?.some(arg => arg.name?.startsWith('?'));
     }
 
     _isAtomicOrNumeric(term) {
-        if (term.isAtomic) return true;
-
+        return term.isAtomic || this._isNumericValue(term);
+    }
+    
+    _isNumericValue(term) {
         const value = this._termToValue(term);
-        return typeof value === 'number' || (Array.isArray(value) && value.every(v => typeof v === 'number'));
+        return typeof value === 'number' || 
+               (Array.isArray(value) && value.every(v => typeof v === 'number'));
     }
 
     async _solveForVariableInOperation(operation, target, variableBindings) {
@@ -326,10 +313,10 @@ export class EvaluationEngine {
 
     _isFunctionalEvaluation(term) {
         if (!term.isCompound || !this.operatorRules[term.operator]) return false;
-        if (term.operator === '--') {
-            return term.components?.length > 0 && this._isBooleanValue(term.components[0]);
-        }
-        return term.components?.every(comp => this._isBooleanValue(comp));
+        
+        return term.operator === '--' 
+            ? term.components?.length > 0 && this._isBooleanValue(term.components[0])
+            : term.components?.every(comp => this._isBooleanValue(comp));
     }
 
     _isBooleanValue(term) {
@@ -339,10 +326,7 @@ export class EvaluationEngine {
     _applyFunctionalRule(operator, components) {
         try {
             const rule = this.operatorRules[operator]?.functional;
-            if (rule) return rule(components);
-            
-            const { result } = BooleanEvaluator.functionalReduction(operator, components);
-            return result;
+            return rule ? rule(components) : BooleanEvaluator.functionalReduction(operator, components).result;
         } catch (error) {
             console.error(`Error during functional reduction for operator ${operator}:`, error.message);
             return SYSTEM_ATOMS.Null;
@@ -356,22 +340,14 @@ export class EvaluationEngine {
                 return rule(components);
             } catch (error) {
                 console.error(`Error during structural reduction for operator ${operator}:`, error.message);
-                const safeOperator = operator || 'UNKNOWN';
-                const safeComponents = components || [];
-                const componentNames = safeComponents.map(comp => comp.name || comp.toString());
-                return new Term('compound', `(${safeOperator}, ${componentNames.join(', ')})`, safeComponents, safeOperator);
             }
         }
         
         const safeOperator = operator || 'UNKNOWN';
         const safeComponents = components || [];
-        return this._createCompoundTerm(safeOperator, safeComponents);
-    }
-    
-    _createCompoundTerm(operator, components) {
-        const componentNames = components.map(comp => comp.name || comp.toString());
-        const termName = `(${operator}, ${componentNames.join(', ')})`;
-        return new Term('compound', termName, components, operator);
+        const componentNames = safeComponents.map(comp => comp.name || comp.toString());
+        const termName = `(${safeOperator}, ${componentNames.join(', ')})`;
+        return new Term('compound', termName, safeComponents, safeOperator);
     }
 
     // Functional reduction rules (boolean evaluation)
@@ -458,10 +434,10 @@ export class EvaluationEngine {
         }
 
         const [ant, cons] = components;
-        return isFalse(ant) || isTrue(cons) ? SYSTEM_ATOMS.True :
-               isTrue(ant) && isFalse(cons) ? SYSTEM_ATOMS.False :
-               isNull(ant) || isNull(cons) ? SYSTEM_ATOMS.Null :
-               new Term('compound', `(==>, ${ant.name}, ${cons.name})`, [ant, cons], '==>');
+        if (isFalse(ant) || isTrue(cons)) return SYSTEM_ATOMS.True;
+        if (isTrue(ant) && isFalse(cons)) return SYSTEM_ATOMS.False;
+        if (isNull(ant) || isNull(cons)) return SYSTEM_ATOMS.Null;
+        return new Term('compound', `(==>, ${ant.name}, ${cons.name})`, [ant, cons], '==>');
     }
 
     _reduceEquivalenceStructural(components) {
@@ -476,10 +452,10 @@ export class EvaluationEngine {
         const bothFalse = isFalse(left) && isFalse(right);
         const trueFalse = (isTrue(left) && isFalse(right)) || (isFalse(left) && isTrue(right));
         
-        return bothTrue || bothFalse ? SYSTEM_ATOMS.True :
-               trueFalse ? SYSTEM_ATOMS.False :
-               isNull(left) || isNull(right) ? SYSTEM_ATOMS.Null :
-               new Term('compound', 'EQUIVALENCE', [left, right], '<=>');
+        if (bothTrue || bothFalse) return SYSTEM_ATOMS.True;
+        if (trueFalse) return SYSTEM_ATOMS.False;
+        if (isNull(left) || isNull(right)) return SYSTEM_ATOMS.Null;
+        return new Term('compound', 'EQUIVALENCE', [left, right], '<=>');
     }
 
     cascadeReduce(term) {
@@ -642,8 +618,7 @@ export class EvaluationEngine {
             return SYSTEM_ATOMS[value];
         }
 
-        if (value instanceof Term) return value;
-        return this._createTermWithErrorHandling('atom', String(value));
+        return value instanceof Term ? value : this._createTermWithErrorHandling('atom', String(value));
     }
 
     _createTermWithErrorHandling(type, name) {
@@ -811,6 +786,7 @@ export class EvaluationEngine {
         return VariableBindingUtils.matchAndBindVariables(leftTerm, rightTerm, variableBindings);
     }
 
+    // _matchAndBindVariables is an alias for the utils function
     _matchAndBindVariables(leftTerm, rightTerm, variableBindings) {
         return VariableBindingUtils.matchAndBindVariables(leftTerm, rightTerm, variableBindings);
     }
