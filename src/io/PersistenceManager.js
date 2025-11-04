@@ -1,11 +1,11 @@
 import fs from 'fs/promises';
 
 class PersistenceAdapter {
-    async save(state, filePath) {
+    async save(state, identifier) {
         throw new Error('save method must be implemented by subclass');
     }
 
-    async load(filePath) {
+    async load(identifier) {
         throw new Error('load method must be implemented by subclass');
     }
 }
@@ -14,7 +14,7 @@ class FileSystemAdapter extends PersistenceAdapter {
     async save(state, filePath) {
         const serializedState = JSON.stringify(state, null, 2);
         await fs.writeFile(filePath, serializedState);
-        return {success: true, filePath, size: serializedState.length};
+        return {success: true, identifier: filePath, size: serializedState.length};
     }
 
     async load(filePath) {
@@ -31,7 +31,7 @@ class MemoryAdapter extends PersistenceAdapter {
 
     async save(state, key = 'default') {
         this.storage.set(key, JSON.parse(JSON.stringify(state)));
-        return {success: true, key};
+        return {success: true, identifier: key};
     }
 
     async load(key = 'default') {
@@ -39,16 +39,16 @@ class MemoryAdapter extends PersistenceAdapter {
     }
 }
 
-class PersistenceManager {
-    constructor(options = {}) {
-        const defaults = Object.freeze({
-            defaultAdapter: 'file',
-            defaultPath: './agent.json'
-        });
+const DEFAULT_CONFIG = Object.freeze({
+    defaultAdapter: 'file',
+    defaultPath: './agent.json'
+});
 
+export class PersistenceManager {
+    constructor(options = {}) {
         this.adapters = new Map();
-        this.defaultAdapter = options.defaultAdapter || defaults.defaultAdapter;
-        this._defaultPath = options.defaultPath || defaults.defaultPath;
+        this.defaultAdapter = options.defaultAdapter || DEFAULT_CONFIG.defaultAdapter;
+        this._defaultPath = options.defaultPath || DEFAULT_CONFIG.defaultPath;
 
         this._registerDefaultAdapters();
     }
@@ -81,12 +81,12 @@ class PersistenceManager {
         return adapter;
     }
 
-    async save(state, adapterName = this.defaultAdapter, filePath = this.defaultPath) {
-        return await this.getAdapter(adapterName).save(state, filePath);
+    async save(state, adapterName = this.defaultAdapter, identifier = this.defaultPath) {
+        return await this.getAdapter(adapterName).save(state, identifier);
     }
 
-    async load(adapterName = this.defaultAdapter, filePath = this.defaultPath) {
-        return await this.getAdapter(adapterName).load(filePath);
+    async load(adapterName = this.defaultAdapter, identifier = this.defaultPath) {
+        return await this.getAdapter(adapterName).load(identifier);
     }
 
     async saveToDefault(state) {
@@ -97,9 +97,9 @@ class PersistenceManager {
         return this.load(this.defaultAdapter, this.defaultPath);
     }
 
-    async exists(filePath = this.defaultPath) {
+    async exists(identifier = this.defaultPath) {
         try {
-            await fs.access(filePath);
+            await fs.access(identifier);
             return true;
         } catch {
             return false;
@@ -107,4 +107,5 @@ class PersistenceManager {
     }
 }
 
-export {PersistenceManager, PersistenceAdapter, FileSystemAdapter, MemoryAdapter};
+// Maintain backward compatibility
+export {PersistenceAdapter, FileSystemAdapter, MemoryAdapter};

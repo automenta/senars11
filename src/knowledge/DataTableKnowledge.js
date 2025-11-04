@@ -35,19 +35,19 @@ export class DataTableKnowledge extends Knowledge {
   async processData() {
     if (!this.df) await this.initDataTable(this.data);
     let processedDf = this.df;
-    if (this.options.handleMissingValues) processedDf = processedDf.dropna();
-    if (this.options.removeDuplicates) processedDf = processedDf.dropDuplicates();
+    if (this.options.handleMissingValues) processedDf = processedDf?.dropna?.();
+    if (this.options.removeDuplicates) processedDf = processedDf?.dropDuplicates?.();
     this.df = processedDf;
     return this.df;
   }
 
   async toTasks() {
     if (!this.df) await this.processData();
-    const tasks = [], rows = await this.df.values, cols = await this.df.columns;
-    for (let i = 0; i < rows.length; i++) {
-      const row = rows[i];
+    const tasks = [], rows = this.df?.values || [], cols = this.df?.columns || [];
+    for (let i = 0; i < (rows.length || 0); i++) {
+      const row = rows[i] || [];
       const rowObj = {};
-      cols.forEach((col, idx) => rowObj[col] = row[idx]);
+      (cols || []).forEach((col, idx) => rowObj[col] = row[idx]);
       const task = await this.rowToTask(rowObj, i);
       if (task) tasks.push(task);
     }
@@ -67,30 +67,31 @@ export class DataTableKnowledge extends Knowledge {
 
   async getItems() {
     if (!this.df) await this.processData();
-    const rows = await this.df.values, cols = await this.df.columns;
-    return rows.map(row => {
+    const rows = this.df?.values || [], cols = this.df?.columns || [];
+    return (rows || []).map(row => {
       const item = {};
-      cols.forEach((col, idx) => item[col] = row[idx]);
+      (cols || []).forEach((col, idx) => item[col] = (row || [])[idx]);
       return item;
     });
   }
 
   async getSummary() {
     if (!this.df) await this.processData();
+    const shape = this.df?.shape || [0, 0];
     const summary = {
       tableName: this.tableName,
-      rowCount: await this.df.shape[0],
-      columnCount: await this.df.shape[1],
-      columns: await this.df.columns,
+      rowCount: shape[0],
+      columnCount: shape[1],
+      columns: this.df?.columns || [],
       statistics: {}
     };
     
     const numericCols = [];
-    const allCols = await this.df.columns;
+    const allCols = this.df?.columns || [];
     for (const col of allCols) {
       try {
-        const colData = this.df.column(col);
-        if (['int32', 'float32', 'float64'].includes(colData.dtype)) {
+        const colData = this.df?.column?.(col);
+        if (colData && ['int32', 'float32', 'float64'].includes(colData.dtype)) {
           numericCols.push(col);
         }
       } catch (e) {}
@@ -98,17 +99,22 @@ export class DataTableKnowledge extends Knowledge {
     
     for (const col of numericCols) {
       try {
-        const colData = this.df.column(col);
-        const mean = await colData.mean();
-        const std = await colData.std();
-        const min = await colData.min();
-        const max = await colData.max();
-        summary.statistics[col] = {
-          mean: parseFloat(mean.toFixed(4)),
-          std: parseFloat(std.toFixed(4)),
-          min: parseFloat(min.toFixed(4)),
-          max: parseFloat(max.toFixed(4))
-        };
+        const colData = this.df?.column?.(col);
+        if (!colData) continue;
+        
+        const mean = await colData.mean?.();
+        const std = await colData.std?.();
+        const min = await colData.min?.();
+        const max = await colData.max?.();
+        
+        if (mean !== undefined && std !== undefined && min !== undefined && max !== undefined) {
+          summary.statistics[col] = {
+            mean: parseFloat(mean.toFixed(4)),
+            std: parseFloat(std.toFixed(4)),
+            min: parseFloat(min.toFixed(4)),
+            max: parseFloat(max.toFixed(4))
+          };
+        }
       } catch (e) {
         console.warn(`Could not calculate statistics for column ${col}: ${e.message}`);
       }
@@ -122,6 +128,6 @@ export class DataTableKnowledge extends Knowledge {
 
   async describe() {
     if (!this.df) await this.processData();
-    return await this.df.describe();
+    return await this.df?.describe?.();
   }
 }

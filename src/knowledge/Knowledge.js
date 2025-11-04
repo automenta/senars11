@@ -32,8 +32,8 @@ export class Knowledge {
     throw new Error("initDataFrame must be implemented in concrete class that uses danfojs");
   }
 
-  getDataFrame() { 
-    return this.df; 
+  getDataFrame() {
+    return this.df;
   }
 
   async transform(transformFn) {
@@ -43,12 +43,12 @@ export class Knowledge {
 
   async filter(condition) {
     if (!this.df) await this.initDataFrame();
-    return this.df.query ? this.df.query(condition) : [];
+    return this.df?.query ? this.df.query(condition) : [];
   }
 
   async groupBy(column) {
     if (!this.df) await this.initDataFrame();
-    return this.df.groupby ? this.df.groupby(column) : {};
+    return this.df?.groupby ? this.df.groupby(column) : {};
   }
 
   async aggregate(stats) {

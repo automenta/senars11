@@ -1,20 +1,20 @@
-import { Knowledge, TruthValueUtils } from './Knowledge.js';
+import { Knowledge } from './Knowledge.js';
 import { DataTableKnowledge } from './DataTableKnowledge.js';
 
-export class KnowledgeFactory {
-  static knowledgeRegistry = {};
+const KNOWLEDGE_REGISTRY = new Map();
 
+export class KnowledgeFactory {
   static registerKnowledgeType(type, knowledgeClass) {
     if (!(knowledgeClass.prototype instanceof Knowledge)) {
       throw new Error(`Knowledge class must extend the Knowledge base class`);
     }
-    this.knowledgeRegistry[type] = knowledgeClass;
+    KNOWLEDGE_REGISTRY.set(type, knowledgeClass);
   }
 
   static createKnowledge(type, data, options = {}) {
-    const KnowledgeClass = this.knowledgeRegistry[type];
+    const KnowledgeClass = KNOWLEDGE_REGISTRY.get(type);
     if (!KnowledgeClass) {
-      throw new Error(`Unknown knowledge type: ${type}. Available types: ${Object.keys(this.knowledgeRegistry).join(', ')}`);
+      throw new Error(`Unknown knowledge type: ${type}. Available types: ${[...KNOWLEDGE_REGISTRY.keys()].join(', ')}`);
     }
     return new KnowledgeClass(data, options);
   }
@@ -30,6 +30,6 @@ export class KnowledgeFactory {
   }
   
   static getAvailableTypes() {
-    return Object.keys(this.knowledgeRegistry);
+    return [...KNOWLEDGE_REGISTRY.keys()];
   }
 }

@@ -11,19 +11,19 @@ export class FileAnalysisKnowledge extends DataTableKnowledge {
 
   async processData() {
     if (!this.df) {
-      if (this.data && this.data.fileDetails) {
+      if (this.data?.fileDetails) {
         const flatData = this.data.fileDetails.map(file => ({
           path: file.path,
           directory: file.directory,
           lines: file.lines,
           size: file.size,
-          complexity_cyclomatic: file.complexity ? file.complexity.cyclomatic : 0,
-          complexity_functionCount: file.complexity ? file.complexity.functionCount : 0,
-          complexity_classCount: file.complexity ? file.complexity.classCount : 0,
-          complexity_conditionalCount: file.complexity ? file.complexity.conditionalCount : 0
+          complexity_cyclomatic: file.complexity?.cyclomatic || 0,
+          complexity_functionCount: file.complexity?.functionCount || 0,
+          complexity_classCount: file.complexity?.classCount || 0,
+          complexity_conditionalCount: file.complexity?.conditionalCount || 0
         }));
         this.df = new dfd.DataFrame(flatData);
-      } else if (this.data && this.data.fileAnalysis) {
+      } else if (this.data?.fileAnalysis) {
         const flatData = this.data.fileAnalysis.map(file => ({
           file_path: file.filePath,
           line_coverage: file.lineCoverage,
@@ -106,11 +106,11 @@ export class FileAnalysisKnowledge extends DataTableKnowledge {
   async createRelationships() {
     if (!this.df) await this.processData();
     
-    const relationships = [], rows = await this.df.values, cols = await this.df.columns;
+    const relationships = [], rows = this.df?.values || [], cols = this.df?.columns || [];
     
-    for (let i = 0; i < rows.length; i++) {
+    for (let i = 0; i < (rows.length || 0); i++) {
       const row = {};
-      cols.forEach((col, idx) => row[col] = rows[i][idx]);
+      (cols || []).forEach((col, idx) => row[col] = (rows[i] || [])[idx]);
       
       const fileName = row.path || row.file_path || `file_${i}`;
       const filePath = fileName.replace(/[^\w\s-]/g, '_').replace(/\s+/g, '_');
@@ -159,7 +159,6 @@ export class TestResultKnowledge extends DataTableKnowledge {
   async rowToTask(row, index) {
     try {
       const testName = (row.name || `test_${index}`).replace(/[^\w\s-]/g, '_').replace(/\s+/g, '_');
-      const suiteName = (row.suite || 'default_suite').replace(/[^\w\s-]/g, '_').replace(/\s+/g, '_');
       const tasks = [];
       
       if (row.status) {
@@ -203,17 +202,16 @@ export class TestResultKnowledge extends DataTableKnowledge {
   async createRelationships() {
     if (!this.df) await this.processData();
     
-    const relationships = [], rows = await this.df.values, cols = await this.df.columns;
+    const relationships = [], rows = this.df?.values || [], cols = this.df?.columns || [];
     
-    for (let i = 0; i < rows.length; i++) {
+    for (let i = 0; i < (rows.length || 0); i++) {
       const row = {};
-      cols.forEach((col, idx) => row[col] = rows[i][idx]);
+      (cols || []).forEach((col, idx) => row[col] = (rows[i] || [])[idx]);
       
       const testName = (row.name || `test_${i}`).replace(/[^\w\s-]/g, '_').replace(/\s+/g, '_');
-      const suiteName = (row.suite || 'default_suite').replace(/[^\w\s-]/g, '_').replace(/\s+/g, '_');
       
       const suiteRel = await this.createTasksWithTemplate('containment', {
-        container: suiteName,
+        container: (row.suite || 'default_suite').replace(/[^\w\s-]/g, '_').replace(/\s+/g, '_'),
         contained: testName,
         relationship: 'in_suite',
         truth: { frequency: 1.0, confidence: 0.9 }
@@ -313,11 +311,11 @@ export class DirectoryStructureKnowledge extends DataTableKnowledge {
   async createRelationships() {
     if (!this.df) await this.processData();
     
-    const relationships = [], rows = await this.df.values, cols = await this.df.columns;
+    const relationships = [], rows = this.df?.values || [], cols = this.df?.columns || [];
     
-    for (let i = 0; i < rows.length; i++) {
+    for (let i = 0; i < (rows.length || 0); i++) {
       const row = {};
-      cols.forEach((col, idx) => row[col] = rows[i][idx]);
+      (cols || []).forEach((col, idx) => row[col] = (rows[i] || [])[idx]);
       
       const dirName = (row.path || `directory_${i}`).replace(/[^\w\s-]/g, '_').replace(/\s+/g, '_');
       
@@ -325,7 +323,7 @@ export class DirectoryStructureKnowledge extends DataTableKnowledge {
         const parentDir = row.parentDirectory.replace(/[^\w\s-]/g, '_').replace(/\s+/g, '_');
         const childRel = await this.createTasksWithTemplate('relationship', {
           subject: `"${dirName}"`,
-          relation: '-->', 
+          relation: '-->',
           object: `child_of) --> "${parentDir}"`,
           truth: { frequency: 1.0, confidence: 0.85 }
         });
@@ -392,11 +390,11 @@ export class DependencyGraphKnowledge extends DataTableKnowledge {
   async createRelationships() {
     if (!this.df) await this.processData();
     
-    const relationships = [], rows = await this.df.values, cols = await this.df.columns;
+    const relationships = [], rows = this.df?.values || [], cols = this.df?.columns || [];
     
-    for (let i = 0; i < rows.length; i++) {
+    for (let i = 0; i < (rows.length || 0); i++) {
       const row = {};
-      cols.forEach((col, idx) => row[col] = rows[i][idx]);
+      (cols || []).forEach((col, idx) => row[col] = (rows[i] || [])[idx]);
       
       if (row.source && row.target) {
         const source = row.source.replace(/[^\w\s-]/g, '_').replace(/\s+/g, '_');
@@ -429,7 +427,7 @@ export class FlexibleDataTableKnowledge extends DataTableKnowledge {
   }
 
   async rowToTask(row, index) {
-    const cols = await this.df.columns;
+    const cols = this.df?.columns || [];
     if (cols.length > 0) {
       const firstCol = cols[0];
       const value = row[firstCol];

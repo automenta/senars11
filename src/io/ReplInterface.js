@@ -14,9 +14,46 @@ const COMMANDS = Object.freeze({
     demo: ['demo', 'd', 'example']
 });
 
+const EXAMPLE_MAP = Object.freeze({
+    'agent-builder': '../examples/agent-builder-demo.js',
+    'agent-builder-demo': '../examples/agent-builder-demo.js',
+    'causal-reasoning': '../examples/causal-reasoning-demo.js',
+    'causal-reasoning-demo': '../examples/causal-reasoning-demo.js',
+    'inductive-reasoning': '../examples/inductive-reasoning-demo.js',
+    'inductive-reasoning-demo': '../examples/inductive-reasoning-demo.js',
+    'syllogism': '../examples/syllogism-demo.js',
+    'syllogism-demo': '../examples/syllogism-demo.js',
+    'temporal': '../examples/temporal-reasoning-demo.js',
+    'temporal-reasoning': '../examples/temporal-reasoning-demo.js',
+    'temporal-reasoning-demo': '../examples/temporal-reasoning-demo.js',
+    'performance': '../examples/performance-benchmark.js',
+    'performance-benchmark': '../examples/performance-benchmark.js',
+    'phase10-complete': '../examples/phase10-complete-demo.js',
+    'phase10-final': '../examples/phase10-final-demo.js',
+    'phase10-final-demo': '../examples/phase10-final-demo.js',
+    'websocket': '../examples/websocket-monitoring-test.js',
+    'websocket-demo': '../examples/websocket-monitoring-test.js',
+    'websocket-monitoring': '../examples/websocket-monitoring-test.js',
+    'lm-providers': '../examples/lm-providers.js',
+    'basic-usage': '../examples/basic-usage.js'
+});
+
+const EXAMPLES_LIST = Object.freeze([
+    'agent-builder-demo     - Demonstrates building agents with various capabilities',
+    'causal-reasoning       - Shows causal reasoning capabilities',
+    'inductive-reasoning    - Demonstrates inductive inference',
+    'syllogism              - Classic syllogistic reasoning examples',
+    'temporal               - Temporal reasoning demonstrations',
+    'performance            - Performance benchmarking example',
+    'phase10-complete       - Full phase 10 reasoning demonstration',
+    'phase10-final          - Final comprehensive demonstration',
+    'websocket              - WebSocket monitoring example',
+    'lm-providers           - Language model provider integrations'
+]);
+
 export class ReplInterface {
     constructor(config = {}) {
-        this.nar = new NAR(config.nar || {});
+        this.nar = config.nar ? new NAR(config.nar) : new NAR();
         this.rl = readline.createInterface({input: process.stdin, output: process.stdout});
         this.sessionState = {history: [], lastResult: null, startTime: Date.now()};
         this.commands = this._createCommandMap();
@@ -26,13 +63,11 @@ export class ReplInterface {
     }
 
     _createCommandMap() {
-        const commandMap = new Map();
-        for (const [method, aliases] of Object.entries(COMMANDS)) {
-            for (const alias of aliases) {
-                commandMap.set(alias, this[`_${method}`].bind(this));
-            }
-        }
-        return commandMap;
+        return new Map(
+            Object.entries(COMMANDS).flatMap(([method, aliases]) =>
+                aliases.map(alias => [alias, this[`_${method}`].bind(this)])
+            )
+        );
     }
 
     async start() {
@@ -64,9 +99,12 @@ export class ReplInterface {
         process.stdout.write('\nNAR> ');
     }
 
-    async _executeCommand(cmd, args) {
+    async _executeCommand(cmd, ...args) {
         const commandFn = this.commands.get(cmd);
-        if (!commandFn) return console.log(`Unknown command: ${cmd}. Type 'help' for available commands.`);
+        if (!commandFn) {
+            console.log(`Unknown command: ${cmd}. Type 'help' for available commands.`);
+            return;
+        }
 
         try {
             const result = await commandFn(args);
@@ -92,7 +130,7 @@ export class ReplInterface {
 
     _showSuccess(duration) {
         console.log(`✓ Input processed successfully (${duration}ms)`);
-        const beliefs = this.nar.getBeliefs();
+        const beliefs = this.nar.getBeliefs?.() || [];
         if (beliefs.length === 0) return;
 
         console.log('Latest beliefs:');
@@ -100,12 +138,11 @@ export class ReplInterface {
     }
     
     _displayBeliefs(beliefs) {
-        beliefs.forEach(task =>
-            console.log(`  ${this._formatBelief(task)}`));
+        beliefs.forEach(task => console.log(`  ${this._formatBelief(task)}`));
     }
     
     _formatBelief(task) {
-        return `${task.term.name} ${task.truth?.toString() || ''}`;
+        return `${task.term?.name || ''} ${task.truth?.toString() || ''}`;
     }
 
     _help() {
@@ -134,41 +171,43 @@ Narsese input examples:
     }
 
     _status() {
-        const stats = this.nar.getStats();
+        const stats = this.nar.getStats?.() || {};
+        const memoryStats = stats.memoryStats || {};
         return `System Status:
   Running: ${stats.isRunning ? 'Yes' : 'No'}
-  Cycles: ${stats.cycleCount}
-  Memory Concepts: ${stats.memoryStats.conceptCount}
-  Focus Tasks: ${stats.memoryStats.focusTaskCount}
+  Cycles: ${stats.cycleCount || 0}
+  Memory Concepts: ${memoryStats.conceptCount || 0}
+  Focus Tasks: ${memoryStats.focusTaskCount || 0}
   Total Tasks: ${stats.taskManagerStats?.totalTasks || 'N/A'}
   Start Time: ${new Date(this.sessionState.startTime).toISOString()}`;
     }
 
     _memory() {
-        const stats = this.nar.getStats();
+        const stats = this.nar.getStats?.() || {};
+        const memoryStats = stats.memoryStats || {};
         return `Memory Statistics:
-  Concepts: ${stats.memoryStats.conceptCount}
-  Tasks in Memory: ${stats.memoryStats.taskCount}
-  Focus Set Size: ${stats.memoryStats.focusSize}
-  Concept Capacity: ${stats.memoryStats.capacity}
-  Forgetting Threshold: ${stats.memoryStats.forgettingThreshold}
-  Average Concept Priority: ${stats.memoryStats.avgPriority?.toFixed(3) || 'N/A'}`;
+  Concepts: ${memoryStats.conceptCount || 0}
+  Tasks in Memory: ${memoryStats.taskCount || 0}
+  Focus Set Size: ${memoryStats.focusSize || 0}
+  Concept Capacity: ${memoryStats.capacity || 'N/A'}
+  Forgetting Threshold: ${memoryStats.forgettingThreshold || 'N/A'}
+  Average Concept Priority: ${memoryStats.avgPriority?.toFixed(3) || 'N/A'}`;
     }
 
     _trace() {
-        const beliefs = this.nar.getBeliefs();
+        const beliefs = this.nar.getBeliefs?.() || [];
         if (beliefs.length === 0) {
             return 'No recent beliefs found.';
         }
 
         return [
             'Recent Beliefs (last 5):',
-            ...beliefs.slice(-5).map(task => `  ${task.term.name} ${task.truth?.toString() || ''}`)
+            ...beliefs.slice(-5).map(task => `  ${task.term?.name || ''} ${task.truth?.toString() || ''}`)
         ].join('\n');
     }
 
     _reset() {
-        this.nar.reset();
+        this.nar.reset?.();
         this.sessionState.history = [];
         this.sessionState.lastResult = null;
         return 'NAR system reset successfully.';
@@ -176,9 +215,11 @@ Narsese input examples:
 
     async _save() {
         try {
-            const state = this.nar.serialize();
+            const state = this.nar.serialize?.();
+            if (!state) return 'Serialization not supported by NAR instance.';
+            
             const result = await this.persistenceManager.saveToDefault(state);
-            return `NAR state saved successfully to ${result.filePath} (${Math.round(result.size / 1024)} KB)`;
+            return `NAR state saved successfully to ${result.identifier} (${Math.round(result.size / 1024)} KB)`;
         } catch (error) {
             return `Error saving NAR state: ${error.message}`;
         }
@@ -192,7 +233,7 @@ Narsese input examples:
             }
 
             const state = await this.persistenceManager.loadFromDefault();
-            const success = await this.nar.deserialize(state);
+            const success = await this.nar.deserialize?.(state);
 
             return success
                 ? `NAR state loaded successfully from ${this.persistenceManager.defaultPath}`
@@ -203,56 +244,18 @@ Narsese input examples:
     }
 
     async _demo(args) {
-        const exampleName = args && args.length > 0 ? args[0] : null;
+        const exampleName = args?.[0];
 
         if (!exampleName) {
-            const examples = [
-                'agent-builder-demo     - Demonstrates building agents with various capabilities',
-                'causal-reasoning       - Shows causal reasoning capabilities',
-                'inductive-reasoning    - Demonstrates inductive inference',
-                'syllogism              - Classic syllogistic reasoning examples',
-                'temporal               - Temporal reasoning demonstrations',
-                'performance            - Performance benchmarking example',
-                'phase10-complete       - Full phase 10 reasoning demonstration',
-                'phase10-final          - Final comprehensive demonstration',
-                'websocket              - WebSocket monitoring example',
-                'lm-providers           - Language model provider integrations'
-            ];
-            
             return [
                 'Available examples:',
-                ...examples.map(line => `  ${line}`),
+                ...EXAMPLES_LIST.map(line => `  ${line}`),
                 '',
                 'Usage: :demo <example-name> (without the .js extension)'
             ].join('\n');
         }
 
-        // Map example names to file paths
-        const exampleMap = {
-            'agent-builder': '../examples/agent-builder-demo.js',
-            'agent-builder-demo': '../examples/agent-builder-demo.js',
-            'causal-reasoning': '../examples/causal-reasoning-demo.js',
-            'causal-reasoning-demo': '../examples/causal-reasoning-demo.js',
-            'inductive-reasoning': '../examples/inductive-reasoning-demo.js',
-            'inductive-reasoning-demo': '../examples/inductive-reasoning-demo.js',
-            'syllogism': '../examples/syllogism-demo.js',
-            'syllogism-demo': '../examples/syllogism-demo.js',
-            'temporal': '../examples/temporal-reasoning-demo.js',
-            'temporal-reasoning': '../examples/temporal-reasoning-demo.js',
-            'temporal-reasoning-demo': '../examples/temporal-reasoning-demo.js',
-            'performance': '../examples/performance-benchmark.js',
-            'performance-benchmark': '../examples/performance-benchmark.js',
-            'phase10-complete': '../examples/phase10-complete-demo.js',
-            'phase10-final': '../examples/phase10-final-demo.js',
-            'phase10-final-demo': '../examples/phase10-final-demo.js',
-            'websocket': '../examples/websocket-monitoring-test.js',
-            'websocket-demo': '../examples/websocket-monitoring-test.js',
-            'websocket-monitoring': '../examples/websocket-monitoring-test.js',
-            'lm-providers': '../examples/lm-providers.js',
-            'basic-usage': '../examples/basic-usage.js'
-        };
-
-        const examplePath = exampleMap[exampleName];
+        const examplePath = EXAMPLE_MAP[exampleName];
         if (!examplePath) {
             return `Unknown example: ${exampleName}. Use ":demo" for a list of available examples.`;
         }

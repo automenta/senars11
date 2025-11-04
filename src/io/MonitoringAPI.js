@@ -2,8 +2,9 @@ import {EventEmitter} from 'events';
 import {createServer} from 'http';
 import {WebSocketServer} from 'ws';
 
-const DEFAULT_OPTIONS = {port: 8080, host: 'localhost'};
-const EVENT_HANDLERS = {
+const DEFAULT_OPTIONS = Object.freeze({port: 8080, host: 'localhost'});
+
+const EVENT_HANDLERS = Object.freeze({
     'cycle.completed': (api, data) => {
         api.metrics.cycleCount++;
         api._broadcastEvent('cycle.completed', {cycle: api.metrics.cycleCount, data, timestamp: Date.now()});
@@ -16,7 +17,7 @@ const EVENT_HANDLERS = {
     'system.started': (api, data) => api._broadcastEvent('system.started', {...data, timestamp: Date.now()}),
     'system.stopped': (api, data) => api._broadcastEvent('system.stopped', {...data, timestamp: Date.now()}),
     'system.reset': (api, data) => api._broadcastEvent('system.reset', {...data, timestamp: Date.now()})
-};
+});
 
 export class MonitoringAPI {
     constructor(nar, options = {}) {
@@ -80,7 +81,7 @@ export class MonitoringAPI {
             data: {
                 metrics: this.metrics,
                 systemStats: this.nar.getStats(),
-                memoryStats: this.nar.memory.getDetailedStats(),
+                memoryStats: this.nar.memory.getDetailedStats?.() || {},
                 isRunning: this.nar.isRunning,
                 cycleCount: this.nar.cycleCount
             },
@@ -122,17 +123,17 @@ export class MonitoringAPI {
     }
 
     getConcepts() {
-        return Array.from(this.nar.memory.getAllConcepts()).map(concept => ({
-            term: concept.term.name,
-            taskCount: concept.getTasksByType('BELIEF').length,
+        return Array.from(this.nar.memory?.getAllConcepts?.() || []).map(concept => ({
+            term: concept.term?.name || '',
+            taskCount: concept.getTasksByType?.('BELIEF')?.length || 0,
             priority: concept.priority || 0,
             lastAccess: concept.lastAccess || 0
         }));
     }
 
     getRecentTasks(limit = 50) {
-        return this.nar.getBeliefs().slice(-limit).map(task => ({
-            term: task.term.name,
+        return (this.nar.getBeliefs?.() || []).slice(-limit).map(task => ({
+            term: task.term?.name || '',
             truth: task.truth?.toString() || null,
             priority: task.budget?.priority || 0,
             type: task.type

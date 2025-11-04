@@ -1,16 +1,18 @@
 import path from 'path';
 
+const INITIAL_STATS = Object.freeze({
+  totalKnowledgeItems: 0,
+  totalTasks: 0,
+  totalRelationships: 0,
+  knowledgeByType: {},
+  lastUpdated: null
+});
+
 export class Knowing {
   constructor(options = {}) {
     this.knowledgeItems = [];
     this.options = options;
-    this.stats = {
-      totalKnowledgeItems: 0,
-      totalTasks: 0,
-      totalRelationships: 0,
-      knowledgeByType: {},
-      lastUpdated: null
-    };
+    this.stats = {...INITIAL_STATS};
   }
 
   async addKnowledge(knowledge) {
@@ -45,8 +47,8 @@ export class Knowing {
   }
 
   findByType(type) {
-    return this.knowledgeItems.filter(knowledge => 
-      knowledge.constructor.name === type || 
+    return this.knowledgeItems.filter(knowledge =>
+      knowledge.constructor.name === type ||
       knowledge.constructor.name.toLowerCase().includes(type.toLowerCase())
     );
   }
@@ -55,7 +57,7 @@ export class Knowing {
     const allTasks = [];
     for (const knowledge of this.knowledgeItems) {
       try {
-        const tasks = await knowledge.toTasks();
+        const tasks = await knowledge.toTasks?.();
         if (Array.isArray(tasks)) allTasks.push(...tasks);
       } catch (error) {
         console.error(`❌ Error getting tasks from ${knowledge.constructor.name}: ${error.message}`);
@@ -68,7 +70,7 @@ export class Knowing {
     const allRelationships = [];
     for (const knowledge of this.knowledgeItems) {
       try {
-        const relationships = await knowledge.createRelationships();
+        const relationships = await knowledge.createRelationships?.();
         if (Array.isArray(relationships)) allRelationships.push(...relationships);
       } catch (error) {
         console.error(`❌ Error getting relationships from ${knowledge.constructor.name}: ${error.message}`);
@@ -108,8 +110,8 @@ export class Knowing {
       
       try {
         const [tasks, relationships] = await Promise.allSettled([
-          knowledge.toTasks(),
-          knowledge.createRelationships()
+          knowledge.toTasks?.() || Promise.resolve([]),
+          knowledge.createRelationships?.() || Promise.resolve([])
         ]);
         
         const taskCount = tasks.status === 'fulfilled' && Array.isArray(tasks.value) ? tasks.value.length : 0;
@@ -139,13 +141,7 @@ export class Knowing {
 
   clear() {
     this.knowledgeItems = [];
-    this.stats = {
-      totalKnowledgeItems: 0,
-      totalTasks: 0,
-      totalRelationships: 0,
-      knowledgeByType: {},
-      lastUpdated: null
-    };
+    this.stats = {...INITIAL_STATS};
   }
 
   async export() {
@@ -160,17 +156,28 @@ export class Knowing {
     };
 
     for (const knowledge of this.knowledgeItems) {
-      const knowledgeData = {
-        type: knowledge.constructor.name,
-        summary: await knowledge.getSummary(),
-        items: await knowledge.getItems(),
-        tasks: await knowledge.toTasks(),
-        relationships: await knowledge.createRelationships()
-      };
-      
-      exported.knowledge.push(knowledgeData);
-      exported.metadata.totalTasks += knowledgeData.tasks.length;
-      exported.metadata.totalRelationships += knowledgeData.relationships.length;
+      try {
+        const [summary, items, tasks, relationships] = await Promise.allSettled([
+          knowledge.getSummary?.() || Promise.resolve({}),
+          knowledge.getItems?.() || Promise.resolve([]),
+          knowledge.toTasks?.() || Promise.resolve([]),
+          knowledge.createRelationships?.() || Promise.resolve([])
+        ]);
+        
+        const knowledgeData = {
+          type: knowledge.constructor.name,
+          summary: summary.status === 'fulfilled' ? summary.value : {},
+          items: items.status === 'fulfilled' ? items.value : [],
+          tasks: tasks.status === 'fulfilled' ? tasks.value : [],
+          relationships: relationships.status === 'fulfilled' ? relationships.value : []
+        };
+        
+        exported.knowledge.push(knowledgeData);
+        exported.metadata.totalTasks += Array.isArray(knowledgeData.tasks) ? knowledgeData.tasks.length : 0;
+        exported.metadata.totalRelationships += Array.isArray(knowledgeData.relationships) ? knowledgeData.relationships.length : 0;
+      } catch (error) {
+        console.error(`❌ Error exporting knowledge ${knowledge.constructor.name}: ${error.message}`);
+      }
     }
 
     return exported;

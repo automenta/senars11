@@ -1,13 +1,19 @@
 import { KnowledgeFactory } from './KnowledgeFactory.js';
 import { FileAnalysisKnowledge, TestResultKnowledge, DirectoryStructureKnowledge, DependencyGraphKnowledge, FlexibleDataTableKnowledge } from './SelfAnalysisKnowledge.js';
 
+const TYPE_MAPPING = Object.freeze({
+  fileAnalysis: FileAnalysisKnowledge,
+  testResult: TestResultKnowledge,
+  directoryStructure: DirectoryStructureKnowledge,
+  dependencyGraph: DependencyGraphKnowledge,
+  flexibleDataTable: FlexibleDataTableKnowledge
+});
+
 export class SelfAnalysisKnowledgeFactory {
   static initialize() {
-    KnowledgeFactory.registerKnowledgeType('fileAnalysis', FileAnalysisKnowledge);
-    KnowledgeFactory.registerKnowledgeType('testResult', TestResultKnowledge);
-    KnowledgeFactory.registerKnowledgeType('directoryStructure', DirectoryStructureKnowledge);
-    KnowledgeFactory.registerKnowledgeType('dependencyGraph', DependencyGraphKnowledge);
-    KnowledgeFactory.registerKnowledgeType('flexibleDataTable', FlexibleDataTableKnowledge);
+    Object.entries(TYPE_MAPPING).forEach(([type, klass]) => {
+      KnowledgeFactory.registerKnowledgeType(type, klass);
+    });
   }
 
   static createSelfAnalysisKnowledge(type, data, options = {}) {

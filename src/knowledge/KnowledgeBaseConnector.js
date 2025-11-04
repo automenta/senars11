@@ -1,21 +1,23 @@
 // Preparatory architecture for Phase 10: Knowledge Integration & External Systems
 // This file establishes the foundation for integrating external knowledge bases and systems
 
+const PROVIDER_MAP = Object.freeze({
+    wikipedia: WikipediaConnector,
+    wikidata: WikidataConnector,
+    custom: CustomAPIConnector
+});
+
+const DEFAULT_RATE_LIMIT = Object.freeze({requests: 10, windowMs: 1000});
+const DEFAULT_CACHE_TTL = 300000; // 5 minutes
+
 // Knowledge base connector interface
 class KnowledgeBaseConnector {
     constructor(config = {}) {
         this.config = config;
         this.connections = new Map(); // Active connections to knowledge bases
         this.cache = new Map(); // Cached knowledge to reduce external calls
-        this.cacheTTL = config.cacheTTL || 300000; // 5 minutes default
-        this.rateLimiter = new RateLimiter(config.rateLimit || {requests: 10, windowMs: 1000});
-        
-        // Define provider mapping for cleaner code
-        this.providerMap = {
-            'wikipedia': WikipediaConnector,
-            'wikidata': WikidataConnector,
-            'custom': CustomAPIConnector
-        };
+        this.cacheTTL = config.cacheTTL ?? DEFAULT_CACHE_TTL;
+        this.rateLimiter = new RateLimiter(config.rateLimit ?? DEFAULT_RATE_LIMIT);
     }
 
     // Connect to a knowledge base
@@ -32,7 +34,7 @@ class KnowledgeBaseConnector {
     }
     
     async _createConnector(providerId, credentials) {
-        const ConnectorClass = this.providerMap[providerId];
+        const ConnectorClass = PROVIDER_MAP[providerId];
         if (!ConnectorClass) {
             throw new Error(`Unknown provider: ${providerId}`);
         }
@@ -111,7 +113,7 @@ class KnowledgeBaseConnector {
         const stats = {};
 
         for (const [providerId, connector] of this.connections) {
-            stats[providerId] = connector.getStats ? connector.getStats() : {};
+            stats[providerId] = connector.getStats?.() ?? {};
         }
 
         return stats;
@@ -120,7 +122,7 @@ class KnowledgeBaseConnector {
 
 // Rate limiter utility
 class RateLimiter {
-    constructor(config = {requests: 10, windowMs: 1000}) {
+    constructor(config = DEFAULT_RATE_LIMIT) {
         this.config = config;
         this.requests = new Map(); // providerId -> array of timestamps
     }
@@ -193,7 +195,7 @@ class WikipediaConnector {
     }
 
     _extractSearchQuery(query) {
-        return typeof query === 'string' ? query : query.search || query.term;
+        return typeof query === 'string' ? query : query.search ?? query.term;
     }
 
     _buildResult(source, query, results) {
@@ -250,7 +252,7 @@ class WikidataConnector {
     _buildSparqlQuery(queryObj) {
         // Build a simple SPARQL query from a query object
         // This is a simplified implementation
-        const searchTerm = queryObj.search || queryObj.term;
+        const searchTerm = queryObj.search ?? queryObj.term;
         return `
       SELECT ?item ?itemLabel WHERE {
         ?item ?label "${searchTerm}"@en .
@@ -297,7 +299,7 @@ class CustomAPIConnector {
         const headers = this._buildHeaders();
 
         const response = await fetch(url, {
-            method: options.method || 'GET',
+            method: options.method ?? 'GET',
             headers
         });
 
@@ -317,7 +319,7 @@ class CustomAPIConnector {
     _buildHeaders() {
         // Build headers with authentication
         const headers = {'Content-Type': 'application/json'};
-        if (this.credentials && this.credentials.apiKey) {
+        if (this.credentials?.apiKey) {
             headers['Authorization'] = `Bearer ${this.credentials.apiKey}`;
         }
         return headers;
@@ -340,19 +342,21 @@ class CustomAPIConnector {
 }
 
 // Data normalizer for different knowledge base formats
+const NORMALIZATION_RULES = Object.freeze({
+    wikipedia: (normalizer, data) => normalizer._normalizeData(data, normalizer._normalizeWikipediaItem.bind(normalizer), 'wikipedia'),
+    wikidata: (normalizer, data) => normalizer._normalizeData(data, normalizer._normalizeWikidataItem.bind(normalizer), 'wikidata'),
+    custom: (_normalizer, data) => Array.isArray(data) ? data : [data]
+});
+
 class KnowledgeNormalizer {
     constructor() {
-        this.normalizationRules = {
-            'wikipedia': (data) => this._normalizeData(data, this._normalizeWikipediaItem.bind(this), 'wikipedia'),
-            'wikidata': (data) => this._normalizeData(data, this._normalizeWikidataItem.bind(this), 'wikidata'),
-            'custom': (data) => Array.isArray(data) ? data : [data]
-        };
+        this.normalizationRules = NORMALIZATION_RULES;
     }
 
     normalize(source, data) {
         const normalizer = this.normalizationRules[source];
         if (normalizer) {
-            return normalizer(data);
+            return normalizer(this, data);
         }
         return data; // Return as-is if no normalizer
     }
@@ -390,7 +394,7 @@ class KnowledgeNormalizer {
 class ExternalKnowledgeManager {
     constructor(config = {}) {
         this.config = config;
-        this.connector = new KnowledgeBaseConnector(config.connector || {});
+        this.connector = new KnowledgeBaseConnector(config.connector ?? {});
         this.normalizer = new KnowledgeNormalizer();
         this.nar = null; // Will be set when connected to NAR
     }
@@ -436,7 +440,7 @@ class ExternalKnowledgeManager {
             } else {
                 integratedResults.push({
                     source: result.query.providerId,
-                    error: result.error.message,
+                    error: result.error?.message,
                     integrated: false
                 });
             }
@@ -468,7 +472,7 @@ class ExternalKnowledgeManager {
         if (!item.title && !item.label) return null;
 
         // Simple conversion - in reality, this would be much more sophisticated
-        const subject = item.title || item.label;
+        const subject = item.title ?? item.label;
         const predicate = 'fact';
 
         // This is a very simplified approach - real integration would be more complex
