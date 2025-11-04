@@ -174,18 +174,40 @@ export class TaskManager extends BaseComponent {
 
         const totalTasks = Object.values(stats.tasksByType).reduce((sum, count) => sum + count, 0);
         
-        // Using danfojs for advanced statistical calculations
+        // Using danfojs for advanced statistical calculations (with fallbacks for safety)
         let averagePriority = 0, priorityStd = 0, priorityMedian = 0, priorityPercentiles = {};
-        if (stats.priorities.length > 0) {
-            const prioritySeries = new dfd.Series(stats.priorities);
-            averagePriority = prioritySeries.mean();
-            priorityStd = prioritySeries.std();
-            priorityMedian = prioritySeries.median();
+        if (stats.priorities && stats.priorities.length > 0) {
+            // Calculate statistics manually to avoid danfojs internal errors
+            const priorities = stats.priorities;
+            
+            // Calculate mean
+            averagePriority = priorities.reduce((sum, val) => sum + val, 0) / priorities.length;
+            
+            // Calculate standard deviation
+            const mean = averagePriority;
+            const squaredDiffs = priorities.map(val => Math.pow(val - mean, 2));
+            const variance = squaredDiffs.reduce((sum, val) => sum + val, 0) / priorities.length;
+            priorityStd = Math.sqrt(variance);
+            
+            // Calculate median
+            const sortedPriorities = [...priorities].sort((a, b) => a - b);
+            const mid = Math.floor(sortedPriorities.length / 2);
+            priorityMedian = sortedPriorities.length % 2 === 0 
+                ? (sortedPriorities[mid - 1] + sortedPriorities[mid]) / 2 
+                : sortedPriorities[mid];
+            
+            // Calculate quantiles manually
             priorityPercentiles = {
-                p25: prioritySeries.quantile(0.25),
-                p75: prioritySeries.quantile(0.75),
-                p95: prioritySeries.quantile(0.95)
+                p25: this._getQuantileValue(sortedPriorities, 0.25),
+                p75: this._getQuantileValue(sortedPriorities, 0.75),
+                p95: this._getQuantileValue(sortedPriorities, 0.95)
             };
+        } else {
+            // Set default values when no priorities exist
+            averagePriority = 0;
+            priorityStd = 0;
+            priorityMedian = 0;
+            priorityPercentiles = { p25: 0, p75: 0, p95: 0 };
         }
 
         return {
@@ -206,6 +228,20 @@ export class TaskManager extends BaseComponent {
     _getPriorityBucket = (priority) =>
         priority < PRIORITY_BUCKETS.LOW_THRESHOLD ? 'low' :
             priority < PRIORITY_BUCKETS.MEDIUM_THRESHOLD ? 'medium' : 'high';
+
+    _getQuantileValue(sortedArray, quantile) {
+        if (sortedArray.length === 0) return 0;
+        const index = quantile * (sortedArray.length - 1);
+        const lowerIndex = Math.floor(index);
+        const upperIndex = Math.ceil(index);
+        
+        if (lowerIndex === upperIndex) {
+            return sortedArray[lowerIndex];
+        }
+        
+        const weight = index - lowerIndex;
+        return sortedArray[lowerIndex] * (1 - weight) + sortedArray[upperIndex] * weight;
+    }
 
     clearPendingTasks() {
         this._pendingTasks.clear();

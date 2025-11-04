@@ -143,7 +143,7 @@ const startProcess = (name, spawnArgs, spawnOptions, testResults) => {
 
 const startBackend = async (testResults) => {
     const backendProcess = startProcess('BACKEND',
-        ['node', ['webui.js']],
+        ['node', ['scripts/ui/run.js']],
         {
             env: {
                 ...process.env,

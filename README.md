@@ -914,6 +914,7 @@ while maintaining production-ready quality, security, and reliability.
 - **Concept evolution mapping** displaying how knowledge organization improves with use, including activation and
   priority changes
 - **Intelligence growth dashboard** showing compound improvement metrics and performance with real-time updates
+- **Graph UI** for dynamic visualization of Concepts, Tasks, Beliefs, and Goals with force-directed layout
 - **Reasoning Trace Panel**: Detailed visualization of reasoning steps with comprehensive logging and annotation tools
 - **Task Flow Diagram**: Visual representation of task processing chains and dependencies with interactive exploration
 - **Concept Panel**: Real-time monitoring of concept activation and priority changes with detailed metrics

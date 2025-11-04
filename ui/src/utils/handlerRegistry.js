@@ -19,6 +19,8 @@ const createOptimizedMessageHandlers = () => Object.freeze({
     error: createMessageHandler('setError'),
     conceptUpdate: createConceptUpdateHandler,
     taskUpdate: createMessageHandler('addTask'),
+    beliefUpdate: createMessageHandler('addBelief'),
+    goalUpdate: createMessageHandler('addGoal'),
     cycleUpdate: createMessageHandler('addCycle'),
     systemMetrics: createMessageHandler('setSystemMetrics'),
     log: createLogHandler,

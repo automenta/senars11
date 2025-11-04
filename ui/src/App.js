@@ -5,6 +5,7 @@ import useUiStore from './stores/uiStore';
 import WebSocketService from './utils/websocket';
 import defaultLayout from './layouts/defaultLayout';
 import selfAnalysisLayout from './layouts/selfAnalysisLayout';
+import graphLayout from './layouts/graphLayout';
 import ErrorBoundary from './components/ErrorBoundary';
 import Panel from './components/Panel';
 import {contentMap} from './components/panelContent';
@@ -25,9 +26,8 @@ function App() {
         if (layoutParam === 'self-analysis') {
             initialLayout = selfAnalysisLayout;
         } else if (layoutParam === 'graph' || defaultLayoutEnv === 'graph') {
-            // For now, we'll use the default layout which includes the GraphUI panel
-            // In the future, we might want a dedicated graph layout
-            initialLayout = defaultLayout;
+            // Use the dedicated graph layout
+            initialLayout = graphLayout;
         } else {
             initialLayout = JSON.parse(localStorage.getItem('layout') || JSON.stringify(defaultLayout));
         }

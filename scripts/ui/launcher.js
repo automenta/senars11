@@ -1,5 +1,10 @@
 #!/usr/bin/env node
 
+/**
+ * Consolidated Web UI Launcher
+ * Provides a parameterized foundation for launching any data-driven UI with WebSocket connectivity
+ */
+
 import {spawn} from 'child_process';
 import {fileURLToPath} from 'url';
 import {dirname, join} from 'path';
@@ -19,7 +24,7 @@ const __dirname = dirname(__filename);
 const {args: cliArgs, helpRequested} = parseCliArgs(process.argv.slice(2));
 
 const USAGE_MESSAGE = `
-Usage: node scripts/ui/run.js [options]
+Usage: node scripts/ui/launcher.js [options]
 
 Options:
   --help, -h        Show this help message
@@ -29,11 +34,13 @@ Options:
   --ws-port <port>  Specify WebSocket port (default: 8080)
   --host <host>     Specify host (default: localhost)
   --graph-ui        Launch with Graph UI layout
+  --layout <name>   Specify layout (default, self-analysis, graph)
 
 Examples:
-  node scripts/ui/run.js --dev
-  node scripts/ui/run.js --prod --port 3000
-  node scripts/ui/run.js --dev --port 8081 --ws-port 8082
+  node scripts/ui/launcher.js --dev
+  node scripts/ui/launcher.js --prod --port 3000
+  node scripts/ui/launcher.js --dev --port 8081 --ws-port 8082
+  node scripts/ui/launcher.js --graph-ui
 `;
 
 // Parse arguments to support flexible server configuration
@@ -99,6 +106,15 @@ function parseArgs(args) {
                     layout: 'graph'
                 }
             };
+        } else if (args[i] === '--layout' && args[i + 1]) {
+            config = {
+                ...config,
+                ui: {
+                    ...config.ui,
+                    layout: args[i + 1]
+                }
+            };
+            i++; // Skip next argument since it's the value
         }
     }
 

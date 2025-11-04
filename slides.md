@@ -15,7 +15,7 @@ css: ./custom.css
 Semantic Non-Axiomatic Reasoning System
 
 <div class="center text-sm opacity-75">
-  Advancing AI Power and Reliability through Neuro-Symbolic Cognition
+Advancing AI Power and Reliability through Neuro-Symbolic Cognition
 </div>
 
 ---
@@ -24,11 +24,11 @@ Semantic Non-Axiomatic Reasoning System
 
 A complete cognitive architecture designed for a synergistic union of:
 
-- **Formal symbolic reasoning**
+- **Formal symbolic reasoning** (Non-Axiomatic Logic)
 - **Semantic power of Language Models (LMs)**
+- **Observable reasoning processes** for transparency
 
-SeNARS combines the best of both worlds to create a transparent, reliable, and adaptive AI
-system.
+SeNARS combines the best of both worlds to create a transparent, reliable, and adaptive AI system.
 
 ---
 
@@ -43,7 +43,7 @@ Today's powerful AI models often suffer from critical limitations:
 These limitations create massive barriers to deploying AI in high-value, regulated industries.
 
 <div class="center text-sm opacity-75 mt-4">
-  SeNARS addresses these fundamental limitations through principled design
+SeNARS addresses these fundamental limitations through principled design
 </div>
 
 ---
@@ -104,7 +104,6 @@ graph LR
 ```
 
 This integration enables:
-
 - **Rigorous logical reasoning** from the NAL rule system
 - **Creative semantic understanding** from the neural component
 - **Bidirectional knowledge exchange** between both systems
@@ -132,10 +131,12 @@ SeNARS is a **neuro-symbolic** architecture that delivers **explainable, robust,
 
 ---
 
-# Key Difference
+## Key Differentiators
 
 - **Transparent Reasoning**: Trace every conclusion back to its premises
-- **Modular Architecture**: Component-based design with clear interfaces
+- **Immutable Data Foundation**: Ensures consistency and enables efficient caching
+- **Component-Based Architecture**: Standardized interfaces with BaseComponent foundation
+- **Dual Memory Architecture**: Short-term focus + long-term storage with automatic consolidation
 - **Self-Adaptation**: Dynamically adjusts reasoning strategies based on performance
 - **True Synergy**: Symbolic reasoning + LM creativity ≠ Black box
 
@@ -173,7 +174,7 @@ Explainable AI (XAI) is the key to unlocking high-value markets:
 
 <div class="center text-lg p-4 bg-gradient-to-r from-blue-500 to-purple-500 bg-opacity-20 rounded">
 SeNARS represents a fundamental advancement in AI architecture,
-combining the best of symbolic and neural approaches.
+combining the best of symbolic and neural approaches with observable reasoning.
 </div>
 
 ---
@@ -232,7 +233,7 @@ SeNARS is built on five core design principles that ensure robust, transparent, 
 
 ## Core Components: Term, Task, and Memory
 
-SeNARS is built on three fundamental components:
+SeNARS is built on three fundamental immutable data structures:
 
 <div class="grid grid-cols-3 gap-4 mb-4">
   <div class="text-center p-4 bg-blue-500 bg-opacity-20 rounded">
@@ -256,13 +257,14 @@ SeNARS is built on three fundamental components:
 
 ## Understanding Terms
 
-**Term** - Immutable representations of concepts:
+**Term** - Immutable representations of concepts with structural intelligence:
 
 - **Examples**: `cat`, `(cat --> animal)`, `(cat ==> furry)`
 - **Key Properties**:
     - Strict immutability with frozen objects
-    - Efficient caching and normalization in TermFactory
-    - Structural intelligence with component access, visitors, and reducers
+    - Canonical normalization (e.g., `(&, A, B)` = `(&, B, A)`)
+    - Efficient caching in TermFactory
+    - Structural analysis with visitor/reducer patterns
 
 ---
 
@@ -282,8 +284,9 @@ const inheritanceTerm = new Term({
 
 Terms are the building blocks of all knowledge in SeNARS, providing:
 
-- **Normalization**: Automatic reduction of equivalent terms (e.g., `(&, A, B)` = `(&, B, A)`)
-- **Immutability**: Ensures consistency across reasoning with frozen objects
+- **Normalization**: Automatic reduction of equivalent terms
+- **Immutability**: Ensures consistency across reasoning
+- **Structural Intelligence**: Visitor/reducer patterns for analysis
 
 ---
 
@@ -296,9 +299,11 @@ Terms are the building blocks of all knowledge in SeNARS, providing:
     - `punctuation`: `.`, `!`, or `?` (Belief, Goal, Question)
     - `truth`: Truth value object with frequency and confidence
     - `stamp`: Evidence tracking with origin and derivation history
-- **State**:
-    - Truth values (frequency, confidence) for Bayesian revision
-    - Budget metrics for attention allocation (priority, durability, quality)
+    - `budget`: Attention allocation metrics (priority, durability, quality)
+- **Types**:
+    - **Belief (.):** What the system knows about the world
+    - **Goal (!):** What the system wants to achieve
+    - **Question (?):** What the system wants to know
 
 ---
 
@@ -319,6 +324,7 @@ Tasks represent the dynamic aspects of cognition:
 - **Typed Punctuation**: Clear distinction between beliefs, goals, and questions
 - **Evidence Tracking**: Complete derivation history with timestamps
 - **Attention Management**: Dynamic budget metrics for cognitive focus
+- **Truth Semantics**: Enable reinforcement learning (beliefs model world, goals define rewards)
 
 ---
 
@@ -513,6 +519,7 @@ Key features:
 - Performance optimization with caching strategies
 - Dynamic rule selection based on task type
 - Resilient operation with fallback mechanisms
+- Cross-validation between symbolic and neural reasoning
 
 ---
 
@@ -545,14 +552,7 @@ SeNARS implements a robust component architecture with standardized interfaces:
 - **Logging Integration**: Consistent logging across all components
 - **Validation Framework**: Input and configuration validation utilities
 - **Event Integration**: Built-in event bus for component communication
-
----
-
-**Component Management**:
-
 - **Lifecycle Management**: Initialize, start, stop, and dispose patterns
-- **Dependency Management**: Explicit dependency relationships between components
-- **Configuration System**: Centralized configuration with validation and defaults
 
 ---
 
@@ -662,6 +662,7 @@ All SeNARS functionality has been verified through comprehensive unit tests and 
 - Focus-driven attention mechanisms with configurable selection strategies
 - Circuit breaker patterns for resilient LM integration
 - Event-driven architecture for component communication
+- Layer-based extensibility (TermLayer, EmbeddingLayer)
 
 ---
 
@@ -671,6 +672,7 @@ All SeNARS functionality has been verified through comprehensive unit tests and 
 - Multi-step reasoning with complex term structures
 - Adaptive forgetting and memory consolidation
 - Hybrid NAL-LM reasoning workflows
+- Reinforcement learning through belief-goal distinction
 
 These capabilities represent a solid foundation for building robust, explainable AI systems.
 

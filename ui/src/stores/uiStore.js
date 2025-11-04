@@ -33,6 +33,8 @@ const initialState = Object.freeze({
     reasoningSteps: [],
     tasks: [],
     concepts: [],
+    beliefs: [],
+    goals: [],
     cycles: [],
     systemMetrics: null,
     demos: [],
@@ -95,6 +97,24 @@ const useUiStore = create((set, get) => ({
     updateTask: (id, updates) => set(tasksManager.update(id, 'id', updates)),
     removeTask: (id) => set(tasksManager.remove(id, 'id')),
     clearTasks: () => set(tasksManager.clear()),
+    
+    addBelief: (belief) => set(state => ({beliefs: [...state.beliefs, belief]})),
+    updateBelief: (id, updates) => set(state => ({
+      beliefs: state.beliefs.map(belief => belief.id === id ? {...belief, ...updates} : belief)
+    })),
+    removeBelief: (id) => set(state => ({
+      beliefs: state.beliefs.filter(belief => belief.id !== id)
+    })),
+    clearBeliefs: () => set({beliefs: []}),
+    
+    addGoal: (goal) => set(state => ({goals: [...state.goals, goal]})),
+    updateGoal: (id, updates) => set(state => ({
+      goals: state.goals.map(goal => goal.id === id ? {...goal, ...updates} : goal)
+    })),
+    removeGoal: (id) => set(state => ({
+      goals: state.goals.filter(goal => goal.id !== id)
+    })),
+    clearGoals: () => set({goals: []}),
     
     addConcept: (concept) => set(conceptsManager.add(concept, 'term')),
     updateConcept: (term, updates) => set(conceptsManager.update(term, 'term', updates)),

@@ -1,135 +1,86 @@
-import { IndexUtils } from './IndexUtils.js';
 import { IndexConfiguration } from './IndexConfiguration.js';
 import { TermCategorization } from './TermCategorization.js';
 import { PerformanceMonitor } from './PerformanceMonitor.js';
 import { ValidationUtils } from './ValidationUtils.js';
+import { AtomicIndex } from './indexes/AtomicIndex.js';
+import { CompoundIndex } from './indexes/CompoundIndex.js';
+import { ActivationIndex } from './indexes/ActivationIndex.js';
+import { TemporalIndex } from './indexes/TemporalIndex.js';
+import { RelationshipIndex } from './indexes/RelationshipIndex.js';
 
 export class MemoryIndex {
     constructor() {
-        this._indexes = IndexConfiguration.getDefaultIndexes();
-        this._config = IndexConfiguration.getDefaultConfig();
         this._totalConcepts = 0;
+        this._config = IndexConfiguration.getDefaultConfig();
+        
+        // Initialize specialized indexes
+        this._atomicIndex = new AtomicIndex(this._config);
+        this._compoundIndex = new CompoundIndex(this._config);
+        this._activationIndex = new ActivationIndex(this._config);
+        this._temporalIndex = new TemporalIndex(this._config);
+        this._relationshipIndex = new RelationshipIndex(this._config);
+        
+        // Additional index for term id to concept mapping to support getConcept method
+        // Map from termId to an array of concepts (to handle multiple concepts with same term)
+        this._termIdToConcepts = new Map();
         
         this._performanceMonitor = new PerformanceMonitor();
         this._validationUtils = new ValidationUtils();
     }
 
     addConcept(concept) {
-        const {term} = concept;
-        const termId = term.id;
-
+        const { term } = concept;
         this._totalConcepts++;
-        IndexUtils.addToIndex(this._indexes, 'term', termId, concept);
 
-        // Add to type-specific indexes
-        if (term.isAtomic) {
-            IndexUtils.addToIndex(this._indexes, 'atomic', term.name, concept);
-        } else {
-            this._indexCompoundTerm(term, concept);
-            IndexUtils.addToIndex(this._indexes, 'compoundByOp', term.operator, concept);
+        // Track term id to concept mapping - handle multiple concepts with same term
+        if (term.id) {
+            if (!this._termIdToConcepts.has(term.id)) {
+                this._termIdToConcepts.set(term.id, []);
+            }
+            // Add concept to the list
+            this._termIdToConcepts.get(term.id).push(concept);
         }
 
-        // Add to additional indexes
-        this._indexByComplexity(term, concept);
-        this._indexByCategory(term, concept);
-        this._indexByActivation(concept);
-        this._indexByTemporal(concept);
+        if (term.isAtomic) {
+            this._atomicIndex.add(concept);
+        } else {
+            this._compoundIndex.add(concept);
+        }
+
+        // Add to cross-cutting indexes
+        this._activationIndex.add(concept);
+        this._temporalIndex.add(concept);
+        this._relationshipIndex.add(concept);
     }
 
     removeConcept(concept) {
-        const {term} = concept;
-        const termId = term.id;
-
-        if (this._indexes.term.has(termId)) {
-            this._removeFromIndex('term', termId, concept);
-            this._totalConcepts--;
-        }
-
-        // Remove from type-specific indexes
-        if (term.isAtomic) {
-            this._removeFromIndex('atomic', term.name, concept);
-        } else {
-            this._removeCompoundTermIndex(term, concept);
-            this._removeFromIndex('compoundByOp', term.operator, concept);
-        }
-
-        // Remove from all other indexes based on the concept/term
-        this._removeFromComplexityIndex(term, concept);
-        this._removeFromCategoryIndex(term, concept);
-        this._removeFromActivationIndex(concept);
-        this._removeFromTemporalIndex(concept);
-    }
-
-    _indexCompoundTerm(term, concept) {
-        IndexUtils.addToIndex(this._indexes, 'compound', term.operator, term);
-
-        // Index by all components (for faster subterm matching)
-        if (term.components) {
-            for (const comp of term.components) {
-                IndexUtils.addToIndex(this._indexes, 'component', comp, concept);
-
-                // Also index nested components
-                if (comp.isCompound) {
-                    this._indexCompoundTerm(comp, concept);
+        const { term } = concept;
+        
+        // Remove specific concept from term id mapping
+        if (term.id && this._termIdToConcepts.has(term.id)) {
+            const concepts = this._termIdToConcepts.get(term.id);
+            const index = concepts.indexOf(concept);
+            if (index !== -1) {
+                concepts.splice(index, 1);
+                // If no more concepts for this term id, remove the entry entirely
+                if (concepts.length === 0) {
+                    this._termIdToConcepts.delete(term.id);
                 }
             }
         }
-
-        switch (term.operator) {
-            case '-->':
-                this._indexInheritance(term, concept);
-                break;
-            case '==>':
-                this._indexImplication(term, concept);
-                break;
-            case '<->':
-                this._indexSimilarity(term, concept);
-                break;
+        
+        if (term.isAtomic) {
+            this._atomicIndex.remove(concept);
+        } else {
+            this._compoundIndex.remove(concept);
         }
-    }
 
-    _indexByComplexity(term, concept) {
-        const complexity = TermCategorization.getTermComplexity(term);
-        const complexityLevel = TermCategorization.getComplexityLevel(complexity, this._config);
-        IndexUtils.addToIndex(this._indexes, 'complexity', complexityLevel, concept);
-    }
-
-    _removeFromComplexityIndex(term, concept) {
-        const complexity = TermCategorization.getTermComplexity(term);
-        const complexityLevel = TermCategorization.getComplexityLevel(complexity, this._config);
-        this._removeFromIndex('complexity', complexityLevel, concept);
-    }
-
-    _indexByCategory(term, concept) {
-        const category = TermCategorization.getTermCategory(term);
-        IndexUtils.addToIndex(this._indexes, 'category', category, concept);
-    }
-
-    _removeFromCategoryIndex(term, concept) {
-        const category = TermCategorization.getTermCategory(term);
-        this._removeFromIndex('category', category, concept);
-    }
-
-    _indexByActivation(concept) {
-        const activationBucket = TermCategorization.getActivationBucket(concept.activation, this._config);
-        IndexUtils.addToIndex(this._indexes, 'activation', activationBucket, concept);
-    }
-
-    _removeFromActivationIndex(concept) {
-        const activationBucket = TermCategorization.getActivationBucket(concept.activation, this._config);
-        this._removeFromIndex('activation', activationBucket, concept);
-    }
-
-    _indexByTemporal(concept) {
-        const timestamp = concept.createdAt || Date.now();
-        const temporalBucket = TermCategorization.getTemporalBucket(timestamp, this._config);
-        IndexUtils.addToIndex(this._indexes, 'temporal', temporalBucket, concept);
-    }
-
-    _removeFromTemporalIndex(concept) {
-        const timestamp = concept.createdAt || Date.now();
-        const temporalBucket = TermCategorization.getTemporalBucket(timestamp, this._config);
-        this._removeFromIndex('temporal', temporalBucket, concept);
+        // Remove from cross-cutting indexes
+        this._activationIndex.remove(concept);
+        this._temporalIndex.remove(concept);
+        this._relationshipIndex.remove(concept);
+        
+        this._totalConcepts = Math.max(0, this._totalConcepts - 1);
     }
 
     updateConcept(concept, updates) {
@@ -148,9 +99,35 @@ export class MemoryIndex {
      * Find concepts with advanced filtering options
      */
     findConceptsWithFilters(filters = {}) {
-        const allConcepts = this.getAllConcepts();
+        // Get concepts from the appropriate indexes based on filters
+        let candidates = [];
+        
+        // Start with the most specific index based on filter types
+        if (filters.operator) {
+            candidates = this._compoundIndex.find({ operator: filters.operator });
+        } else if (filters.category) {
+            candidates = this._compoundIndex.find({ category: filters.category });
+        } else if (filters.minComplexity !== undefined || filters.maxComplexity !== undefined) {
+            candidates = this._compoundIndex.find({ 
+                minComplexity: filters.minComplexity, 
+                maxComplexity: filters.maxComplexity 
+            });
+        } else if (filters.minActivation !== undefined || filters.maxActivation !== undefined) {
+            candidates = this._activationIndex.find({
+                minActivation: filters.minActivation,
+                maxActivation: filters.maxActivation
+            });
+        } else if (filters.createdAfter !== undefined || filters.createdBefore !== undefined) {
+            candidates = this._temporalIndex.find({
+                createdAfter: filters.createdAfter,
+                createdBefore: filters.createdBefore
+            });
+        } else {
+            // Get all concepts if no specific filters
+            candidates = this.getAllConcepts();
+        }
 
-        // Define all possible filters as a map
+        // Apply remaining filters
         const filtersMap = {
             category: concept => TermCategorization.getTermCategory(concept.term) === filters.category,
             minComplexity: concept => TermCategorization.getTermComplexity(concept.term) >= filters.minComplexity,
@@ -163,7 +140,7 @@ export class MemoryIndex {
         };
 
         // Apply filters that are defined
-        return allConcepts.filter(concept => {
+        return candidates.filter(concept => {
             for (const [filterName, filterValue] of Object.entries(filters)) {
                 if (filterValue !== undefined && filtersMap[filterName] && !filtersMap[filterName](concept)) {
                     return false;
@@ -257,15 +234,27 @@ export class MemoryIndex {
 
             // Direct relationships
             if (relationshipTypes.includes('inheritance')) {
-                this._findInheritanceRelated(currentTerm, relatedConcepts);
+                const concepts = this._relationshipIndex.find({ 
+                    relationshipType: 'inheritance', 
+                    subject: currentTerm 
+                });
+                concepts.forEach(c => relatedConcepts.add(c));
             }
 
             if (relationshipTypes.includes('implication')) {
-                this._findImplicationRelated(currentTerm, relatedConcepts);
+                const concepts = this._relationshipIndex.find({ 
+                    relationshipType: 'implication', 
+                    premise: currentTerm 
+                });
+                concepts.forEach(c => relatedConcepts.add(c));
             }
 
             if (relationshipTypes.includes('similarity')) {
-                this._findSimilarityRelated(currentTerm, relatedConcepts);
+                // Add logic for similarity relationships
+                const concepts = this._relationshipIndex.find({ 
+                    relationshipType: 'similarity' 
+                });
+                concepts.forEach(c => relatedConcepts.add(c));
             }
 
             // Indirect relationships (traverse deeper)
@@ -284,27 +273,26 @@ export class MemoryIndex {
     }
 
     _findInheritanceRelated(term, relatedConcepts) {
-        // Find concepts where this term is a subject or predicate in inheritance
-        const subjectConcepts = this.findInheritanceConcepts(term);
-        const predicateConcepts = []; // Would need inverse index for this
-
-        [...subjectConcepts, ...predicateConcepts].forEach(concept =>
-            relatedConcepts.add(concept));
+        const concepts = this._relationshipIndex.find({ 
+            relationshipType: 'inheritance', 
+            subject: term 
+        });
+        concepts.forEach(c => relatedConcepts.add(c));
     }
 
     _findImplicationRelated(term, relatedConcepts) {
-        // Find concepts where this term is a premise or conclusion in implication
-        const premiseConcepts = this.findImplicationConcepts(term);
-        const conclusionConcepts = []; // Would need inverse index for this
-
-        [...premiseConcepts, ...conclusionConcepts].forEach(concept =>
-            relatedConcepts.add(concept));
+        const concepts = this._relationshipIndex.find({ 
+            relationshipType: 'implication', 
+            premise: term 
+        });
+        concepts.forEach(c => relatedConcepts.add(c));
     }
 
     _findSimilarityRelated(term, relatedConcepts) {
-        // Find concepts where this term is part of a similarity relation
-        const similarConcepts = this.findSimilarityConcepts(term);
-        similarConcepts.forEach(concept => relatedConcepts.add(concept));
+        const concepts = this._relationshipIndex.find({ 
+            relationshipType: 'similarity' 
+        });
+        concepts.forEach(c => relatedConcepts.add(c));
     }
 
     /**
@@ -322,10 +310,12 @@ export class MemoryIndex {
 
         const results = new Map(); // Use Map to store concept and relevance score
 
-        // Find by components (subterm matching) - this is the most precise
+        // Find by components - use compound index
         if (term.components) {
             for (const comp of term.components) {
-                const byComponent = this.findConceptsByComponent(comp);
+                // Since component indexing is in CompoundIndex, we need to search there
+                // This requires extending CompoundIndex to support component-based searches
+                const byComponent = this._compoundIndex.find({ component: comp });
                 for (const concept of byComponent) {
                     // Filter by category if specified
                     const category = TermCategorization.getTermCategory(concept.term);
@@ -344,34 +334,40 @@ export class MemoryIndex {
         const category = TermCategorization.getTermCategory(term);
         if (!excludeCategories.includes(category) &&
             (includeCategories.length === 0 || includeCategories.includes(category))) {
-            const byCategory = this.findConceptsByCategory(category);
+            const byCategory = this._compoundIndex.find({ category: category });
             for (const concept of byCategory) {
                 if (results.has(concept)) continue; // Skip if already found via components
                 if (concept.activation < minActivation) continue;
 
+                // Calculate relevance based on category match
                 const relevance = this._calculateRelevance(term, concept.term, 'category');
                 results.set(concept, {relevance, method: 'category'});
             }
         }
 
-        // Semantic similarity search (if enabled)
+        // Apply semantic similarity if enabled
         if (useSemanticSimilarity) {
-            const semanticResults = this._findSemanticallySimilarConcepts(term, searchDepth);
-            for (const [concept, relevance] of semanticResults.entries()) {
-                if (results.has(concept)) continue; // Skip if already found
+            const semanticallySimilar = this._findSemanticallySimilarConcepts(term, searchDepth);
+            for (const [concept, score] of semanticallySimilar.entries()) {
+                if (results.has(concept)) continue;
                 if (concept.activation < minActivation) continue;
 
-                results.set(concept, {relevance, method: 'semantic'});
+                // Filter by categories
+                const category = TermCategorization.getTermCategory(concept.term);
+                if (excludeCategories.includes(category)) continue;
+                if (includeCategories.length > 0 && !includeCategories.includes(category)) continue;
+
+                results.set(concept, {relevance: score, method: 'semantic'});
             }
         }
 
-        // Convert to array, sort by relevance, and return top results
-        const sortedResults = Array.from(results.entries())
+        // Sort by relevance and limit results
+        const sortedConcepts = Array.from(results.entries())
             .sort((a, b) => b[1].relevance - a[1].relevance)
             .slice(0, maxResults)
-            .map(entry => entry[0]); // Return just the concepts, not the relevance scores
+            .map(item => item[0]);
 
-        return sortedResults;
+        return sortedConcepts;
     }
 
     /**
@@ -382,7 +378,7 @@ export class MemoryIndex {
 
         // Calculate similarity with all concepts of the same category
         const category = TermCategorization.getTermCategory(term);
-        const sameCategoryConcepts = this.findConceptsByCategory(category);
+        const sameCategoryConcepts = this._compoundIndex.find({ category: category });
 
         for (const concept of sameCategoryConcepts) {
             if (concept.term === term) continue; // Skip self
@@ -441,68 +437,109 @@ export class MemoryIndex {
     }
 
     getConcept(termHash) {
-        const concepts = Array.from(this._indexes.term.get(termHash) || []);
-        return concepts.length > 0 ? concepts[concepts.length - 1] : undefined;
+        const concepts = this._termIdToConcepts.get(termHash);
+        if (concepts && concepts.length > 0) {
+            // Return the last concept in the list (most recently added)
+            return concepts[concepts.length - 1];
+        }
+        return undefined;
     }
 
-    getAllConcepts = () => Array.from(this._indexes.term.values()).flat();
+    getAllConcepts() {
+        const allConcepts = new Set();
+        
+        // Combine concepts from all indexes
+        [...this._atomicIndex.getAll(), 
+         ...this._compoundIndex.getAll(),
+         ...this._activationIndex.getAll(),
+         ...this._temporalIndex.getAll(),
+         ...this._relationshipIndex.getAll()].forEach(c => allConcepts.add(c));
+        
+        return Array.from(allConcepts);
+    }
 
     getStats() {
-        const indexSizes = {
-            inheritance: this._indexes.inheritance.size,
-            implication: this._indexes.implication.size,
-            similarity: this._indexes.similarity.size,
-            compound: this._indexes.compound.size,
-            atomic: this._indexes.atomic.size,
-            compoundByOp: this._indexes.compoundByOp.size,
-            component: this._indexes.component.size,
-            complexity: this._indexes.complexity.size,
-            category: this._indexes.category.size,
-            temporal: this._indexes.temporal.size,
-            activation: this._indexes.activation.size
-        };
-
-        return {
+        // Collect detailed statistics across all indexes
+        const allConcepts = this.getAllConcepts();
+        const stats = {
             totalConcepts: this._totalConcepts,
-            inheritanceEntries: indexSizes.inheritance,
-            implicationEntries: indexSizes.implication,
-            similarityEntries: indexSizes.similarity,
-            operatorEntries: indexSizes.compound,  // This was the original property name
-            atomicEntries: indexSizes.atomic,
-            compoundByOpEntries: indexSizes.compoundByOp,
-            componentEntries: indexSizes.component,
-            complexityEntries: indexSizes.complexity,
-            categoryEntries: indexSizes.category,
-            temporalEntries: indexSizes.temporal,
-            activationEntries: indexSizes.activation,
-            compoundTermsByOperator: Object.fromEntries(
-                Array.from(this._indexes.compound.entries()).map(([op, terms]) => [op, terms.size])
-            ),
+            inheritanceEntries: 0,
+            implicationEntries: 0,
+            similarityEntries: 0, // This might need to be the count of concepts involved in similarity relationships
+            operatorEntries: 0,
+            atomicEntries: 0,
+            compoundByOpEntries: 0,
+            componentEntries: 0,
+            complexityEntries: 0,
+            categoryEntries: 0,
+            temporalEntries: this._temporalIndex.getAll().length,
+            activationEntries: this._activationIndex.getAll().length,
+            compoundTermsByOperator: {},
             indexDetails: {
-                atomic: this._getMapSizes(this._indexes.atomic),
-                compoundByOp: this._getMapSizes(this._indexes.compoundByOp),
-                component: this._getMapSizes(this._indexes.component),
-                complexity: this._getMapSizes(this._indexes.complexity),
-                category: this._getMapSizes(this._indexes.category),
-                temporal: this._getMapSizes(this._indexes.temporal),
-                activation: this._getMapSizes(this._indexes.activation)
+                atomic: this._atomicIndex.constructor.name,
+                compound: this._compoundIndex.constructor.name,
+                activation: this._activationIndex.constructor.name,
+                temporal: this._temporalIndex.constructor.name,
+                relationship: this._relationshipIndex.constructor.name
             }
         };
-    }
-
-    /**
-     * Helper to get sizes of maps for stats
-     */
-    _getMapSizes(map) {
-        const sizes = {};
-        for (const [key, value] of map.entries()) {
-            sizes[key.toString()] = value.size;
+        
+        // Count by operator types
+        for (const concept of allConcepts) {
+            if (concept.term) {
+                if (concept.term.isAtomic) {
+                    stats.atomicEntries++;
+                } else {
+                    stats.operatorEntries++;
+                    
+                    if (concept.term.operator) {
+                        // Count by operator
+                        stats.compoundTermsByOperator[concept.term.operator] = 
+                            (stats.compoundTermsByOperator[concept.term.operator] || 0) + 1;
+                        
+                        // Count by relationship type
+                        switch (concept.term.operator) {
+                            case '-->':
+                                stats.inheritanceEntries++;
+                                break;
+                            case '==>':
+                                stats.implicationEntries++;
+                                break;
+                            case '<->':
+                                // For similarity, each concept counts as 2 entries (bidirectional)
+                                // A <-> B means both A and B participate in similarity relationships
+                                stats.similarityEntries += 2;
+                                break;
+                        }
+                    }
+                    
+                    // Count nested operators for compound terms
+                    if (concept.term.components) {
+                        for (const component of concept.term.components) {
+                            if (component.operator) {
+                                stats.operatorEntries++; // Increment for each nested operator
+                            }
+                        }
+                    }
+                }
+            }
         }
-        return sizes;
+        
+        // For compoundByOpEntries, count unique operators
+        stats.compoundByOpEntries = Object.keys(stats.compoundTermsByOperator).length;
+        
+        // For component entries, we count concepts that have components (subterms)
+        stats.componentEntries = this._compoundIndex.getAll().filter(c => c.term && c.term.components).length;
+        
+        return stats;
     }
 
     clear() {
-        Object.values(this._indexes).forEach(index => index.clear());
+        this._atomicIndex.clear();
+        this._compoundIndex.clear();
+        this._activationIndex.clear();
+        this._temporalIndex.clear();
+        this._relationshipIndex.clear();
         this._totalConcepts = 0;
     }
 
@@ -511,8 +548,7 @@ export class MemoryIndex {
      */
     rebuildIndex(concepts) {
         // Clear current indexes
-        Object.values(this._indexes).forEach(index => index.clear());
-        this._totalConcepts = 0;
+        this.clear();
 
         // Re-add all concepts
         for (const concept of concepts) {
@@ -738,7 +774,13 @@ export class MemoryIndex {
     }
 
     getPerformanceStats() {
-        return this._performanceMonitor.getPerformanceStats(this._indexes);
+        return this._performanceMonitor.getPerformanceStats({
+            atomic: { size: this._atomicIndex.getAll().length },
+            compound: { size: this._compoundIndex.getAll().length },
+            activation: { size: this._activationIndex.getAll().length },
+            temporal: { size: this._temporalIndex.getAll().length },
+            relationship: { size: this._relationshipIndex.getAll().length }
+        });
     }
 
     optimizePerformance() {
@@ -746,14 +788,8 @@ export class MemoryIndex {
     }
 
     optimize() {
-        // Remove empty sets to free up memory
-        for (const index of Object.values(this._indexes)) {
-            for (const [key, value] of index.entries()) {
-                if (value.size === 0) {
-                    index.delete(key);
-                }
-            }
-        }
+        // In the new implementation, each index can optimize itself
+        // For now, just return
     }
 
     // Delegate validation methods to ValidationUtils
@@ -770,11 +806,23 @@ export class MemoryIndex {
     }
 
     validate() {
-        return this._validationUtils.validate(this._indexes, console);
+        return this._validationUtils.validate({
+            atomic: { size: this._atomicIndex.getAll().length },
+            compound: { size: this._compoundIndex.getAll().length },
+            activation: { size: this._activationIndex.getAll().length },
+            temporal: { size: this._temporalIndex.getAll().length },
+            relationship: { size: this._relationshipIndex.getAll().length }
+        }, console);
     }
 
     repair() {
-        return this._validationUtils.repair(this._indexes, console);
+        return this._validationUtils.repair({
+            atomic: { size: this._atomicIndex.getAll().length },
+            compound: { size: this._compoundIndex.getAll().length },
+            activation: { size: this._activationIndex.getAll().length },
+            temporal: { size: this._temporalIndex.getAll().length },
+            relationship: { size: this._relationshipIndex.getAll().length }
+        }, console);
     }
 
     registerValidationRule(name, ruleFn) {
@@ -786,148 +834,91 @@ export class MemoryIndex {
     }
 
     getValidationStats() {
-        return this._validationUtils.getValidationStats(this._indexes);
+        return this._validationUtils.getValidationStats({
+            atomic: { size: this._atomicIndex.getAll().length },
+            compound: { size: this._compoundIndex.getAll().length },
+            activation: { size: this._activationIndex.getAll().length },
+            temporal: { size: this._temporalIndex.getAll().length },
+            relationship: { size: this._relationshipIndex.getAll().length }
+        });
     }
 
-    // Index-specific helper methods
-    _addToIndex(index, key, value) {
-        IndexUtils.addToIndex(this._indexes, index, key, value);
+    findInheritanceConcepts(term) {
+        return this._relationshipIndex.find({ 
+            relationshipType: 'inheritance', 
+            subject: term 
+        });
     }
 
-    _removeFromIndex(index, key, value) {
-        IndexUtils.removeFromIndex(this._indexes, index, key, value);
+    findImplicationConcepts(term) {
+        return this._relationshipIndex.find({ 
+            relationshipType: 'implication', 
+            premise: term 
+        });
     }
 
-    _addToMultipleIndexes(indexEntries) {
-        IndexUtils.addMultipleToIndex(this._indexes, indexEntries);
+    findSimilarityConcepts(term) {
+        return this._relationshipIndex.find({ 
+            relationshipType: 'similarity' 
+        });
     }
-
-    _removeFromMultipleIndexes(indexEntries) {
-        IndexUtils.removeMultipleFromIndex(this._indexes, indexEntries);
-    }
-
-    _indexInheritance(term, concept) {
-        if (term.components?.length >= 2) {
-            this._addToIndex('inheritance', term.components[1], concept);
-        }
-    }
-
-    _indexImplication(term, concept) {
-        if (term.components?.length >= 2) {
-            this._addToIndex('implication', term.components[0], concept);
-        }
-    }
-
-    _indexSimilarity(term, concept) {
-        if (term.components?.length >= 2) {
-            this._addToIndex('similarity', term.components[0], concept);
-            this._addToIndex('similarity', term.components[1], concept);
-        }
-    }
-
-    _removeCompoundTermIndex(term, concept) {
-        this._removeFromIndex('compound', term.operator, term);
-
-        const removalMap = {
-            '-->': '_removeInheritanceIndex',
-            '==>': '_removeImplicationIndex',
-            '<->': '_removeSimilarityIndex'
-        };
-
-        const removalMethod = removalMap[term.operator];
-        if (removalMethod) {
-            this[removalMethod](term, concept);
-        }
-    }
-
-    _removeInheritanceIndex(term, concept) {
-        if (term.components?.length >= 2) {
-            this._removeFromIndex('inheritance', term.components[1], concept);
-        }
-    }
-
-    _removeImplicationIndex(term, concept) {
-        if (term.components?.length >= 2) {
-            this._removeFromIndex('implication', term.components[0], concept);
-        }
-    }
-
-    _removeSimilarityIndex(term, concept) {
-        if (term.components?.length >= 2) {
-            this._removeFromIndex('similarity', term.components[0], concept);
-            this._removeFromIndex('similarity', term.components[1], concept);
-        }
-    }
-
-    // Unified method to find concepts by index
-    _findConceptsByIndex(indexName, key) {
-        const concepts = this._indexes[indexName]?.get(key) || new Set();
-        return Array.from(concepts);
-    }
-
-    findInheritanceConcepts = (predicate) => this._findConceptsByIndex('inheritance', predicate);
-    findImplicationConcepts = (premise) => this._findConceptsByIndex('implication', premise);
-    findSimilarityConcepts = (term) => this._findConceptsByIndex('similarity', term);
 
     findConceptsByOperator(operator) {
-        const terms = this._indexes.compound.get(operator) || new Set();
-        return Array.from(terms)
-            .flatMap(term => Array.from(this._indexes.term.get(term.id) || []))
-            .filter(Boolean);
+        return this._compoundIndex.find({ operator });
     }
 
     /**
      * Find concepts by complexity level
      */
     findConceptsByComplexity(level) {
-        return this._findConceptsByIndex('complexity', level);
+        return this._compoundIndex.find({ minComplexity: level, maxComplexity: level });
     }
 
     /**
      * Find concepts by category
      */
     findConceptsByCategory(category) {
-        return this._findConceptsByIndex('category', category);
+        return this._compoundIndex.find({ category });
     }
 
     /**
      * Find concepts by activation level
      */
-    findConceptsByActivation(activationBucket) {
-        return this._findConceptsByIndex('activation', activationBucket);
+    findConceptsByActivation(minActivation, maxActivation) {
+        return this._activationIndex.find({
+            minActivation,
+            maxActivation
+        });
     }
 
     /**
      * Find concepts by component (subterm matching)
      */
     findConceptsByComponent(componentTerm) {
-        return this._findConceptsByIndex('component', componentTerm);
+        return this._compoundIndex.find({ component: componentTerm });
     }
 
     /**
      * Find concepts by temporal range
      */
-    findConceptsByTemporal(temporalBucket) {
-        return this._findConceptsByIndex('temporal', temporalBucket);
+    findConceptsByTemporal(createdAfter, createdBefore) {
+        return this._temporalIndex.find({
+            createdAfter,
+            createdBefore
+        });
     }
 
     /**
      * Find atomic concepts by name
      */
     findAtomicConcepts(name) {
-        return this._findConceptsByIndex('atomic', name);
+        return this._atomicIndex.find({ termName: name });
     }
 
     /**
      * Find concepts by operator (enhanced)
      */
     findConceptsByOperatorEnhanced(operator) {
-        // Get concepts from both the basic compound index and the enhanced compoundByOp index
-        const basicConcepts = this.findConceptsByOperator(operator);
-        const enhancedConcepts = this._findConceptsByIndex('compoundByOp', operator);
-
-        // Combine and deduplicate
-        const allConcepts = [...basicConcepts, ...enhancedConcepts];
-        return Array.from(new Set(allConcepts));
+        return this.findConceptsByOperator(operator);
     }
 }

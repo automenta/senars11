@@ -446,18 +446,76 @@ class WebSocketService {
                 }, 150);
 
                 setTimeout(() => {
+                    const task1Type = generateRandomTaskType();
+                    const task2Type = generateRandomTaskType();
+                    
                     sendTaskUpdate(
                         `task_${demoId}_1`,
                         generateRandomContent(),
                         0.78,
-                        generateRandomTaskType()
+                        task1Type
                     );
+                    
+                    // Also send belief or goal updates to separate collections
+                    if (task1Type === 'belief') {
+                        this.routeMessage({
+                            type: 'beliefUpdate',
+                            payload: {
+                                id: `task_${demoId}_1`,
+                                term: generateRandomContent(),
+                                priority: 0.78,
+                                creationTime: Date.now(),
+                                type: task1Type,
+                                truth: {frequency: Math.random(), confidence: Math.random()}
+                            }
+                        });
+                    } else if (task1Type === 'goal') {
+                        this.routeMessage({
+                            type: 'goalUpdate',
+                            payload: {
+                                id: `task_${demoId}_1`,
+                                term: generateRandomContent(),
+                                priority: 0.78,
+                                creationTime: Date.now(),
+                                type: task1Type,
+                                truth: {desire: Math.random(), confidence: Math.random()}
+                            }
+                        });
+                    }
+                    
                     sendTaskUpdate(
                         `task_${demoId}_2`,
                         generateRandomContent(),
                         0.65,
-                        generateRandomTaskType()
+                        task2Type
                     );
+                    
+                    // Also send belief or goal updates to separate collections
+                    if (task2Type === 'belief') {
+                        this.routeMessage({
+                            type: 'beliefUpdate',
+                            payload: {
+                                id: `task_${demoId}_2`,
+                                term: generateRandomContent(),
+                                priority: 0.65,
+                                creationTime: Date.now(),
+                                type: task2Type,
+                                truth: {frequency: Math.random(), confidence: Math.random()}
+                            }
+                        });
+                    } else if (task2Type === 'goal') {
+                        this.routeMessage({
+                            type: 'goalUpdate',
+                            payload: {
+                                id: `task_${demoId}_2`,
+                                term: generateRandomContent(),
+                                priority: 0.65,
+                                creationTime: Date.now(),
+                                type: task2Type,
+                                truth: {desire: Math.random(), confidence: Math.random()}
+                            }
+                        });
+                    }
                 }, 250);
 
                 setTimeout(() => sendDemoState('running', 25, 'Processing input'), 300);
@@ -494,16 +552,46 @@ class WebSocketService {
                 }
             });
 
+            const taskType = input.endsWith('?') ? 'question' : input.endsWith('!') ? 'goal' : 'belief';
+            const taskId = `task_${Date.now()}`;
+            
             this.routeMessage({
                 type: 'taskUpdate',
                 payload: {
-                    id: `task_${Date.now()}`,
+                    id: taskId,
                     content: input,
                     priority: Math.random(),
                     creationTime: Date.now(),
-                    type: input.endsWith('?') ? 'question' : input.endsWith('!') ? 'goal' : 'belief'
+                    type: taskType
                 }
             });
+            
+            // Also send belief or goal updates to separate collections
+            if (taskType === 'belief') {
+                this.routeMessage({
+                    type: 'beliefUpdate',
+                    payload: {
+                        id: taskId,
+                        term: input,
+                        priority: Math.random(),
+                        creationTime: Date.now(),
+                        type: taskType,
+                        truth: {frequency: Math.random(), confidence: Math.random()}
+                    }
+                });
+            } else if (taskType === 'goal') {
+                this.routeMessage({
+                    type: 'goalUpdate',
+                    payload: {
+                        id: taskId,
+                        term: input,
+                        priority: Math.random(),
+                        creationTime: Date.now(),
+                        type: taskType,
+                        truth: {desire: Math.random(), confidence: Math.random()}
+                    }
+                });
+            }
         }, 50);
     }
 
@@ -549,6 +637,34 @@ class WebSocketService {
                         task: {id, content, priority, creationTime: now, type},
                         changeType: 'input'
                     }
+                })
+            );
+        }
+
+        // Add sample beliefs
+        if (!targetPanels || targetPanels.includes('beliefs')) {
+            const now = Date.now();
+            [
+                {id: `belief_${now}_sample1`, term: '<cat --> animal>.', priority: 0.9, type: 'belief', truth: {frequency: 0.9, confidence: 0.8}},
+                {id: `belief_${now}_sample2`, term: '<dog --> mammal>.', priority: 0.85, type: 'belief', truth: {frequency: 0.85, confidence: 0.75}}
+            ].forEach(({id, term, priority, type, truth}) =>
+                this.routeMessage({
+                    type: 'beliefUpdate',
+                    payload: {id, term, priority, creationTime: now, type, truth}
+                })
+            );
+        }
+
+        // Add sample goals
+        if (!targetPanels || targetPanels.includes('goals')) {
+            const now = Date.now();
+            [
+                {id: `goal_${now}_sample1`, term: '<find_solution --> desirable>!', priority: 0.95, type: 'goal', truth: {desire: 0.9, confidence: 0.85}},
+                {id: `goal_${now}_sample2`, term: '<achieve_target --> intended>!', priority: 0.8, type: 'goal', truth: {desire: 0.8, confidence: 0.7}}
+            ].forEach(({id, term, priority, type, truth}) =>
+                this.routeMessage({
+                    type: 'goalUpdate',
+                    payload: {id, term, priority, creationTime: now, type, truth}
                 })
             );
         }

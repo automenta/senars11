@@ -13,6 +13,15 @@ This UI provides an IDE-like environment for interacting with a reasoning engine
 - Message validation using Zod schemas
 - Enhanced component patterns with virtualization support
 - Improved performance with memoization and optimized rendering
+- Graph UI for visualizing Concepts, Tasks, Beliefs, and Goals with force-directed layout
+
+- Dynamic panel docking and layout management
+- Real-time communication with a server via WebSockets
+- Comprehensive error handling
+- Theme support (light/dark)
+- Message validation using Zod schemas
+- Enhanced component patterns with virtualization support
+- Improved performance with memoization and optimized rendering
 
 ## Tech Stack
 
@@ -35,6 +44,7 @@ This UI provides an IDE-like environment for interacting with a reasoning engine
 │   │   ├── GenericPanel.js  # Generic panel for displaying lists of items
 │   │   ├── ListPanel.js     # Advanced list panel with filtering/sorting
 │   │   ├── VirtualizedList.js # Virtualized list for performance with large datasets
+│   │   ├── GraphUI.js       # Graph UI component for visualizing Concepts, Tasks, Beliefs, and Goals
 │   │   └── ErrorBoundary.js # Error boundary component
 │   ├── stores/              # Zustand stores (e.g., uiStore.js)
 │   ├── utils/               # Helpers (e.g., websocket.js, consoleBridge.js)
@@ -71,6 +81,12 @@ This UI provides an IDE-like environment for interacting with a reasoning engine
    ```
    This will start the Vite development server on http://localhost:5173
 
+3. **Start the development server with Graph UI:**
+   ```bash
+   npm run web:graph
+   ```
+   This will start the Vite development server with the Graph UI layout on http://localhost:5176
+
 3. **Run tests:**
     - All tests: `npm run test`
     - Unit tests: `npm run test:unit`
@@ -96,6 +112,15 @@ This UI provides an IDE-like environment for interacting with a reasoning engine
 - Zod schemas validate all incoming WebSocket messages
 
 ## Key Improvements
+
+### Graph UI
+
+- **Dynamic Graph Visualization**: Interactive graph visualization of Concepts, Tasks, Beliefs, and Goals
+- **Force-Directed Layout**: Automatic positioning of nodes with related items grouped together
+- **Context Menu Interactions**: Right-click context menu for temporary Concepts and interactions
+- **Node Types**: Custom node components for different system items with appropriate styling
+- **Real-time Updates**: Live updates as system data changes
+- **Selection Support**: Click to select nodes and view details
 
 ### Component Architecture
 
@@ -151,6 +176,8 @@ The UI communicates with the server via WebSockets using the following message t
 - `log`: Forwards console logs to the server
 - `conceptUpdate`: Updates concept information
 - `taskUpdate`: Updates task information
+- `beliefUpdate`: Updates belief information
+- `goalUpdate`: Updates goal information
 - `demoState`: Updates demo state
 - `systemMetrics`: Updates system metrics
 - `narseseInput`: Processes Narsese input
