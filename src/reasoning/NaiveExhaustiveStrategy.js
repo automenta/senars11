@@ -1,5 +1,6 @@
 import {StrategyInterface} from './StrategyInterface.js';
 import {StrategyMetrics} from './StrategyMetrics.js';
+import {createBatches, removeDuplicateTasks} from './ReasoningUtils.js';
 
 /**
  * A naive, exhaustive reasoning strategy that iterates through all task combinations.
@@ -70,7 +71,7 @@ export class NaiveExhaustiveStrategy extends StrategyInterface {
             taskCount = tasks.length;
 
             // Use the tasks provided rather than getting from memory since we now have tasks parameter
-            const taskBatches = this._createBatches(tasks, this.config.maxTasksPerBatch);
+            const taskBatches = createBatches(tasks, this.config.maxTasksPerBatch);
 
             const allDerivedTasks = [];
             let ruleApplications = 0;
@@ -87,7 +88,7 @@ export class NaiveExhaustiveStrategy extends StrategyInterface {
             }
 
             // Remove duplicates
-            result = this._removeDuplicates(allDerivedTasks);
+            result = removeDuplicateTasks(allDerivedTasks);
         } catch (error) {
             success = false;
             throw error;
@@ -115,14 +116,6 @@ export class NaiveExhaustiveStrategy extends StrategyInterface {
             return memory.getAllTasks();
         }
         return [];
-    }
-
-    _createBatches(tasks, batchSize) {
-        const batches = [];
-        for (let i = 0; i < tasks.length; i += batchSize) {
-            batches.push(tasks.slice(i, i + batchSize));
-        }
-        return batches;
     }
 
     async _processBatch(tasks, rules, termFactory) {
@@ -234,6 +227,5 @@ export class NaiveExhaustiveStrategy extends StrategyInterface {
             }
         }
 
-        return uniqueTasks;
     }
 }

@@ -1,4 +1,5 @@
 import {RuleProcessor} from './RuleProcessor.js';
+import {createBatches, chunkArray, flattenResults} from './ReasoningUtils.js';
 
 /**
  * ParallelRuleProcessor: Applies rules in parallel to tasks for better performance
@@ -17,7 +18,7 @@ export class ParallelRuleProcessor extends RuleProcessor {
         const results = [];
 
         // Split tasks into batches to manage memory and performance
-        const taskBatches = this._createBatches(tasks, this.batchSize);
+        const taskBatches = createBatches(tasks, this.batchSize);
 
         for (const taskBatch of taskBatches) {
             const batchResults = await this._processBatch(rules, taskBatch, context);
@@ -41,37 +42,14 @@ export class ParallelRuleProcessor extends RuleProcessor {
         }
 
         // Process in chunks to respect maxConcurrency
-        const chunkedPromises = this._chunkArray(allPromises, this.maxConcurrency);
+        const chunkedPromises = chunkArray(allPromises, this.maxConcurrency);
         const allResults = [];
 
         for (const chunk of chunkedPromises) {
             const chunkResults = await Promise.all(chunk);
-            allResults.push(...chunkResults.flat());
+            allResults.push(...flattenResults(chunkResults));
         }
 
         return allResults;
-    }
-
-
-    /**
-     * Create batches of items
-     */
-    _createBatches(items, batchSize) {
-        const batches = [];
-        for (let i = 0; i < items.length; i += batchSize) {
-            batches.push(items.slice(i, i + batchSize));
-        }
-        return batches;
-    }
-
-    /**
-     * Split array into chunks
-     */
-    _chunkArray(array, chunkSize) {
-        const chunks = [];
-        for (let i = 0; i < array.length; i += chunkSize) {
-            chunks.push(array.slice(i, i + chunkSize));
-        }
-        return chunks;
     }
 }

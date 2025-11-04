@@ -1,6 +1,5 @@
 /**
  * MeTTaParser.js - Parser for MeTTa syntax (stub implementation)
- * MeTTa is a language developed by Adam Vandervorst for NARS-like reasoning
  * This is a placeholder implementation to be expanded in the future
  */
 

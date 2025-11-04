@@ -1,3 +1,5 @@
+import {createBatches} from './ReasoningUtils.js';
+
 /**
  * RuleIndex: Indexes rules by their matching patterns for faster lookup
  */
@@ -409,7 +411,7 @@ export class PerformanceOptimizer {
 
         // Split into batches and process each batch
         const allResults = [];
-        const taskBatches = this._createBatches(tasks, this.config.maxBatchSize);
+        const taskBatches = createBatches(tasks, this.config.maxBatchSize);
 
         for (const taskBatch of taskBatches) {
             const batchResults = await processFunction(rules, taskBatch, context);
@@ -417,17 +419,6 @@ export class PerformanceOptimizer {
         }
 
         return allResults;
-    }
-
-    /**
-     * Create batches of items
-     */
-    _createBatches(items, batchSize) {
-        const batches = [];
-        for (let i = 0; i < items.length; i += batchSize) {
-            batches.push(items.slice(i, i + batchSize));
-        }
-        return batches;
     }
 
     /**

@@ -7,3 +7,5 @@ export {Reasoner} from './Reasoner.js';
 export {Rule} from './Rule.js';
 export {RuleEngine} from './RuleEngine.js';
 export {StrategySelector} from './StrategySelector.js';
+export {ProcessorFactory} from './ProcessorFactory.js';
+export {createBatches, chunkArray, flattenResults, safeApply, allSatisfy, safeFilter, removeDuplicates, removeDuplicateTasks} from './ReasoningUtils.js';
