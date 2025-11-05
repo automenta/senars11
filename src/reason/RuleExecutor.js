@@ -13,21 +13,12 @@ export class RuleExecutor {
     this.decisionTree = null;
   }
 
-  /**
-   * Register a rule for execution
-   * @param {Rule} rule - The rule to register
-   */
   register(rule) {
     this.rules.push(rule);
-    // When rules change, we need to rebuild the optimization structure
     this.decisionTree = null;
     return this;
   }
 
-  /**
-   * Register multiple rules
-   * @param {Array<Rule>} rules - Array of rules to register
-   */
   registerMany(rules) {
     for (const rule of rules) {
       this.register(rule);
@@ -35,27 +26,14 @@ export class RuleExecutor {
     return this;
   }
 
-  /**
-   * Analyze and optimize symbolic guards for the rules
-   */
   buildOptimizationStructure() {
-    // For now, create a simple structure that can be expanded later
-    // This is where we would implement the decision tree creation
-    // for guard analysis, deduplication, and ordering
     this.decisionTree = this._createDecisionTree();
   }
 
-  /**
-   * Create an optimized decision tree for rule selection
-   * @private
-   */
   _createDecisionTree() {
-    // A naive implementation that just builds a lookup based on rule categories
-    // In the future, this would build a more sophisticated decision tree
     const tree = new Map();
     
     for (const rule of this.rules) {
-      // Create a simple key based on rule properties for initial optimization
       const key = this._getRuleKey(rule);
       if (!tree.has(key)) {
         tree.set(key, []);
@@ -66,99 +44,56 @@ export class RuleExecutor {
     return tree;
   }
 
-  /**
-   * Generate a key for rule lookup
-   * @private
-   */
   _getRuleKey(rule) {
-    // For now, just use rule type as a simple key
-    // In the future, this would be more sophisticated based on guards
     return rule.type ?? 'default';
   }
 
-  /**
-   * Get candidate rules for a premise pair
-   * @param {Task} primaryPremise - The primary premise
-   * @param {Task} secondaryPremise - The secondary premise
-   * @returns {Array<Rule>} - Array of candidate rules
-   */
   getCandidateRules(primaryPremise, secondaryPremise) {
-    // Build optimization structure if not already built
     if (!this.decisionTree) {
       this.buildOptimizationStructure();
     }
 
-    // First try to use the decision tree for fast filtering
     if (this.decisionTree) {
-      // Try to get candidates based on a heuristic key from the premises
       const heuristicKey = this._getHeuristicKey(primaryPremise, secondaryPremise);
-      const treeCandidates = this.decisionTree.get(heuristicKey) || this.rules;
-      
-      // Filter the candidates using canApply, but try to optimize
-      const candidateRules = [];
-      for (const rule of treeCandidates) {
-        try {
-          if (rule.canApply?.(primaryPremise, secondaryPremise) ?? true) {
-            candidateRules.push(rule);
-          }
-        } catch (error) {
-          logError(error, { 
-            ruleId: rule.id ?? rule.name, 
-            context: 'rule_candidate_check' 
-          }, 'warn');
-          // Continue to next rule instead of returning false
-        }
-      }
-      return candidateRules;
+      const treeCandidates = this.decisionTree.get(heuristicKey) ?? this.rules;
+      return this._filterCandidates(treeCandidates, primaryPremise, secondaryPremise);
     } else {
-      // Fallback: return all rules and filter with canApply
-      const candidateRules = [];
-      for (const rule of this.rules) {
-        try {
-          if (rule.canApply?.(primaryPremise, secondaryPremise) ?? true) {
-            candidateRules.push(rule);
-          }
-        } catch (error) {
-          logError(error, { 
-            ruleId: rule.id ?? rule.name, 
-            context: 'rule_candidate_check' 
-          }, 'warn');
-          // Continue to next rule instead of returning false
-        }
-      }
-      return candidateRules;
+      return this._filterCandidates(this.rules, primaryPremise, secondaryPremise);
     }
   }
 
   /**
-   * Generate a heuristic key for premise-based rule filtering
+   * Filter candidates using canApply method
    * @private
-   * @param {Task} primaryPremise - The primary premise
-   * @param {Task} secondaryPremise - The secondary premise
-   * @returns {string} A heuristic key
    */
+  _filterCandidates(candidates, primaryPremise, secondaryPremise) {
+    const candidateRules = [];
+    for (const rule of candidates) {
+      try {
+        if (rule.canApply?.(primaryPremise, secondaryPremise) ?? true) {
+          candidateRules.push(rule);
+        }
+      } catch (error) {
+        logError(error, { 
+          ruleId: rule.id ?? rule.name, 
+          context: 'rule_candidate_check' 
+        }, 'warn');
+      }
+    }
+    return candidateRules;
+  }
+
   _getHeuristicKey(primaryPremise, secondaryPremise) {
-    // Create a simple heuristic key based on premise characteristics
-    // This can be expanded based on more sophisticated premise analysis
     const primaryType = primaryPremise.type ?? 'unknown';
     const secondaryType = secondaryPremise.type ?? 'unknown';
-    const primaryTerm = primaryPremise.term?.name ? primaryPremise.term.name.substring(0, 10) : 'unknown';
-    const secondaryTerm = secondaryPremise.term?.name ? secondaryPremise.term.name.substring(0, 10) : 'unknown';
+    const primaryTerm = primaryPremise.term?.name?.substring(0, 10) ?? 'unknown';
+    const secondaryTerm = secondaryPremise.term?.name?.substring(0, 10) ?? 'unknown';
     
     return `${primaryType}_${secondaryType}_${primaryTerm}_${secondaryTerm}`;
   }
 
-  /**
-   * Execute a rule and return results
-   * @param {Rule} rule - The rule to execute
-   * @param {Task} primaryPremise - The primary premise
-   * @param {Task} secondaryPremise - The secondary premise
-   * @param {object} context - The execution context
-   * @returns {Array<Task>} - Array of derived tasks
-   */
   executeRule(rule, primaryPremise, secondaryPremise, context = {}) {
     try {
-      // Execute the rule application
       const results = rule.apply?.(primaryPremise, secondaryPremise, context) ?? [];
       return Array.isArray(results) ? results : [results];
     } catch (error) {
@@ -170,26 +105,16 @@ export class RuleExecutor {
     }
   }
 
-  /**
-   * Get the number of registered rules
-   * @returns {number}
-   */
   getRuleCount() {
     return this.rules.length;
   }
 
-  /**
-   * Clear all registered rules
-   */
   clearRules() {
     this.rules = [];
     this.decisionTree = null;
     this.optimizedRuleMap.clear();
   }
 
-  /**
-   * Clean up resources
-   */
   cleanup() {
     this.clearRules();
     this.optimizedRuleMap.clear();

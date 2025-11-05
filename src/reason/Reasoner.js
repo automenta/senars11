@@ -13,19 +13,18 @@ export class Reasoner {
     this.premiseSource = premiseSource;
     this.strategy = strategy;
     this.ruleProcessor = ruleProcessor;
-    this.parentNAR = parentNAR; // Store reference to parent NAR for adding derivations back
+    this.parentNAR = parentNAR;
     this.config = {
-      maxDerivationDepth: config.maxDerivationDepth || 10,
-      cpuThrottleInterval: config.cpuThrottleInterval || 0, // milliseconds to yield CPU
-      backpressureThreshold: config.backpressureThreshold || 100, // number of queued items to trigger backpressure
-      backpressureInterval: config.backpressureInterval || 10, // milliseconds to wait when backpressure detected
+      maxDerivationDepth: config.maxDerivationDepth ?? 10,
+      cpuThrottleInterval: config.cpuThrottleInterval ?? 0,
+      backpressureThreshold: config.backpressureThreshold ?? 100,
+      backpressureInterval: config.backpressureInterval ?? 10,
       ...config
     };
     
     this.isRunning = false;
     this._outputStream = null;
     
-    // Metrics tracking
     this.metrics = {
       totalDerivations: 0,
       startTime: null,
@@ -36,50 +35,29 @@ export class Reasoner {
       lastBackpressureTime: null
     };
     
-    // Performance monitoring
     this.performance = {
-      throughput: 0, // derivations per second
-      avgProcessingTime: 0, // average processing time in ms
-      memoryUsage: 0, // in bytes
-      backpressureLevel: 0 // indicator of backpressure severity
+      throughput: 0,
+      avgProcessingTime: 0,
+      memoryUsage: 0,
+      backpressureLevel: 0
     };
     
-    // Backpressure detection
-    this.outputConsumerSpeed = 0; // derivations per second
+    this.outputConsumerSpeed = 0;
     this.lastConsumerCheckTime = Date.now();
     this.consumerDerivationCount = 0;
   }
 
-  /**
-   * Get the output stream of newly derived tasks
-   * @returns {AsyncGenerator<Task>}
-   */
   get outputStream() {
-    if (!this._outputStream) {
-      this._outputStream = this._createOutputStream();
-    }
-    return this._outputStream;
+    return this._outputStream ??= this._createOutputStream();
   }
 
-  /**
-   * Create the main output stream
-   * @private
-   */
   async *_createOutputStream() {
     try {
-      // Get the premise stream from the source
       const premiseStream = this.premiseSource.stream();
-      
-      // Generate premise pairs using the strategy
       const premisePairStream = this.strategy.generatePremisePairs(premiseStream);
+      const derivationStream = this.ruleProcessor.process(premisePairStream, 30000);
       
-      // Process the pairs through rules with a reasonable timeout
-      // The timeout will be handled within the RuleProcessor
-      const derivationStream = this.ruleProcessor.process(premisePairStream, 30000); // 30 second timeout
-      
-      // Yield results from the derivation stream
       for await (const derivation of derivationStream) {
-        // Apply CPU throttle if configured
         if (this.config.cpuThrottleInterval > 0) {
           await this._cpuThrottle();
           this.metrics.cpuThrottleCount++;
@@ -89,14 +67,10 @@ export class Reasoner {
       }
     } catch (error) {
       console.debug('Error in output stream creation:', error.message);
-      // Don't throw, just return to avoid hanging
       return;
     }
   }
 
-  /**
-   * Start the continuous reasoning process
-   */
   start() {
     if (this.isRunning) {
       console.warn('Reasoner is already running');
@@ -105,206 +79,152 @@ export class Reasoner {
     
     this.isRunning = true;
     this.metrics.startTime = Date.now();
-    
-    // Start the reasoning pipeline by consuming the output stream
     this._runPipeline();
   }
 
-  /**
-   * Stop the continuous reasoning process
-   */
   async stop() {
     this.isRunning = false;
-    
-    // Wait briefly to allow any pending operations to complete
     await new Promise(resolve => setTimeout(resolve, 10));
   }
 
-  /**
-   * Executes a single reasoning step. Useful for debugging and iterative mode.
-   * Uses the streaming pipeline with a controlled timeout.
-   */
-  async step(timeoutMs = 5000) { // Increased default timeout to 5 seconds
+  async step(timeoutMs = 5000) {
     const results = [];
-    const abortController = new AbortController();
     
     try {
-      // Create a separate abortable stream for this step
-      // We'll create a temporary stream from current focus content
       const startTime = Date.now();
+      const focusTasks = this.premiseSource.focusComponent?.getTasks(10) ?? [];
       
-      // Get tasks from focus to use as premises for this step
-      const focusTasks = [];
-      if (this.premiseSource.focusComponent) {
-        focusTasks.push(...this.premiseSource.focusComponent.getTasks(10));
-      }
-      
-      // Process premise pairs from the current focus
       for (let i = 0; i < focusTasks.length; i++) {
         for (let j = i + 1; j < focusTasks.length; j++) {
-          if (Date.now() - startTime > timeoutMs) {
-            break;
-          }
+          if (Date.now() - startTime > timeoutMs) break;
           
           const primaryPremise = focusTasks[i];
           const secondaryPremise = focusTasks[j];
           
           try {
-            // Get candidate rules for this premise pair
             const candidateRules = this.ruleProcessor.ruleExecutor.getCandidateRules(primaryPremise, secondaryPremise);
             
-            // Process each rule
-            for (const rule of candidateRules) {
-              if (Date.now() - startTime > timeoutMs) {
-                break;
-              }
-              
-              if (this._isSynchronousRule(rule)) {
-                const ruleContext = {
-                  termFactory: this.ruleProcessor.config.termFactory || this.ruleProcessor.config.context?.termFactory || null
-                };
-                const ruleResults = this.ruleProcessor.ruleExecutor.executeRule(rule, primaryPremise, secondaryPremise, ruleContext);
-                
-                for (const result of ruleResults) {
-                  const processedResult = this._processDerivation(result);
-                  if (processedResult) {
-                    results.push(processedResult);
-                  }
-                }
-              }
-            }
+            // Process forward pairing (primary -> secondary)
+            const forwardResults = await this._processRuleBatch(
+              candidateRules, 
+              primaryPremise, 
+              secondaryPremise, 
+              startTime, 
+              timeoutMs
+            );
+            results.push(...forwardResults.filter(Boolean));
             
-            // Also try the reverse pairing (primary <-> secondary)
-            for (const rule of candidateRules) {
-              if (Date.now() - startTime > timeoutMs) {
-                break;
-              }
-              
-              if (this._isSynchronousRule(rule)) {
-                const ruleContext = {
-                  termFactory: this.ruleProcessor.config.termFactory || this.ruleProcessor.config.context?.termFactory || null
-                };
-                const ruleResults = this.ruleProcessor.ruleExecutor.executeRule(rule, secondaryPremise, primaryPremise, ruleContext);
-                
-                for (const result of ruleResults) {
-                  const processedResult = this._processDerivation(result);
-                  if (processedResult) {
-                    results.push(processedResult);
-                  }
-                }
-              }
-            }
+            // Process reverse pairing (secondary -> primary) 
+            const reverseResults = await this._processRuleBatch(
+              candidateRules, 
+              secondaryPremise, 
+              primaryPremise, 
+              startTime, 
+              timeoutMs
+            );
+            results.push(...reverseResults.filter(Boolean));
+            
+            if (results.length >= 20 || Date.now() - startTime > timeoutMs) break;
           } catch (error) {
             console.debug('Error processing premise pair:', error.message);
-            continue;
-          }
-          
-          // Safety check to avoid taking too long
-          if (results.length >= 20) {
-            break;
           }
         }
         
-        if (results.length >= 20 || Date.now() - startTime > timeoutMs) {
-          break;
-        }
+        if (results.length >= 20 || Date.now() - startTime > timeoutMs) break;
       }
     } catch (error) {
       console.debug('Error in step method:', error.message);
-    } finally {
-      // Cleanup if needed
     }
     
-    // Return the results array (may be empty if no derivations were produced)
     return results;
   }
   
   /**
-   * Helper to check if a rule is synchronous (used in the step method)
+   * Process a batch of rules for a premise pair
+   * @private
    */
-  _isSynchronousRule(rule) {
-    // For now, assume rules with 'nal' type are synchronous and others are async
-    return (rule.type ?? '').toLowerCase().includes('nal');
+  async _processRuleBatch(candidateRules, primaryPremise, secondaryPremise, startTime, maxTimeMs) {
+    const results = [];
+    
+    for (const rule of candidateRules) {
+      if (Date.now() - startTime > maxTimeMs) break;
+      
+      if (this._isSynchronousRule(rule)) {
+        const ruleContext = this._createRuleContext();
+        const ruleResults = this.ruleProcessor.ruleExecutor.executeRule(rule, primaryPremise, secondaryPremise, ruleContext);
+        
+        for (const result of ruleResults) {
+          const processedResult = this._processDerivation(result);
+          if (processedResult) results.push(processedResult);
+        }
+      }
+    }
+    
+    return results;
   }
   
   /**
-   * Helper to process a derivation (extracted from RuleProcessor)
+   * Create rule execution context
+   * @private
    */
+  _createRuleContext() {
+    return {
+      termFactory: this.ruleProcessor.config.termFactory ?? this.ruleProcessor.config.context?.termFactory ?? null
+    };
+  }
+  
+  _isSynchronousRule(rule) {
+    return (rule.type ?? '').toLowerCase().includes('nal');
+  }
+  
   _processDerivation(result) {
     try {
-      if (!result?.stamp) {
-        return result;
-      }
+      if (!result?.stamp) return result;
 
-      // Get the derivation depth from the result's stamp
       const derivationDepth = result.stamp.depth ?? 0;
 
-      // Check max derivation depth limit
       if (derivationDepth > this.config.maxDerivationDepth) {
         console.debug(`Discarding derivation - exceeds max depth (${derivationDepth} > ${this.config.maxDerivationDepth})`);
-        return null; // Discard if exceeds depth limit
+        return null;
       }
 
       return result;
     } catch (error) {
       console.debug('Error processing derivation:', error.message);
-      return null; // Discard problematic results
+      return null;
     }
   }
 
-  /**
-   * Apply CPU throttling to prevent blocking the event loop
-   * @private
-   */
   async _cpuThrottle() {
     if (this.config.cpuThrottleInterval > 0) {
       return new Promise(resolve => setTimeout(resolve, this.config.cpuThrottleInterval));
     }
   }
 
-  /**
-   * Run the reasoning pipeline continuously
-   * @private
-   */
   async _runPipeline() {
     try {
       for await (const derivation of this.outputStream) {
-        if (!this.isRunning) {
-          break;
-        }
+        if (!this.isRunning) break;
         
-        // Start timing for this derivation
         const startTime = Date.now();
-        
-        // Process the derivation (can be extended to do additional work)
         this._processDerivation(derivation);
-        
-        // Update metrics
         this._updateMetrics(startTime);
         
-        // Update performance metrics periodically and adapt processing rate
-        if (this.metrics.totalDerivations % 50 === 0) { // Adapt every 50 derivations instead of 100
+        if (this.metrics.totalDerivations % 50 === 0) {
           this._updatePerformanceMetrics();
-          await this._adaptProcessingRate(); // Apply adaptive rate adjustments
+          await this._adaptProcessingRate();
         }
         
-        // Check for backpressure and apply if needed
         await this._checkAndApplyBackpressure();
       }
     } catch (error) {
       console.error('Error in reasoning pipeline:', error);
     } finally {
       this.isRunning = false;
-      
-      // Final metrics update
       this._updatePerformanceMetrics();
     }
   }
 
-  /**
-   * Update metrics after processing a derivation
-   * @private
-   */
   _updateMetrics(startTime) {
     this.metrics.totalDerivations++;
     this.metrics.lastDerivationTime = Date.now();
@@ -313,28 +233,21 @@ export class Reasoner {
     this.metrics.totalProcessingTime += processingTime;
   }
 
-  /**
-   * Update performance metrics based on current state
-   * @private
-   */
   _updatePerformanceMetrics() {
     if (this.metrics.startTime && this.metrics.totalDerivations > 0) {
-      const elapsed = (this.metrics.lastDerivationTime - this.metrics.startTime) / 1000; // in seconds
+      const elapsed = (this.metrics.lastDerivationTime - this.metrics.startTime) / 1000;
       this.performance.throughput = elapsed > 0 ? this.metrics.totalDerivations / elapsed : 0;
-      
       this.performance.avgProcessingTime = this.metrics.totalProcessingTime / this.metrics.totalDerivations;
     }
     
-    // Monitor memory usage if available (Node.js specific)
     if (typeof process !== 'undefined' && process.memoryUsage) {
       const memUsage = process.memoryUsage();
       this.performance.memoryUsage = memUsage.heapUsed;
     }
     
-    // Calculate consumer speed if we can measure it
     const now = Date.now();
     if (this.lastConsumerCheckTime) {
-      const timeDiff = (now - this.lastConsumerCheckTime) / 1000; // in seconds
+      const timeDiff = (now - this.lastConsumerCheckTime) / 1000;
       if (timeDiff > 0) {
         this.outputConsumerSpeed = (this.metrics.totalDerivations - this.consumerDerivationCount) / timeDiff;
         this.performance.backpressureLevel = Math.max(0, this.outputConsumerSpeed - this.performance.throughput);
@@ -345,88 +258,54 @@ export class Reasoner {
     this.consumerDerivationCount = this.metrics.totalDerivations;
   }
 
-  /**
-   * Check for backpressure and apply mitigation if needed
-   * @private
-   */
   async _checkAndApplyBackpressure() {
-    // For now, we'll implement a simple approach based on processing speed vs output speed
-    // In a real implementation, we might monitor queue sizes, memory usage, etc.
-    
-    // Calculate if we're producing faster than consuming
     const now = Date.now();
     const timeDiff = now - this.lastConsumerCheckTime;
     
-    if (timeDiff > 1000) { // Check once per second
+    if (timeDiff > 1000) {
       this._updatePerformanceMetrics();
       
-      // Check if backpressure is detected (producing faster than consuming)
-      if (this.performance.backpressureLevel > 10) { // arbitrary threshold
+      if (this.performance.backpressureLevel > 10) {
         this.metrics.backpressureEvents++;
         this.metrics.lastBackpressureTime = now;
-        
-        // Apply backpressure by slowing down processing
-        await new Promise(resolve => setTimeout(resolve, this.config.backpressureInterval || 10));
+        await new Promise(resolve => setTimeout(resolve, this.config.backpressureInterval ?? 10));
       }
       
       this.lastConsumerCheckTime = now;
     }
   }
 
-  /**
-   * Adapt processing rate based on current system conditions
-   * @private
-   */
   async _adaptProcessingRate() {
-    // Update performance metrics to get current state
     this._updatePerformanceMetrics();
     
-    // Calculate adaptive adjustments based on current conditions
-    let adjustmentFactor = 1.0; // 1.0 = no change, <1.0 = slow down, >1.0 = speed up
+    let adjustmentFactor = 1.0;
     
-    // Adjust based on backpressure level
     if (this.performance.backpressureLevel > 20) {
-      adjustmentFactor = 0.5; // Slow down significantly under high backpressure
+      adjustmentFactor = 0.5;
     } else if (this.performance.backpressureLevel > 5) {
-      adjustmentFactor = 0.8; // Moderate slowdown under moderate backpressure
-    } else if (this.performance.backpressureLevel < -5) { // Consumer is faster than producer
-      adjustmentFactor = 1.2; // Speed up when we're underutilized
+      adjustmentFactor = 0.8;
+    } else if (this.performance.backpressureLevel < -5) {
+      adjustmentFactor = 1.2;
     }
     
-    // Adjust CPU throttle based on the adjustment factor
-    const baseThrottle = this.config.cpuThrottleInterval || 0;
+    const baseThrottle = this.config.cpuThrottleInterval ?? 0;
     const newThrottle = Math.max(0, baseThrottle / adjustmentFactor);
-    
-    // Apply a gradual adjustment to avoid sudden changes
     const adjustedThrottle = this.config.cpuThrottleInterval * 0.9 + newThrottle * 0.1;
     this.config.cpuThrottleInterval = adjustedThrottle;
     
-    // Also adjust backpressure interval based on conditions
-    const baseBackpressureInterval = this.config.backpressureInterval || 10;
+    const baseBackpressureInterval = this.config.backpressureInterval ?? 10;
     this.config.backpressureInterval = Math.max(1, baseBackpressureInterval / adjustmentFactor);
   }
 
-  /**
-   * Process a derivation (can be extended)
-   * @private
-   */
   _processDerivation(derivation) {
-    // Can implement additional processing of derivations
-    // For example: storing in memory, logging, etc.
-    
-    // If a parent NAR instance is provided, add the derivation back to the system
-    // This is critical for the reasoning loop to continue properly
     if (this.parentNAR && derivation) {
       try {
-        // Fire an event to indicate a reasoning derivation occurred
         this.parentNAR._eventBus.emit('reasoning.derivation', {
           derivedTask: derivation,
           source: 'streamReasoner',
           timestamp: Date.now()
         });
         
-        // Add the derived task back to the system by adding it to the task manager
-        // The NAR handles focus management internally
         this.parentNAR._taskManager.addTask(derivation);
       } catch (error) {
         console.error('Error adding derived task back to system:', error);
@@ -434,45 +313,29 @@ export class Reasoner {
     }
   }
 
-  /**
-   * Get current metrics
-   * @returns {object} Metrics object
-   */
   getMetrics() {
     this._updatePerformanceMetrics();
     return {
       ...this.metrics,
       ...this.performance,
       outputConsumerSpeed: this.outputConsumerSpeed,
-      ruleProcessorStats: this.ruleProcessor.getStats ? this.ruleProcessor.getStats() : null
+      ruleProcessorStats: this.ruleProcessor.getStats?.() ?? null
     };
   }
 
-  /**
-   * Register a consumer feedback handler to receive notifications about derivation consumption
-   * @param {function} handler - Function to call with consumption feedback
-   */
   registerConsumerFeedbackHandler(handler) {
-    if (!this.consumerFeedbackHandlers) {
-      this.consumerFeedbackHandlers = [];
-    }
+    this.consumerFeedbackHandlers ??= [];
     this.consumerFeedbackHandlers.push(handler);
   }
 
-  /**
-   * Notify registered handlers about derivation consumption
-   * @param {Task} derivation - The derivation that was consumed
-   * @param {number} processingTime - Time it took to consume this derivation
-   * @param {object} consumerInfo - Information about the consumer
-   */
   notifyConsumption(derivation, processingTime, consumerInfo = {}) {
-    if (this.consumerFeedbackHandlers && this.consumerFeedbackHandlers.length > 0) {
+    if (this.consumerFeedbackHandlers?.length > 0) {
       for (const handler of this.consumerFeedbackHandlers) {
         try {
           handler(derivation, processingTime, {
             ...consumerInfo,
             timestamp: Date.now(),
-            queueLength: this.metrics.totalDerivations - (this.lastProcessedCount || 0)
+            queueLength: this.metrics.totalDerivations - (this.lastProcessedCount ?? 0)
           });
         } catch (error) {
           console.error('Error in consumer feedback handler:', error);
@@ -481,9 +344,6 @@ export class Reasoner {
     }
   }
 
-  /**
-   * Reset all metrics
-   */
   resetMetrics() {
     this.metrics = {
       totalDerivations: 0,
@@ -500,10 +360,6 @@ export class Reasoner {
     };
   }
 
-  /**
-   * Get the current state of the reasoning pipeline
-   * @returns {object} State information
-   */
   getState() {
     return {
       isRunning: this.isRunning,
@@ -518,10 +374,6 @@ export class Reasoner {
     };
   }
 
-  /**
-   * Get detailed component status
-   * @returns {object} Detailed status information
-   */
   getComponentStatus() {
     return {
       premiseSource: this._getComponentStatus(this.premiseSource, 'PremiseSource'),
@@ -530,21 +382,13 @@ export class Reasoner {
     };
   }
 
-  /**
-   * Get status of a specific component
-   * @param {object} component - The component to get status for
-   * @param {string} componentName - Name of the component
-   * @returns {object} Component status
-   * @private
-   */
   _getComponentStatus(component, componentName) {
     const status = {
       name: componentName,
       type: component.constructor.name
     };
     
-    // If the component has its own status method, use it
-    if (component.getStatus && typeof component.getStatus === 'function') {
+    if (typeof component.getStatus === 'function') {
       try {
         return { ...status, ...component.getStatus() };
       } catch (e) {
@@ -556,10 +400,6 @@ export class Reasoner {
     return status;
   }
 
-  /**
-   * Get debugging information
-   * @returns {object} Debugging information
-   */
   getDebugInfo() {
     return {
       state: this.getState(),
@@ -568,16 +408,12 @@ export class Reasoner {
       componentStatus: this.getComponentStatus(),
       internalState: {
         hasOutputStream: !!this._outputStream,
-        outputStreamType: this._outputStream ? this._outputStream.constructor.name : null
+        outputStreamType: this._outputStream?.constructor.name ?? null
       },
       timestamp: Date.now()
     };
   }
 
-  /**
-   * Get pipeline performance metrics
-   * @returns {object} Performance metrics
-   */
   getPerformanceMetrics() {
     this._updatePerformanceMetrics();
     return {
@@ -592,30 +428,18 @@ export class Reasoner {
     };
   }
 
-  /**
-   * Receive feedback from consumers about pipeline performance
-   * @param {object} feedback - Feedback object from consumers
-   * @param {number} feedback.processingSpeed - Derivations processed per second by consumer
-   * @param {number} feedback.backlogSize - Number of unprocessed derivations in consumer queue
-   * @param {string} feedback.consumerId - Identifier for the consumer
-   * @param {object} feedback.performanceMetrics - Additional performance metrics from consumer
-   */
   receiveConsumerFeedback(feedback) {
-    // Update our understanding of consumer needs based on feedback
     if (typeof feedback.processingSpeed === 'number') {
       this.outputConsumerSpeed = feedback.processingSpeed;
     }
     
     if (typeof feedback.backlogSize === 'number') {
-      // Adjust our behavior based on consumer backlog
       if (feedback.backlogSize > this.config.backpressureThreshold) {
-        // Consumer is falling behind, reduce our production rate
         this.config.cpuThrottleInterval = Math.min(
           this.config.cpuThrottleInterval * 1.5, 
           this.config.cpuThrottleInterval + 5
         );
       } else if (feedback.backlogSize < this.config.backpressureThreshold / 2) {
-        // Consumer is doing well, we can increase our production rate
         this.config.cpuThrottleInterval = Math.max(
           this.config.cpuThrottleInterval * 0.9, 
           Math.max(0, this.config.cpuThrottleInterval - 1)
@@ -623,13 +447,9 @@ export class Reasoner {
       }
     }
     
-    // Update backpressure level based on feedback
-    this.performance.backpressureLevel = feedback.backlogSize || 0;
+    this.performance.backpressureLevel = feedback.backlogSize ?? 0;
   }
 
-  /**
-   * Clean up resources
-   */
   async cleanup() {
     await this.stop();
     this._outputStream = null;
