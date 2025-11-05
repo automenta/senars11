@@ -210,15 +210,18 @@ export class TestNAR {
                 await new Promise(resolve => setTimeout(resolve, 10));
             }
             
-            // Execute steps to make sure processing happens
-            for (let i = 0; i < 10; i++) {  // Run multiple steps for stream reasoner
+            // Execute multiple steps to make sure processing happens
+            for (let i = 0; i < 20; i++) {  // Run more steps to ensure processing
                 await this.nar.step();
                 // Small delay to allow async processing
-                await new Promise(resolve => setTimeout(resolve, 5));
+                await new Promise(resolve => setTimeout(resolve, 10));
             }
             
             // Additional wait for any async rules to complete derivations
-            await new Promise(resolve => setTimeout(resolve, 50));
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            // Stop the stream reasoner to ensure no further processing
+            await this.nar.streamReasoner.stop();
         } else {
             // For the old cycle-based reasoner, just run one cycle
             for (let i = 0; i < 1; i++) {
