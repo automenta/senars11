@@ -139,8 +139,8 @@ export class ErrorHandling {
             return await this.recovery.attemptRecovery(errorInfo, options);
         }
 
-        this.config.get('errorHandling.enableGracefulDegradation') &&
-            (return {success: false, degraded: true, error: errorInfo});
+        if (this.config.get('errorHandling.enableGracefulDegradation'))
+            return {success: false, degraded: true, error: errorInfo};
 
         throw error;
     }
