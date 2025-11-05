@@ -129,10 +129,13 @@ describe('NAR Integration Tests', () => {
             expect(stats).toBeDefined();
             expect(stats.memoryStats).toBeDefined();
             expect(stats.taskManagerStats).toBeDefined();
-            expect(stats.cycleStats).toBeDefined();
-
-            // Use flexible assertions for values that might change with implementation
-            expect(stats.cycleStats).toBeDefined();
+            
+            // For stream reasoner, check appropriate stats
+            if (stats.reasonerType === 'stream') {
+                expect(stats.streamReasonerStats).toBeDefined();
+            } else {
+                expect(stats.cycleStats).toBeDefined();
+            }
         });
 
         test('should track memory usage correctly', async () => {

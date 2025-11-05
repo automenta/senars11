@@ -194,7 +194,8 @@ export class NAR extends BaseComponent {
             {
                 maxDerivationDepth: this._config.get('reasoning.maxDerivationDepth') || 10,
                 cpuThrottleInterval: this._config.get('reasoning.cpuThrottleInterval') || 0
-            }
+            },
+            this  // Pass the NAR instance as parent for derivation feedback
         );
     }
 
@@ -293,11 +294,15 @@ export class NAR extends BaseComponent {
                     originalInput: narseseString,
                     parsed
                 }, {traceId: options.traceId});
+                
+                // For stream reasoner: explicitly add to focus so the stream can access it
+                if (this._focus && this._useStreamReasoner) {
+                    this._focus.addTaskToFocus(task);
+                }
+                
                 await this._processPendingTasks(options.traceId);
             }
             
-            // For the stream reasoner, we don't need to do anything special here
-            // as it will pick up tasks from the taskBag automatically
             return added;
         } catch (error) {
             this._eventBus.emit('input.error', {

@@ -24,18 +24,19 @@ export class SyllogisticRule extends Rule {
   canApply(primaryPremise, secondaryPremise, context) {
     if (!primaryPremise || !secondaryPremise) return false;
     
-    // Both premises need to be inheritance statements (-->)
-    // Check if we have patterns like (S --> M) and (M --> P) or (M --> P) and (S --> M)
+    // Both premises need to be compound statements with appropriate operators
+    // Check if we have patterns like (S ==> M) and (M ==> P) or (M ==> P) and (S ==> M)
     const term1 = primaryPremise.term;
     const term2 = secondaryPremise.term;
     
     if (!term1?.isCompound || !term2?.isCompound) return false;
     
-    // Look for inheritance relations (-->)
-    const isTerm1Inheritance = term1.operator === '-->';
-    const isTerm2Inheritance = term2.operator === '-->';
+    // Look for relations like implication (==>) or inheritance (-->)
+    const isValidOperator = (op) => op === '==>' || op === '-->';
+    const isTerm1Valid = isValidOperator(term1.operator);
+    const isTerm2Valid = isValidOperator(term2.operator);
     
-    if (!isTerm1Inheritance || !isTerm2Inheritance) return false;
+    if (!isTerm1Valid || !isTerm2Valid) return false;
     
     // Check for syllogistic pattern: (S --> M) + (M --> P) => (S --> P)
     // This means the middle term of one premise matches the subject or predicate of the other
@@ -47,8 +48,25 @@ export class SyllogisticRule extends Rule {
     // Find potential matching middle terms
     // Pattern 1: (S --> M) + (M --> P) where comp1[1] === comp2[0]
     // Pattern 2: (M --> P) + (S --> M) where comp2[1] === comp1[0]
-    const matchesPattern1 = comp1[1].equals(comp2[0]); // term1.object === term2.subject
-    const matchesPattern2 = comp2[1].equals(comp1[0]); // term2.object === term1.subject
+    
+    // Implement robust term comparison
+    const termEquals = (t1, t2) => {
+        if (!t1 || !t2) return false;
+        
+        // Try direct equals method if available
+        if (typeof t1.equals === 'function') {
+            return t1.equals(t2);
+        }
+        
+        // Fallback: compare by name or string representation
+        const name1 = t1.name || t1._name || t1.toString?.() || '';
+        const name2 = t2.name || t2._name || t2.toString?.() || '';
+        
+        return name1 === name2;
+    };
+    
+    const matchesPattern1 = termEquals(comp1[1], comp2[0]); // term1.object === term2.subject
+    const matchesPattern2 = termEquals(comp2[1], comp1[0]); // term2.object === term1.subject
     
     return matchesPattern1 || matchesPattern2;
   }
@@ -89,11 +107,37 @@ export class SyllogisticRule extends Rule {
       return []; // No valid pattern found
     }
 
-    // Create the conclusion term
-    const conclusionTerm = context.termFactory.create({
-      operator: '-->',
-      components: [subject, predicate]
-    });
+    // Determine the appropriate operator for the conclusion based on the input terms
+    // Use the same operator as the first term for consistency
+    const conclusionOperator = primaryPremise.term.operator || '==>';
+    
+    // Create the conclusion term - first try with termFactory from context
+    let conclusionTerm = null;
+    if (context.termFactory) {
+      conclusionTerm = context.termFactory.create({
+        operator: conclusionOperator,
+        components: [subject, predicate]
+      });
+    } else {
+      // Fallback: create a simple term object if termFactory is not available
+      // This is a simplified approach to handle cases where context doesn't have the factory
+      conclusionTerm = {
+        operator: conclusionOperator,
+        components: [subject, predicate],
+        name: `(${conclusionOperator}, ${subject.name || subject._name || subject.toString()}, ${predicate.name || predicate._name || predicate.toString()})`,
+        toString: function() { 
+          return `(${this.operator}, ${this.components[0].name || this.components[0]._name || this.components[0].toString()}, ${this.components[1].name || this.components[1]._name || this.components[1].toString()})`;
+        },
+        equals: function(other) {
+          return other && 
+                 other.operator === this.operator && 
+                 this.components.length === other.components.length &&
+                 this.components[0].name === other.components[0].name &&
+                 this.components[1].name === other.components[1].name;
+        },
+        isCompound: true
+      };
+    }
 
     if (!conclusionTerm) {
       return [];

@@ -7,11 +7,13 @@ export class Reasoner {
    * @param {Strategy} strategy - The strategy for premise pairing
    * @param {RuleProcessor} ruleProcessor - The processor for rules
    * @param {object} config - Configuration options
+   * @param {object} parentNAR - Reference to the parent NAR instance (optional)
    */
-  constructor(premiseSource, strategy, ruleProcessor, config = {}) {
+  constructor(premiseSource, strategy, ruleProcessor, config = {}, parentNAR = null) {
     this.premiseSource = premiseSource;
     this.strategy = strategy;
     this.ruleProcessor = ruleProcessor;
+    this.parentNAR = parentNAR; // Store reference to parent NAR for adding derivations back
     this.config = {
       maxDerivationDepth: config.maxDerivationDepth || 10,
       cpuThrottleInterval: config.cpuThrottleInterval || 0, // milliseconds to yield CPU
@@ -296,6 +298,20 @@ export class Reasoner {
   _processDerivation(derivation) {
     // Can implement additional processing of derivations
     // For example: storing in memory, logging, etc.
+    
+    // If a parent NAR instance is provided, add the derivation back to the system
+    // This is critical for the reasoning loop to continue properly
+    if (this.parentNAR && derivation) {
+      try {
+        // Add the derived task back to the system for further reasoning
+        this.parentNAR._taskManager.addTask(derivation);
+        if (this.parentNAR._focus) {
+          this.parentNAR._focus.addTaskToFocus(derivation);
+        }
+      } catch (error) {
+        console.error('Error adding derived task back to system:', error);
+      }
+    }
   }
 
   /**

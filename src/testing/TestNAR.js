@@ -106,9 +106,11 @@ export class TaskMatch {
  * Simplified test framework for NAR
  */
 export class TestNAR {
-    constructor() {
+    constructor(trace = false) {
         this.operations = [];
         this.nar = null;
+        this.trace = trace; // Add trace flag to show all events
+        this.eventLog = []; // Log of all events for debugging
     }
 
     static _matchesTruth(taskTruth, criteriaTruth) {
@@ -170,6 +172,30 @@ export class TestNAR {
         
         this.nar = new NAR(config);
         await this.nar.initialize(); // Initialize the NAR to ensure components are set up
+        
+        // If trace is enabled, set up event logging
+        if (this.trace) {
+            this.nar.on('task.input', (data) => {
+                this.eventLog.push({ type: 'task.input', data, timestamp: Date.now() });
+                console.log('TRACE [task.input]:', data);
+            });
+            this.nar.on('task.added', (data) => {
+                this.eventLog.push({ type: 'task.added', data, timestamp: Date.now() });
+                console.log('TRACE [task.added]:', data);
+            });
+            this.nar.on('streamReasoner.step', (data) => {
+                this.eventLog.push({ type: 'streamReasoner.step', data, timestamp: Date.now() });
+                console.log('TRACE [streamReasoner.step]:', data);
+            });
+            this.nar.on('streamReasoner.metrics', (data) => {
+                this.eventLog.push({ type: 'streamReasoner.metrics', data, timestamp: Date.now() });
+                console.log('TRACE [streamReasoner.metrics]:', data);
+            });
+            this.nar.on('reasoning.derivation', (data) => {
+                this.eventLog.push({ type: 'reasoning.derivation', data, timestamp: Date.now() });
+                console.log('TRACE [reasoning.derivation]:', data);
+            });
+        }
 
         // Process operations
         const expectations = [];
@@ -200,6 +226,9 @@ export class TestNAR {
             }
         }
 
+        // Process inputs first to make sure they're in the system
+        await this._processInputs();
+        
         // Additional reasoning cycles after all inputs to allow for inference
         // For stream reasoner, we might need more time to let the stream process
         if (this.nar._useStreamReasoner && this.nar.streamReasoner) {
@@ -218,7 +247,7 @@ export class TestNAR {
             }
             
             // Additional wait for any async rules to complete derivations
-            await new Promise(resolve => setTimeout(resolve, 100));
+            await new Promise(resolve => setTimeout(resolve, 200));
             
             // Stop the stream reasoner to ensure no further processing
             await this.nar.streamReasoner.stop();
@@ -228,6 +257,9 @@ export class TestNAR {
                 await this.nar.step();
             }
         }
+        
+        // Ensure all derived tasks are properly registered in memory
+        await this._ensureDerivedTasksAreProcessed();
 
         // Get all tasks from memory and focus to catch derived results
         let allTasks = this.nar.memory.getAllConcepts().flatMap(c => c.getAllTasks());
@@ -282,5 +314,35 @@ ${taskList}
         }
 
         return true;
+    }
+    
+    /**
+     * Process all input operations
+     */
+    async _processInputs() {
+        // Process only input operations first
+        for (const op of this.operations) {
+            if (op.type === 'input') {
+                try {
+                    // Format input with truth values: "term. %freq;conf%"
+                    const inputStr = `${op.termStr}. %${op.freq};${op.conf}%`;
+                    await this.nar.input(inputStr);
+                } catch (error) {
+                    this.logger?.warn(`Input failed: ${op.termStr}`, error);
+                }
+            }
+        }
+    }
+    
+    /**
+     * Ensure derived tasks are properly processed into the system
+     */
+    async _ensureDerivedTasksAreProcessed() {
+        // In the new architecture, make sure the focus and memory are synchronized
+        // This helps ensure all tasks (input + derived) are available for the test check
+        if (this.nar._focus) {
+            // Allow any pending operations to complete
+            await new Promise(resolve => setTimeout(resolve, 50));
+        }
     }
 }

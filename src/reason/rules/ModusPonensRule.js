@@ -27,9 +27,26 @@ export class ModusPonensRule extends Rule {
     
     // Check if one is an implication and the other matches the antecedent
     const isImplication = (term) => term.operator === '==>';
+    
+    // Robust term equality comparison
+    const termEquals = (t1, t2) => {
+        if (!t1 || !t2) return false;
+        
+        // Try direct equals method if available
+        if (typeof t1.equals === 'function') {
+            return t1.equals(t2);
+        }
+        
+        // Fallback: compare by name or string representation
+        const name1 = t1.name || t1._name || t1.toString?.() || '';
+        const name2 = t2.name || t2._name || t2.toString?.() || '';
+        
+        return name1 === name2;
+    };
+    
     const isAntecedentMatch = (implicationTerm, otherTerm) => {
       if (!isImplication(implicationTerm) || !implicationTerm.components) return false;
-      return implicationTerm.components[0] && implicationTerm.components[0].equals(otherTerm);
+      return implicationTerm.components[0] && termEquals(implicationTerm.components[0], otherTerm);
     };
 
     const primaryTerm = primaryPremise.term;
@@ -63,12 +80,31 @@ export class ModusPonensRule extends Rule {
     try {
       // Determine which premise is the implication and which is the antecedent
       let implicationPremise, antecedentPremise;
+      
+      // Robust term equality comparison
+      const termEquals = (t1, t2) => {
+          if (!t1 || !t2) return false;
+          
+          // Try direct equals method if available
+          if (typeof t1.equals === 'function') {
+              return t1.equals(t2);
+          }
+          
+          // Fallback: compare by name or string representation
+          const name1 = t1.name || t1._name || t1.toString?.() || '';
+          const name2 = t2.name || t2._name || t2.toString?.() || '';
+          
+          return name1 === name2;
+      };
+      
       if (primaryPremise.term.operator === '==>' && 
-          primaryPremise.term.components[0].equals(secondaryPremise.term)) {
+          primaryPremise.term.components[0] && 
+          termEquals(primaryPremise.term.components[0], secondaryPremise.term)) {
         implicationPremise = primaryPremise;
         antecedentPremise = secondaryPremise;
       } else if (secondaryPremise.term.operator === '==>' && 
-                 secondaryPremise.term.components[0].equals(primaryPremise.term)) {
+                 secondaryPremise.term.components[0] && 
+                 termEquals(secondaryPremise.term.components[0], primaryPremise.term)) {
         implicationPremise = secondaryPremise;
         antecedentPremise = primaryPremise;
       } else {
