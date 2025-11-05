@@ -33,10 +33,11 @@ export class ExtendedNALRule extends PatternNALRule {
     }
 
     _calculateNALTruth(truth1, truth2, operation = 'intersection') {
-        if (!truth1 && !truth2) return new Truth(0.5, 0.5);
+        if (!truth1 && !truth2) return null;//new Truth(0.5, 0.5);
         if (!truth1) return truth2;
         if (!truth2) return truth1;
 
+        // Truth calculation operations with shorthand notation
         const operations = {
             intersection: (t1, t2) => ({f: t1.frequency * t2.frequency, c: t1.confidence * t2.confidence}),
             union: (t1, t2) => ({
@@ -79,6 +80,23 @@ export class ExtendedNALRule extends PatternNALRule {
                 new Term('compound', `(not ${antecedent.name})`, [antecedent], 'not')],
             '==>');
     }
+    
+    /**
+     * Creates a derived task with adjusted truth and priority
+     */
+    _createDerivedTaskWithTruthAdjustment(originalTask, term, confidenceMultiplier = 1.0, priorityMultiplier = 1.0) {
+        const derivedTruth = new Truth(
+            originalTask.truth.frequency,
+            originalTask.truth.confidence * confidenceMultiplier
+        );
+        
+        return this._createDerivedTask(originalTask, {
+            term,
+            truth: derivedTruth,
+            type: originalTask.type,
+            priority: originalTask.priority * this.priority * priorityMultiplier
+        });
+    }
 }
 
 export class ConversionRule extends ExtendedNALRule {
@@ -105,17 +123,8 @@ export class ConversionRule extends ExtendedNALRule {
             [predicate, subject],
             '-->');
 
-        const derivedTruth = new Truth(
-            task.truth.frequency,
-            task.truth.confidence * 0.8
-        );
-
-        return [this._createDerivedTask(task, {
-            term: convertedTerm,
-            truth: derivedTruth,
-            type: task.type,
-            priority: task.priority * this.priority
-        })];
+        // Create derived task with reduced confidence
+        return [this._createDerivedTaskWithTruthAdjustment(task, convertedTerm, 0.8)];
     }
 }
 
@@ -138,17 +147,18 @@ export class EquivalenceRule extends ExtendedNALRule {
         if (!this._matches(task, context)) return [];
 
         const [left, right] = task.term.components;
+        const truth = this._calculateNALTruth(task.truth, new Truth(1.0, 0.9), 'intersection');
         
         return [
             this._createDerivedTask(task, {
                 term: new Term('compound', `(==> ${left.name}, ${right.name})`, [left, right], '==>'),
-                truth: this._calculateNALTruth(task.truth, new Truth(1.0, 0.9), 'intersection'),
+                truth,
                 type: task.type,
                 priority: task.priority * this.priority * 0.9
             }),
             this._createDerivedTask(task, {
                 term: new Term('compound', `(==> ${right.name}, ${left.name})`, [right, left], '==>'),
-                truth: this._calculateNALTruth(task.truth, new Truth(1.0, 0.9), 'intersection'),
+                truth,
                 type: task.type,
                 priority: task.priority * this.priority * 0.9
             })
@@ -176,19 +186,10 @@ export class NegationRule extends ExtendedNALRule {
 
         const operand = task.term.components[0];
 
+        // Handle double negation elimination
         if (operand.isCompound && operand.operator === '--' && operand.components?.length >= 1) {
             const doubleNegationTerm = operand.components[0];
-            const derivedTruth = new Truth(
-                operand.truth?.frequency || 0.5,
-                (operand.truth?.confidence || 0.5) * 0.9
-            );
-
-            return [this._createDerivedTask(task, {
-                term: doubleNegationTerm,
-                truth: derivedTruth,
-                type: task.type,
-                priority: task.priority * this.priority
-            })];
+            return [this._createDerivedTaskWithTruthAdjustment(task, doubleNegationTerm, 0.9)];
         }
 
         return [];
@@ -213,18 +214,9 @@ export class ConjunctionRule extends ExtendedNALRule {
     async _apply(task, context) {
         if (!this._matches(task, context)) return [];
 
-        const derivedTruth = new Truth(
-            task.truth.frequency,
-            task.truth.confidence * 0.9
-        );
-
-        return task.term.components.map(component => 
-            this._createDerivedTask(task, {
-                term: component,
-                truth: derivedTruth,
-                type: task.type,
-                priority: task.priority * this.priority * 0.8
-            })
+        // Create derived tasks for each component with reduced confidence
+        return task.term.components.map(component =>
+            this._createDerivedTaskWithTruthAdjustment(task, component, 0.9, 0.8)
         );
     }
 }

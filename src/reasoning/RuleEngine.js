@@ -118,20 +118,14 @@ export class RuleEngine extends BaseComponent {
 
     applyRules(task, ruleIds = null, ruleType = null, memory = null) {
         const rulesToApply = ruleIds ? this._getValidRules(ruleIds) : this.getApplicableRules(task, ruleType);
-        return this._applyRulesToTask(rulesToApply, task, memory);
-    }
-
-    _applyRulesToTask(rules, task, memory = null) {
-        return rules.flatMap(rule => this._applySingleRule(task, memory, rule));
-    }
-
-    _applySingleRule(task, memory, rule) {
-        try {
-            return this.applyRule(rule, task, memory).results;
-        } catch (error) {
-            this.logger.warn(`Rule ${rule.id} failed:`, error);
-            return [];
-        }
+        return rulesToApply.flatMap(rule => {
+            try {
+                return this.applyRule(rule, task, memory).results;
+            } catch (error) {
+                this.logger.warn(`Rule ${rule.id} failed:`, error);
+                return [];
+            }
+        });
     }
 
     applyLMRules = (task, ruleIds = null, memory = null) => this.applyRules(task, ruleIds, 'lm', memory);
@@ -139,8 +133,8 @@ export class RuleEngine extends BaseComponent {
 
     applyHybridRules(task, lmRuleIds = null, nalRuleIds = null, memory = null) {
         return [
-            ...this.applyLMRules(task, lmRuleIds, memory),
-            ...this.applyNALRules(task, nalRuleIds, memory)
+            ...this.applyRules(task, lmRuleIds, 'lm', memory),
+            ...this.applyRules(task, nalRuleIds, 'nal', memory)
         ];
     }
 
@@ -177,9 +171,14 @@ export class RuleEngine extends BaseComponent {
     }
 
     async coordinateRules(task, memory = null) {
+        // First phase: Apply LM rules to the initial task
         const lmResults = this.applyLMRules(task, null, memory);
+        
+        // Second phase: Apply NAL rules to both the original task and LM results
         const allTasks = [task, ...lmResults];
         const nalResults = allTasks.flatMap(t => this.applyNALRules(t, null, memory));
+        
+        // Third phase: Apply LM rules again to the NAL results for deeper reasoning
         const additionalLmResults = nalResults.flatMap(t => this.applyLMRules(t, null, memory));
 
         return {
@@ -213,24 +212,20 @@ export class RuleEngine extends BaseComponent {
             ...this._config?.context
         });
 
-        if (this._performanceOptimizer && this._config.performance?.enableBatching) {
-            return await this._performanceOptimizer.batchProcess(
+        // Use performance optimizer if available and enabled, otherwise fall back to standard processing
+        return this._performanceOptimizer && this._config.performance?.enableBatching
+            ? await this._performanceOptimizer.batchProcess(
                 rules,
                 tasks,
                 context,
                 async (ruleBatch, taskBatch, ctx) => await this._ruleProcessor.process(ruleBatch, taskBatch, ctx)
-            );
-        }
-
-        return await this._ruleProcessor.process(rules, tasks, context);
+            )
+            : await this._ruleProcessor.process(rules, tasks, context);
     }
 
     async applyRuleOptimized(rule, task, memory = null) {
         if (!rule || !this._rules.has(rule.id)) return {results: [], rule};
-        return await this.applyRuleWithOptimization(rule, task, memory);
-    }
-
-    async applyRuleWithOptimization(rule, task, memory = null) {
+        
         const startTime = Date.now();
         let success = false;
 
@@ -262,7 +257,7 @@ export class RuleEngine extends BaseComponent {
 
         for (const rule of rulesToApply) {
             try {
-                const ruleResult = await this.applyRuleWithOptimization(rule, task, memory);
+                const ruleResult = await this.applyRuleOptimized(rule, task, memory);
                 results.push(...ruleResult.results);
             } catch (error) {
                 this.logger.warn(`Optimized rule ${rule.id} failed:`, error);

@@ -1,9 +1,26 @@
 import {Term} from '../../term/Term.js';
 
 export class PatternMatcher {
+    constructor() {
+        // Cache for memoization of unification results
+        this._unifyCache = new Map();
+    }
+    
     unify = (pattern, term, existingBindings = null) => {
+        // Create cache key
+        const cacheKey = `${pattern?.id || pattern?.toString() || 'null'}_${term?.id || term?.toString() || 'null'}`;
+        
+        // Check cache first
+        if (this._unifyCache.has(cacheKey)) {
+            return this._unifyCache.get(cacheKey);
+        }
+        
         const bindings = existingBindings || new Map();
-        return this._unifyTerms(pattern, term, bindings) ? bindings : null;
+        const result = this._unifyTerms(pattern, term, bindings) ? bindings : null;
+        
+        // Cache the result
+        this._unifyCache.set(cacheKey, result);
+        return result;
     }
 
     unifyMultiple = (patternTermPairs, initialBindings = new Map()) => {
@@ -14,6 +31,13 @@ export class PatternMatcher {
             currentBindings = result;
         }
         return currentBindings;
+    }
+    
+    /**
+     * Clears the unification cache
+     */
+    clearCache() {
+        this._unifyCache.clear();
     }
 
     _unifyTerms(pattern, term, bindings) {
@@ -35,20 +59,32 @@ export class PatternMatcher {
     }
 
     _unifyCompound(pattern, term, bindings) {
+        // Early exit checks for performance
         if (pattern.operator !== term.operator || pattern.components.length !== term.components.length) return false;
-        return pattern.components.every((comp, i) => this._unifyTerms(comp, term.components[i], bindings));
+        
+        // Short-circuit evaluation for better performance
+        for (let i = 0; i < pattern.components.length; i++) {
+            if (!this._unifyTerms(pattern.components[i], term.components[i], bindings)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     substitute(term, bindings) {
         if (this._isVariable(term)) {
             const variableName = term.name || term.toString();
             if (bindings.has(variableName)) {
-                return this.substitute(bindings.get(variableName), bindings);
+                // Prevent infinite recursion by tracking visited variables
+                const substituted = bindings.get(variableName);
+                return this._isVariable(substituted) && substituted.name === variableName
+                    ? term // Avoid self-reference
+                    : this.substitute(substituted, bindings);
             }
             return term;
         }
 
-        return term.isCompound 
+        return term.isCompound
             ? new Term(term.type, term.name, term.components.map(comp => this.substitute(comp, bindings)), term.operator)
             : term;
     }

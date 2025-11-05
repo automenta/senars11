@@ -12,7 +12,7 @@ export class LMRule extends Rule {
             temperature: 0.7,  // Default temperature
             maxTokens: 1000,   // Default max tokens
             model: 'default',  // Default model
-            ...config.lm
+            ...this._validateLMConfig(config.lm)
         };
 
         // Initialize metrics for LM operations
@@ -63,7 +63,7 @@ export class LMRule extends Rule {
         try {
             const prompt = this._buildPrompt(task, memory);
             const response = await this._callLanguageModel(prompt);
-            const processedResponse = await this._responseProcessor(response, task);
+            const processedResponse = await this._processResponse(response, task);
 
             // Update LM stats
             const tokens = prompt.length + (response?.length || 0);
@@ -73,8 +73,33 @@ export class LMRule extends Rule {
         } catch (error) {
             this.logger.warn(`LM rule ${this.id} failed:`, error);
             this._updateLMStats(0, Date.now() - startTime);
-            return [];
+            return this._handleError(error, task);
         }
+    }
+
+    /**
+     * Processes the LM response using the response processor
+     */
+    async _processResponse(response, task) {
+        if (typeof this._responseProcessor === 'function') {
+            return await this._responseProcessor(response, task);
+        }
+        return response;
+    }
+
+    /**
+     * Handles errors during LM rule execution
+     */
+    _handleError(error, task) {
+        // Log error with more context
+        this.logger.warn(`LM rule ${this.id} failed for task ${task?.term?.toString() || 'unknown'}:`, {
+            error: error.message,
+            taskId: task?.id,
+            ruleId: this.id
+        });
+        
+        // Return empty array as fallback
+        return [];
     }
 
     /**
@@ -150,6 +175,30 @@ export class LMRule extends Rule {
      */
     getLMStats() {
         return {...this.lmStats};
+    }
+    
+    /**
+     * Validates LM configuration parameters
+     */
+    _validateLMConfig(config = {}) {
+        const validated = {};
+        
+        // Validate temperature (0.0 to 2.0)
+        if (typeof config.temperature === 'number') {
+            validated.temperature = Math.max(0.0, Math.min(2.0, config.temperature));
+        }
+        
+        // Validate maxTokens (positive integer)
+        if (typeof config.maxTokens === 'number' && config.maxTokens > 0) {
+            validated.maxTokens = Math.floor(config.maxTokens);
+        }
+        
+        // Validate model (string)
+        if (typeof config.model === 'string') {
+            validated.model = config.model;
+        }
+        
+        return validated;
     }
 
     // Override _clone to handle LMRule-specific constructor signature

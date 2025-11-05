@@ -25,38 +25,43 @@ class ConflictResolver {
             return [];
         }
 
-        return results.filter(result => {
-            if (!result || typeof result !== 'object') {
-                console.warn(`Invalid result object from ${source}: not an object`);
+        return results.filter(result => this._isValidResult(result, source));
+    }
+
+    /**
+     * Validates a single result object
+     */
+    _isValidResult(result, source) {
+        if (!result || typeof result !== 'object') {
+            console.warn(`Invalid result object from ${source}: not an object`);
+            this.stats.validationErrors++;
+            return false;
+        }
+
+        // Validate that result has required properties
+        if (!result.term) {
+            console.warn(`Invalid result from ${source}: missing term property`);
+            this.stats.validationErrors++;
+            return false;
+        }
+
+        // Validate truth value if present
+        if (result.truth) {
+            const {f: frequency, c: confidence} = result.truth;
+            if (typeof frequency === 'number' && (frequency < 0 || frequency > 1)) {
+                console.warn(`Invalid frequency value in result from ${source}: ${frequency}`);
                 this.stats.validationErrors++;
                 return false;
             }
 
-            // Validate that result has required properties
-            if (!result.term) {
-                console.warn(`Invalid result from ${source}: missing term property`);
+            if (typeof confidence === 'number' && (confidence < 0 || confidence > 1)) {
+                console.warn(`Invalid confidence value in result from ${source}: ${confidence}`);
                 this.stats.validationErrors++;
                 return false;
             }
+        }
 
-            // Validate truth value if present
-            if (result.truth) {
-                const {f: frequency, c: confidence} = result.truth;
-                if (typeof frequency === 'number' && (frequency < 0 || frequency > 1)) {
-                    console.warn(`Invalid frequency value in result from ${source}: ${frequency}`);
-                    this.stats.validationErrors++;
-                    return false;
-                }
-
-                if (typeof confidence === 'number' && (confidence < 0 || confidence > 1)) {
-                    console.warn(`Invalid confidence value in result from ${source}: ${confidence}`);
-                    this.stats.validationErrors++;
-                    return false;
-                }
-            }
-
-            return true;
-        });
+        return true;
     }
 
     /**
@@ -70,45 +75,60 @@ class ConflictResolver {
             const validHybridResults = this._validateResults(hybridResults || [], 'hybrid');
 
             const allResults = [...validNalResults, ...validLmResults, ...validHybridResults];
-            const resolvedResults = [];
-            const potentialConflicts = [];
-
-            // Detect potential conflicts by comparing similar results
-            for (let i = 0; i < allResults.length; i++) {
-                for (let j = i + 1; j < allResults.length; j++) {
-                    if (this._isConflicting(allResults[i], allResults[j])) {
-                        potentialConflicts.push([allResults[i], allResults[j]]);
-                        this.stats.conflictsDetected++;
-                    }
-                }
-            }
-
-            if (potentialConflicts.length > 0) {
-                // Resolve each conflict
-                for (const [result1, result2] of potentialConflicts) {
-                    try {
-                        const resolved = await this._resolvePair(result1, result2);
-                        resolvedResults.push(resolved);
-                        this.stats.conflictsResolved++;
-                    } catch (error) {
-                        console.error('Error resolving conflict pair:', error);
-                        this.stats.validationErrors++;
-                        // If we can't resolve, keep both results
-                        resolvedResults.push(result1, result2);
-                    }
-                }
-            } else {
-                // No conflicts, return all valid results
-                return allResults;
-            }
-
-            return resolvedResults;
+            
+            // Detect and resolve conflicts
+            const {resolvedResults, hasConflicts} = await this._detectAndResolveConflicts(allResults);
+            
+            return hasConflicts ? resolvedResults : allResults;
         } catch (error) {
             console.error('Error in conflict resolution:', error);
             this.stats.validationErrors++;
             // Return original results if conflict resolution fails
             return [...(nalResults || []), ...(lmResults || []), ...(hybridResults || [])];
         }
+    }
+
+    /**
+     * Detects and resolves conflicts in results
+     */
+    async _detectAndResolveConflicts(allResults) {
+        const resolvedResults = [];
+        const potentialConflicts = this._detectConflicts(allResults);
+
+        if (potentialConflicts.length > 0) {
+            // Resolve each conflict
+            for (const [result1, result2] of potentialConflicts) {
+                try {
+                    const resolved = await this._resolvePair(result1, result2);
+                    resolvedResults.push(resolved);
+                    this.stats.conflictsResolved++;
+                } catch (error) {
+                    console.error('Error resolving conflict pair:', error);
+                    this.stats.validationErrors++;
+                    // If we can't resolve, keep both results
+                    resolvedResults.push(result1, result2);
+                }
+            }
+            return {resolvedResults, hasConflicts: true};
+        }
+        
+        return {resolvedResults: [], hasConflicts: false};
+    }
+
+    /**
+     * Detects potential conflicts by comparing similar results
+     */
+    _detectConflicts(allResults) {
+        const potentialConflicts = [];
+        for (let i = 0; i < allResults.length; i++) {
+            for (let j = i + 1; j < allResults.length; j++) {
+                if (this._isConflicting(allResults[i], allResults[j])) {
+                    potentialConflicts.push([allResults[i], allResults[j]]);
+                    this.stats.conflictsDetected++;
+                }
+            }
+        }
+        return potentialConflicts;
     }
 
     /**
@@ -243,75 +263,17 @@ export class HybridReasoningEngine {
 
             this.logger.info(`Starting hybrid reasoning for task: ${task.term?.toString() || task.toString() || 'unknown'}`);
 
-            // Step 1: Apply NAL reasoning
-            try {
-                const nalResults = await this._applyNALReasoning(task, context);
-                results.reasoningPath.push('NAL reasoning applied');
-                results.nalResults = Array.isArray(nalResults) ? nalResults : [];
-            } catch (nalError) {
-                results.errorCount++;
-                this.logger.error('Error in NAL reasoning step:', nalError);
-                results.reasoningPath.push('NAL reasoning failed');
-                results.nalResults = [];
-            }
+            // Apply NAL and LM reasoning in parallel
+            await Promise.all([
+                this._applyReasoningAndTrack(task, context, 'NAL', results),
+                this._applyReasoningAndTrack(task, context, 'LM', results)
+            ]);
 
-            // Step 2: Apply LM reasoning
-            try {
-                const lmResults = await this._applyLMReasoning(task, context);
-                results.reasoningPath.push('LM reasoning applied');
-                results.lmResults = Array.isArray(lmResults) ? lmResults : [];
-            } catch (lmError) {
-                results.errorCount++;
-                this.logger.error('Error in LM reasoning step:', lmError);
-                results.reasoningPath.push('LM reasoning failed');
-                results.lmResults = [];
-            }
+            // Detect gaps and apply cross-validation
+            await this._processGapsAndValidation(task, context, results);
 
-            // Step 3: Detect gaps and apply cross-validation
-            try {
-                const gaps = this._detectReasoningGaps(task, results.nalResults, results.lmResults, context);
-                if (gaps.length > 0) {
-                    results.reasoningPath.push(`Detected ${gaps.length} gaps in reasoning`);
-
-                    // Fill gaps using the other system
-                    for (const gap of gaps) {
-                        try {
-                            const gapResult = await this._fillGap(task, gap, context);
-                            results.hybridResults.push(...Array.isArray(gapResult) ? gapResult : []);
-                        } catch (gapError) {
-                            results.errorCount++;
-                            this.logger.error('Error filling gap:', gapError);
-                        }
-                    }
-                }
-            } catch (gapError) {
-                results.errorCount++;
-                this.logger.error('Error in gap detection:', gapError);
-            }
-
-            // Step 4: Cross-validate results
-            try {
-                const validatedResults = await this._crossValidate(results.nalResults, results.lmResults, context);
-                results.reasoningPath.push('Cross-validation completed');
-                results.hybridResults.push(...Array.isArray(validatedResults) ? validatedResults : []);
-            } catch (validationError) {
-                results.errorCount++;
-                this.logger.error('Error in cross-validation:', validationError);
-                results.reasoningPath.push('Cross-validation failed');
-            }
-
-            // Step 5: Resolve conflicts between NAL and LM results
-            try {
-                const finalResults = await this.conflictResolver.resolveConflicts(results.nalResults, results.lmResults, results.hybridResults);
-                results.reasoningPath.push('Conflict resolution completed');
-                results.finalDecision = Array.isArray(finalResults) ? finalResults : [];
-            } catch (conflictError) {
-                results.errorCount++;
-                this.logger.error('Error in conflict resolution:', conflictError);
-                results.reasoningPath.push('Conflict resolution failed');
-                // Use original results if conflict resolution fails
-                results.finalDecision = [...results.nalResults, ...results.lmResults, ...results.hybridResults];
-            }
+            // Resolve conflicts between NAL and LM results
+            await this._resolveConflicts(results);
 
             return results;
         } catch (error) {
@@ -325,6 +287,84 @@ export class HybridReasoningEngine {
                 errorCount: 1,
                 errorMessage: error.message
             };
+        }
+    }
+
+    /**
+     * Applies reasoning and tracks results
+     */
+    async _applyReasoningAndTrack(task, context, engineType, results) {
+        try {
+            const engineResults = engineType === 'NAL'
+                ? await this._applyNALReasoning(task, context)
+                : await this._applyLMReasoning(task, context);
+                
+            results.reasoningPath.push(`${engineType} reasoning applied`);
+            results[`${engineType.toLowerCase()}Results`] = Array.isArray(engineResults) ? engineResults : [];
+        } catch (error) {
+            results.errorCount++;
+            this.logger.error(`Error in ${engineType} reasoning step:`, error);
+            results.reasoningPath.push(`${engineType} reasoning failed`);
+            results[`${engineType.toLowerCase()}Results`] = [];
+        }
+    }
+
+    /**
+     * Processes gaps and validation
+     */
+    async _processGapsAndValidation(task, context, results) {
+        try {
+            // Detect gaps
+            const gaps = this._detectReasoningGaps(task, results.nalResults, results.lmResults, context);
+            if (gaps.length > 0) {
+                results.reasoningPath.push(`Detected ${gaps.length} gaps in reasoning`);
+
+                // Fill gaps using the other system
+                for (const gap of gaps) {
+                    try {
+                        const gapResult = await this._fillGap(task, gap, context);
+                        results.hybridResults.push(...Array.isArray(gapResult) ? gapResult : []);
+                    } catch (gapError) {
+                        results.errorCount++;
+                        this.logger.error('Error filling gap:', gapError);
+                    }
+                }
+            }
+        } catch (gapError) {
+            results.errorCount++;
+            this.logger.error('Error in gap detection:', gapError);
+        }
+
+        // Cross-validate results
+        try {
+            const validatedResults = await this._crossValidate(results.nalResults, results.lmResults, context);
+            results.reasoningPath.push('Cross-validation completed');
+            results.hybridResults.push(...Array.isArray(validatedResults) ? validatedResults : []);
+        } catch (validationError) {
+            results.errorCount++;
+            this.logger.error('Error in cross-validation:', validationError);
+            results.reasoningPath.push('Cross-validation failed');
+        }
+    }
+
+    /**
+     * Resolves conflicts between results
+     */
+    async _resolveConflicts(results) {
+        try {
+            const finalResults = await this.conflictResolver.resolveConflicts(
+                results.nalResults,
+                results.lmResults,
+                results.hybridResults
+            );
+            results.reasoningPath.push('Conflict resolution completed');
+            results.finalDecision = Array.isArray(finalResults) ? finalResults : [];
+        } catch (conflictError) {
+            results.errorCount++;
+            this.logger.error('Error in conflict resolution:', conflictError);
+            results.reasoningPath.push('Conflict resolution failed');
+            // Use original results if conflict resolution fails
+            results.finalDecision = [...results.nalResults, ...results.lmResults, ...results.hybridResults];
         }
     }
 

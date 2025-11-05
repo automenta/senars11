@@ -114,8 +114,14 @@ export class RuleManager {
     }
 
     _applyToCollection(ruleIds, action) {
-        if (ruleIds) {
-            for (const ruleId of ruleIds) action(ruleId);
+        if (ruleIds && typeof action === 'function') {
+            for (const ruleId of ruleIds) {
+                try {
+                    action(ruleId);
+                } catch (error) {
+                    console.warn(`Failed to apply action to rule ${ruleId}:`, error);
+                }
+            }
         }
     }
 
@@ -128,9 +134,10 @@ export class RuleManager {
     }
 
     getEnabled() {
-        return Array.from(this._enabledRules)
-            .map(id => this._rules.get(id))
-            .filter(Boolean);
+        // More efficient implementation using filter directly on the rules map
+        return Array.from(this._rules.entries())
+            .filter(([id, rule]) => this._enabledRules.has(id) && rule)
+            .map(([, rule]) => rule);
     }
 
     getByCategory(category) {
@@ -175,6 +182,23 @@ export class RuleManager {
         const totalRules = this._rules.size;
         const enabledCount = this._enabledRules.size;
 
+        // Calculate performance metrics
+        const performanceStats = this._calculatePerformanceStats();
+
+        return {
+            totalRules,
+            enabledCount,
+            disabledCount: totalRules - enabledCount,
+            categories: Array.from(this._categories.keys()),
+            groups: Array.from(this._ruleGroups.keys()),
+            performance: performanceStats
+        };
+    }
+
+    /**
+     * Calculates aggregated performance statistics
+     */
+    _calculatePerformanceStats() {
         let totalApplications = 0;
         let totalSuccesses = 0;
         let totalFailures = 0;
@@ -195,17 +219,10 @@ export class RuleManager {
         const avgTime = completedMetrics > 0 ? totalAvgTime / completedMetrics : 0;
 
         return {
-            totalRules,
-            enabledCount,
-            disabledCount: totalRules - enabledCount,
-            categories: Array.from(this._categories.keys()),
-            groups: Array.from(this._ruleGroups.keys()),
-            performance: {
-                totalApplications,
-                totalSuccesses,
-                totalFailures,
-                avgTime
-            }
+            totalApplications,
+            totalSuccesses,
+            totalFailures,
+            avgTime
         };
     }
 
