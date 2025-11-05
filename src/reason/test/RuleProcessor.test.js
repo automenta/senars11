@@ -1,3 +1,4 @@
+import {jest} from '@jest/globals';
 import { RuleProcessor } from '../RuleProcessor.js';
 import { RuleExecutor } from '../RuleExecutor.js';
 import { Rule } from '../Rule.js';
@@ -92,14 +93,21 @@ describe('RuleProcessor', () => {
 
   describe('_processDerivation', () => {
     test('should process derivations with depth limits', () => {
-      const validDerivation = { id: 'valid', stamp: { depth: 5 } };
-      const invalidDerivation = { id: 'invalid', stamp: { depth: 15 } }; // Exceeds default max depth of 10
+      // Mock console.debug to prevent test output pollution when depth limit is exceeded
+      const consoleSpy = jest.spyOn(console, 'debug').mockImplementation(() => {});
       
-      const result1 = ruleProcessor._processDerivation(validDerivation);
-      const result2 = ruleProcessor._processDerivation(invalidDerivation);
-      
-      expect(result1).toBe(validDerivation);
-      expect(result2).toBeNull();
+      try {
+        const validDerivation = { id: 'valid', stamp: { depth: 5 } };
+        const invalidDerivation = { id: 'invalid', stamp: { depth: 15 } }; // Exceeds default max depth of 10
+        
+        const result1 = ruleProcessor._processDerivation(validDerivation);
+        const result2 = ruleProcessor._processDerivation(invalidDerivation);
+        
+        expect(result1).toBe(validDerivation);
+        expect(result2).toBeNull();
+      } finally {
+        consoleSpy.mockRestore();
+      }
     });
 
     test('should handle derivations without stamps', () => {
@@ -183,32 +191,39 @@ describe('RuleProcessor', () => {
     });
 
     test('should handle errors during rule processing', async () => {
-      // Create a rule that throws an error
-      const errorRule = {
-        id: 'error-rule',
-        type: 'nal',
-        apply: () => {
-          throw new Error('Rule execution failed');
-        },
-        canApply: () => true
-      };
+      // Mock console.error to prevent test output pollution
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
       
-      ruleExecutor.register(errorRule);
+      try {
+        // Create a rule that throws an error
+        const errorRule = {
+          id: 'error-rule',
+          type: 'nal',
+          apply: () => {
+            throw new Error('Rule execution failed');
+          },
+          canApply: () => true
+        };
+        
+        ruleExecutor.register(errorRule);
 
-      // Create a simple premise pair stream
-      async function* premisePairStream() {
-        yield [createTestTask({ id: 'primary' }), createTestTask({ id: 'secondary' })];
-      }
-
-      const results = [];
-      await expect(async () => {
-        for await (const result of ruleProcessor.process(premisePairStream())) {
-          results.push(result);
+        // Create a simple premise pair stream
+        async function* premisePairStream() {
+          yield [createTestTask({ id: 'primary' }), createTestTask({ id: 'secondary' })];
         }
-      }).resolves.not.toThrow();
 
-      // Should continue processing despite the error
-      expect(results.length).toBe(0);
+        const results = [];
+        await expect(async () => {
+          for await (const result of ruleProcessor.process(premisePairStream())) {
+            results.push(result);
+          }
+        }).resolves.not.toThrow();
+
+        // Should continue processing despite the error
+        expect(results.length).toBe(0);
+      } finally {
+        consoleSpy.mockRestore();
+      }
     });
   });
 });

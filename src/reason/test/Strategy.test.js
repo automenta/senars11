@@ -34,16 +34,23 @@ describe('Strategy', () => {
     });
 
     test('should handle errors gracefully', async () => {
-      // Create a Strategy with a premiseSelector that throws an error
-      const errorSelector = {
-        select: () => { throw new Error('Selector error'); }
-      };
-      const errorStrategy = new Strategy({ premiseSelector: errorSelector });
-
-      const primaryPremise = createTestTask({ id: 'primary' });
-      const result = await errorStrategy.selectSecondaryPremises(primaryPremise);
+      // Mock console.error to prevent test output pollution
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
       
-      expect(result).toEqual([]);
+      try {
+        // Create a Strategy with a premiseSelector that throws an error
+        const errorSelector = {
+          select: () => { throw new Error('Selector error'); }
+        };
+        const errorStrategy = new Strategy({ premiseSelector: errorSelector });
+
+        const primaryPremise = createTestTask({ id: 'primary' });
+        const result = await errorStrategy.selectSecondaryPremises(primaryPremise);
+        
+        expect(result).toEqual([]);
+      } finally {
+        consoleSpy.mockRestore();
+      }
     });
   });
 
@@ -88,35 +95,42 @@ describe('Strategy', () => {
     });
 
     test('should handle errors during premise selection', async () => {
-      const premiseStream = {
-        [Symbol.asyncIterator]: async function*() {
-          yield createTestTask({ id: 'primary1' });
-          yield createTestTask({ id: 'primary2' });
-        }
-      };
+      // Mock console.error to prevent test output pollution
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      
+      try {
+        const premiseStream = {
+          [Symbol.asyncIterator]: async function*() {
+            yield createTestTask({ id: 'primary1' });
+            yield createTestTask({ id: 'primary2' });
+          }
+        };
 
-      // Replace the method on the instance to avoid mocking
-      const originalMethod = strategy.selectSecondaryPremises.bind(strategy);
-      let callCount = 0;
-      strategy.selectSecondaryPremises = async (primary) => {
-        callCount++;
-        if (callCount === 1) {
-          throw new Error('Selection failed');
-        }
-        return [createTestTask({ id: 'secondary' })];
-      };
+        // Replace the method on the instance to avoid mocking
+        const originalMethod = strategy.selectSecondaryPremises.bind(strategy);
+        let callCount = 0;
+        strategy.selectSecondaryPremises = async (primary) => {
+          callCount++;
+          if (callCount === 1) {
+            throw new Error('Selection failed');
+          }
+          return [createTestTask({ id: 'secondary' })];
+        };
 
-      const pairs = [];
-      for await (const pair of strategy.generatePremisePairs(premiseStream)) {
-        pairs.push(pair);
+        const pairs = [];
+        for await (const pair of strategy.generatePremisePairs(premiseStream)) {
+          pairs.push(pair);
+        }
+
+        // Restore original method
+        strategy.selectSecondaryPremises = originalMethod;
+
+        // Should skip the failed premise and continue with the second
+        // At least one pair should be produced from the successful premise
+        expect(pairs.length).toBeGreaterThanOrEqual(1);
+      } finally {
+        consoleSpy.mockRestore();
       }
-
-      // Restore original method
-      strategy.selectSecondaryPremises = originalMethod;
-
-      // Should skip the failed premise and continue with the second
-      // At least one pair should be produced from the successful premise
-      expect(pairs.length).toBeGreaterThanOrEqual(1);
     });
   });
 

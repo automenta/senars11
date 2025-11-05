@@ -124,41 +124,41 @@ export class Strategy {
     
     const [primarySubject, primaryObject] = primaryComponents;
     
-    // Separate tasks by compatibility level
-    const highlyCompatible = [];
-    const compatible = [];
-    const lessCompatible = [];
-    
-    for (const task of secondaryTasks) {
-      if (!task?.term?.components || task.term.components.length !== 2) {
-        lessCompatible.push(task);
-        continue;
-      }
-      
-      const [secondarySubject, secondaryObject] = task.term.components;
-      
-      // Check for syllogistic patterns: 
-      // Pattern 1: primary=(S->M), secondary=(M->P) where primaryObject = secondarySubject (M term matches)
-      // Pattern 2: primary=(M->P), secondary=(S->M) where primarySubject = secondaryObject (M term matches)
-      const pattern1 = termEquals(primaryObject, secondarySubject);  // primary ends where secondary starts
-      const pattern2 = termEquals(primarySubject, secondaryObject);  // primary starts where secondary ends
-      
-      if (pattern1 || pattern2) {
-        highlyCompatible.push(task);  // These are most likely to generate syllogistic derivations
-      } else {
-        // Check for other types of compatibility
-        const hasCommonTerms = termEquals(primarySubject, secondarySubject) || 
-                              termEquals(primarySubject, secondaryObject) || 
-                              termEquals(primaryObject, secondarySubject) || 
-                              termEquals(primaryObject, secondaryObject);
-        
-        if (hasCommonTerms) {
-          compatible.push(task);  // These might lead to other rule applications
-        } else {
-          lessCompatible.push(task);  // These are less likely to be useful
+    // Use reduce to categorize tasks in a single pass for better performance
+    const { highlyCompatible, compatible, lessCompatible } = secondaryTasks.reduce(
+      (acc, task) => {
+        if (!task?.term?.components || task.term.components.length !== 2) {
+          acc.lessCompatible.push(task);
+          return acc;
         }
-      }
-    }
+        
+        const [secondarySubject, secondaryObject] = task.term.components;
+        
+        // Check for syllogistic patterns: 
+        // Pattern 1: primary=(S->M), secondary=(M->P) where primaryObject = secondarySubject (M term matches)
+        // Pattern 2: primary=(M->P), secondary=(S->M) where primarySubject = secondaryObject (M term matches)
+        const pattern1 = termEquals(primaryObject, secondarySubject);  // primary ends where secondary starts
+        const pattern2 = termEquals(primarySubject, secondaryObject);  // primary starts where secondary ends
+        
+        if (pattern1 || pattern2) {
+          acc.highlyCompatible.push(task);  // These are most likely to generate syllogistic derivations
+        } else {
+          // Check for other types of compatibility
+          const hasCommonTerms = termEquals(primarySubject, secondarySubject) || 
+                                termEquals(primarySubject, secondaryObject) || 
+                                termEquals(primaryObject, secondarySubject) || 
+                                termEquals(primaryObject, secondaryObject);
+          
+          if (hasCommonTerms) {
+            acc.compatible.push(task);  // These might lead to other rule applications
+          } else {
+            acc.lessCompatible.push(task);  // These are less likely to be useful
+          }
+        }
+        return acc;
+      },
+      { highlyCompatible: [], compatible: [], lessCompatible: [] }
+    );
     
     // Return in order: highly compatible first, then compatible, then less compatible
     return [...highlyCompatible, ...compatible, ...lessCompatible];

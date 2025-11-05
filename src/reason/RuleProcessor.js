@@ -55,12 +55,12 @@ export class RuleProcessor {
               this.syncRuleExecutions++;
               // Pass an enhanced context that includes termFactory if available from parent NAR
               const ruleContext = {
-                termFactory: this.config.termFactory || (this.config.context && this.config.context.termFactory) || null,
+                termFactory: this.config.termFactory ?? this.config.context?.termFactory ?? null,
                 ...this.config.context  // Pass through any other context properties
               };
               const results = this.ruleExecutor.executeRule(rule, primaryPremise, secondaryPremise, ruleContext);
               
-              // Yield synchronous results immediately
+              // Yield synchronous results immediately using for...of for better performance
               for (const result of results) {
                 const processedResult = this._processDerivation(result);
                 if (processedResult) {
@@ -102,12 +102,13 @@ export class RuleProcessor {
         await sleep(this.config.asyncWaitInterval);
         
         // Yield any results that became available during the wait
-        while (this.asyncResultsQueue.length > 0) {
+        let result;
+        while ((result = this.asyncResultsQueue.shift()) !== undefined) {
           hasAsyncResults = true;
           // Check for backpressure before yielding results
           await this._checkAndApplyBackpressure();
           
-          yield this.asyncResultsQueue.shift();
+          yield result;
         }
       }
     } catch (error) {
@@ -162,7 +163,7 @@ export class RuleProcessor {
       }
     } catch (error) {
       logError(error, { ruleId: rule.id ?? rule.name, context: 'async_rule_execution' }, 'error');
-      throw error; // Re-throw to be caught by the outer .catch
+      // Don't re-throw, just log - errors shouldn't break the async execution chain
     }
   }
 

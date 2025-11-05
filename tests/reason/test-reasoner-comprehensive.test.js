@@ -1,3 +1,4 @@
+import {jest} from '@jest/globals';
 import { Reasoner, PremiseSource, TaskBagPremiseSource, Strategy, RuleProcessor, RuleExecutor, Rule } from '../../src/reason/index.js';
 import { ArrayStamp } from '../../src/Stamp.js';
 
@@ -108,26 +109,33 @@ describe('New Reasoner - Stream-based Architecture', () => {
   });
 
   test('should respect derivation depth limits in rule processor', async () => {
-    // Add the test rule
-    const testRule = new TestDeductionRule();
-    ruleExecutor.register(testRule);
+    // Mock console.debug to prevent test output pollution
+    const consoleSpy = jest.spyOn(console, 'debug').mockImplementation(() => {});
+    
+    try {
+      // Add the test rule
+      const testRule = new TestDeductionRule();
+      ruleExecutor.register(testRule);
 
-    // Create a mock premise pair stream
-    async function* mockPremiseStream() {
-      yield [new MockTask('A --> B', 'BELIEF'), new MockTask('A', 'BELIEF')];
+      // Create a mock premise pair stream
+      async function* mockPremiseStream() {
+        yield [new MockTask('A --> B', 'BELIEF'), new MockTask('A', 'BELIEF')];
+      }
+      
+      // Create a rule processor with a depth limit of 0 (should discard everything)
+      const limitedRuleProcessor = new RuleProcessor(ruleExecutor, { maxDerivationDepth: 0 });
+      
+      // Process the stream
+      const results = [];
+      for await (const result of limitedRuleProcessor.process(mockPremiseStream())) {
+        results.push(result);
+      }
+      
+      // Should have no results because they were all discarded due to depth limit
+      expect(results.length).toBe(0);
+    } finally {
+      consoleSpy.mockRestore();
     }
-    
-    // Create a rule processor with a depth limit of 0 (should discard everything)
-    const limitedRuleProcessor = new RuleProcessor(ruleExecutor, { maxDerivationDepth: 0 });
-    
-    // Process the stream
-    const results = [];
-    for await (const result of limitedRuleProcessor.process(mockPremiseStream())) {
-      results.push(result);
-    }
-    
-    // Should have no results because they were all discarded due to depth limit
-    expect(results.length).toBe(0);
   });
 
   test('should handle single step execution', async () => {
@@ -155,20 +163,27 @@ describe('New Reasoner - Stream-based Architecture', () => {
   });
 
   test('should support start/stop functionality', async () => {
-    // Verify that start and stop methods exist
-    expect(typeof reasoner.start).toBe('function');
-    expect(typeof reasoner.stop).toBe('function');
+    // Mock console.warn to prevent test output pollution when starting already running reasoner
+    const consoleSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     
-    // Initially should not be running
-    expect(reasoner.isRunning).toBe(false);
-    
-    // Start should work
-    reasoner.start();
-    // We can't easily check isRunning here because it runs async, but we can at least verify start doesn't throw
-    expect(() => reasoner.start()).not.toThrow();
-    
-    // Stop should work
-    reasoner.stop();
-    expect(reasoner.isRunning).toBe(false);
+    try {
+      // Verify that start and stop methods exist
+      expect(typeof reasoner.start).toBe('function');
+      expect(typeof reasoner.stop).toBe('function');
+      
+      // Initially should not be running
+      expect(reasoner.isRunning).toBe(false);
+      
+      // Start should work
+      reasoner.start();
+      // We can't easily check isRunning here because it runs async, but we can at least verify start doesn't throw
+      expect(() => reasoner.start()).not.toThrow();
+      
+      // Stop should work
+      reasoner.stop();
+      expect(reasoner.isRunning).toBe(false);
+    } finally {
+      consoleSpy.mockRestore();
+    }
   });
 });

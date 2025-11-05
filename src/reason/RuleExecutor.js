@@ -90,17 +90,21 @@ export class RuleExecutor {
 
     // For now, return all rules as candidates
     // In the future, this would use the decision tree to filter candidates efficiently
-    return this.rules.filter(rule => {
+    const candidateRules = [];
+    for (const rule of this.rules) {
       try {
-        return rule.canApply?.(primaryPremise, secondaryPremise) ?? true;
+        if (rule.canApply?.(primaryPremise, secondaryPremise) ?? true) {
+          candidateRules.push(rule);
+        }
       } catch (error) {
         logError(error, { 
           ruleId: rule.id ?? rule.name, 
           context: 'rule_candidate_check' 
         }, 'warn');
-        return false;
+        // Continue to next rule instead of returning false
       }
-    });
+    }
+    return candidateRules;
   }
 
   /**
@@ -113,15 +117,8 @@ export class RuleExecutor {
    */
   executeRule(rule, primaryPremise, secondaryPremise, context = {}) {
     try {
-      // Ensure the context has the necessary factories
-      // The context should be enhanced with termFactory if not already present
-      const executionContext = {
-        ...context,
-        // termFactory will be provided by the calling component (NAR or RuleProcessor)
-      };
-      
       // Execute the rule application
-      const results = rule.apply?.(primaryPremise, secondaryPremise, executionContext) ?? [];
+      const results = rule.apply?.(primaryPremise, secondaryPremise, context) ?? [];
       return Array.isArray(results) ? results : [results];
     } catch (error) {
       logError(error, { 
