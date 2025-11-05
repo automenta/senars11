@@ -91,14 +91,30 @@ export class SyllogisticRule extends Rule {
     
     let subject, middle, predicate;
     
+    // Robust term equality comparison
+    const termEquals = (t1, t2) => {
+        if (!t1 || !t2) return false;
+        
+        // Try direct equals method if available
+        if (typeof t1.equals === 'function') {
+            return t1.equals(t2);
+        }
+        
+        // Fallback: compare by name or string representation
+        const name1 = t1.name || t1._name || t1.toString?.() || '';
+        const name2 = t2.name || t2._name || t2.toString?.() || '';
+        
+        return name1 === name2;
+    };
+    
     // Pattern 1: (S --> M) + (M --> P) => (S --> P)
-    if (comp1[1].equals(comp2[0])) {
+    if (termEquals(comp1[1], comp2[0])) {
       subject = comp1[0];    // S
       middle = comp1[1];     // M (from first premise)
       predicate = comp2[1];  // P (from second premise)
     }
     // Pattern 2: (M --> P) + (S --> M) => (S --> P)  
-    else if (comp2[1].equals(comp1[0])) {
+    else if (termEquals(comp2[1], comp1[0])) {
       subject = comp2[0];    // S (from second premise)
       middle = comp2[1];     // M 
       predicate = comp1[1];  // P (from first premise)

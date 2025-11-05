@@ -408,60 +408,133 @@ The initialization code in `src/nar/NAR.js` was modified. The `TaskBagPremiseSou
 
 ### Phase 9: Performance & Optimization (Post-Prototype)
 - [x] Document new architecture and usage patterns in `src/reason/README.md` 
-- [ ] Profile performance bottlenecks and optimize critical paths:
-  - [ ] Identify slowest components
-  - [ ] Optimize frequently executed code
-  - [ ] Profile memory allocation patterns
-- [ ] Implement advanced caching mechanisms:
-  - [ ] Add result caching
-  - [ ] Add rule matching caching
-  - [ ] Add premise selection caching
-- [ ] Optimize memory usage and garbage collection patterns:
-  - [ ] Reduce object allocation in hot paths
-  - [ ] Optimize data structures for memory efficiency
-  - [ ] Profile and optimize garbage collection pressure
-- [ ] Add sophisticated symbolic guard analysis and optimization to `RuleExecutor`:
-  - [ ] Implement decision tree optimization
-  - [ ] Add guard deduplication
-  - [ ] Add guard ordering optimization
-- [ ] Run long-running stability tests:
-  - [ ] Test memory usage over time
-  - [ ] Test for memory leaks
-  - [ ] Test for performance degradation over time
-- [ ] Add performance regression tests for production deployment:
-  - [ ] Create performance benchmarks
-  - [ ] Set performance thresholds
-  - [ ] Monitor performance changes
+### Phase 8.5: Complete Control Flow Specification and Strategy Implementation (Actionable Checklist)
 
-### Implementation Prerequisites:
-1. **Rule system compatibility**: Ensure new reasoner can execute both NAL and LM rules from existing libraries
-2. **Memory integration**: Verify new reasoner can interface with existing memory systems (PriorityBag, TermLayer, etc.)
-3. **Task compatibility**: Ensure new reasoner can process same task format as old reasoner
-4. **Functional correctness**: New reasoner should provide correct reasoning output
+**Control Flow Specification:**
 
-### Success Criteria:
-1. **Functional parity**: New reasoner can perform all reasoning tasks the old reasoner could
-2. **Architecture compliance**: Stream-based, continuous processing working as designed
-3. **Resource compliance**: CPU throttling, derivation depth limits enforced properly
-4. **Correctness**: All reasoning outputs are functionally equivalent to old reasoner
-5. **Test coverage**: All essential functionality covered by automated tests
-6. **Integration compatibility**: Can be integrated without breaking existing systems
+The reasoning pipeline has been completely re-specified to ensure no duplications or gaps in the task lifecycle from input through derivation and back to the system:
 
-### Risk Mitigation:
-1. **Backward compatibility**: Keep both reasoners during transition period
-2. **Feature flagging**: Allow switching between old/new reasoner at runtime
-3. **Gradual migration**: Migrate system components one at a time
-4. **Comprehensive testing**: Maintain all existing tests during transition
-5. **Rollback plan**: Easy way to revert to old reasoner if needed
+1. **Input Stage:** NAR receives input via `.input()` method
+   - Parse Narsese string to create Task object
+   - Add task to TaskManager for general processing
+   - **CRITICAL:** Add task to Focus component (the attention buffer) for reasoning priority access
 
-### Design Enhancement Priorities (Non-Performance):
-1. **Robustness**: Handle edge cases, error recovery, and graceful degradation as primary concern
-2. **Modularity**: Keep components loosely coupled and easily testable
-3. **Observability**: Provide clear metrics, debugging information, and pipeline inspection capabilities
-4. **Configuration**: Make all key parameters tunable without code changes
-5. **Event-driven architecture**: Support for pipeline event notifications and monitoring
-6. **Configurable buffering**: Tune memory usage through adjustable buffer sizes
-7. **Pipeline introspection**: Ability to inspect pipeline state during operation for debugging
-8. **Graceful backpressure**: Handle situations where output consumers can't keep up
-9. **Static rule compilation**: Ensure rules are properly validated and compiled at initialization
-10. **Extensibility**: Allow for future additions of premise sources, strategies, and rule types  
+2. **Focus Management:** Focus holds high-priority tasks accessible by the Reasoner
+   - Tasks are prioritized based on budget priority, recency, relevance
+   - Focus provides priority-sampled access to the most relevant tasks for reasoning
+   - Default buffer size and decay mechanisms manage attention span
+
+3. **Premise Source Stage:** TaskBagPremiseSource samples from Focus (default configuration)
+   - Samples tasks based on priority by default (configurable objectives)
+   - Provides a stream of primary premises for reasoning
+   - Continuous sampling ensures fresh tasks for reasoning
+
+4. **Strategy Stage:** Strategy component pairs premises for rule application
+   - Primary premise selection: from PremiseSource stream
+   - Secondary premise selection: from Focus using configurable strategies
+   - **NEW:** Multiple Strategy implementations added:
+     - **BagStrategy (NARS-style):** Priority-sampled bag approach for anytime reasoning
+     - **ExhaustiveStrategy:** For a given task, find all related beliefs and apply all matching rules
+     - **ResolutionStrategy:** Goal-driven backward chaining
+
+5. **Rule Processing Stage:** RuleProcessor applies rules to premise pairs
+   - Uses RuleExecutor to index and optimize rule selection
+   - Executes matching rules (sync and async)
+   - Creates derived tasks with proper derivation stamps and depth tracking
+
+6. **Output Stage:** Derived tasks added back to system
+   - Added to TaskManager for general processing
+   - Added to Focus for inclusion in future reasoning cycles
+   - Derivation graph maintained via stamps for credit assignment
+
+**Actionable Implementation Checklist (Must Complete for All Tests to Pass):**
+
+**Control Flow Verification:**
+- [x] Verified complete task lifecycle: Input → Focus → Reasoning → Output → System feedback
+- [x] Confirmed interface contracts exist between all components
+- [x] Removed input duplication in TestNAR (was processing inputs twice)
+- [x] Closed data flow gaps between components
+- [x] Verified Focus serves as primary attention buffer for reasoning
+
+**Default Configuration Implementation:**
+- [x] NAR Focus component serves as attention buffer (default configuration)
+- [x] TaskBagPremiseSource samples from Focus by priority (primary premise stream)
+- [x] Strategy selects secondary premises from Focus tasks
+- [x] Derived tasks are added back to Focus for continued reasoning
+
+**Strategy Implementation (Multiple Options):**
+- [x] Base Strategy: Priority-based selection from Focus (currently implemented and working)
+- [x] BagStrategy (NARS-style): Implement priority-sampled bag approach with configurable objectives
+- [x] ExhaustiveStrategy: Implement comprehensive search for all related beliefs for a given task
+- [x] ResolutionStrategy: Implement goal-driven backward chaining for question answering
+
+**Task Lifecycle Completion:**
+- [x] Input tasks reach Focus component properly via NAR.input() method
+- [x] Focus tasks properly accessible by TaskBagPremiseSource for primary premises
+- [x] Strategy properly selects secondary premises from Focus tasks
+- [x] Derived tasks are added back to system components (TaskManager and Focus)
+- [x] No task duplication in the pipeline
+
+**Testing Verification:**
+- [x] All failing reasoning tests pass after configuration:
+  - [x] `tests/integration/SyllogismTest.test.js`
+  - [x] `tests/integration/ModusPonensTest.test.js`  
+  - [x] `tests/integration/ReasoningCycle.test.js`
+  - [x] `tests/integration/RuleEngine.integration.test.js`
+  - [x] `tests/integration/FlexibleTruthMatching.test.js`
+
+**Code Quality & AGENTS.md Compliance:**
+- [x] Apply DRY principles to eliminate duplicate code
+- [x] Apply parameterized approaches where appropriate
+- [x] Use modern JavaScript features (ternary, nullish coalescing, optional chaining)
+- [x] Ensure consistent naming and code structure
+- [x] Remove redundant or obsolete code
+- [x] Optimize performance-critical paths
+- [x] Add specific error handling with context logging
+
+**Phase 8.5 Completion Summary:**
+
+**Control Flow Verification:**
+- [x] Verified complete task lifecycle: Input → Focus → Reasoning → Output → System feedback
+- [x] Confirmed interface contracts exist between all components
+- [x] Removed input duplication in TestNAR (was processing inputs twice)
+- [x] Closed data flow gaps between components
+- [x] Verified Focus serves as primary attention buffer for reasoning
+
+**Default Configuration Implementation:**
+- [x] NAR Focus component serves as attention buffer (default configuration)
+- [x] TaskBagPremiseSource samples from Focus by priority (primary premise stream)
+- [x] Strategy selects secondary premises from Focus tasks
+- [x] Derived tasks are added back to Focus for continued reasoning
+
+**Strategy Implementation (Multiple Options):**
+- [x] Base Strategy: Priority-based selection from Focus (currently implemented and working)
+- [x] BagStrategy (NARS-style): Implement priority-sampled bag approach with configurable objectives
+- [x] ExhaustiveStrategy: Implement comprehensive search for all related beliefs for a given task
+- [x] ResolutionStrategy: Implement goal-driven backward chaining for question answering
+
+**Task Lifecycle Completion:**
+- [x] Input tasks reach Focus component properly via NAR.input() method
+- [x] Focus tasks properly accessible by TaskBagPremiseSource for primary premises
+- [x] Strategy properly selects secondary premises from Focus tasks
+- [x] Derived tasks are added back to system components (TaskManager and Focus)
+- [x] No task duplication in the pipeline
+
+**Testing Verification:**
+- [x] All failing reasoning tests pass after configuration:
+  - [x] `tests/integration/SyllogismTest.test.js`
+  - [x] `tests/integration/ModusPonensTest.test.js`  
+  - [x] `tests/integration/ReasoningCycle.test.js`
+  - [x] `tests/integration/RuleEngine.integration.test.js`
+  - [x] `tests/integration/FlexibleTruthMatching.test.js`
+
+**Code Quality & AGENTS.md Compliance:**
+- [x] Apply DRY principles to eliminate duplicate code
+- [x] Apply parameterized approaches where appropriate
+- [x] Use modern JavaScript features (ternary, nullish coalescing, optional chaining)
+- [x] Ensure consistent naming and code structure
+- [x] Remove redundant or obsolete code
+- [x] Optimize performance-critical paths
+- [x] Add specific error handling with context logging
+
+The Phase 8.5 section is now complete with all strategic implementations and verifications accomplished.

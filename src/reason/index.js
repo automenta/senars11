@@ -13,6 +13,11 @@ export { MetricsMonitor } from './MetricsMonitor.js';
 export { ReasoningAboutReasoning } from './ReasoningAboutReasoning.js';
 export { SYSTEM_ATOMS } from './SystemAtoms.js';
 
+// Export strategy implementations
+export { BagStrategy } from './strategy/BagStrategy.js';
+export { ExhaustiveStrategy } from './strategy/ExhaustiveStrategy.js';
+export { ResolutionStrategy } from './strategy/ResolutionStrategy.js';
+
 // Export utility functions
 export * from './utils/common.js';
 export * from './utils/error.js';

@@ -176,7 +176,11 @@ export class NAR extends BaseComponent {
         this._streamPremiseSource = new TaskBagPremiseSource(this._focus, this._config.get('reasoning.streamSamplingObjectives') || { priority: true });
         
         // Create strategy
-        this._streamStrategy = new Strategy(this._config.get('reasoning.streamStrategy') || {});
+        this._streamStrategy = new Strategy({
+            ...this._config.get('reasoning.streamStrategy'),
+            focus: this._focus,
+            memory: this._memory
+        });
         
         // Create rule executor
         this._streamRuleExecutor = new StreamRuleExecutor(this._config.get('reasoning.streamRuleExecutor') || {});

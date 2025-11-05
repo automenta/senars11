@@ -225,32 +225,20 @@ export class TestNAR {
                     break;
             }
         }
-
-        // Process inputs first to make sure they're in the system
-        await this._processInputs();
         
         // Additional reasoning cycles after all inputs to allow for inference
-        // For stream reasoner, we might need more time to let the stream process
+        // For stream reasoner, use step-by-step processing instead of continuous mode
         if (this.nar._useStreamReasoner && this.nar.streamReasoner) {
-            // For stream reasoner, we should ensure it's started and give time for processing
-            if (!this.nar.streamReasoner.isRunning) {
-                this.nar.streamReasoner.start();
-                // Wait to allow the stream to start processing input tasks
-                await new Promise(resolve => setTimeout(resolve, 10));
-            }
-            
+            // Do NOT start the stream reasoner continuously - use step-by-step execution only
             // Execute multiple steps to make sure processing happens
-            for (let i = 0; i < 20; i++) {  // Run more steps to ensure processing
+            for (let i = 0; i < 50; i++) {  // Run reasoning steps iteratively
                 await this.nar.step();
                 // Small delay to allow async processing
-                await new Promise(resolve => setTimeout(resolve, 10));
+                await new Promise(resolve => setTimeout(resolve, 5));
             }
             
             // Additional wait for any async rules to complete derivations
             await new Promise(resolve => setTimeout(resolve, 200));
-            
-            // Stop the stream reasoner to ensure no further processing
-            await this.nar.streamReasoner.stop();
         } else {
             // For the old cycle-based reasoner, just run one cycle
             for (let i = 0; i < 1; i++) {

@@ -10,6 +10,10 @@ export class Strategy {
       maxSecondaryPremises: config.maxSecondaryPremises || 10,
       ...config
     };
+    
+    // Store the focus or memory reference if provided in config
+    this.focus = config.focus || null;
+    this.memory = config.memory || null;
   }
 
   /**
@@ -54,8 +58,30 @@ export class Strategy {
         return await this.config.premiseSelector.select(primaryPremise);
       }
       
-      // Default: return an empty array (no secondary premises)
-      return [];
+      // Default strategy: get tasks from focus or memory that could pair with the primary premise
+      // We need to access other tasks in the system to form premise pairs
+      let allTasks = [];
+      
+      // Try to get tasks from focus first (higher priority tasks)
+      if (this.focus) {
+        allTasks = this.focus.getTasks(this.config.maxSecondaryPremises || 10);
+      } else if (this.memory && typeof this.memory.getAllConcepts === 'function') {
+        // Get tasks from memory concepts if focus is not available
+        allTasks = this.memory.getAllConcepts()
+          .flatMap(concept => concept.getTasks ? concept.getTasks() : [])
+          .slice(0, this.config.maxSecondaryPremises || 10);
+      }
+      
+      // Filter tasks to find those that could be meaningfully paired with the primary premise
+      const validSecondaryTasks = allTasks.filter(task => 
+        task && 
+        task !== primaryPremise &&  // Don't pair a task with itself
+        task.term &&  // Has a valid term
+        task.term !== primaryPremise.term  // Different terms
+      );
+      
+      // Limit to maxSecondaryPremises if specified
+      return validSecondaryTasks.slice(0, this.config.maxSecondaryPremises || 10);
     } catch (error) {
       console.error('Error in selectSecondaryPremises:', error);
       // Return empty array to continue processing instead of failing
