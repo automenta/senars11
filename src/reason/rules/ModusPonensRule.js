@@ -28,21 +28,10 @@ export class ModusPonensRule extends Rule {
     // Check if one is an implication and the other matches the antecedent
     const isImplication = (term) => term.operator === '==>';
     
-    // Use the proper Term equals method for comparison
-    const termEquals = (t1, t2) => {
-        if (!t1 || !t2) return false;
-        if (typeof t1.equals === 'function') {
-            return t1.equals(t2);
-        }
-        // Fallback for non-Term objects
-        const name1 = t1.name || t1._name || t1.toString?.() || '';
-        const name2 = t2.name || t2._name || t2.toString?.() || '';
-        return name1 === name2;
-    };
-    
     const isAntecedentMatch = (implicationTerm, otherTerm) => {
       if (!isImplication(implicationTerm) || !implicationTerm.components) return false;
-      return implicationTerm.components[0] && termEquals(implicationTerm.components[0], otherTerm);
+      return implicationTerm.components[0]?.equals && 
+             implicationTerm.components[0].equals(otherTerm);
     };
 
     const primaryTerm = primaryPremise.term;
@@ -77,30 +66,14 @@ export class ModusPonensRule extends Rule {
       // Determine which premise is the implication and which is the antecedent
       let implicationPremise, antecedentPremise;
       
-      // Robust term equality comparison
-      const termEquals = (t1, t2) => {
-          if (!t1 || !t2) return false;
-          
-          // Try direct equals method if available
-          if (typeof t1.equals === 'function') {
-              return t1.equals(t2);
-          }
-          
-          // Fallback: compare by name or string representation
-          const name1 = t1.name || t1._name || t1.toString?.() || '';
-          const name2 = t2.name || t2._name || t2.toString?.() || '';
-          
-          return name1 === name2;
-      };
-      
       if (primaryPremise.term.operator === '==>' && 
-          primaryPremise.term.components[0] && 
-          termEquals(primaryPremise.term.components[0], secondaryPremise.term)) {
+          primaryPremise.term.components[0]?.equals && 
+          primaryPremise.term.components[0].equals(secondaryPremise.term)) {
         implicationPremise = primaryPremise;
         antecedentPremise = secondaryPremise;
       } else if (secondaryPremise.term.operator === '==>' && 
-                 secondaryPremise.term.components[0] && 
-                 termEquals(secondaryPremise.term.components[0], primaryPremise.term)) {
+                 secondaryPremise.term.components[0]?.equals && 
+                 secondaryPremise.term.components[0].equals(primaryPremise.term)) {
         implicationPremise = secondaryPremise;
         antecedentPremise = primaryPremise;
       } else {
@@ -125,7 +98,9 @@ export class ModusPonensRule extends Rule {
       const newStamp = Stamp.derive([primaryPremise.stamp, secondaryPremise.stamp]);
       
       // Calculate priority (simplified)
-      const priority = (primaryPremise.budget?.priority || 0.5) * (secondaryPremise.budget?.priority || 0.5) * this.priority;
+      const priority = (primaryPremise.budget?.priority ?? 0.5) * 
+                       (secondaryPremise.budget?.priority ?? 0.5) * 
+                       this.priority;
 
       // Create derived task
       const derivedTask = new Task({
@@ -135,8 +110,14 @@ export class ModusPonensRule extends Rule {
         stamp: newStamp,
         budget: {
           priority: priority,
-          durability: Math.min(primaryPremise.budget?.durability || 0.5, secondaryPremise.budget?.durability || 0.5),
-          quality: Math.min(primaryPremise.budget?.quality || 0.5, secondaryPremise.budget?.quality || 0.5)
+          durability: Math.min(
+            primaryPremise.budget?.durability ?? 0.5, 
+            secondaryPremise.budget?.durability ?? 0.5
+          ),
+          quality: Math.min(
+            primaryPremise.budget?.quality ?? 0.5, 
+            secondaryPremise.budget?.quality ?? 0.5
+          )
         }
       });
 

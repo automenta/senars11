@@ -25,7 +25,6 @@ export class SyllogisticRule extends Rule {
     if (!primaryPremise || !secondaryPremise) return false;
     
     // Both premises need to be compound statements with appropriate operators
-    // Check if we have patterns like (S ==> M) and (M ==> P) or (M ==> P) and (S ==> M)
     const term1 = primaryPremise.term;
     const term2 = secondaryPremise.term;
     
@@ -33,36 +32,19 @@ export class SyllogisticRule extends Rule {
     
     // Look for relations like implication (==>) or inheritance (-->)
     const isValidOperator = (op) => op === '==>' || op === '-->';
-    const isTerm1Valid = isValidOperator(term1.operator);
-    const isTerm2Valid = isValidOperator(term2.operator);
-    
-    if (!isTerm1Valid || !isTerm2Valid) return false;
+    if (!isValidOperator(term1.operator) || !isValidOperator(term2.operator)) return false;
     
     // Check for syllogistic pattern: (S --> M) + (M --> P) => (S --> P)
-    // This means the middle term of one premise matches the subject or predicate of the other
     const comp1 = term1.components;
     const comp2 = term2.components;
     
     if (comp1.length !== 2 || comp2.length !== 2) return false;
     
-    // Find potential matching middle terms
+    // Find potential matching middle terms using the proper Term.equals method
     // Pattern 1: (S --> M) + (M --> P) where comp1[1] === comp2[0]
     // Pattern 2: (M --> P) + (S --> M) where comp2[1] === comp1[0]
-    
-    // Use the proper Term equals method for comparison
-    const termEquals = (t1, t2) => {
-        if (!t1 || !t2) return false;
-        if (typeof t1.equals === 'function') {
-            return t1.equals(t2);
-        }
-        // Fallback for non-Term objects
-        const name1 = t1.name || t1._name || t1.toString?.() || '';
-        const name2 = t2.name || t2._name || t2.toString?.() || '';
-        return name1 === name2;
-    };
-    
-    const matchesPattern1 = termEquals(comp1[1], comp2[0]); // term1.object === term2.subject
-    const matchesPattern2 = termEquals(comp2[1], comp1[0]); // term2.object === term1.subject
+    const matchesPattern1 = comp1[1]?.equals && comp1[1].equals(comp2[0]); // term1.object === term2.subject
+    const matchesPattern2 = comp2[1]?.equals && comp2[1].equals(comp1[0]); // term2.object === term1.subject
     
     return matchesPattern1 || matchesPattern2;
   }
@@ -85,51 +67,45 @@ export class SyllogisticRule extends Rule {
     const comp1 = term1.components;
     const comp2 = term2.components;
     
-    let subject, middle, predicate;
-    
     // Pattern 1: (S --> M) + (M --> P) => (S --> P)
     if (comp1[1].equals && comp1[1].equals(comp2[0])) {
-      subject = comp1[0];    // S
-      middle = comp1[1];     // M (from first premise)
-      predicate = comp2[1];  // P (from second premise)
+      // subject = comp1[0], middle = comp1[1], predicate = comp2[1]
+      return this._createDerivedTask(primaryPremise, secondaryPremise, comp1[0], comp2[1], term1.operator);
     }
     // Pattern 2: (M --> P) + (S --> M) => (S --> P)  
     else if (comp2[1].equals && comp2[1].equals(comp1[0])) {
-      subject = comp2[0];    // S (from second premise)
-      middle = comp2[1];     // M 
-      predicate = comp1[1];  // P (from first premise)
+      // subject = comp2[0], middle = comp2[1], predicate = comp1[1]
+      return this._createDerivedTask(primaryPremise, secondaryPremise, comp2[0], comp1[1], term1.operator);
     }
-    else {
-      return []; // No valid pattern found
-    }
-
-    // Determine the appropriate operator for the conclusion based on the input terms
-    // Use the same operator as the first term for consistency
-    const conclusionOperator = primaryPremise.term.operator || '==>';
     
-    // Create the conclusion term using the Term class with proper structure
-    // The name should reflect the operator and components in the expected format (with spaces after commas)
-    const conclusionName = `(${conclusionOperator}, ${subject._name || subject.name || 'subject'}, ${predicate._name || predicate.name || 'predicate'})`;
-    const conclusionTerm = new Term(TermType.COMPOUND, conclusionName, [subject, predicate], conclusionOperator);
-
+    return []; // No valid pattern found
+  }
+  
+  /**
+   * Helper method to create derived task from syllogistic conclusion
+   * @private
+   */
+  _createDerivedTask(primaryPremise, secondaryPremise, subject, predicate, operator) {
     // Calculate truth value using NAL deduction
     const truth1 = primaryPremise.truth;
     const truth2 = secondaryPremise.truth;
     
-    if (!truth1 || !truth2) {
-      return [];
-    }
+    if (!truth1 || !truth2) return [];
     
     const derivedTruth = Truth.deduction(truth1, truth2);
-    if (!derivedTruth) {
-      return [];
-    }
+    if (!derivedTruth) return [];
+
+    // Create the conclusion term using the Term class with proper structure
+    const conclusionName = `(${operator}, ${subject.name || 'subject'}, ${predicate.name || 'predicate'})`;
+    const conclusionTerm = new Term(TermType.COMPOUND, conclusionName, [subject, predicate], operator);
 
     // Create new stamp combining both premise stamps
     const newStamp = Stamp.derive([primaryPremise.stamp, secondaryPremise.stamp]);
     
     // Calculate priority (simplified)
-    const priority = (primaryPremise.budget?.priority || 0.5) * (secondaryPremise.budget?.priority || 0.5) * this.priority;
+    const priority = (primaryPremise.budget?.priority || 0.5) * 
+                     (secondaryPremise.budget?.priority || 0.5) * 
+                     this.priority;
 
     // Create derived task
     const derivedTask = new Task({
@@ -139,8 +115,14 @@ export class SyllogisticRule extends Rule {
       stamp: newStamp,
       budget: {
         priority: priority,
-        durability: Math.min(primaryPremise.budget?.durability || 0.5, secondaryPremise.budget?.durability || 0.5),
-        quality: Math.min(primaryPremise.budget?.quality || 0.5, secondaryPremise.budget?.quality || 0.5)
+        durability: Math.min(
+          primaryPremise.budget?.durability ?? 0.5, 
+          secondaryPremise.budget?.durability ?? 0.5
+        ),
+        quality: Math.min(
+          primaryPremise.budget?.quality ?? 0.5, 
+          secondaryPremise.budget?.quality ?? 0.5
+        )
       }
     });
 
