@@ -1,4 +1,5 @@
 import { PremiseSource } from './PremiseSource.js';
+import { randomWeightedSelect } from './utils/randomWeightedSelect.js';
 
 /**
  * A PremiseSource that draws from a TaskBag with configurable sampling objectives.
@@ -9,9 +10,12 @@ export class TaskBagPremiseSource extends PremiseSource {
    * @param {object} samplingObjectives - Configuration for the sampling strategy.
    * Supported objectives:
    * - priority: Sample tasks based on their priority value (default: true)
-   * - recency: Favor tasks that have been recently activated (default: false)
+   * - recency: Favor tasks that are closest to a specific target time (default: false)  
    * - punctuation: Focus on Goals or Questions (default: false)
    * - novelty: Favor tasks that have participated in fewer reasoning steps (default: false)
+   * - targetTime: Specific time to measure closeness to (default: current time when used)
+   * - weights: Custom weights for different sampling strategies (default: {})
+   * - dynamic: Enable dynamic strategy adaptation based on performance (default: false)
    */
   constructor(memory, samplingObjectives) {
     // Set default sampling objectives if not provided
@@ -20,6 +24,9 @@ export class TaskBagPremiseSource extends PremiseSource {
       recency: false,
       punctuation: false,
       novelty: false,
+      targetTime: null,  // Default to current time when used
+      weights: {},
+      dynamic: false,
       ...samplingObjectives
     };
     
@@ -28,6 +35,27 @@ export class TaskBagPremiseSource extends PremiseSource {
     if (!this.taskBag) {
       throw new Error('TaskBagPremiseSource requires a memory object with a taskBag or bag property');
     }
+    
+    // Initialize sampling strategy weights
+    this.weights = {
+      priority: defaults.weights.priority || 1.0,
+      recency: defaults.weights.recency || 0.0,
+      punctuation: defaults.weights.punctuation || 0.0,
+      novelty: defaults.weights.novelty || 0.0,
+      ...defaults.weights
+    };
+    
+    // Performance tracking for dynamic adaptation
+    this.performanceStats = {
+      priority: { count: 0, effectiveness: 0 },
+      recency: { count: 0, effectiveness: 0 },
+      punctuation: { count: 0, effectiveness: 0 },
+      novelty: { count: 0, effectiveness: 0 }
+    };
+    
+    this.dynamicAdaptation = defaults.dynamic;
+    this.lastUpdate = Date.now();
+    this.samplingObjectives = defaults;
   }
 
   /**
@@ -69,22 +97,234 @@ export class TaskBagPremiseSource extends PremiseSource {
    */
   async _sampleTask() {
     try {
-      // For now, implement priority-based sampling as the default strategy
-      // The taskBag should be a PriorityBag that naturally handles priority-based sampling
-      if (this.taskBag.take) {
-        // If the bag has a take method (like PriorityBag) - this typically handles priority
-        return this.taskBag.take();
-      } else if (this.taskBag.pop) {
-        // If it has a pop method
-        return this.taskBag.pop();
-      } else if (this.taskBag.get) {
-        // If it has a get method with optional index
-        return this.taskBag.get(0);
+      // Check if taskBag is available and has items
+      if (!this.taskBag || this._getBagSize() === 0) {
+        return null;
       }
-      return null;
+
+      // Update weights dynamically if enabled
+      if (this.dynamicAdaptation) {
+        this._updateWeightsDynamically();
+      }
+
+      // Select sampling method based on weights
+      const selectedMethod = this._selectSamplingMethod();
+      
+      // Record which method was selected for performance tracking
+      const startTime = Date.now();
+      const selectedTask = this._applySamplingMethod(selectedMethod);
+      
+      // Record the performance of the selected method if we have the task
+      if (selectedTask) {
+        const executionTime = Date.now() - startTime;
+        // For now, we'll record basic effectiveness (inverse of execution time, with some random factor)
+        // In a real system, this would be based on how valuable the derived conclusions are
+        const effectiveness = 1.0 / (executionTime + 1);  // +1 to avoid division by zero
+        this.recordMethodEffectiveness(selectedMethod, effectiveness);
+      }
+      
+      return selectedTask;
     } catch (error) {
       console.error('Error in _sampleTask:', error);
       return null;
+    }
+  }
+
+  /**
+   * Apply the selected sampling method
+   * @param {string} method - The sampling method to apply
+   * @returns {Task|null}
+   */
+  _applySamplingMethod(method) {
+    switch (method) {
+      case 'priority':
+        return this._sampleByPriority();
+      case 'recency':
+        return this._sampleByRecency();
+      case 'punctuation':
+        return this._sampleByPunctuation();
+      case 'novelty':
+        return this._sampleByNovelty();
+      default:
+        return this._sampleByPriority(); // Default fallback
+    }
+  }
+
+  /**
+   * Get the size of the task bag
+   * @returns {number}
+   */
+  _getBagSize() {
+    if (this.taskBag.size !== undefined) return this.taskBag.size;
+    if (typeof this.taskBag.length === 'number') return this.taskBag.length;
+    if (typeof this.taskBag.count === 'function') return this.taskBag.count();
+    if (Array.isArray(this.taskBag) || this.taskBag instanceof Set) return this.taskBag.length || this.taskBag.size;
+    if (this.taskBag instanceof Map) return this.taskBag.size;
+    // If we can't determine size, assume it's not empty and try to get items
+    return 1; // Conservative assumption
+  }
+
+  /**
+   * Select the sampling method based on current weights
+   * @returns {string}
+   */
+  _selectSamplingMethod() {
+    const methods = Object.keys(this.weights);
+    const weights = methods.map(method => this.weights[method]);
+    
+    // Normalize weights to ensure at least some probability for each method
+    const totalWeight = weights.reduce((sum, w) => sum + Math.max(w, 0.001), 0);
+    const normalizedWeights = weights.map(w => w / totalWeight);
+    
+    return randomWeightedSelect(methods, normalizedWeights);
+  }
+
+  /**
+   * Sample by priority (default behavior using the underlying bag's priority)
+   * @returns {Task|null}
+   */
+  _sampleByPriority() {
+    if (this.taskBag.take) {
+      return this.taskBag.take();
+    } else if (this.taskBag.pop) {
+      return this.taskBag.pop();
+    } else if (this.taskBag.get) {
+      return this.taskBag.get(0);
+    }
+    return null;
+  }
+
+  /**
+   * Sample by closeness to target time (favor tasks closest to a specific time)
+   * @returns {Task|null}
+   */
+  _sampleByRecency() {
+    // If the bag supports getting multiple items, we can prioritize based on closeness to target time
+    if (this.taskBag.getAll && typeof this.taskBag.getAll === 'function') {
+      const allTasks = this.taskBag.getAll();
+      if (allTasks.length === 0) return null;
+      
+      // Use a configurable target time (default to current time if not specified)
+      const targetTime = this.samplingObjectives.targetTime || Date.now();
+      
+      // Sort by closeness to target time (closest first)
+      allTasks.sort((a, b) => {
+        const timeA = a.stamp?.lastUpdated || a.stamp?.creationTime || 0;
+        const timeB = b.stamp?.lastUpdated || b.stamp?.creationTime || 0;
+        
+        // Calculate absolute distance to target time
+        const distanceA = Math.abs(timeA - targetTime);
+        const distanceB = Math.abs(timeB - targetTime);
+        
+        return distanceA - distanceB; // Closest to target time first
+      });
+      
+      // Return the task closest to target time
+      const selectedTask = allTasks[0];
+      // Remove the selected task from the bag
+      this.taskBag.remove(selectedTask);
+      return selectedTask;
+    }
+    
+    // Fallback: just take from the bag (assumes underlying priority might include recency)
+    return this._sampleByPriority();
+  }
+
+  /**
+   * Sample by punctuation (favor Goals or Questions)
+   * @returns {Task|null}
+   */
+  _sampleByPunctuation() {
+    // Get all tasks and filter for goals/questions
+    if (this.taskBag.getAll && typeof this.taskBag.getAll === 'function') {
+      const allTasks = this.taskBag.getAll();
+      if (allTasks.length === 0) return null;
+      
+      // Filter for goals and questions
+      const goalsAndQuestions = allTasks.filter(task => {
+        const punctuation = task.sentence?.punctuation;
+        return punctuation === '?' || punctuation === '!'; // Goals use '!' and Questions use '?'
+      });
+      
+      if (goalsAndQuestions.length > 0) {
+        // Randomly select from goals/questions
+        const randomIndex = Math.floor(Math.random() * goalsAndQuestions.length);
+        const selectedTask = goalsAndQuestions[randomIndex];
+        // Remove the selected task from the bag
+        this.taskBag.remove(selectedTask);
+        return selectedTask;
+      }
+    }
+    
+    // If no goals/questions available, fall back to priority
+    return this._sampleByPriority();
+  }
+
+  /**
+   * Sample by novelty (favor tasks with fewer reasoning steps)
+   * @returns {Task|null}
+   */
+  _sampleByNovelty() {
+    // Get all tasks and select those with lower derivation depth
+    if (this.taskBag.getAll && typeof this.taskBag.getAll === 'function') {
+      const allTasks = this.taskBag.getAll();
+      if (allTasks.length === 0) return null;
+      
+      // Calculate novelty as inverse of derivation depth
+      const tasksWithNovelty = allTasks.map(task => {
+        const depth = task.stamp?.depth || 0;
+        // Higher novelty score for lower depth values
+        const novelty = 1 / (depth + 1); // Add 1 to avoid division by zero
+        return { task, novelty };
+      });
+      
+      // Sort by novelty (highest novelty first)
+      tasksWithNovelty.sort((a, b) => b.novelty - a.novelty);
+      
+      // Select the most novel task
+      const selectedTask = tasksWithNovelty[0].task;
+      // Remove the selected task from the bag
+      this.taskBag.remove(selectedTask);
+      return selectedTask;
+    }
+    
+    // Fallback: just take from the bag
+    return this._sampleByPriority();
+  }
+
+  /**
+   * Update weights based on performance metrics
+   */
+  _updateWeightsDynamically() {
+    const now = Date.now();
+    // Only update weights periodically (e.g., every 1000ms)
+    if (now - this.lastUpdate < 1000) {
+      return;
+    }
+    
+    this.lastUpdate = now;
+    
+    // Calculate effectiveness scores for each method
+    for (const method in this.performanceStats) {
+      const stats = this.performanceStats[method];
+      if (stats.count > 0) {
+        // Effectiveness is average effectiveness per sample
+        const effectiveness = stats.effectiveness / stats.count;
+        // Adjust weight based on effectiveness (with some decay to prevent overfitting)
+        this.weights[method] = 0.9 * this.weights[method] + 0.1 * effectiveness;
+      }
+    }
+  }
+
+  /**
+   * Record performance for a sampling method
+   * @param {string} method - The sampling method used
+   * @param {number} effectiveness - Effectiveness score (0-1)
+   */
+  recordMethodEffectiveness(method, effectiveness) {
+    if (this.performanceStats[method]) {
+      this.performanceStats[method].count++;
+      this.performanceStats[method].effectiveness += effectiveness;
     }
   }
 

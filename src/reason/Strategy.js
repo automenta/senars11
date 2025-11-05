@@ -62,4 +62,16 @@ export class Strategy {
       return [];
     }
   }
+
+  /**
+   * Get status information about the strategy
+   * @returns {object} Status information
+   */
+  getStatus() {
+    return {
+      config: this.config,
+      type: this.constructor.name,
+      timestamp: Date.now()
+    };
+  }
 }

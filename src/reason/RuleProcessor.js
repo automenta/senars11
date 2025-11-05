@@ -12,6 +12,8 @@ export class RuleProcessor {
     this.ruleExecutor = ruleExecutor;
     this.config = {
       maxDerivationDepth: config.maxDerivationDepth || 10,
+      backpressureThreshold: config.backpressureThreshold || 50, // queue size threshold
+      backpressureInterval: config.backpressureInterval || 5, // ms to wait when backpressure detected
       ...config
     };
     
@@ -23,6 +25,9 @@ export class RuleProcessor {
     // Track rule execution counts
     this.syncRuleExecutions = 0;
     this.asyncRuleExecutions = 0;
+    
+    // Track queue stats for backpressure
+    this.maxQueueSize = 0;
   }
 
   /**
@@ -33,6 +38,9 @@ export class RuleProcessor {
   async *process(premisePairStream) {
     try {
       for await (const [primaryPremise, secondaryPremise] of premisePairStream) {
+        // Check for backpressure before processing this premise pair
+        await this._checkAndApplyBackpressure();
+        
         // Get candidate rules for this premise pair
         const candidateRules = this.ruleExecutor.getCandidateRules(primaryPremise, secondaryPremise);
         
@@ -64,6 +72,9 @@ export class RuleProcessor {
         
         // Yield any available async results after processing this premise pair
         while (this.asyncResultsQueue.length > 0) {
+          // Check for backpressure before yielding results
+          await this._checkAndApplyBackpressure();
+          
           yield this.asyncResultsQueue.shift();
         }
       }
@@ -84,6 +95,9 @@ export class RuleProcessor {
         // Yield any results that became available during the wait
         while (this.asyncResultsQueue.length > 0) {
           hasAsyncResults = true;
+          // Check for backpressure before yielding results
+          await this._checkAndApplyBackpressure();
+          
           yield this.asyncResultsQueue.shift();
         }
       }
@@ -169,12 +183,52 @@ export class RuleProcessor {
   }
 
   /**
+   * Check for backpressure and apply mitigation if needed
+   * @private
+   */
+  async _checkAndApplyBackpressure() {
+    // Track queue size for monitoring
+    if (this.asyncResultsQueue.length > this.maxQueueSize) {
+      this.maxQueueSize = this.asyncResultsQueue.length;
+    }
+    
+    // Check if queue size exceeds threshold
+    if (this.asyncResultsQueue.length > this.config.backpressureThreshold) {
+      // Apply backpressure by yielding control to event loop
+      await new Promise(resolve => setTimeout(resolve, this.config.backpressureInterval || 5));
+    }
+  }
+
+  /**
    * Get statistics about rule executions
    */
   getStats() {
     return {
       syncRuleExecutions: this.syncRuleExecutions,
       asyncRuleExecutions: this.asyncRuleExecutions
+    };
+  }
+
+  /**
+   * Get detailed status information
+   */
+  getStatus() {
+    return {
+      ruleExecutor: this.ruleExecutor.constructor.name,
+      config: this.config,
+      stats: this.getStats(),
+      internalState: {
+        asyncResultsQueueLength: this.asyncResultsQueue.length,
+        maxQueueSize: this.maxQueueSize,
+        syncRuleExecutions: this.syncRuleExecutions,
+        asyncRuleExecutions: this.asyncRuleExecutions
+      },
+      backpressure: {
+        queueLength: this.asyncResultsQueue.length,
+        threshold: this.config.backpressureThreshold,
+        isApplyingBackpressure: this.asyncResultsQueue.length > this.config.backpressureThreshold
+      },
+      timestamp: Date.now()
     };
   }
 

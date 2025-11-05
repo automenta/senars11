@@ -15,6 +15,8 @@ export class Reasoner {
     this.config = {
       maxDerivationDepth: config.maxDerivationDepth || 10,
       cpuThrottleInterval: config.cpuThrottleInterval || 0, // milliseconds to yield CPU
+      backpressureThreshold: config.backpressureThreshold || 100, // number of queued items to trigger backpressure
+      backpressureInterval: config.backpressureInterval || 10, // milliseconds to wait when backpressure detected
       ...config
     };
     
@@ -27,15 +29,23 @@ export class Reasoner {
       startTime: null,
       lastDerivationTime: null,
       totalProcessingTime: 0,
-      cpuThrottleCount: 0
+      cpuThrottleCount: 0,
+      backpressureEvents: 0,
+      lastBackpressureTime: null
     };
     
     // Performance monitoring
     this.performance = {
       throughput: 0, // derivations per second
       avgProcessingTime: 0, // average processing time in ms
-      memoryUsage: 0 // in bytes
+      memoryUsage: 0, // in bytes
+      backpressureLevel: 0 // indicator of backpressure severity
     };
+    
+    // Backpressure detection
+    this.outputConsumerSpeed = 0; // derivations per second
+    this.lastConsumerCheckTime = Date.now();
+    this.consumerDerivationCount = 0;
   }
 
   /**
@@ -155,10 +165,14 @@ export class Reasoner {
         // Update metrics
         this._updateMetrics(startTime);
         
-        // Update performance metrics periodically
-        if (this.metrics.totalDerivations % 100 === 0) {
+        // Update performance metrics periodically and adapt processing rate
+        if (this.metrics.totalDerivations % 50 === 0) { // Adapt every 50 derivations instead of 100
           this._updatePerformanceMetrics();
+          await this._adaptProcessingRate(); // Apply adaptive rate adjustments
         }
+        
+        // Check for backpressure and apply if needed
+        await this._checkAndApplyBackpressure();
       }
     } catch (error) {
       console.error('Error in reasoning pipeline:', error);
@@ -199,6 +213,80 @@ export class Reasoner {
       const memUsage = process.memoryUsage();
       this.performance.memoryUsage = memUsage.heapUsed;
     }
+    
+    // Calculate consumer speed if we can measure it
+    const now = Date.now();
+    if (this.lastConsumerCheckTime) {
+      const timeDiff = (now - this.lastConsumerCheckTime) / 1000; // in seconds
+      if (timeDiff > 0) {
+        this.outputConsumerSpeed = (this.metrics.totalDerivations - this.consumerDerivationCount) / timeDiff;
+        this.performance.backpressureLevel = Math.max(0, this.outputConsumerSpeed - this.performance.throughput);
+      }
+    }
+    
+    this.lastConsumerCheckTime = now;
+    this.consumerDerivationCount = this.metrics.totalDerivations;
+  }
+
+  /**
+   * Check for backpressure and apply mitigation if needed
+   * @private
+   */
+  async _checkAndApplyBackpressure() {
+    // For now, we'll implement a simple approach based on processing speed vs output speed
+    // In a real implementation, we might monitor queue sizes, memory usage, etc.
+    
+    // Calculate if we're producing faster than consuming
+    const now = Date.now();
+    const timeDiff = now - this.lastConsumerCheckTime;
+    
+    if (timeDiff > 1000) { // Check once per second
+      this._updatePerformanceMetrics();
+      
+      // Check if backpressure is detected (producing faster than consuming)
+      if (this.performance.backpressureLevel > 10) { // arbitrary threshold
+        this.metrics.backpressureEvents++;
+        this.metrics.lastBackpressureTime = now;
+        
+        // Apply backpressure by slowing down processing
+        await new Promise(resolve => setTimeout(resolve, this.config.backpressureInterval || 10));
+      }
+      
+      this.lastConsumerCheckTime = now;
+    }
+  }
+
+  /**
+   * Adapt processing rate based on current system conditions
+   * @private
+   */
+  async _adaptProcessingRate() {
+    // Update performance metrics to get current state
+    this._updatePerformanceMetrics();
+    
+    // Calculate adaptive adjustments based on current conditions
+    let adjustmentFactor = 1.0; // 1.0 = no change, <1.0 = slow down, >1.0 = speed up
+    
+    // Adjust based on backpressure level
+    if (this.performance.backpressureLevel > 20) {
+      adjustmentFactor = 0.5; // Slow down significantly under high backpressure
+    } else if (this.performance.backpressureLevel > 5) {
+      adjustmentFactor = 0.8; // Moderate slowdown under moderate backpressure
+    } else if (this.performance.backpressureLevel < -5) { // Consumer is faster than producer
+      adjustmentFactor = 1.2; // Speed up when we're underutilized
+    }
+    
+    // Adjust CPU throttle based on the adjustment factor
+    const baseThrottle = this.config.cpuThrottleInterval || 0;
+    const newThrottle = Math.max(0, baseThrottle / adjustmentFactor);
+    
+    // Apply a gradual adjustment to avoid sudden changes
+    const adjustedThrottle = this.config.cpuThrottleInterval * 0.9 + newThrottle * 0.1;
+    this.config.cpuThrottleInterval = adjustedThrottle;
+    
+    // Also adjust backpressure interval based on conditions
+    const baseBackpressureInterval = this.config.backpressureInterval || 10;
+    this.config.backpressureInterval = Math.max(1, baseBackpressureInterval / adjustmentFactor);
   }
 
   /**
@@ -219,8 +307,42 @@ export class Reasoner {
     return {
       ...this.metrics,
       ...this.performance,
+      outputConsumerSpeed: this.outputConsumerSpeed,
       ruleProcessorStats: this.ruleProcessor.getStats ? this.ruleProcessor.getStats() : null
     };
+  }
+
+  /**
+   * Register a consumer feedback handler to receive notifications about derivation consumption
+   * @param {function} handler - Function to call with consumption feedback
+   */
+  registerConsumerFeedbackHandler(handler) {
+    if (!this.consumerFeedbackHandlers) {
+      this.consumerFeedbackHandlers = [];
+    }
+    this.consumerFeedbackHandlers.push(handler);
+  }
+
+  /**
+   * Notify registered handlers about derivation consumption
+   * @param {Task} derivation - The derivation that was consumed
+   * @param {number} processingTime - Time it took to consume this derivation
+   * @param {object} consumerInfo - Information about the consumer
+   */
+  notifyConsumption(derivation, processingTime, consumerInfo = {}) {
+    if (this.consumerFeedbackHandlers && this.consumerFeedbackHandlers.length > 0) {
+      for (const handler of this.consumerFeedbackHandlers) {
+        try {
+          handler(derivation, processingTime, {
+            ...consumerInfo,
+            timestamp: Date.now(),
+            queueLength: this.metrics.totalDerivations - (this.lastProcessedCount || 0)
+          });
+        } catch (error) {
+          console.error('Error in consumer feedback handler:', error);
+        }
+      }
+    }
   }
 
   /**
@@ -240,6 +362,133 @@ export class Reasoner {
       avgProcessingTime: 0,
       memoryUsage: 0
     };
+  }
+
+  /**
+   * Get the current state of the reasoning pipeline
+   * @returns {object} State information
+   */
+  getState() {
+    return {
+      isRunning: this.isRunning,
+      config: this.config,
+      metrics: this.getMetrics(),
+      components: {
+        premiseSource: this.premiseSource.constructor.name,
+        strategy: this.strategy.constructor.name,
+        ruleProcessor: this.ruleProcessor.constructor.name
+      },
+      timestamp: Date.now()
+    };
+  }
+
+  /**
+   * Get detailed component status
+   * @returns {object} Detailed status information
+   */
+  getComponentStatus() {
+    return {
+      premiseSource: this._getComponentStatus(this.premiseSource, 'PremiseSource'),
+      strategy: this._getComponentStatus(this.strategy, 'Strategy'),
+      ruleProcessor: this._getComponentStatus(this.ruleProcessor, 'RuleProcessor')
+    };
+  }
+
+  /**
+   * Get status of a specific component
+   * @param {object} component - The component to get status for
+   * @param {string} componentName - Name of the component
+   * @returns {object} Component status
+   * @private
+   */
+  _getComponentStatus(component, componentName) {
+    const status = {
+      name: componentName,
+      type: component.constructor.name
+    };
+    
+    // If the component has its own status method, use it
+    if (component.getStatus && typeof component.getStatus === 'function') {
+      try {
+        return { ...status, ...component.getStatus() };
+      } catch (e) {
+        console.warn(`Error getting ${componentName} status:`, e.message);
+        return { ...status, error: e.message };
+      }
+    }
+    
+    return status;
+  }
+
+  /**
+   * Get debugging information
+   * @returns {object} Debugging information
+   */
+  getDebugInfo() {
+    return {
+      state: this.getState(),
+      config: this.config,
+      metrics: this.getMetrics(),
+      componentStatus: this.getComponentStatus(),
+      internalState: {
+        hasOutputStream: !!this._outputStream,
+        outputStreamType: this._outputStream ? this._outputStream.constructor.name : null
+      },
+      timestamp: Date.now()
+    };
+  }
+
+  /**
+   * Get pipeline performance metrics
+   * @returns {object} Performance metrics
+   */
+  getPerformanceMetrics() {
+    this._updatePerformanceMetrics();
+    return {
+      ...this.performance,
+      detailed: {
+        throughput: this.performance.throughput,
+        avgProcessingTime: this.performance.avgProcessingTime,
+        memoryUsage: this.performance.memoryUsage,
+        cpuThrottleCount: this.metrics.cpuThrottleCount
+      },
+      timestamp: Date.now()
+    };
+  }
+
+  /**
+   * Receive feedback from consumers about pipeline performance
+   * @param {object} feedback - Feedback object from consumers
+   * @param {number} feedback.processingSpeed - Derivations processed per second by consumer
+   * @param {number} feedback.backlogSize - Number of unprocessed derivations in consumer queue
+   * @param {string} feedback.consumerId - Identifier for the consumer
+   * @param {object} feedback.performanceMetrics - Additional performance metrics from consumer
+   */
+  receiveConsumerFeedback(feedback) {
+    // Update our understanding of consumer needs based on feedback
+    if (typeof feedback.processingSpeed === 'number') {
+      this.outputConsumerSpeed = feedback.processingSpeed;
+    }
+    
+    if (typeof feedback.backlogSize === 'number') {
+      // Adjust our behavior based on consumer backlog
+      if (feedback.backlogSize > this.config.backpressureThreshold) {
+        // Consumer is falling behind, reduce our production rate
+        this.config.cpuThrottleInterval = Math.min(
+          this.config.cpuThrottleInterval * 1.5, 
+          this.config.cpuThrottleInterval + 5
+        );
+      } else if (feedback.backlogSize < this.config.backpressureThreshold / 2) {
+        // Consumer is doing well, we can increase our production rate
+        this.config.cpuThrottleInterval = Math.max(
+          this.config.cpuThrottleInterval * 0.9, 
+          Math.max(0, this.config.cpuThrottleInterval - 1)
+        );
+      }
+    }
+    
+    // Update backpressure level based on feedback
+    this.performance.backpressureLevel = feedback.backlogSize || 0;
   }
 
   /**

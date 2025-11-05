@@ -1,0 +1,238 @@
+import { Reasoner } from '../Reasoner.js';
+
+// Mock components
+class MockPremiseSource {
+  constructor(tasks = []) {
+    this.tasks = tasks;
+  }
+
+  stream() {
+    return {
+      [Symbol.asyncIterator]: async function*() {
+        for (const task of this.tasks) {
+          yield task;
+        }
+      }.bind(this)
+    };
+  }
+}
+
+class MockStrategy {
+  generatePremisePairs(premiseStream) {
+    return {
+      [Symbol.asyncIterator]: async function*() {
+        for await (const primary of premiseStream) {
+          yield [primary, primary]; // Just pairing with itself for test
+        }
+      }
+    };
+  }
+}
+
+class MockRuleProcessor {
+  constructor(results = []) {
+    this.results = results;
+  }
+
+  process(premisePairStream) {
+    return {
+      [Symbol.asyncIterator]: async function*() {
+        for await (const pair of premisePairStream) {
+          for (const result of this.results) {
+            yield result;
+          }
+        }
+      }.bind(this)
+    };
+  }
+
+  getStats() {
+    return { syncRuleExecutions: 10, asyncRuleExecutions: 5 };
+  }
+}
+
+describe('Reasoner', () => {
+  let reasoner;
+  let mockPremiseSource;
+  let mockStrategy;
+  let mockRuleProcessor;
+
+  beforeEach(() => {
+    mockPremiseSource = new MockPremiseSource([{ id: 'test-task' }]);
+    mockStrategy = new MockStrategy();
+    mockRuleProcessor = new MockRuleProcessor([{ id: 'derived-task' }]);
+    reasoner = new Reasoner(mockPremiseSource, mockStrategy, mockRuleProcessor);
+  });
+
+  describe('constructor', () => {
+    test('should initialize with default config', () => {
+      expect(reasoner.config.maxDerivationDepth).toBe(10);
+      expect(reasoner.config.cpuThrottleInterval).toBe(0);
+      expect(reasoner.isRunning).toBe(false);
+    });
+
+    test('should initialize with custom config', () => {
+      reasoner = new Reasoner(mockPremiseSource, mockStrategy, mockRuleProcessor, {
+        maxDerivationDepth: 5,
+        cpuThrottleInterval: 1,
+        backpressureThreshold: 50,
+        backpressureInterval: 10
+      });
+
+      expect(reasoner.config.maxDerivationDepth).toBe(5);
+      expect(reasoner.config.cpuThrottleInterval).toBe(1);
+      expect(reasoner.config.backpressureThreshold).toBe(50);
+      expect(reasoner.config.backpressureInterval).toBe(10);
+    });
+  });
+
+  describe('outputStream', () => {
+    test('should create and return output stream', async () => {
+      const stream = reasoner.outputStream;
+      expect(stream).toBeDefined();
+
+      const results = [];
+      let count = 0;
+      for await (const item of stream) {
+        results.push(item);
+        count++;
+        if (count >= 1) break; // Just get one item to test the stream
+      }
+
+      expect(results.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('getMetrics', () => {
+    test('should return metrics object', () => {
+      const metrics = reasoner.getMetrics();
+      
+      expect(metrics.totalDerivations).toBeDefined();
+      expect(metrics.startTime).toBeDefined();
+      expect(metrics.throughput).toBeDefined();
+      expect(metrics.avgProcessingTime).toBeDefined();
+    });
+  });
+
+  describe('getState', () => {
+    test('should return state information', () => {
+      const state = reasoner.getState();
+      
+      expect(state.isRunning).toBe(false);
+      expect(state.config).toBeDefined();
+      expect(state.metrics).toBeDefined();
+      expect(state.timestamp).toBeDefined();
+    });
+  });
+
+  describe('getComponentStatus', () => {
+    test('should return component status', () => {
+      const status = reasoner.getComponentStatus();
+      
+      expect(status.premiseSource).toBeDefined();
+      expect(status.strategy).toBeDefined();
+      expect(status.ruleProcessor).toBeDefined();
+    });
+  });
+
+  describe('getDebugInfo', () => {
+    test('should return debug information', () => {
+      const debugInfo = reasoner.getDebugInfo();
+      
+      expect(debugInfo.state).toBeDefined();
+      expect(debugInfo.config).toBeDefined();
+      expect(debugInfo.metrics).toBeDefined();
+      expect(debugInfo.componentStatus).toBeDefined();
+      expect(debugInfo.timestamp).toBeDefined();
+    });
+  });
+
+  describe('getPerformanceMetrics', () => {
+    test('should return performance metrics', () => {
+      const perfMetrics = reasoner.getPerformanceMetrics();
+      
+      expect(perfMetrics.throughput).toBeDefined();
+      expect(perfMetrics.avgProcessingTime).toBeDefined();
+      expect(perfMetrics.memoryUsage).toBeDefined();
+      expect(perfMetrics.detailed).toBeDefined();
+    });
+  });
+
+  describe('start/stop', () => {
+    test('should start and stop the reasoner', async () => {
+      expect(reasoner.isRunning).toBe(false);
+      
+      reasoner.start();
+      expect(reasoner.isRunning).toBe(true);
+      
+      await reasoner.stop();
+      expect(reasoner.isRunning).toBe(false);
+    });
+
+    test('should warn if starting already running reasoner', () => {
+      console.warn = jest.fn();
+      
+      reasoner.start();
+      reasoner.start(); // Should trigger warning
+      
+      expect(console.warn).toHaveBeenCalledWith('Reasoner is already running');
+    });
+  });
+
+  describe('step', () => {
+    test('should execute a single reasoning step', async () => {
+      reasoner.start();
+      const result = await reasoner.step(100); // 100ms timeout
+      
+      // Should either return a result or null due to timeout
+      expect(result).toBeDefined();
+    });
+  });
+
+  describe('registerConsumerFeedbackHandler', () => {
+    test('should register and call feedback handlers', () => {
+      const mockHandler = jest.fn();
+      reasoner.registerConsumerFeedbackHandler(mockHandler);
+
+      const testDerivation = { id: 'test' };
+      reasoner.notifyConsumption(testDerivation, 10, { consumerId: 'test-consumer' });
+
+      expect(mockHandler).toHaveBeenCalledWith(
+        testDerivation,
+        10,
+        expect.objectContaining({
+          consumerId: 'test-consumer',
+          timestamp: expect.any(Number),
+          queueLength: expect.any(Number)
+        })
+      );
+    });
+  });
+
+  describe('receiveConsumerFeedback', () => {
+    test('should adjust behavior based on consumer feedback', () => {
+      const feedback = {
+        processingSpeed: 5,
+        backlogSize: 20,
+        consumerId: 'test-consumer'
+      };
+
+      reasoner.receiveConsumerFeedback(feedback);
+
+      // Should have adjusted based on high backlog
+      expect(reasoner.outputConsumerSpeed).toBe(5);
+      expect(reasoner.performance.backpressureLevel).toBe(20);
+    });
+  });
+
+  describe('cleanup', () => {
+    test('should properly clean up resources', async () => {
+      reasoner.start();
+      await reasoner.cleanup();
+
+      expect(reasoner.isRunning).toBe(false);
+      expect(reasoner._outputStream).toBeNull();
+      expect(reasoner.metrics.totalDerivations).toBe(0);
+    });
+  });
+});

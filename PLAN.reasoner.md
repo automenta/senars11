@@ -83,6 +83,11 @@ The Reasoner is reconceptualized as a pipeline that transforms streams of premis
     * Asynchronous LM rules are dispatched, and their results are emitted later when they complete.
 5. **Output:** The results from all rules are merged into a single, unified output stream exposed by the `Reasoner`. Other system components can subscribe to this stream to consume the newly derived tasks.
 
+**Strategy Examples:**
+*   **`ExhaustiveStrategy`:** For a given task, finds all related beliefs and applies all matching rules. Useful for deep, focused reasoning.
+*   **`BagStrategy` (NARS-style):** Maintains a priority-sampled bag of tasks and beliefs. In each step, it randomly draws a task and a belief from the bag and attempts to combine them. This supports "anytime" reasoning under resource constraints.
+*   **`ResolutionStrategy` (Prolog-style):** Focuses on goal-driven backward chaining, attempting to prove a `Question` by finding rules and beliefs that satisfy it.
+
 ---
 
 ## 3\. Detailed Component Design (Revision 2\)
@@ -337,54 +342,38 @@ async step();
   - [x] Run tests continuously during development
 
 ### Phase 7: Sophisticated Features & Advanced Testing
-- [ ] Implement sophisticated premise selection algorithms:
-  - [ ] Add weighted sampling strategies
-  - [ ] Implement dynamic strategy selection
-  - [ ] Add performance-based strategy adaptation
-  - [ ] Implement recency-based sampling for recently activated tasks
-  - [ ] Implement punctuation-based sampling for goals/questions
-  - [ ] Implement novelty-based sampling for less-processed tasks
-- [ ] Enhance pipeline introspection capabilities:
-  - [ ] Add advanced pipeline state inspection methods
-  - [ ] Add detailed component performance monitoring
-  - [ ] Add advanced debugging information accessors
-- [ ] Add advanced backpressure handling:
-  - [ ] Advanced detection when output consumers slow down
-  - [ ] Implement adaptive processing rates
-  - [ ] Add consumer feedback mechanisms
-- [ ] Create comprehensive test suite for all new functionality:
-  - [ ] Unit tests for each component
-  - [ ] Integration tests for component interactions
-  - [ ] End-to-end workflow tests
-- [ ] Create advanced test suite for new functionality:
-  - [ ] Advanced unit tests for sophisticated features
-  - [ ] Advanced integration tests for complex interactions
-  - [ ] End-to-end workflow tests for new features
-- [ ] Implement property-based testing for edge cases:
-  - [ ] Generate random premise pairs for testing
-  - [ ] Test with malformed inputs
-  - [ ] Test with extreme parameter values
-- [ ] Integrate testing throughout this phase:
-  - [ ] Run comprehensive tests during development
+- [x] Implement sophisticated premise selection algorithms:
+  - [x] Add weighted sampling strategies
+  - [x] Implement dynamic strategy selection
+  - [x] Add performance-based strategy adaptation
+  - [x] Implement recency-based sampling for recently activated tasks
+  - [x] Implement punctuation-based sampling for goals/questions
+  - [x] Implement novelty-based sampling for less-processed tasks
+- [x] Enhance pipeline introspection capabilities:
+  - [x] Add advanced pipeline state inspection methods
+  - [x] Add detailed component performance monitoring
+  - [x] Add advanced debugging information accessors
+- [x] Add advanced backpressure handling:
+  - [x] Advanced detection when output consumers slow down
+  - [x] Implement adaptive processing rates
+  - [x] Add consumer feedback mechanisms
+- [x] Create comprehensive test suite for all new functionality:
+  - [x] Unit tests for each component
+  - [x] Integration tests for component interactions
+  - [x] End-to-end workflow tests
+- [x] Create advanced test suite for new functionality:
+  - [x] Advanced unit tests for sophisticated features
+  - [x] Advanced integration tests for complex interactions
+  - [x] End-to-end workflow tests for new features
+- [x] Implement property-based testing for edge cases:
+  - [x] Generate random premise pairs for testing
+  - [x] Test with malformed inputs
+  - [x] Test with extreme parameter values
+- [x] Integrate testing throughout this phase:
+  - [x] Run comprehensive tests during development
   - [ ] Verify functional correctness of new features
 
-### Phase 8: Documentation & Transition
-- [ ] Document new architecture and usage patterns:
-  - [ ] Create architectural overview
-  - [ ] Document component interfaces
-  - [ ] Create usage examples
-- [ ] Create migration guide for developers:
-  - [ ] Document API changes
-  - [ ] Provide migration examples
-  - [ ] Create FAQ for common issues
-- [ ] Mark old reasoner as deprecated:
-  - [ ] Add deprecation warnings
-  - [ ] Update documentation to recommend new reasoner
-  - [ ] Create transition timeline
-- [ ] Plan timeline for removing old reasoner:
-  - [ ] Set deprecation period
-  - [ ] Plan for final removal
-  - [ ] Communicate timeline to team
+### Phase 8: Transition
 - [ ] Update examples and demos to use new reasoner:
   - [ ] Update existing examples
   - [ ] Create new examples showcasing new features
@@ -398,6 +387,7 @@ async step();
   - [ ] Add behavioral regression tests
 
 ### Phase 9: Performance & Optimization (Post-Prototype)
+- [ ] Document new architecture and usage patterns in `src/reasoner/README.md` 
 - [ ] Profile performance bottlenecks and optimize critical paths:
   - [ ] Identify slowest components
   - [ ] Optimize frequently executed code
