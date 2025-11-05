@@ -226,3 +226,232 @@ stop();
 async step();
 
 }  
+
+## 6\. Detailed Development Plan & Actionable Flow
+
+### Phase 1: Core Infrastructure Setup
+- [x] Create `src/reason/` directory structure
+- [x] Implement basic `PremiseSource` interface with abstract definition
+- [x] Implement `TaskBagPremiseSource` concrete implementation
+- [x] Implement `PremiseSources` bag class for multiple sources
+- [x] Implement base `Rule` class with essential functionality
+- [x] Implement `LMRule` class extending base `Rule` for language model rules
+- [x] Update `Stamp.js` to include derivation depth tracking with proper depth calculation
+
+### Phase 2: Core Processing Components
+- [x] Implement `RuleExecutor` with basic rule indexing and lookup
+- [x] Implement `RuleProcessor` with sync rule execution capabilities
+- [x] Implement `RuleProcessor` with async rule execution capabilities
+- [x] Implement `RuleProcessor` with async result aggregation mechanism
+- [x] Implement `Strategy` class for premise pairing logic
+- [x] Implement main `Reasoner` class with stream-based architecture
+- [x] Connect all components into a functional pipeline
+
+### Phase 3: Basic Integration & Testing
+- [x] Create basic test suite for new reasoner components
+- [x] Verify new reasoner can process simple deduction rules
+- [x] Test derivation depth limit enforcement
+- [x] Test CPU throttling functionality
+- [x] Ensure backward compatibility with existing components during transition
+
+### Phase 4: Robustness & Essential Features
+- [x] Implement basic priority-only sampling in `TaskBagPremiseSource`:
+  - [x] Implement priority-based task selection as default strategy
+  - [x] Design flexible configuration structure for future sampling objectives
+  - [x] Add placeholder for additional sampling objectives (recency, punctuation, novelty)
+- [x] Enhance async rule result aggregation in `RuleProcessor`:
+  - [x] Implement proper async result collection mechanism
+  - [x] Ensure async results are properly merged with sync results
+  - [x] Handle async rule completion timing properly
+- [x] Add comprehensive error handling throughout pipeline:
+  - [x] Add error handling for premise source failures
+  - [x] Add error handling for strategy failures
+  - [x] Add error handling for rule execution failures
+  - [x] Add error handling for result processing failures
+- [x] Add essential metrics collection:
+  - [x] Count rule executions (sync and async separately)
+  - [x] Track pipeline throughput
+  - [x] Monitor resource usage (CPU, memory)
+- [x] Implement proper resource lifecycle management:
+  - [x] Add resource cleanup for all components
+  - [x] Implement proper shutdown procedures
+  - [x] Ensure no memory leaks in async operations
+
+### Phase 5: Integration & Migration
+- [x] Identify all system components using old reasoner:
+  - [x] Scan codebase for reasoner usage patterns
+  - [x] Document all integration points
+  - [x] Assess migration complexity for each component
+- [x] Create migration paths for each integration point:
+  - [x] Create adapter patterns where needed
+  - [x] Design configuration switches for gradual migration
+  - [x] Plan for testing each migrated component
+- [x] Update main system entry points to use new reasoner:
+  - [x] Update system initialization code
+  - [x] Update configuration loading
+  - [x] Update dependency injection points
+- [x] Add configuration options to switch between reasoner versions:
+  - [x] Add runtime configuration flag
+  - [x] Implement dynamic reasoner selection
+  - [x] Add logging for which reasoner is active
+- [x] Create comprehensive integration tests:
+  - [x] Test end-to-end workflows
+  - [x] Verify functional parity with old reasoner
+  - [x] Test migration scenarios
+
+### Phase 6: Design Enhancement & Refinement
+- [x] Add self-optimization hooks for metacognitive control:
+  - [x] Add control interfaces for metacognitive systems
+  - [x] Implement feedback mechanisms
+  - [x] Add tunable parameters for optimization
+- [x] Enhance resource management with more granular controls:
+  - [x] Add memory usage monitoring
+  - [x] Implement dynamic CPU throttling
+  - [x] Add adaptive depth limits
+- [x] Improve pipeline metrics and observability:
+  - [x] Add basic performance metrics
+  - [x] Implement pipeline monitoring
+  - [x] Add debugging utilities
+- [x] Implement event-driven notification system:
+  - [x] Add event emission for premise processing
+  - [x] Add event emission for rule applications
+  - [x] Add event emission for result generation
+- [x] Add configurable buffering mechanisms:
+  - [x] Add configurable input buffer sizes
+  - [x] Add configurable processing queue sizes
+  - [x] Add configurable output buffer sizes
+- [x] Implement basic pipeline introspection capabilities:
+  - [x] Add pipeline state inspection methods
+  - [x] Add component status monitoring
+  - [x] Add debugging information accessors
+- [x] Add basic backpressure handling:
+  - [x] Basic detection when output consumers slow down
+  - [x] Implement simple processing rate adjustments
+- [x] Add static rule compilation and validation:
+  - [x] Add rule validation at registration time
+  - [x] Add basic rule dependency checking
+  - [x] Add basic rule conflict detection
+- [x] Integrate unit and integration testing throughout this phase:
+  - [x] Write unit tests for each enhancement
+  - [x] Write integration tests for component interactions
+  - [x] Run tests continuously during development
+
+### Phase 7: Sophisticated Features & Advanced Testing
+- [ ] Implement sophisticated premise selection algorithms:
+  - [ ] Add weighted sampling strategies
+  - [ ] Implement dynamic strategy selection
+  - [ ] Add performance-based strategy adaptation
+  - [ ] Implement recency-based sampling for recently activated tasks
+  - [ ] Implement punctuation-based sampling for goals/questions
+  - [ ] Implement novelty-based sampling for less-processed tasks
+- [ ] Enhance pipeline introspection capabilities:
+  - [ ] Add advanced pipeline state inspection methods
+  - [ ] Add detailed component performance monitoring
+  - [ ] Add advanced debugging information accessors
+- [ ] Add advanced backpressure handling:
+  - [ ] Advanced detection when output consumers slow down
+  - [ ] Implement adaptive processing rates
+  - [ ] Add consumer feedback mechanisms
+- [ ] Create comprehensive test suite for all new functionality:
+  - [ ] Unit tests for each component
+  - [ ] Integration tests for component interactions
+  - [ ] End-to-end workflow tests
+- [ ] Create advanced test suite for new functionality:
+  - [ ] Advanced unit tests for sophisticated features
+  - [ ] Advanced integration tests for complex interactions
+  - [ ] End-to-end workflow tests for new features
+- [ ] Implement property-based testing for edge cases:
+  - [ ] Generate random premise pairs for testing
+  - [ ] Test with malformed inputs
+  - [ ] Test with extreme parameter values
+- [ ] Integrate testing throughout this phase:
+  - [ ] Run comprehensive tests during development
+  - [ ] Verify functional correctness of new features
+
+### Phase 8: Documentation & Transition
+- [ ] Document new architecture and usage patterns:
+  - [ ] Create architectural overview
+  - [ ] Document component interfaces
+  - [ ] Create usage examples
+- [ ] Create migration guide for developers:
+  - [ ] Document API changes
+  - [ ] Provide migration examples
+  - [ ] Create FAQ for common issues
+- [ ] Mark old reasoner as deprecated:
+  - [ ] Add deprecation warnings
+  - [ ] Update documentation to recommend new reasoner
+  - [ ] Create transition timeline
+- [ ] Plan timeline for removing old reasoner:
+  - [ ] Set deprecation period
+  - [ ] Plan for final removal
+  - [ ] Communicate timeline to team
+- [ ] Update examples and demos to use new reasoner:
+  - [ ] Update existing examples
+  - [ ] Create new examples showcasing new features
+  - [ ] Update tutorials and documentation
+- [ ] Verify all functionality previously covered by old reasoner tests:
+  - [ ] Ensure functional equivalence
+  - [ ] Test with existing test cases
+  - [ ] Validate output consistency
+- [ ] Add regression tests to ensure stable behavior:
+  - [ ] Create baseline test cases
+  - [ ] Add behavioral regression tests
+
+### Phase 9: Performance & Optimization (Post-Prototype)
+- [ ] Profile performance bottlenecks and optimize critical paths:
+  - [ ] Identify slowest components
+  - [ ] Optimize frequently executed code
+  - [ ] Profile memory allocation patterns
+- [ ] Implement advanced caching mechanisms:
+  - [ ] Add result caching
+  - [ ] Add rule matching caching
+  - [ ] Add premise selection caching
+- [ ] Optimize memory usage and garbage collection patterns:
+  - [ ] Reduce object allocation in hot paths
+  - [ ] Optimize data structures for memory efficiency
+  - [ ] Profile and optimize garbage collection pressure
+- [ ] Add sophisticated symbolic guard analysis and optimization to `RuleExecutor`:
+  - [ ] Implement decision tree optimization
+  - [ ] Add guard deduplication
+  - [ ] Add guard ordering optimization
+- [ ] Run long-running stability tests:
+  - [ ] Test memory usage over time
+  - [ ] Test for memory leaks
+  - [ ] Test for performance degradation over time
+- [ ] Add performance regression tests for production deployment:
+  - [ ] Create performance benchmarks
+  - [ ] Set performance thresholds
+  - [ ] Monitor performance changes
+
+### Implementation Prerequisites:
+1. **Rule system compatibility**: Ensure new reasoner can execute both NAL and LM rules from existing libraries
+2. **Memory integration**: Verify new reasoner can interface with existing memory systems (PriorityBag, TermLayer, etc.)
+3. **Task compatibility**: Ensure new reasoner can process same task format as old reasoner
+4. **Functional correctness**: New reasoner should provide correct reasoning output
+
+### Success Criteria:
+1. **Functional parity**: New reasoner can perform all reasoning tasks the old reasoner could
+2. **Architecture compliance**: Stream-based, continuous processing working as designed
+3. **Resource compliance**: CPU throttling, derivation depth limits enforced properly
+4. **Correctness**: All reasoning outputs are functionally equivalent to old reasoner
+5. **Test coverage**: All essential functionality covered by automated tests
+6. **Integration compatibility**: Can be integrated without breaking existing systems
+
+### Risk Mitigation:
+1. **Backward compatibility**: Keep both reasoners during transition period
+2. **Feature flagging**: Allow switching between old/new reasoner at runtime
+3. **Gradual migration**: Migrate system components one at a time
+4. **Comprehensive testing**: Maintain all existing tests during transition
+5. **Rollback plan**: Easy way to revert to old reasoner if needed
+
+### Design Enhancement Priorities (Non-Performance):
+1. **Robustness**: Handle edge cases, error recovery, and graceful degradation as primary concern
+2. **Modularity**: Keep components loosely coupled and easily testable
+3. **Observability**: Provide clear metrics, debugging information, and pipeline inspection capabilities
+4. **Configuration**: Make all key parameters tunable without code changes
+5. **Event-driven architecture**: Support for pipeline event notifications and monitoring
+6. **Configurable buffering**: Tune memory usage through adjustable buffer sizes
+7. **Pipeline introspection**: Ability to inspect pipeline state during operation for debugging
+8. **Graceful backpressure**: Handle situations where output consumers can't keep up
+9. **Static rule compilation**: Ensure rules are properly validated and compiled at initialization
+10. **Extensibility**: Allow for future additions of premise sources, strategies, and rule types  

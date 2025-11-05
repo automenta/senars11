@@ -5,7 +5,13 @@ import {WebSocketMonitor} from './server/WebSocketMonitor.js';
 import {NAR} from './nar/NAR.js';
 
 const DEFAULT_CONFIG = Object.freeze({
-    nar: {lm: {enabled: false}, reasoningAboutReasoning: {enabled: true}},
+    nar: {
+        lm: {enabled: false}, 
+        reasoningAboutReasoning: {enabled: true},
+        reasoning: {
+            useStreamReasoner: false // Set to true to use the new stream-based reasoner
+        }
+    },
     persistence: {defaultPath: './agent.json'},
     webSocket: {
         port: process.env.WS_PORT || 8080,
