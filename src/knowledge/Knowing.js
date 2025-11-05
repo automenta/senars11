@@ -25,10 +25,10 @@ export class Knowing {
       await this._updateStats();
       
       if (this.options.verbose) {
-        console.log(`✅ Added knowledge: ${knowledge.constructor.name}`);
+        console.log(`Added knowledge: ${knowledge.constructor.name}`);
       }
     } catch (error) {
-      console.error(`❌ Error adding knowledge: ${error.message}`);
+      console.error(`Error adding knowledge: ${error.message}`);
       throw error;
     }
   }
@@ -60,7 +60,7 @@ export class Knowing {
         const tasks = await knowledge.toTasks?.();
         if (Array.isArray(tasks)) allTasks.push(...tasks);
       } catch (error) {
-        console.error(`❌ Error getting tasks from ${knowledge.constructor.name}: ${error.message}`);
+        console.error(`Error getting tasks from ${knowledge.constructor.name}: ${error.message}`);
       }
     }
     return allTasks;
@@ -73,7 +73,7 @@ export class Knowing {
         const relationships = await knowledge.createRelationships?.();
         if (Array.isArray(relationships)) allRelationships.push(...relationships);
       } catch (error) {
-        console.error(`❌ Error getting relationships from ${knowledge.constructor.name}: ${error.message}`);
+        console.error(`Error getting relationships from ${knowledge.constructor.name}: ${error.message}`);
       }
     }
     return allRelationships;
@@ -94,7 +94,6 @@ export class Knowing {
     this.stats.knowledgeByType = {};
     this.stats.lastUpdated = new Date().toISOString();
 
-    // Use Promise.all for better performance when collecting stats
     const statsPromises = this.knowledgeItems.map(async (knowledge) => {
       const typeName = knowledge.constructor.name;
       
@@ -122,7 +121,7 @@ export class Knowing {
         this.stats.totalRelationships += relationshipCount;
         this.stats.knowledgeByType[typeName].relationships += relationshipCount;
       } catch (error) {
-        console.error(`❌ Error calculating stats for ${typeName}: ${error.message}`);
+        console.error(`Error calculating stats for ${typeName}: ${error.message}`);
       }
     });
     
@@ -176,7 +175,7 @@ export class Knowing {
         exported.metadata.totalTasks += Array.isArray(knowledgeData.tasks) ? knowledgeData.tasks.length : 0;
         exported.metadata.totalRelationships += Array.isArray(knowledgeData.relationships) ? knowledgeData.relationships.length : 0;
       } catch (error) {
-        console.error(`❌ Error exporting knowledge ${knowledge.constructor.name}: ${error.message}`);
+        console.error(`Error exporting knowledge ${knowledge.constructor.name}: ${error.message}`);
       }
     }
 

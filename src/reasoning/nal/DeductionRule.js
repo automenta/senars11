@@ -23,17 +23,19 @@ export class DeductionRule extends PatternNALRule {
         const complementaryTasks = RuleUtils.findTasksByTerm(subject, context, this._unify.bind(this));
 
         return complementaryTasks
-            .map(compTask => {
-                const bindings = this._unify(subject, compTask.term);
-                return bindings 
-                    ? this._createDerivedTask(task, {
-                        term: predicate,
-                        truth: this._calculateTruth(task.truth, compTask.truth),
-                        type: compTask.type,
-                        priority: task.priority * compTask.priority * this.priority
-                    })
-                    : null;
-            })
+            .map(compTask => this._deriveTaskIfUnified(task, compTask, subject, predicate))
             .filter(Boolean);
+    }
+
+    _deriveTaskIfUnified(task, compTask, subject, predicate) {
+        const bindings = this._unify(subject, compTask.term);
+        return bindings 
+            ? this._createDerivedTask(task, {
+                term: predicate,
+                truth: this._calculateTruth(task.truth, compTask.truth),
+                type: compTask.type,
+                priority: task.priority * compTask.priority * this.priority
+            })
+            : null;
     }
 }

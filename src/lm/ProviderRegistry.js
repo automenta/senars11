@@ -14,9 +14,7 @@ export class ProviderRegistry {
         }
 
         this.providers.set(id, provider);
-
         this.defaultProviderId ||= id;
-
         return this;
     }
 

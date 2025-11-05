@@ -22,25 +22,11 @@ export class RuleEngine extends BaseComponent {
         this._performanceOptimizer = new PerformanceOptimizer(config.performance || {});
     }
 
-    get rules() {
-        return [...this._rules.values()];
-    }
-
-    get ruleSets() {
-        return [...this._ruleSets.values()];
-    }
-
-    get metrics() {
-        return {...this._ruleUtilMetrics, ...this._typeMetrics};
-    }
-
-    get lm() {
-        return this._lm;
-    }
-
-    get termFactory() {
-        return this._termFactory;
-    }
+    get rules() { return [...this._rules.values()]; }
+    get ruleSets() { return [...this._ruleSets.values()]; }
+    get metrics() { return {...this._ruleUtilMetrics, ...this._typeMetrics}; }
+    get lm() { return this._lm; }
+    get termFactory() { return this._termFactory; }
 
     static create(config = {}) {
         const {lm, termFactory, ruleProcessor} = config;
@@ -48,9 +34,7 @@ export class RuleEngine extends BaseComponent {
     }
 
     static createWithRules(rules, config = {}) {
-        const engine = new RuleEngine(config);
-        engine.registerMany(rules);
-        return engine;
+        return new RuleEngine(config).registerMany(rules);
     }
 
     setLM(lm) {
@@ -106,14 +90,10 @@ export class RuleEngine extends BaseComponent {
     }
 
     getApplicableRules(task, ruleType = null) {
-        // If performance optimizer has indexing enabled, use it to find candidates
-        let candidateRules;
-        if (this._performanceOptimizer) {
-            candidateRules = this._performanceOptimizer.getCandidateRules(task, this.rules);
-        } else {
-            candidateRules = this.rules;
-        }
-
+        const candidateRules = this._performanceOptimizer 
+            ? this._performanceOptimizer.getCandidateRules(task, this.rules) 
+            : this.rules;
+            
         const applicable = candidateRules.filter(rule => rule.canApply(task));
         return this._filterByType(applicable, ruleType).sort((a, b) => b.priority - a.priority);
     }
@@ -133,25 +113,12 @@ export class RuleEngine extends BaseComponent {
             const {results, rule: updatedRule} = rule.apply(task, context);
             
             // Emit rule event
-            if (results && results.length > 0) {
-                this._emitIntrospectionEvent(IntrospectionEvents.RULE_FIRED, {
-                    rule: rule.id,
-                    task: task.serialize(),
-                    results: results.map(r => r.serialize())
-                });
-            } else {
-                this._emitIntrospectionEvent(IntrospectionEvents.RULE_NOT_FIRED, {
-                    rule: rule.id,
-                    task: task.serialize()
-                });
-            }
+            this._emitRuleEvent(rule, task, results);
             
             this._rules.set(rule.id, updatedRule);
             success = true;
             
-            // Increment type metric
-            const ruleType = rule instanceof LMRule ? 'lm' : 'nal';
-            this._typeMetrics[`${ruleType}RuleApplications`]++;
+            this._incrementTypeMetric(rule);
             
             // Update rule effectiveness if performance optimizer is available
             if (this._performanceOptimizer) {
@@ -167,16 +134,33 @@ export class RuleEngine extends BaseComponent {
         }
     }
 
+    _emitRuleEvent(rule, task, results) {
+        if (results && results.length > 0) {
+            this._emitIntrospectionEvent(IntrospectionEvents.RULE_FIRED, {
+                rule: rule.id,
+                task: task.serialize(),
+                results: results.map(r => r.serialize())
+            });
+        } else {
+            this._emitIntrospectionEvent(IntrospectionEvents.RULE_NOT_FIRED, {
+                rule: rule.id,
+                task: task.serialize()
+            });
+        }
+    }
+
     applyRules(task, ruleIds = null, ruleType = null, memory = null) {
         const rulesToApply = ruleIds ? this._getValidRules(ruleIds) : this.getApplicableRules(task, ruleType);
-        return rulesToApply.flatMap(rule => {
-            try {
-                return this.applyRule(rule, task, memory).results;
-            } catch (error) {
-                this.logger.warn(`Rule ${rule.id} failed:`, error);
-                return [];
-            }
-        });
+        return rulesToApply.flatMap(this._applySingleRule.bind(this, task, memory));
+    }
+
+    _applySingleRule(task, memory, rule) {
+        try {
+            return this.applyRule(rule, task, memory).results;
+        } catch (error) {
+            this.logger.warn(`Rule ${rule.id} failed:`, error);
+            return [];
+        }
     }
 
     applyLMRules = (task, ruleIds = null, memory = null) => this.applyRules(task, ruleIds, 'lm', memory);
@@ -203,7 +187,9 @@ export class RuleEngine extends BaseComponent {
     }
 
     _filterByType(rules, ruleType) {
-        return ruleType ? rules.filter(r => ruleType === 'lm' ? r instanceof LMRule : !(r instanceof LMRule)) : rules;
+        return ruleType 
+            ? rules.filter(r => ruleType === 'lm' ? r instanceof LMRule : !(r instanceof LMRule)) 
+            : rules;
     }
 
     _incrementTypeMetric(rule) {
@@ -216,27 +202,13 @@ export class RuleEngine extends BaseComponent {
     }
 
     _applyRulesWithLogging(rules, task, memory = null) {
-        return rules.flatMap(rule => {
-            try {
-                return this.applyRule(rule, task, memory).results;
-            } catch (error) {
-                this.logger.warn(`Rule ${rule.id} failed:`, error);
-                return [];
-            }
-        });
+        return rules.flatMap(this._applySingleRule.bind(this, task, memory));
     }
 
     async coordinateRules(task, memory = null) {
-        // Apply LM rules to original task
         const lmResults = this.applyLMRules(task, null, memory);
-
-        // Combine original task results with LM results
         const allTasks = [task, ...lmResults];
-
-        // Apply NAL rules to all tasks
         const nalResults = allTasks.flatMap(t => this.applyNALRules(t, null, memory));
-
-        // Optionally, apply LM rules to NAL results as well
         const additionalLmResults = nalResults.flatMap(t => this.applyLMRules(t, null, memory));
 
         return {
@@ -301,9 +273,7 @@ export class RuleEngine extends BaseComponent {
             this._rules.set(rule.id, updatedRule);
             success = true;
             
-            // Increment type metric
-            const ruleType = rule instanceof LMRule ? 'lm' : 'nal';
-            this._typeMetrics[`${ruleType}RuleApplications`]++;
+            this._incrementTypeMetric(rule);
             
             // Update rule effectiveness if performance optimizer is available
             if (this._performanceOptimizer) {

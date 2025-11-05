@@ -14,7 +14,7 @@ export class LM extends BaseComponent {
         this.narseseTranslator = new NarseseTranslator();
         this.circuitBreaker = new CircuitBreaker(this._getCircuitBreakerConfig());
         this.lmMetrics = new Metrics();
-        this.activeWorkflows = new Map(); // Track active workflows
+        this.activeWorkflows = new Map();
         this.lmStats = {
             totalCalls: 0,
             totalTokens: 0,
@@ -166,7 +166,9 @@ export class LM extends BaseComponent {
         return this.modelSelector.getAvailableModels();
     }
 
-    _countTokens = text => typeof text === 'string' ? text.split(/\s+/).filter(token => token.length > 0).length : 0;
+    _countTokens(text) {
+        return typeof text === 'string' ? text.split(/\s+/).filter(token => token.length > 0).length : 0;
+    }
 
     _handleFallback(prompt, options = {}) {
         this.logInfo('Using fallback strategy - LM unavailable, degrading to pure NAL reasoning');

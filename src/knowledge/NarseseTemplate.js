@@ -1,8 +1,3 @@
-/**
- * Task/Term/Truth Template API for flexible Narsese generation
- * Provides abstracted and consolidated templates for creating tasks and relationships
- */
-
 export class TruthValueUtils {
   static normalizeMetric(value, min, max) {
     if (value < min) return 0;
@@ -109,7 +104,6 @@ function _formatTruthValue(truth) {
   if (!truth) return '. %1.00;0.90%';
   
   if (typeof truth === 'number') {
-    // If it's just a frequency number
     return `. ${TruthValueUtils.createTruthValue(truth, 0.9)}`;
   }
   
@@ -119,7 +113,7 @@ function _formatTruthValue(truth) {
     return `. ${TruthValueUtils.createTruthValue(frequency, confidence)}`;
   }
   
-  return '. %1.00;0.90%'; // Default truth value
+  return '. %1.00;0.90%';
 }
 
 export class NarseseTemplate {
@@ -127,16 +121,10 @@ export class NarseseTemplate {
     this.templates = new Map(Object.entries(DEFAULT_TEMPLATES));
   }
 
-  /**
-   * Register a template with a name
-   */
   registerTemplate(name, templateFn) {
     this.templates.set(name, templateFn);
   }
 
-  /**
-   * Execute a template with data
-   */
   executeTemplate(name, data, options = {}) {
     const templateFn = this.templates.get(name);
     if (!templateFn) {
@@ -146,21 +134,15 @@ export class NarseseTemplate {
     return templateFn(data, options);
   }
 
-  /**
-   * Create a custom template on the fly
-   */
   createTemplate(name, templateFn) {
     this.registerTemplate(name, templateFn);
     return this;
   }
 
-  /**
-   * Batch execute multiple templates
-   */
   executeBatch(operations) {
     return operations.map(op => {
       if (typeof op === 'string') {
-        return op; // Already a statement
+        return op;
       }
       if (typeof op === 'object' && op.template && op.data) {
         return this.executeTemplate(op.template, op.data, op.options || {});
@@ -170,12 +152,8 @@ export class NarseseTemplate {
   }
 }
 
-// Default instance for convenience
 export const defaultNarseseTemplate = new NarseseTemplate();
 
-/**
- * Abstract base class for knowledge systems using the template API
- */
 export class TemplateBasedKnowledge {
   constructor(data = null, options = {}) {
     this.data = data;
@@ -183,9 +161,6 @@ export class TemplateBasedKnowledge {
     this.templateAPI = defaultNarseseTemplate;
   }
 
-  /**
-   * Create tasks using template API
-   */
   async createTasksWithTemplate(templateName, data, options = {}) {
     try {
       return this.templateAPI.executeTemplate(templateName, data, options);
@@ -195,16 +170,10 @@ export class TemplateBasedKnowledge {
     }
   }
 
-  /**
-   * Batch create tasks using template API
-   */
   async createBatchTasksWithTemplate(operations) {
     return this.templateAPI.executeBatch(operations);
   }
 
-  /**
-   * Register custom template for this knowledge instance
-   */
   registerCustomTemplate(name, templateFn) {
     this.templateAPI.registerTemplate(name, templateFn);
   }

@@ -6,7 +6,7 @@ const KNOWLEDGE_REGISTRY = new Map();
 export class KnowledgeFactory {
   static registerKnowledgeType(type, knowledgeClass) {
     if (!(knowledgeClass.prototype instanceof Knowledge)) {
-      throw new Error(`Knowledge class must extend the Knowledge base class`);
+      throw new Error('Knowledge class must extend the Knowledge base class');
     }
     KNOWLEDGE_REGISTRY.set(type, knowledgeClass);
   }

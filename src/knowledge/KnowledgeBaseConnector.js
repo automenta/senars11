@@ -1,6 +1,3 @@
-// Preparatory architecture for Phase 10: Knowledge Integration & External Systems
-// This file establishes the foundation for integrating external knowledge bases and systems
-
 const PROVIDER_MAP = Object.freeze({
     wikipedia: WikipediaConnector,
     wikidata: WikidataConnector,
@@ -8,26 +5,22 @@ const PROVIDER_MAP = Object.freeze({
 });
 
 const DEFAULT_RATE_LIMIT = Object.freeze({requests: 10, windowMs: 1000});
-const DEFAULT_CACHE_TTL = 300000; // 5 minutes
+const DEFAULT_CACHE_TTL = 300000;
 
-// Knowledge base connector interface
 class KnowledgeBaseConnector {
     constructor(config = {}) {
         this.config = config;
-        this.connections = new Map(); // Active connections to knowledge bases
-        this.cache = new Map(); // Cached knowledge to reduce external calls
+        this.connections = new Map();
+        this.cache = new Map();
         this.cacheTTL = config.cacheTTL ?? DEFAULT_CACHE_TTL;
         this.rateLimiter = new RateLimiter(config.rateLimit ?? DEFAULT_RATE_LIMIT);
     }
 
-    // Connect to a knowledge base
     async connect(providerId, credentials) {
-        // Return existing connection if available
         if (this.connections.has(providerId)) {
             return this.connections.get(providerId);
         }
 
-        // Validate provider and create new connection
         const connector = await this._createConnector(providerId, credentials);
         this.connections.set(providerId, connector);
         return connector;
@@ -44,19 +37,15 @@ class KnowledgeBaseConnector {
         return connector;
     }
 
-    // Query a knowledge base
     async query(providerId, query, options = {}) {
-        // Check cache first
         const cacheKey = this._buildCacheKey(providerId, query);
         const cachedResult = this._getCachedResult(cacheKey);
         if (cachedResult) return cachedResult;
 
-        // Check rate limit and query
         this._checkRateLimit(providerId);
         const connector = await this.connect(providerId);
         const result = await connector.query(query, options);
 
-        // Cache the result
         this._cacheResult(cacheKey, result);
         return result;
     }
@@ -87,7 +76,6 @@ class KnowledgeBaseConnector {
         });
     }
 
-    // Batch query multiple knowledge bases
     async batchQuery(queries) {
         const results = await Promise.allSettled(
             queries.map(({providerId, query, options}) =>
@@ -103,12 +91,10 @@ class KnowledgeBaseConnector {
         }));
     }
 
-    // Clear cache
     clearCache() {
         this.cache.clear();
     }
 
-    // Get connection statistics
     getStats() {
         const stats = {};
 
@@ -120,11 +106,10 @@ class KnowledgeBaseConnector {
     }
 }
 
-// Rate limiter utility
 class RateLimiter {
     constructor(config = DEFAULT_RATE_LIMIT) {
         this.config = config;
-        this.requests = new Map(); // providerId -> array of timestamps
+        this.requests = new Map();
     }
 
     allow(providerId) {
@@ -136,12 +121,9 @@ class RateLimiter {
         }
 
         const providerRequests = this.requests.get(providerId);
-
-        // Remove old requests outside the window
         const validRequests = providerRequests.filter(timestamp => timestamp > windowStart);
         this.requests.set(providerId, validRequests);
 
-        // Check if we're under the limit
         if (validRequests.length < this.config.requests) {
             validRequests.push(now);
             return true;
@@ -151,7 +133,6 @@ class RateLimiter {
     }
 }
 
-// Wikipedia connector
 class WikipediaConnector {
     constructor(credentials, config) {
         this.credentials = credentials;
@@ -161,7 +142,6 @@ class WikipediaConnector {
     }
 
     async initialize() {
-        // Verify connectivity or setup
         this.initialized = true;
     }
 
@@ -208,7 +188,6 @@ class WikipediaConnector {
     }
 }
 
-// Wikidata connector
 class WikidataConnector {
     constructor(credentials, config) {
         this.credentials = credentials;
@@ -218,7 +197,6 @@ class WikidataConnector {
     }
 
     async initialize() {
-        // Verify connectivity
         this.initialized = true;
     }
 
@@ -250,8 +228,6 @@ class WikidataConnector {
     }
 
     _buildSparqlQuery(queryObj) {
-        // Build a simple SPARQL query from a query object
-        // This is a simplified implementation
         const searchTerm = queryObj.search ?? queryObj.term;
         return `
       SELECT ?item ?itemLabel WHERE {
@@ -278,7 +254,6 @@ class WikidataConnector {
     }
 }
 
-// Custom API connector base class
 class CustomAPIConnector {
     constructor(credentials, config) {
         this.credentials = credentials;
@@ -288,7 +263,6 @@ class CustomAPIConnector {
     }
 
     async initialize() {
-        // Verify connectivity or setup
         this.initialized = true;
     }
 
@@ -312,12 +286,10 @@ class CustomAPIConnector {
     }
 
     _buildUrl(query, options) {
-        // Build URL from query and options
         return `${this.baseUrl}/${query}`;
     }
 
     _buildHeaders() {
-        // Build headers with authentication
         const headers = {'Content-Type': 'application/json'};
         if (this.credentials?.apiKey) {
             headers['Authorization'] = `Bearer ${this.credentials.apiKey}`;
@@ -341,7 +313,6 @@ class CustomAPIConnector {
     }
 }
 
-// Data normalizer for different knowledge base formats
 const NORMALIZATION_RULES = Object.freeze({
     wikipedia: (normalizer, data) => normalizer._normalizeData(data, normalizer._normalizeWikipediaItem.bind(normalizer), 'wikipedia'),
     wikidata: (normalizer, data) => normalizer._normalizeData(data, normalizer._normalizeWikidataItem.bind(normalizer), 'wikidata'),
@@ -358,7 +329,7 @@ class KnowledgeNormalizer {
         if (normalizer) {
             return normalizer(this, data);
         }
-        return data; // Return as-is if no normalizer
+        return data;
     }
 
     _normalizeData(data, itemNormalizer, source) {
@@ -381,7 +352,7 @@ class KnowledgeNormalizer {
 
     _normalizeWikidataItem(item, source) {
         return {
-            id: item.item?.value?.split('/').pop(), // Extract ID from URL
+            id: item.item?.value?.split('/').pop(),
             label: item.itemLabel?.value,
             description: item.itemDescription?.value,
             type: 'entity',
@@ -390,27 +361,23 @@ class KnowledgeNormalizer {
     }
 }
 
-// External knowledge integration manager
 class ExternalKnowledgeManager {
     constructor(config = {}) {
         this.config = config;
         this.connector = new KnowledgeBaseConnector(config.connector ?? {});
         this.normalizer = new KnowledgeNormalizer();
-        this.nar = null; // Will be set when connected to NAR
+        this.nar = null;
     }
 
-    // Connect to NAR for integration
     connectToNAR(nar) {
         this.nar = nar;
     }
 
-    // Query external knowledge and integrate with internal knowledge
     async queryAndIntegrate(query, sources = ['wikipedia', 'wikidata']) {
         if (!this.nar) {
             throw new Error('ExternalKnowledgeManager not connected to NAR');
         }
 
-        // Query multiple sources
         const queries = sources.map(providerId => ({
             providerId,
             query,
@@ -418,8 +385,6 @@ class ExternalKnowledgeManager {
         }));
 
         const results = await this.connector.batchQuery(queries);
-
-        // Normalize and integrate results
         const integratedResults = [];
 
         for (const result of results) {
@@ -429,7 +394,6 @@ class ExternalKnowledgeManager {
                     result.data.results
                 );
 
-                // Integrate with NAR (this would convert to Narsese and input to NAR)
                 await this.integrateWithNAR(normalized, result.query.providerId);
 
                 integratedResults.push({
@@ -449,14 +413,11 @@ class ExternalKnowledgeManager {
         return integratedResults;
     }
 
-    // Integrate external knowledge with NAR
     async integrateWithNAR(knowledge, source) {
         if (!this.nar) return;
 
-        // Convert external knowledge to Narsese and add to NAR
         for (const item of knowledge) {
             try {
-                // This is a simplified conversion - in reality, this would be more complex
                 const narsese = this.convertToNarsese(item);
                 if (narsese) {
                     await this.nar.input(narsese);
@@ -467,19 +428,15 @@ class ExternalKnowledgeManager {
         }
     }
 
-    // Convert external knowledge item to Narsese
     convertToNarsese(item) {
         if (!item.title && !item.label) return null;
 
-        // Simple conversion - in reality, this would be much more sophisticated
         const subject = item.title ?? item.label;
         const predicate = 'fact';
 
-        // This is a very simplified approach - real integration would be more complex
         return `<${subject.replace(/\s+/g, '_')} --> ${predicate}>. %1.00;0.90%`;
     }
 
-    // Get statistics
     getStats() {
         return {
             connectorStats: this.connector.getStats(),
@@ -487,13 +444,11 @@ class ExternalKnowledgeManager {
         };
     }
 
-    // Clear cache
     clearCache() {
         this.connector.clearCache();
     }
 }
 
-// Export factory functions
 const createKnowledgeBaseConnector = (config = {}) => new KnowledgeBaseConnector(config);
 const createExternalKnowledgeManager = (config = {}) => new ExternalKnowledgeManager(config);
 

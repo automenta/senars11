@@ -1,7 +1,5 @@
 import { TruthValueUtils } from './NarseseTemplate.js';
 import * as dfd from 'danfojs';
-
-// Since DataTableKnowledge uses danfojs, we import it separately
 import { DataTableKnowledge } from './DataTableKnowledge.js';
 
 export class FileAnalysisKnowledge extends DataTableKnowledge {
@@ -45,11 +43,9 @@ export class FileAnalysisKnowledge extends DataTableKnowledge {
       const fileName = row.path || row.file_path || `file_${index}`;
       const filePath = fileName.replace(/[^\w\s-]/g, '_').replace(/\s+/g, '_');
       
-      // Using template API for more flexible task creation
       const tasks = [];
       
       if (row.line_coverage !== undefined) {
-        const frequency = TruthValueUtils.calculateFrequencyFromMetric(row.line_coverage, 0, 100);
         const task = await this.createTasksWithTemplate('file-analysis', {
           filePath,
           metric: 'coverage',
@@ -61,7 +57,6 @@ export class FileAnalysisKnowledge extends DataTableKnowledge {
       }
       
       if (row.size !== undefined) {
-        const sizeFrequency = TruthValueUtils.calculateFrequencyFromMetric(Math.min(row.size, 10000), 0, 10000);
         const task = await this.createTasksWithTemplate('file-analysis', {
           filePath,
           metric: 'size',
@@ -73,7 +68,6 @@ export class FileAnalysisKnowledge extends DataTableKnowledge {
       }
       
       if (row.complexity_cyclomatic !== undefined) {
-        const complexityFrequency = TruthValueUtils.calculateFrequencyFromMetric(row.complexity_cyclomatic, 0, 50);
         const task = await this.createTasksWithTemplate('file-analysis', {
           filePath,
           metric: 'complexity',
@@ -85,7 +79,6 @@ export class FileAnalysisKnowledge extends DataTableKnowledge {
       }
       
       if (row.lines !== undefined) {
-        const linesFrequency = TruthValueUtils.calculateFrequencyFromMetric(row.lines, 0, 1000);
         const task = await this.createTasksWithTemplate('file-analysis', {
           filePath,
           metric: 'lines',
@@ -266,7 +259,6 @@ export class DirectoryStructureKnowledge extends DataTableKnowledge {
       const tasks = [];
       
       if (row.files !== undefined) {
-        const fileCountFreq = TruthValueUtils.calculateFrequencyFromMetric(Math.min(row.files, 50), 0, 50);
         const task = await this.createTasksWithTemplate('directory-analysis', {
           dirPath: dirName,
           metric: 'files',
@@ -278,7 +270,6 @@ export class DirectoryStructureKnowledge extends DataTableKnowledge {
       }
       
       if (row.lines !== undefined) {
-        const linesFreq = TruthValueUtils.calculateFrequencyFromMetric(Math.min(row.lines, 10000), 0, 10000);
         const task = await this.createTasksWithTemplate('directory-analysis', {
           dirPath: dirName,
           metric: 'lines',
@@ -290,7 +281,6 @@ export class DirectoryStructureKnowledge extends DataTableKnowledge {
       }
       
       if (row.complexity !== undefined) {
-        const complexityFreq = TruthValueUtils.calculateFrequencyFromMetric(Math.min(row.complexity, 100), 0, 100);
         const task = await this.createTasksWithTemplate('directory-analysis', {
           dirPath: dirName,
           metric: 'complexity',

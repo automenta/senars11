@@ -6,12 +6,10 @@ import {HumanMessage} from '@langchain/core/messages';
 export class LangChainProvider extends BaseProvider {
     constructor(config = {}) {
         super({...config, maxTokens: config.maxTokens ?? 1000});
-        Object.assign(this, {
-            providerType: config.provider || 'ollama',
-            modelName: config.modelName || 'llama2',
-            apiKey: config.apiKey,
-            baseURL: config.baseURL || 'http://localhost:11434',
-        });
+        this.providerType = config.provider || 'ollama';
+        this.modelName = config.modelName || 'llama2';
+        this.apiKey = config.apiKey;
+        this.baseURL = config.baseURL || 'http://localhost:11434';
 
         if (this.baseURL.includes(':11434') && !this.baseURL.startsWith('http')) {
             this.baseURL = `http://${this.baseURL}`;
@@ -21,25 +19,28 @@ export class LangChainProvider extends BaseProvider {
     }
 
     _initChatModel() {
-        if (this.providerType === 'ollama') {
-            this.chatModel = new ChatOllama({
-                model: this.modelName,
-                baseUrl: this.baseURL,
-                temperature: this.temperature,
-                num_predict: this.maxTokens,
-                ...this.config.ollamaOptions
-            });
-        } else if (this.providerType === 'openai') {
-            if (!this.apiKey) throw new Error('API key is required for OpenAI provider');
-            this.chatModel = new ChatOpenAI({
-                modelName: this.modelName,
-                openAIApiKey: this.apiKey,
-                temperature: this.temperature,
-                maxTokens: this.maxTokens,
-                ...this.config.openaiOptions
-            });
-        } else {
-            throw new Error(`Unsupported provider type: ${this.providerType}. Use 'ollama' or 'openai'.`);
+        switch (this.providerType) {
+            case 'ollama':
+                this.chatModel = new ChatOllama({
+                    model: this.modelName,
+                    baseUrl: this.baseURL,
+                    temperature: this.temperature,
+                    num_predict: this.maxTokens,
+                    ...this.config.ollamaOptions
+                });
+                break;
+            case 'openai':
+                if (!this.apiKey) throw new Error('API key is required for OpenAI provider');
+                this.chatModel = new ChatOpenAI({
+                    modelName: this.modelName,
+                    openAIApiKey: this.apiKey,
+                    temperature: this.temperature,
+                    maxTokens: this.maxTokens,
+                    ...this.config.openaiOptions
+                });
+                break;
+            default:
+                throw new Error(`Unsupported provider type: ${this.providerType}. Use 'ollama' or 'openai'.`);
         }
     }
 
@@ -57,7 +58,7 @@ export class LangChainProvider extends BaseProvider {
         }
     }
 
-    async generateEmbedding(text) {
+    async generateEmbedding() {
         throw new Error("Embeddings not fully implemented for LangChainProvider due to LangChain's varied embedding support across providers");
     }
 }

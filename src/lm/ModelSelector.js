@@ -27,13 +27,9 @@ export class ModelSelector {
             return this.providerRegistry.defaultProviderId || availableProviders[0] || null;
         }
 
-        const selected = constraints.performance === 'high'
-            ? availableProviders[0]
-            : constraints.performance === 'low'
-                ? availableProviders[availableProviders.length - 1] || null
-                : availableProviders[0] || null;
-
-        return selected;
+        return constraints.performance === 'high' ? availableProviders[0] :
+               constraints.performance === 'low' ? availableProviders[availableProviders.length - 1] || null :
+               availableProviders[0] || null;
     }
 
     getAvailableModels() {

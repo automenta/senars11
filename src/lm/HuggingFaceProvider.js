@@ -6,16 +6,16 @@ export class HuggingFaceProvider extends BaseProvider {
         this.modelName = config.modelName || 'sshleifer/distilbart-cnn-12-6';
         this.device = config.device || 'cpu';
 
-        this.modelType = this.modelName.includes('MobileBERT')
-            ? 'mobilebert'
-            : this.modelName.includes('SmolLM')
-                ? 'smollm'
-                : 'generic';
-
+        this.modelType = this._getModelType(this.modelName);
         this.pipeline = null;
         this.tokenizer = null;
         this.model = null;
         this.initialized = false;
+    }
+
+    _getModelType(modelName) {
+        return modelName.includes('MobileBERT') ? 'mobilebert' :
+               modelName.includes('SmolLM') ? 'smollm' : 'generic';
     }
 
     async _initializeModel() {
@@ -24,13 +24,16 @@ export class HuggingFaceProvider extends BaseProvider {
         try {
             const {pipeline, AutoTokenizer, AutoModelForCausalLM} = await import('@xenova/transformers');
 
-            if (this.modelType === 'smollm') {
-                this.pipeline = await pipeline('text-generation', this.modelName, { device: this.device });
-            } else if (this.modelType === 'mobilebert') {
-                this.tokenizer = await AutoTokenizer.from_pretrained(this.modelName);
-                this.model = await AutoModelForCausalLM.from_pretrained(this.modelName);
-            } else {
-                this.pipeline = await pipeline('text-generation', this.modelName, { device: this.device });
+            switch (this.modelType) {
+                case 'smollm':
+                    this.pipeline = await pipeline('text-generation', this.modelName, { device: this.device });
+                    break;
+                case 'mobilebert':
+                    this.tokenizer = await AutoTokenizer.from_pretrained(this.modelName);
+                    this.model = await AutoModelForCausalLM.from_pretrained(this.modelName);
+                    break;
+                default:
+                    this.pipeline = await pipeline('text-generation', this.modelName, { device: this.device });
             }
 
             this.initialized = true;
@@ -52,28 +55,32 @@ export class HuggingFaceProvider extends BaseProvider {
         try {
             const response = await this.pipeline(prompt, {
                 max_new_tokens: maxTokens,
-                temperature: temperature,
+                temperature,
                 do_sample: temperature > 0,
                 pad_token_id: 50256,
                 ...options
             });
 
-            if (Array.isArray(response) && response.length > 0) {
-                return response[0].generated_text || response[0].text || response[0];
-            }
-            
-            if (typeof response === 'string') {
-                return response;
-            }
-            
-            if (response?.generated_text) {
-                return response.generated_text;
-            }
-            
-            return JSON.stringify(response);
+            return this._extractTextFromResponse(response);
         } catch (error) {
             throw new Error(`HuggingFaceProvider generateText failed: ${error.message}`);
         }
+    }
+
+    _extractTextFromResponse(response) {
+        if (Array.isArray(response) && response.length > 0) {
+            return response[0].generated_text || response[0].text || response[0];
+        }
+        
+        if (typeof response === 'string') {
+            return response;
+        }
+        
+        if (response?.generated_text) {
+            return response.generated_text;
+        }
+        
+        return JSON.stringify(response);
     }
 
     async generateEmbedding(text) {

@@ -78,31 +78,17 @@ export class Reasoner {
     }
 
     async _performSymbolicInference(focusSet, maxDerived) {
-        const derivedTasks = [];
-
         this.logger.debug(`Starting symbolic inference with ${this.ruleEngine.rules.length} rules on ${focusSet.length} tasks`);
 
-        // Create context for the rules
-        const reasoningContext = new ReasoningContext({
-            memory: this.systemContext?.memory || null,
-            termFactory: this.systemContext?.termFactory || null,
-            ruleEngine: this.ruleEngine,
-            systemContext: this.systemContext,
-            config: this.config
-        });
-
-        // Process all focus set tasks using rule engine with the selected strategy
+        const reasoningContext = this._createReasoningContext();
         const strategy = this.strategySelector.selectStrategy(reasoningContext, focusSet, this.ruleEngine.rules);
-
-        // Apply reasoning strategy to the entire focus set to allow for multi-task rule applications
         const strategyResults = await strategy.execute(
             reasoningContext,
             this.ruleEngine.rules,
-            focusSet  // Pass the entire focus set to allow for multi-premise rules
+            focusSet
         );
 
-        derivedTasks.push(...strategyResults.slice(0, maxDerived));
-
+        const derivedTasks = strategyResults.slice(0, maxDerived);
         ReasoningUtils.updateMetrics(this.metrics, 'symbolic', derivedTasks.length);
         this.logger.debug(`Symbolic inference produced ${derivedTasks.length} derived tasks`);
 
@@ -140,27 +126,22 @@ export class Reasoner {
         this.logger.debug(`Starting modular inference on ${focusSet.length} tasks with max ${maxModularTasks} derived tasks`);
 
         const derivedTasks = [];
-
         for (const task of focusSet) {
             if (derivedTasks.length >= maxModularTasks) break;
 
             try {
-                // Analyze task to determine appropriate strategy
-                const taskAnalysis = this.strategySelector.analyzeTasks([task]);
                 const strategy = this.strategySelector.selectStrategy(
                     {ruleEngine: this.ruleEngine, systemContext: this.systemContext},
                     [task],
                     []
                 );
 
-                // Execute strategy with task
                 const result = await strategy.execute(
                     this.systemContext.memory,
                     [],
                     this.systemContext.termFactory
                 );
 
-                // Add results to derived tasks
                 for (const inferredTask of result) {
                     if (derivedTasks.length >= maxModularTasks) break;
                     derivedTasks.push(inferredTask);
@@ -187,9 +168,7 @@ export class Reasoner {
     }
 
     async processTask(task) {
-        // Add the task to focus set and perform inference
-        const focusSet = [task];
-        return await this.performInference(focusSet);
+        return await this.performInference([task]);
     }
 
     getPerformanceStats() {

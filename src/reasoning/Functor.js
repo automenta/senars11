@@ -37,29 +37,19 @@ export class ConcreteFunctor extends Functor {
 }
 
 // Private utilities for FunctorRegistry
-class FunctorRegistryUtils {
-    static extractArity(aliases) {
-        return aliases.length > 0 && Array.isArray(aliases[aliases.length - 1]) ? aliases.pop() : 0;
+const extractArity = aliases => aliases.length > 0 && Array.isArray(aliases[aliases.length - 1]) ? aliases.pop() : 0;
+const addAliases = (registry, aliases, functorName) => aliases.forEach(alias => registry.aliases.set(alias, functorName));
+const removeAliases = (registry, functorName) => {
+    for (const [alias, name] of registry.aliases.entries()) {
+        if (name === functorName) registry.aliases.delete(alias);
     }
-
-    static addAliases(registry, aliases, functorName) {
-        aliases.forEach(alias => registry.aliases.set(alias, functorName));
-    }
-
-    static removeAliases(registry, functorName) {
-        for (const [alias, name] of registry.aliases.entries()) {
-            if (name === functorName) registry.aliases.delete(alias);
-        }
-    }
-
-    static areFunctionallyEquivalent(existingFunctor, newFunctor) {
-        return existingFunctor &&
-            existingFunctor.execute.toString() === newFunctor.execute.toString() &&
-            existingFunctor.arity === newFunctor.arity &&
-            existingFunctor.isCommutative === newFunctor.isCommutative &&
-            existingFunctor.isAssociative === newFunctor.isAssociative;
-    }
-}
+};
+const areFunctionallyEquivalent = (existingFunctor, newFunctor) => 
+    existingFunctor &&
+    existingFunctor.execute.toString() === newFunctor.execute.toString() &&
+    existingFunctor.arity === newFunctor.arity &&
+    existingFunctor.isCommutative === newFunctor.isCommutative &&
+    existingFunctor.isAssociative === newFunctor.isAssociative;
 
 /**
  * FunctorRegistry - A system for registering and managing Functors
@@ -71,26 +61,17 @@ export class FunctorRegistry {
     }
 
     register(name, functor, aliases = []) {
-        // Make sure aliases is an array and make a copy so we can safely modify it
-        const aliasesArray = Array.isArray(aliases) ? aliases : [];
-        const aliasesCopy = [...aliasesArray];
+        const aliasesCopy = Array.isArray(aliases) ? [...aliases] : [];
+        functor = typeof functor === 'function' 
+            ? new ConcreteFunctor(name, functor, {arity: extractArity(aliasesCopy)}) 
+            : functor;
 
-        if (typeof functor === 'function') {
-            functor = new ConcreteFunctor(name, functor, {arity: FunctorRegistryUtils.extractArity(aliasesCopy)});
-        }
-
-        if (this.functors.has(name)) {
-            // Check if the functors are functionally equivalent to avoid unnecessary warnings
-            const existingFunctor = this.functors.get(name);
-            if (FunctorRegistryUtils.areFunctionallyEquivalent(existingFunctor, functor)) {
-                // Same functor, no need to replace or warn
-                return true;
-            }
+        if (this.functors.has(name) && !areFunctionallyEquivalent(this.functors.get(name), functor)) {
             this.logger?.warn(`Functor ${name} is already registered, replacing it.`);
         }
 
         this.functors.set(name, functor);
-        FunctorRegistryUtils.addAliases(this, aliasesCopy, name);
+        addAliases(this, aliasesCopy, name);
 
         return true;
     }
@@ -116,17 +97,12 @@ export class FunctorRegistry {
         const actualName = this.aliases.get(name) || name;
         if (!this.functors.has(actualName)) return false;
 
-        FunctorRegistryUtils.removeAliases(this, actualName);
+        removeAliases(this, actualName);
         return this.functors.delete(actualName);
     }
 
-    getFunctorNames() {
-        return Array.from(this.functors.keys());
-    }
-
-    getAliases() {
-        return Array.from(this.aliases.keys());
-    }
+    getFunctorNames() { return Array.from(this.functors.keys()); }
+    getAliases() { return Array.from(this.aliases.keys()); }
 
     getStats() {
         return {
@@ -169,15 +145,13 @@ export class FunctorRegistry {
     // Get functor properties
     getFunctorProperties(name) {
         const functor = this.get(name);
-        if (!functor) return null;
-
-        return {
+        return functor ? {
             name: functor.name,
             arity: functor.arity,
             isCommutative: functor.isCommutative,
             isAssociative: functor.isAssociative,
             config: functor.config
-        };
+        } : null;
     }
 
     // Check if a functor has specific properties
@@ -186,38 +160,24 @@ export class FunctorRegistry {
         if (!functor) return false;
 
         switch (property) {
-            case 'commutative':
-                return functor.isCommutative;
-            case 'associative':
-                return functor.isAssociative;
-            default:
-                return functor.config[property] === true;
+            case 'commutative': return functor.isCommutative;
+            case 'associative': return functor.isAssociative;
+            default: return functor.config[property] === true;
         }
     }
 
     // Get all functors with a specific property
     getFunctorsWithProperty(property) {
-        const result = [];
-
-        for (const [name, functor] of this.functors.entries()) {
-            let hasProp = false;
+        const isPropertyMatch = functor => {
             switch (property) {
-                case 'commutative':
-                    hasProp = functor.isCommutative;
-                    break;
-                case 'associative':
-                    hasProp = functor.isAssociative;
-                    break;
-                default:
-                    hasProp = functor.config[property] === true;
-                    break;
+                case 'commutative': return functor.isCommutative;
+                case 'associative': return functor.isAssociative;
+                default: return functor.config[property] === true;
             }
+        };
 
-            if (hasProp) {
-                result.push({name, functor});
-            }
-        }
-
-        return result;
+        return Array.from(this.functors.entries())
+            .filter(([, functor]) => isPropertyMatch(functor))
+            .map(([name, functor]) => ({name, functor}));
     }
 }
