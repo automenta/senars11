@@ -134,10 +134,11 @@ describe('New Reasoner - Stream-based Architecture', () => {
     // This test verifies that the step() method exists and works appropriately
     expect(typeof reasoner.step).toBe('function');
     
-    // Since there's no active premise source feeding data, step should return null eventually
+    // Since there's no active premise source feeding data, step should return an empty array
     const result = await reasoner.step();
-    // The result may be null if no premises are immediately available
-    expect(result).toBeNull(); // Or may be undefined depending on implementation
+    // The result is an array (may be empty if no premises are immediately available)
+    expect(Array.isArray(result)).toBe(true);
+    expect(result.length).toBe(0);
   });
 
   test('should handle empty premise stream gracefully', async () => {
@@ -147,9 +148,10 @@ describe('New Reasoner - Stream-based Architecture', () => {
     
     const emptyReasoner = new Reasoner(emptyPremiseSource, strategy, ruleProcessor, { maxDerivationDepth: 5 });
     
-    // Single step should return null for empty stream
+    // Single step should return an empty array for empty stream
     const result = await emptyReasoner.step();
-    expect(result).toBeNull();
+    expect(Array.isArray(result)).toBe(true);
+    expect(result.length).toBe(0);
   });
 
   test('should support start/stop functionality', async () => {
