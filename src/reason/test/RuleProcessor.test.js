@@ -1,7 +1,7 @@
 import { RuleProcessor } from '../RuleProcessor.js';
 import { RuleExecutor } from '../RuleExecutor.js';
 import { Rule } from '../Rule.js';
-import { createTestTask } from '../utils/test.js';
+import { createTestTask } from './testUtils.js';
 
 // Define proper rule classes for testing
 class TestSyncRule extends Rule {

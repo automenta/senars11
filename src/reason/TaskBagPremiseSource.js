@@ -165,7 +165,7 @@ export class TaskBagPremiseSource extends PremiseSource {
   }
 
   /**
-   * Get the size of the task bag
+   * Get the size of the task bag or focus
    * @returns {number}
    */
   _getBagSize() {
@@ -175,13 +175,13 @@ export class TaskBagPremiseSource extends PremiseSource {
       return tasks.length;
     }
     
-    if (this.taskBag.size !== undefined) return this.taskBag.size;
-    if (typeof this.taskBag.length === 'number') return this.taskBag.length;
-    if (typeof this.taskBag.count === 'function') return this.taskBag.count();
+    if (this.taskBag?.size !== undefined) return this.taskBag.size;
+    if (typeof this.taskBag?.length === 'number') return this.taskBag.length;
+    if (typeof this.taskBag?.count === 'function') return this.taskBag.count();
     if (Array.isArray(this.taskBag) || this.taskBag instanceof Set) return this.taskBag.length ?? this.taskBag.size;
     if (this.taskBag instanceof Map) return this.taskBag.size;
     // If we can't determine size, assume it's not empty and try to get items
-    return 1; // Conservative assumption
+    return 0; // Return 0 if no bag or focus is available
   }
 
   /**
@@ -210,11 +210,11 @@ export class TaskBagPremiseSource extends PremiseSource {
       return tasks.length > 0 ? tasks[0] : null;
     }
     
-    if (this.taskBag.take) {
+    if (this.taskBag?.take) {
       return this.taskBag.take();
-    } else if (this.taskBag.pop) {
+    } else if (this.taskBag?.pop) {
       return this.taskBag.pop();
-    } else if (this.taskBag.get) {
+    } else if (this.taskBag?.get) {
       return this.taskBag.get(0);
     }
     return null;
@@ -251,7 +251,7 @@ export class TaskBagPremiseSource extends PremiseSource {
     }
     
     // If the bag supports getting multiple items, we can prioritize based on closeness to target time
-    if (this.taskBag.getAll && typeof this.taskBag.getAll === 'function') {
+    if (this.taskBag?.getAll && typeof this.taskBag.getAll === 'function') {
       const allTasks = this.taskBag.getAll();
       if (allTasks.length === 0) return null;
       
@@ -273,7 +273,7 @@ export class TaskBagPremiseSource extends PremiseSource {
       // Return the task closest to target time
       const selectedTask = allTasks[0];
       // Remove the selected task from the bag (if supported)
-      if (this.taskBag.remove) {
+      if (this.taskBag?.remove) {
         this.taskBag.remove(selectedTask);
       }
       return selectedTask;
@@ -296,8 +296,8 @@ export class TaskBagPremiseSource extends PremiseSource {
       
       // Filter for goals and questions
       const goalsAndQuestions = allTasks.filter(task => {
-        const punctuation = task.sentence?.punctuation;
-        return punctuation === '?' || punctuation === '!'; // Goals use '!' and Questions use '?'
+        const punctuation = task.type; // In the new system, task type is stored in 'type' property
+        return punctuation === 'GOAL' || punctuation === 'QUESTION';
       });
       
       if (goalsAndQuestions.length > 0) {
@@ -308,14 +308,14 @@ export class TaskBagPremiseSource extends PremiseSource {
     }
     
     // Get all tasks and filter for goals/questions
-    if (this.taskBag.getAll && typeof this.taskBag.getAll === 'function') {
+    if (this.taskBag?.getAll && typeof this.taskBag.getAll === 'function') {
       const allTasks = this.taskBag.getAll();
       if (allTasks.length === 0) return null;
       
       // Filter for goals and questions
       const goalsAndQuestions = allTasks.filter(task => {
-        const punctuation = task.sentence?.punctuation;
-        return punctuation === '?' || punctuation === '!'; // Goals use '!' and Questions use '?'
+        const punctuation = task.type; // In the new system, task type is stored in 'type' property
+        return punctuation === 'GOAL' || punctuation === 'QUESTION';
       });
       
       if (goalsAndQuestions.length > 0) {
@@ -323,7 +323,7 @@ export class TaskBagPremiseSource extends PremiseSource {
         const randomIndex = Math.floor(Math.random() * goalsAndQuestions.length);
         const selectedTask = goalsAndQuestions[randomIndex];
         // Remove the selected task from the bag (if supported)
-        if (this.taskBag.remove) {
+        if (this.taskBag?.remove) {
           this.taskBag.remove(selectedTask);
         }
         return selectedTask;
@@ -361,14 +361,14 @@ export class TaskBagPremiseSource extends PremiseSource {
     }
     
     // Get all tasks and select those with lower derivation depth
-    if (this.taskBag.getAll && typeof this.taskBag.getAll === 'function') {
+    if (this.taskBag?.getAll && typeof this.taskBag.getAll === 'function') {
       const allTasks = this.taskBag.getAll();
       if (allTasks.length === 0) return null;
       
       // Calculate novelty as inverse of derivation depth
       const tasksWithNovelty = allTasks.map(task => {
         const depth = task.stamp?.depth ?? 0;
-        // Higher novelty score for lower depth values
+        // Higher novelty score for lower derivation depth values
         const novelty = 1 / (depth + 1); // Add 1 to avoid division by zero
         return { task, novelty };
       });
@@ -379,7 +379,7 @@ export class TaskBagPremiseSource extends PremiseSource {
       // Select the most novel task
       const selectedTask = tasksWithNovelty[0].task;
       // Remove the selected task from the bag (if supported)
-      if (this.taskBag.remove) {
+      if (this.taskBag?.remove) {
         this.taskBag.remove(selectedTask);
       }
       return selectedTask;

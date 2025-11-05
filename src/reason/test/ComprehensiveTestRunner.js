@@ -8,7 +8,7 @@ import { Strategy } from '../Strategy.js';
 import { RuleProcessor } from '../RuleProcessor.js';
 import { RuleExecutor } from '../RuleExecutor.js';
 import { Rule } from '../Rule.js';
-import { createTestMemory, createTestTask } from '../utils/test.js';
+import { createTestMemory, createTestTask } from './testUtils.js';
 
 // Test rule for the comprehensive test
 class TestRule extends Rule {

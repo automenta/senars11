@@ -5,7 +5,7 @@ import { RuleProcessor } from '../RuleProcessor.js';
 import { RuleExecutor } from '../RuleExecutor.js';
 import { TaskBagPremiseSource } from '../TaskBagPremiseSource.js';
 import { Focus } from '../../memory/Focus.js';
-import { createTestMemory, createTestTask } from '../utils/test.js';
+import { createTestMemory, createTestTask } from './testUtils.js';
 
 describe('Reasoner', () => {
   let reasoner;

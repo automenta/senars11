@@ -1,6 +1,6 @@
 import {jest} from '@jest/globals';
 import { Strategy } from '../Strategy.js';
-import { createTestTask } from '../utils/test.js';
+import { createTestTask } from './testUtils.js';
 
 describe('Strategy', () => {
   let strategy;

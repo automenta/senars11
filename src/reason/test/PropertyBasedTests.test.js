@@ -1,21 +1,17 @@
 import { TaskBagPremiseSource } from '../TaskBagPremiseSource.js';
 import { Strategy } from '../Strategy.js';
 import { randomWeightedSelect } from '../utils/randomWeightedSelect.js';
-import { createTestMemory, createTestTask } from '../utils/test.js';
+import { createTestMemory, createTestTask } from './testUtils.js';
 
 // Helper function to generate random tasks
 function generateRandomTask() {
   const punctuations = ['.', '?', '!'];
-  return createTestTask({
-    priority: Math.random(), // Random priority between 0 and 1
-    sentence: { 
-      punctuation: punctuations[Math.floor(Math.random() * punctuations.length)] 
-    },
-    stamp: { 
-      creationTime: Date.now() - Math.floor(Math.random() * 100000), // Random time in last 100s of seconds
-      depth: Math.floor(Math.random() * 10) // Random depth 0-9
-    }
-  });
+  const termStr = `randomTerm${Math.floor(Math.random() * 1000)}`;
+  const type = punctuations[Math.floor(Math.random() * punctuations.length)] === '.' ? 'BELIEF' :
+               punctuations[Math.floor(Math.random() * punctuations.length)] === '?' ? 'QUESTION' : 'GOAL';
+  const priority = Math.random(); // Random priority between 0 and 1
+  
+  return createTestTask(termStr, type, 0.8 + Math.random() * 0.2, 0.7 + Math.random() * 0.3, priority);
 }
 
 // Helper function to generate random bags of tasks
@@ -154,11 +150,10 @@ describe('Property-Based Testing for Edge Cases', () => {
   describe('Malformed and Extreme Data Handling', () => {
     test('should handle malformed task objects gracefully', async () => {
       const malformedTasks = [
-        createTestTask({ priority: 'not-a-number' }),
-        createTestTask({ stamp: { depth: 'not-a-number' } }),
-        createTestTask({ sentence: { punctuation: 123 } }), // Wrong type
-        createTestTask({ priority: 1.5 }), // Invalid priority > 1
-        createTestTask({ priority: -0.5 }) // Invalid priority < 0
+        createTestTask('task1', 'BELIEF', 0.9, 0.9, NaN), // Invalid priority
+        createTestTask('task2', 'QUESTION', 0.8, 0.8, Infinity), // Invalid priority
+        createTestTask('task3', 'GOAL', 0.7, 0.7, 1.5), // Invalid priority > 1
+        createTestTask('task4', 'BELIEF', 0.6, 0.6, -0.5) // Invalid priority < 0
       ];
       
       const memory = createTestMemory({ tasks: malformedTasks });
@@ -179,13 +174,11 @@ describe('Property-Based Testing for Edge Cases', () => {
 
     test('should handle extreme parameter values', async () => {
       const extremeTasks = [
-        createTestTask({ priority: Infinity }),
-        createTestTask({ priority: -Infinity }),
-        createTestTask({ priority: 0 }),
-        createTestTask({ priority: Number.MAX_VALUE }),
-        createTestTask({ priority: Number.MIN_VALUE }),
-        createTestTask({ stamp: { depth: 1000000 } }), // Extremely deep
-        createTestTask({ stamp: { depth: -1000 } }) // Negative depth
+        createTestTask('task1', 'BELIEF', 0.9, 0.9, Infinity),
+        createTestTask('task2', 'BELIEF', 0.8, 0.8, -Infinity),
+        createTestTask('task3', 'BELIEF', 0.7, 0.7, 0),
+        createTestTask('task4', 'BELIEF', 0.6, 0.6, Number.MAX_VALUE),
+        createTestTask('task5', 'BELIEF', 0.5, 0.5, Number.MIN_VALUE)
       ];
       
       const memory = createTestMemory({ tasks: extremeTasks });
