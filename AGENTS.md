@@ -10,7 +10,11 @@
 - Modularized
 - Parameterized
 
-- Terse syntax: ternary, switch, etc... but adhere to reasonable JavaScript code guidelines.
+- Terse syntax
+  - Ternary, switch, nullish coalescing, etc... 
+  - Adhere to reasonable JavaScript code guidelines  
+  - Don't arbitrarily change method functions to arrow functions
+  - Consider modern JavaScript language syntax
 
 - Few comments: rely on self-documenting code
 

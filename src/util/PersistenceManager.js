@@ -16,7 +16,6 @@ export class PersistenceManager {
         if (this.isInitialized) return true;
         
         try {
-            // Initialize storage backend
             this.isInitialized = true;
             return true;
         } catch (error) {
@@ -30,7 +29,6 @@ export class PersistenceManager {
         
         try {
             this.storage.set(key, data);
-            // In a real implementation, this would persist to disk/database
             return true;
         } catch (error) {
             console.error(`Failed to save data for key ${key}:`, error);

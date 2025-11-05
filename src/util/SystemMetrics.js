@@ -26,7 +26,6 @@ export class SystemMetrics {
             this.cycleTimes.shift();
         }
 
-        // Calculate average cycle time manually without danfojs
         if (this.cycleTimes.length > 0) {
             this.metrics.averageCycleTime = this.cycleTimes.reduce((sum, time) => sum + time, 0) / this.cycleTimes.length;
         }
@@ -65,7 +64,6 @@ export class SystemMetrics {
     }
 
     getPerformanceMetrics() {
-        // Manual statistical calculations without danfojs
         let cycleTimeVariance = 0;
         let cycleTimeStd = 0;
         let cycleTimeMedian = 0;
@@ -75,18 +73,15 @@ export class SystemMetrics {
             const sorted = [...this.cycleTimes].sort((a, b) => a - b);
             const n = sorted.length;
             
-            // Median
             cycleTimeMedian = n % 2 === 0
                 ? (sorted[n / 2 - 1] + sorted[n / 2]) / 2
                 : sorted[Math.floor(n / 2)];
             
-            // Variance and standard deviation
             const mean = this.metrics.averageCycleTime;
             const varianceSum = this.cycleTimes.reduce((sum, time) => sum + Math.pow(time - mean, 2), 0);
             cycleTimeVariance = varianceSum / n;
             cycleTimeStd = Math.sqrt(cycleTimeVariance);
             
-            // Percentiles
             cycleTimePercentiles = {
                 p25: sorted[Math.floor(0.25 * n)],
                 p75: sorted[Math.floor(0.75 * n)],
@@ -118,7 +113,6 @@ export class SystemMetrics {
         };
     }
 
-    // Advanced statistical analysis methods without danfojs
     getAdvancedPerformanceMetrics() {
         if (this.cycleTimes.length === 0) {
             return {
@@ -128,17 +122,14 @@ export class SystemMetrics {
             };
         }
 
-        // Calculate mean and standard deviation
         const mean = this.cycleTimes.reduce((sum, time) => sum + time, 0) / this.cycleTimes.length;
         const varianceSum = this.cycleTimes.reduce((sum, time) => sum + Math.pow(time - mean, 2), 0);
         const std = Math.sqrt(varianceSum / this.cycleTimes.length);
         
-        // Identify outliers (values more than 2 standard deviations from mean)
         const outliers = this.cycleTimes.filter(value =>
             Math.abs(value - mean) > 2 * std
         );
         
-        // Simple trend analysis based on last 10% vs first 10% of data
         const recentCount = Math.max(1, Math.floor(this.cycleTimes.length * 0.1));
         const recentSlice = this.cycleTimes.slice(-recentCount);
         const recentAvg = recentSlice.reduce((sum, val) => sum + val, 0) / recentSlice.length;
@@ -149,7 +140,6 @@ export class SystemMetrics {
         if (recentAvg > earlyAvg * 1.1) trend = 'degrading';
         else if (recentAvg < earlyAvg * 0.9) trend = 'improving';
         
-        // Stability based on coefficient of variation
         const coefVariation = mean > 0 ? std / mean : Infinity;
         const stability = coefVariation < 0.1 ? 'high' :
                          coefVariation < 0.2 ? 'medium' : 'low';

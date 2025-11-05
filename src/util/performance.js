@@ -68,7 +68,6 @@ export const rateLimit = (fn, maxCalls, timeWindow) => {
     
     return (...args) => {
         const now = Date.now();
-        // Remove calls outside the time window
         while (calls.length > 0 && now - calls[0] > timeWindow) {
             calls.shift();
         }
