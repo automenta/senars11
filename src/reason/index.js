@@ -8,6 +8,10 @@ export { Strategy } from './Strategy.js';
 export { Reasoner } from './Reasoner.js';
 export { Rule } from './Rule.js';
 export { LMRule } from './LMRule.js';
+export { EvaluationEngine } from './EvaluationEngine.js';
+export { MetricsMonitor } from './MetricsMonitor.js';
+export { ReasoningAboutReasoning } from './ReasoningAboutReasoning.js';
+export { SYSTEM_ATOMS } from './SystemAtoms.js';
 
 // Export utility functions
 export * from './utils/common.js';

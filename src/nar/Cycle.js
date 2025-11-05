@@ -1,5 +1,5 @@
 import {BaseComponent} from '../util/BaseComponent.js';
-import {EvaluationEngine} from '../reasoning/EvaluationEngine.js';
+import {EvaluationEngine} from '../reason/EvaluationEngine.js';
 import {IntrospectionEvents} from '../util/IntrospectionEvents.js';
 
 const DEFAULT_FOCUS_TASK_LIMIT = 10;

@@ -1,6 +1,6 @@
 import {NAR} from './nar/NAR.js';
 import {Agent, InputTasks} from './Agent.js';
-import {EvaluationEngine} from './reasoning/EvaluationEngine.js';
+import {EvaluationEngine} from './reason/EvaluationEngine.js';
 import {PrologParser} from './parser/PrologParser.js';
 import {ReplInterface} from './io/ReplInterface.js';
 import {MonitoringAPI} from './io/MonitoringAPI.js';

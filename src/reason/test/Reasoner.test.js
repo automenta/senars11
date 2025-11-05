@@ -1,3 +1,4 @@
+import {jest} from '@jest/globals';
 import { Reasoner } from '../Reasoner.js';
 import { Strategy } from '../Strategy.js';
 import { RuleProcessor } from '../RuleProcessor.js';

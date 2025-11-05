@@ -1,4 +1,4 @@
-import {LMRule} from '../reasoning/LMRule.js';
+import {LMRule} from '../reason/LMRule.js';
 
 export class LMRuleFactory {
     static create(id, lm, promptTemplate, responseProcessor, priority = 1.0, config = {}) {

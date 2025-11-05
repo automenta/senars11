@@ -1,84 +1,103 @@
 import { Rule } from './Rule.js';
-import { mergeConfig } from './utils/common.js';
-import { logError } from './utils/error.js';
 
 /**
- * Language Model Rule for the new reasoner design
+ * Language Model Rule for the stream reasoner system.
+ * This rule uses language models to generate inferences and conclusions.
  */
 export class LMRule extends Rule {
   constructor(id, lm, promptTemplate, responseProcessor, priority = 1.0, config = {}) {
     super(id, 'lm', priority, config);
-    this.lm = lm;
+    this.lm = lm; // Language model instance
     this.promptTemplate = promptTemplate;
-    this.responseProcessor = responseProcessor;
-    this.lmConfig = mergeConfig({
-      temperature: 0.7,
-      maxTokens: 1000,
-      model: 'default'
-    }, config.lmConfig);
+    this.responseProcessor = responseProcessor || this._createDefaultResponseProcessor();
+    this.name = id;
+    this.description = 'Language Model Rule for generating inferences using neural models';
   }
 
   /**
-   * Apply the rule asynchronously
+   * Check if this LM rule can be applied to the given premises
    * @param {Task} primaryPremise - The primary premise
    * @param {Task} secondaryPremise - The secondary premise
-   * @param {object} context - The execution context
-   * @returns {Promise<Array<Task>>} - Promise resolving to array of derived tasks
+   * @param {Object} context - Context containing system components
+   * @returns {boolean} Whether the rule can be applied
    */
-  async applyAsync(primaryPremise, secondaryPremise, context) {
-    if (!this.lm) {
-      logError(new Error(`LM unavailable for rule ${this.id}`), { 
-        ruleId: this.id, 
-        context: 'lm_unavailable' 
-      }, 'error');
+  canApply(primaryPremise, secondaryPremise, context) {
+    // LM rules can typically be applied to various premise types
+    // This can be made more specific based on the rule's purpose
+    return primaryPremise && primaryPremise.term; 
+  }
+
+  /**
+   * Apply the LM rule to generate conclusions
+   * @param {Task} primaryPremise - The primary premise
+   * @param {Task} secondaryPremise - The secondary premise
+   * @param {Object} context - Context containing system components
+   * @returns {Array<Task>} Array of derived tasks
+   */
+  async apply(primaryPremise, secondaryPremise, context = {}) {
+    if (!this.canApply(primaryPremise, secondaryPremise, context)) {
       return [];
     }
 
     try {
-      const prompt = this._buildPrompt(primaryPremise, secondaryPremise, context);
-      const response = await this.lm.process(prompt, this.lmConfig);
-      const processedResponse = await this._processResponse(response, primaryPremise, secondaryPremise);
+      // Create a prompt using the template and the premises
+      const prompt = this._fillPromptTemplate(
+        this.promptTemplate,
+        primaryPremise,
+        secondaryPremise
+      );
 
-      return Array.isArray(processedResponse) ? processedResponse : [processedResponse];
+      // Generate response using the language model
+      const lmResponse = await this.lm.generateText(prompt, {
+        maxTokens: 200,
+        temperature: 0.7
+      });
+
+      // Process the response to generate tasks
+      const processedTasks = await this.responseProcessor(lmResponse, primaryPremise, secondaryPremise, context);
+
+      return processedTasks || [];
     } catch (error) {
-      logError(error, { ruleId: this.id, context: 'lm_rule_execution' }, 'error');
+      console.error(`Error applying LM rule ${this.id}:`, error);
       return [];
     }
   }
 
   /**
-   * Builds the prompt for the language model
+   * Fill the prompt template with premise information
    * @private
    */
-  _buildPrompt(primaryPremise, secondaryPremise, context) {
-    const templateVars = this._getTemplateVars(primaryPremise, secondaryPremise, context);
-    return this.promptTemplate.replace(/\{\{(\w+)\}\}/g, (match, key) =>
-      templateVars[key] !== undefined ? templateVars[key] : match
-    );
-  }
+  _fillPromptTemplate(template, primaryPremise, secondaryPremise) {
+    let filledPrompt = template
+      .replace('{{taskTerm}}', primaryPremise.term.toString?.() || String(primaryPremise.term || 'unknown'))
+      .replace('{{taskType}}', primaryPremise.punctuation || 'unknown')
+      .replace('{{taskTruth}}', primaryPremise.truth ? 
+        `frequency: ${primaryPremise.truth.f}, confidence: ${primaryPremise.truth.c}` : 
+        'unknown truth value');
 
-  /**
-   * Gets template variables for prompt construction
-   * @private
-   */
-  _getTemplateVars(primaryPremise, secondaryPremise, context) {
-    return {
-      primaryTerm: primaryPremise.term?.toString() || 'unknown',
-      secondaryTerm: secondaryPremise.term?.toString() || 'unknown',
-      primaryType: primaryPremise.type || 'unknown',
-      secondaryType: secondaryPremise.type || 'unknown',
-      context: JSON.stringify(context || {})
-    };
-  }
-
-  /**
-   * Process the LM response
-   * @private
-   */
-  async _processResponse(response, primaryPremise, secondaryPremise) {
-    if (typeof this.responseProcessor === 'function') {
-      return await this.responseProcessor(response, primaryPremise, secondaryPremise);
+    if (secondaryPremise) {
+      filledPrompt = filledPrompt
+        .replace('{{secondaryTerm}}', secondaryPremise.term.toString?.() || String(secondaryPremise.term || 'unknown'))
+        .replace('{{secondaryType}}', secondaryPremise.punctuation || 'unknown')
+        .replace('{{secondaryTruth}}', secondaryPremise.truth ? 
+          `frequency: ${secondaryPremise.truth.f}, confidence: ${secondaryPremise.truth.c}` : 
+          'unknown truth value');
     }
-    return response;
+
+    return filledPrompt;
+  }
+
+  /**
+   * Create a default response processor
+   * @private
+   */
+  _createDefaultResponseProcessor() {
+    return async (lmResponse, primaryPremise, secondaryPremise, context) => {
+      if (!lmResponse) return [];
+
+      // In a real implementation, this would parse the LM response
+      // and create appropriate tasks. For now, return empty array.
+      return [];
+    };
   }
 }

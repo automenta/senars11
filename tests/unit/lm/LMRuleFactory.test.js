@@ -22,7 +22,7 @@ describe('LMRuleFactory', () => {
         expect(rule.id).toBe('test-rule');
         expect(rule.lm).toBe(lm);
         expect(rule.priority).toBe(0.7);
-        expect(rule._promptTemplate).toBe('Process: {{taskTerm}}');
+        expect(rule.promptTemplate).toBe('Process: {{taskTerm}}');
     });
 
     test('should throw error when required parameters are missing', () => {
@@ -45,7 +45,7 @@ describe('LMRuleFactory', () => {
         expect(rule.id).toBe('simple-rule');
         expect(rule.lm).toBe(lm);
         expect(rule.priority).toBe(0.6);
-        expect(rule._promptTemplate).toBe('Template: {{taskTerm}}');
+        expect(rule.promptTemplate).toBe('Template: {{taskTerm}}');
     });
 
     test('should create inference rule', () => {
@@ -54,7 +54,7 @@ describe('LMRuleFactory', () => {
         expect(rule.id).toBe('inference-rule');
         expect(rule.lm).toBe(lm);
         expect(rule.priority).toBe(0.5);
-        expect(rule._promptTemplate).toContain('Given the task');
+        expect(rule.promptTemplate).toContain('Given the task');
     });
 
     test('should create hypothesis rule', () => {
@@ -63,6 +63,6 @@ describe('LMRuleFactory', () => {
         expect(rule.id).toBe('hypothesis-rule');
         expect(rule.lm).toBe(lm);
         expect(rule.priority).toBe(0.4);
-        expect(rule._promptTemplate).toContain('generate a plausible hypothesis');
+        expect(rule.promptTemplate).toContain('generate a plausible hypothesis');
     });
 });

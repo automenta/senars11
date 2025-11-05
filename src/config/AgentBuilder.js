@@ -143,7 +143,7 @@ export class AgentBuilder {
 
         if (this.config.subsystems.functors) {
             const evaluator = nar._evaluator || nar.getEvaluator?.();
-            if (evaluator) {
+            if (evaluator && typeof evaluator.getFunctorRegistry === 'function') {
                 this._registerFunctors(evaluator.getFunctorRegistry(), this.config.subsystems.functors);
             }
         }

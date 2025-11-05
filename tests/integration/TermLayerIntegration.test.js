@@ -11,8 +11,9 @@ describe('TermLayer Integration', () => {
     });
 
     afterEach(() => {
-        if (nar.metricsMonitor) {
-            nar.metricsMonitor.shutdown();
+        // Clean up NAR instance
+        if (nar && typeof nar.dispose === 'function') {
+            nar.dispose();
         }
     });
 

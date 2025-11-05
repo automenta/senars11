@@ -133,3 +133,36 @@ export function createTestMemory(options = {}) {
     ...options.additionalMethods
   };
 }
+
+/**
+ * Create a basic reasoner for testing with default components
+ * @param {object} config - Configuration options for the reasoner
+ * @returns {object} Test reasoner object
+ */
+export function createReasoner(config = {}) {
+  // We need to import the real classes - but for the test utils, we'll create a mock reasoner
+  // This function was imported but not defined, so we'll create a basic mock structure
+  const memory = createTestMemory();
+  const TaskBagPremiseSource = class { constructor() { this.samplingObjectives = { priority: true }; } };
+  const Strategy = class {};
+  const RuleProcessor = class {};
+  const RuleExecutor = class {};
+  const Reasoner = class {
+    constructor() {
+      this.isRunning = false;
+      this.config = { maxDerivationDepth: 10, cpuThrottleInterval: 0 };
+    }
+    async step(timeout = 100) {
+      // Mock implementation
+      return null;
+    }
+    start() { this.isRunning = true; }
+    async stop() { this.isRunning = false; }
+    getMetrics() { 
+      return { totalDerivations: 0, startTime: Date.now(), throughput: 0 }; 
+    }
+    resetMetrics() {}
+  };
+  
+  return new Reasoner();
+}

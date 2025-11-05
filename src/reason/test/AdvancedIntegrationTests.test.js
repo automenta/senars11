@@ -1,3 +1,4 @@
+import {jest} from '@jest/globals';
 import { Reasoner } from '../Reasoner.js';
 import { TaskBagPremiseSource } from '../TaskBagPremiseSource.js';
 import { Strategy } from '../Strategy.js';

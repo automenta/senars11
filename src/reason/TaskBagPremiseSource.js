@@ -32,18 +32,32 @@ export class TaskBagPremiseSource extends PremiseSource {
     }, samplingObjectives);
     
     super(memory, defaults);
-    this.taskBag = memory?.taskBag ?? memory?.bag ?? null;
-    if (!this.taskBag) {
-      throw new ReasonerError('TaskBagPremiseSource requires a memory object with a taskBag or bag property', 'CONFIG_ERROR');
+    
+    // Support different memory types: traditional taskBag/bag, or Focus component
+    if (memory && typeof memory.getTasks === 'function') {
+      // This is a Focus-like component that uses getTasks method
+      this.focusComponent = memory;
+      this.taskBag = null; // No traditional taskBag
+    } else {
+      // Traditional memory with taskBag or bag property
+      this.taskBag = memory?.taskBag ?? memory?.bag ?? null;
+      this.focusComponent = null;
     }
     
-    // Initialize sampling strategy weights
-    this.weights = mergeConfig({
-      priority: 1.0,
-      recency: 0.0,
-      punctuation: 0.0,
-      novelty: 0.0
-    }, defaults.weights);
+    if (!this.taskBag && !this.focusComponent) {
+      throw new ReasonerError('TaskBagPremiseSource requires either a memory object with a taskBag/bag property or a Focus component with getTasks method', 'CONFIG_ERROR');
+    }
+    
+    // Initialize sampling strategy weights based on sampling objectives
+    const initialWeights = {
+      priority: defaults.priority ? 1.0 : 0.0,
+      recency: defaults.recency ? 1.0 : 0.0,
+      punctuation: defaults.punctuation ? 1.0 : 0.0,
+      novelty: defaults.novelty ? 1.0 : 0.0
+    };
+    
+    // Override with any explicit weights provided
+    this.weights = mergeConfig(initialWeights, defaults.weights);
     
     // Performance tracking for dynamic adaptation
     this.performanceStats = {
@@ -155,6 +169,12 @@ export class TaskBagPremiseSource extends PremiseSource {
    * @returns {number}
    */
   _getBagSize() {
+    if (this.focusComponent) {
+      // For Focus component, get the number of tasks in the current focus
+      const tasks = this.focusComponent.getTasks(1000); // Get all tasks (up to 1000)
+      return tasks.length;
+    }
+    
     if (this.taskBag.size !== undefined) return this.taskBag.size;
     if (typeof this.taskBag.length === 'number') return this.taskBag.length;
     if (typeof this.taskBag.count === 'function') return this.taskBag.count();
@@ -184,6 +204,12 @@ export class TaskBagPremiseSource extends PremiseSource {
    * @returns {Task|null}
    */
   _sampleByPriority() {
+    if (this.focusComponent) {
+      // For Focus component, get highest priority task
+      const tasks = this.focusComponent.getTasks(1); // Get just the highest priority task
+      return tasks.length > 0 ? tasks[0] : null;
+    }
+    
     if (this.taskBag.take) {
       return this.taskBag.take();
     } else if (this.taskBag.pop) {
@@ -199,6 +225,31 @@ export class TaskBagPremiseSource extends PremiseSource {
    * @returns {Task|null}
    */
   _sampleByRecency() {
+    // Handle Focus component
+    if (this.focusComponent) {
+      // Get all tasks from focus
+      const allTasks = this.focusComponent.getTasks(1000); // Get up to 1000 tasks
+      if (allTasks.length === 0) return null;
+      
+      // Use a configurable target time (default to current time if not specified)
+      const targetTime = this.samplingObjectives.targetTime ?? Date.now();
+      
+      // Sort by closeness to target time (closest first)
+      allTasks.sort((a, b) => {
+        const timeA = a.stamp?.lastUpdated ?? a.stamp?.creationTime ?? 0;
+        const timeB = b.stamp?.lastUpdated ?? b.stamp?.creationTime ?? 0;
+        
+        // Calculate absolute distance to target time
+        const distanceA = Math.abs(timeA - targetTime);
+        const distanceB = Math.abs(timeB - targetTime);
+        
+        return distanceA - distanceB; // Closest to target time first
+      });
+      
+      // Return the task closest to target time
+      return allTasks[0];
+    }
+    
     // If the bag supports getting multiple items, we can prioritize based on closeness to target time
     if (this.taskBag.getAll && typeof this.taskBag.getAll === 'function') {
       const allTasks = this.taskBag.getAll();
@@ -237,6 +288,25 @@ export class TaskBagPremiseSource extends PremiseSource {
    * @returns {Task|null}
    */
   _sampleByPunctuation() {
+    // Handle Focus component
+    if (this.focusComponent) {
+      // Get all tasks from focus
+      const allTasks = this.focusComponent.getTasks(1000); // Get up to 1000 tasks
+      if (allTasks.length === 0) return null;
+      
+      // Filter for goals and questions
+      const goalsAndQuestions = allTasks.filter(task => {
+        const punctuation = task.sentence?.punctuation;
+        return punctuation === '?' || punctuation === '!'; // Goals use '!' and Questions use '?'
+      });
+      
+      if (goalsAndQuestions.length > 0) {
+        // Randomly select from goals/questions
+        const randomIndex = Math.floor(Math.random() * goalsAndQuestions.length);
+        return goalsAndQuestions[randomIndex];
+      }
+    }
+    
     // Get all tasks and filter for goals/questions
     if (this.taskBag.getAll && typeof this.taskBag.getAll === 'function') {
       const allTasks = this.taskBag.getAll();
@@ -269,6 +339,27 @@ export class TaskBagPremiseSource extends PremiseSource {
    * @returns {Task|null}
    */
   _sampleByNovelty() {
+    // Handle Focus component
+    if (this.focusComponent) {
+      // Get all tasks from focus
+      const allTasks = this.focusComponent.getTasks(1000); // Get up to 1000 tasks
+      if (allTasks.length === 0) return null;
+      
+      // Calculate novelty as inverse of derivation depth
+      const tasksWithNovelty = allTasks.map(task => {
+        const depth = task.stamp?.depth ?? 0;
+        // Higher novelty score for lower depth values
+        const novelty = 1 / (depth + 1); // Add 1 to avoid division by zero
+        return { task, novelty };
+      });
+      
+      // Sort by novelty (highest novelty first)
+      tasksWithNovelty.sort((a, b) => b.novelty - a.novelty);
+      
+      // Select the most novel task
+      return tasksWithNovelty[0].task;
+    }
+    
     // Get all tasks and select those with lower derivation depth
     if (this.taskBag.getAll && typeof this.taskBag.getAll === 'function') {
       const allTasks = this.taskBag.getAll();
