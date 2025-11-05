@@ -42,58 +42,39 @@ export class HigherOrderRule extends NALRule {
     }
 
     async _apply(task, context) {
-        const results = [];
-
-        if (!this._isHigherOrderTerm(task.term)) {
-            return results;
-        }
+        if (!this._isHigherOrderTerm(task.term)) return [];
 
         // Look for complementary terms that might match within the higher-order structure
-        const allTasks = this._collectTasks(context);
-        for (const compTask of allTasks) {
-            if (compTask === task) continue; // Don't match with itself
+        return this._collectTasks(context)
+            .filter(compTask => compTask !== task) // Don't match with itself
+            .map(compTask => {
+                const bindings = this._unify(task.term, compTask.term);
+                if (!bindings) return null;
 
-            // Attempt to match the outer structure while considering inner statements
-            const bindings = this._unify(task.term, compTask.term);
-
-            if (bindings) {
                 // Create a derived term by substituting bindings
                 const derivedTerm = this._substituteVariables(task.term, bindings);
-
                 // Calculate truth value for the derived statement
                 const derivedTruth = this._calculateTruth(task.truth, compTask.truth);
 
-                results.push(this._createDerivedTask(task, {
+                return this._createDerivedTask(task, {
                     term: derivedTerm,
                     truth: derivedTruth,
                     type: 'belief', // Default to belief type
                     priority: Math.max(task.priority, compTask.priority) * this.priority
-                }));
-            }
-        }
-
-        return results;
+                });
+            })
+            .filter(Boolean);
     }
 
     _collectTasks(context) {
-        const tasks = [];
-        if (context?.memory?.concepts) {
-            for (const concept of context.memory.concepts.values()) {
-                if (concept.beliefs) {
-                    tasks.push(...concept.beliefs);
-                }
-                if (concept.goals) {
-                    tasks.push(...concept.goals);
-                }
-            }
-        }
-        return tasks;
+        return context?.memory?.concepts ? 
+            Array.from(context.memory.concepts.values()).flatMap(concept => 
+                [...(concept.beliefs || []), ...(concept.goals || [])]
+            ) : [];
     }
 
     _calculateTruth(truth1, truth2) {
-        if (!truth1 || !truth2) {
-            return new Truth(0.5, 0.5); // Default truth if not provided
-        }
+        if (!truth1 || !truth2) return new Truth(0.5, 0.5); // Default truth if not provided
 
         // Combine truth values using NAL truth-value functions
         // For simplicity here, we'll return a combination of the two

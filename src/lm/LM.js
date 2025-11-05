@@ -14,7 +14,7 @@ export class LM extends BaseComponent {
         this.narseseTranslator = new NarseseTranslator();
         this.circuitBreaker = new CircuitBreaker(this._getCircuitBreakerConfig());
         this.lmMetrics = new Metrics();
-        this.activeWorkflows = new Set();
+        this.activeWorkflows = new Map(); // Track active workflows
         this.lmStats = {
             totalCalls: 0,
             totalTokens: 0,
@@ -78,7 +78,7 @@ export class LM extends BaseComponent {
     }
 
     _handleCircuitBreakerError(error, fallbackInput) {
-        if (error.message && error.message.includes('Circuit breaker is OPEN')) {
+        if (error.message?.includes('Circuit breaker is OPEN')) {
             this.logInfo('Circuit breaker is OPEN, using fallback...');
             return true;
         }
@@ -98,10 +98,9 @@ export class LM extends BaseComponent {
             this._updateStats(prompt, result, providerId, startTime);
             return result;
         } catch (error) {
-            if (this._handleCircuitBreakerError(error, prompt)) {
-                return this._handleFallback(prompt, options);
-            }
-            throw error;
+            return this._handleCircuitBreakerError(error, prompt)
+                ? this._handleFallback(prompt, options)
+                : Promise.reject(error);
         }
     }
 
@@ -114,10 +113,9 @@ export class LM extends BaseComponent {
         try {
             return await this._executeWithCircuitBreaker(provider, provider.generateEmbedding, text);
         } catch (error) {
-            if (this._handleCircuitBreakerError(error, text)) {
-                return this._handleEmbeddingFallback(text);
-            }
-            throw error;
+            return this._handleCircuitBreakerError(error, text)
+                ? this._handleEmbeddingFallback(text)
+                : Promise.reject(error);
         }
     }
 
@@ -130,15 +128,17 @@ export class LM extends BaseComponent {
         try {
             if (typeof provider.process === 'function') {
                 return await this._executeWithCircuitBreaker(provider, provider.process, prompt, options);
-            } else {
-                return provider.generateText ? await this.generateText(prompt, options, providerId) :
-                    provider.generate ? await provider.generate(prompt, options) : prompt;
             }
+            
+            return provider.generateText
+                ? await this.generateText(prompt, options, providerId)
+                : provider.generate
+                    ? await provider.generate(prompt, options)
+                    : prompt;
         } catch (error) {
-            if (this._handleCircuitBreakerError(error, prompt)) {
-                return this._handleFallback(prompt, options);
-            }
-            throw error;
+            return this._handleCircuitBreakerError(error, prompt)
+                ? this._handleFallback(prompt, options)
+                : Promise.reject(error);
         }
     }
 
@@ -175,7 +175,7 @@ export class LM extends BaseComponent {
 
     _handleEmbeddingFallback(text) {
         this.logInfo('Using fallback strategy - Generate embedding unavailable');
-        const textLength = text ? text.length : 0;
+        const textLength = text?.length || 0;
         return Array(8).fill(0).map((_, i) => Math.sin(textLength * (i + 1) * 0.1));
     }
 

@@ -4,10 +4,9 @@ import {Task} from '../task/Task.js';
 import {Stamp} from '../Stamp.js';
 
 /**
- * NALRule is the base class for all logical inference rules in the system.
- * It defines the structure of a rule, including its premises, conclusion, and truth function.
- * The actual application of the rule is handled by a ReasoningStrategy, which decouples
- * the logical definition of the rule from the algorithm used to find and apply it.
+ * Multi-Premise NALRule: Handles NAL reasoning with multiple premises
+ * This NALRule variant processes multiple tasks as premises to derive conclusions
+ * (Different from single-task pattern-based NALRule in nal subdirectory)
  */
 export class NALRule extends Rule {
     constructor(id, premises, conclusion, truthFunction, priority = 1.0, config = {}) {

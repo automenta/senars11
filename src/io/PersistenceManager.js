@@ -107,5 +107,4 @@ export class PersistenceManager {
     }
 }
 
-// Maintain backward compatibility
 export {PersistenceAdapter, FileSystemAdapter, MemoryAdapter};

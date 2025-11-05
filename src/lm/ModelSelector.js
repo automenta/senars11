@@ -27,13 +27,11 @@ export class ModelSelector {
             return this.providerRegistry.defaultProviderId || availableProviders[0] || null;
         }
 
-        let selected = availableProviders[0] || null;
-
-        if (constraints.performance === 'high') {
-            selected = availableProviders[0]; 
-        } else if (constraints.performance === 'low') {
-            selected = availableProviders[availableProviders.length - 1] || null;
-        }
+        const selected = constraints.performance === 'high'
+            ? availableProviders[0]
+            : constraints.performance === 'low'
+                ? availableProviders[availableProviders.length - 1] || null
+                : availableProviders[0] || null;
 
         return selected;
     }

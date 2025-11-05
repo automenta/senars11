@@ -24,9 +24,9 @@ export class ExtendedNALRule extends NALRule {
 
     _structuralEquivalence(term1, term2) {
         if (!term1 || !term2) return false;
-        if (term1.operator !== term2.operator) return false;
-        if ((term1.components?.length || 0) !== (term2.components?.length || 0)) return false;
-        if (term1.name !== term2.name) return false;
+        if (term1.operator !== term2.operator || 
+            (term1.components?.length || 0) !== (term2.components?.length || 0) ||
+            term1.name !== term2.name) return false;
 
         return !term1.components || term1.components.every((comp, i) =>
             this._structuralEquivalence(comp, term2.components[i]));
@@ -138,33 +138,21 @@ export class EquivalenceRule extends ExtendedNALRule {
         if (!this._matches(task, context)) return [];
 
         const [left, right] = task.term.components;
-        const results = [];
-
-        const implication1 = new Term('compound',
-            `(==> ${left.name}, ${right.name})`,
-            [left, right],
-            '==>');
-
-        results.push(this._createDerivedTask(task, {
-            term: implication1,
-            truth: this._calculateNALTruth(task.truth, new Truth(1.0, 0.9), 'intersection'),
-            type: task.type,
-            priority: task.priority * this.priority * 0.9
-        }));
-
-        const implication2 = new Term('compound',
-            `(==> ${right.name}, ${left.name})`,
-            [right, left],
-            '==>');
-
-        results.push(this._createDerivedTask(task, {
-            term: implication2,
-            truth: this._calculateNALTruth(task.truth, new Truth(1.0, 0.9), 'intersection'),
-            type: task.type,
-            priority: task.priority * this.priority * 0.9
-        }));
-
-        return results;
+        
+        return [
+            this._createDerivedTask(task, {
+                term: new Term('compound', `(==> ${left.name}, ${right.name})`, [left, right], '==>'),
+                truth: this._calculateNALTruth(task.truth, new Truth(1.0, 0.9), 'intersection'),
+                type: task.type,
+                priority: task.priority * this.priority * 0.9
+            }),
+            this._createDerivedTask(task, {
+                term: new Term('compound', `(==> ${right.name}, ${left.name})`, [right, left], '==>'),
+                truth: this._calculateNALTruth(task.truth, new Truth(1.0, 0.9), 'intersection'),
+                type: task.type,
+                priority: task.priority * this.priority * 0.9
+            })
+        ];
     }
 }
 
@@ -187,7 +175,6 @@ export class NegationRule extends ExtendedNALRule {
         if (!this._matches(task, context)) return [];
 
         const operand = task.term.components[0];
-        const results = [];
 
         if (operand.isCompound && operand.operator === '--' && operand.components?.length >= 1) {
             const doubleNegationTerm = operand.components[0];
@@ -196,15 +183,15 @@ export class NegationRule extends ExtendedNALRule {
                 (operand.truth?.confidence || 0.5) * 0.9
             );
 
-            results.push(this._createDerivedTask(task, {
+            return [this._createDerivedTask(task, {
                 term: doubleNegationTerm,
                 truth: derivedTruth,
                 type: task.type,
                 priority: task.priority * this.priority
-            }));
+            })];
         }
 
-        return results;
+        return [];
     }
 }
 
@@ -226,24 +213,19 @@ export class ConjunctionRule extends ExtendedNALRule {
     async _apply(task, context) {
         if (!this._matches(task, context)) return [];
 
-        const results = [];
-        const components = task.term.components;
+        const derivedTruth = new Truth(
+            task.truth.frequency,
+            task.truth.confidence * 0.9
+        );
 
-        for (const component of components) {
-            const derivedTruth = new Truth(
-                task.truth.frequency,
-                task.truth.confidence * 0.9
-            );
-
-            results.push(this._createDerivedTask(task, {
+        return task.term.components.map(component => 
+            this._createDerivedTask(task, {
                 term: component,
                 truth: derivedTruth,
                 type: task.type,
                 priority: task.priority * this.priority * 0.8
-            }));
-        }
-
-        return results;
+            })
+        );
     }
 }
 

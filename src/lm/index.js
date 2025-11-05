@@ -1,4 +1,3 @@
-// LM module index - exports all LM-related classes
 export {LM} from './LM.js';
 export {ProviderRegistry} from './ProviderRegistry.js';
 export {ModelSelector} from './ModelSelector.js';

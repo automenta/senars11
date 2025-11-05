@@ -16,8 +16,8 @@ export class LMRuleFactory {
 
     static createInferenceRule(id, lm, priority = 1.0, config = {}) {
         return this._createRuleWithTemplate(
-            id, 
-            lm, 
+            id,
+            lm,
             `Given the task "{{taskTerm}}" of type "{{taskType}}" with truth value "{{taskTruth}}", please generate a logical inference or conclusion based on this information. Respond with a valid Narsese statement.`,
             priority,
             config
@@ -40,9 +40,6 @@ export class LMRuleFactory {
     }
 
     static _createDefaultResponseProcessor() {
-        return async (lmResponse, task) => {
-            if (!lmResponse) return [];
-            return [];
-        };
+        return async (lmResponse, task) => lmResponse ? [] : [];
     }
 }

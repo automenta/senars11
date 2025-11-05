@@ -15,9 +15,7 @@ export class ProviderRegistry {
 
         this.providers.set(id, provider);
 
-        if (!this.defaultProviderId) {
-            this.defaultProviderId = id;
-        }
+        this.defaultProviderId ||= id;
 
         return this;
     }
@@ -33,7 +31,7 @@ export class ProviderRegistry {
     remove(id) {
         if (this.defaultProviderId === id) {
             const remainingProviders = Array.from(this.providers.keys());
-            this.defaultProviderId = remainingProviders.length > 1 ? 
+            this.defaultProviderId = remainingProviders.length > 1 ?
                 remainingProviders.find(key => key !== id) || null : null;
         }
         return this.providers.delete(id);

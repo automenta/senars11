@@ -1,6 +1,6 @@
 // NAL (Non-Axiomatic Logic) Module Index
 export { TruthFunctions } from './TruthFunctions.js';
-export { NALRule } from './NALRule.js';
+export { PatternBasedNALRule } from './PatternBasedNALRule.js';
 export { DeductionRule } from './DeductionRule.js';
 export { InductionRule } from './InductionRule.js';
 export { AbductionRule } from './AbductionRule.js';

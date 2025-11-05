@@ -26,12 +26,10 @@ export class MonitoringAPI {
         this.server = null;
         this.wss = null;
         this.clients = new Set();
-        this.eventEmitter = new EventEmitter();
 
         this.metrics = {
             cycleCount: 0,
             taskCount: 0,
-            conceptCount: 0,
             startTime: Date.now()
         };
 

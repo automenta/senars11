@@ -97,7 +97,7 @@ export class AdvancedNarseseTranslator {
             this.translationHistory.shift();
         }
 
-        const result = isReverse 
+        const result = isReverse
             ? { text: translated, confidence, original, context: this.contextBuffer }
             : { narsese: translated, confidence, original, context: this.contextBuffer };
 
@@ -152,12 +152,12 @@ export class AdvancedNarseseTranslator {
     }
 
     applyErrorCorrection(result) {
-        if (result.narsese && result.narsese.includes(' --> ') && 
+        if (result.narsese && result.narsese.includes(' --> ') &&
             !result.narsese.endsWith('.') && !result.narsese.endsWith('?') && !result.narsese.endsWith('!')) {
             result.narsese += '.';
         }
         
-        if (result.narsese && result.narsese.includes('()')) {
+        if (result.narsese?.includes('()')) {
             result.confidence = Math.min(result.confidence, 0.3);
             result.notes = (result.notes || '') + ' Potential syntax error: empty parentheses found.';
         }

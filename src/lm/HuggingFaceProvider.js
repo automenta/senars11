@@ -6,13 +6,11 @@ export class HuggingFaceProvider extends BaseProvider {
         this.modelName = config.modelName || 'sshleifer/distilbart-cnn-12-6';
         this.device = config.device || 'cpu';
 
-        if (this.modelName.includes('MobileBERT')) {
-            this.modelType = 'mobilebert';
-        } else if (this.modelName.includes('SmolLM')) {
-            this.modelType = 'smollm';
-        } else {
-            this.modelType = 'generic';
-        }
+        this.modelType = this.modelName.includes('MobileBERT')
+            ? 'mobilebert'
+            : this.modelName.includes('SmolLM')
+                ? 'smollm'
+                : 'generic';
 
         this.pipeline = null;
         this.tokenizer = null;
@@ -62,13 +60,17 @@ export class HuggingFaceProvider extends BaseProvider {
 
             if (Array.isArray(response) && response.length > 0) {
                 return response[0].generated_text || response[0].text || response[0];
-            } else if (typeof response === 'string') {
-                return response;
-            } else if (response?.generated_text) {
-                return response.generated_text;
-            } else {
-                return JSON.stringify(response);
             }
+            
+            if (typeof response === 'string') {
+                return response;
+            }
+            
+            if (response?.generated_text) {
+                return response.generated_text;
+            }
+            
+            return JSON.stringify(response);
         } catch (error) {
             throw new Error(`HuggingFaceProvider generateText failed: ${error.message}`);
         }

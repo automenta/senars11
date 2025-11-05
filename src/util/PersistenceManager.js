@@ -24,73 +24,81 @@ export class PersistenceManager {
         }
     }
     
-    async save(key, data) {
-        if (!this.options.enabled || !this.isInitialized) return false;
+    _checkAvailability() {
+        return this.options.enabled && this.isInitialized;
+    }
+    
+    _wrapOperation(operation, errorMessage) {
+        if (!this._checkAvailability()) {
+            return typeof operation() === 'boolean' ? false :
+                   typeof operation() === 'object' ? {} :
+                   Array.isArray(operation()) ? [] : null;
+        }
         
         try {
-            this.storage.set(key, data);
-            return true;
+            return operation();
         } catch (error) {
-            console.error(`Failed to save data for key ${key}:`, error);
-            return false;
+            console.error(errorMessage, error);
+            return typeof operation() === 'boolean' ? false :
+                   typeof operation() === 'object' ? {} :
+                   Array.isArray(operation()) ? [] : null;
         }
+    }
+    
+    async save(key, data) {
+        return this._wrapOperation(
+            () => {
+                this.storage.set(key, data);
+                return true;
+            },
+            `Failed to save data for key ${key}:`
+        );
     }
     
     async load(key) {
-        if (!this.options.enabled || !this.isInitialized) return null;
-        
-        try {
-            return this.storage.get(key) ?? null;
-        } catch (error) {
-            console.error(`Failed to load data for key ${key}:`, error);
-            return null;
-        }
+        return this._wrapOperation(
+            () => this.storage.get(key) ?? null,
+            `Failed to load data for key ${key}:`
+        );
     }
     
     async delete(key) {
-        if (!this.options.enabled || !this.isInitialized) return false;
-        
-        try {
-            const exists = this.storage.has(key);
-            exists && this.storage.delete(key);
-            return exists;
-        } catch (error) {
-            console.error(`Failed to delete data for key ${key}:`, error);
-            return false;
-        }
+        return this._wrapOperation(
+            () => {
+                const exists = this.storage.has(key);
+                exists && this.storage.delete(key);
+                return exists;
+            },
+            `Failed to delete data for key ${key}:`
+        );
     }
     
     async listKeys() {
-        if (!this.options.enabled || !this.isInitialized) return [];
-        
-        try {
-            return Array.from(this.storage.keys());
-        } catch (error) {
-            console.error('Failed to list keys:', error);
-            return [];
-        }
+        return this._wrapOperation(
+            () => Array.from(this.storage.keys()),
+            'Failed to list keys:'
+        );
     }
     
     async clear() {
-        if (!this.options.enabled || !this.isInitialized) return false;
-        
-        try {
-            this.storage.clear();
-            return true;
-        } catch (error) {
-            console.error('Failed to clear storage:', error);
-            return false;
-        }
+        return this._wrapOperation(
+            () => {
+                this.storage.clear();
+                return true;
+            },
+            'Failed to clear storage:'
+        );
     }
     
     async getStats() {
-        if (!this.options.enabled || !this.isInitialized) return {};
-        
-        return {
-            keyCount: this.storage.size,
-            enabled: this.options.enabled,
-            storagePath: this.options.storagePath,
-            autoSave: this.options.autoSave
-        };
+        return this._wrapOperation(
+            () => ({
+                keyCount: this.storage.size,
+                enabled: this.options.enabled,
+                storagePath: this.options.storagePath,
+                autoSave: this.options.autoSave
+            }),
+            'Failed to get stats:'
+        );
     }
 }
