@@ -1,21 +1,42 @@
-export const sortByProperty = (items, prop, desc = false) =>
-    [...items].sort((a, b) => (desc ? (b[prop] || 0) - (a[prop] || 0) : (a[prop] || 0) - (b[prop] || 0)));
+export const sortByProperty = (items, prop, desc = false) => {
+    // Handle edge cases
+    if (!Array.isArray(items) || items.length === 0) return [];
+    
+    return [...items].sort((a, b) => {
+        const aVal = a[prop] ?? 0;
+        const bVal = b[prop] ?? 0;
+        return desc ? bVal - aVal : aVal - bVal;
+    });
+};
 
 export const filterBy = (items, predicate) => items.filter(predicate);
 export const findBy = (items, predicate) => items.find(predicate);
 
-export const groupBy = (items, keyFn) =>
-    items.reduce((groups, item) => ((groups[keyFn(item) || 'unknown'] ||= []).push(item), groups), {});
+export const groupBy = (items, keyFn) => {
+    if (!Array.isArray(items) || items.length === 0) return {};
+    
+    return items.reduce((groups, item) => {
+        const key = keyFn(item) ?? 'unknown';
+        (groups[key] ??= []).push(item);
+        return groups;
+    }, {});
+};
 
 export const applyToAll = (items, fn) => items.forEach(fn);
 
-export const createMap = (items, keyFn, valueFn = x => x) =>
-    new Map(items.map(item => [keyFn(item), valueFn(item)]));
+export const createMap = (items, keyFn, valueFn = x => x) => {
+    if (!Array.isArray(items)) return new Map();
+    return new Map(items.map(item => [keyFn(item), valueFn(item)]));
+};
 
-export const createSet = (items, keyFn = x => x) =>
-    new Set(items.map(keyFn));
+export const createSet = (items, keyFn = x => x) => {
+    if (!Array.isArray(items)) return new Set();
+    return new Set(items.map(keyFn));
+};
 
 export const chunk = (array, size) => {
+    if (!Array.isArray(array) || size <= 0) return [];
+    
     const chunks = [];
     for (let i = 0; i < array.length; i += size) {
         chunks.push(array.slice(i, i + size));
@@ -23,13 +44,20 @@ export const chunk = (array, size) => {
     return chunks;
 };
 
-export const flatten = arrays => [].concat(...arrays);
+export const flatten = arrays => {
+    if (!Array.isArray(arrays)) return [];
+    return [].concat(...arrays);
+};
 
-export const calculateAverage = values => 
-    !values?.length ? 0 : values.reduce((sum, val) => sum + val, 0) / values.length;
+export const calculateAverage = values => {
+    if (!Array.isArray(values) || values.length === 0) return 0;
+    return values.reduce((sum, val) => sum + val, 0) / values.length;
+};
 
 export const calculateStatistics = values => {
-    if (!values?.length) return {mean: 0, median: 0, std: 0, min: 0, max: 0, count: 0};
+    if (!Array.isArray(values) || values.length === 0) {
+        return {mean: 0, median: 0, std: 0, min: 0, max: 0, count: 0};
+    }
     
     const sorted = [...values].sort((a, b) => a - b);
     const n = values.length;
@@ -45,14 +73,15 @@ export const calculateStatistics = values => {
 };
 
 export const getPercentile = (values, percentile) => {
-    if (!values?.length) return 0;
+    if (!Array.isArray(values) || values.length === 0) return 0;
+    
     const sorted = [...values].sort((a, b) => a - b);
     const index = Math.floor(percentile * (sorted.length - 1));
     return sorted[index];
 };
 
 export const getOutliers = (values, threshold = 2) => {
-    if (!values?.length) return [];
+    if (!Array.isArray(values) || values.length === 0) return [];
     
     const mean = calculateAverage(values);
     const std = Math.sqrt(values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / values.length);
@@ -61,7 +90,8 @@ export const getOutliers = (values, threshold = 2) => {
 };
 
 export const correlation = (values1, values2) => {
-    if (!values1 || !values2 || values1.length !== values2.length || !values1.length) return 0;
+    if (!Array.isArray(values1) || !Array.isArray(values2) ||
+        values1.length !== values2.length || values1.length === 0) return 0;
     
     const n = values1.length;
     const avg1 = calculateAverage(values1);
@@ -83,6 +113,17 @@ export const correlation = (values1, values2) => {
     return denominator === 0 ? 0 : numerator / denominator;
 };
 
-export const sum = values => values.reduce((acc, val) => acc + val, 0);
-export const min = values => Math.min(...values);
-export const max = values => Math.max(...values);
+export const sum = values => {
+    if (!Array.isArray(values)) return 0;
+    return values.reduce((acc, val) => acc + val, 0);
+};
+
+export const min = values => {
+    if (!Array.isArray(values) || values.length === 0) return Infinity;
+    return Math.min(...values);
+};
+
+export const max = values => {
+    if (!Array.isArray(values) || values.length === 0) return -Infinity;
+    return Math.max(...values);
+};

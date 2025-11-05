@@ -28,7 +28,7 @@ export const mergeConfig = (base, ...overrides) =>
     freeze(overrides.reduce((acc, cfg) => ({...acc, ...cfg}), {...base}));
 
 export const isNumber = val => typeof val === 'number' && !isNaN(val);
-export const round = (val, decimals = 2) => Number(Math.round(val * Math.pow(10, decimals)) + 'e-' + decimals);
+export const round = (val, decimals = 2) => Number(Math.round(val + 'e' + decimals) + 'e-' + decimals);
 
 export const capitalize = str => str.charAt(0).toUpperCase() + str.slice(1);
 export const kebabCase = str => str.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();

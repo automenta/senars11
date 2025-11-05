@@ -8,9 +8,16 @@ export class EventBus {
         this._errorHandlers = new Set();
         this._stats = {eventsEmitted: 0, eventsHandled: 0, errors: 0};
         this._enabled = true;
+        this._maxListeners = 10; // Prevent memory leaks
     }
     
     on(eventName, callback) {
+        // Check for potential memory leak
+        const currentCount = this.listenerCount(eventName);
+        if (currentCount >= this._maxListeners) {
+            console.warn(`Possible memory leak detected: ${currentCount} listeners for event "${eventName}"`);
+        }
+        
         this._emitter.on(eventName, callback);
         return this;
     }
@@ -52,10 +59,14 @@ export class EventBus {
         const traceId = options.traceId || TraceId.generate();
         let processedData = {...data, eventName, traceId};
         
-        // Process middleware
+        // Process middleware in parallel where possible
         for (const middleware of this._middleware) {
             try {
-                processedData = await middleware(processedData);
+                // Allow middleware to be either sync or async
+                const result = middleware(processedData);
+                processedData = result instanceof Promise ? await result : result;
+                
+                // Allow middleware to cancel event processing by returning null
                 if (processedData === null) return;
             } catch (error) {
                 return this._handleError('middleware', error, {eventName, data, traceId});
@@ -74,7 +85,8 @@ export class EventBus {
     
     _handleError(type, error, context) {
         // Process error handlers
-        for (const handler of this._errorHandlers) {
+        const errorHandlers = [...this._errorHandlers]; // Create snapshot to prevent modification during iteration
+        for (const handler of errorHandlers) {
             try {
                 handler(error, type, context);
             } catch (handlerError) {
@@ -83,7 +95,7 @@ export class EventBus {
         }
         
         // Default error logging
-        if (this._errorHandlers.size === 0) {
+        if (errorHandlers.length === 0) {
             console.error(`EventBus error in ${type}:`, error, context);
         }
     }
@@ -96,6 +108,7 @@ export class EventBus {
         this._emitter.all.clear();
         this._middleware = [];
         this._errorHandlers.clear();
+        this._stats = {eventsEmitted: 0, eventsHandled: 0, errors: 0};
     }
     
     enable() {
@@ -116,5 +129,26 @@ export class EventBus {
     
     listenerCount(eventName) {
         return this._emitter.all.get(eventName)?.size || 0;
+    }
+    
+    // Added utility methods for better control
+    setMaxListeners(maxListeners) {
+        if (typeof maxListeners === 'number' && maxListeners > 0) {
+            this._maxListeners = maxListeners;
+        }
+        return this;
+    }
+    
+    getMaxListeners() {
+        return this._maxListeners;
+    }
+    
+    removeAllListeners(eventName) {
+        if (eventName) {
+            this._emitter.all.delete(eventName);
+        } else {
+            this._emitter.all.clear();
+        }
+        return this;
     }
 }

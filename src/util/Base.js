@@ -14,6 +14,6 @@ export class Base {
         validator?.(this);
         
         // Enforce immutability
-        Object.freeze(this);
+        return Object.freeze(this);
     }
 }

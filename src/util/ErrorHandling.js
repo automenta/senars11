@@ -1,36 +1,61 @@
 import {Logger} from './Logger.js';
 import {SystemConfig} from '../nar/SystemConfig.js';
 
-const ERROR_TYPES = {
+const ERROR_TYPES = Object.freeze({
     LOGIC: 'logic',
     NETWORK: 'network',
     RESOURCE: 'resource',
     SYNTAX: 'syntax',
     VALIDATION: 'validation',
     UNKNOWN: 'unknown'
-};
-const SEVERITY_LEVELS = {HIGH: 'high', MEDIUM: 'medium', LOW: 'low'};
+});
+
+const SEVERITY_LEVELS = Object.freeze({
+    HIGH: 'high',
+    MEDIUM: 'medium',
+    LOW: 'low'
+});
 
 class ErrorClassifier {
     static classify(error) {
-        const logicErrors = ['TypeError', 'ReferenceError'];
-        if (logicErrors.includes(error.name)) return ERROR_TYPES.LOGIC;
-        if (/(timeout|network)/.test(error.message)) return ERROR_TYPES.NETWORK;
-        if (/(memory|heap)/.test(error.message)) return ERROR_TYPES.RESOURCE;
-        if (error.name === 'SyntaxError') return ERROR_TYPES.SYNTAX;
-        if (/(validation|invalid)/.test(error.message.toLowerCase())) return ERROR_TYPES.VALIDATION;
+        // More precise error classification
+        const errorTypeMap = {
+            [ERROR_TYPES.LOGIC]: ['TypeError', 'ReferenceError', 'RangeError', 'EvalError'],
+            [ERROR_TYPES.NETWORK]: ['NetworkError', 'TimeoutError', 'AbortError'],
+            [ERROR_TYPES.RESOURCE]: ['OutOfMemoryError', 'HeapError'],
+            [ERROR_TYPES.SYNTAX]: ['SyntaxError'],
+            [ERROR_TYPES.VALIDATION]: ['ValidationError']
+        };
+
+        // Check by error name
+        for (const [type, names] of Object.entries(errorTypeMap)) {
+            if (names.includes(error.name)) return type;
+        }
+
+        // Check by message patterns
+        const message = error.message?.toLowerCase() || '';
+        if (/(timeout|network|connection|fetch)/.test(message)) return ERROR_TYPES.NETWORK;
+        if (/(memory|heap|out of memory)/.test(message)) return ERROR_TYPES.RESOURCE;
+        if (/(validation|invalid|must be|cannot be)/.test(message)) return ERROR_TYPES.VALIDATION;
+
         return ERROR_TYPES.UNKNOWN;
     }
 
     static determineSeverity(error, provided) {
-        return provided || {
+        // Return provided severity if specified
+        if (provided) return provided;
+        
+        // Map error types to default severities
+        const severityMap = {
             [ERROR_TYPES.LOGIC]: SEVERITY_LEVELS.HIGH,
             [ERROR_TYPES.NETWORK]: SEVERITY_LEVELS.MEDIUM,
             [ERROR_TYPES.RESOURCE]: SEVERITY_LEVELS.HIGH,
             [ERROR_TYPES.SYNTAX]: SEVERITY_LEVELS.HIGH,
             [ERROR_TYPES.VALIDATION]: SEVERITY_LEVELS.LOW,
             [ERROR_TYPES.UNKNOWN]: SEVERITY_LEVELS.MEDIUM,
-        }[this.classify(error)];
+        };
+        
+        return severityMap[this.classify(error)] || SEVERITY_LEVELS.MEDIUM;
     }
 }
 
@@ -44,12 +69,16 @@ class ErrorTracker {
     track(errorInfo) {
         this.errorRateWindow.push({timestamp: errorInfo.timestamp, severity: errorInfo.severity});
         this._cleanup();
-        this.getErrorRate() > this.maxErrorRate &&
-            this.logger.warn(`High error rate: ${(this.getErrorRate() * 100).toFixed(2)}%`);
+        
+        const errorRate = this.getErrorRate();
+        if (errorRate > this.maxErrorRate) {
+            this.logger.warn(`High error rate: ${(errorRate * 100).toFixed(2)}%`);
+        }
     }
 
     getErrorRate() {
         if (!this.errorRateWindow.length) return 0;
+        
         const recentErrors = this.errorRateWindow.filter(err =>
             [SEVERITY_LEVELS.HIGH, SEVERITY_LEVELS.MEDIUM].includes(err.severity));
         return recentErrors.length / this.errorRateWindow.length;
@@ -58,6 +87,16 @@ class ErrorTracker {
     _cleanup() {
         const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
         this.errorRateWindow = this.errorRateWindow.filter(err => err.timestamp > fiveMinutesAgo);
+    }
+    
+    // Added method to get error counts by type
+    getErrorCounts() {
+        const counts = {};
+        this.errorRateWindow.forEach(err => {
+            const type = err.type || 'unknown';
+            counts[type] = (counts[type] || 0) + 1;
+        });
+        return counts;
     }
 }
 
@@ -94,24 +133,33 @@ class ErrorRecovery {
     }
 
     async _executeRecovery(errorInfo, options) {
-        const strategies = {
-            [ERROR_TYPES.NETWORK]: this._recoverNetwork,
-            [ERROR_TYPES.RESOURCE]: this._recoverResource,
-            [ERROR_TYPES.VALIDATION]: this._recoverValidation,
-        };
+        // Simplified recovery strategy mapping
+        const strategies = new Map([
+            [ERROR_TYPES.NETWORK, () => ({success: false, needsRetry: true})],
+            [ERROR_TYPES.RESOURCE, () => ({success: false, degraded: true})],
+            [ERROR_TYPES.VALIDATION, (err, opts) =>
+                opts.defaultValue !== undefined
+                    ? {success: true, value: opts.defaultValue}
+                    : {success: false, skip: true}
+            ],
+            // Generic fallback for all other error types
+            ['default', () => ({success: false, degraded: true})]
+        ]);
 
-        const strategy = strategies[errorInfo.type] || this._recoverGeneric;
-        return await strategy.call(this, errorInfo, options);
+        const strategy = strategies.get(errorInfo.type) || strategies.get('default');
+        return await strategy(errorInfo, options);
     }
-
-    async _recoverNetwork() { return {success: false, needsRetry: true}; }
-    async _recoverResource() { return {success: false, degraded: true}; }
-    async _recoverValidation(errorInfo, options) {
-        return options.defaultValue !== undefined
-            ? {success: true, value: options.defaultValue}
-            : {success: false, skip: true};
+    
+    // Added method to reset recovery attempts for a specific error
+    resetRecoveryAttempts(errorType, message) {
+        const errorKey = `${errorType}:${message.substring(0, 30)}`;
+        this.recoveryAttempts.delete(errorKey);
     }
-    async _recoverGeneric() { return {success: false, degraded: true}; }
+    
+    // Added method to get current recovery attempts
+    getRecoveryAttempts() {
+        return new Map(this.recoveryAttempts);
+    }
 }
 
 export class ErrorHandling {
@@ -121,10 +169,10 @@ export class ErrorHandling {
         this.errorRegistry = new Map();
         this.degradationLevel = 0;
 
-        const errorConfig = this.config.get('errorHandling');
-        this.tracker = new ErrorTracker(errorConfig.maxErrorRate);
-        this.recovery = new ErrorRecovery(errorConfig.recoveryAttempts, this.logger);
-        this.enableRecovery = errorConfig.enableRecovery;
+        const errorConfig = this.config.get('errorHandling') || {};
+        this.tracker = new ErrorTracker(errorConfig.maxErrorRate || 0.1);
+        this.recovery = new ErrorRecovery(errorConfig.recoveryAttempts || 3, this.logger);
+        this.enableRecovery = errorConfig.enableRecovery ?? true;
     }
 
     async handleError(error, context = {}, options = {}) {
@@ -139,8 +187,9 @@ export class ErrorHandling {
             return await this.recovery.attemptRecovery(errorInfo, options);
         }
 
-        if (this.config.get('errorHandling.enableGracefulDegradation'))
+        if (this.config.get('errorHandling.enableGracefulDegradation')) {
             return {success: false, degraded: true, error: errorInfo};
+        }
 
         throw error;
     }
@@ -158,7 +207,7 @@ export class ErrorHandling {
     }
 
     _logError(errorInfo) {
-        const level = {high: 'error', medium: 'warn', low: 'info'}[errorInfo.severity];
+        const level = {high: 'error', medium: 'warn', low: 'info'}[errorInfo.severity] || 'error';
         this.logger[level](`Error [${errorInfo.type}][${errorInfo.severity}]: ${errorInfo.message}`, {
             context: errorInfo.context, stack: errorInfo.stack, timestamp: errorInfo.timestamp
         });
@@ -181,7 +230,7 @@ export class ErrorHandling {
 
     _assessDegradation() {
         const currentErrorRate = this.tracker.getErrorRate();
-        const maxErrorRate = this.config.get('errorHandling.maxErrorRate');
+        const maxErrorRate = this.config.get('errorHandling.maxErrorRate') || 0.1;
 
         if (currentErrorRate > maxErrorRate) {
             this.degradationLevel = Math.min(1, this.degradationLevel + 0.1);
@@ -191,8 +240,13 @@ export class ErrorHandling {
         }
     }
 
-    getDegradationLevel() { return this.degradationLevel; }
-    isDegraded() { return this.degradationLevel > 0.5; }
+    getDegradationLevel() {
+        return this.degradationLevel;
+    }
+    
+    isDegraded() {
+        return this.degradationLevel > 0.5;
+    }
     
     getStats() {
         return {
@@ -200,10 +254,11 @@ export class ErrorHandling {
             errorRate: this.tracker.getErrorRate(),
             totalErrors: this.tracker.errorRateWindow.length,
             errorRegistrySize: this.errorRegistry.size,
-            recoveryAttempts: new Map(this.recovery.recoveryAttempts),
+            recoveryAttempts: this.recovery.getRecoveryAttempts(),
             registeredErrors: Array.from(this.errorRegistry.entries()).map(([key, value]) => ({
                 key, count: value.count, lastSeen: value.lastSeen, instances: value.instances.length
-            }))
+            })),
+            errorCountsByType: this.tracker.getErrorCounts()
         };
     }
     
@@ -217,6 +272,16 @@ export class ErrorHandling {
     getErrorTypes() {
         return Object.values(ERROR_TYPES);
     }
+    
+    // Added utility methods
+    resetRecoveryAttempts(errorType, message) {
+        this.recovery.resetRecoveryAttempts(errorType, message);
+    }
+    
+    clearErrorRegistry() {
+        this.errorRegistry.clear();
+    }
 }
 
+// Export singleton instance
 export const GlobalErrorHandler = new ErrorHandling();
