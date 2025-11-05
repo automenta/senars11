@@ -5,36 +5,27 @@
  */
 
 import { LMRule } from '../LMRule.js';
-import { extractPrimaryTask, parseListFromResponse, cleanText, isValidText } from '../RuleHelpers.js';
-
-// Helper function to create sub-goal tasks (simplified - in reality would import Task, Punctuation, TruthValue)
-function createSubGoalTask(subGoal, originalTask) {
-  // This is a template - actual implementation would use proper Task creation
-  return {
-    term: `Sub-goal: ${subGoal}`,
-    punctuation: originalTask.punctuation, // Keep same punctuation type
-    truth: {
-      frequency: originalTask.truth?.frequency || 0.5,
-      confidence: (originalTask.truth?.confidence || 0.9) * 0.9 // Slightly reduce confidence for derived tasks
-    },
-    priority: Math.min(0.9, (originalTask.priority || 0.8) * 0.9), // Slightly reduce priority
-    derivedFrom: originalTask.id || originalTask.term?.toString?.() || 'original-task'
-  };
-}
+import { Task, TruthValue, Punctuation, TaskDerivation } from '../TaskUtils.js';
+import { 
+  parseSubGoals, 
+  cleanSubGoal, 
+  isValidSubGoal,
+  extractPrimaryTask,
+  isGoal 
+} from '../RuleHelpers.js';
 
 /**
  * Creates a goal decomposition rule using the enhanced LMRule.create method.
  * This rule identifies high-priority goals and uses an LM to decompose them into smaller, actionable sub-goals.
  *
- * @param {object} config - Configuration object containing lm and other options
+ * @param {object} dependencies - Object containing lm and other dependencies
+ * @param {object} config - Configuration options for the rule
  * @returns {LMRule} A new LMRule instance for goal decomposition.
  */
-export const createGoalDecompositionRule = (config) => {
-  const { id = 'goal-decomposition', lm, ...rest } = config;
-  
-  return LMRule.create({
-    id,
-    lm,
+export const createGoalDecompositionRule = (dependencies, config = {}) => {
+  const { lm } = dependencies;
+  const finalConfig = {
+    id: 'goal-decomposition',
     name: 'Goal Decomposition Rule',
     description: 'Breaks down high-level goals into concrete, actionable sub-goals using an LM.',
     priority: 0.9,
@@ -42,46 +33,37 @@ export const createGoalDecompositionRule = (config) => {
     maxSubGoals: 5,
     minGoalLength: 5,
     maxGoalLength: 150,
+    ...config,
+    lm
+  };
+
+  return LMRule.create({
+    ...finalConfig,
     
     condition: (primaryPremise, secondaryPremise, context) => {
-      // Check if we have an LM and a valid primary premise
-      if (!lm || !primaryPremise) return false;
-      
-      // Check if this is a goal (punctuation === '?')
-      // In real implementation, would check for actual punctuation constant
-      const isGoal = primaryPremise.punctuation === '?' || 
-                    (primaryPremise.punctuation && primaryPremise.punctuation.toLowerCase().includes('goal'));
-      
-      // Check if the goal has high enough priority
-      const priority = primaryPremise.priority || 0;
-      
-      return isGoal && priority > 0.7;
+      if (!lm) return false;
+      if (!primaryPremise) return false;
+      const isGoalTask = isGoal(primaryPremise);
+      const priority = primaryPremise.getPriority?.() || primaryPremise.priority || 0;
+      return isGoalTask && priority > 0.7;
     },
 
     prompt: (primaryPremise, secondaryPremise, context) => {
       const termStr = primaryPremise.term?.toString?.() || String(primaryPremise.term || 'unknown');
-      const minSubGoals = config.minSubGoals || 2;
-      const maxSubGoals = config.maxSubGoals || 5;
-      
-      return `Decompose the following goal into ${minSubGoals} to ${maxSubGoals} smaller, actionable sub-goals.
+      return `Decompose the following goal into ${finalConfig.minSubGoals} to ${finalConfig.maxSubGoals} smaller, actionable sub-goals.
 
 Goal: "${termStr}"
 
-Output the subgoals as a clear, numbered list, one per line. Each sub-goal should be concrete and specific.`;
+Output: List of subgoals, one per line`;
     },
 
     process: (lmResponse) => {
       if (!lmResponse) return [];
-      
-      const subGoals = parseListFromResponse(lmResponse);
-      const minGoalLength = config.minGoalLength || 5;
-      const maxGoalLength = config.maxGoalLength || 150;
-      const maxSubGoals = config.maxSubGoals || 5;
-      
+      const subGoals = parseSubGoals(lmResponse);
       return subGoals
-        .map(cleanText)
-        .filter(goal => isValidText(goal, minGoalLength, maxGoalLength))
-        .slice(0, maxSubGoals);
+        .map(cleanSubGoal)
+        .filter(goal => isValidSubGoal(goal, finalConfig.minGoalLength, finalConfig.maxGoalLength))
+        .slice(0, finalConfig.maxSubGoals);
     },
 
     generate: (processedOutput, primaryPremise, secondaryPremise, context) => {
@@ -89,10 +71,22 @@ Output the subgoals as a clear, numbered list, one per line. Each sub-goal shoul
         return [];
       }
 
-      // Create sub-goal tasks from the processed output
-      const newTasks = processedOutput.map(subGoal => 
-        createSubGoalTask(subGoal, primaryPremise)
-      );
+      // Create sub-goal tasks with proper Task objects
+      const newTasks = processedOutput.map(subGoal => {
+        // Create a new term for the sub-goal
+        const newTerm = new Task(subGoal, Punctuation.GOAL, {
+          frequency: primaryPremise.truth.f,
+          confidence: primaryPremise.truth.c * 0.9 // Slightly reduce confidence
+        });
+        
+        // Adjust priority slightly lower than original
+        newTerm.priority = Math.max(0.1, (primaryPremise.priority || 0.8) * 0.9);
+        
+        // Add derivation metadata
+        newTerm.derivedFrom = primaryPremise.term?.toString?.() || 'original-task';
+        
+        return newTerm;
+      });
 
       return newTasks;
     },
@@ -100,10 +94,8 @@ Output the subgoals as a clear, numbered list, one per line. Each sub-goal shoul
     lm_options: {
       temperature: 0.6,
       max_tokens: 500,
-      stop: ['\n\n', 'Question:', 'Goal:'],
-      ...config.lm_options
+      stop: ['\n\n'],
+      ...finalConfig.lm_options
     },
-    
-    ...rest
   });
 };

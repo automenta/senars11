@@ -1,4 +1,5 @@
 import {LMRule} from '../reason/LMRule.js';
+import {LMRuleUtils} from '../reason/LMRuleUtils.js';
 
 export class LMRuleFactory {
     /**
@@ -141,10 +142,102 @@ export class LMRuleFactory {
     }
 
     /**
+     * Create a rule based on v9 patterns using LMRuleUtils
+     */
+    static createPatternBased(config) {
+        return LMRuleUtils.createPatternBasedRule(config);
+    }
+
+    /**
+     * Create a punctuation-based rule using LMRuleUtils
+     */
+    static createPunctuationBased(config) {
+        return LMRuleUtils.createPunctuationBasedRule(config);
+    }
+
+    /**
+     * Create a priority-based rule using LMRuleUtils
+     */
+    static createPriorityBased(config) {
+        return LMRuleUtils.createPriorityBasedRule(config);
+    }
+
+    /**
      * Create a custom rule with a builder pattern for enhanced ergonomics
      */
     static builder() {
         return new LMRuleBuilder();
+    }
+
+    /**
+     * Convenience method to create common rule types using predefined templates
+     */
+    static createCommonRule(type, dependencies, config = {}) {
+        const { lm } = dependencies;
+        
+        switch (type) {
+            case 'goal-decomposition':
+                return this.create({
+                    id: config.id || 'goal-decomposition',
+                    lm,
+                    name: config.name || 'Goal Decomposition Rule',
+                    description: config.description || 'Breaks down high-level goals into sub-goals',
+                    priority: config.priority || 0.9,
+                    condition: (primary, secondary, ctx) => {
+                        // Check if primary is a goal with high priority
+                        return primary && 
+                               primary.punctuation === '!' && 
+                               (primary.getPriority?.() || primary.priority || 0) > 0.7;
+                    },
+                    prompt: LMRuleUtils.createPromptTemplate('goalDecomposition', config.options),
+                    process: LMRuleUtils.createResponseProcessor('list', config.options),
+                    generate: LMRuleUtils.createTaskGenerator('multipleSubTasks', config.options),
+                    lm_options: { temperature: 0.6, max_tokens: 500, ...config.lm_options }
+                });
+
+            case 'hypothesis-generation':
+                return this.create({
+                    id: config.id || 'hypothesis-generation',
+                    lm,
+                    name: config.name || 'Hypothesis Generation Rule',
+                    description: config.description || 'Generates hypotheses from beliefs',
+                    priority: config.priority || 0.6,
+                    condition: (primary, secondary, ctx) => {
+                        // Check if primary is a high-priority belief
+                        return primary && 
+                               primary.punctuation === '.' && 
+                               (primary.getPriority?.() || primary.priority || 0) > 0.7 &&
+                               (primary.truth?.c || primary.truth?.confidence || 0) > 0.8;
+                    },
+                    prompt: LMRuleUtils.createPromptTemplate('hypothesisGeneration'),
+                    process: LMRuleUtils.createResponseProcessor('single'),
+                    generate: LMRuleUtils.createTaskGenerator('singleTask', { punctuation: '?' }),
+                    lm_options: { temperature: 0.8, max_tokens: 200, ...config.lm_options }
+                });
+
+            case 'causal-analysis':
+                return this.create({
+                    id: config.id || 'causal-analysis',
+                    lm,
+                    name: config.name || 'Causal Analysis Rule',
+                    description: config.description || 'Analyzes causal relationships',
+                    priority: config.priority || 0.75,
+                    condition: (primary, secondary, ctx) => {
+                        const termStr = primary?.term?.toString?.() || '';
+                        return primary && 
+                               primary.punctuation === '.' && 
+                               (primary.getPriority?.() || primary.priority || 0) > 0.7 &&
+                               LMRuleUtils.createPatternBasedRule({ patternType: 'temporalCausal' }).condition(primary);
+                    },
+                    prompt: LMRuleUtils.createPromptTemplate('causalAnalysis'),
+                    process: LMRuleUtils.createResponseProcessor('single'),
+                    generate: LMRuleUtils.createTaskGenerator('singleTask', { punctuation: '.' }),
+                    lm_options: { temperature: 0.4, max_tokens: 300, ...config.lm_options }
+                });
+            
+            default:
+                throw new Error(`Unknown common rule type: ${type}`);
+        }
     }
 }
 

@@ -3,6 +3,8 @@
  * @description Shared helper functions for reasoning rules, enhanced for stream-based architecture.
  */
 
+import { Task, TruthValue, Punctuation } from './TaskUtils.js';
+
 /**
  * Extracts the primary task from the reasoning context.
  * @param {Task} primaryPremise - The primary premise
@@ -49,6 +51,49 @@ export function parseListFromResponse(lmResponse) {
       return line.replace(/^\s*\d+[\.)]\s*|^[-*]\s*/, '').trim();
     })
     .filter(item => item.length > 0); // Remove any empty strings
+}
+
+/**
+ * Parses sub-goals from LM response (v9 pattern)
+ * @param {string} lmResponse - The response from the language model
+ * @returns {Array<string>} Array of parsed sub-goals
+ */
+export function parseSubGoals(lmResponse) {
+  return lmResponse
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line.length > 0)
+    .map(line => line.replace(/^\s*\d+[\.)]\s*|^[-*]\s*/, '').trim());
+}
+
+/**
+ * Cleans a sub-goal string by removing quotes and punctuation (v9 pattern)
+ * @param {string} goal - The sub-goal string to clean
+ * @returns {string} The cleaned sub-goal
+ */
+export function cleanSubGoal(goal) {
+  if (!goal) return '';
+  goal = goal.replace(/^["']|["']$/g, '');
+  goal = goal.replace(/[.,;!?]+$/, '');
+  return goal.trim();
+}
+
+/**
+ * Validates if a sub-goal meets length and content criteria (v9 pattern)
+ * @param {string} goal - The sub-goal to validate
+ * @param {number} minLength - Minimum length requirement
+ * @param {number} maxLength - Maximum length requirement
+ * @returns {boolean} True if valid, false otherwise
+ */
+export function isValidSubGoal(goal, minLength, maxLength) {
+  if (!goal || goal.length < minLength || goal.length > maxLength) {
+    return false;
+  }
+  const lowerGoal = goal.toLowerCase();
+  if (lowerGoal.includes('sorry') || lowerGoal.includes('cannot') || lowerGoal.includes('unable')) {
+    return false;
+  }
+  return true;
 }
 
 /**
@@ -159,3 +204,63 @@ export function createContext(primaryPremise, secondaryPremise, systemContext = 
     }
   };
 }
+
+/**
+ * Helper to check if a task is a goal
+ */
+export function isGoal(task) {
+  return task && task.punctuation === Punctuation.GOAL;
+}
+
+/**
+ * Helper to check if a task is a question
+ */
+export function isQuestion(task) {
+  return task && task.punctuation === Punctuation.QUESTION;
+}
+
+/**
+ * Helper to check if a task is a judgment (belief)
+ */
+export function isJudgment(task) {
+  return task && task.punctuation === Punctuation.JUDGMENT;
+}
+
+/**
+ * Common keywords and patterns for different rule types
+ */
+export const KeywordPatterns = {
+  problemSolving: [
+    'solve', 'fix', 'repair', 'improve', 'handle', 'address', 'resolve', 'overcome', 'manage', 'operate',
+    'apply', 'adapt', 'implement', 'execute', 'create', 'build', 'design', 'plan', 'organize', 'find a way to'
+  ],
+  
+  conflict: ['contradict', 'conflict', 'inconsistent', 'opposite', 'versus', 'vs'],
+  
+  complexRelation: (termStr) => {
+    return termStr.includes('-->') || termStr.includes('<->') || termStr.includes('==>');
+  },
+  
+  narrative: [
+    'when', 'then', 'if', 'first', 'after', 'before', 'sequence', 'procedure', 'instruction', 'process', 'step', 'guide', 'how to'
+  ],
+  
+  temporalCausal: [
+    'before', 'after', 'when', 'then', 'while', 'during', 'causes', 'leads to', 'results in',
+    'because', 'since', 'due to', 'therefore', 'consequently', 'if', 'precedes', 'follows'
+  ],
+  
+  uncertainty: [
+    'maybe', 'perhaps', 'likely', 'unlikely', 'uncertain', 'probably', 'possibly', 'might',
+    'tend to', 'often', 'sometimes', 'generally', 'usually', 'could be', 'seems'
+  ],
+  
+  ambiguous: [
+    'it', 'this', 'that', 'they', 'them', 'which', 'what', 'how', 'some', 'few', 'many', 'most', 'thing', 'stuff', 'deal with'
+  ],
+  
+  complexity: [
+    'solve', 'achieve', 'optimize', 'balance', 'maximize', 'minimize', 'understand', 'analyze',
+    'investigate', 'discover', 'resolve', 'plan', 'design', 'create', 'develop', 'implement'
+  ]
+};

@@ -5,36 +5,33 @@
  */
 
 import { LMRule } from '../LMRule.js';
-import { extractPrimaryTask, createContext } from '../RuleHelpers.js';
+import { Task, TruthValue, Punctuation, TaskDerivation } from '../TaskUtils.js';
+import { extractPrimaryTask, isJudgment } from '../RuleHelpers.js';
 
 /**
  * Creates a hypothesis generation rule using the enhanced LMRule.create method.
  * This rule identifies interesting beliefs and uses an LM to generate related hypotheses.
  *
- * @param {object} config - Configuration object containing lm and other options
+ * @param {object} dependencies - Object containing lm and other dependencies
  * @returns {LMRule} A new LMRule instance for hypothesis generation.
  */
-export const createHypothesisGenerationRule = (config) => {
-  const { id = 'hypothesis-generation', lm, ...rest } = config;
-  
+export const createHypothesisGenerationRule = (dependencies) => {
+  const { lm } = dependencies;
   return LMRule.create({
-    id,
+    id: 'hypothesis-generation',
     lm,
     name: 'Hypothesis Generation Rule',
     description: 'Generates new, related hypotheses based on existing beliefs.',
     priority: 0.6,
-    
-    condition: (primaryPremise, secondaryPremise, context) => {
-      if (!lm || !primaryPremise) return false;
 
-      // For this rule, we want high-priority, confident beliefs
-      // In real implementation, punctuation constants would be used
-      const isBelief = primaryPremise.punctuation === '.' || 
-                      (primaryPremise.punctuation && primaryPremise.punctuation.toLowerCase().includes('judgment'));
-      
-      const priority = primaryPremise.priority || 0;
-      const confidence = primaryPremise.truth?.confidence || 0;
-      
+    condition: (primaryPremise, secondaryPremise, context) => {
+      if (!primaryPremise) return false;
+
+      const isBelief = isJudgment(primaryPremise);
+      const priority = primaryPremise.getPriority?.() || primaryPremise.priority || 0;
+      const confidence = primaryPremise.truth?.c || primaryPremise.truth?.confidence || 0;
+
+      // Trigger on high-priority, confident beliefs
       return isBelief && priority > 0.7 && confidence > 0.8;
     },
 
@@ -50,26 +47,22 @@ State the hypothesis as a clear, single statement.`;
 
     process: (lmResponse) => {
       // Clean and validate the response
-      if (!lmResponse) return '';
-      return lmResponse.trim().replace(/^Hypothesis:\s*/i, '');
+      const hypothesis = lmResponse?.trim?.().replace(/^Hypothesis:\s*/i, '') || '';
+      return hypothesis;
     },
 
     generate: (processedOutput, primaryPremise, secondaryPremise, context) => {
       if (!processedOutput) return [];
 
-      // Create a new task representing the hypothesis
-      // In real implementation, would import Task and Punctuation
-      const newTask = {
-        term: processedOutput,
-        // Frame hypothesis as a question to be investigated
-        punctuation: '?',
-        truth: {
-          frequency: 0.5, // Hypotheses start with medium uncertainty
-          confidence: 0.5
-        },
-        priority: 0.7, // Give hypothesis reasonable priority to be tested
-        derivedFrom: primaryPremise.id || primaryPremise.term?.toString?.() || 'original-belief'
-      };
+      // Generate a new question to investigate the hypothesis
+      const newTask = new Task(
+        processedOutput,
+        Punctuation.QUESTION, // Frame hypothesis as a question to be investigated
+        { frequency: 0.5, confidence: 0.5 }, // Hypotheses start with medium uncertainty
+        null,
+        null,
+        0.7 // Give reasonable priority to be tested
+      );
 
       return [newTask];
     },
@@ -77,9 +70,6 @@ State the hypothesis as a clear, single statement.`;
     lm_options: {
       temperature: 0.8,
       max_tokens: 200,
-      ...config.lm_options
     },
-    
-    ...rest
   });
 };
