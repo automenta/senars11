@@ -160,7 +160,8 @@ export class TestNAR {
             reasoning: {
                 maxCombinations: 25, // Smaller limit for tests (was 100, now 50)
                 maxRuleApplications: 50, // Smaller limit for tests (was 1000, now 100)
-                maxTasksPerBatch: 5 // Smaller batches for tests (was 50, now 10)
+                maxTasksPerBatch: 5, // Smaller batches for tests (was 50, now 10)
+                useStreamReasoner: true // Enable stream-based reasoning for tests
             },
             cycle: {
                 delay: 1 // Minimum delay to pass validation but still optimized for tests
@@ -169,9 +170,6 @@ export class TestNAR {
         
         this.nar = new NAR(config);
         await this.nar.initialize(); // Initialize the NAR to ensure components are set up
-
-        // Allow for fewer cycles to ensure reasoning completion (optimized for tests)
-        const maxCycles = 1; // Reduced cycles for tests after inputs (was 2)
 
         // Process operations
         const expectations = [];
@@ -189,6 +187,8 @@ export class TestNAR {
                     break;
 
                 case 'run':
+                    // For stream reasoner, we need to step the stream reasoner
+                    // For cycle-based reasoner, use the traditional approach
                     for (let i = 0; i < op.cycles; i++) {
                         await this.nar.step();
                     }
@@ -201,8 +201,29 @@ export class TestNAR {
         }
 
         // Additional reasoning cycles after all inputs to allow for inference
-        for (let i = 0; i < maxCycles; i++) {
-            await this.nar.step();
+        // For stream reasoner, we might need more time to let the stream process
+        if (this.nar._useStreamReasoner && this.nar.streamReasoner) {
+            // For stream reasoner, we should ensure it's started and give time for processing
+            if (!this.nar.streamReasoner.isRunning) {
+                this.nar.streamReasoner.start();
+                // Wait to allow the stream to start processing input tasks
+                await new Promise(resolve => setTimeout(resolve, 10));
+            }
+            
+            // Execute steps to make sure processing happens
+            for (let i = 0; i < 10; i++) {  // Run multiple steps for stream reasoner
+                await this.nar.step();
+                // Small delay to allow async processing
+                await new Promise(resolve => setTimeout(resolve, 5));
+            }
+            
+            // Additional wait for any async rules to complete derivations
+            await new Promise(resolve => setTimeout(resolve, 50));
+        } else {
+            // For the old cycle-based reasoner, just run one cycle
+            for (let i = 0; i < 1; i++) {
+                await this.nar.step();
+            }
         }
 
         // Get all beliefs from NAR after processing

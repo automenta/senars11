@@ -2,6 +2,8 @@
  * New EvaluationEngine for the stream-based reasoner system
  * Provides equation solving and evaluation capabilities
  */
+import { FunctorRegistry } from './FunctorRegistry.js';
+
 export class EvaluationEngine {
   constructor(context = null, termFactory = null) {
     this.context = context;
@@ -13,6 +15,7 @@ export class EvaluationEngine {
     // Initialize evaluation engine components
     this.operationRegistry = new Map();
     this.variableBindings = new Map();
+    this._functorRegistry = new FunctorRegistry();
   }
 
   /**
@@ -143,6 +146,13 @@ export class EvaluationEngine {
   reset() {
     this.variableBindings.clear();
     // Reset other state as needed
+  }
+
+  /**
+   * Get the functor registry
+   */
+  getFunctorRegistry() {
+    return this._functorRegistry;
   }
 
   /**

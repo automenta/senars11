@@ -1,168 +1,47 @@
 /**
- * Testing utilities for the reasoner components
+ * Test utilities for the new reasoner architecture
  */
 
-/**
- * Create a test task for testing
- * @param {object} overrides - Properties to override in the test task
- * @returns {object} Test task object
- */
-export function createTestTask(overrides = {}) {
-  const defaultTask = {
-    id: `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-    term: {
-      toString: () => 'defaultTerm',
-      ...overrides.term
-    },
-    type: 'belief',
-    sentence: {
-      punctuation: '.',
-      ...overrides.sentence
-    },
-    stamp: {
-      creationTime: Date.now(),
-      depth: 0,
-      id: `stamp_${Date.now()}`,
-      ...overrides.stamp
-    },
-    priority: 0.5,
-    ...overrides
-  };
+import { Task } from '../../task/Task.js';
+import { Truth } from '../../Truth.js';
+import { ArrayStamp } from '../../Stamp.js';
+import { Term } from '../../term/Term.js';
+import { Memory } from '../../memory/Memory.js';
+
+// Create a test task
+export function createTestTask(termStr, type = 'BELIEF', freq = 0.9, conf = 0.9, priority = 0.5) {
+  const term = new Term(termStr); // Create proper Term object
+  const truth = new Truth(freq, conf);
+  const stamp = new ArrayStamp({ source: 'INPUT' });
   
-  return defaultTask;
+  return new Task({
+    term,
+    type,
+    truth,
+    stamp,
+    budget: { priority }
+  });
 }
 
-/**
- * Wait for a condition to be true
- * @param {Function} condition - Function that returns boolean
- * @param {number} timeout - Timeout in ms
- * @param {number} interval - Check interval in ms
- * @returns {Promise<boolean>} Whether condition was met
- */
-export async function waitForCondition(condition, timeout = 2000, interval = 10) {
-  const startTime = Date.now();
+// Create a test memory (using real Memory component)
+export function createTestMemory(tasks = []) {
+  const memory = new Memory();
   
-  while (Date.now() - startTime < timeout) {
-    if (await Promise.resolve(condition())) {
-      return true;
-    }
-    await new Promise(resolve => setTimeout(resolve, interval));
+  // Add initial tasks to memory if provided
+  for (const task of tasks) {
+    memory.addTask(task);
   }
   
-  return false;
+  return memory;
 }
 
-/**
- * Assert that an async generator yields expected values
- * @param {AsyncGenerator} asyncGen - Generator to test
- * @param {Array} expectedValues - Expected values
- * @param {number} timeout - Timeout in ms
- * @returns {Promise<boolean>} Whether assertion passed
- */
-export async function assertAsyncGenerator(asyncGen, expectedValues, timeout = 1000) {
-  const actualValues = [];
-  const startTime = Date.now();
-  
-  try {
-    for await (const value of asyncGen) {
-      actualValues.push(value);
-      if (actualValues.length >= expectedValues.length) {
-        break;
-      }
-      if (Date.now() - startTime > timeout) {
-        throw new Error(`Timeout waiting for async generator values`);
-      }
-    }
-  } catch (error) {
-    // Ignore errors during iteration, just return what we got
-  }
-  
-  // Simple comparison - might need to be more sophisticated depending on test needs
-  return JSON.stringify(actualValues) === JSON.stringify(expectedValues);
-}
-
-/**
- * Create a test task bag for testing memory components
- * @param {Array} tasks - Initial tasks for the bag
- * @returns {object} Test task bag
- */
+// Create a test task bag
 export function createTestTaskBag(tasks = []) {
-  let internalTasks = [...tasks];
-  
   return {
-    get size() {
-      return internalTasks.length;
-    },
-    take: () => {
-      if (internalTasks.length > 0) {
-        return internalTasks.shift();
-      }
-      return null;
-    },
-    add: (task) => {
-      internalTasks.push(task);
-      // Sort by priority in descending order (higher priority first)
-      internalTasks.sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
-    },
-    remove: (task) => {
-      const index = internalTasks.findIndex(t => t.id === task.id);
-      if (index !== -1) {
-        internalTasks.splice(index, 1);
-      }
-    },
-    getAll: () => [...internalTasks],
-    count: () => internalTasks.length,
-    clear: () => { internalTasks = []; },
-    peek: () => internalTasks[0] ?? null
+    tasks: [...tasks],
+    take: () => tasks.shift() || null,
+    size: () => tasks.length,
+    add: (task) => tasks.push(task),
+    getAll: () => [...tasks]
   };
-}
-
-/**
- * Create a test memory object for testing
- * @param {object} options - Configuration options
- * @returns {object} Test memory object
- */
-export function createTestMemory(options = {}) {
-  const taskBag = options.taskBag ?? createTestTaskBag(options.tasks ?? []);
-  
-  return {
-    taskBag,
-    addTask: (task) => taskBag.add(task),
-    getTask: () => taskBag.take(),
-    getAllTasks: () => taskBag.getAll(),
-    ...options.additionalMethods
-  };
-}
-
-/**
- * Create a basic reasoner for testing with default components
- * @param {object} config - Configuration options for the reasoner
- * @returns {object} Test reasoner object
- */
-export function createReasoner(config = {}) {
-  // We need to import the real classes - but for the test utils, we'll create a mock reasoner
-  // This function was imported but not defined, so we'll create a basic mock structure
-  const memory = createTestMemory();
-  const TaskBagPremiseSource = class { constructor() { this.samplingObjectives = { priority: true }; } };
-  const Strategy = class {};
-  const RuleProcessor = class {};
-  const RuleExecutor = class {};
-  const Reasoner = class {
-    constructor() {
-      this.isRunning = false;
-      this.config = { maxDerivationDepth: 10, cpuThrottleInterval: 0 };
-    }
-    async step(timeout = 100) {
-      // Mock implementation
-      return null;
-    }
-    start() { this.isRunning = true; }
-    async stop() { this.isRunning = false; }
-    getMetrics() { 
-      return { totalDerivations: 0, startTime: Date.now(), throughput: 0 }; 
-    }
-    resetMetrics() {}
-  };
-  
-  return new Reasoner();
 }

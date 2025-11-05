@@ -4,6 +4,7 @@ import { Strategy } from '../Strategy.js';
 import { RuleProcessor } from '../RuleProcessor.js';
 import { RuleExecutor } from '../RuleExecutor.js';
 import { TaskBagPremiseSource } from '../TaskBagPremiseSource.js';
+import { Focus } from '../../memory/Focus.js';
 import { createTestMemory, createTestTask } from '../utils/test.js';
 
 describe('Reasoner', () => {
@@ -15,8 +16,10 @@ describe('Reasoner', () => {
   let testMemory;
 
   beforeEach(() => {
-    testMemory = createTestMemory({ tasks: [createTestTask({ id: 'test-task' })] });
-    premiseSource = new TaskBagPremiseSource(testMemory);
+    testMemory = createTestMemory();
+    // Use Focus instead of Memory for TaskBagPremiseSource
+    const focus = new Focus();
+    premiseSource = new TaskBagPremiseSource(focus);
     strategy = new Strategy();
     ruleExecutor = new RuleExecutor();
     ruleProcessor = new RuleProcessor(ruleExecutor);
