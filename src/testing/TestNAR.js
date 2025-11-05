@@ -229,11 +229,28 @@ export class TestNAR {
             }
         }
 
-        // Get all beliefs from NAR after processing
-        const allBeliefs = this.nar.memory.getAllConcepts().flatMap(c => c.getAllTasks().filter(t => t.type === 'BELIEF'));
-
-        // Get all tasks (not just beliefs) to catch derived results
-        const allTasks = this.nar.memory.getAllConcepts().flatMap(c => c.getAllTasks());
+        // Get all tasks from memory and focus to catch derived results
+        let allTasks = this.nar.memory.getAllConcepts().flatMap(c => c.getAllTasks());
+        
+        // Also check focus for tasks that might not be in memory yet
+        if (this.nar._focus) {
+            const focusTasks = this.nar._focus.getTasks(1000);
+            allTasks = [...allTasks, ...focusTasks];
+        }
+        
+        // Remove duplicates based on term and stamp
+        const uniqueTasks = [];
+        const seen = new Set();
+        
+        for (const task of allTasks) {
+            const key = task.term?.toString() + (task.stamp?.id || '');
+            if (!seen.has(key)) {
+                seen.add(key);
+                uniqueTasks.push(task);
+            }
+        }
+        
+        allTasks = uniqueTasks;
 
         // Validate expectations
         for (const exp of expectations) {
