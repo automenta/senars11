@@ -1,8 +1,8 @@
-import {NALRule} from './NALRule.js';
+import {PatternNALRule} from './PatternNALRule.js';
 import {Term} from '../../term/Term.js';
 import {RuleUtils} from './RuleUtils.js';
 
-export class ComparisonRule extends NALRule {
+export class ComparisonRule extends PatternNALRule {
     constructor() {
         super('comparison', {
             name: 'Comparison Rule',

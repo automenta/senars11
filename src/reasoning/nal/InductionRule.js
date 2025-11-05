@@ -1,12 +1,12 @@
-import {NALRule} from './NALRule.js';
+import {PatternNALRule} from './PatternNALRule.js';
 import {Term} from '../../term/Term.js';
 import {RuleUtils} from './RuleUtils.js';
 
-export class InductionRule extends NALRule {
+export class InductionRule extends PatternNALRule {
     constructor() {
         super('induction', {
             name: 'Induction Rule',
-            description: 'Performs inductive inference: If <a --> b> and <b --> a> then <a <-> b>',
+            description: 'Performs inductive inference: If (a --> b) and (b --> a) then (a <-> b)',
             priority: 0.7,
             category: 'syllogistic'
         });

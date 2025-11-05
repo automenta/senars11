@@ -7,7 +7,7 @@ import {TruthFunctions} from './TruthFunctions.js';
  * This NALRule variant processes single tasks using pattern matching and unification
  * (Different from multi-premise NALRule in parent directory)
  */
-export class NALRule extends Rule {
+export class PatternNALRule extends Rule {
     constructor(id, config = {}) {
         super(id, 'nal', config.priority || 1.0, config);
         this._patternMatcher = config.patternMatcher || new PatternMatcher();

@@ -1,11 +1,11 @@
-import {NALRule} from './NALRule.js';
+import {PatternNALRule} from './PatternNALRule.js';
 import {Term} from '../../term/Term.js';
 import {RuleUtils} from './RuleUtils.js';
 
 /**
  * Conjunction Rule: Combines multiple beliefs into compound statements
  */
-export class ConjunctionRule extends NALRule {
+export class ConjunctionRule extends PatternNALRule {
     constructor() {
         super('conjunction', {
             name: 'Conjunction Rule',

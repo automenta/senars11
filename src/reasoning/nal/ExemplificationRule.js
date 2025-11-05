@@ -1,12 +1,12 @@
-import {NALRule} from './NALRule.js';
+import {PatternNALRule} from './PatternNALRule.js';
 import {Term} from '../../term/Term.js';
 import {RuleUtils} from './RuleUtils.js';
 
-export class ExemplificationRule extends NALRule {
+export class ExemplificationRule extends PatternNALRule {
     constructor() {
         super('exemplification', {
             name: 'Exemplification Rule',
-            description: 'Exemplification: If <a --> b> and <b --> c> then <c --> a>',
+            description: 'Exemplification: If (a --> b) and (b --> c) then (c --> a)',
             priority: 0.3,
             category: 'syllogistic'
         });

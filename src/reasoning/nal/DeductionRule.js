@@ -1,11 +1,11 @@
-import {NALRule} from './NALRule.js';
+import {PatternNALRule} from './PatternNALRule.js';
 import {RuleUtils} from './RuleUtils.js';
 
-export class DeductionRule extends NALRule {
+export class DeductionRule extends PatternNALRule {
     constructor() {
         super('deduction', {
             name: 'Deduction Rule',
-            description: 'Performs deductive inference: If <a --> b> and <a> then <b>',
+            description: 'Performs deductive inference: If (a ==> b) and a then b',
             priority: 0.9,
             category: 'syllogistic'
         });
@@ -13,7 +13,7 @@ export class DeductionRule extends NALRule {
 
     _matches(task, context) {
         const {term} = task ?? {};
-        return term?.isCompound && term.operator === '-->' && term.components?.length === 2;
+        return term?.isCompound && term.operator === '==>' && term.components?.length === 2;
     }
 
     async _apply(task, context) {

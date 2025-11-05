@@ -1,25 +1,25 @@
-import {NALRule} from './NALRule.js';
+import {PatternNALRule} from './PatternNALRule.js';
 import {RuleUtils} from './RuleUtils.js';
 
-export class AbductionRule extends NALRule {
+export class AbductionRule extends PatternNALRule {
     constructor() {
         super('abduction', {
             name: 'Abduction Rule',
-            description: 'Performs abductive inference: If <a --> b> and <b> then <a>',
+            description: 'Performs abductive inference: If (a ==> b) and b then a',
             priority: 0.6,
             category: 'syllogistic'
         });
     }
 
     _matches(task, context) {
-        return (task.term?.isCompound && task.term.operator === '-->' && task.term.components?.length === 2) ||
+        return (task.term?.isCompound && task.term.operator === '==>' && task.term.components?.length === 2) ||
             (task.term?.isAtomic);
     }
 
     async _apply(task, context) {
         if (!this._matches(task, context)) return [];
 
-        if (task.term?.isCompound && task.term.operator === '-->' && task.term.components?.length === 2) {
+        if (task.term?.isCompound && task.term.operator === '==>' && task.term.components?.length === 2) {
             return this._deriveFromInheritance(task, context);
         }
         
@@ -55,10 +55,10 @@ export class AbductionRule extends NALRule {
 
     async _deriveFromSimpleTerm(task, context) {
         const allTasks = RuleUtils.collectTasks(context);
-        const inheritanceTasks = RuleUtils.filterByInheritance(allTasks);
+        const implTask = RuleUtils.filterByInheritance(allTasks);
         const results = [];
 
-        for (const inheritanceTask of inheritanceTasks) {
+        for (const inheritanceTask of implTask) {
             const [, predicate] = inheritanceTask.term.components;
             const bindings = this._unify(predicate, task.term);
 

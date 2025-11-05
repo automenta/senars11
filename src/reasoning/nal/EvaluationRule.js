@@ -1,11 +1,11 @@
-import {NALRule} from './NALRule.js';
+import {PatternNALRule} from './PatternNALRule.js';
 import {RuleUtils} from './RuleUtils.js';
 
-export class EvaluationRule extends NALRule {
+export class EvaluationRule extends PatternNALRule {
     constructor() {
         super('evaluation', {
             name: 'Evaluation Rule',
-            description: 'Evaluates statements: If <a> and <a --> b> then <b>',
+            description: 'Evaluates statements: If <a> and (a --> b) then <b>',
             priority: 0.8,
             category: 'syllogistic'
         });

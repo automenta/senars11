@@ -1,9 +1,9 @@
-import {NALRule} from './NALRule.js';
+import {PatternNALRule} from './PatternNALRule.js';
 import {Term} from '../../term/Term.js';
 import {Truth} from '../../Truth.js';
 import {RuleUtils} from './RuleUtils.js';
 
-export class ConditionalRule extends NALRule {
+export class ConditionalRule extends PatternNALRule {
     constructor() {
         super('conditional', {
             name: 'Conditional Reasoning Rule',

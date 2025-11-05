@@ -1,4 +1,4 @@
-import {NALRule} from './NALRule.js';
+import {PatternNALRule} from './PatternNALRule.js';
 import {Term} from '../../term/Term.js';
 import {Truth} from '../../Truth.js';
 
@@ -6,7 +6,7 @@ import {Truth} from '../../Truth.js';
  * HigherOrderRule: Handles reasoning about higher-order statements and patterns
  * Implements patterns like (A ==> B) ==> C where the implication itself is the subject
  */
-export class HigherOrderRule extends NALRule {
+export class HigherOrderRule extends PatternNALRule {
     constructor() {
         super('higher-order', {
             name: 'Higher-Order Reasoning Rule',

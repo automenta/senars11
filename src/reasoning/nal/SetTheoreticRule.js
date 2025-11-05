@@ -1,11 +1,11 @@
-import {NALRule} from './NALRule.js';
+import {PatternNALRule} from './PatternNALRule.js';
 import {Term} from '../../term/Term.js';
 
 /**
  * Set-Theoretic Rule: Handle set membership and subset relations
  * Implements rules for set operations like extensional and intensional sets
  */
-export class SetTheoreticRule extends NALRule {
+export class SetTheoreticRule extends PatternNALRule {
     constructor() {
         super('set-theoretic', {
             name: 'Set-Theoretic Rule',

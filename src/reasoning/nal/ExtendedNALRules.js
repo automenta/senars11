@@ -1,8 +1,8 @@
-import {NALRule} from './NALRule.js';
+import {PatternNALRule} from './PatternNALRule.js';
 import {Term} from '../../term/Term.js';
 import {Truth} from '../../Truth.js';
 
-export class ExtendedNALRule extends NALRule {
+export class ExtendedNALRule extends PatternNALRule {
     constructor(name, config) {
         super(name, config || {
             name: 'Extended NAL Rule',

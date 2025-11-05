@@ -1,8 +1,8 @@
-import {NALRule} from './NALRule.js';
+import {PatternNALRule} from './PatternNALRule.js';
 import {Term} from '../../term/Term.js';
 import {RuleUtils} from './RuleUtils.js';
 
-export class TemporalDeductionRule extends NALRule {
+export class TemporalDeductionRule extends PatternNALRule {
     constructor() {
         super('temporal-deduction', {
             name: 'Temporal Deduction Rule',
