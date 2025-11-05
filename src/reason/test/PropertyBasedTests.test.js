@@ -1,12 +1,12 @@
 import { TaskBagPremiseSource } from '../TaskBagPremiseSource.js';
 import { Strategy } from '../Strategy.js';
 import { randomWeightedSelect } from '../utils/randomWeightedSelect.js';
+import { createTestMemory, createTestTask } from '../utils/test.js';
 
 // Helper function to generate random tasks
 function generateRandomTask() {
   const punctuations = ['.', '?', '!'];
-  return {
-    id: `task-${Math.random().toString(36).substr(2, 9)}`,
+  return createTestTask({
     priority: Math.random(), // Random priority between 0 and 1
     sentence: { 
       punctuation: punctuations[Math.floor(Math.random() * punctuations.length)] 
@@ -15,7 +15,7 @@ function generateRandomTask() {
       creationTime: Date.now() - Math.floor(Math.random() * 100000), // Random time in last 100s of seconds
       depth: Math.floor(Math.random() * 10) // Random depth 0-9
     }
-  };
+  });
 }
 
 // Helper function to generate random bags of tasks
@@ -29,53 +29,31 @@ function generateRandomTaskBag(size = 5) {
 
 describe('Property-Based Testing for Edge Cases', () => {
   describe('Random Premise Pairs Generation', () => {
-    test('should handle randomly generated premise streams', () => {
+    test('should handle randomly generated premise streams', async () => {
       // Generate random tasks
       const randomTasks = generateRandomTaskBag(10);
-      
-      // Create a mock bag with these tasks
-      const mockBag = {
-        take: () => randomTasks.shift() || null,
-        get size() {
-          return randomTasks.length;
-        },
-        getAll: () => [...randomTasks]
-      };
-      
-      const memory = { taskBag: mockBag };
+      const memory = createTestMemory({ tasks: randomTasks });
       const premiseSource = new TaskBagPremiseSource(memory, { priority: true });
       
       // Test that we can sample from random tasks without errors
-      const promises = [];
+      const results = [];
       for (let i = 0; i < 5; i++) {
-        promises.push(premiseSource._sampleTask());
+        results.push(await premiseSource._sampleTask());
       }
       
       // All samplings should complete without throwing errors
-      return Promise.all(promises).then(results => {
-        results.forEach(result => {
-          // Each result should either be null or a valid task object
-          if (result !== null) {
-            expect(typeof result).toBe('object');
-            expect(result).toHaveProperty('id');
-          }
-        });
+      results.forEach(result => {
+        // Each result should either be null or a valid task object
+        if (result !== null) {
+          expect(typeof result).toBe('object');
+          expect(result).toHaveProperty('id');
+        }
       });
     });
 
     test('should handle different sampling strategies with random data', async () => {
       const randomTasks = generateRandomTaskBag(20);
-      const mockBag = {
-        take: () => randomTasks.shift() || null,
-        getAll: () => [...randomTasks],
-        remove: (task) => {
-          const index = randomTasks.indexOf(task);
-          if (index !== -1) randomTasks.splice(index, 1);
-        },
-        get size() { return randomTasks.length; }
-      };
-      
-      const memory = { taskBag: mockBag };
+      const memory = createTestMemory({ tasks: randomTasks });
       const premiseSource = new TaskBagPremiseSource(memory, {
         priority: true,
         recency: true,
@@ -174,66 +152,43 @@ describe('Property-Based Testing for Edge Cases', () => {
   });
 
   describe('Malformed and Extreme Data Handling', () => {
-    test('should handle malformed task objects gracefully', () => {
+    test('should handle malformed task objects gracefully', async () => {
       const malformedTasks = [
-        null,
-        undefined,
-        { }, // Empty object
-        { priority: 'not-a-number' },
-        { stamp: { depth: 'not-a-number' } },
-        { sentence: { punctuation: 123 } }, // Wrong type
-        { id: 'valid', priority: 1.5 }, // Invalid priority > 1
-        { id: 'valid', priority: -0.5 } // Invalid priority < 0
+        createTestTask({ priority: 'not-a-number' }),
+        createTestTask({ stamp: { depth: 'not-a-number' } }),
+        createTestTask({ sentence: { punctuation: 123 } }), // Wrong type
+        createTestTask({ priority: 1.5 }), // Invalid priority > 1
+        createTestTask({ priority: -0.5 }) // Invalid priority < 0
       ];
       
-      const mockBag = {
-        take: () => malformedTasks.shift() || null,
-        get size() {
-          return malformedTasks.length;
-        },
-        getAll: () => [...malformedTasks]
-      };
-      
-      const memory = { taskBag: mockBag };
+      const memory = createTestMemory({ tasks: malformedTasks });
       const premiseSource = new TaskBagPremiseSource(memory, { priority: true });
       
       // Should not crash when processing malformed tasks
-      for (const task of malformedTasks) {
-        // Test the various sampling methods with malformed data
-        try {
-          premiseSource._sampleByPriority();
-          premiseSource._sampleByRecency();
-          premiseSource._sampleByPunctuation();
-          premiseSource._sampleByNovelty();
-        } catch (error) {
-          // Errors are acceptable if they're handled gracefully
-          console.debug(`Expected error with malformed task: ${error.message}`);
-        }
+      // Test the various sampling methods with malformed data
+      try {
+        await premiseSource._sampleByPriority();
+        await premiseSource._sampleByRecency();
+        await premiseSource._sampleByPunctuation();
+        await premiseSource._sampleByNovelty();
+      } catch (error) {
+        // Errors are acceptable if they're handled gracefully
+        console.debug(`Expected error with malformed task: ${error.message}`);
       }
     });
 
-    test('should handle extreme parameter values', () => {
+    test('should handle extreme parameter values', async () => {
       const extremeTasks = [
-        { id: 'high-priority', priority: Infinity },
-        { id: 'low-priority', priority: -Infinity },
-        { id: 'zero-priority', priority: 0 },
-        { id: 'max-priority', priority: Number.MAX_VALUE },
-        { id: 'min-priority', priority: Number.MIN_VALUE },
-        { id: 'deep-task', stamp: { depth: 1000000 } }, // Extremely deep
-        { id: 'shallow-task', stamp: { depth: -1000 } } // Negative depth
+        createTestTask({ priority: Infinity }),
+        createTestTask({ priority: -Infinity }),
+        createTestTask({ priority: 0 }),
+        createTestTask({ priority: Number.MAX_VALUE }),
+        createTestTask({ priority: Number.MIN_VALUE }),
+        createTestTask({ stamp: { depth: 1000000 } }), // Extremely deep
+        createTestTask({ stamp: { depth: -1000 } }) // Negative depth
       ];
       
-      const mockBag = {
-        take: () => extremeTasks.shift() || null,
-        getAll: () => [...extremeTasks],
-        remove: (task) => {
-          const index = extremeTasks.indexOf(task);
-          if (index !== -1) extremeTasks.splice(index, 1);
-        },
-        get size() { return extremeTasks.length; }
-      };
-      
-      const memory = { taskBag: mockBag };
+      const memory = createTestMemory({ tasks: extremeTasks });
       const premiseSource = new TaskBagPremiseSource(memory, {
         priority: true,
         novelty: true,
@@ -257,5 +212,4 @@ describe('Property-Based Testing for Edge Cases', () => {
       }
     });
   });
-});
 });

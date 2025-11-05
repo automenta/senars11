@@ -3,63 +3,42 @@ import { TaskBagPremiseSource } from '../TaskBagPremiseSource.js';
 import { Strategy } from '../Strategy.js';
 import { RuleProcessor } from '../RuleProcessor.js';
 import { RuleExecutor } from '../RuleExecutor.js';
+import { Rule } from '../Rule.js';
+import { createTestMemory, createTestTask } from '../utils/test.js';
 
-// Mock components for integration test
-class MockTaskBag {
+// Define test rules for integration tests
+class TestDeductionRule extends Rule {
   constructor() {
-    this.tasks = [
-      { id: 'task1', priority: 0.9, stamp: { creationTime: Date.now() - 1000, depth: 0 } },
-      { id: 'task2', priority: 0.7, stamp: { creationTime: Date.now() - 500, depth: 0 } },
-      { id: 'task3', priority: 0.5, stamp: { creationTime: Date.now() - 100, depth: 0 } }
-    ];
+    super('deduction-rule', 'nal', 1.0);
   }
 
-  take() {
-    return this.tasks.shift() || null;
-  }
-
-  get size() {
-    return this.tasks.length;
-  }
-
-  getAll() {
-    return [...this.tasks];
+  apply(primaryPremise, secondaryPremise) {
+    // Simple derivation: create a new task based on the inputs
+    return [{
+      id: `derived-${primaryPremise.id}-${secondaryPremise.id}`,
+      priority: (primaryPremise.priority + secondaryPremise.priority) / 2,
+      stamp: { depth: Math.max(primaryPremise.stamp.depth, secondaryPremise.stamp.depth) + 1 }
+    }];
   }
 }
 
-class MockRuleExecutor {
+class TestDeepRule extends Rule {
   constructor() {
-    // Create mock rules
-    this.rules = [
-      {
-        id: 'deduction-rule',
-        type: 'nal',
-        guards: ['compound-term'],
-        apply: (primary, secondary) => {
-          // Simple derivation: create a new task based on the inputs
-          return [{
-            id: `derived-${primary.id}-${secondary.id}`,
-            priority: (primary.priority + secondary.priority) / 2,
-            stamp: { depth: Math.max(primary.stamp.depth, secondary.stamp.depth) + 1 }
-          }];
-        }
-      }
-    ];
+    super('deep-rule', 'nal', 1.0);
   }
 
-  getCandidateRules(primary, secondary) {
-    // For this test, return all rules
-    return this.rules;
-  }
-
-  executeRule(rule, primary, secondary) {
-    return rule.apply(primary, secondary);
+  apply(primaryPremise, secondaryPremise) {
+    // Create a derivation with a high depth to test limits
+    return [{
+      id: `deep-derived-${primaryPremise.id}`,
+      priority: 0.5,
+      stamp: { depth: 10 } // This exceeds our max depth of 5
+    }];
   }
 }
 
 describe('Reasoner Integration Tests', () => {
   let memory;
-  let taskBag;
   let premiseSource;
   let strategy;
   let ruleExecutor;
@@ -67,8 +46,13 @@ describe('Reasoner Integration Tests', () => {
   let reasoner;
 
   beforeEach(() => {
-    taskBag = new MockTaskBag();
-    memory = { taskBag };
+    // Create test memory with some tasks
+    const tasks = [
+      createTestTask({ id: 'task1', priority: 0.9, stamp: { creationTime: Date.now() - 1000, depth: 0 } }),
+      createTestTask({ id: 'task2', priority: 0.7, stamp: { creationTime: Date.now() - 500, depth: 0 } }),
+      createTestTask({ id: 'task3', priority: 0.5, stamp: { creationTime: Date.now() - 100, depth: 0 } })
+    ];
+    memory = createTestMemory({ tasks });
     
     premiseSource = new TaskBagPremiseSource(memory, {
       priority: true,
@@ -76,7 +60,8 @@ describe('Reasoner Integration Tests', () => {
     });
     
     strategy = new Strategy();
-    ruleExecutor = new MockRuleExecutor();
+    ruleExecutor = new RuleExecutor();
+    ruleExecutor.register(new TestDeductionRule());
     ruleProcessor = new RuleProcessor(ruleExecutor, { maxDerivationDepth: 5 });
     reasoner = new Reasoner(premiseSource, strategy, ruleProcessor, {
       maxDerivationDepth: 5,
@@ -108,26 +93,12 @@ describe('Reasoner Integration Tests', () => {
   });
 
   test('should respect derivation depth limits', async () => {
-    // Create a mock rule that creates deeply nested derivations
-    const deepRule = {
-      id: 'deep-rule',
-      type: 'nal',
-      apply: (primary, secondary) => {
-        // Create a derivation with a high depth to test limits
-        return [{
-          id: `deep-derived-${primary.id}`,
-          priority: 0.5,
-          stamp: { depth: 10 } // This exceeds our max depth of 5
-        }];
-      }
-    };
-
-    const mockRuleExecutorDeep = {
-      getCandidateRules: () => [deepRule],
-      executeRule: (rule, primary, secondary) => rule.apply(primary, secondary)
-    };
-
-    const deepRuleProcessor = new RuleProcessor(mockRuleExecutorDeep, { maxDerivationDepth: 5 });
+    // Create a rule that creates deeply nested derivations
+    const deepRule = new TestDeepRule();
+    const ruleExecutorDeep = new RuleExecutor();
+    ruleExecutorDeep.register(deepRule);
+    const deepRuleProcessor = new RuleProcessor(ruleExecutorDeep, { maxDerivationDepth: 5 });
+    
     const deepReasoner = new Reasoner(premiseSource, strategy, deepRuleProcessor, { maxDerivationDepth: 5 });
     
     const results = [];
@@ -194,7 +165,7 @@ describe('Reasoner Integration Tests', () => {
   });
 
   test('should handle component failures gracefully', async () => {
-    // Create a reasoner with components that might fail
+    // Create a strategy that might fail
     const failingStrategy = {
       generatePremisePairs: async function*(premiseStream) {
         for await (const premise of premiseStream) {

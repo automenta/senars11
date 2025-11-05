@@ -1,5 +1,5 @@
 import { mergeConfig } from './utils/common.js';
-import { ReasonerError, logError, createErrorHandler } from './utils/error.js';
+import { ReasonerError, logError } from './utils/error.js';
 
 /**
  * RuleExecutor indexes all registered rules for fast retrieval and performs 
@@ -7,15 +7,10 @@ import { ReasonerError, logError, createErrorHandler } from './utils/error.js';
  */
 export class RuleExecutor {
   constructor(config = {}) {
-    this.config = mergeConfig({
-      // Default configuration options
-    }, config);
+    this.config = mergeConfig({}, config);
     this.rules = [];
     this.optimizedRuleMap = new Map();
     this.decisionTree = null;
-    
-    // Create error handler for consistent error handling
-    this.errorHandler = createErrorHandler('RuleExecutor');
   }
 
   /**
@@ -78,7 +73,7 @@ export class RuleExecutor {
   _getRuleKey(rule) {
     // For now, just use rule type as a simple key
     // In the future, this would be more sophisticated based on guards
-    return rule.type || 'default';
+    return rule.type ?? 'default';
   }
 
   /**
@@ -100,7 +95,7 @@ export class RuleExecutor {
         return rule.canApply?.(primaryPremise, secondaryPremise) ?? true;
       } catch (error) {
         logError(error, { 
-          ruleId: rule.id || rule.name, 
+          ruleId: rule.id ?? rule.name, 
           context: 'rule_candidate_check' 
         }, 'warn');
         return false;
@@ -119,11 +114,11 @@ export class RuleExecutor {
   executeRule(rule, primaryPremise, secondaryPremise, context) {
     try {
       // Execute the rule application
-      const results = rule.apply?.(primaryPremise, secondaryPremise, context) || [];
+      const results = rule.apply?.(primaryPremise, secondaryPremise, context) ?? [];
       return Array.isArray(results) ? results : [results];
     } catch (error) {
       logError(error, { 
-        ruleId: rule.id || rule.name, 
+        ruleId: rule.id ?? rule.name, 
         context: 'rule_execution' 
       }, 'error');
       return [];

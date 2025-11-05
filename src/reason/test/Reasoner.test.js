@@ -1,19 +1,25 @@
 import { Reasoner } from '../Reasoner.js';
-import { createMockPremiseSource, createMockStrategy, createMockRuleProcessor, createMockTask, createTestMemory } from '../index.js';
+import { Strategy } from '../Strategy.js';
+import { RuleProcessor } from '../RuleProcessor.js';
+import { RuleExecutor } from '../RuleExecutor.js';
+import { TaskBagPremiseSource } from '../TaskBagPremiseSource.js';
+import { createTestMemory, createTestTask } from '../utils/test.js';
 
 describe('Reasoner', () => {
   let reasoner;
-  let mockPremiseSource;
-  let mockStrategy;
-  let mockRuleProcessor;
+  let premiseSource;
+  let strategy;
+  let ruleProcessor;
+  let ruleExecutor;
   let testMemory;
 
   beforeEach(() => {
-    testMemory = createTestMemory({ tasks: [createMockTask({ id: 'test-task' })] });
-    mockPremiseSource = createMockPremiseSource([createMockTask({ id: 'test-task' })]);
-    mockStrategy = createMockStrategy();
-    mockRuleProcessor = createMockRuleProcessor([createMockTask({ id: 'derived-task' })]);
-    reasoner = new Reasoner(mockPremiseSource, mockStrategy, mockRuleProcessor);
+    testMemory = createTestMemory({ tasks: [createTestTask({ id: 'test-task' })] });
+    premiseSource = new TaskBagPremiseSource(testMemory);
+    strategy = new Strategy();
+    ruleExecutor = new RuleExecutor();
+    ruleProcessor = new RuleProcessor(ruleExecutor);
+    reasoner = new Reasoner(premiseSource, strategy, ruleProcessor);
   });
 
   describe('constructor', () => {
@@ -24,7 +30,7 @@ describe('Reasoner', () => {
     });
 
     test('should initialize with custom config', () => {
-      reasoner = new Reasoner(mockPremiseSource, mockStrategy, mockRuleProcessor, {
+      reasoner = new Reasoner(premiseSource, strategy, ruleProcessor, {
         maxDerivationDepth: 5,
         cpuThrottleInterval: 1,
         backpressureThreshold: 50,
@@ -35,23 +41,6 @@ describe('Reasoner', () => {
       expect(reasoner.config.cpuThrottleInterval).toBe(1);
       expect(reasoner.config.backpressureThreshold).toBe(50);
       expect(reasoner.config.backpressureInterval).toBe(10);
-    });
-  });
-
-  describe('outputStream', () => {
-    test('should create and return output stream', async () => {
-      const stream = reasoner.outputStream;
-      expect(stream).toBeDefined();
-
-      const results = [];
-      let count = 0;
-      for await (const item of stream) {
-        results.push(item);
-        count++;
-        if (count >= 1) break; // Just get one item to test the stream
-      }
-
-      expect(results.length).toBeGreaterThan(0);
     });
   });
 

@@ -1,32 +1,9 @@
 import { TaskBagPremiseSource } from '../TaskBagPremiseSource.js';
 import { Reasoner } from '../Reasoner.js';
 import { RuleProcessor } from '../RuleProcessor.js';
-
-// Mock task bag for testing
-class MockTaskBag {
-  constructor(tasks = []) {
-    this.tasks = tasks;
-  }
-
-  take() {
-    return this.tasks.shift() || null;
-  }
-
-  get size() {
-    return this.tasks.length;
-  }
-
-  getAll() {
-    return [...this.tasks];
-  }
-
-  remove(task) {
-    const index = this.tasks.indexOf(task);
-    if (index !== -1) {
-      this.tasks.splice(index, 1);
-    }
-  }
-}
+import { RuleExecutor } from '../RuleExecutor.js';
+import { Strategy } from '../Strategy.js';
+import { createTestTaskBag, createTestMemory, createTestTask } from '../utils/test.js';
 
 describe('Advanced Unit Tests for Sophisticated Features', () => {
   describe('TaskBagPremiseSource - Dynamic Adaptation', () => {
@@ -36,11 +13,11 @@ describe('Advanced Unit Tests for Sophisticated Features', () => {
 
     beforeEach(() => {
       const tasks = [
-        { id: 'task1', priority: 0.9, stamp: { creationTime: Date.now() - 1000, depth: 0 } },
-        { id: 'task2', priority: 0.7, stamp: { creationTime: Date.now(), depth: 0 } }
+        createTestTask({ id: 'task1', priority: 0.9, stamp: { creationTime: Date.now() - 1000, depth: 0 } }),
+        createTestTask({ id: 'task2', priority: 0.7, stamp: { creationTime: Date.now(), depth: 0 } })
       ];
-      taskBag = new MockTaskBag(tasks);
-      memory = { taskBag };
+      taskBag = createTestTaskBag(tasks);
+      memory = createTestMemory({ taskBag });
     });
 
     test('should update weights based on performance dynamically', () => {
@@ -108,16 +85,16 @@ describe('Advanced Unit Tests for Sophisticated Features', () => {
   });
 
   describe('Reasoner - Adaptive Processing Rates', () => {
-    let mockPremiseSource, mockStrategy, mockRuleProcessor, reasoner;
+    let reasoner;
 
     beforeEach(() => {
-      mockPremiseSource = { stream: () => ({ [Symbol.asyncIterator]: async function*() {} }) };
-      mockStrategy = { generatePremisePairs: () => ({ [Symbol.asyncIterator]: async function*() {} }) };
-      mockRuleProcessor = { 
-        process: () => ({ [Symbol.asyncIterator]: async function*() {} }),
-        getStats: () => ({})
-      };
-      reasoner = new Reasoner(mockPremiseSource, mockStrategy, mockRuleProcessor, {
+      const memory = createTestMemory();
+      const premiseSource = new TaskBagPremiseSource(memory);
+      const strategy = new Strategy();
+      const ruleExecutor = new RuleExecutor();
+      const ruleProcessor = new RuleProcessor(ruleExecutor);
+      
+      reasoner = new Reasoner(premiseSource, strategy, ruleProcessor, {
         cpuThrottleInterval: 10,
         backpressureInterval: 5
       });
@@ -162,12 +139,8 @@ describe('Advanced Unit Tests for Sophisticated Features', () => {
     let ruleProcessor;
 
     beforeEach(() => {
-      // Mock rule executor
-      const mockRuleExecutor = {
-        getCandidateRules: () => [],
-        executeRule: () => []
-      };
-      ruleProcessor = new RuleProcessor(mockRuleExecutor, {
+      const ruleExecutor = new RuleExecutor();
+      ruleProcessor = new RuleProcessor(ruleExecutor, {
         backpressureThreshold: 10,
         backpressureInterval: 2
       });
@@ -175,20 +148,20 @@ describe('Advanced Unit Tests for Sophisticated Features', () => {
 
     test('should detect backpressure when queue exceeds threshold', () => {
       // Fill queue above threshold
-      ruleProcessor.asyncResultsQueue = new Array(15).fill({ id: 'task' });
+      ruleProcessor.asyncResultsQueue = new Array(15).fill(createTestTask({ id: 'task' }));
       
       expect(ruleProcessor.asyncResultsQueue.length).toBe(15);
       expect(ruleProcessor.asyncResultsQueue.length > ruleProcessor.config.backpressureThreshold).toBe(true);
     });
 
     test('should update max queue size tracking', async () => {
-      ruleProcessor.asyncResultsQueue = new Array(15).fill({ id: 'task' });
+      ruleProcessor.asyncResultsQueue = new Array(15).fill(createTestTask({ id: 'task' }));
       await ruleProcessor._checkAndApplyBackpressure();
       
       expect(ruleProcessor.maxQueueSize).toBeGreaterThanOrEqual(15);
       
       // Reduce queue size and verify max doesn't decrease
-      ruleProcessor.asyncResultsQueue = new Array(5).fill({ id: 'task' });
+      ruleProcessor.asyncResultsQueue = new Array(5).fill(createTestTask({ id: 'task' }));
       await ruleProcessor._checkAndApplyBackpressure();
       
       expect(ruleProcessor.maxQueueSize).toBeGreaterThanOrEqual(15); // Should maintain max
@@ -196,7 +169,7 @@ describe('Advanced Unit Tests for Sophisticated Features', () => {
 
     test('should apply backpressure based on queue size', async () => {
       // Test with queue size above threshold
-      ruleProcessor.asyncResultsQueue = new Array(15).fill({ id: 'task' }); // Above threshold of 10
+      ruleProcessor.asyncResultsQueue = new Array(15).fill(createTestTask({ id: 'task' })); // Above threshold of 10
       
       const start = Date.now();
       await ruleProcessor._checkAndApplyBackpressure();
@@ -208,7 +181,7 @@ describe('Advanced Unit Tests for Sophisticated Features', () => {
 
     test('should not apply backpressure when under threshold', async () => {
       // Test with queue size below threshold
-      ruleProcessor.asyncResultsQueue = new Array(5).fill({ id: 'task' }); // Below threshold of 10
+      ruleProcessor.asyncResultsQueue = new Array(5).fill(createTestTask({ id: 'task' })); // Below threshold of 10
       
       const start = Date.now();
       await ruleProcessor._checkAndApplyBackpressure();
@@ -219,7 +192,7 @@ describe('Advanced Unit Tests for Sophisticated Features', () => {
     });
 
     test('should include backpressure information in status', () => {
-      ruleProcessor.asyncResultsQueue = new Array(12).fill({ id: 'task' });
+      ruleProcessor.asyncResultsQueue = new Array(12).fill(createTestTask({ id: 'task' }));
       
       const status = ruleProcessor.getStatus();
       
@@ -237,29 +210,29 @@ describe('Advanced Unit Tests for Sophisticated Features', () => {
 
     beforeEach(() => {
       const tasks = [
-        { 
+        createTestTask({ 
           id: 'recent-task', 
           priority: 0.5, 
           stamp: { creationTime: Date.now() - 100, depth: 0 } 
-        },
-        { 
+        }),
+        createTestTask({ 
           id: 'old-task', 
           priority: 0.5, 
           stamp: { creationTime: Date.now() - 10000, depth: 0 } 
-        },
-        { 
+        }),
+        createTestTask({ 
           id: 'deep-task', 
           priority: 0.5, 
           stamp: { creationTime: Date.now() - 500, depth: 8 } 
-        },
-        { 
+        }),
+        createTestTask({ 
           id: 'shallow-task', 
           priority: 0.5, 
           stamp: { creationTime: Date.now() - 500, depth: 1 } 
-        }
+        })
       ];
-      taskBag = new MockTaskBag(tasks);
-      memory = { taskBag };
+      taskBag = createTestTaskBag(tasks);
+      memory = createTestMemory({ taskBag });
     });
 
     test('should select by closeness to target time', () => {
@@ -286,13 +259,13 @@ describe('Advanced Unit Tests for Sophisticated Features', () => {
 
     test('should handle punctuation-based selection', () => {
       const tasksWithPunct = [
-        { id: 'belief', sentence: { punctuation: '.' } },
-        { id: 'goal', sentence: { punctuation: '!' } },
-        { id: 'question', sentence: { punctuation: '?' } }
+        createTestTask({ id: 'belief', sentence: { punctuation: '.' } }),
+        createTestTask({ id: 'goal', sentence: { punctuation: '!' } }),
+        createTestTask({ id: 'question', sentence: { punctuation: '?' } })
       ];
       
-      const punctTaskBag = new MockTaskBag(tasksWithPunct);
-      premiseSource = new TaskBagPremiseSource({ taskBag: punctTaskBag }, { punctuation: true });
+      const punctTaskBag = createTestTaskBag(tasksWithPunct);
+      premiseSource = new TaskBagPremiseSource(createTestMemory({ taskBag: punctTaskBag }), { punctuation: true });
       
       const punctTask = premiseSource._sampleByPunctuation();
       

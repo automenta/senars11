@@ -1,7 +1,7 @@
 import { PremiseSource } from './PremiseSource.js';
 import { randomWeightedSelect } from './utils/randomWeightedSelect.js';
 import { sleep, mergeConfig } from './utils/common.js';
-import { ReasonerError, logError, createErrorHandler } from './utils/error.js';
+import { ReasonerError, logError } from './utils/error.js';
 
 /**
  * A PremiseSource that draws from a TaskBag with configurable sampling objectives.
@@ -32,7 +32,7 @@ export class TaskBagPremiseSource extends PremiseSource {
     }, samplingObjectives);
     
     super(memory, defaults);
-    this.taskBag = memory?.taskBag || memory?.bag || null;
+    this.taskBag = memory?.taskBag ?? memory?.bag ?? null;
     if (!this.taskBag) {
       throw new ReasonerError('TaskBagPremiseSource requires a memory object with a taskBag or bag property', 'CONFIG_ERROR');
     }
@@ -56,9 +56,6 @@ export class TaskBagPremiseSource extends PremiseSource {
     this.dynamicAdaptation = defaults.dynamic;
     this.lastUpdate = Date.now();
     this.samplingObjectives = defaults;
-    
-    // Create error handler for consistent error handling
-    this.errorHandler = createErrorHandler('TaskBagPremiseSource');
   }
 
   /**
@@ -161,7 +158,7 @@ export class TaskBagPremiseSource extends PremiseSource {
     if (this.taskBag.size !== undefined) return this.taskBag.size;
     if (typeof this.taskBag.length === 'number') return this.taskBag.length;
     if (typeof this.taskBag.count === 'function') return this.taskBag.count();
-    if (Array.isArray(this.taskBag) || this.taskBag instanceof Set) return this.taskBag.length || this.taskBag.size;
+    if (Array.isArray(this.taskBag) || this.taskBag instanceof Set) return this.taskBag.length ?? this.taskBag.size;
     if (this.taskBag instanceof Map) return this.taskBag.size;
     // If we can't determine size, assume it's not empty and try to get items
     return 1; // Conservative assumption
@@ -208,12 +205,12 @@ export class TaskBagPremiseSource extends PremiseSource {
       if (allTasks.length === 0) return null;
       
       // Use a configurable target time (default to current time if not specified)
-      const targetTime = this.samplingObjectives.targetTime || Date.now();
+      const targetTime = this.samplingObjectives.targetTime ?? Date.now();
       
       // Sort by closeness to target time (closest first)
       allTasks.sort((a, b) => {
-        const timeA = a.stamp?.lastUpdated || a.stamp?.creationTime || 0;
-        const timeB = b.stamp?.lastUpdated || b.stamp?.creationTime || 0;
+        const timeA = a.stamp?.lastUpdated ?? a.stamp?.creationTime ?? 0;
+        const timeB = b.stamp?.lastUpdated ?? b.stamp?.creationTime ?? 0;
         
         // Calculate absolute distance to target time
         const distanceA = Math.abs(timeA - targetTime);
@@ -279,7 +276,7 @@ export class TaskBagPremiseSource extends PremiseSource {
       
       // Calculate novelty as inverse of derivation depth
       const tasksWithNovelty = allTasks.map(task => {
-        const depth = task.stamp?.depth || 0;
+        const depth = task.stamp?.depth ?? 0;
         // Higher novelty score for lower depth values
         const novelty = 1 / (depth + 1); // Add 1 to avoid division by zero
         return { task, novelty };
@@ -331,9 +328,10 @@ export class TaskBagPremiseSource extends PremiseSource {
    * @param {number} effectiveness - Effectiveness score (0-1)
    */
   recordMethodEffectiveness(method, effectiveness) {
-    if (this.performanceStats[method]) {
-      this.performanceStats[method].count++;
-      this.performanceStats[method].effectiveness += effectiveness;
+    const stats = this.performanceStats[method];
+    if (stats) {
+      stats.count++;
+      stats.effectiveness += effectiveness;
     }
   }
 

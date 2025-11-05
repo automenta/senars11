@@ -7,57 +7,25 @@ import { TaskBagPremiseSource } from '../TaskBagPremiseSource.js';
 import { Strategy } from '../Strategy.js';
 import { RuleProcessor } from '../RuleProcessor.js';
 import { RuleExecutor } from '../RuleExecutor.js';
+import { Rule } from '../Rule.js';
+import { createTestMemory, createTestTask } from '../utils/test.js';
 
-// Mock implementations for testing
-class SimpleTaskBag {
+// Test rule for the comprehensive test
+class TestRule extends Rule {
   constructor() {
-    this.tasks = [
-      { id: 'input1', priority: 0.8, stamp: { creationTime: Date.now(), depth: 0 } },
-      { id: 'input2', priority: 0.6, stamp: { creationTime: Date.now() - 100, depth: 0 } },
-      { id: 'input3', priority: 0.9, stamp: { creationTime: Date.now() - 200, depth: 0 } }
-    ];
+    super('test-rule', 'nal', 1.0);
   }
 
-  take() {
-    return this.tasks.shift() || null;
-  }
-
-  get size() {
-    return this.tasks.length;
-  }
-
-  getAll() {
-    return [...this.tasks];
-  }
-}
-
-class TestRuleExecutor {
-  constructor() {
-    this.rules = [
-      {
-        id: 'test-rule',
-        type: 'nal',
-        apply: (primary, secondary) => {
-          // Create a simple derivation
-          return [{
-            id: `derived-${primary.id}-${secondary.id}`,
-            priority: (primary.priority + secondary.priority) / 2,
-            stamp: { 
-              depth: Math.max(primary.stamp.depth, secondary.stamp.depth) + 1,
-              creationTime: Date.now()
-            }
-          }];
-        }
+  apply(primary, secondary) {
+    // Create a simple derivation
+    return [{
+      id: `derived-${primary.id}-${secondary.id}`,
+      priority: (primary.priority + secondary.priority) / 2,
+      stamp: { 
+        depth: Math.max(primary.stamp.depth, secondary.stamp.depth) + 1,
+        creationTime: Date.now()
       }
-    ];
-  }
-
-  getCandidateRules() {
-    return this.rules;
-  }
-
-  executeRule(rule, primary, secondary) {
-    return rule.apply(primary, secondary);
+    }];
   }
 }
 
@@ -66,8 +34,12 @@ console.log('Starting comprehensive functionality test...');
 async function runComprehensiveTest() {
   try {
     // Set up the reasoner system
-    const taskBag = new SimpleTaskBag();
-    const memory = { taskBag };
+    const tasks = [
+      createTestTask({ id: 'input1', priority: 0.8, stamp: { creationTime: Date.now(), depth: 0 } }),
+      createTestTask({ id: 'input2', priority: 0.6, stamp: { creationTime: Date.now() - 100, depth: 0 } }),
+      createTestTask({ id: 'input3', priority: 0.9, stamp: { creationTime: Date.now() - 200, depth: 0 } })
+    ];
+    const memory = createTestMemory({ tasks });
     
     const premiseSource = new TaskBagPremiseSource(memory, {
       priority: true,
@@ -76,7 +48,8 @@ async function runComprehensiveTest() {
     });
     
     const strategy = new Strategy();
-    const ruleExecutor = new TestRuleExecutor();
+    const ruleExecutor = new RuleExecutor();
+    ruleExecutor.register(new TestRule());
     const ruleProcessor = new RuleProcessor(ruleExecutor, { maxDerivationDepth: 3 });
     
     const reasoner = new Reasoner(premiseSource, strategy, ruleProcessor, {
@@ -121,7 +94,7 @@ async function runComprehensiveTest() {
     
     // Test 4: Test backpressure handling
     console.log('Test 4: Testing backpressure mechanisms...');
-    ruleProcessor.asyncResultsQueue = new Array(15).fill({ id: 'backpressure-test' });
+    ruleProcessor.asyncResultsQueue = new Array(15).fill(createTestTask({ id: 'backpressure-test' }));
     const status = ruleProcessor.getStatus();
     console.log('Backpressure status:', status.backpressure);
     
@@ -138,8 +111,8 @@ async function runComprehensiveTest() {
     
     // Test 6: Test various sampling methods
     console.log('Test 6: Testing sampling methods...');
-    const task1 = { id: 'test-task', priority: 0.7, stamp: { creationTime: Date.now() - 100, depth: 2 } };
-    taskBag.tasks.push(task1);
+    const task1 = createTestTask({ id: 'test-task', priority: 0.7, stamp: { creationTime: Date.now() - 100, depth: 2 } });
+    memory.taskBag.add(task1);
     
     const priorityResult = premiseSource._sampleByPriority();
     const recencyResult = premiseSource._sampleByRecency();

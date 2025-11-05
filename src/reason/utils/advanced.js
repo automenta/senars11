@@ -60,7 +60,7 @@ export const predicateFactory = {
    * @returns {Function} Predicate function
    */
   hasPriorityInRange: (min, max) => (item) => {
-    const priority = item.priority || 0;
+    const priority = item.priority ?? 0;
     return priority >= min && priority <= max;
   },
 
@@ -70,7 +70,7 @@ export const predicateFactory = {
    * @returns {Function} Predicate function
    */
   hasMaxDepth: (maxDepth) => (item) => {
-    return (item.stamp?.depth || 0) <= maxDepth;
+    return (item.stamp?.depth ?? 0) <= maxDepth;
   }
 };
 
@@ -242,10 +242,10 @@ export function createValidator(validators) {
       try {
         const result = validator(item);
         if (result !== true) {
-          errors.push(result || 'Validation failed');
+          errors.push(result ?? 'Validation failed');
         }
       } catch (error) {
-        errors.push(error.message || 'Validation error');
+        errors.push(error.message ?? 'Validation error');
       }
     }
     
@@ -309,5 +309,88 @@ export function createTransformer(transforms) {
       result = transform(result);
     }
     return result;
+  };
+}
+
+/**
+ * Create a fluent rule builder for simple rule construction
+ * @returns {object} Fluent rule builder
+ */
+export function createRuleBuilder() {
+  const ruleState = {
+    id: `rule_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    type: 'general',
+    priority: 1.0,
+    guards: [],
+    applyFn: () => [],
+    applyAsyncFn: null
+  };
+  
+  return {
+    withId(id) {
+      ruleState.id = id;
+      return this;
+    },
+    
+    withType(type) {
+      ruleState.type = type;
+      return this;
+    },
+    
+    withPriority(priority) {
+      ruleState.priority = priority;
+      return this;
+    },
+    
+    withGuards(guards) {
+      ruleState.guards = guards;
+      return this;
+    },
+    
+    withApplyFunction(fn) {
+      ruleState.applyFn = fn;
+      return this;
+    },
+    
+    withAsyncApplyFunction(fn) {
+      ruleState.applyAsyncFn = fn;
+      return this;
+    },
+    
+    build() {
+      return {
+        id: ruleState.id,
+        type: ruleState.type,
+        priority: ruleState.priority,
+        guards: ruleState.guards,
+        canApply: (primary, secondary) => {
+          return ruleState.guards.length === 0 || ruleState.guards.every(guard => guard(primary, secondary));
+        },
+        apply: (primary, secondary, context) => {
+          return ruleState.applyFn(primary, secondary, context);
+        },
+        applyAsync: async (primary, secondary, context) => {
+          if (ruleState.applyAsyncFn) {
+            return await ruleState.applyAsyncFn(primary, secondary, context);
+          }
+          return ruleState.applyFn(primary, secondary, context);
+        }
+      };
+    }
+  };
+}
+
+/**
+ * Create a reusable rule validator to check if rules meet certain criteria
+ * @param {Array<Function>} checks - Validation checks
+ * @returns {Function} Validation function
+ */
+export function createRuleValidator(checks) {
+  return (rule) => {
+    const results = checks.map(check => check(rule));
+    return {
+      isValid: results.every(r => r.isValid),
+      issues: results.filter(r => !r.isValid).map(r => r.issue)
+    };
   };
 }

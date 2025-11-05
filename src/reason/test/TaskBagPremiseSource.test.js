@@ -1,5 +1,5 @@
 import { TaskBagPremiseSource } from '../TaskBagPremiseSource.js';
-import { createTestMemory, createMockTask } from '../index.js';
+import { createTestMemory, createTestTask } from '../utils/test.js';
 
 describe('TaskBagPremiseSource', () => {
   let memory;
@@ -75,8 +75,8 @@ describe('TaskBagPremiseSource', () => {
     test('should sample by priority using the underlying bag', () => {
       premiseSource = new TaskBagPremiseSource(memory);
       
-      const task1 = createMockTask({ id: 'task1', priority: 0.8 });
-      const task2 = createMockTask({ id: 'task2', priority: 0.6 });
+      const task1 = createTestTask({ id: 'task1', priority: 0.8 });
+      const task2 = createTestTask({ id: 'task2', priority: 0.6 });
       
       taskBag.add(task1);
       taskBag.add(task2);
@@ -90,12 +90,12 @@ describe('TaskBagPremiseSource', () => {
     test('should sample by closeness to target time', () => {
       premiseSource = new TaskBagPremiseSource(memory, { targetTime: 1000 });
       
-      const task1 = createMockTask({ 
+      const task1 = createTestTask({ 
         id: 'task1', 
         stamp: { creationTime: 950 } // Close to target time (1000)
       });
       
-      const task2 = createMockTask({ 
+      const task2 = createTestTask({ 
         id: 'task2', 
         stamp: { creationTime: 500 } // Far from target time
       });
@@ -114,15 +114,15 @@ describe('TaskBagPremiseSource', () => {
       premiseSource = new TaskBagPremiseSource(memory);
       
       // Mock tasks with different punctuation
-      const goalTask = createMockTask({ 
+      const goalTask = createTestTask({ 
         id: 'goal',
         sentence: { punctuation: '!' } 
       });
-      const questionTask = createMockTask({ 
+      const questionTask = createTestTask({ 
         id: 'question',
         sentence: { punctuation: '?' } 
       });
-      const beliefTask = createMockTask({ 
+      const beliefTask = createTestTask({ 
         id: 'belief',
         sentence: { punctuation: '.' } 
       });
@@ -141,12 +141,12 @@ describe('TaskBagPremiseSource', () => {
     test('should sample by novelty (lowest derivation depth)', () => {
       premiseSource = new TaskBagPremiseSource(memory);
       
-      const novelTask = createMockTask({ 
+      const novelTask = createTestTask({ 
         id: 'novel', 
         stamp: { depth: 1 } // Lower depth = more novel
       });
       
-      const lessNovelTask = createMockTask({ 
+      const lessNovelTask = createTestTask({ 
         id: 'lessNovel', 
         stamp: { depth: 5 } // Higher depth = less novel
       });

@@ -1,4 +1,5 @@
 import { Strategy } from '../Strategy.js';
+import { createTestTask } from '../utils/test.js';
 
 describe('Strategy', () => {
   let strategy;
@@ -25,7 +26,7 @@ describe('Strategy', () => {
 
   describe('selectSecondaryPremises', () => {
     test('should return empty array by default', async () => {
-      const primaryPremise = { id: 'primary' };
+      const primaryPremise = createTestTask({ id: 'primary' });
       const result = await strategy.selectSecondaryPremises(primaryPremise);
       
       expect(result).toEqual([]);
@@ -33,16 +34,16 @@ describe('Strategy', () => {
 
     test('should use premiseSelector if provided', async () => {
       const mockPremiseSelector = {
-        select: jest.fn().mockResolvedValue([{ id: 'selected' }])
+        select: jest.fn().mockResolvedValue([createTestTask({ id: 'selected' })])
       };
       
       strategy = new Strategy({ premiseSelector: mockPremiseSelector });
       
-      const primaryPremise = { id: 'primary' };
+      const primaryPremise = createTestTask({ id: 'primary' });
       const result = await strategy.selectSecondaryPremises(primaryPremise);
       
       expect(mockPremiseSelector.select).toHaveBeenCalledWith(primaryPremise);
-      expect(result).toEqual([{ id: 'selected' }]);
+      expect(result).toEqual([createTestTask({ id: 'selected' })]);
     });
 
     test('should handle errors gracefully', async () => {
@@ -50,7 +51,7 @@ describe('Strategy', () => {
         premiseSelector: { select: () => { throw new Error('Selector error'); } }
       });
 
-      const primaryPremise = { id: 'primary' };
+      const primaryPremise = createTestTask({ id: 'primary' });
       const result = await strategy.selectSecondaryPremises(primaryPremise);
       
       expect(result).toEqual([]);
@@ -61,17 +62,17 @@ describe('Strategy', () => {
     test('should generate premise pairs from stream', async () => {
       const premiseStream = {
         [Symbol.asyncIterator]: async function*() {
-          yield { id: 'primary1' };
-          yield { id: 'primary2' };
+          yield createTestTask({ id: 'primary1' });
+          yield createTestTask({ id: 'primary2' });
         }
       };
 
       // Mock the selectSecondaryPremises to return specific results
       strategy.selectSecondaryPremises = async (primary) => {
         if (primary.id === 'primary1') {
-          return [{ id: 'secondary1a' }, { id: 'secondary1b' }];
+          return [createTestTask({ id: 'secondary1a' }), createTestTask({ id: 'secondary1b' })];
         } else {
-          return [{ id: 'secondary2a' }];
+          return [createTestTask({ id: 'secondary2a' })];
         }
       };
 
@@ -81,17 +82,17 @@ describe('Strategy', () => {
       }
 
       expect(pairs).toEqual([
-        [{ id: 'primary1' }, { id: 'secondary1a' }],
-        [{ id: 'primary1' }, { id: 'secondary1b' }],
-        [{ id: 'primary2' }, { id: 'secondary2a' }]
+        [createTestTask({ id: 'primary1' }), createTestTask({ id: 'secondary1a' })],
+        [createTestTask({ id: 'primary1' }), createTestTask({ id: 'secondary1b' })],
+        [createTestTask({ id: 'primary2' }), createTestTask({ id: 'secondary2a' })]
       ]);
     });
 
     test('should handle errors during premise selection', async () => {
       const premiseStream = {
         [Symbol.asyncIterator]: async function*() {
-          yield { id: 'primary1' };
-          yield { id: 'primary2' };
+          yield createTestTask({ id: 'primary1' });
+          yield createTestTask({ id: 'primary2' });
         }
       };
 
@@ -102,7 +103,7 @@ describe('Strategy', () => {
         if (callCount === 1) {
           throw new Error('Selection failed');
         }
-        return [{ id: 'secondary' }];
+        return [createTestTask({ id: 'secondary' })];
       };
 
       const pairs = [];
@@ -112,7 +113,7 @@ describe('Strategy', () => {
 
       // Should skip the failed premise and continue with the second
       expect(pairs).toEqual([
-        [{ id: 'primary2' }, { id: 'secondary' }]
+        [createTestTask({ id: 'primary2' }), createTestTask({ id: 'secondary' })]
       ]);
     });
   });

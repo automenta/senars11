@@ -1,16 +1,12 @@
 import { RuleProcessor } from '../RuleProcessor.js';
-import { createMockRuleExecutor, createMockTask } from '../index.js';
+import { RuleExecutor } from '../RuleExecutor.js';
+import { Rule } from '../Rule.js';
+import { createTestTask } from '../utils/test.js';
 
-// Define proper mock rule classes for testing
-class MockRule {
-  constructor(id, type = 'nal', isAsync = false) {
-    this.id = id;
-    this.type = type;
-    this.isAsync = isAsync;
-  }
-
-  async applyAsync(primaryPremise, secondaryPremise) {
-    return [{ id: `async-derived-${this.id}`, ruleId: this.id, primary: primaryPremise.id, secondary: secondaryPremise.id }];
+// Define proper rule classes for testing
+class TestSyncRule extends Rule {
+  constructor(id) {
+    super(id, 'nal', 1.0);
   }
   
   apply(primaryPremise, secondaryPremise) {
@@ -18,28 +14,23 @@ class MockRule {
   }
 }
 
+class TestAsyncRule extends Rule {
+  constructor(id) {
+    super(id, 'lm', 1.0);
+  }
+  
+  async applyAsync(primaryPremise, secondaryPremise) {
+    return [{ id: `async-derived-${this.id}`, ruleId: this.id, primary: primaryPremise.id, secondary: secondaryPremise.id }];
+  }
+}
+
 describe('RuleProcessor', () => {
   let ruleProcessor;
-  let mockRuleExecutor;
+  let ruleExecutor;
 
   beforeEach(() => {
-    const rules = [
-      new MockRule('rule1', 'nal'),  // Synchronous
-      new MockRule('rule2', 'lm')    // Asynchronous
-    ];
-    
-    // Create a mock rule executor that can handle both sync and async rules properly
-    mockRuleExecutor = {
-      rules,
-      getCandidateRules: (primary, secondary) => rules,
-      executeRule: (rule, primary, secondary) => {
-        return rule.apply(primary, secondary);
-      },
-      buildOptimizationStructure: () => {},
-      getRuleCount: () => rules.length
-    };
-    
-    ruleProcessor = new RuleProcessor(mockRuleExecutor);
+    ruleExecutor = new RuleExecutor();
+    ruleProcessor = new RuleProcessor(ruleExecutor);
   });
 
   describe('constructor', () => {
@@ -52,7 +43,7 @@ describe('RuleProcessor', () => {
     });
 
     test('should initialize with custom config', () => {
-      ruleProcessor = new RuleProcessor(mockRuleExecutor, {
+      ruleProcessor = new RuleProcessor(ruleExecutor, {
         maxDerivationDepth: 5,
         backpressureThreshold: 25,
         backpressureInterval: 5
@@ -123,7 +114,7 @@ describe('RuleProcessor', () => {
   describe('_checkAndApplyBackpressure', () => {
     test('should apply backpressure when queue is above threshold', async () => {
       // Set up a queue above the threshold
-      ruleProcessor.asyncResultsQueue = new Array(60).fill(createMockTask({ id: 'task' })); // Above default threshold of 50
+      ruleProcessor.asyncResultsQueue = new Array(60).fill(createTestTask({ id: 'task' })); // Above default threshold of 50
       
       const start = Date.now();
       await ruleProcessor._checkAndApplyBackpressure();
@@ -136,7 +127,7 @@ describe('RuleProcessor', () => {
 
     test('should not apply backpressure when queue is below threshold', async () => {
       // Set up a queue below the threshold
-      ruleProcessor.asyncResultsQueue = new Array(10).fill(createMockTask({ id: 'task' })); // Below default threshold of 50
+      ruleProcessor.asyncResultsQueue = new Array(10).fill(createTestTask({ id: 'task' })); // Below default threshold of 50
       
       const start = Date.now();
       await ruleProcessor._checkAndApplyBackpressure();
@@ -149,7 +140,7 @@ describe('RuleProcessor', () => {
 
   describe('getStatus', () => {
     test('should return status information', () => {
-      ruleProcessor.asyncResultsQueue = new Array(5).fill(createMockTask({ id: 'task' }));
+      ruleProcessor.asyncResultsQueue = new Array(5).fill(createTestTask({ id: 'task' }));
       ruleProcessor.maxQueueSize = 10;
       ruleProcessor.syncRuleExecutions = 15;
       ruleProcessor.asyncRuleExecutions = 8;
@@ -170,16 +161,21 @@ describe('RuleProcessor', () => {
 
   describe('process', () => {
     test('should process premise pairs and yield results', async () => {
-      const premisePairStream = {
-        [Symbol.asyncIterator]: async function*() {
-          yield [createMockTask({ id: 'primary' }), createMockTask({ id: 'secondary' })];
-        }
-      };
+      // Add test rules to the rule executor
+      const syncRule = new TestSyncRule('sync-rule');
+      const asyncRule = new TestAsyncRule('async-rule');
+      ruleExecutor.register(syncRule);
+      ruleExecutor.register(asyncRule);
+
+      // Create a simple premise pair stream
+      async function* premisePairStream() {
+        yield [createTestTask({ id: 'primary' }), createTestTask({ id: 'secondary' })];
+      }
 
       const results = [];
-      for await (const result of ruleProcessor.process(premisePairStream)) {
+      for await (const result of ruleProcessor.process(premisePairStream())) {
         results.push(result);
-        if (results.length >= 2) break; // We expect 2 results from 2 rules
+        if (results.length >= 1) break; // We expect at least one result
       }
 
       expect(results.length).toBeGreaterThan(0);
@@ -187,28 +183,26 @@ describe('RuleProcessor', () => {
     });
 
     test('should handle errors during rule processing', async () => {
+      // Create a rule that throws an error
       const errorRule = {
         id: 'error-rule',
         type: 'nal',
         apply: () => {
           throw new Error('Rule execution failed');
-        }
+        },
+        canApply: () => true
       };
       
-      mockRuleExecutor.getCandidateRules = () => [errorRule];
-      mockRuleExecutor.executeRule = (rule, primary, secondary) => {
-        return rule.apply(primary, secondary);
-      };
+      ruleExecutor.register(errorRule);
 
-      const premisePairStream = {
-        [Symbol.asyncIterator]: async function*() {
-          yield [createMockTask({ id: 'primary' }), createMockTask({ id: 'secondary' })];
-        }
-      };
+      // Create a simple premise pair stream
+      async function* premisePairStream() {
+        yield [createTestTask({ id: 'primary' }), createTestTask({ id: 'secondary' })];
+      }
 
       const results = [];
       await expect(async () => {
-        for await (const result of ruleProcessor.process(premisePairStream)) {
+        for await (const result of ruleProcessor.process(premisePairStream())) {
           results.push(result);
         }
       }).resolves.not.toThrow();

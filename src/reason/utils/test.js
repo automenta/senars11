@@ -3,11 +3,11 @@
  */
 
 /**
- * Create a mock task for testing
- * @param {object} overrides - Properties to override in the mock task
- * @returns {object} Mock task object
+ * Create a test task for testing
+ * @param {object} overrides - Properties to override in the test task
+ * @returns {object} Test task object
  */
-export function createMockTask(overrides = {}) {
+export function createTestTask(overrides = {}) {
   const defaultTask = {
     id: `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     term: {
@@ -30,89 +30,6 @@ export function createMockTask(overrides = {}) {
   };
   
   return defaultTask;
-}
-
-/**
- * Create a mock strategy for testing
- * @param {Array} premisePairs - Array of premise pairs to yield
- * @returns {object} Mock strategy object
- */
-export function createMockStrategy(premisePairs = []) {
-  return {
-    generatePremisePairs: async function* (premiseStream) {
-      for await (const primary of premiseStream) {
-        if (premisePairs.length > 0) {
-          for (const pair of premisePairs) {
-            yield pair;
-          }
-        } else {
-          // Default: pair each premise with itself
-          yield [primary, primary];
-        }
-      }
-    },
-    // Add other methods as needed
-    ...arguments[1] || {}
-  };
-}
-
-/**
- * Create a mock rule executor for testing
- * @param {Array} candidateRules - Rules to return as candidates
- * @param {Array} executionResults - Results to return from rule execution
- * @returns {object} Mock rule executor object
- */
-export function createMockRuleExecutor(candidateRules = [], executionResults = []) {
-  return {
-    getCandidateRules: () => candidateRules,
-    executeRule: () => executionResults,
-    register: () => {},
-    registerMany: () => {},
-    buildOptimizationStructure: () => {},
-    getRuleCount: () => candidateRules.length,
-    ...arguments[2] || {}
-  };
-}
-
-/**
- * Create a mock rule processor for testing
- * @param {Array} processingResults - Results to return from processing
- * @returns {object} Mock rule processor object
- */
-export function createMockRuleProcessor(processingResults = []) {
-  return {
-    process: async function* (premisePairStream) {
-      for await (const pair of premisePairStream) {
-        for (const result of processingResults) {
-          yield result;
-        }
-      }
-    },
-    getStats: () => ({ syncRuleExecutions: 0, asyncRuleExecutions: 0 }),
-    getStatus: () => ({}),
-    resetStats: () => {}
-  };
-}
-
-/**
- * Create a mock premise source for testing
- * @param {Array} tasks - Tasks to yield from the source
- * @returns {object} Mock premise source object
- */
-export function createMockPremiseSource(tasks = []) {
-  return {
-    stream: async function* () {
-      for (const task of tasks) {
-        yield task;
-      }
-      // To avoid infinite loop in tests, you can either:
-      // 1. Stop after yielding all tasks, or
-      // 2. Keep yielding the same tasks
-      // For now, let's just yield once and stop
-    },
-    tryGetTask: async () => tasks[0] || null,
-    ...arguments[1] || {}
-  };
 }
 
 /**
@@ -185,7 +102,7 @@ export function createTestTaskBag(tasks = []) {
     add: (task) => {
       internalTasks.push(task);
       // Sort by priority in descending order (higher priority first)
-      internalTasks.sort((a, b) => (b.priority || 0) - (a.priority || 0));
+      internalTasks.sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
     },
     remove: (task) => {
       const index = internalTasks.findIndex(t => t.id === task.id);
@@ -196,7 +113,7 @@ export function createTestTaskBag(tasks = []) {
     getAll: () => [...internalTasks],
     count: () => internalTasks.length,
     clear: () => { internalTasks = []; },
-    peek: () => internalTasks[0] || null
+    peek: () => internalTasks[0] ?? null
   };
 }
 
@@ -206,7 +123,7 @@ export function createTestTaskBag(tasks = []) {
  * @returns {object} Test memory object
  */
 export function createTestMemory(options = {}) {
-  const taskBag = options.taskBag || createTestTaskBag(options.tasks || []);
+  const taskBag = options.taskBag ?? createTestTaskBag(options.tasks ?? []);
   
   return {
     taskBag,

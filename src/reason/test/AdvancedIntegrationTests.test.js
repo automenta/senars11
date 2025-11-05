@@ -3,92 +3,47 @@ import { TaskBagPremiseSource } from '../TaskBagPremiseSource.js';
 import { Strategy } from '../Strategy.js';
 import { RuleProcessor } from '../RuleProcessor.js';
 import { RuleExecutor } from '../RuleExecutor.js';
+import { Rule } from '../Rule.js';
+import { createTestMemory, createTestTask } from '../utils/test.js';
 
-// Complex mock implementations for advanced testing
-class MockTaskBag {
-  constructor(tasks = []) {
-    this.tasks = tasks;
-    this.events = []; // Track operations for testing
+// Complex rules for advanced testing
+class TestDeductionRule extends Rule {
+  constructor() {
+    super('deduction', 'nal', 1.0);
   }
 
-  take() {
-    if (this.tasks.length > 0) {
-      const task = this.tasks.shift();
-      this.events.push({ operation: 'take', task: task.id, timestamp: Date.now() });
-      return task;
-    }
-    return null;
-  }
-
-  get size() {
-    return this.tasks.length;
-  }
-
-  getAll() {
-    return [...this.tasks];
-  }
-
-  remove(task) {
-    const index = this.tasks.indexOf(task);
-    if (index !== -1) {
-      this.tasks.splice(index, 1);
-      this.events.push({ operation: 'remove', task: task.id, timestamp: Date.now() });
-    }
+  apply(primary, secondary) {
+    return [{
+      id: `derived-${primary.id}-${secondary.id}`,
+      priority: Math.min(primary.priority, secondary.priority) * 0.9,
+      stamp: { 
+        depth: Math.max(primary.stamp.depth, secondary.stamp.depth) + 1,
+        creationTime: Date.now()
+      }
+    }];
   }
 }
 
-class ComplexRuleExecutor {
+class TestAsyncRule extends Rule {
   constructor() {
-    this.rules = [
-      // Simple deduction rule
-      {
-        id: 'deduction',
-        type: 'nal',
-        apply: (primary, secondary) => {
-          return [{
-            id: `derived-${primary.id}-${secondary.id}`,
-            priority: Math.min(primary.priority, secondary.priority) * 0.9,
-            stamp: { 
-              depth: Math.max(primary.stamp.depth, secondary.stamp.depth) + 1,
-              creationTime: Date.now()
-            }
-          }];
-        }
-      },
-      // Asynchronous rule simulation
-      {
-        id: 'async-rule',
-        type: 'lm',
-        applyAsync: async (primary, secondary) => {
-          // Simulate async processing time
-          await new Promise(resolve => setTimeout(resolve, 5));
-          return [{
-            id: `async-derived-${primary.id}-${secondary.id}`,
-            priority: (primary.priority + secondary.priority) / 2,
-            stamp: { 
-              depth: Math.max(primary.stamp.depth, secondary.stamp.depth) + 1,
-              creationTime: Date.now()
-            }
-          }];
-        }
+    super('async-rule', 'lm', 1.0);
+  }
+
+  async applyAsync(primary, secondary) {
+    // Simulate async processing time
+    await new Promise(resolve => setTimeout(resolve, 5));
+    return [{
+      id: `async-derived-${primary.id}-${secondary.id}`,
+      priority: (primary.priority + secondary.priority) / 2,
+      stamp: { 
+        depth: Math.max(primary.stamp.depth, secondary.stamp.depth) + 1,
+        creationTime: Date.now()
       }
-    ];
-  }
-
-  getCandidateRules() {
-    return this.rules;
-  }
-
-  executeRule(rule, primary, secondary) {
-    if (rule.apply) {
-      return rule.apply(primary, secondary);
-    }
-    return [];
+    }];
   }
 }
 
 describe('Advanced Integration Tests - Complex Interactions', () => {
-  let taskBag;
   let memory;
   let premiseSource;
   let strategy;
@@ -98,12 +53,11 @@ describe('Advanced Integration Tests - Complex Interactions', () => {
 
   beforeEach(() => {
     const tasks = [
-      { id: 'task1', priority: 0.9, stamp: { creationTime: Date.now() - 1000, depth: 0 } },
-      { id: 'task2', priority: 0.8, stamp: { creationTime: Date.now() - 500, depth: 0 } },
-      { id: 'task3', priority: 0.7, stamp: { creationTime: Date.now() - 100, depth: 0 } }
+      createTestTask({ id: 'task1', priority: 0.9, stamp: { creationTime: Date.now() - 1000, depth: 0 } }),
+      createTestTask({ id: 'task2', priority: 0.8, stamp: { creationTime: Date.now() - 500, depth: 0 } }),
+      createTestTask({ id: 'task3', priority: 0.7, stamp: { creationTime: Date.now() - 100, depth: 0 } })
     ];
-    taskBag = new MockTaskBag(tasks);
-    memory = { taskBag };
+    memory = createTestMemory({ tasks });
   });
 
   test('should handle complex sampling strategy interactions', async () => {
@@ -121,7 +75,9 @@ describe('Advanced Integration Tests - Complex Interactions', () => {
 
     // Set up reasoner components
     strategy = new Strategy();
-    ruleExecutor = new ComplexRuleExecutor();
+    ruleExecutor = new RuleExecutor();
+    ruleExecutor.register(new TestDeductionRule());
+    ruleExecutor.register(new TestAsyncRule());
     ruleProcessor = new RuleProcessor(ruleExecutor, { maxDerivationDepth: 3 });
     reasoner = new Reasoner(premiseSource, strategy, ruleProcessor, {
       maxDerivationDepth: 3,
@@ -148,7 +104,9 @@ describe('Advanced Integration Tests - Complex Interactions', () => {
   test('should maintain backpressure across component boundaries', async () => {
     premiseSource = new TaskBagPremiseSource(memory, { priority: true });
     strategy = new Strategy({ maxSecondaryPremises: 5 });
-    ruleExecutor = new ComplexRuleExecutor();
+    ruleExecutor = new RuleExecutor();
+    ruleExecutor.register(new TestDeductionRule());
+    ruleExecutor.register(new TestAsyncRule());
     
     // Create rule processor with low backpressure threshold for testing
     ruleProcessor = new RuleProcessor(ruleExecutor, { 
@@ -189,7 +147,9 @@ describe('Advanced Integration Tests - Complex Interactions', () => {
   test('should adapt behavior based on consumer feedback', async () => {
     premiseSource = new TaskBagPremiseSource(memory, { priority: true });
     strategy = new Strategy();
-    ruleExecutor = new ComplexRuleExecutor();
+    ruleExecutor = new RuleExecutor();
+    ruleExecutor.register(new TestDeductionRule());
+    ruleExecutor.register(new TestAsyncRule());
     ruleProcessor = new RuleProcessor(ruleExecutor, { maxDerivationDepth: 3 });
     
     reasoner = new Reasoner(premiseSource, strategy, ruleProcessor, {
@@ -268,14 +228,15 @@ describe('Advanced Integration Tests - Complex Interactions', () => {
 
   test('should maintain performance under load with adaptive mechanisms', async () => {
     // Create a scenario with many tasks to test performance under load
-    const manyTasks = Array.from({ length: 50 }, (_, i) => ({
-      id: `task${i}`,
-      priority: 1.0 - (i * 0.02), // Decreasing priority
-      stamp: { creationTime: Date.now() - (i * 10), depth: i % 3 } // Varying depth
-    }));
+    const manyTasks = Array.from({ length: 50 }, (_, i) => 
+      createTestTask({
+        id: `task${i}`,
+        priority: 1.0 - (i * 0.02), // Decreasing priority
+        stamp: { creationTime: Date.now() - (i * 10), depth: i % 3 } // Varying depth
+      })
+    );
     
-    const loadedTaskBag = new MockTaskBag(manyTasks);
-    const loadedMemory = { taskBag: loadedTaskBag };
+    const loadedMemory = createTestMemory({ tasks: manyTasks });
     
     premiseSource = new TaskBagPremiseSource(loadedMemory, {
       priority: true,
@@ -284,7 +245,9 @@ describe('Advanced Integration Tests - Complex Interactions', () => {
     });
     
     strategy = new Strategy({ maxSecondaryPremises: 3 });
-    ruleExecutor = new ComplexRuleExecutor();
+    ruleExecutor = new RuleExecutor();
+    ruleExecutor.register(new TestDeductionRule());
+    ruleExecutor.register(new TestAsyncRule());
     ruleProcessor = new RuleProcessor(ruleExecutor, { 
       maxDerivationDepth: 5,
       backpressureThreshold: 10,
@@ -329,7 +292,9 @@ describe('Advanced Integration Tests - Complex Interactions', () => {
     });
     
     strategy = new Strategy();
-    ruleExecutor = new ComplexRuleExecutor();
+    ruleExecutor = new RuleExecutor();
+    ruleExecutor.register(new TestDeductionRule());
+    ruleExecutor.register(new TestAsyncRule());
     ruleProcessor = new RuleProcessor(ruleExecutor, { maxDerivationDepth: 4 });
     reasoner = new Reasoner(premiseSource, strategy, ruleProcessor, {
       maxDerivationDepth: 4,
@@ -352,7 +317,7 @@ describe('Advanced Integration Tests - Complex Interactions', () => {
     
     // Verify all components report consistent state
     expect(state.isRunning).toBe(reasoner.isRunning);
-    expect(componentStatus.premiseSource.name).toBe('PremiseSource');
+    expect(componentStatus.premiseSource.name).toBe('TaskBagPremiseSource');
     expect(debugInfo.state.isRunning).toBe(state.isRunning);
     
     // Verify metrics are consistent across reporting mechanisms

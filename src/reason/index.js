@@ -13,8 +13,12 @@ export { LMRule } from './LMRule.js';
 export * from './utils/common.js';
 export * from './utils/error.js';
 export * from './utils/async.js';
-export * from './utils/test.js';
 export * from './utils/advanced.js';
+// Export test utilities with backward compatibility
+export * from './utils/test.js';
 export { randomWeightedSelect } from './utils/randomWeightedSelect.js';
 
-// Also export any utility components if they exist
+// Backward compatibility for test utilities
+export { createTestTask as createMockTask } from './utils/test.js';
+export { createTestMemory as createMockMemory } from './utils/test.js';
+export { createTestTaskBag as createMockTaskBag } from './utils/test.js';

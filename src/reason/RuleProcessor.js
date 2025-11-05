@@ -1,7 +1,5 @@
-import { Stamp } from '../Stamp.js';
 import { sleep, mergeConfig } from './utils/common.js';
-import { ReasonerError, logError, createErrorHandler } from './utils/error.js';
-import { bufferWithBackpressure } from './utils/async.js';
+import { ReasonerError, logError } from './utils/error.js';
 
 /**
  * RuleProcessor consumes premise pairs and processes them through rules.
@@ -32,9 +30,6 @@ export class RuleProcessor {
     
     // Track queue stats for backpressure
     this.maxQueueSize = 0;
-    
-    // Create error handler for consistent error handling
-    this.errorHandler = createErrorHandler('RuleProcessor');
   }
 
   /**
@@ -72,7 +67,7 @@ export class RuleProcessor {
             }
           } catch (error) {
             logError(error, { 
-              ruleId: rule.id || rule.name, 
+              ruleId: rule.id ?? rule.name, 
               context: 'rule_processing' 
             }, 'warn');
             // Continue with other rules instead of failing completely
@@ -123,7 +118,7 @@ export class RuleProcessor {
   _isSynchronousRule(rule) {
     // For now, assume rules with 'nal' type are synchronous and others are async
     // This could be expanded based on rule metadata
-    return (rule.type || '').toLowerCase().includes('nal');
+    return (rule.type ?? '').toLowerCase().includes('nal');
   }
 
   /**
@@ -136,7 +131,7 @@ export class RuleProcessor {
     // Execute the async rule in the background without awaiting
     this._executeAsyncRule(rule, primaryPremise, secondaryPremise)
       .catch(error => {
-        logError(error, { ruleId: rule.id || rule.name, context: 'async_rule_execution' }, 'error');
+        logError(error, { ruleId: rule.id ?? rule.name, context: 'async_rule_execution' }, 'error');
       });
   }
   
@@ -147,8 +142,8 @@ export class RuleProcessor {
   async _executeAsyncRule(rule, primaryPremise, secondaryPremise) {
     try {
       // Execute the async rule
-      const results = await (rule.applyAsync?.(primaryPremise, secondaryPremise, this.config.context) || 
-                     rule.apply?.(primaryPremise, secondaryPremise, this.config.context)) || [];
+      const results = await (rule.applyAsync?.(primaryPremise, secondaryPremise, this.config.context) ?? 
+                     rule.apply?.(primaryPremise, secondaryPremise, this.config.context)) ?? [];
       
       const resultArray = Array.isArray(results) ? results : [results];
       
@@ -160,7 +155,7 @@ export class RuleProcessor {
         }
       }
     } catch (error) {
-      logError(error, { ruleId: rule.id || rule.name, context: 'async_rule_execution' }, 'error');
+      logError(error, { ruleId: rule.id ?? rule.name, context: 'async_rule_execution' }, 'error');
       throw error; // Re-throw to be caught by the outer .catch
     }
   }
@@ -171,12 +166,12 @@ export class RuleProcessor {
    */
   _processDerivation(result) {
     try {
-      if (!result || !result.stamp) {
+      if (!result?.stamp) {
         return result;
       }
 
       // Get the derivation depth from the result's stamp
-      const derivationDepth = result.stamp.depth || 0;
+      const derivationDepth = result.stamp.depth ?? 0;
 
       // Check max derivation depth limit
       if (derivationDepth > this.config.maxDerivationDepth) {
@@ -197,9 +192,7 @@ export class RuleProcessor {
    */
   async _checkAndApplyBackpressure() {
     // Track queue size for monitoring
-    if (this.asyncResultsQueue.length > this.maxQueueSize) {
-      this.maxQueueSize = this.asyncResultsQueue.length;
-    }
+    this.maxQueueSize = Math.max(this.maxQueueSize, this.asyncResultsQueue.length);
     
     // Check if queue size exceeds threshold
     if (this.asyncResultsQueue.length > this.config.backpressureThreshold) {
