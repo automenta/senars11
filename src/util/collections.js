@@ -46,7 +46,7 @@ export const chunk = (array, size) => {
 
 export const flatten = arrays => {
     if (!Array.isArray(arrays)) return [];
-    return [].concat(...arrays);
+    return arrays.flat();
 };
 
 export const calculateAverage = values => {

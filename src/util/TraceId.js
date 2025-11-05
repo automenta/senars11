@@ -10,6 +10,9 @@ export class TraceId {
     }
     
     static isValid(traceId) {
-        return typeof traceId === 'string' && traceId.length > 0 && traceId !== 'undefined' && traceId !== 'null';
+        return typeof traceId === 'string' &&
+               traceId.length > 0 &&
+               traceId !== 'undefined' &&
+               traceId !== 'null';
     }
 }

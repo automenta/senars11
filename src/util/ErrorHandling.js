@@ -85,7 +85,7 @@ class ErrorTracker {
     }
 
     _cleanup() {
-        const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
+        const fiveMinutesAgo = Date.now() - 300000; // 5 minutes in milliseconds
         this.errorRateWindow = this.errorRateWindow.filter(err => err.timestamp > fiveMinutesAgo);
     }
     

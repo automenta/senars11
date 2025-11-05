@@ -25,7 +25,7 @@ export const clampAndFreeze = (obj, min = 0, max = 1) =>
             [k, typeof v === 'number' ? clamp(v, min, max) : v])));
 
 export const mergeConfig = (base, ...overrides) =>
-    freeze(overrides.reduce((acc, cfg) => ({...acc, ...cfg}), {...base}));
+    freeze(Object.assign({}, base, ...overrides));
 
 export const isNumber = val => typeof val === 'number' && !isNaN(val);
 export const round = (val, decimals = 2) => Number(Math.round(val + 'e' + decimals) + 'e-' + decimals);

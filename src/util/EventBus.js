@@ -63,11 +63,11 @@ export class EventBus {
         for (const middleware of this._middleware) {
             try {
                 // Allow middleware to be either sync or async
-                const result = middleware(processedData);
-                processedData = result instanceof Promise ? await result : result;
+                const result = await middleware(processedData);
                 
                 // Allow middleware to cancel event processing by returning null
-                if (processedData === null) return;
+                if (result === null) return;
+                processedData = result;
             } catch (error) {
                 return this._handleError('middleware', error, {eventName, data, traceId});
             }

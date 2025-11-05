@@ -14,8 +14,7 @@ export class ConfigurableComponent {
     }
     
     configure(cfg) {
-        const validatedCfg = this._validate(cfg);
-        this._config = {...this._config, ...validatedCfg};
+        this._config = {...this._config, ...this._validate(cfg)};
         return this;
     }
     

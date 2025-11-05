@@ -58,7 +58,9 @@ export class CircuitBreaker {
     
     onFailure() {
         this.failureCount++;
-        this.failureCount >= this.options.failureThreshold && this.forceOpen();
+        if (this.failureCount >= this.options.failureThreshold) {
+            this.forceOpen();
+        }
     }
     
     shouldOpen() {
@@ -71,7 +73,9 @@ export class CircuitBreaker {
     
     transitionTo(newState) {
         this.state = newState;
-        newState === CircuitBreaker.STATES.OPEN && (this.lastFailureTime = Date.now());
+        if (newState === CircuitBreaker.STATES.OPEN) {
+            this.lastFailureTime = Date.now();
+        }
     }
     
     getState() {

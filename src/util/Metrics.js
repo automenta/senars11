@@ -49,7 +49,9 @@ export class Metrics {
             merged.failures += metrics.failures;
             merged.totalTime += metrics.totalTime;
             merged.lastRun = Math.max(merged.lastRun || 0, metrics.lastRun || 0);
-            metrics.lastError && (merged.lastError = metrics.lastError);
+            if (metrics.lastError) {
+                merged.lastError = metrics.lastError;
+            }
         }
         merged.avgTime = merged.executions > 0 ? merged.totalTime / merged.executions : 0;
         return merged;

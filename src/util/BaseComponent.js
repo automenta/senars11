@@ -93,7 +93,10 @@ export class BaseComponent {
             this._emitLifecycleEvent(operation);
 
             // Log and update metrics
-            this._logger.info(`${this._name} ${operation}${operation === 'initialize' ? 'd' : operation === 'start' ? 'ed' : operation === 'stop' ? 'ped' : 'd'}`);
+            const operationSuffix = operation === 'initialize' ? 'd' :
+                                  operation === 'start' ? 'ed' :
+                                  operation === 'stop' ? 'ped' : 'd';
+            this._logger.info(`${this._name} ${operation}${operationSuffix}`);
             metricName && this.incrementMetric(metricName);
             return true;
         } catch (error) {

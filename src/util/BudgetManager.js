@@ -107,7 +107,7 @@ export class BudgetManager {
     reset() {
         this.budget = this.getAvailable() + this.getTotalAllocated();
         this.allocations.clear();
-        this.history = [];
+        this.history.length = 0; // More efficient than reassigning
     }
     
     // Utility method to check if an allocation exists
