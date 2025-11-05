@@ -14,13 +14,10 @@ export class Metrics {
 
     static update(metrics, success, time, error = null) {
         const totalExecutions = metrics.executions + 1;
-        const totalSuccesses = metrics.successes + (success ? 1 : 0);
-        const totalFailures = metrics.failures + (success ? 0 : 1);
-
         return {
             executions: totalExecutions,
-            successes: totalSuccesses,
-            failures: totalFailures,
+            successes: metrics.successes + (success ? 1 : 0),
+            failures: metrics.failures + (success ? 0 : 1),
             totalTime: metrics.totalTime + time,
             avgTime: totalExecutions > 0 ? (metrics.totalTime + time) / totalExecutions : 0,
             lastRun: Date.now(),
@@ -35,9 +32,9 @@ export class Metrics {
             executions: metrics.executions,
             successes: metrics.successes,
             failures: metrics.failures,
-            successRate: Number((successRate).toFixed(2)),
-            avgTime: Number((metrics.avgTime).toFixed(2)),
-            totalTime: Number((metrics.totalTime).toFixed(2)),
+            successRate: Number(successRate.toFixed(2)),
+            avgTime: Number(metrics.avgTime.toFixed(2)),
+            totalTime: Number(metrics.totalTime.toFixed(2)),
             lastRun: metrics.lastRun,
             lastError: metrics.lastError,
             uptime: Date.now() - metrics.createdAt
@@ -52,7 +49,7 @@ export class Metrics {
             merged.failures += metrics.failures;
             merged.totalTime += metrics.totalTime;
             merged.lastRun = Math.max(merged.lastRun || 0, metrics.lastRun || 0);
-            if (metrics.lastError) merged.lastError = metrics.lastError;
+            metrics.lastError && (merged.lastError = metrics.lastError);
         }
         merged.avgTime = merged.executions > 0 ? merged.totalTime / merged.executions : 0;
         return merged;
@@ -72,16 +69,7 @@ export class Metrics {
         return formatted;
     }
     
-    static reset(metrics) {
-        return {
-            executions: 0,
-            successes: 0,
-            failures: 0,
-            totalTime: 0,
-            avgTime: 0,
-            lastRun: null,
-            lastError: null,
-            createdAt: Date.now()
-        };
+    static reset() {
+        return this.create();
     }
 }

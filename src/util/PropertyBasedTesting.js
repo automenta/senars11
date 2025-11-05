@@ -17,7 +17,6 @@ export class PropertyBasedTester {
 
     generateTerm(depth = 0, maxDepth = 3) {
         const {Term} = require('../src/term/Term.js'); // Dynamically import to avoid circular deps
-        const termTypes = ['atomic', 'compound'];
         const operators = ['-->', '<->', '==>', '<=>', '&', '|', '--'];
 
         if (depth >= maxDepth || (depth > 0 && this.random() < 0.3)) {
@@ -91,7 +90,7 @@ export class PropertyBasedTester {
         // Try to modify properties (should not affect the original)
         try {
             // This should either fail (with proper immutability) or not change the original values
-            if (term._name) term._name = 'modified';
+            term._name && (term._name = 'modified');
             if (term.name !== originalString) return false;
             if (term.hash !== originalHash) return false;
 

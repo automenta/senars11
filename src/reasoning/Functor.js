@@ -36,6 +36,31 @@ export class ConcreteFunctor extends Functor {
     }
 }
 
+// Private utilities for FunctorRegistry
+class FunctorRegistryUtils {
+    static extractArity(aliases) {
+        return aliases.length > 0 && Array.isArray(aliases[aliases.length - 1]) ? aliases.pop() : 0;
+    }
+
+    static addAliases(registry, aliases, functorName) {
+        aliases.forEach(alias => registry.aliases.set(alias, functorName));
+    }
+
+    static removeAliases(registry, functorName) {
+        for (const [alias, name] of registry.aliases.entries()) {
+            if (name === functorName) registry.aliases.delete(alias);
+        }
+    }
+
+    static areFunctionallyEquivalent(existingFunctor, newFunctor) {
+        return existingFunctor &&
+            existingFunctor.execute.toString() === newFunctor.execute.toString() &&
+            existingFunctor.arity === newFunctor.arity &&
+            existingFunctor.isCommutative === newFunctor.isCommutative &&
+            existingFunctor.isAssociative === newFunctor.isAssociative;
+    }
+}
+
 /**
  * FunctorRegistry - A system for registering and managing Functors
  */
@@ -51,17 +76,13 @@ export class FunctorRegistry {
         const aliasesCopy = [...aliasesArray];
 
         if (typeof functor === 'function') {
-            functor = new ConcreteFunctor(name, functor, {arity: this._extractArity(aliasesCopy)});
+            functor = new ConcreteFunctor(name, functor, {arity: FunctorRegistryUtils.extractArity(aliasesCopy)});
         }
 
         if (this.functors.has(name)) {
             // Check if the functors are functionally equivalent to avoid unnecessary warnings
             const existingFunctor = this.functors.get(name);
-            if (existingFunctor &&
-                existingFunctor.execute.toString() === functor.execute.toString() &&
-                existingFunctor.arity === functor.arity &&
-                existingFunctor.isCommutative === functor.isCommutative &&
-                existingFunctor.isAssociative === functor.isAssociative) {
+            if (FunctorRegistryUtils.areFunctionallyEquivalent(existingFunctor, functor)) {
                 // Same functor, no need to replace or warn
                 return true;
             }
@@ -69,17 +90,9 @@ export class FunctorRegistry {
         }
 
         this.functors.set(name, functor);
-        this._addAliases(aliasesCopy, name);
+        FunctorRegistryUtils.addAliases(this, aliasesCopy, name);
 
         return true;
-    }
-
-    _extractArity(aliases) {
-        return aliases.length > 0 && Array.isArray(aliases[aliases.length - 1]) ? aliases.pop() : 0;
-    }
-
-    _addAliases(aliases, functorName) {
-        aliases.forEach(alias => this.aliases.set(alias, functorName));
     }
 
     get(name) {
@@ -103,14 +116,8 @@ export class FunctorRegistry {
         const actualName = this.aliases.get(name) || name;
         if (!this.functors.has(actualName)) return false;
 
-        this._removeAliases(actualName);
+        FunctorRegistryUtils.removeAliases(this, actualName);
         return this.functors.delete(actualName);
-    }
-
-    _removeAliases(functorName) {
-        for (const [alias, name] of this.aliases.entries()) {
-            if (name === functorName) this.aliases.delete(alias);
-        }
     }
 
     getFunctorNames() {

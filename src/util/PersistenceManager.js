@@ -42,7 +42,7 @@ export class PersistenceManager {
         if (!this.options.enabled || !this.isInitialized) return null;
         
         try {
-            return this.storage.get(key) || null;
+            return this.storage.get(key) ?? null;
         } catch (error) {
             console.error(`Failed to load data for key ${key}:`, error);
             return null;
@@ -54,9 +54,7 @@ export class PersistenceManager {
         
         try {
             const exists = this.storage.has(key);
-            if (exists) {
-                this.storage.delete(key);
-            }
+            exists && this.storage.delete(key);
             return exists;
         } catch (error) {
             console.error(`Failed to delete data for key ${key}:`, error);

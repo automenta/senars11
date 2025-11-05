@@ -9,6 +9,63 @@ import {HigherOrderReasoningEngine} from './nal/HigherOrderReasoningEngine.js';
 import {EquationSolver} from './EquationSolver.js';
 import {BooleanEvaluator} from './BooleanEvaluator.js';
 
+/**
+ * Centralized utilities for evaluation engine to reduce duplication
+ */
+class EvaluationUtils {
+    static createResult(result, success, message, additionalData = {}) {
+        return {result, success, message, ...additionalData};
+    }
+    
+    static createBooleanResult(result, message) {
+        return EvaluationUtils.createResult(result, true, message);
+    }
+    
+    static areAllBooleanValues(components, variableBindings, substituteFunc) {
+        return components.every(comp => {
+            const boundComp = substituteFunc(comp, variableBindings);
+            return boundComp.isBoolean || isTrue(boundComp) || isFalse(boundComp) || isNull(boundComp);
+        });
+    }
+    
+    static binaryBooleanOp(op, left, right, trueResult, falseResult, nullResult = SYSTEM_ATOMS.Null) {
+        if (isNull(left) || isNull(right)) return nullResult;
+        return op(left, right) ? trueResult : falseResult;
+    }
+
+    static unaryBooleanOp(operand, condition, trueResult, falseResult, nullResult = SYSTEM_ATOMS.Null) {
+        if (isNull(operand)) return nullResult;
+        return condition(operand) ? trueResult : falseResult;
+    }
+
+    static naryBooleanOperation(components, someCheck1, result1, someCheck2, result2, everyCheck, result3, defaultFn) {
+        if (components.some(someCheck1)) return result1;
+        if (components.some(someCheck2)) return result2;
+        if (components.every(everyCheck)) return result3;
+        return defaultFn();
+    }
+    
+    static naryStructuralOperation(components, filterCond, check1, result1, check2, result2, allCaseResult, operator, termType) {
+        if (components.some(check1)) return result1;
+        if (components.some(check2)) return result2;
+
+        const filteredComponents = components.filter(filterCond);
+        const count = filteredComponents.length;
+        return count === 0 ? allCaseResult :
+               count === 1 ? filteredComponents[0] :
+               new Term('compound', termType, filteredComponents, operator);
+    }
+    
+    static generateCacheKey(term, variableBindings) {
+        const termKey = term.toString();
+        const bindingsKey = Array.from(variableBindings.entries())
+            .map(([key, val]) => `${key}:${val.toString()}`)
+            .sort()
+            .join('|');
+        return `${termKey}#${bindingsKey}`;
+    }
+}
+
 export class EvaluationEngine {
     constructor(functorRegistry = null, termFactory = null, config = {}) {
         this.functorRegistry = functorRegistry || new FunctorRegistry();
@@ -38,15 +95,19 @@ export class EvaluationEngine {
         this._recursionDepth = 0;
 
         // Unified rules for both functional and structural evaluation
-        this.operatorRules = {
+        this.operatorRules = this._createOperatorRules();
+
+        this._initializeDefaultFunctors();
+    }
+    
+    _createOperatorRules() {
+        return {
             '&': {functional: this._reduceAndFunctional.bind(this), structural: this._reduceAndStructural.bind(this)},
             '|': {functional: this._reduceOrFunctional.bind(this), structural: this._reduceOrStructural.bind(this)},
             '--': {functional: this._reduceNegationFunctional.bind(this), structural: this._reduceNegationStructural.bind(this)},
             '==>': {functional: this._reduceImplicationFunctional.bind(this), structural: this._reduceImplicationStructural.bind(this)},
             '<=>': {functional: this._reduceEquivalenceFunctional.bind(this), structural: this._reduceEquivalenceStructural.bind(this)}
         };
-
-        this._initializeDefaultFunctors();
     }
 
     _initializeDefaultFunctors = () => {
@@ -64,13 +125,13 @@ export class EvaluationEngine {
     async evaluate(term, context, variableBindings = new Map()) {
         // Check recursion depth to prevent infinite loops
         if (this._recursionDepth > this.config.maxRecursionDepth) {
-            return this._createResult(SYSTEM_ATOMS.Null, false, 'Maximum recursion depth exceeded');
+            return EvaluationUtils.createResult(SYSTEM_ATOMS.Null, false, 'Maximum recursion depth exceeded');
         }
         this._recursionDepth++;
 
         try {
             // Generate cache key if caching is enabled
-            const cacheKey = this.config.enableCaching ? this._generateCacheKey(term, variableBindings) : null;
+            const cacheKey = this.config.enableCaching ? EvaluationUtils.generateCacheKey(term, variableBindings) : null;
             if (cacheKey) {
                 const cachedResult = this._evaluationCache.get(cacheKey);
                 if (cachedResult) {
@@ -95,7 +156,7 @@ export class EvaluationEngine {
         // Check for higher-order reasoning patterns before standard evaluation
         const higherOrderResult = this.higherOrderEngine.processHigherOrderTerm(term, context);
         if (higherOrderResult.success) {
-            return this._createResult(higherOrderResult.result, true, `Higher-order reasoning: ${higherOrderResult.message}`,
+            return EvaluationUtils.createResult(higherOrderResult.result, true, `Higher-order reasoning: ${higherOrderResult.message}`,
                 higherOrderResult.bindings ? {bindings: higherOrderResult.bindings} : {});
         }
 
@@ -107,7 +168,7 @@ export class EvaluationEngine {
                 return await this._evaluateUnifiedOperator(term, context, variableBindings);
             case '^':
                 return term.components.length !== 2
-                    ? this._createResult(SYSTEM_ATOMS.Null, false, 'Invalid operation format')
+                    ? EvaluationUtils.createResult(SYSTEM_ATOMS.Null, false, 'Invalid operation format')
                     : await this._evaluateOperation(term, variableBindings);
             case '=':
                 return await this._evaluateEquality(term, context, variableBindings);
@@ -120,24 +181,18 @@ export class EvaluationEngine {
 
     async _evaluateUnifiedOperator(term, context, variableBindings) {
         // Check if all arguments are Boolean atoms (True, False, Null) for functional evaluation
-        const isFunctional = this._areAllBooleanValues(term.components, variableBindings);
+        const isFunctional = EvaluationUtils.areAllBooleanValues(term.components, variableBindings, this._substituteVariables.bind(this));
         return isFunctional 
             ? this._evaluateBooleanFunction(term, variableBindings) 
-            : this._createResult(this.reduce(term), true, 'Structural compound with boolean reduction');
+            : EvaluationUtils.createResult(this.reduce(term), true, 'Structural compound with boolean reduction');
     }
-
-    _areAllBooleanValues = (components, variableBindings) => 
-        components.every(comp => {
-            const boundComp = this._substituteVariables(comp, variableBindings);
-            return boundComp.isBoolean || isTrue(boundComp) || isFalse(boundComp) || isNull(boundComp);
-        })
 
     _evaluateBooleanFunction = (term, variableBindings) => {
         const { operator, components } = term;
         
         // Ensure we have exactly 2 components for binary operations or at least 1 for others
         if (['==>', '<=>'].includes(operator) && components.length !== 2) {
-            return this._createResult(SYSTEM_ATOMS.Null, false, `${operator} requires exactly 2 arguments`);
+            return EvaluationUtils.createResult(SYSTEM_ATOMS.Null, false, `${operator} requires exactly 2 arguments`);
         }
         
         const boundComponents = components.map(comp => this._substituteVariables(comp, variableBindings));
@@ -155,12 +210,12 @@ export class EvaluationEngine {
         }
         
         const { result, message } = evaluator();
-        return this._createBooleanResult(result, message);
+        return EvaluationUtils.createBooleanResult(result, message);
     }
 
     async _evaluateEquality(term, context, variableBindings) {
         if (term.components.length !== 2) {
-            return this._createResult(SYSTEM_ATOMS.Null, false, 'Equality requires exactly 2 arguments');
+            return EvaluationUtils.createResult(SYSTEM_ATOMS.Null, false, 'Equality requires exactly 2 arguments');
         }
 
         const [left, right] = term.components;
@@ -185,11 +240,11 @@ export class EvaluationEngine {
         const bindings = VariableBindingUtils.matchAndBindVariables(leftBound, rightBound, variableBindings);
         if (bindings) {
             // If successful matching occurred, return True
-            return this._createResult(SYSTEM_ATOMS.True, true, 'Equality: structures match', {bindings});
+            return EvaluationUtils.createResult(SYSTEM_ATOMS.True, true, 'Equality: structures match', {bindings});
         }
 
         // If no match found, return False - but this is still a successful evaluation
-        return this._createResult(SYSTEM_ATOMS.False, true, 'Equality: structures do not match');
+        return EvaluationUtils.createResult(SYSTEM_ATOMS.False, true, 'Equality: structures do not match');
     }
 
     _evaluateAtomicEquality = (leftBound, rightBound) => {
@@ -198,8 +253,8 @@ export class EvaluationEngine {
 
         // For simple values, return True/False
         return leftVal === rightVal
-            ? this._createResult(SYSTEM_ATOMS.True, true, 'Equality: atomic values match')
-            : this._createResult(SYSTEM_ATOMS.False, true, 'Equality: atomic values do not match');
+            ? EvaluationUtils.createResult(SYSTEM_ATOMS.True, true, 'Equality: atomic values match')
+            : EvaluationUtils.createResult(SYSTEM_ATOMS.False, true, 'Equality: atomic values do not match');
     }
 
     _attemptEquationSolving = async (left, right, variableBindings) => {
@@ -243,12 +298,12 @@ export class EvaluationEngine {
         const functionName = this._resolveFunctionName(functionTerm, variableBindings);
 
         if (!functionName) {
-            return this._createResult(SYSTEM_ATOMS.Null, false, 'Unbound variable in function position');
+            return EvaluationUtils.createResult(SYSTEM_ATOMS.Null, false, 'Unbound variable in function position');
         }
 
         const targetValue = this._termToValue(target);
         if (targetValue === null || (typeof targetValue !== 'number' && !Array.isArray(targetValue))) {
-            return this._createResult(SYSTEM_ATOMS.Null, false, 'Target value cannot be determined for equation solving');
+            return EvaluationUtils.createResult(SYSTEM_ATOMS.Null, false, 'Target value cannot be determined for equation solving');
         }
 
         const args = this._extractArguments(argsTerm, variableBindings);
@@ -266,7 +321,7 @@ export class EvaluationEngine {
                 const newBindings = new Map(variableBindings);
                 newBindings.set(args[variableIndex].name, solvedValue);
 
-                return this._createResult(
+                return EvaluationUtils.createResult(
                     SYSTEM_ATOMS.True,
                     true,
                     `Variable ${args[variableIndex].name} solved to ${solvedValue.name || solvedValue.toString()}`,
@@ -330,7 +385,7 @@ export class EvaluationEngine {
     // Functional reduction rules (boolean evaluation)
     _reduceAndFunctional = (components) => {
         if (!components?.length) return SYSTEM_ATOMS.True;
-        return this._naryBooleanOperation(components,
+        return EvaluationUtils.naryBooleanOperation(components,
             isFalse, SYSTEM_ATOMS.False,
             isNull, SYSTEM_ATOMS.Null,
             isTrue, SYSTEM_ATOMS.True,
@@ -339,7 +394,7 @@ export class EvaluationEngine {
 
     _reduceOrFunctional = (components) => {
         if (!components?.length) return SYSTEM_ATOMS.False;
-        return this._naryBooleanOperation(components,
+        return EvaluationUtils.naryBooleanOperation(components,
             isTrue, SYSTEM_ATOMS.True,
             isNull, SYSTEM_ATOMS.Null,
             isFalse, SYSTEM_ATOMS.False,
@@ -373,7 +428,7 @@ export class EvaluationEngine {
     // Structural reduction rules (NAL logic)
     _reduceAndStructural(components) {
         if (!components?.length) return SYSTEM_ATOMS.True;
-        return this._naryStructuralOperation(
+        return EvaluationUtils.naryStructuralOperation(
             components, comp => !isTrue(comp), // keep non-True for AND
             comp => isFalse(comp), SYSTEM_ATOMS.False,  // any False -> False
             comp => isNull(comp), SYSTEM_ATOMS.Null,    // any Null -> Null
@@ -383,7 +438,7 @@ export class EvaluationEngine {
 
     _reduceOrStructural(components) {
         if (!components?.length) return SYSTEM_ATOMS.False;
-        return this._naryStructuralOperation(
+        return EvaluationUtils.naryStructuralOperation(
             components, comp => !isFalse(comp), // keep non-False for OR
             comp => isTrue(comp), SYSTEM_ATOMS.True,   // any True -> True
             comp => isNull(comp), SYSTEM_ATOMS.Null,   // any Null -> Null
@@ -455,14 +510,14 @@ export class EvaluationEngine {
 
         const functionName = this._resolveFunctionName(functionTerm, variableBindings);
         if (!functionName) {
-            return this._createResult(SYSTEM_ATOMS.Null, false, 'Unbound variable in function position');
+            return EvaluationUtils.createResult(SYSTEM_ATOMS.Null, false, 'Unbound variable in function position');
         }
 
         const args = this._extractArguments(argsTerm, variableBindings);
         const functor = this.functorRegistry.get(functionName);
 
         if (!functor) {
-            return this._createResult(SYSTEM_ATOMS.Null, false, `Functor '${functionName}' not found`);
+            return EvaluationUtils.createResult(SYSTEM_ATOMS.Null, false, `Functor '${functionName}' not found`);
         }
 
         try {
@@ -473,7 +528,7 @@ export class EvaluationEngine {
                 if (processedArg.isCompound && processedArg.operator === '^') {
                     const evalResult = await this.evaluate(processedArg, null, variableBindings);
                     if (!evalResult.success || isNull(evalResult.result)) {
-                        return this._createResult(SYSTEM_ATOMS.Null, false, `Failed to evaluate nested operation in argument: ${processedArg.toString()}`);
+                        return EvaluationUtils.createResult(SYSTEM_ATOMS.Null, false, `Failed to evaluate nested operation in argument: ${processedArg.toString()}`);
                     }
                     processedArg = evalResult.result;
                 }
@@ -485,15 +540,15 @@ export class EvaluationEngine {
             const resultTerm = this._valueToTerm(result, this.termFactory);
 
             if (isNull(resultTerm)) {
-                return this._createResult(resultTerm, false, 'Operation resulted in Null (poison pill)');
+                return EvaluationUtils.createResult(resultTerm, false, 'Operation resulted in Null (poison pill)');
             }
 
-            return this._createResult(resultTerm, true, null, {functorName: functionName});
+            return EvaluationUtils.createResult(resultTerm, true, null, {functorName: functionName});
         } catch (error) {
             if (typeof process === 'undefined' || !process.env.JEST_WORKER_ID) {
                 console.error(`Error evaluating operation: ${error.message}`, error.stack);
             }
-            return this._createResult(SYSTEM_ATOMS.Null, false, error.message);
+            return EvaluationUtils.createResult(SYSTEM_ATOMS.Null, false, error.message);
         }
     }
 
@@ -518,18 +573,7 @@ export class EvaluationEngine {
     _evaluateNonOperation(term, context, variableBindings) {
         const substitutedTerm = this._substituteVariables(term, variableBindings);
         const message = substitutedTerm.isCompound ? 'Non-operation compound term, no evaluation performed' : undefined;
-        return this._createResult(substitutedTerm, true, message);
-    }
-
-    // Helper methods to reduce code duplication
-    _binaryBooleanOp(op, left, right, trueResult, falseResult, nullResult = SYSTEM_ATOMS.Null) {
-        if (isNull(left) || isNull(right)) return nullResult;
-        return op(left, right) ? trueResult : falseResult;
-    }
-
-    _unaryBooleanOp(operand, condition, trueResult, falseResult, nullResult = SYSTEM_ATOMS.Null) {
-        if (isNull(operand)) return nullResult;
-        return condition(operand) ? trueResult : falseResult;
+        return EvaluationUtils.createResult(substitutedTerm, true, message);
     }
 
     _substituteVariables(term, bindings) {
@@ -632,18 +676,18 @@ export class EvaluationEngine {
 
     _solveOperationEquation(operationTerm, targetTerm, variableName, variableBindings) {
         if (!operationTerm.isCompound || operationTerm.operator !== '^' || operationTerm.components.length !== 2) {
-            return this._createResult(SYSTEM_ATOMS.Null, false, 'Invalid operation format for equation solving');
+            return EvaluationUtils.createResult(SYSTEM_ATOMS.Null, false, 'Invalid operation format for equation solving');
         }
 
         const [functionTerm, argsTerm] = operationTerm.components;
         const functionName = this._resolveFunctionName(functionTerm, variableBindings);
         if (!functionName) {
-            return this._createResult(SYSTEM_ATOMS.Null, false, 'Unbound variable in function position');
+            return EvaluationUtils.createResult(SYSTEM_ATOMS.Null, false, 'Unbound variable in function position');
         }
 
         const targetValue = this._termToValue(targetTerm);
         if (targetValue === null) {
-            return this._createResult(SYSTEM_ATOMS.Null, false, 'Target value cannot be determined');
+            return EvaluationUtils.createResult(SYSTEM_ATOMS.Null, false, 'Target value cannot be determined');
         }
 
         const args = this._extractArguments(argsTerm, variableBindings);
@@ -652,7 +696,7 @@ export class EvaluationEngine {
         );
 
         if (variableIndex === -1) {
-            return this._createResult(SYSTEM_ATOMS.Null, false, 'Target variable not found in operation arguments');
+            return EvaluationUtils.createResult(SYSTEM_ATOMS.Null, false, 'Target variable not found in operation arguments');
         }
 
         return this._solveArithmeticEquation(functionName, args, variableIndex, targetValue);
@@ -662,12 +706,12 @@ export class EvaluationEngine {
         const argValues = args.map(arg => this._termToValue(arg));
 
         if (targetValue === null || typeof targetValue !== 'number') {
-            return this._createResult(SYSTEM_ATOMS.Null, false, 'Target value must be a number for arithmetic equation solving');
+            return EvaluationUtils.createResult(SYSTEM_ATOMS.Null, false, 'Target value must be a number for arithmetic equation solving');
         }
 
         const otherValue = argValues[1 - variableIndex];
         if (typeof otherValue !== 'number') {
-            return this._createResult(SYSTEM_ATOMS.Null, false, 'Non-variable argument must be a number for arithmetic equation solving');
+            return EvaluationUtils.createResult(SYSTEM_ATOMS.Null, false, 'Non-variable argument must be a number for arithmetic equation solving');
         }
 
         const solvers = {
@@ -679,19 +723,19 @@ export class EvaluationEngine {
 
         const solver = solvers[functionName];
         if (!solver) {
-            return this._createResult(SYSTEM_ATOMS.Null, false, `Back-solving not implemented for functor: ${functionName}`);
+            return EvaluationUtils.createResult(SYSTEM_ATOMS.Null, false, `Back-solving not implemented for functor: ${functionName}`);
         }
 
         const {solvedValue, success, message} = solver();
 
         if (success && solvedValue !== null) {
             const resultTerm = this._valueToTerm(solvedValue, this.termFactory);
-            return this._createResult(resultTerm, true, null, {
+            return EvaluationUtils.createResult(resultTerm, true, null, {
                 solvedVariable: args[variableIndex].name,
                 solvedValue
             });
         } else {
-            return this._createResult(SYSTEM_ATOMS.Null, false, message || 'Could not solve equation');
+            return EvaluationUtils.createResult(SYSTEM_ATOMS.Null, false, message || 'Could not solve equation');
         }
     }
 
@@ -741,14 +785,6 @@ export class EvaluationEngine {
         }
     }
 
-    _createResult(result, success, message, additionalData = {}) {
-        return {result, success, message, ...additionalData};
-    }
-
-    _createBooleanResult(result, message) {
-        return this._createResult(result, true, message);
-    }
-
     _valueFromSubstitutedTerm(term, variableBindings) {
         return this._termToValue(this._substituteVariables(term, variableBindings));
     }
@@ -763,30 +799,8 @@ export class EvaluationEngine {
         return VariableBindingUtils.matchAndBindVariables(leftTerm, rightTerm, variableBindings);
     }
 
-
-
     _unaryBooleanOperation(operand, operationFn) {
         return operationFn(operand);
-    }
-
-    _naryBooleanOperation(components, someCheck1, result1, someCheck2, result2, everyCheck, result3, defaultFn) {
-        if (components.some(someCheck1)) return result1;
-        if (components.some(someCheck2)) return result2;
-        if (components.every(everyCheck)) return result3;
-        return defaultFn();
-    }
-    
-
-
-    _naryStructuralOperation(components, filterCond, check1, result1, check2, result2, allCaseResult, operator, termType) {
-        if (components.some(check1)) return result1;
-        if (components.some(check2)) return result2;
-
-        const filteredComponents = components.filter(filterCond);
-        const count = filteredComponents.length;
-        return count === 0 ? allCaseResult :
-               count === 1 ? filteredComponents[0] :
-               new Term('compound', termType, filteredComponents, operator);
     }
 
     addFunctor(name, execute, config = {}) {
@@ -797,15 +811,6 @@ export class EvaluationEngine {
 
     getFunctorRegistry() {
         return this.functorRegistry;
-    }
-
-    _generateCacheKey(term, variableBindings) {
-        const termKey = term.toString();
-        const bindingsKey = Array.from(variableBindings.entries())
-            .map(([key, val]) => `${key}:${val.toString()}`)
-            .sort()
-            .join('|');
-        return `${termKey}#${bindingsKey}`;
     }
 
     _setCacheResult(cacheKey, result) {

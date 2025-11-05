@@ -78,24 +78,3 @@ export function removeDuplicates(items, keyFn) {
 export function removeDuplicateTasks(tasks) {
     return removeDuplicates(tasks, task => task.term ? task.term.toString() : JSON.stringify(task));
 }
-
-/**
- * Create a standard result object with success status and optional message
- */
-export function createResult(result, success, message, additionalData = {}) {
-    return {result, success, message, ...additionalData};
-}
-
-/**
- * Create a success result
- */
-export function createSuccessResult(result, message, additionalData = {}) {
-    return createResult(result, true, message, additionalData);
-}
-
-/**
- * Create a failure result
- */
-export function createFailureResult(result, message, additionalData = {}) {
-    return createResult(result, false, message, additionalData);
-}

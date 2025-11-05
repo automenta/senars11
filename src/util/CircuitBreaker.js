@@ -24,11 +24,13 @@ export class CircuitBreaker {
     }
     
     async execute(fn, context = {}) {
+        // Check if we should transition to HALF_OPEN state
         if (this.state === CircuitBreaker.STATES.OPEN && this.isResetTimeoutExpired()) {
             this.transitionTo(CircuitBreaker.STATES.HALF_OPEN);
             this.successCount = 0;
         }
         
+        // Check if we should open the circuit
         if (this.state !== CircuitBreaker.STATES.HALF_OPEN && this.shouldOpen()) {
             this.forceOpen();
             throw new Error('Circuit breaker is OPEN');
@@ -69,7 +71,7 @@ export class CircuitBreaker {
     
     transitionTo(newState) {
         this.state = newState;
-        this.lastFailureTime = newState === CircuitBreaker.STATES.OPEN ? Date.now() : this.lastFailureTime;
+        newState === CircuitBreaker.STATES.OPEN && (this.lastFailureTime = Date.now());
     }
     
     getState() {
@@ -116,6 +118,5 @@ export class CircuitBreaker {
 
 export const withCircuitBreaker = (fn, circuitBreakerOptions = {}) => {
     const circuitBreaker = new CircuitBreaker(circuitBreakerOptions);
-    
     return async (...args) => circuitBreaker.execute(() => fn(...args));
 };

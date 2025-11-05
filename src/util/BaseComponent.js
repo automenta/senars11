@@ -6,7 +6,7 @@ export class BaseComponent {
     constructor(config = {}, name = 'BaseComponent', eventBus = null, validationSchema = null) {
         this._config = config;
         this._name = name;
-        this._logger = Logger;  // Logger is a singleton instance, not a class to instantiate
+        this._logger = Logger;  // Logger is a singleton instance
         this._eventBus = eventBus || new EventBus();
         this._metrics = new Map();
         this._validationSchema = validationSchema;
@@ -16,54 +16,25 @@ export class BaseComponent {
         this._startTime = null;
 
         // Validate configuration if schema provided
-        if (this._validationSchema) {
-            this._validateConfig(config);
-        }
+        this._validationSchema && this._validateConfig(config);
 
         // Initialize common metrics
         this._initializeMetrics();
     }
 
-    get name() {
-        return this._name;
-    }
+    // Getters
+    get name() { return this._name; }
+    get config() { return this._config; }
+    get logger() { return this._logger; }
+    get eventBus() { return this._eventBus; }
+    get metrics() { return this._metrics; }
+    get isInitialized() { return this._initialized; }
+    get isStarted() { return this._started; }
+    get isDisposed() { return this._disposed; }
+    get isRunning() { return this._started && !this._disposed; }
+    get uptime() { return this._startTime ? Date.now() - this._startTime : 0; }
 
-    get config() {
-        return this._config;
-    }
-
-    get logger() {
-        return this._logger;
-    }
-
-    get eventBus() {
-        return this._eventBus;
-    }
-
-    get metrics() {
-        return this._metrics;
-    }
-
-    get isInitialized() {
-        return this._initialized;
-    }
-
-    get isStarted() {
-        return this._started;
-    }
-
-    get isDisposed() {
-        return this._disposed;
-    }
-
-    get isRunning() {
-        return this._started && !this._disposed;
-    }
-
-    get uptime() {
-        return this._startTime ? Date.now() - this._startTime : 0;
-    }
-
+    // Configuration validation
     _validateConfig(config) {
         const schema = typeof this._validationSchema === 'function'
             ? this._validationSchema()
@@ -86,7 +57,8 @@ export class BaseComponent {
         return this._validationSchema ? this._validateConfig(config) : config;
     }
 
-    async _executeLifecycleOperation(operation, checkCondition, action, conditionMessage, metricName = null) {
+    // Lifecycle operation executor
+    async _executeLifecycleOperation(operation, checkCondition, action, metricName = null) {
         if (checkCondition) {
             if (operation === 'start' && !this._initialized) {
                 this._logger.error('Cannot start uninitialized component');
@@ -107,22 +79,22 @@ export class BaseComponent {
         }
 
         try {
-            if (operation === 'start') this._startTime = Date.now();
+            operation === 'start' && (this._startTime = Date.now());
             
             await action();
             
             // Update state after successful operation
-            if (operation === 'initialize') this._initialized = true;
-            if (operation === 'start') this._started = true;
-            if (operation === 'stop') this._started = false;
-            if (operation === 'dispose') this._disposed = true;
+            operation === 'initialize' && (this._initialized = true);
+            operation === 'start' && (this._started = true);
+            operation === 'stop' && (this._started = false);
+            operation === 'dispose' && (this._disposed = true);
 
             // Emit the appropriate event
             this._emitLifecycleEvent(operation);
 
             // Log and update metrics
             this._logger.info(`${this._name} ${operation}${operation === 'initialize' ? 'd' : operation === 'start' ? 'ed' : operation === 'stop' ? 'ped' : 'd'}`);
-            if (metricName) this.incrementMetric(metricName);
+            metricName && this.incrementMetric(metricName);
             return true;
         } catch (error) {
             this._logger.error(`Failed to ${operation} component`, error);
@@ -130,11 +102,7 @@ export class BaseComponent {
         }
     }
 
-    /**
-     * Emits a lifecycle event for the component
-     * @param {string} operation - The operation that was performed
-     * @private
-     */
+    // Lifecycle event emitter
     _emitLifecycleEvent(operation) {
         const eventPayload = {
             timestamp: Date.now(),
@@ -144,21 +112,22 @@ export class BaseComponent {
         this._eventBus.emit(`${this._name}.${operation}d`, eventPayload);
     }
 
+    // Lifecycle methods
     async initialize() {
         return await this._executeLifecycleOperation(
-            'initialize', true, () => this._initialize(), '', 'initializeCount'
+            'initialize', true, () => this._initialize(), 'initializeCount'
         );
     }
 
     async start() {
         return await this._executeLifecycleOperation(
-            'start', true, () => this._start(), '', 'startCount'
+            'start', true, () => this._start(), 'startCount'
         );
     }
 
     async stop() {
         return await this._executeLifecycleOperation(
-            'stop', true, () => this._stop(), '', 'stopCount'
+            'stop', true, () => this._stop(), 'stopCount'
         );
     }
 
@@ -170,13 +139,12 @@ export class BaseComponent {
 
         try {
             // Stop if running
-            if (this._started) await this.stop();
+            this._started && await this.stop();
 
             await this._executeLifecycleOperation(
                 'dispose',
                 false, // no condition check needed for dispose
-                () => this._dispose(),
-                ''
+                () => this._dispose()
             );
             return true;
         } catch (error) {
@@ -185,18 +153,13 @@ export class BaseComponent {
         }
     }
 
-    async _initialize() { /* Default implementation - can be overridden */
-    }
+    // Default lifecycle implementations (can be overridden)
+    async _initialize() {}
+    async _start() {}
+    async _stop() {}
+    async _dispose() {}
 
-    async _start() { /* Default implementation - can be overridden */
-    }
-
-    async _stop() { /* Default implementation - can be overridden */
-    }
-
-    async _dispose() { /* Default implementation - can be overridden */
-    }
-
+    // Metrics initialization
     _initializeMetrics() {
         this._metrics.set('initializeCount', 0);
         this._metrics.set('startCount', 0);
@@ -206,6 +169,7 @@ export class BaseComponent {
         this._metrics.set('lastActivity', Date.now());
     }
 
+    // Metric operations
     updateMetric(key, value) {
         this._metrics.set(key, value);
         this._metrics.set('lastActivity', Date.now());
@@ -229,6 +193,7 @@ export class BaseComponent {
         };
     }
 
+    // Logging methods
     logInfo(message, metadata) {
         this._logger.info(message, metadata);
         this._metrics.set('lastActivity', Date.now());
@@ -249,6 +214,7 @@ export class BaseComponent {
         this._metrics.set('lastActivity', Date.now());
     }
 
+    // Event emission
     emitEvent(event, data, options = {}) {
         this._eventBus.emit(event, {
             timestamp: Date.now(),
@@ -259,13 +225,11 @@ export class BaseComponent {
     }
 
     _emitIntrospectionEvent(eventName, payload) {
-        if (!this._config.introspection?.enabled) {
-            return;
-        }
-
-        this._eventBus.emit(eventName, createEventPayload(this._name, payload));
+        this._config.introspection?.enabled &&
+            this._eventBus.emit(eventName, createEventPayload(this._name, payload));
     }
 
+    // Event handling
     onEvent(event, handler) {
         this._eventBus.on(event, handler);
     }

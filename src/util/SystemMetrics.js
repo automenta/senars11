@@ -33,15 +33,15 @@ export class SystemMetrics {
         this.metrics.totalProcessingTime += cycleTime;
     }
 
-    recordTask(taskData) {
+    recordTask() {
         this.metrics.taskCount++;
     }
 
-    recordConcept(conceptData) {
+    recordConcept() {
         this.metrics.conceptCount++;
     }
 
-    recordError(errorData) {
+    recordError() {
         this.metrics.errorCount++;
     }
 
@@ -76,8 +76,8 @@ export class SystemMetrics {
             const n = sorted.length;
             
             // Median
-            cycleTimeMedian = n % 2 === 0 
-                ? (sorted[n / 2 - 1] + sorted[n / 2]) / 2 
+            cycleTimeMedian = n % 2 === 0
+                ? (sorted[n / 2 - 1] + sorted[n / 2]) / 2
                 : sorted[Math.floor(n / 2)];
             
             // Variance and standard deviation
@@ -112,9 +112,9 @@ export class SystemMetrics {
 
         return {
             isHealthy: errorRate < 0.1 && this.metrics.averageCycleTime < 100,
-            errorRate: errorRate,
+            errorRate,
             systemLoad: this.metrics.cycleCount / Math.max(1, uptime / 1000),
-            memoryPressure: this.metrics.memoryUsage / this.metrics.peakMemoryUsage,
+            memoryPressure: this.metrics.peakMemoryUsage > 0 ? this.metrics.memoryUsage / this.metrics.peakMemoryUsage : 0,
         };
     }
 
@@ -134,7 +134,7 @@ export class SystemMetrics {
         const std = Math.sqrt(varianceSum / this.cycleTimes.length);
         
         // Identify outliers (values more than 2 standard deviations from mean)
-        const outliers = this.cycleTimes.filter(value => 
+        const outliers = this.cycleTimes.filter(value =>
             Math.abs(value - mean) > 2 * std
         );
         
@@ -151,7 +151,7 @@ export class SystemMetrics {
         
         // Stability based on coefficient of variation
         const coefVariation = mean > 0 ? std / mean : Infinity;
-        const stability = coefVariation < 0.1 ? 'high' : 
+        const stability = coefVariation < 0.1 ? 'high' :
                          coefVariation < 0.2 ? 'medium' : 'low';
         
         return {

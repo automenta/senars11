@@ -3,18 +3,14 @@ export const CapabilityTypes = {
     FILE_SYSTEM_WRITE: 'file-system-write',
     NETWORK_ACCESS: 'network-access',
     COMMAND_EXECUTION: 'command-execution',
-
     PROCESS_MANAGEMENT: 'process-management',
     USER_MANAGEMENT: 'user-management',
     SYSTEM_CONFIGURATION: 'system-configuration',
-
     DATABASE_ACCESS: 'database-access',
     ENCRYPTION: 'encryption',
     CRYPTOGRAPHY: 'cryptography',
-
     EXTERNAL_API_ACCESS: 'external-api-access',
     WEB_REQUESTS: 'web-requests',
-
     RESOURCE_LIMITS: 'resource-limits',
     MEMORY_ACCESS: 'memory-access',
     CPU_INTENSIVE: 'cpu-intensive'
@@ -134,7 +130,7 @@ export class CapabilityManager {
     }
 
     async grantCapabilities(toolId, capabilityIds, options = {}) {
-        if (!toolId || !Array.isArray(capabilityIds) || capabilityIds.length === 0) {
+        if (!toolId || !Array.isArray(capabilityIds) || !capabilityIds.length) {
             throw new Error('Tool ID and at least one capability ID are required');
         }
 
@@ -159,9 +155,7 @@ export class CapabilityManager {
         }
 
         // Initialize grants for tool if needed
-        if (!this.grants.has(toolId)) {
-            this.grants.set(toolId, new Set());
-        }
+        !this.grants.has(toolId) && this.grants.set(toolId, new Set());
 
         const toolGrants = this.grants.get(toolId);
         const granted = [], failed = [];
@@ -194,7 +188,7 @@ export class CapabilityManager {
     }
 
     async revokeCapabilities(toolId, capabilityIds) {
-        if (!toolId || !Array.isArray(capabilityIds) || capabilityIds.length === 0) {
+        if (!toolId || !Array.isArray(capabilityIds) || !capabilityIds.length) {
             throw new Error('Tool ID and at least one capability ID are required');
         }
 
@@ -221,9 +215,7 @@ export class CapabilityManager {
         }
 
         // Clean up empty grants
-        if (toolGrants.size === 0) {
-            this.grants.delete(toolId);
-        }
+        !toolGrants.size && this.grants.delete(toolId);
 
         return {
             success: true,
@@ -240,7 +232,7 @@ export class CapabilityManager {
     }
 
     async hasAllCapabilities(toolId, capabilityIds) {
-        if (!Array.isArray(capabilityIds) || capabilityIds.length === 0) return true;
+        if (!Array.isArray(capabilityIds) || !capabilityIds.length) return true;
         const toolGrants = this.grants.get(toolId);
         return !!toolGrants && capabilityIds.every(capId => toolGrants.has(capId));
     }

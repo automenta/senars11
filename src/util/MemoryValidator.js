@@ -12,9 +12,7 @@ export class MemoryValidator {
     }
 
     calculateChecksum(obj) {
-        if (!this.isEnabled || !this.options.enableChecksums) {
-            return null;
-        }
+        if (!this.isEnabled || !this.options.enableChecksums) return null;
 
         const str = JSON.stringify(obj, Object.keys(obj).sort());
         let hash = 0;
@@ -32,30 +30,28 @@ export class MemoryValidator {
         if (!this.isEnabled) return;
         
         const checksum = this.calculateChecksum(obj);
-        if (checksum) {
-            this.checksums.set(key, checksum);
-        }
+        checksum && this.checksums.set(key, checksum);
         return checksum;
     }
 
     validate(key, obj) {
         if (!this.isEnabled || !this.options.enableChecksums) {
-            return {valid: true, message: 'Validation disabled'};
+            return { valid: true, message: 'Validation disabled' };
         }
         
         const expectedChecksum = this.checksums.get(key);
         if (!expectedChecksum) {
             this.storeChecksum(key, obj);
-            return {valid: true, message: 'First validation - stored checksum'};
+            return { valid: true, message: 'First validation - stored checksum' };
         }
         
         const actualChecksum = this.calculateChecksum(obj);
         if (!actualChecksum) {
-            return {valid: false, message: 'Could not calculate checksum'};
+            return { valid: false, message: 'Could not calculate checksum' };
         }
         
         return expectedChecksum === actualChecksum
-            ? {valid: true, message: 'Valid'}
+            ? { valid: true, message: 'Valid' }
             : {
                 valid: false,
                 message: 'Memory corruption detected',
@@ -91,9 +87,7 @@ export class MemoryValidator {
         if (!this.isEnabled) return;
         
         const checksum = this.calculateChecksum(obj);
-        if (checksum) {
-            this.checksums.set(key, checksum);
-        }
+        checksum && this.checksums.set(key, checksum);
         return checksum;
     }
 }

@@ -1,22 +1,15 @@
-export const collectTasksFromAllConcepts = (memory, filterFn = null) => 
+export const collectTasksFromAllConcepts = (memory, filterFn = null) =>
     memory.getAllConcepts()
         .flatMap(concept => filterFn ? concept.getAllTasks().filter(filterFn) : concept.getAllTasks());
 
 export const collectConceptsWithCriteria = (memory, criteria = {}) => {
     const {minTaskCount = 0, hasUnresolvedTasks = false, termPattern = null} = criteria;
     
-    return memory.getAllConcepts().filter(concept => {
-        // Filter by minimum task count
-        if (concept.getAllTasks().length < minTaskCount) return false;
-        
-        // Filter by unresolved tasks
-        if (hasUnresolvedTasks && !concept.hasUnresolvedTasks()) return false;
-        
-        // Filter by term pattern
-        if (termPattern && !new RegExp(termPattern).test(concept.term.toString())) return false;
-        
-        return true;
-    });
+    return memory.getAllConcepts().filter(concept =>
+        concept.getAllTasks().length >= minTaskCount &&
+        (!hasUnresolvedTasks || concept.hasUnresolvedTasks()) &&
+        (!termPattern || new RegExp(termPattern).test(concept.term.toString()))
+    );
 };
 
 export const getMemoryStats = memory => {

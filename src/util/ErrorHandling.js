@@ -44,13 +44,12 @@ class ErrorTracker {
     track(errorInfo) {
         this.errorRateWindow.push({timestamp: errorInfo.timestamp, severity: errorInfo.severity});
         this._cleanup();
-        if (this.getErrorRate() > this.maxErrorRate) {
+        this.getErrorRate() > this.maxErrorRate &&
             this.logger.warn(`High error rate: ${(this.getErrorRate() * 100).toFixed(2)}%`);
-        }
     }
 
     getErrorRate() {
-        if (this.errorRateWindow.length === 0) return 0;
+        if (!this.errorRateWindow.length) return 0;
         const recentErrors = this.errorRateWindow.filter(err =>
             [SEVERITY_LEVELS.HIGH, SEVERITY_LEVELS.MEDIUM].includes(err.severity));
         return recentErrors.length / this.errorRateWindow.length;
@@ -140,9 +139,8 @@ export class ErrorHandling {
             return await this.recovery.attemptRecovery(errorInfo, options);
         }
 
-        if (this.config.get('errorHandling.enableGracefulDegradation')) {
-            return {success: false, degraded: true, error: errorInfo};
-        }
+        this.config.get('errorHandling.enableGracefulDegradation') &&
+            (return {success: false, degraded: true, error: errorInfo});
 
         throw error;
     }

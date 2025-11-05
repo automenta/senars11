@@ -71,7 +71,7 @@ export class Plugin {
         }
 
         try {
-            if (this.started) await this.stop();
+            this.started && await this.stop();
             await this._dispose();
             this.disposed = true;
             return true;
@@ -97,28 +97,22 @@ export class Plugin {
     }
     
     emitEvent(event, data, options = {}) {
-        if (this.context && this.context.eventBus) {
-            this.context.eventBus.emit(event, {
-                timestamp: Date.now(),
-                source: this.id,
-                ...data
-            }, {
-                ...options,
-                source: this.id
-            });
-        }
+        this.context?.eventBus?.emit(event, {
+            timestamp: Date.now(),
+            source: this.id,
+            ...data
+        }, {
+            ...options,
+            source: this.id
+        });
     }
     
     onEvent(event, handler) {
-        if (this.context && this.context.eventBus) {
-            this.context.eventBus.on(event, handler);
-        }
+        this.context?.eventBus?.on(event, handler);
     }
     
     offEvent(event, handler) {
-        if (this.context && this.context.eventBus) {
-            this.context.eventBus.off(event, handler);
-        }
+        this.context?.eventBus?.off(event, handler);
     }
     
     isReady() {
@@ -155,13 +149,13 @@ export class PluginManager {
         }
         
         const plugin = this.plugins.get(pluginId);
-        if (plugin.started) plugin.stop();
-        if (!plugin.disposed) plugin.dispose();
+        plugin.started && plugin.stop();
+        !plugin.disposed && plugin.dispose();
         return this.plugins.delete(pluginId);
     }
     
     getPlugin(pluginId) {
-        return this.plugins.get(pluginId) || null;
+        return this.plugins.get(pluginId) ?? null;
     }
     
     async initializeAll() {
@@ -199,7 +193,7 @@ export class PluginManager {
             promises.push(
                 plugin.start()
                     .then(success => {
-                        if (!success) allSuccessful = false;
+                        success || (allSuccessful = false);
                     })
                     .catch(error => {
                         console.error(`Failed to start plugin ${id}:`, error);
@@ -220,7 +214,7 @@ export class PluginManager {
             promises.push(
                 plugin.stop()
                     .then(success => {
-                        if (!success) allSuccessful = false;
+                        success || (allSuccessful = false);
                     })
                     .catch(error => {
                         console.error(`Failed to stop plugin ${id}:`, error);
@@ -241,7 +235,7 @@ export class PluginManager {
             promises.push(
                 plugin.dispose()
                     .then(success => {
-                        if (!success) allSuccessful = false;
+                        success || (allSuccessful = false);
                     })
                     .catch(error => {
                         console.error(`Failed to dispose plugin ${id}:`, error);
@@ -265,7 +259,7 @@ export class PluginManager {
                 case 'initialized': return plugin.initialized;
                 case 'started': return plugin.started;
                 case 'disposed': return plugin.disposed;
-                case 'ready': return plugin.isReady && plugin.isReady();
+                case 'ready': return plugin.isReady?.() ?? false;
                 default: return true;
             }
         });

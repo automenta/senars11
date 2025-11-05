@@ -34,16 +34,19 @@ export const throttle = (fn, delay, options = {}) => {
         const now = Date.now();
         if (now - lastCall >= delay) {
             lastCall = now;
-            lastResult = fn(...args);
-        } else if (options.trailing) {
-            // Execute trailing call after delay
+            return lastResult = fn(...args);
+        }
+        
+        if (options.trailing) {
             setTimeout(() => {
-                if (Date.now() - lastCall >= delay) {
-                    lastCall = Date.now();
+                const time = Date.now();
+                if (time - lastCall >= delay) {
+                    lastCall = time;
                     lastResult = fn(...args);
                 }
             }, delay - (now - lastCall));
         }
+        
         return lastResult;
     };
 };
@@ -52,10 +55,11 @@ export const memoize = (fn, resolver = null) => {
     const cache = new Map();
     return (...args) => {
         const key = resolver ? resolver(...args) : JSON.stringify(args);
-        if (cache.has(key)) return cache.get(key);
-        const result = fn(...args);
-        cache.set(key, result);
-        return result;
+        return cache.has(key) ? cache.get(key) : (() => {
+            const result = fn(...args);
+            cache.set(key, result);
+            return result;
+        })();
     };
 };
 

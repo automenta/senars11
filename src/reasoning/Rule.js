@@ -2,18 +2,49 @@ import {Metrics} from '../util/Metrics.js';
 import {TRUTH} from '../config/constants.js';
 import {clamp} from '../util/common.js';
 
+// Private utilities for Rule class
+class RuleUtils {
+    static validateId(id) {
+        if (!id || typeof id !== 'string') throw new Error('Rule ID must be a non-empty string');
+    }
+    
+    static createMetrics() {
+        return Object.freeze({
+            applications: 0, 
+            successes: 0, 
+            failures: 0, 
+            totalTime: 0, 
+            createdAt: Date.now()
+        });
+    }
+    
+    static resolveContext(memoryOrContext, termFactory) {
+        const isContext = memoryOrContext?.hasOwnProperty('config');
+
+        return isContext
+            ? {
+                effectiveContext: memoryOrContext,
+                effectiveMemory: memoryOrContext.memory,
+                effectiveTermFactory: memoryOrContext.termFactory || termFactory
+            }
+            : {effectiveMemory: memoryOrContext, effectiveTermFactory: termFactory, effectiveContext: null};
+    }
+    
+    static updateMetrics(metrics, success, time) {
+        return Metrics.update(metrics, success, time);
+    }
+}
+
 export class Rule {
     constructor(id, type, priority = 1.0, config = {}) {
-        if (!id || typeof id !== 'string') throw new Error('Rule ID must be a non-empty string');
+        RuleUtils.validateId(id);
 
         this._id = id;
         this._type = type;
         this._priority = clamp(priority, TRUTH.MIN_PRIORITY, TRUTH.MAX_PRIORITY);
         this._config = Object.freeze({...config});
         this._enabled = config.enabled !== false;
-        this._metrics = Object.freeze({
-            applications: 0, successes: 0, failures: 0, totalTime: 0, createdAt: Date.now()
-        });
+        this._metrics = RuleUtils.createMetrics();
     }
 
     get id() {
@@ -76,7 +107,7 @@ export class Rule {
             effectiveContext,
             effectiveMemory,
             effectiveTermFactory
-        } = this._resolveContext(memoryOrContext, termFactory);
+        } = RuleUtils.resolveContext(memoryOrContext, termFactory);
 
         if (!this.canApply(task)) return {results: [], rule: this};
 
@@ -95,18 +126,6 @@ export class Rule {
         } catch (error) {
             throw {error, rule: this._updateMetrics(false, performance.now() - start)};
         }
-    }
-
-    _resolveContext(memoryOrContext, termFactory) {
-        const isContext = memoryOrContext?.hasOwnProperty('config');
-
-        return isContext
-            ? {
-                effectiveContext: memoryOrContext,
-                effectiveMemory: memoryOrContext.memory,
-                effectiveTermFactory: memoryOrContext.termFactory || termFactory
-            }
-            : {effectiveMemory: memoryOrContext, effectiveTermFactory: termFactory, effectiveContext: null};
     }
 
     async _applyWithContext(task, context) {
@@ -128,7 +147,7 @@ export class Rule {
     }
 
     _updateMetrics(success, time) {
-        const metrics = Metrics.update(this._metrics, success, time);
+        const metrics = RuleUtils.updateMetrics(this._metrics, success, time);
         return this._clone({metrics});
     }
 

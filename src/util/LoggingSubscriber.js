@@ -8,7 +8,7 @@ export class LoggingSubscriber {
             logger: options.logger || console
         };
         
-        this.levels = {'debug': 0, 'info': 1, 'warn': 2, 'error': 3};
+        this.levels = { debug: 0, info: 1, warn: 2, error: 3 };
         this.currentLogLevel = this.levels[this.options.level] || this.levels.info;
         this.stopped = false;
         this.boundMiddleware = this._loggingMiddleware.bind(this);
@@ -52,24 +52,18 @@ export class LoggingSubscriber {
     }
     
     _getLogLevel(eventName) {
-        if (eventName.includes('error')) return 'error';
-        if (eventName.includes('warn') || eventName.includes('warning')) return 'warn';
-        if (eventName.includes('debug')) return 'debug';
-        return 'info';
+        return eventName.includes('error') ? 'error' :
+               eventName.includes('warn') || eventName.includes('warning') ? 'warn' :
+               eventName.includes('debug') ? 'debug' : 'info';
     }
     
     _sanitizeEventData(eventData) {
-        const sanitized = {...eventData};
-        delete sanitized.eventName;
-        delete sanitized.timestamp;
-        delete sanitized.component;
-        delete sanitized.traceId;
+        const { eventName, timestamp, component, traceId, ...sanitized } = eventData;
         return sanitized;
     }
     
     _outputLog(logEntry) {
-        if (this.levels[logEntry.level] >= this.currentLogLevel) {
+        this.levels[logEntry.level] >= this.currentLogLevel &&
             this.options.logger.log(JSON.stringify(logEntry));
-        }
     }
 }

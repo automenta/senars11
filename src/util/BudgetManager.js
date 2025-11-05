@@ -8,12 +8,10 @@ export class BudgetManager {
     }
     
     allocate(id, amount) {
-        if (this.budget >= amount) {
-            this.budget -= amount;
-            this.allocations.set(id, (this.allocations.get(id) || 0) + amount);
-            return true;
-        }
-        return false;
+        if (this.budget < amount) return false;
+        this.budget -= amount;
+        this.allocations.set(id, (this.allocations.get(id) || 0) + amount);
+        return true;
     }
     
     release(id) {
