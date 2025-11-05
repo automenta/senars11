@@ -22,8 +22,9 @@ export class RuleProcessor {
       termFactory: null // Default to null, will be provided by parent
     }, config);
     
-    // Queue for async results
+    // Queue for async results - using array with index for efficient removal from front
     this.asyncResultsQueue = [];
+    this.asyncResultsQueueStart = 0; // Track start index to avoid shifting
     
     // Track rule execution counts
     this.syncRuleExecutions = 0;
@@ -36,11 +37,19 @@ export class RuleProcessor {
   /**
    * Process a stream of premise pairs through rules
    * @param {AsyncGenerator<Array<Task>>} premisePairStream - Stream of premise pairs
+   * @param {number} timeoutMs - Maximum time to spend processing (0 for no timeout)
    * @returns {AsyncGenerator<Task>} - Stream of derived tasks (both sync and async results)
    */
-  async *process(premisePairStream) {
+  async *process(premisePairStream, timeoutMs = 0) {
+    const startTime = Date.now();
     try {
       for await (const [primaryPremise, secondaryPremise] of premisePairStream) {
+        // Check for timeout
+        if (timeoutMs > 0 && (Date.now() - startTime) > timeoutMs) {
+          console.debug(`RuleProcessor: timeout reached after ${timeoutMs}ms`);
+          break;
+        }
+        
         // Check for backpressure before processing this premise pair
         await this._checkAndApplyBackpressure();
         
@@ -49,6 +58,12 @@ export class RuleProcessor {
         
         // Process each rule (both sync and async)
         for (const rule of candidateRules) {
+          // Check for timeout again inside the inner loop
+          if (timeoutMs > 0 && (Date.now() - startTime) > timeoutMs) {
+            console.debug(`RuleProcessor: timeout reached after ${timeoutMs}ms`);
+            break;
+          }
+          
           try {
             // Execute synchronous rules immediately
             if (this._isSynchronousRule(rule)) {
@@ -82,33 +97,32 @@ export class RuleProcessor {
         }
         
         // Yield any available async results after processing this premise pair
-        while (this.asyncResultsQueue.length > 0) {
-          // Check for backpressure before yielding results
-          await this._checkAndApplyBackpressure();
-          
-          yield this.asyncResultsQueue.shift();
-        }
+        yield* this._yieldAsyncResults();
       }
       
       // After processing all premise pairs, continue yielding any remaining async results
-      let hasAsyncResults = true;
       let checkCount = 0;
+      const initialRemainingTime = timeoutMs > 0 ? timeoutMs - (Date.now() - startTime) : 0;
       
-      while (hasAsyncResults && checkCount < this.config.maxChecks) {
-        hasAsyncResults = false;
+      while (checkCount < this.config.maxChecks && (timeoutMs === 0 || initialRemainingTime > 0)) {
+        // Check timeout
+        if (timeoutMs > 0 && (Date.now() - startTime) > timeoutMs) {
+          console.debug(`RuleProcessor: timeout reached after ${timeoutMs}ms (in async results loop)`);
+          break;
+        }
+        
         checkCount++;
         
         // Small timeout to allow pending async operations to complete
         await sleep(this.config.asyncWaitInterval);
         
         // Yield any results that became available during the wait
-        let result;
-        while ((result = this.asyncResultsQueue.shift()) !== undefined) {
-          hasAsyncResults = true;
-          // Check for backpressure before yielding results
-          await this._checkAndApplyBackpressure();
-          
-          yield result;
+        const asyncResultsAvailable = this._getAsyncResultsCount() > 0;
+        if (asyncResultsAvailable) {
+          yield* this._yieldAsyncResults();
+        } else if (checkCount >= this.config.maxChecks) {
+          // No more results expected, exit early
+          break;
         }
       }
     } catch (error) {
@@ -116,6 +130,58 @@ export class RuleProcessor {
       // Re-throw to allow upstream handling
       throw new ReasonerError(`Error in RuleProcessor process: ${error.message}`, 'STREAM_ERROR', { originalError: error });
     }
+  }
+
+  /**
+   * Yield all available async results with backpressure checks
+   * @private
+   */
+  async *_yieldAsyncResults() {
+    // Process and yield all current async results
+    while (this._getAsyncResultsCount() > 0) {
+      // Check for backpressure before yielding results
+      await this._checkAndApplyBackpressure();
+      
+      yield this._dequeueAsyncResult();
+    }
+  }
+
+  /**
+   * Get the current count of async results in the queue
+   * @returns {number} Count of items in the queue
+   * @private
+   */
+  _getAsyncResultsCount() {
+    return this.asyncResultsQueue.length - this.asyncResultsQueueStart;
+  }
+
+  /**
+   * Dequeue an async result from the front of the queue
+   * @returns {any} The dequeued result or undefined if empty
+   * @private
+   */
+  _dequeueAsyncResult() {
+    if (this.asyncResultsQueueStart >= this.asyncResultsQueue.length) {
+      // Clean up the array if we've consumed most of it
+      if (this.asyncResultsQueue.length > 100) {
+        this.asyncResultsQueue = this.asyncResultsQueue.slice(this.asyncResultsQueueStart);
+        this.asyncResultsQueueStart = 0;
+      }
+      return undefined;
+    }
+    
+    const result = this.asyncResultsQueue[this.asyncResultsQueueStart];
+    this.asyncResultsQueueStart++;
+    return result;
+  }
+
+  /**
+   * Add an async result to the queue
+   * @param {any} result - The result to add
+   * @private
+   */
+  _enqueueAsyncResult(result) {
+    this.asyncResultsQueue.push(result);
   }
 
   /**
@@ -158,7 +224,7 @@ export class RuleProcessor {
       for (const result of resultArray) {
         const processedResult = this._processDerivation(result);
         if (processedResult) {
-          this.asyncResultsQueue.push(processedResult);
+          this._enqueueAsyncResult(processedResult);
         }
       }
     } catch (error) {
@@ -198,11 +264,12 @@ export class RuleProcessor {
    * @private
    */
   async _checkAndApplyBackpressure() {
-    // Track queue size for monitoring
-    this.maxQueueSize = Math.max(this.maxQueueSize, this.asyncResultsQueue.length);
+    // Track queue size for monitoring - using actual count instead of array length
+    const currentQueueSize = this._getAsyncResultsCount();
+    this.maxQueueSize = Math.max(this.maxQueueSize, currentQueueSize);
     
     // Check if queue size exceeds threshold
-    if (this.asyncResultsQueue.length > this.config.backpressureThreshold) {
+    if (currentQueueSize > this.config.backpressureThreshold) {
       // Apply backpressure by yielding control to event loop
       await sleep(this.config.backpressureInterval);
     }
@@ -222,20 +289,21 @@ export class RuleProcessor {
    * Get detailed status information
    */
   getStatus() {
+    const currentQueueSize = this._getAsyncResultsCount();
     return {
       ruleExecutor: this.ruleExecutor.constructor.name,
       config: this.config,
       stats: this.getStats(),
       internalState: {
-        asyncResultsQueueLength: this.asyncResultsQueue.length,
+        asyncResultsQueueLength: currentQueueSize,
         maxQueueSize: this.maxQueueSize,
         syncRuleExecutions: this.syncRuleExecutions,
         asyncRuleExecutions: this.asyncRuleExecutions
       },
       backpressure: {
-        queueLength: this.asyncResultsQueue.length,
+        queueLength: currentQueueSize,
         threshold: this.config.backpressureThreshold,
-        isApplyingBackpressure: this.asyncResultsQueue.length > this.config.backpressureThreshold
+        isApplyingBackpressure: currentQueueSize > this.config.backpressureThreshold
       },
       timestamp: Date.now()
     };

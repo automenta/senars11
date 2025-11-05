@@ -88,23 +88,64 @@ export class RuleExecutor {
       this.buildOptimizationStructure();
     }
 
-    // For now, return all rules as candidates
-    // In the future, this would use the decision tree to filter candidates efficiently
-    const candidateRules = [];
-    for (const rule of this.rules) {
-      try {
-        if (rule.canApply?.(primaryPremise, secondaryPremise) ?? true) {
-          candidateRules.push(rule);
+    // First try to use the decision tree for fast filtering
+    if (this.decisionTree) {
+      // Try to get candidates based on a heuristic key from the premises
+      const heuristicKey = this._getHeuristicKey(primaryPremise, secondaryPremise);
+      const treeCandidates = this.decisionTree.get(heuristicKey) || this.rules;
+      
+      // Filter the candidates using canApply, but try to optimize
+      const candidateRules = [];
+      for (const rule of treeCandidates) {
+        try {
+          if (rule.canApply?.(primaryPremise, secondaryPremise) ?? true) {
+            candidateRules.push(rule);
+          }
+        } catch (error) {
+          logError(error, { 
+            ruleId: rule.id ?? rule.name, 
+            context: 'rule_candidate_check' 
+          }, 'warn');
+          // Continue to next rule instead of returning false
         }
-      } catch (error) {
-        logError(error, { 
-          ruleId: rule.id ?? rule.name, 
-          context: 'rule_candidate_check' 
-        }, 'warn');
-        // Continue to next rule instead of returning false
       }
+      return candidateRules;
+    } else {
+      // Fallback: return all rules and filter with canApply
+      const candidateRules = [];
+      for (const rule of this.rules) {
+        try {
+          if (rule.canApply?.(primaryPremise, secondaryPremise) ?? true) {
+            candidateRules.push(rule);
+          }
+        } catch (error) {
+          logError(error, { 
+            ruleId: rule.id ?? rule.name, 
+            context: 'rule_candidate_check' 
+          }, 'warn');
+          // Continue to next rule instead of returning false
+        }
+      }
+      return candidateRules;
     }
-    return candidateRules;
+  }
+
+  /**
+   * Generate a heuristic key for premise-based rule filtering
+   * @private
+   * @param {Task} primaryPremise - The primary premise
+   * @param {Task} secondaryPremise - The secondary premise
+   * @returns {string} A heuristic key
+   */
+  _getHeuristicKey(primaryPremise, secondaryPremise) {
+    // Create a simple heuristic key based on premise characteristics
+    // This can be expanded based on more sophisticated premise analysis
+    const primaryType = primaryPremise.type ?? 'unknown';
+    const secondaryType = secondaryPremise.type ?? 'unknown';
+    const primaryTerm = primaryPremise.term?.name ? primaryPremise.term.name.substring(0, 10) : 'unknown';
+    const secondaryTerm = secondaryPremise.term?.name ? secondaryPremise.term.name.substring(0, 10) : 'unknown';
+    
+    return `${primaryType}_${secondaryType}_${primaryTerm}_${secondaryTerm}`;
   }
 
   /**

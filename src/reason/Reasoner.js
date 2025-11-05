@@ -73,8 +73,9 @@ export class Reasoner {
       // Generate premise pairs using the strategy
       const premisePairStream = this.strategy.generatePremisePairs(premiseStream);
       
-      // Process the pairs through rules
-      const derivationStream = this.ruleProcessor.process(premisePairStream);
+      // Process the pairs through rules with a reasonable timeout
+      // The timeout will be handled within the RuleProcessor
+      const derivationStream = this.ruleProcessor.process(premisePairStream, 30000); // 30 second timeout
       
       // Yield results from the derivation stream
       for await (const derivation of derivationStream) {
@@ -123,7 +124,7 @@ export class Reasoner {
    * Executes a single reasoning step. Useful for debugging and iterative mode.
    * Uses the streaming pipeline with a controlled timeout.
    */
-  async step(timeoutMs = 100) {
+  async step(timeoutMs = 5000) { // Increased default timeout to 5 seconds
     const results = [];
     const abortController = new AbortController();
     
