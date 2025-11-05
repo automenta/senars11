@@ -1,27 +1,7 @@
 import { RuleProcessor } from '../RuleProcessor.js';
+import { createMockRuleExecutor, createMockTask } from '../index.js';
 
-// Mock components
-class MockRuleExecutor {
-  constructor(rules = []) {
-    this.rules = rules;
-  }
-
-  getCandidateRules() {
-    return this.rules;
-  }
-
-  executeRule(rule, primaryPremise, secondaryPremise) {
-    if (rule.type && rule.type.toLowerCase().includes('nal')) {
-      // Synchronous rule
-      return [{ id: 'sync-result', premise: primaryPremise, ruleId: rule.id }];
-    } else {
-      // Asynchronous rule - for testing purposes, return result immediately
-      return [{ id: 'async-result', premise: primaryPremise, ruleId: rule.id }];
-    }
-  }
-}
-
-// Mock rule class
+// Define proper mock rule classes for testing
 class MockRule {
   constructor(id, type = 'nal', isAsync = false) {
     this.id = id;
@@ -29,8 +9,12 @@ class MockRule {
     this.isAsync = isAsync;
   }
 
-  applyAsync() {
-    return [{ id: 'async-derived', ruleId: this.id }];
+  async applyAsync(primaryPremise, secondaryPremise) {
+    return [{ id: `async-derived-${this.id}`, ruleId: this.id, primary: primaryPremise.id, secondary: secondaryPremise.id }];
+  }
+  
+  apply(primaryPremise, secondaryPremise) {
+    return [{ id: `sync-derived-${this.id}`, ruleId: this.id, primary: primaryPremise.id, secondary: secondaryPremise.id }];
   }
 }
 
@@ -39,10 +23,22 @@ describe('RuleProcessor', () => {
   let mockRuleExecutor;
 
   beforeEach(() => {
-    mockRuleExecutor = new MockRuleExecutor([
+    const rules = [
       new MockRule('rule1', 'nal'),  // Synchronous
       new MockRule('rule2', 'lm')    // Asynchronous
-    ]);
+    ];
+    
+    // Create a mock rule executor that can handle both sync and async rules properly
+    mockRuleExecutor = {
+      rules,
+      getCandidateRules: (primary, secondary) => rules,
+      executeRule: (rule, primary, secondary) => {
+        return rule.apply(primary, secondary);
+      },
+      buildOptimizationStructure: () => {},
+      getRuleCount: () => rules.length
+    };
+    
     ruleProcessor = new RuleProcessor(mockRuleExecutor);
   });
 
@@ -127,7 +123,7 @@ describe('RuleProcessor', () => {
   describe('_checkAndApplyBackpressure', () => {
     test('should apply backpressure when queue is above threshold', async () => {
       // Set up a queue above the threshold
-      ruleProcessor.asyncResultsQueue = new Array(60).fill({ id: 'task' }); // Above default threshold of 50
+      ruleProcessor.asyncResultsQueue = new Array(60).fill(createMockTask({ id: 'task' })); // Above default threshold of 50
       
       const start = Date.now();
       await ruleProcessor._checkAndApplyBackpressure();
@@ -140,7 +136,7 @@ describe('RuleProcessor', () => {
 
     test('should not apply backpressure when queue is below threshold', async () => {
       // Set up a queue below the threshold
-      ruleProcessor.asyncResultsQueue = new Array(10).fill({ id: 'task' }); // Below default threshold of 50
+      ruleProcessor.asyncResultsQueue = new Array(10).fill(createMockTask({ id: 'task' })); // Below default threshold of 50
       
       const start = Date.now();
       await ruleProcessor._checkAndApplyBackpressure();
@@ -153,7 +149,7 @@ describe('RuleProcessor', () => {
 
   describe('getStatus', () => {
     test('should return status information', () => {
-      ruleProcessor.asyncResultsQueue = new Array(5).fill({ id: 'task' });
+      ruleProcessor.asyncResultsQueue = new Array(5).fill(createMockTask({ id: 'task' }));
       ruleProcessor.maxQueueSize = 10;
       ruleProcessor.syncRuleExecutions = 15;
       ruleProcessor.asyncRuleExecutions = 8;
@@ -176,7 +172,7 @@ describe('RuleProcessor', () => {
     test('should process premise pairs and yield results', async () => {
       const premisePairStream = {
         [Symbol.asyncIterator]: async function*() {
-          yield [{ id: 'primary' }, { id: 'secondary' }];
+          yield [createMockTask({ id: 'primary' }), createMockTask({ id: 'secondary' })];
         }
       };
 
@@ -193,16 +189,20 @@ describe('RuleProcessor', () => {
     test('should handle errors during rule processing', async () => {
       const errorRule = {
         id: 'error-rule',
-        type: 'nal'
+        type: 'nal',
+        apply: () => {
+          throw new Error('Rule execution failed');
+        }
       };
-      mockRuleExecutor.rules = [errorRule];
-      ruleProcessor.ruleExecutor.executeRule = () => {
-        throw new Error('Rule execution failed');
+      
+      mockRuleExecutor.getCandidateRules = () => [errorRule];
+      mockRuleExecutor.executeRule = (rule, primary, secondary) => {
+        return rule.apply(primary, secondary);
       };
 
       const premisePairStream = {
         [Symbol.asyncIterator]: async function*() {
-          yield [{ id: 'primary' }, { id: 'secondary' }];
+          yield [createMockTask({ id: 'primary' }), createMockTask({ id: 'secondary' })];
         }
       };
 

@@ -1,4 +1,6 @@
 import { Rule } from './Rule.js';
+import { mergeConfig } from './utils/common.js';
+import { logError } from './utils/error.js';
 
 /**
  * Language Model Rule for the new reasoner design
@@ -9,12 +11,11 @@ export class LMRule extends Rule {
     this.lm = lm;
     this.promptTemplate = promptTemplate;
     this.responseProcessor = responseProcessor;
-    this.lmConfig = {
+    this.lmConfig = mergeConfig({
       temperature: 0.7,
       maxTokens: 1000,
-      model: 'default',
-      ...config.lmConfig
-    };
+      model: 'default'
+    }, config.lmConfig);
   }
 
   /**
@@ -26,7 +27,10 @@ export class LMRule extends Rule {
    */
   async applyAsync(primaryPremise, secondaryPremise, context) {
     if (!this.lm) {
-      console.error(`LM unavailable for rule ${this.id}`);
+      logError(new Error(`LM unavailable for rule ${this.id}`), { 
+        ruleId: this.id, 
+        context: 'lm_unavailable' 
+      }, 'error');
       return [];
     }
 
@@ -37,7 +41,7 @@ export class LMRule extends Rule {
 
       return Array.isArray(processedResponse) ? processedResponse : [processedResponse];
     } catch (error) {
-      console.error(`LM rule ${this.id} failed:`, error);
+      logError(error, { ruleId: this.id, context: 'lm_rule_execution' }, 'error');
       return [];
     }
   }

@@ -9,4 +9,12 @@ export { Reasoner } from './Reasoner.js';
 export { Rule } from './Rule.js';
 export { LMRule } from './LMRule.js';
 
+// Export utility functions
+export * from './utils/common.js';
+export * from './utils/error.js';
+export * from './utils/async.js';
+export * from './utils/test.js';
+export * from './utils/advanced.js';
+export { randomWeightedSelect } from './utils/randomWeightedSelect.js';
+
 // Also export any utility components if they exist

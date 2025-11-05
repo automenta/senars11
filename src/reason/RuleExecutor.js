@@ -1,13 +1,21 @@
+import { mergeConfig } from './utils/common.js';
+import { ReasonerError, logError, createErrorHandler } from './utils/error.js';
+
 /**
  * RuleExecutor indexes all registered rules for fast retrieval and performs 
  * symbolic guard analysis and optimization.
  */
 export class RuleExecutor {
   constructor(config = {}) {
-    this.config = config;
+    this.config = mergeConfig({
+      // Default configuration options
+    }, config);
     this.rules = [];
     this.optimizedRuleMap = new Map();
     this.decisionTree = null;
+    
+    // Create error handler for consistent error handling
+    this.errorHandler = createErrorHandler('RuleExecutor');
   }
 
   /**
@@ -91,7 +99,10 @@ export class RuleExecutor {
       try {
         return rule.canApply?.(primaryPremise, secondaryPremise) ?? true;
       } catch (error) {
-        console.warn(`Error checking if rule can apply:`, error);
+        logError(error, { 
+          ruleId: rule.id || rule.name, 
+          context: 'rule_candidate_check' 
+        }, 'warn');
         return false;
       }
     });
@@ -111,7 +122,10 @@ export class RuleExecutor {
       const results = rule.apply?.(primaryPremise, secondaryPremise, context) || [];
       return Array.isArray(results) ? results : [results];
     } catch (error) {
-      console.error(`Error executing rule ${rule.id || rule.name}:`, error);
+      logError(error, { 
+        ruleId: rule.id || rule.name, 
+        context: 'rule_execution' 
+      }, 'error');
       return [];
     }
   }

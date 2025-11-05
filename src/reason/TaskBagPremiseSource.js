@@ -1,5 +1,7 @@
 import { PremiseSource } from './PremiseSource.js';
 import { randomWeightedSelect } from './utils/randomWeightedSelect.js';
+import { sleep, mergeConfig } from './utils/common.js';
+import { ReasonerError, logError, createErrorHandler } from './utils/error.js';
 
 /**
  * A PremiseSource that draws from a TaskBag with configurable sampling objectives.
@@ -19,31 +21,29 @@ export class TaskBagPremiseSource extends PremiseSource {
    */
   constructor(memory, samplingObjectives) {
     // Set default sampling objectives if not provided
-    const defaults = {
+    const defaults = mergeConfig({
       priority: true,
       recency: false,
       punctuation: false,
       novelty: false,
       targetTime: null,  // Default to current time when used
       weights: {},
-      dynamic: false,
-      ...samplingObjectives
-    };
+      dynamic: false
+    }, samplingObjectives);
     
     super(memory, defaults);
     this.taskBag = memory?.taskBag || memory?.bag || null;
     if (!this.taskBag) {
-      throw new Error('TaskBagPremiseSource requires a memory object with a taskBag or bag property');
+      throw new ReasonerError('TaskBagPremiseSource requires a memory object with a taskBag or bag property', 'CONFIG_ERROR');
     }
     
     // Initialize sampling strategy weights
-    this.weights = {
-      priority: defaults.weights.priority || 1.0,
-      recency: defaults.weights.recency || 0.0,
-      punctuation: defaults.weights.punctuation || 0.0,
-      novelty: defaults.weights.novelty || 0.0,
-      ...defaults.weights
-    };
+    this.weights = mergeConfig({
+      priority: 1.0,
+      recency: 0.0,
+      punctuation: 0.0,
+      novelty: 0.0
+    }, defaults.weights);
     
     // Performance tracking for dynamic adaptation
     this.performanceStats = {
@@ -56,6 +56,9 @@ export class TaskBagPremiseSource extends PremiseSource {
     this.dynamicAdaptation = defaults.dynamic;
     this.lastUpdate = Date.now();
     this.samplingObjectives = defaults;
+    
+    // Create error handler for consistent error handling
+    this.errorHandler = createErrorHandler('TaskBagPremiseSource');
   }
 
   /**
@@ -75,7 +78,7 @@ export class TaskBagPremiseSource extends PremiseSource {
           await this._waitForTask();
         }
       } catch (error) {
-        console.error('Error in TaskBagPremiseSource stream:', error);
+        logError(error, { context: 'premise_source_stream' }, 'warn');
         // Wait before continuing to avoid tight error loop
         await this._waitForTask();
         continue;
@@ -125,7 +128,7 @@ export class TaskBagPremiseSource extends PremiseSource {
       
       return selectedTask;
     } catch (error) {
-      console.error('Error in _sampleTask:', error);
+      logError(error, { context: 'task_sampling' }, 'error');
       return null;
     }
   }
@@ -221,8 +224,10 @@ export class TaskBagPremiseSource extends PremiseSource {
       
       // Return the task closest to target time
       const selectedTask = allTasks[0];
-      // Remove the selected task from the bag
-      this.taskBag.remove(selectedTask);
+      // Remove the selected task from the bag (if supported)
+      if (this.taskBag.remove) {
+        this.taskBag.remove(selectedTask);
+      }
       return selectedTask;
     }
     
@@ -250,8 +255,10 @@ export class TaskBagPremiseSource extends PremiseSource {
         // Randomly select from goals/questions
         const randomIndex = Math.floor(Math.random() * goalsAndQuestions.length);
         const selectedTask = goalsAndQuestions[randomIndex];
-        // Remove the selected task from the bag
-        this.taskBag.remove(selectedTask);
+        // Remove the selected task from the bag (if supported)
+        if (this.taskBag.remove) {
+          this.taskBag.remove(selectedTask);
+        }
         return selectedTask;
       }
     }
@@ -283,8 +290,10 @@ export class TaskBagPremiseSource extends PremiseSource {
       
       // Select the most novel task
       const selectedTask = tasksWithNovelty[0].task;
-      // Remove the selected task from the bag
-      this.taskBag.remove(selectedTask);
+      // Remove the selected task from the bag (if supported)
+      if (this.taskBag.remove) {
+        this.taskBag.remove(selectedTask);
+      }
       return selectedTask;
     }
     
@@ -333,13 +342,7 @@ export class TaskBagPremiseSource extends PremiseSource {
    * @returns {Promise<void>}
    */
   async _waitForTask() {
-    try {
-      // Simple timeout-based wait
-      return new Promise(resolve => setTimeout(resolve, 10)); // 10ms wait
-    } catch (error) {
-      console.error('Error in _waitForTask:', error);
-      // Fallback - just wait a bit
-      await new Promise(resolve => setTimeout(resolve, 10));
-    }
+    // Use utility sleep function
+    await sleep(10); // 10ms wait
   }
 }

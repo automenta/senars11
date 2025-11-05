@@ -1,4 +1,7 @@
 import { Stamp } from '../Stamp.js';
+import { sleep, mergeConfig } from './utils/common.js';
+import { ReasonerError, logError, createErrorHandler } from './utils/error.js';
+import { bufferWithBackpressure } from './utils/async.js';
 
 /**
  * RuleProcessor consumes premise pairs and processes them through rules.
@@ -10,17 +13,18 @@ export class RuleProcessor {
    */
   constructor(ruleExecutor, config = {}) {
     this.ruleExecutor = ruleExecutor;
-    this.config = {
-      maxDerivationDepth: config.maxDerivationDepth || 10,
-      backpressureThreshold: config.backpressureThreshold || 50, // queue size threshold
-      backpressureInterval: config.backpressureInterval || 5, // ms to wait when backpressure detected
-      ...config
-    };
+    
+    // Use utility to merge configuration properly
+    this.config = mergeConfig({
+      maxDerivationDepth: 10,
+      backpressureThreshold: 50, // queue size threshold
+      backpressureInterval: 5, // ms to wait when backpressure detected
+      maxChecks: 100, // Prevent infinite loops when waiting for async results
+      asyncWaitInterval: 10 // ms to wait between checking for async results
+    }, config);
     
     // Queue for async results
     this.asyncResultsQueue = [];
-    this.asyncResultsQueuePromise = null;
-    this.asyncResultsQueueResolver = null;
     
     // Track rule execution counts
     this.syncRuleExecutions = 0;
@@ -28,6 +32,9 @@ export class RuleProcessor {
     
     // Track queue stats for backpressure
     this.maxQueueSize = 0;
+    
+    // Create error handler for consistent error handling
+    this.errorHandler = createErrorHandler('RuleProcessor');
   }
 
   /**
@@ -64,7 +71,10 @@ export class RuleProcessor {
               this._dispatchAsyncRule(rule, primaryPremise, secondaryPremise);
             }
           } catch (error) {
-            console.error(`Error processing rule ${rule.id || rule.name}:`, error);
+            logError(error, { 
+              ruleId: rule.id || rule.name, 
+              context: 'rule_processing' 
+            }, 'warn');
             // Continue with other rules instead of failing completely
             continue;
           }
@@ -80,17 +90,15 @@ export class RuleProcessor {
       }
       
       // After processing all premise pairs, continue yielding any remaining async results
-      // We'll use a timeout-based approach to process remaining async results
       let hasAsyncResults = true;
       let checkCount = 0;
-      const maxChecks = 100; // Prevent infinite loops
       
-      while (hasAsyncResults && checkCount < maxChecks) {
+      while (hasAsyncResults && checkCount < this.config.maxChecks) {
         hasAsyncResults = false;
         checkCount++;
         
         // Small timeout to allow pending async operations to complete
-        await new Promise(resolve => setTimeout(resolve, 10));
+        await sleep(this.config.asyncWaitInterval);
         
         // Yield any results that became available during the wait
         while (this.asyncResultsQueue.length > 0) {
@@ -102,9 +110,9 @@ export class RuleProcessor {
         }
       }
     } catch (error) {
-      console.error('Error in RuleProcessor process method:', error);
+      logError(error, { context: 'rule_processor_stream' });
       // Re-throw to allow upstream handling
-      throw error;
+      throw new ReasonerError(`Error in RuleProcessor process: ${error.message}`, 'STREAM_ERROR', { originalError: error });
     }
   }
 
@@ -122,37 +130,38 @@ export class RuleProcessor {
    * Dispatch an asynchronous rule
    * @private
    */
-  async _dispatchAsyncRule(rule, primaryPremise, secondaryPremise) {
+  _dispatchAsyncRule(rule, primaryPremise, secondaryPremise) {
     this.asyncRuleExecutions++;
+    
+    // Execute the async rule in the background without awaiting
+    this._executeAsyncRule(rule, primaryPremise, secondaryPremise)
+      .catch(error => {
+        logError(error, { ruleId: rule.id || rule.name, context: 'async_rule_execution' }, 'error');
+      });
+  }
+  
+  /**
+   * Execute an asynchronous rule and add results to queue
+   * @private
+   */
+  async _executeAsyncRule(rule, primaryPremise, secondaryPremise) {
     try {
       // Execute the async rule
-      const results = await rule.applyAsync?.(primaryPremise, secondaryPremise, this.config.context) || 
-                     rule.apply?.(primaryPremise, secondaryPremise, this.config.context) || [];
+      const results = await (rule.applyAsync?.(primaryPremise, secondaryPremise, this.config.context) || 
+                     rule.apply?.(primaryPremise, secondaryPremise, this.config.context)) || [];
       
       const resultArray = Array.isArray(results) ? results : [results];
       
       // Process each result and add to the queue
       for (const result of resultArray) {
-        try {
-          const processedResult = this._processDerivation(result);
-          if (processedResult) {
-            this.asyncResultsQueue.push(processedResult);
-            
-            // Resolve any waiting promise if one exists
-            if (this.asyncResultsQueueResolver) {
-              this.asyncResultsQueueResolver();
-              this.asyncResultsQueuePromise = null;
-              this.asyncResultsQueueResolver = null;
-            }
-          }
-        } catch (resultError) {
-          console.error(`Error processing async rule result:`, resultError);
-          continue; // Continue with other results
+        const processedResult = this._processDerivation(result);
+        if (processedResult) {
+          this.asyncResultsQueue.push(processedResult);
         }
       }
     } catch (error) {
-      console.error(`Error in async rule ${rule.id || rule.name}:`, error);
-      // Don't rethrow, just log the error and continue
+      logError(error, { ruleId: rule.id || rule.name, context: 'async_rule_execution' }, 'error');
+      throw error; // Re-throw to be caught by the outer .catch
     }
   }
 
@@ -177,7 +186,7 @@ export class RuleProcessor {
 
       return result;
     } catch (error) {
-      console.error('Error in _processDerivation:', error);
+      logError(error, { context: 'derivation_processing' }, 'error');
       return null; // Discard problematic results
     }
   }
@@ -195,7 +204,7 @@ export class RuleProcessor {
     // Check if queue size exceeds threshold
     if (this.asyncResultsQueue.length > this.config.backpressureThreshold) {
       // Apply backpressure by yielding control to event loop
-      await new Promise(resolve => setTimeout(resolve, this.config.backpressureInterval || 5));
+      await sleep(this.config.backpressureInterval);
     }
   }
 

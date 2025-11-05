@@ -1,66 +1,18 @@
 import { Reasoner } from '../Reasoner.js';
-
-// Mock components
-class MockPremiseSource {
-  constructor(tasks = []) {
-    this.tasks = tasks;
-  }
-
-  stream() {
-    return {
-      [Symbol.asyncIterator]: async function*() {
-        for (const task of this.tasks) {
-          yield task;
-        }
-      }.bind(this)
-    };
-  }
-}
-
-class MockStrategy {
-  generatePremisePairs(premiseStream) {
-    return {
-      [Symbol.asyncIterator]: async function*() {
-        for await (const primary of premiseStream) {
-          yield [primary, primary]; // Just pairing with itself for test
-        }
-      }
-    };
-  }
-}
-
-class MockRuleProcessor {
-  constructor(results = []) {
-    this.results = results;
-  }
-
-  process(premisePairStream) {
-    return {
-      [Symbol.asyncIterator]: async function*() {
-        for await (const pair of premisePairStream) {
-          for (const result of this.results) {
-            yield result;
-          }
-        }
-      }.bind(this)
-    };
-  }
-
-  getStats() {
-    return { syncRuleExecutions: 10, asyncRuleExecutions: 5 };
-  }
-}
+import { createMockPremiseSource, createMockStrategy, createMockRuleProcessor, createMockTask, createTestMemory } from '../index.js';
 
 describe('Reasoner', () => {
   let reasoner;
   let mockPremiseSource;
   let mockStrategy;
   let mockRuleProcessor;
+  let testMemory;
 
   beforeEach(() => {
-    mockPremiseSource = new MockPremiseSource([{ id: 'test-task' }]);
-    mockStrategy = new MockStrategy();
-    mockRuleProcessor = new MockRuleProcessor([{ id: 'derived-task' }]);
+    testMemory = createTestMemory({ tasks: [createMockTask({ id: 'test-task' })] });
+    mockPremiseSource = createMockPremiseSource([createMockTask({ id: 'test-task' })]);
+    mockStrategy = createMockStrategy();
+    mockRuleProcessor = createMockRuleProcessor([createMockTask({ id: 'derived-task' })]);
     reasoner = new Reasoner(mockPremiseSource, mockStrategy, mockRuleProcessor);
   });
 
