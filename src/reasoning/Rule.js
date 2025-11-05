@@ -3,12 +3,12 @@ import {TRUTH} from '../config/constants.js';
 import {clamp} from '../util/common.js';
 
 // Private utilities for Rule class
-class RuleUtils {
-    static validateId(id) {
+const RuleUtils = {
+    validateId(id) {
         if (!id || typeof id !== 'string') throw new Error('Rule ID must be a non-empty string');
-    }
+    },
     
-    static createMetrics() {
+    createMetrics() {
         return Object.freeze({
             applications: 0, 
             successes: 0, 
@@ -16,9 +16,9 @@ class RuleUtils {
             totalTime: 0, 
             createdAt: Date.now()
         });
-    }
+    },
     
-    static resolveContext(memoryOrContext, termFactory) {
+    resolveContext(memoryOrContext, termFactory) {
         const isContext = memoryOrContext?.hasOwnProperty('config');
 
         return isContext
@@ -28,12 +28,12 @@ class RuleUtils {
                 effectiveTermFactory: memoryOrContext.termFactory || termFactory
             }
             : {effectiveMemory: memoryOrContext, effectiveTermFactory: termFactory, effectiveContext: null};
-    }
+    },
     
-    static updateMetrics(metrics, success, time) {
+    updateMetrics(metrics, success, time) {
         return Metrics.update(metrics, success, time);
     }
-}
+};
 
 export class Rule {
     constructor(id, type, priority = 1.0, config = {}) {

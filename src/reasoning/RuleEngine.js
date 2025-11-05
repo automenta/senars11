@@ -227,9 +227,10 @@ export class RuleEngine extends BaseComponent {
     applyNALRules = (task, ruleIds = null, memory = null) => this.applyRules(task, ruleIds, 'nal', memory);
 
     applyHybridRules(task, lmRuleIds = null, nalRuleIds = null, memory = null) {
-        const lmResults = this.applyLMRules(task, lmRuleIds, memory);
-        const nalResults = this.applyNALRules(task, nalRuleIds, memory);
-        return [...lmResults, ...nalResults];
+        return [
+            ...this.applyLMRules(task, lmRuleIds, memory),
+            ...this.applyNALRules(task, nalRuleIds, memory)
+        ];
     }
 
     _toggleRule = (ruleId, enable) => {

@@ -81,9 +81,6 @@ export class StrategySelector {
         }
     }
 
-    /**
-     * Analyze tasks to determine their characteristics
-     */
     analyzeTasks(tasks) {
         if (!Array.isArray(tasks) || tasks.length === 0) {
             return {
@@ -97,31 +94,22 @@ export class StrategySelector {
 
         const analysis = {
             count: tasks.length,
-            complexity: 0,
             types: [...new Set(tasks.map(t => t.type || 'unknown'))],
             hasLMCompatible: false,
             hasNALCompatible: false
         };
 
         // Calculate average complexity and check compatibility
-        let totalComponents = 0;
-        for (const task of tasks) {
-            if (task.term && task.term.components) {
-                totalComponents += task.term.components.length;
-            }
+        const totalComponents = tasks.reduce((sum, task) => {
+            // Check compatibility
+            if (this._isLMCompatible(task)) analysis.hasLMCompatible = true;
+            if (this._isNALCompatible(task)) analysis.hasNALCompatible = true;
+            
+            // Calculate complexity
+            return sum + (task.term?.components?.length || 0);
+        }, 0);
 
-            // Check if task might be suitable for LM (natural language, complex, ambiguous)
-            if (this._isLMCompatible(task)) {
-                analysis.hasLMCompatible = true;
-            }
-
-            // Check if task is suitable for NAL (structured, formal)
-            if (this._isNALCompatible(task)) {
-                analysis.hasNALCompatible = true;
-            }
-        }
-
-        analysis.complexity = tasks.length > 0 ? totalComponents / tasks.length : 0;
+        analysis.complexity = totalComponents / tasks.length;
 
         return analysis;
     }

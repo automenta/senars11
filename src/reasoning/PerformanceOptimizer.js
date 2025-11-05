@@ -366,9 +366,6 @@ export class PerformanceOptimizer {
         this._rulePriorities.set(ruleId, effectiveness);
     }
 
-    /**
-     * Get a snapshot of memory state for caching purposes
-     */
     _getMemoryState(memory) {
         if (!memory || typeof memory.getSnapshot !== 'function') {
             return null;
@@ -376,9 +373,6 @@ export class PerformanceOptimizer {
         return memory.getSnapshot ? memory.getSnapshot() : JSON.stringify(memory);
     }
 
-    /**
-     * Record performance profile for a rule
-     */
     _recordProfile(ruleId, duration, resultCount) {
         if (!this.profiles.has(ruleId)) {
             this.profiles.set(ruleId, {
@@ -421,12 +415,9 @@ export class PerformanceOptimizer {
         return allResults;
     }
 
-    /**
-     * Get performance statistics
-     */
     getStats() {
         return {
-            cacheStats: this.ruleCache ? this.ruleCache.getStats() : null,
+            cacheStats: this.ruleCache?.getStats() || null,
             profileCount: this.profiles.size,
             indexedRules: this.ruleIndex ?
                 Array.from(this.ruleIndex._categoryIndex.values()).flat().length : 0,

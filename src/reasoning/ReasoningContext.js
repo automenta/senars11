@@ -39,53 +39,24 @@ export class ReasoningContext {
         };
     }
 
-    get config() {
-        return this._config;
-    }
-
-    get memory() {
-        return this._config.memory;
-    }
-
-    get focus() {
-        return this._config.focus;
-    }
-
-    get ruleEngine() {
-        return this._config.ruleEngine;
-    }
-
-    get termFactory() {
-        return this._config.termFactory;
-    }
-
-    get taskManager() {
-        return this._config.taskManager;
-    }
-
-    get reasoningDepth() {
-        return this._config.reasoningDepth;
-    }
-
+    // Unified getter for config properties
+    get config() { return this._config; }
+    get memory() { return this._config.memory; }
+    get focus() { return this._config.focus; }
+    get ruleEngine() { return this._config.ruleEngine; }
+    get termFactory() { return this._config.termFactory; }
+    get taskManager() { return this._config.taskManager; }
+    get reasoningDepth() { return this._config.reasoningDepth; }
+    
     set reasoningDepth(depth) {
         this._config.reasoningDepth = Math.min(depth, this._config.maxDepth);
     }
 
-    get reasoningPath() {
-        return [...this._config.reasoningPath];
-    }
+    get reasoningPath() { return [...this._config.reasoningPath]; }
+    get goalStack() { return [...this._config.goalStack]; }
+    get currentGoal() { return this._config.goalStack[this._config.goalStack.length - 1] || null; }
 
-    get goalStack() {
-        return [...this._config.goalStack];
-    }
-
-    get currentGoal() {
-        return this._config.goalStack[this._config.goalStack.length - 1] || null;
-    }
-
-    /**
-     * Create a context from an existing task and memory state
-     */
+    // Static factory methods
     static fromTaskAndMemory(task, memory, config = {}) {
         return new ReasoningContext({
             memory,
@@ -96,16 +67,10 @@ export class ReasoningContext {
         });
     }
 
-    /**
-     * Factory method to create a context with common configurations
-     */
     static create(config = {}) {
         return new ReasoningContext(config);
     }
 
-    /**
-     * Create a context specifically for rule application
-     */
     static forRuleApplication(memory, termFactory, ruleEngine, config = {}) {
         return new ReasoningContext({
             memory,
@@ -116,9 +81,6 @@ export class ReasoningContext {
         });
     }
 
-    /**
-     * Create a context specifically for strategy execution
-     */
     static forStrategyExecution(memory, termFactory, strategy, config = {}) {
         return new ReasoningContext({
             memory,
@@ -129,31 +91,19 @@ export class ReasoningContext {
         });
     }
 
-    /**
-     * Add a property to the context
-     */
     setProperty(key, value) {
         this._properties.set(key, value);
         return this;
     }
 
-    /**
-     * Get a property from the context
-     */
     getProperty(key, defaultValue = undefined) {
         return this._properties.has(key) ? this._properties.get(key) : defaultValue;
     }
 
-    /**
-     * Remove a property from the context
-     */
     removeProperty(key) {
         return this._properties.delete(key);
     }
 
-    /**
-     * Add an entry to the reasoning history
-     */
     addToHistory(entry) {
         this._history.push({
             ...entry,
@@ -169,23 +119,14 @@ export class ReasoningContext {
         return this;
     }
 
-    /**
-     * Get the reasoning history
-     */
     getHistory() {
         return [...this._history];
     }
 
-    /**
-     * Get recent history entries
-     */
     getRecentHistory(count = 10) {
         return this._history.slice(-count);
     }
 
-    /**
-     * Increment a metric
-     */
     incrementMetric(metricName, amount = 1) {
         if (this._metrics.hasOwnProperty(metricName)) {
             this._metrics[metricName] += amount;
@@ -193,9 +134,6 @@ export class ReasoningContext {
         return this;
     }
 
-    /**
-     * Get current metrics
-     */
     getMetrics() {
         return {
             ...this._metrics,
@@ -207,16 +145,10 @@ export class ReasoningContext {
         };
     }
 
-    /**
-     * Check if we've reached the maximum reasoning depth
-     */
     isAtMaxDepth() {
         return this._config.reasoningDepth >= this._config.maxDepth;
     }
 
-    /**
-     * Advance to next reasoning level
-     */
     advanceDepth() {
         if (!this.isAtMaxDepth()) {
             this._config.reasoningDepth++;
@@ -225,31 +157,19 @@ export class ReasoningContext {
         return false;
     }
 
-    /**
-     * Push a goal onto the goal stack
-     */
     pushGoal(goal) {
         this._config.goalStack.push(goal);
         return this;
     }
 
-    /**
-     * Pop a goal from the goal stack
-     */
     popGoal() {
         return this._config.goalStack.pop();
     }
 
-    /**
-     * Check if a goal exists on the stack
-     */
     hasGoal(goal) {
         return this._config.goalStack.includes(goal);
     }
 
-    /**
-     * Add a belief to the belief base
-     */
     addBelief(term, truth) {
         const key = term.toString();
         this._beliefBase.set(key, {term, truth, timestamp: Date.now()});
@@ -257,23 +177,14 @@ export class ReasoningContext {
         return this;
     }
 
-    /**
-     * Check if a belief exists in the belief base
-     */
     hasBelief(term) {
         return this._beliefBase.has(term.toString());
     }
 
-    /**
-     * Get a belief from the belief base
-     */
     getBelief(term) {
         return this._beliefBase.get(term.toString());
     }
 
-    /**
-     * Track a conflict between beliefs
-     */
     trackConflict(term1, term2, details = {}) {
         const conflictKey = `${term1.toString()}:${term2.toString()}`;
         this._conflictTracker.set(conflictKey, {
@@ -283,9 +194,6 @@ export class ReasoningContext {
         return this;
     }
 
-    /**
-     * Check for conflicts with a given term
-     */
     getConflictsFor(term) {
         const termStr = term.toString();
         return [...this._conflictTracker.entries()]
@@ -295,9 +203,6 @@ export class ReasoningContext {
             .map(([key, conflict]) => conflict);
     }
 
-    /**
-     * Set relevance score for a concept/term
-     */
     setRelevance(term, score) {
         this._relevanceScores.set(term.toString(), {
             score,
@@ -306,16 +211,10 @@ export class ReasoningContext {
         return this;
     }
 
-    /**
-     * Get relevance score for a concept/term
-     */
     getRelevance(term) {
         return this._relevanceScores.get(term.toString())?.score || 0;
     }
 
-    /**
-     * Track an inference chain
-     */
     addInferenceChain(premises, conclusion, ruleName) {
         this._inferenceChains.push({
             premises: premises.map(p => p.toString()),
@@ -327,16 +226,10 @@ export class ReasoningContext {
         return this;
     }
 
-    /**
-     * Get recent inference chains
-     */
     getInferenceChains(limit = 10) {
         return this._inferenceChains.slice(-limit);
     }
 
-    /**
-     * Add current reasoning step to the path
-     */
     addToReasoningPath(step) {
         this._config.reasoningPath.push(step);
         if (this._config.reasoningPath.length > 20) { // Limit path length
@@ -345,41 +238,26 @@ export class ReasoningContext {
         return this;
     }
 
-    /**
-     * Check if current reasoning path contains a specific step
-     */
     hasInPath(step) {
         return this._config.reasoningPath.includes(step);
     }
 
-    /**
-     * Get the current attention focus
-     */
     getAttentionFocus() {
         return this._config.attentionFocus;
     }
 
-    /**
-     * Set the attention focus
-     */
     setAttentionFocus(term) {
         this._config.attentionFocus = term;
         this._config.attentionFocusStart = Date.now();
         return this;
     }
 
-    /**
-     * Check if attention is still focused
-     */
     hasAttentionFocus() {
         if (!this._config.attentionFocus) return false;
         const elapsed = Date.now() - (this._config.attentionFocusStart || 0);
         return elapsed < (this._config.attentionSpan * 1000); // Convert to milliseconds
     }
 
-    /**
-     * Create a child context with additional properties
-     */
     createChildContext(additionalConfig = {}) {
         const childConfig = {
             ...this._config,
@@ -406,13 +284,8 @@ export class ReasoningContext {
         return childContext;
     }
 
-    /**
-     * Create a copy of this context with new configuration values
-     */
     copy(config = {}) {
-        // Create a new context with merged configuration
         const mergedConfig = this._deepMerge(this._config, config);
-
         const newContext = new ReasoningContext(mergedConfig);
 
         // Copy all state to the new context
@@ -430,9 +303,6 @@ export class ReasoningContext {
         return newContext;
     }
 
-    /**
-     * Helper method to perform deep merge of configuration objects
-     */
     _deepMerge(target, source) {
         const result = {...target};
 
@@ -453,9 +323,6 @@ export class ReasoningContext {
         return result;
     }
 
-    /**
-     * Serialize context for debugging or logging
-     */
     toJSON() {
         return {
             config: {
@@ -475,9 +342,6 @@ export class ReasoningContext {
         };
     }
 
-    /**
-     * Check for consistency in the belief base
-     */
     checkConsistency() {
         let inconsistencies = [];
 
@@ -502,9 +366,6 @@ export class ReasoningContext {
         return inconsistencies;
     }
 
-    /**
-     * Simple check if two terms are contradictory
-     */
     _areContradictory(term1, term2) {
         // This is a very basic implementation - a real system would have more sophisticated logic
         const str1 = term1.toString();
@@ -514,9 +375,6 @@ export class ReasoningContext {
         return (str1 === `~${str2}` || str2 === `~${str1}`);
     }
 
-    /**
-     * Get beliefs related to a specific term
-     */
     getRelatedBeliefs(term) {
         const termStr = term.toString();
         const related = [];

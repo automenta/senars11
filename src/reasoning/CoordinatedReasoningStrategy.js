@@ -177,22 +177,12 @@ export class CoordinatedReasoningStrategy extends StrategyInterface {
         return this._filterAndValidateResults(allResults);
     }
 
-    /**
-     * Determines if a result likely came from an LM rule
-     */
     _isLMResult(result) {
         // Results with high complexity or non-logical characteristics may have come from LM
-        if (result.term?.complexity > 5) return true;
-        if (result._fromLM) return true;
-        if (result._ruleType === 'LM') return true;
-        return false;
+        return result.term?.complexity > 5 || result._fromLM || result._ruleType === 'LM';
     }
 
-    /**
-     * Processes feedback events to learn from cooperation patterns
-     */
     _processFeedbackEvents(feedbackEvents) {
-        // Count different types of feedback
         const feedbackStats = {
             agreements: 0,
             disagreements: 0,
@@ -208,10 +198,7 @@ export class CoordinatedReasoningStrategy extends StrategyInterface {
             feedbackStats.byType[key] = (feedbackStats.byType[key] || 0) + 1;
         }
 
-        // Store feedback stats in metrics if available
-        if (this.metrics) {
-            this.metrics.recordCooperationStats(feedbackStats);
-        }
+        this.metrics?.recordCooperationStats(feedbackStats);
     }
 
     /**
@@ -239,54 +226,39 @@ export class CoordinatedReasoningStrategy extends StrategyInterface {
         return this._filterAndValidateResults(allDerivedTasks);
     }
 
-    /**
-     * Performs a single iteration of coordinated reasoning
-     */
     async _performIteration(tasks, memory, termFactory) {
-        const results = {
-            lmResults: [],
-            nalResults: [],
-            hybridResults: [],
-            derivedTasks: []
-        };
-
         // Apply LM rules to all tasks
-        for (const task of tasks) {
-            const lmTaskResults = this.ruleEngine.applyLMRules(task, null, memory);
-            // Tag results with rule type for potential feedback processing
-            results.lmResults.push(...lmTaskResults.map(r => ({...r, _ruleType: 'LM'})));
-        }
+        const lmResults = tasks.flatMap(task => 
+            this.ruleEngine.applyLMRules(task, null, memory).map(r => ({...r, _ruleType: 'LM'}))
+        );
 
         // Apply NAL rules to original tasks
-        for (const task of tasks) {
-            const nalTaskResults = this.ruleEngine.applyNALRules(task, null, memory);
-            // Tag results with rule type for potential feedback processing
-            results.nalResults.push(...nalTaskResults.map(r => ({...r, _ruleType: 'NAL'})));
-        }
+        const nalResults = tasks.flatMap(task => 
+            this.ruleEngine.applyNALRules(task, null, memory).map(r => ({...r, _ruleType: 'NAL'}))
+        );
 
         // Apply hybrid coordination - apply NAL rules to LM results and vice versa
+        let hybridResults = [];
         if (this.config.enableCrossValidation) {
             // Apply NAL rules to LM-generated results
-            for (const lmResult of results.lmResults) {
-                const nalOnLmResults = this.ruleEngine.applyNALRules(lmResult, null, memory);
-                results.hybridResults.push(...nalOnLmResults.map(r => ({...r, _ruleType: 'Hybrid'})));
-            }
-
-            // Apply LM rules to NAL-generated results
-            for (const nalResult of results.nalResults) {
-                const lmOnNalResults = this.ruleEngine.applyLMRules(nalResult, null, memory);
-                results.hybridResults.push(...lmOnNalResults.map(r => ({...r, _ruleType: 'Hybrid'})));
-            }
+            hybridResults = [
+                ...lmResults.flatMap(lmResult => 
+                    this.ruleEngine.applyNALRules(lmResult, null, memory).map(r => ({...r, _ruleType: 'Hybrid'}))
+                ),
+                // Apply LM rules to NAL-generated results
+                ...nalResults.flatMap(nalResult => 
+                    this.ruleEngine.applyLMRules(nalResult, null, memory).map(r => ({...r, _ruleType: 'Hybrid'}))
+                )
+            ];
         }
 
         // Combine all results
-        results.derivedTasks = [
-            ...results.lmResults,
-            ...results.nalResults,
-            ...results.hybridResults
-        ];
-
-        return results;
+        return {
+            lmResults,
+            nalResults,
+            hybridResults,
+            derivedTasks: [...lmResults, ...nalResults, ...hybridResults]
+        };
     }
 
     /**
