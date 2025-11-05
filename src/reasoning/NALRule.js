@@ -93,15 +93,6 @@ export class NALRule extends Rule {
         return await this._apply(premises, context, context.termFactory);
     }
 
-    /**
-     * Unifies a pattern with a term, populating a bindings map.
-     * This version is recursive and handles shared variables across a pattern.
-     *
-     * @param {Term} pattern - The pattern term (may contain variables).
-     * @param {Term} term - The concrete term.
-     * @param {Map<string, Term>} bindings - The map of variable bindings to update.
-     * @returns {Map<string, Term>|null} The updated bindings map or null if unification fails.
-     */
     _unifyPatterns(pattern, term, bindings) {
         if (!pattern || !term) return null;
 
@@ -136,14 +127,6 @@ export class NALRule extends Rule {
         return null;
     }
 
-    /**
-     * Substitutes variables in a term based on a bindings map.
-     *
-     * @param {Term} term - The term to perform substitutions on.
-     * @param {Map<string, Term>} bindings - The map of variable bindings.
-     * @param {TermFactory} termFactory - The term factory for creating new compound terms.
-     * @returns {Term|null} The new term with variables substituted, or null on failure.
-     */
     _substituteVariables(term, bindings, termFactory) {
         if (!term || !bindings || !termFactory) return null;
 

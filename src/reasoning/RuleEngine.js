@@ -40,6 +40,7 @@ export class RuleEngine extends BaseComponent {
     setLM(lm) {
         this._lm = lm;
         this._refreshLMRuleInstances();
+        return this;
     }
 
     setTermFactory(termFactory) {
@@ -100,58 +101,28 @@ export class RuleEngine extends BaseComponent {
 
     applyRule(rule, task, memory = null) {
         if (!rule || !this._rules.has(rule.id)) return {results: [], rule};
-
-        const startTime = Date.now();
-        let success = false;
-
-        try {
-            const context = new ReasoningContext({
-                memory: memory,
-                termFactory: memory?.termFactory || this._termFactory,
-                ruleEngine: this
-            });
-            const {results, rule: updatedRule} = rule.apply(task, context);
-            
-            // Emit rule event
-            this._emitRuleEvent(rule, task, results);
-            
-            this._rules.set(rule.id, updatedRule);
-            success = true;
-            
-            this._incrementTypeMetric(rule);
-            
-            // Update rule effectiveness if performance optimizer is available
-            if (this._performanceOptimizer) {
-                this._performanceOptimizer.updateRuleEffectiveness(rule.id, success, results?.length || 0);
-            }
-
-            return {results, rule: updatedRule};
-        } catch (error) {
-            if (error.rule) this._rules.set(rule.id, error.rule);
-            throw error.error || error;
-        } finally {
-            this._updateMetrics(success, Date.now() - startTime);
-        }
+        return this._applyRuleWithMetrics(rule, task, memory);
     }
 
     _emitRuleEvent(rule, task, results) {
-        if (results && results.length > 0) {
-            this._emitIntrospectionEvent(IntrospectionEvents.RULE_FIRED, {
-                rule: rule.id,
-                task: task.serialize(),
-                results: results.map(r => r.serialize())
-            });
-        } else {
-            this._emitIntrospectionEvent(IntrospectionEvents.RULE_NOT_FIRED, {
-                rule: rule.id,
-                task: task.serialize()
-            });
-        }
+        const eventType = results?.length > 0 
+            ? IntrospectionEvents.RULE_FIRED 
+            : IntrospectionEvents.RULE_NOT_FIRED;
+            
+        const eventPayload = results?.length > 0
+            ? { rule: rule.id, task: task.serialize(), results: results.map(r => r.serialize()) }
+            : { rule: rule.id, task: task.serialize() };
+            
+        this._emitIntrospectionEvent(eventType, eventPayload);
     }
 
     applyRules(task, ruleIds = null, ruleType = null, memory = null) {
         const rulesToApply = ruleIds ? this._getValidRules(ruleIds) : this.getApplicableRules(task, ruleType);
-        return rulesToApply.flatMap(this._applySingleRule.bind(this, task, memory));
+        return this._applyRulesToTask(rulesToApply, task, memory);
+    }
+
+    _applyRulesToTask(rules, task, memory = null) {
+        return rules.flatMap(rule => this._applySingleRule(task, memory, rule));
     }
 
     _applySingleRule(task, memory, rule) {
@@ -202,7 +173,7 @@ export class RuleEngine extends BaseComponent {
     }
 
     _applyRulesWithLogging(rules, task, memory = null) {
-        return rules.flatMap(this._applySingleRule.bind(this, task, memory));
+        return this._applyRulesToTask(rules, task, memory);
     }
 
     async coordinateRules(task, memory = null) {
@@ -256,20 +227,16 @@ export class RuleEngine extends BaseComponent {
 
     async applyRuleOptimized(rule, task, memory = null) {
         if (!rule || !this._rules.has(rule.id)) return {results: [], rule};
+        return await this.applyRuleWithOptimization(rule, task, memory);
+    }
 
+    async applyRuleWithOptimization(rule, task, memory = null) {
         const startTime = Date.now();
         let success = false;
 
         try {
-            const context = new ReasoningContext({
-                memory: memory,
-                termFactory: memory?.termFactory || this._termFactory,
-                ruleEngine: this
-            });
-            const {
-                results,
-                rule: updatedRule
-            } = await this._performanceOptimizer.applyRuleWithOptimization(rule, task, context);
+            const context = this._createRuleContext(memory);
+            const {results, rule: updatedRule} = await this._performanceOptimizer.applyRuleWithOptimization(rule, task, context);
             this._rules.set(rule.id, updatedRule);
             success = true;
             
@@ -295,7 +262,7 @@ export class RuleEngine extends BaseComponent {
 
         for (const rule of rulesToApply) {
             try {
-                const ruleResult = await this.applyRuleOptimized(rule, task, memory);
+                const ruleResult = await this.applyRuleWithOptimization(rule, task, memory);
                 results.push(...ruleResult.results);
             } catch (error) {
                 this.logger.warn(`Optimized rule ${rule.id} failed:`, error);
@@ -329,6 +296,44 @@ export class RuleEngine extends BaseComponent {
         return this;
     }
 
+    _applyRuleWithMetrics(rule, task, memory = null) {
+        const startTime = Date.now();
+        let success = false;
+
+        try {
+            const context = this._createRuleContext(memory);
+            const {results, rule: updatedRule} = rule.apply(task, context);
+            
+            // Emit rule event
+            this._emitRuleEvent(rule, task, results);
+            
+            this._rules.set(rule.id, updatedRule);
+            success = true;
+            
+            this._incrementTypeMetric(rule);
+            
+            // Update rule effectiveness if performance optimizer is available
+            if (this._performanceOptimizer) {
+                this._performanceOptimizer.updateRuleEffectiveness(rule.id, success, results?.length || 0);
+            }
+
+            return {results, rule: updatedRule};
+        } catch (error) {
+            if (error.rule) this._rules.set(rule.id, error.rule);
+            throw error.error || error;
+        } finally {
+            this._updateMetrics(success, Date.now() - startTime);
+        }
+    }
+
+    _createRuleContext(memory) {
+        return new ReasoningContext({
+            memory: memory,
+            termFactory: memory?.termFactory || this._termFactory,
+            ruleEngine: this
+        });
+    }
+    
     _refreshLMRuleInstances() {
         for (const [ruleId, rule] of this._rules.entries()) {
             if (rule instanceof LMRule && rule.lm !== this._lm) {

@@ -1,7 +1,3 @@
-/**
- * Shared utility functions for reasoning components
- */
-
 export class ReasoningUtils {
     static validateFocusSet(focusSet) {
         if (!Array.isArray(focusSet)) {
@@ -23,8 +19,9 @@ export class ReasoningUtils {
             ...metrics,
             uptime: Date.now() - metrics.startTime,
             ruleEngineStats: ruleEngine.metrics || null,
-            strategySelectorStats: strategySelector.getPerformanceRecommendation?.() ? 
-                strategySelector.getPerformanceRecommendation() : null
+            strategySelectorStats: strategySelector.getPerformanceRecommendation?.()
+                ? strategySelector.getPerformanceRecommendation()
+                : null
         };
     }
 
@@ -53,13 +50,7 @@ export class ReasoningUtils {
     }
 }
 
-export const createBatches = (array, batchSize) => {
-    const batches = [];
-    for (let i = 0; i < array.length; i += batchSize) {
-        batches.push(array.slice(i, i + batchSize));
-    }
-    return batches;
-};
+export const createBatches = (array, batchSize) => chunkArray(array, batchSize);
 
 export const chunkArray = (array, chunkSize) => {
     const chunks = [];
@@ -102,12 +93,5 @@ export const removeDuplicates = (array, keyFn) => {
     return [...new Set(array)];
 };
 
-export const removeDuplicateTasks = tasks => {
-    const seen = new Set();
-    return tasks.filter(task => {
-        const key = task.serialize ? task.serialize() : JSON.stringify(task);
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-    });
-};
+export const removeDuplicateTasks = tasks => 
+    removeDuplicates(tasks, task => task.serialize ? task.serialize() : JSON.stringify(task));

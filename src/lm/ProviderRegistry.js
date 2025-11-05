@@ -9,10 +9,7 @@ export class ProviderRegistry {
     }
 
     register(id, provider) {
-        if (!id || !provider) {
-            throw new Error('Provider ID and provider object are required');
-        }
-
+        if (!id || !provider) throw new Error('Provider ID and provider object are required');
         this.providers.set(id, provider);
         this.defaultProviderId ||= id;
         return this;
@@ -40,9 +37,7 @@ export class ProviderRegistry {
     }
 
     setDefault(id) {
-        if (this.providers.has(id)) {
-            this.defaultProviderId = id;
-        }
+        if (this.providers.has(id)) this.defaultProviderId = id;
         return this;
     }
 }

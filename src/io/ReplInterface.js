@@ -1,6 +1,8 @@
 import {NAR} from '../nar/NAR.js';
 import readline from 'readline';
 import {PersistenceManager} from './PersistenceManager.js';
+import path from 'path';
+import {fileURLToPath} from 'url';
 
 const COMMANDS = Object.freeze({
     help: ['help', 'h', '?'],
@@ -124,7 +126,7 @@ export class ReplInterface {
                 ? this._showSuccess(duration)
                 : console.log('✗ Failed to process input');
         } catch (error) {
-            console.error(`Error: ${error.message}`);
+            console.error(`Error processing Narsese input: ${error.message}`);
         }
     }
 
@@ -261,14 +263,10 @@ Narsese input examples:
         }
 
         try {
-            // Import and run the example - we need to use a file URL for the import
-            const path = await import('path');
-            const url = await import('url');
-
             // Get the current directory and build the absolute path
-            const __filename = url.fileURLToPath(import.meta.url);
+            const __filename = fileURLToPath(import.meta.url);
             const __dirname = path.dirname(__filename);
-            const filePath = path.resolve(__dirname, examplePath);
+            const filePath = path.resolve(__dirname, '..', '..', examplePath);
 
             // Import using file:// URL protocol
             const exampleModule = await import(`file://${filePath}`);

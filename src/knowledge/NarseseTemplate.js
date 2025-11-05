@@ -35,69 +35,44 @@ export class TruthValueUtils {
 }
 
 const DEFAULT_TEMPLATES = Object.freeze({
-  statement: (data, options = {}) => {
-    const { subject, predicate, truth } = data;
-    const truthStr = _formatTruthValue(truth);
-    return `<${subject} --> ${predicate}>${truthStr}`;
-  },
+  statement: ({ subject, predicate, truth }) =>
+    `<${subject} --> ${predicate}>${_formatTruthValue(truth)}`,
   
-  relationship: (data, options = {}) => {
-    const { subject, relation, object, truth } = data;
-    const truthStr = _formatTruthValue(truth);
-    return `<${subject} ${relation} ${object}>${truthStr}`;
-  },
+  relationship: ({ subject, relation, object, truth }) =>
+    `<${subject} ${relation} ${object}>${_formatTruthValue(truth)}`,
   
-  inheritance: (data, options = {}) => {
-    const { subject, object, truth } = data;
-    const truthStr = _formatTruthValue(truth);
-    return `<${subject} --> ${object}>${truthStr}`;
-  },
+  inheritance: ({ subject, object, truth }) =>
+    `<${subject} --> ${object}>${_formatTruthValue(truth)}`,
   
-  similarity: (data, options = {}) => {
-    const { subject, object, truth } = data;
-    const truthStr = _formatTruthValue(truth);
-    return `<${subject} <-> ${object}>${truthStr}`;
-  },
+  similarity: ({ subject, object, truth }) =>
+    `<${subject} <-> ${object}>${_formatTruthValue(truth)}`,
   
-  implication: (data, options = {}) => {
-    const { subject, object, truth } = data;
-    const truthStr = _formatTruthValue(truth);
-    return `<${subject} =/> ${object}>${truthStr}`;
-  },
+  implication: ({ subject, object, truth }) =>
+    `<${subject} =/> ${object}>${_formatTruthValue(truth)}`,
   
-  'file-analysis': (data, options = {}) => {
-    const { filePath, metric, value, min = 0, max = 100 } = data;
+  'file-analysis': ({ filePath, metric, value, min = 0, max = 100 }, options = {}) => {
     const normalizedValue = TruthValueUtils.normalizeMetric(value, min, max);
     const truth = { frequency: normalizedValue, confidence: options.confidence || 0.9 };
-    const truthStr = _formatTruthValue(truth);
-    return `<("${filePath}" --> ${metric}) --> ${value}>${truthStr}`;
+    return `<("${filePath}" --> ${metric}) --> ${value}>${_formatTruthValue(truth)}`;
   },
   
-  'directory-analysis': (data, options = {}) => {
-    const { dirPath, metric, value, min = 0, max = 100 } = data;
+  'directory-analysis': ({ dirPath, metric, value, min = 0, max = 100 }, options = {}) => {
     const normalizedValue = TruthValueUtils.normalizeMetric(value, min, max);
     const truth = { frequency: normalizedValue, confidence: options.confidence || 0.8 };
-    const truthStr = _formatTruthValue(truth);
-    return `<("${dirPath}" --> ${metric}) --> ${value}>${truthStr}`;
+    return `<("${dirPath}" --> ${metric}) --> ${value}>${_formatTruthValue(truth)}`;
   },
   
-  'test-result': (data, options = {}) => {
-    const { testName, status, duration, truth } = data;
-    const truthStr = _formatTruthValue(truth);
-    
+  'test-result': ({ testName, status, duration, truth }) => {
     if (status) {
-      return `<("${testName}" --> pass) --> ${status}>${truthStr}`;
+      return `<("${testName}" --> pass) --> ${status}>${_formatTruthValue(truth)}`;
     } else if (duration !== undefined) {
-      return `<("${testName}" --> time) --> ${duration}ms>${truthStr}`;
+      return `<("${testName}" --> time) --> ${duration}ms>${_formatTruthValue(truth)}`;
     }
     return null;
   },
   
-  containment: (data, options = {}) => {
-    const { container, contained, relationship = 'in', truth } = data;
-    const truthStr = _formatTruthValue(truth);
-    return `<("${contained}" --> ${relationship}_of) --> "${container}">${truthStr}`;
-  }
+  containment: ({ container, contained, relationship = 'in', truth }) =>
+    `<("${contained}" --> ${relationship}_of) --> "${container}">${_formatTruthValue(truth)}`
 });
 
 function _formatTruthValue(truth) {

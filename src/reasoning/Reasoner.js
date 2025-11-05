@@ -54,19 +54,24 @@ export class Reasoner {
 
         this.logger.debug(`Performing inference on ${focusSet.length} tasks with max ${maxDerivedTasks} derived tasks`);
 
+        // Define reasoning modes with their respective functions
+        const reasoningModes = [
+            { enabled: enableSymbolicReasoning, type: 'symbolic', fn: this._executeSymbolicInference.bind(this) },
+            { enabled: enableTemporalReasoning && this.temporalReasoner, type: 'temporal', fn: this._executeTemporalInference.bind(this) },
+            { enabled: enableModularReasoning && this.systemContext, type: 'modular', fn: this._executeModularInference.bind(this) }
+        ];
+
         let allDerivedTasks = [];
 
         // Apply reasoning sequentially based on enabled modes
-        if (enableSymbolicReasoning) {
-            allDerivedTasks.push(...await this._performSymbolicInference(focusSet, maxDerivedTasks - allDerivedTasks.length));
-        }
-        
-        if (enableTemporalReasoning && allDerivedTasks.length < maxDerivedTasks && this.temporalReasoner) {
-            allDerivedTasks.push(...this._performTemporalInference(focusSet, maxDerivedTasks - allDerivedTasks.length));
-        }
-        
-        if (enableModularReasoning && allDerivedTasks.length < maxDerivedTasks && this.systemContext) {
-            allDerivedTasks.push(...await this._performModularInference(focusSet, maxDerivedTasks - allDerivedTasks.length));
+        for (const { enabled, type, fn } of reasoningModes) {
+            if (!enabled || allDerivedTasks.length >= maxDerivedTasks) continue;
+            
+            const remainingTasks = maxDerivedTasks - allDerivedTasks.length;
+            const results = await this._performInference(type, focusSet, remainingTasks, fn);
+            allDerivedTasks = allDerivedTasks.concat(results);
+            
+            if (allDerivedTasks.length >= maxDerivedTasks) break;
         }
 
         const finalTasks = allDerivedTasks.slice(0, maxDerivedTasks);
@@ -77,55 +82,47 @@ export class Reasoner {
         return finalTasks;
     }
 
-    async _performSymbolicInference(focusSet, maxDerived) {
-        this.logger.debug(`Starting symbolic inference with ${this.ruleEngine.rules.length} rules on ${focusSet.length} tasks`);
+    async _performInference(type, focusSet, maxTasks, executionFn) {
+        // Check if the required component is available
+        const isAvailable = type === 'temporal' ? !!this.temporalReasoner : type === 'modular' ? !!this.systemContext : true;
+        
+        if (!isAvailable) {
+            this.logger.debug(`${type} reasoner not available, skipping ${type} reasoning`);
+            return [];
+        }
 
+        this.logger.debug(`Starting ${type} inference on ${focusSet.length} tasks with max ${maxTasks} derived tasks`);
+
+        try {
+            const results = await executionFn(focusSet, maxTasks);
+            const limitedResults = Array.isArray(results) ? results.slice(0, maxTasks) : results || [];
+            ReasoningUtils.updateMetrics(this.metrics, type, limitedResults.length);
+            this.logger.debug(`${type} inference produced ${limitedResults.length} derived tasks`);
+
+            return limitedResults;
+        } catch (error) {
+            this.logger.warn(`${type} reasoning failed:`, error);
+            return [];
+        }
+    }
+    
+    async _executeSymbolicInference(focusSet) {
         const reasoningContext = this._createReasoningContext();
         const strategy = this.strategySelector.selectStrategy(reasoningContext, focusSet, this.ruleEngine.rules);
-        const strategyResults = await strategy.execute(
+        return await strategy.execute(
             reasoningContext,
             this.ruleEngine.rules,
             focusSet
         );
-
-        const derivedTasks = strategyResults.slice(0, maxDerived);
-        ReasoningUtils.updateMetrics(this.metrics, 'symbolic', derivedTasks.length);
-        this.logger.debug(`Symbolic inference produced ${derivedTasks.length} derived tasks`);
-
-        return derivedTasks;
     }
-
-    _performTemporalInference(focusSet, maxTemporalTasks) {
-        if (!this.temporalReasoner) {
-            this.logger.debug('Temporal reasoner not available, skipping temporal reasoning');
-            return [];
-        }
-
-        this.logger.debug(`Starting temporal inference on ${focusSet.length} tasks with max ${maxTemporalTasks} derived tasks`);
-
-        try {
-            const temporalTasks = this.temporalReasoner.infer(focusSet);
-            const limitedTasks = Array.isArray(temporalTasks) ? temporalTasks.slice(0, maxTemporalTasks) : [];
-
-            ReasoningUtils.updateMetrics(this.metrics, 'temporal', limitedTasks.length);
-            this.logger.debug(`Temporal inference produced ${limitedTasks.length} derived tasks`);
-
-            return limitedTasks;
-        } catch (error) {
-            this.logger.warn('Temporal reasoning failed:', error);
-            return [];
-        }
+    
+    _executeTemporalInference(focusSet) {
+        return this.temporalReasoner.infer(focusSet);
     }
-
-    async _performModularInference(focusSet, maxModularTasks) {
-        if (!this.systemContext) {
-            this.logger.debug('System context not available, skipping modular reasoning');
-            return [];
-        }
-
-        this.logger.debug(`Starting modular inference on ${focusSet.length} tasks with max ${maxModularTasks} derived tasks`);
-
+    
+    async _executeModularInference(focusSet, maxModularTasks) {
         const derivedTasks = [];
+        
         for (const task of focusSet) {
             if (derivedTasks.length >= maxModularTasks) break;
 
@@ -150,10 +147,6 @@ export class Reasoner {
                 this.logger.error(`Error executing modular reasoning for task:`, error);
             }
         }
-
-        ReasoningUtils.updateMetrics(this.metrics, 'modular', derivedTasks.length);
-        this.logger.debug(`Modular inference produced ${derivedTasks.length} derived tasks`);
-
         return derivedTasks;
     }
 

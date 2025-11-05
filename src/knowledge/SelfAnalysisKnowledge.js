@@ -43,53 +43,28 @@ export class FileAnalysisKnowledge extends DataTableKnowledge {
       const fileName = row.path || row.file_path || `file_${index}`;
       const filePath = fileName.replace(/[^\w\s-]/g, '_').replace(/\s+/g, '_');
       
-      const tasks = [];
+      // Define metrics to process
+      const metrics = [
+        { key: 'line_coverage', metric: 'coverage', min: 0, max: 100, confidence: 0.9 },
+        { key: 'size', metric: 'size', min: 0, max: 10000, confidence: 0.8 },
+        { key: 'complexity_cyclomatic', metric: 'complexity', min: 0, max: 50, confidence: 0.85 },
+        { key: 'lines', metric: 'lines', min: 0, max: 1000, confidence: 0.8 }
+      ];
       
-      if (row.line_coverage !== undefined) {
-        const task = await this.createTasksWithTemplate('file-analysis', {
-          filePath,
-          metric: 'coverage',
-          value: row.line_coverage,
-          min: 0,
-          max: 100
-        }, { confidence: 0.9 });
-        tasks.push(task);
+      // Process each metric
+      for (const { key, metric, min, max, confidence } of metrics) {
+        if (row[key] !== undefined) {
+          return await this.createTasksWithTemplate('file-analysis', {
+            filePath,
+            metric,
+            value: row[key],
+            min,
+            max
+          }, { confidence });
+        }
       }
       
-      if (row.size !== undefined) {
-        const task = await this.createTasksWithTemplate('file-analysis', {
-          filePath,
-          metric: 'size',
-          value: row.size,
-          min: 0,
-          max: 10000
-        }, { confidence: 0.8 });
-        tasks.push(task);
-      }
-      
-      if (row.complexity_cyclomatic !== undefined) {
-        const task = await this.createTasksWithTemplate('file-analysis', {
-          filePath,
-          metric: 'complexity',
-          value: row.complexity_cyclomatic,
-          min: 0,
-          max: 50
-        }, { confidence: 0.85 });
-        tasks.push(task);
-      }
-      
-      if (row.lines !== undefined) {
-        const task = await this.createTasksWithTemplate('file-analysis', {
-          filePath,
-          metric: 'lines',
-          value: row.lines,
-          min: 0,
-          max: 1000
-        }, { confidence: 0.8 });
-        tasks.push(task);
-      }
-      
-      return tasks.length > 0 ? tasks[0] : null;
+      return null;
     } catch (error) {
       console.error(`Error converting file row to task: ${error.message}`);
       return null;
@@ -152,40 +127,31 @@ export class TestResultKnowledge extends DataTableKnowledge {
   async rowToTask(row, index) {
     try {
       const testName = (row.name || `test_${index}`).replace(/[^\w\s-]/g, '_').replace(/\s+/g, '_');
-      const tasks = [];
       
+      // Handle test status
       if (row.status) {
         const isPass = row.status === 'passed' ? 1 : 0;
-        const task = await this.createTasksWithTemplate('test-result', {
+        return await this.createTasksWithTemplate('test-result', {
           testName,
           status: row.status,
           truth: { frequency: isPass, confidence: 0.95 }
         });
-        tasks.push(task);
       }
       
+      // Handle test duration
       if (row.duration !== undefined && row.duration > 0) {
         const durationNorm = TruthValueUtils.normalizeMetric(row.duration, 0, 5000);
-        const task = await this.createTasksWithTemplate('test-result', {
+        
+        // Return slow/fast classification first
+        return await this.createTasksWithTemplate('test-result', {
           testName,
           status: row.duration > 1000 ? 'slow' : 'fast',
           duration: row.duration,
           truth: { frequency: durationNorm, confidence: 0.8 }
         });
-        tasks.push(task);
       }
       
-      if (row.duration !== undefined && row.duration > 0) {
-        const task = await this.createTasksWithTemplate('test-result', {
-          testName,
-          status: 'duration',
-          duration: row.duration,
-          truth: { frequency: 1.0, confidence: 0.9 }
-        });
-        tasks.push(task);
-      }
-      
-      return tasks.length > 0 ? tasks[0] : null;
+      return null;
     } catch (error) {
       console.error(`Error converting test row to task: ${error.message}`);
       return null;
@@ -256,42 +222,28 @@ export class DirectoryStructureKnowledge extends DataTableKnowledge {
   async rowToTask(row, index) {
     try {
       const dirName = (row.path || `directory_${index}`).replace(/[^\w\s-]/g, '_').replace(/\s+/g, '_');
-      const tasks = [];
       
-      if (row.files !== undefined) {
-        const task = await this.createTasksWithTemplate('directory-analysis', {
-          dirPath: dirName,
-          metric: 'files',
-          value: row.files,
-          min: 0,
-          max: 50
-        }, { confidence: 0.8 });
-        tasks.push(task);
+      // Define metrics to process
+      const metrics = [
+        { key: 'files', metric: 'files', min: 0, max: 50, confidence: 0.8 },
+        { key: 'lines', metric: 'lines', min: 0, max: 10000, confidence: 0.8 },
+        { key: 'complexity', metric: 'complexity', min: 0, max: 100, confidence: 0.8 }
+      ];
+      
+      // Process each metric
+      for (const { key, metric, min, max, confidence } of metrics) {
+        if (row[key] !== undefined) {
+          return await this.createTasksWithTemplate('directory-analysis', {
+            dirPath: dirName,
+            metric,
+            value: row[key],
+            min,
+            max
+          }, { confidence });
+        }
       }
       
-      if (row.lines !== undefined) {
-        const task = await this.createTasksWithTemplate('directory-analysis', {
-          dirPath: dirName,
-          metric: 'lines',
-          value: row.lines,
-          min: 0,
-          max: 10000
-        }, { confidence: 0.8 });
-        tasks.push(task);
-      }
-      
-      if (row.complexity !== undefined) {
-        const task = await this.createTasksWithTemplate('directory-analysis', {
-          dirPath: dirName,
-          metric: 'complexity',
-          value: row.complexity,
-          min: 0,
-          max: 100
-        }, { confidence: 0.8 });
-        tasks.push(task);
-      }
-      
-      return tasks.length > 0 ? tasks[0] : null;
+      return null;
     } catch (error) {
       console.error(`Error converting directory row to task: ${error.message}`);
       return null;

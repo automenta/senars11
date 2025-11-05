@@ -6,10 +6,7 @@ export class ModelSelector {
 
     select(task, constraints = {}) {
         const cacheKey = this._generateCacheKey(task, constraints);
-        
-        if (this.cache.has(cacheKey)) {
-            return this.cache.get(cacheKey);
-        }
+        if (this.cache.has(cacheKey)) return this.cache.get(cacheKey);
 
         const availableProviders = Array.from(this.providerRegistry.providers.keys());
         const result = this._selectBasedOnConstraints(availableProviders, constraints);

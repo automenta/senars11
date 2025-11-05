@@ -1,3 +1,5 @@
+import fetch from 'node-fetch';
+
 const PROVIDER_MAP = Object.freeze({
     wikipedia: WikipediaConnector,
     wikidata: WikidataConnector,

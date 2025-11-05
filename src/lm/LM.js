@@ -59,7 +59,6 @@ export class LM extends BaseComponent {
             providerId: id,
             default: id === this.providers.defaultProviderId
         });
-
         return this;
     }
 
@@ -88,9 +87,7 @@ export class LM extends BaseComponent {
 
     async generateText(prompt, options = {}, providerId = null) {
         const provider = this._getProvider(providerId);
-        if (!provider) {
-            throw new Error(`Provider "${providerId || this.providers.defaultProviderId}" not found.`);
-        }
+        if (!provider) throw new Error(`Provider "${providerId || this.providers.defaultProviderId}" not found.`);
 
         const startTime = Date.now();
         try {
@@ -106,9 +103,7 @@ export class LM extends BaseComponent {
 
     async generateEmbedding(text, providerId = null) {
         const provider = this._getProvider(providerId);
-        if (!provider) {
-            throw new Error(`Provider "${providerId || this.providers.defaultProviderId}" not found.`);
-        }
+        if (!provider) throw new Error(`Provider "${providerId || this.providers.defaultProviderId}" not found.`);
 
         try {
             return await this._executeWithCircuitBreaker(provider, provider.generateEmbedding, text);
@@ -121,9 +116,7 @@ export class LM extends BaseComponent {
 
     async process(prompt, options = {}, providerId = null) {
         const provider = this._getProvider(providerId);
-        if (!provider) {
-            throw new Error(`Provider "${providerId || this.providers.defaultProviderId}" not found.`);
-        }
+        if (!provider) throw new Error(`Provider "${providerId || this.providers.defaultProviderId}" not found.`);
 
         try {
             if (typeof provider.process === 'function') {

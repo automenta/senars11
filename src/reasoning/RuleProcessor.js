@@ -1,28 +1,14 @@
 import {ReasoningContext} from './ReasoningContext.js';
 
-/**
- * Interface for different rule processing strategies
- * Allows for different approaches to rule application
- */
 export class RuleProcessor {
     constructor(config = {}) {
         this.config = config;
     }
 
-    /**
-     * Process rules against tasks
-     * @param {Array} rules - Rules to apply
-     * @param {Array} tasks - Tasks to apply rules to
-     * @param {ReasoningContext} context - Reasoning context containing memory, termFactory, etc.
-     * @returns {Array} Processed results
-     */
     async process(rules, tasks, context) {
         throw new Error('RuleProcessor.process must be implemented by subclasses');
     }
 
-    /**
-     * Create or use context for processing
-     */
     async createContext(tasks, config = {}) {
         if (config instanceof ReasoningContext) {
             return config;
@@ -31,16 +17,20 @@ export class RuleProcessor {
         return new ReasoningContext(config);
     }
 
-    /**
-     * Check if this processor can handle the specified rules or task types
-     */
     canProcess(ruleType, taskType) {
         return true;
     }
 
-    /**
-     * Common method to apply a single rule to a task and update metrics
-     */
+    async _applyRulesToTasks(rules, tasks, context) {
+        const results = [];
+        for (const rule of rules) {
+            for (const task of tasks) {
+                results.push(...await this._applyRuleToTask(rule, task, context));
+            }
+        }
+        return results;
+    }
+
     async _applyRuleToTask(rule, task, context) {
         if (!rule.canApply?.(task)) return [];
 
@@ -50,7 +40,9 @@ export class RuleProcessor {
             context.incrementMetric('inferencesMade', ruleResults.length);
             return ruleResults;
         } catch (error) {
-            this.logger?.warn(`Rule ${rule.id} failed:`, error);
+            // Log with specific error context for better debugging
+            this.logger?.warn?.(`Rule ${rule.id} failed for task ${task?.id || 'unknown'}:`, error);
+            // Return empty array in case of error to maintain processing flow
             return [];
         }
     }
