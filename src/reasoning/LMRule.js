@@ -1,11 +1,6 @@
 import {Logger} from '../util/Logger.js';
 import {Rule} from './Rule.js';
 
-/**
- * An LM-based reasoning rule that interacts with a Language Model.
- * This class is designed to be highly configurable and declarative,
- * allowing for the easy creation of new rules with minimal boilerplate.
- */
 export class LMRule extends Rule {
     constructor(id, lm, promptTemplate, responseProcessor, priority = 1.0, config = {}) {
         super(id, 'lm', priority, config);

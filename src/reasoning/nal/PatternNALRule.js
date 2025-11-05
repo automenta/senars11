@@ -2,11 +2,6 @@ import {Rule} from '../Rule.js';
 import {PatternMatcher} from './PatternMatcher.js';
 import {TruthFunctions} from './TruthFunctions.js';
 
-/**
- * Pattern-based NAL Rule: Single-task pattern matching NAL rule
- * This NALRule variant processes single tasks using pattern matching and unification
- * (Different from multi-premise NALRule in parent directory)
- */
 export class PatternNALRule extends Rule {
     constructor(id, config = {}) {
         super(id, 'nal', config.priority || 1.0, config);

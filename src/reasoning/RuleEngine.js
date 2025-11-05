@@ -8,83 +8,18 @@ import {PerformanceOptimizer} from './PerformanceOptimizer.js';
 import {BaseComponent} from '../util/BaseComponent.js';
 import {IntrospectionEvents} from '../util/IntrospectionEvents.js';
 
-/**
- * Private utilities for RuleEngine
- */
-class RuleEngineUtils {
-    static createDefaultConfig(config) {
-        return {autoRegisterLM: true, ...config};
-    }
-    
-    static createDefaultRuleProcessor(config) {
-        return new SequentialRuleProcessor(config.ruleProcessor || {});
-    }
-    
-    static createDefaultPerformanceOptimizer(config) {
-        return new PerformanceOptimizer(config.performance || {});
-    }
-    
-    static createContext(ruleEngine, memory, termFactory) {
-        return new ReasoningContext({
-            memory: memory,
-            termFactory: termFactory || ruleEngine._termFactory,
-            ruleEngine: ruleEngine
-        });
-    }
-    
-    static createRuleContext(ruleEngine, memory, termFactory, additionalConfig = {}) {
-        return new ReasoningContext({
-            memory: memory || null,
-            termFactory: termFactory || ruleEngine._termFactory,
-            ruleEngine: ruleEngine,
-            ...ruleEngine._config.context,
-            ...additionalConfig
-        });
-    }
-    
-    static getRuleType(rule) {
-        return rule instanceof LMRule ? 'lm' : 'nal';
-    }
-    
-    static incrementTypeMetric(engine, rule) {
-        const ruleType = RuleEngineUtils.getRuleType(rule);
-        engine._typeMetrics[`${ruleType}RuleApplications`]++;
-    }
-    
-    static updateRuleEffectiveness(engine, ruleId, success, resultCount) {
-        if (engine._performanceOptimizer) {
-            engine._performanceOptimizer.updateRuleEffectiveness(ruleId, success, resultCount);
-        }
-    }
-    
-    static emitRuleEvent(engine, rule, task, results) {
-        if (results && results.length > 0) {
-            engine._emitIntrospectionEvent(IntrospectionEvents.RULE_FIRED, {
-                rule: rule.id,
-                task: task.serialize(),
-                results: results.map(r => r.serialize())
-            });
-        } else {
-            engine._emitIntrospectionEvent(IntrospectionEvents.RULE_NOT_FIRED, {
-                rule: rule.id,
-                task: task.serialize()
-            });
-        }
-    }
-}
-
 export class RuleEngine extends BaseComponent {
     constructor(config = {}, lm = null, termFactory = null, ruleProcessor = null) {
         super(config, 'RuleEngine');
-        this._config = RuleEngineUtils.createDefaultConfig({...this.config, ...config});
+        this._config = {autoRegisterLM: true, ...config};
         this._rules = new Map();
         this._ruleSets = new Map();
         this._lm = lm;
         this._termFactory = termFactory;
         this._ruleUtilMetrics = MetricsUtil.create();
         this._typeMetrics = {lmRuleApplications: 0, nalRuleApplications: 0};
-        this._ruleProcessor = ruleProcessor || RuleEngineUtils.createDefaultRuleProcessor(this._config);
-        this._performanceOptimizer = RuleEngineUtils.createDefaultPerformanceOptimizer(this._config);
+        this._ruleProcessor = ruleProcessor || new SequentialRuleProcessor(config.ruleProcessor || {});
+        this._performanceOptimizer = new PerformanceOptimizer(config.performance || {});
     }
 
     get rules() {
@@ -190,17 +125,38 @@ export class RuleEngine extends BaseComponent {
         let success = false;
 
         try {
-            const context = RuleEngineUtils.createContext(this, memory);
+            const context = new ReasoningContext({
+                memory: memory,
+                termFactory: memory?.termFactory || this._termFactory,
+                ruleEngine: this
+            });
             const {results, rule: updatedRule} = rule.apply(task, context);
             
-            RuleEngineUtils.emitRuleEvent(this, rule, task, results);
+            // Emit rule event
+            if (results && results.length > 0) {
+                this._emitIntrospectionEvent(IntrospectionEvents.RULE_FIRED, {
+                    rule: rule.id,
+                    task: task.serialize(),
+                    results: results.map(r => r.serialize())
+                });
+            } else {
+                this._emitIntrospectionEvent(IntrospectionEvents.RULE_NOT_FIRED, {
+                    rule: rule.id,
+                    task: task.serialize()
+                });
+            }
             
             this._rules.set(rule.id, updatedRule);
             success = true;
-            RuleEngineUtils.incrementTypeMetric(this, rule);
+            
+            // Increment type metric
+            const ruleType = rule instanceof LMRule ? 'lm' : 'nal';
+            this._typeMetrics[`${ruleType}RuleApplications`]++;
             
             // Update rule effectiveness if performance optimizer is available
-            RuleEngineUtils.updateRuleEffectiveness(this, rule.id, success, results?.length || 0);
+            if (this._performanceOptimizer) {
+                this._performanceOptimizer.updateRuleEffectiveness(rule.id, success, results?.length || 0);
+            }
 
             return {results, rule: updatedRule};
         } catch (error) {
@@ -251,7 +207,8 @@ export class RuleEngine extends BaseComponent {
     }
 
     _incrementTypeMetric(rule) {
-        RuleEngineUtils.incrementTypeMetric(this, rule);
+        const ruleType = rule instanceof LMRule ? 'lm' : 'nal';
+        this._typeMetrics[`${ruleType}RuleApplications`]++;
     }
 
     _updateMetrics(success, time) {
@@ -292,7 +249,12 @@ export class RuleEngine extends BaseComponent {
     }
 
     async processBatch(rules, tasks, memory = null, termFactory = null) {
-        const context = RuleEngineUtils.createRuleContext(this, memory, termFactory);
+        const context = new ReasoningContext({
+            memory: memory || null,
+            termFactory: termFactory || this._termFactory,
+            ruleEngine: this,
+            ...this._config?.context
+        });
         return await this._ruleProcessor.process(rules, tasks, context);
     }
 
@@ -301,7 +263,12 @@ export class RuleEngine extends BaseComponent {
     }
 
     async processBatchOptimized(rules, tasks, memory = null, termFactory = null) {
-        const context = RuleEngineUtils.createRuleContext(this, memory, termFactory);
+        const context = new ReasoningContext({
+            memory: memory || null,
+            termFactory: termFactory || this._termFactory,
+            ruleEngine: this,
+            ...this._config?.context
+        });
 
         if (this._performanceOptimizer && this._config.performance?.enableBatching) {
             return await this._performanceOptimizer.batchProcess(
@@ -322,17 +289,26 @@ export class RuleEngine extends BaseComponent {
         let success = false;
 
         try {
-            const context = RuleEngineUtils.createContext(this, memory);
+            const context = new ReasoningContext({
+                memory: memory,
+                termFactory: memory?.termFactory || this._termFactory,
+                ruleEngine: this
+            });
             const {
                 results,
                 rule: updatedRule
             } = await this._performanceOptimizer.applyRuleWithOptimization(rule, task, context);
             this._rules.set(rule.id, updatedRule);
             success = true;
-            RuleEngineUtils.incrementTypeMetric(this, rule);
-
-            // Update rule effectiveness
-            RuleEngineUtils.updateRuleEffectiveness(this, rule.id, success, results?.length || 0);
+            
+            // Increment type metric
+            const ruleType = rule instanceof LMRule ? 'lm' : 'nal';
+            this._typeMetrics[`${ruleType}RuleApplications`]++;
+            
+            // Update rule effectiveness if performance optimizer is available
+            if (this._performanceOptimizer) {
+                this._performanceOptimizer.updateRuleEffectiveness(rule.id, success, results?.length || 0);
+            }
 
             return {results, rule: updatedRule};
         } catch (error) {
@@ -360,7 +336,13 @@ export class RuleEngine extends BaseComponent {
     }
 
     createContext(config = {}) {
-        return RuleEngineUtils.createRuleContext(this, config.memory, config.termFactory, config);
+        return new ReasoningContext({
+            memory: config.memory || null,
+            termFactory: config.termFactory || this._termFactory,
+            ruleEngine: this,
+            ...this._config?.context,
+            ...config
+        });
     }
 
     getPerformanceStats() {

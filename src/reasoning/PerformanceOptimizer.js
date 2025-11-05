@@ -1,8 +1,5 @@
 import {createBatches} from './ReasoningUtils.js';
 
-/**
- * RuleIndex: Indexes rules by their matching patterns for faster lookup
- */
 export class RuleIndex {
     constructor() {
         this._operatorIndex = new Map(); // Index by term operators
@@ -116,9 +113,6 @@ export class RuleIndex {
     }
 }
 
-/**
- * RuleCache: Caches rule application results for improved performance
- */
 export class RuleCache {
     constructor(config = {}) {
         this.config = {
@@ -234,9 +228,6 @@ export class RuleCache {
     }
 }
 
-/**
- * PerformanceOptimizer: Manages performance optimization for rule processing
- */
 export class PerformanceOptimizer {
     constructor(config = {}) {
         this.config = {
@@ -244,12 +235,12 @@ export class PerformanceOptimizer {
             enableBatching: config.enableBatching !== false,
             enableIndexing: config.enableIndexing !== false,
             enablePrioritization: config.enablePrioritization !== false,
-            maxBatchSize: config.maxBatchSize || 50,
+            maxBatchSize: config.maxBatchSize ?? 50,
             enableProfiling: config.enableProfiling !== false,
             ...config
         };
 
-        this.ruleCache = this.config.enableCaching ? new RuleCache(config.cache || {}) : null;
+        this.ruleCache = this.config.enableCaching ? new RuleCache(config.cache ?? {}) : null;
         this.ruleIndex = this.config.enableIndexing ? new RuleIndex() : null;
         this.profiles = new Map(); // Performance profiles by rule ID
         this._rulePriorities = new Map(); // Dynamic rule priorities based on effectiveness
@@ -268,10 +259,7 @@ export class PerformanceOptimizer {
      * Get candidate rules for a task using indexing (if enabled)
      */
     getCandidateRules(task, allRules) {
-        if (this.ruleIndex) {
-            return this.ruleIndex.getCandidates(task);
-        }
-        return allRules; // Fall back to all rules if indexing disabled
+        return this.ruleIndex ? this.ruleIndex.getCandidates(task) : allRules;
     }
 
     /**
@@ -367,10 +355,9 @@ export class PerformanceOptimizer {
     }
 
     _getMemoryState(memory) {
-        if (!memory || typeof memory.getSnapshot !== 'function') {
-            return null;
-        }
-        return memory.getSnapshot ? memory.getSnapshot() : JSON.stringify(memory);
+        return (memory?.getSnapshot && typeof memory.getSnapshot === 'function') 
+            ? memory.getSnapshot() 
+            : null;
     }
 
     _recordProfile(ruleId, duration, resultCount) {
@@ -417,10 +404,11 @@ export class PerformanceOptimizer {
 
     getStats() {
         return {
-            cacheStats: this.ruleCache?.getStats() || null,
+            cacheStats: this.ruleCache?.getStats() ?? null,
             profileCount: this.profiles.size,
-            indexedRules: this.ruleIndex ?
-                Array.from(this.ruleIndex._categoryIndex.values()).flat().length : 0,
+            indexedRules: this.ruleIndex 
+                ? Array.from(this.ruleIndex._categoryIndex.values()).flat().length 
+                : 0,
             hasProfiling: this.config.enableProfiling,
             hasCaching: this.config.enableCaching,
             hasIndexing: this.config.enableIndexing,

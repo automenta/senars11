@@ -2,7 +2,6 @@ import {Metrics} from '../util/Metrics.js';
 import {TRUTH} from '../config/constants.js';
 import {clamp} from '../util/common.js';
 
-// Private utilities for Rule class
 const RuleUtils = {
     validateId(id) {
         if (!id || typeof id !== 'string') throw new Error('Rule ID must be a non-empty string');

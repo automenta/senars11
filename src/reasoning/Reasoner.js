@@ -2,82 +2,21 @@ import {RuleEngine} from './RuleEngine.js';
 import {StrategySelector} from './StrategySelector.js';
 import {ReasoningContext} from './ReasoningContext.js';
 import {Logger} from '../util/Logger.js';
-
-/**
- * Reasoner utilities to reduce duplication
- */
-class ReasonerUtils {
-    static validateFocusSet(focusSet) {
-        if (!Array.isArray(focusSet)) {
-            throw new Error(`Focus set must be an array, received: ${typeof focusSet}`);
-        }
-    }
-
-    static createDefaultConfig(config) {
-        return {
-            enableSymbolicReasoning: true,
-            enableTemporalReasoning: true,
-            enableModularReasoning: true,
-            maxDerivedTasks: Infinity,
-            ...config
-        };
-    }
-
-    static createDefaultRuleEngine(config) {
-        return config.ruleEngine || new RuleEngine(config.ruleEngine || {});
-    }
-
-    static createDefaultStrategySelector(config) {
-        return config.strategySelector || new StrategySelector(config.strategySelector || {});
-    }
-
-    static updateMetrics(metrics, type, count) {
-        metrics[`${type}Inferences`] += count;
-        metrics.totalInferences += count;
-    }
-
-    static createReasoningContext(ruleEngine, systemContext, config) {
-        return new ReasoningContext({
-            memory: systemContext?.memory || null,
-            termFactory: systemContext?.termFactory || null,
-            ruleEngine: ruleEngine,
-            systemContext: systemContext,
-            config: config
-        });
-    }
-
-    static createPerformanceStats(metrics, ruleEngine, strategySelector) {
-        return {
-            ...metrics,
-            uptime: Date.now() - metrics.startTime,
-            ruleEngineStats: ruleEngine.metrics || null,
-            strategySelectorStats: strategySelector.getPerformanceRecommendation ?
-                strategySelector.getPerformanceRecommendation() : null
-        };
-    }
-
-    static createRuleStats(ruleEngine) {
-        const rules = ruleEngine.rules;
-        return {
-            totalRules: rules.length,
-            ruleNames: rules.map(r => r.id),
-            ruleTypes: {
-                lmRules: rules.filter(r => r.type === 'lm').length,
-                nalRules: rules.filter(r => r.type !== 'lm').length
-            },
-            ...ruleEngine.metrics
-        };
-    }
-}
+import {ReasoningUtils} from './ReasoningUtils.js';
 
 export class Reasoner {
     constructor(config = {}) {
-        this.config = ReasonerUtils.createDefaultConfig(config);
+        this.config = ReasoningUtils.createDefaultConfig(config, {
+            enableSymbolicReasoning: true,
+            enableTemporalReasoning: true,
+            enableModularReasoning: true,
+            maxDerivedTasks: Infinity
+        });
 
         // Initialize core components
-        this.ruleEngine = ReasonerUtils.createDefaultRuleEngine(config);
-        this.strategySelector = ReasonerUtils.createDefaultStrategySelector(config);
-        this.temporalReasoner = config.temporalReasoner || null;
+        this.ruleEngine = config.ruleEngine || new RuleEngine(config.ruleEngine || {});
+        this.strategySelector = config.strategySelector || new StrategySelector(config.strategySelector || {});
+        this.temporalReasoner = config.temporalReasoner ?? null;
         this.systemContext = null;
 
         // Initialize metrics and tracking
@@ -98,11 +37,9 @@ export class Reasoner {
     }
 
     async performInference(focusSet, options = {}) {
-        ReasonerUtils.validateFocusSet(focusSet);
+        ReasoningUtils.validateFocusSet(focusSet);
 
-        if (focusSet.length === 0) {
-            return [];
-        }
+        if (focusSet.length === 0) return [];
 
         return await this._executeInference(focusSet, options);
     }
@@ -135,7 +72,7 @@ export class Reasoner {
         const finalTasks = allDerivedTasks.slice(0, maxDerivedTasks);
         this.logger.debug(`Total inference produced ${finalTasks.length} derived tasks`);
         
-        ReasonerUtils.updateMetrics(this.metrics, 'total', finalTasks.length);
+        ReasoningUtils.updateMetrics(this.metrics, 'total', finalTasks.length);
 
         return finalTasks;
     }
@@ -146,7 +83,13 @@ export class Reasoner {
         this.logger.debug(`Starting symbolic inference with ${this.ruleEngine.rules.length} rules on ${focusSet.length} tasks`);
 
         // Create context for the rules
-        const reasoningContext = ReasonerUtils.createReasoningContext(this.ruleEngine, this.systemContext, this.config);
+        const reasoningContext = new ReasoningContext({
+            memory: this.systemContext?.memory || null,
+            termFactory: this.systemContext?.termFactory || null,
+            ruleEngine: this.ruleEngine,
+            systemContext: this.systemContext,
+            config: this.config
+        });
 
         // Process all focus set tasks using rule engine with the selected strategy
         const strategy = this.strategySelector.selectStrategy(reasoningContext, focusSet, this.ruleEngine.rules);
@@ -160,7 +103,7 @@ export class Reasoner {
 
         derivedTasks.push(...strategyResults.slice(0, maxDerived));
 
-        ReasonerUtils.updateMetrics(this.metrics, 'symbolic', derivedTasks.length);
+        ReasoningUtils.updateMetrics(this.metrics, 'symbolic', derivedTasks.length);
         this.logger.debug(`Symbolic inference produced ${derivedTasks.length} derived tasks`);
 
         return derivedTasks;
@@ -178,7 +121,7 @@ export class Reasoner {
             const temporalTasks = this.temporalReasoner.infer(focusSet);
             const limitedTasks = Array.isArray(temporalTasks) ? temporalTasks.slice(0, maxTemporalTasks) : [];
 
-            ReasonerUtils.updateMetrics(this.metrics, 'temporal', limitedTasks.length);
+            ReasoningUtils.updateMetrics(this.metrics, 'temporal', limitedTasks.length);
             this.logger.debug(`Temporal inference produced ${limitedTasks.length} derived tasks`);
 
             return limitedTasks;
@@ -227,14 +170,20 @@ export class Reasoner {
             }
         }
 
-        ReasonerUtils.updateMetrics(this.metrics, 'modular', derivedTasks.length);
+        ReasoningUtils.updateMetrics(this.metrics, 'modular', derivedTasks.length);
         this.logger.debug(`Modular inference produced ${derivedTasks.length} derived tasks`);
 
         return derivedTasks;
     }
 
     _createReasoningContext() {
-        return ReasonerUtils.createReasoningContext(this.ruleEngine, this.systemContext, this.config);
+        return new ReasoningContext({
+            memory: this.systemContext?.memory || null,
+            termFactory: this.systemContext?.termFactory || null,
+            ruleEngine: this.ruleEngine,
+            systemContext: this.systemContext,
+            config: this.config
+        });
     }
 
     async processTask(task) {
@@ -244,11 +193,11 @@ export class Reasoner {
     }
 
     getPerformanceStats() {
-        return ReasonerUtils.createPerformanceStats(this.metrics, this.ruleEngine, this.strategySelector);
+        return ReasoningUtils.createPerformanceStats(this.metrics, this.ruleEngine, this.strategySelector);
     }
 
     getRuleStatistics() {
-        return ReasonerUtils.createRuleStats(this.ruleEngine);
+        return ReasoningUtils.createRuleStats(this.ruleEngine);
     }
 
     setReasoningMode(mode, enabled) {

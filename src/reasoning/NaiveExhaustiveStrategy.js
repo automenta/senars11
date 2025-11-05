@@ -10,22 +10,20 @@ export class NaiveExhaustiveStrategy extends StrategyInterface {
     constructor(config = {}) {
         super({id: 'naive-exhaustive', ...config});
         this.config = {
-            maxCombinations: config.maxCombinations || 100,
-            maxTasksPerBatch: config.maxTasksPerBatch || 50,
-            maxRuleApplications: config.maxRuleApplications || 1000,
+            maxCombinations: config.maxCombinations ?? 100,
+            maxTasksPerBatch: config.maxTasksPerBatch ?? 50,
+            maxRuleApplications: config.maxRuleApplications ?? 1000,
             enableMetrics: config.enableMetrics !== false,
             ...config
         };
 
         // Initialize metrics if enabled
-        if (this.config.enableMetrics) {
-            this.metrics = new StrategyMetrics({
+        this.metrics = this.config.enableMetrics 
+            ? new StrategyMetrics({
                 strategyId: 'naive-exhaustive',
                 ...this.config.metrics
-            });
-        } else {
-            this.metrics = null;
-        }
+            })
+            : null;
     }
 
     async execute(context, rules = [], taskOrTasks, optionalFocusTasks) {
@@ -38,11 +36,11 @@ export class NaiveExhaustiveStrategy extends StrategyInterface {
             let memory, termFactory, tasks;
 
             // Handle context appropriately
-            if (context && typeof context === 'object' && context.memory && context.termFactory) {
+            if (context?.memory && context?.termFactory) {
                 // It's a ReasoningContext
                 memory = context.memory;
                 termFactory = context.termFactory;
-                tasks = context.tasks || [];
+                tasks = context.tasks ?? [];
             } else {
                 // Handle the pattern from Cycle: execute(memory, rules[], termFactory, allTasks[])
                 if (Array.isArray(optionalFocusTasks)) {
@@ -59,14 +57,12 @@ export class NaiveExhaustiveStrategy extends StrategyInterface {
                     // Default fallback - get all tasks from memory
                     memory = context;
                     termFactory = rules;
-                    tasks = this._getAllTasksFromMemory(context) || [];
+                    tasks = this._getAllTasksFromMemory(context) ?? [];
                 }
             }
 
             // If tasks still not defined or empty, use default
-            if (!tasks || tasks.length === 0) {
-                tasks = []; // Default to empty array
-            }
+            tasks = tasks ?? [];
 
             taskCount = tasks.length;
 
@@ -205,12 +201,10 @@ export class NaiveExhaustiveStrategy extends StrategyInterface {
     }
 
     _getAllTasksFromMemory(memory) {
-        if (memory && typeof memory === 'object') {
-            if (memory.getAllConcepts) {
-                return memory.getAllConcepts().flatMap(c => c.getAllTasks ? c.getAllTasks() : []);
-            } else if (memory.getAllTasks) {
-                return memory.getAllTasks();
-            }
+        if (memory?.getAllConcepts) {
+            return memory.getAllConcepts().flatMap(c => c.getAllTasks?.() ?? []);
+        } else if (memory?.getAllTasks) {
+            return memory.getAllTasks();
         }
         return [];
     }
