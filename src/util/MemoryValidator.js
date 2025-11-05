@@ -84,10 +84,6 @@ export class MemoryValidator {
     }
 
     updateChecksum(key, obj) {
-        if (!this.isEnabled) return;
-        
-        const checksum = this.calculateChecksum(obj);
-        checksum && this.checksums.set(key, checksum);
-        return checksum;
+        return this.storeChecksum(key, obj);
     }
 }

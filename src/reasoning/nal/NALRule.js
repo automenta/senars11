@@ -19,9 +19,11 @@ export class NALRule extends Rule {
         const start = performance.now();
         try {
             const results = await this._apply(task, context);
-            return {results, rule: this._updateMetrics(true, performance.now() - start)};
+            const executionTime = performance.now() - start;
+            return {results, rule: this._updateMetrics(true, executionTime)};
         } catch (error) {
-            return {results: [], error, rule: this._updateMetrics(false, performance.now() - start)};
+            const executionTime = performance.now() - start;
+            return {results: [], error, rule: this._updateMetrics(false, executionTime)};
         }
     }
 

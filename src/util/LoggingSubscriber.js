@@ -32,11 +32,8 @@ export class LoggingSubscriber {
     }
     
     _shouldLogEvent(eventData) {
-        if (!this.options.logAllEvents) return false;
-        if (this.options.eventFilter && typeof this.options.eventFilter === 'function') {
-            return this.options.eventFilter(eventData);
-        }
-        return true;
+        return this.options.logAllEvents &&
+            (!this.options.eventFilter || this.options.eventFilter(eventData));
     }
     
     _formatLogEntry(eventData) {

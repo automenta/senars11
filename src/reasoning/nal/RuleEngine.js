@@ -93,8 +93,8 @@ export class RuleEngine extends BaseRuleEngine {
     async _applyRulesByTypes(task, context, ruleTypes) {
         const results = [];
         for (const type of ruleTypes) {
-            const applyFn = this[`apply${type.charAt(0).toUpperCase() + type.slice(1)}Rules`].bind(this);
-            results.push(...await applyFn(task, context));
+            const methodName = `apply${type.charAt(0).toUpperCase() + type.slice(1)}Rules`;
+            results.push(...await this[methodName](task, context));
         }
         return results;
     }
@@ -130,7 +130,7 @@ export class RuleEngine extends BaseRuleEngine {
 
     _isAmbiguous(term) {
         if (!term) return false;
-        return term.isVariable || (term.name && (term.name === 'any' || term.name === '?'));
+        return term.isVariable || (term.name && ['any', '?'].includes(term.name));
     }
 
     _isComplex(task) {

@@ -61,12 +61,13 @@ export class RuleManager {
     }
 
     _removeFromMapCollections(ruleId) {
-        [this._categories, this._ruleGroups].forEach(map => {
-            for (const [key, ruleIds] of map.entries()) {
+        const collections = [this._categories, this._ruleGroups];
+        for (const collection of collections) {
+            for (const [key, ruleIds] of collection.entries()) {
                 ruleIds.delete(ruleId);
-                if (ruleIds.size === 0) map.delete(key);
+                if (ruleIds.size === 0) collection.delete(key);
             }
-        });
+        }
     }
 
     enable(ruleId) {
@@ -133,14 +134,14 @@ export class RuleManager {
     }
 
     getByCategory(category) {
-        const ruleIds = this._categories.get(category) || new Set();
-        return Array.from(ruleIds)
-            .map(id => this._rules.get(id))
-            .filter(Boolean);
+        return this._getRulesByCollection(this._categories.get(category));
     }
 
     getByGroup(group) {
-        const ruleIds = this._ruleGroups.get(group) || new Set();
+        return this._getRulesByCollection(this._ruleGroups.get(group));
+    }
+    
+    _getRulesByCollection(ruleIds = new Set()) {
         return Array.from(ruleIds)
             .map(id => this._rules.get(id))
             .filter(Boolean);

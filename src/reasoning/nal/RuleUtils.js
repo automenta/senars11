@@ -1,9 +1,9 @@
 export class RuleUtils {
     static collectTasks(context) {
-        const {memory, focus} = context || {};
+        const {memory, focus} = context ?? {};
         return [
-            ...(memory?.getAllTasks?.() || []),
-            ...(focus?.getCurrentTasks?.() || [])
+            ...(memory?.getAllTasks?.() ?? []),
+            ...(focus?.getCurrentTasks?.() ?? [])
         ];
     }
 

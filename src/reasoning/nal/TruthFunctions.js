@@ -32,10 +32,9 @@ export class TruthFunctions {
 
     static exemplification(v1, v2) {
         if (!v1 || !v2) return null;
-        const t1 = this.toTruth(v1);
-        const t2 = this.toTruth(v2);
+        const [t1, t2] = [this.toTruth(v1), this.toTruth(v2)];
         const result = Truth.op(t1, t2, (t, u) => 
-            new Truth(t.frequency, t.confidence * u.confidence * (TRUTH.EXEMPLIFICATION_CONFIDENCE_FACTOR || 0.1))
+            new Truth(t.frequency, t.confidence * u.confidence * (TRUTH.EXEMPLIFICATION_CONFIDENCE_FACTOR ?? 0.1))
         );
         return result ? { frequency: result.frequency, confidence: result.confidence } : null;
     }

@@ -12,7 +12,7 @@ export class DeductionRule extends NALRule {
     }
 
     _matches(task, context) {
-        const {term} = task || {};
+        const {term} = task ?? {};
         return term?.isCompound && term.operator === '-->' && term.components?.length === 2;
     }
 
@@ -25,16 +25,14 @@ export class DeductionRule extends NALRule {
         return complementaryTasks
             .map(compTask => {
                 const bindings = this._unify(subject, compTask.term);
-                if (bindings) {
-                    const derivedTruth = this._calculateTruth(task.truth, compTask.truth);
-                    return this._createDerivedTask(task, {
+                return bindings 
+                    ? this._createDerivedTask(task, {
                         term: predicate,
-                        truth: derivedTruth,
+                        truth: this._calculateTruth(task.truth, compTask.truth),
                         type: compTask.type,
                         priority: task.priority * compTask.priority * this.priority
-                    });
-                }
-                return null;
+                    })
+                    : null;
             })
             .filter(Boolean);
     }

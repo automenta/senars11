@@ -28,12 +28,10 @@ export class PatternMatcher {
     }
 
     _bindVariable(pattern, term, bindings) {
-        const variableName = pattern.name || pattern.toString();
-        if (bindings.has(variableName)) {
-            return this._termsEqual(bindings.get(variableName), term, bindings);
-        }
-        bindings.set(variableName, term);
-        return true;
+        const variableName = pattern.name ?? pattern.toString();
+        return bindings.has(variableName) 
+            ? this._termsEqual(bindings.get(variableName), term, bindings)
+            : (bindings.set(variableName, term), true);
     }
 
     _unifyCompound(pattern, term, bindings) {
@@ -55,7 +53,7 @@ export class PatternMatcher {
             : term;
     }
 
-    _isVariable = (term) => !!(term?.name?.startsWith?.('?'))
+    _isVariable = (term) => !!term?.name?.startsWith?.('?')
 
     _termsEqual(t1, t2, bindings = null) {
         if (!t1 || !t2) return t1 === t2;
