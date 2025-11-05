@@ -2,6 +2,7 @@ import { Rule } from '../Rule.js';
 import { Truth } from '../../Truth.js';
 import { Task } from '../../task/Task.js';
 import { Stamp } from '../../Stamp.js';
+import { Term, TermType } from '../../term/Term.js';
 
 /**
  * Implements the implication syllogistic deduction rule for the stream reasoner.
@@ -85,23 +86,9 @@ export class ImplicationSyllogisticRule extends Rule {
       // Apply deduction truth function
       const newTruth = Truth.deduction(firstTruth, secondTruth);
 
-      // Create the new implication term (a ==> c)
-      const newTerm = context.termFactory?.create({
-        operator: '==>',
-        components: [a, c]
-      }) || {
-        operator: '==>',
-        components: [a, c],
-        // Fallback implementation if termFactory is not available
-        equals: function(other) {
-          return other.operator === this.operator && 
-                 other.components && 
-                 other.components[0] && other.components[1] &&
-                 other.components[0].equals && other.components[1].equals &&
-                 other.components[0].equals(this.components[0]) &&
-                 other.components[1].equals(this.components[1]);
-        }
-      };
+      // Create the new implication term (a ==> c) using the Term class
+      const newTermName = `(==>, ${a._name || a.name || 'a'}, ${c._name || c.name || 'c'})`;
+      const newTerm = new Term(TermType.COMPOUND, newTermName, [a, c], '==>');
 
       // Create new stamp combining both premise stamps
       const newStamp = Stamp.derive([primaryPremise.stamp, secondaryPremise.stamp]);

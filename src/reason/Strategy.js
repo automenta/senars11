@@ -64,12 +64,12 @@ export class Strategy {
       
       // Try to get tasks from focus first (higher priority tasks)
       if (this.focus) {
-        allTasks = this.focus.getTasks(this.config.maxSecondaryPremises || 10);
+        allTasks = this.focus.getTasks(this.config.maxSecondaryPremises || 20); // Increased default from 10 to 20
       } else if (this.memory && typeof this.memory.getAllConcepts === 'function') {
         // Get tasks from memory concepts if focus is not available
         allTasks = this.memory.getAllConcepts()
           .flatMap(concept => concept.getTasks ? concept.getTasks() : [])
-          .slice(0, this.config.maxSecondaryPremises || 10);
+          .slice(0, this.config.maxSecondaryPremises || 20); // Increased default from 10 to 20
       }
       
       // Filter tasks to find those that could be meaningfully paired with the primary premise
@@ -80,13 +80,88 @@ export class Strategy {
         task.term !== primaryPremise.term  // Different terms
       );
       
+      // Prioritize secondary premises that are likely to form syllogistic patterns
+      // with the primary premise by looking for matching terms
+      const prioritizedTasks = this._prioritizeCompatibleTasks(primaryPremise, validSecondaryTasks);
+      
       // Limit to maxSecondaryPremises if specified
-      return validSecondaryTasks.slice(0, this.config.maxSecondaryPremises || 10);
+      return prioritizedTasks.slice(0, this.config.maxSecondaryPremises || 20); // Increased default
     } catch (error) {
       console.error('Error in selectSecondaryPremises:', error);
       // Return empty array to continue processing instead of failing
       return [];
     }
+  }
+  
+  /**
+   * Prioritize tasks that are compatible with the primary premise for rule application
+   * @param {Task} primaryPremise - The primary premise
+   * @param {Array<Task>} secondaryTasks - Array of potential secondary premises
+   * @returns {Array<Task>} - Prioritized array of compatible tasks
+   */
+  _prioritizeCompatibleTasks(primaryPremise, secondaryTasks) {
+    if (!primaryPremise?.term?.components || !Array.isArray(secondaryTasks)) {
+      return secondaryTasks;
+    }
+    
+    // Use the proper Term equals method for comparison
+    const termEquals = (t1, t2) => {
+      if (!t1 || !t2) return false;
+      if (typeof t1.equals === 'function') {
+        return t1.equals(t2);
+      }
+      // Fallback for non-Term objects
+      const name1 = t1.name || t1._name || t1.toString?.() || '';
+      const name2 = t2.name || t2._name || t2.toString?.() || '';
+      return name1 === name2;
+    };
+    
+    // Identify the syllogistic compatibility based on matching terms
+    const primaryComponents = primaryPremise.term.components;
+    if (primaryComponents?.length !== 2) {
+      return secondaryTasks;
+    }
+    
+    const [primarySubject, primaryObject] = primaryComponents;
+    
+    // Separate tasks by compatibility level
+    const highlyCompatible = [];
+    const compatible = [];
+    const lessCompatible = [];
+    
+    for (const task of secondaryTasks) {
+      if (!task?.term?.components || task.term.components.length !== 2) {
+        lessCompatible.push(task);
+        continue;
+      }
+      
+      const [secondarySubject, secondaryObject] = task.term.components;
+      
+      // Check for syllogistic patterns: 
+      // Pattern 1: primary=(S->M), secondary=(M->P) where primaryObject = secondarySubject (M term matches)
+      // Pattern 2: primary=(M->P), secondary=(S->M) where primarySubject = secondaryObject (M term matches)
+      const pattern1 = termEquals(primaryObject, secondarySubject);  // primary ends where secondary starts
+      const pattern2 = termEquals(primarySubject, secondaryObject);  // primary starts where secondary ends
+      
+      if (pattern1 || pattern2) {
+        highlyCompatible.push(task);  // These are most likely to generate syllogistic derivations
+      } else {
+        // Check for other types of compatibility
+        const hasCommonTerms = termEquals(primarySubject, secondarySubject) || 
+                              termEquals(primarySubject, secondaryObject) || 
+                              termEquals(primaryObject, secondarySubject) || 
+                              termEquals(primaryObject, secondaryObject);
+        
+        if (hasCommonTerms) {
+          compatible.push(task);  // These might lead to other rule applications
+        } else {
+          lessCompatible.push(task);  // These are less likely to be useful
+        }
+      }
+    }
+    
+    // Return in order: highly compatible first, then compatible, then less compatible
+    return [...highlyCompatible, ...compatible, ...lessCompatible];
   }
 
   /**

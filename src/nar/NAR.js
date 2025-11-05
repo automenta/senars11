@@ -35,6 +35,9 @@ export class NAR extends BaseComponent {
         this._startTime = Date.now();
         this._registerComponents();
 
+        // Add debug mode for tracking pipeline
+        this._debugMode = config.debug?.pipeline || false;
+
         if (this._useStreamReasoner) {
             this._initStreamReasoner();
         }
@@ -187,7 +190,8 @@ export class NAR extends BaseComponent {
         
         // Create rule processor
         this._streamRuleProcessor = new StreamRuleProcessor(this._streamRuleExecutor, {
-            maxDerivationDepth: this._config.get('reasoning.maxDerivationDepth') || 10
+            maxDerivationDepth: this._config.get('reasoning.maxDerivationDepth') || 10,
+            termFactory: this._termFactory
         });
         
         // Create the main stream reasoner
@@ -447,10 +451,28 @@ export class NAR extends BaseComponent {
             await this._processPendingTasks(options.traceId);
             
             if (this._useStreamReasoner) {
-                // Execute a single step of the stream reasoner
-                const result = await this._streamReasoner.step();
-                this._eventBus.emit('streamReasoner.step', {result}, {traceId: options.traceId});
-                return result;
+                // Execute a single step of the stream reasoner (now returns array of derivations)
+                const results = await this._streamReasoner.step();
+                
+                // Add all derivations back to the system
+                for (const result of results) {
+                    if (result) {
+                        this._taskManager.addTask(result);
+                        if (this._focus) {
+                            this._focus.addTaskToFocus(result);
+                        }
+                        
+                        // Emit event for each derivation
+                        this._eventBus.emit('reasoning.derivation', {
+                            derivedTask: result,
+                            source: 'streamReasoner.step',
+                            timestamp: Date.now()
+                        }, {traceId: options.traceId});
+                    }
+                }
+                
+                this._eventBus.emit('streamReasoner.step', {results, count: results.length}, {traceId: options.traceId});
+                return results;  // Return the array of results
             } else {
                 const result = await this._cycle.execute();
                 this._eventBus.emit('cycle.completed', result, {traceId: options.traceId});

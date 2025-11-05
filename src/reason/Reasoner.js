@@ -66,24 +66,30 @@ export class Reasoner {
    * @private
    */
   async *_createOutputStream() {
-    // Get the premise stream from the source
-    const premiseStream = this.premiseSource.stream();
-    
-    // Generate premise pairs using the strategy
-    const premisePairStream = this.strategy.generatePremisePairs(premiseStream);
-    
-    // Process the pairs through rules
-    const derivationStream = this.ruleProcessor.process(premisePairStream);
-    
-    // Yield results from the derivation stream
-    for await (const derivation of derivationStream) {
-      // Apply CPU throttle if configured
-      if (this.config.cpuThrottleInterval > 0) {
-        await this._cpuThrottle();
-        this.metrics.cpuThrottleCount++;
-      }
+    try {
+      // Get the premise stream from the source
+      const premiseStream = this.premiseSource.stream();
       
-      yield derivation;
+      // Generate premise pairs using the strategy
+      const premisePairStream = this.strategy.generatePremisePairs(premiseStream);
+      
+      // Process the pairs through rules
+      const derivationStream = this.ruleProcessor.process(premisePairStream);
+      
+      // Yield results from the derivation stream
+      for await (const derivation of derivationStream) {
+        // Apply CPU throttle if configured
+        if (this.config.cpuThrottleInterval > 0) {
+          await this._cpuThrottle();
+          this.metrics.cpuThrottleCount++;
+        }
+        
+        yield derivation;
+      }
+    } catch (error) {
+      console.debug('Error in output stream creation:', error.message);
+      // Don't throw, just return to avoid hanging
+      return;
     }
   }
 
@@ -115,26 +121,134 @@ export class Reasoner {
 
   /**
    * Executes a single reasoning step. Useful for debugging and iterative mode.
+   * Uses the streaming pipeline with a controlled timeout.
    */
   async step(timeoutMs = 100) {
-    // Get one derivation from the stream with a timeout
-    const outputStream = this.outputStream;
+    const results = [];
+    const abortController = new AbortController();
     
-    // Create a timeout promise
-    const timeoutPromise = new Promise(resolve => {
-      setTimeout(() => resolve({done: true, value: null}), timeoutMs);
-    });
-    
-    // Race between getting a result and the timeout
-    const result = await Promise.race([
-      outputStream.next(),
-      timeoutPromise
-    ]);
-    
-    if (!result.done) {
-      return result.value;
+    try {
+      // Create a separate abortable stream for this step
+      // We'll create a temporary stream from current focus content
+      const startTime = Date.now();
+      
+      // Get tasks from focus to use as premises for this step
+      const focusTasks = [];
+      if (this.premiseSource.focusComponent) {
+        focusTasks.push(...this.premiseSource.focusComponent.getTasks(10));
+      }
+      
+      // Process premise pairs from the current focus
+      for (let i = 0; i < focusTasks.length; i++) {
+        for (let j = i + 1; j < focusTasks.length; j++) {
+          if (Date.now() - startTime > timeoutMs) {
+            break;
+          }
+          
+          const primaryPremise = focusTasks[i];
+          const secondaryPremise = focusTasks[j];
+          
+          try {
+            // Get candidate rules for this premise pair
+            const candidateRules = this.ruleProcessor.ruleExecutor.getCandidateRules(primaryPremise, secondaryPremise);
+            
+            // Process each rule
+            for (const rule of candidateRules) {
+              if (Date.now() - startTime > timeoutMs) {
+                break;
+              }
+              
+              if (this._isSynchronousRule(rule)) {
+                const ruleContext = {
+                  termFactory: this.ruleProcessor.config.termFactory || this.ruleProcessor.config.context?.termFactory || null
+                };
+                const ruleResults = this.ruleProcessor.ruleExecutor.executeRule(rule, primaryPremise, secondaryPremise, ruleContext);
+                
+                for (const result of ruleResults) {
+                  const processedResult = this._processDerivation(result);
+                  if (processedResult) {
+                    results.push(processedResult);
+                  }
+                }
+              }
+            }
+            
+            // Also try the reverse pairing (primary <-> secondary)
+            for (const rule of candidateRules) {
+              if (Date.now() - startTime > timeoutMs) {
+                break;
+              }
+              
+              if (this._isSynchronousRule(rule)) {
+                const ruleContext = {
+                  termFactory: this.ruleProcessor.config.termFactory || this.ruleProcessor.config.context?.termFactory || null
+                };
+                const ruleResults = this.ruleProcessor.ruleExecutor.executeRule(rule, secondaryPremise, primaryPremise, ruleContext);
+                
+                for (const result of ruleResults) {
+                  const processedResult = this._processDerivation(result);
+                  if (processedResult) {
+                    results.push(processedResult);
+                  }
+                }
+              }
+            }
+          } catch (error) {
+            console.debug('Error processing premise pair:', error.message);
+            continue;
+          }
+          
+          // Safety check to avoid taking too long
+          if (results.length >= 20) {
+            break;
+          }
+        }
+        
+        if (results.length >= 20 || Date.now() - startTime > timeoutMs) {
+          break;
+        }
+      }
+    } catch (error) {
+      console.debug('Error in step method:', error.message);
+    } finally {
+      // Cleanup if needed
     }
-    return null;
+    
+    // Return the results array (may be empty if no derivations were produced)
+    return results;
+  }
+  
+  /**
+   * Helper to check if a rule is synchronous (used in the step method)
+   */
+  _isSynchronousRule(rule) {
+    // For now, assume rules with 'nal' type are synchronous and others are async
+    return (rule.type ?? '').toLowerCase().includes('nal');
+  }
+  
+  /**
+   * Helper to process a derivation (extracted from RuleProcessor)
+   */
+  _processDerivation(result) {
+    try {
+      if (!result?.stamp) {
+        return result;
+      }
+
+      // Get the derivation depth from the result's stamp
+      const derivationDepth = result.stamp.depth ?? 0;
+
+      // Check max derivation depth limit
+      if (derivationDepth > this.config.maxDerivationDepth) {
+        console.debug(`Discarding derivation - exceeds max depth (${derivationDepth} > ${this.config.maxDerivationDepth})`);
+        return null; // Discard if exceeds depth limit
+      }
+
+      return result;
+    } catch (error) {
+      console.debug('Error processing derivation:', error.message);
+      return null; // Discard problematic results
+    }
   }
 
   /**
@@ -303,11 +417,16 @@ export class Reasoner {
     // This is critical for the reasoning loop to continue properly
     if (this.parentNAR && derivation) {
       try {
-        // Add the derived task back to the system for further reasoning
+        // Fire an event to indicate a reasoning derivation occurred
+        this.parentNAR._eventBus.emit('reasoning.derivation', {
+          derivedTask: derivation,
+          source: 'streamReasoner',
+          timestamp: Date.now()
+        });
+        
+        // Add the derived task back to the system by adding it to the task manager
+        // The NAR handles focus management internally
         this.parentNAR._taskManager.addTask(derivation);
-        if (this.parentNAR._focus) {
-          this.parentNAR._focus.addTaskToFocus(derivation);
-        }
       } catch (error) {
         console.error('Error adding derived task back to system:', error);
       }

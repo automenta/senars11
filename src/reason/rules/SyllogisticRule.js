@@ -8,7 +8,7 @@ import { Rule } from '../Rule.js';
 import { Truth } from '../../Truth.js';
 import { Task } from '../../task/Task.js';
 import { Stamp } from '../../Stamp.js';
-import { Term } from '../../term/Term.js';
+import { Term, TermType } from '../../term/Term.js';
 
 export class SyllogisticRule extends Rule {
   constructor(config = {}) {
@@ -49,19 +49,15 @@ export class SyllogisticRule extends Rule {
     // Pattern 1: (S --> M) + (M --> P) where comp1[1] === comp2[0]
     // Pattern 2: (M --> P) + (S --> M) where comp2[1] === comp1[0]
     
-    // Implement robust term comparison
+    // Use the proper Term equals method for comparison
     const termEquals = (t1, t2) => {
         if (!t1 || !t2) return false;
-        
-        // Try direct equals method if available
         if (typeof t1.equals === 'function') {
             return t1.equals(t2);
         }
-        
-        // Fallback: compare by name or string representation
+        // Fallback for non-Term objects
         const name1 = t1.name || t1._name || t1.toString?.() || '';
         const name2 = t2.name || t2._name || t2.toString?.() || '';
-        
         return name1 === name2;
     };
     
@@ -91,30 +87,14 @@ export class SyllogisticRule extends Rule {
     
     let subject, middle, predicate;
     
-    // Robust term equality comparison
-    const termEquals = (t1, t2) => {
-        if (!t1 || !t2) return false;
-        
-        // Try direct equals method if available
-        if (typeof t1.equals === 'function') {
-            return t1.equals(t2);
-        }
-        
-        // Fallback: compare by name or string representation
-        const name1 = t1.name || t1._name || t1.toString?.() || '';
-        const name2 = t2.name || t2._name || t2.toString?.() || '';
-        
-        return name1 === name2;
-    };
-    
     // Pattern 1: (S --> M) + (M --> P) => (S --> P)
-    if (termEquals(comp1[1], comp2[0])) {
+    if (comp1[1].equals && comp1[1].equals(comp2[0])) {
       subject = comp1[0];    // S
       middle = comp1[1];     // M (from first premise)
       predicate = comp2[1];  // P (from second premise)
     }
     // Pattern 2: (M --> P) + (S --> M) => (S --> P)  
-    else if (termEquals(comp2[1], comp1[0])) {
+    else if (comp2[1].equals && comp2[1].equals(comp1[0])) {
       subject = comp2[0];    // S (from second premise)
       middle = comp2[1];     // M 
       predicate = comp1[1];  // P (from first premise)
@@ -127,37 +107,10 @@ export class SyllogisticRule extends Rule {
     // Use the same operator as the first term for consistency
     const conclusionOperator = primaryPremise.term.operator || '==>';
     
-    // Create the conclusion term - first try with termFactory from context
-    let conclusionTerm = null;
-    if (context.termFactory) {
-      conclusionTerm = context.termFactory.create({
-        operator: conclusionOperator,
-        components: [subject, predicate]
-      });
-    } else {
-      // Fallback: create a simple term object if termFactory is not available
-      // This is a simplified approach to handle cases where context doesn't have the factory
-      conclusionTerm = {
-        operator: conclusionOperator,
-        components: [subject, predicate],
-        name: `(${conclusionOperator}, ${subject.name || subject._name || subject.toString()}, ${predicate.name || predicate._name || predicate.toString()})`,
-        toString: function() { 
-          return `(${this.operator}, ${this.components[0].name || this.components[0]._name || this.components[0].toString()}, ${this.components[1].name || this.components[1]._name || this.components[1].toString()})`;
-        },
-        equals: function(other) {
-          return other && 
-                 other.operator === this.operator && 
-                 this.components.length === other.components.length &&
-                 this.components[0].name === other.components[0].name &&
-                 this.components[1].name === other.components[1].name;
-        },
-        isCompound: true
-      };
-    }
-
-    if (!conclusionTerm) {
-      return [];
-    }
+    // Create the conclusion term using the Term class with proper structure
+    // The name should reflect the operator and components in the expected format (with spaces after commas)
+    const conclusionName = `(${conclusionOperator}, ${subject._name || subject.name || 'subject'}, ${predicate._name || predicate.name || 'predicate'})`;
+    const conclusionTerm = new Term(TermType.COMPOUND, conclusionName, [subject, predicate], conclusionOperator);
 
     // Calculate truth value using NAL deduction
     const truth1 = primaryPremise.truth;

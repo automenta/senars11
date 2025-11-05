@@ -111,10 +111,17 @@ export class RuleExecutor {
    * @param {object} context - The execution context
    * @returns {Array<Task>} - Array of derived tasks
    */
-  executeRule(rule, primaryPremise, secondaryPremise, context) {
+  executeRule(rule, primaryPremise, secondaryPremise, context = {}) {
     try {
+      // Ensure the context has the necessary factories
+      // The context should be enhanced with termFactory if not already present
+      const executionContext = {
+        ...context,
+        // termFactory will be provided by the calling component (NAR or RuleProcessor)
+      };
+      
       // Execute the rule application
-      const results = rule.apply?.(primaryPremise, secondaryPremise, context) ?? [];
+      const results = rule.apply?.(primaryPremise, secondaryPremise, executionContext) ?? [];
       return Array.isArray(results) ? results : [results];
     } catch (error) {
       logError(error, { 

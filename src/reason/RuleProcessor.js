@@ -18,7 +18,8 @@ export class RuleProcessor {
       backpressureThreshold: 50, // queue size threshold
       backpressureInterval: 5, // ms to wait when backpressure detected
       maxChecks: 100, // Prevent infinite loops when waiting for async results
-      asyncWaitInterval: 10 // ms to wait between checking for async results
+      asyncWaitInterval: 10, // ms to wait between checking for async results
+      termFactory: null // Default to null, will be provided by parent
     }, config);
     
     // Queue for async results
@@ -52,7 +53,12 @@ export class RuleProcessor {
             // Execute synchronous rules immediately
             if (this._isSynchronousRule(rule)) {
               this.syncRuleExecutions++;
-              const results = this.ruleExecutor.executeRule(rule, primaryPremise, secondaryPremise, this.config.context);
+              // Pass an enhanced context that includes termFactory if available from parent NAR
+              const ruleContext = {
+                termFactory: this.config.termFactory || (this.config.context && this.config.context.termFactory) || null,
+                ...this.config.context  // Pass through any other context properties
+              };
+              const results = this.ruleExecutor.executeRule(rule, primaryPremise, secondaryPremise, ruleContext);
               
               // Yield synchronous results immediately
               for (const result of results) {

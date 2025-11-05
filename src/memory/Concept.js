@@ -129,7 +129,7 @@ export class Concept extends BaseComponent {
 
     _enforceBagCapacity(bag, maxCount) {
         while (bag.size > maxCount) {
-            bag._removeLowestPriorityItem();
+            bag._removeItemByPolicy();
         }
     }
 

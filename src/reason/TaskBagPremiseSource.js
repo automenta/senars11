@@ -201,13 +201,23 @@ export class TaskBagPremiseSource extends PremiseSource {
 
   /**
    * Sample by priority (default behavior using the underlying bag's priority)
+   * Enhanced to consider recent tasks for better syllogistic reasoning
    * @returns {Task|null}
    */
   _sampleByPriority() {
     if (this.focusComponent) {
-      // For Focus component, get highest priority task
-      const tasks = this.focusComponent.getTasks(1); // Get just the highest priority task
-      return tasks.length > 0 ? tasks[0] : null;
+      // For Focus component, get the most recent tasks which are most likely to be relevant
+      // for syllogistic reasoning (recent tasks are more likely to match with other recent tasks)
+      const tasks = this.focusComponent.getTasks(5); // Get a few top priority tasks
+      
+      // If we have multiple tasks, randomly select one to promote diversity in premise pairing
+      if (tasks.length === 0) return null;
+      if (tasks.length === 1) return tasks[0];
+      
+      // Prefer recent tasks but allow some randomness
+      // First 2 tasks have higher probability
+      const randomIndex = Math.random() < 0.7 ? Math.floor(Math.random() * 2) : Math.floor(Math.random() * tasks.length);
+      return tasks[Math.min(randomIndex, tasks.length - 1)];
     }
     
     if (this.taskBag?.take) {

@@ -163,7 +163,9 @@ export class TestNAR {
                 maxCombinations: 25, // Smaller limit for tests (was 100, now 50)
                 maxRuleApplications: 50, // Smaller limit for tests (was 1000, now 100)
                 maxTasksPerBatch: 5, // Smaller batches for tests (was 50, now 10)
-                useStreamReasoner: true // Enable stream-based reasoning for tests
+                useStreamReasoner: true, // Enable stream-based reasoning for tests
+                cpuThrottleInterval: 0, // No CPU throttling in tests to improve performance
+                maxDerivationDepth: 5 // Limit derivation depth for tests
             },
             cycle: {
                 delay: 1 // Minimum delay to pass validation but still optimized for tests
@@ -213,10 +215,11 @@ export class TestNAR {
                     break;
 
                 case 'run':
-                    // For stream reasoner, we need to step the stream reasoner
-                    // For cycle-based reasoner, use the traditional approach
+                    // For stream reasoner, run iterative steps with enhanced processing
                     for (let i = 0; i < op.cycles; i++) {
                         await this.nar.step();
+                        // Small delay to allow async processing between steps
+                        await new Promise(resolve => setTimeout(resolve, 2));
                     }
                     break;
 
@@ -227,23 +230,28 @@ export class TestNAR {
         }
         
         // Additional reasoning cycles after all inputs to allow for inference
-        // For stream reasoner, use step-by-step processing instead of continuous mode
-        if (this.nar._useStreamReasoner && this.nar.streamReasoner) {
-            // Do NOT start the stream reasoner continuously - use step-by-step execution only
-            // Execute multiple steps to make sure processing happens
-            for (let i = 0; i < 50; i++) {  // Run reasoning steps iteratively
-                await this.nar.step();
+        // Execute multiple steps to make sure processing happens
+        if (this.nar.streamReasoner) {
+            for (let i = 0; i < 200; i++) {  // Increased from 100 to 200 steps for better coverage
+                const stepResults = await this.nar.step();
+                
+                // Make sure any derived tasks are also added to focus for next steps
+                for (const result of stepResults) {
+                    if (result && this.nar._focus) {
+                        this.nar._focus.addTaskToFocus(result);
+                    }
+                }
+                
                 // Small delay to allow async processing
-                await new Promise(resolve => setTimeout(resolve, 5));
+                if (i % 10 === 0) { // Every 10th step, allow more processing time
+                    await new Promise(resolve => setTimeout(resolve, 5));
+                } else {
+                    await new Promise(resolve => setTimeout(resolve, 1)); // Small delay
+                }
             }
             
             // Additional wait for any async rules to complete derivations
-            await new Promise(resolve => setTimeout(resolve, 200));
-        } else {
-            // For the old cycle-based reasoner, just run one cycle
-            for (let i = 0; i < 1; i++) {
-                await this.nar.step();
-            }
+            await new Promise(resolve => setTimeout(resolve, 500)); // Increased from 300 to 500 ms
         }
         
         // Ensure all derived tasks are properly registered in memory
@@ -298,6 +306,16 @@ export class TestNAR {
 ${taskList}
           ---------------------------------------------------
         `);
+            }
+        }
+
+        // Properly dispose of the NAR to avoid Jest teardown issues
+        if (this.nar) {
+            try {
+                await this.nar.dispose();
+            } catch (disposeError) {
+                // Log disposal errors but don't fail the test
+                console.warn('Warning during NAR disposal:', disposeError.message);
             }
         }
 

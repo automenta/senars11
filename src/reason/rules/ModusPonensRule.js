@@ -28,19 +28,15 @@ export class ModusPonensRule extends Rule {
     // Check if one is an implication and the other matches the antecedent
     const isImplication = (term) => term.operator === '==>';
     
-    // Robust term equality comparison
+    // Use the proper Term equals method for comparison
     const termEquals = (t1, t2) => {
         if (!t1 || !t2) return false;
-        
-        // Try direct equals method if available
         if (typeof t1.equals === 'function') {
             return t1.equals(t2);
         }
-        
-        // Fallback: compare by name or string representation
+        // Fallback for non-Term objects
         const name1 = t1.name || t1._name || t1.toString?.() || '';
         const name2 = t2.name || t2._name || t2.toString?.() || '';
-        
         return name1 === name2;
     };
     
