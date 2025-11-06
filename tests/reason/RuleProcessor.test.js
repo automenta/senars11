@@ -1,7 +1,7 @@
 import {jest} from '@jest/globals';
-import {RuleProcessor} from '../RuleProcessor.js';
-import {RuleExecutor} from '../RuleExecutor.js';
-import {Rule} from '../Rule.js';
+import {RuleProcessor} from '../../src/reason/RuleProcessor.js';
+import {RuleExecutor} from '../../src/reason/RuleExecutor.js';
+import {Rule} from '../../src/reason/Rule.js';
 import {createTestTask} from './testUtils.js';
 
 // Define proper rule classes for testing

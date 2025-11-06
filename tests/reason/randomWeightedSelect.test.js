@@ -1,4 +1,4 @@
-import {randomWeightedSelect} from '../utils/randomWeightedSelect.js';
+import {randomWeightedSelect} from '../../src/reason/utils/randomWeightedSelect.js';
 
 describe('randomWeightedSelect', () => {
     test('should select items based on weights', () => {

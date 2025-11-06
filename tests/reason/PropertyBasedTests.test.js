@@ -1,6 +1,6 @@
-import {TaskBagPremiseSource} from '../TaskBagPremiseSource.js';
-import {Strategy} from '../Strategy.js';
-import {randomWeightedSelect} from '../utils/randomWeightedSelect.js';
+import {TaskBagPremiseSource} from '../../src/reason/TaskBagPremiseSource.js';
+import {Strategy} from '../../src/reason/Strategy.js';
+import {randomWeightedSelect} from '../../src/reason/utils/randomWeightedSelect.js';
 import {createTestMemory, createTestTask} from './testUtils.js';
 
 // Helper function to generate random tasks

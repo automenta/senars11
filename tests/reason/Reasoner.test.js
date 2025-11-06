@@ -1,10 +1,10 @@
 import {jest} from '@jest/globals';
-import {Reasoner} from '../Reasoner.js';
-import {Strategy} from '../Strategy.js';
-import {RuleProcessor} from '../RuleProcessor.js';
-import {RuleExecutor} from '../RuleExecutor.js';
-import {TaskBagPremiseSource} from '../TaskBagPremiseSource.js';
-import {Focus} from '../../memory/Focus.js';
+import {Reasoner} from '../../src/reason/Reasoner.js';
+import {Strategy} from '../../src/reason/Strategy.js';
+import {RuleProcessor} from '../../src/reason/RuleProcessor.js';
+import {RuleExecutor} from '../../src/reason/RuleExecutor.js';
+import {TaskBagPremiseSource} from '../../src/reason/TaskBagPremiseSource.js';
+import {Focus} from '../../src/memory/Focus.js';
 import {createTestMemory} from './testUtils.js';
 
 describe('Reasoner', () => {

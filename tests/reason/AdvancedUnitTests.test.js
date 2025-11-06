@@ -1,9 +1,9 @@
-import {TaskBagPremiseSource} from '../TaskBagPremiseSource.js';
-import {Reasoner} from '../Reasoner.js';
-import {RuleProcessor} from '../RuleProcessor.js';
-import {RuleExecutor} from '../RuleExecutor.js';
-import {Strategy} from '../Strategy.js';
-import {Focus} from '../../memory/Focus.js';
+import {TaskBagPremiseSource} from '../../src/reason/TaskBagPremiseSource.js';
+import {Reasoner} from '../../src/reason/Reasoner.js';
+import {RuleProcessor} from '../../src/reason/RuleProcessor.js';
+import {RuleExecutor} from '../../src/reason/RuleExecutor.js';
+import {Strategy} from '../../src/reason/Strategy.js';
+import {Focus} from '../../src/memory/Focus.js';
 import {createTestTask} from './testUtils.js';
 
 describe('Advanced Unit Tests for Sophisticated Features', () => {

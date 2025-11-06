@@ -1,5 +1,5 @@
-import {TaskBagPremiseSource} from '../TaskBagPremiseSource.js';
-import {Focus} from '../../memory/Focus.js';
+import {TaskBagPremiseSource} from '../../src/reason/TaskBagPremiseSource.js';
+import {Focus} from '../../src/memory/Focus.js';
 import {createTestTask} from './testUtils.js';
 
 describe('TaskBagPremiseSource', () => {
