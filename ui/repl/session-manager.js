@@ -15,6 +15,15 @@ class SessionManager {
     this.container = document.getElementById('session-container');
     this.selector = document.getElementById('session-selector');
     
+    // Track session activity and resource management
+    this.sessionActivity = {}; // Track last activity per session
+    this.sessionResourceLimits = {}; // Track throttling per session
+    this.activeTabSessions = new Set(); // Track which sessions are in active tabs
+    this.debouncedSaves = {}; // Track debounced save functions
+    
+    // Check for reduced motion preference
+    this.reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    
     // Bind events
     this.bindEvents();
     
@@ -22,6 +31,15 @@ class SessionManager {
     window.addEventListener('beforeunload', () => {
       this.persistAllHistories();
     });
+    
+    // Set up resource management interval
+    this.setupResourceManagement();
+    
+    // Initialize debounce functions for history saves
+    this.setupDebouncedHistorySaves();
+    
+    // Set up reduced motion preference listener
+    this.setupReducedMotionListener();
     
     // Load histories on initialization
     this.loadAllHistories();
@@ -63,17 +81,71 @@ class SessionManager {
       }
     }
     
+    // Clear related memoized results since history changed
+    this.clearMemoizedResultsForSession(sessionId);
+    
     // Persist to sessionStorage
     this.persistSessionHistory(sessionId);
   }
   
-  // New: Persist session history to sessionStorage
+  // New: Persist session history to sessionStorage with debounce
   persistSessionHistory(sessionId) {
-    try {
-      const history = this.sessionHistories[sessionId] || [];
-      sessionStorage.setItem(`nars-history-${sessionId}`, JSON.stringify(history));
-    } catch (error) {
-      this.handlePersistenceError(`Failed to persist history for session ${sessionId}`, error);
+    // For this to work properly, we need to import debounce and create a debounced function
+    // Since we already imported utilities in setup, we can create the debounced function here
+    if (!this.debouncedSaveFunctions) {
+      this.debouncedSaveFunctions = new Map();
+    }
+    
+    // Create debounced function for this session if it doesn't exist
+    if (!this.debouncedSaveFunctions.has(sessionId)) {
+      // Create save function for this session
+      const saveFn = (sid) => {
+        try {
+          const history = this.sessionHistories[sid] || [];
+          sessionStorage.setItem(`nars-history-${sid}`, JSON.stringify(history));
+        } catch (error) {
+          this.handlePersistenceError(`Failed to persist history for session ${sid}`, error);
+        }
+      };
+      
+      // Apply debounce to the save function
+      import('../src/utils/utilityFunctions.js').then((utils) => {
+        if (utils.debounce) {
+          const debouncedSave = utils.debounce(saveFn, 500); // 500ms debounce
+          this.debouncedSaveFunctions.set(sessionId, debouncedSave);
+          debouncedSave(sessionId);
+        } else {
+          // Fallback to direct save without debounce
+          saveFn(sessionId);
+        }
+      }).catch(() => {
+        // If import fails, use direct save
+        saveFn(sessionId);
+      });
+    } else {
+      // Use existing debounced function
+      const debouncedSave = this.debouncedSaveFunctions.get(sessionId);
+      debouncedSave(sessionId);
+    }
+  }
+  
+  /**
+   * Clear memoized results for a specific session to invalidate cache when history changes
+   * @param {string} sessionId - Session identifier
+   */
+  clearMemoizedResultsForSession(sessionId) {
+    if (!this.memoizedResults) return;
+    
+    // Convert map to array of entries to avoid issues during iteration while deleting
+    const entries = Array.from(this.memoizedResults.entries());
+    
+    for (const [key, _] of entries) {
+      if (key.includes(`_${sessionId}_`) || key.startsWith(`filterHistoryByText_${sessionId}_`) ||
+          key.startsWith(`filterHistoryByType_${sessionId}_`) ||
+          key.startsWith(`filterHistoryByDateRange_${sessionId}_`) ||
+          key.startsWith(`filterHistoryCombined_${sessionId}_`)) {
+        this.memoizedResults.delete(key);
+      }
     }
   }
   
@@ -120,8 +192,14 @@ class SessionManager {
   }
   
   persistAllHistories() {
+    // For page unload, save all histories immediately without debouncing
     Object.keys(this.activeSessions).forEach(sessionId => {
-      this.persistSessionHistory(sessionId);
+      try {
+        const history = this.sessionHistories[sessionId] || [];
+        sessionStorage.setItem(`nars-history-${sessionId}`, JSON.stringify(history));
+      } catch (error) {
+        this.handlePersistenceError(`Failed to persist history for session ${sessionId}`, error);
+      }
     });
   }
   
@@ -180,6 +258,8 @@ class SessionManager {
     if (this.sessionHistories[sessionId]) {
       // Keep pinned cells when clearing history
       this.sessionHistories[sessionId] = this.sessionHistories[sessionId].filter(cell => cell.pinned);
+      // Clear related memoized results
+      this.clearMemoizedResultsForSession(sessionId);
       this.persistSessionHistory(sessionId);
       this.renderHistory(sessionId);
     }
@@ -279,6 +359,8 @@ class SessionManager {
     const cellIndex = history.findIndex(cell => cell.id === cellId);
     if (cellIndex !== -1) {
       history[cellIndex].pinned = true;
+      // Clear related memoized results since history changed
+      this.clearMemoizedResultsForSession(sessionId);
       this.persistSessionHistory(sessionId);
     }
   }
@@ -295,6 +377,8 @@ class SessionManager {
     const cellIndex = history.findIndex(cell => cell.id === cellId);
     if (cellIndex !== -1) {
       history[cellIndex].pinned = false;
+      // Clear related memoized results since history changed
+      this.clearMemoizedResultsForSession(sessionId);
       this.persistSessionHistory(sessionId);
     }
   }
@@ -434,7 +518,7 @@ class SessionManager {
   }
   
   /**
-   * Filter session history by text search
+   * Filter session history by text search with memoization
    * @param {string} sessionId - Session identifier
    * @param {string} searchText - Text to search for
    * @param {boolean} useRegex - Whether to treat searchText as regex
@@ -445,6 +529,19 @@ class SessionManager {
       return this.sessionHistories[sessionId] ?? [];
     }
     
+    // Create cache key
+    const cacheKey = `filterHistoryByText_${sessionId}_${searchText}_${useRegex}`;
+    
+    // Initialize memoization cache if needed
+    if (!this.memoizedResults) {
+      this.memoizedResults = new Map();
+    }
+    
+    // Check if result is already cached
+    if (this.memoizedResults.has(cacheKey)) {
+      return this.memoizedResults.get(cacheKey);
+    }
+    
     const history = this.sessionHistories[sessionId] ?? [];
     const searchLower = searchText.toLowerCase();
     
@@ -452,7 +549,12 @@ class SessionManager {
       ? this.createRegexFilter(searchText) 
       : (cell) => this.matchesText(cell, searchLower);
     
-    return history.filter(filterFn);
+    const result = history.filter(filterFn);
+    
+    // Store in cache
+    this.memoizedResults.set(cacheKey, result);
+    
+    return result;
   }
   
   /**
@@ -510,7 +612,7 @@ class SessionManager {
 
   
   /**
-   * Filter session history by type
+   * Filter session history by type with memoization
    * @param {string} sessionId - Session identifier
    * @param {string} type - Type to filter by ('input', 'output', or 'all')
    * @returns {Array} Filtered history
@@ -520,29 +622,86 @@ class SessionManager {
       return this.sessionHistories[sessionId] || [];
     }
     
+    // Create cache key
+    const cacheKey = `filterHistoryByType_${sessionId}_${type}`;
+    
+    // Initialize memoization cache if needed
+    if (!this.memoizedResults) {
+      this.memoizedResults = new Map();
+    }
+    
+    // Check if result is already cached
+    if (this.memoizedResults.has(cacheKey)) {
+      return this.memoizedResults.get(cacheKey);
+    }
+    
     const history = this.sessionHistories[sessionId] || [];
-    return history.filter(cell => cell.type === type);
+    const result = history.filter(cell => cell.type === type);
+    
+    // Store in cache
+    this.memoizedResults.set(cacheKey, result);
+    
+    return result;
   }
   
   /**
-   * Filter session history by date range
+   * Filter session history by date range with memoization
    * @param {string} sessionId - Session identifier
    * @param {number} startDate - Start timestamp (milliseconds since epoch)
    * @param {number} endDate - End timestamp (milliseconds since epoch)
    * @returns {Array} Filtered history
    */
   filterHistoryByDateRange(sessionId, startDate, endDate) {
+    // Create cache key (using rounded timestamps to avoid too many unique keys)
+    const startRounded = Math.floor(startDate / 1000) * 1000; // Round to seconds
+    const endRounded = Math.floor(endDate / 1000) * 1000;
+    const cacheKey = `filterHistoryByDateRange_${sessionId}_${startRounded}_${endRounded}`;
+    
+    // Initialize memoization cache if needed
+    if (!this.memoizedResults) {
+      this.memoizedResults = new Map();
+    }
+    
+    // Check if result is already cached
+    if (this.memoizedResults.has(cacheKey)) {
+      return this.memoizedResults.get(cacheKey);
+    }
+    
     const history = this.sessionHistories[sessionId] || [];
-    return history.filter(cell => cell.timestamp >= startDate && cell.timestamp <= endDate);
+    const result = history.filter(cell => cell.timestamp >= startDate && cell.timestamp <= endDate);
+    
+    // Store in cache
+    this.memoizedResults.set(cacheKey, result);
+    
+    return result;
   }
   
   /**
-   * Apply combined filters to session history
+   * Apply combined filters to session history with memoization
    * @param {string} sessionId - Session identifier
    * @param {Object} filters - Filter criteria
    * @returns {Array} Filtered history
    */
   filterHistoryCombined(sessionId, filters) {
+    // Create cache key from filter parameters
+    const textHash = filters.text ? btoa(filters.text).substring(0, 10) : 'none';
+    const type = filters.type || 'all';
+    const startDate = filters.startDate ? Math.floor(filters.startDate / 1000) : 'none';
+    const endDate = filters.endDate ? Math.floor(filters.endDate / 1000) : 'none';
+    const useRegex = filters.useRegex || false;
+    
+    const cacheKey = `filterHistoryCombined_${sessionId}_${textHash}_${type}_${startDate}_${endDate}_${useRegex}`;
+    
+    // Initialize memoization cache if needed
+    if (!this.memoizedResults) {
+      this.memoizedResults = new Map();
+    }
+    
+    // Check if result is already cached
+    if (this.memoizedResults.has(cacheKey)) {
+      return this.memoizedResults.get(cacheKey);
+    }
+    
     let history = this.sessionHistories[sessionId] || [];
     
     // Apply text filter
@@ -561,6 +720,9 @@ class SessionManager {
       const endDate = filters.endDate || Date.now();
       history = history.filter(cell => cell.timestamp >= startDate && cell.timestamp <= endDate);
     }
+    
+    // Store in cache
+    this.memoizedResults.set(cacheKey, history);
     
     return history;
   }
@@ -620,6 +782,8 @@ class SessionManager {
     const sessionElement = document.createElement('div');
     sessionElement.className = 'session';
     sessionElement.setAttribute('data-session-id', id);
+    sessionElement.setAttribute('role', 'region');
+    sessionElement.setAttribute('aria-label', `Session ${id}`);
     
     // Add session header with close button
     const header = this.createSessionHeader(id);
@@ -630,17 +794,28 @@ class SessionManager {
     // Add output area
     const output = document.createElement('div');
     output.className = 'output-area';
+    output.setAttribute('aria-live', 'polite');
+    output.setAttribute('aria-label', `Session ${id} output`);
+    output.setAttribute('role', 'log');
     
     // Add status indicator
     const status = document.createElement('div');
     status.className = 'status';
     status.textContent = '●';
+    status.setAttribute('aria-label', `Session ${id} status`);
+    
+    // Add instructions element for input
+    const instructions = document.createElement('div');
+    instructions.id = `session-${id}-instructions`;
+    instructions.className = 'sr-only'; // Hidden but accessible to screen readers
+    instructions.textContent = 'Enter Narsese commands and press Enter to submit';
     
     // Assemble session element
     sessionElement.appendChild(header);
     sessionElement.appendChild(inputArea);
     sessionElement.appendChild(output);
     sessionElement.appendChild(status);
+    sessionElement.appendChild(instructions); // Add instructions
     
     // Add to container
     this.container.appendChild(sessionElement);
@@ -671,11 +846,13 @@ class SessionManager {
     const title = document.createElement('span');
     title.className = 'session-title';
     title.textContent = id;
+    title.setAttribute('aria-label', `Session ${id} title`);
     
     const closeButton = document.createElement('button');
     closeButton.className = 'close-session-btn';
     closeButton.textContent = '×';
     closeButton.setAttribute('aria-label', `Close session ${id}`);
+    closeButton.setAttribute('aria-describedby', `session-${id}-description`);
     closeButton.addEventListener('click', () => this.destroySession(id));
     
     header.appendChild(title);
@@ -696,10 +873,13 @@ class SessionManager {
     input.className = 'repl-input';
     input.placeholder = `${id}> `;
     input.rows = 1;
+    input.setAttribute('aria-label', `${id} input`);
+    input.setAttribute('aria-describedby', `session-${id}-instructions`);
     
     const submitButton = document.createElement('button');
     submitButton.className = 'submit-btn';
     submitButton.textContent = 'Submit';
+    submitButton.setAttribute('aria-label', `Submit command for session ${id}`);
     
     inputArea.appendChild(input);
     inputArea.appendChild(submitButton);
@@ -792,6 +972,8 @@ class SessionManager {
   createSelectorContainer() {
     const selectorContainer = document.createElement('div');
     selectorContainer.className = 'session-selector-container';
+    selectorContainer.setAttribute('role', 'toolbar');
+    selectorContainer.setAttribute('aria-label', 'Session management controls');
     return selectorContainer;
   }
   
@@ -811,6 +993,95 @@ class SessionManager {
       option.textContent = `${id} ${this.getSessionStatusIcon(id)}`;
       this.sessionDropdown.appendChild(option);
     });
+    
+    // Set up swipe gestures for mobile
+    this.setupSwipeGestures();
+  }
+  
+  /**
+   * Set up swipe gestures for mobile session switching
+   */
+  setupSwipeGestures() {
+    if (!this.sessionDropdown) return;
+    
+    let touchStartX = 0;
+    let touchStartY = 0;
+    
+    // Add touch event listeners for swipe gestures
+    this.sessionDropdown.addEventListener('touchstart', (event) => {
+      touchStartX = event.touches[0].clientX;
+      touchStartY = event.touches[0].clientY;
+    }, { passive: true });
+    
+    this.sessionDropdown.addEventListener('touchend', (event) => {
+      if (!touchStartX || !touchStartY) return;
+      
+      const touchEndX = event.changedTouches[0].clientX;
+      const touchEndY = event.changedTouches[0].clientY;
+      
+      const diffX = touchStartX - touchEndX;
+      const diffY = touchStartY - touchEndY;
+      
+      // Check if it's primarily a horizontal swipe
+      if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 30) { // 30px threshold
+        if (diffX > 0) {
+          // Swipe left - next session
+          this.switchToNextSession();
+        } else {
+          // Swipe right - previous session
+          this.switchToPreviousSession();
+        }
+      }
+      
+      // Reset touch positions
+      touchStartX = 0;
+      touchStartY = 0;
+    }, { passive: true });
+  }
+  
+  /**
+   * Switch to the next session
+   */
+  switchToNextSession() {
+    const sessionIds = Object.keys(this.activeSessions);
+    if (sessionIds.length <= 1) return; // No need to switch if only one session
+    
+    const currentIndex = sessionIds.indexOf(this.currentSessionId || 'main');
+    const nextIndex = (currentIndex + 1) % sessionIds.length;
+    const nextSessionId = sessionIds[nextIndex];
+    
+    this.switchToSession(nextSessionId);
+  }
+  
+  /**
+   * Switch to the previous session
+   */
+  switchToPreviousSession() {
+    const sessionIds = Object.keys(this.activeSessions);
+    if (sessionIds.length <= 1) return; // No need to switch if only one session
+    
+    const currentIndex = sessionIds.indexOf(this.currentSessionId || 'main');
+    const prevIndex = (currentIndex - 1 + sessionIds.length) % sessionIds.length;
+    const prevSessionId = sessionIds[prevIndex];
+    
+    this.switchToSession(prevSessionId);
+  }
+  
+  /**
+   * Switch to a specific session
+   * @param {string} sessionId - Session identifier to switch to
+   */
+  switchToSession(sessionId) {
+    // Update dropdown selection
+    if (this.sessionDropdown) {
+      this.sessionDropdown.value = sessionId;
+    }
+    
+    // Update current session ID
+    this.currentSessionId = sessionId;
+    
+    // Additional session switching logic could go here
+    console.log(`Switched to session: ${sessionId}`);
   }
   
   /**
@@ -879,6 +1150,172 @@ class SessionManager {
    */
   getSession(id) {
     return this.activeSessions[id] || null;
+  }
+  
+  /**
+   * Register a repl core with a session
+   * @param {string} sessionId - Session identifier
+   * @param {Object} replCore - REPL core instance
+   */
+  registerReplCore(sessionId, replCore) {
+    const session = this.activeSessions[sessionId];
+    if (session) {
+      session.replCore = replCore;
+    }
+  }
+  
+  /**
+   * Set up reduced motion preference listener
+   */
+  setupReducedMotionListener() {
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    mediaQuery.addListener((e) => {
+      this.reducedMotion = e.matches;
+      
+      // Apply reduced motion class to document if needed
+      if (this.reducedMotion) {
+        document.documentElement.classList.add('reduced-motion');
+      } else {
+        document.documentElement.classList.remove('reduced-motion');
+      }
+    });
+    
+    // Apply class immediately based on current preference
+    if (this.reducedMotion) {
+      document.documentElement.classList.add('reduced-motion');
+    }
+  }
+  
+  /**
+   * Set up debounced history saves
+   */
+  setupDebouncedHistorySaves() {
+    // Import and set up debounce for history saves
+    import('../src/utils/utilityFunctions.js').then((utils) => {
+      if (utils.debounce) {
+        // Create a persistent save function that maps sessionId to the save operation
+        const saveHistory = (sessionId) => {
+          try {
+            const history = this.sessionHistories[sessionId] || [];
+            sessionStorage.setItem(`nars-history-${sessionId}`, JSON.stringify(history));
+          } catch (error) {
+            this.handlePersistenceError(`Failed to persist history for session ${sessionId}`, error);
+          }
+        };
+        
+        // For each potential session, we'll create a debounced version
+        // but we'll generate them on-demand when persistSessionHistory is called
+      }
+    }).catch(error => {
+      console.warn('Could not import debounce utility for history saves:', error);
+    });
+  }
+  
+  /**
+   * Set up resource management for sessions
+   */
+  setupResourceManagement() {
+    // Update session activity when user interacts with a session
+    this.container.addEventListener('focusin', (event) => {
+      const sessionElement = event.target.closest('[data-session-id]');
+      if (sessionElement) {
+        const sessionId = sessionElement.getAttribute('data-session-id');
+        this.updateSessionActivity(sessionId);
+      }
+    });
+    
+    // Update session activity when clicking in a session
+    this.container.addEventListener('click', (event) => {
+      const sessionElement = event.target.closest('[data-session-id]');
+      if (sessionElement) {
+        const sessionId = sessionElement.getAttribute('data-session-id');
+        this.updateSessionActivity(sessionId);
+      }
+    });
+    
+    // Update session activity when focusing on inputs
+    this.container.addEventListener('focus', (event) => {
+      if (event.target.classList.contains('repl-input')) {
+        const sessionElement = event.target.closest('[data-session-id]');
+        if (sessionElement) {
+          const sessionId = sessionElement.getAttribute('data-session-id');
+          this.updateSessionActivity(sessionId);
+        }
+      }
+    }, true);
+    
+    // Track which sessions are in active tabs/windows
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        this.activeTabSessions.clear();
+      } else {
+        // When tab becomes active again, the active session becomes the current session
+        const activeSessionElement = document.querySelector('[data-session-id]');
+        if (activeSessionElement) {
+          const sessionId = activeSessionElement.getAttribute('data-session-id');
+          if (sessionId) {
+            this.activeTabSessions.add(sessionId);
+          }
+        }
+      }
+    });
+    
+    // Set up interval for resource management (check inactive sessions every 5 minutes)
+    setInterval(() => {
+      this.manageSessionResources();
+    }, 5 * 60 * 1000); // 5 minutes
+  }
+  
+  /**
+   * Update session activity timestamp
+   * @param {string} sessionId - Session identifier
+   */
+  updateSessionActivity(sessionId) {
+    this.sessionActivity[sessionId] = Date.now();
+    
+    // Mark as active tab if it's being used
+    this.activeTabSessions.add(sessionId);
+  }
+  
+  /**
+   * Manage session resources based on activity and limits
+   */
+  manageSessionResources() {
+    const now = Date.now();
+    const oneHour = 60 * 60 * 1000; // 1 hour in milliseconds
+    
+    Object.keys(this.activeSessions).forEach(sessionId => {
+      const lastActivity = this.sessionActivity[sessionId] || now;
+      const timeSinceActivity = now - lastActivity;
+      
+      // Check if session should be throttled (background sessions)
+      if (!this.activeTabSessions.has(sessionId) && timeSinceActivity > 10000) { // 10 seconds inactive
+        this.throttleSession(sessionId);
+      }
+      
+      // Check if session should be auto-closed (>1 hour inactive)
+      if (timeSinceActivity > oneHour && sessionId !== 'main') { // Never auto-close 'main' session
+        console.log(`Auto-closing inactive session ${sessionId}`);
+        this.destroySession(sessionId);
+      }
+    });
+  }
+  
+  /**
+   * Throttle a session's resource usage
+   * @param {string} sessionId - Session identifier
+   */
+  throttleSession(sessionId) {
+    const session = this.activeSessions[sessionId];
+    if (!session) return;
+    
+    // Limit updates to 1 per second for background sessions
+    if (!this.sessionResourceLimits[sessionId]) {
+      this.sessionResourceLimits[sessionId] = {
+        lastUpdate: 0,
+        throttleRate: 1000 // 1 second
+      };
+    }
   }
   
   /**

@@ -25,6 +25,12 @@ class REPLCore {
     // History navigation position
     this.historyPosition = -1;
     
+    // Throttling state
+    this.lastUpdate = 0;
+    
+    // Register this repl core with session manager
+    this.sessionManager?.registerReplCore?.(this.sessionId, this);
+    
     // Initialize WebSocket
     this.initWebSocket();
     
@@ -86,6 +92,7 @@ class REPLCore {
     const button = document.createElement('button');
     button.className = className;
     button.textContent = text;
+    button.setAttribute('aria-label', `${text} for session ${this.sessionId}`);
     button.addEventListener('click', () => this.sendControlCommand(command));
     return button;
   }
@@ -286,10 +293,29 @@ class REPLCore {
   }
   
   /**
+   * Check if session should be throttled
+   * @returns {boolean} True if session should be throttled
+   */
+  shouldThrottle() {
+    const limits = this.sessionManager?.sessionResourceLimits?.[this.sessionId];
+    if (!limits) return false;
+    
+    const now = Date.now();
+    const shouldUpdate = now - this.lastUpdate >= limits.throttleRate;
+    
+    if (shouldUpdate) {
+      this.lastUpdate = now;
+      return false;
+    }
+    return true;
+  }
+  
+  /**
    * Handle output messages
    * @param {Object} payload - Output payload
    */
   handleOutput(payload) {
+    if (this.shouldThrottle()) return;
     this.handleGenericOutput(payload);
   }
   
@@ -298,6 +324,7 @@ class REPLCore {
    * @param {Object} payload - Reasoner output payload
    */
   handleReasonOutput(payload) {
+    if (this.shouldThrottle()) return;
     this.handleGenericOutput(payload);
   }
   
@@ -363,6 +390,8 @@ class REPLCore {
    * @param {Object} payload - Status payload
    */
   handleStatus(payload) {
+    if (this.shouldThrottle()) return;
+    
     // Update status display with cycles, memory, etc.
     console.log(`Session ${this.sessionId} status:`, payload);
     
@@ -450,6 +479,16 @@ class REPLCore {
    */
   setStatus(status) {
     this.statusElement.setAttribute('data-status', status);
+    
+    // Update accessibility attributes
+    const statusLabels = {
+      'connected': 'Connected',
+      'disconnected': 'Disconnected',
+      'error': 'Error',
+      'processing': 'Processing'
+    };
+    
+    this.statusElement.setAttribute('aria-label', `${statusLabels[status] || status} - Session ${this.sessionId}`);
     
     // Update session manager status
     this.sessionManager?.updateSessionStatus?.(this.sessionId, status);

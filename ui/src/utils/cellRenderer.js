@@ -94,15 +94,19 @@ export function addOutputLine(outputElement, sessionId, line) {
   
   const lineElement = document.createElement('div');
   lineElement.className = 'output-line';
+  lineElement.setAttribute('role', 'listitem');
   
   // Use a mapping object for line types to reduce switch statement
   const lineTypeHandlers = {
     'input': () => {
       lineElement.classList.add('input-line');
+      lineElement.setAttribute('aria-label', `Input: ${sessionId}> ${line.text}`);
       lineElement.textContent = `${sessionId}> ${line.text}`;
     },
     'error': () => {
       lineElement.classList.add('error-line');
+      lineElement.setAttribute('aria-label', `Error: ${line.text || ''}`);
+      lineElement.setAttribute('role', 'alert');
       lineElement.textContent = line.text || '';
     },
     'default': () => {
@@ -111,6 +115,7 @@ export function addOutputLine(outputElement, sessionId, line) {
         const punctClass = getPunctuationClass(line.punctuation);
         lineElement.classList.add(punctClass);
       }
+      lineElement.setAttribute('aria-label', `Output: ${line.text || ''}`);
       lineElement.textContent = line.text || '';
     }
   };
@@ -140,6 +145,7 @@ export function addStructuredOutputLine(outputElement, line) {
   
   const lineElement = document.createElement('div');
   lineElement.className = 'output-line structured-output';
+  lineElement.setAttribute('role', 'listitem');
   
   // Apply punctuation styling if available
   if (line.punctuation) {
@@ -147,10 +153,11 @@ export function addStructuredOutputLine(outputElement, line) {
     lineElement.classList.add(punctClass);
   }
   
-  // Add text content
+  // Add text content with ARIA label
   const textElement = document.createElement('span');
   textElement.className = 'output-text';
   textElement.textContent = line.text || '';
+  textElement.setAttribute('aria-label', `Output text: ${line.text || ''}`);
   lineElement.appendChild(textElement);
   
   // Add truth bar if available
@@ -161,6 +168,7 @@ export function addStructuredOutputLine(outputElement, line) {
     truthBar.max = 1;
     truthBar.value = line.truth.frequency || 0;
     truthBar.title = `Frequency: ${(line.truth.frequency * 100).toFixed(1)}%, Confidence: ${(line.truth.confidence * 100).toFixed(1)}%`;
+    truthBar.setAttribute('aria-label', `Truth bar: Frequency ${(line.truth.frequency * 100).toFixed(1)}%, Confidence ${(line.truth.confidence * 100).toFixed(1)}%`);
     lineElement.appendChild(truthBar);
   }
   
@@ -169,6 +177,7 @@ export function addStructuredOutputLine(outputElement, line) {
     const priorityBadge = document.createElement('span');
     priorityBadge.className = 'priority-badge';
     priorityBadge.textContent = line.priority.toFixed(2);
+    priorityBadge.setAttribute('aria-label', `Priority: ${line.priority.toFixed(2)}`);
     lineElement.appendChild(priorityBadge);
   }
   
@@ -177,6 +186,7 @@ export function addStructuredOutputLine(outputElement, line) {
     const menuButton = document.createElement('button');
     menuButton.textContent = '⋯';
     menuButton.className = 'send-to-menu-btn';
+    menuButton.setAttribute('aria-label', 'Send to session menu');
     menuButton.style.cssText = `
       background: none;
       border: none;
@@ -215,6 +225,7 @@ export function addStructuredOutputLine(outputElement, line) {
       const chartButton = document.createElement('button');
       chartButton.textContent = '📊';
       chartButton.className = 'truth-chart-btn';
+      chartButton.setAttribute('aria-label', 'Toggle truth chart visualization');
       chartButton.style.cssText = `
         background: none;
         border: none;
@@ -252,6 +263,7 @@ export function addStructuredOutputLine(outputElement, line) {
       const derivationButton = document.createElement('button');
       derivationButton.textContent = '🌳';
       derivationButton.className = 'derivation-popup-btn';
+      derivationButton.setAttribute('aria-label', 'Show derivation tree');
       derivationButton.style.cssText = `
         background: none;
         border: none;
@@ -279,6 +291,12 @@ export function addStructuredOutputLine(outputElement, line) {
       lineElement.appendChild(derivationButton);
     }
   }
+  
+  // Add ARIA label for the entire line element based on content
+  let ariaLabel = `Output: ${line.text || ''}`;
+  if (line.priority !== undefined) ariaLabel += ` (Priority: ${line.priority})`;
+  if (line.truth) ariaLabel += ` (Frequency: ${(line.truth.frequency * 100).toFixed(1)}%, Confidence: ${(line.truth.confidence * 100).toFixed(1)}%)`;
+  lineElement.setAttribute('aria-label', ariaLabel);
   
   cellGroup.appendChild(lineElement);
   

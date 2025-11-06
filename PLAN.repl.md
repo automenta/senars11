@@ -785,14 +785,6 @@ Since we're minimizing mocks, we'll test the actual history functionality:
     - ARIA labels for session controls (`aria-label="Close session main"`)
     - Reduced-motion preference: Disable animations if `prefers-reduced-motion`
 
-#### **Stress Testing**
-- [ ] 10-session load test:
-    - All sessions reasoning concurrently → verify <100ms input lag
-    - Memory leak check: 1hr runtime → heap size growth <5%
-- [ ] Failure recovery:
-    - Simulate server crash → verify only affected sessions show errors
-    - Network flakiness test: 50% packet loss → connections recover within 10s
-
 ---
 
 ### **Final Validation Checklist**
