@@ -1,8 +1,3 @@
-/**
- * Memory and Focus Management Integration Tests
- * Tests the complete memory architecture with focus sets, indexing, and consolidation
- */
-
 import {Memory} from '../../src/memory/Memory.js';
 import {Focus} from '../../src/memory/Focus.js';
 import {FocusSetSelector} from '../../src/memory/FocusSetSelector.js';

@@ -12,15 +12,14 @@ describe('Cycle-Limited Testing Framework', () => {
     });
 
     test('should handle cycle completion gracefully', async () => {
-        // This test runs for the full cycle limit without a specific success condition
         const result = await runCycleLimitedTest(async (nar) => {
             await nar.input('<bird --> animal>. %0.9;0.8%');
         }, 5); // Run for 5 cycles
 
         // The test should complete all cycles without hanging
-        expect(result.cycleCount).toBe(5); // Should reach the limit
+        expect(result.cycleCount).toBe(5);
         expect(result.message).toContain('completed');
-        expect(result.success).toBe(true); // Should be successful as it completed without error
+        expect(result.success).toBe(true);
     });
 
     test('should work with tester utility', async () => {
@@ -29,7 +28,7 @@ describe('Cycle-Limited Testing Framework', () => {
             .addTask('tweety --> bird', '.', 1.0, 0.9)
             .expectResult(async (nar) => {
                 // Just verify the system is responsive
-                return true; // Simple success condition
+                return true;
             });
 
         const result = await tester.run();
@@ -39,7 +38,6 @@ describe('Cycle-Limited Testing Framework', () => {
 
     test('should handle errors gracefully', async () => {
         const result = await runCycleLimitedTest(async (nar) => {
-            // Simulate an error condition
             throw new Error('Test error');
         }, 10);
 

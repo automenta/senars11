@@ -44,19 +44,19 @@ describe('Stamp', () => {
         expect(derivedStamp1).toBeInstanceOf(ArrayStamp);
         expect(derivedStamp1.source).toBe('DERIVED');
         expect(derivedStamp1.derivations).toEqual(expect.arrayContaining(['p1', 'p2', 'd1', 'd2']));
-        flexibleAssertions.expectInRange(derivedStamp1.derivations.length, 4, 4); // Flexible assertion to handle potential variations
+        flexibleAssertions.expectInRange(derivedStamp1.derivations.length, 4, 4);
 
         const parent3 = createStamp({id: 'p3', derivations: ['d1', 'd2']});
         const parent4 = createStamp({id: 'p4', derivations: ['d2', 'd3']});
         const derivedStamp2 = Stamp.derive([parent3, parent4]);
 
         expect(derivedStamp2.derivations).toEqual(expect.arrayContaining(['p3', 'p4', 'd1', 'd2', 'd3']));
-        flexibleAssertions.expectInRange(derivedStamp2.derivations.length, 5, 5); // Set logic prevents duplicates
+        flexibleAssertions.expectInRange(derivedStamp2.derivations.length, 5, 5);
     });
 
     test('should correctly check for equality', () => {
         const stamp1 = createStamp({id: 's1'});
-        const stamp1Clone = new ArrayStamp({id: 's1'}); // Keep one direct instantiation for variety
+        const stamp1Clone = new ArrayStamp({id: 's1'});
         const stamp2 = createStamp({id: 's2'});
 
         expect(stamp1.equals(stamp1Clone)).toBe(true);

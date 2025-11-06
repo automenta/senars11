@@ -80,7 +80,7 @@ describe('AgentBuilder', () => {
         const agent = new AgentBuilder()
             .withConfig({
                 subsystems: {
-                    metrics: false, // Note: metrics monitor is created by default in NAR, but may be disabled
+                    metrics: false,
                     embeddingLayer: {enabled: false},
                     tools: false,
                     lm: false
@@ -88,9 +88,8 @@ describe('AgentBuilder', () => {
             })
             .build();
 
-        // Note: embedding layer, LM, and tools can be truly disabled
         expect(agent.getEmbeddingLayer()).toBeNull();
-        expect(agent.getLM() === null || agent.getLM() === undefined).toBe(true);
+        expect(agent.getLM()).toBeNull();
         expect(agent.getTools()).toBeNull();
     });
 });

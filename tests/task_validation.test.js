@@ -74,7 +74,7 @@ describe('Task Validation', () => {
             new Task({
                 term: mockTerm,
                 punctuation: '?',
-                truth: new Truth(1.0, 0.9), // Invalid - question with truth
+                truth: new Truth(1.0, 0.9),
                 budget: {priority: 0.5}
             });
         }).toThrow(/Questions cannot have truth values/);
@@ -84,7 +84,7 @@ describe('Task Validation', () => {
         const task = new Task({
             term: mockTerm,
             punctuation: '?',
-            truth: null, // Valid - question without truth
+            truth: null,
             budget: {priority: 0.5}
         });
 
@@ -97,7 +97,6 @@ describe('Task Validation', () => {
         expect(() => {
             new Task({
                 term: mockTerm,
-                // no punctuation, should default to '.'
                 truth: null,
                 budget: {priority: 0.5}
             });

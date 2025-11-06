@@ -1,6 +1,3 @@
-/**
- * Unit tests for LMRule functionality
- */
 import {LMRule} from '../../src/reason/LMRule.js';
 import {Punctuation, Task, TruthValue} from '../../src/reason/TaskUtils.js';
 import {
@@ -26,12 +23,10 @@ class MockLM {
     }
 
     async generateText(prompt, options = {}) {
-        // Return predefined responses for testing
         const key = Object.keys(this.responses).find(pattern => prompt.includes(pattern));
         if (key) {
             return this.responses[key];
         }
-        // Default fallback response
         return "Default mock response";
     }
 
@@ -287,7 +282,7 @@ describe('Specific LM Rules from v9', () => {
 
         const task = new Task('Maybe this will work', Punctuation.JUDGMENT);
         task.priority = 0.7;
-        task.truth = new TruthValue(0.99, 0.99); // High confidence to trigger rule
+        task.truth = new TruthValue(0.99, 0.99);
 
         expect(rule.canApply(task)).toBe(true);
     });

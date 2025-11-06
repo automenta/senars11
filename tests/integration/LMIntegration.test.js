@@ -1,8 +1,3 @@
-/**
- * @file tests/integration/LMIntegration.test.js
- * @description Integration tests for LM provider integration with NAR system
- */
-
 // Import necessary modules
 import {NAR} from '../../src/nar/NAR.js';
 import {DummyProvider} from '../../src/lm/DummyProvider.js';
@@ -51,7 +46,6 @@ describe('LM Integration Tests', () => {
     test('should use AdvancedNarseseTranslator for quality improvements', () => {
         const translator = new AdvancedNarseseTranslator();
 
-        // Test basic translation methods exist and return expected types
         const toNarseseResult = translator.toNarsese('cat is an animal');
         expect(typeof toNarseseResult).toBe('object');
         expect(typeof toNarseseResult.confidence).toBe('number');
@@ -71,7 +65,6 @@ describe('LM Integration Tests', () => {
     test('should track translation quality metrics', () => {
         const translator = new AdvancedNarseseTranslator();
 
-        // Perform a few translations
         translator.toNarsese('test 1');
         translator.fromNarsese('<test --> example>.');
 
@@ -96,12 +89,10 @@ describe('LM Integration Tests', () => {
     });
 
     test('should work with NAR system for symbolic-mode only with DummyLM', () => {
-        // Create NAR with DummyLM provider
         const narWithDummy = new NAR({lm: {enabled: true}});
         const dummyProvider = new DummyProvider();
         narWithDummy.registerLMProvider('dummy', dummyProvider);
 
-        // Verify it can be used for symbolic-mode operations
         expect(narWithDummy.lm).toBeDefined();
         expect(narWithDummy.lm.providers.get('dummy')).toBeDefined();
     });
@@ -109,10 +100,8 @@ describe('LM Integration Tests', () => {
     test('should handle quality scoring for translations', async () => {
         const translator = new AdvancedNarseseTranslator();
 
-        // Test that the method exists and returns expected type
         expect(typeof translator.iterativeTranslate).toBe('function');
 
-        // Since we're not doing actual translations, just check the method exists
         const result = await translator.iterativeTranslate('a valid statement');
         expect(result).toBeDefined();
     });
@@ -120,7 +109,6 @@ describe('LM Integration Tests', () => {
     test('should apply error correction to translations', () => {
         const translator = new AdvancedNarseseTranslator();
 
-        // Test that the method exists and can be called
         const result = {
             narsese: '(test --> example)',
             confidence: 0.9
@@ -133,6 +121,4 @@ describe('LM Integration Tests', () => {
     });
 
     afterEach(() => {
-        // Clean up any running NAR instances if needed
-    });
 });
