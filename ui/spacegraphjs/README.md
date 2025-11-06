@@ -10,18 +10,18 @@
 
 - **2D/3D Graph Visualization**: Renders nodes and edges in a 2D or 3D space.
 - **Versatile Node Types**:
-    - **HTML Nodes**: Embed complex HTML content as node visuals, enabling rich UIs within the graph.
-    - **Shape Nodes**: Supports basic 3D shapes (e.g., spheres, boxes) with 3D text labels.
-    - **Image, Video, IFrame Nodes**, and more. Easily extensible for custom node types.
+  - **HTML Nodes**: Embed complex HTML content as node visuals, enabling rich UIs within the graph.
+  - **Shape Nodes**: Supports basic 3D shapes (e.g., spheres, boxes) with 3D text labels.
+  - **Image, Video, IFrame Nodes**, and more. Easily extensible for custom node types.
 - **Dynamic Layouts**:
-    - Built-in force-directed layout.
-    - Support for various layout algorithms (Circular, Grid, Hierarchical, Radial, Spherical, TreeMap) via plugins.
-    - Pin nodes to fix their positions.
+  - Built-in force-directed layout.
+  - Support for various layout algorithms (Circular, Grid, Hierarchical, Radial, Spherical, TreeMap) via plugins.
+  - Pin nodes to fix their positions.
 - **Interactive UI & Camera**:
-    - Drag & drop nodes.
-    - Smooth camera controls (pan, zoom, focus on node) powered by GSAP.
-    - Camera movement history (back/forward).
-    - Context menus for nodes and edges.
+  - Drag & drop nodes.
+  - Smooth camera controls (pan, zoom, focus on node) powered by GSAP.
+  - Camera movement history (back/forward).
+  - Context menus for nodes and edges.
 - **Extensible Plugin System**: Customize or extend nearly any aspect of the library by creating or modifying plugins for rendering, camera behavior, UI interactions, data handling, and more.
 - **Multiple Module Formats**: Supports ES Modules (ESM), CommonJS (CJS), and UMD, compatible with Node.js and modern browsers.
 - **TypeScript Definitions**: Includes type definitions for a better development experience with TypeScript.
@@ -54,25 +54,25 @@ yarn add three gsap postprocessing
     ```html
     <!DOCTYPE html>
     <html lang="en">
-        <head>
-            <meta charset="UTF-8" />
-            <title>My SpaceGraph App</title>
-            <style>
-                body {
-                    margin: 0;
-                    overflow: hidden;
-                }
-                #graph-container {
-                    width: 100vw;
-                    height: 100vh;
-                    position: relative;
-                }
-            </style>
-        </head>
-        <body>
-            <div id="graph-container"></div>
-            <script type="module" src="my-app.js"></script>
-        </body>
+      <head>
+        <meta charset="UTF-8" />
+        <title>My SpaceGraph App</title>
+        <style>
+          body {
+            margin: 0;
+            overflow: hidden;
+          }
+          #graph-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+          }
+        </style>
+      </head>
+      <body>
+        <div id="graph-container"></div>
+        <script type="module" src="my-app.js"></script>
+      </body>
     </html>
     ```
 
@@ -85,65 +85,65 @@ yarn add three gsap postprocessing
     // For CommonJS: const { SpaceGraph } = require('spacegraph-zui');
 
     document.addEventListener('DOMContentLoaded', async () => {
-        const container = document.getElementById('graph-container');
+      const container = document.getElementById('graph-container');
 
-        if (!container) {
-            console.error('Graph container not found!');
-            return;
+      if (!container) {
+        console.error('Graph container not found!');
+        return;
+      }
+
+      // Basic options (see documentation for more)
+      const options = {
+        // Example: configure default layout
+        layout: {
+          type: 'ForceLayout', // Default, can be omitted
+          settings: {
+            // Force layout specific settings
+          },
+        },
+        // Example: UI plugin options (if using default UI elements)
+        // ui: {
+        //   contextMenuElement: document.getElementById('my-custom-context-menu'),
+        //   confirmDialogElement: document.getElementById('my-custom-confirm-dialog')
+        // }
+      };
+
+      const sg = new SpaceGraph(container, options);
+
+      try {
+        await sg.init(); // Initialize plugins and renderer
+
+        // Add some nodes
+        const node1 = sg.createNode({
+          id: 'node-1',
+          type: 'ShapeNode', // Default node type, can be 'HtmlNode', 'ImageNode' etc.
+          data: { label: 'Hello' },
+          position: { x: -50, y: 0, z: 0 }, // Optional initial position
+        });
+
+        const node2 = sg.createNode({
+          id: 'node-2',
+          type: 'ShapeNode',
+          data: { label: 'World' },
+          position: { x: 50, y: 0, z: 0 },
+        });
+
+        // Add an edge between them
+        if (node1 && node2) {
+          sg.addEdge(node1, node2, { label: 'connects to' });
         }
 
-        // Basic options (see documentation for more)
-        const options = {
-            // Example: configure default layout
-            layout: {
-                type: 'ForceLayout', // Default, can be omitted
-                settings: {
-                    // Force layout specific settings
-                },
-            },
-            // Example: UI plugin options (if using default UI elements)
-            // ui: {
-            //   contextMenuElement: document.getElementById('my-custom-context-menu'),
-            //   confirmDialogElement: document.getElementById('my-custom-confirm-dialog')
-            // }
-        };
+        // If your layout requires manual starting or if you want to ensure rendering loop
+        sg.animate(); // Starts the rendering loop if not auto-started by plugins
 
-        const sg = new SpaceGraph(container, options);
+        // Center view on content or specific node
+        sg.centerView();
+      } catch (error) {
+        console.error('Failed to initialize SpaceGraph:', error);
+      }
 
-        try {
-            await sg.init(); // Initialize plugins and renderer
-
-            // Add some nodes
-            const node1 = sg.createNode({
-                id: 'node-1',
-                type: 'ShapeNode', // Default node type, can be 'HtmlNode', 'ImageNode' etc.
-                data: { label: 'Hello' },
-                position: { x: -50, y: 0, z: 0 }, // Optional initial position
-            });
-
-            const node2 = sg.createNode({
-                id: 'node-2',
-                type: 'ShapeNode',
-                data: { label: 'World' },
-                position: { x: 50, y: 0, z: 0 },
-            });
-
-            // Add an edge between them
-            if (node1 && node2) {
-                sg.addEdge(node1, node2, { label: 'connects to' });
-            }
-
-            // If your layout requires manual starting or if you want to ensure rendering loop
-            sg.animate(); // Starts the rendering loop if not auto-started by plugins
-
-            // Center view on content or specific node
-            sg.centerView();
-        } catch (error) {
-            console.error('Failed to initialize SpaceGraph:', error);
-        }
-
-        // Make it accessible for debugging
-        window.mySpaceGraph = sg;
+      // Make it accessible for debugging
+      window.mySpaceGraph = sg;
     });
     ```
 
