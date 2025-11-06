@@ -4,9 +4,9 @@
  * Based on the v9 implementation with enhancements for stream-based architecture.
  */
 
-import { LMRule } from '../LMRule.js';
-import { Task, TruthValue, Punctuation, TaskDerivation } from '../TaskUtils.js';
-import { isGoal, isQuestion, hasPattern, KeywordPatterns } from '../RuleHelpers.js';
+import { LMRule } from '../../LMRule.js';
+import { Task, TruthValue, Punctuation, TaskDerivation } from '../../TaskUtils.js';
+import { isGoal, isQuestion, hasPattern, KeywordPatterns } from '../../RuleHelpers.js';
 
 /**
  * Creates a meta-reasoning guidance rule using the enhanced LMRule.create method.

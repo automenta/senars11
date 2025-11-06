@@ -13,6 +13,10 @@ export { MetricsMonitor } from './MetricsMonitor.js';
 export { ReasoningAboutReasoning } from './ReasoningAboutReasoning.js';
 export { SYSTEM_ATOMS } from './SystemAtoms.js';
 
+// Export rule categories
+export * from './rules/nal/index.js';
+export * from './rules/lm/index.js';
+
 // Export strategy implementations
 export { BagStrategy } from './strategy/BagStrategy.js';
 export { ExhaustiveStrategy } from './strategy/ExhaustiveStrategy.js';

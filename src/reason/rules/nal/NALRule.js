@@ -1,4 +1,4 @@
-import { Rule } from '../Rule.js';
+import { Rule } from '../../Rule.js';
 import { Truth } from '../../../Truth.js';
 
 /**

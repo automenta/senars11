@@ -1,7 +1,7 @@
-import { Rule } from '../Rule.js';
-import { Truth } from '../../Truth.js';
-import { Task } from '../../task/Task.js';
-import { Stamp } from '../../Stamp.js';
+import { Rule } from '../../Rule.js';
+import { Truth } from '../../../Truth.js';
+import { Task } from '../../../task/Task.js';
+import { Stamp } from '../../../Stamp.js';
 
 /**
  * Implements the Modus Ponens inference rule for the stream reasoner.

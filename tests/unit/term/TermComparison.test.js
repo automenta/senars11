@@ -1,5 +1,5 @@
 import {jest} from '@jest/globals';
-import { SyllogisticRule } from '../../../src/reason/rules/SyllogisticRule.js';
+import { SyllogisticRule } from '../../../src/reason/rules/nal/SyllogisticRule.js';
 import { Task } from '../../../src/task/Task.js';
 import { Truth } from '../../../src/Truth.js';
 import { ArrayStamp } from '../../../src/Stamp.js';

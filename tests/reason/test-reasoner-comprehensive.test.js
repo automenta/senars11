@@ -1,6 +1,6 @@
 import {jest} from '@jest/globals';
 import { NAR } from '../../src/nar/NAR.js';
-import { SyllogisticRule } from '../../src/reason/rules/SyllogisticRule.js';
+import { SyllogisticRule } from '../../src/reason/rules/nal/SyllogisticRule.js';
 
 // Set a timeout for all tests in this file to prevent hanging
 jest.setTimeout(30000); // 30 seconds timeout

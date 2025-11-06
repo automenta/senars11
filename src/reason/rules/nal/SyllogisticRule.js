@@ -4,11 +4,11 @@
  * Derives (S --> P) from (S --> M) and (M --> P)
  */
 
-import { Rule } from '../Rule.js';
-import { Truth } from '../../Truth.js';
-import { Task } from '../../task/Task.js';
-import { Stamp } from '../../Stamp.js';
-import { Term, TermType } from '../../term/Term.js';
+import { Rule } from '../../Rule.js';
+import { Truth } from '../../../Truth.js';
+import { Task } from '../../../task/Task.js';
+import { Stamp } from '../../../Stamp.js';
+import { Term, TermType } from '../../../term/Term.js';
 
 export class SyllogisticRule extends Rule {
   constructor(config = {}) {

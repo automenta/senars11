@@ -3,9 +3,9 @@
  * @description Hypothesis generation rule that uses an LM to create new hypotheses based on existing beliefs.
  */
 
-import { LMRule } from '../LMRule.js';
-import { Task, Punctuation } from '../TaskUtils.js';
-import { isJudgment } from '../RuleHelpers.js';
+import { LMRule } from '../../LMRule.js';
+import { Task, Punctuation } from '../../TaskUtils.js';
+import { isJudgment } from '../../RuleHelpers.js';
 
 export const createHypothesisGenerationRule = (dependencies) => {
   const { lm } = dependencies;

@@ -3,9 +3,9 @@
  * @description Temporal and causal modeling rule that uses an LM to infer time order and causal relationships.
  */
 
-import { LMRule } from '../LMRule.js';
-import { Task, Punctuation } from '../TaskUtils.js';
-import { isJudgment, hasPattern, KeywordPatterns } from '../RuleHelpers.js';
+import { LMRule } from '../../LMRule.js';
+import { Task, Punctuation } from '../../TaskUtils.js';
+import { isJudgment, hasPattern, KeywordPatterns } from '../../RuleHelpers.js';
 
 export const createTemporalCausalModelingRule = (dependencies) => {
   const { lm } = dependencies;

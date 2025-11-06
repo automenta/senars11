@@ -4,9 +4,9 @@
  * Based on the v9 implementation with enhancements for stream-based architecture.
  */
 
-import { LMRule } from '../LMRule.js';
-import { Task, TruthValue, Punctuation, TaskDerivation } from '../TaskUtils.js';
-import { parseSubGoals } from '../RuleHelpers.js';
+import { LMRule } from '../../LMRule.js';
+import { Task, TruthValue, Punctuation, TaskDerivation } from '../../TaskUtils.js';
+import { parseSubGoals } from '../../RuleHelpers.js';
 
 const hasVariable = (text) => {
   return /[\$\?]\w+/.test(text);

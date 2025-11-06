@@ -1,6 +1,6 @@
 import {jest} from '@jest/globals';
-import { SyllogisticRule } from '../../../src/reason/rules/SyllogisticRule.js';
-import { ModusPonensRule } from '../../../src/reason/rules/ModusPonensRule.js';
+import { SyllogisticRule } from '../../../src/reason/rules/nal/SyllogisticRule.js';
+import { ModusPonensRule } from '../../../src/reason/rules/nal/ModusPonensRule.js';
 import { Task } from '../../../src/task/Task.js';
 import { Truth } from '../../../src/Truth.js';
 import { ArrayStamp } from '../../../src/Stamp.js';

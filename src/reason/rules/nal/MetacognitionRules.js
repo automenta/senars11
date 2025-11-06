@@ -3,7 +3,7 @@
  * These rules implement self-optimization and self-modification capabilities.
  */
 
-import { Rule } from '../Rule.js';
+import { Rule } from '../../Rule.js';
 
 /**
  * A rule that adjusts system parameters based on performance feedback

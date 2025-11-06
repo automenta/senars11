@@ -259,11 +259,11 @@ export class NAR extends BaseComponent {
     async _registerRulesWithStreamReasoner() {
         if (!this._streamRuleExecutor) return;
         
-        // Import and register new stream reasoner rules
-        const { SyllogisticRule } = await import('../reason/rules/SyllogisticRule.js');
-        const { ModusPonensRule } = await import('../reason/rules/ModusPonensRule.js');
-        const { ImplicationSyllogisticRule } = await import('../reason/rules/ImplicationSyllogisticRule.js');
-        const { MetacognitionRules } = await import('../reason/rules/MetacognitionRules.js');
+        // Import and register new stream reasoner rules from the refactored structure
+        const { SyllogisticRule } = await import('../reason/rules/nal/SyllogisticRule.js');
+        const { ModusPonensRule } = await import('../reason/rules/nal/ModusPonensRule.js');
+        const { ImplicationSyllogisticRule } = await import('../reason/rules/nal/ImplicationSyllogisticRule.js');
+        const { MetacognitionRules } = await import('../reason/rules/nal/MetacognitionRules.js');
         
         const newSyllogisticRule = new SyllogisticRule();
         const newModusPonensRule = new ModusPonensRule();
@@ -283,7 +283,7 @@ export class NAR extends BaseComponent {
         
         // TODO: Add other new rules as they are implemented
         // For example:
-        // const { DeductionRule } = await import('../reason/rules/DeductionRule.js');
+        // const { DeductionRule } = await import('../reason/rules/nal/DeductionRule.js');
         // this._streamRuleExecutor.register(new DeductionRule());
     }
 

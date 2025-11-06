@@ -1,8 +1,8 @@
 import { SyllogisticRule } from './SyllogisticRule.js';
-import { Task } from '../../task/Task.js';
-import { Truth } from '../../Truth.js';
-import { ArrayStamp } from '../../Stamp.js';
-import { TermFactory } from '../../term/TermFactory.js';
+import { Task } from '../../../task/Task.js';
+import { Truth } from '../../../Truth.js';
+import { ArrayStamp } from '../../../Stamp.js';
+import { TermFactory } from '../../../term/TermFactory.js';
 
 // Create a simple context for testing
 const termFactory = new TermFactory();
