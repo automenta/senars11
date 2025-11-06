@@ -1,4 +1,4 @@
-import {SyllogisticRule} from '../../../src/reason/rules/nal/SyllogisticRule.js';
+import {ImplicationSyllogisticRuleNew as SyllogisticRule} from '../../../src/reason/rules/nal/SyllogisticRule.js';
 import {ModusPonensRule} from '../../../src/reason/rules/nal/ModusPonensRule.js';
 import {Task} from '../../../src/task/Task.js';
 import {Truth} from '../../../src/Truth.js';

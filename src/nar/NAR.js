@@ -257,18 +257,17 @@ export class NAR extends BaseComponent {
         if (!this._streamRuleExecutor) return;
 
         // Import and register new stream reasoner rules from the refactored structure
-        const {SyllogisticRule} = await import('../reason/rules/nal/SyllogisticRule.js');
+        const {InheritanceSyllogisticRule, ImplicationSyllogisticRuleNew} = await import('../reason/rules/nal/SyllogisticRule.js');
         const {ModusPonensRule} = await import('../reason/rules/nal/ModusPonensRule.js');
-        const {ImplicationSyllogisticRule} = await import('../reason/rules/nal/ImplicationSyllogisticRule.js');
         const {MetacognitionRules} = await import('../reason/rules/nal/MetacognitionRules.js');
 
-        const newSyllogisticRule = new SyllogisticRule();
+        const newInheritanceSyllogisticRule = new InheritanceSyllogisticRule();
+        const newImplicationSyllogisticRule = new ImplicationSyllogisticRuleNew();
         const newModusPonensRule = new ModusPonensRule();
-        const newImplicationSyllogisticRule = new ImplicationSyllogisticRule();
 
-        this._streamRuleExecutor.register(newSyllogisticRule);
-        this._streamRuleExecutor.register(newModusPonensRule);
+        this._streamRuleExecutor.register(newInheritanceSyllogisticRule);
         this._streamRuleExecutor.register(newImplicationSyllogisticRule);
+        this._streamRuleExecutor.register(newModusPonensRule);
 
         // Register metacognition rules if enabled
         if (this._config.get('metacognition.selfOptimization.enabled')) {

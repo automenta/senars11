@@ -1,7 +1,7 @@
 /**
- * New Syllogistic Rule for the stream-based reasoner
- * Implements the inheritance syllogistic deduction rule.
- * Derives (S --> P) from (S --> M) and (M --> P)
+ * Abstract Syllogistic Rule for the stream-based reasoner
+ * Implements the syllogistic deduction rule base for both inheritance and implication.
+ * Derives (S --> P) or (S ==> P) from (S --> M) and (M --> P) or (S ==> M) and (M ==> P)
  */
 
 import {Rule} from '../../Rule.js';
@@ -11,8 +11,16 @@ import {Stamp} from '../../../Stamp.js';
 import {Term, TermType} from '../../../term/Term.js';
 
 export class SyllogisticRule extends Rule {
-    constructor(config = {}) {
-        super('nal-syllogistic-deduction', 'nal', 1.0, config);
+    /**
+     * Constructor for abstract class - should be called by subclasses
+     * @param {string} id - Rule identifier
+     * @param {string} operator - The operator this rule handles (e.g. '==>' or '-->')
+     * @param {number} priority - Rule priority
+     * @param {Object} config - Configuration options
+     */
+    constructor(id, operator, priority, config = {}) {
+        super(id, 'nal', priority, config);
+        this.operator = operator;
     }
 
     /**
@@ -24,16 +32,15 @@ export class SyllogisticRule extends Rule {
     canApply(primaryPremise, secondaryPremise, context) {
         if (!primaryPremise || !secondaryPremise) return false;
 
-        // Both premises need to be compound statements with appropriate operators
+        // Both premises need to be compound statements with the appropriate operator
         const term1 = primaryPremise.term;
         const term2 = secondaryPremise.term;
 
         if (!term1?.isCompound || !term2?.isCompound) return false;
 
-        // Look for relations like inheritance (-->), but not implication (==>) which is handled by ImplicationSyllogisticRule
-        // This avoids duplicate processing of implication syllogisms
-        const isValidOperator = (op) => op === '-->';
-        if (!isValidOperator(term1.operator) || !isValidOperator(term2.operator)) return false;
+        // Check that at least one premise has the correct operator for this rule
+        const hasCorrectOperator = (term) => term.operator === this.operator;
+        if (!hasCorrectOperator(term1) && !hasCorrectOperator(term2)) return false;
 
         // Check for syllogistic pattern: (S --> M) + (M --> P) => (S --> P)
         const comp1 = term1.components;
@@ -71,12 +78,12 @@ export class SyllogisticRule extends Rule {
         // Pattern 1: (S --> M) + (M --> P) => (S --> P)
         if (comp1[1].equals && comp1[1].equals(comp2[0])) {
             // subject = comp1[0], middle = comp1[1], predicate = comp2[1]
-            return this._createDerivedTask(primaryPremise, secondaryPremise, comp1[0], comp2[1], term1.operator);
+            return this._createDerivedTask(primaryPremise, secondaryPremise, comp1[0], comp2[1], this.operator);
         }
         // Pattern 2: (M --> P) + (S --> M) => (S --> P)
         else if (comp2[1].equals && comp2[1].equals(comp1[0])) {
             // subject = comp2[0], middle = comp2[1], predicate = comp1[1]
-            return this._createDerivedTask(primaryPremise, secondaryPremise, comp2[0], comp1[1], term1.operator);
+            return this._createDerivedTask(primaryPremise, secondaryPremise, comp2[0], comp1[1], this.operator);
         }
 
         return []; // No valid pattern found
@@ -128,6 +135,19 @@ export class SyllogisticRule extends Rule {
         });
 
         return [derivedTask];
+    }
+}
+
+// Export concrete implementations
+export class InheritanceSyllogisticRule extends SyllogisticRule {
+    constructor(config = {}) {
+        super('nal-inheritance-syllogistic', '-->', 1.0, config);
+    }
+}
+
+export class ImplicationSyllogisticRuleNew extends SyllogisticRule {
+    constructor(config = {}) {
+        super('nal-implication-syllogistic', '==>', 1.0, config);
     }
 }
 
