@@ -121,12 +121,7 @@ describe('NAR Integration Tests', () => {
             expect(stats.memoryStats).toBeDefined();
             expect(stats.taskManagerStats).toBeDefined();
 
-            // For stream reasoner, check appropriate stats
-            if (stats.reasonerType === 'stream') {
-                expect(stats.streamReasonerStats).toBeDefined();
-            } else {
-                expect(stats.cycleStats).toBeDefined();
-            }
+            expect(stats.streamReasonerStats).toBeDefined();
         });
 
         test('should track memory usage correctly', async () => {

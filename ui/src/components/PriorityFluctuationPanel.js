@@ -1,7 +1,7 @@
 import React, {memo} from 'react';
 import {DataPanel} from './DataPanel.js';
 import {themeUtils} from '../utils/themeUtils.js';
-import {createProgressBar} from '../utils/componentUtils.js';
+import {createProgressBar} from '../utils/dashboardUtils.js';
 
 const PriorityFluctuationPanel = memo(() => {
     const renderFluctuation = (fluctuation) =>

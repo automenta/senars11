@@ -8,9 +8,7 @@ const DEFAULT_CONFIG = Object.freeze({
     nar: {
         lm: {enabled: false},
         reasoningAboutReasoning: {enabled: true},
-        reasoning: {
-            useStreamReasoner: false // Set to true to use the new stream-based reasoner
-        }
+        reasoning: {}
     },
     persistence: {defaultPath: './agent.json'},
     webSocket: {

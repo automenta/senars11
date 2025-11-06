@@ -5,9 +5,9 @@ import {
     createDistributionBar,
     createMetricCard,
     createStatusBadge,
-    formatPercentage,
     getPerformanceMetricColor
 } from '../utils/dashboardUtils.js';
+import {formatPercentage} from '../utils/formatters.js';
 
 const DashboardPanel = () => {
     const [viewMode, setViewMode] = useState('overview'); // 'overview', 'performance'

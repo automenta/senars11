@@ -287,6 +287,28 @@ class WebSocketMonitor {
             'requestCapabilities': (msg) => this.messageHandlers.handleRequestCapabilities(client, msg)
         };
 
+        // Check if it's a reason/* message type and route to narseseInput handler
+        if (message.type.startsWith('reason/')) {
+            // Format the message to match narseseInput expectations
+            const formattedMessage = {
+                ...message,
+                // Extract the text from payload for the narseseInput handler
+                payload: {
+                    input: message.payload?.text || message.payload?.input || ''
+                }
+            };
+            this.messageHandlers.handleNarseseInput(client, formattedMessage);
+            return;
+        }
+
+        // Check if it's a control/* message type - these might need special handling
+        if (message.type.startsWith('control/')) {
+            // For now, route to narseseInput handler but in the future
+            // we might want to implement specific control handlers
+            this._handleControlMessage(client, message);
+            return;
+        }
+
         (handlers[message.type] || this._handleCustomMessage.bind(this, client, message))(message);
     }
 
@@ -422,6 +444,53 @@ class WebSocketMonitor {
             client.close(1011, 'Sending error');
         } catch (e) {
             // If client is already closed, just ignore
+        }
+    }
+
+    _handleControlMessage(client, message) {
+        // Handle control messages like start, stop, step
+        const command = message.type.split('/')[1]; // Extract command from 'control/command'
+        
+        if (!this._nar) {
+            this._sendToClient(client, {
+                type: 'error',
+                message: 'NAR instance not available for control commands'
+            });
+            return;
+        }
+
+        switch (command) {
+            case 'start':
+                this._nar.start();
+                this._sendToClient(client, {
+                    type: 'control/ack',
+                    payload: { command: 'start', status: 'started' }
+                });
+                break;
+                
+            case 'stop':
+                this._nar.stop();
+                this._sendToClient(client, {
+                    type: 'control/ack',
+                    payload: { command: 'stop', status: 'stopped' }
+                });
+                break;
+                
+            case 'step':
+                this._nar.step();
+                this._sendToClient(client, {
+                    type: 'control/ack',
+                    payload: { command: 'step', status: 'stepped' }
+                });
+                break;
+                
+            default:
+                console.warn('Unknown control command:', command);
+                this._sendToClient(client, {
+                    type: 'error',
+                    message: `Unknown control command: ${command}`
+                });
+                break;
         }
     }
 

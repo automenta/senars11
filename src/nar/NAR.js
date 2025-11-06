@@ -32,7 +32,7 @@ export class NAR extends BaseComponent {
         super(config, 'NAR');
         this._config = NARBuilder.from(config);
         this._componentManager = new ComponentManager({}, this._eventBus, this);
-        this._useStreamReasoner = config.reasoning?.useStreamReasoner !== false; // Default to true
+        this._useStreamReasoner = true; // Always use stream reasoner
         this._initComponents(config);
         this._isRunning = false;
         this._cycleInterval = null;
@@ -43,9 +43,7 @@ export class NAR extends BaseComponent {
         // Add debug mode for tracking pipeline
         this._debugMode = config.debug?.pipeline || false;
 
-        if (this._useStreamReasoner) {
-            this._initStreamReasoner();
-        }
+        this._initStreamReasoner();
 
         if (this._config.get('components')) {
             this._componentManager.loadComponentsFromConfig(this._config.get('components'));
@@ -119,7 +117,7 @@ export class NAR extends BaseComponent {
         }
 
         // Initialize stream reasoner if it's going to be used
-        if (this._useStreamReasoner && !this._streamReasoner) {
+        if (!this._streamReasoner) {
             this._initStreamReasoner();
             await this._registerRulesWithStreamReasoner();
         }
@@ -137,14 +135,8 @@ export class NAR extends BaseComponent {
         this._evaluator = new EvaluationEngine(null, this._termFactory);
         this._lm = lmEnabled ? new LM() : null;
 
-        // Initialize stream reasoner early if it's going to be used
-        if (this._useStreamReasoner) {
-            this._ruleEngine = null; // No old rule engine needed
-        } else {
-            // This branch would be for backward compatibility if needed
-            // For now we'll focus on the stream reasoner
-            this._ruleEngine = null; // Default to null
-        }
+        // Initialize stream reasoner components
+        this._ruleEngine = null; // No old rule engine needed
 
         const cycleConfig = {
             memory: this._memory,
@@ -309,7 +301,7 @@ export class NAR extends BaseComponent {
                 }, {traceId: options.traceId});
 
                 // For stream reasoner: explicitly add to focus so the stream can access it
-                if (this._focus && this._useStreamReasoner) {
+                if (this._focus) {
                     this._focus.addTaskToFocus(task);
                 }
 
@@ -371,33 +363,20 @@ export class NAR extends BaseComponent {
         this._isRunning = true;
         this._processPendingTasks(options.traceId);
 
-        if (this._useStreamReasoner) {
-            // Start the stream-based reasoner instead of the cycle-based one
-            this._streamReasoner.start();
+        // Start the stream-based reasoner instead of the cycle-based one
+        this._streamReasoner.start();
 
-            // Optionally, set up a monitoring process for stream reasoner metrics
-            this._streamMonitoringInterval = setInterval(() => {
-                if (this._streamReasoner) {
-                    const metrics = this._streamReasoner.getMetrics();
-                    this._eventBus.emit('streamReasoner.metrics', metrics, {traceId: options.traceId});
-                }
-            }, 5000); // Report metrics every 5 seconds
-        } else {
-            // Start the traditional cycle-based reasoner
-            this._cycleInterval = setInterval(async () => {
-                try {
-                    const result = await this._cycle.execute();
-                    this._eventBus.emit('cycle.completed', result, {traceId: options.traceId});
-                } catch (error) {
-                    this.logError('Error in reasoning cycle:', error);
-                    this._eventBus.emit('cycle.error', {error: error.message}, {traceId: options.traceId});
-                }
-            }, this._config.get('cycle.delay'));
-        }
+        // Optionally, set up a monitoring process for stream reasoner metrics
+        this._streamMonitoringInterval = setInterval(() => {
+            if (this._streamReasoner) {
+                const metrics = this._streamReasoner.getMetrics();
+                this._eventBus.emit('streamReasoner.metrics', metrics, {traceId: options.traceId});
+            }
+        }, 5000); // Report metrics every 5 seconds
 
         this._eventBus.emit('system.started', {timestamp: Date.now()}, {traceId: options.traceId});
         this._emitIntrospectionEvent('system:start', {timestamp: Date.now()});
-        this.logInfo(`NAR started successfully with ${this._useStreamReasoner ? 'stream' : 'cycle'}-based reasoning`);
+        this.logInfo(`NAR started successfully with stream-based reasoning`);
         return true;
     }
 
@@ -436,7 +415,7 @@ export class NAR extends BaseComponent {
 
         this._eventBus.emit('system.stopped', {timestamp: Date.now()}, {traceId: options.traceId});
         this._emitIntrospectionEvent('system:stop', {timestamp: Date.now()});
-        this.logInfo(`NAR stopped successfully (${this._useStreamReasoner ? 'stream' : 'cycle'}-based reasoning)`);
+        this.logInfo(`NAR stopped successfully (stream-based reasoning)`);
         return true;
     }
 
@@ -455,43 +434,33 @@ export class NAR extends BaseComponent {
         try {
             await this._processPendingTasks(options.traceId);
 
-            if (this._useStreamReasoner) {
-                // Execute a single step of the stream reasoner (now returns array of derivations)
-                const results = await this._streamReasoner.step();
+            // Execute a single step of the stream reasoner (now returns array of derivations)
+            const results = await this._streamReasoner.step();
 
-                // Add all derivations back to the system
-                for (const result of results) {
-                    if (result) {
-                        this._taskManager.addTask(result);
-                        if (this._focus) {
-                            this._focus.addTaskToFocus(result);
-                        }
-
-                        // Emit event for each derivation
-                        this._eventBus.emit('reasoning.derivation', {
-                            derivedTask: result,
-                            source: 'streamReasoner.step',
-                            timestamp: Date.now()
-                        }, {traceId: options.traceId});
+            // Add all derivations back to the system
+            for (const result of results) {
+                if (result) {
+                    this._taskManager.addTask(result);
+                    if (this._focus) {
+                        this._focus.addTaskToFocus(result);
                     }
-                }
 
-                this._eventBus.emit('streamReasoner.step', {
-                    results,
-                    count: results.length
-                }, {traceId: options.traceId});
-                return results;  // Return the array of results
-            } else {
-                const result = await this._cycle.execute();
-                this._eventBus.emit('cycle.completed', result, {traceId: options.traceId});
-                return result;
+                    // Emit event for each derivation
+                    this._eventBus.emit('reasoning.derivation', {
+                        derivedTask: result,
+                        source: 'streamReasoner.step',
+                        timestamp: Date.now()
+                    }, {traceId: options.traceId});
+                }
             }
+
+            this._eventBus.emit('streamReasoner.step', {
+                results,
+                count: results.length
+            }, {traceId: options.traceId});
+            return results;  // Return the array of results
         } catch (error) {
-            if (this._useStreamReasoner) {
-                this._eventBus.emit('streamReasoner.error', {error: error.message}, {traceId: options.traceId});
-            } else {
-                this._eventBus.emit('cycle.error', {error: error.message}, {traceId: options.traceId});
-            }
+            this._eventBus.emit('streamReasoner.error', {error: error.message}, {traceId: options.traceId});
             this.logError('Error in reasoning step:', error);
             throw error;
         }
@@ -660,19 +629,14 @@ export class NAR extends BaseComponent {
     getStats() {
         const baseStats = {
             isRunning: this._isRunning,
-            cycleCount: this._useStreamReasoner ? (this._streamReasoner?.getMetrics?.()?.totalDerivations || 0) : this._cycle.cycleCount,
+            cycleCount: this._streamReasoner?.getMetrics?.()?.totalDerivations || 0,
             memoryStats: this._memory.getDetailedStats(),
             taskManagerStats: this._taskManager.getTaskStats?.() ?? this._taskManager.stats,
             config: this._config.toJSON(),
-            lmStats: this._lm?.getMetrics?.(),
-            reasonerType: this._useStreamReasoner ? 'stream' : 'cycle'
+            lmStats: this._lm?.getMetrics?.()
         };
 
-        if (this._useStreamReasoner) {
-            baseStats.streamReasonerStats = this._streamReasoner?.getMetrics?.() || null;
-        } else {
-            baseStats.cycleStats = this._cycle.stats;
-        }
+        baseStats.streamReasonerStats = this._streamReasoner?.getMetrics?.() || null;
 
         return baseStats;
     }
