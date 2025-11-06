@@ -111,8 +111,8 @@ export function isQuestion(task) {
     return task?.punctuation === Punctuation.QUESTION;
 }
 
-export function isJudgment(task) {
-    return task?.punctuation === Punctuation.JUDGMENT;
+export function isBelief(task) {
+    return task?.punctuation === Punctuation.BELIEF;
 }
 
 export const KeywordPatterns = {

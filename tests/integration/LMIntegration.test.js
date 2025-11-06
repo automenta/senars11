@@ -121,4 +121,6 @@ describe('LM Integration Tests', () => {
     });
 
     afterEach(() => {
+        // Clean up any running NAR instances if needed
+    });
 });

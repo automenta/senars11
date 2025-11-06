@@ -1,8 +1,3 @@
-/**
- * NAR Integration Tests
- * Tests the complete input → processing → memory storage cycle
- */
-
 import {NAR} from '../../src/nar/NAR.js';
 import {TermFactory} from '../../src/term/TermFactory.js';
 import {completeNARIntegrationSuite, flexibleNARIntegrationSuite, narTestSetup} from '../support/commonTestSuites.js';
@@ -15,7 +10,6 @@ const narProvider = narTestSetup({
 });
 
 describe('NAR Integration Tests', () => {
-    // Apply input/output module tests for NAR
     comprehensiveTestSuites.inputOutputModuleTests('NAR',
         async () => {
             const nar = new NAR({
@@ -25,7 +19,6 @@ describe('NAR Integration Tests', () => {
             return {
                 process: async (input) => {
                     await nar.input(input);
-                    // Return all task types to support different input types
                     return [...nar.getBeliefs(), ...nar.getGoals(), ...nar.getQuestions()];
                 },
                 destroy: () => {
@@ -37,7 +30,7 @@ describe('NAR Integration Tests', () => {
             {
                 description: 'handles simple belief input',
                 input: 'cat.',
-                expectedOutput: null, // Will validate separately
+                expectedOutput: null,
                 validator: (result, expected) => result.some(b => b.term.toString().includes('cat') && b.type === 'BELIEF')
             },
             {
@@ -55,10 +48,8 @@ describe('NAR Integration Tests', () => {
         ]
     );
 
-    // Run the complete NAR integration test suite
     completeNARIntegrationSuite(narProvider);
 
-    // Run the flexible NAR integration test suite for agile development
     flexibleNARIntegrationSuite(narProvider);
 
     // Additional specific tests that are not part of the common suite

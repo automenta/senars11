@@ -6,7 +6,7 @@
 
 import {LMRule} from '../../LMRule.js';
 import {Punctuation, Task} from '../../TaskUtils.js';
-import {hasPattern, isJudgment, KeywordPatterns} from '../../RuleHelpers.js';
+import {hasPattern, isBelief, KeywordPatterns} from '../../RuleHelpers.js';
 
 /**
  * Creates a schema induction rule using the enhanced LMRule.create method.
@@ -27,11 +27,11 @@ export const createSchemaInductionRule = (dependencies) => {
         condition: (primaryPremise, secondaryPremise, context) => {
             if (!primaryPremise) return false;
 
-            const isBelief = isJudgment(primaryPremise);
+            const belief = isBelief(primaryPremise);
             const priority = primaryPremise.getPriority?.() || primaryPremise.priority || 0;
             const termStr = primaryPremise.term?.toString?.() || String(primaryPremise.term || '');
 
-            return isBelief && priority > 0.6 && hasPattern(primaryPremise, KeywordPatterns.narrative);
+            return belief && priority > 0.6 && hasPattern(primaryPremise, KeywordPatterns.narrative);
         },
 
         prompt: (primaryPremise, secondaryPremise, context) => {
@@ -53,7 +53,7 @@ The schema should be abstract enough to apply to similar situations.`;
 
             const newTask = new Task(
                 processedOutput,
-                Punctuation.JUDGMENT,
+                Punctuation.BELIEF,
                 {frequency: 0.9, confidence: 0.8}
             );
 

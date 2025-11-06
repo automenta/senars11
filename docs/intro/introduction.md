@@ -35,7 +35,7 @@ providing rapid assessments, and retrieving relevant context through sophisticat
   embeddings, the system can intuitively fetch relevant knowledge from `Memory` based on conceptual closeness rather
   than simple keyword matching. This enables sophisticated analogical reasoning and creative problem-solving.
 
-* **Creative & Analogical Judgment:** The **`HypothesisGenerator`** service exemplifies the system's intuitive leap
+* **Creative & Analogical Belief:** The **`HypothesisGenerator`** service exemplifies the system's intuitive leap
   capability, generating novel ideas and potential explanations when formal logic encounters limitations. The *
   *`ProactiveEnricher`** leverages this capability to actively discover new connections in existing knowledge, enriching
   the cognitive system's understanding.

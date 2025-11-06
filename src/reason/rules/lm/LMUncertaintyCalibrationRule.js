@@ -6,7 +6,7 @@
 
 import {LMRule} from '../../LMRule.js';
 import {Task} from '../../TaskUtils.js';
-import {hasPattern, isJudgment, KeywordPatterns} from '../../RuleHelpers.js';
+import {hasPattern, isBelief, KeywordPatterns} from '../../RuleHelpers.js';
 
 /**
  * Creates an uncertainty calibration rule using the enhanced LMRule.create method.
@@ -27,13 +27,13 @@ export const createUncertaintyCalibrationRule = (dependencies) => {
         condition: (primaryPremise, secondaryPremise, context) => {
             if (!primaryPremise) return false;
 
-            const isBelief = isJudgment(primaryPremise);
+            const belief = isBelief(primaryPremise);
             const priority = primaryPremise.getPriority?.() || primaryPremise.priority || 0;
             const termStr = primaryPremise.term?.toString?.() || String(primaryPremise.term || '');
             const confidence = primaryPremise.truth?.c || primaryPremise.truth?.confidence || 0.9;
 
             // Apply if the belief has uncertainty terms and default confidence
-            return isBelief && priority > 0.6 && confidence >= 0.9 && hasPattern(primaryPremise, KeywordPatterns.uncertainty);
+            return belief && priority > 0.6 && confidence >= 0.9 && hasPattern(primaryPremise, KeywordPatterns.uncertainty);
         },
 
         prompt: (primaryPremise, secondaryPremise, context) => {

@@ -57,7 +57,7 @@ Recommend the best primary strategy and briefly explain why.`;
             const newTerm = `strategy_for_(${primaryPremise.term?.toString?.() || 'unknown'})`;
             const newTask = new Task(
                 newTerm,
-                Punctuation.JUDGMENT,
+                Punctuation.BELIEF,
                 {frequency: 1.0, confidence: 0.9},
                 null,
                 null,

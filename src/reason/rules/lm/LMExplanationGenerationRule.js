@@ -6,7 +6,7 @@
 
 import {LMRule} from '../../LMRule.js';
 import {Punctuation, Task} from '../../TaskUtils.js';
-import {isJudgment, KeywordPatterns} from '../../RuleHelpers.js';
+import {isBelief, KeywordPatterns} from '../../RuleHelpers.js';
 
 /**
  * Creates an explanation generation rule using the enhanced LMRule.create method.
@@ -27,11 +27,11 @@ export const createExplanationGenerationRule = (dependencies) => {
         condition: (primaryPremise, secondaryPremise, context) => {
             if (!primaryPremise) return false;
 
-            const isBelief = isJudgment(primaryPremise);
+            const belief = isBelief(primaryPremise);
             const priority = primaryPremise.getPriority?.() || primaryPremise.priority || 0;
             const termStr = primaryPremise.term?.toString?.() || String(primaryPremise.term || '');
 
-            return isBelief && priority > 0.6 && KeywordPatterns.complexRelation(termStr);
+            return belief && priority > 0.6 && KeywordPatterns.complexRelation(termStr);
         },
 
         prompt: (primaryPremise, secondaryPremise, context) => {
@@ -54,7 +54,7 @@ Focus on conveying the core meaning and implication of the statement.`;
 
             const newTask = new Task(
                 explanationTerm,
-                Punctuation.JUDGMENT,
+                Punctuation.BELIEF,
                 {frequency: 1.0, confidence: 0.9},
                 null,
                 null,

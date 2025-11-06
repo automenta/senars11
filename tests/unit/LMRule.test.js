@@ -15,6 +15,7 @@ import {
 } from '../../src/reason/lm/index.js';
 import {LMRuleFactory} from '../../src/lm/LMRuleFactory.js';
 import {LMRuleUtils} from '../../src/reason/LMRuleUtils.js';
+import {jest} from '@jest/globals';
 
 // Mock LM for testing
 class MockLM {
@@ -70,8 +71,8 @@ describe('LMRule', () => {
             condition: (primary, secondary, context) => primary && primary.term?.name === 'test'
         });
 
-        const testTask = new Task('test', Punctuation.JUDGMENT);
-        const otherTask = new Task('other', Punctuation.JUDGMENT);
+        const testTask = new Task('test', Punctuation.BELIEF);
+        const otherTask = new Task('other', Punctuation.BELIEF);
 
         expect(rule.canApply(testTask, null, {})).toBe(true);
         expect(rule.canApply(otherTask, null, {})).toBe(false);
@@ -86,7 +87,7 @@ describe('LMRule', () => {
             generate: (output) => []
         });
 
-        const testTask = new Task('sample term', Punctuation.JUDGMENT);
+        const testTask = new Task('sample term', Punctuation.BELIEF);
         const prompt = rule.generatePrompt(testTask, null, {});
 
         expect(prompt).toBe('Process: sample term');
@@ -99,7 +100,7 @@ describe('LMRule', () => {
             condition: () => true,
             prompt: () => 'decompose test goal',
             process: (response) => response.split('\n').filter(line => line.trim()),
-            generate: (output) => output.map(item => new Task(item.trim(), Punctuation.JUDGMENT))
+            generate: (output) => output.map(item => new Task(item.trim(), Punctuation.BELIEF))
         });
 
         const result = await rule.apply(new Task('test goal', Punctuation.GOAL), null, {});
@@ -109,6 +110,9 @@ describe('LMRule', () => {
     });
 
     test('should handle errors gracefully', async () => {
+        // Mock console.error to prevent test output pollution
+        const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
         const errorLM = {
             generateText: () => {
                 throw new Error('LM error');
@@ -121,12 +125,14 @@ describe('LMRule', () => {
             condition: () => true,
             prompt: () => 'test prompt',
             process: (response) => response,
-            generate: (output) => [new Task(output, Punctuation.JUDGMENT)]
+            generate: (output) => [new Task(output, Punctuation.BELIEF)]
         });
 
-        const result = await rule.apply(new Task('test', Punctuation.JUDGMENT), null, {});
-
+        const result = await rule.apply(new Task('test', Punctuation.BELIEF), null, {});
         expect(result).toEqual([]);
+
+        // Restore console.error
+        consoleErrorSpy.mockRestore();
     });
 
     test('should track execution stats', async () => {
@@ -139,7 +145,7 @@ describe('LMRule', () => {
             generate: (output) => []
         });
 
-        await rule.apply(new Task('test', Punctuation.JUDGMENT), null, {});
+        await rule.apply(new Task('test', Punctuation.BELIEF), null, {});
 
         const stats = rule.getStats();
         expect(stats.execution.totalExecutions).toBe(1);
@@ -149,10 +155,10 @@ describe('LMRule', () => {
     test('should support backward compatibility with promptTemplate', () => {
         const rule = new LMRule('compat-rule', mockLM, {
             promptTemplate: 'Template: {{taskTerm}}',
-            responseProcessor: (response) => [new Task(response, Punctuation.JUDGMENT)]
+            responseProcessor: (response) => [new Task(response, Punctuation.BELIEF)]
         });
 
-        const testTask = new Task('test-term', Punctuation.JUDGMENT);
+        const testTask = new Task('test-term', Punctuation.BELIEF);
         const prompt = rule.generatePrompt(testTask, null, {});
         expect(prompt).toBe('Template: test-term');
     });
@@ -190,7 +196,7 @@ describe('Specific LM Rules from v9', () => {
     test('HypothesisGenerationRule should generate hypotheses', () => {
         const rule = createHypothesisGenerationRule({lm: mockLM});
 
-        const beliefTask = new Task('Regular exercise is beneficial', Punctuation.JUDGMENT);
+        const beliefTask = new Task('Regular exercise is beneficial', Punctuation.BELIEF);
         beliefTask.priority = 0.8;
         beliefTask.truth = new TruthValue(0.8, 0.9);
 
@@ -200,7 +206,7 @@ describe('Specific LM Rules from v9', () => {
     test('TemporalCausalModelingRule should model causal relationships', () => {
         const rule = createTemporalCausalModelingRule({lm: mockLM});
 
-        const beliefTask = new Task('Exercise leads to better health', Punctuation.JUDGMENT);
+        const beliefTask = new Task('Exercise leads to better health', Punctuation.BELIEF);
         beliefTask.priority = 0.8;
         beliefTask.truth = new TruthValue(0.8, 0.9);
 
@@ -210,7 +216,7 @@ describe('Specific LM Rules from v9', () => {
     test('BeliefRevisionRule should identify contradictory beliefs', () => {
         const rule = createBeliefRevisionRule({lm: mockLM});
 
-        const beliefTask = new Task('This contradicts that', Punctuation.JUDGMENT);
+        const beliefTask = new Task('This contradicts that', Punctuation.BELIEF);
         beliefTask.priority = 0.9;
         beliefTask.truth = new TruthValue(0.8, 0.9);
 
@@ -220,7 +226,7 @@ describe('Specific LM Rules from v9', () => {
     test('ExplanationGenerationRule should identify complex relations', () => {
         const rule = createExplanationGenerationRule({lm: mockLM});
 
-        const beliefTask = new Task('A --> B', Punctuation.JUDGMENT);
+        const beliefTask = new Task('A --> B', Punctuation.BELIEF);
         beliefTask.priority = 0.7;
         beliefTask.truth = new TruthValue(0.8, 0.9);
 
@@ -240,7 +246,7 @@ describe('Specific LM Rules from v9', () => {
     test('VariableGroundingRule should identify variables', () => {
         const rule = createVariableGroundingRule({lm: mockLM});
 
-        const task = new Task('Find value for $X', Punctuation.JUDGMENT);
+        const task = new Task('Find value for $X', Punctuation.BELIEF);
         task.priority = 0.8;
         task.truth = new TruthValue(0.8, 0.9);
 
@@ -270,7 +276,7 @@ describe('Specific LM Rules from v9', () => {
     test('SchemaInductionRule should identify narrative text', () => {
         const rule = createSchemaInductionRule({lm: mockLM});
 
-        const task = new Task('First do A, then do B', Punctuation.JUDGMENT);
+        const task = new Task('First do A, then do B', Punctuation.BELIEF);
         task.priority = 0.7;
         task.truth = new TruthValue(0.8, 0.9);
 
@@ -280,7 +286,7 @@ describe('Specific LM Rules from v9', () => {
     test('UncertaintyCalibrationRule should identify uncertain language', () => {
         const rule = createUncertaintyCalibrationRule({lm: mockLM});
 
-        const task = new Task('Maybe this will work', Punctuation.JUDGMENT);
+        const task = new Task('Maybe this will work', Punctuation.BELIEF);
         task.priority = 0.7;
         task.truth = new TruthValue(0.99, 0.99);
 
@@ -359,10 +365,10 @@ describe('LMRuleUtils', () => {
         });
 
         const goalTask = new Task('goal', Punctuation.GOAL);
-        const judgmentTask = new Task('judgment', Punctuation.JUDGMENT);
+        const beliefTask = new Task('belief', Punctuation.BELIEF);
 
         expect(rule.canApply(goalTask)).toBe(true);
-        expect(rule.canApply(judgmentTask)).toBe(false);
+        expect(rule.canApply(beliefTask)).toBe(false);
     });
 
     test('should create priority-based rules', () => {
@@ -372,10 +378,10 @@ describe('LMRuleUtils', () => {
             minPriority: 0.6
         });
 
-        const highPriorityTask = new Task('task', Punctuation.JUDGMENT);
+        const highPriorityTask = new Task('task', Punctuation.BELIEF);
         highPriorityTask.priority = 0.8;
 
-        const lowPriorityTask = new Task('task', Punctuation.JUDGMENT);
+        const lowPriorityTask = new Task('task', Punctuation.BELIEF);
         lowPriorityTask.priority = 0.4;
 
         expect(rule.canApply(highPriorityTask)).toBe(true);

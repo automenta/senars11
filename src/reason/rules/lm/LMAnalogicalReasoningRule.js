@@ -52,7 +52,7 @@ Based on that analogy, describe a step-by-step solution for the original problem
             const newTerm = `solution_proposal_for_(${primaryPremise.term?.toString?.() || 'unknown'})`;
             const newTask = new Task(
                 newTerm,
-                Punctuation.JUDGMENT,
+                Punctuation.BELIEF,
                 {frequency: 0.8, confidence: 0.7},
                 null,
                 null,

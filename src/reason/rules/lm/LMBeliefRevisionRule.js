@@ -6,7 +6,7 @@
 
 import {LMRule} from '../../LMRule.js';
 import {Punctuation, Task} from '../../TaskUtils.js';
-import {hasPattern, isJudgment, KeywordPatterns} from '../../RuleHelpers.js';
+import {hasPattern, isBelief, KeywordPatterns} from '../../RuleHelpers.js';
 
 /**
  * Creates a belief revision rule using the enhanced LMRule.create method.
@@ -27,11 +27,11 @@ export const createBeliefRevisionRule = (dependencies) => {
         condition: (primaryPremise, secondaryPremise, context) => {
             if (!primaryPremise) return false;
 
-            const isBelief = isJudgment(primaryPremise);
+            const belief = isBelief(primaryPremise);
             const priority = primaryPremise.getPriority?.() || primaryPremise.priority || 0;
             const termStr = primaryPremise.term?.toString?.() || String(primaryPremise.term || '');
 
-            return isBelief && priority > 0.8 && hasPattern(primaryPremise, KeywordPatterns.conflict);
+            return belief && priority > 0.8 && hasPattern(primaryPremise, KeywordPatterns.conflict);
         },
 
         prompt: (primaryPremise, secondaryPremise, context) => {
@@ -52,7 +52,7 @@ The revised belief should be a single, clear statement.`;
 
             const newTask = new Task(
                 processedOutput,
-                Punctuation.JUDGMENT,
+                Punctuation.BELIEF,
                 {
                     frequency: primaryPremise.truth.f,
                     confidence: primaryPremise.truth.c * 0.8, // Revised belief is slightly less confident

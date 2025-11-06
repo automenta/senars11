@@ -5,7 +5,7 @@
 
 import {LMRule} from '../../LMRule.js';
 import {Punctuation, Task} from '../../TaskUtils.js';
-import {hasPattern, isJudgment, KeywordPatterns} from '../../RuleHelpers.js';
+import {hasPattern, isBelief, KeywordPatterns} from '../../RuleHelpers.js';
 
 export const createTemporalCausalModelingRule = (dependencies) => {
     const {lm} = dependencies;
@@ -22,7 +22,7 @@ export const createTemporalCausalModelingRule = (dependencies) => {
             const priority = primaryPremise.getPriority?.() ?? primaryPremise.priority ?? 0;
             const termStr = primaryPremise.term?.toString?.() ?? String(primaryPremise.term ?? '');
 
-            return isJudgment(primaryPremise) && priority > 0.7 && hasPattern(primaryPremise, KeywordPatterns.temporalCausal);
+            return isBelief(primaryPremise) && priority > 0.7 && hasPattern(primaryPremise, KeywordPatterns.temporalCausal);
         },
 
         prompt: (primaryPremise) => {
@@ -44,7 +44,7 @@ If there is a time sequence, describe it.`;
 
             return [new Task(
                 processedOutput,
-                Punctuation.JUDGMENT,
+                Punctuation.BELIEF,
                 {frequency: 0.9, confidence: 0.8}
             )];
         },

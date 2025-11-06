@@ -5,7 +5,7 @@
 
 import {LMRule} from '../../LMRule.js';
 import {Punctuation, Task} from '../../TaskUtils.js';
-import {isJudgment} from '../../RuleHelpers.js';
+import {isBelief} from '../../RuleHelpers.js';
 
 export const createHypothesisGenerationRule = (dependencies) => {
     const {lm} = dependencies;
@@ -22,7 +22,7 @@ export const createHypothesisGenerationRule = (dependencies) => {
             const priority = primaryPremise.getPriority?.() ?? primaryPremise.priority ?? 0;
             const confidence = primaryPremise.truth?.c ?? primaryPremise.truth?.confidence ?? 0;
 
-            return isJudgment(primaryPremise) && priority > 0.7 && confidence > 0.8;
+            return isBelief(primaryPremise) && priority > 0.7 && confidence > 0.8;
         },
 
         prompt: (primaryPremise) => {

@@ -4,7 +4,7 @@
  */
 
 export const Punctuation = {
-    JUDGMENT: '.',
+    BELIEF: '.',
     QUESTION: '?',
     GOAL: '!'
 };
