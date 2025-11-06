@@ -30,7 +30,7 @@ export class RuleProcessor {
     const startTime = Date.now();
     try {
       for await (const [primaryPremise, secondaryPremise] of premisePairStream) {
-        if (timeoutMs > 0 && (Date.now() - startTime) > timeoutMs) {
+        if (this._isTimeoutExceeded(startTime, timeoutMs)) {
           console.debug(`RuleProcessor: timeout reached after ${timeoutMs}ms`);
           break;
         }
@@ -40,21 +40,14 @@ export class RuleProcessor {
         const candidateRules = this.ruleExecutor.getCandidateRules(primaryPremise, secondaryPremise);
         
         for (const rule of candidateRules) {
-          if (timeoutMs > 0 && (Date.now() - startTime) > timeoutMs) {
+          if (this._isTimeoutExceeded(startTime, timeoutMs)) {
             console.debug(`RuleProcessor: timeout reached after ${timeoutMs}ms`);
             break;
           }
           
           try {
             if (this._isSynchronousRule(rule)) {
-              this.syncRuleExecutions++;
-              const ruleContext = this._createRuleContext();
-              const results = this.ruleExecutor.executeRule(rule, primaryPremise, secondaryPremise, ruleContext);
-              
-              for (const result of results) {
-                const processedResult = this._processDerivation(result);
-                if (processedResult) yield processedResult;
-              }
+              yield* this._processSyncRule(rule, primaryPremise, secondaryPremise);
             } else {
               this._dispatchAsyncRule(rule, primaryPremise, secondaryPremise);
             }
@@ -70,28 +63,33 @@ export class RuleProcessor {
         yield* this._yieldAsyncResults();
       }
       
-      let checkCount = 0;
-      const initialRemainingTime = timeoutMs > 0 ? timeoutMs - (Date.now() - startTime) : 0;
-      
-      while (checkCount < this.config.maxChecks && (timeoutMs === 0 || initialRemainingTime > 0)) {
-        if (timeoutMs > 0 && (Date.now() - startTime) > timeoutMs) {
-          console.debug(`RuleProcessor: timeout reached after ${timeoutMs}ms (in async results loop)`);
-          break;
-        }
-        
-        checkCount++;
-        
-        await sleep(this.config.asyncWaitInterval);
-        
-        if (this._getAsyncResultsCount() > 0) {
-          yield* this._yieldAsyncResults();
-        } else if (checkCount >= this.config.maxChecks) {
-          break;
-        }
-      }
+      yield* this._processRemainingAsyncResults(timeoutMs, startTime);
     } catch (error) {
       logError(error, { context: 'rule_processor_stream' });
       throw new ReasonerError(`Error in RuleProcessor process: ${error.message}`, 'STREAM_ERROR', { originalError: error });
+    }
+  }
+
+  /**
+   * Helper to check if timeout has been exceeded
+   * @private
+   */
+  _isTimeoutExceeded(startTime, timeoutMs) {
+    return timeoutMs > 0 && (Date.now() - startTime) > timeoutMs;
+  }
+
+  /**
+   * Process a synchronous rule and yield results
+   * @private
+   */
+  async *_processSyncRule(rule, primaryPremise, secondaryPremise) {
+    this.syncRuleExecutions++;
+    const ruleContext = this._createRuleContext();
+    const results = this.ruleExecutor.executeRule(rule, primaryPremise, secondaryPremise, ruleContext);
+    
+    for (const result of results) {
+      const processedResult = this._processDerivation(result);
+      if (processedResult) yield processedResult;
     }
   }
 
@@ -186,6 +184,32 @@ export class RuleProcessor {
     
     if (currentQueueSize > this.config.backpressureThreshold) {
       await sleep(this.config.backpressureInterval);
+    }
+  }
+
+  /**
+   * Process remaining async results after main processing
+   * @private
+   */
+  async *_processRemainingAsyncResults(timeoutMs, startTime) {
+    let checkCount = 0;
+    const initialRemainingTime = timeoutMs > 0 ? timeoutMs - (Date.now() - startTime) : 0;
+    
+    while (checkCount < this.config.maxChecks && (timeoutMs === 0 || initialRemainingTime > 0)) {
+      if (this._isTimeoutExceeded(startTime, timeoutMs)) {
+        console.debug(`RuleProcessor: timeout reached after ${timeoutMs}ms (in async results loop)`);
+        break;
+      }
+      
+      checkCount++;
+      
+      await sleep(this.config.asyncWaitInterval);
+      
+      if (this._getAsyncResultsCount() > 0) {
+        yield* this._yieldAsyncResults();
+      } else if (checkCount >= this.config.maxChecks) {
+        break;
+      }
     }
   }
 

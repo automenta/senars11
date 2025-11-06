@@ -34,15 +34,7 @@ export class TaskBagPremiseSource extends PremiseSource {
     super(memory, defaults);
     
     // Support different memory types: traditional taskBag/bag, or Focus component
-    if (memory && typeof memory.getTasks === 'function') {
-      // This is a Focus-like component that uses getTasks method
-      this.focusComponent = memory;
-      this.taskBag = null; // No traditional taskBag
-    } else {
-      // Traditional memory with taskBag or bag property
-      this.taskBag = memory?.taskBag ?? memory?.bag ?? null;
-      this.focusComponent = null;
-    }
+    this._initializeMemoryAccess(memory);
     
     if (!this.taskBag && !this.focusComponent) {
       throw new ReasonerError('TaskBagPremiseSource requires either a memory object with a taskBag/bag property or a Focus component with getTasks method', 'CONFIG_ERROR');
@@ -70,6 +62,23 @@ export class TaskBagPremiseSource extends PremiseSource {
     this.dynamicAdaptation = defaults.dynamic;
     this.lastUpdate = Date.now();
     this.samplingObjectives = defaults;
+  }
+
+  /**
+   * Initialize memory access based on the provided memory object
+   * @private
+   */
+  _initializeMemoryAccess(memory) {
+    // Support different memory types: traditional taskBag/bag, or Focus component
+    if (memory && typeof memory.getTasks === 'function') {
+      // This is a Focus-like component that uses getTasks method
+      this.focusComponent = memory;
+      this.taskBag = null; // No traditional taskBag
+    } else {
+      // Traditional memory with taskBag or bag property
+      this.taskBag = memory?.taskBag ?? memory?.bag ?? null;
+      this.focusComponent = null;
+    }
   }
 
   /**
@@ -206,18 +215,7 @@ export class TaskBagPremiseSource extends PremiseSource {
    */
   _sampleByPriority() {
     if (this.focusComponent) {
-      // For Focus component, get the most recent tasks which are most likely to be relevant
-      // for syllogistic reasoning (recent tasks are more likely to match with other recent tasks)
-      const tasks = this.focusComponent.getTasks(5); // Get a few top priority tasks
-      
-      // If we have multiple tasks, randomly select one to promote diversity in premise pairing
-      if (tasks.length === 0) return null;
-      if (tasks.length === 1) return tasks[0];
-      
-      // Prefer recent tasks but allow some randomness
-      // First 2 tasks have higher probability
-      const randomIndex = Math.random() < 0.7 ? Math.floor(Math.random() * 2) : Math.floor(Math.random() * tasks.length);
-      return tasks[Math.min(randomIndex, tasks.length - 1)];
+      return this._sampleFocusByPriority();
     }
     
     if (this.taskBag?.take) {
@@ -229,6 +227,25 @@ export class TaskBagPremiseSource extends PremiseSource {
     }
     return null;
   }
+  
+  /**
+   * Sample focus by priority
+   * @private
+   */
+  _sampleFocusByPriority() {
+    // For Focus component, get the most recent tasks which are most likely to be relevant
+    // for syllogistic reasoning (recent tasks are more likely to match with other recent tasks)
+    const tasks = this.focusComponent.getTasks(5); // Get a few top priority tasks
+    
+    // If we have multiple tasks, randomly select one to promote diversity in premise pairing
+    if (tasks.length === 0) return null;
+    if (tasks.length === 1) return tasks[0];
+    
+    // Prefer recent tasks but allow some randomness
+    // First 2 tasks have higher probability
+    const randomIndex = Math.random() < 0.7 ? Math.floor(Math.random() * 2) : Math.floor(Math.random() * tasks.length);
+    return tasks[Math.min(randomIndex, tasks.length - 1)];
+  }
 
   /**
    * Sample by closeness to target time (favor tasks closest to a specific time)
@@ -237,60 +254,76 @@ export class TaskBagPremiseSource extends PremiseSource {
   _sampleByRecency() {
     // Handle Focus component
     if (this.focusComponent) {
-      // Get all tasks from focus
-      const allTasks = this.focusComponent.getTasks(1000); // Get up to 1000 tasks
-      if (allTasks.length === 0) return null;
-      
-      // Use a configurable target time (default to current time if not specified)
-      const targetTime = this.samplingObjectives.targetTime ?? Date.now();
-      
-      // Sort by closeness to target time (closest first)
-      allTasks.sort((a, b) => {
-        const timeA = a.stamp?.lastUpdated ?? a.stamp?.creationTime ?? 0;
-        const timeB = b.stamp?.lastUpdated ?? b.stamp?.creationTime ?? 0;
-        
-        // Calculate absolute distance to target time
-        const distanceA = Math.abs(timeA - targetTime);
-        const distanceB = Math.abs(timeB - targetTime);
-        
-        return distanceA - distanceB; // Closest to target time first
-      });
-      
-      // Return the task closest to target time
-      return allTasks[0];
+      return this._sampleFocusByRecency();
     }
     
     // If the bag supports getting multiple items, we can prioritize based on closeness to target time
     if (this.taskBag?.getAll && typeof this.taskBag.getAll === 'function') {
-      const allTasks = this.taskBag.getAll();
-      if (allTasks.length === 0) return null;
-      
-      // Use a configurable target time (default to current time if not specified)
-      const targetTime = this.samplingObjectives.targetTime ?? Date.now();
-      
-      // Sort by closeness to target time (closest first)
-      allTasks.sort((a, b) => {
-        const timeA = a.stamp?.lastUpdated ?? a.stamp?.creationTime ?? 0;
-        const timeB = b.stamp?.lastUpdated ?? b.stamp?.creationTime ?? 0;
-        
-        // Calculate absolute distance to target time
-        const distanceA = Math.abs(timeA - targetTime);
-        const distanceB = Math.abs(timeB - targetTime);
-        
-        return distanceA - distanceB; // Closest to target time first
-      });
-      
-      // Return the task closest to target time
-      const selectedTask = allTasks[0];
-      // Remove the selected task from the bag (if supported)
-      if (this.taskBag?.remove) {
-        this.taskBag.remove(selectedTask);
-      }
-      return selectedTask;
+      return this._sampleBagByRecency();
     }
     
     // Fallback: just take from the bag (assumes underlying priority might include recency)
     return this._sampleByPriority();
+  }
+  
+  /**
+   * Sample focus by recency
+   * @private
+   */
+  _sampleFocusByRecency() {
+    // Get all tasks from focus
+    const allTasks = this.focusComponent.getTasks(1000); // Get up to 1000 tasks
+    if (allTasks.length === 0) return null;
+    
+    // Use a configurable target time (default to current time if not specified)
+    const targetTime = this.samplingObjectives.targetTime ?? Date.now();
+    
+    // Sort by closeness to target time (closest first)
+    allTasks.sort((a, b) => {
+      const timeA = a.stamp?.lastUpdated ?? a.stamp?.creationTime ?? 0;
+      const timeB = b.stamp?.lastUpdated ?? b.stamp?.creationTime ?? 0;
+      
+      // Calculate absolute distance to target time
+      const distanceA = Math.abs(timeA - targetTime);
+      const distanceB = Math.abs(timeB - targetTime);
+      
+      return distanceA - distanceB; // Closest to target time first
+    });
+    
+    // Return the task closest to target time
+    return allTasks[0];
+  }
+  
+  /**
+   * Sample task bag by recency
+   * @private
+   */
+  _sampleBagByRecency() {
+    const allTasks = this.taskBag.getAll();
+    if (allTasks.length === 0) return null;
+    
+    // Use a configurable target time (default to current time if not specified)
+    const targetTime = this.samplingObjectives.targetTime ?? Date.now();
+    
+    // Sort by closeness to target time (closest first)
+    allTasks.sort((a, b) => {
+      const timeA = a.stamp?.lastUpdated ?? a.stamp?.creationTime ?? 0;
+      const timeB = b.stamp?.lastUpdated ?? b.stamp?.creationTime ?? 0;
+      
+      // Calculate absolute distance to target time
+      const distanceA = Math.abs(timeA - targetTime);
+      const distanceB = Math.abs(timeB - targetTime);
+      
+      return distanceA - distanceB; // Closest to target time first
+    });
+    
+    // Return the task closest to target time
+    const selectedTask = allTasks[0];
+    // Remove the selected task from the bag (if supported)
+    if (this.taskBag?.remove) {
+      this.taskBag.remove(selectedTask);
+    }
+    return selectedTask;
   }
 
   /**
@@ -300,48 +333,68 @@ export class TaskBagPremiseSource extends PremiseSource {
   _sampleByPunctuation() {
     // Handle Focus component
     if (this.focusComponent) {
-      // Get all tasks from focus
-      const allTasks = this.focusComponent.getTasks(1000); // Get up to 1000 tasks
-      if (allTasks.length === 0) return null;
-      
-      // Filter for goals and questions
-      const goalsAndQuestions = allTasks.filter(task => {
-        const punctuation = task.type; // In the new system, task type is stored in 'type' property
-        return punctuation === 'GOAL' || punctuation === 'QUESTION';
-      });
-      
-      if (goalsAndQuestions.length > 0) {
-        // Randomly select from goals/questions
-        const randomIndex = Math.floor(Math.random() * goalsAndQuestions.length);
-        return goalsAndQuestions[randomIndex];
-      }
+      return this._sampleFocusByPunctuation();
     }
     
     // Get all tasks and filter for goals/questions
     if (this.taskBag?.getAll && typeof this.taskBag.getAll === 'function') {
-      const allTasks = this.taskBag.getAll();
-      if (allTasks.length === 0) return null;
-      
-      // Filter for goals and questions
-      const goalsAndQuestions = allTasks.filter(task => {
-        const punctuation = task.type; // In the new system, task type is stored in 'type' property
-        return punctuation === 'GOAL' || punctuation === 'QUESTION';
-      });
-      
-      if (goalsAndQuestions.length > 0) {
-        // Randomly select from goals/questions
-        const randomIndex = Math.floor(Math.random() * goalsAndQuestions.length);
-        const selectedTask = goalsAndQuestions[randomIndex];
-        // Remove the selected task from the bag (if supported)
-        if (this.taskBag?.remove) {
-          this.taskBag.remove(selectedTask);
-        }
-        return selectedTask;
-      }
+      return this._sampleBagByPunctuation();
     }
     
     // If no goals/questions available, fall back to priority
     return this._sampleByPriority();
+  }
+  
+  /**
+   * Sample focus by punctuation
+   * @private
+   */
+  _sampleFocusByPunctuation() {
+    // Get all tasks from focus
+    const allTasks = this.focusComponent.getTasks(1000); // Get up to 1000 tasks
+    if (allTasks.length === 0) return null;
+    
+    // Filter for goals and questions
+    const goalsAndQuestions = allTasks.filter(task => {
+      const punctuation = task.type; // In the new system, task type is stored in 'type' property
+      return punctuation === 'GOAL' || punctuation === 'QUESTION';
+    });
+    
+    if (goalsAndQuestions.length > 0) {
+      // Randomly select from goals/questions
+      const randomIndex = Math.floor(Math.random() * goalsAndQuestions.length);
+      return goalsAndQuestions[randomIndex];
+    }
+    
+    return null;
+  }
+  
+  /**
+   * Sample task bag by punctuation
+   * @private
+   */
+  _sampleBagByPunctuation() {
+    const allTasks = this.taskBag.getAll();
+    if (allTasks.length === 0) return null;
+    
+    // Filter for goals and questions
+    const goalsAndQuestions = allTasks.filter(task => {
+      const punctuation = task.type; // In the new system, task type is stored in 'type' property
+      return punctuation === 'GOAL' || punctuation === 'QUESTION';
+    });
+    
+    if (goalsAndQuestions.length > 0) {
+      // Randomly select from goals/questions
+      const randomIndex = Math.floor(Math.random() * goalsAndQuestions.length);
+      const selectedTask = goalsAndQuestions[randomIndex];
+      // Remove the selected task from the bag (if supported)
+      if (this.taskBag?.remove) {
+        this.taskBag.remove(selectedTask);
+      }
+      return selectedTask;
+    }
+    
+    return null;
   }
 
   /**
@@ -351,52 +404,68 @@ export class TaskBagPremiseSource extends PremiseSource {
   _sampleByNovelty() {
     // Handle Focus component
     if (this.focusComponent) {
-      // Get all tasks from focus
-      const allTasks = this.focusComponent.getTasks(1000); // Get up to 1000 tasks
-      if (allTasks.length === 0) return null;
-      
-      // Calculate novelty as inverse of derivation depth
-      const tasksWithNovelty = allTasks.map(task => {
-        const depth = task.stamp?.depth ?? 0;
-        // Higher novelty score for lower depth values
-        const novelty = 1 / (depth + 1); // Add 1 to avoid division by zero
-        return { task, novelty };
-      });
-      
-      // Sort by novelty (highest novelty first)
-      tasksWithNovelty.sort((a, b) => b.novelty - a.novelty);
-      
-      // Select the most novel task
-      return tasksWithNovelty[0].task;
+      return this._sampleFocusByNovelty();
     }
     
     // Get all tasks and select those with lower derivation depth
     if (this.taskBag?.getAll && typeof this.taskBag.getAll === 'function') {
-      const allTasks = this.taskBag.getAll();
-      if (allTasks.length === 0) return null;
-      
-      // Calculate novelty as inverse of derivation depth
-      const tasksWithNovelty = allTasks.map(task => {
-        const depth = task.stamp?.depth ?? 0;
-        // Higher novelty score for lower derivation depth values
-        const novelty = 1 / (depth + 1); // Add 1 to avoid division by zero
-        return { task, novelty };
-      });
-      
-      // Sort by novelty (highest novelty first)
-      tasksWithNovelty.sort((a, b) => b.novelty - a.novelty);
-      
-      // Select the most novel task
-      const selectedTask = tasksWithNovelty[0].task;
-      // Remove the selected task from the bag (if supported)
-      if (this.taskBag?.remove) {
-        this.taskBag.remove(selectedTask);
-      }
-      return selectedTask;
+      return this._sampleBagByNovelty();
     }
     
     // Fallback: just take from the bag
     return this._sampleByPriority();
+  }
+  
+  /**
+   * Sample focus by novelty
+   * @private
+   */
+  _sampleFocusByNovelty() {
+    // Get all tasks from focus
+    const allTasks = this.focusComponent.getTasks(1000); // Get up to 1000 tasks
+    if (allTasks.length === 0) return null;
+    
+    // Calculate novelty as inverse of derivation depth
+    const tasksWithNovelty = allTasks.map(task => {
+      const depth = task.stamp?.depth ?? 0;
+      // Higher novelty score for lower depth values
+      const novelty = 1 / (depth + 1); // Add 1 to avoid division by zero
+      return { task, novelty };
+    });
+    
+    // Sort by novelty (highest novelty first)
+    tasksWithNovelty.sort((a, b) => b.novelty - a.novelty);
+    
+    // Select the most novel task
+    return tasksWithNovelty[0].task;
+  }
+  
+  /**
+   * Sample task bag by novelty
+   * @private
+   */
+  _sampleBagByNovelty() {
+    const allTasks = this.taskBag.getAll();
+    if (allTasks.length === 0) return null;
+    
+    // Calculate novelty as inverse of derivation depth
+    const tasksWithNovelty = allTasks.map(task => {
+      const depth = task.stamp?.depth ?? 0;
+      // Higher novelty score for lower depth values
+      const novelty = 1 / (depth + 1); // Add 1 to avoid division by zero
+      return { task, novelty };
+    });
+    
+    // Sort by novelty (highest novelty first)
+    tasksWithNovelty.sort((a, b) => b.novelty - a.novelty);
+    
+    // Select the most novel task
+    const selectedTask = tasksWithNovelty[0].task;
+    // Remove the selected task from the bag (if supported)
+    if (this.taskBag?.remove) {
+      this.taskBag.remove(selectedTask);
+    }
+    return selectedTask;
   }
 
   /**

@@ -60,17 +60,7 @@ export class Strategy {
       
       // Default strategy: get tasks from focus or memory that could pair with the primary premise
       // We need to access other tasks in the system to form premise pairs
-      let allTasks = [];
-      
-      // Try to get tasks from focus first (higher priority tasks)
-      if (this.focus) {
-        allTasks = this.focus.getTasks(this.config.maxSecondaryPremises || 20); // Increased default from 10 to 20
-      } else if (this.memory && typeof this.memory.getAllConcepts === 'function') {
-        // Get tasks from memory concepts if focus is not available
-        allTasks = this.memory.getAllConcepts()
-          .flatMap(concept => concept.getTasks ? concept.getTasks() : [])
-          .slice(0, this.config.maxSecondaryPremises || 20); // Increased default from 10 to 20
-      }
+      let allTasks = this._getAvailableTasks();
       
       // Filter tasks to find those that could be meaningfully paired with the primary premise
       const validSecondaryTasks = allTasks.filter(task => 
@@ -91,6 +81,25 @@ export class Strategy {
       // Return empty array to continue processing instead of failing
       return [];
     }
+  }
+  
+  /**
+   * Get tasks from focus or memory based on availability
+   * @private
+   */
+  _getAvailableTasks() {
+    // Try to get tasks from focus first (higher priority tasks)
+    if (this.focus) {
+      return this.focus.getTasks(this.config.maxSecondaryPremises || 20); // Increased default from 10 to 20
+    } 
+    // Get tasks from memory concepts if focus is not available
+    else if (this.memory && typeof this.memory.getAllConcepts === 'function') {
+      return this.memory.getAllConcepts()
+        .flatMap(concept => concept.getTasks ? concept.getTasks() : [])
+        .slice(0, this.config.maxSecondaryPremises || 20); // Increased default from 10 to 20
+    }
+    
+    return [];
   }
   
   /**

@@ -49,15 +49,18 @@ export class RuleExecutor {
   }
 
   getCandidateRules(primaryPremise, secondaryPremise) {
+    // Build decision tree if not already built
     if (!this.decisionTree) {
       this.buildOptimizationStructure();
     }
 
+    // Try using decision tree first for optimized selection
     if (this.decisionTree) {
       const heuristicKey = this._getHeuristicKey(primaryPremise, secondaryPremise);
       const treeCandidates = this.decisionTree.get(heuristicKey) ?? this.rules;
       return this._filterCandidates(treeCandidates, primaryPremise, secondaryPremise);
     } else {
+      // Fallback to filtering all rules
       return this._filterCandidates(this.rules, primaryPremise, secondaryPremise);
     }
   }
@@ -70,7 +73,7 @@ export class RuleExecutor {
     const candidateRules = [];
     for (const rule of candidates) {
       try {
-        if (rule.canApply?.(primaryPremise, secondaryPremise) ?? true) {
+        if (this._canRuleApply(rule, primaryPremise, secondaryPremise)) {
           candidateRules.push(rule);
         }
       } catch (error) {
@@ -81,6 +84,14 @@ export class RuleExecutor {
       }
     }
     return candidateRules;
+  }
+
+  /**
+   * Helper method to determine if a rule can be applied
+   * @private
+   */
+  _canRuleApply(rule, primaryPremise, secondaryPremise) {
+    return rule.canApply?.(primaryPremise, secondaryPremise) ?? true;
   }
 
   _getHeuristicKey(primaryPremise, secondaryPremise) {
