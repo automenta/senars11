@@ -13,6 +13,7 @@ export class DataPlugin extends Plugin {
     super.init();
   }
 
+  // Export/Import
   exportGraphToJSON(options = { prettyPrint: false, includeCamera: false }) {
     const nodePlugin = this.pluginManager.getPlugin('NodePlugin');
     const edgePlugin = this.pluginManager.getPlugin('EdgePlugin');

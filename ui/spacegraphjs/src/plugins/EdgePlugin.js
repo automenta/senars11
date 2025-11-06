@@ -25,26 +25,16 @@ export class EdgePlugin extends Plugin {
 
   constructor(spaceGraph, pluginManager) {
     super(spaceGraph, pluginManager);
-    this.edgeFactory = new EdgeFactory(spaceGraph); // Factory for creating edge instances
-    this._registerEdgeTypes(); // Centralized registration of all known edge types
+    this.edgeFactory = new EdgeFactory(spaceGraph);
+    this._registerEdgeTypes();
   }
 
-  /**
-   * Registers all known edge types with the EdgeFactory.
-   * This method is called during plugin construction.
-   * To add a new edge type:
-   * 1. Create your edge class (e.g., MyCustomEdge extends Edge).
-   * 2. Ensure it has a static `typeName` property (e.g., static typeName = 'myCustomEdge').
-   * 3. Import it into this file (EdgePlugin.js).
-   * 4. Add a line here: `this.edgeFactory.registerType(MyCustomEdge.typeName, MyCustomEdge);`
-   */
   _registerEdgeTypes() {
     this.edgeFactory.registerType(Edge.typeName, Edge);
     this.edgeFactory.registerType(CurvedEdge.typeName, CurvedEdge);
     this.edgeFactory.registerType(LabeledEdge.typeName, LabeledEdge);
     this.edgeFactory.registerType(DottedEdge.typeName, DottedEdge);
     this.edgeFactory.registerType(DynamicThicknessEdge.typeName, DynamicThicknessEdge);
-
     this.edgeFactory.registerType('default', Edge);
   }
 
@@ -67,12 +57,14 @@ export class EdgePlugin extends Plugin {
     this.instancedEdgeManager = new InstancedEdgeManager(this._renderingPlugin.getWebGLScene());
   }
 
+  // Event handlers
   handleRendererResize({ width, height }) {
     this.edges.forEach(edge => {
       if (!edge.isInstanced && edge.updateResolution) edge.updateResolution(width, height);
     });
   }
 
+  // Instancing management
   _checkAndSwitchInstancingMode() {
     const shouldUseInstancing = this.edges.size >= INSTANCE_THRESHOLD;
     if (this.useInstancedEdges === shouldUseInstancing) return;
@@ -101,20 +93,19 @@ export class EdgePlugin extends Plugin {
         if (edge.arrowheads?.target) webglScene?.add(edge.arrowheads.target);
       }
       if (edge.labelObject) {
-        if (this.useInstancedEdges) {
-          cssScene?.add(edge.labelObject);
-        } else {
-          cssScene?.add(edge.labelObject);
-        }
+        cssScene?.add(edge.labelObject);
       }
     });
   }
 
+  // Edge management
   addEdge(sourceNode, targetNode, data = {}) {
     if (!sourceNode || !targetNode || sourceNode === targetNode) {
       console.warn('EdgePlugin: Invalid source or target.');
       return null;
     }
+    
+    // Check for duplicate edges
     for (const existingEdge of this.edges.values()) {
       if (
         (existingEdge.source === sourceNode && existingEdge.target === targetNode) ||
@@ -134,10 +125,12 @@ export class EdgePlugin extends Plugin {
       targetNode,
       data
     );
+    
     if (!edge) {
       console.error(`EdgePlugin: Failed to create edge type "${data.type || 'default'}".`);
       return null;
     }
+    
     this.edges.set(edge.id, edge);
 
     const webglScene = this._renderingPlugin?.getWebGLScene();
@@ -165,8 +158,9 @@ export class EdgePlugin extends Plugin {
 
     this._layoutPlugin?.removeEdgeFromLayout(edge);
 
-    if (edge.isInstanced && this.instancedEdgeManager) this.instancedEdgeManager.removeEdge(edge);
-    else {
+    if (edge.isInstanced && this.instancedEdgeManager) {
+      this.instancedEdgeManager.removeEdge(edge);
+    } else {
       this._renderingPlugin?.getWebGLScene()?.remove(edge.line);
       if (edge.arrowheads?.source)
         this._renderingPlugin?.getWebGLScene()?.remove(edge.arrowheads.source);
@@ -184,6 +178,7 @@ export class EdgePlugin extends Plugin {
   getEdgeById(id) {
     return this.edges.get(id);
   }
+  
   getEdges() {
     return this.edges;
   }
@@ -196,10 +191,14 @@ export class EdgePlugin extends Plugin {
     return connectedEdges;
   }
 
+  // Updates
   update() {
     this.edges.forEach(edge => {
-      if (edge.isInstanced && this.instancedEdgeManager) this.instancedEdgeManager.updateEdge(edge);
-      else edge.update?.();
+      if (edge.isInstanced && this.instancedEdgeManager) {
+        this.instancedEdgeManager.updateEdge(edge);
+      } else {
+        edge.update?.();
+      }
       edge.updateLabelPosition?.();
     });
   }

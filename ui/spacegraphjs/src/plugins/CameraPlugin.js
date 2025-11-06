@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { Plugin } from '../core/Plugin.js';
-import { Camera as CameraControls, CAMERA_MODES } from '../camera/Camera.js'; // Import CAMERA_MODES
+import { Camera as CameraControls, CAMERA_MODES } from '../camera/Camera.js';
 import { AdvancedCameraControls } from '../camera/AdvancedCameraControls.js';
 import { Utils } from '../utils.js';
 
@@ -31,8 +31,6 @@ export class CameraPlugin extends Plugin {
       this.space._cam = this.perspectiveCamera;
     }
 
-    // The CameraControls class (imported as Camera) handles different camera modes (orbit, free, top_down, etc.)
-    // and their specific interaction logic. This plugin primarily acts as a wrapper and interface.
     this.cameraControls = new CameraControls(this.space);
     this.advancedControls = new AdvancedCameraControls(this.space, this.cameraControls);
     this._subscribeToEvents();
@@ -59,6 +57,7 @@ export class CameraPlugin extends Plugin {
     });
   }
 
+  // Core camera methods
   getCameraInstance() {
     return this.perspectiveCamera;
   }
@@ -71,11 +70,11 @@ export class CameraPlugin extends Plugin {
     this.cameraControls?.moveTo(x, y, z, duration, lookAtTarget);
   }
 
+  // View management
   _determineCenterViewTarget(targetPosition = null) {
     const nodePlugin = this.pluginManager.getPlugin('NodePlugin');
     const currentNodes = nodePlugin?.getNodes();
 
-    // Use early returns for different target position types
     if (targetPosition instanceof THREE.Vector3) {
       return targetPosition.clone();
     }
@@ -133,37 +132,48 @@ export class CameraPlugin extends Plugin {
     this.moveTo(targetPos.x, targetPos.y, targetPos.z + distance, duration, targetPos);
   }
 
+  // Basic camera controls
   pan(deltaX, deltaY) {
     this.cameraControls?.pan(deltaX, deltaY);
   }
+
   startPan(startX, startY) {
     this.cameraControls?.startPan(startX, startY);
   }
+
   endPan() {
     this.cameraControls?.endPan();
   }
+
   zoom(deltaY) {
     this.cameraControls?.zoom(deltaY);
   }
+
   resetView(duration = 0.7) {
     this.cameraControls?.resetView(duration);
   }
+
   pushState() {
     this.cameraControls?.pushState();
   }
+
   popState(duration = 0.6) {
     this.cameraControls?.popState(duration);
   }
+
   getCurrentTargetNodeId() {
     return this.cameraControls?.getCurrentTargetNodeId();
   }
+
   setCurrentTargetNodeId(nodeId) {
     this.cameraControls?.setCurrentTargetNodeId(nodeId);
   }
+
   setInitialState() {
     this.cameraControls?.setInitialState();
   }
 
+  // Named views
   saveNamedView(name) {
     return this.cameraControls?.saveNamedView(name);
   }
@@ -184,12 +194,13 @@ export class CameraPlugin extends Plugin {
     return this.cameraControls?.hasNamedView(name) || false;
   }
 
+  // Camera mode management
   setCameraMode(mode) {
     this.cameraControls?.setCameraMode(mode);
   }
 
   getCameraMode() {
-    return this.cameraControls?.cameraMode; // Corrected: Access property directly
+    return this.cameraControls?.cameraMode;
   }
 
   getAvailableCameraModes() {
@@ -202,6 +213,7 @@ export class CameraPlugin extends Plugin {
     };
   }
 
+  // Following
   startFollowing(target, options = {}) {
     this.cameraControls?.startFollowing(target, options);
   }
@@ -214,6 +226,7 @@ export class CameraPlugin extends Plugin {
     return this.cameraControls?.isFollowing || false;
   }
 
+  // Pointer lock
   requestPointerLock() {
     this.cameraControls?.pointerLockControls?.lock();
   }
@@ -222,7 +235,7 @@ export class CameraPlugin extends Plugin {
     this.cameraControls?.pointerLockControls?.unlock();
   }
 
-  // Advanced camera control methods
+  // Advanced camera controls
   toggleAutoZoom(enabled = null) {
     return this.advancedControls?.toggleAutoZoom(enabled);
   }

@@ -15,7 +15,7 @@ import {
   SSAOEffect,
 } from 'postprocessing';
 import { InstancedMeshManager } from '../rendering/InstancedMeshManager.js';
-import { Line2 } from 'three/addons/lines/Line2.js'; // Import Line2 for instanceof check
+import { Line2 } from 'three/addons/lines/Line2.js';
 
 export class RenderingPlugin extends Plugin {
   scene = null;
@@ -108,6 +108,7 @@ export class RenderingPlugin extends Plugin {
     this._rebuildEffectPasses();
   }
 
+  // Selection
   _setupSelectionListener() {
     this.space.on('selection:changed', this.handleSelectionChange.bind(this));
   }
@@ -117,10 +118,8 @@ export class RenderingPlugin extends Plugin {
 
     this.selection.clear();
     payload.selected?.forEach(selectedItem => {
-      // Corrected: selectedItem is the node or edge instance directly
       const object = selectedItem.mesh || selectedItem.line;
       if (object && this._isObjectInMainScene(object)) {
-        // Ensure the object is a WebGL renderable type that OutlineEffect can process
         if (
           object instanceof THREE.Mesh ||
           object instanceof Line2 ||
@@ -141,12 +140,12 @@ export class RenderingPlugin extends Plugin {
     return false;
   }
 
+  // Rendering
   update() {
     const cam = this._cameraPlugin?.getCameraInstance();
     const deltaTime = this.clock.getDelta();
 
-    // Defensive check for composer and its renderer
-    if (cam && this.composer && this.composer.renderer) {
+    if (cam && this.composer?.renderer) {
       this.composer.render(deltaTime);
       this.renderCSS3D?.render(this.cssScene, cam);
     } else if (cam && this.renderGL) {
@@ -157,6 +156,7 @@ export class RenderingPlugin extends Plugin {
     this._minimapPlugin?.render?.(this.renderGL);
   }
 
+  // Renderer setup
   _setupRenderersAndComposer() {
     if (!this.space?.container) {
       console.error('RenderingPlugin: SpaceGraph container not available.');
@@ -214,8 +214,23 @@ export class RenderingPlugin extends Plugin {
     });
   }
 
+  _onWindowResize = () => {
+    const cam = this.pluginManager?.getPlugin('CameraPlugin')?.getCameraInstance();
+    if (!cam || !this.renderGL || !this.renderCSS3D || !this.composer) return;
+
+    const { innerWidth: iw, innerHeight: ih } = window;
+    cam.aspect = iw / ih;
+    cam.updateProjectionMatrix();
+
+    this.renderGL.setSize(iw, ih);
+    this.composer.setSize(iw, ih);
+    this.renderCSS3D.setSize(iw, ih);
+    this.space.emit('renderer:resize', { width: iw, height: ih });
+  };
+
+  // Effects
   _rebuildEffectPasses() {
-    if (!this.composer || !this.renderPass || !this.composer.renderer) return; // Added defensive check for composer.renderer
+    if (!this.composer || !this.renderPass || !this.composer.renderer) return;
 
     const cam = this._cameraPlugin?.getCameraInstance();
     if (!cam) return;
@@ -311,6 +326,21 @@ export class RenderingPlugin extends Plugin {
     return this.effectsConfig[effectName] ? { ...this.effectsConfig[effectName] } : null;
   }
 
+  // Lighting
+  _setupLighting() {
+    this.addLight('defaultAmbient', 'ambient', { intensity: 0.8 });
+    this.addLight('defaultDirectional', 'directional', {
+      intensity: 1.2,
+      position: { x: 150, y: 200, z: 100 },
+      castShadow: true,
+      shadowMapSizeWidth: 2048,
+      shadowMapSizeHeight: 2048,
+      shadowCameraNear: 10,
+      shadowCameraFar: 600,
+      shadowCameraSize: 150,
+    });
+  }
+
   addLight(id, type, options = {}) {
     if (this.managedLights.has(id)) return this.managedLights.get(id);
     let light;
@@ -328,16 +358,14 @@ export class RenderingPlugin extends Plugin {
           options.position?.y ?? 100,
           options.position?.z ?? 75
         );
-        // Corrected: Ensure light.target is an Object3D and its position is set correctly
         if (options.target instanceof THREE.Object3D) {
           light.target = options.target;
         } else if (options.target instanceof THREE.Vector3) {
           light.target.position.copy(options.target);
         } else {
-          // Default target position is (0,0,0), no change needed unless specified
           light.target.position.set(0, 0, 0);
         }
-        this.scene.add(light.target); // Add the target object to the scene
+        this.scene.add(light.target);
         if (options.castShadow !== false) {
           light.castShadow = true;
           light.shadow.mapSize.width = options.shadowMapSizeWidth ?? 2048;
@@ -434,20 +462,7 @@ export class RenderingPlugin extends Plugin {
     return true;
   }
 
-  _setupLighting() {
-    this.addLight('defaultAmbient', 'ambient', { intensity: 0.8 });
-    this.addLight('defaultDirectional', 'directional', {
-      intensity: 1.2,
-      position: { x: 150, y: 200, z: 100 },
-      castShadow: true,
-      shadowMapSizeWidth: 2048,
-      shadowMapSizeHeight: 2048,
-      shadowCameraNear: 10,
-      shadowCameraFar: 600,
-      shadowCameraSize: 150,
-    });
-  }
-
+  // Background
   setBackground(color = 0x000000, alpha = 0) {
     this.background = { color, alpha };
     this.renderGL?.setClearColor(color, alpha);
@@ -456,111 +471,24 @@ export class RenderingPlugin extends Plugin {
         alpha === 0 ? 'transparent' : `#${new THREE.Color(color).getHexString()}`;
   }
 
-  _onWindowResize = () => {
-    const cam = this.pluginManager?.getPlugin('CameraPlugin')?.getCameraInstance();
-    if (!cam || !this.renderGL || !this.renderCSS3D || !this.composer) return;
-
-    const { innerWidth: iw, innerHeight: ih } = window;
-    cam.aspect = iw / ih;
-    cam.updateProjectionMatrix();
-
-    this.renderGL.setSize(iw, ih);
-    this.composer.setSize(iw, ih);
-    this.renderCSS3D.setSize(iw, ih);
-    this.space.emit('renderer:resize', { width: iw, height: ih });
-  };
-
-  _updateFrustumHelper() {
-    const mainCamera = this.pluginManager.getPlugin('CameraPlugin')?.getCameraInstance();
-    if (!this.frustumHelper || !mainCamera) {
-      if (this.frustumHelper) this.frustumHelper.visible = false;
-      return;
-    }
-
-    mainCamera.updateMatrixWorld();
-    mainCamera.updateProjectionMatrix();
-
-    const corners = [];
-    // NDC coordinates for near and far planes
-    const ndcCorners = [
-      new THREE.Vector3(-1, -1, -1), // Near bottom left
-      new THREE.Vector3(1, -1, -1), // Near bottom right
-      new THREE.Vector3(1, 1, -1), // Near top right
-      new THREE.Vector3(-1, 1, -1), // Near top left
-      new THREE.Vector3(-1, -1, 1), // Far bottom left
-      new THREE.Vector3(1, -1, 1), // Far bottom right
-      new THREE.Vector3(1, 1, 1), // Far top right
-      new THREE.Vector3(-1, 1, 1), // Far top left
-    ];
-
-    for (let i = 0; i < 8; i++) {
-      corners.push(ndcCorners[i].clone().unproject(mainCamera));
-    }
-
-    // Project these corners onto the XY plane (Z=0)
-    const projectedCorners = corners.map(p => new THREE.Vector3(p.x, p.y, 0));
-
-    // Determine the bounding box of the projected corners
-    let minX = Infinity,
-      maxX = -Infinity,
-      minY = Infinity,
-      maxY = -Infinity;
-    projectedCorners.forEach(p => {
-      minX = Math.min(minX, p.x);
-      maxX = Math.max(maxX, p.x);
-      minY = Math.min(minY, p.y);
-      maxY = Math.max(maxY, p.y);
-    });
-
-    // Define the rectangle vertices for the frustum helper
-    const p = [minX, minY, 0, maxX, minY, 0, maxX, maxY, 0, minX, maxY, 0];
-
-    const vertices = new Float32Array([
-      p[0],
-      p[1],
-      p[2],
-      p[3],
-      p[4],
-      p[5],
-      p[3],
-      p[4],
-      p[5],
-      p[6],
-      p[7],
-      p[8],
-      p[6],
-      p[7],
-      p[8],
-      p[9],
-      p[10],
-      p[11],
-      p[9],
-      p[10],
-      p[11],
-      p[0],
-      p[1],
-      p[2],
-    ]);
-
-    this.frustumHelper.geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
-    this.frustumHelper.geometry.attributes.position.needsUpdate = true;
-    this.frustumHelper.geometry.computeBoundingSphere();
-    this.frustumHelper.visible = true; // Ensure it's visible
-  }
-
+  // Getters
   getWebGLScene() {
     return this.scene;
   }
+
   getCSS3DScene() {
     return this.cssScene;
   }
+
   getInstancedMeshManager() {
     return this.instancedMeshManager;
   }
+
   getCSS3DRenderer() {
     return this.renderCSS3D;
   }
 
+  // Disposal
   dispose() {
     super.dispose();
     window.removeEventListener('resize', this._onWindowResize);

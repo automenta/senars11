@@ -28,9 +28,6 @@ export class UIPlugin extends Plugin {
 
   init() {
     super.init();
-    // The UIManager constructor already handles its own initialization.
-    // Calling init() here is redundant and causes a TypeError as UIManager has no such method.
-    // this.uiManager.init(); // REMOVED THIS LINE
     this._subscribeToEvents();
   }
 
@@ -51,6 +48,7 @@ export class UIPlugin extends Plugin {
     this._emitSelectionChange();
   };
 
+  // Selection management
   setSelectedNode(node, multiSelect = false) {
     if (!multiSelect) {
       this.selectedNodes.forEach(n => n.setSelectedStyle(false));
@@ -120,6 +118,7 @@ export class UIPlugin extends Plugin {
     return this.selectedEdges;
   }
 
+  // Linking functionality
   startLinking = sourceNode => {
     if (!sourceNode) return;
     this.linkSourceNode = sourceNode;
@@ -151,6 +150,7 @@ export class UIPlugin extends Plugin {
   getIsLinking = () => this.isLinking;
   getLinkSourceNode = () => this.linkSourceNode;
 
+  // UI Updates
   update() {
     // If there's exactly one edge selected, update its menu position
     if (this.selectedEdges.size === 1) {
