@@ -206,10 +206,6 @@ The architecture provides hooks for metacognitive control:
 - Derivation graphs in `Stamp`s enable credit assignment
 - Performance metrics enable system optimization
 
-## Migration from Legacy Reasoner
-
-The Stream Reasoner maintains backward compatibility while providing enhanced capabilities. Both reasoners can coexist during transition periods with runtime configuration switches.
-
 ## Key Benefits
 
 - **Continuous Processing**: Operates as a non-blocking pipeline processing information as it becomes available
@@ -276,7 +272,5 @@ The SeNARS Stream Reasoner architecture opens up several possibilities for futur
 - **Comprehensive Testing**: Includes unit tests, integration tests, end-to-end workflow tests, property-based tests, and regression tests to ensure reliability.
 
 - **Self-Optimization Hooks**: Provides hooks for metacognitive control through sampling objectives, derivation graphs for credit assignment, and performance metrics.
-
-- **Migration Support**: Maintains backward compatibility with legacy reasoner implementations, allowing both to coexist during transition periods.
 
 - **Performance Monitoring**: Built-in CPU throttling, derivation depth limits, and backpressure handling ensure stable operation under varying loads.
