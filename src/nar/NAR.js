@@ -18,7 +18,7 @@ import {EvaluationEngine} from '../reason/EvaluationEngine.js';
 import {MetricsMonitor} from '../reason/MetricsMonitor.js';
 import {EmbeddingLayer} from '../lm/EmbeddingLayer.js';
 import {TermLayer} from '../memory/TermLayer.js';
-import {ReasoningAboutReasoning} from '../reason/ReasoningAboutReasoning.js';
+import {ReasoningAboutReasoning} from '../self/ReasoningAboutReasoning.js';
 import {SYSTEM_ATOMS} from '../reason/SystemAtoms.js';
 import { Reasoner as StreamReasoner, TaskBagPremiseSource, Strategy, RuleProcessor as StreamRuleProcessor, RuleExecutor as StreamRuleExecutor } from '../reason/index.js';
 
