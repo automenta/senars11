@@ -27,37 +27,27 @@ export class ResolutionStrategy extends Strategy {
    * @returns {AsyncGenerator<Array<Task>>} - Stream of premise pairs [primary, secondary]
    */
   async *generatePremisePairs(premiseStream) {
-    try {
-      for await (const primaryPremise of premiseStream) {
-        try {
-          // Check if this is a goal-type premise that should trigger resolution
-          if (this.isGoalOrQuestion(primaryPremise)) {
-            // Perform goal-driven reasoning to find supporting premises
-            const supportingPremises = await this.findSupportingPremisesForGoal(primaryPremise);
-            
-            // Yield pairs of primary (goal) and supporting premises
-            for (const supportingPremise of supportingPremises) {
-              yield [primaryPremise, supportingPremise];
-            }
-          } else {
-            // For non-goal premises, use standard premise selection
-            const secondaryPremises = await this.selectSecondaryPremises(primaryPremise);
-            
-            // Yield pairs of primary and secondary premises
-            for (const secondaryPremise of secondaryPremises) {
-              yield [primaryPremise, secondaryPremise];
-            }
+    for await (const primaryPremise of premiseStream) {
+      try {
+        if (this.isGoalOrQuestion(primaryPremise)) {
+          // Perform goal-driven reasoning to find supporting premises
+          const supportingPremises = await this.findSupportingPremisesForGoal(primaryPremise);
+          
+          for (const supportingPremise of supportingPremises) {
+            yield [primaryPremise, supportingPremise];
           }
-        } catch (error) {
-          console.error('Error processing primary premise in ResolutionStrategy:', error);
-          // Continue to next premise rather than failing completely
-          continue;
+        } else {
+          // For non-goal premises, use standard premise selection
+          const secondaryPremises = await this.selectSecondaryPremises(primaryPremise);
+          
+          for (const secondaryPremise of secondaryPremises) {
+            yield [primaryPremise, secondaryPremise];
+          }
         }
+      } catch (error) {
+        console.error('Error processing primary premise in ResolutionStrategy:', error);
+        continue;
       }
-    } catch (error) {
-      console.error('Error in ResolutionStrategy generatePremisePairs:', error);
-      // Re-throw to allow upstream handling
-      throw error;
     }
   }
 
@@ -67,7 +57,7 @@ export class ResolutionStrategy extends Strategy {
    * @returns {boolean} - True if the task is a goal or question
    */
   isGoalOrQuestion(task) {
-    if (!task || !task.sentence) {
+    if (!task?.sentence) {
       return false;
     }
 
@@ -94,33 +84,26 @@ export class ResolutionStrategy extends Strategy {
    * @returns {Promise<Array<Task>>} - Array of supporting premises
    */
   async findSupportingPremisesForGoal(goalPremise) {
-    try {
-      const supportingTasks = [];
+    const supportingTasks = [];
 
-      // Get tasks from focus that could support this goal
-      if (this.focus) {
-        const focusTasks = this.focus.getTasks();
-        const relevantTasks = this.findRelevantTasksForGoal(goalPremise, focusTasks);
-        supportingTasks.push(...relevantTasks);
-      } else if (this.memory && typeof this.memory.getAllConcepts === 'function') {
-        const memoryTasks = this.memory.getAllConcepts()
-          .flatMap(concept => concept.getTasks ? concept.getTasks() : []);
-        const relevantTasks = this.findRelevantTasksForGoal(goalPremise, memoryTasks);
-        supportingTasks.push(...relevantTasks);
-      }
-
-      // Look for rules that could help achieve the goal
-      const ruleBasedTasks = await this.findRuleBasedSupport(goalPremise);
-      supportingTasks.push(...ruleBasedTasks);
-
-      // Filter out duplicates and self-matching
-      const uniqueSupportingTasks = [...new Set(supportingTasks.filter(task => task !== goalPremise))];
-
-      return uniqueSupportingTasks;
-    } catch (error) {
-      console.error('Error in findSupportingPremisesForGoal:', error);
-      return [];
+    // Get tasks from focus that could support this goal
+    if (this.focus) {
+      const focusTasks = this.focus.getTasks();
+      const relevantTasks = this.findRelevantTasksForGoal(goalPremise, focusTasks);
+      supportingTasks.push(...relevantTasks);
+    } else if (this.memory?.getAllConcepts) {
+      const memoryTasks = this.memory.getAllConcepts()
+        .flatMap(concept => concept.getTasks ? concept.getTasks() : []);
+      const relevantTasks = this.findRelevantTasksForGoal(goalPremise, memoryTasks);
+      supportingTasks.push(...relevantTasks);
     }
+
+    // Look for rules that could help achieve the goal
+    const ruleBasedTasks = await this.findRuleBasedSupport(goalPremise);
+    supportingTasks.push(...ruleBasedTasks);
+
+    // Filter out duplicates and self-matching
+    return [...new Set(supportingTasks.filter(task => task !== goalPremise))];
   }
 
   /**
@@ -130,34 +113,23 @@ export class ResolutionStrategy extends Strategy {
    * @returns {Array<Task>} - Array of relevant tasks
    */
   findRelevantTasksForGoal(goalPremise, tasks) {
-    try {
-      if (this.config.goalMatcher) {
-        return tasks.filter(task => 
-          task && 
-          task !== goalPremise &&
-          this.config.goalMatcher(goalPremise, task)
-        );
+    if (this.config.goalMatcher) {
+      return tasks.filter(task => 
+        task && 
+        task !== goalPremise &&
+        this.config.goalMatcher(goalPremise, task)
+      );
+    }
+
+    // Default goal matching: look for tasks that could lead to achieving the goal
+    return tasks.filter(task => {
+      if (!task || task === goalPremise || !task.term || !goalPremise.term) {
+        return false;
       }
 
-      // Default goal matching: look for tasks that could lead to achieving the goal
-      return tasks.filter(task => {
-        if (!task || task === goalPremise || !task.term || !goalPremise.term) {
-          return false;
-        }
-
-        // Check if the task is a belief that could be used to derive the goal
-        // For example, if goal is "b" and we have "(a ==> b)" as a belief, then "a" would be relevant
-        const isPotentialSupport = this.checkPotentialGoalSupport(goalPremise, task);
-        
-        // Check if the task could be part of a resolution chain
-        const isResolutionRelevant = this.checkResolutionRelevance(goalPremise, task);
-        
-        return isPotentialSupport || isResolutionRelevant;
-      });
-    } catch (error) {
-      console.error('Error in findRelevantTasksForGoal:', error);
-      return [];
-    }
+      return this.checkPotentialGoalSupport(goalPremise, task) ||
+             this.checkResolutionRelevance(goalPremise, task);
+    });
   }
 
   /**
@@ -232,12 +204,9 @@ export class ResolutionStrategy extends Strategy {
    * @returns {Promise<Array<Task>>} - Array of secondary premises
    */
   async selectSecondaryPremises(primaryPremise) {
-    if (this.isGoalOrQuestion(primaryPremise)) {
-      return this.findSupportingPremisesForGoal(primaryPremise);
-    } else {
-      // For non-goal premises, use the parent's default selection
-      return super.selectSecondaryPremises(primaryPremise);
-    }
+    return this.isGoalOrQuestion(primaryPremise) 
+      ? this.findSupportingPremisesForGoal(primaryPremise) 
+      : super.selectSecondaryPremises(primaryPremise);
   }
 
   /**

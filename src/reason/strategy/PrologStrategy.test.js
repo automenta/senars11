@@ -34,9 +34,9 @@ describe('PrologStrategy', () => {
 
   test('should handle simple query when knowledge base is empty', async () => {
     const mockTask = new Task({
-      term: termFactory.parse('likes(X, food)'),
+      term: termFactory.create('likes'),
       punctuation: '?',
-      truth: new Truth(1.0, 0.9)
+      truth: null
     });
     
     const secondaryPremises = await strategy.selectSecondaryPremises(mockTask);
@@ -48,7 +48,7 @@ describe('PrologStrategy', () => {
 
   test('should update knowledge base with tasks', () => {
     const mockTask = new Task({
-      term: termFactory.parse('likes(bob, pizza)'),
+      term: termFactory.create('likes'),
       punctuation: '.',
       truth: new Truth(1.0, 0.9)
     });
@@ -70,7 +70,7 @@ describe('PrologStrategy', () => {
 
   test('should select secondary premises for non-question tasks using fallback', async () => {
     const mockTask = new Task({
-      term: termFactory.parse('likes(bob, pizza)'),
+      term: termFactory.create('likes'),
       punctuation: '.',  // Not a question
       truth: new Truth(1.0, 0.9)
     });

@@ -25,26 +25,17 @@ export class ExhaustiveStrategy extends Strategy {
    * @returns {AsyncGenerator<Array<Task>>} - Stream of premise pairs [primary, secondary]
    */
   async *generatePremisePairs(premiseStream) {
-    try {
-      for await (const primaryPremise of premiseStream) {
-        try {
-          // Find ALL related secondary premises for this primary premise
-          const secondaryPremises = await this.findRelatedPremises(primaryPremise);
-          
-          // Yield pairs of primary and secondary premises
-          for (const secondaryPremise of secondaryPremises) {
-            yield [primaryPremise, secondaryPremise];
-          }
-        } catch (error) {
-          console.error('Error processing primary premise in ExhaustiveStrategy:', error);
-          // Continue to next premise rather than failing completely
-          continue;
+    for await (const primaryPremise of premiseStream) {
+      try {
+        const secondaryPremises = await this.findRelatedPremises(primaryPremise);
+        
+        for (const secondaryPremise of secondaryPremises) {
+          yield [primaryPremise, secondaryPremise];
         }
+      } catch (error) {
+        console.error('Error processing primary premise in ExhaustiveStrategy:', error);
+        continue;
       }
-    } catch (error) {
-      console.error('Error in ExhaustiveStrategy generatePremisePairs:', error);
-      // Re-throw to allow upstream handling
-      throw error;
     }
   }
 
@@ -54,32 +45,20 @@ export class ExhaustiveStrategy extends Strategy {
    * @returns {Promise<Array<Task>>} - Array of all related secondary premises
    */
   async findRelatedPremises(primaryPremise) {
-    try {
-      let allRelatedTasks = [];
+    let allRelatedTasks = [];
 
-      // Get tasks from focus that are related to the primary premise
-      if (this.focus) {
-        const focusTasks = this.focus.getTasks();  // Get all tasks from focus
-        allRelatedTasks = this.filterRelatedTasks(primaryPremise, focusTasks);
-      } else if (this.memory && typeof this.memory.getAllConcepts === 'function') {
-        // Get tasks from memory concepts that are related to the primary premise
-        const memoryTasks = this.memory.getAllConcepts()
-          .flatMap(concept => concept.getTasks ? concept.getTasks() : []);
-        allRelatedTasks = this.filterRelatedTasks(primaryPremise, memoryTasks);
-      }
-
-      // Additional search for related premises using term structure analysis
-      const structuralRelatedTasks = await this.findStructurallyRelatedTasks(primaryPremise, allRelatedTasks);
-      allRelatedTasks = [...new Set([...allRelatedTasks, ...structuralRelatedTasks])]; // Combine and deduplicate
-
-      // Ensure no self-matching
-      allRelatedTasks = allRelatedTasks.filter(task => task !== primaryPremise);
-      
-      return allRelatedTasks;
-    } catch (error) {
-      console.error('Error in findRelatedPremises:', error);
-      return [];
+    if (this.focus) {
+      allRelatedTasks = this.filterRelatedTasks(primaryPremise, this.focus.getTasks());
+    } else if (this.memory?.getAllConcepts) {
+      const memoryTasks = this.memory.getAllConcepts()
+        .flatMap(concept => concept.getTasks ? concept.getTasks() : []);
+      allRelatedTasks = this.filterRelatedTasks(primaryPremise, memoryTasks);
     }
+
+    const structuralRelatedTasks = await this.findStructurallyRelatedTasks(primaryPremise, allRelatedTasks);
+    allRelatedTasks = [...new Set([...allRelatedTasks, ...structuralRelatedTasks])]; // Combine and deduplicate
+
+    return allRelatedTasks.filter(task => task !== primaryPremise);
   }
 
   /**
@@ -89,36 +68,24 @@ export class ExhaustiveStrategy extends Strategy {
    * @returns {Array<Task>} - Filtered array of related tasks
    */
   filterRelatedTasks(primaryPremise, tasks) {
-    try {
-      if (this.config.relevanceFunction) {
-        return tasks.filter(task => 
-          task && 
-          task !== primaryPremise &&
-          this.config.relevanceFunction(primaryPremise, task)
-        );
+    if (this.config.relevanceFunction) {
+      return tasks.filter(task => 
+        task && 
+        task !== primaryPremise &&
+        this.config.relevanceFunction(primaryPremise, task)
+      );
+    }
+
+    // Default relevance: check for common terms, variables, or structural similarity
+    return tasks.filter(task => {
+      if (!task || task === primaryPremise || !task.term || !primaryPremise.term) {
+        return false;
       }
 
-      // Default relevance: check for common terms, variables, or structural similarity
-      return tasks.filter(task => {
-        if (!task || task === primaryPremise || !task.term || !primaryPremise.term) {
-          return false;
-        }
-
-        // Check for common variables or shared structural elements
-        const hasCommonVariable = this.hasCommonVariable(primaryPremise.term, task.term);
-        
-        // Check for term similarity (e.g., same predicate, different arguments)
-        const hasStructuralSimilarity = this.hasStructuralSimilarity(primaryPremise.term, task.term);
-        
-        // Check for direct term inclusion (one term contains the other)
-        const hasTermInclusion = this.hasTermInclusion(primaryPremise.term, task.term);
-        
-        return hasCommonVariable || hasStructuralSimilarity || hasTermInclusion;
-      });
-    } catch (error) {
-      console.error('Error in filterRelatedTasks:', error);
-      return [];
-    }
+      return this.hasCommonVariable(primaryPremise.term, task.term) ||
+             this.hasStructuralSimilarity(primaryPremise.term, task.term) ||
+             this.hasTermInclusion(primaryPremise.term, task.term);
+    });
   }
 
   /**
@@ -128,7 +95,6 @@ export class ExhaustiveStrategy extends Strategy {
    * @returns {boolean} - True if terms have common variables
    */
   hasCommonVariable(term1, term2) {
-    // This is a simplified check - in a real system, you'd have better variable extraction
     const term1Str = term1.toString();
     const term2Str = term2.toString();
     
@@ -183,8 +149,6 @@ export class ExhaustiveStrategy extends Strategy {
    * @returns {Array<Task>} - Array of structurally related tasks
    */
   async findStructurallyRelatedTasks(primaryPremise, allTasks) {
-    // For now, return the already filtered tasks
-    // In a more sophisticated implementation, this would perform deeper structural analysis
     return allTasks;
   }
 

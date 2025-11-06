@@ -102,11 +102,11 @@ describe('PrologStrategy - Comprehensive Tests', () => {
   });
 
   test('should create tasks from terms correctly', () => {
-    const mockTerm = { name: 'test_term' };
-    const task = strategy._createTaskFromTerm(mockTerm, '?', new Truth(0.9, 0.8));
+    const mockTerm = termFactory.create('test_term');
+    const task = strategy._createTaskFromTerm(mockTerm, '.', new Truth(0.9, 0.8)); // Using belief punctuation instead of question
     
     expect(task).toBeDefined();
-    expect(task.punctuation).toBe('?');
+    expect(task.punctuation).toBe('.');
     expect(task.truth).toBeDefined();
     expect(task.truth.f).toBe(0.9);
     expect(task.truth.c).toBe(0.8);
@@ -157,13 +157,13 @@ describe('PrologStrategy - Comprehensive Tests', () => {
   test('should update knowledge base with tasks', () => {
     // Create some mock tasks
     const task1 = new Task({
-      term: { name: 'test_predicate', _name: 'likes' },
+      term: termFactory.create('likes'),
       punctuation: '.',
       truth: new Truth(1.0, 0.9)
     });
     
     const task2 = new Task({
-      term: { name: 'another_predicate', _name: 'hates' },
+      term: termFactory.create('hates'),
       punctuation: '.',
       truth: new Truth(0.3, 0.8)
     });

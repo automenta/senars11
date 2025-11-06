@@ -19,7 +19,6 @@ export class BagStrategy extends Strategy {
       ...config
     });
     
-    // Bag to hold tasks for sampling
     this.bag = [];
     this.bagSize = this.config.bagSize;
   }
@@ -30,29 +29,18 @@ export class BagStrategy extends Strategy {
    * @returns {AsyncGenerator<Array<Task>>} - Stream of premise pairs [primary, secondary]
    */
   async *generatePremisePairs(premiseStream) {
-    try {
-      for await (const primaryPremise of premiseStream) {
-        try {
-          // Update the bag with the new primary premise
-          this.updateBag(primaryPremise);
-          
-          // Select secondary premises from the bag using priority sampling
-          const secondaryPremises = await this.selectSecondaryPremisesFromBag(primaryPremise);
-          
-          // Yield pairs of primary and secondary premises
-          for (const secondaryPremise of secondaryPremises) {
-            yield [primaryPremise, secondaryPremise];
-          }
-        } catch (error) {
-          console.error('Error processing primary premise in BagStrategy:', error);
-          // Continue to next premise rather than failing completely
-          continue;
+    for await (const primaryPremise of premiseStream) {
+      try {
+        this.updateBag(primaryPremise);
+        const secondaryPremises = await this.selectSecondaryPremisesFromBag(primaryPremise);
+        
+        for (const secondaryPremise of secondaryPremises) {
+          yield [primaryPremise, secondaryPremise];
         }
+      } catch (error) {
+        console.error('Error processing primary premise in BagStrategy:', error);
+        continue;
       }
-    } catch (error) {
-      console.error('Error in BagStrategy generatePremisePairs:', error);
-      // Re-throw to allow upstream handling
-      throw error;
     }
   }
 
@@ -61,26 +49,17 @@ export class BagStrategy extends Strategy {
    * @param {Task} task - The task to add to the bag
    */
   updateBag(task) {
-    if (!task || !task.budget) {
-      return; // Only add tasks with budget information
-    }
+    if (!task?.budget) return;
 
-    // Add task to bag
     this.bag.push(task);
 
-    // Maintain bag size by removing lowest priority items if necessary
     if (this.bag.length > this.bagSize) {
-      // Find and remove the lowest priority item instead of sorting entire array
-      let minPriorityIndex = 0;
-      let minPriority = this.bag[0].budget?.priority ?? 0;
-      
-      for (let i = 1; i < this.bag.length; i++) {
-        const priority = this.bag[i].budget?.priority ?? 0;
-        if (priority < minPriority) {
-          minPriority = priority;
-          minPriorityIndex = i;
-        }
-      }
+      // Find and remove the lowest priority item
+      const minPriorityIndex = this.bag.reduce((minIdx, currTask, idx, arr) => {
+        const currPriority = currTask.budget?.priority ?? 0;
+        const minPriority = arr[minIdx].budget?.priority ?? 0;
+        return currPriority < minPriority ? idx : minIdx;
+      }, 0);
       
       this.bag.splice(minPriorityIndex, 1);
     }
@@ -92,31 +71,24 @@ export class BagStrategy extends Strategy {
    * @returns {Promise<Array<Task>>} - Array of secondary premises
    */
   async selectSecondaryPremisesFromBag(primaryPremise) {
-    try {
-      // Use the configured sampling function or default to priority-based sampling
-      if (this.config.samplingFunction) {
-        return this.config.samplingFunction(primaryPremise, this.bag);
-      }
-
-      // Default: priority-based sampling from the bag
-      const validSecondaryTasks = this.bag.filter(task => 
-        task && 
-        task !== primaryPremise &&  // Don't pair a task with itself
-        task.term &&  // Has a valid term
-        task.term !== primaryPremise.term &&  // Different terms
-        task.budget &&  // Has budget information
-        (task.budget.priority || 0) > 0  // Has positive priority
-      );
-
-      // Sort by priority (descending) and limit to maxSecondaryPremises
-      validSecondaryTasks.sort((a, b) => (b.budget.priority || 0) - (a.budget.priority || 0));
-      
-      return validSecondaryTasks.slice(0, this.config.maxSecondaryPremises || 10);
-    } catch (error) {
-      console.error('Error in selectSecondaryPremisesFromBag:', error);
-      // Return empty array to continue processing instead of failing
-      return [];
+    // Use the configured sampling function or default to priority-based sampling
+    if (this.config.samplingFunction) {
+      return this.config.samplingFunction(primaryPremise, this.bag);
     }
+
+    const validSecondaryTasks = this.bag.filter(task => 
+      task && 
+      task !== primaryPremise &&  // Don't pair a task with itself
+      task.term &&  // Has a valid term
+      task.term !== primaryPremise.term &&  // Different terms
+      task.budget &&  // Has budget information
+      (task.budget.priority || 0) > 0  // Has positive priority
+    );
+
+    // Sort by priority (descending) and limit to maxSecondaryPremises
+    validSecondaryTasks.sort((a, b) => (b.budget.priority || 0) - (a.budget.priority || 0));
+    
+    return validSecondaryTasks.slice(0, this.config.maxSecondaryPremises || 10);
   }
 
   /**

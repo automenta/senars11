@@ -46,8 +46,7 @@ export class PrologStrategy extends Strategy {
       }
       
       // Use Prolog resolution to find solutions for the question
-      const solutions = await this._resolveGoal(primaryPremise);
-      return solutions;
+      return await this._resolveGoal(primaryPremise);
     } catch (error) {
       console.error('Error in PrologStrategy resolution:', error);
       return [];
@@ -65,49 +64,39 @@ export class PrologStrategy extends Strategy {
 
     const solutions = [];
     
-    try {
-      // Find applicable rules/facts in the knowledge base
-      const applicableRules = this._findApplicableRules(goalTask);
+    // Find applicable rules/facts in the knowledge base
+    const applicableRules = this._findApplicableRules(goalTask);
+    
+    for (const rule of applicableRules) {
+      // Attempt to unify the goal with the rule head
+      const unificationResult = this._unify(goalTask.term, rule.head, substitution);
       
-      for (const rule of applicableRules) {
-        // Attempt to unify the goal with the rule head
-        const unificationResult = this._unify(goalTask.term, rule.head, substitution);
+      if (unificationResult.success) {
+        const newSubstitution = unificationResult.substitution;
         
-        if (unificationResult.success) {
-          const newSubstitution = unificationResult.substitution;
+        if (rule.isFact) {
+          // If it's a fact, we have a direct solution
+          const solvedTask = this._applySubstitution(goalTask, newSubstitution);
+          solutions.push(solvedTask);
           
-          if (rule.isFact) {
-            // If it's a fact, we have a direct solution
-            const solvedTask = this._applySubstitution(goalTask, newSubstitution);
-            solutions.push(solvedTask);
-            
-            if (solutions.length >= this.config.maxSolutions) {
-              break;
-            }
-          } else if (rule.body && Array.isArray(rule.body) && rule.body.length > 0) {
-            // If it's a rule with a body, we need to resolve each sub-goal
-            const success = await this._resolveRuleBody(rule.body, newSubstitution, currentDepth + 1);
-            
-            if (success && success.length > 0) {
-              // Apply the final substitution to the original goal to get the answer
-              for (const finalSub of success) {
-                const solvedTask = this._applySubstitution(goalTask, finalSub);
-                solutions.push(solvedTask);
-                
-                if (solutions.length >= this.config.maxSolutions) {
-                  break;
-                }
-              }
-            }
-          }
+          if (solutions.length >= this.config.maxSolutions) break;
+        } else if (rule.body?.length > 0) {
+          // If it's a rule with a body, we need to resolve each sub-goal
+          const success = await this._resolveRuleBody(rule.body, newSubstitution, currentDepth + 1);
           
-          if (solutions.length >= this.config.maxSolutions) {
-            break;
+          if (success.length > 0) {
+            // Apply the final substitution to the original goal to get the answer
+            for (const finalSub of success) {
+              const solvedTask = this._applySubstitution(goalTask, finalSub);
+              solutions.push(solvedTask);
+              
+              if (solutions.length >= this.config.maxSolutions) break;
+            }
           }
         }
+        
+        if (solutions.length >= this.config.maxSolutions) break;
       }
-    } catch (error) {
-      console.error('Error during goal resolution:', error);
     }
     
     return solutions.slice(0, this.config.maxSolutions);
@@ -118,9 +107,7 @@ export class PrologStrategy extends Strategy {
    * @private
    */
   async _resolveRuleBody(goals, initialSubstitution, currentDepth) {
-    if (goals.length === 0) {
-      return [initialSubstitution]; // Empty body is true
-    }
+    if (goals.length === 0) return [initialSubstitution]; // Empty body is true
     
     const [firstGoal, ...remainingGoals] = goals;
     
@@ -145,9 +132,7 @@ export class PrologStrategy extends Strategy {
         allSolutions.push(...remainingSolutions);
       }
       
-      if (allSolutions.length >= this.config.maxSolutions) {
-        break;
-      }
+      if (allSolutions.length >= this.config.maxSolutions) break;
     }
     
     return allSolutions.slice(0, this.config.maxSolutions);
@@ -171,7 +156,7 @@ export class PrologStrategy extends Strategy {
     // If no specific predicate match, look for more general matches
     if (applicable.length === 0) {
       // Find rules that could potentially unify with the goal
-      for (const [key, items] of this.knowledgeBase.entries()) {
+      for (const [, items] of this.knowledgeBase.entries()) {
         for (const item of items) {
           if (this._couldUnify(goal, item.head)) {
             applicable.push(item);
@@ -189,13 +174,17 @@ export class PrologStrategy extends Strategy {
    */
   _getPredicateName(term) {
     if (term && typeof term === 'object') {
-      // Handle different term representations
-      if (term._name) {
+      // For compound terms like ^[pred, args], the first component is the predicate
+      if (term.operator === '^' && term.components && term.components[0]) {
+        return term.components[0]._name || term.components[0].name || 'unknown';
+      } 
+      // Handle atomic terms or other term representations
+      else if (term._name) {
         return term._name;
       } else if (term.name) {
         return term.name;
       } else if (term.components && term.components[0]) {
-        // For compound terms like ^[pred, args]
+        // For other compound terms, return the first component's name  
         return term.components[0]._name || term.components[0].name || 'unknown';
       }
     }
@@ -229,14 +218,12 @@ export class PrologStrategy extends Strategy {
     
     // If term1 is a variable, bind it to term2
     if (this._isVariable(substTerm1)) {
-      const varName = this._getVariableName(substTerm1);
-      return this._bindVariable(varName, substTerm2, substitution);
+      return this._bindVariable(this._getVariableName(substTerm1), substTerm2, substitution);
     }
     
     // If term2 is a variable, bind it to term1
     if (this._isVariable(substTerm2)) {
-      const varName = this._getVariableName(substTerm2);
-      return this._bindVariable(varName, substTerm1, substitution);
+      return this._bindVariable(this._getVariableName(substTerm2), substTerm1, substitution);
     }
     
     // For compound terms, attempt to unify components
@@ -325,11 +312,7 @@ export class PrologStrategy extends Strategy {
       
       if (comp1.length !== comp2.length) return false;
       
-      for (let i = 0; i < comp1.length; i++) {
-        if (!this._termsEqual(comp1[i], comp2[i])) return false;
-      }
-      
-      return true;
+      return comp1.every((comp, i) => this._termsEqual(comp, comp2[i]));
     }
     
     return false;
@@ -381,11 +364,7 @@ export class PrologStrategy extends Strategy {
     
     if (this._isCompound(term)) {
       const components = this._getTermComponents(term);
-      for (const comp of components) {
-        if (this._occursCheck(varName, comp, substitution)) {
-          return true;
-        }
-      }
+      return components.some(comp => this._occursCheck(varName, comp, substitution));
     }
     
     return false;
@@ -445,14 +424,6 @@ export class PrologStrategy extends Strategy {
   }
 
   /**
-   * Apply substitution to a task (public interface)
-   * @private
-   */
-  _applySubstitution(task, substitution) {
-    return this._applySubstitutionToTask(task, substitution);
-  }
-
-  /**
    * Create a task from a term
    * @private
    */
@@ -460,7 +431,7 @@ export class PrologStrategy extends Strategy {
     return new Task({
       term: term,
       punctuation: punctuation,
-      truth: truth || new Truth(1.0, 0.9),
+      truth: punctuation === '?' ? null : truth || new Truth(1.0, 0.9),
       budget: { priority: 0.8, durability: 0.7, quality: 0.8 }
     });
   }
