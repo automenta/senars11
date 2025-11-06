@@ -168,6 +168,7 @@
 - [ ] Session-scoped visualizers:
     - Truth chart: Toggle per output line (Chart.js loaded on-demand)
     - Derivation popup: Shows session-specific derivation tree on click
+    - Leverage existing non-React visualization components where possible
 - [ ] Cross-session network view:
     - Toggle in agent HUD → shows force-directed graph of inter-session beliefs
     - Nodes colored by session ID; edges show belief propagation
@@ -233,4 +234,6 @@
 > 3. **Optimization ban**: Phase 6 work forbidden until Phase 5 validation complete
 > 4. **Debugging hooks**:
      >    - `?debug=true` URL param enables raw WebSocket logging
+>    - `window.NARS_SESSIONS` exposes session registry to console>    - `window.NARS_SESSIONS` exposes session registry to console
+>    - `window.NARS_SESSIONS` exposes session registry to console     >    - `?debug=true` URL param enables raw WebSocket logging
 >    - `window.NARS_SESSIONS` exposes session registry to console
