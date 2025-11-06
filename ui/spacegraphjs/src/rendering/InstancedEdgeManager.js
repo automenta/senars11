@@ -47,11 +47,7 @@ class InstancedArrowheadGroup {
     return instanceId;
   }
 
-  updateArrowheadTransform(
-    edge,
-    type,
-    instanceId = this.arrowheadIdToInstanceId.get(`${edge.id}_${type}`)
-  ) {
+  updateArrowheadTransform(edge, type, instanceId = this.arrowheadIdToInstanceId.get(`${edge.id}_${type}`)) {
     if (instanceId === undefined) return;
 
     const sourcePos = edge.source.position;
@@ -249,15 +245,18 @@ export class InstancedEdgeManager {
   }
 
   updateEdge(edge) {
-    if (edge.isInstanced) {
-      this.edgeGroup?.updateEdgeTransform(edge);
-      this.edgeGroup?.updateEdgeColor(edge);
-      if (edge.data.arrowheads?.source)
-        this.arrowheadGroup?.updateArrowheadTransform(edge, 'source');
-      if (edge.data.arrowheads?.target)
-        this.arrowheadGroup?.updateArrowheadTransform(edge, 'target');
-      this.arrowheadGroup?.updateArrowheadColor(edge);
+    if (!edge.isInstanced) return;
+    
+    this.edgeGroup?.updateEdgeTransform(edge);
+    this.edgeGroup?.updateEdgeColor(edge);
+    
+    if (edge.data.arrowheads?.source) {
+      this.arrowheadGroup?.updateArrowheadTransform(edge, 'source');
     }
+    if (edge.data.arrowheads?.target) {
+      this.arrowheadGroup?.updateArrowheadTransform(edge, 'target');
+    }
+    this.arrowheadGroup?.updateArrowheadColor(edge);
   }
 
   removeEdge(edge) {

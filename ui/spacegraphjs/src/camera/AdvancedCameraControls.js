@@ -415,7 +415,7 @@ export class AdvancedCameraControls {
     const nodes = Array.from(nodePlugin?.getNodes()?.values() || []);
 
     if (nodes.length === 0) return;
-
+    
     const center = new THREE.Vector3();
     nodes.forEach(node => center.add(node.position));
     center.divideScalar(nodes.length);
@@ -513,11 +513,8 @@ export class AdvancedCameraControls {
 
       // Expand focus area to include connected nodes
       connectedNodes.forEach(connectedNode => {
-        if (!connectedNode.position) {
-          // Warn when connected node position is undefined
-          // Silently handle in production
-          return; // Changed from continue to return to match typical forEach behavior expectation, though 'continue' is more accurate for loop context
-        }
+        if (!connectedNode?.position) return;
+        
         const nodeBox = new THREE.Box3();
         const radius = connectedNode.getBoundingSphereRadius?.() || 50;
         nodeBox.setFromCenterAndSize(

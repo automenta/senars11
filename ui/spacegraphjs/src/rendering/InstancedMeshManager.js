@@ -143,7 +143,9 @@ export class InstancedMeshManager {
   async getNodeGroup(node) {
     if (node.data.shape === 'sphere') {
       return this.meshGroups.get('sphere');
-    } else if (node.data.gltfUrl) {
+    }
+    
+    if (node.data.gltfUrl) {
       let group = this.meshGroups.get(node.data.gltfUrl);
       if (!group) {
         const geometry = await this._loadGltfModel(node.data.gltfUrl);
@@ -158,6 +160,7 @@ export class InstancedMeshManager {
       }
       return group;
     }
+    
     return null;
   }
 
@@ -180,6 +183,7 @@ export class InstancedMeshManager {
 
   async updateNode(node) {
     if (!node.isInstanced) return;
+    
     const group = await this.getNodeGroup(node);
     if (group) {
       group.updateNodeTransform(node);

@@ -45,7 +45,6 @@ export class ContentAdapter {
 
     // Find appropriate content for current zoom level
     const contentConfig = this._findContentForZoomLevel(zoomLevel);
-
     if (contentConfig) {
       this._applyContent(node, contentConfig, lodConfig, zoomLevel);
     }
@@ -304,19 +303,13 @@ export class DataContentAdapter extends ContentAdapter {
     // Generate headers
     if (rows.length > 0) {
       const headers = Object.keys(rows[0]);
-      headers.forEach(header => {
-        html += `<th>${header}</th>`;
-      });
+      html += headers.map(header => `<th>${header}</th>`).join('');
       html += '</tr></thead><tbody>';
 
       // Generate rows
-      rows.forEach(row => {
-        html += '<tr>';
-        headers.forEach(header => {
-          html += `<td>${row[header] || ''}</td>`;
-        });
-        html += '</tr>';
-      });
+      html += rows.map(row =>
+        '<tr>' + headers.map(header => `<td>${row[header] || ''}</td>`).join('') + '</tr>'
+      ).join('');
     }
 
     html += '</tbody></table>';

@@ -245,10 +245,8 @@ export class FractalZoomManager {
     const nodes = nodePlugin?.getNodes();
     if (nodes) {
       nodes.forEach(node => {
-        if (node && node.position) {
+        if (node?.position) {
           this._updateNodeLOD(node, lodConfig);
-        } else {
-          // console.warn('FractalZoomManager: Attempted to update LOD for a node without a position or undefined node:', node);
         }
       });
     }
@@ -257,10 +255,8 @@ export class FractalZoomManager {
     const edges = edgePlugin?.getEdges();
     if (edges) {
       edges.forEach(edge => {
-        if (edge && edge.source && edge.source.position && edge.target && edge.target.position) {
+        if (edge?.source?.position && edge?.target?.position) {
           this._updateEdgeLOD(edge, lodConfig);
-        } else {
-          // console.warn('FractalZoomManager: Attempted to update LOD for an edge with missing source/target or positions:', edge);
         }
       });
     }
