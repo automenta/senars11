@@ -17,7 +17,13 @@ describe('LMRuleFactory', () => {
         const promptTemplate = 'Process: {{taskTerm}}';
         const responseProcessor = async (response, task) => [];
 
-        const rule = LMRuleFactory.create('test-rule', lm, promptTemplate, responseProcessor, 0.7);
+        const rule = LMRuleFactory.create({
+            id: 'test-rule',
+            lm,
+            promptTemplate,
+            responseProcessor,
+            priority: 0.7
+        });
 
         expect(rule.id).toBe('test-rule');
         expect(rule.lm).toBe(lm);
@@ -27,20 +33,25 @@ describe('LMRuleFactory', () => {
 
     test('should throw error when required parameters are missing', () => {
         expect(() => {
-            LMRuleFactory.create();
+            LMRuleFactory.create({});
         }).toThrow();
 
         expect(() => {
-            LMRuleFactory.create('test-rule');
+            LMRuleFactory.create({id: 'test-rule'});
         }).toThrow();
 
         expect(() => {
-            LMRuleFactory.create('test-rule', lm);
+            LMRuleFactory.create({lm});
         }).toThrow();
     });
 
     test('should create simple rule', () => {
-        const rule = LMRuleFactory.createSimple('simple-rule', lm, 'Template: {{taskTerm}}', 0.6);
+        const rule = LMRuleFactory.createSimple({
+            id: 'simple-rule',
+            lm,
+            promptTemplate: 'Template: {{taskTerm}}',
+            priority: 0.6
+        });
 
         expect(rule.id).toBe('simple-rule');
         expect(rule.lm).toBe(lm);
@@ -49,7 +60,11 @@ describe('LMRuleFactory', () => {
     });
 
     test('should create inference rule', () => {
-        const rule = LMRuleFactory.createInferenceRule('inference-rule', lm, 0.5);
+        const rule = LMRuleFactory.createInferenceRule({
+            id: 'inference-rule',
+            lm,
+            priority: 0.5
+        });
 
         expect(rule.id).toBe('inference-rule');
         expect(rule.lm).toBe(lm);
@@ -58,7 +73,11 @@ describe('LMRuleFactory', () => {
     });
 
     test('should create hypothesis rule', () => {
-        const rule = LMRuleFactory.createHypothesisRule('hypothesis-rule', lm, 0.4);
+        const rule = LMRuleFactory.createHypothesisRule({
+            id: 'hypothesis-rule',
+            lm,
+            priority: 0.4
+        });
 
         expect(rule.id).toBe('hypothesis-rule');
         expect(rule.lm).toBe(lm);
