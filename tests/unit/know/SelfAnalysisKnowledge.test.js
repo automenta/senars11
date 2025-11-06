@@ -7,8 +7,8 @@ import {
     DirectoryStructureKnowledge,
     FileAnalysisKnowledge,
     TestResultKnowledge
-} from '../../../src/knowledge/SelfAnalysisKnowledge.js';
-import {SelfAnalysisKnowledgeFactory} from '../../../src/knowledge/SelfAnalysisKnowledgeFactory.js';
+} from '../../../src/know/SelfAnalysisKnowledge.js';
+import {SelfAnalysisKnowledgeFactory} from '../../../src/know/SelfAnalysisKnowledgeFactory.js';
 
 describe('Self-Analysis Knowledge', () => {
     describe('FileAnalysisKnowledge', () => {

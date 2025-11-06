@@ -2,8 +2,8 @@
  * Knowing System Unit Tests
  * Tests for the central knowledge management system
  */
-import {Knowing} from '../../../src/knowledge/Knowing.js';
-import {Knowledge} from '../../../src/knowledge/Knowledge.js';
+import {Knowing} from '../../../src/know/Knowing.js';
+import {Knowledge} from '../../../src/know/Knowledge.js';
 
 // Simple test knowledge class
 class SimpleTestKnowledge extends Knowledge {

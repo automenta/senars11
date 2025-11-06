@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 import SeNARSSelfAnalyzer from './self-analyze.js';
-import {Knowing} from './src/knowledge/Knowing.js';
-import {SelfAnalysisKnowledgeFactory} from './src/knowledge/SelfAnalysisKnowledgeFactory.js';
+import {Knowing} from './src/know/Knowing.js';
+import {SelfAnalysisKnowledgeFactory} from './src/know/SelfAnalysisKnowledgeFactory.js';
 // Check if this script is being run directly (not imported)
 import {fileURLToPath} from 'url';
 import {basename, dirname} from 'path';

@@ -2,8 +2,8 @@
  * Knowledge System Unit Tests
  * Tests for the core Knowledge classes and their functionality
  */
-import {Knowledge, TruthValueUtils} from '../../../src/knowledge/Knowledge.js';
-import {DataTableKnowledge} from '../../../src/knowledge/DataTableKnowledge.js';
+import {Knowledge, TruthValueUtils} from '../../../src/know/Knowledge.js';
+import {DataTableKnowledge} from '../../../src/know/DataTableKnowledge.js';
 
 describe('Knowledge System', () => {
     describe('TruthValueUtils', () => {
