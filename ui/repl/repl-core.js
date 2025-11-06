@@ -157,10 +157,7 @@ class REPLCore {
     } else {
       // Apply punctuation styling if available
       if (line.punctuation) {
-        const punctClass = `punct-${line.punctuation === '.' ? 'statement' : 
-                              line.punctuation === '?' ? 'question' : 
-                              line.punctuation === '!' ? 'goal' : 
-                              'achievement'}`;
+        const punctClass = this.getPunctuationClass(line.punctuation);
         lineElement.classList.add(punctClass);
       }
       lineElement.textContent = line.text || '';
@@ -173,25 +170,35 @@ class REPLCore {
   }
   
   /**
+   * Get CSS class for punctuation type
+   * @param {string} punctuation - Punctuation character
+   * @returns {string} CSS class name
+   */
+  getPunctuationClass(punctuation) {
+    const punctMap = {
+      '.': 'punct-statement',
+      '?': 'punct-question',
+      '!': 'punct-goal',
+      '@': 'punct-achievement'
+    };
+    
+    return punctMap[punctuation] || 'punct-achievement';
+  }
+  
+  /**
    * Set connection status
    * @param {string} status - Connection status ('connected', 'disconnected', 'error')
    */
   setStatus(status) {
     this.statusElement.setAttribute('data-status', status);
     
-    switch (status) {
-      case 'connected':
-        this.statusElement.style.color = 'var(--status-connected)';
-        break;
-      case 'disconnected':
-        this.statusElement.style.color = 'var(--status-disconnected)';
-        break;
-      case 'processing':
-        this.statusElement.style.color = 'var(--status-processing)';
-        break;
-      default:
-        this.statusElement.style.color = 'var(--text-secondary)';
-    }
+    const statusColors = {
+      'connected': 'var(--status-connected)',
+      'disconnected': 'var(--status-disconnected)',
+      'processing': 'var(--status-processing)'
+    };
+    
+    this.statusElement.style.color = statusColors[status] || 'var(--text-secondary)';
   }
   
   /**

@@ -32,37 +32,10 @@ class SessionManager {
     sessionElement.setAttribute('data-session-id', id);
     
     // Add session header with close button
-    const header = document.createElement('div');
-    header.className = 'session-header';
-    
-    const title = document.createElement('span');
-    title.className = 'session-title';
-    title.textContent = id;
-    
-    const closeButton = document.createElement('button');
-    closeButton.className = 'close-session-btn';
-    closeButton.textContent = '×';
-    closeButton.setAttribute('aria-label', `Close session ${id}`);
-    closeButton.addEventListener('click', () => this.destroySession(id));
-    
-    header.appendChild(title);
-    header.appendChild(closeButton);
+    const header = this.createSessionHeader(id);
     
     // Add input area
-    const inputArea = document.createElement('div');
-    inputArea.className = 'input-area';
-    
-    const input = document.createElement('textarea');
-    input.className = 'repl-input';
-    input.placeholder = `${id}> `;
-    input.rows = 1;
-    
-    const submitButton = document.createElement('button');
-    submitButton.className = 'submit-btn';
-    submitButton.textContent = 'Submit';
-    
-    inputArea.appendChild(input);
-    inputArea.appendChild(submitButton);
+    const inputArea = this.createInputArea(id);
     
     // Add output area
     const output = document.createElement('div');
@@ -85,12 +58,61 @@ class SessionManager {
     // Register session
     this.activeSessions[id] = {
       element: sessionElement,
-      input: input,
+      input: inputArea.querySelector('.repl-input'),
       output: output,
       status: status
     };
     
     console.log(`Created session: ${id}`);
+  }
+  
+  /**
+   * Create session header with title and close button
+   * @param {string} id - Session identifier
+   * @returns {HTMLElement} Header element
+   */
+  createSessionHeader(id) {
+    const header = document.createElement('div');
+    header.className = 'session-header';
+    
+    const title = document.createElement('span');
+    title.className = 'session-title';
+    title.textContent = id;
+    
+    const closeButton = document.createElement('button');
+    closeButton.className = 'close-session-btn';
+    closeButton.textContent = '×';
+    closeButton.setAttribute('aria-label', `Close session ${id}`);
+    closeButton.addEventListener('click', () => this.destroySession(id));
+    
+    header.appendChild(title);
+    header.appendChild(closeButton);
+    
+    return header;
+  }
+  
+  /**
+   * Create input area with textarea and submit button
+   * @param {string} id - Session identifier
+   * @returns {HTMLElement} Input area element
+   */
+  createInputArea(id) {
+    const inputArea = document.createElement('div');
+    inputArea.className = 'input-area';
+    
+    const input = document.createElement('textarea');
+    input.className = 'repl-input';
+    input.placeholder = `${id}> `;
+    input.rows = 1;
+    
+    const submitButton = document.createElement('button');
+    submitButton.className = 'submit-btn';
+    submitButton.textContent = 'Submit';
+    
+    inputArea.appendChild(input);
+    inputArea.appendChild(submitButton);
+    
+    return inputArea;
   }
   
   /**
