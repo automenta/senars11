@@ -6,11 +6,11 @@
  * Shows end-to-end functionality with all system activity
  */
 
-import {spawn} from 'child_process';
-import {fileURLToPath} from 'url';
-import {dirname, join} from 'path';
-import {WebSocket} from 'ws';
-import {setTimeout as setTimeoutPromise} from 'timers/promises';
+import { spawn } from 'child_process';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import { WebSocket } from 'ws';
+import { setTimeout as setTimeoutPromise } from 'timers/promises';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -27,246 +27,430 @@ const config = {
         '<a ==> b>. %1.0;0.9%', 
         '<b ==> c>. %1.0;0.9%'
     ],
-    stepsToRun: 10 // Number of reasoning steps to execute
+    stepsToRun: 5 // Number of reasoning steps to execute to ensure derivations
 };
 
-// Helper function to wait for a specific time
+/**
+ * Helper function to wait for a specific time
+ */
 const wait = (ms) => setTimeoutPromise(ms);
 
-// Function to run the demo with inputs
-async function runDemo(demoInputs = config.defaultInputs) {
-    console.log('🎓 SeNARS Generic Demo Runner');
-    console.log('===============================');
-    console.log(`📋 Running ${demoInputs.length} input(s): ${demoInputs.join(', ')}`);
-    console.log('');
+/**
+ * Clean term for comparison with original inputs
+ * This function normalizes both input format (<a ==> b>) and internal format ((==>, a, b))
+ * to a common representation for comparison purposes
+ */
+const cleanTermForComparison = (term) => {
+    // First, remove syntax characters and normalize operators
+    let cleaned = term
+        .replace(/[<>.,()]/g, ' ')  // Replace syntax characters with spaces
+        .replace(/-->/g, '==> ')    // Normalize implication operator
+        .replace(/\s+/g, ' ')       // Normalize multiple spaces
+        .trim();
     
-    // Start the SeNARS server in the background
-    console.log('🔌 Starting SeNARS server...');
-    
-    const serverProcess = spawn('node', [join(__dirname, '../../src/index.js')], {
-        stdio: ['pipe', 'pipe', 'pipe'],
-        env: {
-            ...process.env,
-            WS_PORT: config.wsPort,
-            NODE_ENV: 'development'
-        }
-    });
+    // Split by spaces and filter out operators and empty strings, then rejoin
+    return cleaned
+        .split(' ')
+        .filter(part => part && part !== '==>' && part !== '') // Remove operators and empty parts
+        .sort()                     // Sort to handle different argument orders
+        .join(' ');                 // Join back together
+};
 
-    // Track when the server is ready
-    let serverReady = false;
-    
-    serverProcess.stdout.on('data', (data) => {
-        const output = data.toString();
-        if (output.includes('WebSocket monitoring server started')) {
-            serverReady = true;
-            console.log('✅ Server ready - WebSocket server listening');
-        }
+/**
+ * TaskManager class to handle task tracking and filtering
+ */
+class TaskManager {
+    constructor(originalInputs = []) {
+        this.originalInputTermsSet = new Set();
+        this.tasksReceived = new Map();  // All task.added events (for deduplication)
+        this.derivedTasks = new Set();   // Derived output tasks (excluding original inputs)
         
-        // Capture and display server logs relevant to our demo
-        if (serverReady && output.includes('task.') && !output.includes('Connected tools')) {
-            console.log('🔧 Server:', output.trim());
+        // Extract just the core term from each input for comparison
+        for (const input of originalInputs) {
+            const termPart = input.split('%')[0].replace(/[<>]/g, '').replace(/\.$/g, '').trim();
+            this.originalInputTermsSet.add(cleanTermForComparison(termPart));
         }
-    });
-    
-    serverProcess.stderr.on('data', (data) => {
-        const error = data.toString();
-        if (error.includes('error') || error.includes('Error')) {
-            console.error('❌ Server error:', error);
-        }
-    });
-    
-    // Wait for the server to be ready
-    while (!serverReady) {
-        await wait(500);
     }
-
-    // Wait a bit more for full initialization
-    await wait(2000);
-
-    console.log('');
-    console.log('📡 Connecting to SeNARS via WebSocket...');
     
-    // Connect to the server via WebSocket
-    const ws = new WebSocket(`${config.wsUrl}?session=demo`);
-    
-    // Track outputs and derivations using Maps for proper deduplication by ID
-    const outputs = new Map();  // All system events
-    const derivations = new Map(); // Tasks created during reasoning (not original inputs)
-    const originalInputs = new Set(demoInputs); // Track what we sent as inputs
-    
-    ws.on('open', () => {
-        console.log('✅ Connected to SeNARS server\n');
+    /**
+     * Check if a task is an original input
+     */
+    isOriginalInput(taskTerm) {
+        // Handle both string and object terms
+        const termString = typeof taskTerm === 'object' && taskTerm._name ? 
+            taskTerm._name : 
+            (typeof taskTerm === 'object' ? String(taskTerm) : taskTerm);
         
-        // Send the demo inputs sequentially
-        (async () => {
-            for (let i = 0; i < demoInputs.length; i++) {
-                const input = demoInputs[i];
-                console.log(`📥 INPUT ${i+1}: ${input}`);
-                
-                // Send the input
-                ws.send(JSON.stringify({
-                    sessionId: 'demo',
-                    type: 'reason/step',
-                    payload: { text: input }
-                }));
-                
-                // Wait between inputs to allow processing
-                await wait(1200);
+        const cleanTaskTerm = cleanTermForComparison(termString);
+        
+        for (const originalTerm of this.originalInputTermsSet) {
+            // Check for exact match or near-exact match after cleaning both
+            if (cleanTaskTerm === originalTerm || 
+                cleanTaskTerm.includes(originalTerm) || 
+                originalTerm.includes(cleanTaskTerm)) {
+                return true;
             }
-            
-            console.log('\n🔄 Running reasoning cycles...\n');
-            
-            // Run several reasoning steps to allow derivations
-            for (let step = 1; step <= config.stepsToRun; step++) {
-                console.log(`⏱️  Step ${step}/${config.stepsToRun} - Processing...`);
-                
-                ws.send(JSON.stringify({
-                    sessionId: 'demo',
-                    type: 'control/step',
-                    payload: {}
-                }));
-                
-                await wait(1000); // Wait for processing
-            }
-            
-            console.log('\n✅ Reasoning completed!');
-            
-            // Close the WebSocket connection after a delay to allow final outputs
-            setTimeout(() => {
-                if (ws.readyState === WebSocket.OPEN) {
-                    ws.close();
-                }
-            }, 3000);
-        })();
-    });
-    
-    ws.on('message', (data) => {
-        try {
-            const message = JSON.parse(data);
-            
-            // Show ALL system activity - no filtering
-            if (message.type === 'event' && message.eventType) {
-                const taskData = message.data?.data?.task;
-                if (taskData) {
-                    const term = taskData.term?._name || taskData.term || 'unknown';
-                    const type = taskData.type || 'unknown';
-                    const truth = taskData.truth ? 
-                        `f:${taskData.truth.frequency}, c:${taskData.truth.confidence}` : 
-                        'no truth';
-                        
-                    // Show ALL events, regardless of type
-                    console.log(`   • ${message.eventType.toUpperCase()}: ${type} ${term} (${truth})`);
-                    
-                    // Create a unique identifier for each task/event combination and add to outputs Map
-                    const taskId = `${term}-${type}-${truth}-${message.eventType}`;
-                    const outputObj = {type, term, truth, eventType: message.eventType, original: message, id: taskId};
-                    outputs.set(taskId, outputObj);
-                    
-                    // Track all tasks that get added during reasoning - no filtering
-                    if (message.eventType === 'task.added' && type === 'BELIEF') {
-                        const derivationId = `${term}-${truth}-${message.eventType}`;
-                        const derivationObj = {term, truth, eventType: message.eventType, id: derivationId};
-                        derivations.set(derivationId, derivationObj);
-                    }
-                } else {
-                    // For non-task events, show them too
-                    console.log(`   • ${message.eventType.toUpperCase()}: ${JSON.stringify(message.data?.data || message.data || 'data')}`);
-                    
-                    const eventTaskId = `event-${message.eventType}-${JSON.stringify(message.data)}`;
-                    const outputObj = {eventType: message.eventType, data: message.data, original: message, id: eventTaskId};
-                    outputs.set(eventTaskId, outputObj);
-                }
-            } 
-            else if (message.type === 'narseseInput') {
-                console.log(`   • NARSESE_INPUT: ${JSON.stringify(message.payload)}`);
-                const narseseTaskId = `narseseInput-${JSON.stringify(message.payload)}`;
-                outputs.set(narseseTaskId, {type: 'narseseInput', payload: message.payload, original: message, id: narseseTaskId});
-            }
-            else if (message.type === 'control/ack') {
-                console.log(`   • CONTROL_ACK: ${JSON.stringify(message.payload)}`);
-                const controlTaskId = `control-ack-${JSON.stringify(message.payload)}`;
-                outputs.set(controlTaskId, {type: 'control/ack', payload: message.payload, original: message, id: controlTaskId});
-            }
-            else {
-                // Show any other message types
-                console.log(`   • ${message.type.toUpperCase()}: ${JSON.stringify(message)}`);
-                const otherTaskId = `other-${message.type}-${JSON.stringify(message)}`;
-                outputs.set(otherTaskId, {type: message.type, data: message, original: message, id: otherTaskId});
-            }
-        } catch (e) {
-            // Ignore non-JSON messages or parsing errors
         }
-    });
+        return false;
+    }
     
-    ws.on('error', (error) => {
-        // Only show WebSocket errors if not expected (like after intentional close)
-        if (error.message && !error.message.includes('ECONNREFUSED')) {
-            console.error('📡 WebSocket error:', error.message);
+    /**
+     * Add a task to tracking if it's new and not an original input
+     */
+    addTask(taskData) {
+        const term = taskData.term?._name || taskData.term || 'unknown';
+        
+        // Format the task with truth values
+        let formattedTask = term;
+        const truth = taskData.truth;
+        if (truth && truth.frequency !== undefined && truth.confidence !== undefined) {
+            formattedTask += ` %${truth.frequency.toFixed(1)};${truth.confidence.toFixed(1)}%`;
         }
-    });
+        
+        // Use the same term for comparison as we use for storage
+        const termForComparison = term;
+        
+        // Only add if it's not an original input and it's unique
+        if (!this.isOriginalInput(termForComparison) && !this.tasksReceived.has(termForComparison)) {
+            this.tasksReceived.set(termForComparison, taskData);
+            this.derivedTasks.add(formattedTask);
+            return true;
+        }
+        return false;
+    }
     
-    ws.on('close', () => {
-        // Final summary after demo completes
-        setTimeout(() => {
-            console.log('\n🏁 Demo completed!');
-            console.log('================================');
-            console.log('📊 DERIVATION SUMMARY:');
+    /**
+     * Get derived tasks
+     */
+    getDerivedTasks() {
+        return Array.from(this.derivedTasks);
+    }
+    
+    /**
+     * Get all tracked tasks
+     */
+    getAllTasks() {
+        return this.tasksReceived;
+    }
+}
+
+/**
+ * WebSocketManager class to handle WebSocket communication
+ */
+class WebSocketManager {
+    constructor(config, taskManager) {
+        this.config = config;
+        this.taskManager = taskManager;
+        this.ws = null;
+        this.isReady = false;
+    }
+    
+    async connect(sessionId = 'demo') {
+        return new Promise((resolve, reject) => {
+            this.ws = new WebSocket(`${this.config.wsUrl}?session=${sessionId}`);
             
-            if (derivations.size > 0) {
-                console.log('✅ Successful derivations found:');
-                let i = 0;
-                derivations.forEach((derivation) => {
-                    console.log(`   ${i+1}. ${derivation.term} (${derivation.truth})`);
-                    i++;
-                });
-                
-                console.log(`\n✅ Success! ${derivations.size} new derivations captured during reasoning.`);
-            } else {
-                console.log('ℹ️  No new derivations captured during reasoning - this may be expected depending on the inputs.');
-            }
-            
-            console.log('\n📋 All outputs received:');
-            let j = 0;
-            outputs.forEach((output) => {
-                if (output.term && output.type) {
-                    console.log(`   ${j+1}. ${output.term} [${output.type}]`);
-                } else if (output.type === 'narseseInput' && output.payload) {
-                    console.log(`   ${j+1}. NarseseInput: ${output.payload.input} [success: ${output.payload.success}]`);
-                } else if (output.eventType) {
-                    console.log(`   ${j+1}. ${output.eventType} [${output.type || 'event'}]`);
-                } else {
-                    console.log(`   ${j+1}. ${output.type || 'unknown'}: ${JSON.stringify(output.data || 'data')}`);
-                }
-                j++;
+            this.ws.on('open', () => {
+                this.isReady = true;
+                resolve(this.ws);
             });
             
-            console.log('\n🔌 Server shutting down...');
-            serverProcess.kill();
-            console.log('✅ End-to-End Demo finished successfully!');
-        }, 100);
-    });
+            this.ws.on('message', (data) => {
+                try {
+                    const message = JSON.parse(data);
+                    
+                    // Process task.added events (beliefs only)
+                    if (message.type === 'event' && message.eventType === 'task.added') {
+                        const taskData = message.data?.data?.task;
+                        if (taskData && taskData.type === 'BELIEF') {
+                            this.taskManager.addTask(taskData);
+                        }
+                    }
+                    // Also handle other events that the REPL would receive
+                    else if (message.type === 'event' && message.eventType === 'task.processed') {
+                        // This event occurs when a task has been processed
+                        // For demo purposes, we just track it if needed
+                    }
+                    else if (message.type === 'event' && message.eventType === 'cycle.complete') {
+                        // This event occurs when a reasoning cycle is complete
+                        // For demo purposes, we just acknowledge it
+                    }
+                    // Handle direct output messages that the REPL might receive
+                    else if (message.type === 'output' || message.type === 'reason/output') {
+                        // These are direct output messages from the system
+                    }
+                } catch (e) {
+                    // Ignore non-JSON messages or parsing errors
+                }
+            });
+            
+            this.ws.on('error', (error) => {
+                if (error.message && !error.message.includes('ECONNREFUSED')) {
+                    console.error('📡 WebSocket error:', error.message);
+                }
+                reject(error);
+            });
+            
+            this.ws.on('close', () => {
+                this.isReady = false;
+            });
+        });
+    }
     
-    // Handle process termination
-    process.on('SIGINT', () => {
-        console.log('\n🛑 Demo interrupted by user');
-        serverProcess.kill();
-        if (ws.readyState === WebSocket.OPEN) {
-            ws.close();
+    /**
+     * Send a message through the WebSocket
+     */
+    sendMessage(sessionId, type, payload) {
+        if (!this.isReady || this.ws.readyState !== WebSocket.OPEN) {
+            return Promise.reject(new Error('WebSocket is not ready'));
         }
-        process.exit(0);
-    });
+        
+        const message = { sessionId, type, payload };
+        this.ws.send(JSON.stringify(message));
+        
+        return Promise.resolve();
+    }
+    
+    /**
+     * Close the WebSocket connection
+     */
+    close() {
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            this.ws.close();
+        }
+    }
+    
+    /**
+     * Wait for WebSocket to be ready
+     */
+    async waitForReady() {
+        while (!this.isReady) {
+            await wait(100);
+        }
+    }
+}
+
+/**
+ * OutputFormatter class to handle display formatting
+ */
+class OutputFormatter {
+    static formatTitle(text) {
+        return `\x1b[36m${text}\x1b[0m`; // Cyan
+    }
+    
+    static formatInput(text) {
+        return `\x1b[32m${text}\x1b[0m`; // Green
+    }
+    
+    static formatOutput(text) {
+        return `\x1b[33m${text}\x1b[0m`; // Yellow
+    }
+    
+    static formatSection(text) {
+        return `\x1b[35m${text}\x1b[0m`; // Magenta
+    }
+    
+    static formatStatus(text) {
+        return `\x1b[37m${text}\x1b[0m`; // White
+    }
+    
+    static printSeparator() {
+        console.log('─'.repeat(50));
+    }
+    
+    static printDemoStart() {
+        console.log(OutputFormatter.formatTitle('🎓 SeNARS Generic Demo Runner'));
+        OutputFormatter.printSeparator();
+        console.log(`${OutputFormatter.formatSection('📋')} Processing inputs...`);
+        console.log();
+    }
+    
+    static printDemoStartBrief(count) {
+        console.log(OutputFormatter.formatTitle('🎓 SeNARS Generic Demo Runner'));
+        OutputFormatter.printSeparator();
+        console.log(`${OutputFormatter.formatSection('📋')} Running ${count} input(s)...`);
+        console.log();
+    }
+    
+    static printDemoResults(demoInputs, derivedTasks) {
+        console.log(OutputFormatter.formatTitle('🏁 Demo completed!'));
+        OutputFormatter.printSeparator();
+        
+        // Show original inputs
+        console.log(OutputFormatter.formatSection('📥 INPUTS:'));
+        demoInputs.forEach((input, i) => {
+            console.log(`  ${i+1}. ${input}`);
+        });
+        
+        // Show derived outputs
+        console.log();
+        console.log(OutputFormatter.formatSection('📤 DERIVED OUTPUTS:'));
+        if (derivedTasks.length > 0) {
+            let derivedIndex = 1;
+            for (const task of derivedTasks) {
+                console.log(`  ${derivedIndex++}. ${OutputFormatter.formatOutput(task)}`);
+            }
+        } else {
+            console.log(`  ${OutputFormatter.formatStatus('No new derivations generated.')}`);
+        }
+        
+        console.log();
+        console.log(`${OutputFormatter.formatStatus('🔌')} Server shutting down...`);
+    }
+    
+    static printSuccess() {
+        console.log(OutputFormatter.formatTitle('✅ End-to-End Demo finished successfully!'));
+    }
+    
+    static printCustomInputs(inputs) {
+        console.log(`${OutputFormatter.formatSection('📋')} Custom inputs mode`);
+    }
+}
+
+/**
+ * SeNARSDemoRunner class to coordinate the demo execution
+ */
+class SeNARSDemoRunner {
+    constructor() {
+        this.serverProcess = null;
+        this.taskManager = null;
+        this.webSocketManager = null;
+        this.config = config;
+    }
+    
+    /**
+     * Start the SeNARS server process
+     */
+    async startServer() {
+        return new Promise((resolve) => {
+            this.serverProcess = spawn('node', [join(__dirname, '../../src/index.js')], {
+                stdio: ['pipe', 'pipe', 'pipe'],
+                env: {
+                    ...process.env,
+                    WS_PORT: this.config.wsPort,
+                    NODE_ENV: 'development'
+                }
+            });
+
+            let serverReady = false;
+            
+            this.serverProcess.stdout.on('data', (data) => {
+                const output = data.toString();
+                if (output.includes('WebSocket monitoring server started')) {
+                    serverReady = true;
+                }
+            });
+            
+            this.serverProcess.stderr.on('data', (data) => {
+                const error = data.toString();
+                if (error.includes('error') || error.includes('Error')) {
+                    console.error('❌ Server error:', error);
+                }
+            });
+            
+            // Wait for the server to be ready
+            (async () => {
+                while (!serverReady) {
+                    await wait(100);
+                }
+                resolve();
+            })();
+            
+            // Handle process termination
+            process.on('SIGINT', () => {
+                console.log('\n🛑 Demo interrupted by user');
+                this.cleanup();
+                process.exit(0);
+            });
+        });
+    }
+    
+    /**
+     * Run the demo with given inputs
+     */
+    async runDemo(demoInputs = this.config.defaultInputs) {
+        // Initialize task manager
+        this.taskManager = new TaskManager(demoInputs);
+        
+        // Start server
+        await this.startServer();
+        await wait(300); // Minimal initialization wait
+        
+        // Initialize WebSocket manager
+        this.webSocketManager = new WebSocketManager(this.config, this.taskManager);
+        await this.webSocketManager.connect('demo');
+        await this.webSocketManager.waitForReady();
+        
+        // Display start info
+        OutputFormatter.printDemoStart();
+        
+        // Send all inputs
+        for (let i = 0; i < demoInputs.length; i++) {
+            await this.webSocketManager.sendMessage('demo', 'reason/step', { text: demoInputs[i] });
+            await wait(100); // Minimal wait between inputs
+        }
+        
+        // Brief pause to let inputs be processed into the system
+        await wait(300);
+        
+        // Run the configured number of reasoning cycles
+        for (let step = 0; step < this.config.stepsToRun; step++) {
+            await this.webSocketManager.sendMessage('demo', 'control/step', {});
+            // No output during processing to keep display clean
+        }
+        
+        await wait(500); // Allow final processing time
+        
+        // Close connections
+        this.webSocketManager.close();
+        
+        // Generate and display output
+        OutputFormatter.printDemoResults(demoInputs, this.taskManager.getDerivedTasks());
+        
+        // Kill server process
+        this.cleanup();
+        
+        OutputFormatter.printSuccess();
+    }
+    
+    /**
+     * Clean up resources
+     */
+    cleanup() {
+        if (this.serverProcess) {
+            this.serverProcess.kill();
+        }
+        if (this.webSocketManager) {
+            this.webSocketManager.close();
+        }
+    }
+}
+
+/**
+ * Main execution function
+ */
+async function main() {
+    const runner = new SeNARSDemoRunner();
+    
+    if (customInputs) {
+        OutputFormatter.printCustomInputs(customInputs);
+        try {
+            await runner.runDemo(customInputs);
+        } catch (error) {
+            console.error('❌ Demo failed:', error);
+            process.exit(1);
+        }
+    } else {
+        try {
+            await runner.runDemo();
+        } catch (error) {
+            console.error('❌ Demo failed:', error);
+            process.exit(1);
+        }
+    }
 }
 
 // Run the demo
-if (customInputs) {
-    console.log(`Using custom inputs: ${customInputs.join(', ')}`);
-    runDemo(customInputs).catch(error => {
-        console.error('❌ Demo failed:', error);
-        process.exit(1);
-    });
-} else {
-    runDemo().catch(error => {
-        console.error('❌ Demo failed:', error);
-        process.exit(1);
-    });
-}
+main().catch(error => {
+    console.error('❌ Demo failed:', error);
+    process.exit(1);
+});

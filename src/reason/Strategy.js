@@ -88,15 +88,15 @@ export class Strategy {
      * @private
      */
     _getAvailableTasks() {
-        // Try to get tasks from focus first (higher priority tasks)
+        // Try to get tasks from focus - get all tasks to enable fair sampling
         if (this.focus) {
-            return this.focus.getTasks(this.config.maxSecondaryPremises || 20); // Increased default from 10 to 20
+            return this.focus.getTasks(1000); // Get all tasks in focus to enable fair roulette sampling
         }
         // Get tasks from memory concepts if focus is not available
         else if (this.memory && typeof this.memory.getAllConcepts === 'function') {
             return this.memory.getAllConcepts()
                 .flatMap(concept => concept.getTasks ? concept.getTasks() : [])
-                .slice(0, this.config.maxSecondaryPremises || 20); // Increased default from 10 to 20
+                .slice(0, 1000); // Get up to 1000 tasks to enable fair sampling
         }
 
         return [];

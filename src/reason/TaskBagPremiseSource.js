@@ -229,22 +229,53 @@ export class TaskBagPremiseSource extends PremiseSource {
     }
 
     /**
-     * Sample focus by priority
+     * Sample focus by priority using fair roulette sampling
      * @private
      */
     _sampleFocusByPriority() {
-        // For Focus component, get the most recent tasks which are most likely to be relevant
-        // for syllogistic reasoning (recent tasks are more likely to match with other recent tasks)
-        const tasks = this.focusComponent.getTasks(5); // Get a few top priority tasks
+        // Get all tasks from focus to enable fair roulette sampling
+        const allTasks = this.focusComponent.getTasks(1000); // Get up to 1000 tasks (essentially all)
+        
+        if (allTasks.length === 0) return null;
+        if (allTasks.length === 1) return allTasks[0];
 
-        // If we have multiple tasks, randomly select one to promote diversity in premise pairing
-        if (tasks.length === 0) return null;
-        if (tasks.length === 1) return tasks[0];
+        // Log all available tasks for debugging
+        /*
+        console.log(`[PREMISE DEBUG] Available tasks in focus: ${allTasks.length}`);
+        for (let i = 0; i < allTasks.length; i++) {
+            const termName = allTasks[i].term?._name || allTasks[i].term || 'unknown';
+            const priority = allTasks[i].budget?.priority || 0;
+            console.log(`[PREMISE DEBUG] Task ${i}: ${termName} (priority: ${priority})`);
+        }
+        */
 
-        // Prefer recent tasks but allow some randomness
-        // First 2 tasks have higher probability
-        const randomIndex = Math.random() < 0.7 ? Math.floor(Math.random() * 2) : Math.floor(Math.random() * tasks.length);
-        return tasks[Math.min(randomIndex, tasks.length - 1)];
+        // Use fair roulette sampling: each task's selection probability is proportional to its priority
+        const totalPriority = allTasks.reduce((sum, task) => sum + (task.budget?.priority || 0), 0);
+        
+        if (totalPriority <= 0) {
+            // If no priorities, do uniform random selection
+            const randomIndex = Math.floor(Math.random() * allTasks.length);
+            const selectedTask = allTasks[randomIndex];
+            //console.log(`[PREMISE SELECT] Random (no priority) - Selected: ${selectedTask.term?._name || selectedTask.term || 'unknown'}`);
+            return selectedTask;
+        }
+        
+        // Perform roulette wheel selection
+        let randomValue = Math.random() * totalPriority;
+        for (const task of allTasks) {
+            const taskPriority = task.budget?.priority || 0;
+            //console.log(`[PREMISE SELECT] Considering ${task.term?._name || task.term || 'unknown'} with priority ${taskPriority}`);
+            if (randomValue < taskPriority) {
+                //console.log(`[PREMISE SELECT] SELECTED: ${task.term?._name || task.term || 'unknown'} with priority ${taskPriority}`);
+                return task;
+            }
+            randomValue -= taskPriority;
+        }
+        
+        // Fallback (shouldn't reach here if totalPriority calculation is correct)
+        const fallbackTask = allTasks[allTasks.length - 1];
+        //console.log(`[PREMISE SELECT] Fallback - Selected: ${fallbackTask.term?._name || fallbackTask.term || 'unknown'}`);
+        return fallbackTask;
     }
 
     /**

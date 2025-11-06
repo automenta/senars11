@@ -30,8 +30,9 @@ export class SyllogisticRule extends Rule {
 
         if (!term1?.isCompound || !term2?.isCompound) return false;
 
-        // Look for relations like implication (==>) or inheritance (-->)
-        const isValidOperator = (op) => op === '==>' || op === '-->';
+        // Look for relations like inheritance (-->), but not implication (==>) which is handled by ImplicationSyllogisticRule
+        // This avoids duplicate processing of implication syllogisms
+        const isValidOperator = (op) => op === '-->';
         if (!isValidOperator(term1.operator) || !isValidOperator(term2.operator)) return false;
 
         // Check for syllogistic pattern: (S --> M) + (M --> P) => (S --> P)

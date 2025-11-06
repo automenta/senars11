@@ -16,6 +16,7 @@
     "web:graph": "node scripts/ui/launcher.js --graph-ui",
     "repl": "node scripts/ui/launcher.js --repl",
     "repl:demo": "node scripts/ui/repl-demo.js",
+    "repl:sim": "node scripts/utils/repl-simulator.js",
     "demo": "node scripts/utils/run-demo.js",
     "screenshots": "node scripts/utils/visualize.js --type screenshots",
     "movies": "node scripts/utils/visualize.js --type movie",

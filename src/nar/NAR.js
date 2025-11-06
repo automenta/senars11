@@ -434,8 +434,19 @@ export class NAR extends BaseComponent {
         try {
             await this._processPendingTasks(options.traceId);
 
+            //console.log(`[NAR STEP] Executing stream reasoner step...`);
             // Execute a single step of the stream reasoner (now returns array of derivations)
             const results = await this._streamReasoner.step();
+
+            //console.log(`[NAR STEP] Stream reasoner generated ${results.length} results:`);
+            for (let i = 0; i < results.length; i++) {
+                const result = results[i];
+                if (result && result.term) {
+                    const termName = result.term._name || result.term || 'unknown';
+                    const truth = result.truth ? `f:${result.truth.frequency}, c:${result.truth.confidence}` : 'no truth';
+                    console.log(`  [${i}] ${termName} ${truth ? `(${truth})` : ''}`);
+                }
+            }
 
             // Add all derivations back to the system
             for (const result of results) {
