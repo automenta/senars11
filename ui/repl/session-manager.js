@@ -405,58 +405,56 @@ class SessionManager {
    * @returns {Array} Filtered history
    */
   filterHistoryByText(sessionId, searchText, useRegex = false) {
-    if (!searchText.trim()) {
+    if (!searchText?.trim()) {
       return this.sessionHistories[sessionId] || [];
     }
     
     const history = this.sessionHistories[sessionId] || [];
+    const searchLower = searchText.toLowerCase();
     
     if (useRegex) {
       try {
         const regex = new RegExp(searchText, 'i'); // Case insensitive
-        return history.filter(cell => {
-          if (cell.type === 'input') {
-            return regex.test(cell.content);
-          } else {
-            // For output cells, search in text content
-            const textContent = cell.content.text || '';
-            return regex.test(textContent);
-          }
-        });
+        return history.filter(cell => this.matchesRegex(cell, regex));
       } catch (e) {
         // If regex is invalid, fall back to simple text search
         console.warn('Invalid regex, falling back to text search:', e);
-        const lowerSearchText = searchText.toLowerCase();
-        return this.filterHistoryByContent(history, lowerSearchText, false);
+        return history.filter(cell => this.matchesText(cell, searchLower));
       }
     } else {
-      const lowerSearchText = searchText.toLowerCase();
-      return this.filterHistoryByContent(history, lowerSearchText, false);
+      return history.filter(cell => this.matchesText(cell, searchLower));
     }
   }
   
   /**
-   * Filter history by content (internal helper)
-   * @param {Array} history - History array to filter
-   * @param {string} searchText - Text to search for
-   * @param {boolean} useRegex - Whether to treat searchText as regex
-   * @returns {Array} Filtered history
+   * Check if cell matches regex pattern
+   * @param {Object} cell - Cell to check
+   * @param {RegExp} regex - Regex pattern
+   * @returns {boolean} Whether cell matches
    */
-  filterHistoryByContent(history, searchText, useRegex = false) {
-    return history.filter(cell => {
-      if (cell.type === 'input') {
-        return useRegex ? 
-          new RegExp(searchText, 'i').test(cell.content) : 
-          cell.content.toLowerCase().includes(searchText);
-      } else {
-        // For output cells, search in text content
-        const textContent = cell.content.text || '';
-        return useRegex ? 
-          new RegExp(searchText, 'i').test(textContent) : 
-          textContent.toLowerCase().includes(searchText);
-      }
-    });
+  matchesRegex(cell, regex) {
+    if (cell.type === 'input') {
+      return regex.test(cell.content);
+    }
+    // For output cells, search in text content
+    return regex.test(cell.content.text || '');
   }
+  
+  /**
+   * Check if cell matches text pattern
+   * @param {Object} cell - Cell to check
+   * @param {string} searchText - Search text (lowercase)
+   * @returns {boolean} Whether cell matches
+   */
+  matchesText(cell, searchText) {
+    if (cell.type === 'input') {
+      return cell.content.toLowerCase().includes(searchText);
+    }
+    // For output cells, search in text content
+    return (cell.content.text || '').toLowerCase().includes(searchText);
+  }
+  
+
   
   /**
    * Filter session history by type
@@ -522,18 +520,24 @@ class SessionManager {
    * @returns {Object} Paginated history with metadata
    */
   paginateHistory(sessionId, page = 1, pageSize = 50) {
-    const history = this.sessionHistories[sessionId] || [];
-    const startIndex = (page - 1) * pageSize;
-    const endIndex = startIndex + pageSize;
-    const paginatedData = history.slice(startIndex, endIndex);
+    const history = this.sessionHistories[sessionId] ?? [];
+    const total = history.length;
+    const totalPages = Math.ceil(total / pageSize);
+    
+    // Ensure page is within valid range
+    const safePage = Math.max(1, Math.min(page, totalPages || 1));
+    
+    const startIndex = (safePage - 1) * pageSize;
+    const endIndex = Math.min(startIndex + pageSize, total);
+    const data = history.slice(startIndex, endIndex);
     
     return {
-      data: paginatedData,
-      page,
+      data,
+      page: safePage,
       pageSize,
-      total: history.length,
-      totalPages: Math.ceil(history.length / pageSize),
-      hasNext: endIndex < history.length,
+      total,
+      totalPages,
+      hasNext: endIndex < total,
       hasPrev: startIndex > 0
     };
   }
@@ -776,6 +780,16 @@ class SessionManager {
       // Update dropdown to reflect status change
       this.updateSessionDropdown();
     }
+  }
+  
+  /**
+   * Get session status
+   * @param {string} id - Session identifier
+   * @returns {string|null} Current session status or null if not found
+   */
+  getSessionStatus(id) {
+    const session = this.activeSessions[id];
+    return session?.status?.getAttribute('data-status') || null;
   }
   
   /**

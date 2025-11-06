@@ -185,35 +185,25 @@ class REPLCore {
     // Clear input
     this.inputElement.value = '';
     
-    const validCommands = ['start', 'stop', 'step'];
     const sessionManager = window.sessionManager;
     
-    if (validCommands.includes(cmd)) {
-      this.sendControlCommand(cmd);
+    // Use command map for better organization
+    const commandMap = {
+      'start': () => this.sendControlCommand('start'),
+      'stop': () => this.sendControlCommand('stop'),
+      'step': () => this.sendControlCommand('step'),
+      'agents': () => sessionManager?.createAgentHUD?.(),
+      'hide-agents': () => sessionManager?.hideAgentHUD?.()
+    };
+    
+    const commandHandler = commandMap[cmd];
+    if (commandHandler) {
+      commandHandler();
     } else {
-      this.handleSpecialCommand(cmd, sessionManager);
-    }
-  }
-  
-  /**
-   * Handle special commands that interact with session manager
-   * @param {string} cmd - Command to handle
-   * @param {Object} sessionManager - Reference to session manager
-   */
-  handleSpecialCommand(cmd, sessionManager) {
-    switch (cmd) {
-      case 'agents':
-        sessionManager?.createAgentHUD?.();
-        break;
-      case 'hide-agents':
-        sessionManager?.hideAgentHUD?.();
-        break;
-      default:
-        this.addOutputLine({
-          type: 'error',
-          text: `Unknown command: ${cmd}. Available commands: /start, /stop, /step, /agents`
-        });
-        break;
+      this.addOutputLine({
+        type: 'error',
+        text: `Unknown command: ${cmd}. Available commands: /start, /stop, /step, /agents`
+      });
     }
   }
   

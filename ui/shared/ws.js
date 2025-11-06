@@ -41,7 +41,7 @@ export default class WebSocketClient {
     this.websocket.onclose = (event) => {
       this.onclose?.(event);
       // Attempt to reconnect if not closed intentionally
-      const shouldReconnect = !event.wasClean && this.reconnectAttempts < this.maxReconnectAttempts;
+      const shouldReconnect = this.shouldReconnect(event);
       if (shouldReconnect) {
         this.reconnect();
       }
@@ -54,6 +54,27 @@ export default class WebSocketClient {
     this.websocket.onmessage = (event) => {
       this.onmessage?.(event);
     };
+  }
+  
+  /**
+   * Determine if reconnection should occur
+   * @param {CloseEvent} event - Close event
+   * @returns {boolean} Whether to reconnect
+   */
+  shouldReconnect(event) {
+    // Don't reconnect if closed cleanly or if max attempts reached
+    return !event.wasClean && this.reconnectAttempts < this.maxReconnectAttempts;
+  }
+  
+  /**
+   * Close the WebSocket connection with optional code and reason
+   * @param {number} code - Close code
+   * @param {string} reason - Close reason
+   */
+  close(code, reason) {
+    if (this.websocket) {
+      this.websocket.close(code, reason);
+    }
   }
   
   /**
