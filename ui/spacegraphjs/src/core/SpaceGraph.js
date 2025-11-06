@@ -61,7 +61,7 @@ export class SpaceGraph {
     this._layoutPlugin = this.plugins.getPlugin('LayoutPlugin');
     this._uiPlugin = this.plugins.getPlugin('UIPlugin');
     this._renderingPlugin = this.plugins.getPlugin('RenderingPlugin');
-    this._dataPlugin = this.plugins.getPlugin('DataPlugin'); // Cache DataPlugin
+    this._dataPlugin = this.plugins.getPlugin('DataPlugin');
 
     this._cameraPlugin?.centerView(null, 0);
     this._cameraPlugin?.setInitialState();
@@ -89,9 +89,7 @@ export class SpaceGraph {
   }
 
   emit(eventName, ...args) {
-    this._listeners.get(eventName)?.forEach(callback => {
-      callback(...args);
-    });
+    this._listeners.get(eventName)?.forEach(callback => callback(...args));
   }
 
   /** Sets up all event listeners by delegating to more specific methods. */
@@ -100,7 +98,6 @@ export class SpaceGraph {
     this._setupEdgeEventListeners();
     this._setupUIEventListeners();
     this._setupCameraEventListeners();
-    // this._setupOtherEventListeners(); // Retained if other event types are added later
   }
 
   /** Sets up event listeners related to node operations. */
@@ -145,10 +142,7 @@ export class SpaceGraph {
     this.on('ui:request:addEdge', (sourceNode, targetNode, data) =>
       this._edgePlugin?.addEdge(sourceNode, targetNode, data)
     );
-    // 'edge:added' listener can be used for logging or other side effects if needed.
-    this.on('edge:added', () => {
-      // Intentionally left blank for future use
-    });
+    this.on('edge:added', () => {}); // Placeholder for future use
     this.on('ui:request:removeEdge', edgeId => this._edgePlugin?.removeEdge(edgeId));
     this.on('ui:request:reverseEdge', this._handleReverseEdge.bind(this));
     this.on('ui:request:updateEdge', this._handleUpdateEdge.bind(this));
@@ -232,10 +226,6 @@ export class SpaceGraph {
       this.focusOnNode(node, duration, pushHistory)
     );
   }
-
-  // _setupOtherEventListeners() {
-  //     // Placeholder for any other event listeners that don't fit specific categories
-  // }
 
   addNode(nodeInstance) {
     const addedNode = this._nodePlugin?.addNode(nodeInstance);
@@ -419,33 +409,25 @@ export class SpaceGraph {
   dispose() {
     this.plugins.disposePlugins();
     this._listeners.clear();
-    // Consider removing event listeners from this.container if they were added directly
-    // For example, if _setupCameraMouseControls adds listeners, they should be removed here.
-    this._removeCameraMouseControls(); // Call a new method to remove listeners
+    this._removeCameraMouseControls();
   }
 
   exportGraphToJSON(options) {
-    return this._dataPlugin?.exportGraphToJSON(options) || null;
+    return this._dataPlugin?.exportGraphToJSON(options) ?? null;
   }
 
   async importGraphFromJSON(jsonData, options) {
-    return (await this._dataPlugin?.importGraphFromJSON(jsonData, options)) || false;
+    return (await this._dataPlugin?.importGraphFromJSON(jsonData, options)) ?? false;
   }
 
   _setupCameraMouseControls() {
     if (!this._cameraPlugin || !this.container) return;
 
-    const cameraControls = this._cameraPlugin.getControls(); // This is the instance of Camera.js
-
-    // Prevent default context menu
-    // All event listeners are handled via the bound properties
-    // The original contextmenu handler was replaced by using this._boundHandleContextMenuEvent
-
     this.container.addEventListener('contextmenu', this._boundHandleContextMenuEvent);
     this.container.addEventListener('mousedown', this._boundHandleMouseDownEvent);
     this.container.addEventListener('mousemove', this._boundHandleMouseMoveEvent);
     this.container.addEventListener('mouseup', this._boundHandleMouseUpOrLeaveEvent);
-    this.container.addEventListener('mouseleave', this._boundHandleMouseUpOrLeaveEvent); // Correct: mouseup and mouseleave can share handler logic
+    this.container.addEventListener('mouseleave', this._boundHandleMouseUpOrLeaveEvent);
     this.container.addEventListener('wheel', this._boundHandleWheelEvent, { passive: false });
   }
 
@@ -467,16 +449,13 @@ export class SpaceGraph {
 
     if (cameraControls.cameraMode === 'drag_orbit') {
       if (event.button === 0) {
-        // Left mouse button
         cameraControls.startPan(event.clientX, event.clientY);
       } else if (event.button === 1 || event.button === 2) {
-        // Middle or Right mouse button
         event.preventDefault();
         cameraControls.startOrbitDrag(event.clientX, event.clientY);
       }
     } else if (cameraControls.cameraMode === 'orbit' || cameraControls.cameraMode === 'top_down') {
       if (event.button === 0) {
-        // Left mouse button for orbit/top_down pan
         cameraControls.startPan(event.clientX, event.clientY);
       }
     }

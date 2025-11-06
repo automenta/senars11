@@ -2,7 +2,7 @@ import { Plugin } from './Plugin.js';
 
 export class PluginManager {
   space = null;
-  plugins = new Map(); // This map stores the plugin instances
+  plugins = new Map();
 
   constructor(space) {
     this.space = space;
@@ -14,14 +14,13 @@ export class PluginManager {
    */
   add(plugin) {
     if (!(plugin instanceof Plugin)) {
-      // Throw an error instead of just warning and returning.
-      throw new Error(
-        'PluginManager: Attempted to add an object that is not an instance of Plugin.'
-      );
+      throw new Error('PluginManager: Attempted to add an object that is not an instance of Plugin.');
     }
+    
     if (this.plugins.has(plugin.getName())) {
       console.warn(`PluginManager: Plugin "${plugin.getName()}" already registered. Overwriting.`);
     }
+    
     this.plugins.set(plugin.getName(), plugin);
   }
 
@@ -31,7 +30,6 @@ export class PluginManager {
    * @returns {Plugin|undefined} The plugin instance, or undefined if not found.
    */
   getPlugin(name) {
-    // Corrected: The comment was about 'pluginMap' which doesn't exist, 'plugins' is the correct map.
     return this.plugins.get(name);
   }
 
@@ -49,7 +47,7 @@ export class PluginManager {
    */
   async initPlugins() {
     for (const plugin of this.plugins.values()) {
-      await plugin.init?.(); // Call init if it exists
+      await plugin.init?.();
     }
   }
 
@@ -59,7 +57,7 @@ export class PluginManager {
    */
   updatePlugins() {
     for (const plugin of this.plugins.values()) {
-      plugin.update?.(); // Call update if it exists
+      plugin.update?.();
     }
   }
 
@@ -68,12 +66,8 @@ export class PluginManager {
    * and clears the plugin map.
    */
   disposePlugins() {
-    // Iterate in reverse order for disposal if dependencies are a concern,
-    // but current implementation iterates in insertion order.
-    // For now, matching the current iteration order of Map.values()
-    // which is insertion order.
     for (const plugin of this.plugins.values()) {
-      plugin.dispose?.(); // Call dispose if it exists
+      plugin.dispose?.();
     }
     this.plugins.clear();
   }

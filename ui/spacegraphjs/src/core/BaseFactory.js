@@ -10,12 +10,7 @@ export class BaseFactory {
    */
   registerType(typeName, typeClass) {
     if (!typeName) {
-      throw new Error(
-        `${this.constructor.name}: Attempted to register a class without a typeName.`
-      );
-    }
-    if (this.types.has(typeName)) {
-      // Type already registered, overwriting is intentional
+      throw new Error(`${this.constructor.name}: Attempted to register a class without a typeName.`);
     }
     this.types.set(typeName, typeClass);
   }
@@ -27,15 +22,8 @@ export class BaseFactory {
    * @param {string} [defaultType] - The typeName to use if the requested type is not found.
    * @returns {object|null} The created instance, or null if the type is not found.
    */
-  create(type, args, defaultType = null) {
-    const TypeClass = this.types.get(type) || (defaultType ? this.types.get(defaultType) : null);
-
-    if (!TypeClass) {
-      // Warn when type is not found and no default type available
-      // Silently handle in production
-      return null;
-    }
-
-    return new TypeClass(...args);
+  create(type, args = [], defaultType = null) {
+    const TypeClass = this.types.get(type) ?? (defaultType ? this.types.get(defaultType) : null);
+    return TypeClass ? new TypeClass(...args) : null;
   }
 }
