@@ -69,17 +69,24 @@ export class CameraPlugin extends Plugin {
     _determineCenterViewTarget(targetPosition = null) {
         const nodePlugin = this.pluginManager.getPlugin('NodePlugin');
         const currentNodes = nodePlugin?.getNodes();
-        let finalTargetPos = new THREE.Vector3();
-
+        
+        // Use early returns for different target position types
         if (targetPosition instanceof THREE.Vector3) {
-            finalTargetPos = targetPosition.clone();
-        } else if (targetPosition && typeof targetPosition.x === 'number') {
-            finalTargetPos.set(targetPosition.x, targetPosition.y, targetPosition.z);
-        } else if (currentNodes && currentNodes.size > 0) {
+            return targetPosition.clone();
+        }
+        
+        if (targetPosition && typeof targetPosition.x === 'number') {
+            return new THREE.Vector3(targetPosition.x, targetPosition.y, targetPosition.z);
+        }
+        
+        if (currentNodes && currentNodes.size > 0) {
+            const finalTargetPos = new THREE.Vector3();
             currentNodes.forEach((node) => finalTargetPos.add(node.position));
             finalTargetPos.divideScalar(currentNodes.size);
+            return finalTargetPos;
         }
-        return finalTargetPos;
+        
+        return new THREE.Vector3();
     }
 
     _determineOptimalDistance(baseDistance = 400, farDistance = 700, nodeCount = 0) {

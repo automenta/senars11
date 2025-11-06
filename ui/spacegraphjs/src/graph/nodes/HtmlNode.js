@@ -51,7 +51,7 @@ export class HtmlNode extends Node {
         el.innerHTML = `
             <div class="node-inner-wrapper">
                 <div class="node-content" spellcheck="false" style="transform: scale(${this.data.contentScale});">
-                    ${this.data.content || this.data.label || ''}
+                    ${this.data.content ?? this.data.label ?? ''}
                 </div>
                 <div class="node-controls">
                     <button class="node-quick-button node-content-zoom-in" title="Zoom In Content (+)">➕</button>
@@ -169,7 +169,7 @@ export class HtmlNode extends Node {
         try {
             this.space?.plugins?.getPlugin('LayoutPlugin')?.layoutManager?.getActiveLayout()?.releaseNode(this);
         } catch (error) {
-            console.error("Error releasing node during resize:", error);
+            console.error(`HtmlNode.endResize: Failed to release node ${this.id} during resize:`, error);
         }
         this.space?.emit('graph:node:resizeend', { node: this, finalSize: { ...this.size } });
     }

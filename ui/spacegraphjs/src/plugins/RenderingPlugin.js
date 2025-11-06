@@ -58,6 +58,10 @@ export class RenderingPlugin extends Plugin {
     background = { color: 0x1a1a1d, alpha: 1.0 };
     managedLights = new Map();
     instancedMeshManager = null;
+    
+    // Cached plugin references
+    _cameraPlugin = null;
+    _minimapPlugin = null;
 
     constructor(spaceGraph, pluginManager) {
         super(spaceGraph, pluginManager);
@@ -72,6 +76,8 @@ export class RenderingPlugin extends Plugin {
 
     init() {
         super.init();
+        this._cameraPlugin = this.pluginManager.getPlugin('CameraPlugin');
+        this._minimapPlugin = this.pluginManager.getPlugin('MinimapPlugin');
         this._setupRenderersAndComposer();
         this._setupLighting();
         this.setBackground(this.background.color, this.background.alpha);
@@ -111,7 +117,7 @@ export class RenderingPlugin extends Plugin {
     }
 
     update() {
-        const cam = this.pluginManager?.getPlugin('CameraPlugin')?.getCameraInstance();
+        const cam = this._cameraPlugin?.getCameraInstance();
         const deltaTime = this.clock.getDelta();
 
         // Defensive check for composer and its renderer
@@ -123,7 +129,7 @@ export class RenderingPlugin extends Plugin {
             this.renderCSS3D?.render(this.cssScene, cam);
         }
 
-        this.pluginManager?.getPlugin('MinimapPlugin')?.render?.(this.renderGL);
+        this._minimapPlugin?.render?.(this.renderGL);
     }
 
     _setupRenderersAndComposer() {
@@ -177,9 +183,14 @@ export class RenderingPlugin extends Plugin {
     _rebuildEffectPasses() {
         if (!this.composer || !this.renderPass || !this.composer.renderer) return; // Added defensive check for composer.renderer
 
-        const cam = this.pluginManager?.getPlugin('CameraPlugin')?.getCameraInstance();
+        const cam = this._cameraPlugin?.getCameraInstance();
         if (!cam) return;
 
+        this._disposeAndRemovePasses();
+        this._createEnabledEffectPasses(cam);
+    }
+
+    _disposeAndRemovePasses() {
         this.normalPassInstance?.dispose(); this.composer.removePass(this.normalPassInstance); this.normalPassInstance = null;
         this.effectPassSSAO?.dispose(); this.composer.removePass(this.effectPassSSAO); this.effectPassSSAO = null;
         this.effectPassOutline?.dispose(); this.composer.removePass(this.effectPassOutline); this.effectPassOutline = null;
@@ -188,28 +199,45 @@ export class RenderingPlugin extends Plugin {
         this.ssaoEffect?.dispose(); this.ssaoEffect = null;
         this.outlineEffect?.dispose(); this.outlineEffect = null;
         this.bloomEffect?.dispose(); this.bloomEffect = null;
+    }
 
+    _createEnabledEffectPasses(cam) {
         if (this.effectsConfig.ssao.enabled) {
-            this.normalPassInstance = new NormalPass(this.scene, cam, { renderTarget: new THREE.WebGLRenderTarget(1, 1, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBAFormat }) });
-            this.composer.addPass(this.normalPassInstance);
-            this.ssaoEffect = new SSAOEffect(cam, this.normalPassInstance.texture, this.effectsConfig.ssao);
-            this.effectPassSSAO = new EffectPass(cam, this.ssaoEffect);
-            this.composer.addPass(this.effectPassSSAO);
+            this._createSSAOEffect(cam);
         }
 
         if (this.effectsConfig.outline.enabled) {
-            this.selection ??= new Selection();
-            this.outlineEffect = new OutlineEffect(this.scene, cam, this.effectsConfig.outline);
-            this.outlineEffect.selection = this.selection;
-            this.effectPassOutline = new EffectPass(cam, this.outlineEffect);
-            this.composer.addPass(this.effectPassOutline);
+            this._createOutlineEffect(cam);
         }
 
         if (this.effectsConfig.bloom.enabled) {
-            this.bloomEffect = new BloomEffect(this.effectsConfig.bloom);
-            this.effectPassBloom = new EffectPass(cam, this.bloomEffect);
-            this.composer.addPass(this.effectPassBloom);
+            this._createBloomEffect();
         }
+    }
+
+    _createSSAOEffect(cam) {
+        this.normalPassInstance = new NormalPass(this.scene, cam, { renderTarget: new THREE.WebGLRenderTarget(1, 1, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBAFormat }) });
+        this.composer.addPass(this.normalPassInstance);
+        this.ssaoEffect = new SSAOEffect(cam, this.normalPassInstance.texture, this.effectsConfig.ssao);
+        this.effectPassSSAO = new EffectPass(cam, this.ssaoEffect);
+        this.composer.addPass(this.effectPassSSAO);
+    }
+
+    _createOutlineEffect(cam) {
+        this.selection ??= new Selection();
+        this.outlineEffect = new OutlineEffect(this.scene, cam, this.effectsConfig.outline);
+        this.outlineEffect.selection = this.selection;
+        this.effectPassOutline = new EffectPass(cam, this.outlineEffect);
+        this.composer.addPass(this.effectPassOutline);
+    }
+
+    _createBloomEffect() {
+        const cam = this._cameraPlugin?.getCameraInstance();
+        if (!cam) return;
+        
+        this.bloomEffect = new BloomEffect(this.effectsConfig.bloom);
+        this.effectPassBloom = new EffectPass(cam, this.bloomEffect);
+        this.composer.addPass(this.effectPassBloom);
     }
 
     setEffectEnabled(effectName, enabled) {

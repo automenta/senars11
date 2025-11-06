@@ -10,7 +10,7 @@ import {BezierEdge} from './edges/BezierEdge.js';
 
 export class EdgeFactory extends BaseFactory { // Extend BaseFactory
     constructor(space) {
-        super(); // Call BaseFactory constructor
+        super();
         this.space = space;
     }
 

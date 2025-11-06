@@ -10,6 +10,10 @@ import {AdvancedLayoutManager} from '../layout/AdvancedLayoutManager.js';
 
 export class LayoutPlugin extends Plugin {
     layoutManager = null;
+    
+    // Cached plugin references
+    _uiPlugin = null;
+    _nodePlugin = null;
 
     constructor(spaceGraph, pluginManager) {
         super(spaceGraph, pluginManager);
@@ -22,6 +26,9 @@ export class LayoutPlugin extends Plugin {
 
     async init() {
         super.init();
+        
+        this._uiPlugin = this.pluginManager.getPlugin('UIPlugin');
+        this._nodePlugin = this.pluginManager.getPlugin('NodePlugin');
 
         // To add a new layout:
         // 1. Create your layout class (e.g., MyCustomLayout). It should adhere to the
@@ -54,14 +61,13 @@ export class LayoutPlugin extends Plugin {
 
     _setupEventListeners() {
         if (!this.space || !this.layoutManager) return;
-        const uiPlugin = this.pluginManager.getPlugin('UIPlugin');
 
         this.space.on('ui:request:applyLayout', (layoutName) => this.applyLayout(layoutName));
 
         this.space.on('node:dragstart', (draggedNodeInstance) => {
             const currentLayout = this.layoutManager.getActiveLayout();
             if (!currentLayout || typeof currentLayout.fixNode !== 'function') return;
-            const selectedNodes = uiPlugin?.getSelectedNodes();
+            const selectedNodes = this._uiPlugin?.getSelectedNodes();
             selectedNodes?.has(draggedNodeInstance)
                 ? selectedNodes.forEach((sNode) => currentLayout.fixNode(sNode))
                 : currentLayout.fixNode(draggedNodeInstance);
@@ -70,7 +76,7 @@ export class LayoutPlugin extends Plugin {
         this.space.on('node:dragend', (draggedNodeInstance) => {
             const currentLayout = this.layoutManager.getActiveLayout();
             if (!currentLayout || typeof currentLayout.releaseNode !== 'function') return;
-            const selectedNodes = uiPlugin?.getSelectedNodes();
+            const selectedNodes = this._uiPlugin?.getSelectedNodes();
             selectedNodes?.has(draggedNodeInstance)
                 ? selectedNodes.forEach((sNode) => currentLayout.releaseNode(sNode))
                 : currentLayout.releaseNode(draggedNodeInstance);
@@ -124,7 +130,7 @@ export class LayoutPlugin extends Plugin {
     }
 
     togglePinNode(nodeId) {
-        const node = this.pluginManager.getPlugin('NodePlugin')?.getNodeById(nodeId);
+        const node = this._nodePlugin?.getNodeById(nodeId);
         if (!node) return console.warn(`LayoutPlugin: Node ${nodeId} not found.`);
 
         const currentLayout = this.layoutManager?.getActiveLayout();

@@ -20,6 +20,12 @@ export class NodePlugin extends Plugin {
     nodes = new Map();
     nodeFactory = null;
     instancedMeshManager = null;
+    
+    // Cached plugin references
+    _edgePlugin = null;
+    _uiPlugin = null;
+    _layoutPlugin = null;
+    _renderingPlugin = null;
 
     constructor(spaceGraph, pluginManager) {
         super(spaceGraph, pluginManager);
@@ -65,7 +71,11 @@ export class NodePlugin extends Plugin {
 
     init() {
         super.init();
-        this.instancedMeshManager = this.pluginManager.getPlugin('RenderingPlugin')?.getInstancedMeshManager();
+        this._edgePlugin = this.pluginManager.getPlugin('EdgePlugin');
+        this._uiPlugin = this.pluginManager.getPlugin('UIPlugin');
+        this._layoutPlugin = this.pluginManager.getPlugin('LayoutPlugin');
+        this._renderingPlugin = this.pluginManager.getPlugin('RenderingPlugin');
+        this.instancedMeshManager = this._renderingPlugin?.getInstancedMeshManager();
     }
 
     addNode(nodeInstance) {
@@ -78,9 +88,8 @@ export class NodePlugin extends Plugin {
         this.nodes.set(nodeInstance.id, nodeInstance);
         nodeInstance.space = this.space;
 
-        const renderingPlugin = this.pluginManager.getPlugin('RenderingPlugin');
-        const cssScene = renderingPlugin?.getCSS3DScene();
-        const webglScene = renderingPlugin?.getWebGLScene();
+        const cssScene = this._renderingPlugin?.getCSS3DScene();
+        const webglScene = this._renderingPlugin?.getWebGLScene();
 
         let successfullyInstanced = false;
         if (this.instancedMeshManager && nodeInstance instanceof ShapeNode && nodeInstance.data.shape === 'sphere') {
@@ -110,15 +119,14 @@ export class NodePlugin extends Plugin {
         const node = this.nodes.get(nodeId);
         if (!node) return console.warn(`NodePlugin: Node ${nodeId} not found.`);
 
-        const uiPlugin = this.pluginManager.getPlugin('UIPlugin');
-        if (uiPlugin?.getSelectedNode() === node) uiPlugin.setSelectedNode(null);
-        if (uiPlugin?.getLinkSourceNode() === node) uiPlugin.cancelLinking();
+        if (this._uiPlugin?.getSelectedNode() === node) this._uiPlugin.setSelectedNode(null);
+        if (this._uiPlugin?.getLinkSourceNode() === node) this._uiPlugin.cancelLinking();
 
-        this.pluginManager.getPlugin('EdgePlugin')?.getEdgesForNode(node).forEach((edge) =>
-            this.pluginManager.getPlugin('EdgePlugin')?.removeEdge(edge.id)
+        this._edgePlugin?.getEdgesForNode(node).forEach((edge) =>
+            this._edgePlugin?.removeEdge(edge.id)
         );
 
-        this.pluginManager.getPlugin('LayoutPlugin')?.removeNodeFromLayout(node);
+        this._layoutPlugin?.removeNodeFromLayout(node);
 
         if (node.isInstanced && this.instancedMeshManager) this.instancedMeshManager.removeNode(node);
         node.dispose();

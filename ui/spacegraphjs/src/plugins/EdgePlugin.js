@@ -17,6 +17,11 @@ export class EdgePlugin extends Plugin {
     edgeFactory = null;
     instancedEdgeManager = null;
     useInstancedEdges = false;
+    
+    // Cached plugin references
+    _renderingPlugin = null;
+    _uiPlugin = null;
+    _layoutPlugin = null;
 
     constructor(spaceGraph, pluginManager) {
         super(spaceGraph, pluginManager);
@@ -50,13 +55,16 @@ export class EdgePlugin extends Plugin {
     init() {
         super.init();
         this.space.on('renderer:resize', this.handleRendererResize.bind(this));
-
-        const renderingPlugin = this.pluginManager.getPlugin('RenderingPlugin');
-        if (!renderingPlugin?.getWebGLScene()) {
+        
+        this._renderingPlugin = this.pluginManager.getPlugin('RenderingPlugin');
+        this._uiPlugin = this.pluginManager.getPlugin('UIPlugin');
+        this._layoutPlugin = this.pluginManager.getPlugin('LayoutPlugin');
+        
+        if (!this._renderingPlugin?.getWebGLScene()) {
             console.error('EdgePlugin: RenderingPlugin or scene not available.');
             return;
         }
-        this.instancedEdgeManager = new InstancedEdgeManager(renderingPlugin.getWebGLScene());
+        this.instancedEdgeManager = new InstancedEdgeManager(this._renderingPlugin.getWebGLScene());
     }
 
     handleRendererResize({ width, height }) {
@@ -71,11 +79,10 @@ export class EdgePlugin extends Plugin {
 
         this.useInstancedEdges = shouldUseInstancing;
 
-        const renderingPlugin = this.pluginManager.getPlugin('RenderingPlugin');
-        if (!renderingPlugin || !this.instancedEdgeManager) return;
+        if (!this._renderingPlugin || !this.instancedEdgeManager) return;
 
-        const webglScene = renderingPlugin.getWebGLScene();
-        const cssScene = renderingPlugin.getCSS3DScene();
+        const webglScene = this._renderingPlugin.getWebGLScene();
+        const cssScene = this._renderingPlugin.getCSS3DScene();
 
         this.edges.forEach((edge) => {
             if (this.useInstancedEdges) {
@@ -123,9 +130,8 @@ export class EdgePlugin extends Plugin {
         }
         this.edges.set(edge.id, edge);
 
-        const renderingPlugin = this.pluginManager.getPlugin('RenderingPlugin');
-        const webglScene = renderingPlugin?.getWebGLScene();
-        const cssScene = renderingPlugin?.getCSS3DScene();
+        const webglScene = this._renderingPlugin?.getWebGLScene();
+        const cssScene = this._renderingPlugin?.getCSS3DScene();
 
         if (this.edges.size >= INSTANCE_THRESHOLD) {
             this.instancedEdgeManager.addEdge(edge);
@@ -145,18 +151,17 @@ export class EdgePlugin extends Plugin {
         const edge = this.edges.get(edgeId);
         if (!edge) return console.warn(`EdgePlugin: Edge ${edgeId} not found.`);
 
-        this.pluginManager.getPlugin('UIPlugin')?.getSelectedEdge() === edge &&
-            this.pluginManager.getPlugin('UIPlugin').setSelectedEdge(null);
+        this._uiPlugin?.getSelectedEdge() === edge &&
+            this._uiPlugin?.setSelectedEdge(null);
 
-        this.pluginManager.getPlugin('LayoutPlugin')?.removeEdgeFromLayout(edge);
+        this._layoutPlugin?.removeEdgeFromLayout(edge);
 
         if (edge.isInstanced && this.instancedEdgeManager) this.instancedEdgeManager.removeEdge(edge);
         else {
-            const renderingPlugin = this.pluginManager.getPlugin('RenderingPlugin');
-            renderingPlugin?.getWebGLScene()?.remove(edge.line);
-            if (edge.arrowheads?.source) renderingPlugin?.getWebGLScene()?.remove(edge.arrowheads.source);
-            if (edge.arrowheads?.target) renderingPlugin?.getWebGLScene()?.remove(edge.arrowheads.target);
-            if (edge.labelObject) renderingPlugin?.getCSS3DScene()?.remove(edge.labelObject);
+            this._renderingPlugin?.getWebGLScene()?.remove(edge.line);
+            if (edge.arrowheads?.source) this._renderingPlugin?.getWebGLScene()?.remove(edge.arrowheads.source);
+            if (edge.arrowheads?.target) this._renderingPlugin?.getWebGLScene()?.remove(edge.arrowheads.target);
+            if (edge.labelObject) this._renderingPlugin?.getCSS3DScene()?.remove(edge.labelObject);
         }
 
         edge.dispose();

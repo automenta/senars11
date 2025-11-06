@@ -19,7 +19,7 @@ import {MetaWidgetNode} from './nodes/MetaWidgetNode.js';
 
 export class NodeFactory extends BaseFactory { // Extend BaseFactory
     constructor(space) {
-        super(); // Call BaseFactory constructor
+        super();
         this.space = space;
     }
 
