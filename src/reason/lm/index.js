@@ -3,11 +3,9 @@
  * @description Main index for LM rule implementations
  */
 
-// Export the main LMRule class and factory
 export { LMRule } from '../LMRule.js';
 export { LMRuleFactory } from '../../lm/LMRuleFactory.js';
 
-// Export all LM rule creation functions
 export { createGoalDecompositionRule } from './rules/LMGoalDecompositionRule.js';
 export { createHypothesisGenerationRule } from './rules/LMHypothesisGenerationRule.js';
 export { createTemporalCausalModelingRule } from './rules/LMTemporalCausalModelingRule.js';
@@ -20,6 +18,5 @@ export { createMetaReasoningGuidanceRule } from './rules/LMMetaReasoningGuidance
 export { createSchemaInductionRule } from './rules/LMSchemaInductionRule.js';
 export { createUncertaintyCalibrationRule } from './rules/LMUncertaintyCalibrationRule.js';
 
-// Export utilities
 export { TaskUtils } from '../TaskUtils.js';
 export { RuleHelpers } from '../RuleHelpers.js';

@@ -4,7 +4,7 @@
  */
 
 import { LMRule } from './LMRule.js';
-import { Task, Punctuation } from './TaskUtils.js';
+import { Task } from './TaskUtils.js';
 import { 
   isGoal, 
   isQuestion, 
@@ -16,106 +16,62 @@ import {
   isValidSubGoal 
 } from './RuleHelpers.js';
 
-/**
- * Utility class for common LM rule patterns adapted from v9 implementation
- */
 export class LMRuleUtils {
-  /**
-   * Creates a basic conditional rule based on task punctuation
-   */
   static createPunctuationBasedRule(config) {
     const { id, lm, name, description, priority, punctuation, conditionFn, ...rest } = config;
     
     return LMRule.create({
       id,
       lm,
-      name: name || `${punctuation}-based rule`,
-      description: description || `Rule for ${punctuation} tasks`,
-      priority: priority || 0.5,
+      name: name ?? `${punctuation}-based rule`,
+      description: description ?? `Rule for ${punctuation} tasks`,
+      priority: priority ?? 0.5,
       
-      condition: (primaryPremise, secondaryPremise, context) => {
+      condition: (primaryPremise) => {
         if (conditionFn) {
-          return conditionFn(primaryPremise, secondaryPremise, context);
+          return conditionFn(primaryPremise);
         }
-        // Default condition based on punctuation
-        if (!primaryPremise) return false;
-        return primaryPremise.punctuation === punctuation;
+        return primaryPremise?.punctuation === punctuation;
       },
       
       ...rest
     });
   }
   
-  /**
-   * Creates a priority-based conditional rule
-   */
   static createPriorityBasedRule(config) {
-    const { id, lm, name, description, priority, minPriority, ...rest } = config;
+    const { id, lm, name, description, priority, minPriority = 0.5, ...rest } = config;
     
     return LMRule.create({
       id,
       lm,
-      name: name || 'Priority-based rule',
-      description: description || 'Rule that triggers based on task priority',
-      priority: priority || 0.5,
+      name: name ?? 'Priority-based rule',
+      description: description ?? 'Rule that triggers based on task priority',
+      priority: priority ?? 0.5,
       
-      condition: (primaryPremise, secondaryPremise, context) => {
-        if (!primaryPremise) return false;
-        const taskPriority = primaryPremise.getPriority?.() || primaryPremise.priority || 0;
-        return taskPriority >= (minPriority || 0.5);
+      condition: (primaryPremise) => {
+        const taskPriority = primaryPremise.getPriority?.() ?? primaryPremise.priority ?? 0;
+        return taskPriority >= minPriority;
       },
       
       ...rest
     });
   }
   
-  /**
-   * Creates a pattern-based conditional rule using keyword patterns
-   */
   static createPatternBasedRule(config) {
-    const { 
-      id, lm, name, description, priority, 
-      patternType, minPriority = 0.5, ...rest 
-    } = config;
+    const { id, lm, name, description, priority, patternType, minPriority = 0.5, ...rest } = config;
     
-    let patterns;
-    switch (patternType) {
-      case 'problemSolving':
-        patterns = KeywordPatterns.problemSolving;
-        break;
-      case 'conflict':
-        patterns = KeywordPatterns.conflict;
-        break;
-      case 'narrative':
-        patterns = KeywordPatterns.narrative;
-        break;
-      case 'temporalCausal':
-        patterns = KeywordPatterns.temporalCausal;
-        break;
-      case 'uncertainty':
-        patterns = KeywordPatterns.uncertainty;
-        break;
-      case 'ambiguous':
-        patterns = KeywordPatterns.ambiguous;
-        break;
-      case 'complexity':
-        patterns = KeywordPatterns.complexity;
-        break;
-      default:
-        patterns = [];
-    }
+    const patterns = KeywordPatterns[patternType] ?? [];
     
     return LMRule.create({
       id,
       lm,
-      name: name || `${patternType}-based rule`,
-      description: description || `Rule for tasks matching ${patternType} patterns`,
-      priority: priority || 0.6,
+      name: name ?? `${patternType}-based rule`,
+      description: description ?? `Rule for tasks matching ${patternType} patterns`,
+      priority: priority ?? 0.6,
       
-      condition: (primaryPremise, secondaryPremise, context) => {
-        if (!primaryPremise) return false;
-        const taskPriority = primaryPremise.getPriority?.() || primaryPremise.priority || 0;
-        const termStr = primaryPremise.term?.toString?.() || String(primaryPremise.term || '');
+      condition: (primaryPremise) => {
+        const taskPriority = primaryPremise.getPriority?.() ?? primaryPremise.priority ?? 0;
+        const termStr = primaryPremise.term?.toString?.() ?? String(primaryPremise.term ?? '');
         return taskPriority >= minPriority && hasPattern(primaryPremise, patterns);
       },
       
@@ -123,13 +79,16 @@ export class LMRuleUtils {
     });
   }
   
-  /**
-   * Helper to create common prompt templates
-   */
   static createPromptTemplate(templateType, options = {}) {
+    const defaults = {
+      minSubGoals: 2,
+      maxSubGoals: 5
+    };
+    const opts = { ...defaults, ...options };
+    
     switch (templateType) {
       case 'goalDecomposition':
-        return `Decompose the following goal into ${options.minSubGoals || 2} to ${options.maxSubGoals || 5} smaller, actionable sub-goals.
+        return `Decompose the following goal into ${opts.minSubGoals} to ${opts.maxSubGoals} smaller, actionable sub-goals.
 
 Goal: "{{taskTerm}}"
 
@@ -161,28 +120,28 @@ Focus on conveying the core meaning and implication of the statement.`;
     }
   }
   
-  /**
-   * Helper to create common response processors
-   */
   static createResponseProcessor(processorType, options = {}) {
+    const defaults = {
+      minLength: 1,
+      maxLength: 200,
+      maxItems: 10
+    };
+    const opts = { ...defaults, ...options };
+    
     switch (processorType) {
       case 'list':
         return (lmResponse) => {
           if (!lmResponse) return [];
           const items = parseSubGoals(lmResponse);
-          const minLen = options.minLength || 1;
-          const maxLen = options.maxLength || 200;
-          const maxItems = options.maxItems || 10;
-          
           return items
             .map(cleanSubGoal)
-            .filter(goal => isValidSubGoal(goal, minLen, maxLen))
-            .slice(0, maxItems);
+            .filter(goal => isValidSubGoal(goal, opts.minLength, opts.maxLength))
+            .slice(0, opts.maxItems);
         };
       
       case 'single':
         return (lmResponse) => {
-          return lmResponse?.trim?.().replace(/^[^:]*:\s*/, '') || '';
+          return lmResponse?.trim?.().replace(/^[^:]*:\s*/, '') ?? '';
         };
       
       case 'number':
@@ -198,53 +157,52 @@ Focus on conveying the core meaning and implication of the statement.`;
         };
       
       default:
-        return (lmResponse) => lmResponse || '';
+        return (lmResponse) => lmResponse ?? '';
     }
   }
   
-  /**
-   * Helper to create common task generators
-   */
   static createTaskGenerator(generatorType, options = {}) {
     switch (generatorType) {
       case 'multipleSubTasks':
         return (processedOutput, originalTask) => {
-          if (!Array.isArray(processedOutput) || processedOutput.length === 0) return [];
+          if (!Array.isArray(processedOutput) || !processedOutput.length) return [];
           
-          return processedOutput.map(output => {
-            return new Task(
-              output,
-              originalTask.punctuation,
-              {
-                frequency: originalTask.truth.f,
-                confidence: originalTask.truth.c * (options.confidenceMultiplier || 0.9)
-              },
-              null,
-              null,
-              Math.max(0.1, (originalTask.priority || 0.5) * (options.priorityMultiplier || 0.9)),
-              originalTask.durability * (options.durabilityMultiplier || 0.8)
-            );
-          });
+          const confMult = options.confidenceMultiplier ?? 0.9;
+          const priorMult = options.priorityMultiplier ?? 0.9;
+          const durMult = options.durabilityMultiplier ?? 0.8;
+          
+          return processedOutput.map(output => new Task(
+            output,
+            originalTask.punctuation,
+            {
+              frequency: originalTask.truth.f,
+              confidence: originalTask.truth.c * confMult
+            },
+            null,
+            null,
+            Math.max(0.1, (originalTask.priority ?? 0.5) * priorMult),
+            originalTask.durability * durMult
+          ));
         };
       
       case 'singleTask':
         return (processedOutput, originalTask) => {
           if (!processedOutput) return [];
           
-          // Determine punctuation for the new task based on options or keep original
-          const punctuation = options.punctuation || originalTask.punctuation;
+          const punctuation = options.punctuation ?? originalTask.punctuation;
+          const freq = options.frequency ?? originalTask.truth.f;
+          const conf = options.confidence ?? originalTask.truth.c * (options.confidenceMultiplier ?? 1.0);
+          const prior = options.priority ?? originalTask.priority * (options.priorityMultiplier ?? 1.0);
+          const dur = options.durability ?? originalTask.durability;
           
           return [new Task(
             processedOutput,
             punctuation,
-            {
-              frequency: options.frequency !== undefined ? options.frequency : originalTask.truth.f,
-              confidence: options.confidence !== undefined ? options.confidence : originalTask.truth.c * (options.confidenceMultiplier || 1.0)
-            },
+            { frequency: freq, confidence: conf },
             null,
             null,
-            options.priority !== undefined ? options.priority : originalTask.priority * (options.priorityMultiplier || 1.0),
-            options.durability !== undefined ? options.durability : originalTask.durability
+            prior,
+            dur
           )];
         };
       
