@@ -61,6 +61,14 @@ These shared components are necessary because:
 - Basic WebSocket integration
 - Simple input/output handling
 
+### Code Refactoring
+- Improved session ID generation
+- Enhanced WebSocket reconnection logic
+- Streamlined output handling
+- Better organized CSS styling
+- More concise conditional logic
+- Improved code modularity and organization
+
 ### Phase 2: Multi-Session Architecture
 - Isolated sessions with independent connections
 - Session management UI
@@ -113,6 +121,13 @@ Enable debugging features by adding `?debug=true` to the URL:
 See `ui/shared/protocol.md` for the complete client-server protocol specification.
 
 ## Implementation Details
+
+This REPL implementation leverages the existing WebSocket infrastructure in the SeNARS codebase:
+
+- Uses `WebSocketService` from `ui/src/utils/websocket.js` for robust WebSocket communication through the wrapper in `ui/shared/ws.js`
+- Integrates with the message processing pipeline using `messageProcessor` and `handlerRegistry`
+- Follows the same validation patterns as the main UI using Zod schemas
+- Reuses connection state management and reconnection logic## Implementation Details
 
 This REPL implementation leverages the existing WebSocket infrastructure in the SeNARS codebase:
 

@@ -10,6 +10,9 @@
   --session-agent1: #e74c3c;
   --session-agent2: #9b59b6;
   --session-agent3: #1abc9c;
+  --session-agent4: #f39c12;
+  --session-agent5: #34495e;
+  --session-agent6: #2ecc71;
   
   /* Base UI colors */
   --background-primary: #ffffff;
@@ -33,6 +36,7 @@
   --status-connected: #2ecc71;
   --status-disconnected: #e74c3c;
   --status-processing: #f39c12;
+  --status-error: #e74c3c;
 }
 
 /* Punctuation styling utilities */

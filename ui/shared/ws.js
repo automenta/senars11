@@ -2,7 +2,7 @@
  * Reusable WebSocket class for SeNARS REPL
  * Provides a simplified interface for WebSocket communication with reconnection logic
  */
-class WebSocketClient {
+export default class WebSocketClient {
   /**
    * Create a new WebSocket client
    * @param {string} url - WebSocket server URL
@@ -35,23 +35,24 @@ class WebSocketClient {
     // Set up event handlers
     this.websocket.onopen = (event) => {
       this.reconnectAttempts = 0;
-      if (this.onopen) this.onopen(event);
+      this.onopen?.(event);
     };
     
     this.websocket.onclose = (event) => {
-      if (this.onclose) this.onclose(event);
+      this.onclose?.(event);
       // Attempt to reconnect if not closed intentionally
-      if (!event.wasClean && this.reconnectAttempts < this.maxReconnectAttempts) {
+      const shouldReconnect = !event.wasClean && this.reconnectAttempts < this.maxReconnectAttempts;
+      if (shouldReconnect) {
         this.reconnect();
       }
     };
     
     this.websocket.onerror = (error) => {
-      if (this.onerror) this.onerror(error);
+      this.onerror?.(error);
     };
     
     this.websocket.onmessage = (event) => {
-      if (this.onmessage) this.onmessage(event);
+      this.onmessage?.(event);
     };
   }
   
@@ -72,23 +73,28 @@ class WebSocketClient {
    * @param {Object} data - Message data to send
    */
   send(data) {
-    if (this.websocket?.readyState === WebSocket.OPEN) {
-      // Add sessionId to the message if not already present
-      const message = data.sessionId ? data : { sessionId: this.sessionId, ...data };
-      this.websocket.send(JSON.stringify(message));
-    } else {
-      console.warn('WebSocket is not open. Message not sent:', data);
+    if (!this.isConnected()) {
+      console.warn('WebSocket is not initialized. Message not sent:', data);
+      return;
     }
+    
+    // Add sessionId to the message if not already present
+    const message = data.sessionId ? data : { sessionId: this.sessionId, ...data };
+    this.websocket.send(JSON.stringify(message));
   }
   
   /**
    * Close the WebSocket connection
    */
   close() {
-    if (this.websocket) {
-      this.websocket.close();
-    }
+    this.websocket?.close();
+  }
+  
+  /**
+   * Check if the WebSocket is connected
+   * @returns {boolean} True if connected, false otherwise
+   */
+  isConnected() {
+    return this.websocket?.readyState === WebSocket.OPEN;
   }
 }
-
-export default WebSocketClient;
