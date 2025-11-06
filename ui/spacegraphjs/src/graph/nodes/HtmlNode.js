@@ -115,10 +115,7 @@ export class HtmlNode extends Node {
     this.size.width = Math.max(HtmlNode.MIN_SIZE.width, width);
     this.size.height = Math.max(HtmlNode.MIN_SIZE.height, height);
 
-    if (this.htmlElement) {
-      this.htmlElement.style.width = `${this.size.width}px`;
-      this.htmlElement.style.height = `${this.size.height}px`;
-    }
+    this._updateElementSize();
 
     if (scaleContent && oldArea > 0) {
       const scaleFactor = Math.sqrt((this.size.width * this.size.height) / oldArea);
@@ -126,14 +123,43 @@ export class HtmlNode extends Node {
     }
   }
 
+  /**
+   * Updates the element size visually.
+   */
+  _updateElementSize() {
+    if (this.htmlElement) {
+      this.htmlElement.style.width = `${this.size.width}px`;
+      this.htmlElement.style.height = `${this.size.height}px`;
+    }
+  }
+
   setContentScale(scale) {
-    this.data.contentScale = Utils.clamp(
+    const clampedScale = Utils.clamp(
       scale,
       HtmlNode.CONTENT_SCALE_RANGE.min,
       HtmlNode.CONTENT_SCALE_RANGE.max
     );
+    
+    // Only update if the scale actually changed
+    if (this.data.contentScale === clampedScale) return;
+    
+    this.data.contentScale = clampedScale;
+    this._updateContentScale();
+    this._emitContentScaleChange();
+  }
+
+  /**
+   * Updates the content scale visually.
+   */
+  _updateContentScale() {
     const contentEl = $('.node-content', this.htmlElement);
     if (contentEl) contentEl.style.transform = `scale(${this.data.contentScale})`;
+  }
+
+  /**
+   * Emits the content scale change event.
+   */
+  _emitContentScaleChange() {
     this.space?.emit('graph:node:dataChanged', {
       node: this,
       property: 'contentScale',
@@ -142,8 +168,25 @@ export class HtmlNode extends Node {
   }
 
   setBackgroundColor(color) {
+    // Only update if the color actually changed
+    if (this.data.backgroundColor === color) return;
+    
     this.data.backgroundColor = color;
+    this._updateBackgroundColor();
+    this._emitBackgroundColorChange();
+  }
+
+  /**
+   * Updates the background color visually.
+   */
+  _updateBackgroundColor() {
     this.htmlElement?.style.setProperty('--node-bg', this.data.backgroundColor);
+  }
+
+  /**
+   * Emits the background color change event.
+   */
+  _emitBackgroundColorChange() {
     this.space?.emit('graph:node:dataChanged', {
       node: this,
       property: 'backgroundColor',

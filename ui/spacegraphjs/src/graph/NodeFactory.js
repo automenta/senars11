@@ -1,4 +1,4 @@
-import { BaseFactory } from '../core/BaseFactory.js'; // Import BaseFactory
+import { BaseFactory } from '../core/BaseFactory.js';
 import { HtmlNode } from './nodes/HtmlNode.js';
 import { ShapeNode } from './nodes/ShapeNode.js';
 import { ImageNode } from './nodes/ImageNode.js';
@@ -18,13 +18,14 @@ import { TextMeshNode } from './nodes/TextMeshNode.js';
 import { MetaWidgetNode } from './nodes/MetaWidgetNode.js';
 
 export class NodeFactory extends BaseFactory {
-  // Extend BaseFactory
   constructor(space) {
     super();
     this.space = space;
+    this.registerCoreNodeTypes();
   }
 
   registerCoreNodeTypes() {
+    // Core nodes
     this.registerType(HtmlNode.typeName, HtmlNode);
     this.registerType(ShapeNode.typeName, ShapeNode);
     this.registerType(ImageNode.typeName, ImageNode);
@@ -34,6 +35,7 @@ export class NodeFactory extends BaseFactory {
     this.registerType(DataNode.typeName, DataNode);
     this.registerType(NoteNode.typeName, NoteNode);
 
+    // Media nodes
     this.registerType(AudioNode.typeName, AudioNode);
     this.registerType(DocumentNode.typeName, DocumentNode);
     this.registerType(ChartNode.typeName, ChartNode);
@@ -50,6 +52,7 @@ export class NodeFactory extends BaseFactory {
     // MetaWidget system
     this.registerType(MetaWidgetNode.typeName, MetaWidgetNode);
 
+    // Default fallback
     this.registerType('default', ShapeNode);
   }
 
@@ -63,7 +66,7 @@ export class NodeFactory extends BaseFactory {
    * @returns {Node|null} The created node instance, or null if the type is not found.
    */
   createNode(id, type, position, data = {}, mass = 1.0) {
-    const effectiveType = data?.type || type;
+    const effectiveType = data.type ?? type;
     const nodeInstance = this.create(effectiveType, [id, position, data, mass], 'default');
     if (nodeInstance) {
       nodeInstance.space = this.space;

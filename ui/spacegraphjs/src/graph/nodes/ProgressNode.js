@@ -411,6 +411,8 @@ export class ProgressNode extends HtmlNode {
   }
 
   animateToValue(targetValue, duration = 1000) {
+    this._cancelPendingAnimation();
+    
     const startValue = this.data.value;
     const startTime = performance.now();
 
@@ -430,18 +432,21 @@ export class ProgressNode extends HtmlNode {
       }
     };
 
-    if (this._animationFrame) {
-      cancelAnimationFrame(this._animationFrame);
-    }
-
     this._animationFrame = requestAnimationFrame(animate);
   }
 
-  dispose() {
+  /**
+   * Cancels any pending animation.
+   */
+  _cancelPendingAnimation() {
     if (this._animationFrame) {
       cancelAnimationFrame(this._animationFrame);
       this._animationFrame = null;
     }
+  }
+
+  dispose() {
+    this._cancelPendingAnimation();
     super.dispose();
   }
 }

@@ -38,9 +38,11 @@ export class FlowEdge extends Edge {
     const positions = new Float32Array(this.particleCount * 3);
     const colors = new Float32Array(this.particleCount * 3);
     const sizes = new Float32Array(this.particleCount);
-    const velocities = new Float32Array(this.particleCount);
 
-    // Initialize particles
+    // Initialize particles with optimized loop
+    const particleColor = new THREE.Color(this.data.particleColor);
+    this.particles = [];
+    
     for (let i = 0; i < this.particleCount; i++) {
       const t = i / this.particleCount;
       const position = this._getPositionOnCurve(t);
@@ -49,17 +51,15 @@ export class FlowEdge extends Edge {
       positions[i * 3 + 1] = position.y;
       positions[i * 3 + 2] = position.z;
 
-      const color = new THREE.Color(this.data.particleColor);
-      colors[i * 3] = color.r;
-      colors[i * 3 + 1] = color.g;
-      colors[i * 3 + 2] = color.b;
+      colors[i * 3] = particleColor.r;
+      colors[i * 3 + 1] = particleColor.g;
+      colors[i * 3 + 2] = particleColor.b;
 
       sizes[i] = this.data.particleSize;
-      velocities[i] = Math.random() * 0.5 + 0.5; // Random velocity multiplier
 
       this.particles.push({
         progress: t,
-        velocity: velocities[i],
+        velocity: Math.random() * 0.5 + 0.5, // Random velocity multiplier
         originalSize: this.data.particleSize,
         life: 1.0,
       });
@@ -75,48 +75,8 @@ export class FlowEdge extends Edge {
         time: { value: 0 },
         glowIntensity: { value: this.data.glowEffect ? 1.0 : 0.0 },
       },
-      vertexShader: `
-                attribute float size;
-                attribute vec3 color;
-                varying vec3 vColor;
-                varying float vSize;
-                uniform float time;
-                
-                void main() {
-                    vColor = color;
-                    vSize = size;
-                    
-                    vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-                    vec4 mvPosition = viewMatrix * worldPosition;
-                    
-                    gl_Position = projectionMatrix * mvPosition;
-                    gl_PointSize = size * (300.0 / -mvPosition.z);
-                }
-            `,
-      fragmentShader: `
-                varying vec3 vColor;
-                varying float vSize;
-                uniform float time;
-                uniform float glowIntensity;
-                
-                void main() {
-                    vec2 center = gl_PointCoord - 0.5;
-                    float dist = length(center);
-                    
-                    if (dist > 0.5) discard;
-                    
-                    float alpha = 1.0 - (dist * 2.0);
-                    alpha = pow(alpha, 2.0);
-                    
-                    vec3 color = vColor;
-                    if (glowIntensity > 0.0) {
-                        float glow = sin(time * 3.0 + dist * 10.0) * 0.3 + 0.7;
-                        color *= glow * glowIntensity + (1.0 - glowIntensity);
-                    }
-                    
-                    gl_FragColor = vec4(color, alpha);
-                }
-            `,
+      vertexShader: this._getVertexShader(),
+      fragmentShader: this._getFragmentShader(),
       transparent: true,
       depthTest: false,
       blending: THREE.AdditiveBlending,
@@ -126,6 +86,62 @@ export class FlowEdge extends Edge {
     this.particleSystem = new THREE.Points(geometry, material);
     this.particleSystem.userData = { edgeId: this.id, type: 'flow-particles' };
     this.particleSystem.renderOrder = 1;
+  }
+
+  /**
+   * Returns the vertex shader code for the particle system.
+   * @returns {string} The vertex shader code.
+   */
+  _getVertexShader() {
+    return `
+      attribute float size;
+      attribute vec3 color;
+      varying vec3 vColor;
+      varying float vSize;
+      uniform float time;
+      
+      void main() {
+        vColor = color;
+        vSize = size;
+        
+        vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+        vec4 mvPosition = viewMatrix * worldPosition;
+        
+        gl_Position = projectionMatrix * mvPosition;
+        gl_PointSize = size * (300.0 / -mvPosition.z);
+      }
+    `;
+  }
+
+  /**
+   * Returns the fragment shader code for the particle system.
+   * @returns {string} The fragment shader code.
+   */
+  _getFragmentShader() {
+    return `
+      varying vec3 vColor;
+      varying float vSize;
+      uniform float time;
+      uniform float glowIntensity;
+      
+      void main() {
+        vec2 center = gl_PointCoord - 0.5;
+        float dist = length(center);
+        
+        if (dist > 0.5) discard;
+        
+        float alpha = 1.0 - (dist * 2.0);
+        alpha = pow(alpha, 2.0);
+        
+        vec3 color = vColor;
+        if (glowIntensity > 0.0) {
+          float glow = sin(time * 3.0 + dist * 10.0) * 0.3 + 0.7;
+          color *= glow * glowIntensity + (1.0 - glowIntensity);
+        }
+        
+        gl_FragColor = vec4(color, alpha);
+      }
+    `;
   }
 
   _getPositionOnCurve(t) {
@@ -170,6 +186,7 @@ export class FlowEdge extends Edge {
       this.particleSystem.material.uniforms.time.value = time;
     }
 
+    // Update particles with optimized loop
     for (let i = 0; i < this.particles.length; i++) {
       const particle = this.particles[i];
 
@@ -177,7 +194,7 @@ export class FlowEdge extends Edge {
       if (this.flowDirection !== 0) {
         particle.progress += this.particleSpeed * particle.velocity * this.flowDirection * 0.01;
 
-        // Wrap around
+        // Wrap around with optimized conditions
         if (this.flowDirection > 0 && particle.progress > 1) {
           particle.progress = 0;
           particle.life = 1.0;
@@ -193,9 +210,10 @@ export class FlowEdge extends Edge {
 
       // Update position
       const position = this._getPositionOnCurve(particle.progress);
-      positions[i * 3] = position.x;
-      positions[i * 3 + 1] = position.y;
-      positions[i * 3 + 2] = position.z;
+      const idx = i * 3;
+      positions[idx] = position.x;
+      positions[idx + 1] = position.y;
+      positions[idx + 2] = position.z;
 
       // Update size with life and pulsing effect
       const pulseEffect = Math.sin(time * 4 + i * 0.1) * 0.3 + 0.7;
@@ -247,11 +265,14 @@ export class FlowEdge extends Edge {
     if (this.particleSystem) {
       const colors = this.particleSystem.geometry.attributes.color.array;
       const colorObj = new THREE.Color(color);
+      const { r, g, b } = colorObj;
 
+      // Optimized loop for color update
       for (let i = 0; i < this.particleCount; i++) {
-        colors[i * 3] = colorObj.r;
-        colors[i * 3 + 1] = colorObj.g;
-        colors[i * 3 + 2] = colorObj.b;
+        const idx = i * 3;
+        colors[idx] = r;
+        colors[idx + 1] = g;
+        colors[idx + 2] = b;
       }
 
       this.particleSystem.geometry.attributes.color.needsUpdate = true;

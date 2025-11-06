@@ -72,17 +72,12 @@ export class DataNode extends Node {
     const { chartType, chartData, chartBackgroundColor, chartTextColor } = this.data;
     const { width, height } = this.canvas;
 
-    this.ctx.fillStyle = chartBackgroundColor || DEFAULT_CHART_BG_COLOR;
-    this.ctx.fillRect(0, 0, width, height);
-
-    this.ctx.fillStyle = chartTextColor || DEFAULT_CHART_TEXT_COLOR;
-    this.ctx.strokeStyle = chartTextColor || DEFAULT_CHART_TEXT_COLOR;
-    this.ctx.font = '16px Arial';
-    this.ctx.textAlign = 'center';
+    this._clearCanvas(chartBackgroundColor);
+    this._setupChartContext(chartTextColor);
 
     if (!chartData?.length) {
-      this.ctx.fillText('No Data', width / 2, height / 2);
-      this.texture.needsUpdate = true;
+      this._drawNoDataMessage(width, height);
+      this._updateTexture();
       return;
     }
 
@@ -91,14 +86,71 @@ export class DataNode extends Node {
         this._drawBarChart(chartData, width, height);
         break;
       case 'line':
-        this.ctx.fillText('Line chart NI', width / 2, height / 2);
+        this._drawNotImplementedMessage('Line chart NI', width, height);
         break;
       case 'pie':
-        this.ctx.fillText('Pie chart NI', width / 2, height / 2);
+        this._drawNotImplementedMessage('Pie chart NI', width, height);
         break;
       default:
-        this.ctx.fillText(`Unknown: ${chartType}`, width / 2, height / 2);
+        this._drawUnknownChartMessage(chartType, width, height);
     }
+    this._updateTexture();
+  }
+
+  /**
+   * Clears the canvas with the specified background color.
+   * @param {string} backgroundColor - The background color.
+   */
+  _clearCanvas(backgroundColor) {
+    const { width, height } = this.canvas;
+    this.ctx.fillStyle = backgroundColor || DEFAULT_CHART_BG_COLOR;
+    this.ctx.fillRect(0, 0, width, height);
+  }
+
+  /**
+   * Sets up the chart context with the specified text color.
+   * @param {string} textColor - The text color.
+   */
+  _setupChartContext(textColor) {
+    this.ctx.fillStyle = textColor || DEFAULT_CHART_TEXT_COLOR;
+    this.ctx.strokeStyle = textColor || DEFAULT_CHART_TEXT_COLOR;
+    this.ctx.font = '16px Arial';
+    this.ctx.textAlign = 'center';
+  }
+
+  /**
+   * Draws a "No Data" message.
+   * @param {number} width - The canvas width.
+   * @param {number} height - The canvas height.
+   */
+  _drawNoDataMessage(width, height) {
+    this.ctx.fillText('No Data', width / 2, height / 2);
+  }
+
+  /**
+   * Draws a "Not Implemented" message.
+   * @param {string} message - The message to display.
+   * @param {number} width - The canvas width.
+   * @param {number} height - The canvas height.
+   */
+  _drawNotImplementedMessage(message, width, height) {
+    this.ctx.fillText(message, width / 2, height / 2);
+  }
+
+  /**
+   * Draws an "Unknown Chart" message.
+   * @param {string} chartType - The unknown chart type.
+   * @param {number} width - The canvas width.
+   * @param {number} height - The canvas height.
+   */
+  _drawUnknownChartMessage(chartType, width, height) {
+    this.ctx.fillText(`Unknown: ${chartType}`, width / 2, height / 2);
+  }
+
+  /**
+   * Updates the texture.
+   */
+  _updateTexture() {
     this.texture.needsUpdate = true;
   }
 
@@ -113,26 +165,61 @@ export class DataNode extends Node {
     const maxValue = Math.max(...data.map(d => d.value), 0);
 
     if (maxValue === 0) {
-      this.ctx.fillText('All values are 0', canvasWidth / 2, canvasHeight / 2);
+      this._drawZeroValuesMessage(canvasWidth, canvasHeight);
       return;
     }
 
     data.forEach((item, index) => {
-      const barHeight = (item.value / maxValue) * chartHeight;
-      const x = padding + index * (barWidth + 5);
-      const y = canvasHeight - padding - barHeight - 20;
-
-      this.ctx.fillStyle = item.color || '#cccccc';
-      this.ctx.fillRect(x, y, barWidth, barHeight);
-
-      this.ctx.fillStyle = this.data.chartTextColor || DEFAULT_CHART_TEXT_COLOR;
-      this.ctx.fillText(item.label || '', x + barWidth / 2, canvasHeight - padding + 5);
+      this._drawBar(item, index, barWidth, maxValue, chartHeight, padding, canvasHeight);
     });
+  }
+
+  /**
+   * Draws a message for zero values.
+   * @param {number} canvasWidth - The canvas width.
+   * @param {number} canvasHeight - The canvas height.
+   */
+  _drawZeroValuesMessage(canvasWidth, canvasHeight) {
+    this.ctx.fillText('All values are 0', canvasWidth / 2, canvasHeight / 2);
+  }
+
+  /**
+   * Draws a single bar.
+   * @param {Object} item - The data item.
+   * @param {number} index - The bar index.
+   * @param {number} barWidth - The bar width.
+   * @param {number} maxValue - The maximum value.
+   * @param {number} chartHeight - The chart height.
+   * @param {number} padding - The padding.
+   * @param {number} canvasHeight - The canvas height.
+   */
+  _drawBar(item, index, barWidth, maxValue, chartHeight, padding, canvasHeight) {
+    const barHeight = (item.value / maxValue) * chartHeight;
+    const x = padding + index * (barWidth + 5);
+    const y = canvasHeight - padding - barHeight - 20;
+
+    this.ctx.fillStyle = item.color || '#cccccc';
+    this.ctx.fillRect(x, y, barWidth, barHeight);
+
+    this.ctx.fillStyle = this.data.chartTextColor || DEFAULT_CHART_TEXT_COLOR;
+    this.ctx.fillText(item.label || '', x + barWidth / 2, canvasHeight - padding + 5);
   }
 
   updateChartData(newData) {
     this.data.chartData = newData;
     this._drawChart();
+    this._emitChartDataChange();
+  }
+
+  /**
+   * Emits the chart data change event.
+   */
+  _emitChartDataChange() {
+    this.space?.emit('graph:node:dataChanged', {
+      node: this,
+      property: 'chartData',
+      value: this.data.chartData,
+    });
   }
 
   _createLabel() {

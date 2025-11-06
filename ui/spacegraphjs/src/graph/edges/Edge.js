@@ -56,10 +56,11 @@ export class Edge {
     this.isInstanced = false;
     this.instanceId = null;
 
+    // Ensure color is null if gradient is used, with fallback
     if (this.data.gradientColors?.length === 2) {
-      this.data.color = null; // Ensure color is null if gradient is used
+      this.data.color = null;
     } else if (this.data.color === null) {
-      this.data.color = defaultData.color; // Fallback if color is explicitly null but no gradient
+      this.data.color = defaultData.color;
     }
 
     this.line = this._createLine();
@@ -87,12 +88,13 @@ export class Edge {
       opacity: Edge.DEFAULT_OPACITY,
       depthTest: false,
       resolution: new THREE.Vector2(window.innerWidth, window.innerHeight),
-      dashed: this.data.dashed || false,
+      dashed: this.data.dashed ?? false,
       dashScale: this.data.dashScale ?? 1,
       dashSize: this.data.dashSize ?? 3,
       gapSize: this.data.gapSize ?? 1,
     };
 
+    // Handle gradient colors vs solid color
     if (this.data.gradientColors?.length === 2) {
       materialConfig.vertexColors = true;
       this._colorStart.set(this.data.gradientColors[0]);
@@ -107,7 +109,7 @@ export class Edge {
       ]);
     } else {
       materialConfig.vertexColors = false;
-      materialConfig.color = this.data.color || 0x00d0ff;
+      materialConfig.color = this.data.color ?? 0x00d0ff;
     }
 
     const material = new LineMaterial(materialConfig);
@@ -120,29 +122,33 @@ export class Edge {
   }
 
   _setGradientColors() {
-    if (!this.line || !this.line.material) return;
+    if (!this.line?.material) return;
 
+    const material = this.line.material;
+    
+    // Handle gradient colors
     if (this.data.gradientColors?.length === 2) {
-      if (!this.line.material.vertexColors) {
-        this.line.material.vertexColors = true;
-        this.line.material.needsUpdate = true;
+      if (!material.vertexColors) {
+        material.vertexColors = true;
+        material.needsUpdate = true;
       }
 
       this._colorStart.set(this.data.gradientColors[0]);
       this._colorEnd.set(this.data.gradientColors[1]);
 
-      const colors = this.line.geometry.attributes.color?.array || [];
-      if (colors.length >= 6) {
-        // Ensure array is large enough for at least 2 points (6 components)
+      const colorAttr = this.line.geometry.attributes.color;
+      if (colorAttr?.array?.length >= 6) {
+        // Update existing color array for at least 2 points
+        const colors = colorAttr.array;
         colors[0] = this._colorStart.r;
         colors[1] = this._colorStart.g;
         colors[2] = this._colorStart.b;
         colors[3] = this._colorEnd.r;
         colors[4] = this._colorEnd.g;
         colors[5] = this._colorEnd.b;
-        this.line.geometry.attributes.color.needsUpdate = true;
+        colorAttr.needsUpdate = true;
       } else {
-        // If geometry has more points, interpolate colors for all points
+        // Interpolate colors for all points
         const posAttribute = this.line.geometry.attributes.position;
         if (posAttribute) {
           const numPoints = posAttribute.count;
@@ -158,11 +164,12 @@ export class Edge {
         }
       }
     } else {
-      if (this.line.material.vertexColors) {
-        this.line.material.vertexColors = false;
-        this.line.material.needsUpdate = true;
+      // Handle solid color
+      if (material.vertexColors) {
+        material.vertexColors = false;
+        material.needsUpdate = true;
       }
-      this.line.material.color.set(this.data.color || 0x00d0ff);
+      material.color.set(this.data.color ?? 0x00d0ff);
     }
   }
 
@@ -172,14 +179,8 @@ export class Edge {
     const sourcePos = this.source.position;
     const targetPos = this.target.position;
 
-    if (
-      !isFinite(sourcePos.x) ||
-      !isFinite(sourcePos.y) ||
-      !isFinite(sourcePos.z) ||
-      !isFinite(targetPos.x) ||
-      !isFinite(targetPos.y) ||
-      !isFinite(targetPos.z)
-    ) {
+    // Validate positions
+    if (!this._isValidPosition(sourcePos) || !this._isValidPosition(targetPos)) {
       return;
     }
 
@@ -194,12 +195,26 @@ export class Edge {
 
     if (this.line.geometry.attributes.position.count === 0) return;
 
-    this._setGradientColors(); // Call the optimized method
+    this._setGradientColors();
 
     if (this.line.material.dashed) this.line.computeLineDistances();
     this.line.geometry.computeBoundingSphere();
 
     this._updateArrowheads();
+  }
+
+  /**
+   * Validates if a position vector has finite components.
+   * @param {THREE.Vector3} position - The position to validate.
+   * @returns {boolean} True if all components are finite, false otherwise.
+   */
+  _isValidPosition(position) {
+    return (
+      position &&
+      isFinite(position.x) &&
+      isFinite(position.y) &&
+      isFinite(position.z)
+    );
   }
 
   _updateArrowheads() {
@@ -242,28 +257,45 @@ export class Edge {
   setHighlight(highlight) {
     this.isHighlighted = highlight;
     if (!this.line?.material) return;
+    
     const mat = this.line.material;
     mat.opacity = highlight ? Edge.HIGHLIGHT_OPACITY : Edge.DEFAULT_OPACITY;
 
-    const thicknessMultiplier =
-      this.data.gradientColors?.length === 2 && mat.vertexColors ? 2.0 : 1.5;
+    // Calculate thickness multiplier based on gradient usage
+    const hasGradient = this.data.gradientColors?.length === 2 && mat.vertexColors;
+    const thicknessMultiplier = hasGradient ? 2.0 : 1.5;
     mat.linewidth = highlight ? this.data.thickness * thicknessMultiplier : this.data.thickness;
 
-    if (!mat.vertexColors) mat.color.set(highlight ? Edge.HIGHLIGHT_COLOR : this.data.color);
+    // Update color if not using vertex colors
+    if (!mat.vertexColors) {
+      mat.color.set(highlight ? Edge.HIGHLIGHT_COLOR : this.data.color);
+    }
     mat.needsUpdate = true;
 
-    const highlightArrowhead = arrowhead => {
-      if (arrowhead?.material) {
-        arrowhead.material.color.set(
-          highlight ? Edge.HIGHLIGHT_COLOR : this.data.arrowheadColor || this.data.color
-        );
-        arrowhead.material.opacity = highlight ? Edge.HIGHLIGHT_OPACITY : Edge.DEFAULT_OPACITY;
-      }
-    };
-    highlightArrowhead(this.arrowheads.source);
-    highlightArrowhead(this.arrowheads.target);
+    // Update arrowhead styles
+    this._updateArrowheadStyle(this.arrowheads.source, highlight);
+    this._updateArrowheadStyle(this.arrowheads.target, highlight);
 
+    // Handle hover state override
     if (highlight && this.isHovered) this.setHoverStyle(false, true);
+  }
+
+  /**
+   * Updates the style of an arrowhead.
+   * @param {THREE.Mesh} arrowhead - The arrowhead to update.
+   * @param {boolean} isHighlighted - Whether the edge is highlighted.
+   */
+  _updateArrowheadStyle(arrowhead, isHighlighted) {
+    if (!arrowhead?.material) return;
+    
+    const color = isHighlighted
+      ? Edge.HIGHLIGHT_COLOR
+      : this.data.arrowheadColor ?? this.data.color;
+      
+    arrowhead.material.color.set(color);
+    arrowhead.material.opacity = isHighlighted
+      ? Edge.HIGHLIGHT_OPACITY
+      : Edge.DEFAULT_OPACITY;
   }
 
   setHoverStyle(hovered, force = false) {
@@ -284,18 +316,25 @@ export class Edge {
       : baseThickness;
     mat.needsUpdate = true;
 
-    const hoverArrowhead = arrowhead => {
-      if (arrowhead?.material) {
-        const arrowBaseOpacity = Edge.DEFAULT_OPACITY;
-        arrowhead.material.opacity = hovered
-          ? Math.min(1.0, arrowBaseOpacity + Edge.DEFAULT_HOVER_OPACITY_BOOST)
-          : arrowBaseOpacity;
-      }
-    };
+    // Update arrowhead opacity if not highlighted
     if (!this.isHighlighted) {
-      hoverArrowhead(this.arrowheads.source);
-      hoverArrowhead(this.arrowheads.target);
+      this._updateArrowheadOpacity(this.arrowheads.source, hovered);
+      this._updateArrowheadOpacity(this.arrowheads.target, hovered);
     }
+  }
+
+  /**
+   * Updates the opacity of an arrowhead.
+   * @param {THREE.Mesh} arrowhead - The arrowhead to update.
+   * @param {boolean} isHovered - Whether the edge is hovered.
+   */
+  _updateArrowheadOpacity(arrowhead, isHovered) {
+    if (!arrowhead?.material) return;
+    
+    const baseOpacity = Edge.DEFAULT_OPACITY;
+    arrowhead.material.opacity = isHovered
+      ? Math.min(1.0, baseOpacity + Edge.DEFAULT_HOVER_OPACITY_BOOST)
+      : baseOpacity;
   }
 
   updateResolution(width, height) {
@@ -303,19 +342,27 @@ export class Edge {
   }
 
   dispose() {
+    // Dispose line resources
     this.line?.geometry?.dispose();
     this.line?.material?.dispose();
     this.line?.parent?.remove(this.line);
     this.line = null;
 
-    const disposeArrowhead = arrowhead => {
-      arrowhead?.geometry?.dispose();
-      arrowhead?.material?.dispose();
-      arrowhead?.parent?.remove(arrowhead);
-    };
-    disposeArrowhead(this.arrowheads.source);
+    // Dispose arrowhead resources
+    this._disposeArrowhead(this.arrowheads.source);
     this.arrowheads.source = null;
-    disposeArrowhead(this.arrowheads.target);
+    this._disposeArrowhead(this.arrowheads.target);
     this.arrowheads.target = null;
+  }
+
+  /**
+   * Disposes of an arrowhead's resources.
+   * @param {THREE.Mesh} arrowhead - The arrowhead to dispose.
+   */
+  _disposeArrowhead(arrowhead) {
+    if (!arrowhead) return;
+    arrowhead.geometry?.dispose();
+    arrowhead.material?.dispose();
+    arrowhead.parent?.remove(arrowhead);
   }
 }

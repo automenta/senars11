@@ -1,4 +1,4 @@
-import { BaseFactory } from '../core/BaseFactory.js'; // Import BaseFactory
+import { BaseFactory } from '../core/BaseFactory.js';
 import { Edge } from './edges/Edge.js';
 import { CurvedEdge } from './edges/CurvedEdge.js';
 import { LabeledEdge } from './edges/LabeledEdge.js';
@@ -9,13 +9,14 @@ import { SpringEdge } from './edges/SpringEdge.js';
 import { BezierEdge } from './edges/BezierEdge.js';
 
 export class EdgeFactory extends BaseFactory {
-  // Extend BaseFactory
   constructor(space) {
     super();
     this.space = space;
+    this.registerCoreEdgeTypes();
   }
 
   registerCoreEdgeTypes() {
+    // Core edge types
     this.registerType(Edge.typeName, Edge);
     this.registerType(CurvedEdge.typeName, CurvedEdge);
     this.registerType(LabeledEdge.typeName, LabeledEdge);
@@ -27,6 +28,7 @@ export class EdgeFactory extends BaseFactory {
     this.registerType(SpringEdge.typeName, SpringEdge);
     this.registerType(BezierEdge.typeName, BezierEdge);
 
+    // Default fallback
     this.registerType('default', Edge);
   }
 
@@ -40,7 +42,7 @@ export class EdgeFactory extends BaseFactory {
    * @returns {Edge|null} The created edge instance, or null if the type is not found.
    */
   createEdge(id, type, sourceNode, targetNode, data = {}) {
-    const effectiveType = data?.type || type;
+    const effectiveType = data.type ?? type;
     const edgeInstance = this.create(effectiveType, [id, sourceNode, targetNode, data], 'default');
     if (edgeInstance) {
       edgeInstance.space = this.space;

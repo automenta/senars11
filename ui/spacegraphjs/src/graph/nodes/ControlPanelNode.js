@@ -241,13 +241,31 @@ export class ControlPanelNode extends HtmlNode {
     if (!container) return;
 
     this.data.controls.forEach(control => {
-      const controlEl = this._createControl(control);
-      if (controlEl) {
-        container.appendChild(controlEl);
-        this.controls.set(control.id, controlEl);
-        this.values.set(control.id, control.value ?? control.defaultValue ?? 0);
-      }
+      this._addControlToContainer(container, control);
     });
+  }
+
+  /**
+   * Adds a control to the specified container.
+   * @param {HTMLElement} container - The container to add the control to.
+   * @param {Object} control - The control configuration.
+   */
+  _addControlToContainer(container, control) {
+    const controlEl = this._createControl(control);
+    if (controlEl) {
+      container.appendChild(controlEl);
+      this.controls.set(control.id, controlEl);
+      this.values.set(control.id, this._getInitialControlValue(control));
+    }
+  }
+
+  /**
+   * Gets the initial value for a control.
+   * @param {Object} control - The control configuration.
+   * @returns {*} The initial value.
+   */
+  _getInitialControlValue(control) {
+    return control.value ?? control.defaultValue ?? (control.type === 'switch' ? false : 0);
   }
 
   _createControl(control) {
@@ -309,12 +327,7 @@ export class ControlPanelNode extends HtmlNode {
 
     input.addEventListener('input', e => {
       const value = parseFloat(e.target.value);
-      this.values.set(control.id, value);
-
-      const valueSpan = e.target.parentNode.querySelector('.control-value');
-      if (valueSpan) valueSpan.textContent = value;
-
-      this._emitControlChange(control.id, value, control);
+      this._updateControlValue(control.id, value, control, e.target);
     });
 
     return input;
@@ -349,8 +362,7 @@ export class ControlPanelNode extends HtmlNode {
 
     input.addEventListener('change', e => {
       const value = e.target.checked;
-      this.values.set(control.id, value);
-      this._emitControlChange(control.id, value, control);
+      this._updateControlValue(control.id, value, control, e.target);
     });
 
     return wrapper;
@@ -365,8 +377,7 @@ export class ControlPanelNode extends HtmlNode {
 
     input.addEventListener('input', e => {
       const value = e.target.value;
-      this.values.set(control.id, value);
-      this._emitControlChange(control.id, value, control);
+      this._updateControlValue(control.id, value, control, e.target);
     });
 
     input.addEventListener('pointerdown', e => e.stopPropagation());
@@ -385,12 +396,7 @@ export class ControlPanelNode extends HtmlNode {
 
     input.addEventListener('input', e => {
       const value = parseFloat(e.target.value) || 0;
-      this.values.set(control.id, value);
-
-      const valueSpan = e.target.parentNode.querySelector('.control-value');
-      if (valueSpan) valueSpan.textContent = value;
-
-      this._emitControlChange(control.id, value, control);
+      this._updateControlValue(control.id, value, control, e.target);
     });
 
     input.addEventListener('pointerdown', e => e.stopPropagation());
@@ -413,8 +419,7 @@ export class ControlPanelNode extends HtmlNode {
 
     select.addEventListener('change', e => {
       const value = e.target.value;
-      this.values.set(control.id, value);
-      this._emitControlChange(control.id, value, control);
+      this._updateControlValue(control.id, value, control, e.target);
     });
 
     select.addEventListener('pointerdown', e => e.stopPropagation());
@@ -430,6 +435,25 @@ export class ControlPanelNode extends HtmlNode {
       control,
       allValues: Object.fromEntries(this.values),
     });
+  }
+
+  /**
+   * Updates a control's value and emits the change event.
+   * @param {string} controlId - The ID of the control.
+   * @param {*} value - The new value.
+   * @param {Object} control - The control configuration.
+   * @param {HTMLElement} target - The input element that triggered the change.
+   */
+  _updateControlValue(controlId, value, control, target) {
+    this.values.set(controlId, value);
+
+    // Update value display for slider and number inputs
+    if (control.type === 'slider' || control.type === 'number') {
+      const valueSpan = target.parentNode.querySelector('.control-value');
+      if (valueSpan) valueSpan.textContent = value;
+    }
+
+    this._emitControlChange(controlId, value, control);
   }
 
   _bindEvents() {
@@ -451,15 +475,26 @@ export class ControlPanelNode extends HtmlNode {
 
     const input = controlEl.querySelector('input, select, button');
     if (input) {
-      if (input.type === 'checkbox') {
-        input.checked = value;
-      } else if (input.type === 'range' || input.type === 'number') {
-        input.value = value;
+      this._setInputValue(input, value);
+      
+      // Update value display for slider and number inputs
+      if (input.type === 'range' || input.type === 'number') {
         const valueSpan = controlEl.querySelector('.control-value');
         if (valueSpan) valueSpan.textContent = value;
-      } else {
-        input.value = value;
       }
+    }
+  }
+
+  /**
+   * Sets the value of an input element based on its type.
+   * @param {HTMLElement} input - The input element.
+   * @param {*} value - The value to set.
+   */
+  _setInputValue(input, value) {
+    if (input.type === 'checkbox') {
+      input.checked = value;
+    } else {
+      input.value = value;
     }
   }
 
@@ -475,12 +510,7 @@ export class ControlPanelNode extends HtmlNode {
     this.data.controls.push(control);
     const container = $('.controls-container', this.htmlElement);
     if (container) {
-      const controlEl = this._createControl(control);
-      if (controlEl) {
-        container.appendChild(controlEl);
-        this.controls.set(control.id, controlEl);
-        this.values.set(control.id, control.value ?? control.defaultValue ?? 0);
-      }
+      this._addControlToContainer(container, control);
     }
   }
 
