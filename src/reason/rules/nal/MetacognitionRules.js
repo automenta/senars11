@@ -3,61 +3,61 @@
  * These rules implement self-optimization and self-modification capabilities.
  */
 
-import { Rule } from '../../Rule.js';
-import { RuleExecutionError, logError } from '../../utils/error.js';
+import {Rule} from '../../Rule.js';
+import {logError} from '../../utils/error.js';
 
 /**
  * A rule that adjusts system parameters based on performance feedback
  */
 export class AdjustCacheSizeRule extends Rule {
-  constructor(config = {}) {
-    super('metacognition-adjust-cache-size', 'metacognition', 0.9, config);
-  }
-
-  canApply(primaryPremise, secondaryPremise, context) {
-    // Check if the premise indicates low cache hit rate
-    return primaryPremise?.term?.name === '((SELF, has_property, low_cache_hit_rate) --> TRUE)' ||
-           (primaryPremise?.term?.toString && primaryPremise.term.toString().includes('low_cache_hit_rate'));
-  }
-
-  apply(primaryPremise, secondaryPremise, context = {}) {
-    if (!this.canApply(primaryPremise, secondaryPremise, context)) {
-      return [];
+    constructor(config = {}) {
+        super('metacognition-adjust-cache-size', 'metacognition', 0.9, config);
     }
 
-    try {
-      // Get the term factory or system component to adjust
-      const termFactory = context.termFactory;
-      if (termFactory && typeof termFactory.getCacheSize === 'function') {
-        const currentCacheSize = termFactory.getCacheSize();
-        const newCacheSize = Math.floor(currentCacheSize * 1.2); // Increase by 20%
+    canApply(primaryPremise, secondaryPremise, context) {
+        // Check if the premise indicates low cache hit rate
+        return primaryPremise?.term?.name === '((SELF, has_property, low_cache_hit_rate) --> TRUE)' ||
+            (primaryPremise?.term?.toString && primaryPremise.term.toString().includes('low_cache_hit_rate'));
+    }
 
-        if (context.nar) {
-          // Adjust system configuration
-          context.nar.config.set('termFactory.maxCacheSize', newCacheSize);
-          if (termFactory._maxCacheSize !== undefined) {
-            termFactory._maxCacheSize = newCacheSize;
-          }
-          context.nar.logInfo?.(`Adjusted TermFactory cache size to ${newCacheSize}`);
+    apply(primaryPremise, secondaryPremise, context = {}) {
+        if (!this.canApply(primaryPremise, secondaryPremise, context)) {
+            return [];
         }
-      }
 
-      return []; // No new tasks are created, but the system state is modified
-    } catch (error) {
-      logError(error, { 
-        ruleId: this.id, 
-        context: 'adjust_cache_size_rule_application' 
-      }, 'error');
-      return [];
+        try {
+            // Get the term factory or system component to adjust
+            const termFactory = context.termFactory;
+            if (termFactory && typeof termFactory.getCacheSize === 'function') {
+                const currentCacheSize = termFactory.getCacheSize();
+                const newCacheSize = Math.floor(currentCacheSize * 1.2); // Increase by 20%
+
+                if (context.nar) {
+                    // Adjust system configuration
+                    context.nar.config.set('termFactory.maxCacheSize', newCacheSize);
+                    if (termFactory._maxCacheSize !== undefined) {
+                        termFactory._maxCacheSize = newCacheSize;
+                    }
+                    context.nar.logInfo?.(`Adjusted TermFactory cache size to ${newCacheSize}`);
+                }
+            }
+
+            return []; // No new tasks are created, but the system state is modified
+        } catch (error) {
+            logError(error, {
+                ruleId: this.id,
+                context: 'adjust_cache_size_rule_application'
+            }, 'error');
+            return [];
+        }
     }
-  }
 }
 
 /**
  * Export the metacognition rules as an array for registration
  */
 export const MetacognitionRules = [
-  AdjustCacheSizeRule,
+    AdjustCacheSizeRule,
 ];
 
 export default MetacognitionRules;

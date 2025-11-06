@@ -7,8 +7,8 @@ export class BaseProvider {
     }
 
     async process(prompt, options = {}) {
-        return typeof this.generateText === 'function' 
-            ? this.generateText(prompt, options) 
+        return typeof this.generateText === 'function'
+            ? this.generateText(prompt, options)
             : prompt;
     }
 

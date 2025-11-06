@@ -1,8 +1,8 @@
-import { SyllogisticRule } from './SyllogisticRule.js';
-import { Task } from '../../../task/Task.js';
-import { Truth } from '../../../Truth.js';
-import { ArrayStamp } from '../../../Stamp.js';
-import { TermFactory } from '../../../term/TermFactory.js';
+import {SyllogisticRule} from './SyllogisticRule.js';
+import {Task} from '../../../task/Task.js';
+import {Truth} from '../../../Truth.js';
+import {ArrayStamp} from '../../../Stamp.js';
+import {TermFactory} from '../../../term/TermFactory.js';
 
 // Create a simple context for testing
 const termFactory = new TermFactory();
@@ -28,17 +28,17 @@ console.log('  components:', socratesManTerm.components.map(c => c.toString()));
 
 // Create tasks with these terms
 const manMortalTask = new Task({
-  term: manMortalTerm,
-  punctuation: '.',
-  truth: new Truth(1.0, 0.9),
-  stamp: new ArrayStamp({creationTime: 1})
+    term: manMortalTerm,
+    punctuation: '.',
+    truth: new Truth(1.0, 0.9),
+    stamp: new ArrayStamp({creationTime: 1})
 });
 
 const socratesManTask = new Task({
-  term: socratesManTerm,
-  punctuation: '.',
-  truth: new Truth(1.0, 0.8),
-  stamp: new ArrayStamp({creationTime: 2})
+    term: socratesManTerm,
+    punctuation: '.',
+    truth: new Truth(1.0, 0.8),
+    stamp: new ArrayStamp({creationTime: 2})
 });
 
 const rule = new SyllogisticRule();
@@ -62,26 +62,26 @@ console.log('socratesManTask.object (man) == manMortalTask.subject (man):', matc
 console.log('manMortalTask.object (mortal) == socratesManTask.subject (Socrates):', match2);
 
 // Test if the rule can be applied
-const canApply = rule.canApply(socratesManTask, manMortalTask, { termFactory });
+const canApply = rule.canApply(socratesManTask, manMortalTask, {termFactory});
 console.log('\nCan apply (socratesMan + manMortal):', canApply);
 
 // Test the application
-const context = { termFactory };
+const context = {termFactory};
 const results = rule.apply(socratesManTask, manMortalTask, context);
 console.log('Results count:', results.length);
 
 if (results.length > 0) {
-  console.log('Derived task:', results[0].term.toString());
-  console.log('Derived truth:', results[0].truth.toString());
+    console.log('Derived task:', results[0].term.toString());
+    console.log('Derived truth:', results[0].truth.toString());
 } else {
-  console.log('No results derived');
+    console.log('No results derived');
 
-  // Test the other order just for verification
-  const canApply2 = rule.canApply(manMortalTask, socratesManTask, { termFactory });
-  console.log('Can apply (manMortal + socratesMan):', canApply2);
-  
-  const results2 = rule.apply(manMortalTask, socratesManTask, context);
-  console.log('Results count (manMortal + socratesMan):', results2.length);
+    // Test the other order just for verification
+    const canApply2 = rule.canApply(manMortalTask, socratesManTask, {termFactory});
+    console.log('Can apply (manMortal + socratesMan):', canApply2);
+
+    const results2 = rule.apply(manMortalTask, socratesManTask, context);
+    console.log('Results count (manMortal + socratesMan):', results2.length);
 }
 
 console.log('Syllogistic rule test completed.');

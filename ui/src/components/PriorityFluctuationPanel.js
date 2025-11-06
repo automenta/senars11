@@ -17,15 +17,20 @@ const PriorityFluctuationPanel = memo(() => {
                 }
             },
             React.createElement('div', {
-                style: {
-                    fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD'),
-                    color: themeUtils.get('TEXT.PRIMARY'),
-                    display: 'flex',
-                    justifyContent: 'space-between'
-                }
-            },
+                    style: {
+                        fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD'),
+                        color: themeUtils.get('TEXT.PRIMARY'),
+                        display: 'flex',
+                        justifyContent: 'space-between'
+                    }
+                },
                 React.createElement('span', null, fluctuation.concept),
-                React.createElement('span', {style: {fontSize: themeUtils.get('FONTS.SIZE.XS'), color: themeUtils.get('TEXT.SECONDARY')}},
+                React.createElement('span', {
+                        style: {
+                            fontSize: themeUtils.get('FONTS.SIZE.XS'),
+                            color: themeUtils.get('TEXT.SECONDARY')
+                        }
+                    },
                     new Date(fluctuation.timestamp).toLocaleTimeString()
                 )
             ),
@@ -56,13 +61,28 @@ const PriorityFluctuationPanel = memo(() => {
                     marginBottom: '0.25rem'
                 }
             },
-            React.createElement('div', {style: {fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD'), color: themeUtils.get('TEXT.PRIMARY')}},
+            React.createElement('div', {
+                    style: {
+                        fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD'),
+                        color: themeUtils.get('TEXT.PRIMARY')
+                    }
+                },
                 concept.term
             ),
-            React.createElement('div', {style: {fontSize: themeUtils.get('FONTS.SIZE.SM'), color: themeUtils.get('TEXT.SECONDARY')}},
+            React.createElement('div', {
+                    style: {
+                        fontSize: themeUtils.get('FONTS.SIZE.SM'),
+                        color: themeUtils.get('TEXT.SECONDARY')
+                    }
+                },
                 `Priority: ${concept.priority?.toFixed(3)} | Activation: ${concept.activation?.toFixed(3)}`
             ),
-            React.createElement('div', {style: {fontSize: themeUtils.get('FONTS.SIZE.SM'), color: themeUtils.get('TEXT.SECONDARY')}},
+            React.createElement('div', {
+                    style: {
+                        fontSize: themeUtils.get('FONTS.SIZE.SM'),
+                        color: themeUtils.get('TEXT.SECONDARY')
+                    }
+                },
                 `Tasks: ${concept.totalTasks} | Use: ${concept.useCount}`
             ),
             createProgressBar(React, {
@@ -76,7 +96,7 @@ const PriorityFluctuationPanel = memo(() => {
         dataSource: (state) => {
             const demoMetrics = state.demoMetrics;
             const concepts = state.concepts;
-            
+
             // Extract priority fluctuations from all demo metrics
             const allPriorityFluctuations = [];
             Object.values(demoMetrics || {}).forEach(metrics => {

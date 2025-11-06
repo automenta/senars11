@@ -56,7 +56,7 @@ export class DemoStateManager {
     }
 
     getAllDemoStates() {
-        return { ...this.demoStates };
+        return {...this.demoStates};
     }
 
     hasRunningDemo() {

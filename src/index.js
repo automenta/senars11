@@ -6,7 +6,7 @@ import {NAR} from './nar/NAR.js';
 
 const DEFAULT_CONFIG = Object.freeze({
     nar: {
-        lm: {enabled: false}, 
+        lm: {enabled: false},
         reasoningAboutReasoning: {enabled: true},
         reasoning: {
             useStreamReasoner: false // Set to true to use the new stream-based reasoner

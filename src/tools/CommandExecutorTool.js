@@ -212,7 +212,7 @@ export class CommandExecutorTool extends BaseTool {
             }
         }
 
-        return { isValid: errors.length === 0, errors };
+        return {isValid: errors.length === 0, errors};
     }
 
     /**

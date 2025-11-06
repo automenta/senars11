@@ -67,21 +67,21 @@ export class SystemMetrics {
         let cycleTimeVariance = 0;
         let cycleTimeStd = 0;
         let cycleTimeMedian = 0;
-        let cycleTimePercentiles = { p25: 0, p75: 0, p95: 0 };
-        
+        let cycleTimePercentiles = {p25: 0, p75: 0, p95: 0};
+
         if (this.cycleTimes.length > 0) {
             const sorted = [...this.cycleTimes].sort((a, b) => a - b);
             const n = sorted.length;
-            
+
             cycleTimeMedian = n % 2 === 0
                 ? (sorted[n / 2 - 1] + sorted[n / 2]) / 2
                 : sorted[Math.floor(n / 2)];
-            
+
             const mean = this.metrics.averageCycleTime;
             const varianceSum = this.cycleTimes.reduce((sum, time) => sum + Math.pow(time - mean, 2), 0);
             cycleTimeVariance = varianceSum / n;
             cycleTimeStd = Math.sqrt(cycleTimeVariance);
-            
+
             cycleTimePercentiles = {
                 p25: sorted[Math.floor(0.25 * n)],
                 p75: sorted[Math.floor(0.75 * n)],
@@ -125,25 +125,25 @@ export class SystemMetrics {
         const mean = this.cycleTimes.reduce((sum, time) => sum + time, 0) / this.cycleTimes.length;
         const varianceSum = this.cycleTimes.reduce((sum, time) => sum + Math.pow(time - mean, 2), 0);
         const std = Math.sqrt(varianceSum / this.cycleTimes.length);
-        
+
         const outliers = this.cycleTimes.filter(value =>
             Math.abs(value - mean) > 2 * std
         );
-        
+
         const recentCount = Math.max(1, Math.floor(this.cycleTimes.length * 0.1));
         const recentSlice = this.cycleTimes.slice(-recentCount);
         const recentAvg = recentSlice.reduce((sum, val) => sum + val, 0) / recentSlice.length;
         const earlySlice = this.cycleTimes.slice(0, recentCount);
         const earlyAvg = earlySlice.reduce((sum, val) => sum + val, 0) / earlySlice.length;
-        
+
         let trend = 'stable';
         if (recentAvg > earlyAvg * 1.1) trend = 'degrading';
         else if (recentAvg < earlyAvg * 0.9) trend = 'improving';
-        
+
         const coefVariation = mean > 0 ? std / mean : Infinity;
         const stability = coefVariation < 0.1 ? 'high' :
-                         coefVariation < 0.2 ? 'medium' : 'low';
-        
+            coefVariation < 0.2 ? 'medium' : 'low';
+
         return {
             trend,
             outliers,
@@ -176,11 +176,11 @@ export class SystemMetrics {
             timestamp: Date.now(),
         };
     }
-    
+
     getRecentCycleTimes(count = 10) {
         return this.cycleTimes.slice(-count);
     }
-    
+
     getErrorRate() {
         const uptime = Date.now() - this.metrics.startTime;
         return uptime > 0 ? this.metrics.errorCount / (uptime / 1000) : 0;

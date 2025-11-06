@@ -45,12 +45,12 @@ export class PropertyBasedTester {
     check(property, generator, options = {}) {
         const maxTests = options.maxTests || this.maxTests;
         let successes = 0;
-        
+
         for (let i = 0; i < maxTests; i++) {
             try {
                 const input = generator(this.random);
                 const result = property(input);
-                
+
                 if (!result) {
                     this.failures.push({
                         testNumber: i,
@@ -70,7 +70,7 @@ export class PropertyBasedTester {
                 return false;
             }
         }
-        
+
         return {
             passed: true,
             successes,

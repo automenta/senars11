@@ -13,7 +13,7 @@ export class ForgettingPolicy {
         this.maxAge = options.maxAge || 1000000; // Maximum age before forgetting (in ms)
         this.minPriority = options.minPriority || 0.05;
         this.propagationStrength = options.propagationStrength || 0.1;
-        
+
         // Policy methods mapping for cleaner switch statement
         this._policyMethods = {
             'simple': (concept) => this._simplePolicy(concept),
@@ -213,7 +213,7 @@ export class ForgettingPolicy {
         if (!concept.term) return [];
 
         const allConcepts = memory.getAllConcepts();
-        return allConcepts.filter(otherConcept => 
+        return allConcepts.filter(otherConcept =>
             otherConcept !== concept && this._areTermsRelated(concept.term, otherConcept.term)
         );
     }

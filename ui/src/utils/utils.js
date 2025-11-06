@@ -1,7 +1,18 @@
 // Consolidated utility functions
-import { generateId, debounce, throttle, deepClone, formatTimestamp,
-         formatDateTime, isEmpty, deepEqual, delay, getNestedProperty,
-         setNestedProperty, memoize } from './helpers.js';
+import {
+    debounce,
+    deepClone,
+    deepEqual,
+    delay,
+    formatDateTime,
+    formatTimestamp,
+    generateId,
+    getNestedProperty,
+    isEmpty,
+    memoize,
+    setNestedProperty,
+    throttle
+} from './helpers.js';
 
 // Export all helper functions
 export {
@@ -20,7 +31,7 @@ export {
 };
 
 // Additional utility functions from utilityFunctions.js
-export { safeTransformData, paginateData, createSearchableCollection } from './utilityFunctions.js';
+export {safeTransformData, paginateData, createSearchableCollection} from './utilityFunctions.js';
 
 // Formatting functions from formatters.js
 export {

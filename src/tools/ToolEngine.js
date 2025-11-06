@@ -122,12 +122,12 @@ export class ToolEngine {
         const startTime = Date.now();
         const executionId = this._generateExecutionId();
         const tool = this.tools.get(toolId);
-        
+
         if (!tool) throw new Error(`Tool "${toolId}" not found`);
 
         await this._validateToolCapabilities(toolId, tool);
         const executionContext = this._createExecutionContext(executionId, toolId, params, context, startTime);
-        
+
         this.activeExecutions.set(executionId, executionContext);
 
         try {

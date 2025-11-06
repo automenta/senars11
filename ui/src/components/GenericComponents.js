@@ -30,14 +30,14 @@ const StatusBadge = memo(({status, label, ...props}) => {
 
 const LoadingSpinner = memo(({size = '1.5rem', color = themeUtils.get('COLORS.PRIMARY'), ...props}) =>
     React.createElement('div', {
-        style: {
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '1rem',
-            ...props.style
-        }
-    },
+            style: {
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '1rem',
+                ...props.style
+            }
+        },
         React.createElement('div', {
             style: {
                 width: size,
@@ -54,17 +54,17 @@ const LoadingSpinner = memo(({size = '1.5rem', color = themeUtils.get('COLORS.PR
 
 const EmptyState = memo(({message = 'No data to display', icon = '🔍', ...props}) =>
     React.createElement('div', {
-        style: {
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '1.5rem',
-            textAlign: 'center',
-            color: themeUtils.get('TEXT.MUTED'),
-            ...props.style
-        }
-    },
+            style: {
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '1.5rem',
+                textAlign: 'center',
+                color: themeUtils.get('TEXT.MUTED'),
+                ...props.style
+            }
+        },
         React.createElement('div', {style: {fontSize: '2rem', marginBottom: '1rem'}}, icon),
         React.createElement('div', null, message)
     )
@@ -72,20 +72,24 @@ const EmptyState = memo(({message = 'No data to display', icon = '🔍', ...prop
 
 const ErrorState = memo(({message = 'An error occurred', onRetry = null, ...props}) =>
     React.createElement('div', {
-        style: {
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '1.5rem',
-            textAlign: 'center',
-            color: themeUtils.get('COLORS.DANGER'),
-            ...props.style
-        }
-    },
+            style: {
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '1.5rem',
+                textAlign: 'center',
+                color: themeUtils.get('COLORS.DANGER'),
+                ...props.style
+            }
+        },
         React.createElement('div', {style: {fontSize: '2rem', marginBottom: '1rem'}}, '❌'),
         React.createElement('div', null, message),
-        onRetry && React.createElement(Button, {onClick: onRetry, variant: "danger", style: {marginTop: '1rem'}}, 'Retry')
+        onRetry && React.createElement(Button, {
+            onClick: onRetry,
+            variant: "danger",
+            style: {marginTop: '1rem'}
+        }, 'Retry')
     )
 );
 
@@ -98,9 +102,9 @@ const TimeDisplay = memo(({timestamp, formatType = 'relative', ...props}) => {
 
     return formatType === 'relative'
         ? diffInSeconds < 60 ? React.createElement('span', null, `${diffInSeconds}s ago`) :
-          diffInSeconds < 3600 ? React.createElement('span', null, `${Math.floor(diffInSeconds / 60)}m ago`) :
-          diffInSeconds < 86400 ? React.createElement('span', null, `${Math.floor(diffInSeconds / 3600)}h ago`) :
-          React.createElement('span', null, `${Math.floor(diffInSeconds / 86400)}d ago`)
+            diffInSeconds < 3600 ? React.createElement('span', null, `${Math.floor(diffInSeconds / 60)}m ago`) :
+                diffInSeconds < 86400 ? React.createElement('span', null, `${Math.floor(diffInSeconds / 3600)}h ago`) :
+                    React.createElement('span', null, `${Math.floor(diffInSeconds / 86400)}d ago`)
         : formatType === 'datetime'
             ? React.createElement('span', null, format(date, 'MM/dd/yyyy HH:mm:ss'))
             : React.createElement('span', null, format(date, 'HH:mm:ss'));
@@ -110,9 +114,9 @@ const WebSocketStatus = memo(({showLabel = true, ...props}) => {
     const wsConnected = useUiStore(state => state.wsConnected);
 
     return React.createElement('div', {
-        className: "websocket-status",
-        style: {display: 'flex', alignItems: 'center', ...props.style}
-    },
+            className: "websocket-status",
+            style: {display: 'flex', alignItems: 'center', ...props.style}
+        },
         React.createElement('div', {
             style: {
                 width: '0.75rem',
@@ -130,14 +134,14 @@ const WebSocketStatus = memo(({showLabel = true, ...props}) => {
 const GenericFormField = ({label, children, required = false, description = null, style = {}}) =>
     React.createElement('div', {style: {marginBottom: '1rem', ...style}},
         React.createElement('label', {
-            style: {
-                display: 'block',
-                fontWeight: 'bold',
-                marginBottom: '0.25rem',
-                fontSize: themeUtils.get('FONTS.SIZE.SM'),
-                color: themeUtils.get('TEXT.PRIMARY')
-            }
-        },
+                style: {
+                    display: 'block',
+                    fontWeight: 'bold',
+                    marginBottom: '0.25rem',
+                    fontSize: themeUtils.get('FONTS.SIZE.SM'),
+                    color: themeUtils.get('TEXT.PRIMARY')
+                }
+            },
             label,
             required && React.createElement('span', {style: {color: themeUtils.get('COLORS.DANGER')}}, ' *')
         ),
@@ -151,7 +155,16 @@ const GenericFormField = ({label, children, required = false, description = null
         }, description)
     );
 
-const GenericInputField = ({label, value, onChange, type = 'text', placeholder = '', required = false, description = null, disabled = false}) =>
+const GenericInputField = ({
+                               label,
+                               value,
+                               onChange,
+                               type = 'text',
+                               placeholder = '',
+                               required = false,
+                               description = null,
+                               disabled = false
+                           }) =>
     React.createElement(GenericFormField, {label, required, description},
         React.createElement('input', {
             type,
@@ -172,22 +185,30 @@ const GenericInputField = ({label, value, onChange, type = 'text', placeholder =
         })
     );
 
-const GenericSelectField = ({label, value, onChange, options, required = false, description = null, disabled = false}) =>
+const GenericSelectField = ({
+                                label,
+                                value,
+                                onChange,
+                                options,
+                                required = false,
+                                description = null,
+                                disabled = false
+                            }) =>
     React.createElement(GenericFormField, {label, required, description},
         React.createElement('select', {
-            value,
-            onChange: (e) => onChange(e.target.value),
-            disabled,
-            style: {
-                width: '100%',
-                padding: '0.5rem',
-                border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`,
-                borderRadius: themeUtils.get('BORDERS.RADIUS.MD'),
-                fontSize: themeUtils.get('FONTS.SIZE.SM'),
-                backgroundColor: disabled ? themeUtils.get('BACKGROUNDS.TERTIARY') : themeUtils.get('BACKGROUNDS.PRIMARY'),
-                color: themeUtils.get('TEXT.PRIMARY')
-            }
-        },
+                value,
+                onChange: (e) => onChange(e.target.value),
+                disabled,
+                style: {
+                    width: '100%',
+                    padding: '0.5rem',
+                    border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`,
+                    borderRadius: themeUtils.get('BORDERS.RADIUS.MD'),
+                    fontSize: themeUtils.get('FONTS.SIZE.SM'),
+                    backgroundColor: disabled ? themeUtils.get('BACKGROUNDS.TERTIARY') : themeUtils.get('BACKGROUNDS.PRIMARY'),
+                    color: themeUtils.get('TEXT.PRIMARY')
+                }
+            },
             options.map(option =>
                 React.createElement('option', {key: option.value, value: option.value}, option.label)
             )
@@ -215,7 +236,13 @@ const CollapsibleSection = ({title, children, defaultOpen = false}) => {
                 },
                 onClick: () => setIsOpen(!isOpen)
             },
-            React.createElement('div', {style: {display: 'flex', justifyContent: 'space-between', alignItems: 'center'}},
+            React.createElement('div', {
+                    style: {
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                    }
+                },
                 React.createElement('span', null, title),
                 React.createElement('span', null, isOpen ? '▼' : '▶')
             )
@@ -226,24 +253,24 @@ const CollapsibleSection = ({title, children, defaultOpen = false}) => {
 
 const ToggleSwitch = ({checked, onChange, label}) =>
     React.createElement('label', {
-        style: {
-            display: 'flex',
-            alignItems: 'center',
-            cursor: 'pointer',
-            fontSize: themeUtils.get('FONTS.SIZE.SM')
-        }
-    },
-        React.createElement('div', {
             style: {
-                position: 'relative',
-                width: '40px',
-                height: '20px',
-                backgroundColor: checked ? themeUtils.get('COLORS.PRIMARY') : themeUtils.get('COLORS.GRAY_400'),
-                borderRadius: '10px',
-                marginRight: '0.5rem',
-                transition: 'background-color 0.3s'
+                display: 'flex',
+                alignItems: 'center',
+                cursor: 'pointer',
+                fontSize: themeUtils.get('FONTS.SIZE.SM')
             }
         },
+        React.createElement('div', {
+                style: {
+                    position: 'relative',
+                    width: '40px',
+                    height: '20px',
+                    backgroundColor: checked ? themeUtils.get('COLORS.PRIMARY') : themeUtils.get('COLORS.GRAY_400'),
+                    borderRadius: '10px',
+                    marginRight: '0.5rem',
+                    transition: 'background-color 0.3s'
+                }
+            },
             React.createElement('div', {
                 style: {
                     position: 'absolute',
@@ -267,7 +294,11 @@ const getButtonVariantStyle = (variant) => ({
     success: {backgroundColor: themeUtils.get('COLORS.SUCCESS'), color: themeUtils.get('TEXT.LIGHT')},
     warning: {backgroundColor: themeUtils.get('COLORS.WARNING'), color: themeUtils.get('TEXT.PRIMARY')},
     danger: {backgroundColor: themeUtils.get('COLORS.DANGER'), color: themeUtils.get('TEXT.LIGHT')},
-    light: {backgroundColor: themeUtils.get('BACKGROUNDS.SECONDARY'), color: themeUtils.get('TEXT.PRIMARY'), border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`},
+    light: {
+        backgroundColor: themeUtils.get('BACKGROUNDS.SECONDARY'),
+        color: themeUtils.get('TEXT.PRIMARY'),
+        border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`
+    },
     dark: {backgroundColor: themeUtils.get('COLORS.DARK'), color: themeUtils.get('TEXT.LIGHT')}
 }[variant] || {backgroundColor: themeUtils.get('COLORS.PRIMARY'), color: themeUtils.get('TEXT.LIGHT')});
 
@@ -296,15 +327,15 @@ const Button = ({children, onClick, variant = 'primary', style = {}, disabled = 
 
 const Card = ({children, title, style = {}}) =>
     React.createElement('div', {
-        style: {
-            border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`,
-            borderRadius: themeUtils.get('BORDERS.RADIUS.MD'),
-            padding: '1rem',
-            backgroundColor: themeUtils.get('BACKGROUNDS.PRIMARY'),
-            boxShadow: themeUtils.get('SHADOWS.SM'),
-            ...style
-        }
-    },
+            style: {
+                border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`,
+                borderRadius: themeUtils.get('BORDERS.RADIUS.MD'),
+                padding: '1rem',
+                backgroundColor: themeUtils.get('BACKGROUNDS.PRIMARY'),
+                boxShadow: themeUtils.get('SHADOWS.SM'),
+                ...style
+            }
+        },
         title && React.createElement('div', {
             style: {
                 fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD'),

@@ -68,9 +68,20 @@ const InputInterfacePanel = memo(() => {
                     fontSize: themeUtils.get('FONTS.SIZE.SM')
                 }
             },
-            React.createElement('div', {style: {fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD'), display: 'flex', justifyContent: 'space-between'}},
+            React.createElement('div', {
+                    style: {
+                        fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD'),
+                        display: 'flex',
+                        justifyContent: 'space-between'
+                    }
+                },
                 React.createElement('span', null, item.input),
-                React.createElement('span', {style: {fontSize: themeUtils.get('FONTS.SIZE.XXS'), color: themeUtils.get('TEXT.SECONDARY')}},
+                React.createElement('span', {
+                        style: {
+                            fontSize: themeUtils.get('FONTS.SIZE.XXS'),
+                            color: themeUtils.get('TEXT.SECONDARY')
+                        }
+                    },
                     new Date(item.timestamp).toLocaleTimeString()
                 )
             ),
@@ -82,8 +93,20 @@ const InputInterfacePanel = memo(() => {
 
     // Input form
     const inputForm = React.createElement('div',
-        {style: {marginBottom: '1rem', padding: '0.5rem', backgroundColor: themeUtils.get('BACKGROUNDS.SECONDARY'), borderRadius: themeUtils.get('BORDERS.RADIUS.SM')}},
-        React.createElement('div', {style: {marginBottom: '0.5rem', fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD')}}, 'Input Narsese:'),
+        {
+            style: {
+                marginBottom: '1rem',
+                padding: '0.5rem',
+                backgroundColor: themeUtils.get('BACKGROUNDS.SECONDARY'),
+                borderRadius: themeUtils.get('BORDERS.RADIUS.SM')
+            }
+        },
+        React.createElement('div', {
+            style: {
+                marginBottom: '0.5rem',
+                fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD')
+            }
+        }, 'Input Narsese:'),
         React.createElement('textarea', {
             value: inputText,
             onChange: (e) => setInputText(e.target.value),
@@ -118,8 +141,20 @@ const InputInterfacePanel = memo(() => {
 
     // Examples of valid Narsese
     const examples = React.createElement('div',
-        {style: {marginBottom: '1rem', padding: '0.75rem', backgroundColor: '#e9ecef', borderRadius: themeUtils.get('BORDERS.RADIUS.SM')}},
-        React.createElement('div', {style: {fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD'), marginBottom: '0.5rem'}}, 'Narsese Examples:'),
+        {
+            style: {
+                marginBottom: '1rem',
+                padding: '0.75rem',
+                backgroundColor: '#e9ecef',
+                borderRadius: themeUtils.get('BORDERS.RADIUS.SM')
+            }
+        },
+        React.createElement('div', {
+            style: {
+                fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD'),
+                marginBottom: '0.5rem'
+            }
+        }, 'Narsese Examples:'),
         React.createElement('ul', {style: {margin: 0, paddingLeft: '1rem', fontSize: themeUtils.get('FONTS.SIZE.SM')}},
             React.createElement('li', null, '<cat --> animal>. (Belief)'),
             React.createElement('li', null, '<dog --> mammal>? (Question)'),
@@ -130,7 +165,12 @@ const InputInterfacePanel = memo(() => {
 
     // History section
     const historySection = React.createElement('div', null,
-        React.createElement('div', {style: {fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD'), marginBottom: '0.5rem'}}, 'Input History:'),
+        React.createElement('div', {
+            style: {
+                fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD'),
+                marginBottom: '0.5rem'
+            }
+        }, 'Input History:'),
         history.length > 0
             ? React.createElement('div', null, ...history.map(renderHistoryItem))
             : React.createElement('div', {

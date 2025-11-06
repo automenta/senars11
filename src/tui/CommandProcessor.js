@@ -21,7 +21,7 @@ export class CommandProcessor {
         for (const [method, aliases] of Object.entries(COMMANDS)) {
             // Skip next command as it should be handled by specific interfaces
             if (method === 'next') continue;
-            
+
             for (const alias of aliases) {
                 // Bind methods dynamically if they exist on this instance
                 if (typeof this[`_${method}`] === 'function') {
@@ -76,7 +76,7 @@ export class CommandProcessor {
     _status() {
         const stats = this.nar.getStats();
         const memoryStats = stats.memoryStats || {};
-        
+
         return `📊 System Status:
   ⚡ Running: ${stats.isRunning ? 'Yes' : 'No'}
   🕒 Internal Clock: ${stats.cycleCount || 0}
@@ -90,7 +90,7 @@ export class CommandProcessor {
     _memory() {
         const stats = this.nar.getStats();
         const memoryStats = stats.memoryStats || {};
-        
+
         const conceptCount = memoryStats.conceptCount || memoryStats.totalConcepts || 0;
         const taskCount = memoryStats.taskCount || memoryStats.totalTasks || 0;
         const focusSize = memoryStats.focusTaskCount || memoryStats.focusConceptsCount || 0;
@@ -184,7 +184,7 @@ export class CommandProcessor {
                 'websocket              - WebSocket monitoring example',
                 'lm-providers           - Language model provider integrations'
             ];
-            
+
             return [
                 '🎭 Available examples:',
                 ...examples.map(line => `  ${line}`),

@@ -7,22 +7,22 @@ export class LoggingSubscriber {
             eventFilter: options.eventFilter || null,
             logger: options.logger || console
         };
-        
-        this.levels = { debug: 0, info: 1, warn: 2, error: 3 };
+
+        this.levels = {debug: 0, info: 1, warn: 2, error: 3};
         this.currentLogLevel = this.levels[this.options.level] || this.levels.info;
         this.stopped = false;
         this.boundMiddleware = this._loggingMiddleware.bind(this);
     }
-    
+
     start() {
         this.eventBus.use(this.boundMiddleware);
     }
-    
+
     stop() {
         this.eventBus.removeMiddleware(this.boundMiddleware);
         this.stopped = true;
     }
-    
+
     _loggingMiddleware(eventData) {
         if (!this.stopped && this._shouldLogEvent(eventData)) {
             const logEntry = this._formatLogEntry(eventData);
@@ -30,12 +30,12 @@ export class LoggingSubscriber {
         }
         return eventData;
     }
-    
+
     _shouldLogEvent(eventData) {
         return this.options.logAllEvents &&
             (!this.options.eventFilter || this.options.eventFilter(eventData));
     }
-    
+
     _formatLogEntry(eventData) {
         return {
             timestamp: eventData.timestamp || Date.now(),
@@ -47,20 +47,20 @@ export class LoggingSubscriber {
             source: 'eventbus'
         };
     }
-    
+
     _getLogLevel(eventName) {
         return eventName.includes('error') ? 'error' :
-               eventName.includes('warn') || eventName.includes('warning') ? 'warn' :
-               eventName.includes('debug') ? 'debug' : 'info';
+            eventName.includes('warn') || eventName.includes('warning') ? 'warn' :
+                eventName.includes('debug') ? 'debug' : 'info';
     }
-    
+
     _sanitizeEventData(eventData) {
-        const { eventName, timestamp, component, traceId, ...sanitized } = eventData;
+        const {eventName, timestamp, component, traceId, ...sanitized} = eventData;
         return sanitized;
     }
-    
+
     _outputLog(logEntry) {
         this.levels[logEntry.level] >= this.currentLogLevel &&
-            this.options.logger.log(JSON.stringify(logEntry));
+        this.options.logger.log(JSON.stringify(logEntry));
     }
 }

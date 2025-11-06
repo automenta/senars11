@@ -86,7 +86,7 @@ export class BaseTool {
             }
         }
 
-        return { isValid: errors.length === 0, errors };
+        return {isValid: errors.length === 0, errors};
     }
 
     /**
@@ -152,5 +152,6 @@ export class BaseTool {
      * Shutdown the tool and clean up resources
      * @returns {Promise<void>} - Async cleanup
      */
-    async shutdown() {}
+    async shutdown() {
+    }
 }

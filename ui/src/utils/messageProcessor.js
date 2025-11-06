@@ -75,12 +75,12 @@ const messageProcessorUtils = {
             const now = Date.now();
             const type = message.type;
             const counts = messageCounts.get(type) || [];
-            
+
             const recentCount = counts.filter(time => now - time < intervalMs).length;
             if (recentCount >= maxPerInterval) {
                 throw new Error(`Rate limit exceeded for message type: ${type}`);
             }
-            
+
             messageCounts.set(type, [...counts, now].filter(time => now - time < intervalMs));
             return message;
         };
@@ -93,14 +93,14 @@ const messageProcessorUtils = {
             const key = `${message.type}_${JSON.stringify(message.payload)}`;
             const now = Date.now();
             const lastSeen = seenMessages.get(key);
-            
+
             if (lastSeen && now - lastSeen < windowMs) return null;
-            
+
             seenMessages.set(key, now);
             for (const [k, time] of seenMessages) {
                 if (now - time >= windowMs) seenMessages.delete(k);
             }
-            
+
             return message;
         };
     },

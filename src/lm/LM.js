@@ -25,6 +25,14 @@ export class LM extends BaseComponent {
         Object.freeze(this);
     }
 
+    get config() {
+        return {...this._config};
+    }
+
+    get metrics() {
+        return this.lmMetrics;
+    }
+
     _getCircuitBreakerConfig() {
         const cbConfig = this.config.circuitBreaker || {};
         return {
@@ -32,14 +40,6 @@ export class LM extends BaseComponent {
             timeout: cbConfig.timeout || 60000,
             resetTimeout: cbConfig.resetTimeout || 30000
         };
-    }
-
-    get config() {
-        return {...this._config};
-    }
-
-    get metrics() {
-        return this.lmMetrics;
     }
 
     async _initialize() {
@@ -122,7 +122,7 @@ export class LM extends BaseComponent {
             if (typeof provider.process === 'function') {
                 return await this._executeWithCircuitBreaker(provider, provider.process, prompt, options);
             }
-            
+
             return provider.generateText
                 ? await this.generateText(prompt, options, providerId)
                 : provider.generate

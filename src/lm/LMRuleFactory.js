@@ -3,7 +3,7 @@ import {LMRuleUtils} from '../reason/LMRuleUtils.js';
 
 export class LMRuleFactory {
     static create(config) {
-        const { id, lm, ...rest } = config;
+        const {id, lm, ...rest} = config;
         if (!id || !lm) {
             throw new Error('LMRuleFactory.create: `id` and `lm` are required.');
         }
@@ -11,13 +11,13 @@ export class LMRuleFactory {
     }
 
     static createLegacy(id, lm, promptTemplate, responseProcessor, priority = 1.0, config = {}) {
-        const newConfig = { ...config, promptTemplate, responseProcessor, priority };
-        return LMRule.create({ id, lm, ...newConfig });
+        const newConfig = {...config, promptTemplate, responseProcessor, priority};
+        return LMRule.create({id, lm, ...newConfig});
     }
 
     static createSimple(config) {
-        const { id, lm, promptTemplate, priority = 1.0, ...rest } = config;
-        
+        const {id, lm, promptTemplate, priority = 1.0, ...rest} = config;
+
         const fullConfig = {
             id,
             lm,
@@ -27,25 +27,25 @@ export class LMRuleFactory {
             generate: (processedOutput) => processedOutput ? [] : [],
             ...rest
         };
-        
+
         return LMRule.create(fullConfig);
     }
 
     static createInferenceRule(config) {
-        return this._createBasicRule(config, 'Inference Rule', 
+        return this._createBasicRule(config, 'Inference Rule',
             'Generates logical inferences using language models',
             `Given the task "{{taskTerm}}" of type "{{taskType}}" with truth value "{{taskTruth}}", please generate a logical inference or conclusion based on this information. Respond with a valid Narsese statement.`);
     }
 
     static createHypothesisRule(config) {
-        return this._createBasicRule(config, 'Hypothesis Generation Rule', 
+        return this._createBasicRule(config, 'Hypothesis Generation Rule',
             'Generates plausible hypotheses using language models',
             `Given the task "{{taskTerm}}" of type "{{taskType}}" with truth value "{{taskTruth}}", please generate a plausible hypothesis that could explain or relate to this information. Respond with a valid Narsese statement.`);
     }
 
     static _createBasicRule(config, name, description, template) {
-        const { id, lm, priority = 1.0, ...rest } = config;
-        
+        const {id, lm, priority = 1.0, ...rest} = config;
+
         return LMRule.create({
             id,
             lm,
@@ -62,8 +62,8 @@ export class LMRuleFactory {
     }
 
     static createSinglePremise(config) {
-        const { id, lm, ...rest } = config;
-        return LMRule.create({ singlePremise: true, ...rest, id, lm });
+        const {id, lm, ...rest} = config;
+        return LMRule.create({singlePremise: true, ...rest, id, lm});
     }
 
     static createPatternBased(config) {
@@ -83,7 +83,7 @@ export class LMRuleFactory {
     }
 
     static createCommonRule(type, dependencies, config = {}) {
-        const { lm } = dependencies;
+        const {lm} = dependencies;
         const baseConfig = {
             id: config.id ?? `${type}`,
             lm,
@@ -136,33 +136,33 @@ export class LMRuleFactory {
             prompt: LMRuleUtils.createPromptTemplate('goalDecomposition', config.options),
             process: LMRuleUtils.createResponseProcessor('list', config.options),
             generate: LMRuleUtils.createTaskGenerator('multipleSubTasks', config.options),
-            lm_options: { temperature: 0.6, max_tokens: 500, ...config.lm_options }
+            lm_options: {temperature: 0.6, max_tokens: 500, ...config.lm_options}
         });
     }
 
     static _createHypothesisRule(config) {
         return LMRule.create({
             ...config,
-            condition: (primary) => primary?.punctuation === '.' && 
-                               (primary.getPriority?.() ?? primary.priority ?? 0) > 0.7 &&
-                               (primary.truth?.c ?? primary.truth?.confidence ?? 0) > 0.8,
+            condition: (primary) => primary?.punctuation === '.' &&
+                (primary.getPriority?.() ?? primary.priority ?? 0) > 0.7 &&
+                (primary.truth?.c ?? primary.truth?.confidence ?? 0) > 0.8,
             prompt: LMRuleUtils.createPromptTemplate('hypothesisGeneration'),
             process: LMRuleUtils.createResponseProcessor('single'),
-            generate: LMRuleUtils.createTaskGenerator('singleTask', { punctuation: '?' }),
-            lm_options: { temperature: 0.8, max_tokens: 200, ...config.lm_options }
+            generate: LMRuleUtils.createTaskGenerator('singleTask', {punctuation: '?'}),
+            lm_options: {temperature: 0.8, max_tokens: 200, ...config.lm_options}
         });
     }
 
     static _createCausalAnalysisRule(config) {
         return LMRule.create({
             ...config,
-            condition: (primary) => primary?.punctuation === '.' && 
-                               (primary.getPriority?.() ?? primary.priority ?? 0) > 0.7 &&
-                               LMRuleUtils.createPatternBasedRule({ patternType: 'temporalCausal' }).condition(primary),
+            condition: (primary) => primary?.punctuation === '.' &&
+                (primary.getPriority?.() ?? primary.priority ?? 0) > 0.7 &&
+                LMRuleUtils.createPatternBasedRule({patternType: 'temporalCausal'}).condition(primary),
             prompt: LMRuleUtils.createPromptTemplate('causalAnalysis'),
             process: LMRuleUtils.createResponseProcessor('single'),
-            generate: LMRuleUtils.createTaskGenerator('singleTask', { punctuation: '.' }),
-            lm_options: { temperature: 0.4, max_tokens: 300, ...config.lm_options }
+            generate: LMRuleUtils.createTaskGenerator('singleTask', {punctuation: '.'}),
+            lm_options: {temperature: 0.4, max_tokens: 300, ...config.lm_options}
         });
     }
 }

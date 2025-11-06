@@ -98,7 +98,7 @@ export const DEFAULT_CLIENT_CAPABILITIES = Object.freeze([
 
 export const SUPPORTED_MESSAGE_TYPES = Object.freeze([
     'narseseInput',
-    'testLMConnection', 
+    'testLMConnection',
     'subscribe',
     'unsubscribe',
     'ping',

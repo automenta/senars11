@@ -107,26 +107,26 @@ export class TaskPromotionManager extends ConfigurableComponent {
      */
     _makePromotionDecision(candidate, focusSet, memory, currentTime) {
         const score = this._calculatePromotionScore(candidate, focusSet, currentTime);
-        const { priority } = candidate;
-        
+        const {priority} = candidate;
+
         const decision = this._determineAction(score, priority);
-        
+
         return {
             action: decision.action,
             reason: decision.reason,
             score
         };
     }
-    
+
     _determineAction(score, priority) {
         if (score >= this._config.promotionThreshold) {
-            return { action: 'promote', reason: 'High promotion score' };
+            return {action: 'promote', reason: 'High promotion score'};
         } else if (score <= this._config.demotionThreshold) {
-            return { action: 'demote', reason: 'Low promotion score' };
+            return {action: 'demote', reason: 'Low promotion score'};
         } else if (priority >= this._config.stabilityThreshold) {
-            return { action: 'stabilize', reason: 'Stable priority level' };
+            return {action: 'stabilize', reason: 'Stable priority level'};
         } else {
-            return { action: 'demote', reason: 'Insufficient priority for stabilization' };
+            return {action: 'demote', reason: 'Insufficient priority for stabilization'};
         }
     }
 

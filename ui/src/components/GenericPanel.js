@@ -3,17 +3,17 @@ import {TimeDisplay} from './GenericComponents.js';
 import {themeUtils} from '../utils/themeUtils.js';
 
 const GenericPanel = memo(({
-    items = [],
-    renderItem,
-    maxHeight = 'calc(100% - 2rem)',
-    emptyMessage = 'No items to display',
-    containerStyle = {},
-    withTimestamp = false,
-    title = null,
-    autoScroll = false,
-    maxItems = null,
-    showCount = false
-}) => {
+                               items = [],
+                               renderItem,
+                               maxHeight = 'calc(100% - 2rem)',
+                               emptyMessage = 'No items to display',
+                               containerStyle = {},
+                               withTimestamp = false,
+                               title = null,
+                               autoScroll = false,
+                               maxItems = null,
+                               showCount = false
+                           }) => {
     const [containerRef, setContainerRef] = useState(null);
 
     const displayItems = useMemo(() => maxItems ? items.slice(-maxItems) : items, [items, maxItems]);
@@ -63,9 +63,9 @@ const GenericPanel = memo(({
             showCount && React.createElement('span', {style: countStyle}, `(${displayItems.length})`)
         ),
         React.createElement('div', {
-            style: containerStyleComputed,
-            ref: setContainerRef
-        },
+                style: containerStyleComputed,
+                ref: setContainerRef
+            },
             displayItems.length > 0
                 ? displayItems.map((item, index) => React.createElement('div', {key: index}, renderItem(item, index)))
                 : React.createElement('div', {className: "emptyState", style: emptyStateStyle}, emptyMessage)

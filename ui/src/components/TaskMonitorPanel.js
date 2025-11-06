@@ -133,12 +133,22 @@ const TaskMonitorPanel = memo(() => {
                 }
             },
             React.createElement('div', {
-                    style: {fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD'), display: 'flex', justifyContent: 'space-between', cursor: 'pointer'},
+                    style: {
+                        fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD'),
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        cursor: 'pointer'
+                    },
                     onClick: () => setExpandedTask(isExpanded ? null : task.id)
                 },
                 React.createElement('span', null, task.term || 'No term'),
                 React.createElement('div', {style: {display: 'flex', gap: '0.5rem'}},
-                    React.createElement('span', {style: {fontSize: themeUtils.get('FONTS.SIZE.XS'), color: themeUtils.get('TEXT.SECONDARY')}}, task.type || 'Unknown'),
+                    React.createElement('span', {
+                        style: {
+                            fontSize: themeUtils.get('FONTS.SIZE.XS'),
+                            color: themeUtils.get('TEXT.SECONDARY')
+                        }
+                    }, task.type || 'Unknown'),
                     hasTransformations && React.createElement('span', {
                         style: {
                             fontSize: themeUtils.get('FONTS.SIZE.XS'),

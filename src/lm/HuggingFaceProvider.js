@@ -15,7 +15,7 @@ export class HuggingFaceProvider extends BaseProvider {
 
     _getModelType(modelName) {
         return modelName.includes('MobileBERT') ? 'mobilebert' :
-               modelName.includes('SmolLM') ? 'smollm' : 'generic';
+            modelName.includes('SmolLM') ? 'smollm' : 'generic';
     }
 
     async _initializeModel() {
@@ -26,14 +26,14 @@ export class HuggingFaceProvider extends BaseProvider {
 
             switch (this.modelType) {
                 case 'smollm':
-                    this.pipeline = await pipeline('text-generation', this.modelName, { device: this.device });
+                    this.pipeline = await pipeline('text-generation', this.modelName, {device: this.device});
                     break;
                 case 'mobilebert':
                     this.tokenizer = await AutoTokenizer.from_pretrained(this.modelName);
                     this.model = await AutoModelForCausalLM.from_pretrained(this.modelName);
                     break;
                 default:
-                    this.pipeline = await pipeline('text-generation', this.modelName, { device: this.device });
+                    this.pipeline = await pipeline('text-generation', this.modelName, {device: this.device});
             }
 
             this.initialized = true;
@@ -71,15 +71,15 @@ export class HuggingFaceProvider extends BaseProvider {
         if (Array.isArray(response) && response.length > 0) {
             return response[0].generated_text || response[0].text || response[0];
         }
-        
+
         if (typeof response === 'string') {
             return response;
         }
-        
+
         if (response?.generated_text) {
             return response.generated_text;
         }
-        
+
         return JSON.stringify(response);
     }
 
@@ -88,7 +88,7 @@ export class HuggingFaceProvider extends BaseProvider {
 
         try {
             const {pipeline} = await import('@xenova/transformers');
-            const extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2', { device: this.device });
+            const extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2', {device: this.device});
             const output = await extractor(text, {pooling: 'mean', normalize: true});
             return Array.from(output.data || output);
         } catch (error) {

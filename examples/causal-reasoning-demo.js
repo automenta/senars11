@@ -15,7 +15,7 @@ async function traditionalCausalDemo() {
             useStreamReasoner: false  // Use traditional cycle-based reasoner
         }
     };
-    
+
     const nar = new NAR(config);
     await nar.initialize();
 
@@ -37,7 +37,7 @@ async function traditionalCausalDemo() {
 
     console.log(`\nTotal reasoning cycles completed: ${nar.cycleCount}`);
     console.log(`Total concepts in memory: ${nar.memory.getAllConcepts().length}`);
-    
+
     return nar;
 }
 
@@ -54,7 +54,7 @@ async function streamCausalDemo() {
             cpuThrottleInterval: 0  // No throttle for demo
         }
     };
-    
+
     const nar = new NAR(config);
     await nar.initialize();
 
@@ -65,19 +65,19 @@ async function streamCausalDemo() {
     await nar.input('(rains =/> [raining]). %1.0;0.9%');
 
     console.log('\nStarting stream reasoning...\n');
-    
+
     // Start the stream reasoner
     nar.start();
-    
+
     // Run a few manual steps to ensure reasoning occurs
     for (let i = 0; i < 20; i++) {
         await nar.step();
         await new Promise(resolve => setTimeout(resolve, 50)); // Small delay to allow processing
     }
-    
+
     // Wait a bit more for any async derivations
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
+
     // Stop the stream reasoner
     nar.stop();
 
@@ -92,26 +92,26 @@ async function streamCausalDemo() {
     const stats = nar.getStats();
     console.log(`\nStream reasoner derivations: ${stats.cycleCount}`);
     console.log(`Total concepts in memory: ${stats.memoryStats.conceptCount}`);
-    
+
     if (stats.streamReasonerStats) {
         console.log(`Stream reasoner metrics:`);
         console.log(`  Total derivations: ${stats.streamReasonerStats.totalDerivations}`);
         console.log(`  Processing time: ${stats.streamReasonerStats.totalProcessingTime}ms`);
         console.log(`  Throughput: ${(stats.streamReasonerStats.throughput || 0).toFixed(2)}/sec`);
     }
-    
+
     return nar;
 }
 
 async function runCausalComparison() {
     console.log('🚀 Causal Reasoning: Traditional vs Stream-Based Comparison\n');
-    
+
     // Run traditional demo
     await traditionalCausalDemo();
-    
+
     // Run stream demo
     await streamCausalDemo();
-    
+
     console.log('\n🎯 Causal reasoning comparison completed!');
 }
 
@@ -120,4 +120,4 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     runCausalComparison().catch(console.error);
 }
 
-export { traditionalCausalDemo, streamCausalDemo, runCausalComparison };
+export {traditionalCausalDemo, streamCausalDemo, runCausalComparison};

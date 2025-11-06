@@ -87,25 +87,52 @@ const ConceptRelationshipPanel = () => {
                 React.createElement('thead', null,
                     React.createElement('tr',
                         {style: {backgroundColor: themeUtils.get('BACKGROUNDS.SECONDARY')}},
-                        React.createElement('th', {style: {padding: '0.5rem', border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`}}, 'Source'),
-                        React.createElement('th', {style: {padding: '0.5rem', border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`}}, 'Type'),
-                        React.createElement('th', {style: {padding: '0.5rem', border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`}}, 'Target'),
+                        React.createElement('th', {
+                            style: {
+                                padding: '0.5rem',
+                                border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`
+                            }
+                        }, 'Source'),
+                        React.createElement('th', {
+                            style: {
+                                padding: '0.5rem',
+                                border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`
+                            }
+                        }, 'Type'),
+                        React.createElement('th', {
+                            style: {
+                                padding: '0.5rem',
+                                border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`
+                            }
+                        }, 'Target'),
                         React.createElement('th', {
                             style: {
                                 padding: '0.5rem',
                                 border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`
                             }
                         }, 'Strength'),
-                        React.createElement('th', {style: {padding: '0.5rem', border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`}}, 'Task')
+                        React.createElement('th', {
+                            style: {
+                                padding: '0.5rem',
+                                border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`
+                            }
+                        }, 'Task')
                     )
                 ),
                 React.createElement('tbody', null,
                     relationships.map((rel) =>
                         React.createElement('tr',
-                            {key: `${rel.source}-${rel.target}-${rel.type}`, style: {backgroundColor: themeUtils.get('BACKGROUNDS.PRIMARY')}},
+                            {
+                                key: `${rel.source}-${rel.target}-${rel.type}`,
+                                style: {backgroundColor: themeUtils.get('BACKGROUNDS.PRIMARY')}
+                            },
                             React.createElement('td',
                                 {
-                                    style: {padding: '0.5rem', border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`, cursor: 'pointer'},
+                                    style: {
+                                        padding: '0.5rem',
+                                        border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`,
+                                        cursor: 'pointer'
+                                    },
                                     onClick: () => setSelectedConcept(rel.source)
                                 },
                                 rel.source
@@ -118,7 +145,11 @@ const ConceptRelationshipPanel = () => {
                             }, rel.type),
                             React.createElement('td',
                                 {
-                                    style: {padding: '0.5rem', border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`, cursor: 'pointer'},
+                                    style: {
+                                        padding: '0.5rem',
+                                        border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`,
+                                        cursor: 'pointer'
+                                    },
                                     onClick: () => setSelectedConcept(rel.target)
                                 },
                                 rel.target
@@ -160,7 +191,12 @@ const ConceptRelationshipPanel = () => {
         }
 
         return React.createElement('div', null,
-            React.createElement('h4', {style: {margin: '0 0 0.5rem 0', fontSize: themeUtils.get('FONTS.SIZE.BASE')}}, 'Available Concepts'),
+            React.createElement('h4', {
+                style: {
+                    margin: '0 0 0.5rem 0',
+                    fontSize: themeUtils.get('FONTS.SIZE.BASE')
+                }
+            }, 'Available Concepts'),
             React.createElement('div',
                 {style: {display: 'flex', flexWrap: 'wrap', gap: '0.5rem'}},
                 concepts.map((concept) =>

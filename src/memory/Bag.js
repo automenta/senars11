@@ -138,7 +138,7 @@ export class Bag {
 
         return true;
     }
-    
+
     _addItemToStorage(item, priority) {
         this._items.set(item, priority);
         this._insertionOrder.push(item);

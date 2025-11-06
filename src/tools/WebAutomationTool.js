@@ -346,7 +346,7 @@ export class WebAutomationTool extends BaseTool {
             }
         }
 
-        return { isValid: errors.length === 0, errors };
+        return {isValid: errors.length === 0, errors};
     }
 
     /**
@@ -373,7 +373,7 @@ export class WebAutomationTool extends BaseTool {
             const domain = parsedUrl.hostname.toLowerCase();
 
             // Check if domain is in allowed list
-            const isAllowed = Array.from(this.allowedDomains).some(allowed => 
+            const isAllowed = Array.from(this.allowedDomains).some(allowed =>
                 domain === allowed || domain.endsWith('.' + allowed)
             );
 

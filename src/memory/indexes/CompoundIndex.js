@@ -1,6 +1,6 @@
-import { BaseIndex } from './BaseIndex.js';
-import { TermCategorization } from '../TermCategorization.js';
-import { addToMapSet } from '../MemoryUtils.js';
+import {BaseIndex} from './BaseIndex.js';
+import {TermCategorization} from '../TermCategorization.js';
+import {addToMapSet} from '../MemoryUtils.js';
 
 export class CompoundIndex extends BaseIndex {
     constructor(config = {}) {
@@ -12,7 +12,7 @@ export class CompoundIndex extends BaseIndex {
     }
 
     add(concept) {
-        const { term } = concept;
+        const {term} = concept;
         if (!term.isAtomic) {
             // Index by operator, complexity, category, and components
             addToMapSet(this._index, term.operator, concept);
@@ -50,7 +50,7 @@ export class CompoundIndex extends BaseIndex {
     }
 
     remove(concept) {
-        const { term } = concept;
+        const {term} = concept;
         if (!term.isAtomic) {
             // Remove from all indexes
             this._removeFromIndex(this._index, term.operator, concept);
@@ -92,11 +92,11 @@ export class CompoundIndex extends BaseIndex {
     }
 
     find(filters = {}) {
-        const { operator, category, minComplexity, maxComplexity, component } = filters;
+        const {operator, category, minComplexity, maxComplexity, component} = filters;
 
         // Start with operator search if specified
-        let resultConcepts = operator 
-            ? new Set(this._index.get(operator) || []) 
+        let resultConcepts = operator
+            ? new Set(this._index.get(operator) || [])
             : new Set();
 
         // Apply category filter
@@ -148,7 +148,7 @@ export class CompoundIndex extends BaseIndex {
     getAll() {
         const allConcepts = new Set();
         const indexes = [this._index, this._complexityIndex, this._categoryIndex, this._componentIndex];
-        
+
         for (const index of indexes) {
             for (const concepts of index.values()) {
                 for (const concept of concepts) {
@@ -156,7 +156,7 @@ export class CompoundIndex extends BaseIndex {
                 }
             }
         }
-        
+
         return Array.from(allConcepts);
     }
 }

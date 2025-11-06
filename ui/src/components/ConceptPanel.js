@@ -1,17 +1,13 @@
 import React, {memo} from 'react';
 import {DataPanel} from './DataPanel.js';
 import DataItem from './DataItem.js';
-import {themeUtils} from '../utils/themeUtils.js';
-import {
-    calculatePriorityChange,
-    getPriorityChangeColor
-} from '../utils/conceptUtils.js';
+import {calculatePriorityChange, getPriorityChangeColor} from '../utils/conceptUtils.js';
 
 const ConceptPanel = memo(() => {
     const renderConcept = (concept) => {
         const priorityChange = calculatePriorityChange(concept);
         const priorityChangeColor = getPriorityChangeColor(priorityChange);
-        
+
         return React.createElement(DataItem, {
             key: concept.term,
             title: concept.term,
@@ -20,12 +16,12 @@ const ConceptPanel = memo(() => {
                     label: 'Priority Change',
                     value: priorityChange.toFixed(3),
                     render: (value) => React.createElement('span', {
-                        style: { color: priorityChangeColor }
+                        style: {color: priorityChangeColor}
                     }, `${priorityChange >= 0 ? '+' : ''}${value}`)
                 },
-                { label: 'Priority', value: (concept.priority || 0).toFixed(3) },
-                { label: 'Tasks', value: concept.taskCount || 0 },
-                { label: 'Beliefs', value: concept.beliefCount || 0 },
+                {label: 'Priority', value: (concept.priority || 0).toFixed(3)},
+                {label: 'Tasks', value: concept.taskCount || 0},
+                {label: 'Beliefs', value: concept.beliefCount || 0},
                 concept.lastAccess && {
                     label: 'Last Access',
                     value: new Date(concept.lastAccess).toLocaleTimeString()

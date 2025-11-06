@@ -79,7 +79,7 @@ export class FileOperationsTool extends BaseTool {
             }
 
             const content = await fs.readFile(filePath, encoding);
-            return this._createFileResult('read', filePath, { content, size: stats.size });
+            return this._createFileResult('read', filePath, {content, size: stats.size});
         } catch (error) {
             this._handleFileError(error, filePath, 'read');
         }
@@ -102,7 +102,7 @@ export class FileOperationsTool extends BaseTool {
 
             await fs.writeFile(filePath, fileContent, encoding);
 
-            return this._createFileResult('write', filePath, { 
+            return this._createFileResult('write', filePath, {
                 size: Buffer.byteLength(fileContent, encoding),
                 backupCreated: this.backupEnabled
             });
@@ -288,7 +288,7 @@ export class FileOperationsTool extends BaseTool {
             }
         }
 
-        return { isValid: errors.length === 0, errors };
+        return {isValid: errors.length === 0, errors};
     }
 
     /**

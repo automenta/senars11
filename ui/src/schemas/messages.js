@@ -272,7 +272,7 @@ export const validateMessage = (data) => {
                 errors: validationErrors,
                 originalData: data
             });
-            
+
             // Return a basic validated structure instead of failing completely
             return {
                 type: data.type,
@@ -285,7 +285,7 @@ export const validateMessage = (data) => {
                 error: error?.message || error || 'Unknown validation error',
                 originalData: data
             });
-            
+
             // Return a basic structure instead of null to prevent complete failure
             return {
                 type: data.type,

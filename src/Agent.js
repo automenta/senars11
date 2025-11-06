@@ -116,7 +116,8 @@ export class Agent {
         }
     }
 
-    async _processDerivedTasks() {}
+    async _processDerivedTasks() {
+    }
 
     _removeProcessedTask(task) {
         const allTasks = this.inputTasks.getAllTasks();

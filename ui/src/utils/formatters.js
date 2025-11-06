@@ -1,4 +1,3 @@
-
 export const formatTruth = (truth) => {
     if (!truth) return 'N/A';
     const frequency = (truth.frequency || 0) * 100;

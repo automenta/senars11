@@ -1,6 +1,5 @@
-import { BaseIndex } from './BaseIndex.js';
-import { TermCategorization } from '../TermCategorization.js';
-import { getWithDefaultSet } from '../MemoryUtils.js';
+import {BaseIndex} from './BaseIndex.js';
+import {getWithDefaultSet} from '../MemoryUtils.js';
 
 export class ActivationIndex extends BaseIndex {
     constructor(config = {}) {
@@ -33,7 +32,7 @@ export class ActivationIndex extends BaseIndex {
     }
 
     find(filters = {}) {
-        const { minActivation, maxActivation } = filters;
+        const {minActivation, maxActivation} = filters;
 
         return (minActivation !== undefined || maxActivation !== undefined)
             ? this._getConceptsByActivationRange(minActivation, maxActivation)

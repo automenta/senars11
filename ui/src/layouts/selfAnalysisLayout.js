@@ -1,4 +1,4 @@
-import { createTab, createTabSet, createRow, createColumn, createBorder } from './defaultLayout.js';
+import {createBorder, createColumn, createRow, createTab, createTabSet} from './defaultLayout.js';
 
 const GLOBAL_CONFIG = {
     tabEnableClose: true,

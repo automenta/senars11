@@ -57,16 +57,16 @@ const initialState = Object.freeze({
 const useUiStore = create((set, get) => ({
     // Initial state
     ...initialState,
-    
+
     // UI state management
     setLayout: (layout) => set({layout}),
     saveLayout: (name, layout) => set(savedLayoutsManager.set(name, layout)),
     loadLayout: (name) => get().savedLayouts?.[name],
-    
+
     // WebSocket state management
     setWsConnected: (connected) => set({wsConnected: connected}),
     setWsService: (wsService) => set({wsService}),
-    
+
     // Meta-cognitive state management
     setNar: (nar) => set({nar}),
     setReasoningState: (state) => set({reasoningState: state}),
@@ -74,7 +74,7 @@ const useUiStore = create((set, get) => ({
     setCorrections: (corrections) => set({corrections}),
     addCorrection: (correction) => set(state => ({corrections: [...state.corrections, correction]})),
     clearCorrections: () => set({corrections: []}),
-    
+
     // Panel management with optimized updates
     addPanel: (id, config) => set(state => ({
         panels: {...state.panels, [id]: config}
@@ -87,47 +87,47 @@ const useUiStore = create((set, get) => ({
         delete newPanels[id];
         return {panels: newPanels};
     }),
-    
+
     // Optimized collection management with unified patterns
     addReasoningStep: (step) => set(reasoningStepsManager.add(step, 'id')),
     updateReasoningStep: (id, updates) => set(reasoningStepsManager.update(id, 'id', updates)),
     clearReasoningSteps: () => set(reasoningStepsManager.clear()),
-    
+
     addTask: (task) => set(tasksManager.add(task, 'id')),
     updateTask: (id, updates) => set(tasksManager.update(id, 'id', updates)),
     removeTask: (id) => set(tasksManager.remove(id, 'id')),
     clearTasks: () => set(tasksManager.clear()),
-    
+
     addBelief: (belief) => set(state => ({beliefs: [...state.beliefs, belief]})),
     updateBelief: (id, updates) => set(state => ({
-      beliefs: state.beliefs.map(belief => belief.id === id ? {...belief, ...updates} : belief)
+        beliefs: state.beliefs.map(belief => belief.id === id ? {...belief, ...updates} : belief)
     })),
     removeBelief: (id) => set(state => ({
-      beliefs: state.beliefs.filter(belief => belief.id !== id)
+        beliefs: state.beliefs.filter(belief => belief.id !== id)
     })),
     clearBeliefs: () => set({beliefs: []}),
-    
+
     addGoal: (goal) => set(state => ({goals: [...state.goals, goal]})),
     updateGoal: (id, updates) => set(state => ({
-      goals: state.goals.map(goal => goal.id === id ? {...goal, ...updates} : goal)
+        goals: state.goals.map(goal => goal.id === id ? {...goal, ...updates} : goal)
     })),
     removeGoal: (id) => set(state => ({
-      goals: state.goals.filter(goal => goal.id !== id)
+        goals: state.goals.filter(goal => goal.id !== id)
     })),
     clearGoals: () => set({goals: []}),
-    
+
     addConcept: (concept) => set(conceptsManager.add(concept, 'term')),
     updateConcept: (term, updates) => set(conceptsManager.update(term, 'term', updates)),
     removeConcept: (term) => set(conceptsManager.remove(term, 'term')),
     clearConcepts: () => set(conceptsManager.clear()),
-    
+
     addCycle: (cycle) => set(cyclesManager.addLimited(cycle, 50, 'id')),
     clearCycles: () => set(cyclesManager.clear()),
-    
+
     // System state management
     setSystemMetrics: (metrics) => set({systemMetrics: metrics}),
     clearSystemMetrics: () => set({systemMetrics: null}),
-    
+
     // Demo management
     setDemoList: (demos) => set({demos}),
     setDemoState: (key, value) => set(demoStatesManager.set(key, value)),
@@ -135,25 +135,25 @@ const useUiStore = create((set, get) => ({
         demoStates: {...prev.demoStates, [demoId]: state}
     })),
     updateDemoState: (demoId, updates) => set(demoStatesManager.update(demoId, updates)),
-    
+
     addDemoStep: (step) => set(demoStepsManager.addLimited(step, 100, 'id')),
     clearDemoSteps: () => set(demoStepsManager.clear()),
-    
+
     setDemoMetrics: demoMetricsManager.set,
     updateDemoMetrics: (demoId, updates) => set(demoMetricsManager.update(demoId, updates)),
     clearDemoMetrics: () => set(demoMetricsManager.clear()),
-    
+
     // Session management
     setActiveSession: (session) => set({activeSession: session}),
     endSession: () => set({activeSession: null}),
-    
+
     // UI status
     setError: (error) => set({error}),
     clearError: () => set({error: null}),
     setLoading: (loading) => set({isLoading: loading}),
     setTheme: (theme) => set({theme}),
     toggleTheme: () => set(state => ({theme: state.theme === 'light' ? 'dark' : 'light'})),
-    
+
     // Notifications with optimized ID generation
     addNotification: (notification) => set(state => {
         const id = notification.id || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -162,10 +162,10 @@ const useUiStore = create((set, get) => ({
     updateNotification: (id, updates) => set(notificationsManager.update(id, 'id', updates)),
     removeNotification: (id) => set(notificationsManager.remove(id, 'id')),
     clearNotifications: () => set(notificationsManager.clear()),
-    
+
     // Configuration state
     setLMTestResult: (result) => set({lmTestResult: result}),
-    
+
     // Utility methods
     batchUpdate: (updates) => batchUpdate(set, updates),
     selectors,

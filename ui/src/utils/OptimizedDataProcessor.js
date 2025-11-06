@@ -1,8 +1,8 @@
-import { createTypeFilter, createTextFilter, createCustomFilters, getNestedValue } from './filterUtils';
-import { compareValues, sortByKey } from './sortUtils';
-import { groupRelatedItems } from './groupUtils';
-import { extractDisplayProperties, createDataDisplayElement, createDataSummary } from './displayUtils';
-import { safeTransformData, paginateData, debounce, memoize, createSearchableCollection } from './utilityFunctions';
+import {createCustomFilters, createTextFilter, createTypeFilter, getNestedValue} from './filterUtils';
+import {compareValues, sortByKey} from './sortUtils';
+import {groupRelatedItems} from './groupUtils';
+import {createDataDisplayElement, createDataSummary, extractDisplayProperties} from './displayUtils';
+import {createSearchableCollection, debounce, memoize, paginateData, safeTransformData} from './utilityFunctions';
 
 export const processDataWithFilters = (data, options = {}) => {
     const {

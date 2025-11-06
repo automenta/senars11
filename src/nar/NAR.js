@@ -19,8 +19,13 @@ import {MetricsMonitor} from '../reason/MetricsMonitor.js';
 import {EmbeddingLayer} from '../lm/EmbeddingLayer.js';
 import {TermLayer} from '../memory/TermLayer.js';
 import {ReasoningAboutReasoning} from '../self/ReasoningAboutReasoning.js';
-import {SYSTEM_ATOMS} from '../reason/SystemAtoms.js';
-import { Reasoner as StreamReasoner, TaskBagPremiseSource, Strategy, RuleProcessor as StreamRuleProcessor, RuleExecutor as StreamRuleExecutor } from '../reason/index.js';
+import {
+    Reasoner as StreamReasoner,
+    RuleExecutor as StreamRuleExecutor,
+    RuleProcessor as StreamRuleProcessor,
+    Strategy,
+    TaskBagPremiseSource
+} from '../reason/index.js';
 
 export class NAR extends BaseComponent {
     constructor(config = {}) {
@@ -112,13 +117,13 @@ export class NAR extends BaseComponent {
         if (success) {
             await this._setupDefaultRules();
         }
-        
+
         // Initialize stream reasoner if it's going to be used
         if (this._useStreamReasoner && !this._streamReasoner) {
             this._initStreamReasoner();
             await this._registerRulesWithStreamReasoner();
         }
-        
+
         return success;
     }
 
@@ -131,7 +136,7 @@ export class NAR extends BaseComponent {
         this._taskManager = new TaskManager(this._memory, this._focus, this._config.taskManager);
         this._evaluator = new EvaluationEngine(null, this._termFactory);
         this._lm = lmEnabled ? new LM() : null;
-        
+
         // Initialize stream reasoner early if it's going to be used
         if (this._useStreamReasoner) {
             this._ruleEngine = null; // No old rule engine needed
@@ -157,7 +162,7 @@ export class NAR extends BaseComponent {
         this._cycle = this._useOptimizedCycle
             ? new OptimizedCycle(cycleConfig)
             : new Cycle(cycleConfig);
-        
+
         this._initOptionalComponents(config);
     }
 
@@ -176,24 +181,24 @@ export class NAR extends BaseComponent {
 
     _initStreamReasoner() {
         // Create premise source using the new reasoner's approach
-        this._streamPremiseSource = new TaskBagPremiseSource(this._focus, this._config.get('reasoning.streamSamplingObjectives') || { priority: true });
-        
+        this._streamPremiseSource = new TaskBagPremiseSource(this._focus, this._config.get('reasoning.streamSamplingObjectives') || {priority: true});
+
         // Create strategy
         this._streamStrategy = new Strategy({
             ...this._config.get('reasoning.streamStrategy'),
             focus: this._focus,
             memory: this._memory
         });
-        
+
         // Create rule executor
         this._streamRuleExecutor = new StreamRuleExecutor(this._config.get('reasoning.streamRuleExecutor') || {});
-        
+
         // Create rule processor
         this._streamRuleProcessor = new StreamRuleProcessor(this._streamRuleExecutor, {
             maxDerivationDepth: this._config.get('reasoning.maxDerivationDepth') || 10,
             termFactory: this._termFactory
         });
-        
+
         // Create the main stream reasoner
         this._streamReasoner = new StreamReasoner(
             this._streamPremiseSource,
@@ -221,7 +226,7 @@ export class NAR extends BaseComponent {
         this._componentManager.registerComponent('memory', this._memory);
         this._componentManager.registerComponent('focus', this._focus, ['memory']);
         this._componentManager.registerComponent('taskManager', this._taskManager, ['memory', 'focus']);
-        
+
         // Only register ruleEngine if it exists (for backward compatibility)
         if (this._ruleEngine) {
             this._componentManager.registerComponent('ruleEngine', this._ruleEngine);
@@ -243,7 +248,7 @@ export class NAR extends BaseComponent {
         if (this._ruleEngine) {
             cycleDependencies.push('ruleEngine');
         }
-        
+
         this._componentManager.registerComponent('cycle', this._cycle, cycleDependencies);
     }
 
@@ -255,24 +260,24 @@ export class NAR extends BaseComponent {
             this.logWarn('Error setting up default rules:', error);
         }
     }
-    
+
     async _registerRulesWithStreamReasoner() {
         if (!this._streamRuleExecutor) return;
-        
+
         // Import and register new stream reasoner rules from the refactored structure
-        const { SyllogisticRule } = await import('../reason/rules/nal/SyllogisticRule.js');
-        const { ModusPonensRule } = await import('../reason/rules/nal/ModusPonensRule.js');
-        const { ImplicationSyllogisticRule } = await import('../reason/rules/nal/ImplicationSyllogisticRule.js');
-        const { MetacognitionRules } = await import('../reason/rules/nal/MetacognitionRules.js');
-        
+        const {SyllogisticRule} = await import('../reason/rules/nal/SyllogisticRule.js');
+        const {ModusPonensRule} = await import('../reason/rules/nal/ModusPonensRule.js');
+        const {ImplicationSyllogisticRule} = await import('../reason/rules/nal/ImplicationSyllogisticRule.js');
+        const {MetacognitionRules} = await import('../reason/rules/nal/MetacognitionRules.js');
+
         const newSyllogisticRule = new SyllogisticRule();
         const newModusPonensRule = new ModusPonensRule();
         const newImplicationSyllogisticRule = new ImplicationSyllogisticRule();
-        
+
         this._streamRuleExecutor.register(newSyllogisticRule);
         this._streamRuleExecutor.register(newModusPonensRule);
         this._streamRuleExecutor.register(newImplicationSyllogisticRule);
-        
+
         // Register metacognition rules if enabled
         if (this._config.get('metacognition.selfOptimization.enabled')) {
             for (const RuleClass of MetacognitionRules) {
@@ -280,7 +285,7 @@ export class NAR extends BaseComponent {
                 this._streamRuleExecutor.register(rule);
             }
         }
-        
+
         // TODO: Add other new rules as they are implemented
         // For example:
         // const { DeductionRule } = await import('../reason/rules/nal/DeductionRule.js');
@@ -302,15 +307,15 @@ export class NAR extends BaseComponent {
                     originalInput: narseseString,
                     parsed
                 }, {traceId: options.traceId});
-                
+
                 // For stream reasoner: explicitly add to focus so the stream can access it
                 if (this._focus && this._useStreamReasoner) {
                     this._focus.addTaskToFocus(task);
                 }
-                
+
                 await this._processPendingTasks(options.traceId);
             }
-            
+
             return added;
         } catch (error) {
             this._eventBus.emit('input.error', {
@@ -342,7 +347,7 @@ export class NAR extends BaseComponent {
             return null;
         }
 
-        return truthValue 
+        return truthValue
             ? new Truth(truthValue.frequency, truthValue.confidence)
             : new Truth(1.0, 0.9);
     }
@@ -369,7 +374,7 @@ export class NAR extends BaseComponent {
         if (this._useStreamReasoner) {
             // Start the stream-based reasoner instead of the cycle-based one
             this._streamReasoner.start();
-            
+
             // Optionally, set up a monitoring process for stream reasoner metrics
             this._streamMonitoringInterval = setInterval(() => {
                 if (this._streamReasoner) {
@@ -414,7 +419,7 @@ export class NAR extends BaseComponent {
         }
 
         this._isRunning = false;
-        
+
         if (this._useStreamReasoner) {
             // Stop the stream-based reasoner
             if (this._streamReasoner) {
@@ -449,11 +454,11 @@ export class NAR extends BaseComponent {
     async step(options = {}) {
         try {
             await this._processPendingTasks(options.traceId);
-            
+
             if (this._useStreamReasoner) {
                 // Execute a single step of the stream reasoner (now returns array of derivations)
                 const results = await this._streamReasoner.step();
-                
+
                 // Add all derivations back to the system
                 for (const result of results) {
                     if (result) {
@@ -461,7 +466,7 @@ export class NAR extends BaseComponent {
                         if (this._focus) {
                             this._focus.addTaskToFocus(result);
                         }
-                        
+
                         // Emit event for each derivation
                         this._eventBus.emit('reasoning.derivation', {
                             derivedTask: result,
@@ -470,8 +475,11 @@ export class NAR extends BaseComponent {
                         }, {traceId: options.traceId});
                     }
                 }
-                
-                this._eventBus.emit('streamReasoner.step', {results, count: results.length}, {traceId: options.traceId});
+
+                this._eventBus.emit('streamReasoner.step', {
+                    results,
+                    count: results.length
+                }, {traceId: options.traceId});
                 return results;  // Return the array of results
             } else {
                 const result = await this._cycle.execute();
@@ -506,12 +514,12 @@ export class NAR extends BaseComponent {
         if (this._isRunning) {
             this.stop();
         }
-        
+
         // Clean up stream reasoner if it exists
         if (this._streamReasoner) {
             await this._streamReasoner.cleanup();
         }
-        
+
         const success = await this._componentManager.disposeAll();
         await super.dispose();
         return success;

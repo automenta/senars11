@@ -3,23 +3,23 @@ import useUiStore from '../stores/uiStore.js';
 
 // Mock localStorage for tests
 const localStorageMock = (() => {
-  let store = {};
-  return {
-    getItem: (key) => store[key] || null,
-    setItem: (key, value) => {
-      store[key] = value.toString();
-    },
-    removeItem: (key) => {
-      delete store[key];
-    },
-    clear: () => {
-      store = {};
-    }
-  };
+    let store = {};
+    return {
+        getItem: (key) => store[key] || null,
+        setItem: (key, value) => {
+            store[key] = value.toString();
+        },
+        removeItem: (key) => {
+            delete store[key];
+        },
+        clear: () => {
+            store = {};
+        }
+    };
 })();
 
 Object.defineProperty(window, 'localStorage', {
-  value: localStorageMock
+    value: localStorageMock
 });
 
 const resetStore = () => useUiStore.getState().resetStore();

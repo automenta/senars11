@@ -17,7 +17,7 @@ async function syllogismDemo() {
             useStreamReasoner: false  // Use traditional cycle-based reasoner
         }
     };
-    
+
     const traditionalNar = new NAR(traditionalConfig);
     await traditionalNar.initialize();
 
@@ -52,7 +52,7 @@ async function syllogismDemo() {
             cpuThrottleInterval: 0  // No throttle for demo
         }
     };
-    
+
     const streamNar = new NAR(streamConfig);
     await streamNar.initialize();
 
@@ -63,19 +63,19 @@ async function syllogismDemo() {
     await streamNar.input('<Socrates --> man>. %1.0;0.8%');
 
     console.log('\nStarting stream reasoning...\n');
-    
+
     // Start the stream reasoner
     streamNar.start();
-    
+
     // Run a few manual steps to ensure reasoning occurs
     for (let i = 0; i < 20; i++) {
         await streamNar.step();
         await new Promise(resolve => setTimeout(resolve, 50)); // Small delay to allow processing
     }
-    
+
     // Wait a bit more for any async derivations
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
+
     // Stop the stream reasoner
     streamNar.stop();
 
@@ -90,7 +90,7 @@ async function syllogismDemo() {
     const stats = streamNar.getStats();
     console.log(`\nStream reasoner derivations: ${stats.cycleCount}`);
     console.log(`Total concepts in memory: ${stats.memoryStats.conceptCount}`);
-    
+
     if (stats.streamReasonerStats) {
         console.log(`Stream reasoner metrics:`);
         console.log(`  Total derivations: ${stats.streamReasonerStats.totalDerivations}`);

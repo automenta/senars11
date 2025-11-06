@@ -1,6 +1,5 @@
 import React, {memo} from 'react';
 import {DataPanel} from './DataPanel.js';
-import {themeUtils} from '../utils/themeUtils.js';
 import {createMetricDisplay} from '../utils/panelUtils.js';
 
 const VariablesPanel = memo(() => {

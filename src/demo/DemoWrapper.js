@@ -1,6 +1,6 @@
-import { DemosManager } from './DemosManager.js';
-import { DemoStateManager } from './DemoStateManager.js';
-import { DemoValidator } from './DemoValidator.js';
+import {DemosManager} from './DemosManager.js';
+import {DemoStateManager} from './DemoStateManager.js';
+import {DemoValidator} from './DemoValidator.js';
 
 /**
  * DemoWrapper - A system that wraps demos to provide remote control and introspection
@@ -41,14 +41,18 @@ export class DemoWrapper {
 
     registerBuiltinDemos() {
         const builtinDemos = this.demosManager.getAvailableDemos();
-        
+
         builtinDemos.forEach(config => {
             this.registerDemo(config.id, {
                 name: config.name,
                 description: config.description,
                 handler: config.handler,
                 parameters: {
-                    stepDelay: {type: 'number', defaultValue: config.stepDelay, description: 'Delay between steps in ms'}
+                    stepDelay: {
+                        type: 'number',
+                        defaultValue: config.stepDelay,
+                        description: 'Delay between steps in ms'
+                    }
                 }
             });
         });
@@ -81,7 +85,7 @@ export class DemoWrapper {
             if (!DemoValidator.validateDemoControl(data)) return;
 
             const {command, demoId, parameters} = data.payload;
-            
+
             // Use a command map to reduce switch statement
             const commandMap = {
                 'start': () => this.startDemo(demoId, parameters),
@@ -91,7 +95,7 @@ export class DemoWrapper {
                 'step': () => this.stepDemo(demoId, parameters),
                 'configure': () => this.configureDemo(demoId, parameters),
             };
-            
+
             const handler = commandMap[command] || (() => this._handleUnknownCommand(demoId, command));
             await handler();
         } catch (error) {
@@ -107,7 +111,7 @@ export class DemoWrapper {
             }
         }
     }
-    
+
     async _handleUnknownCommand(demoId, command) {
         console.warn(`Unknown demo command: ${command}`);
         // Optionally notify the client about the unknown command
@@ -158,7 +162,7 @@ export class DemoWrapper {
         try {
             // Execute the demo handler with proper context
             await this._executeDemoHandler(demo, parameters);
-            
+
             // Update final state when demo completes successfully
             this.demoStateManager.finalizeDemoState(demoId, 'completed');
             await this.sendDemoState(demoId, {
@@ -168,13 +172,13 @@ export class DemoWrapper {
             });
         } catch (error) {
             console.error(`Error running demo ${demoId}:`, error);
-            
+
             this.demoStateManager.finalizeDemoState(demoId, 'error', {
                 error: error.message,
                 errorMessage: error.message,
                 errorStack: error.stack
             });
-            
+
             await this.sendDemoState(demoId, {
                 state: 'error',
                 error: error.message,
@@ -213,27 +217,27 @@ export class DemoWrapper {
         // For demo-specific handlers, we call them with the necessary context
         const demoMap = {
             'basicUsage': () => this.demosManager.runBasicUsageDemo(
-                this.nar, 
-                this.sendDemoStep.bind(this), 
-                this.waitIfNotPaused.bind(this), 
+                this.nar,
+                this.sendDemoStep.bind(this),
+                this.waitIfNotPaused.bind(this),
                 parameters
             ),
             'syllogism': () => this.demosManager.runSyllogismDemo(
-                this.nar, 
-                this.sendDemoStep.bind(this), 
-                this.waitIfNotPaused.bind(this), 
+                this.nar,
+                this.sendDemoStep.bind(this),
+                this.waitIfNotPaused.bind(this),
                 parameters
             ),
             'inductive': () => this.demosManager.runInductiveDemo(
-                this.nar, 
-                this.sendDemoStep.bind(this), 
-                this.waitIfNotPaused.bind(this), 
+                this.nar,
+                this.sendDemoStep.bind(this),
+                this.waitIfNotPaused.bind(this),
                 parameters
             ),
         };
-        
+
         const handler = demoMap[demo.id] || (typeof demo.handler === 'function' ? () => demo.handler.call(this, parameters) : null);
-        
+
         if (handler) {
             await handler();
         }
@@ -246,21 +250,21 @@ export class DemoWrapper {
 
         const targetDemoId = demoId || this.currentDemoId;
         if (targetDemoId) {
-            this.demoStateManager.updateDemoState(targetDemoId, { state: 'stopped', demoId: targetDemoId });
-            await this.sendDemoState(targetDemoId, { state: 'stopped' });
+            this.demoStateManager.updateDemoState(targetDemoId, {state: 'stopped', demoId: targetDemoId});
+            await this.sendDemoState(targetDemoId, {state: 'stopped'});
         }
     }
 
     async pauseDemo(demoId) {
         this.isPaused = true;
-        this.demoStateManager.updateDemoState(demoId, { state: 'paused' });
-        await this.sendDemoState(demoId, { state: 'paused' });
+        this.demoStateManager.updateDemoState(demoId, {state: 'paused'});
+        await this.sendDemoState(demoId, {state: 'paused'});
     }
 
     async resumeDemo(demoId) {
         this.isPaused = false;
-        this.demoStateManager.updateDemoState(demoId, { state: 'running' });
-        await this.sendDemoState(demoId, { state: 'running' });
+        this.demoStateManager.updateDemoState(demoId, {state: 'running'});
+        await this.sendDemoState(demoId, {state: 'running'});
     }
 
     async stepDemo(demoId, parameters = {}) {
@@ -357,36 +361,36 @@ export class DemoWrapper {
     // Demo implementations
     async runBasicUsageDemo(params = {}) {
         const steps = [
-            { description: 'Initializing basic usage demo' },
-            { description: 'Adding belief: <cat --> animal>.', input: 'cat --> animal.' },
-            { description: 'Adding belief: <dog --> animal>.', input: 'dog --> animal.' },
-            { description: 'Asking question: <cat --> animal>?', input: 'cat --> animal?' },
-            { description: 'Adding goal: <cat --> pet>!', input: 'cat --> pet!' },
-            { description: 'Demo completed' }
+            {description: 'Initializing basic usage demo'},
+            {description: 'Adding belief: <cat --> animal>.', input: 'cat --> animal.'},
+            {description: 'Adding belief: <dog --> animal>.', input: 'dog --> animal.'},
+            {description: 'Asking question: <cat --> animal>?', input: 'cat --> animal?'},
+            {description: 'Adding goal: <cat --> pet>!', input: 'cat --> pet!'},
+            {description: 'Demo completed'}
         ];
         await this._executeDemoSteps('basicUsage', steps, params);
     }
 
     async runSyllogismDemo(params = {}) {
         const steps = [
-            { description: 'Initializing syllogistic reasoning demo' },
-            { description: 'Adding premise: <bird --> animal>.', input: 'bird --> animal.' },
-            { description: 'Adding premise: <robin --> bird>.', input: 'robin --> bird.' },
-            { description: 'Deriving conclusion: <robin --> animal>' },
-            { description: 'Asking: <robin --> animal>?', input: 'robin --> animal?' },
-            { description: 'Syllogistic reasoning demo completed' }
+            {description: 'Initializing syllogistic reasoning demo'},
+            {description: 'Adding premise: <bird --> animal>.', input: 'bird --> animal.'},
+            {description: 'Adding premise: <robin --> bird>.', input: 'robin --> bird.'},
+            {description: 'Deriving conclusion: <robin --> animal>'},
+            {description: 'Asking: <robin --> animal>?', input: 'robin --> animal?'},
+            {description: 'Syllogistic reasoning demo completed'}
         ];
         await this._executeDemoSteps('syllogism', steps, params);
     }
 
     async runInductiveDemo(params = {}) {
         const steps = [
-            { description: 'Initializing inductive reasoning demo' },
-            { description: 'Adding observations: <swan1 --> white>.', input: 'swan1 --> white.' },
-            { description: 'Adding observations: <swan2 --> white>.', input: 'swan2 --> white.' },
-            { description: 'Adding observations: <swan3 --> white>.', input: 'swan3 --> white.' },
-            { description: 'Inductive inference: <swan --> white>?', input: 'swan --> white?' },
-            { description: 'Inductive reasoning demo completed' }
+            {description: 'Initializing inductive reasoning demo'},
+            {description: 'Adding observations: <swan1 --> white>.', input: 'swan1 --> white.'},
+            {description: 'Adding observations: <swan2 --> white>.', input: 'swan2 --> white.'},
+            {description: 'Adding observations: <swan3 --> white>.', input: 'swan3 --> white.'},
+            {description: 'Inductive inference: <swan --> white>?', input: 'swan --> white?'},
+            {description: 'Inductive reasoning demo completed'}
         ];
         await this._executeDemoSteps('inductive', steps, params);
     }
@@ -398,18 +402,18 @@ export class DemoWrapper {
         for (const [index, step] of steps.entries()) {
             this.currentStep++;
             await this.sendDemoStep(demoId, this.currentStep, step.description);
-            
+
             if (step.input) {
                 await this._executeInputSafely(demoId, step.input);
             }
-            
+
             // Don't wait after the last step
             if (index < steps.length - 1) {
                 await this.waitIfNotPaused(stepDelay);
             }
         }
     }
-    
+
     async _executeInputSafely(demoId, input) {
         try {
             await this.nar.input(input);

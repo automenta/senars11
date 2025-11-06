@@ -1,4 +1,3 @@
-import {EventEmitter} from 'events';
 import {createServer} from 'http';
 import {WebSocketServer} from 'ws';
 

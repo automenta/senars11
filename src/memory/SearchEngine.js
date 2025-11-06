@@ -397,8 +397,8 @@ export class SearchEngine {
     _shouldSkipConcept(concept, excludeCategories, includeCategories, minActivation) {
         const category = this._getTermCategorization().getTermCategory(concept.term);
         return excludeCategories.includes(category) ||
-               (includeCategories.length > 0 && !includeCategories.includes(category)) ||
-               concept.activation < minActivation;
+            (includeCategories.length > 0 && !includeCategories.includes(category)) ||
+            concept.activation < minActivation;
     }
 
     /**

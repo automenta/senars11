@@ -45,18 +45,18 @@ const DataItem = ({title, fields = [], style = {}, variant = 'default'}) => {
                 marginBottom: variant === 'compact' ? themeUtils.get('SPACING.XS') : themeUtils.get('SPACING.SM')
             }
         }, title),
-        ...fields.map((field, index) => 
+        ...fields.map((field, index) =>
             React.createElement('div', {
-                key: index,
-                style: {
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    fontSize: variant === 'compact' ? themeUtils.get('FONTS.SIZE.SM') : themeUtils.get('FONTS.SIZE.BASE'),
-                    color: themeUtils.get('TEXT.SECONDARY')
-                }
-            },
-            React.createElement('span', {style: {fontWeight: themeUtils.get('FONTS.WEIGHT.MEDIUM')}}, field.label),
-            React.createElement('span', null, renderFieldValue(field))
+                    key: index,
+                    style: {
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        fontSize: variant === 'compact' ? themeUtils.get('FONTS.SIZE.SM') : themeUtils.get('FONTS.SIZE.BASE'),
+                        color: themeUtils.get('TEXT.SECONDARY')
+                    }
+                },
+                React.createElement('span', {style: {fontWeight: themeUtils.get('FONTS.WEIGHT.MEDIUM')}}, field.label),
+                React.createElement('span', null, renderFieldValue(field))
             )
         )
     );

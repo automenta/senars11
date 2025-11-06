@@ -4,9 +4,9 @@
  * Based on the v9 implementation with enhancements for stream-based architecture.
  */
 
-import { LMRule } from '../../LMRule.js';
-import { Task, TruthValue, Punctuation, TaskDerivation } from '../../TaskUtils.js';
-import { isJudgment, hasPattern, KeywordPatterns } from '../../RuleHelpers.js';
+import {LMRule} from '../../LMRule.js';
+import {Punctuation, Task} from '../../TaskUtils.js';
+import {hasPattern, isJudgment, KeywordPatterns} from '../../RuleHelpers.js';
 
 /**
  * Creates a schema induction rule using the enhanced LMRule.create method.
@@ -16,53 +16,53 @@ import { isJudgment, hasPattern, KeywordPatterns } from '../../RuleHelpers.js';
  * @returns {LMRule} A new LMRule instance for schema induction.
  */
 export const createSchemaInductionRule = (dependencies) => {
-  const { lm } = dependencies;
-  return LMRule.create({
-    id: 'schema-induction',
-    lm,
-    name: 'Schema Induction Rule',
-    description: 'Extracts action schemas from narrative or instruction sequences.',
-    priority: 0.65,
+    const {lm} = dependencies;
+    return LMRule.create({
+        id: 'schema-induction',
+        lm,
+        name: 'Schema Induction Rule',
+        description: 'Extracts action schemas from narrative or instruction sequences.',
+        priority: 0.65,
 
-    condition: (primaryPremise, secondaryPremise, context) => {
-      if (!primaryPremise) return false;
+        condition: (primaryPremise, secondaryPremise, context) => {
+            if (!primaryPremise) return false;
 
-      const isBelief = isJudgment(primaryPremise);
-      const priority = primaryPremise.getPriority?.() || primaryPremise.priority || 0;
-      const termStr = primaryPremise.term?.toString?.() || String(primaryPremise.term || '');
+            const isBelief = isJudgment(primaryPremise);
+            const priority = primaryPremise.getPriority?.() || primaryPremise.priority || 0;
+            const termStr = primaryPremise.term?.toString?.() || String(primaryPremise.term || '');
 
-      return isBelief && priority > 0.6 && hasPattern(primaryPremise, KeywordPatterns.narrative);
-    },
+            return isBelief && priority > 0.6 && hasPattern(primaryPremise, KeywordPatterns.narrative);
+        },
 
-    prompt: (primaryPremise, secondaryPremise, context) => {
-      const termStr = primaryPremise.term?.toString?.() || String(primaryPremise.term || 'unknown');
-      return `From the following text, extract a generalizable procedure or schema.
+        prompt: (primaryPremise, secondaryPremise, context) => {
+            const termStr = primaryPremise.term?.toString?.() || String(primaryPremise.term || 'unknown');
+            return `From the following text, extract a generalizable procedure or schema.
 
 Text: "${termStr}"
 
 Describe the schema as a sequence of conditional steps (e.g., "IF condition THEN action").
 The schema should be abstract enough to apply to similar situations.`;
-    },
+        },
 
-    process: (lmResponse) => {
-      return lmResponse?.trim() || '';
-    },
+        process: (lmResponse) => {
+            return lmResponse?.trim() || '';
+        },
 
-    generate: (processedOutput, primaryPremise, secondaryPremise, context) => {
-      if (!processedOutput) return [];
-      
-      const newTask = new Task(
-        processedOutput,
-        Punctuation.JUDGMENT,
-        { frequency: 0.9, confidence: 0.8 }
-      );
+        generate: (processedOutput, primaryPremise, secondaryPremise, context) => {
+            if (!processedOutput) return [];
 
-      return [newTask];
-    },
+            const newTask = new Task(
+                processedOutput,
+                Punctuation.JUDGMENT,
+                {frequency: 0.9, confidence: 0.8}
+            );
 
-    lm_options: {
-      temperature: 0.5,
-      max_tokens: 500,
-    },
-  });
+            return [newTask];
+        },
+
+        lm_options: {
+            temperature: 0.5,
+            max_tokens: 500,
+        },
+    });
 };

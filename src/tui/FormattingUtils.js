@@ -18,7 +18,7 @@ export class FormattingUtils {
 
     static formatTruth(truth) {
         if (!truth) return ' %1.000,0.900%'; // Default truth values
-        
+
         const freq = truth.frequency !== undefined ? truth.frequency.toFixed(3) : '1.000';
         const conf = truth.confidence !== undefined ? truth.confidence.toFixed(3) : '0.900';
         return ` %${freq},${conf}%`;
@@ -26,10 +26,10 @@ export class FormattingUtils {
 
     static formatOccurrence(task) {
         if (task.occurrenceTime === undefined && !task.stamp) return '';
-        
+
         const timeStr = task.occurrenceTime || '';
         const stampStr = task.stamp ? FormattingUtils.encodeShortId(task.stamp.id || task.stamp) : '';
-        
+
         return stampStr ? ` ${timeStr}@${stampStr}`.trim() : timeStr;
     }
 
@@ -84,11 +84,11 @@ export class FormattingUtils {
 
     static safeGet(obj, ...paths) {
         const defaultValue = paths.pop(); // Last argument is the default value
-        
+
         for (const path of paths) {
             let current = obj;
             let found = true;
-            
+
             for (const prop of path) {
                 if (current == null || typeof current !== 'object' || !(prop in current)) {
                     found = false;
@@ -96,12 +96,12 @@ export class FormattingUtils {
                 }
                 current = current[prop];
             }
-            
+
             if (found) {
                 return current;
             }
         }
-        
+
         return defaultValue;
     }
 
@@ -116,23 +116,23 @@ export class FormattingUtils {
 
         return details.join(' | ');
     }
-    
+
     static formatType(type) {
         return type ? `Type: ${type}` : 'Type: Task';
     }
-    
+
     static formatTruthStr(truth) {
         return truth ? `Truth: ${truth.toString()}` : 'Truth: N/A';
     }
-    
+
     static formatPriorityStr(priority) {
         return priority !== undefined ? `Priority: ${priority.toFixed(3)}` : 'Priority: N/A';
     }
-    
+
     static formatStamp(stamp) {
         return stamp ? `Stamp: ${stamp}` : 'Stamp: N/A';
     }
-    
+
     static formatOccurrenceTime(occurrenceTime) {
         return occurrenceTime !== undefined ? `OccTime: ${occurrenceTime}` : null; // null means don't include
     }
@@ -146,15 +146,15 @@ export class FormattingUtils {
 
         return details.join('');
     }
-    
+
     static formatBeliefTruth(truth) {
         return truth ? `{magenta}${truth.toString()}{/magenta}` : null;
     }
-    
+
     static formatBeliefPriority(priority) {
         return priority !== undefined ? `{yellow} | P:${priority.toFixed(3)}{/yellow}` : null;
     }
-    
+
     static formatBeliefOccurrence(stamp) {
         return stamp ? `{blue} | Occ:${stamp}{/blue}` : null;
     }

@@ -70,7 +70,7 @@ export class EmbeddingTool extends BaseTool {
         if (!text && !texts) throw new Error('Either text or texts array is required for embed operation');
         if (text && texts) throw new Error('Provide either text or texts array, not both');
 
-        return text 
+        return text
             ? this._generateEmbedding(text, model, options)
             : this._generateBatchEmbeddings(texts, model, options);
     }
@@ -400,7 +400,7 @@ export class EmbeddingTool extends BaseTool {
             }
         }
 
-        return { isValid: errors.length === 0, errors };
+        return {isValid: errors.length === 0, errors};
     }
 
     /**

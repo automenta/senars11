@@ -13,12 +13,12 @@ export class DisplayUtils {
      */
     static createTable(headers, rows, columnWidths = []) {
         if (!headers || !rows) return '';
-        
+
         // Calculate column widths if not provided
         const calculatedWidths = [];
         for (let i = 0; i < headers.length; i++) {
             const headerWidth = headers[i].length;
-            const maxDataWidth = Math.max(...rows.map(row => 
+            const maxDataWidth = Math.max(...rows.map(row =>
                 row[i] ? String(row[i]).length : 0
             ));
             calculatedWidths[i] = Math.max(headerWidth, maxDataWidth, columnWidths[i] || 0, 8);
@@ -30,15 +30,15 @@ export class DisplayUtils {
         const separator = '  ' + widths.map(w => '─'.repeat(w + 2)).join('┼');
 
         // Create header row
-        const headerRow = '  ' + headers.map((header, i) => 
+        const headerRow = '  ' + headers.map((header, i) =>
             header.padEnd(widths[i])
         ).join(' │ ');
 
         // Create data rows
-        const dataRows = rows.map(row => 
-            '  ' + row.map((cell, i) => 
-                String(cell || '').padEnd(widths[i])
-            ).join(' │ ')
+        const dataRows = rows.map(row =>
+                '  ' + row.map((cell, i) =>
+                    String(cell || '').padEnd(widths[i])
+                ).join(' │ ')
         );
 
         // Combine all parts
@@ -136,10 +136,10 @@ export class DisplayUtils {
      */
     static formatKeyValuePairs(obj, prefix = '  ', includeEmpty = false) {
         if (!obj || typeof obj !== 'object') return '';
-        
+
         const entries = Object.entries(obj);
         if (entries.length === 0) return '';
-        
+
         const formattedEntries = entries
             .filter(([key, value]) => includeEmpty || (value !== null && value !== undefined && value !== ''))
             .map(([key, value]) => {
@@ -147,7 +147,7 @@ export class DisplayUtils {
                 const formattedValue = this._formatValue(value);
                 return `${prefix}${formattedKey}: ${formattedValue}`;
             });
-        
+
         return formattedEntries.join('\n');
     }
 
@@ -170,7 +170,7 @@ export class DisplayUtils {
         if (typeof value === 'object') return '{Object}';
         return String(value);
     }
-    
+
     /**
      * Creates an indented multi-line string
      * @param {string} text - Text to indent
@@ -206,43 +206,43 @@ export class DisplayUtils {
      */
     static printDataFrame(df, options = {}) {
         if (!df || typeof df !== 'object') return '';
-        
+
         const {
             maxRows = 20,
             maxCols = 10,
             precision = 2
         } = options;
-        
+
         try {
             // Get DataFrame dimensions
             const shape = df.shape || [0, 0];
             const rows = shape[0];
             const cols = shape[1];
-            
+
             // Handle empty DataFrame
             if (rows === 0 || cols === 0) {
                 return 'Empty DataFrame';
             }
-            
+
             // Get column names
             const columns = df.columns || [];
             const displayColumns = columns.slice(0, maxCols);
-            
+
             // Prepare headers
             const headers = displayColumns.map(col => String(col));
-            
+
             // Prepare data rows
             const values = df.values || [];
             const displayRows = Math.min(rows, maxRows);
             const dataRows = [];
-            
+
             for (let i = 0; i < displayRows; i++) {
                 const row = values[i] || [];
                 const displayRow = [];
-                
+
                 for (let j = 0; j < displayColumns.length; j++) {
                     let cell = row[j];
-                    
+
                     // Format cell value
                     if (typeof cell === 'number' && !Number.isInteger(cell)) {
                         cell = cell.toFixed(precision);
@@ -251,23 +251,23 @@ export class DisplayUtils {
                     } else {
                         cell = String(cell);
                     }
-                    
+
                     displayRow.push(cell);
                 }
-                
+
                 dataRows.push(displayRow);
             }
-            
+
             // Create the table
             let table = this.createTable(headers, dataRows);
-            
+
             // Add info about truncated data
             if (rows > maxRows || cols > maxCols) {
                 const rowInfo = rows > maxRows ? ` (${rows - maxRows} more rows)` : '';
                 const colInfo = cols > maxCols ? ` (${cols - maxCols} more columns)` : '';
                 table += `\n\n[${rows} rows x ${cols} columns]${rowInfo}${colInfo}`;
             }
-            
+
             return table;
         } catch (error) {
             // Fallback to simple representation if operations fail

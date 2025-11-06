@@ -1,4 +1,3 @@
-import { KnowledgeBaseConnector } from './KnowledgeBaseConnector.js';
 import SeNARSSelfAnalyzer from '../self-analyze.js';
 
 /**
@@ -31,12 +30,12 @@ class SelfAnalysisKnowledgeBaseConnector {
         // Perform analysis based on query parameters
         const analysisQuery = query.categories || ['all'];
         const results = await this._performAnalysis(analysisQuery, options);
-        
+
         // Cache the result
         this._cacheResult(cacheKey, results);
         this.lastAnalysis = results;
         this.lastAnalysisTime = Date.now();
-        
+
         return results;
     }
 
@@ -89,7 +88,7 @@ class SelfAnalysisKnowledgeBaseConnector {
      * Get the last analysis results without re-running
      */
     getLastAnalysis() {
-        if (this.lastAnalysis && 
+        if (this.lastAnalysis &&
             Date.now() - this.lastAnalysisTime < this.cacheTTL) {
             return this.lastAnalysis;
         }
@@ -222,7 +221,7 @@ class SelfAnalysisKnowledgeBaseConnector {
      */
     async getAnalysisData(query, options = {}) {
         const results = await this.query(query, options);
-        
+
         // Structure the data for knowledge integration
         const structuredData = {
             metadata: {
@@ -298,7 +297,7 @@ class SelfAnalysisManager {
                     recommendation: 'Fix failing tests to ensure system stability'
                 });
             }
-            
+
             if (results.tests.passedTests > 0 && results.tests.failedTests === 0) {
                 insights.push({
                     id: 'test-stability-good',
@@ -409,7 +408,7 @@ class SelfAnalysisManager {
     extractEntities(text) {
         // Simple entity extraction - could be enhanced with more sophisticated NLP
         const entities = [];
-        
+
         // Look for specific terms
         const terms = ['tests', 'coverage', 'complexity', 'refactoring', 'dependencies', 'documentation'];
         for (const term of terms) {
@@ -417,14 +416,14 @@ class SelfAnalysisManager {
                 entities.push(term);
             }
         }
-        
+
         return entities;
     }
 
     // Map recommendations to actions
     mapRecommendationToAction(recommendation) {
         const rec = recommendation.toLowerCase();
-        
+
         if (rec.includes('fix') || rec.includes('resolve')) {
             return 'fix_problems';
         } else if (rec.includes('add') || rec.includes('increase')) {
@@ -477,111 +476,111 @@ class SelfAnalysisManager {
             case 'testing':
                 // Quality assessment based on pass rate
                 if (item.metrics.passRate !== undefined) {
-                    const qualityLevel = item.metrics.passRate > 0.95 ? 'excellent' : 
-                                        item.metrics.passRate > 0.85 ? 'good' : 
-                                        item.metrics.passRate > 0.7 ? 'fair' : 'poor';
+                    const qualityLevel = item.metrics.passRate > 0.95 ? 'excellent' :
+                        item.metrics.passRate > 0.85 ? 'good' :
+                            item.metrics.passRate > 0.7 ? 'fair' : 'poor';
                     statements.push(`<test_quality --> ${qualityLevel}>. %1.00;0.90%`);
                 }
-                
+
                 // Test stability assessment
                 if (item.metrics.failed !== undefined && item.metrics.total !== undefined) {
                     const stability = item.metrics.failed === 0 ? 'stable' : 'unstable';
                     statements.push(`<system_stability --> ${stability}>. %1.00;0.90%`);
                 }
                 break;
-                
+
             case 'coverage':
                 // Coverage assessment
                 if (item.metrics.lines !== undefined) {
-                    const coverageLevel = item.metrics.lines > 80 ? 'high' : 
-                                         item.metrics.lines > 60 ? 'medium' : 
-                                         item.metrics.lines > 40 ? 'low' : 'very_low';
+                    const coverageLevel = item.metrics.lines > 80 ? 'high' :
+                        item.metrics.lines > 60 ? 'medium' :
+                            item.metrics.lines > 40 ? 'low' : 'very_low';
                     statements.push(`<test_coverage --> ${coverageLevel}>. %1.00;0.90%`);
-                    
+
                     // Reliability assessment based on coverage
-                    const reliability = item.metrics.lines > 80 ? 'reliable' : 
-                                       item.metrics.lines > 50 ? 'moderately_reliable' : 
-                                       'unreliable';
+                    const reliability = item.metrics.lines > 80 ? 'reliable' :
+                        item.metrics.lines > 50 ? 'moderately_reliable' :
+                            'unreliable';
                     statements.push(`<system_reliability --> ${reliability}>. %1.00;0.90%`);
                 }
                 break;
-                
+
             case 'static':
                 // Code complexity assessment
                 if (item.metrics.avgComplexity !== undefined) {
-                    const complexityLevel = item.metrics.avgComplexity > 30 ? 'highly_complex' : 
-                                          item.metrics.avgComplexity > 20 ? 'complex' : 
-                                          item.metrics.avgComplexity > 10 ? 'moderately_complex' : 'simple';
+                    const complexityLevel = item.metrics.avgComplexity > 30 ? 'highly_complex' :
+                        item.metrics.avgComplexity > 20 ? 'complex' :
+                            item.metrics.avgComplexity > 10 ? 'moderately_complex' : 'simple';
                     statements.push(`<code_complexity --> ${complexityLevel}>. %1.00;0.90%`);
-                    
+
                     // Maintainability assessment
-                    const maintainability = item.metrics.avgComplexity < 15 ? 'maintainable' : 
-                                          item.metrics.avgComplexity < 25 ? 'moderately_maintainable' : 'difficult_to_maintain';
+                    const maintainability = item.metrics.avgComplexity < 15 ? 'maintainable' :
+                        item.metrics.avgComplexity < 25 ? 'moderately_maintainable' : 'difficult_to_maintain';
                     statements.push(`<code_maintainability --> ${maintainability}>. %1.00;0.90%`);
                 }
-                
+
                 // Code size assessment
                 if (item.metrics.totalLines !== undefined) {
-                    const sizeLevel = item.metrics.totalLines > 50000 ? 'large' : 
-                                     item.metrics.totalLines > 10000 ? 'medium' : 'small';
+                    const sizeLevel = item.metrics.totalLines > 50000 ? 'large' :
+                        item.metrics.totalLines > 10000 ? 'medium' : 'small';
                     statements.push(`<code_size --> ${sizeLevel}>. %1.00;0.90%`);
                 }
-                
+
                 // File count assessment
                 if (item.metrics.jsFiles !== undefined) {
-                    const fileCount = item.metrics.jsFiles > 100 ? 'many_files' : 
-                                     item.metrics.jsFiles > 50 ? 'moderate_files' : 'few_files';
+                    const fileCount = item.metrics.jsFiles > 100 ? 'many_files' :
+                        item.metrics.jsFiles > 50 ? 'moderate_files' : 'few_files';
                     statements.push(`<file_count --> ${fileCount}>. %1.00;0.90%`);
                 }
                 break;
-                
+
             case 'quality': // technical debt
                 // Technical debt assessment
                 if (item.metrics.totalDebtScore !== undefined) {
-                    const debtLevel = item.metrics.totalDebtScore > 2000 ? 'high_debt' : 
-                                     item.metrics.totalDebtScore > 1000 ? 'moderate_debt' : 
-                                     item.metrics.totalDebtScore > 500 ? 'low_debt' : 'minimal_debt';
+                    const debtLevel = item.metrics.totalDebtScore > 2000 ? 'high_debt' :
+                        item.metrics.totalDebtScore > 1000 ? 'moderate_debt' :
+                            item.metrics.totalDebtScore > 500 ? 'low_debt' : 'minimal_debt';
                     statements.push(`<technical_debt --> ${debtLevel}>. %1.00;0.90%`);
-                    
+
                     // Refactoring priority
-                    const refactoringPriority = item.metrics.totalDebtScore > 1500 ? 'high_priority' : 
-                                              item.metrics.totalDebtScore > 750 ? 'medium_priority' : 'low_priority';
+                    const refactoringPriority = item.metrics.totalDebtScore > 1500 ? 'high_priority' :
+                        item.metrics.totalDebtScore > 750 ? 'medium_priority' : 'low_priority';
                     statements.push(`<refactoring_priority --> ${refactoringPriority}>. %1.00;0.90%`);
                 }
-                
+
                 // Risk assessment based on debt
                 if (item.metrics.highRiskFiles !== undefined) {
-                    const riskLevel = item.metrics.highRiskFiles > 10 ? 'high_risk' : 
-                                    item.metrics.highRiskFiles > 5 ? 'medium_risk' : 'low_risk';
+                    const riskLevel = item.metrics.highRiskFiles > 10 ? 'high_risk' :
+                        item.metrics.highRiskFiles > 5 ? 'medium_risk' : 'low_risk';
                     statements.push(`<development_risk --> ${riskLevel}>. %1.00;0.90%`);
                 }
                 break;
-                
+
             case 'architecture':
                 // Architecture quality
                 if (item.metrics.cyclicDependencies !== undefined) {
                     const architectureQuality = item.metrics.cyclicDependencies === 0 ? 'well_architected' : 'poorly_architected';
                     statements.push(`<architecture_quality --> ${architectureQuality}>. %1.00;0.90%`);
-                    
+
                     // Modularity assessment
-                    const modularity = item.metrics.cyclicDependencies === 0 ? 'highly_modular' : 
-                                      item.metrics.cyclicDependencies < 5 ? 'modular' : 'tightly_coupled';
+                    const modularity = item.metrics.cyclicDependencies === 0 ? 'highly_modular' :
+                        item.metrics.cyclicDependencies < 5 ? 'modular' : 'tightly_coupled';
                     statements.push(`<code_modularity --> ${modularity}>. %1.00;0.90%`);
                 }
-                
+
                 // Layer count assessment
                 if (item.metrics.layers !== undefined) {
-                    const layerCount = item.metrics.layers > 10 ? 'many_layers' : 
-                                      item.metrics.layers > 5 ? 'moderate_layers' : 'few_layers';
+                    const layerCount = item.metrics.layers > 10 ? 'many_layers' :
+                        item.metrics.layers > 5 ? 'moderate_layers' : 'few_layers';
                     statements.push(`<architectural_layers --> ${layerCount}>. %1.00;0.90%`);
                 }
                 break;
-                
+
             case 'planning':
                 // Development pace assessment
                 if (item.metrics.developmentPace !== undefined) {
-                    const pace = item.metrics.developmentPace === 'high' ? 'fast_paced' : 
-                                item.metrics.developmentPace === 'medium' ? 'moderate_paced' : 'slow_paced';
+                    const pace = item.metrics.developmentPace === 'high' ? 'fast_paced' :
+                        item.metrics.developmentPace === 'medium' ? 'moderate_paced' : 'slow_paced';
                     statements.push(`<development_pace --> ${pace}>. %1.00;0.90%`);
                 }
                 break;
@@ -590,8 +589,8 @@ class SelfAnalysisManager {
         // Add a general assessment combining metrics
         if (item.metrics.passRate !== undefined && item.metrics.lines !== undefined) {
             // Overall quality assessment based on multiple factors
-            const overallQuality = (item.metrics.passRate * item.metrics.lines / 100) > 70 ? 
-                                 'high_quality' : 'low_quality';
+            const overallQuality = (item.metrics.passRate * item.metrics.lines / 100) > 70 ?
+                'high_quality' : 'low_quality';
             statements.push(`<overall_system_quality --> ${overallQuality}>. %1.00;0.90%`);
         }
 

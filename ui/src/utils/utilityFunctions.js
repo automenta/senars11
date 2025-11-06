@@ -32,7 +32,7 @@ export const createSearchableCollection = (data, fields) => {
         console.debug('createSearchableCollection: data is not an array, using empty array instead', data);
         data = [];
     }
-    
+
     const searchIndex = new Map(data.map((item, index) => {
         const searchableText = fields.map(field => getNestedValue(item, field)).join(' ').toLowerCase();
         return [index, searchableText];

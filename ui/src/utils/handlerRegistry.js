@@ -39,7 +39,7 @@ const createOptimizedMessageHandlers = () => Object.freeze({
 
 export const createHandlerRegistry = () => {
     const handlers = new Map();
-    
+
     Object.entries(createOptimizedMessageHandlers()).forEach(([type, handler]) => {
         handlers.set(type, handler);
     });
@@ -57,7 +57,7 @@ export const createHandlerRegistry = () => {
                 console.warn('Received invalid message data:', data);
                 return false;
             }
-            
+
             const {type} = data;
             if (!type) {
                 console.debug('Received message without type (this may be expected for certain message types):', data);

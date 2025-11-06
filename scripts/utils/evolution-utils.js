@@ -122,10 +122,10 @@ export const EvolutionUtils = {
         if (population.length === 0) return {best: 0, average: 0, worst: 0, std: 0, median: 0};
 
         const fitnesses = population.map(ind => ind.fitness || 0);
-        
+
         // Use danfojs for more comprehensive statistical analysis
         const fitnessSeries = new dfd.Series(fitnesses);
-        
+
         return {
             best: fitnessSeries.max(),
             average: fitnessSeries.mean(),

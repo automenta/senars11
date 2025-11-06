@@ -20,7 +20,7 @@ function App() {
         const urlParams = new URLSearchParams(window.location.search);
         const layoutParam = urlParams.get('layout');
         const defaultLayoutEnv = import.meta.env.VITE_DEFAULT_LAYOUT || 'default';
-        
+
         // Determine which layout to use
         let initialLayout;
         if (layoutParam === 'self-analysis') {
@@ -31,7 +31,7 @@ function App() {
         } else {
             initialLayout = JSON.parse(localStorage.getItem('layout') || JSON.stringify(defaultLayout));
         }
-        
+
         setModel(Model.fromJson(initialLayout));
     }, []);
 

@@ -45,7 +45,7 @@ try {
 const sendLogToWebSocket = (currentWsService, level, args) => {
     // Prefer the cached WebSocket service, fall back to direct access if needed
     const wsServiceToUse = currentWsService || cachedWsService;
-    
+
     // Check if the wsServiceToUse exists and has the expected structure
     if (!wsServiceToUse || !wsServiceToUse.sendMessage) return;
 

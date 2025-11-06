@@ -448,14 +448,14 @@ class WebSocketService {
                 setTimeout(() => {
                     const task1Type = generateRandomTaskType();
                     const task2Type = generateRandomTaskType();
-                    
+
                     sendTaskUpdate(
                         `task_${demoId}_1`,
                         generateRandomContent(),
                         0.78,
                         task1Type
                     );
-                    
+
                     // Also send belief or goal updates to separate collections
                     if (task1Type === 'belief') {
                         this.routeMessage({
@@ -482,14 +482,14 @@ class WebSocketService {
                             }
                         });
                     }
-                    
+
                     sendTaskUpdate(
                         `task_${demoId}_2`,
                         generateRandomContent(),
                         0.65,
                         task2Type
                     );
-                    
+
                     // Also send belief or goal updates to separate collections
                     if (task2Type === 'belief') {
                         this.routeMessage({
@@ -554,7 +554,7 @@ class WebSocketService {
 
             const taskType = input.endsWith('?') ? 'question' : input.endsWith('!') ? 'goal' : 'belief';
             const taskId = `task_${Date.now()}`;
-            
+
             this.routeMessage({
                 type: 'taskUpdate',
                 payload: {
@@ -565,7 +565,7 @@ class WebSocketService {
                     type: taskType
                 }
             });
-            
+
             // Also send belief or goal updates to separate collections
             if (taskType === 'belief') {
                 this.routeMessage({
@@ -645,8 +645,20 @@ class WebSocketService {
         if (!targetPanels || targetPanels.includes('beliefs')) {
             const now = Date.now();
             [
-                {id: `belief_${now}_sample1`, term: '<cat --> animal>.', priority: 0.9, type: 'belief', truth: {frequency: 0.9, confidence: 0.8}},
-                {id: `belief_${now}_sample2`, term: '<dog --> mammal>.', priority: 0.85, type: 'belief', truth: {frequency: 0.85, confidence: 0.75}}
+                {
+                    id: `belief_${now}_sample1`,
+                    term: '<cat --> animal>.',
+                    priority: 0.9,
+                    type: 'belief',
+                    truth: {frequency: 0.9, confidence: 0.8}
+                },
+                {
+                    id: `belief_${now}_sample2`,
+                    term: '<dog --> mammal>.',
+                    priority: 0.85,
+                    type: 'belief',
+                    truth: {frequency: 0.85, confidence: 0.75}
+                }
             ].forEach(({id, term, priority, type, truth}) =>
                 this.routeMessage({
                     type: 'beliefUpdate',
@@ -659,8 +671,20 @@ class WebSocketService {
         if (!targetPanels || targetPanels.includes('goals')) {
             const now = Date.now();
             [
-                {id: `goal_${now}_sample1`, term: '<find_solution --> desirable>!', priority: 0.95, type: 'goal', truth: {desire: 0.9, confidence: 0.85}},
-                {id: `goal_${now}_sample2`, term: '<achieve_target --> intended>!', priority: 0.8, type: 'goal', truth: {desire: 0.8, confidence: 0.7}}
+                {
+                    id: `goal_${now}_sample1`,
+                    term: '<find_solution --> desirable>!',
+                    priority: 0.95,
+                    type: 'goal',
+                    truth: {desire: 0.9, confidence: 0.85}
+                },
+                {
+                    id: `goal_${now}_sample2`,
+                    term: '<achieve_target --> intended>!',
+                    priority: 0.8,
+                    type: 'goal',
+                    truth: {desire: 0.8, confidence: 0.7}
+                }
             ].forEach(({id, term, priority, type, truth}) =>
                 this.routeMessage({
                     type: 'goalUpdate',

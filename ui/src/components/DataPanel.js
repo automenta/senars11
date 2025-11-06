@@ -5,7 +5,13 @@ import VirtualizedList from './VirtualizedList.js';
 import {themeUtils} from '../utils/themeUtils.js';
 import {createSearchableCollection, getNestedValue, process} from '../utils/dataProcessor.js';
 import {createPanelHeader} from '../utils/panelUtils.js';
-import {createSearchInput, createSortButton, createPaginationControls, createItemCount, createEmptyState} from '../utils/dataPanelUtils.js';
+import {
+    createEmptyState,
+    createItemCount,
+    createPaginationControls,
+    createSearchInput,
+    createSortButton
+} from '../utils/dataPanelUtils.js';
 
 // Helper function to compare values for sorting
 const compareValues = (valueA, valueB) => {
@@ -18,33 +24,33 @@ const compareValues = (valueA, valueB) => {
 };
 
 const DataPanel = memo(({
-    title = 'Data',
-    dataSource,
-    renderItem,
-    config = {},
-    processPipeline = null,
-    search = {
-        enabled: true,
-        placeholder: 'Search...',
-        fields: []
-    },
-    sort = {
-        enabled: true,
-        options: [],
-        defaultField: null,
-        defaultDirection: 'asc'
-    },
-    pagination = {
-        enabled: true,
-        itemsPerPage: 20
-    },
-    virtualization = {
-        enabled: false,
-        itemHeight: 50
-    },
-    style = {},
-    className = ''
-}) => {
+                            title = 'Data',
+                            dataSource,
+                            renderItem,
+                            config = {},
+                            processPipeline = null,
+                            search = {
+                                enabled: true,
+                                placeholder: 'Search...',
+                                fields: []
+                            },
+                            sort = {
+                                enabled: true,
+                                options: [],
+                                defaultField: null,
+                                defaultDirection: 'asc'
+                            },
+                            pagination = {
+                                enabled: true,
+                                itemsPerPage: 20
+                            },
+                            virtualization = {
+                                enabled: false,
+                                itemHeight: 50
+                            },
+                            style = {},
+                            className = ''
+                        }) => {
     const rawData = useMemo(() => {
         if (typeof dataSource === 'function') {
             return dataSource(useUiStore.getState()) || [];
@@ -59,7 +65,7 @@ const DataPanel = memo(({
 
     const processedData = useMemo(() => {
         let filteredData = rawData;
-        
+
         // Apply search filter
         if (searchTerm && search.fields?.length > 0) {
             const processor = createSearchableCollection(rawData, search.fields);
@@ -78,7 +84,7 @@ const DataPanel = memo(({
             filteredData = [...filteredData].sort((a, b) => {
                 const valueA = getNestedValue(a, sortBy);
                 const valueB = getNestedValue(b, sortBy);
-                
+
                 const comparison = compareValues(valueA, valueB);
                 return sortDirection === 'asc' ? comparison : -comparison;
             });

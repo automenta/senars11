@@ -138,11 +138,11 @@ export class ReplInterface {
         console.log('Latest beliefs:');
         this._displayBeliefs(beliefs.slice(-3));
     }
-    
+
     _displayBeliefs(beliefs) {
         beliefs.forEach(task => console.log(`  ${this._formatBelief(task)}`));
     }
-    
+
     _formatBelief(task) {
         return `${task.term?.name || ''} ${task.truth?.toString() || ''}`;
     }
@@ -219,7 +219,7 @@ Narsese input examples:
         try {
             const state = this.nar.serialize?.();
             if (!state) return 'Serialization not supported by NAR instance.';
-            
+
             const result = await this.persistenceManager.saveToDefault(state);
             return `NAR state saved successfully to ${result.identifier} (${Math.round(result.size / 1024)} KB)`;
         } catch (error) {

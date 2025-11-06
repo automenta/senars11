@@ -104,6 +104,7 @@ graph LR
 ```
 
 This integration enables:
+
 - **Rigorous logical reasoning** from the NAL rule system
 - **Creative semantic understanding** from the neural component
 - **Bidirectional knowledge exchange** between both systems

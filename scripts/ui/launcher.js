@@ -8,12 +8,7 @@
 import {spawn} from 'child_process';
 import {fileURLToPath} from 'url';
 import {dirname, join} from 'path';
-import {
-    BASE_DIR,
-    parseArgs as parseCliArgs,
-    parseKeyValueArgs,
-    showUsageAndExit
-} from '../utils/script-utils.js';
+import {parseArgs as parseCliArgs, showUsageAndExit} from '../utils/script-utils.js';
 import {WebSocketMonitor} from '../../src/server/WebSocketMonitor.js';
 import {NAR} from '../../src/nar/NAR.js';
 import {DemoWrapper} from '../../src/demo/DemoWrapper.js';

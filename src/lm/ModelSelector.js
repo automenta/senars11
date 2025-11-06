@@ -10,7 +10,7 @@ export class ModelSelector {
 
         const availableProviders = Array.from(this.providerRegistry.providers.keys());
         const result = this._selectBasedOnConstraints(availableProviders, constraints);
-        
+
         this.cache.set(cacheKey, result);
         return result;
     }
@@ -25,8 +25,8 @@ export class ModelSelector {
         }
 
         return constraints.performance === 'high' ? availableProviders[0] :
-               constraints.performance === 'low' ? availableProviders[availableProviders.length - 1] || null :
-               availableProviders[0] || null;
+            constraints.performance === 'low' ? availableProviders[availableProviders.length - 1] || null :
+                availableProviders[0] || null;
     }
 
     getAvailableModels() {

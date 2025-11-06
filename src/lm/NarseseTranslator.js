@@ -4,7 +4,10 @@ export class NarseseTranslator {
             forward: [
                 {regex: /(.*)\s+is\s+(?:a|an|a kind of|a type of|a sort of)\s+(.*)/i, replacement: '($1 --> $2).'},
                 {regex: /(.*)s\s+are\s+(.*)/i, replacement: '($1 --> $2).'},
-                {regex: /(.*)\s+(?:resembles|is similar to|is like|is similar as)\s+(.*)/i, replacement: '($1 <-> $2).'},
+                {
+                    regex: /(.*)\s+(?:resembles|is similar to|is like|is similar as)\s+(.*)/i,
+                    replacement: '($1 <-> $2).'
+                },
                 {regex: /(?:if|when)\s+(.*)\s+then\s+(.*)/i, replacement: '($1 ==> $2).'},
                 {regex: /(.*)\s+(?:causes|leads to|results in)\s+(.*)/i, replacement: '($1 ==> $2).'},
                 {regex: /(.*)\s+if and only if\s+(.*)/i, replacement: '($1 <=> $2).'},

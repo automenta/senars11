@@ -6,7 +6,7 @@ export const createTypeFilter = (typeField, filterType) =>
 export const createTextFilter = (searchFields, filterText) => {
     if (!filterText.trim()) return () => true;
     const searchText = filterText.toLowerCase();
-    
+
     return (item) =>
         searchFields.some(field => {
             const value = getNestedValue(item, field);

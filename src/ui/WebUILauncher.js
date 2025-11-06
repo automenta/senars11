@@ -89,11 +89,11 @@ const startWebSocketServer = async (config = DEFAULT_CONFIG) => {
 // Start Vite dev server
 const startViteDevServer = (config = DEFAULT_CONFIG) => {
     console.log(`Starting Vite dev server on port ${config.ui.port}...`);
-    
+
     // Check if we're in the right directory structure for the ui folder
     // __dirname is src/ui, so ui directory is at the project root level
     const uiDir = join(__dirname, '../../ui'); // Go up two levels to project root, then into ui
-    
+
     const viteProcess = spawn('npx', ['vite', 'dev', '--port', config.ui.port.toString()], {
         cwd: uiDir,
         stdio: 'inherit',
@@ -169,19 +169,19 @@ const setupGracefulShutdown = async (webSocketServer) => {
 // Main launch function - abstracted for any data processor
 export const launchDataDrivenUI = async (dataProcessorFn, cliArgs = process.argv.slice(2)) => {
     // Import and use the consolidated launcher
-    const { execFileSync } = await import('child_process');
-    const { fileURLToPath } = await import('url');
-    const { dirname, join } = await import('path');
-    
+    const {execFileSync} = await import('child_process');
+    const {fileURLToPath} = await import('url');
+    const {dirname, join} = await import('path');
+
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = dirname(__filename);
-    
+
     // Path to the consolidated launcher
     const launcherPath = join(__dirname, '../../scripts/ui/launcher.js');
-    
+
     try {
         // Execute the consolidated launcher with the provided arguments
-        execFileSync('node', [launcherPath, ...cliArgs], { stdio: 'inherit' });
+        execFileSync('node', [launcherPath, ...cliArgs], {stdio: 'inherit'});
     } catch (error) {
         console.error('Failed to start UI launcher:', error.message);
         process.exit(1);
@@ -191,19 +191,19 @@ export const launchDataDrivenUI = async (dataProcessorFn, cliArgs = process.argv
 // For backwards compatibility when called directly, delegate to the consolidated launcher
 if (import.meta.url === `file://${process.argv[1]}`) {
     // Import and use the consolidated launcher
-    const { execFileSync } = await import('child_process');
-    const { fileURLToPath } = await import('url');
-    const { dirname, join } = await import('path');
-    
+    const {execFileSync} = await import('child_process');
+    const {fileURLToPath} = await import('url');
+    const {dirname, join} = await import('path');
+
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = dirname(__filename);
-    
+
     // Path to the consolidated launcher
     const launcherPath = join(__dirname, '../../scripts/ui/launcher.js');
-    
+
     try {
         // Execute the consolidated launcher with all arguments except the script name
-        execFileSync('node', [launcherPath, ...process.argv.slice(2)], { stdio: 'inherit' });
+        execFileSync('node', [launcherPath, ...process.argv.slice(2)], {stdio: 'inherit'});
     } catch (error) {
         console.error('Failed to start UI launcher:', error.message);
         process.exit(1);

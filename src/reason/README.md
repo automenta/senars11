@@ -1,6 +1,8 @@
 # SeNARS Stream Reasoner
 
-The SeNARS Stream Reasoner is a continuous, stream-based dataflow architecture that transforms streams of premises into streams of conclusions. This architecture enables hybrid neuro-symbolic reasoning with NAL (Non-Axiomatic Logic) and Language Models (LM) in a resource-aware, continuous processing pipeline.
+The SeNARS Stream Reasoner is a continuous, stream-based dataflow architecture that transforms streams of premises into
+streams of conclusions. This architecture enables hybrid neuro-symbolic reasoning with NAL (Non-Axiomatic Logic) and
+Language Models (LM) in a resource-aware, continuous processing pipeline.
 
 ## Architecture Overview
 
@@ -42,13 +44,16 @@ The SeNARS Stream Reasoner is a continuous, stream-based dataflow architecture t
 
 ### PremiseSource
 
-The `PremiseSource` generates a continuous stream of `Task`s, drawing from `Memory` based on tunable sampling objectives.
+The `PremiseSource` generates a continuous stream of `Task`s, drawing from `Memory` based on tunable sampling
+objectives.
 
 #### Built-in Implementations:
+
 - `TaskBagPremiseSource`: Samples from a priority bag with configurable strategies
 - `PremiseSources`: A bag of multiple `PremiseSource`s that samples proportionally
 
 #### Sampling Objectives:
+
 - `priority`: Sample tasks based on their priority value (default: true)
 - `recency`: Favor tasks that are closest to a target time (default: false)
 - `punctuation`: Focus on Goals (`!`) or Questions (`?`) (default: false)
@@ -57,11 +62,14 @@ The `PremiseSource` generates a continuous stream of `Task`s, drawing from `Memo
 
 ### Strategy
 
-The `Strategy` component receives the stream of primary premises and creates premise pairs by finding suitable secondary premises using various selection algorithms.
+The `Strategy` component receives the stream of primary premises and creates premise pairs by finding suitable secondary
+premises using various selection algorithms.
 
 ### RuleExecutor
 
-The `RuleExecutor` indexes all registered rules for fast retrieval and performs symbolic guard analysis to optimize rule execution through:
+The `RuleExecutor` indexes all registered rules for fast retrieval and performs symbolic guard analysis to optimize rule
+execution through:
+
 - Deduplication & ordering of common checks
 - Subsumption detection
 - Constant folding
@@ -69,6 +77,7 @@ The `RuleExecutor` indexes all registered rules for fast retrieval and performs 
 ### RuleProcessor
 
 The `RuleProcessor` consumes premise pairs and executes rules in a non-blocking fashion:
+
 - Synchronous NAL rules are executed immediately and results are emitted
 - Asynchronous LM rules are dispatched without blocking and results are emitted when available
 - Results are merged into a unified output stream
@@ -76,6 +85,7 @@ The `RuleProcessor` consumes premise pairs and executes rules in a non-blocking 
 ### Reasoner
 
 The main `Reasoner` class manages the continuous reasoning pipeline:
+
 - Manages pipeline lifecycle with `start()`, `stop()`, `step()` methods
 - Exposes a single `outputStream` for consumers
 - Implements resource constraints (CPU throttling, derivation depth limits)
@@ -155,14 +165,17 @@ const componentStatus = reasoner.getComponentStatus();
 The Stream Reasoner implements several resource management features:
 
 ### CPU Throttling
+
 - Configurable CPU throttle interval to prevent blocking the event loop
 - Adjustable based on system load and consumer feedback
 
 ### Derivation Depth Limits
+
 - Configurable maximum derivation depth to keep the derivation graph finite
 - Tasks exceeding the limit are discarded to comply with AIKR (Assumption of Insufficient Knowledge and Resources)
 
 ### Backpressure Handling
+
 - Advanced detection when output consumers slow down
 - Adaptive processing rate adjustments
 - Consumer feedback mechanisms to adjust processing based on downstream capacity
@@ -170,6 +183,7 @@ The Stream Reasoner implements several resource management features:
 ## Event-Driven Architecture
 
 The reasoner supports an event-driven notification system for:
+
 - Premise processing events
 - Rule application events
 - Result generation events
@@ -177,6 +191,7 @@ The reasoner supports an event-driven notification system for:
 ## Testing
 
 The Stream Reasoner includes comprehensive testing:
+
 - Unit tests for individual components
 - Integration tests for component interactions
 - End-to-end workflow tests
@@ -186,13 +201,15 @@ The Stream Reasoner includes comprehensive testing:
 ## Self-Optimization Hooks
 
 The architecture provides hooks for metacognitive control:
+
 - Sampling objectives serve as direct control knobs
 - Derivation graphs in `Stamp`s enable credit assignment
 - Performance metrics enable system optimization
 
 ## Migration from Legacy Reasoner
 
-The Stream Reasoner maintains backward compatibility while providing enhanced capabilities. Both reasoners can coexist during transition periods with runtime configuration switches.
+The Stream Reasoner maintains backward compatibility while providing enhanced capabilities. Both reasoners can coexist
+during transition periods with runtime configuration switches.
 
 ## Key Benefits
 

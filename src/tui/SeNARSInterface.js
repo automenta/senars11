@@ -11,7 +11,7 @@ export class SeNARSInterface {
         this.persistenceManager = new PersistenceManager({
             defaultPath: config.persistence?.defaultPath || './agent.json'
         });
-        
+
         // Create shared command processor
         this.commandProcessor = new CommandProcessor(this.nar, this.persistenceManager, this.sessionState);
 
@@ -41,16 +41,16 @@ export class SeNARSInterface {
     _createCommandMap() {
         // Get command map from shared processor
         const commandMap = this.commandProcessor.getCommandMap();
-        
+
         // Override demo command with interface-specific implementation
         commandMap.set('demo', this._demo.bind(this));
         commandMap.set('d', this._demo.bind(this));
-        
+
         // Add interface-specific commands
         commandMap.set('quit', this._quit.bind(this));
         commandMap.set('q', this._quit.bind(this));
         commandMap.set('exit', this._quit.bind(this));
-        
+
         return commandMap;
     }
 
@@ -61,31 +61,31 @@ export class SeNARSInterface {
                 top: '0', left: '0', width: '100%', height: '6%',
                 content: '{bold}{rainbow}SeNARS Reasoning Engine 🚀{/rainbow}{/bold}',
                 tags: true,
-                border: { type: 'line' },
-                style: { fg: 'white', bg: 'blue', border: { fg: '#f0f0f0' } }
+                border: {type: 'line'},
+                style: {fg: 'white', bg: 'blue', border: {fg: '#f0f0f0'}}
             },
             input: {
                 top: '6%', left: '0', width: '100%', height: '15%',
-                border: { type: 'line' },
-                style: { fg: 'white', bg: 'black', border: { fg: 'green' } },
+                border: {type: 'line'},
+                style: {fg: 'white', bg: 'black', border: {fg: 'green'}},
                 inputOnFocus: true
             },
             output: {
                 top: '21%', left: '0', width: '70%', height: '54%',
-                border: { type: 'line' },
-                style: { fg: 'white', bg: 'black', border: { fg: 'cyan' } },
+                border: {type: 'line'},
+                style: {fg: 'white', bg: 'black', border: {fg: 'cyan'}},
                 scrollable: true, alwaysScroll: true, mouse: true, keys: true, vi: true
             },
             memoryDisplay: {
                 top: '21%', left: '70%', width: '30%', height: '54%',
-                border: { type: 'line' },
-                style: { fg: 'white', bg: 'black', border: { fg: 'magenta' } },
+                border: {type: 'line'},
+                style: {fg: 'white', bg: 'black', border: {fg: 'magenta'}},
                 scrollable: true, alwaysScroll: true, mouse: true, keys: true, vi: true
             },
             statusBar: {
                 bottom: '0', left: '0', width: '100%', height: '25%',
-                border: { type: 'line' },
-                style: { fg: 'white', bg: 'red', border: { fg: 'yellow' } },
+                border: {type: 'line'},
+                style: {fg: 'white', bg: 'red', border: {fg: 'yellow'}},
                 content: this._getStatusContent()
             }
         };
@@ -196,7 +196,7 @@ export class SeNARSInterface {
 
             if (result) {
                 this._addToOutput(`✅ Input processed successfully (${duration}ms)`);
-                
+
                 // Show latest beliefs
                 const beliefs = this.nar.getBeliefs();
                 if (beliefs.length > 0) {
@@ -252,7 +252,7 @@ export class SeNARSInterface {
             () => this.nar.getTasks?.(),
             () => this.nar.memory?.getTasks?.(),
             () => this.nar.memory?.concepts && (
-                this.nar.memory.concepts instanceof Map 
+                this.nar.memory.concepts instanceof Map
                     ? Array.from(this.nar.memory.concepts.values())
                     : Object.values(this.nar.memory.concepts)
             ).flatMap(concept => concept?.tasks || [])
@@ -270,12 +270,29 @@ export class SeNARSInterface {
     }
 
     // Delegating formatting methods to FormattingUtils for better modularity
-    _formatTaskDetails(task) { return FormattingUtils.formatTaskDetails(task); }
-    _formatType(type) { return FormattingUtils.formatType(type); }
-    _formatTruthStr(truth) { return FormattingUtils.formatTruthStr(truth); }
-    _formatPriorityStr(priority) { return FormattingUtils.formatPriorityStr(priority); }
-    _formatStamp(stamp) { return FormattingUtils.formatStamp(stamp); }
-    _formatOccurrenceTime(occurrenceTime) { return FormattingUtils.formatOccurrenceTime(occurrenceTime); }
+    _formatTaskDetails(task) {
+        return FormattingUtils.formatTaskDetails(task);
+    }
+
+    _formatType(type) {
+        return FormattingUtils.formatType(type);
+    }
+
+    _formatTruthStr(truth) {
+        return FormattingUtils.formatTruthStr(truth);
+    }
+
+    _formatPriorityStr(priority) {
+        return FormattingUtils.formatPriorityStr(priority);
+    }
+
+    _formatStamp(stamp) {
+        return FormattingUtils.formatStamp(stamp);
+    }
+
+    _formatOccurrenceTime(occurrenceTime) {
+        return FormattingUtils.formatOccurrenceTime(occurrenceTime);
+    }
 
     _help() {
         return `

@@ -140,7 +140,7 @@ export class SandboxedTool extends BaseTool {
                 resolve({
                     success: false,
                     exitCode: null,
-                    error: { message: `Command execution failed: ${error.message}` },
+                    error: {message: `Command execution failed: ${error.message}`},
                     stdout: this.sanitizeOutput(stdout),
                     stderr: this.sanitizeOutput(stderr),
                     executionTime: Date.now() - startTime
@@ -203,7 +203,7 @@ export class SandboxedTool extends BaseTool {
         return {
             success: false,
             exitCode: null,
-            error: { message: `${outputType} exceeded size limit of ${limit} bytes` },
+            error: {message: `${outputType} exceeded size limit of ${limit} bytes`},
             stdout: '',
             stderr: '',
             executionTime: Date.now() - (Date.now() - this.runtimeLimit) // Approximate execution time

@@ -16,7 +16,7 @@ async function traditionalSyllogismDemo() {
             useStreamReasoner: false  // Use traditional cycle-based reasoner
         }
     };
-    
+
     const nar = new NAR(config);
     await nar.initialize();
 
@@ -38,7 +38,7 @@ async function traditionalSyllogismDemo() {
 
     console.log(`\nTotal reasoning cycles completed: ${nar.cycleCount}`);
     console.log(`Total concepts in memory: ${nar.memory.getAllConcepts().length}`);
-    
+
     return nar;
 }
 
@@ -55,7 +55,7 @@ async function streamSyllogismDemo() {
             cpuThrottleInterval: 0  // No throttle for demo
         }
     };
-    
+
     const nar = new NAR(config);
     await nar.initialize();
 
@@ -66,13 +66,13 @@ async function streamSyllogismDemo() {
     await nar.input('<Socrates --> man>. %1.0;0.8%');
 
     console.log('\nStarting stream reasoning...\n');
-    
+
     // Start the stream reasoner
     nar.start();
-    
+
     // Wait for a few seconds to allow derivations to occur
     await new Promise(resolve => setTimeout(resolve, 2000));
-    
+
     // Stop the stream reasoner
     nar.stop();
 
@@ -87,30 +87,30 @@ async function streamSyllogismDemo() {
     const stats = nar.getStats();
     console.log(`\nStream reasoner derivations: ${stats.cycleCount}`);
     console.log(`Total concepts in memory: ${stats.memoryStats.conceptCount}`);
-    
+
     if (stats.streamReasonerStats) {
         console.log(`Stream reasoner metrics:`);
         console.log(`  Total derivations: ${stats.streamReasonerStats.totalDerivations}`);
         console.log(`  Processing time: ${stats.streamReasonerStats.totalProcessingTime}ms`);
         console.log(`  Throughput: ${(stats.streamReasonerStats.throughput || 0).toFixed(2)}/sec`);
     }
-    
+
     return nar;
 }
 
 async function runComparison() {
     console.log('🚀 Syllogistic Reasoning: Traditional vs Stream-Based Comparison\n');
-    
+
     // Run traditional demo
     console.log('🔍 Traditional Approach:');
     await traditionalSyllogismDemo();
-    
+
     console.log('\n' + '='.repeat(70));
-    
+
     // Run stream demo
     console.log('🔍 Stream-Based Approach:');
     await streamSyllogismDemo();
-    
+
     console.log('\n🎯 Comparison completed! Both approaches should derive similar conclusions.');
 }
 
@@ -119,4 +119,4 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     runComparison().catch(console.error);
 }
 
-export { traditionalSyllogismDemo, streamSyllogismDemo, runComparison };
+export {traditionalSyllogismDemo, streamSyllogismDemo, runComparison};

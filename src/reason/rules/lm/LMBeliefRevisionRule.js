@@ -4,9 +4,9 @@
  * Based on the v9 implementation with enhancements for stream-based architecture.
  */
 
-import { LMRule } from '../../LMRule.js';
-import { Task, TruthValue, Punctuation, TaskDerivation } from '../../TaskUtils.js';
-import { isJudgment, hasPattern, KeywordPatterns } from '../../RuleHelpers.js';
+import {LMRule} from '../../LMRule.js';
+import {Punctuation, Task} from '../../TaskUtils.js';
+import {hasPattern, isJudgment, KeywordPatterns} from '../../RuleHelpers.js';
 
 /**
  * Creates a belief revision rule using the enhanced LMRule.create method.
@@ -16,55 +16,55 @@ import { isJudgment, hasPattern, KeywordPatterns } from '../../RuleHelpers.js';
  * @returns {LMRule} A new LMRule instance for belief revision.
  */
 export const createBeliefRevisionRule = (dependencies) => {
-  const { lm } = dependencies;
-  return LMRule.create({
-    id: 'belief-revision',
-    lm,
-    name: 'Belief Revision Rule',
-    description: 'Helps resolve contradictions by suggesting belief revisions.',
-    priority: 0.95,
+    const {lm} = dependencies;
+    return LMRule.create({
+        id: 'belief-revision',
+        lm,
+        name: 'Belief Revision Rule',
+        description: 'Helps resolve contradictions by suggesting belief revisions.',
+        priority: 0.95,
 
-    condition: (primaryPremise, secondaryPremise, context) => {
-      if (!primaryPremise) return false;
+        condition: (primaryPremise, secondaryPremise, context) => {
+            if (!primaryPremise) return false;
 
-      const isBelief = isJudgment(primaryPremise);
-      const priority = primaryPremise.getPriority?.() || primaryPremise.priority || 0;
-      const termStr = primaryPremise.term?.toString?.() || String(primaryPremise.term || '');
+            const isBelief = isJudgment(primaryPremise);
+            const priority = primaryPremise.getPriority?.() || primaryPremise.priority || 0;
+            const termStr = primaryPremise.term?.toString?.() || String(primaryPremise.term || '');
 
-      return isBelief && priority > 0.8 && hasPattern(primaryPremise, KeywordPatterns.conflict);
-    },
+            return isBelief && priority > 0.8 && hasPattern(primaryPremise, KeywordPatterns.conflict);
+        },
 
-    prompt: (primaryPremise, secondaryPremise, context) => {
-      const termStr = primaryPremise.term?.toString?.() || String(primaryPremise.term || 'unknown');
-      return `The following belief appears to contain a contradiction or conflict:
+        prompt: (primaryPremise, secondaryPremise, context) => {
+            const termStr = primaryPremise.term?.toString?.() || String(primaryPremise.term || 'unknown');
+            return `The following belief appears to contain a contradiction or conflict:
 "${termStr}"
 
 Analyze this belief and the potential conflict. Propose a revised, more nuanced belief that resolves the inconsistency.
 The revised belief should be a single, clear statement.`;
-    },
-
-    process: (lmResponse) => {
-      return lmResponse?.trim() || '';
-    },
-
-    generate: (processedOutput, primaryPremise, secondaryPremise, context) => {
-      if (!processedOutput) return [];
-      
-      const newTask = new Task(
-        processedOutput,
-        Punctuation.JUDGMENT,
-        {
-          frequency: primaryPremise.truth.f,
-          confidence: primaryPremise.truth.c * 0.8, // Revised belief is slightly less confident
         },
-      );
 
-      return [newTask];
-    },
+        process: (lmResponse) => {
+            return lmResponse?.trim() || '';
+        },
 
-    lm_options: {
-      temperature: 0.5,
-      max_tokens: 400,
-    },
-  });
+        generate: (processedOutput, primaryPremise, secondaryPremise, context) => {
+            if (!processedOutput) return [];
+
+            const newTask = new Task(
+                processedOutput,
+                Punctuation.JUDGMENT,
+                {
+                    frequency: primaryPremise.truth.f,
+                    confidence: primaryPremise.truth.c * 0.8, // Revised belief is slightly less confident
+                },
+            );
+
+            return [newTask];
+        },
+
+        lm_options: {
+            temperature: 0.5,
+            max_tokens: 400,
+        },
+    });
 };

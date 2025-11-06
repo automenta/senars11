@@ -129,7 +129,7 @@ describe('NAR Integration Tests', () => {
             expect(stats).toBeDefined();
             expect(stats.memoryStats).toBeDefined();
             expect(stats.taskManagerStats).toBeDefined();
-            
+
             // For stream reasoner, check appropriate stats
             if (stats.reasonerType === 'stream') {
                 expect(stats.streamReasonerStats).toBeDefined();

@@ -2,7 +2,7 @@ import {parse} from './peggy-parser.js';
 import {TermFactory} from '../term/TermFactory.js';
 
 /**
- * Unified Narsese Parser 
+ * Unified Narsese Parser
  * Provides parsing capabilities for Narsese syntax with integration to TermFactory
  */
 export class NarseseParser {

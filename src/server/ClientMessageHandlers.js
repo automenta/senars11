@@ -39,9 +39,9 @@ export class ClientMessageHandlers {
     // Private methods
     _handleSubscription(client, message, action) {
         if (!client.subscriptions) client.subscriptions = new Set();
-        
+
         const eventTypes = message.eventTypes ?? ['all'];
-        
+
         if (action === 'subscribe') {
             eventTypes.forEach(type => client.subscriptions.add(type));
             this._sendToClient(client, {

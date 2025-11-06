@@ -601,7 +601,12 @@ const DiscoveryPanel = memo(() => {
                 }
             },
             React.createElement('div', {style: {marginBottom: '20px'}},
-                React.createElement('h2', {style: {color: '#2c3e50', marginBottom: '10px'}}, 'Insight Discovery & Sharing'),
+                React.createElement('h2', {
+                    style: {
+                        color: '#2c3e50',
+                        marginBottom: '10px'
+                    }
+                }, 'Insight Discovery & Sharing'),
                 React.createElement('p', {style: {color: '#7f8c8d'}},
                     'Discover, document, and share interesting patterns in hybrid NARS-LM reasoning'
                 )

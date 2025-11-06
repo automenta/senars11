@@ -23,16 +23,45 @@ export class BaseComponent {
     }
 
     // Getters
-    get name() { return this._name; }
-    get config() { return this._config; }
-    get logger() { return this._logger; }
-    get eventBus() { return this._eventBus; }
-    get metrics() { return this._metrics; }
-    get isInitialized() { return this._initialized; }
-    get isStarted() { return this._started; }
-    get isDisposed() { return this._disposed; }
-    get isRunning() { return this._started && !this._disposed; }
-    get uptime() { return this._startTime ? Date.now() - this._startTime : 0; }
+    get name() {
+        return this._name;
+    }
+
+    get config() {
+        return this._config;
+    }
+
+    get logger() {
+        return this._logger;
+    }
+
+    get eventBus() {
+        return this._eventBus;
+    }
+
+    get metrics() {
+        return this._metrics;
+    }
+
+    get isInitialized() {
+        return this._initialized;
+    }
+
+    get isStarted() {
+        return this._started;
+    }
+
+    get isDisposed() {
+        return this._disposed;
+    }
+
+    get isRunning() {
+        return this._started && !this._disposed;
+    }
+
+    get uptime() {
+        return this._startTime ? Date.now() - this._startTime : 0;
+    }
 
     // Configuration validation
     _validateConfig(config) {
@@ -80,9 +109,9 @@ export class BaseComponent {
 
         try {
             operation === 'start' && (this._startTime = Date.now());
-            
+
             await action();
-            
+
             // Update state after successful operation
             operation === 'initialize' && (this._initialized = true);
             operation === 'start' && (this._started = true);
@@ -94,8 +123,8 @@ export class BaseComponent {
 
             // Log and update metrics
             const operationSuffix = operation === 'initialize' ? 'd' :
-                                  operation === 'start' ? 'ed' :
-                                  operation === 'stop' ? 'ped' : 'd';
+                operation === 'start' ? 'ed' :
+                    operation === 'stop' ? 'ped' : 'd';
             this._logger.info(`${this._name} ${operation}${operationSuffix}`);
             metricName && this.incrementMetric(metricName);
             return true;
@@ -110,7 +139,7 @@ export class BaseComponent {
         const eventPayload = {
             timestamp: Date.now(),
             component: this._name,
-            ...(operation !== 'initialize' && operation !== 'dispose' && { uptime: this.uptime })
+            ...(operation !== 'initialize' && operation !== 'dispose' && {uptime: this.uptime})
         };
         this._eventBus.emit(`${this._name}.${operation}d`, eventPayload);
     }
@@ -157,10 +186,17 @@ export class BaseComponent {
     }
 
     // Default lifecycle implementations (can be overridden)
-    async _initialize() {}
-    async _start() {}
-    async _stop() {}
-    async _dispose() {}
+    async _initialize() {
+    }
+
+    async _start() {
+    }
+
+    async _stop() {
+    }
+
+    async _dispose() {
+    }
 
     // Metrics initialization
     _initializeMetrics() {
@@ -229,7 +265,7 @@ export class BaseComponent {
 
     _emitIntrospectionEvent(eventName, payload) {
         this._config.introspection?.enabled &&
-            this._eventBus.emit(eventName, createEventPayload(this._name, payload));
+        this._eventBus.emit(eventName, createEventPayload(this._name, payload));
     }
 
     // Event handling

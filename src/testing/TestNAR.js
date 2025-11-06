@@ -148,7 +148,7 @@ export class TestNAR {
     async execute() {
         // Dynamically import NAR to avoid circular dependencies
         const {NAR} = await import('../nar/NAR.js');
-        
+
         // Use optimized config for tests to improve performance
         const config = {
             performance: {
@@ -171,30 +171,30 @@ export class TestNAR {
                 delay: 1 // Minimum delay to pass validation but still optimized for tests
             }
         };
-        
+
         this.nar = new NAR(config);
         await this.nar.initialize(); // Initialize the NAR to ensure components are set up
-        
+
         // If trace is enabled, set up event logging
         if (this.trace) {
             this.nar.on('task.input', (data) => {
-                this.eventLog.push({ type: 'task.input', data, timestamp: Date.now() });
+                this.eventLog.push({type: 'task.input', data, timestamp: Date.now()});
                 console.log('TRACE [task.input]:', data);
             });
             this.nar.on('task.added', (data) => {
-                this.eventLog.push({ type: 'task.added', data, timestamp: Date.now() });
+                this.eventLog.push({type: 'task.added', data, timestamp: Date.now()});
                 console.log('TRACE [task.added]:', data);
             });
             this.nar.on('streamReasoner.step', (data) => {
-                this.eventLog.push({ type: 'streamReasoner.step', data, timestamp: Date.now() });
+                this.eventLog.push({type: 'streamReasoner.step', data, timestamp: Date.now()});
                 console.log('TRACE [streamReasoner.step]:', data);
             });
             this.nar.on('streamReasoner.metrics', (data) => {
-                this.eventLog.push({ type: 'streamReasoner.metrics', data, timestamp: Date.now() });
+                this.eventLog.push({type: 'streamReasoner.metrics', data, timestamp: Date.now()});
                 console.log('TRACE [streamReasoner.metrics]:', data);
             });
             this.nar.on('reasoning.derivation', (data) => {
-                this.eventLog.push({ type: 'reasoning.derivation', data, timestamp: Date.now() });
+                this.eventLog.push({type: 'reasoning.derivation', data, timestamp: Date.now()});
                 console.log('TRACE [reasoning.derivation]:', data);
             });
         }
@@ -228,20 +228,20 @@ export class TestNAR {
                     break;
             }
         }
-        
+
         // Additional reasoning cycles after all inputs to allow for inference
         // Execute multiple steps to make sure processing happens
         if (this.nar.streamReasoner) {
             for (let i = 0; i < 200; i++) {  // Increased from 100 to 200 steps for better coverage
                 const stepResults = await this.nar.step();
-                
+
                 // Make sure any derived tasks are also added to focus for next steps
                 for (const result of stepResults) {
                     if (result && this.nar._focus) {
                         this.nar._focus.addTaskToFocus(result);
                     }
                 }
-                
+
                 // Small delay to allow async processing
                 if (i % 10 === 0) { // Every 10th step, allow more processing time
                     await new Promise(resolve => setTimeout(resolve, 5));
@@ -249,27 +249,27 @@ export class TestNAR {
                     await new Promise(resolve => setTimeout(resolve, 1)); // Small delay
                 }
             }
-            
+
             // Additional wait for any async rules to complete derivations
             await new Promise(resolve => setTimeout(resolve, 500)); // Increased from 300 to 500 ms
         }
-        
+
         // Ensure all derived tasks are properly registered in memory
         await this._ensureDerivedTasksAreProcessed();
 
         // Get all tasks from memory and focus to catch derived results
         let allTasks = this.nar.memory.getAllConcepts().flatMap(c => c.getAllTasks());
-        
+
         // Also check focus for tasks that might not be in memory yet
         if (this.nar._focus) {
             const focusTasks = this.nar._focus.getTasks(1000);
             allTasks = [...allTasks, ...focusTasks];
         }
-        
+
         // Remove duplicates based on term and stamp
         const uniqueTasks = [];
         const seen = new Set();
-        
+
         for (const task of allTasks) {
             const key = task.term?.toString() + (task.stamp?.id || '');
             if (!seen.has(key)) {
@@ -277,7 +277,7 @@ export class TestNAR {
                 uniqueTasks.push(task);
             }
         }
-        
+
         allTasks = uniqueTasks;
 
         // Validate expectations
@@ -321,7 +321,7 @@ ${taskList}
 
         return true;
     }
-    
+
     /**
      * Process all input operations
      */
@@ -339,7 +339,7 @@ ${taskList}
             }
         }
     }
-    
+
     /**
      * Ensure derived tasks are properly processed into the system
      */

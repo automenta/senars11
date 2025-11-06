@@ -36,11 +36,16 @@ const DemoPanel = memo(() => {
 
     const getStateColors = (state) => {
         switch (state) {
-            case 'running': return {bg: '#e8f5e8', border: '#28a745'};
-            case 'paused': return {bg: '#fff3cd', border: '#ffc107'};
-            case 'completed': return {bg: '#d4edda', border: '#28a745'};
-            case 'error': return {bg: '#f8d7da', border: '#dc3545'};
-            default: return {bg: 'white', border: '#ddd'};
+            case 'running':
+                return {bg: '#e8f5e8', border: '#28a745'};
+            case 'paused':
+                return {bg: '#fff3cd', border: '#ffc107'};
+            case 'completed':
+                return {bg: '#d4edda', border: '#28a745'};
+            case 'error':
+                return {bg: '#f8d7da', border: '#dc3545'};
+            default:
+                return {bg: 'white', border: '#ddd'};
         }
     };
 
@@ -79,13 +84,24 @@ const DemoPanel = memo(() => {
                     }
                 },
                 React.createElement('div', {style: {flex: 1}},
-                    React.createElement('div', {style: {fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD'), cursor: 'pointer'}},
+                    React.createElement('div', {
+                            style: {
+                                fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD'),
+                                cursor: 'pointer'
+                            }
+                        },
                         React.createElement('span', {onClick: toggleExpanded},
                             expanded ? '▼ ' : '► '
                         ),
                         `${demo.name} (${state.state})`
                     ),
-                    React.createElement('div', {style: {fontSize: themeUtils.get('FONTS.SIZE.XS'), color: themeUtils.get('TEXT.SECONDARY'), marginTop: '0.25rem'}},
+                    React.createElement('div', {
+                            style: {
+                                fontSize: themeUtils.get('FONTS.SIZE.XS'),
+                                color: themeUtils.get('TEXT.SECONDARY'),
+                                marginTop: '0.25rem'
+                            }
+                        },
                         demo.description
                     ),
                     // Show progress bar and additional info
@@ -152,13 +168,23 @@ const DemoPanel = memo(() => {
                 },
                 demo.parameters && demo.parameters.length > 0
                     ? React.createElement('div', null,
-                        React.createElement('div', {style: {fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD'), marginBottom: '0.5rem'}}, 'Parameters:'),
+                        React.createElement('div', {
+                            style: {
+                                fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD'),
+                                marginBottom: '0.5rem'
+                            }
+                        }, 'Parameters:'),
                         demo.parameters.map(param =>
                             React.createElement('div', {
                                     key: param.name,
                                     style: {marginBottom: '0.25rem', display: 'flex', alignItems: 'center'}
                                 },
-                                React.createElement('label', {style: {width: '150px', fontSize: themeUtils.get('FONTS.SIZE.XS')}}, param.name),
+                                React.createElement('label', {
+                                    style: {
+                                        width: '150px',
+                                        fontSize: themeUtils.get('FONTS.SIZE.XS')
+                                    }
+                                }, param.name),
                                 React.createElement('input', {
                                     type: 'number',
                                     defaultValue: param.defaultValue,
@@ -167,12 +193,22 @@ const DemoPanel = memo(() => {
                                         // This would require more complex state management to capture parameter changes
                                         // For now, we'll just show the parameters
                                     },
-                                    style: {flex: 1, padding: '0.25rem', border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`, borderRadius: themeUtils.get('BORDERS.RADIUS.XS')}
+                                    style: {
+                                        flex: 1,
+                                        padding: '0.25rem',
+                                        border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`,
+                                        borderRadius: themeUtils.get('BORDERS.RADIUS.XS')
+                                    }
                                 })
                             )
                         )
                     )
-                    : React.createElement('div', {style: {fontSize: themeUtils.get('FONTS.SIZE.XS'), color: themeUtils.get('TEXT.MUTED')}}, 'No configurable parameters')
+                    : React.createElement('div', {
+                        style: {
+                            fontSize: themeUtils.get('FONTS.SIZE.XS'),
+                            color: themeUtils.get('TEXT.MUTED')
+                        }
+                    }, 'No configurable parameters')
             )
         );
     });

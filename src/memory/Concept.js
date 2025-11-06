@@ -99,7 +99,7 @@ export class Concept extends BaseComponent {
             [TASK_TYPES.GOAL]: this._goals,
             [TASK_TYPES.QUESTION]: this._questions
         }[taskType];
-        
+
         if (!storage) throw new Error(`Unknown task type: ${taskType}. Expected ${Object.values(TASK_TYPES).join(', ')}.`);
         return storage;
     }
@@ -135,7 +135,7 @@ export class Concept extends BaseComponent {
 
     getTask(taskId) {
         const allBags = [this._beliefs, this._goals, this._questions];
-        
+
         for (const bag of allBags) {
             for (const task of bag.getItemsInPriorityOrder()) {
                 if (task.stamp.id === taskId) {
@@ -207,7 +207,7 @@ export class Concept extends BaseComponent {
         const storage = this._getStorage(task.type);
         return this._replaceTaskInStorage(storage, task, task.clone({budget: newBudget}));
     }
-    
+
     _replaceTaskInStorage(storage, oldTask, newTask) {
         return storage.remove(oldTask) && storage.add(newTask);
     }
@@ -261,12 +261,12 @@ export class Concept extends BaseComponent {
             }
 
             const deserializationMap = [
-                { dataKey: 'beliefs', bagKey: '_beliefs' },
-                { dataKey: 'goals', bagKey: '_goals' },
-                { dataKey: 'questions', bagKey: '_questions' }
+                {dataKey: 'beliefs', bagKey: '_beliefs'},
+                {dataKey: 'goals', bagKey: '_goals'},
+                {dataKey: 'questions', bagKey: '_questions'}
             ];
 
-            for (const { dataKey, bagKey } of deserializationMap) {
+            for (const {dataKey, bagKey} of deserializationMap) {
                 if (data[dataKey] && this[bagKey].deserialize) {
                     await this[bagKey].deserialize(data[dataKey]);
                 }

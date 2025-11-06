@@ -81,11 +81,18 @@ export class Plugin {
         }
     }
 
-    async _initialize() {}
-    async _start() {}
-    async _stop() {}
-    async _dispose() {}
-    
+    async _initialize() {
+    }
+
+    async _start() {
+    }
+
+    async _stop() {
+    }
+
+    async _dispose() {
+    }
+
     getStatus() {
         return {
             id: this.id,
@@ -95,7 +102,7 @@ export class Plugin {
             config: this.config,
         };
     }
-    
+
     emitEvent(event, data, options = {}) {
         this.context?.eventBus?.emit(event, {
             timestamp: Date.now(),
@@ -106,15 +113,15 @@ export class Plugin {
             source: this.id
         });
     }
-    
+
     onEvent(event, handler) {
         this.context?.eventBus?.on(event, handler);
     }
-    
+
     offEvent(event, handler) {
         this.context?.eventBus?.off(event, handler);
     }
-    
+
     isReady() {
         return this.initialized && this.started && !this.disposed;
     }
@@ -126,42 +133,42 @@ export class PluginManager {
         this.plugins = new Map();
         this.initialized = false;
     }
-    
+
     registerPlugin(plugin) {
         if (!(plugin instanceof Plugin)) {
             console.error('Plugin must be an instance of Plugin class');
             return false;
         }
-        
+
         if (this.plugins.has(plugin.id)) {
             console.warn(`Plugin with id ${plugin.id} already registered`);
             return false;
         }
-        
+
         this.plugins.set(plugin.id, plugin);
         return true;
     }
-    
+
     unregisterPlugin(pluginId) {
         if (!this.plugins.has(pluginId)) {
             console.warn(`No plugin found with id ${pluginId}`);
             return false;
         }
-        
+
         const plugin = this.plugins.get(pluginId);
         plugin.started && plugin.stop();
         !plugin.disposed && plugin.dispose();
         return this.plugins.delete(pluginId);
     }
-    
+
     getPlugin(pluginId) {
         return this.plugins.get(pluginId) ?? null;
     }
-    
+
     async initializeAll() {
         let allSuccessful = true;
         const promises = [];
-        
+
         for (const [id, plugin] of this.plugins) {
             promises.push(
                 plugin.initialize({
@@ -174,21 +181,21 @@ export class PluginManager {
                     })
             );
         }
-        
+
         await Promise.all(promises);
         this.initialized = allSuccessful;
         return allSuccessful;
     }
-    
+
     async startAll() {
         if (!this.initialized) {
             console.warn('Plugins should be initialized before starting');
             await this.initializeAll();
         }
-        
+
         let allSuccessful = true;
         const promises = [];
-        
+
         for (const [id, plugin] of this.plugins) {
             promises.push(
                 plugin.start()
@@ -201,15 +208,15 @@ export class PluginManager {
                     })
             );
         }
-        
+
         await Promise.all(promises);
         return allSuccessful;
     }
-    
+
     async stopAll() {
         let allSuccessful = true;
         const promises = [];
-        
+
         for (const [id, plugin] of this.plugins) {
             promises.push(
                 plugin.stop()
@@ -222,15 +229,15 @@ export class PluginManager {
                     })
             );
         }
-        
+
         await Promise.all(promises);
         return allSuccessful;
     }
-    
+
     async disposeAll() {
         let allSuccessful = true;
         const promises = [];
-        
+
         for (const [id, plugin] of this.plugins) {
             promises.push(
                 plugin.dispose()
@@ -243,24 +250,29 @@ export class PluginManager {
                     })
             );
         }
-        
+
         await Promise.all(promises);
         this.plugins.clear();
         return allSuccessful;
     }
-    
+
     getAllPlugins() {
         return Array.from(this.plugins.values());
     }
-    
+
     getPluginsByStatus(status) {
         return Array.from(this.plugins.values()).filter(plugin => {
             switch (status) {
-                case 'initialized': return plugin.initialized;
-                case 'started': return plugin.started;
-                case 'disposed': return plugin.disposed;
-                case 'ready': return plugin.isReady?.() ?? false;
-                default: return true;
+                case 'initialized':
+                    return plugin.initialized;
+                case 'started':
+                    return plugin.started;
+                case 'disposed':
+                    return plugin.disposed;
+                case 'ready':
+                    return plugin.isReady?.() ?? false;
+                default:
+                    return true;
             }
         });
     }

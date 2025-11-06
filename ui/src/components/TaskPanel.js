@@ -2,7 +2,6 @@ import React, {memo} from 'react';
 import {formatBudget, formatTruth} from '../utils/formatters.js';
 import {DataPanel} from './DataPanel.js';
 import DataItem from './DataItem.js';
-import {themeUtils} from '../utils/themeUtils.js';
 
 const TaskPanel = memo(() => {
     const renderTask = (task) =>

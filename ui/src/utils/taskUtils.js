@@ -1,4 +1,3 @@
-
 const taskColorConfig = {
     'question': {bg: '#e7f3ff', border: '#b8daff'},
     'goal': {bg: '#fff3cd', border: '#ffeaa7'},

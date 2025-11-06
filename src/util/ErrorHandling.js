@@ -44,7 +44,7 @@ class ErrorClassifier {
     static determineSeverity(error, provided) {
         // Return provided severity if specified
         if (provided) return provided;
-        
+
         // Map error types to default severities
         const severityMap = {
             [ERROR_TYPES.LOGIC]: SEVERITY_LEVELS.HIGH,
@@ -54,7 +54,7 @@ class ErrorClassifier {
             [ERROR_TYPES.VALIDATION]: SEVERITY_LEVELS.LOW,
             [ERROR_TYPES.UNKNOWN]: SEVERITY_LEVELS.MEDIUM,
         };
-        
+
         return severityMap[this.classify(error)] || SEVERITY_LEVELS.MEDIUM;
     }
 }
@@ -69,7 +69,7 @@ class ErrorTracker {
     track(errorInfo) {
         this.errorRateWindow.push({timestamp: errorInfo.timestamp, severity: errorInfo.severity});
         this._cleanup();
-        
+
         const errorRate = this.getErrorRate();
         if (errorRate > this.maxErrorRate) {
             this.logger.warn(`High error rate: ${(errorRate * 100).toFixed(2)}%`);
@@ -78,7 +78,7 @@ class ErrorTracker {
 
     getErrorRate() {
         if (!this.errorRateWindow.length) return 0;
-        
+
         const recentErrors = this.errorRateWindow.filter(err =>
             [SEVERITY_LEVELS.HIGH, SEVERITY_LEVELS.MEDIUM].includes(err.severity));
         return recentErrors.length / this.errorRateWindow.length;
@@ -88,7 +88,7 @@ class ErrorTracker {
         const fiveMinutesAgo = Date.now() - 300000; // 5 minutes in milliseconds
         this.errorRateWindow = this.errorRateWindow.filter(err => err.timestamp > fiveMinutesAgo);
     }
-    
+
     // Added method to get error counts by type
     getErrorCounts() {
         const counts = {};
@@ -149,13 +149,13 @@ class ErrorRecovery {
         const strategy = strategies.get(errorInfo.type) || strategies.get('default');
         return await strategy(errorInfo, options);
     }
-    
+
     // Added method to reset recovery attempts for a specific error
     resetRecoveryAttempts(errorType, message) {
         const errorKey = `${errorType}:${message.substring(0, 30)}`;
         this.recoveryAttempts.delete(errorKey);
     }
-    
+
     // Added method to get current recovery attempts
     getRecoveryAttempts() {
         return new Map(this.recoveryAttempts);
@@ -243,11 +243,11 @@ export class ErrorHandling {
     getDegradationLevel() {
         return this.degradationLevel;
     }
-    
+
     isDegraded() {
         return this.degradationLevel > 0.5;
     }
-    
+
     getStats() {
         return {
             degradationLevel: this.degradationLevel,
@@ -261,23 +261,23 @@ export class ErrorHandling {
             errorCountsByType: this.tracker.getErrorCounts()
         };
     }
-    
+
     resetStats() {
         this.errorRegistry.clear();
         this.tracker.errorRateWindow = [];
         this.recovery.recoveryAttempts.clear();
         this.degradationLevel = 0;
     }
-    
+
     getErrorTypes() {
         return Object.values(ERROR_TYPES);
     }
-    
+
     // Added utility methods
     resetRecoveryAttempts(errorType, message) {
         this.recovery.resetRecoveryAttempts(errorType, message);
     }
-    
+
     clearErrorRegistry() {
         this.errorRegistry.clear();
     }

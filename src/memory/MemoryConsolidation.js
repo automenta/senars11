@@ -290,12 +290,12 @@ export class MemoryConsolidation extends ConfigurableComponent {
 
         // Factor 1: Task recency factor (recent tasks decay slower)
         const taskAge = Date.now() - task.stamp.creationTime;
-        const recencyThresholds = this.getConfigValue('recencyDecayThresholds', { short: 60000, medium: 300000 });
-        const recencyFactors = this.getConfigValue('recencyDecayFactors', { short: 0.2, medium: 0.5, long: 1 });
-        
-        taskDecayRate *= taskAge < recencyThresholds.short ? recencyFactors.short : 
-                         taskAge < recencyThresholds.medium ? recencyFactors.medium : 
-                         recencyFactors.long;
+        const recencyThresholds = this.getConfigValue('recencyDecayThresholds', {short: 60000, medium: 300000});
+        const recencyFactors = this.getConfigValue('recencyDecayFactors', {short: 0.2, medium: 0.5, long: 1});
+
+        taskDecayRate *= taskAge < recencyThresholds.short ? recencyFactors.short :
+            taskAge < recencyThresholds.medium ? recencyFactors.medium :
+                recencyFactors.long;
 
         // Factor 2: Task type factor (goals may decay differently than beliefs)
         switch (task.type) {
@@ -341,7 +341,7 @@ export class MemoryConsolidation extends ConfigurableComponent {
         const weights = this._getDecayWeights();
 
         // Combine all factors with configurable weights
-        const totalFactor = factors.reduce((sum, factor, index) => 
+        const totalFactor = factors.reduce((sum, factor, index) =>
             sum + (factor * weights[index]), 0
         );
 
@@ -436,7 +436,7 @@ export class MemoryConsolidation extends ConfigurableComponent {
 
         return 1.0; // Standard decay
     }
-    
+
     /**
      * Calculate proportional decay factor based on thresholds and values
      * @private

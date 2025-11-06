@@ -1,7 +1,7 @@
 import {WebSocketServer} from 'ws';
 import {EventEmitter} from 'events';
 import {ClientMessageHandlers} from './ClientMessageHandlers.js';
-import {WEBSOCKET_CONFIG, NAR_EVENTS, DEFAULT_CLIENT_CAPABILITIES} from '../config/constants.js';
+import {DEFAULT_CLIENT_CAPABILITIES, NAR_EVENTS, WEBSOCKET_CONFIG} from '../config/constants.js';
 
 const DEFAULT_OPTIONS = Object.freeze({
     port: WEBSOCKET_CONFIG.defaultPort,
@@ -170,7 +170,7 @@ class WebSocketMonitor {
     }
 
     broadcastEvent(eventType, data, options = {}) {
-        this._broadcastMessage({ type: 'event', eventType, data, timestamp: Date.now(), ...options }, eventType);
+        this._broadcastMessage({type: 'event', eventType, data, timestamp: Date.now(), ...options}, eventType);
     }
 
     _sendToClient(client, message) {
@@ -239,7 +239,7 @@ class WebSocketMonitor {
     }
 
     broadcastCustomEvent(eventType, data, options = {}) {
-        this._broadcastMessage({ type: eventType, data, timestamp: Date.now(), ...options }, eventType);
+        this._broadcastMessage({type: eventType, data, timestamp: Date.now(), ...options}, eventType);
     }
 
     _handleClientMessage(client, data) {
@@ -316,10 +316,10 @@ class WebSocketMonitor {
         const isSyntaxError = error instanceof SyntaxError;
         const errorMsg = isSyntaxError ? 'Invalid JSON format' : 'Error processing message';
         const errorMessage = isSyntaxError ? error.message : error.message;
-        
+
         console.error(isSyntaxError ? 'Invalid JSON received:' : 'Error handling client message:', errorMessage);
-        
-        this._sendToClient(client, { type: 'error', message: errorMsg, error: errorMessage });
+
+        this._sendToClient(client, {type: 'error', message: errorMsg, error: errorMessage});
     }
 
     _sendHandlerError(client, messageType, handlerError) {
@@ -333,9 +333,9 @@ class WebSocketMonitor {
         this._sendError(client, `Invalid handler for message type: ${messageType}`);
         this.metrics.errorCount++;
     }
-    
+
     _sendError(client, message, error = null) {
-        this._sendToClient(client, { type: 'error', message, error });
+        this._sendToClient(client, {type: 'error', message, error});
     }
 
     listenToNAR(nar) {
@@ -378,7 +378,7 @@ class WebSocketMonitor {
             this.metrics.errorCount++;
         }
     }
-    
+
     _shouldBroadcast(message, eventType) {
         const now = Date.now();
         const lastBroadcast = this.broadcastRateLimiter.lastBroadcastTime.get(eventType) ?? 0;
@@ -392,17 +392,17 @@ class WebSocketMonitor {
                 return false;
             }
         }
-        
+
         return true;
     }
-    
+
     _shouldSendToClient(client, message, eventType) {
-        return message.type === 'event' || 
-            !client.subscriptions || 
-            client.subscriptions.has('all') || 
+        return message.type === 'event' ||
+            !client.subscriptions ||
+            client.subscriptions.has('all') ||
             client.subscriptions.has(eventType);
     }
-    
+
     _sendToClientSafe(client, jsonMessage, messageType) {
         try {
             client.send(jsonMessage, {binary: false, compress: true}, (error) => {
@@ -414,7 +414,7 @@ class WebSocketMonitor {
             return 0;
         }
     }
-    
+
     _handleClientSendError(client, messageType, error) {
         console.error(`Error sending ${messageType} to client:`, error);
         this.clients.delete(client);

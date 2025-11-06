@@ -4,7 +4,7 @@ export const collectTasksFromAllConcepts = (memory, filterFn = null) =>
 
 export const collectConceptsWithCriteria = (memory, criteria = {}) => {
     const {minTaskCount = 0, hasUnresolvedTasks = false, termPattern = null} = criteria;
-    
+
     return memory.getAllConcepts().filter(concept =>
         concept.getAllTasks().length >= minTaskCount &&
         (!hasUnresolvedTasks || concept.hasUnresolvedTasks()) &&
@@ -15,7 +15,7 @@ export const collectConceptsWithCriteria = (memory, criteria = {}) => {
 export const getMemoryStats = memory => {
     const concepts = memory.getAllConcepts();
     const tasks = concepts.flatMap(concept => concept.getAllTasks());
-    
+
     return {
         conceptCount: concepts.length,
         taskCount: tasks.length,

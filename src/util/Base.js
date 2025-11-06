@@ -12,7 +12,7 @@ export class Base {
         // Assign properties and validate if validator provided
         Object.assign(this, props);
         validator?.(this);
-        
+
         // Enforce immutability
         return Object.freeze(this);
     }

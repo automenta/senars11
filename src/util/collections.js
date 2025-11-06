@@ -1,7 +1,7 @@
 export const sortByProperty = (items, prop, desc = false) => {
     // Handle edge cases
     if (!Array.isArray(items) || items.length === 0) return [];
-    
+
     return [...items].sort((a, b) => {
         const aVal = a[prop] ?? 0;
         const bVal = b[prop] ?? 0;
@@ -14,7 +14,7 @@ export const findBy = (items, predicate) => items.find(predicate);
 
 export const groupBy = (items, keyFn) => {
     if (!Array.isArray(items) || items.length === 0) return {};
-    
+
     return items.reduce((groups, item) => {
         const key = keyFn(item) ?? 'unknown';
         (groups[key] ??= []).push(item);
@@ -36,7 +36,7 @@ export const createSet = (items, keyFn = x => x) => {
 
 export const chunk = (array, size) => {
     if (!Array.isArray(array) || size <= 0) return [];
-    
+
     const chunks = [];
     for (let i = 0; i < array.length; i += size) {
         chunks.push(array.slice(i, i + size));
@@ -58,23 +58,23 @@ export const calculateStatistics = values => {
     if (!Array.isArray(values) || values.length === 0) {
         return {mean: 0, median: 0, std: 0, min: 0, max: 0, count: 0};
     }
-    
+
     const sorted = [...values].sort((a, b) => a - b);
     const n = values.length;
     const mean = calculateAverage(values);
     const min = sorted[0];
     const max = sorted[n - 1];
     const median = n % 2 === 0 ? (sorted[n / 2 - 1] + sorted[n / 2]) / 2 : sorted[Math.floor(n / 2)];
-    
+
     const variance = values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / n;
     const std = Math.sqrt(variance);
-    
+
     return {mean, median, std, min, max, count: n, variance};
 };
 
 export const getPercentile = (values, percentile) => {
     if (!Array.isArray(values) || values.length === 0) return 0;
-    
+
     const sorted = [...values].sort((a, b) => a - b);
     const index = Math.floor(percentile * (sorted.length - 1));
     return sorted[index];
@@ -82,25 +82,25 @@ export const getPercentile = (values, percentile) => {
 
 export const getOutliers = (values, threshold = 2) => {
     if (!Array.isArray(values) || values.length === 0) return [];
-    
+
     const mean = calculateAverage(values);
     const std = Math.sqrt(values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / values.length);
-    
+
     return values.filter(value => Math.abs(value - mean) > threshold * std);
 };
 
 export const correlation = (values1, values2) => {
     if (!Array.isArray(values1) || !Array.isArray(values2) ||
         values1.length !== values2.length || values1.length === 0) return 0;
-    
+
     const n = values1.length;
     const avg1 = calculateAverage(values1);
     const avg2 = calculateAverage(values2);
-    
+
     let numerator = 0;
     let sumSq1 = 0;
     let sumSq2 = 0;
-    
+
     for (let i = 0; i < n; i++) {
         const diff1 = values1[i] - avg1;
         const diff2 = values2[i] - avg2;
@@ -108,7 +108,7 @@ export const correlation = (values1, values2) => {
         sumSq1 += diff1 * diff1;
         sumSq2 += diff2 * diff2;
     }
-    
+
     const denominator = Math.sqrt(sumSq1 * sumSq2);
     return denominator === 0 ? 0 : numerator / denominator;
 };

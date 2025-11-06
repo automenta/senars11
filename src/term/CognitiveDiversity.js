@@ -171,8 +171,8 @@ export class CognitiveDiversity {
         if (!this.registeredTerms.size) return [];
 
         const contributions = Array.from(this.registeredTerms.entries()).map(([termName, complexity]) => ({
-            termName, 
-            complexity, 
+            termName,
+            complexity,
             contribution: Math.abs(complexity - this.diversityMetrics.averageComplexity)
         }));
 
@@ -194,7 +194,7 @@ export class CognitiveDiversity {
         }
 
         const termComplexity = this.termFactory.getComplexity(term);
-        const { averageComplexity: currentAvg, variety: currentVariety } = this.diversityMetrics;
+        const {averageComplexity: currentAvg, variety: currentVariety} = this.diversityMetrics;
 
         const complexityDistanceFromAvg = Math.abs(termComplexity - currentAvg);
         const diversityImpact = complexityDistanceFromAvg / (currentAvg || 1);

@@ -11,7 +11,7 @@ export class Repl {
         this.persistenceManager = new PersistenceManager({
             defaultPath: config.persistence?.defaultPath || './agent.json'
         });
-        
+
         this.commandProcessor = new CommandProcessor(this.nar, this.persistenceManager, this.sessionState);
 
         this.animationState = {spinningIndex: 0};
@@ -66,13 +66,13 @@ export class Repl {
             if (result) console.log(result.trim());
             return;
         }
-        
+
         if (cmd === 'run' || cmd === 'go') {
             const result = await this._run();
             if (result) console.log(result.trim());
             return;
         }
-        
+
         if (cmd === 'stop' || cmd === 'st') {
             const result = this._stop();
             if (result) console.log(result.trim());
@@ -205,7 +205,7 @@ export class Repl {
                 'websocket              - WebSocket monitoring example',
                 'lm-providers           - Language model provider integrations'
             ];
-            
+
             return [
                 '🎭 Available examples:',
                 ...examples.map(line => `  ${line}`),

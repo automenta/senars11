@@ -1,4 +1,3 @@
-
 export const calculatePriorityChange = (concept) =>
     concept.priority - (concept.initialPriority || concept.priority);
 

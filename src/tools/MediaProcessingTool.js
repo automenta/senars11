@@ -336,7 +336,7 @@ export class MediaProcessingTool extends BaseTool {
             errors.push('targetFormat is required for convert operation');
         }
 
-        return { isValid: errors.length === 0, errors };
+        return {isValid: errors.length === 0, errors};
     }
 
     /**
@@ -391,7 +391,7 @@ export class MediaProcessingTool extends BaseTool {
             // For text files, also check the text length
             return; // Will be checked when reading the file
         }
-        
+
         // Use stats to check file size for non-text files
         return; // Size check happens after access validation
     }

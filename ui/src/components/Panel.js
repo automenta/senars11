@@ -6,14 +6,14 @@ import {themeUtils} from '../utils/themeUtils.js';
 import styles from './Panel.module.css';
 
 const Panel = memo(({
-    title,
-    children,
-    showWebSocketStatus = true,
-    showHeader = true,
-    className = '',
-    style = {},
-    headerExtra = null
-}) => {
+                        title,
+                        children,
+                        showWebSocketStatus = true,
+                        showHeader = true,
+                        className = '',
+                        style = {},
+                        headerExtra = null
+                    }) => {
     const wsConnected = useUiStore(state => state.wsConnected);
     const panelClassName = `${styles.panel} ${className}`.trim();
 

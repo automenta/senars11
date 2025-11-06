@@ -56,11 +56,11 @@ export class Metrics {
         merged.avgTime = merged.executions > 0 ? merged.totalTime / merged.executions : 0;
         return merged;
     }
-    
+
     static round(value, decimals = 2) {
         return Number(value.toFixed(decimals));
     }
-    
+
     static format(stats) {
         const formatted = {...stats};
         Object.keys(formatted).forEach(key => {
@@ -70,7 +70,7 @@ export class Metrics {
         });
         return formatted;
     }
-    
+
     static reset() {
         return this.create();
     }

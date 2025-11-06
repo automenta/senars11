@@ -28,7 +28,7 @@ export class MemoryValidator {
 
     storeChecksum(key, obj) {
         if (!this.isEnabled) return;
-        
+
         const checksum = this.calculateChecksum(obj);
         checksum && this.checksums.set(key, checksum);
         return checksum;
@@ -36,22 +36,22 @@ export class MemoryValidator {
 
     validate(key, obj) {
         if (!this.isEnabled || !this.options.enableChecksums) {
-            return { valid: true, message: 'Validation disabled' };
+            return {valid: true, message: 'Validation disabled'};
         }
-        
+
         const expectedChecksum = this.checksums.get(key);
         if (!expectedChecksum) {
             this.storeChecksum(key, obj);
-            return { valid: true, message: 'First validation - stored checksum' };
+            return {valid: true, message: 'First validation - stored checksum'};
         }
-        
+
         const actualChecksum = this.calculateChecksum(obj);
         if (!actualChecksum) {
-            return { valid: false, message: 'Could not calculate checksum' };
+            return {valid: false, message: 'Could not calculate checksum'};
         }
-        
+
         return expectedChecksum === actualChecksum
-            ? { valid: true, message: 'Valid' }
+            ? {valid: true, message: 'Valid'}
             : {
                 valid: false,
                 message: 'Memory corruption detected',

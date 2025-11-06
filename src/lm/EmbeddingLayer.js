@@ -34,8 +34,8 @@ export class EmbeddingLayer {
             return 0;
         }
 
-        const { dotProduct, magnitude1, magnitude2 } = this._computeSimilarityMetrics(embedding1, embedding2);
-        
+        const {dotProduct, magnitude1, magnitude2} = this._computeSimilarityMetrics(embedding1, embedding2);
+
         if (magnitude1 === 0 || magnitude2 === 0) {
             return 0;
         }
@@ -44,9 +44,9 @@ export class EmbeddingLayer {
     }
 
     _validateEmbeddings(embedding1, embedding2) {
-        return Array.isArray(embedding1) && 
-               Array.isArray(embedding2) && 
-               embedding1.length === embedding2.length;
+        return Array.isArray(embedding1) &&
+            Array.isArray(embedding2) &&
+            embedding1.length === embedding2.length;
     }
 
     _computeSimilarityMetrics(embedding1, embedding2) {
@@ -63,7 +63,7 @@ export class EmbeddingLayer {
         magnitude1 = Math.sqrt(magnitude1);
         magnitude2 = Math.sqrt(magnitude2);
 
-        return { dotProduct, magnitude1, magnitude2 };
+        return {dotProduct, magnitude1, magnitude2};
     }
 
     async findSimilar(input, candidates, threshold = 0.7) {

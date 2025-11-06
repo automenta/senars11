@@ -1,5 +1,4 @@
-import { BaseIndex } from './BaseIndex.js';
-import { TermCategorization } from '../TermCategorization.js';
+import {BaseIndex} from './BaseIndex.js';
 
 export class TemporalIndex extends BaseIndex {
     constructor(config = {}) {
@@ -34,7 +33,7 @@ export class TemporalIndex extends BaseIndex {
     }
 
     find(filters = {}) {
-        const { createdAfter, createdBefore } = filters;
+        const {createdAfter, createdBefore} = filters;
 
         return (createdAfter !== undefined || createdBefore !== undefined)
             ? this._getConceptsByTimeRange(createdAfter, createdBefore)
@@ -49,7 +48,7 @@ export class TemporalIndex extends BaseIndex {
 
             // Check if bucket overlaps with requested time range
             const bucketOverlaps = (createdBefore === undefined || bucketStartTime <= createdBefore) &&
-                                (createdAfter === undefined || bucketEndTime >= createdAfter);
+                (createdAfter === undefined || bucketEndTime >= createdAfter);
 
             if (bucketOverlaps) {
                 // Additional filtering might be needed inside bucket

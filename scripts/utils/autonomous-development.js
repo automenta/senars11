@@ -230,7 +230,7 @@ async function runAutonomousDevelopment() {
             // Extract fitness values for danfojs analysis
             const fitnessValues = population.map(ind => ind.fitness || 0);
             const fitnessSeries = new dfd.Series(fitnessValues);
-            
+
             evolutionHistory.push({
                 generation: gen,
                 bestFitness: bestOfGen.fitness,

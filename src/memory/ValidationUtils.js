@@ -9,6 +9,23 @@ export class ValidationUtils {
         };
     }
 
+    static addToIndex(indexes, index, key, value) {
+        if (!indexes[index].has(key)) {
+            indexes[index].set(key, new Set());
+        }
+        indexes[index].get(key).add(value);
+    }
+
+    static removeFromIndex(indexes, index, key, value) {
+        if (indexes[index].has(key)) {
+            const set = indexes[index].get(key);
+            set.delete(value);
+            if (set.size === 0) {
+                indexes[index].delete(key);
+            }
+        }
+    }
+
     /**
      * Start automatic validation
      */
@@ -64,33 +81,33 @@ export class ValidationUtils {
 
         return results;
     }
-    
+
     /**
      * Run all validation tasks
      */
     _runValidationTasks(indexes, results) {
         const validationTasks = [
-            { key: 'termConsistency', validator: this.validateTermConsistency, error: true },
-            { key: 'orphanedEntries', validator: this.validateOrphanedEntries, error: false },
-            { key: 'duplicates', validator: this.validateDuplicates, error: false },
-            { key: 'invalidReferences', validator: this.validateReferences, error: true },
-            { key: 'customRules', validator: this.validateCustomRules, error: true }
+            {key: 'termConsistency', validator: this.validateTermConsistency, error: true},
+            {key: 'orphanedEntries', validator: this.validateOrphanedEntries, error: false},
+            {key: 'duplicates', validator: this.validateDuplicates, error: false},
+            {key: 'invalidReferences', validator: this.validateReferences, error: true},
+            {key: 'customRules', validator: this.validateCustomRules, error: true}
         ];
 
         validationTasks.forEach(task => this._executeValidationTask(task, indexes, results));
     }
-    
+
     /**
      * Execute a single validation task
      */
     _executeValidationTask(task, indexes, results) {
         const validationResult = task.validator.call(this, indexes);
         results.details[task.key] = validationResult;
-        
+
         if (!validationResult.passed) {
             const target = task.error ? results.errors : results.warnings;
             target.push(...(validationResult[task.error ? 'errors' : 'warnings'] || []));
-            
+
             if (task.error) {
                 results.passed = false;
             }
@@ -123,21 +140,21 @@ export class ValidationUtils {
 
         return result;
     }
-    
+
     /**
      * Validate consistency for a specific concept
      */
     _validateConceptConsistency(concepts, termId, indexes, result) {
         concepts.forEach(concept => {
             // Determine if concept is atomic or compound and validate accordingly
-            const validator = concept.term.isAtomic 
-                ? this._validateAtomicConsistency 
+            const validator = concept.term.isAtomic
+                ? this._validateAtomicConsistency
                 : this._validateCompoundConsistency;
-            
+
             validator.call(this, concept, termId, indexes, result);
         });
     }
-    
+
     /**
      * Validate atomic concept consistency
      */
@@ -148,7 +165,7 @@ export class ValidationUtils {
             result.errors.push(`Atomic concept ${termId} missing from atomic index`);
         }
     }
-    
+
     /**
      * Validate compound concept consistency
      */
@@ -165,11 +182,11 @@ export class ValidationUtils {
             '==>': this._validateImplicationConsistency.bind(this),
             '<->': this._validateSimilarityConsistency.bind(this)
         };
-        
+
         const validator = validationMap[concept.term.operator];
         if (validator) validator(concept, termId, indexes, result);
     }
-    
+
     /**
      * Validate relationship concept consistency using a common pattern
      */
@@ -183,23 +200,23 @@ export class ValidationUtils {
             }
         }
     }
-    
+
     /**
      * Validate inheritance concept consistency
      */
     _validateInheritanceConsistency(concept, termId, indexes, result) {
-        this._validateRelationshipConsistency(concept, termId, indexes, result, 'Inheritance', 'inheritance', 
+        this._validateRelationshipConsistency(concept, termId, indexes, result, 'Inheritance', 'inheritance',
             term => term.components[1]);
     }
-    
+
     /**
      * Validate implication concept consistency
      */
     _validateImplicationConsistency(concept, termId, indexes, result) {
-        this._validateRelationshipConsistency(concept, termId, indexes, result, 'Implication', 'implication', 
+        this._validateRelationshipConsistency(concept, termId, indexes, result, 'Implication', 'implication',
             term => term.components[0]);
     }
-    
+
     /**
      * Validate similarity concept consistency
      */
@@ -230,14 +247,14 @@ export class ValidationUtils {
             // Check for entries in secondary indexes that don't exist in primary term index
             const termIndex = indexes.term;
             const indexesToCheck = [
-                { index: indexes.atomic, name: 'atomic' },
-                { index: indexes.compoundByOp, name: 'compoundByOp' },
-                { index: indexes.inheritance, name: 'inheritance' },
-                { index: indexes.implication, name: 'implication' },
-                { index: indexes.similarity, name: 'similarity' }
+                {index: indexes.atomic, name: 'atomic'},
+                {index: indexes.compoundByOp, name: 'compoundByOp'},
+                {index: indexes.inheritance, name: 'inheritance'},
+                {index: indexes.implication, name: 'implication'},
+                {index: indexes.similarity, name: 'similarity'}
             ];
 
-            indexesToCheck.forEach(({ index, name }) => {
+            indexesToCheck.forEach(({index, name}) => {
                 for (const [key, concepts] of index.entries()) {
                     result.checked++;
                     for (const concept of concepts) {
@@ -493,7 +510,7 @@ export class ValidationUtils {
         results.duration = Date.now() - repairStartTime;
         return results;
     }
-    
+
     /**
      * Execute repair operations based on validation results
      */
@@ -614,27 +631,20 @@ export class ValidationUtils {
         return repaired;
     }
 
-    static addToIndex(indexes, index, key, value) {
-        if (!indexes[index].has(key)) {
-            indexes[index].set(key, new Set());
-        }
-        indexes[index].get(key).add(value);
-    }
-
     removeOrphanedEntries(indexes) {
         let removedCount = 0;
 
         try {
             const termIndex = indexes.term;
             const indexesToCheck = [
-                { index: indexes.atomic, name: 'atomic' },
-                { index: indexes.compoundByOp, name: 'compoundByOp' },
-                { index: indexes.inheritance, name: 'inheritance' },
-                { index: indexes.implication, name: 'implication' },
-                { index: indexes.similarity, name: 'similarity' }
+                {index: indexes.atomic, name: 'atomic'},
+                {index: indexes.compoundByOp, name: 'compoundByOp'},
+                {index: indexes.inheritance, name: 'inheritance'},
+                {index: indexes.implication, name: 'implication'},
+                {index: indexes.similarity, name: 'similarity'}
             ];
 
-            for (const { index, name } of indexesToCheck) {
+            for (const {index, name} of indexesToCheck) {
                 for (const [key, concepts] of index.entries()) {
                     for (const concept of Array.from(concepts)) { // Use Array.from to avoid modification during iteration
                         const termId = concept.term.id;
@@ -650,16 +660,6 @@ export class ValidationUtils {
         }
 
         return removedCount;
-    }
-
-    static removeFromIndex(indexes, index, key, value) {
-        if (indexes[index].has(key)) {
-            const set = indexes[index].get(key);
-            set.delete(value);
-            if (set.size === 0) {
-                indexes[index].delete(key);
-            }
-        }
     }
 
     removeDuplicates(indexes) {
@@ -712,8 +712,20 @@ export class ValidationUtils {
     }
 
     getStats(indexes) {
-        const { inheritance, implication, similarity, compound, atomic, compoundByOp, component, complexity, category, temporal, activation } = indexes;
-        
+        const {
+            inheritance,
+            implication,
+            similarity,
+            compound,
+            atomic,
+            compoundByOp,
+            component,
+            complexity,
+            category,
+            temporal,
+            activation
+        } = indexes;
+
         return {
             totalConcepts: this.countTotalConcepts(indexes),
             inheritanceEntries: inheritance.size,
@@ -744,7 +756,7 @@ export class ValidationUtils {
 
     countTotalConcepts(indexes) {
         let count = 0;
-        for(const concepts of indexes.term.values()) {
+        for (const concepts of indexes.term.values()) {
             count += concepts.size;
         }
         return count;

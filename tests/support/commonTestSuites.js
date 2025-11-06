@@ -90,16 +90,16 @@ export const systemLifecycleSuite = (narProvider) => {
             await narProvider().input('dog.');
 
             expect(narProvider().getBeliefs().length).toBeGreaterThan(0);
-            const initialCycleCount = narProvider()._useStreamReasoner ? 
-                (narProvider().streamReasoner?.getMetrics?.()?.totalDerivations || 0) : 
+            const initialCycleCount = narProvider()._useStreamReasoner ?
+                (narProvider().streamReasoner?.getMetrics?.()?.totalDerivations || 0) :
                 narProvider().cycleCount;
             expect(initialCycleCount).toBeGreaterThanOrEqual(0);
 
             narProvider().reset();
 
             expect(narProvider().getBeliefs().length).toBe(0);
-            const resetCycleCount = narProvider()._useStreamReasoner ? 
-                (narProvider().streamReasoner?.getMetrics?.()?.totalDerivations || 0) : 
+            const resetCycleCount = narProvider()._useStreamReasoner ?
+                (narProvider().streamReasoner?.getMetrics?.()?.totalDerivations || 0) :
                 narProvider().cycleCount;
             expect(resetCycleCount).toBe(0);
         });

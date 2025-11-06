@@ -27,7 +27,7 @@ class KnowledgeBaseConnector {
         this.connections.set(providerId, connector);
         return connector;
     }
-    
+
     async _createConnector(providerId, credentials) {
         const ConnectorClass = PROVIDER_MAP[providerId];
         if (!ConnectorClass) {
@@ -51,12 +51,12 @@ class KnowledgeBaseConnector {
         this._cacheResult(cacheKey, result);
         return result;
     }
-    
+
     _getCachedResult(cacheKey) {
         const cachedResult = this.cache.get(cacheKey);
         return cachedResult && this._isCacheValid(cachedResult) ? cachedResult.data : null;
     }
-    
+
     _checkRateLimit(providerId) {
         if (!this.rateLimiter.allow(providerId)) {
             throw new Error(`Rate limit exceeded for provider: ${providerId}`);
@@ -149,7 +149,7 @@ class WikipediaConnector {
 
     async query(query, options = {}) {
         this._ensureInitialized();
-        
+
         const searchQuery = this._extractSearchQuery(query);
         const searchUrl = this._buildWikipediaUrl(searchQuery);
 
@@ -157,11 +157,11 @@ class WikipediaConnector {
         const data = await response.json();
         return this._buildResult('wikipedia', searchQuery, [data]);
     }
-    
+
     _buildWikipediaUrl(searchQuery) {
         return `${this.baseUrl}/page/summary/${encodeURIComponent(searchQuery)}`;
     }
-    
+
     async _fetchData(url) {
         const response = await fetch(url);
         if (!response.ok) {
@@ -204,10 +204,10 @@ class WikidataConnector {
 
     async query(query, options = {}) {
         this._ensureInitialized();
-        
+
         const sparqlQuery = this._prepareSparqlQuery(query);
         const url = `${this.baseUrl}?query=${encodeURIComponent(sparqlQuery)}`;
-        
+
         const response = await fetch(url, {
             headers: {
                 'Accept': 'application/sparql-results+json'
@@ -270,7 +270,7 @@ class CustomAPIConnector {
 
     async query(query, options = {}) {
         this._ensureInitialized();
-        
+
         const url = this._buildUrl(query, options);
         const headers = this._buildHeaders();
 

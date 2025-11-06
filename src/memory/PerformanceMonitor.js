@@ -233,7 +233,7 @@ export class PerformanceMonitor {
             queryTimes: 1000,
             indexUpdateTimes: 1000
         };
-        
+
         const ranges = {
             memoryUsage: 50,
             queryTimes: 500,

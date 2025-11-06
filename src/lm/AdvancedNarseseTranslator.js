@@ -2,13 +2,25 @@ export class AdvancedNarseseTranslator {
     constructor() {
         this.patterns = {
             forward: [
-                {regex: /(.*)\s+is\s+(?:a|an|a kind of|a type of|a sort of)\s+(.*)/i, replacement: '($1 --> $2).', confidence: 0.9},
+                {
+                    regex: /(.*)\s+is\s+(?:a|an|a kind of|a type of|a sort of)\s+(.*)/i,
+                    replacement: '($1 --> $2).',
+                    confidence: 0.9
+                },
                 {regex: /(.*)s\s+are\s+(.*)/i, replacement: '($1 --> $2).', confidence: 0.9},
-                {regex: /(.*)\s+(?:resembles|is similar to|is like|is similar as)\s+(.*)/i, replacement: '($1 <-> $2).', confidence: 0.85},
+                {
+                    regex: /(.*)\s+(?:resembles|is similar to|is like|is similar as)\s+(.*)/i,
+                    replacement: '($1 <-> $2).',
+                    confidence: 0.85
+                },
                 {regex: /(?:if|when)\s+(.*)\s+then\s+(.*)/i, replacement: '($1 ==> $2).', confidence: 0.9},
                 {regex: /(.*)\s+(?:causes|leads to|results in)\s+(.*)/i, replacement: '($1 ==> $2).', confidence: 0.85},
                 {regex: /(.*)\s+if and only if\s+(.*)/i, replacement: '($1 <=> $2).', confidence: 0.8},
-                {regex: /(.*)\s+(?:is equivalent to|is the same as)\s+(.*)/i, replacement: '($1 <=> $2).', confidence: 0.8},
+                {
+                    regex: /(.*)\s+(?:is equivalent to|is the same as)\s+(.*)/i,
+                    replacement: '($1 <=> $2).',
+                    confidence: 0.8
+                },
                 {regex: /(.*)\s+and\s+(.*)/i, replacement: '(&, $1, $2).', confidence: 0.9},
                 {regex: /(.*)\s+or\s+(.*)/i, replacement: '(|, $1, $2).', confidence: 0.9},
                 {regex: /\bnot\s+(.*)/i, replacement: '(--, $1).', confidence: 0.9},
@@ -90,16 +102,16 @@ export class AdvancedNarseseTranslator {
             timestamp: Date.now(),
             patternUsed
         };
-        
+
         this.translationHistory.push(translationEntry);
-        
+
         if (this.translationHistory.length > this.maxHistorySize) {
             this.translationHistory.shift();
         }
 
         const result = isReverse
-            ? { text: translated, confidence, original, context: this.contextBuffer }
-            : { narsese: translated, confidence, original, context: this.contextBuffer };
+            ? {text: translated, confidence, original, context: this.contextBuffer}
+            : {narsese: translated, confidence, original, context: this.contextBuffer};
 
         return this.applyErrorCorrection(result);
     }
@@ -107,13 +119,17 @@ export class AdvancedNarseseTranslator {
     async iterativeTranslate(text, options = {}) {
         const initialResult = this.toNarsese(text, options);
         return initialResult.confidence < this.minConfidence
-            ? { ...initialResult, refined: false, notes: `Low confidence (${initialResult.confidence}) - consider providing more context or rephrasing` }
+            ? {
+                ...initialResult,
+                refined: false,
+                notes: `Low confidence (${initialResult.confidence}) - consider providing more context or rephrasing`
+            }
             : initialResult;
     }
 
     getQualityMetrics() {
         if (this.translationHistory.length === 0) {
-            return { totalTranslations: 0, averageConfidence: 0, highConfidenceRate: 0, lowConfidenceRate: 0 };
+            return {totalTranslations: 0, averageConfidence: 0, highConfidenceRate: 0, lowConfidenceRate: 0};
         }
 
         const total = this.translationHistory.length;
@@ -156,7 +172,7 @@ export class AdvancedNarseseTranslator {
             !result.narsese.endsWith('.') && !result.narsese.endsWith('?') && !result.narsese.endsWith('!')) {
             result.narsese += '.';
         }
-        
+
         if (result.narsese?.includes('()')) {
             result.confidence = Math.min(result.confidence, 0.3);
             result.notes = (result.notes || '') + ' Potential syntax error: empty parentheses found.';

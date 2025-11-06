@@ -37,7 +37,7 @@ describe('TermLayer Integration', () => {
         await nar.step();
 
         // Verify that the cycle ran without errors
-        const actualCycleCount = nar._useStreamReasoner ? 
+        const actualCycleCount = nar._useStreamReasoner ?
             (nar.streamReasoner?.getMetrics?.()?.totalDerivations || 0) : nar.cycleCount;
         expect(actualCycleCount).toBeGreaterThanOrEqual(0); // Allow 0 for stream reasoner
     });

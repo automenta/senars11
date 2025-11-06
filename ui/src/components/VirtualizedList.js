@@ -1,12 +1,12 @@
 import React, {useCallback, useMemo, useState} from 'react';
 
 const VirtualizedList = ({
-    items = [],
-    renderItem,
-    itemHeight = 50,
-    containerHeight = 400,
-    overscan = 5
-}) => {
+                             items = [],
+                             renderItem,
+                             itemHeight = 50,
+                             containerHeight = 400,
+                             overscan = 5
+                         }) => {
     const [scrollTop, setScrollTop] = useState(0);
 
     const {startIdx, endIdx, totalHeight, offsetY, visibleItems} = useMemo(() => {

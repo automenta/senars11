@@ -1,4 +1,4 @@
-import { BaseIndex } from './BaseIndex.js';
+import {BaseIndex} from './BaseIndex.js';
 
 export class RelationshipIndex extends BaseIndex {
     constructor(config = {}) {
@@ -6,21 +6,21 @@ export class RelationshipIndex extends BaseIndex {
         this._inheritanceIndex = new Map(); // Maps inheritance relationships
         this._implicationIndex = new Map(); // Maps implication relationships  
         this._similarityIndex = new Map(); // Maps similarity relationships
-        
+
         // Index operations mapping to simplify code
         this._indexOperations = {
             '-->': (term, concept) => this._indexInheritance(term, concept),
             '==>': (term, concept) => this._indexImplication(term, concept),
             '<->': (term, concept) => this._indexSimilarity(term, concept)
         };
-        
+
         // Remove operations mapping
         this._removeOperations = {
             '-->': (term, concept) => this._removeInheritance(term, concept),
             '==>': (term, concept) => this._removeImplication(term, concept),
             '<->': (term, concept) => this._removeSimilarity(term, concept)
         };
-        
+
         // Find operations mapping
         this._findOperations = {
             'inheritance': (filters) => this._findInheritance(filters),
@@ -30,7 +30,7 @@ export class RelationshipIndex extends BaseIndex {
     }
 
     add(concept) {
-        const { term } = concept;
+        const {term} = concept;
         if (!term.isAtomic && term.operator) {
             const operation = this._indexOperations[term.operator];
             if (operation) operation(term, concept);
@@ -71,7 +71,7 @@ export class RelationshipIndex extends BaseIndex {
     }
 
     remove(concept) {
-        const { term } = concept;
+        const {term} = concept;
         if (!term.isAtomic && term.operator) {
             const operation = this._removeOperations[term.operator];
             if (operation) operation(term, concept);
@@ -113,7 +113,7 @@ export class RelationshipIndex extends BaseIndex {
     }
 
     find(filters = {}) {
-        const { relationshipType } = filters;
+        const {relationshipType} = filters;
 
         if (relationshipType) {
             const operation = this._findOperations[relationshipType];
@@ -127,9 +127,9 @@ export class RelationshipIndex extends BaseIndex {
     }
 
     _findInheritance(filters) {
-        const { subject, predicate } = filters;
+        const {subject, predicate} = filters;
         const result = [];
-        
+
         if (subject) {
             const concepts = this._inheritanceIndex.get(`subject:${subject.toString()}`);
             if (concepts) result.push(...Array.from(concepts));
@@ -138,14 +138,14 @@ export class RelationshipIndex extends BaseIndex {
             const concepts = this._inheritanceIndex.get(`predicate:${predicate.toString()}`);
             if (concepts) result.push(...Array.from(concepts));
         }
-        
+
         return result;
     }
 
     _findImplication(filters) {
-        const { premise, conclusion } = filters;
+        const {premise, conclusion} = filters;
         const result = [];
-        
+
         if (premise) {
             const concepts = this._implicationIndex.get(`premise:${premise.toString()}`);
             if (concepts) result.push(...Array.from(concepts));
@@ -154,7 +154,7 @@ export class RelationshipIndex extends BaseIndex {
             const concepts = this._implicationIndex.get(`conclusion:${conclusion.toString()}`);
             if (concepts) result.push(...Array.from(concepts));
         }
-        
+
         return result;
     }
 
@@ -172,7 +172,7 @@ export class RelationshipIndex extends BaseIndex {
     getAll() {
         const allConcepts = new Set();
         const indexes = [this._inheritanceIndex, this._implicationIndex, this._similarityIndex];
-        
+
         for (const index of indexes) {
             for (const concepts of index.values()) {
                 for (const concept of concepts) {
@@ -180,7 +180,7 @@ export class RelationshipIndex extends BaseIndex {
                 }
             }
         }
-        
+
         return Array.from(allConcepts);
     }
 }

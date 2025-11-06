@@ -1,18 +1,9 @@
-import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
-import {
-  ReactFlow,
-  MiniMap,
-  Controls,
-  Background,
-  useNodesState,
-  useEdgesState,
-  addEdge,
-  MarkerType
-} from 'reactflow';
+import React, {memo, useCallback, useEffect, useMemo, useState} from 'react';
+import {addEdge, Background, Controls, MarkerType, MiniMap, ReactFlow, useEdgesState, useNodesState} from 'reactflow';
 import 'reactflow/dist/style.css';
 import useUiStore from '../stores/uiStore.js';
-import { getTaskColor } from '../utils/taskUtils.js';
-import { themeUtils } from '../utils/themeUtils.js';
+import {getTaskColor} from '../utils/taskUtils.js';
+import {themeUtils} from '../utils/themeUtils.js';
 
 // Node types for different system items
 const nodeTypes = {
@@ -23,7 +14,7 @@ const nodeTypes = {
 };
 
 // Custom node components
-const ConceptNode = memo(({ data }) => {
+const ConceptNode = memo(({data}) => {
     return React.createElement('div', {
             style: {
                 padding: '10px',
@@ -35,12 +26,12 @@ const ConceptNode = memo(({ data }) => {
                 boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
             }
         },
-        React.createElement('div', { style: { fontWeight: 'bold', marginBottom: '5px' } }, data.label),
-        React.createElement('div', { style: { fontSize: '0.8em' } }, `Priority: ${(data.priority || 0).toFixed(2)}`)
+        React.createElement('div', {style: {fontWeight: 'bold', marginBottom: '5px'}}, data.label),
+        React.createElement('div', {style: {fontSize: '0.8em'}}, `Priority: ${(data.priority || 0).toFixed(2)}`)
     );
 });
 
-const TaskNode = memo(({ data }) => {
+const TaskNode = memo(({data}) => {
     return React.createElement('div', {
             style: {
                 padding: '8px',
@@ -52,12 +43,12 @@ const TaskNode = memo(({ data }) => {
                 boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
             }
         },
-        React.createElement('div', { style: { fontWeight: 'bold', marginBottom: '3px' } }, data.type),
-        React.createElement('div', { style: { fontSize: '0.7em' } }, data.label)
+        React.createElement('div', {style: {fontWeight: 'bold', marginBottom: '3px'}}, data.type),
+        React.createElement('div', {style: {fontSize: '0.7em'}}, data.label)
     );
 });
 
-const BeliefNode = memo(({ data }) => {
+const BeliefNode = memo(({data}) => {
     return React.createElement('div', {
             style: {
                 padding: '8px',
@@ -69,13 +60,13 @@ const BeliefNode = memo(({ data }) => {
                 boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
             }
         },
-        React.createElement('div', { style: { fontWeight: 'bold', marginBottom: '3px' } }, 'Belief'),
-        React.createElement('div', { style: { fontSize: '0.7em' } }, data.label),
-        React.createElement('div', { style: { fontSize: '0.6em' } }, `Freq: ${(data.frequency || 0).toFixed(2)}`)
+        React.createElement('div', {style: {fontWeight: 'bold', marginBottom: '3px'}}, 'Belief'),
+        React.createElement('div', {style: {fontSize: '0.7em'}}, data.label),
+        React.createElement('div', {style: {fontSize: '0.6em'}}, `Freq: ${(data.frequency || 0).toFixed(2)}`)
     );
 });
 
-const GoalNode = memo(({ data }) => {
+const GoalNode = memo(({data}) => {
     return React.createElement('div', {
             style: {
                 padding: '8px',
@@ -87,9 +78,9 @@ const GoalNode = memo(({ data }) => {
                 boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
             }
         },
-        React.createElement('div', { style: { fontWeight: 'bold', marginBottom: '3px' } }, 'Goal'),
-        React.createElement('div', { style: { fontSize: '0.7em' } }, data.label),
-        React.createElement('div', { style: { fontSize: '0.6em' } }, `Desire: ${(data.desire || 0).toFixed(2)}`)
+        React.createElement('div', {style: {fontWeight: 'bold', marginBottom: '3px'}}, 'Goal'),
+        React.createElement('div', {style: {fontSize: '0.7em'}}, data.label),
+        React.createElement('div', {style: {fontSize: '0.6em'}}, `Desire: ${(data.desire || 0).toFixed(2)}`)
     );
 });
 
@@ -103,7 +94,7 @@ const GraphUI = () => {
     const goals = useUiStore(state => state.goals);
 
     // Generate nodes and edges from system data
-    const { nodes: generatedNodes, edges: generatedEdges } = useMemo(() => {
+    const {nodes: generatedNodes, edges: generatedEdges} = useMemo(() => {
         const nodeList = [];
         const edgeList = [];
         const nodeIdSet = new Set();
@@ -116,7 +107,7 @@ const GraphUI = () => {
             nodeList.push({
                 id,
                 type: 'concept',
-                position: { x: index * 150, y: 0 },
+                position: {x: index * 150, y: 0},
                 data: {
                     label: concept.term,
                     priority: concept.priority,
@@ -134,7 +125,7 @@ const GraphUI = () => {
             nodeList.push({
                 id,
                 type: 'task',
-                position: { x: (index % 5) * 200, y: 150 + Math.floor(index / 5) * 150 },
+                position: {x: (index % 5) * 200, y: 150 + Math.floor(index / 5) * 150},
                 data: {
                     label: task.term,
                     type: task.type,
@@ -151,7 +142,7 @@ const GraphUI = () => {
             nodeList.push({
                 id,
                 type: 'belief',
-                position: { x: (index % 4) * 220, y: 400 + Math.floor(index / 4) * 150 },
+                position: {x: (index % 4) * 220, y: 400 + Math.floor(index / 4) * 150},
                 data: {
                     label: belief.term,
                     frequency: belief.truth?.frequency,
@@ -168,7 +159,7 @@ const GraphUI = () => {
             nodeList.push({
                 id,
                 type: 'goal',
-                position: { x: (index % 4) * 220, y: 650 + Math.floor(index / 4) * 150 },
+                position: {x: (index % 4) * 220, y: 650 + Math.floor(index / 4) * 150},
                 data: {
                     label: goal.term,
                     desire: goal.truth?.desire,
@@ -191,8 +182,8 @@ const GraphUI = () => {
                             id: `edge-${taskId}-${conceptId}`,
                             source: taskId,
                             target: conceptId,
-                            markerEnd: { type: MarkerType.ArrowClosed },
-                            style: { stroke: '#007bff', strokeWidth: 2 }
+                            markerEnd: {type: MarkerType.ArrowClosed},
+                            style: {stroke: '#007bff', strokeWidth: 2}
                         });
                     }
                 }
@@ -211,8 +202,8 @@ const GraphUI = () => {
                             id: `edge-${beliefId}-${conceptId}`,
                             source: beliefId,
                             target: conceptId,
-                            markerEnd: { type: MarkerType.ArrowClosed },
-                            style: { stroke: '#28a745', strokeWidth: 2 }
+                            markerEnd: {type: MarkerType.ArrowClosed},
+                            style: {stroke: '#28a745', strokeWidth: 2}
                         });
                     }
                 }
@@ -231,15 +222,15 @@ const GraphUI = () => {
                             id: `edge-${goalId}-${conceptId}`,
                             source: goalId,
                             target: conceptId,
-                            markerEnd: { type: MarkerType.ArrowClosed },
-                            style: { stroke: '#dc3545', strokeWidth: 2 }
+                            markerEnd: {type: MarkerType.ArrowClosed},
+                            style: {stroke: '#dc3545', strokeWidth: 2}
                         });
                     }
                 }
             }
         });
 
-        return { nodes: nodeList, edges: edgeList };
+        return {nodes: nodeList, edges: edgeList};
     }, [concepts, tasks, beliefs, goals, selectedNode]);
 
     // Update nodes and edges when data changes
@@ -300,9 +291,9 @@ const GraphUI = () => {
                 },
                 onClick: (e) => e.stopPropagation()
             },
-            React.createElement('div', { style: { padding: '4px 8px', cursor: 'pointer' } }, 'Add Related Concept'),
-            React.createElement('div', { style: { padding: '4px 8px', cursor: 'pointer' } }, 'View Details'),
-            React.createElement('div', { style: { padding: '4px 8px', cursor: 'pointer' } }, 'Export Node')
+            React.createElement('div', {style: {padding: '4px 8px', cursor: 'pointer'}}, 'Add Related Concept'),
+            React.createElement('div', {style: {padding: '4px 8px', cursor: 'pointer'}}, 'View Details'),
+            React.createElement('div', {style: {padding: '4px 8px', cursor: 'pointer'}}, 'Export Node')
         ) : null;
 
     // Selected node info panel
@@ -322,11 +313,11 @@ const GraphUI = () => {
             },
             React.createElement('h4', null, 'Selected Item'),
             React.createElement('p', null, `ID: ${selectedNode}`),
-            React.createElement('button', { onClick: () => setSelectedNode(null) }, 'Close')
+            React.createElement('button', {onClick: () => setSelectedNode(null)}, 'Close')
         ) : null;
 
     return React.createElement('div', {
-            style: { width: '100%', height: '100%', position: 'relative' },
+            style: {width: '100%', height: '100%', position: 'relative'},
             onClick: closeContextMenu
         },
         React.createElement(ReactFlow, {
@@ -343,7 +334,7 @@ const GraphUI = () => {
             },
             React.createElement(Controls),
             React.createElement(MiniMap),
-            React.createElement(Background, { variant: "dots", gap: 12, size: 1 })
+            React.createElement(Background, {variant: "dots", gap: 12, size: 1})
         ),
         contextMenuElement,
         selectedNodePanel
