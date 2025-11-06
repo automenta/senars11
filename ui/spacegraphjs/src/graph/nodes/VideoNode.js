@@ -1,10 +1,11 @@
 import {CSS3DObject} from 'three/addons/renderers/CSS3DRenderer.js';
 import {Node} from './Node.js';
+import {GRAPH_CONSTANTS} from '../constants.js';
 
 export class VideoNode extends Node {
     static typeName = 'video';
-    static DEFAULT_WIDTH = 320;
-    static DEFAULT_HEIGHT = 240;
+    static DEFAULT_WIDTH = GRAPH_CONSTANTS.DEFAULT_NODE_SIZE * 6.4;
+    static DEFAULT_HEIGHT = GRAPH_CONSTANTS.DEFAULT_NODE_SIZE * 4.8;
     htmlElement = null;
     videoElement = null;
     size = {width: VideoNode.DEFAULT_WIDTH, height: VideoNode.DEFAULT_HEIGHT};

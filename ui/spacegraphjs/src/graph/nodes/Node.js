@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import {Utils} from '../../utils.js';
+import {GRAPH_CONSTANTS} from '../constants.js';
 
 export class Node {
     space = null;
@@ -42,7 +43,7 @@ export class Node {
     }
 
     getBoundingSphereRadius() {
-        return 50;
+        return GRAPH_CONSTANTS.DEFAULT_NODE_SIZE;
     }
 
     setSelectedStyle(_selected) {

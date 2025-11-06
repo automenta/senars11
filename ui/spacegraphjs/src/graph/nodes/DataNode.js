@@ -1,8 +1,9 @@
 import * as THREE from 'three';
 import {Node} from './Node.js';
-import {CSS3DObject} from 'three/addons/renderers/CSS3DRenderer.js';
+import {createCSS3DLabelObject} from '../../utils/labelUtils.js';
+import {GRAPH_CONSTANTS, LABEL_STYLES, MATERIAL_PROPERTIES} from '../constants.js';
 
-const DEFAULT_NODE_SIZE = 100;
+const DEFAULT_NODE_SIZE = GRAPH_CONSTANTS.DEFAULT_NODE_SIZE * 2; // Data nodes are typically larger
 const DEFAULT_CHART_BG_COLOR = '#222227';
 const DEFAULT_CHART_TEXT_COLOR = '#eeeeee';
 
@@ -55,8 +56,7 @@ export class DataNode extends Node {
             map: this.texture,
             side: THREE.DoubleSide,
             transparent: true,
-            roughness: 0.8,
-            metalness: 0.1,
+            ...MATERIAL_PROPERTIES.CHART,
         });
         this.mesh = new THREE.Mesh(geometry, material);
         this.mesh.userData = {nodeId: this.id, type: 'data-node-mesh'};
@@ -76,7 +76,7 @@ export class DataNode extends Node {
         this._setupChartContext(chartTextColor);
 
         if (!chartData?.length) {
-            this._drawNoDataMessage(width, height);
+            this._drawMessage('No Data', width, height);
             this._updateTexture();
             return;
         }
@@ -86,13 +86,13 @@ export class DataNode extends Node {
                 this._drawBarChart(chartData, width, height);
                 break;
             case 'line':
-                this._drawNotImplementedMessage('Line chart NI', width, height);
+                this._drawMessage('Line chart NI', width, height);
                 break;
             case 'pie':
-                this._drawNotImplementedMessage('Pie chart NI', width, height);
+                this._drawMessage('Pie chart NI', width, height);
                 break;
             default:
-                this._drawUnknownChartMessage(chartType, width, height);
+                this._drawMessage(`Unknown: ${chartType}`, width, height);
         }
         this._updateTexture();
     }
@@ -119,39 +119,13 @@ export class DataNode extends Node {
     }
 
     /**
-     * Draws a "No Data" message.
-     * @param {number} width - The canvas width.
-     * @param {number} height - The canvas height.
-     */
-    _drawNoDataMessage(width, height) {
-        this.ctx.fillText('No Data', width / 2, height / 2);
-    }
-
-    /**
-     * Draws a "Not Implemented" message.
+     * Draws a message on the canvas.
      * @param {string} message - The message to display.
      * @param {number} width - The canvas width.
      * @param {number} height - The canvas height.
      */
-    _drawNotImplementedMessage(message, width, height) {
+    _drawMessage(message, width, height) {
         this.ctx.fillText(message, width / 2, height / 2);
-    }
-
-    /**
-     * Draws an "Unknown Chart" message.
-     * @param {string} chartType - The unknown chart type.
-     * @param {number} width - The canvas width.
-     * @param {number} height - The canvas height.
-     */
-    _drawUnknownChartMessage(chartType, width, height) {
-        this.ctx.fillText(`Unknown: ${chartType}`, width / 2, height / 2);
-    }
-
-    /**
-     * Updates the texture.
-     */
-    _updateTexture() {
-        this.texture.needsUpdate = true;
     }
 
     _drawBarChart(data, canvasWidth, canvasHeight) {
@@ -165,22 +139,13 @@ export class DataNode extends Node {
         const maxValue = Math.max(...data.map(d => d.value), 0);
 
         if (maxValue === 0) {
-            this._drawZeroValuesMessage(canvasWidth, canvasHeight);
+            this._drawMessage('All values are 0', canvasWidth, canvasHeight);
             return;
         }
 
         data.forEach((item, index) => {
             this._drawBar(item, index, barWidth, maxValue, chartHeight, padding, canvasHeight);
         });
-    }
-
-    /**
-     * Draws a message for zero values.
-     * @param {number} canvasWidth - The canvas width.
-     * @param {number} canvasHeight - The canvas height.
-     */
-    _drawZeroValuesMessage(canvasWidth, canvasHeight) {
-        this.ctx.fillText('All values are 0', canvasWidth / 2, canvasHeight / 2);
     }
 
     /**
@@ -223,17 +188,19 @@ export class DataNode extends Node {
     }
 
     _createLabel() {
-        const div = document.createElement('div');
-        div.className = 'node-label-3d node-common';
-        div.textContent = this.data.label || '';
-        div.dataset.nodeId = this.id;
-        return new CSS3DObject(div);
+        return createCSS3DLabelObject(
+            this.data.label,
+            this.id,
+            'node-label-3d',
+            LABEL_STYLES.DATA_NODE,
+            'data-label'
+        );
     }
 
     update(space) {
         super.update(space);
         if (this.labelObject) {
-            const offset = this.getBoundingSphereRadius() * 1.1 + 15;
+            const offset = this.getBoundingSphereRadius() * 1.1 + GRAPH_CONSTANTS.DEFAULT_LABEL_OFFSET + 5;
             this.labelObject.position.copy(this.position).y += offset;
             if (space?._cam) this.labelObject.quaternion.copy(space._cam.quaternion);
         }

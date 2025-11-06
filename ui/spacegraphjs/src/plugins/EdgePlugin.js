@@ -1,14 +1,8 @@
 import {Plugin} from '../core/Plugin.js';
 import {Utils} from '../utils.js';
-import {EdgeFactory} from '../graph/EdgeFactory.js';
+import {EdgeFactory} from '../graph/factories/EdgeFactory.js';
 import {InstancedEdgeManager} from '../rendering/InstancedEdgeManager.js';
 
-// Import all edge types
-import {Edge} from '../graph/edges/Edge.js';
-import {CurvedEdge} from '../graph/edges/CurvedEdge.js';
-import {LabeledEdge} from '../graph/edges/LabeledEdge.js';
-import {DottedEdge} from '../graph/edges/DottedEdge.js';
-import {DynamicThicknessEdge} from '../graph/edges/DynamicThicknessEdge.js';
 
 const INSTANCE_THRESHOLD = 50;
 
@@ -26,17 +20,8 @@ export class EdgePlugin extends Plugin {
     constructor(spaceGraph, pluginManager) {
         super(spaceGraph, pluginManager);
         this.edgeFactory = new EdgeFactory(spaceGraph);
-        this._registerEdgeTypes();
     }
 
-    _registerEdgeTypes() {
-        this.edgeFactory.registerType(Edge.typeName, Edge);
-        this.edgeFactory.registerType(CurvedEdge.typeName, CurvedEdge);
-        this.edgeFactory.registerType(LabeledEdge.typeName, LabeledEdge);
-        this.edgeFactory.registerType(DottedEdge.typeName, DottedEdge);
-        this.edgeFactory.registerType(DynamicThicknessEdge.typeName, DynamicThicknessEdge);
-        this.edgeFactory.registerType('default', Edge);
-    }
 
     getName() {
         return 'EdgePlugin';

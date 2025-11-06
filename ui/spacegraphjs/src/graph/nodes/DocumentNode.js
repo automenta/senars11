@@ -1,6 +1,7 @@
 import {Node} from './Node.js';
 import * as THREE from 'three';
 import {applyLabelLOD, createCSS3DLabelObject} from '../../utils/labelUtils.js';
+import {GRAPH_CONSTANTS, LABEL_STYLES, MATERIAL_PROPERTIES} from '../constants.js';
 
 export class DocumentNode extends Node {
     static typeName = 'document';
@@ -24,7 +25,7 @@ export class DocumentNode extends Node {
             documentUrl: '',
             icon: '📄',
             color: 0xffcc00,
-            size: 50,
+            size: GRAPH_CONSTANTS.DEFAULT_NODE_SIZE,
             labelLod: [],
         };
     }
@@ -35,8 +36,7 @@ export class DocumentNode extends Node {
         const geometry = new THREE.BoxGeometry(this.data.size, this.data.size * 1.2, 5);
         const material = new THREE.MeshStandardMaterial({
             color: this.data.color,
-            roughness: 0.7,
-            metalness: 0.1,
+            ...MATERIAL_PROPERTIES.STANDARD,
         });
         this.mesh = new THREE.Mesh(geometry, material);
         this.mesh.castShadow = true;
@@ -47,9 +47,7 @@ export class DocumentNode extends Node {
     _createLabel() {
         const labelText = this.data.icon ? `${this.data.icon} ${this.data.label}` : this.data.label;
         const styleData = {
-            color: 'var(--sg-node-text)',
-            backgroundColor: 'var(--sg-label-bg, rgba(10, 10, 20, 0.75))',
-            fontSize: '14px',
+            ...LABEL_STYLES.DEFAULT,
             padding: '5px 10px',
             borderRadius: '5px',
         };

@@ -2,19 +2,20 @@ import {CSS3DObject} from 'three/addons/renderers/CSS3DRenderer.js';
 import {$, Utils} from '../../utils.js';
 import {Node} from './Node.js';
 import {applyLabelLOD} from '../../utils/labelUtils.js';
+import {GRAPH_CONSTANTS} from '../constants.js';
 
 export class HtmlNode extends Node {
     static typeName = 'html';
     static MIN_SIZE = {width: 80, height: 40};
     static CONTENT_SCALE_RANGE = {min: 0.3, max: 3.0};
     htmlElement = null;
-    size = {width: 160, height: 70};
+    size = {width: GRAPH_CONSTANTS.DEFAULT_NODE_SIZE * 3.2, height: GRAPH_CONSTANTS.DEFAULT_NODE_SIZE * 1.4};
     billboard = false;
 
     constructor(id, position, data = {}, mass = 1.0) {
         super(id, position, data, mass);
-        const initialWidth = this.data.width ?? 160;
-        const initialHeight = this.data.height ?? 70;
+        const initialWidth = this.data.width ?? GRAPH_CONSTANTS.DEFAULT_NODE_SIZE * 3.2;
+        const initialHeight = this.data.height ?? GRAPH_CONSTANTS.DEFAULT_NODE_SIZE * 1.4;
         this.size = {width: initialWidth, height: initialHeight};
         this.htmlElement = this._createElement();
         this.cssObject = new CSS3DObject(this.htmlElement);
@@ -28,8 +29,8 @@ export class HtmlNode extends Node {
         return {
             label: '',
             content: '',
-            width: 160,
-            height: 70,
+            width: GRAPH_CONSTANTS.DEFAULT_NODE_SIZE * 3.2,
+            height: GRAPH_CONSTANTS.DEFAULT_NODE_SIZE * 1.4,
             contentScale: 1.0,
             backgroundColor: '#333344',
             type: 'html',

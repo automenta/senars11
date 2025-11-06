@@ -1,5 +1,6 @@
 import {Node} from './Node.js';
 import * as THREE from 'three';
+import {GRAPH_CONSTANTS} from '../constants.js';
 
 export class AudioNode extends Node {
     static typeName = 'audio';
@@ -29,7 +30,7 @@ export class AudioNode extends Node {
             loop: false,
             volume: 0.8,
             color: 0x00ccff,
-            size: 40,
+            size: GRAPH_CONSTANTS.DEFAULT_NODE_SIZE * 0.8,
         };
     }
 

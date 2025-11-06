@@ -1,13 +1,14 @@
 import * as THREE from 'three';
 import {Node} from './Node.js';
 import {applyLabelLOD, createCSS3DLabelObject} from '../../utils/labelUtils.js';
+import {GRAPH_CONSTANTS, LABEL_STYLES} from '../constants.js';
 
 const loader = new THREE.TextureLoader();
 
 export class ImageNode extends Node {
     static typeName = 'image';
     imageUrl = null;
-    imageSize = {width: 100, height: 100};
+    imageSize = {width: GRAPH_CONSTANTS.DEFAULT_NODE_SIZE * 2, height: GRAPH_CONSTANTS.DEFAULT_NODE_SIZE * 2};
 
     constructor(id, position, data = {}, mass = 1.0) {
         super(id, position, data, mass);
@@ -22,7 +23,7 @@ export class ImageNode extends Node {
         ) {
             this.imageSize = {...this.data.size};
         } else {
-            this.imageSize = {width: 100, height: 100};
+            this.imageSize = {width: GRAPH_CONSTANTS.DEFAULT_NODE_SIZE * 2, height: GRAPH_CONSTANTS.DEFAULT_NODE_SIZE * 2};
         }
 
         this.mesh = this._createMesh();
@@ -46,7 +47,7 @@ export class ImageNode extends Node {
         return {
             label: '',
             imageUrl: null,
-            size: 100,
+            size: GRAPH_CONSTANTS.DEFAULT_NODE_SIZE * 2,
             type: 'image',
             color: 0xffffff,
         };
@@ -120,17 +121,12 @@ export class ImageNode extends Node {
     }
 
     _createLabel() {
-        const styleData = {
-            color: 'var(--sg-node-text)',
-            backgroundColor: 'var(--sg-label-bg, rgba(10, 10, 20, 0.75))',
-            fontSize: '14px',
-        };
         return createCSS3DLabelObject(
             this.data.label,
             this.id,
             'node-label-3d',
-            styleData,
-            'shape-label'
+            LABEL_STYLES.DEFAULT,
+            'image-label'
         );
     }
 

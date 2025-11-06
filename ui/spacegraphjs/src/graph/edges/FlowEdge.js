@@ -1,10 +1,56 @@
 import * as THREE from 'three';
 import {Edge} from './Edge.js';
+import {GRAPH_CONSTANTS} from '../constants.js';
+
+// Shader code utilities
+const getVertexShader = () => `
+  attribute float size;
+  attribute vec3 color;
+  varying vec3 vColor;
+  varying float vSize;
+  uniform float time;
+  
+  void main() {
+    vColor = color;
+    vSize = size;
+    
+    vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+    vec4 mvPosition = viewMatrix * worldPosition;
+    
+    gl_Position = projectionMatrix * mvPosition;
+    gl_PointSize = size * (300.0 / -mvPosition.z);
+  }
+`;
+
+const getFragmentShader = () => `
+  varying vec3 vColor;
+  varying float vSize;
+  uniform float time;
+  uniform float glowIntensity;
+  
+  void main() {
+    vec2 center = gl_PointCoord - 0.5;
+    float dist = length(center);
+    
+    if (dist > 0.5) discard;
+    
+    float alpha = 1.0 - (dist * 2.0);
+    alpha = pow(alpha, 2.0);
+    
+    vec3 color = vColor;
+    if (glowIntensity > 0.0) {
+      float glow = sin(time * 3.0 + dist * 10.0) * 0.3 + 0.7;
+      color *= glow * glowIntensity + (1.0 - glowIntensity);
+    }
+    
+    gl_FragColor = vec4(color, alpha);
+  }
+`;
 
 export class FlowEdge extends Edge {
     static typeName = 'flow';
     particles = [];
-    particleCount = 10;
+    particleCount = GRAPH_CONSTANTS.DEFAULT_NODE_SIZE / 5;
     particleSpeed = 0.5;
     particleSystem = null;
     animationFrame = null;
@@ -12,9 +58,9 @@ export class FlowEdge extends Edge {
 
     constructor(id, sourceNode, targetNode, data = {}) {
         const flowData = {
-            particleCount: data.particleCount ?? 10,
+            particleCount: data.particleCount ?? GRAPH_CONSTANTS.DEFAULT_NODE_SIZE / 5,
             particleSpeed: data.particleSpeed ?? 0.5,
-            particleSize: data.particleSize ?? 3,
+            particleSize: data.particleSize ?? (GRAPH_CONSTANTS.DEFAULT_NODE_SIZE / 10),
             particleColor: data.particleColor ?? 0x00ffff,
             flowDirection: data.flowDirection ?? 1,
             animated: data.animated ?? true,
@@ -75,8 +121,8 @@ export class FlowEdge extends Edge {
                 time: {value: 0},
                 glowIntensity: {value: this.data.glowEffect ? 1.0 : 0.0},
             },
-            vertexShader: this._getVertexShader(),
-            fragmentShader: this._getFragmentShader(),
+            vertexShader: getVertexShader(),
+            fragmentShader: getFragmentShader(),
             transparent: true,
             depthTest: false,
             blending: THREE.AdditiveBlending,
@@ -86,62 +132,6 @@ export class FlowEdge extends Edge {
         this.particleSystem = new THREE.Points(geometry, material);
         this.particleSystem.userData = {edgeId: this.id, type: 'flow-particles'};
         this.particleSystem.renderOrder = 1;
-    }
-
-    /**
-     * Returns the vertex shader code for the particle system.
-     * @returns {string} The vertex shader code.
-     */
-    _getVertexShader() {
-        return `
-      attribute float size;
-      attribute vec3 color;
-      varying vec3 vColor;
-      varying float vSize;
-      uniform float time;
-      
-      void main() {
-        vColor = color;
-        vSize = size;
-        
-        vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-        vec4 mvPosition = viewMatrix * worldPosition;
-        
-        gl_Position = projectionMatrix * mvPosition;
-        gl_PointSize = size * (300.0 / -mvPosition.z);
-      }
-    `;
-    }
-
-    /**
-     * Returns the fragment shader code for the particle system.
-     * @returns {string} The fragment shader code.
-     */
-    _getFragmentShader() {
-        return `
-      varying vec3 vColor;
-      varying float vSize;
-      uniform float time;
-      uniform float glowIntensity;
-      
-      void main() {
-        vec2 center = gl_PointCoord - 0.5;
-        float dist = length(center);
-        
-        if (dist > 0.5) discard;
-        
-        float alpha = 1.0 - (dist * 2.0);
-        alpha = pow(alpha, 2.0);
-        
-        vec3 color = vColor;
-        if (glowIntensity > 0.0) {
-          float glow = sin(time * 3.0 + dist * 10.0) * 0.3 + 0.7;
-          color *= glow * glowIntensity + (1.0 - glowIntensity);
-        }
-        
-        gl_FragColor = vec4(color, alpha);
-      }
-    `;
     }
 
     _getPositionOnCurve(t) {
