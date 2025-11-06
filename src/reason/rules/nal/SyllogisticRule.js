@@ -9,6 +9,7 @@ import { Truth } from '../../../Truth.js';
 import { Task } from '../../../task/Task.js';
 import { Stamp } from '../../../Stamp.js';
 import { Term, TermType } from '../../../term/Term.js';
+import { RuleExecutionError, logError } from '../../utils/error.js';
 
 export class SyllogisticRule extends Rule {
   constructor(config = {}) {

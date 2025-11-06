@@ -2,6 +2,7 @@ import { Rule } from '../../Rule.js';
 import { Truth } from '../../../Truth.js';
 import { Task } from '../../../task/Task.js';
 import { Stamp } from '../../../Stamp.js';
+import { RuleExecutionError, logError } from '../../utils/error.js';
 
 /**
  * Implements the Modus Ponens inference rule for the stream reasoner.
@@ -123,7 +124,10 @@ export class ModusPonensRule extends Rule {
 
       return [derivedTask];
     } catch (error) {
-      console.error('Error applying ModusPonensRule:', error);
+      logError(error, { 
+        ruleId: this.id, 
+        context: 'modus_ponens_rule_application' 
+      }, 'error');
       return [];
     }
   }

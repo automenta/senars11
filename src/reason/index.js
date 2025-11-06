@@ -21,6 +21,7 @@ export * from './rules/lm/index.js';
 export { BagStrategy } from './strategy/BagStrategy.js';
 export { ExhaustiveStrategy } from './strategy/ExhaustiveStrategy.js';
 export { ResolutionStrategy } from './strategy/ResolutionStrategy.js';
+export { PrologStrategy } from './strategy/PrologStrategy.js';
 
 // Export utility functions
 export * from './utils/common.js';

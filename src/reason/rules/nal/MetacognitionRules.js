@@ -4,6 +4,7 @@
  */
 
 import { Rule } from '../../Rule.js';
+import { RuleExecutionError, logError } from '../../utils/error.js';
 
 /**
  * A rule that adjusts system parameters based on performance feedback
@@ -43,7 +44,10 @@ export class AdjustCacheSizeRule extends Rule {
 
       return []; // No new tasks are created, but the system state is modified
     } catch (error) {
-      console.error('Error in AdjustCacheSizeRule:', error);
+      logError(error, { 
+        ruleId: this.id, 
+        context: 'adjust_cache_size_rule_application' 
+      }, 'error');
       return [];
     }
   }

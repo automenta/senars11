@@ -3,6 +3,7 @@ import { Truth } from '../../../Truth.js';
 import { Task } from '../../../task/Task.js';
 import { Stamp } from '../../../Stamp.js';
 import { Term, TermType } from '../../../term/Term.js';
+import { RuleExecutionError, logError } from '../../utils/error.js';
 
 /**
  * Implements the implication syllogistic deduction rule for the stream reasoner.
@@ -111,7 +112,10 @@ export class ImplicationSyllogisticRule extends Rule {
 
       return [derivedTask];
     } catch (error) {
-      console.error('Error applying ImplicationSyllogisticRule:', error);
+      logError(error, { 
+        ruleId: this.id, 
+        context: 'implication_syllogistic_rule_application' 
+      }, 'error');
       return [];
     }
   }
