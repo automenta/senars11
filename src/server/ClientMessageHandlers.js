@@ -60,9 +60,11 @@ export class ClientMessageHandlers {
     }
 
     _handleNarseseInput(client, message) {
+        console.log(`[CLIENT HANDLERS] _handleNarseseInput called with message:`, message);
         return new Promise(async (resolve) => {
             try {
                 if (!message.payload || !message.payload.input) {
+                    console.log(`[CLIENT HANDLERS] Missing payload or input in message:`, message);
                     this._sendToClient(client, {
                         type: 'narseseInput',
                         payload: {
@@ -76,9 +78,11 @@ export class ClientMessageHandlers {
                 }
 
                 const narseseString = message.payload.input;
+                console.log(`[CLIENT HANDLERS] Extracted narseseString: "${narseseString}"`);
 
                 // Validate that we have a NAR instance to process the input
                 if (!this.monitor._nar) {
+                    console.log(`[CLIENT HANDLERS] NAR instance not available`);
                     this._sendToClient(client, {
                         type: 'narseseInput',
                         payload: {
@@ -92,6 +96,7 @@ export class ClientMessageHandlers {
                 }
 
                 // Process the input with the NAR
+                console.log(`[CLIENT HANDLER] About to call NAR.input with: "${narseseString}"`);
                 try {
                     const result = await this.monitor._nar.input(narseseString);
 

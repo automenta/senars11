@@ -245,6 +245,8 @@ class WebSocketMonitor {
     _handleClientMessage(client, data) {
         try {
             const rawData = data.toString();
+            console.log(`[WEBSOCKET MONITOR] Raw message received: ${rawData}`);
+            
             if (!rawData.trim()) {
                 this._sendToClient(client, {
                     type: 'error',
@@ -254,6 +256,7 @@ class WebSocketMonitor {
             }
 
             const message = JSON.parse(rawData);
+            console.log(`[WEBSOCKET MONITOR] Parsed message:`, message);
 
             if (!message.type || typeof message.type !== 'string') {
                 this._sendToClient(client, {
@@ -277,6 +280,8 @@ class WebSocketMonitor {
     }
 
     _routeMessage(client, message) {
+        console.log(`[WEBSOCKET MONITOR] Routing message of type: ${message.type}`);
+        
         const handlers = {
             'subscribe': (msg) => this.messageHandlers.handleSubscribe(client, msg),
             'unsubscribe': (msg) => this.messageHandlers.handleUnsubscribe(client, msg),
@@ -287,8 +292,9 @@ class WebSocketMonitor {
             'requestCapabilities': (msg) => this.messageHandlers.handleRequestCapabilities(client, msg)
         };
 
-        // Check if it's a reason/* message type and route to narseseInput handler
-        if (message.type.startsWith('reason/')) {
+        // Check if it's a reason/step message - this should be treated as narsese input
+        if (message.type === 'reason/step') {
+            console.log(`[WEBSOCKET MONITOR] Handling reason/step message as narsese input, extracting text:`, message.payload?.text || message.payload?.input || '');
             // Format the message to match narseseInput expectations
             const formattedMessage = {
                 ...message,
@@ -300,16 +306,31 @@ class WebSocketMonitor {
             this.messageHandlers.handleNarseseInput(client, formattedMessage);
             return;
         }
+        // For other reason/ messages, they might be for other purposes
+        else if (message.type.startsWith('reason/')) {
+            console.log(`[WEBSOCKET MONITOR] Handling other reason/ message type: ${message.type}`);
+            // Handle other reason types appropriately
+            this._handleReasonMessage(client, message);
+            return;
+        }
 
         // Check if it's a control/* message type - these might need special handling
         if (message.type.startsWith('control/')) {
+            console.log(`[WEBSOCKET MONITOR] Handling control/ message`);
             // For now, route to narseseInput handler but in the future
             // we might want to implement specific control handlers
             this._handleControlMessage(client, message);
             return;
         }
 
-        (handlers[message.type] || this._handleCustomMessage.bind(this, client, message))(message);
+        const handler = handlers[message.type];
+        if (handler) {
+            console.log(`[WEBSOCKET MONITOR] Found handler for type: ${message.type}`);
+            handler(message);
+        } else {
+            console.log(`[WEBSOCKET MONITOR] No handler found for type: ${message.type}, using custom`);
+            this._handleCustomMessage(client, message);
+        }
     }
 
     _handleCustomMessage(client, message) {
@@ -489,6 +510,34 @@ class WebSocketMonitor {
                 this._sendToClient(client, {
                     type: 'error',
                     message: `Unknown control command: ${command}`
+                });
+                break;
+        }
+    }
+
+    _handleReasonMessage(client, message) {
+        // Handle various reason/ messages appropriately
+        const command = message.type.split('/')[1]; // Extract command from 'reason/command'
+        
+        if (!this._nar) {
+            this._sendToClient(client, {
+                type: 'error',
+                message: 'NAR instance not available for reason commands'
+            });
+            return;
+        }
+
+        switch (command) {
+            case 'step':
+                // This is handled above as narsese input, but if it comes here, it's an error
+                console.warn('reason/step should be handled separately, not here');
+                break;
+                
+            default:
+                console.warn('Unknown reason command:', command);
+                this._sendToClient(client, {
+                    type: 'error',
+                    message: `Unknown reason command: ${command}`
                 });
                 break;
         }

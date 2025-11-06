@@ -24,7 +24,7 @@ const config = {
     wsPort: process.env.WS_PORT || 8080,
     wsUrl: `ws://localhost:${process.env.WS_PORT || 8080}/ws`,
     defaultInputs: [
-        '<a ==> b>. %1.0;0.9%', 
+        '<a ==> b>. %1.0;0.9%',
         '<b ==> c>. %1.0;0.9%'
     ],
     stepsToRun: 5 // Number of reasoning steps to execute to ensure derivations
@@ -67,7 +67,7 @@ class TaskManager {
         
         // Extract just the core term from each input for comparison
         for (const input of originalInputs) {
-            const termPart = input.split('%')[0].replace(/[<>]/g, '').replace(/\.$/g, '').trim();
+            const termPart = input.split('%')[0].replace(/[<>()]/g, '').replace(/\.$/g, '').trim();
             this.originalInputTermsSet.add(cleanTermForComparison(termPart));
         }
     }

@@ -285,6 +285,7 @@ export class NAR extends BaseComponent {
 
     async input(narseseString, options = {}) {
         try {
+            //console.log(`[NAR INPUT] Received raw input: "${narseseString}"`);
             const parsed = this._parser.parse(narseseString);
             if (!parsed?.term) throw new Error('Invalid parse result');
 
