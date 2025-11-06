@@ -73,12 +73,23 @@ class SessionManager {
       const history = this.sessionHistories[sessionId] || [];
       sessionStorage.setItem(`nars-history-${sessionId}`, JSON.stringify(history));
     } catch (error) {
-      console.warn(`Failed to persist history for session ${sessionId}:`, error);
+      this.handlePersistenceError(`Failed to persist history for session ${sessionId}`, error);
     }
+  }
+  
+  /**
+   * Handle persistence errors
+   * @param {string} message - Error message
+   * @param {Error} error - Error object
+   */
+  handlePersistenceError(message, error) {
+    console.warn(`${message}:`, error);
+    // Could implement more sophisticated error handling like fallback storage
   }
   
   // New: Load session history from sessionStorage
   loadSessionHistory(sessionId) {
+    const startTime = performance.now();
     try {
       const historyStr = sessionStorage.getItem(`nars-history-${sessionId}`);
       if (historyStr) {
@@ -87,8 +98,24 @@ class SessionManager {
         this.sessionHistories[sessionId] = [];
       }
     } catch (error) {
-      console.warn(`Failed to load history for session ${sessionId}:`, error);
+      this.handlePersistenceError(`Failed to load history for session ${sessionId}`, error);
       this.sessionHistories[sessionId] = [];
+    } finally {
+      const endTime = performance.now();
+      this.logPerformance('loadSessionHistory', endTime - startTime, { sessionId });
+    }
+  }
+  
+  /**
+   * Log performance metrics
+   * @param {string} operation - Operation name
+   * @param {number} duration - Duration in milliseconds
+   * @param {Object} context - Context information
+   */
+  logPerformance(operation, duration, context = {}) {
+    // Only log if performance debugging is enabled
+    if (window.DEBUG_PERFORMANCE) {
+      console.log(`[PERFORMANCE] ${operation}: ${duration.toFixed(2)}ms`, context);
     }
   }
   
@@ -170,8 +197,7 @@ class SessionManager {
     const history = session.history;
     
     // Get viewport dimensions
-    const scrollTop = outputElement.scrollTop;
-    const viewportHeight = outputElement.clientHeight;
+    const { scrollTop, clientHeight: viewportHeight } = outputElement;
     const rowHeight = 24; // Approximate height of a cell row
     
     // Calculate visible range with buffer
@@ -223,12 +249,22 @@ class SessionManager {
           cellElement = this.createCellElement(sessionId, history[i]);
           cellCache.set(i, cellElement);
         }
-        cellElement.style.position = 'absolute';
-        cellElement.style.top = `${i * 24}px`; // Approximate row height
-        session.output.appendChild(cellElement);
+        this.setPositionAndAppendCell(session.output, cellElement, i);
         visibleCells.set(i, cellElement);
       }
     }
+  }
+  
+  /**
+   * Sets position and appends cell to output
+   * @param {HTMLElement} outputElement - Output element
+   * @param {HTMLElement} cellElement - Cell element to position and append
+   * @param {number} index - Index of the cell for positioning
+   */
+  setPositionAndAppendCell(outputElement, cellElement, index) {
+    cellElement.style.position = 'absolute';
+    cellElement.style.top = `${index * 24}px`; // Approximate row height
+    outputElement.appendChild(cellElement);
   }
   
   /**
@@ -406,23 +442,33 @@ class SessionManager {
    */
   filterHistoryByText(sessionId, searchText, useRegex = false) {
     if (!searchText?.trim()) {
-      return this.sessionHistories[sessionId] || [];
+      return this.sessionHistories[sessionId] ?? [];
     }
     
-    const history = this.sessionHistories[sessionId] || [];
+    const history = this.sessionHistories[sessionId] ?? [];
     const searchLower = searchText.toLowerCase();
     
-    if (useRegex) {
-      try {
-        const regex = new RegExp(searchText, 'i'); // Case insensitive
-        return history.filter(cell => this.matchesRegex(cell, regex));
-      } catch (e) {
-        // If regex is invalid, fall back to simple text search
-        console.warn('Invalid regex, falling back to text search:', e);
-        return history.filter(cell => this.matchesText(cell, searchLower));
-      }
-    } else {
-      return history.filter(cell => this.matchesText(cell, searchLower));
+    const filterFn = useRegex 
+      ? this.createRegexFilter(searchText) 
+      : (cell) => this.matchesText(cell, searchLower);
+    
+    return history.filter(filterFn);
+  }
+  
+  /**
+   * Creates a regex filter function with fallback
+   * @param {string} searchText - Text to search for as regex
+   * @returns {Function} Filter function
+   */
+  createRegexFilter(searchText) {
+    try {
+      const regex = new RegExp(searchText, 'i'); // Case insensitive
+      return (cell) => this.matchesRegex(cell, regex);
+    } catch (e) {
+      // If regex is invalid, fall back to simple text search
+      console.warn('Invalid regex, falling back to text search:', e);
+      const searchLower = searchText.toLowerCase();
+      return (cell) => this.matchesText(cell, searchLower);
     }
   }
   
@@ -433,11 +479,8 @@ class SessionManager {
    * @returns {boolean} Whether cell matches
    */
   matchesRegex(cell, regex) {
-    if (cell.type === 'input') {
-      return regex.test(cell.content);
-    }
-    // For output cells, search in text content
-    return regex.test(cell.content.text || '');
+    const content = this.getCellContent(cell);
+    return regex.test(content);
   }
   
   /**
@@ -447,11 +490,21 @@ class SessionManager {
    * @returns {boolean} Whether cell matches
    */
   matchesText(cell, searchText) {
+    const content = this.getCellContent(cell);
+    return content.toLowerCase().includes(searchText);
+  }
+  
+  /**
+   * Get content from a cell regardless of type
+   * @param {Object} cell - Cell object
+   * @returns {string} Cell content as string
+   */
+  getCellContent(cell) {
     if (cell.type === 'input') {
-      return cell.content.toLowerCase().includes(searchText);
+      return cell.content;
     }
     // For output cells, search in text content
-    return (cell.content.text || '').toLowerCase().includes(searchText);
+    return cell.content.text || '';
   }
   
 
@@ -525,7 +578,7 @@ class SessionManager {
     const totalPages = Math.ceil(total / pageSize);
     
     // Ensure page is within valid range
-    const safePage = Math.max(1, Math.min(page, totalPages || 1));
+    const safePage = this.getSafePageNumber(page, totalPages);
     
     const startIndex = (safePage - 1) * pageSize;
     const endIndex = Math.min(startIndex + pageSize, total);
@@ -540,6 +593,16 @@ class SessionManager {
       hasNext: endIndex < total,
       hasPrev: startIndex > 0
     };
+  }
+  
+  /**
+   * Get a safe page number within valid range
+   * @param {number} page - Requested page number
+   * @param {number} totalPages - Total number of pages
+   * @returns {number} Safe page number
+   */
+  getSafePageNumber(page, totalPages) {
+    return Math.max(1, Math.min(page, totalPages || 1));
   }
   
   /**
@@ -757,15 +820,32 @@ class SessionManager {
    */
   getSessionStatusIcon(id) {
     const session = this.activeSessions[id];
-    if (!session || !session.status) return '⏹️';
+    if (!session || !session.status) return this.getDefaultStatusIcon();
     
     const status = session.status.getAttribute('data-status');
+    return this.getStatusIcon(status);
+  }
+  
+  /**
+   * Get default status icon
+   * @returns {string} Default status icon
+   */
+  getDefaultStatusIcon() {
+    return '⏹️';
+  }
+  
+  /**
+   * Get icon for the given status
+   * @param {string} status - Status string
+   * @returns {string} Status icon
+   */
+  getStatusIcon(status) {
     const statusIcons = {
       'connected': '▶️',
       'disconnected': '⏹️',
       'error': '❌'
     };
-    return statusIcons[status] ?? '⏹️';
+    return statusIcons[status] ?? this.getDefaultStatusIcon();
   }
   
   /**
@@ -1111,13 +1191,23 @@ class SessionManager {
       height: 12px;
       border-radius: 50%;
       margin-right: 8px;
-      background-color: ${
-        status === 'connected' ? '#2ecc71' :
-        status === 'disconnected' ? '#e74c3c' :
-        status === 'error' ? '#f39c12' : '#95a5a6'
-      };
+      background-color: ${this.getStatusColor(status)};
     `;
     return indicator;
+  }
+  
+  /**
+   * Get color value for the given status
+   * @param {string} status - Status string
+   * @returns {string} CSS color value
+   */
+  getStatusColor(status) {
+    const statusColors = {
+      'connected': '#2ecc71',
+      'disconnected': '#e74c3c',
+      'error': '#f39c12'
+    };
+    return statusColors[status] ?? '#95a5a6';
   }
   
   /**
@@ -1727,34 +1817,67 @@ class SessionManager {
    * @returns {Array} Grouped items
    */
   groupRelatedItems(items, groupingStrategy = 'timestamp') {
+    const strategyFn = this.getGroupingStrategy(groupingStrategy);
+    return strategyFn ? strategyFn(items) : items;
+  }
+  
+  /**
+   * Get grouping strategy function
+   * @param {string} groupingStrategy - Grouping strategy
+   * @returns {Function|null} Strategy function or null if not found
+   */
+  getGroupingStrategy(groupingStrategy) {
     const groupingStrategies = {
-      timestamp: (items) => {
-        const groupedByTime = new Map();
-        items.forEach(item => {
-          const timestamp = item.timestamp || item.creationTime || Date.now();
-          const interval = Math.floor(timestamp / 10000);
-          if (!groupedByTime.has(interval)) {
-            groupedByTime.set(interval, []);
-          }
-          groupedByTime.get(interval).push(item);
-        });
-        return Array.from(groupedByTime.values()).flat();
-      },
-      type: (items) => {
-        const groupedByType = new Map();
-        items.forEach(item => {
-          const type = item.type || 'unknown';
-          if (!groupedByType.has(type)) {
-            groupedByType.set(type, []);
-          }
-          groupedByType.get(type).push(item);
-        });
-        return Array.from(groupedByType.values()).flat();
-      },
-      relationship: (items) => items
+      timestamp: this.groupByTimestamp.bind(this),
+      type: this.groupByType.bind(this),
+      relationship: this.groupByRelationship.bind(this)
     };
     
-    return groupingStrategies[groupingStrategy]?.(items) ?? items;
+    return groupingStrategies[groupingStrategy] ?? null;
+  }
+  
+  /**
+   * Group items by timestamp
+   * @param {Array} items - Items to group
+   * @returns {Array} Grouped items
+   */
+  groupByTimestamp(items) {
+    const groupedByTime = new Map();
+    items.forEach(item => {
+      const timestamp = item.timestamp || item.creationTime || Date.now();
+      const interval = Math.floor(timestamp / 10000);
+      if (!groupedByTime.has(interval)) {
+        groupedByTime.set(interval, []);
+      }
+      groupedByTime.get(interval).push(item);
+    });
+    return Array.from(groupedByTime.values()).flat();
+  }
+  
+  /**
+   * Group items by type
+   * @param {Array} items - Items to group
+   * @returns {Array} Grouped items
+   */
+  groupByType(items) {
+    const groupedByType = new Map();
+    items.forEach(item => {
+      const type = item.type || 'unknown';
+      if (!groupedByType.has(type)) {
+        groupedByType.set(type, []);
+      }
+      groupedByType.get(type).push(item);
+    });
+    return Array.from(groupedByType.values()).flat();
+  }
+  
+  /**
+   * Group items by relationship (no grouping, return as-is)
+   * @param {Array} items - Items to group
+   * @returns {Array} Same items array
+   */
+  groupByRelationship(items) {
+    return items;
   }
   
   /**
@@ -1762,30 +1885,51 @@ class SessionManager {
    * @returns {Object} Network data with nodes and edges
    */
   createNetworkVisualizationData() {
-    const nodes = [];
-    const edges = [];
-    
-    // Create nodes for each session
     const sessionIds = Object.keys(this.activeSessions);
+    
+    const nodes = this.createNetworkNodes(sessionIds);
+    const edges = this.createNetworkEdges(sessionIds);
+    
+    // Process data using dataProcessor utilities
+    return this.processVisualizationData({ nodes, edges }, {
+      groupingStrategy: 'relationship'
+    });
+  }
+  
+  /**
+   * Create network nodes from session IDs
+   * @param {string[]} sessionIds - Array of session IDs
+   * @returns {Array} Array of node objects
+   */
+  createNetworkNodes(sessionIds) {
     const centerX = 300;
     const centerY = 200;
     const radius = 150;
     
-    sessionIds.forEach((sessionId, index) => {
+    return sessionIds.map((sessionId, index) => {
       // Position nodes in a circle
       const angle = (index / sessionIds.length) * Math.PI * 2;
       const x = centerX + Math.cos(angle) * radius;
       const y = centerY + Math.sin(angle) * radius;
       
-      nodes.push({
+      return {
         id: sessionId,
         label: sessionId,
         color: this.getSessionColor(sessionId),
         size: 20,
         x: x,
         y: y
-      });
+      };
     });
+  }
+  
+  /**
+   * Create network edges between sessions
+   * @param {string[]} sessionIds - Array of session IDs
+   * @returns {Array} Array of edge objects
+   */
+  createNetworkEdges(sessionIds) {
+    const edges = [];
     
     // Create edges based on belief propagation
     // In a real implementation, this would be based on actual belief relationships
@@ -1806,12 +1950,7 @@ class SessionManager {
       }
     }
     
-    // Process data using dataProcessor utilities
-    const processedData = this.processVisualizationData({ nodes, edges }, {
-      groupingStrategy: 'relationship'
-    });
-    
-    return processedData;
+    return edges;
   }
   
   /**

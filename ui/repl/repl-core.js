@@ -12,7 +12,7 @@ class REPLCore {
     this.websocket = null;
     
     // Get session elements
-    const session = this.sessionManager?.getSession(sessionId) ?? null;
+    const session = this.getSession(sessionId);
     if (!session) {
       console.error(`Session ${sessionId} not found`);
       return;
@@ -68,15 +68,26 @@ class REPLCore {
       { className: 'control-btn step-btn', text: 'Step', command: 'step' }
     ];
     
-    buttons.forEach(({ className, text, command }) => {
-      const button = document.createElement('button');
-      button.className = className;
-      button.textContent = text;
-      button.addEventListener('click', () => this.sendControlCommand(command));
-      controlsContainer.appendChild(button);
-    });
+    buttons
+      .map(({ className, text, command }) => this.createControlButton(className, text, command))
+      .forEach(button => controlsContainer.appendChild(button));
     
     return controlsContainer;
+  }
+  
+  /**
+   * Creates a control button
+   * @param {string} className - CSS class name for the button
+   * @param {string} text - Button text
+   * @param {string} command - Command to send when clicked
+   * @returns {HTMLElement} Control button element
+   */
+  createControlButton(className, text, command) {
+    const button = document.createElement('button');
+    button.className = className;
+    button.textContent = text;
+    button.addEventListener('click', () => this.sendControlCommand(command));
+    return button;
   }
   
   /**
@@ -125,15 +136,21 @@ class REPLCore {
   bindEvents() {
     // Handle input submission
     this.handleInputKeydown = (event) => {
-      if (event.key === 'ArrowUp') {
-        this.navigateHistory(-1);
-        event.preventDefault();
-      } else if (event.key === 'ArrowDown') {
-        this.navigateHistory(1);
-        event.preventDefault();
-      } else if (event.key === 'Enter' && !event.shiftKey) {
-        event.preventDefault();
-        this.submitInput();
+      switch (event.key) {
+        case 'ArrowUp':
+          this.navigateHistory(-1);
+          event.preventDefault();
+          break;
+        case 'ArrowDown':
+          this.navigateHistory(1);
+          event.preventDefault();
+          break;
+        case 'Enter':
+          if (!event.shiftKey) {
+            event.preventDefault();
+            this.submitInput();
+          }
+          break;
       }
     };
     this.inputElement.addEventListener('keydown', this.handleInputKeydown);
@@ -185,18 +202,7 @@ class REPLCore {
     // Clear input
     this.inputElement.value = '';
     
-    const sessionManager = window.sessionManager;
-    
-    // Use command map for better organization
-    const commandMap = {
-      'start': () => this.sendControlCommand('start'),
-      'stop': () => this.sendControlCommand('stop'),
-      'step': () => this.sendControlCommand('step'),
-      'agents': () => sessionManager?.createAgentHUD?.(),
-      'hide-agents': () => sessionManager?.hideAgentHUD?.()
-    };
-    
-    const commandHandler = commandMap[cmd];
+    const commandHandler = this.getCommandHandler(cmd);
     if (commandHandler) {
       commandHandler();
     } else {
@@ -205,6 +211,23 @@ class REPLCore {
         text: `Unknown command: ${cmd}. Available commands: /start, /stop, /step, /agents`
       });
     }
+  }
+  
+  /**
+   * Get command handler function
+   * @param {string} cmd - Command name
+   * @returns {Function|null} Command handler function or null if not found
+   */
+  getCommandHandler(cmd) {
+    const commandMap = {
+      'start': () => this.sendControlCommand('start'),
+      'stop': () => this.sendControlCommand('stop'),
+      'step': () => this.sendControlCommand('step'),
+      'agents': () => window.sessionManager?.createAgentHUD?.(),
+      'hide-agents': () => window.sessionManager?.hideAgentHUD?.()
+    };
+    
+    return commandMap[cmd] ?? null;
   }
   
   /**
@@ -220,8 +243,18 @@ class REPLCore {
       
       this.routeMessage(message);
     } catch (error) {
-      console.error('Error parsing WebSocket message:', error);
+      this.handleError('Error parsing WebSocket message', error);
     }
+  }
+  
+  /**
+   * Handle errors with context
+   * @param {string} message - Error message
+   * @param {Error} error - Error object
+   */
+  handleError(message, error) {
+    console.error(`${message}:`, error);
+    // Could add more sophisticated error reporting here
   }
   
   /**
@@ -229,13 +262,7 @@ class REPLCore {
    * @param {Object} message - Parsed message object
    */
   routeMessage(message) {
-    const handlers = {
-      'output': (payload) => this.handleOutput(payload),
-      'status': (payload) => this.handleStatus(payload),
-      'reason/output': (payload) => this.handleReasonOutput(payload)
-    };
-    
-    const handler = handlers[message.type];
+    const handler = this.getMessageHandler(message.type);
     if (handler) {
       handler(message.payload);
     } else {
@@ -244,11 +271,26 @@ class REPLCore {
   }
   
   /**
+   * Get message handler for the given type
+   * @param {string} type - Message type
+   * @returns {Function|null} Message handler function or null if not found
+   */
+  getMessageHandler(type) {
+    const handlers = {
+      'output': (payload) => this.handleOutput(payload),
+      'status': (payload) => this.handleStatus(payload),
+      'reason/output': (payload) => this.handleReasonOutput(payload)
+    };
+    
+    return handlers[type] ?? null;
+  }
+  
+  /**
    * Handle output messages
    * @param {Object} payload - Output payload
    */
   handleOutput(payload) {
-    this.processOutputLines(payload?.lines || []);
+    this.handleGenericOutput(payload);
   }
   
   /**
@@ -256,7 +298,15 @@ class REPLCore {
    * @param {Object} payload - Reasoner output payload
    */
   handleReasonOutput(payload) {
-    this.processOutputLines(payload?.lines || []);
+    this.handleGenericOutput(payload);
+  }
+  
+  /**
+   * Generic handler for output messages
+   * @param {Object} payload - Output payload
+   */
+  handleGenericOutput(payload) {
+    this.processOutputLines(payload?.lines ?? []);
   }
   
   /**
@@ -266,12 +316,46 @@ class REPLCore {
   processOutputLines(lines) {
     if (!Array.isArray(lines)) return;
     
+    // Performance optimization: batch update if needed for many lines
+    if (lines.length > 10) {
+      this.batchProcessOutputLines(lines);
+    } else {
+      lines.forEach(line => {
+        this.addStructuredOutputLine(line);
+        
+        // Add output cell to history
+        this.sessionManager.addCellToHistory(this.sessionId, 'output', line);
+      });
+    }
+  }
+  
+  /**
+   * Batch process output lines for better performance with many lines
+   * @param {Array} lines - Array of output lines
+   */
+  batchProcessOutputLines(lines) {
+    // Use a document fragment for better performance when adding many elements
+    const fragment = document.createDocumentFragment();
+    const originalOutputAppend = this.outputElement.appendChild;
+    
+    // Temporarily override appendChild to collect in fragment
+    this.outputElement.appendChild = function(child) {
+      return fragment.appendChild(child);
+    };
+    
+    // Process all lines
     lines.forEach(line => {
       this.addStructuredOutputLine(line);
       
       // Add output cell to history
       this.sessionManager.addCellToHistory(this.sessionId, 'output', line);
     });
+    
+    // Restore original appendChild
+    this.outputElement.appendChild = originalOutputAppend;
+    
+    // Add fragment to DOM in one operation
+    this.outputElement.appendChild(fragment);
   }
   
   /**
@@ -302,15 +386,13 @@ class REPLCore {
   getStatusFromPayload(payload) {
     // Determine status based on payload
     const state = payload?.state;
-    switch (state) {
-      case 'running':
-        return 'processing';
-      case 'stopped':
-      case 'error':
-        return 'disconnected';
-      default:
-        return 'connected';
-    }
+    const statusMap = {
+      'running': 'processing',
+      'stopped': 'disconnected',
+      'error': 'disconnected'
+    };
+    
+    return statusMap[state] ?? 'connected';
   }
   
   /**
@@ -372,6 +454,15 @@ class REPLCore {
     // Update session manager status
     this.sessionManager?.updateSessionStatus?.(this.sessionId, status);
     
+    this.statusElement.style.color = this.getStatusColor(status);
+  }
+  
+  /**
+   * Get CSS color for the given status
+   * @param {string} status - Connection status
+   * @returns {string} CSS color value
+   */
+  getStatusColor(status) {
     const statusColors = {
       'connected': 'var(--status-connected)',
       'disconnected': 'var(--status-disconnected)',
@@ -379,7 +470,7 @@ class REPLCore {
       'processing': 'var(--status-processing)'
     };
     
-    this.statusElement.style.color = statusColors[status] || 'var(--text-secondary)';
+    return statusColors[status] ?? 'var(--text-secondary)';
   }
   
   getCurrentCellGroup() {
@@ -402,6 +493,15 @@ class REPLCore {
     if (this.inputElement) {
       this.inputElement.removeEventListener('keydown', this.handleInputKeydown);
     }
+  }
+  
+  /**
+   * Get session by ID
+   * @param {string} sessionId - Session identifier
+   * @returns {Object|null} Session or null if not found
+   */
+  getSession(sessionId) {
+    return this.sessionManager?.getSession(sessionId) ?? null;
   }
 }
 

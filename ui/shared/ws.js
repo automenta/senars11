@@ -82,11 +82,19 @@ export default class WebSocketClient {
    */
   reconnect() {
     this.reconnectAttempts++;
-    const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
+    const delay = this.calculateReconnectDelay();
     
     setTimeout(() => {
       this.connect();
     }, delay);
+  }
+  
+  /**
+   * Calculates the reconnect delay with exponential backoff
+   * @returns {number} Delay in milliseconds
+   */
+  calculateReconnectDelay() {
+    return this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
   }
   
   /**
@@ -100,8 +108,17 @@ export default class WebSocketClient {
     }
     
     // Add sessionId to the message if not already present
-    const message = data.sessionId ? data : { sessionId: this.sessionId, ...data };
+    const message = this.ensureMessageHasSessionId(data);
     this.websocket.send(JSON.stringify(message));
+  }
+  
+  /**
+   * Ensures the message has a sessionId
+   * @param {Object} data - Original message data
+   * @returns {Object} Message data with sessionId
+   */
+  ensureMessageHasSessionId(data) {
+    return data.sessionId ? data : { sessionId: this.sessionId, ...data };
   }
   
   /**
