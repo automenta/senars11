@@ -1,4 +1,4 @@
-import { sleep, mergeConfig } from './utils/common.js';
+import { sleep, mergeConfig, processDerivation } from './utils/common.js';
 import { ReasonerError, logError } from './utils/error.js';
 
 /**
@@ -161,21 +161,7 @@ export class RuleProcessor {
   }
 
   _processDerivation(result) {
-    if (!result?.stamp) return result;
-
-    try {
-      const derivationDepth = result.stamp.depth ?? 0;
-
-      if (derivationDepth > this.config.maxDerivationDepth) {
-        console.debug(`Discarding derivation - exceeds max depth (${derivationDepth} > ${this.config.maxDerivationDepth})`);
-        return null;
-      }
-
-      return result;
-    } catch (error) {
-      logError(error, { context: 'derivation_processing' }, 'error');
-      return null;
-    }
+    return processDerivation(result, this.config.maxDerivationDepth);
   }
 
   async _checkAndApplyBackpressure() {

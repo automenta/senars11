@@ -1,4 +1,5 @@
 import { Rule } from './Rule.js';
+import { RuleExecutionError, logError } from './utils/error.js';
 
 /**
  * Language Model Rule for the stream reasoner system.
@@ -58,7 +59,10 @@ export class LMRule extends Rule {
     try {
       return this.config.condition(primaryPremise, secondaryPremise, context);
     } catch (error) {
-      console.error(`Error in condition for LM rule ${this.id}:`, error);
+      logError(error, { 
+        ruleId: this.id, 
+        context: 'condition_evaluation' 
+      }, 'warn');
       return false;
     }
   }
@@ -99,15 +103,18 @@ export class LMRule extends Rule {
       this._updateExecutionStats(true, Date.now() - startTime);
       return newTasks;
     } catch (error) {
-      //console.error(`Error applying LM rule ${this.id}:`, error);
-      this._updateExecutionStats(false, Date.now() - startTime); //TODO provide 'error'
+      logError(error, { 
+        ruleId: this.id, 
+        context: 'lm_rule_application' 
+      }, 'error');
+      this._updateExecutionStats(false, Date.now() - startTime);
       return [];
     }
   }
 
   async executeLM(prompt) {
     if (!this.lm) {
-      throw new Error(`LM unavailable for rule ${this.id}`);
+      throw new RuleExecutionError(`LM unavailable for rule ${this.id}`, this.id);
     }
 
     const startTime = Date.now();

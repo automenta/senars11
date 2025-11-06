@@ -54,15 +54,10 @@ export class RuleExecutor {
       this.buildOptimizationStructure();
     }
 
-    // Try using decision tree first for optimized selection
-    if (this.decisionTree) {
-      const heuristicKey = this._getHeuristicKey(primaryPremise, secondaryPremise);
-      const treeCandidates = this.decisionTree.get(heuristicKey) ?? this.rules;
-      return this._filterCandidates(treeCandidates, primaryPremise, secondaryPremise);
-    } else {
-      // Fallback to filtering all rules
-      return this._filterCandidates(this.rules, primaryPremise, secondaryPremise);
-    }
+    // Use decision tree for optimized selection
+    const heuristicKey = this._getHeuristicKey(primaryPremise, secondaryPremise);
+    const treeCandidates = this.decisionTree.get(heuristicKey) ?? this.rules;
+    return this._filterCandidates(treeCandidates, primaryPremise, secondaryPremise);
   }
 
   /**

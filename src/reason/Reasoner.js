@@ -178,21 +178,7 @@ export class Reasoner {
   }
   
   _processDerivation(result) {
-    if (!result?.stamp) return result;
-
-    try {
-      const derivationDepth = result.stamp.depth ?? 0;
-
-      if (derivationDepth > this.config.maxDerivationDepth) {
-        console.debug(`Discarding derivation - exceeds max depth (${derivationDepth} > ${this.config.maxDerivationDepth})`);
-        return null;
-      }
-
-      return result;
-    } catch (error) {
-      console.debug('Error processing derivation:', error.message);
-      return null;
-    }
+    return processDerivation(result, this.config.maxDerivationDepth);
   }
 
   async _cpuThrottle() {

@@ -113,18 +113,6 @@ export class Strategy {
       return secondaryTasks;
     }
     
-    // Use the proper Term equals method for comparison
-    const termEquals = (t1, t2) => {
-      if (!t1 || !t2) return false;
-      if (typeof t1.equals === 'function') {
-        return t1.equals(t2);
-      }
-      // Fallback for non-Term objects
-      const name1 = t1.name || t1._name || t1.toString?.() || '';
-      const name2 = t2.name || t2._name || t2.toString?.() || '';
-      return name1 === name2;
-    };
-    
     // Identify the syllogistic compatibility based on matching terms
     const primaryComponents = primaryPremise.term.components;
     if (primaryComponents?.length !== 2) {
@@ -136,34 +124,8 @@ export class Strategy {
     // Use reduce to categorize tasks in a single pass for better performance
     const { highlyCompatible, compatible, lessCompatible } = secondaryTasks.reduce(
       (acc, task) => {
-        if (!task?.term?.components || task.term.components.length !== 2) {
-          acc.lessCompatible.push(task);
-          return acc;
-        }
-        
-        const [secondarySubject, secondaryObject] = task.term.components;
-        
-        // Check for syllogistic patterns: 
-        // Pattern 1: primary=(S->M), secondary=(M->P) where primaryObject = secondarySubject (M term matches)
-        // Pattern 2: primary=(M->P), secondary=(S->M) where primarySubject = secondaryObject (M term matches)
-        const pattern1 = termEquals(primaryObject, secondarySubject);  // primary ends where secondary starts
-        const pattern2 = termEquals(primarySubject, secondaryObject);  // primary starts where secondary ends
-        
-        if (pattern1 || pattern2) {
-          acc.highlyCompatible.push(task);  // These are most likely to generate syllogistic derivations
-        } else {
-          // Check for other types of compatibility
-          const hasCommonTerms = termEquals(primarySubject, secondarySubject) || 
-                                termEquals(primarySubject, secondaryObject) || 
-                                termEquals(primaryObject, secondarySubject) || 
-                                termEquals(primaryObject, secondaryObject);
-          
-          if (hasCommonTerms) {
-            acc.compatible.push(task);  // These might lead to other rule applications
-          } else {
-            acc.lessCompatible.push(task);  // These are less likely to be useful
-          }
-        }
+        const category = this._categorizeTaskCompatibility(task, primarySubject, primaryObject);
+        acc[category].push(task);
         return acc;
       },
       { highlyCompatible: [], compatible: [], lessCompatible: [] }
@@ -171,6 +133,51 @@ export class Strategy {
     
     // Return in order: highly compatible first, then compatible, then less compatible
     return [...highlyCompatible, ...compatible, ...lessCompatible];
+  }
+  
+  /**
+   * Check if two terms are equal using proper Term comparison
+   * @private
+   */
+  _termsEqual(t1, t2) {
+    if (!t1 || !t2) return false;
+    if (typeof t1.equals === 'function') {
+      return t1.equals(t2);
+    }
+    // Fallback for non-Term objects
+    const name1 = t1.name || t1._name || t1.toString?.() || '';
+    const name2 = t2.name || t2._name || t2.toString?.() || '';
+    return name1 === name2;
+  }
+  
+  /**
+   * Categorize a task's compatibility with the primary premise
+   * @private
+   */
+  _categorizeTaskCompatibility(task, primarySubject, primaryObject) {
+    if (!task?.term?.components || task.term.components.length !== 2) {
+      return 'lessCompatible';
+    }
+    
+    const [secondarySubject, secondaryObject] = task.term.components;
+    
+    // Check for syllogistic patterns: 
+    // Pattern 1: primary=(S->M), secondary=(M->P) where primaryObject = secondarySubject (M term matches)
+    // Pattern 2: primary=(M->P), secondary=(S->M) where primarySubject = secondaryObject (M term matches)
+    const pattern1 = this._termsEqual(primaryObject, secondarySubject);  // primary ends where secondary starts
+    const pattern2 = this._termsEqual(primarySubject, secondaryObject);  // primary starts where secondary ends
+    
+    if (pattern1 || pattern2) {
+      return 'highlyCompatible';  // These are most likely to generate syllogistic derivations
+    }
+    
+    // Check for other types of compatibility
+    const hasCommonTerms = this._termsEqual(primarySubject, secondarySubject) || 
+                          this._termsEqual(primarySubject, secondaryObject) || 
+                          this._termsEqual(primaryObject, secondarySubject) || 
+                          this._termsEqual(primaryObject, secondaryObject);
+    
+    return hasCommonTerms ? 'compatible' : 'lessCompatible';
   }
 
   /**
