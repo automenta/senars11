@@ -1,99 +1,99 @@
 import * as THREE from 'three';
-import { Edge } from './Edge.js';
+import {Edge} from './Edge.js';
 
 export class FlowEdge extends Edge {
-  static typeName = 'flow';
-  particles = [];
-  particleCount = 10;
-  particleSpeed = 0.5;
-  particleSystem = null;
-  animationFrame = null;
-  flowDirection = 1; // 1 for source->target, -1 for target->source, 0 for bidirectional
+    static typeName = 'flow';
+    particles = [];
+    particleCount = 10;
+    particleSpeed = 0.5;
+    particleSystem = null;
+    animationFrame = null;
+    flowDirection = 1; // 1 for source->target, -1 for target->source, 0 for bidirectional
 
-  constructor(id, sourceNode, targetNode, data = {}) {
-    const flowData = {
-      particleCount: data.particleCount ?? 10,
-      particleSpeed: data.particleSpeed ?? 0.5,
-      particleSize: data.particleSize ?? 3,
-      particleColor: data.particleColor ?? 0x00ffff,
-      flowDirection: data.flowDirection ?? 1,
-      animated: data.animated ?? true,
-      glowEffect: data.glowEffect ?? true,
-      ...data,
-    };
+    constructor(id, sourceNode, targetNode, data = {}) {
+        const flowData = {
+            particleCount: data.particleCount ?? 10,
+            particleSpeed: data.particleSpeed ?? 0.5,
+            particleSize: data.particleSize ?? 3,
+            particleColor: data.particleColor ?? 0x00ffff,
+            flowDirection: data.flowDirection ?? 1,
+            animated: data.animated ?? true,
+            glowEffect: data.glowEffect ?? true,
+            ...data,
+        };
 
-    super(id, sourceNode, targetNode, flowData);
+        super(id, sourceNode, targetNode, flowData);
 
-    this.particleCount = flowData.particleCount;
-    this.particleSpeed = flowData.particleSpeed;
-    this.flowDirection = flowData.flowDirection;
+        this.particleCount = flowData.particleCount;
+        this.particleSpeed = flowData.particleSpeed;
+        this.flowDirection = flowData.flowDirection;
 
-    this._createParticleSystem();
-    if (flowData.animated) {
-      this._startAnimation();
-    }
-  }
-
-  _createParticleSystem() {
-    const positions = new Float32Array(this.particleCount * 3);
-    const colors = new Float32Array(this.particleCount * 3);
-    const sizes = new Float32Array(this.particleCount);
-
-    // Initialize particles with optimized loop
-    const particleColor = new THREE.Color(this.data.particleColor);
-    this.particles = [];
-    
-    for (let i = 0; i < this.particleCount; i++) {
-      const t = i / this.particleCount;
-      const position = this._getPositionOnCurve(t);
-
-      positions[i * 3] = position.x;
-      positions[i * 3 + 1] = position.y;
-      positions[i * 3 + 2] = position.z;
-
-      colors[i * 3] = particleColor.r;
-      colors[i * 3 + 1] = particleColor.g;
-      colors[i * 3 + 2] = particleColor.b;
-
-      sizes[i] = this.data.particleSize;
-
-      this.particles.push({
-        progress: t,
-        velocity: Math.random() * 0.5 + 0.5, // Random velocity multiplier
-        originalSize: this.data.particleSize,
-        life: 1.0,
-      });
+        this._createParticleSystem();
+        if (flowData.animated) {
+            this._startAnimation();
+        }
     }
 
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-    geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+    _createParticleSystem() {
+        const positions = new Float32Array(this.particleCount * 3);
+        const colors = new Float32Array(this.particleCount * 3);
+        const sizes = new Float32Array(this.particleCount);
 
-    const material = new THREE.ShaderMaterial({
-      uniforms: {
-        time: { value: 0 },
-        glowIntensity: { value: this.data.glowEffect ? 1.0 : 0.0 },
-      },
-      vertexShader: this._getVertexShader(),
-      fragmentShader: this._getFragmentShader(),
-      transparent: true,
-      depthTest: false,
-      blending: THREE.AdditiveBlending,
-      vertexColors: true,
-    });
+        // Initialize particles with optimized loop
+        const particleColor = new THREE.Color(this.data.particleColor);
+        this.particles = [];
 
-    this.particleSystem = new THREE.Points(geometry, material);
-    this.particleSystem.userData = { edgeId: this.id, type: 'flow-particles' };
-    this.particleSystem.renderOrder = 1;
-  }
+        for (let i = 0; i < this.particleCount; i++) {
+            const t = i / this.particleCount;
+            const position = this._getPositionOnCurve(t);
 
-  /**
-   * Returns the vertex shader code for the particle system.
-   * @returns {string} The vertex shader code.
-   */
-  _getVertexShader() {
-    return `
+            positions[i * 3] = position.x;
+            positions[i * 3 + 1] = position.y;
+            positions[i * 3 + 2] = position.z;
+
+            colors[i * 3] = particleColor.r;
+            colors[i * 3 + 1] = particleColor.g;
+            colors[i * 3 + 2] = particleColor.b;
+
+            sizes[i] = this.data.particleSize;
+
+            this.particles.push({
+                progress: t,
+                velocity: Math.random() * 0.5 + 0.5, // Random velocity multiplier
+                originalSize: this.data.particleSize,
+                life: 1.0,
+            });
+        }
+
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+        geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+        const material = new THREE.ShaderMaterial({
+            uniforms: {
+                time: {value: 0},
+                glowIntensity: {value: this.data.glowEffect ? 1.0 : 0.0},
+            },
+            vertexShader: this._getVertexShader(),
+            fragmentShader: this._getFragmentShader(),
+            transparent: true,
+            depthTest: false,
+            blending: THREE.AdditiveBlending,
+            vertexColors: true,
+        });
+
+        this.particleSystem = new THREE.Points(geometry, material);
+        this.particleSystem.userData = {edgeId: this.id, type: 'flow-particles'};
+        this.particleSystem.renderOrder = 1;
+    }
+
+    /**
+     * Returns the vertex shader code for the particle system.
+     * @returns {string} The vertex shader code.
+     */
+    _getVertexShader() {
+        return `
       attribute float size;
       attribute vec3 color;
       varying vec3 vColor;
@@ -111,14 +111,14 @@ export class FlowEdge extends Edge {
         gl_PointSize = size * (300.0 / -mvPosition.z);
       }
     `;
-  }
+    }
 
-  /**
-   * Returns the fragment shader code for the particle system.
-   * @returns {string} The fragment shader code.
-   */
-  _getFragmentShader() {
-    return `
+    /**
+     * Returns the fragment shader code for the particle system.
+     * @returns {string} The fragment shader code.
+     */
+    _getFragmentShader() {
+        return `
       varying vec3 vColor;
       varying float vSize;
       uniform float time;
@@ -142,188 +142,188 @@ export class FlowEdge extends Edge {
         gl_FragColor = vec4(color, alpha);
       }
     `;
-  }
-
-  _getPositionOnCurve(t) {
-    if (!this.source || !this.target) {
-      return new THREE.Vector3();
     }
 
-    // Simple linear interpolation for now, can be enhanced with curves
-    const sourcePos = this.source.position;
-    const targetPos = this.target.position;
-
-    return new THREE.Vector3().lerpVectors(sourcePos, targetPos, t);
-  }
-
-  _startAnimation() {
-    if (this.animationFrame) return;
-
-    const animate = () => {
-      this._updateParticles();
-      this.animationFrame = requestAnimationFrame(animate);
-    };
-
-    this.animationFrame = requestAnimationFrame(animate);
-  }
-
-  _stopAnimation() {
-    if (this.animationFrame) {
-      cancelAnimationFrame(this.animationFrame);
-      this.animationFrame = null;
-    }
-  }
-
-  _updateParticles() {
-    if (!this.particleSystem || !this.source || !this.target) return;
-
-    const positions = this.particleSystem.geometry.attributes.position.array;
-    const sizes = this.particleSystem.geometry.attributes.size.array;
-    const time = performance.now() * 0.001;
-
-    // Update shader time uniform
-    if (this.particleSystem.material.uniforms) {
-      this.particleSystem.material.uniforms.time.value = time;
-    }
-
-    // Update particles with optimized loop
-    for (let i = 0; i < this.particles.length; i++) {
-      const particle = this.particles[i];
-
-      // Update progress based on flow direction
-      if (this.flowDirection !== 0) {
-        particle.progress += this.particleSpeed * particle.velocity * this.flowDirection * 0.01;
-
-        // Wrap around with optimized conditions
-        if (this.flowDirection > 0 && particle.progress > 1) {
-          particle.progress = 0;
-          particle.life = 1.0;
-        } else if (this.flowDirection < 0 && particle.progress < 0) {
-          particle.progress = 1;
-          particle.life = 1.0;
+    _getPositionOnCurve(t) {
+        if (!this.source || !this.target) {
+            return new THREE.Vector3();
         }
-      } else {
-        // Bidirectional flow
-        particle.progress += this.particleSpeed * particle.velocity * 0.01 * Math.sin(time + i);
-        particle.progress = Math.max(0, Math.min(1, particle.progress));
-      }
 
-      // Update position
-      const position = this._getPositionOnCurve(particle.progress);
-      const idx = i * 3;
-      positions[idx] = position.x;
-      positions[idx + 1] = position.y;
-      positions[idx + 2] = position.z;
+        // Simple linear interpolation for now, can be enhanced with curves
+        const sourcePos = this.source.position;
+        const targetPos = this.target.position;
 
-      // Update size with life and pulsing effect
-      const pulseEffect = Math.sin(time * 4 + i * 0.1) * 0.3 + 0.7;
-      sizes[i] = particle.originalSize * particle.life * pulseEffect;
-
-      // Update life (fade effect)
-      particle.life = Math.max(0.1, Math.sin(particle.progress * Math.PI));
+        return new THREE.Vector3().lerpVectors(sourcePos, targetPos, t);
     }
 
-    this.particleSystem.geometry.attributes.position.needsUpdate = true;
-    this.particleSystem.geometry.attributes.size.needsUpdate = true;
-  }
+    _startAnimation() {
+        if (this.animationFrame) return;
 
-  update() {
-    super.update();
+        const animate = () => {
+            this._updateParticles();
+            this.animationFrame = requestAnimationFrame(animate);
+        };
 
-    if (this.particleSystem && this.source && this.target) {
-      // Update particle positions based on new node positions
-      this._updateParticles();
+        this.animationFrame = requestAnimationFrame(animate);
     }
-  }
 
-  setFlowDirection(direction) {
-    this.flowDirection = direction;
-    this.data.flowDirection = direction;
-  }
-
-  setParticleSpeed(speed) {
-    this.particleSpeed = speed;
-    this.data.particleSpeed = speed;
-  }
-
-  setParticleCount(count) {
-    this.particleCount = count;
-    this.data.particleCount = count;
-
-    // Recreate particle system with new count
-    this.disposeParticleSystem();
-    this._createParticleSystem();
-
-    if (this.data.animated) {
-      this._startAnimation();
+    _stopAnimation() {
+        if (this.animationFrame) {
+            cancelAnimationFrame(this.animationFrame);
+            this.animationFrame = null;
+        }
     }
-  }
 
-  setParticleColor(color) {
-    this.data.particleColor = color;
+    _updateParticles() {
+        if (!this.particleSystem || !this.source || !this.target) return;
 
-    if (this.particleSystem) {
-      const colors = this.particleSystem.geometry.attributes.color.array;
-      const colorObj = new THREE.Color(color);
-      const { r, g, b } = colorObj;
+        const positions = this.particleSystem.geometry.attributes.position.array;
+        const sizes = this.particleSystem.geometry.attributes.size.array;
+        const time = performance.now() * 0.001;
 
-      // Optimized loop for color update
-      for (let i = 0; i < this.particleCount; i++) {
-        const idx = i * 3;
-        colors[idx] = r;
-        colors[idx + 1] = g;
-        colors[idx + 2] = b;
-      }
+        // Update shader time uniform
+        if (this.particleSystem.material.uniforms) {
+            this.particleSystem.material.uniforms.time.value = time;
+        }
 
-      this.particleSystem.geometry.attributes.color.needsUpdate = true;
+        // Update particles with optimized loop
+        for (let i = 0; i < this.particles.length; i++) {
+            const particle = this.particles[i];
+
+            // Update progress based on flow direction
+            if (this.flowDirection !== 0) {
+                particle.progress += this.particleSpeed * particle.velocity * this.flowDirection * 0.01;
+
+                // Wrap around with optimized conditions
+                if (this.flowDirection > 0 && particle.progress > 1) {
+                    particle.progress = 0;
+                    particle.life = 1.0;
+                } else if (this.flowDirection < 0 && particle.progress < 0) {
+                    particle.progress = 1;
+                    particle.life = 1.0;
+                }
+            } else {
+                // Bidirectional flow
+                particle.progress += this.particleSpeed * particle.velocity * 0.01 * Math.sin(time + i);
+                particle.progress = Math.max(0, Math.min(1, particle.progress));
+            }
+
+            // Update position
+            const position = this._getPositionOnCurve(particle.progress);
+            const idx = i * 3;
+            positions[idx] = position.x;
+            positions[idx + 1] = position.y;
+            positions[idx + 2] = position.z;
+
+            // Update size with life and pulsing effect
+            const pulseEffect = Math.sin(time * 4 + i * 0.1) * 0.3 + 0.7;
+            sizes[i] = particle.originalSize * particle.life * pulseEffect;
+
+            // Update life (fade effect)
+            particle.life = Math.max(0.1, Math.sin(particle.progress * Math.PI));
+        }
+
+        this.particleSystem.geometry.attributes.position.needsUpdate = true;
+        this.particleSystem.geometry.attributes.size.needsUpdate = true;
     }
-  }
 
-  setAnimated(animated) {
-    this.data.animated = animated;
+    update() {
+        super.update();
 
-    if (animated) {
-      this._startAnimation();
-    } else {
-      this._stopAnimation();
+        if (this.particleSystem && this.source && this.target) {
+            // Update particle positions based on new node positions
+            this._updateParticles();
+        }
     }
-  }
 
-  setGlowEffect(enabled) {
-    this.data.glowEffect = enabled;
-
-    if (this.particleSystem && this.particleSystem.material.uniforms) {
-      this.particleSystem.material.uniforms.glowIntensity.value = enabled ? 1.0 : 0.0;
+    setFlowDirection(direction) {
+        this.flowDirection = direction;
+        this.data.flowDirection = direction;
     }
-  }
 
-  disposeParticleSystem() {
-    if (this.particleSystem) {
-      this.particleSystem.geometry?.dispose();
-      this.particleSystem.material?.dispose();
-      this.particleSystem.parent?.remove(this.particleSystem);
-      this.particleSystem = null;
+    setParticleSpeed(speed) {
+        this.particleSpeed = speed;
+        this.data.particleSpeed = speed;
     }
-    this.particles = [];
-  }
 
-  dispose() {
-    this._stopAnimation();
-    this.disposeParticleSystem();
-    super.dispose();
-  }
+    setParticleCount(count) {
+        this.particleCount = count;
+        this.data.particleCount = count;
 
-  // Method to add particle system to scene
-  addToScene(scene) {
-    if (this.particleSystem) {
-      scene.add(this.particleSystem);
+        // Recreate particle system with new count
+        this.disposeParticleSystem();
+        this._createParticleSystem();
+
+        if (this.data.animated) {
+            this._startAnimation();
+        }
     }
-  }
 
-  // Method to remove particle system from scene
-  removeFromScene(scene) {
-    if (this.particleSystem) {
-      scene.remove(this.particleSystem);
+    setParticleColor(color) {
+        this.data.particleColor = color;
+
+        if (this.particleSystem) {
+            const colors = this.particleSystem.geometry.attributes.color.array;
+            const colorObj = new THREE.Color(color);
+            const {r, g, b} = colorObj;
+
+            // Optimized loop for color update
+            for (let i = 0; i < this.particleCount; i++) {
+                const idx = i * 3;
+                colors[idx] = r;
+                colors[idx + 1] = g;
+                colors[idx + 2] = b;
+            }
+
+            this.particleSystem.geometry.attributes.color.needsUpdate = true;
+        }
     }
-  }
+
+    setAnimated(animated) {
+        this.data.animated = animated;
+
+        if (animated) {
+            this._startAnimation();
+        } else {
+            this._stopAnimation();
+        }
+    }
+
+    setGlowEffect(enabled) {
+        this.data.glowEffect = enabled;
+
+        if (this.particleSystem && this.particleSystem.material.uniforms) {
+            this.particleSystem.material.uniforms.glowIntensity.value = enabled ? 1.0 : 0.0;
+        }
+    }
+
+    disposeParticleSystem() {
+        if (this.particleSystem) {
+            this.particleSystem.geometry?.dispose();
+            this.particleSystem.material?.dispose();
+            this.particleSystem.parent?.remove(this.particleSystem);
+            this.particleSystem = null;
+        }
+        this.particles = [];
+    }
+
+    dispose() {
+        this._stopAnimation();
+        this.disposeParticleSystem();
+        super.dispose();
+    }
+
+    // Method to add particle system to scene
+    addToScene(scene) {
+        if (this.particleSystem) {
+            scene.add(this.particleSystem);
+        }
+    }
+
+    // Method to remove particle system from scene
+    removeFromScene(scene) {
+        if (this.particleSystem) {
+            scene.remove(this.particleSystem);
+        }
+    }
 }

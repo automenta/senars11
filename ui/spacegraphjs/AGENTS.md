@@ -11,14 +11,14 @@
 - Parameterized
 
 - Terse syntax
-  - Ternary, switch, nullish coalescing (`??`), optional chaining (`?.`), template literals
-  - Array methods (map, filter, reduce) over traditional loops for transformations
-  - Destructuring for cleaner object/array access
-  - Adhere to reasonable JavaScript code guidelines
-  - Don't arbitrarily change method functions to arrow functions. Keep the original function declaration style unless
-    there's a specific
-    technical reason related to 'this' binding. Use arrow functions for callbacks and utility functions only.
-  - Consider modern JavaScript language syntax
+    - Ternary, switch, nullish coalescing (`??`), optional chaining (`?.`), template literals
+    - Array methods (map, filter, reduce) over traditional loops for transformations
+    - Destructuring for cleaner object/array access
+    - Adhere to reasonable JavaScript code guidelines
+    - Don't arbitrarily change method functions to arrow functions. Keep the original function declaration style unless
+      there's a specific
+      technical reason related to 'this' binding. Use arrow functions for callbacks and utility functions only.
+    - Consider modern JavaScript language syntax
 
 - Few comments: rely on self-documenting code
 
