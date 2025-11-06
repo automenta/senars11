@@ -363,12 +363,6 @@ class REPLCore {
   batchProcessOutputLines(lines) {
     // Use a document fragment for better performance when adding many elements
     const fragment = document.createDocumentFragment();
-    const originalOutputAppend = this.outputElement.appendChild;
-    
-    // Temporarily override appendChild to collect in fragment
-    this.outputElement.appendChild = function(child) {
-      return fragment.appendChild(child);
-    };
     
     // Process all lines
     lines.forEach(line => {
@@ -377,9 +371,6 @@ class REPLCore {
       // Add output cell to history
       this.sessionManager.addCellToHistory(this.sessionId, 'output', line);
     });
-    
-    // Restore original appendChild
-    this.outputElement.appendChild = originalOutputAppend;
     
     // Add fragment to DOM in one operation
     this.outputElement.appendChild(fragment);
@@ -414,14 +405,11 @@ class REPLCore {
    */
   getStatusFromPayload(payload) {
     // Determine status based on payload
-    const state = payload?.state;
-    const statusMap = {
+    return {
       'running': 'processing',
       'stopped': 'disconnected',
       'error': 'disconnected'
-    };
-    
-    return statusMap[state] ?? 'connected';
+    }[payload?.state] ?? 'connected';
   }
   
   /**

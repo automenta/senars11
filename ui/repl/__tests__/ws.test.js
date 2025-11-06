@@ -1,11 +1,12 @@
 // Unit test for WebSocket client
-import {describe, expect, it, vi, beforeAll, afterAll} from 'vitest';
+import {describe, expect, it} from 'vitest';
+import WebSocketClient from '../../shared/ws.js';
 
-// Create a mock WebSocket class for testing
+// Mock the global WebSocket object for testing
 class MockWebSocket {
   constructor(url) {
     this.url = url;
-    this.readyState = WebSocket.CONNECTING;
+    this.readyState = MockWebSocket.OPEN; // Default to OPEN for tests
     this.onopen = null;
     this.onclose = null;
     this.onerror = null;
@@ -17,77 +18,88 @@ class MockWebSocket {
   }
   
   close() {
-    this.readyState = WebSocket.CLOSED;
+    this.readyState = MockWebSocket.CLOSED;
   }
 }
 
-// Store and restore original WebSocket
-const originalWebSocket = global.WebSocket;
+// Define WebSocket constants in the mock
+MockWebSocket.CONNECTING = 0;
+MockWebSocket.OPEN = 1;
+MockWebSocket.CLOSING = 2;
+MockWebSocket.CLOSED = 3;
+
+// Set up global WebSocket mock before tests
+global.WebSocket = MockWebSocket;
 
 describe('WebSocketClient', () => {
-  beforeAll(() => {
-    global.WebSocket = MockWebSocket;
-  });
-  
-  afterAll(() => {
-    global.WebSocket = originalWebSocket;
-  });
-  
   it('should initialize with correct url and session id', () => {
     const url = 'ws://localhost:8080/nar';
     const sessionId = 'test-session';
     
-    // Test the constructor logic without actually creating the full object
-    const fullUrl = `${url}?session=${sessionId}`;
+    const wsClient = new WebSocketClient(url, sessionId);
     
-    expect(fullUrl).toBe('ws://localhost:8080/nar?session=test-session');
+    expect(wsClient.url).toBe('ws://localhost:8080/nar');
+    expect(wsClient.sessionId).toBe('test-session');
   });
   
   it('should have correct default properties', () => {
-    const wsClientProps = {
-      reconnectAttempts: 0,
-      maxReconnectAttempts: 5,
-      reconnectDelay: 1000
-    };
+    const wsClient = new WebSocketClient('ws://localhost:8080/nar', 'test-session');
     
-    expect(wsClientProps.reconnectAttempts).toBe(0);
-    expect(wsClientProps.maxReconnectAttempts).toBe(5);
-    expect(wsClientProps.reconnectDelay).toBe(1000);
+    expect(wsClient.reconnectAttempts).toBe(0);
+    expect(wsClient.maxReconnectAttempts).toBe(5);
+    expect(wsClient.reconnectDelay).toBe(1000);
   });
   
   it('should format messages with session id', () => {
-    const sessionId = 'test-session';
+    const wsClient = new WebSocketClient('ws://localhost:8080/nar', 'test-session');
     const testData = { type: 'test', payload: { data: 'value' } };
     
     // Test the logic for adding sessionId to messages
-    const message = testData.sessionId ? testData : { sessionId: sessionId, ...testData };
+    const message = wsClient.ensureMessageHasSessionId(testData);
     
-    expect(message.sessionId).toBe(sessionId);
+    expect(message.sessionId).toBe('test-session');
     expect(message.type).toBe('test');
     expect(message.payload.data).toBe('value');
   });
   
   it('should handle reconnection with exponential backoff', () => {
-    const reconnectDelay = 1000;
-    const attempts = [1, 2, 3, 4];
-    const expectedDelays = attempts.map(attempt => reconnectDelay * Math.pow(2, attempt - 1));
+    const wsClient = new WebSocketClient('ws://localhost:8080/nar', 'test-session');
     
-    expect(expectedDelays[0]).toBe(1000); // 1st retry
-    expect(expectedDelays[1]).toBe(2000); // 2nd retry
-    expect(expectedDelays[2]).toBe(4000); // 3rd retry
-    expect(expectedDelays[3]).toBe(8000); // 4th retry
+    // When reconnectAttempts is 0, the calculation is 1000 * 2^(-1) = 500ms
+    expect(wsClient.calculateReconnectDelay()).toBe(500); // 1st retry attempt (0 actual attempts, but calculation uses -1)
+    
+    wsClient.reconnectAttempts = 1;
+    expect(wsClient.calculateReconnectDelay()).toBe(1000); // 1st actual retry
+    wsClient.reconnectAttempts = 2;
+    expect(wsClient.calculateReconnectDelay()).toBe(2000); // 2nd retry
+    wsClient.reconnectAttempts = 3;
+    expect(wsClient.calculateReconnectDelay()).toBe(4000); // 3rd retry
+    wsClient.reconnectAttempts = 4;
+    expect(wsClient.calculateReconnectDelay()).toBe(8000); // 4th retry
   });
   
   it('should check connection status correctly', () => {
-    // Test OPEN state
-    const mockWs = { readyState: 1 }; // WebSocket.OPEN is 1
+    const wsClient = new WebSocketClient('ws://localhost:8080/nar', 'test-session');
     
-    const isConnected = mockWs.readyState === 1; // WebSocket.OPEN
-    expect(isConnected).toBe(true);
+    // Mock WebSocket with OPEN state
+    wsClient.websocket = { readyState: 1 }; // WebSocket.OPEN is 1
     
-    // Test CLOSED state
-    const mockWsClosed = { readyState: 3 }; // WebSocket.CLOSED is 3
-    const isConnectedClosed = mockWsClosed.readyState === 1; // WebSocket.OPEN
-    expect(isConnectedClosed).toBe(false);
+    expect(wsClient.isConnected()).toBe(true);
+    
+    // Mock WebSocket with CLOSED state
+    wsClient.websocket = { readyState: 3 }; // WebSocket.CLOSED is 3
+    expect(wsClient.isConnected()).toBe(false);
+  });
+  
+  it('should send message correctly', () => {
+    const wsClient = new WebSocketClient('ws://localhost:8080/nar', 'test-session');
+    
+    // Mock the websocket connection
+    wsClient.websocket = new MockWebSocket('ws://localhost:8080/nar?session=test-session');
+    
+    const testData = { type: 'test', payload: { data: 'value' } };
+    wsClient.send(testData);
+    
+    expect(wsClient.websocket.lastSent).toBe(JSON.stringify({ sessionId: 'test-session', type: 'test', payload: { data: 'value' } }));
   });
 });

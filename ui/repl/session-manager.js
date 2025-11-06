@@ -90,13 +90,11 @@ class SessionManager {
   
   // New: Persist session history to sessionStorage with debounce
   persistSessionHistory(sessionId) {
-    // For this to work properly, we need to import debounce and create a debounced function
-    // Since we already imported utilities in setup, we can create the debounced function here
+    // Create debounced function for this session if it doesn't exist
     if (!this.debouncedSaveFunctions) {
       this.debouncedSaveFunctions = new Map();
     }
     
-    // Create debounced function for this session if it doesn't exist
     if (!this.debouncedSaveFunctions.has(sessionId)) {
       // Create save function for this session
       const saveFn = (sid) => {
@@ -109,7 +107,22 @@ class SessionManager {
       };
       
       // Apply debounce to the save function
-      import('../src/utils/utilityFunctions.js').then((utils) => {
+      this.createDebouncedSaveFunction(sessionId, saveFn);
+    } 
+    
+    // Use existing or newly created debounced function
+    const debouncedSave = this.debouncedSaveFunctions.get(sessionId);
+    debouncedSave?.(sessionId);
+  }
+  
+  /**
+   * Creates a debounced save function for a session
+   * @param {string} sessionId - Session identifier
+   * @param {Function} saveFn - Save function to debounce
+   */
+  createDebouncedSaveFunction(sessionId, saveFn) {
+    import('../src/utils/utilityFunctions.js')
+      .then((utils) => {
         if (utils.debounce) {
           const debouncedSave = utils.debounce(saveFn, 500); // 500ms debounce
           this.debouncedSaveFunctions.set(sessionId, debouncedSave);
@@ -118,15 +131,11 @@ class SessionManager {
           // Fallback to direct save without debounce
           saveFn(sessionId);
         }
-      }).catch(() => {
+      })
+      .catch(() => {
         // If import fails, use direct save
         saveFn(sessionId);
       });
-    } else {
-      // Use existing debounced function
-      const debouncedSave = this.debouncedSaveFunctions.get(sessionId);
-      debouncedSave(sessionId);
-    }
   }
   
   /**
@@ -193,22 +202,22 @@ class SessionManager {
   
   persistAllHistories() {
     // For page unload, save all histories immediately without debouncing
-    Object.keys(this.activeSessions).forEach(sessionId => {
+    for (const sessionId of Object.keys(this.activeSessions)) {
       try {
         const history = this.sessionHistories[sessionId] || [];
         sessionStorage.setItem(`nars-history-${sessionId}`, JSON.stringify(history));
       } catch (error) {
         this.handlePersistenceError(`Failed to persist history for session ${sessionId}`, error);
       }
-    });
+    }
   }
   
   loadAllHistories() {
     // Load histories for existing sessions
-    Object.keys(this.activeSessions).forEach(sessionId => {
+    for (const sessionId of Object.keys(this.activeSessions)) {
       this.loadSessionHistory(sessionId);
       this.renderHistory(sessionId);
-    });
+    }
   }
   
   renderHistory(sessionId) {
@@ -299,11 +308,9 @@ class SessionManager {
    */
   updateVisibleCells(sessionId, startIdx, endIdx) {
     const session = this.activeSessions[sessionId];
-    if (!session || !session.history) return;
+    if (!session?.history) return;
     
-    const history = session.history;
-    const visibleCells = session.visibleCells;
-    const cellCache = session.cellCache;
+    const { history, visibleCells, cellCache } = session;
     
     // Create a set of indices that should be visible
     const shouldBeVisible = new Set();
@@ -987,12 +994,12 @@ class SessionManager {
     this.sessionDropdown.innerHTML = '';
     
     // Add options for each active session
-    Object.keys(this.activeSessions).forEach(id => {
+    for (const id of Object.keys(this.activeSessions)) {
       const option = document.createElement('option');
       option.value = id;
       option.textContent = `${id} ${this.getSessionStatusIcon(id)}`;
       this.sessionDropdown.appendChild(option);
-    });
+    }
     
     // Set up swipe gestures for mobile
     this.setupSwipeGestures();
@@ -1284,7 +1291,7 @@ class SessionManager {
     const now = Date.now();
     const oneHour = 60 * 60 * 1000; // 1 hour in milliseconds
     
-    Object.keys(this.activeSessions).forEach(sessionId => {
+    for (const sessionId of Object.keys(this.activeSessions)) {
       const lastActivity = this.sessionActivity[sessionId] || now;
       const timeSinceActivity = now - lastActivity;
       
@@ -1298,7 +1305,7 @@ class SessionManager {
         console.log(`Auto-closing inactive session ${sessionId}`);
         this.destroySession(sessionId);
       }
-    });
+    }
   }
   
   /**
@@ -1338,10 +1345,10 @@ class SessionManager {
     const grid = this.createAgentGrid();
     
     // Add agent cards
-    Object.keys(this.activeSessions).forEach(sessionId => {
+    for (const sessionId of Object.keys(this.activeSessions)) {
       const card = this.createAgentCard(sessionId);
       grid.appendChild(card);
-    });
+    }
     
     // Create button container with action buttons
     const buttonContainer = this.createHUDButtonContainer();
@@ -1767,10 +1774,10 @@ class SessionManager {
     grid.innerHTML = '';
     
     // Add updated cards
-    Object.keys(this.activeSessions).forEach(sessionId => {
+    for (const sessionId of Object.keys(this.activeSessions)) {
       const card = this.createAgentCard(sessionId);
       grid.appendChild(card);
-    });
+    }
   }
   
   /**

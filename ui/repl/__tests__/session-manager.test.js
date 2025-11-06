@@ -1,46 +1,51 @@
 // Unit test for Session Manager
-import {describe, expect, it, vi, beforeEach} from 'vitest';
+import {describe, expect, it, beforeEach, vi} from 'vitest';
+import SessionManager from '../../repl/session-manager.js';
+
+// Create mock DOM elements for testing and mock window.matchMedia
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: vi.fn().mockImplementation(query => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(), // deprecated
+    removeListener: vi.fn(), // deprecated
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
+});
 
 // Create mock DOM elements for testing
 describe('SessionManager', () => {
+  let sessionManager;
+
   beforeEach(() => {
     // Create the DOM structure that SessionManager expects
     document.body.innerHTML = `
       <div id="session-container"></div>
       <div id="session-selector"></div>
     `;
+    
+    // Create a SessionManager instance for testing
+    sessionManager = new SessionManager();
   });
 
-  it('should initialize with empty sessions', () => {
-    // Test the basic structure of the SessionManager without full initialization
-    // We'll focus on testing individual methods since full initialization requires complex DOM setup
-    
-    // Create a simplified test of SessionManager's properties
-    const sessionManagerProps = [
-      'activeSessions',
-      'sessionHistories', 
-      'container',
-      'selector'
-    ];
-    
-    expect(sessionManagerProps).toContain('activeSessions');
-    expect(sessionManagerProps).toContain('sessionHistories');
+  it('should initialize with sessions including main', () => {
+    // The constructor automatically creates a main session
+    expect(sessionManager.activeSessions.main).toBeDefined();
+    expect(sessionManager.sessionHistories).toEqual({});
+    expect(sessionManager.container).not.toBeNull();
+    expect(sessionManager.selector).not.toBeNull();
   });
 
   it('should create cell structure correctly', () => {
-    // Test the cell creation functionality
     const sessionId = 'test-session';
     const type = 'input';
     const content = 'test content';
     
-    const cell = {
-      id: `cell-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      type,
-      content,
-      timestamp: Date.now(),
-      sessionId,
-      pinned: false
-    };
+    const cell = sessionManager.createCell(sessionId, type, content);
     
     expect(cell.type).toBe(type);
     expect(cell.content).toBe(content);
@@ -51,75 +56,60 @@ describe('SessionManager', () => {
   });
 
   it('should add cell to history correctly', () => {
-    // Test the history management functionality
-    const sessionHistories = {};
     const sessionId = 'test-session';
     const type = 'input';
     const content = 'test content';
     
-    if (!sessionHistories[sessionId]) {
-      sessionHistories[sessionId] = [];
-    }
+    sessionManager.addCellToHistory(sessionId, type, content);
     
-    const cell = {
-      id: `cell-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      type,
-      content,
-      timestamp: Date.now(),
-      sessionId,
-      pinned: false
-    };
-    
-    sessionHistories[sessionId].push(cell);
-    
-    expect(sessionHistories[sessionId]).toHaveLength(1);
-    expect(sessionHistories[sessionId][0].content).toBe(content);
+    expect(sessionManager.sessionHistories[sessionId]).toHaveLength(1);
+    expect(sessionManager.sessionHistories[sessionId][0].content).toBe(content);
+    expect(sessionManager.sessionHistories[sessionId][0].type).toBe(type);
+    expect(sessionManager.sessionHistories[sessionId][0].sessionId).toBe(sessionId);
   });
 
   it('should filter history by content correctly', () => {
-    // Test the filter functionality that's used in SessionManager
-    const history = [
-      { type: 'input', content: 'hello world', sessionId: 'test' },
-      { type: 'output', content: { text: 'response' }, sessionId: 'test' },
-      { type: 'input', content: 'goodbye', sessionId: 'test' }
-    ];
+    // Add some test data to the session manager
+    const sessionId = 'test-session';
+    sessionManager.addCellToHistory(sessionId, 'input', 'hello world');
+    sessionManager.addCellToHistory(sessionId, 'output', { text: 'response' });
+    sessionManager.addCellToHistory(sessionId, 'input', 'goodbye');
     
     // Test text filtering
-    const filtered = history.filter(cell => {
-      if (cell.type === 'input') {
-        return cell.content.toLowerCase().includes('hello');
-      } else {
-        const textContent = cell.content.text || '';
-        return textContent.toLowerCase().includes('hello');
-      }
-    });
+    const filtered = sessionManager.filterHistoryByText(sessionId, 'hello');
     
     expect(filtered).toHaveLength(1);
     expect(filtered[0].content).toBe('hello world');
   });
 
   it('should handle pin/unpin functionality', () => {
-    // Test the pinning functionality
-    const history = [
-      { id: 'cell-1', type: 'input', content: 'test 1', pinned: false },
-      { id: 'cell-2', type: 'input', content: 'test 2', pinned: false }
-    ];
+    const sessionId = 'test-session';
     
-    // Pin first cell
-    const cell1Index = history.findIndex(cell => cell.id === 'cell-1');
-    if (cell1Index !== -1) {
-      history[cell1Index].pinned = true;
-    }
+    // Add some cells to the session history
+    sessionManager.addCellToHistory(sessionId, 'input', 'test 1');
+    sessionManager.addCellToHistory(sessionId, 'input', 'test 2');
     
-    expect(history[0].pinned).toBe(true);
-    expect(history[1].pinned).toBe(false);
+    // Get the first cell
+    const firstCell = sessionManager.sessionHistories[sessionId][0];
     
-    // Unpin first cell
-    const cell1Index2 = history.findIndex(cell => cell.id === 'cell-1');
-    if (cell1Index2 !== -1) {
-      history[cell1Index2].pinned = false;
-    }
+    // Pin the first cell
+    sessionManager.pinCell(sessionId, firstCell.id);
     
-    expect(history[0].pinned).toBe(false);
+    expect(sessionManager.sessionHistories[sessionId][0].pinned).toBe(true);
+    
+    // Unpin the first cell
+    sessionManager.unpinCell(sessionId, firstCell.id);
+    
+    expect(sessionManager.sessionHistories[sessionId][0].pinned).toBe(false);
+  });
+  
+  it('should create a session correctly', () => {
+    const sessionId = 'test-session';
+    
+    sessionManager.createSession(sessionId);
+    
+    expect(sessionManager.activeSessions[sessionId]).toBeDefined();
+    expect(sessionManager.activeSessions[sessionId].element).toBeDefined();
+    expect(sessionManager.activeSessions[sessionId].element.getAttribute('data-session-id')).toBe(sessionId);
   });
 });

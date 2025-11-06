@@ -1,11 +1,12 @@
 // Unit test for REPL core functionality
-import {describe, expect, it, vi, beforeEach, afterEach, beforeAll, afterAll} from 'vitest';
+import {describe, expect, it, beforeEach} from 'vitest';
+import REPLCore from '../../repl/repl-core.js';
 
-// Create a mock WebSocket class for testing without using Vitest mocks
+// Mock the global WebSocket object for testing
 class MockWebSocket {
   constructor(url) {
     this.url = url;
-    this.readyState = WebSocket.OPEN;
+    this.readyState = MockWebSocket.OPEN;
     this.onopen = null;
     this.onclose = null;
     this.onerror = null;
@@ -13,29 +14,29 @@ class MockWebSocket {
   }
   
   send(data) {
-    // Mock send functionality
+    // The real WebSocketClient.send() method sends JSON.stringify() data
+    // So here we receive a JSON string and store it
     this.lastSent = data;
   }
   
   close() {
-    this.readyState = WebSocket.CLOSED;
+    this.readyState = MockWebSocket.CLOSED;
   }
 }
 
-// Store original WebSocket
-const originalWebSocket = global.WebSocket;
+// Define WebSocket constants in the mock
+MockWebSocket.CONNECTING = 0;
+MockWebSocket.OPEN = 1;
+MockWebSocket.CLOSING = 2;
+MockWebSocket.CLOSED = 3;
+
+// Set up global WebSocket mock before tests
+global.WebSocket = MockWebSocket;
 
 describe('REPLCore', () => {
-  beforeAll(() => {
-    // Mock WebSocket globally for this test suite
-    global.WebSocket = MockWebSocket;
-  });
-  
-  afterAll(() => {
-    // Restore original WebSocket
-    global.WebSocket = originalWebSocket;
-  });
-  
+  let replCore;
+  let sessionManager;
+
   beforeEach(() => {
     // Create DOM elements that REPLCore expects
     document.body.innerHTML = `
@@ -51,48 +52,48 @@ describe('REPLCore', () => {
       </div>
     `;
     
-    // Mock session manager
-    global.sessionManager = {
+    // Create a simple mock session manager
+    sessionManager = {
       getSession: (id) => ({
         element: document.querySelector(`[data-session-id="${id}"]`),
         input: document.querySelector('.repl-input'),
         output: document.querySelector('.output-area'),
         status: document.querySelector('.status')
       }),
-      updateSessionStatus: vi.fn(),
-      addCellToHistory: vi.fn(),
+      updateSessionStatus: () => {},
+      addCellToHistory: () => {},
       sessionHistories: { main: [] }
     };
+    
+    // Mock the global session manager
+    global.sessionManager = sessionManager;
+    
+    // Create REPLCore instance
+    replCore = new REPLCore('main');
   });
 
   it('should initialize with correct sessionId', () => {
-    // Since REPLCore requires DOM elements that are complex to set up,
-    // we'll test the core functionality with a simplified approach
-    const mockSessionManager = {
-      getSession: () => ({
-        input: document.querySelector('.repl-input'),
-        output: document.querySelector('.output-area'),
-        status: document.querySelector('.status'),
-        element: document.querySelector('.session')
-      }),
-      addCellToHistory: vi.fn()
-    };
-    
-    // Simulate the constructor functionality by creating a mock REPLCore
-    expect(() => {
-      // We'll test the core functionality by testing its methods individually
-      // rather than the full constructor since it requires complex DOM setup
-    }).not.toThrow();
+    expect(replCore.sessionId).toBe('main');
+    expect(replCore.sessionManager).toBeDefined();
   });
 
   it('should handle input submission correctly', () => {
-    // Test the submitInput functionality with a mock implementation
     const inputEl = document.querySelector('.repl-input');
     inputEl.value = 'test input';
     
-    // Create a simple test of the submission logic without full initialization
-    expect(inputEl.value).toBe('test input');
-    expect(inputEl.value.trim()).toBe('test input');
+    replCore.inputElement = inputEl;
+    
+    // Mock the websocket send method for this test
+    replCore.websocket = new MockWebSocket('ws://localhost:8080/nar');
+    
+    // Mock session manager methods
+    replCore.sessionManager = sessionManager;
+    
+    // Call submitInput directly
+    replCore.submitInput();
+    
+    // Check that input field was cleared
+    expect(inputEl.value).toBe('');
   });
   
   it('should handle command parsing correctly', () => {
@@ -108,21 +109,31 @@ describe('REPLCore', () => {
     });
   });
 
-  it('should have proper structure for methods', () => {
-    // Test that REPLCore would have expected methods if properly constructed
-    const methods = [
-      'initWebSocket',
-      'bindEvents',
-      'submitInput',
-      'handleCommand',
-      'handleMessage',
-      'addOutputLine',
-      'setStatus'
-    ];
+  it('should handle commands properly', () => {
+    const inputEl = document.querySelector('.repl-input');
+    replCore.inputElement = inputEl;
     
-    // Verify that these method names exist conceptually
-    expect(methods).toContain('submitInput');
-    expect(methods).toContain('handleMessage');
-    expect(methods).toContain('setStatus');
+    // Mock the websocket for command testing
+    replCore.websocket = new MockWebSocket('ws://localhost:8080/nar');
+    
+    // Test /start command
+    inputEl.value = '/start';
+    replCore.handleCommand('/start');
+    expect(inputEl.value).toBe('');
+  });
+  
+  it('should send control commands properly', () => {
+    // Use the websocket that was created in the constructor
+    replCore.sendControlCommand('start');
+    const expectedMessage = {
+      sessionId: 'main',
+      type: 'control/start',
+      payload: {}
+    };
+    
+    // The underlying MockWebSocket should have received the stringified message
+    // Since replCore.websocket is the WebSocketClient, we need to access the underlying WebSocket
+    // The MockWebSocket instance would be in replCore.websocket.websocket
+    expect(replCore.websocket.websocket.lastSent).toBe(JSON.stringify(expectedMessage));
   });
 });

@@ -67,17 +67,6 @@ export default class WebSocketClient {
   }
   
   /**
-   * Close the WebSocket connection with optional code and reason
-   * @param {number} code - Close code
-   * @param {string} reason - Close reason
-   */
-  close(code, reason) {
-    if (this.websocket) {
-      this.websocket.close(code, reason);
-    }
-  }
-  
-  /**
    * Reconnect with exponential backoff
    */
   reconnect() {
@@ -122,17 +111,19 @@ export default class WebSocketClient {
   }
   
   /**
-   * Close the WebSocket connection
-   */
-  close() {
-    this.websocket?.close();
-  }
-  
-  /**
    * Check if the WebSocket is connected
    * @returns {boolean} True if connected, false otherwise
    */
   isConnected() {
     return this.websocket?.readyState === WebSocket.OPEN;
+  }
+  
+  /**
+   * Close the WebSocket connection with optional code and reason
+   * @param {number} code - Close code
+   * @param {string} reason - Close reason
+   */
+  close(code, reason) {
+    this.websocket?.close(code, reason);
   }
 }
