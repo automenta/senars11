@@ -111,7 +111,8 @@ describe('LMRule', () => {
 
     test('should handle errors gracefully', async () => {
         // Mock console.error to prevent test output pollution
-        const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+        const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {
+        });
 
         const errorLM = {
             generateText: () => {

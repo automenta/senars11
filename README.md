@@ -650,33 +650,33 @@ Implement NAL-specific truth value calculations:
 The system provides a fluent API for easy test creation:
 
 ```javascript
-import { createReasoner } from '../support/fluentReasonerAPI';
+import {createReasoner} from '../support/fluentReasonerAPI';
 
 describe('NAR System Deductions', () => {
-  let nar;
+    let nar;
 
-  beforeEach(() => {
-    nar = createReasoner();
-  });
+    beforeEach(() => {
+        nar = createReasoner();
+    });
 
-  test('should deduce a simple conclusion from two premises', async () => {
-    nar.input('<A --> B>.');
-    nar.input('<B --> C>.');
+    test('should deduce a simple conclusion from two premises', async () => {
+        nar.input('<A --> B>.');
+        nar.input('<B --> C>.');
 
-    await nar.cycles(5); // Run for a few cycles to allow inference
+        await nar.cycles(5); // Run for a few cycles to allow inference
 
-    nar.expectBelief('<A --> C>.').toHaveTruth({ frequency: 1.0, confidence: 0.9 });
-  });
+        nar.expectBelief('<A --> C>.').toHaveTruth({frequency: 1.0, confidence: 0.9});
+    });
 
-  test('should answer a question based on existing beliefs', async () => {
-    nar.input('<dog --> animal>.');
-    nar.input('<cat --> animal>.');
+    test('should answer a question based on existing beliefs', async () => {
+        nar.input('<dog --> animal>.');
+        nar.input('<cat --> animal>.');
 
-    await nar.cycles(10);
+        await nar.cycles(10);
 
-    const answer = await nar.query('<dog --> ?x>.');
-    expect(answer).toBeInferred('<dog --> animal>.');
-  });
+        const answer = await nar.query('<dog --> ?x>.');
+        expect(answer).toBeInferred('<dog --> animal>.');
+    });
 });
 ```
 
