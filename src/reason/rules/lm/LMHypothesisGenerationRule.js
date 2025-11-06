@@ -4,7 +4,7 @@
  */
 
 import {LMRule} from '../../LMRule.js';
-import {Punctuation, Task} from '../../TaskUtils.js';
+import {Punctuation, Task} from '../../utils/TaskUtils.js';
 import {isBelief} from '../../RuleHelpers.js';
 
 export const createHypothesisGenerationRule = (dependencies) => {

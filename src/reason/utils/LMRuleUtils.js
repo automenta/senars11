@@ -3,9 +3,9 @@
  * @description Utilities for working with LM rules, with patterns adapted from v9 implementation.
  */
 
-import {LMRule} from './LMRule.js';
+import {LMRule} from '../LMRule.js';
 import {Task} from './TaskUtils.js';
-import {cleanSubGoal, hasPattern, isValidSubGoal, KeywordPatterns, parseSubGoals} from './RuleHelpers.js';
+import {cleanSubGoal, hasPattern, isValidSubGoal, KeywordPatterns, parseSubGoals} from '../RuleHelpers.js';
 
 export class LMRuleUtils {
     static createPunctuationBasedRule(config) {

@@ -1,5 +1,5 @@
 import {LMRule} from '../../src/reason/LMRule.js';
-import {Punctuation, Task, TruthValue} from '../../src/reason/TaskUtils.js';
+import {Punctuation, Task, TruthValue} from '../../src/reason/utils/TaskUtils.js';
 import {
     createAnalogicalReasoningRule,
     createBeliefRevisionRule,
@@ -12,9 +12,9 @@ import {
     createTemporalCausalModelingRule,
     createUncertaintyCalibrationRule,
     createVariableGroundingRule
-} from '../../src/reason/lm/index.js';
+} from '../../src/reason/rules/lm/index.js';
 import {LMRuleFactory} from '../../src/lm/LMRuleFactory.js';
-import {LMRuleUtils} from '../../src/reason/LMRuleUtils.js';
+import {LMRuleUtils} from '../../src/reason/utils/LMRuleUtils.js';
 import {jest} from '@jest/globals';
 
 // Mock LM for testing

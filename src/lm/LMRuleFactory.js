@@ -1,5 +1,5 @@
 import {LMRule} from '../reason/LMRule.js';
-import {LMRuleUtils} from '../reason/LMRuleUtils.js';
+import {LMRuleUtils} from '../reason/utils/LMRuleUtils.js';
 
 export class LMRuleFactory {
     static create(config) {

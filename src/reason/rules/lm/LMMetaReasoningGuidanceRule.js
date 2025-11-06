@@ -5,7 +5,7 @@
  */
 
 import {LMRule} from '../../LMRule.js';
-import {Punctuation, Task} from '../../TaskUtils.js';
+import {Punctuation, Task} from '../../utils/TaskUtils.js';
 import {hasPattern, isGoal, isQuestion, KeywordPatterns} from '../../RuleHelpers.js';
 
 /**

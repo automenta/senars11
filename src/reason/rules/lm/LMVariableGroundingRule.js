@@ -5,7 +5,7 @@
  */
 
 import {LMRule} from '../../LMRule.js';
-import {Task} from '../../TaskUtils.js';
+import {Task} from '../../utils/TaskUtils.js';
 import {parseSubGoals} from '../../RuleHelpers.js';
 
 const hasVariable = (text) => {

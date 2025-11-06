@@ -8,7 +8,7 @@ Language Models (LM) in a resource-aware, continuous processing pipeline.
 
 ```
 +------------------+      +------------------+
-|  PremiseSource   |<-----|      Memory      |
+|  PremiseSource   |<-----|      Layer       |
 | (e.g., TaskBag)  |      | (Term/Embedding) |
 | - Sampling       |      +------------------+
 +------------------+
