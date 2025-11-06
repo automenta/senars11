@@ -178,9 +178,9 @@ export class Reasoner {
   }
   
   _processDerivation(result) {
-    try {
-      if (!result?.stamp) return result;
+    if (!result?.stamp) return result;
 
+    try {
       const derivationDepth = result.stamp.depth ?? 0;
 
       if (derivationDepth > this.config.maxDerivationDepth) {

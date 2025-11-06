@@ -70,9 +70,19 @@ export class BagStrategy extends Strategy {
 
     // Maintain bag size by removing lowest priority items if necessary
     if (this.bag.length > this.bagSize) {
-      // Sort by priority (descending) and keep top N
-      this.bag.sort((a, b) => (b.budget.priority || 0) - (a.budget.priority || 0));
-      this.bag = this.bag.slice(0, this.bagSize);
+      // Find and remove the lowest priority item instead of sorting entire array
+      let minPriorityIndex = 0;
+      let minPriority = this.bag[0].budget?.priority ?? 0;
+      
+      for (let i = 1; i < this.bag.length; i++) {
+        const priority = this.bag[i].budget?.priority ?? 0;
+        if (priority < minPriority) {
+          minPriority = priority;
+          minPriorityIndex = i;
+        }
+      }
+      
+      this.bag.splice(minPriorityIndex, 1);
     }
   }
 

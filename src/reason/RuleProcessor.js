@@ -96,7 +96,7 @@ export class RuleProcessor {
   _createRuleContext() {
     return {
       termFactory: this.config.termFactory ?? this.config.context?.termFactory ?? null,
-      ...this.config.context
+      ...(this.config.context ?? {})
     };
   }
 
@@ -161,9 +161,9 @@ export class RuleProcessor {
   }
 
   _processDerivation(result) {
-    try {
-      if (!result?.stamp) return result;
+    if (!result?.stamp) return result;
 
+    try {
       const derivationDepth = result.stamp.depth ?? 0;
 
       if (derivationDepth > this.config.maxDerivationDepth) {

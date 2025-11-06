@@ -115,18 +115,18 @@ export async function* asyncIteratorWithDelay(items, delay = 0) {
 export function mergeConfig(defaults, overrides = {}) {
   const result = { ...defaults };
   
-  for (const key in overrides) {
-    if (Object.prototype.hasOwnProperty.call(overrides, key)) {
-      if (
-        typeof result[key] === 'object' && 
-        typeof overrides[key] === 'object' &&
-        !Array.isArray(result[key]) &&
-        !Array.isArray(overrides[key])
-      ) {
-        result[key] = mergeConfig(result[key], overrides[key]);
-      } else {
-        result[key] = overrides[key];
-      }
+  for (const [key, value] of Object.entries(overrides)) {
+    if (
+      typeof result[key] === 'object' && 
+      typeof value === 'object' &&
+      result[key] !== null &&
+      value !== null &&
+      !Array.isArray(result[key]) &&
+      !Array.isArray(value)
+    ) {
+      result[key] = mergeConfig(result[key], value);
+    } else {
+      result[key] = value;
     }
   }
   

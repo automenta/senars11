@@ -70,20 +70,17 @@ export class RuleExecutor {
    * @private
    */
   _filterCandidates(candidates, primaryPremise, secondaryPremise) {
-    const candidateRules = [];
-    for (const rule of candidates) {
+    return candidates.filter(rule => {
       try {
-        if (this._canRuleApply(rule, primaryPremise, secondaryPremise)) {
-          candidateRules.push(rule);
-        }
+        return this._canRuleApply(rule, primaryPremise, secondaryPremise);
       } catch (error) {
         logError(error, { 
           ruleId: rule.id ?? rule.name, 
           context: 'rule_candidate_check' 
         }, 'warn');
+        return false;
       }
-    }
-    return candidateRules;
+    });
   }
 
   /**
