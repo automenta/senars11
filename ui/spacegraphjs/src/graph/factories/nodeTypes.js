@@ -20,43 +20,43 @@ import {MetaWidgetNode} from '../nodes/MetaWidgetNode.js';
  * Core node types organized by category
  */
 export const nodeTypes = {
-  // Core nodes
-  core: [
-    { name: HtmlNode.typeName, class: HtmlNode },
-    { name: ShapeNode.typeName, class: ShapeNode },
-    { name: ImageNode.typeName, class: ImageNode },
-    { name: VideoNode.typeName, class: VideoNode },
-    { name: IFrameNode.typeName, class: IFrameNode },
-    { name: GroupNode.typeName, class: GroupNode },
-    { name: DataNode.typeName, class: DataNode },
-    { name: NoteNode.typeName, class: NoteNode }
-  ],
+    // Core nodes
+    core: [
+        {name: HtmlNode.typeName, class: HtmlNode},
+        {name: ShapeNode.typeName, class: ShapeNode},
+        {name: ImageNode.typeName, class: ImageNode},
+        {name: VideoNode.typeName, class: VideoNode},
+        {name: IFrameNode.typeName, class: IFrameNode},
+        {name: GroupNode.typeName, class: GroupNode},
+        {name: DataNode.typeName, class: DataNode},
+        {name: NoteNode.typeName, class: NoteNode}
+    ],
 
-  // Media nodes
-  media: [
-    { name: AudioNode.typeName, class: AudioNode },
-    { name: DocumentNode.typeName, class: DocumentNode },
-    { name: ChartNode.typeName, class: ChartNode }
-  ],
+    // Media nodes
+    media: [
+        {name: AudioNode.typeName, class: AudioNode},
+        {name: DocumentNode.typeName, class: DocumentNode},
+        {name: ChartNode.typeName, class: ChartNode}
+    ],
 
-  // Advanced widget nodes
-  widgets: [
-    { name: ControlPanelNode.typeName, class: ControlPanelNode },
-    { name: ProgressNode.typeName, class: ProgressNode },
-    { name: CanvasNode.typeName, class: CanvasNode }
-  ],
+    // Advanced widget nodes
+    widgets: [
+        {name: ControlPanelNode.typeName, class: ControlPanelNode},
+        {name: ProgressNode.typeName, class: ProgressNode},
+        {name: CanvasNode.typeName, class: CanvasNode}
+    ],
 
-  // Advanced shape nodes
-  shapes: [
-    { name: ProceduralShapeNode.typeName, class: ProceduralShapeNode },
-    { name: TextMeshNode.typeName, class: TextMeshNode }
-  ],
+    // Advanced shape nodes
+    shapes: [
+        {name: ProceduralShapeNode.typeName, class: ProceduralShapeNode},
+        {name: TextMeshNode.typeName, class: TextMeshNode}
+    ],
 
-  // MetaWidget system
-  meta: [
-    { name: MetaWidgetNode.typeName, class: MetaWidgetNode }
-  ]
+    // MetaWidget system
+    meta: [
+        {name: MetaWidgetNode.typeName, class: MetaWidgetNode}
+    ]
 };
 
 // Default fallback
-export const defaultNodeType = { name: 'default', class: ShapeNode };
+export const defaultNodeType = {name: 'default', class: ShapeNode};

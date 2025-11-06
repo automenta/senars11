@@ -1,5 +1,5 @@
 import {BaseFactory} from '../../core/BaseFactory.js';
-import {edgeTypes, defaultEdgeType} from './edgeTypes.js';
+import {defaultEdgeType, edgeTypes} from './edgeTypes.js';
 
 /**
  * Factory for creating edge instances with improved organization

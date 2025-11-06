@@ -23,7 +23,10 @@ export class ImageNode extends Node {
         ) {
             this.imageSize = {...this.data.size};
         } else {
-            this.imageSize = {width: GRAPH_CONSTANTS.DEFAULT_NODE_SIZE * 2, height: GRAPH_CONSTANTS.DEFAULT_NODE_SIZE * 2};
+            this.imageSize = {
+                width: GRAPH_CONSTANTS.DEFAULT_NODE_SIZE * 2,
+                height: GRAPH_CONSTANTS.DEFAULT_NODE_SIZE * 2
+            };
         }
 
         this.mesh = this._createMesh();

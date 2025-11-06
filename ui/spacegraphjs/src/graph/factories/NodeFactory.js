@@ -1,5 +1,5 @@
 import {BaseFactory} from '../../core/BaseFactory.js';
-import {nodeTypes, defaultNodeType} from './nodeTypes.js';
+import {defaultNodeType, nodeTypes} from './nodeTypes.js';
 
 /**
  * Factory for creating node instances with improved organization

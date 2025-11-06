@@ -11,22 +11,22 @@ import {BezierEdge} from '../edges/BezierEdge.js';
  * Edge types organized by category
  */
 export const edgeTypes = {
-  // Core edge types
-  core: [
-    { name: Edge.typeName, class: Edge },
-    { name: CurvedEdge.typeName, class: CurvedEdge },
-    { name: LabeledEdge.typeName, class: LabeledEdge },
-    { name: DottedEdge.typeName, class: DottedEdge },
-    { name: DynamicThicknessEdge.typeName, class: DynamicThicknessEdge }
-  ],
+    // Core edge types
+    core: [
+        {name: Edge.typeName, class: Edge},
+        {name: CurvedEdge.typeName, class: CurvedEdge},
+        {name: LabeledEdge.typeName, class: LabeledEdge},
+        {name: DottedEdge.typeName, class: DottedEdge},
+        {name: DynamicThicknessEdge.typeName, class: DynamicThicknessEdge}
+    ],
 
-  // Advanced edge types
-  advanced: [
-    { name: FlowEdge.typeName, class: FlowEdge },
-    { name: SpringEdge.typeName, class: SpringEdge },
-    { name: BezierEdge.typeName, class: BezierEdge }
-  ]
+    // Advanced edge types
+    advanced: [
+        {name: FlowEdge.typeName, class: FlowEdge},
+        {name: SpringEdge.typeName, class: SpringEdge},
+        {name: BezierEdge.typeName, class: BezierEdge}
+    ]
 };
 
 // Default fallback
-export const defaultEdgeType = { name: 'default', class: Edge };
+export const defaultEdgeType = {name: 'default', class: Edge};

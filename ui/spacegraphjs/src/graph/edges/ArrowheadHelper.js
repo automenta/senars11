@@ -17,14 +17,14 @@ export class ArrowheadHelper {
     static createArrowheads(data, edgeId, color, renderOrder) {
         const arrowheads = {source: null, target: null};
         const {arrowhead} = data;
-        
+
         if (arrowhead === true || arrowhead === 'target' || arrowhead === 'both') {
             arrowheads.target = this._createSingleArrowhead(data, edgeId, color, renderOrder, 'target');
         }
         if (arrowhead === 'source' || arrowhead === 'both') {
             arrowheads.source = this._createSingleArrowhead(data, edgeId, color, renderOrder, 'source');
         }
-        
+
         return arrowheads;
     }
 
