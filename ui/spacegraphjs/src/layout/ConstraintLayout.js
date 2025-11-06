@@ -1,63 +1,65 @@
 import * as THREE from 'three';
+import { BaseLayout } from './BaseLayout.js';
 
-export class ConstraintLayout {
-  space = null;
-  pluginManager = null;
-  settings = {
-    iterations: 100,
-    convergenceThreshold: 0.1,
-    dampingFactor: 0.8,
-    maxForce: 1000,
-    enableCollisionAvoidance: true,
-    collisionPadding: 50,
-    animate: true,
-    animationDuration: 0.8,
-  };
-
+export class ConstraintLayout extends BaseLayout {
   nodeMap = new Map();
   constraints = [];
   isRunning = false;
 
-  constructor(config = {}) {
-    this.settings = { ...this.settings, ...config };
+  static get defaultSettings() {
+    return {
+      iterations: 100,
+      convergenceThreshold: 0.1,
+      dampingFactor: 0.8,
+      maxForce: 1000,
+      enableCollisionAvoidance: true,
+      collisionPadding: 50,
+      animate: true,
+      animationDuration: 0.8,
+    };
   }
 
-  setContext(space, pluginManager) {
-    this.space = space;
-    this.pluginManager = pluginManager;
+  constructor(config = {}) {
+    super(config);
   }
 
   async init(nodes, edges, config = {}) {
-    if (config) this.updateConfig(config);
+    if (Object.keys(config).length > 0) this.updateConfig(config);
     if (!nodes || nodes.length === 0) return;
 
     this.nodeMap.clear();
     this.constraints = [];
 
+    // Initialize node wrappers
     nodes.forEach(node => {
       this.nodeMap.set(node.id, {
         node,
         currentPos: node.position.clone(),
         targetPos: node.position.clone(),
         force: new THREE.Vector3(),
-        mass: node.mass || 1.0,
-        radius: node.getBoundingSphereRadius?.() * 2 || 50,
-        isFixed: node.isPinned || false,
+        mass: node.mass ?? 1.0,
+        radius: (node.getBoundingSphereRadius?.() * 2) ?? 50,
+        isFixed: node.isPinned ?? false,
       });
     });
 
+    // Create default constraints from edges and groups
     this._createDefaultConstraints(nodes, edges);
+    
+    // Solve constraints
     await this._solveConstraints();
   }
 
   _createDefaultConstraints(nodes, edges) {
+    // Create distance constraints from edges
     edges.forEach(edge => {
       this.addDistanceConstraint(edge.source.id, edge.target.id, {
-        distance: edge.data?.constraintParams?.idealLength || 200,
-        strength: edge.data?.constraintParams?.stiffness || 0.5,
+        distance: edge.data?.constraintParams?.idealLength ?? 200,
+        strength: edge.data?.constraintParams?.stiffness ?? 0.5,
       });
     });
 
+    // Create cluster constraints from groups
     const groups = this._detectGroups(nodes);
     groups.forEach(group => {
       if (group.length > 1) {
@@ -87,8 +89,14 @@ export class ConstraintLayout {
     return groups;
   }
 
+  // Constraint creation methods
   addDistanceConstraint(nodeId1, nodeId2, options = {}) {
-    const { distance = 200, strength = 0.5, minDistance = 50, maxDistance = 500 } = options;
+    const {
+      distance = 200,
+      strength = 0.5,
+      minDistance = 50,
+      maxDistance = 500
+    } = options;
 
     this.constraints.push({
       type: 'distance',
@@ -151,6 +159,7 @@ export class ConstraintLayout {
     });
   }
 
+  // Constraint solving methods
   _solveDistanceConstraint(constraint) {
     const [nodeId1, nodeId2] = constraint.nodeIds;
     const wrapper1 = this.nodeMap.get(nodeId1);
@@ -225,19 +234,26 @@ export class ConstraintLayout {
   }
 
   _solveClusterConstraint(constraint) {
-    const wrappers = constraint.nodeIds.map(id => this.nodeMap.get(id)).filter(Boolean);
+    const wrappers = constraint.nodeIds
+      .map(id => this.nodeMap.get(id))
+      .filter(Boolean);
+      
     if (wrappers.length < 2) return;
 
+    // Calculate cluster center
     const center = new THREE.Vector3();
     wrappers.forEach(wrapper => center.add(wrapper.currentPos));
     center.divideScalar(wrappers.length);
 
+    // Apply forces to each node in cluster
     wrappers.forEach(wrapper => {
       if (wrapper.isFixed) return;
 
+      // Move toward center
       const toCenter = center.clone().sub(wrapper.currentPos);
       wrapper.force.add(toCenter.multiplyScalar(constraint.centerStrength));
 
+      // Separate from other nodes in cluster
       wrappers.forEach(other => {
         if (other === wrapper) return;
 
@@ -287,14 +303,18 @@ export class ConstraintLayout {
 
   async _solveConstraints() {
     for (let iteration = 0; iteration < this.settings.iterations; iteration++) {
+      // Reset forces
       this.nodeMap.forEach(wrapper => wrapper.force.set(0, 0, 0));
 
+      // Apply all constraints
       this.constraints.forEach(constraint => constraint.solve(constraint));
 
+      // Resolve collisions if enabled
       if (this.settings.enableCollisionAvoidance) {
         this._resolveCollisions();
       }
 
+      // Update positions based on forces
       let maxForce = 0;
       this.nodeMap.forEach(wrapper => {
         if (wrapper.isFixed) return;
@@ -308,11 +328,13 @@ export class ConstraintLayout {
         maxForce = Math.max(maxForce, force.length());
       });
 
+      // Check for convergence
       if (maxForce < this.settings.convergenceThreshold) {
         break;
       }
     }
 
+    // Apply final positions to nodes
     this.nodeMap.forEach(wrapper => {
       if (!wrapper.isFixed) {
         wrapper.node.position.copy(wrapper.currentPos);
@@ -343,6 +365,7 @@ export class ConstraintLayout {
     }
   }
 
+  // Node/edge management
   addNode(node) {
     if (this.nodeMap.has(node.id)) return;
 
@@ -351,21 +374,23 @@ export class ConstraintLayout {
       currentPos: node.position.clone(),
       targetPos: node.position.clone(),
       force: new THREE.Vector3(),
-      mass: node.mass || 1.0,
-      radius: node.getBoundingSphereRadius?.() * 2 || 50,
-      isFixed: node.isPinned || false,
+      mass: node.mass ?? 1.0,
+      radius: (node.getBoundingSphereRadius?.() * 2) ?? 50,
+      isFixed: node.isPinned ?? false,
     });
   }
 
   removeNode(node) {
     this.nodeMap.delete(node.id);
-    this.constraints = this.constraints.filter(constraint => !constraint.nodeIds.includes(node.id));
+    this.constraints = this.constraints.filter(
+      constraint => !constraint.nodeIds.includes(node.id)
+    );
   }
 
   addEdge(edge) {
     this.addDistanceConstraint(edge.source.id, edge.target.id, {
-      distance: edge.data?.constraintParams?.idealLength || 200,
-      strength: edge.data?.constraintParams?.stiffness || 0.5,
+      distance: edge.data?.constraintParams?.idealLength ?? 200,
+      strength: edge.data?.constraintParams?.stiffness ?? 0.5,
     });
   }
 
@@ -380,10 +405,7 @@ export class ConstraintLayout {
     );
   }
 
-  updateConfig(newConfig) {
-    this.settings = { ...this.settings, ...newConfig };
-  }
-
+  // Lifecycle methods
   run() {
     if (this.isRunning) return;
     this.isRunning = true;
@@ -400,10 +422,9 @@ export class ConstraintLayout {
   }
 
   dispose() {
-    this.space = null;
-    this.pluginManager = null;
     this.nodeMap.clear();
     this.constraints = [];
     this.isRunning = false;
+    super.dispose();
   }
 }

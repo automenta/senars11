@@ -1,37 +1,34 @@
 import * as THREE from 'three';
 import { gsap } from 'gsap';
+import { BaseLayout } from './BaseLayout.js';
 
-export class LayoutConnector {
-  space = null;
-  pluginManager = null;
-  settings = {
-    connectionTypes: ['direct', 'orthogonal', 'curved', 'bundled'],
-    defaultConnectionType: 'curved',
-    routingPadding: 30,
-    bundlingThreshold: 3,
-    bundlingRadius: 50,
-    animate: true,
-    animationDuration: 0.6,
-    avoidOverlaps: true,
-    maxDetourFactor: 2.0,
-    connectionStrength: 0.5,
-  };
-
+export class LayoutConnector extends BaseLayout {
   connections = new Map();
   layoutRegions = new Map();
   routingGraph = new Map();
   connectionPaths = new Map();
   isActive = false;
 
+  static get defaultSettings() {
+    return {
+      connectionTypes: ['direct', 'orthogonal', 'curved', 'bundled'],
+      defaultConnectionType: 'curved',
+      routingPadding: 30,
+      bundlingThreshold: 3,
+      bundlingRadius: 50,
+      animate: true,
+      animationDuration: 0.6,
+      avoidOverlaps: true,
+      maxDetourFactor: 2.0,
+      connectionStrength: 0.5,
+    };
+  }
+
   constructor(config = {}) {
-    this.settings = { ...this.settings, ...config };
+    super(config);
   }
 
-  setContext(space, pluginManager) {
-    this.space = space;
-    this.pluginManager = pluginManager;
-  }
-
+  // Region management
   registerLayoutRegion(regionId, bounds, layoutType, nodes = []) {
     this.layoutRegions.set(regionId, {
       id: regionId,
@@ -57,6 +54,7 @@ export class LayoutConnector {
     });
   }
 
+  // Connection management
   addConnection(sourceNodeId, targetNodeId, options = {}) {
     const connectionId = `${sourceNodeId}-${targetNodeId}`;
     const sourceRegion = this._findNodeRegion(sourceNodeId);
@@ -100,6 +98,7 @@ export class LayoutConnector {
     this.connectionPaths.delete(connectionId);
   }
 
+  // Region helpers
   _findNodeRegion(nodeId) {
     for (const [regionId, region] of this.layoutRegions) {
       if (region.nodes.has(nodeId)) {
@@ -137,11 +136,12 @@ export class LayoutConnector {
   _createObstaclesFromNodes(nodes, bounds) {
     return nodes.map(node => ({
       center: node.position.clone(),
-      radius: (node.getBoundingSphereRadius?.() || 25) + this.settings.routingPadding,
+      radius: (node.getBoundingSphereRadius?.() ?? 25) + this.settings.routingPadding,
       type: 'circle',
     }));
   }
 
+  // Routing graph management
   _updateRoutingGraph() {
     this.routingGraph.clear();
 
@@ -209,9 +209,9 @@ export class LayoutConnector {
     });
   }
 
+  // Obstacle detection
   _pathHasObstacle(start, end) {
     const direction = end.clone().sub(start);
-    const distance = direction.length();
     direction.normalize();
 
     // Check against all region obstacles
@@ -239,6 +239,7 @@ export class LayoutConnector {
     return distance < radius;
   }
 
+  // Connection routing
   _routeConnection(connection) {
     const sourceNode = this._getNodeById(connection.sourceNodeId);
     const targetNode = this._getNodeById(connection.targetNodeId);
@@ -390,6 +391,7 @@ export class LayoutConnector {
     ];
   }
 
+  // Pathfinding
   _findPath(start, end, connection) {
     // Simplified A* pathfinding using routing graph
     const startNodeId = this._findClosestRoutingNode(start, connection.sourceRegion);
@@ -505,6 +507,7 @@ export class LayoutConnector {
     return null;
   }
 
+  // Bezier curve generation
   _generateBezierPath(p0, p1, p2, p3, segments) {
     const path = [];
 
@@ -540,6 +543,7 @@ export class LayoutConnector {
     );
   }
 
+  // Animation
   _animateConnection(connection) {
     // Create visual element first
     this._createVisualConnection(connection);
@@ -609,11 +613,13 @@ export class LayoutConnector {
     }
   }
 
+  // Node helpers
   _getNodeById(nodeId) {
     const nodePlugin = this.pluginManager?.getPlugin('NodePlugin');
     return nodePlugin?.getNodes().get(nodeId);
   }
 
+  // Connection updates
   updateConnection(connectionId, options = {}) {
     const connection = this.connections.get(connectionId);
     if (!connection) return;
@@ -634,6 +640,7 @@ export class LayoutConnector {
     }
   }
 
+  // Getters
   getAllConnections() {
     return Array.from(this.connections.values());
   }
@@ -644,6 +651,7 @@ export class LayoutConnector {
     );
   }
 
+  // Activation
   activate() {
     this.isActive = true;
     this._updateAllConnections();
@@ -679,8 +687,8 @@ export class LayoutConnector {
     this.layoutRegions.clear();
     this.routingGraph.clear();
     this.connectionPaths.clear();
-    this.space = null;
-    this.pluginManager = null;
     this.isActive = false;
+    
+    super.dispose();
   }
 }

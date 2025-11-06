@@ -4,10 +4,10 @@ export class BaseLayout {
   nodes = [];
 
   constructor(config = {}) {
-    this.settings = { ...this.getDefaultSettings(), ...config };
+    this.settings = { ...this.constructor.defaultSettings, ...config };
   }
 
-  getDefaultSettings() {
+  static get defaultSettings() {
     return {
       animate: true,
     };
@@ -23,22 +23,19 @@ export class BaseLayout {
   }
 
   init(nodes, edges, config = {}) {
-    if (config) this.updateConfig(config);
+    if (Object.keys(config).length > 0) this.updateConfig(config);
     this.nodes = [...nodes];
   }
 
+  // Lifecycle methods to be implemented by subclasses
   run() {}
-
   stop() {}
-
   kick() {}
 
+  // Node/edge management methods to be implemented by subclasses
   addNode(_node) {}
-
   removeNode(_node) {}
-
   addEdge(_edge) {}
-
   removeEdge(_edge) {}
 
   dispose() {

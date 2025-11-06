@@ -10,8 +10,9 @@ export class LayoutManager {
   }
 
   registerLayout(name, layoutInstance) {
-    if (this.layouts.has(name))
+    if (this.layouts.has(name)) {
       console.warn(`LayoutManager: Layout "${name}" already registered. Overwriting.`);
+    }
     layoutInstance.setContext?.(this.space, this.pluginManager);
     this.layouts.set(name, layoutInstance);
   }
@@ -23,25 +24,35 @@ export class LayoutManager {
       return false;
     }
 
-    this.activeLayout?.stop?.();
-    this.activeLayout &&
-      this.space.emit('layout:stopped', { name: this.activeLayoutName, layout: this.activeLayout });
+    // Stop current layout if exists
+    if (this.activeLayout) {
+      this.activeLayout.stop?.();
+      this.space.emit('layout:stopped', {
+        name: this.activeLayoutName,
+        layout: this.activeLayout
+      });
+    }
 
+    // Set new active layout
     this.activeLayout = newLayout;
     this.activeLayoutName = name;
 
+    // Update configuration
     this.activeLayout.updateConfig?.(config);
 
+    // Get nodes and edges from plugins
     const nodePlugin = this.pluginManager.getPlugin('NodePlugin');
     const edgePlugin = this.pluginManager.getPlugin('EdgePlugin');
 
     const nodes = nodePlugin ? [...nodePlugin.getNodes().values()] : [];
     const edges = edgePlugin ? [...edgePlugin.getEdges().values()] : [];
 
+    // Initialize layout with animation
     if (this.activeLayout.init) {
       const oldPositions = new Map(nodes.map(node => [node.id, node.position.clone()]));
       await this.activeLayout.init(nodes, edges, config);
 
+      // Animate position transitions
       await Promise.all(
         nodes.map(node => {
           const currentPos = oldPositions.get(node.id);
@@ -64,6 +75,7 @@ export class LayoutManager {
       );
     }
 
+    // Run the layout
     if (this.activeLayout.run) {
       this.space.emit('layout:started', { name: this.activeLayoutName, layout: this.activeLayout });
       await this.activeLayout.run();
@@ -72,15 +84,20 @@ export class LayoutManager {
   }
 
   stopLayout() {
-    this.activeLayout?.stop?.();
-    this.activeLayout &&
-      this.space.emit('layout:stopped', { name: this.activeLayoutName, layout: this.activeLayout });
+    if (this.activeLayout) {
+      this.activeLayout.stop?.();
+      this.space.emit('layout:stopped', {
+        name: this.activeLayoutName,
+        layout: this.activeLayout
+      });
+    }
   }
 
   update() {
     this.activeLayout?.update?.();
   }
 
+  // Node/edge management
   addNodeToLayout(node) {
     this.activeLayout?.addNode?.(node);
   }
@@ -101,6 +118,7 @@ export class LayoutManager {
     this.activeLayout?.kick?.();
   }
 
+  // Getters
   getActiveLayout() {
     return this.activeLayout;
   }

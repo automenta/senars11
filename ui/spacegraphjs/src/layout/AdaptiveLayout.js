@@ -1,32 +1,8 @@
 import * as THREE from 'three';
 import { gsap } from 'gsap';
+import { BaseLayout } from './BaseLayout.js';
 
-export class AdaptiveLayout {
-  space = null;
-  pluginManager = null;
-  settings = {
-    adaptationTriggers: ['nodeCount', 'density', 'connections', 'size', 'time'],
-    morphDuration: 1.2,
-    morphEasing: 'power2.inOut',
-    enableAutoAdaptation: true,
-    adaptationDelay: 2000,
-    densityThresholds: {
-      sparse: 0.1,
-      normal: 0.4,
-      dense: 0.8,
-    },
-    sizeThresholds: {
-      small: 50,
-      medium: 200,
-      large: 500,
-    },
-    timeBasedAdaptation: {
-      enabled: false,
-      interval: 30000,
-      patterns: ['circular', 'grid', 'force', 'hierarchical'],
-    },
-  };
-
+export class AdaptiveLayout extends BaseLayout {
   currentLayout = null;
   currentLayoutName = '';
   availableLayouts = new Map();
@@ -36,8 +12,33 @@ export class AdaptiveLayout {
   isAdapting = false;
   adaptationTimer = null;
 
+  static get defaultSettings() {
+    return {
+      adaptationTriggers: ['nodeCount', 'density', 'connections', 'size', 'time'],
+      morphDuration: 1.2,
+      morphEasing: 'power2.inOut',
+      enableAutoAdaptation: true,
+      adaptationDelay: 2000,
+      densityThresholds: {
+        sparse: 0.1,
+        normal: 0.4,
+        dense: 0.8,
+      },
+      sizeThresholds: {
+        small: 50,
+        medium: 200,
+        large: 500,
+      },
+      timeBasedAdaptation: {
+        enabled: false,
+        interval: 30000,
+        patterns: ['circular', 'grid', 'force', 'hierarchical'],
+      },
+    };
+  }
+
   constructor(config = {}) {
-    this.settings = { ...this.settings, ...config };
+    super(config);
     this._initializeAdaptationRules();
   }
 
@@ -99,7 +100,7 @@ export class AdaptiveLayout {
   }
 
   async init(nodes, edges, config = {}) {
-    if (config) this.updateConfig(config);
+    if (Object.keys(config).length > 0) this.updateConfig(config);
 
     const metrics = this._calculateGraphMetrics(nodes, edges);
     const bestLayout = this._selectBestLayout(metrics);
@@ -194,12 +195,8 @@ export class AdaptiveLayout {
 
     // Count nodes with only one connection (leaves)
     let leaves = 0;
-    let roots = 0;
-    let maxDepth = 0;
-
-    adjacencyList.forEach((neighbors, nodeId) => {
+    adjacencyList.forEach(neighbors => {
       if (neighbors.length === 1) leaves++;
-      if (neighbors.length === 0) roots++;
     });
 
     // Simple hierarchy score based on leaf ratio and structure
@@ -223,7 +220,7 @@ export class AdaptiveLayout {
     let totalClustering = 0;
     let validNodes = 0;
 
-    adjacencyList.forEach((neighbors, nodeId) => {
+    adjacencyList.forEach(neighbors => {
       if (neighbors.size < 2) return;
 
       const neighborsArray = Array.from(neighbors);
@@ -252,6 +249,7 @@ export class AdaptiveLayout {
   }
 
   _selectBestLayout(metrics) {
+    // Find applicable rules sorted by priority
     const applicableRules = this.adaptationRules
       .filter(rule => rule.condition(metrics))
       .sort((a, b) => a.priority - b.priority);
@@ -264,7 +262,7 @@ export class AdaptiveLayout {
       return selectedRule.targetLayout;
     }
 
-    // Default fallback
+    // Default fallback logic
     if (metrics.nodeCount < 20) return 'circular';
     if (metrics.hierarchyScore > 0.5) return 'hierarchical';
     if (metrics.density > 0.5) return 'force';
@@ -411,6 +409,7 @@ export class AdaptiveLayout {
     }
   }
 
+  // Rule management
   addAdaptationRule(rule) {
     this.adaptationRules.push({
       name: rule.name || 'CustomRule',
@@ -428,6 +427,7 @@ export class AdaptiveLayout {
     this.adaptationRules = this.adaptationRules.filter(rule => rule.name !== ruleName);
   }
 
+  // Manual adaptation
   forceAdaptation(targetLayout, reason = 'manual') {
     if (!this.availableLayouts.has(targetLayout)) {
       console.warn(`AdaptiveLayout: Target layout ${targetLayout} not available`);
@@ -462,6 +462,7 @@ export class AdaptiveLayout {
     }
   }
 
+  // Getters
   getLayoutHistory() {
     return [...this.layoutHistory];
   }
@@ -548,8 +549,8 @@ export class AdaptiveLayout {
 
     this.currentLayout = null;
     this.currentLayoutName = '';
-    this.space = null;
-    this.pluginManager = null;
     this.isAdapting = false;
+    
+    super.dispose();
   }
 }

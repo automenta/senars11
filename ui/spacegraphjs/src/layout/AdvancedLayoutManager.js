@@ -8,11 +8,13 @@ export class AdvancedLayoutManager extends LayoutManager {
   constructor(space, pluginManager) {
     super(space, pluginManager);
 
+    // Initialize advanced layout systems
     this.constraintSystem = new ConstraintLayout();
     this.nestedSystem = new NestedLayout();
     this.connector = new LayoutConnector();
     this.adaptiveSystem = new AdaptiveLayout();
 
+    // Define layout modes
     this.layoutModes = {
       STANDARD: 'standard',
       CONSTRAINT: 'constraint',
@@ -22,6 +24,8 @@ export class AdvancedLayoutManager extends LayoutManager {
     };
 
     this.currentMode = this.layoutModes.STANDARD;
+    
+    // Configuration settings
     this.settings = {
       enableConnections: true,
       enableConstraints: false,
@@ -44,18 +48,14 @@ export class AdvancedLayoutManager extends LayoutManager {
   }
 
   _registerAdvancedLayouts() {
-    // Register constraint-based layout
+    // Register advanced layouts
     this.registerLayout('constraint', this.constraintSystem);
-
-    // Register nested layout
     this.registerLayout('nested', this.nestedSystem);
-
-    // Register adaptive layout
     this.registerLayout('adaptive', this.adaptiveSystem);
 
     // Register standard layouts with the adaptive system
     this.layouts.forEach((layout, name) => {
-      if (name !== 'constraint' && name !== 'nested' && name !== 'adaptive') {
+      if (!['constraint', 'nested', 'adaptive'].includes(name)) {
         this.adaptiveSystem.registerLayout(name, layout);
       }
     });
@@ -80,8 +80,10 @@ export class AdvancedLayoutManager extends LayoutManager {
   }
 
   _determineLayoutMode(name, config) {
+    // Explicit mode override
     if (config.mode) return config.mode;
 
+    // Auto mode selection
     if (this.settings.autoModeSelection) {
       return this._autoSelectMode(name, config);
     }
@@ -121,6 +123,7 @@ export class AdvancedLayoutManager extends LayoutManager {
     const isComplex =
       nodes.length > 50 || edges.length > 100 || this._calculateGraphComplexity(nodes, edges) > 0.7;
 
+    // Return appropriate mode based on detected features
     if (hasContainers && hasConstraints && isComplex) {
       return this.layoutModes.HYBRID;
     }
@@ -141,14 +144,13 @@ export class AdvancedLayoutManager extends LayoutManager {
     return (density + avgDegree / 10 + sizeComplexity) / 3;
   }
 
+  // Layout application methods
   async _applyStandardLayout(name, config) {
     return super.applyLayout(name, config);
   }
 
   async _applyConstraintLayout(name, config) {
-    const nodePlugin = this.pluginManager.getPlugin('NodePlugin');
-    const edgePlugin = this.pluginManager.getPlugin('EdgePlugin');
-
+    const { nodePlugin, edgePlugin } = this._getPlugins();
     if (!nodePlugin || !edgePlugin) return false;
 
     const nodes = Array.from(nodePlugin.getNodes().values());
@@ -176,9 +178,7 @@ export class AdvancedLayoutManager extends LayoutManager {
   }
 
   async _applyNestedLayout(name, config) {
-    const nodePlugin = this.pluginManager.getPlugin('NodePlugin');
-    const edgePlugin = this.pluginManager.getPlugin('EdgePlugin');
-
+    const { nodePlugin, edgePlugin } = this._getPlugins();
     if (!nodePlugin || !edgePlugin) return false;
 
     const nodes = Array.from(nodePlugin.getNodes().values());
@@ -200,9 +200,7 @@ export class AdvancedLayoutManager extends LayoutManager {
   }
 
   async _applyAdaptiveLayout(name, config) {
-    const nodePlugin = this.pluginManager.getPlugin('NodePlugin');
-    const edgePlugin = this.pluginManager.getPlugin('EdgePlugin');
-
+    const { nodePlugin, edgePlugin } = this._getPlugins();
     if (!nodePlugin || !edgePlugin) return false;
 
     const nodes = Array.from(nodePlugin.getNodes().values());
@@ -224,9 +222,7 @@ export class AdvancedLayoutManager extends LayoutManager {
   }
 
   async _applyHybridLayout(name, config) {
-    const nodePlugin = this.pluginManager.getPlugin('NodePlugin');
-    const edgePlugin = this.pluginManager.getPlugin('EdgePlugin');
-
+    const { nodePlugin, edgePlugin } = this._getPlugins();
     if (!nodePlugin || !edgePlugin) return false;
 
     const nodes = Array.from(nodePlugin.getNodes().values());
@@ -312,6 +308,13 @@ export class AdvancedLayoutManager extends LayoutManager {
         // Handled by main dispose method
       },
     };
+  }
+
+  // Plugin helpers
+  _getPlugins() {
+    const nodePlugin = this.pluginManager.getPlugin('NodePlugin');
+    const edgePlugin = this.pluginManager.getPlugin('EdgePlugin');
+    return { nodePlugin, edgePlugin };
   }
 
   // Layout Connector Integration
