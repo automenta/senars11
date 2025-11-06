@@ -33,17 +33,17 @@ global.WebSocket = MockWebSocket;
 
 describe('WebSocketClient', () => {
   it('should initialize with correct url and session id', () => {
-    const url = 'ws://localhost:8080/nar';
+    const url = 'ws://localhost:8080/ws';
     const sessionId = 'test-session';
     
     const wsClient = new WebSocketClient(url, sessionId);
     
-    expect(wsClient.url).toBe('ws://localhost:8080/nar');
+    expect(wsClient.url).toBe('ws://localhost:8080/ws?session=test-session');
     expect(wsClient.sessionId).toBe('test-session');
   });
   
   it('should have correct default properties', () => {
-    const wsClient = new WebSocketClient('ws://localhost:8080/nar', 'test-session');
+    const wsClient = new WebSocketClient('ws://localhost:8080/ws', 'test-session');
     
     expect(wsClient.reconnectAttempts).toBe(0);
     expect(wsClient.maxReconnectAttempts).toBe(5);
@@ -51,7 +51,7 @@ describe('WebSocketClient', () => {
   });
   
   it('should format messages with session id', () => {
-    const wsClient = new WebSocketClient('ws://localhost:8080/nar', 'test-session');
+    const wsClient = new WebSocketClient('ws://localhost:8080/ws', 'test-session');
     const testData = { type: 'test', payload: { data: 'value' } };
     
     // Test the logic for adding sessionId to messages
@@ -63,9 +63,9 @@ describe('WebSocketClient', () => {
   });
   
   it('should handle reconnection with exponential backoff', () => {
-    const wsClient = new WebSocketClient('ws://localhost:8080/nar', 'test-session');
+    const wsClient = new WebSocketClient('ws://localhost:8080/ws', 'test-session');
     
-    // When reconnectAttempts is 0, the calculation is 1000 * 2^(-1) = 500ms
+    wsClient.reconnectAttempts = 0;
     expect(wsClient.calculateReconnectDelay()).toBe(500); // 1st retry attempt (0 actual attempts, but calculation uses -1)
     
     wsClient.reconnectAttempts = 1;
@@ -79,7 +79,7 @@ describe('WebSocketClient', () => {
   });
   
   it('should check connection status correctly', () => {
-    const wsClient = new WebSocketClient('ws://localhost:8080/nar', 'test-session');
+    const wsClient = new WebSocketClient('ws://localhost:8080/ws', 'test-session');
     
     // Mock WebSocket with OPEN state
     wsClient.websocket = { readyState: 1 }; // WebSocket.OPEN is 1
@@ -92,10 +92,10 @@ describe('WebSocketClient', () => {
   });
   
   it('should send message correctly', () => {
-    const wsClient = new WebSocketClient('ws://localhost:8080/nar', 'test-session');
+    const wsClient = new WebSocketClient('ws://localhost:8080/ws', 'test-session');
     
     // Mock the websocket connection
-    wsClient.websocket = new MockWebSocket('ws://localhost:8080/nar?session=test-session');
+    wsClient.websocket = new MockWebSocket('ws://localhost:8080/ws?session=test-session');
     
     const testData = { type: 'test', payload: { data: 'value' } };
     wsClient.send(testData);

@@ -2,8 +2,9 @@
  * Main entry point for SeNARS REPL
  */
 
-// This file is intentionally left minimal since most initialization
-// happens in the session-manager.js and repl-core.js files
+// Import modules to initialize the REPL
+import SessionManager from './session-manager.js';
+import './repl-core.js'; // Import repl-core for side effects
 
 console.log('SeNARS REPL initialized');
 

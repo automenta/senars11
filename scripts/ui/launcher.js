@@ -30,12 +30,14 @@ Options:
   --host <host>     Specify host (default: localhost)
   --graph-ui        Launch with Graph UI layout
   --layout <name>   Specify layout (default, self-analysis, graph)
+  --repl            Launch with REPL UI (serves ui/repl directory)
 
 Examples:
   node scripts/ui/launcher.js --dev
   node scripts/ui/launcher.js --prod --port 3000
   node scripts/ui/launcher.js --dev --port 8081 --ws-port 8082
   node scripts/ui/launcher.js --graph-ui
+  node scripts/ui/launcher.js --repl
 `;
 
 // Parse arguments to support flexible server configuration
@@ -110,6 +112,14 @@ function parseArgs(args) {
                 }
             };
             i++; // Skip next argument since it's the value
+        } else if (args[i] === '--repl') {
+            config = {
+                ...config,
+                ui: {
+                    ...config.ui,
+                    mode: 'repl'
+                }
+            };
         }
     }
 
@@ -174,8 +184,14 @@ async function startWebSocketServer(config = DEFAULT_CONFIG) {
 function startViteDevServer(config = DEFAULT_CONFIG) {
     console.log(`Starting Vite dev server on port ${config.ui.port}...`);
 
+    // Determine command based on whether we're in repl mode
+    const isReplMode = config.ui.mode === 'repl';
+    const viteArgs = isReplMode 
+        ? ['vite', 'dev', '--port', config.ui.port.toString(), '--config', 'vite.config.repl.js']
+        : ['vite', 'dev', '--port', config.ui.port.toString()];
+
     // Change to ui directory and run vite dev server
-    const viteProcess = spawn('npx', ['vite', 'dev', '--port', config.ui.port.toString()], {
+    const viteProcess = spawn('npx', viteArgs, {
         cwd: join(__dirname, '../../ui'),
         stdio: 'inherit', // This allows the Vite server to control the terminal properly
         env: {
@@ -185,7 +201,8 @@ function startViteDevServer(config = DEFAULT_CONFIG) {
             VITE_WS_PORT: config.webSocket.port.toString(),
             VITE_WS_PATH: DEFAULT_CONFIG.webSocket.path || undefined,
             PORT: config.ui.port.toString(), // Also set PORT for compatibility
-            VITE_DEFAULT_LAYOUT: config.ui.layout || 'default'
+            VITE_DEFAULT_LAYOUT: config.ui.layout || 'default',
+            VITE_UI_MODE: config.ui.mode || 'default'
         }
     });
 

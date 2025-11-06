@@ -84,7 +84,7 @@ describe('REPLCore', () => {
     replCore.inputElement = inputEl;
     
     // Mock the websocket send method for this test
-    replCore.websocket = new MockWebSocket('ws://localhost:8080/nar');
+    replCore.websocket = new MockWebSocket('ws://localhost:8080/ws');
     
     // Mock session manager methods
     replCore.sessionManager = sessionManager;
@@ -114,7 +114,7 @@ describe('REPLCore', () => {
     replCore.inputElement = inputEl;
     
     // Mock the websocket for command testing
-    replCore.websocket = new MockWebSocket('ws://localhost:8080/nar');
+    replCore.websocket = new MockWebSocket('ws://localhost:8080/ws');
     
     // Test /start command
     inputEl.value = '/start';

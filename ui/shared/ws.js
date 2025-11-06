@@ -9,7 +9,13 @@ export default class WebSocketClient {
    * @param {string} sessionId - Session identifier
    */
   constructor(url, sessionId) {
-    this.url = url;
+    // If the URL already contains query parameters, just use it as-is
+    // Otherwise, append the session parameter
+    if (url.includes('?')) {
+      this.url = url;
+    } else {
+      this.url = `${url}?session=${sessionId}`;
+    }
     this.sessionId = sessionId;
     this.websocket = null;
     this.reconnectAttempts = 0;
@@ -29,10 +35,8 @@ export default class WebSocketClient {
    * Establish WebSocket connection with reconnection logic
    */
   connect() {
-    // Create WebSocket with session-specific URL
-    this.websocket = new WebSocket(`${this.url}?session=${this.sessionId}`);
+    this.websocket = new WebSocket(this.url);
     
-    // Set up event handlers
     this.websocket.onopen = (event) => {
       this.reconnectAttempts = 0;
       this.onopen?.(event);
@@ -40,20 +44,11 @@ export default class WebSocketClient {
     
     this.websocket.onclose = (event) => {
       this.onclose?.(event);
-      // Attempt to reconnect if not closed intentionally
-      const shouldReconnect = this.shouldReconnect(event);
-      if (shouldReconnect) {
-        this.reconnect();
-      }
+      if (this.shouldReconnect(event)) this.reconnect();
     };
     
-    this.websocket.onerror = (error) => {
-      this.onerror?.(error);
-    };
-    
-    this.websocket.onmessage = (event) => {
-      this.onmessage?.(event);
-    };
+    this.websocket.onerror = (error) => this.onerror?.(error);
+    this.websocket.onmessage = (event) => this.onmessage?.(event);
   }
   
   /**
@@ -62,7 +57,6 @@ export default class WebSocketClient {
    * @returns {boolean} Whether to reconnect
    */
   shouldReconnect(event) {
-    // Don't reconnect if closed cleanly or if max attempts reached
     return !event.wasClean && this.reconnectAttempts < this.maxReconnectAttempts;
   }
   
@@ -71,11 +65,7 @@ export default class WebSocketClient {
    */
   reconnect() {
     this.reconnectAttempts++;
-    const delay = this.calculateReconnectDelay();
-    
-    setTimeout(() => {
-      this.connect();
-    }, delay);
+    setTimeout(() => this.connect(), this.calculateReconnectDelay());
   }
   
   /**
@@ -96,7 +86,6 @@ export default class WebSocketClient {
       return;
     }
     
-    // Add sessionId to the message if not already present
     const message = this.ensureMessageHasSessionId(data);
     this.websocket.send(JSON.stringify(message));
   }
