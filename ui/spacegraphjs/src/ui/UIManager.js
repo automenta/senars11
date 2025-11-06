@@ -165,7 +165,18 @@ export class UIManager {
   _transitionToState(newState, data = {}) {
     if (this.currentState === newState) return;
 
-    // Log state transitions for debugging
+    // Exit current state
+    this._exitCurrentState();
+
+    this.currentState = newState;
+
+    // Enter new state
+    this._enterNewState(newState, data);
+    
+    this.space.emit('interaction:stateChanged', { newState, oldState: this.currentState, data });
+  }
+
+  _exitCurrentState() {
     switch (this.currentState) {
       case InteractionState.DRAGGING_NODE:
         this.draggedNode?.endDrag();
@@ -186,92 +197,110 @@ export class UIManager {
         $$('.node-common.linking-target').forEach(el => el.classList.remove('linking-target'));
         break;
     }
+  }
 
-    this.currentState = newState;
-
+  _enterNewState(newState, data) {
     switch (newState) {
-      case InteractionState.DRAGGING_NODE: {
-        this.draggedNode = data.node;
-        this.draggedNodeInitialZ = this.draggedNode.position.z;
-        this.draggedNode.startDrag();
-
-        const worldPos = this.space.screenToWorld(
-          this.pointerState.clientX,
-          this.pointerState.clientY,
-          this.draggedNodeInitialZ
-        );
-        this.dragOffset = worldPos ? worldPos.sub(this.draggedNode.position) : new THREE.Vector3();
-        this.container.style.cursor = 'grabbing';
+      case InteractionState.DRAGGING_NODE:
+        this._enterDraggingNodeState(data.node);
         break;
-      }
-
-      case InteractionState.RESIZING_NODE: {
-        this.resizedNode = data.node;
-        this.resizedNode.startResize();
-        this.resizeStartNodeSize = { ...this.resizedNode.size };
-        this.resizeStartPointerPos = { x: this.pointerState.clientX, y: this.pointerState.clientY };
-        this.container.style.cursor = 'nwse-resize';
-
-        const node = this.resizedNode;
-        const cameraPlugin = this.space.plugins.getPlugin('CameraPlugin');
-        const cam = cameraPlugin?.getCameraInstance();
-
-        if (node && cam && node.cssObject) {
-          const localOrigin = new THREE.Vector3(0, 0, 0);
-          const localOffsetX = new THREE.Vector3(1, 0, 0);
-          const localOffsetY = new THREE.Vector3(0, 1, 0);
-
-          const worldOrigin = localOrigin.clone().applyMatrix4(node.cssObject.matrixWorld);
-          const worldOffsetX = localOffsetX.clone().applyMatrix4(node.cssObject.matrixWorld);
-          const worldOffsetY = localOffsetY.clone().applyMatrix4(node.cssObject.matrixWorld);
-
-          const screenOriginNDC = worldOrigin.clone().project(cam);
-          const screenOffsetXNDC = worldOffsetX.clone().project(cam);
-          const screenOffsetYNDC = worldOffsetY.clone().project(cam);
-
-          const halfW = window.innerWidth / 2;
-          const halfH = window.innerHeight / 2;
-
-          const screenOriginPx = {
-            x: screenOriginNDC.x * halfW + halfW,
-            y: -screenOriginNDC.y * halfH + halfH,
-          };
-          const screenOffsetXPx = {
-            x: screenOffsetXNDC.x * halfW + halfW,
-            y: -screenOffsetXNDC.y * halfH + halfH,
-          };
-          const screenOffsetYPx = {
-            x: screenOffsetYNDC.x * halfW + halfH,
-            y: -screenOffsetYNDC.y * halfH + halfH,
-          };
-
-          this.resizeNodeScreenScaleX = Math.abs(screenOffsetXPx.x - screenOriginPx.x);
-          this.resizeNodeScreenScaleY = Math.abs(screenOffsetYPx.y - screenOriginPx.y);
-
-          if (this.resizeNodeScreenScaleX < 0.001) this.resizeNodeScreenScaleX = 0.001;
-          if (this.resizeNodeScreenScaleY < 0.001) this.resizeNodeScreenScaleY = 0.001;
-        } else {
-          this.resizeNodeScreenScaleX = 1;
-          this.resizeNodeScreenScaleY = 1;
-        }
+      case InteractionState.RESIZING_NODE:
+        this._enterResizingNodeState(data.node);
         break;
-      }
-
       case InteractionState.PANNING:
-        this.space.plugins
-          .getPlugin('CameraPlugin')
-          ?.startPan(this.pointerState.clientX, this.pointerState.clientY);
-        this.container.style.cursor = 'grabbing';
+        this._enterPanningState();
         break;
       case InteractionState.LINKING_NODE:
-        this.container.style.cursor = 'crosshair';
-        this._createTempLinkLine(data.sourceNode);
+        this._enterLinkingNodeState(data.sourceNode);
         break;
       case InteractionState.IDLE:
-        this.container.style.cursor = 'grab';
+        this._enterIdleState();
         break;
     }
-    this.space.emit('interaction:stateChanged', { newState, oldState: this.currentState, data });
+  }
+
+  _enterDraggingNodeState(node) {
+    this.draggedNode = node;
+    this.draggedNodeInitialZ = this.draggedNode.position.z;
+    this.draggedNode.startDrag();
+
+    const worldPos = this.space.screenToWorld(
+      this.pointerState.clientX,
+      this.pointerState.clientY,
+      this.draggedNodeInitialZ
+    );
+    this.dragOffset = worldPos ? worldPos.sub(this.draggedNode.position) : new THREE.Vector3();
+    this.container.style.cursor = 'grabbing';
+  }
+
+  _enterResizingNodeState(node) {
+    this.resizedNode = node;
+    this.resizedNode.startResize();
+    this.resizeStartNodeSize = { ...this.resizedNode.size };
+    this.resizeStartPointerPos = { x: this.pointerState.clientX, y: this.pointerState.clientY };
+    this.container.style.cursor = 'nwse-resize';
+
+    const cameraPlugin = this.space.plugins.getPlugin('CameraPlugin');
+    const cam = cameraPlugin?.getCameraInstance();
+
+    if (node && cam && node.cssObject) {
+      this._calculateResizeScreenScales(node, cam);
+    } else {
+      this.resizeNodeScreenScaleX = 1;
+      this.resizeNodeScreenScaleY = 1;
+    }
+  }
+
+  _calculateResizeScreenScales(node, camera) {
+    const localOrigin = new THREE.Vector3(0, 0, 0);
+    const localOffsetX = new THREE.Vector3(1, 0, 0);
+    const localOffsetY = new THREE.Vector3(0, 1, 0);
+
+    const worldOrigin = localOrigin.clone().applyMatrix4(node.cssObject.matrixWorld);
+    const worldOffsetX = localOffsetX.clone().applyMatrix4(node.cssObject.matrixWorld);
+    const worldOffsetY = localOffsetY.clone().applyMatrix4(node.cssObject.matrixWorld);
+
+    const screenOriginNDC = worldOrigin.clone().project(camera);
+    const screenOffsetXNDC = worldOffsetX.clone().project(camera);
+    const screenOffsetYNDC = worldOffsetY.clone().project(camera);
+
+    const halfW = window.innerWidth / 2;
+    const halfH = window.innerHeight / 2;
+
+    const screenOriginPx = {
+      x: screenOriginNDC.x * halfW + halfW,
+      y: -screenOriginNDC.y * halfH + halfH,
+    };
+    const screenOffsetXPx = {
+      x: screenOffsetXNDC.x * halfW + halfW,
+      y: -screenOffsetXNDC.y * halfH + halfH,
+    };
+    const screenOffsetYPx = {
+      x: screenOffsetYNDC.x * halfW + halfH,
+      y: -screenOffsetYNDC.y * halfH + halfH,
+    };
+
+    this.resizeNodeScreenScaleX = Math.abs(screenOffsetXPx.x - screenOriginPx.x);
+    this.resizeNodeScreenScaleY = Math.abs(screenOffsetYPx.y - screenOriginPx.y);
+
+    if (this.resizeNodeScreenScaleX < 0.001) this.resizeNodeScreenScaleX = 0.001;
+    if (this.resizeNodeScreenScaleY < 0.001) this.resizeNodeScreenScaleY = 0.001;
+  }
+
+  _enterPanningState() {
+    this.space.plugins
+      .getPlugin('CameraPlugin')
+      ?.startPan(this.pointerState.clientX, this.pointerState.clientY);
+    this.container.style.cursor = 'grabbing';
+  }
+
+  _enterLinkingNodeState(sourceNode) {
+    this.container.style.cursor = 'crosshair';
+    this._createTempLinkLine(sourceNode);
+  }
+
+  _enterIdleState() {
+    this.container.style.cursor = 'grab';
   }
 
   _onPointerDown = e => {
@@ -359,95 +388,104 @@ export class UIManager {
         this._handleHover(e);
         break;
 
-      case InteractionState.DRAGGING_NODE: {
+      case InteractionState.DRAGGING_NODE:
         e.preventDefault();
-        if (this.draggedNode) {
-          let targetZ = this.draggedNodeInitialZ;
-          if (e.altKey) {
-            targetZ -= dy * 1.0;
-            this.draggedNodeInitialZ = targetZ;
-          }
-
-          const worldPos = this.space.screenToWorld(
-            this.pointerState.clientX,
-            this.pointerState.clientY,
-            targetZ
-          );
-          if (worldPos) {
-            const primaryNodeNewCalculatedPos = worldPos.clone().sub(this.dragOffset);
-            primaryNodeNewCalculatedPos.z = targetZ;
-
-            const dragDelta = primaryNodeNewCalculatedPos.clone().sub(this.draggedNode.position);
-            const selectedNodes = this._uiPluginCallbacks.getSelectedNodes();
-
-            if (selectedNodes?.size > 0 && selectedNodes.has(this.draggedNode)) {
-              selectedNodes.forEach(sNode => {
-                if (sNode === this.draggedNode) {
-                  sNode.drag(primaryNodeNewCalculatedPos);
-                } else {
-                  const sNodeTargetPos = sNode.position.clone().add(dragDelta);
-                  // sNodeTargetPos.z = sNode.position.z; // Allow Z-depth change for all selected nodes
-                  sNode.drag(sNodeTargetPos);
-                }
-              });
-            } else {
-              this.draggedNode.drag(primaryNodeNewCalculatedPos);
-            }
-            this.space.emit('graph:node:dragged', {
-              node: this.draggedNode,
-              position: primaryNodeNewCalculatedPos,
-            });
-          }
-        }
+        this._handleNodeDragging(e, dy);
         break;
-      }
 
-      case InteractionState.RESIZING_NODE: {
+      case InteractionState.RESIZING_NODE:
         e.preventDefault();
-        if (this.resizedNode) {
-          const totalDx_screen = this.pointerState.clientX - this.resizeStartPointerPos.x;
-          const totalDy_screen = this.pointerState.clientY - this.resizeStartPointerPos.y;
-
-          const deltaWidth_local = totalDx_screen / (this.resizeNodeScreenScaleX || 1);
-          const deltaHeight_local = totalDy_screen / (this.resizeNodeScreenScaleY || 1);
-
-          const newWidth = this.resizeStartNodeSize.width + deltaWidth_local;
-          const newHeight = this.resizeStartNodeSize.height + deltaHeight_local;
-
-          this.resizedNode.resize(
-            Math.max(HtmlNode.MIN_SIZE.width, newWidth),
-            Math.max(HtmlNode.MIN_SIZE.height, newHeight)
-          );
-          this.space.emit('graph:node:resized', {
-            node: this.resizedNode,
-            size: { ...this.resizedNode.size },
-          });
-        }
+        this._handleNodeResizing();
         break;
-      }
 
       case InteractionState.PANNING:
         e.preventDefault();
         this.space.plugins.getPlugin('CameraPlugin')?.pan(dx, dy);
         break;
 
-      case InteractionState.LINKING_NODE: {
+      case InteractionState.LINKING_NODE:
         e.preventDefault();
-        this._updateTempLinkLine(this.pointerState.clientX, this.pointerState.clientY);
-        const targetInfo = this._getTargetInfo(e);
-        $$('.node-common.linking-target').forEach(el => el.classList.remove('linking-target'));
-        const targetElement = targetInfo.node?.htmlElement ?? targetInfo.node?.labelObject?.element;
-        if (
-          targetInfo.node &&
-          targetInfo.node !== this._uiPluginCallbacks.getLinkSourceNode() &&
-          targetElement
-        ) {
-          targetElement.classList.add('linking-target');
-        }
+        this._handleLinking(e);
         break;
-      }
     }
   };
+
+  _handleNodeDragging(e, dy) {
+    if (!this.draggedNode) return;
+
+    let targetZ = this.draggedNodeInitialZ;
+    if (e.altKey) {
+      targetZ -= dy * 1.0;
+      this.draggedNodeInitialZ = targetZ;
+    }
+
+    const worldPos = this.space.screenToWorld(
+      this.pointerState.clientX,
+      this.pointerState.clientY,
+      targetZ
+    );
+    if (worldPos) {
+      const primaryNodeNewCalculatedPos = worldPos.clone().sub(this.dragOffset);
+      primaryNodeNewCalculatedPos.z = targetZ;
+
+      const dragDelta = primaryNodeNewCalculatedPos.clone().sub(this.draggedNode.position);
+      const selectedNodes = this._uiPluginCallbacks.getSelectedNodes();
+
+      if (selectedNodes?.size > 0 && selectedNodes.has(this.draggedNode)) {
+        selectedNodes.forEach(sNode => {
+          if (sNode === this.draggedNode) {
+            sNode.drag(primaryNodeNewCalculatedPos);
+          } else {
+            const sNodeTargetPos = sNode.position.clone().add(dragDelta);
+            // sNodeTargetPos.z = sNode.position.z; // Allow Z-depth change for all selected nodes
+            sNode.drag(sNodeTargetPos);
+          }
+        });
+      } else {
+        this.draggedNode.drag(primaryNodeNewCalculatedPos);
+      }
+      this.space.emit('graph:node:dragged', {
+        node: this.draggedNode,
+        position: primaryNodeNewCalculatedPos,
+      });
+    }
+  }
+
+  _handleNodeResizing() {
+    if (!this.resizedNode) return;
+
+    const totalDx_screen = this.pointerState.clientX - this.resizeStartPointerPos.x;
+    const totalDy_screen = this.pointerState.clientY - this.resizeStartPointerPos.y;
+
+    const deltaWidth_local = totalDx_screen / (this.resizeNodeScreenScaleX || 1);
+    const deltaHeight_local = totalDy_screen / (this.resizeNodeScreenScaleY || 1);
+
+    const newWidth = this.resizeStartNodeSize.width + deltaWidth_local;
+    const newHeight = this.resizeStartNodeSize.height + deltaHeight_local;
+
+    this.resizedNode.resize(
+      Math.max(HtmlNode.MIN_SIZE.width, newWidth),
+      Math.max(HtmlNode.MIN_SIZE.height, newHeight)
+    );
+    this.space.emit('graph:node:resized', {
+      node: this.resizedNode,
+      size: { ...this.resizedNode.size },
+    });
+  }
+
+  _handleLinking(e) {
+    this._updateTempLinkLine(this.pointerState.clientX, this.pointerState.clientY);
+    const targetInfo = this._getTargetInfo(e);
+    $$('.node-common.linking-target').forEach(el => el.classList.remove('linking-target'));
+    const targetElement = targetInfo.node?.htmlElement ?? targetInfo.node?.labelObject?.element;
+    if (
+      targetInfo.node &&
+      targetInfo.node !== this._uiPluginCallbacks.getLinkSourceNode() &&
+      targetElement
+    ) {
+      targetElement.classList.add('linking-target');
+    }
+  }
 
   _onPointerUp = e => {
     if (e.pointerId !== this.activePointerId) return;
@@ -566,119 +604,28 @@ export class UIManager {
     switch (e.key) {
       case 'Delete':
       case 'Backspace':
-        if (primarySelectedNode) {
-          const message =
-            selectedNodes.size > 1
-              ? `Delete ${selectedNodes.size} selected nodes?`
-              : `Delete node "${primarySelectedNode.id.substring(0, 10)}..."?`;
-          this.space.emit('ui:request:confirm', {
-            message: message,
-            onConfirm: () =>
-              selectedNodes.forEach(node => this.space.emit('ui:request:removeNode', node.id)),
-          });
-          handled = true;
-        } else if (primarySelectedEdge) {
-          const message =
-            selectedEdges.size > 1
-              ? `Delete ${selectedEdges.size} selected edges?`
-              : `Delete edge "${primarySelectedEdge.id.substring(0, 10)}..."?`;
-          this.space.emit('ui:request:confirm', {
-            message: message,
-            onConfirm: () =>
-              selectedEdges.forEach(edge => this.space.emit('ui:request:removeEdge', edge.id)),
-          });
-          handled = true;
-        }
+        handled = this._handleDeleteKey(primarySelectedNode, selectedNodes, primarySelectedEdge, selectedEdges);
         break;
 
       case 'Escape':
-        if (this._uiPluginCallbacks.getIsLinking()) {
-          this._uiPluginCallbacks.cancelLinking();
-          handled = true;
-        } else if (this.hudManager.isLayoutSettingsDialogVisible()) {
-          this.hudManager.layoutSettingsDialog.hide();
-          handled = true;
-        } else if (this.hudManager.isKeyboardShortcutsDialogVisible()) {
-          this.hudManager.keyboardShortcutsDialog.hide();
-          handled = true;
-        } else if (this.contextMenu.contextMenuElement.style.display === 'block') {
-          this.contextMenu.hide();
-          handled = true;
-        } else if (this.confirmDialog.confirmDialogElement.style.display === 'block') {
-          this.confirmDialog.hide();
-          handled = true;
-        } else if (this.edgeMenu.edgeMenuObject) {
-          this._uiPluginCallbacks.setSelectedEdge(null, false);
-          handled = true;
-        } else if (selectedNodes.size > 0 || selectedEdges.size > 0) {
-          this._uiPluginCallbacks.setSelectedNode(null, false);
-          handled = true;
-        }
-        {
-          const cameraPlugin = this.space.plugins.getPlugin('CameraPlugin');
-          if (
-            cameraPlugin?.getCameraMode() === 'free' &&
-            cameraPlugin.getControls()?.isPointerLocked
-          ) {
-            cameraPlugin.exitPointerLock();
-            handled = true;
-          }
-        }
+        handled = this._handleEscapeKey(primarySelectedNode, selectedNodes, selectedEdges);
         break;
 
       case 'Enter':
-        if (
-          primarySelectedNode instanceof HtmlNode &&
-          primarySelectedNode.data.editable &&
-          !isEditingText
-        ) {
-          primarySelectedNode.htmlElement?.querySelector('.node-content')?.focus();
-          handled = true;
-        }
+        handled = this._handleEnterKey(primarySelectedNode, activeEl, isEditingText);
         break;
 
       case '+':
       case '=':
-        if (primarySelectedNode instanceof HtmlNode) {
-          const factor = e.key === '+' || e.key === '=' ? 1.15 : 1.2;
-          e.ctrlKey || e.metaKey
-            ? this.space.emit('ui:request:adjustNodeSize', primarySelectedNode, factor)
-            : this.space.emit('ui:request:adjustContentScale', primarySelectedNode, factor);
-          handled = true;
-        }
+        handled = this._handlePlusKey(primarySelectedNode, e);
         break;
       case '-':
       case '_':
-        if (primarySelectedNode instanceof HtmlNode) {
-          const factor = e.key === '-' || e.key === '_' ? 1 / 1.15 : 1 / 1.2;
-          e.ctrlKey || e.metaKey
-            ? this.space.emit('ui:request:adjustNodeSize', primarySelectedNode, factor)
-            : this.space.emit('ui:request:adjustContentScale', primarySelectedNode, factor);
-          handled = true;
-        }
+        handled = this._handleMinusKey(primarySelectedNode, e);
         break;
 
       case ' ':
-        if (primarySelectedNode) {
-          this.space.emit('ui:request:focusOnNode', primarySelectedNode, 0.5, true);
-          handled = true;
-        } else if (primarySelectedEdge) {
-          const midPoint = new THREE.Vector3().lerpVectors(
-            primarySelectedEdge.source.position,
-            primarySelectedEdge.target.position,
-            0.5
-          );
-          const dist = primarySelectedEdge.source.position.distanceTo(
-            primarySelectedEdge.target.position
-          );
-          const camPlugin = this.space.plugins.getPlugin('CameraPlugin');
-          camPlugin?.pushState();
-          camPlugin?.moveTo(midPoint.x, midPoint.y, midPoint.z + dist * 0.6 + 100, 0.5, midPoint);
-          handled = true;
-        } else {
-          this.space.emit('ui:request:centerView');
-          handled = true;
-        }
+        handled = this._handleSpaceKey(primarySelectedNode, primarySelectedEdge);
         break;
     }
 
@@ -687,6 +634,126 @@ export class UIManager {
       e.stopPropagation();
     }
   };
+
+  _handleDeleteKey(primarySelectedNode, selectedNodes, primarySelectedEdge, selectedEdges) {
+    if (primarySelectedNode) {
+      const message =
+        selectedNodes.size > 1
+          ? `Delete ${selectedNodes.size} selected nodes?`
+          : `Delete node "${primarySelectedNode.id.substring(0, 10)}..."?`;
+      this.space.emit('ui:request:confirm', {
+        message: message,
+        onConfirm: () =>
+          selectedNodes.forEach(node => this.space.emit('ui:request:removeNode', node.id)),
+      });
+      return true;
+    } else if (primarySelectedEdge) {
+      const message =
+        selectedEdges.size > 1
+          ? `Delete ${selectedEdges.size} selected edges?`
+          : `Delete edge "${primarySelectedEdge.id.substring(0, 10)}..."?`;
+      this.space.emit('ui:request:confirm', {
+        message: message,
+        onConfirm: () =>
+          selectedEdges.forEach(edge => this.space.emit('ui:request:removeEdge', edge.id)),
+      });
+      return true;
+    }
+    return false;
+  }
+
+  _handleEscapeKey(primarySelectedNode, selectedNodes, selectedEdges) {
+    if (this._uiPluginCallbacks.getIsLinking()) {
+      this._uiPluginCallbacks.cancelLinking();
+      return true;
+    } else if (this.hudManager.isLayoutSettingsDialogVisible()) {
+      this.hudManager.layoutSettingsDialog.hide();
+      return true;
+    } else if (this.hudManager.isKeyboardShortcutsDialogVisible()) {
+      this.hudManager.keyboardShortcutsDialog.hide();
+      return true;
+    } else if (this.contextMenu.contextMenuElement.style.display === 'block') {
+      this.contextMenu.hide();
+      return true;
+    } else if (this.confirmDialog.confirmDialogElement.style.display === 'block') {
+      this.confirmDialog.hide();
+      return true;
+    } else if (this.edgeMenu.edgeMenuObject) {
+      this._uiPluginCallbacks.setSelectedEdge(null, false);
+      return true;
+    } else if (selectedNodes.size > 0 || selectedEdges.size > 0) {
+      this._uiPluginCallbacks.setSelectedNode(null, false);
+      return true;
+    }
+    
+    const cameraPlugin = this.space.plugins.getPlugin('CameraPlugin');
+    if (
+      cameraPlugin?.getCameraMode() === 'free' &&
+      cameraPlugin.getControls()?.isPointerLocked
+    ) {
+      cameraPlugin.exitPointerLock();
+      return true;
+    }
+    
+    return false;
+  }
+
+  _handleEnterKey(primarySelectedNode, activeEl, isEditingText) {
+    if (
+      primarySelectedNode instanceof HtmlNode &&
+      primarySelectedNode.data.editable &&
+      !isEditingText
+    ) {
+      primarySelectedNode.htmlElement?.querySelector('.node-content')?.focus();
+      return true;
+    }
+    return false;
+  }
+
+  _handlePlusKey(primarySelectedNode, e) {
+    if (primarySelectedNode instanceof HtmlNode) {
+      const factor = e.key === '+' || e.key === '=' ? 1.15 : 1.2;
+      e.ctrlKey || e.metaKey
+        ? this.space.emit('ui:request:adjustNodeSize', primarySelectedNode, factor)
+        : this.space.emit('ui:request:adjustContentScale', primarySelectedNode, factor);
+      return true;
+    }
+    return false;
+  }
+
+  _handleMinusKey(primarySelectedNode, e) {
+    if (primarySelectedNode instanceof HtmlNode) {
+      const factor = e.key === '-' || e.key === '_' ? 1 / 1.15 : 1 / 1.2;
+      e.ctrlKey || e.metaKey
+        ? this.space.emit('ui:request:adjustNodeSize', primarySelectedNode, factor)
+        : this.space.emit('ui:request:adjustContentScale', primarySelectedNode, factor);
+      return true;
+    }
+    return false;
+  }
+
+  _handleSpaceKey(primarySelectedNode, primarySelectedEdge) {
+    if (primarySelectedNode) {
+      this.space.emit('ui:request:focusOnNode', primarySelectedNode, 0.5, true);
+      return true;
+    } else if (primarySelectedEdge) {
+      const midPoint = new THREE.Vector3().lerpVectors(
+        primarySelectedEdge.source.position,
+        primarySelectedEdge.target.position,
+        0.5
+      );
+      const dist = primarySelectedEdge.source.position.distanceTo(
+        primarySelectedEdge.target.position
+      );
+      const camPlugin = this.space.plugins.getPlugin('CameraPlugin');
+      camPlugin?.pushState();
+      camPlugin?.moveTo(midPoint.x, midPoint.y, midPoint.z + dist * 0.6 + 100, 0.5, midPoint);
+      return true;
+    } else {
+      this.space.emit('ui:request:centerView');
+      return true;
+    }
+  }
 
   _onWheel = e => {
     const targetInfo = this._getTargetInfo(e);

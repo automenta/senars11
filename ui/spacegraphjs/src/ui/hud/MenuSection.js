@@ -23,7 +23,7 @@ export class MenuSection {
     if (this.isPinnable) {
       this.pinButton = document.createElement('button');
       this.pinButton.className = 'menu-section-pin-button';
-      this.pinButton.innerHTML = '📌'; // Pin emoji, can be replaced with SVG or icon font
+      this.pinButton.innerHTML = '📌';
       this.pinButton.title = 'Pin this section';
       this.header.appendChild(this.pinButton);
       this._bindPinEvents();
@@ -42,7 +42,7 @@ export class MenuSection {
     this.pinButton.addEventListener('click', event => {
       event.stopPropagation();
       this.hudManager.pinSection(this);
-      this.menu.close(); // Close the menu after pinning
+      this.menu.close();
     });
   }
 
@@ -54,14 +54,13 @@ export class MenuSection {
   }
 
   addElement(element) {
-    // For adding custom HTML elements directly
     this.content.appendChild(element);
-    this.items.push(element); // Assuming custom elements might need a dispose or update
+    this.items.push(element);
   }
 
   addSeparator() {
     const separator = document.createElement('hr');
-    separator.className = 'menu-separator'; // Can reuse menu-item separator style or define new
+    separator.className = 'menu-separator';
     this.content.appendChild(separator);
   }
 
@@ -85,12 +84,7 @@ export class MenuSection {
     }
   }
 
-  // Method to be called by PinnedWindow to get the content to display
   getContentForPinning() {
-    const clonedContent = this.content.cloneNode(true);
-    // Re-bind events if necessary, or ensure event delegation is used
-    // For simplicity, this example assumes content doesn't need complex re-binding
-    // or that PinnedWindow handles interactions appropriately.
-    return clonedContent;
+    return this.content.cloneNode(true);
   }
 }

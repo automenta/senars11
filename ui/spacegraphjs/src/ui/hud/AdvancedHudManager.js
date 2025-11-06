@@ -556,3 +556,5 @@ export class AdvancedHudManager extends HudManager {
     super.dispose(); // Call base class dispose
   }
 }
+
+

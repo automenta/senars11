@@ -76,7 +76,6 @@ export class Menu {
     const separator = document.createElement('hr');
     separator.className = 'menu-separator';
     this.popup.appendChild(separator);
-    // We don't add separators to this.items as they are not interactive
   }
 
   addSection(sectionId, title, isPinnable = true) {
@@ -100,13 +99,13 @@ export class Menu {
         return item;
       }
       if (item instanceof MenuSection) {
-        const foundInSection = item.getItem(itemId); // MenuSection.getItem searches its own items
+        const foundInSection = item.getItem(itemId);
         if (foundInSection) {
           return foundInSection;
         }
       }
     }
-    return null; // Not found
+    return null;
   }
 
   update() {

@@ -6,7 +6,7 @@ export class MenuItem {
     this.id = itemId;
     this.label = label;
     this.callback = callback;
-    this.options = options; // e.g., { type: 'checkbox', checked: false, disabled: false, hotkey: 'Ctrl+O' }
+    this.options = options;
 
     this.container = document.createElement('div');
     this.container.className = 'menu-item';
@@ -31,14 +31,11 @@ export class MenuItem {
       this.checkboxElement.type = 'checkbox';
       this.checkboxElement.checked = !!options.checked;
       this.checkboxElement.className = 'menu-item-checkbox';
-      this.container.insertBefore(this.checkboxElement, this.labelElement); // Checkbox before label
+      this.container.insertBefore(this.checkboxElement, this.labelElement);
     }
 
-    // Basic submenu indicator (can be enhanced with proper submenu class)
     if (options.submenu) {
-      // options.submenu would be a Menu instance or an array of items to create a submenu
       this.container.classList.add('has-submenu');
-      // Logic to handle submenu display would go here or in the Menu class
     }
 
     this._bindEvents();
@@ -51,25 +48,20 @@ export class MenuItem {
 
       if (this.options.type === 'checkbox') {
         this.checkboxElement.checked = !this.checkboxElement.checked;
-        if (this.callback) {
-          this.callback(this.checkboxElement.checked, this);
-        }
+        this.callback?.(this.checkboxElement.checked, this);
       } else {
-        if (this.callback) {
-          this.callback(this);
-        }
+        this.callback?.(this);
       }
-      // For items that are not checkboxes or submenus, close the main menu
+
       if (
         this.parentMenuOrSection.close &&
         !this.options.submenu &&
         this.options.type !== 'checkbox'
       ) {
-        // Close all levels of menus
         let parent = this.parentMenuOrSection;
         while (parent && parent.close) {
           parent.close();
-          parent = parent.parentMenuOrSection || parent.menu; // Navigate up
+          parent = parent.parentMenuOrSection || parent.menu;
         }
       }
     });
@@ -77,12 +69,10 @@ export class MenuItem {
     this.container.addEventListener('mouseenter', () => {
       if (this.options.disabled) return;
       this.container.classList.add('hover');
-      // Handle submenu opening on hover if applicable
     });
 
     this.container.addEventListener('mouseleave', () => {
       this.container.classList.remove('hover');
-      // Handle submenu closing on hover if applicable
     });
   }
 
@@ -117,15 +107,10 @@ export class MenuItem {
   }
 
   update() {
-    // For dynamic updates, e.g., based on application state
-    if (this.options.updateHandler) {
-      this.options.updateHandler(this);
-    }
+    this.options.updateHandler?.(this);
   }
 
   dispose() {
-    // Remove event listeners if any were added directly to global objects (e.g., document)
-    // For this simple component, removing from DOM is usually enough
     if (this.container.parentNode) {
       this.container.parentNode.removeChild(this.container);
     }
