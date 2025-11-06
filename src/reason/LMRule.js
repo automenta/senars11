@@ -99,8 +99,8 @@ export class LMRule extends Rule {
       this._updateExecutionStats(true, Date.now() - startTime);
       return newTasks;
     } catch (error) {
-      console.error(`Error applying LM rule ${this.id}:`, error);
-      this._updateExecutionStats(false, Date.now() - startTime);
+      //console.error(`Error applying LM rule ${this.id}:`, error);
+      this._updateExecutionStats(false, Date.now() - startTime); //TODO provide 'error'
       return [];
     }
   }
