@@ -1,6 +1,40 @@
 import { DEMO_COMMANDS } from '../../config/constants.js';
 
 const COMMANDS = DEMO_COMMANDS;
+const HELP_MESSAGE = `🤖 Available commands:
+  /help, /h, /?     - Show this help message 📚
+  /quit, /q, /exit  - Quit the REPL 🚪
+  /status, /s, /stats - Show system status 📊
+  /memory, /m       - Show memory statistics 💾
+  /trace, /t        - Show reasoning trace 🔍
+  /reset, /r        - Reset the NAR system 🔄
+  /save, /sv        - Save current agent state to file 💾
+  /load, /ld        - Load agent state from file 📁
+  /demo, /d         - Run an example/demo (use "/demo" for list) 🎭
+  /next, /n         - Run a single reasoning cycle ⏭️
+  /run, /go         - Start continuous reasoning loop 🏃
+  /stop, /st        - Stop continuous reasoning loop ⏹️
+
+🎯 Narsese input examples:
+  (bird --> animal).                     (inheritance statement)
+  (robin --> bird). %1.0;0.9%           (with truth values)
+  (robin --> animal)?                   (question)
+  (robin --> fly)!                      (goal)
+
+💡 Tip: Press Enter with empty input to run a single cycle`;
+
+const EXAMPLE_LIST = [
+    'agent-builder-demo     - Demonstrates building agents with various capabilities',
+    'causal-reasoning       - Shows causal reasoning capabilities',
+    'inductive-reasoning    - Demonstrates inductive inference',
+    'syllogism              - Classic syllogistic reasoning examples',
+    'temporal               - Temporal reasoning demonstrations',
+    'performance            - Performance benchmarking example',
+    'phase10-complete       - Full phase 10 reasoning demonstration',
+    'phase10-final          - Final comprehensive demonstration',
+    'websocket              - WebSocket monitoring example',
+    'lm-providers           - Language model provider integrations'
+];
 const EXAMPLE_MAP = {
     'agent-builder': '../../examples/agent-builder-demo.js',
     'agent-builder-demo': '../../examples/agent-builder-demo.js',
@@ -24,18 +58,6 @@ const EXAMPLE_MAP = {
     'lm-providers': '../../examples/lm-providers.js',
     'basic-usage': '../../examples/basic-usage.js'
 };
-const EXAMPLE_LIST = [
-    'agent-builder-demo     - Demonstrates building agents with various capabilities',
-    'causal-reasoning       - Shows causal reasoning capabilities',
-    'inductive-reasoning    - Demonstrates inductive inference',
-    'syllogism              - Classic syllogistic reasoning examples',
-    'temporal               - Temporal reasoning demonstrations',
-    'performance            - Performance benchmarking example',
-    'phase10-complete       - Full phase 10 reasoning demonstration',
-    'phase10-final          - Final comprehensive demonstration',
-    'websocket              - WebSocket monitoring example',
-    'lm-providers           - Language model provider integrations'
-];
 
 export class CommandProcessor {
     constructor(nar, persistenceManager, sessionState) {
@@ -71,27 +93,7 @@ export class CommandProcessor {
     }
 
     _help() {
-        return `🤖 Available commands:
-  /help, /h, /?     - Show this help message 📚
-  /quit, /q, /exit  - Quit the REPL 🚪
-  /status, /s, /stats - Show system status 📊
-  /memory, /m       - Show memory statistics 💾
-  /trace, /t        - Show reasoning trace 🔍
-  /reset, /r        - Reset the NAR system 🔄
-  /save, /sv        - Save current agent state to file 💾
-  /load, /ld        - Load agent state from file 📁
-  /demo, /d         - Run an example/demo (use "/demo" for list) 🎭
-  /next, /n         - Run a single reasoning cycle ⏭️
-  /run, /go         - Start continuous reasoning loop 🏃
-  /stop, /st        - Stop continuous reasoning loop ⏹️
-
-🎯 Narsese input examples:
-  (bird --> animal).                     (inheritance statement)
-  (robin --> bird). %1.0;0.9%           (with truth values)
-  (robin --> animal)?                   (question)
-  (robin --> fly)!                      (goal)
-
-💡 Tip: Press Enter with empty input to run a single cycle`;
+        return HELP_MESSAGE;
     }
 
     _status() {

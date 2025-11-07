@@ -4,6 +4,25 @@ import { CommandProcessor } from './utils/CommandProcessor.js';
 import { PersistenceManager } from '../io/PersistenceManager.js';
 
 const SPECIAL_COMMANDS = { 'next': 'n', 'n': 'n', 'run': 'go', 'go': 'go', 'stop': 'st', 'st': 'st', 'quit': 'exit', 'q': 'exit', 'exit': 'exit' };
+const EVENTS = {
+    ENGINE_READY: 'engine.ready',
+    ENGINE_ERROR: 'engine.error',
+    NARSESE_PROCESSED: 'narsese.processed',
+    NARSESE_ERROR: 'narsese.error',
+    ENGINE_QUIT: 'engine.quit',
+    NAR_CYCLE_STEP: 'nar.cycle.step',
+    NAR_CYCLE_START: 'nar.cycle.start',
+    NAR_CYCLE_RUNNING: 'nar.cycle.running',
+    NAR_CYCLE_STOP: 'nar.cycle.stop',
+    NAR_TRACE_ENABLE: 'nar.trace.enable',
+    NAR_TRACE_RESTORE: 'nar.trace.restore',
+    NAR_ERROR: 'nar.error',
+    COMMAND_ERROR: 'command.error',
+    ENGINE_RESET: 'engine.reset',
+    ENGINE_SAVE: 'engine.save',
+    ENGINE_LOAD: 'engine.load',
+    ENGINE_SHUTDOWN: 'engine.shutdown'
+};
 
 export class ReplEngine extends EventEmitter {
     constructor(config = {}) {
@@ -23,10 +42,10 @@ export class ReplEngine extends EventEmitter {
     async initialize() {
         try {
             await this.nar.initialize();
-            this.emit('engine.ready', { success: true, message: 'NAR initialized successfully' });
+            this.emit(EVENTS.ENGINE_READY, { success: true, message: 'NAR initialized successfully' });
             return true;
         } catch (error) {
-            this.emit('engine.error', { error: error.message });
+            this.emit(EVENTS.ENGINE_ERROR, { error: error.message });
             return false;
         }
     }
@@ -51,16 +70,16 @@ export class ReplEngine extends EventEmitter {
 
             if (result) {
                 const output = `✅ Input processed successfully (${duration}ms)`;
-                this.emit('narsese.processed', { input, result, duration, beliefs: this.nar.getBeliefs?.() ?? [] });
+                this.emit(EVENTS.NARSESE_PROCESSED, { input, result, duration, beliefs: this.nar.getBeliefs?.() ?? [] });
                 return output;
             } else {
                 const error = '❌ Failed to process input';
-                this.emit('narsese.error', { input, error });
+                this.emit(EVENTS.NARSESE_ERROR, { input, error });
                 return error;
             }
         } catch (error) {
             const errorMsg = `❌ Error: ${error.message}`;
-            this.emit('narsese.error', { input, error: error.message });
+            this.emit(EVENTS.NARSESE_ERROR, { input, error: error.message });
             return errorMsg;
         }
     }
@@ -92,11 +111,11 @@ export class ReplEngine extends EventEmitter {
         try {
             await this.nar.step();
             const output = `⏭️  Single cycle executed. Cycle: ${this.nar.cycleCount}`;
-            this.emit('nar.cycle.step', { cycle: this.nar.cycleCount });
+            this.emit(EVENTS.NAR_CYCLE_STEP, { cycle: this.nar.cycleCount });
             return output;
         } catch (error) {
             const errorMsg = `❌ Error executing single cycle: ${error.message}`;
-            this.emit('nar.error', { error: error.message });
+            this.emit(EVENTS.NAR_ERROR, { error: error.message });
             return errorMsg;
         }
     }
@@ -106,11 +125,11 @@ export class ReplEngine extends EventEmitter {
 
         this.originalTraceState = this.traceEnabled;
         this.isRunningLoop = true;
-        this.emit('nar.cycle.start', { reason: 'continuous run' });
+        this.emit(EVENTS.NAR_CYCLE_START, { reason: 'continuous run' });
 
         if (!this.traceEnabled) {
             this.traceEnabled = true;
-            this.emit('nar.trace.enable', { reason: 'run session' });
+            this.emit(EVENTS.NAR_TRACE_ENABLE, { reason: 'run session' });
         }
 
         this.runInterval = setInterval(() => {
@@ -120,7 +139,7 @@ export class ReplEngine extends EventEmitter {
             });
         }, 10);
 
-        this.emit('nar.cycle.running', { interval: 10 });
+        this.emit(EVENTS.NAR_CYCLE_RUNNING, { interval: 10 });
         return '🏃 Running continuously... Use "/stop" to stop.';
     }
 
@@ -135,10 +154,10 @@ export class ReplEngine extends EventEmitter {
 
         if (!this.originalTraceState && this.traceEnabled) {
             this.traceEnabled = false;
-            this.emit('nar.trace.restore', { originalState: this.originalTraceState });
+            this.emit(EVENTS.NAR_TRACE_RESTORE, { originalState: this.originalTraceState });
         }
 
-        this.emit('nar.cycle.stop');
+        this.emit(EVENTS.NAR_CYCLE_STOP);
         return '🛑 Run stopped.';
     }
 
@@ -151,7 +170,7 @@ export class ReplEngine extends EventEmitter {
         this.nar.reset?.();
         this.sessionState.history = [];
         this.sessionState.lastResult = null;
-        this.emit('engine.reset');
+        this.emit(EVENTS.ENGINE_RESET);
         return '🔄 NAR system reset successfully.';
     }
 
@@ -161,10 +180,10 @@ export class ReplEngine extends EventEmitter {
             if (!state) return 'Serialization not supported by NAR instance.';
 
             const result = await this.persistenceManager.saveToDefault(state);
-            this.emit('engine.save', { filePath: result.filePath, size: result.size });
+            this.emit(EVENTS.ENGINE_SAVE, { filePath: result.filePath, size: result.size });
             return `💾 NAR state saved successfully to ${result.filePath} (${Math.round(result.size / 1024)} KB)`;
         } catch (error) {
-            this.emit('engine.save.error', { error: error.message });
+            this.emit(EVENTS.ENGINE_ERROR, { error: error.message });
             return `❌ Error saving NAR state: ${error.message}`;
         }
     }
@@ -178,19 +197,19 @@ export class ReplEngine extends EventEmitter {
             const success = await this.nar.deserialize?.(state);
 
             if (success) {
-                this.emit('engine.load', { filePath: this.persistenceManager.defaultPath });
+                this.emit(EVENTS.ENGINE_LOAD, { filePath: this.persistenceManager.defaultPath });
                 return `💾 NAR state loaded successfully from ${this.persistenceManager.defaultPath}`;
             } else {
                 return '❌ Failed to load NAR state - deserialization error';
             }
         } catch (error) {
-            this.emit('engine.load.error', { error: error.message });
+            this.emit(EVENTS.ENGINE_ERROR, { error: error.message });
             return `❌ Error loading NAR state: ${error.message}`;
         }
     }
 
     async shutdown() {
         if (this.isRunningLoop) this._stopRun();
-        this.emit('engine.shutdown');
+        this.emit(EVENTS.ENGINE_SHUTDOWN);
     }
 }

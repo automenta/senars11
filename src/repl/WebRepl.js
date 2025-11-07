@@ -1,8 +1,33 @@
 const CMD_HANDLERS = ['help', 'status', 'memory', 'trace', 'reset', 'save', 'load', 'demo'];
 const CMD_MAP = { 'start': 'run', 'stop': 'stop', 'step': 'next' };
 const WS_HANDLERS = ['reason/step', 'narseseInput', 'command.execute', 'control/start', 'control/stop', 'control/step'];
+const MESSAGE_TYPES = {
+    ENGINE_READY: 'engine.ready',
+    NARSESE_PROCESSED: 'narsese.processed',
+    NARSESE_ERROR: 'narsese.error',
+    ENGINE_QUIT: 'engine.quit',
+    NAR_CYCLE_STEP: 'nar.cycle.step',
+    NAR_CYCLE_RUNNING: 'nar.cycle.running',
+    NAR_CYCLE_STOP: 'nar.cycle.stop',
+    ENGINE_RESET: 'engine.reset',
+    ENGINE_SAVE: 'engine.save',
+    ENGINE_LOAD: 'engine.load',
+    NAR_TRACE_ENABLE: 'nar.trace.enable',
+    NAR_TRACE_RESTORE: 'nar.trace.restore',
+    COMMAND_ERROR: 'command.error',
+    NARSESE_RESULT: 'narsese.result',
+    CONTROL_RESULT: 'control.result',
+    COMMAND_RESULT: 'command.result',
+    ERROR: 'error',
+    COMMAND_OUTPUT: 'command.output'
+};
+const PAYLOAD_TYPES = {
+    REASON_STEP: 'reason/step',
+    NARSESE_INPUT: 'narseseInput',
+    COMMAND_EXECUTE: 'command.execute'
+};
 
-export class WebAdapter {
+export class WebRepl {
     constructor(engine, websocketServer) {
         this.engine = engine;
         this.websocketServer = websocketServer;
@@ -12,18 +37,18 @@ export class WebAdapter {
 
     _setupEventListeners() {
         const eventHandlers = {
-            'engine.ready': (data) => this._broadcastToAllClients({ type: 'engine.ready', payload: data }),
-            'narsese.processed': (data) => this._broadcastToAllClients({ type: 'narsese.processed', payload: data }),
-            'narsese.error': (data) => this._broadcastToAllClients({ type: 'narsese.error', payload: data }),
-            'engine.quit': () => this._broadcastToAllClients({ type: 'engine.quit', payload: {} }),
-            'nar.cycle.step': (data) => this._broadcastToAllClients({ type: 'nar.cycle.step', payload: data }),
-            'nar.cycle.running': (data) => this._broadcastToAllClients({ type: 'nar.cycle.running', payload: data }),
-            'nar.cycle.stop': () => this._broadcastToAllClients({ type: 'nar.cycle.stop', payload: {} }),
-            'engine.reset': () => this._broadcastToAllClients({ type: 'engine.reset', payload: {} }),
-            'engine.save': (data) => this._broadcastToAllClients({ type: 'engine.save', payload: data }),
-            'engine.load': (data) => this._broadcastToAllClients({ type: 'engine.load', payload: data }),
-            'nar.trace.enable': (data) => this._broadcastToAllClients({ type: 'nar.trace.enable', payload: data }),
-            'nar.trace.restore': (data) => this._broadcastToAllClients({ type: 'nar.trace.restore', payload: data }),
+            'engine.ready': (data) => this._broadcastToAllClients({ type: MESSAGE_TYPES.ENGINE_READY, payload: data }),
+            'narsese.processed': (data) => this._broadcastToAllClients({ type: MESSAGE_TYPES.NARSESE_PROCESSED, payload: data }),
+            'narsese.error': (data) => this._broadcastToAllClients({ type: MESSAGE_TYPES.NARSESE_ERROR, payload: data }),
+            'engine.quit': () => this._broadcastToAllClients({ type: MESSAGE_TYPES.ENGINE_QUIT, payload: {} }),
+            'nar.cycle.step': (data) => this._broadcastToAllClients({ type: MESSAGE_TYPES.NAR_CYCLE_STEP, payload: data }),
+            'nar.cycle.running': (data) => this._broadcastToAllClients({ type: MESSAGE_TYPES.NAR_CYCLE_RUNNING, payload: data }),
+            'nar.cycle.stop': () => this._broadcastToAllClients({ type: MESSAGE_TYPES.NAR_CYCLE_STOP, payload: {} }),
+            'engine.reset': () => this._broadcastToAllClients({ type: MESSAGE_TYPES.ENGINE_RESET, payload: {} }),
+            'engine.save': (data) => this._broadcastToAllClients({ type: MESSAGE_TYPES.ENGINE_SAVE, payload: data }),
+            'engine.load': (data) => this._broadcastToAllClients({ type: MESSAGE_TYPES.ENGINE_LOAD, payload: data }),
+            'nar.trace.enable': (data) => this._broadcastToAllClients({ type: MESSAGE_TYPES.NAR_TRACE_ENABLE, payload: data }),
+            'nar.trace.restore': (data) => this._broadcastToAllClients({ type: MESSAGE_TYPES.NAR_TRACE_RESTORE, payload: data }),
             'command.error': (data) => this._broadcastToAllClients({ 
                 type: 'command.error', 
                 payload: { command: data.command, error: data.error } 
@@ -57,7 +82,7 @@ export class WebAdapter {
                     ? await this.engine.executeCommand(CMD_MAP[command])
                     : `Unknown control command: ${command}`;
                 
-                this._sendToClient(client, { type: 'control.result', payload: { command, result } });
+                this._sendToClient(client, { type: MESSAGE_TYPES.CONTROL_RESULT, payload: { command, result } });
             }
             else if (message.type === 'command.execute') {
                 const cmd = message.payload?.command;
@@ -65,7 +90,7 @@ export class WebAdapter {
                 const result = await this.engine.executeCommand(cmd, ...args);
                 
                 this._sendToClient(client, {
-                    type: 'command.result',
+                    type: MESSAGE_TYPES.COMMAND_RESULT,
                     payload: { command: cmd, args, result }
                 });
             }
@@ -74,13 +99,13 @@ export class WebAdapter {
                 const result = await this.engine.executeCommand(cmd, ...args);
                 
                 this._sendToClient(client, {
-                    type: 'command.result',
+                    type: MESSAGE_TYPES.COMMAND_RESULT,
                     payload: { command: cmd, args, result }
                 });
             }
         } catch (error) {
             console.error('Error handling WebSocket message:', error);
-            this._sendToClient(client, { type: 'error', payload: { error: error.message } });
+            this._sendToClient(client, { type: MESSAGE_TYPES.ERROR, payload: { error: error.message } });
         }
     }
 

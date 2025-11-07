@@ -1,8 +1,18 @@
+const PUNCTUATION_MAP = { 'BELIEF': '.', 'GOAL': '!', 'QUESTION': '?' };
+const DEFAULT_TRUTH = ' %1.000,0.900%';
+const DEFAULT_PRIORITY = '';
+const DEFAULT_TERM = 'Unknown';
+const DEFAULT_TASK_TYPE = 'TASK';
+const ID_CHARS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+const MAX_ID_LENGTH = 8;
+const MIN_ID = 0;
+const BASE = ID_CHARS.length;
+
 export class FormattingUtils {
     static formatTask(task) {
         const priority = this.formatPriority(task.budget?.priority);
-        const term = task.term?.toString?.() ?? task.term ?? 'Unknown';
-        const punctuation = this.getTypePunctuation(task.type ?? 'TASK');
+        const term = task.term?.toString?.() ?? task.term ?? DEFAULT_TERM;
+        const punctuation = this.getTypePunctuation(task.type ?? DEFAULT_TASK_TYPE);
         const truthStr = this.formatTruth(task.truth);
         const occurrence = this.formatOccurrence(task);
 
@@ -14,7 +24,7 @@ export class FormattingUtils {
     }
 
     static formatTruth(truth) {
-        if (!truth) return ' %1.000,0.900%';
+        if (!truth) return DEFAULT_TRUTH;
 
         const freq = truth.frequency?.toFixed(3) ?? '1.000';
         const conf = truth.confidence?.toFixed(3) ?? '0.900';
@@ -22,7 +32,7 @@ export class FormattingUtils {
     }
 
     static formatOccurrence(task) {
-        if (task.occurrenceTime === undefined && !task.stamp) return '';
+        if (task.occurrenceTime === undefined && !task.stamp) return DEFAULT_PRIORITY; // Return empty string
 
         const timeStr = task.occurrenceTime ?? '';
         const stampStr = task.stamp ? this.encodeShortId(task.stamp.id ?? task.stamp) : '';
@@ -31,7 +41,7 @@ export class FormattingUtils {
     }
 
     static getTypePunctuation(type) {
-        return { 'BELIEF': '.', 'GOAL': '!', 'QUESTION': '?' }[type?.toUpperCase()] ?? '.';
+        return PUNCTUATION_MAP[type?.toUpperCase()] ?? '.';
     }
 
     static encodeShortId(input) {

@@ -1,12 +1,79 @@
-import { ReplEngine } from '../repl/ReplEngine.js';
+import { ReplEngine } from './ReplEngine.js';
 import blessed from 'blessed';
 import { EventEmitter } from 'events';
-import { FormattingUtils } from '../repl/utils/FormattingUtils.js';
+import { FormattingUtils } from './utils/FormattingUtils.js';
 
 const SPINS = ['🌀', '◕', '◔', '◕'];
 const CMD_HANDLERS = ['help', 'status', 'memory', 'trace', 'reset', 'save', 'load', 'demo'];
+const UI_ELEMENTS = {
+    HEADER: 'header',
+    INPUT: 'input',
+    OUTPUT: 'output',
+    MEMORY_DISPLAY: 'memoryDisplay',
+    STATUS_BAR: 'statusBar'
+};
+const ELEMENT_CONFIGS = {
+    header: { 
+        top: '0', 
+        left: '0', 
+        width: '100%', 
+        height: '6%', 
+        content: '{bold}{center}SeNARS Reasoning Engine 🚀{/center}{/bold}', 
+        tags: true, 
+        border: { type: 'line' }, 
+        style: { fg: 'white', bg: 'blue', border: { fg: '#f0f0f0' } } 
+    },
+    input: { 
+        top: '6%', 
+        left: '0', 
+        width: '100%', 
+        height: '15%', 
+        border: { type: 'line' }, 
+        style: { fg: 'white', bg: 'black', border: { fg: 'green' } }, 
+        inputOnFocus: true 
+    },
+    output: { 
+        top: '21%', 
+        left: '0', 
+        width: '70%', 
+        height: '54%', 
+        border: { type: 'line' }, 
+        style: { fg: 'white', bg: 'black', border: { fg: 'cyan' } }, 
+        scrollable: true, 
+        alwaysScroll: true, 
+        mouse: true, 
+        keys: true, 
+        vi: true 
+    },
+    memoryDisplay: { 
+        top: '21%', 
+        left: '70%', 
+        width: '30%', 
+        height: '54%', 
+        border: { type: 'line' }, 
+        style: { fg: 'white', bg: 'black', border: { fg: 'magenta' } }, 
+        scrollable: true, 
+        alwaysScroll: true, 
+        mouse: true, 
+        keys: true, 
+        vi: true 
+    },
+    statusBar: { 
+        bottom: '0', 
+        left: '0', 
+        width: '100%', 
+        height: '25%', 
+        border: { type: 'line' }, 
+        style: { fg: 'white', bg: 'red', border: { fg: 'yellow' } }, 
+        content: '' 
+    }
+};
+const ELEMENT_TYPES = {
+    TEXTAREA: 'textarea',
+    BOX: 'box'
+};
 
-export class BlessedTUI extends EventEmitter {
+export class TUIRepl extends EventEmitter {
     constructor(config = {}) {
         super();
         
@@ -26,16 +93,21 @@ export class BlessedTUI extends EventEmitter {
     }
 
     _setupLayout() {
-        this.elementConfigs = {
-            header: { top: '0', left: '0', width: '100%', height: '6%', content: '{bold}{center}SeNARS Reasoning Engine 🚀{/center}{/bold}', tags: true, border: { type: 'line' }, style: { fg: 'white', bg: 'blue', border: { fg: '#f0f0f0' } } },
-            input: { top: '6%', left: '0', width: '100%', height: '15%', border: { type: 'line' }, style: { fg: 'white', bg: 'black', border: { fg: 'green' } }, inputOnFocus: true },
-            output: { top: '21%', left: '0', width: '70%', height: '54%', border: { type: 'line' }, style: { fg: 'white', bg: 'black', border: { fg: 'cyan' } }, scrollable: true, alwaysScroll: true, mouse: true, keys: true, vi: true },
-            memoryDisplay: { top: '21%', left: '70%', width: '30%', height: '54%', border: { type: 'line' }, style: { fg: 'white', bg: 'black', border: { fg: 'magenta' } }, scrollable: true, alwaysScroll: true, mouse: true, keys: true, vi: true },
-            statusBar: { bottom: '0', left: '0', width: '100%', height: '25%', border: { type: 'line' }, style: { fg: 'white', bg: 'red', border: { fg: 'yellow' } }, content: this._getStatusContent() }
-        };
+        this.elementConfigs = ELEMENT_CONFIGS;
 
-        [this.header, this.input, this.output, this.memoryDisplay, this.statusBar] = Object.values(this.elementConfigs).map(config => blessed[config.inputOnFocus ? 'textarea' : 'box'](config));
-        [this.header, this.input, this.output, this.memoryDisplay, this.statusBar].forEach(el => this.screen.append(el));
+        // Create UI elements using explicit assignments for better maintainability
+        this.header = blessed.box(this.elementConfigs.header);
+        this.input = blessed.textarea(this.elementConfigs.input);
+        this.output = blessed.box(this.elementConfigs.output);
+        this.memoryDisplay = blessed.box(this.elementConfigs.memoryDisplay);
+        this.statusBar = blessed.box(this.elementConfigs.statusBar);
+
+        // Update status bar content
+        this.statusBar.setContent(this._getStatusContent());
+
+        // Append elements to screen
+        [this.header, this.input, this.output, this.memoryDisplay, this.statusBar]
+            .forEach(el => this.screen.append(el));
 
         this.input.on('submit', (inputText) => {
             this._handleInput(inputText);
@@ -96,7 +168,8 @@ export class BlessedTUI extends EventEmitter {
 
     _getStatusContent() {
         const stats = this.engine.getStats();
-        return `{bold}⚡ Status: ${SPINS[this.animationState.spinningIndex]} | Concepts: ${stats.memoryStats?.conceptCount ?? 0} | Cycles: ${stats.cycleCount ?? 0} | Tasks: ${stats.memoryStats?.taskCount ?? 0}{/bold}`;
+        const memoryStats = stats.memoryStats ?? {};
+        return `{bold}⚡ Status: ${SPINS[this.animationState.spinningIndex]} | Concepts: ${memoryStats.conceptCount ?? 0} | Cycles: ${stats.cycleCount ?? 0} | Tasks: ${memoryStats.taskCount ?? 0}{/bold}`;
     }
 
     async start() {
