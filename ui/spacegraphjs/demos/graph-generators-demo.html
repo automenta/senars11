@@ -56,16 +56,10 @@
 
     async function init() {
         const container = document.getElementById('container');
+
+        // Initialize SpaceGraph with ergonomic factory method
+        const space = await SpaceGraph.the(container);
         
-        // Initialize SpaceGraph with the container element
-        const space = new SpaceGraph(container, {
-            ui: {
-                contextMenuElement: document.createElement('div'), // Minimal context menu
-                confirmDialogElement: document.createElement('div'), // Minimal confirm dialog
-            }
-        });
-        
-        await space.init();
         
         // 1. FileSystemGenerator Demo
         const fsData = {

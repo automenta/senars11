@@ -61,16 +61,10 @@
 
     async function init() {
         const container = document.getElementById('container');
+
+        // Initialize SpaceGraph with ergonomic factory method
+        const space = await SpaceGraph.the(container);
         
-        // Initialize SpaceGraph with the container element
-        const space = new SpaceGraph(container, {
-            ui: {
-                contextMenuElement: document.createElement('div'), // Minimal context menu
-                confirmDialogElement: document.createElement('div'), // Minimal confirm dialog
-            }
-        });
-        
-        await space.init();
         
         const colors = ['#2a2a50', '#2a402a', '#402a2a', '#40402a', '#2a4040', '#402a40', '#503030'];
         let colorIndex = 0;

@@ -56,40 +56,34 @@
 
 <script type="module">
     import {SpaceGraph} from '../src/index.js';
+    import {createNodeWithCommonProps} from './demoUtils.js';
 
     async function init() {
         const container = document.getElementById('container');
-        
-        // Initialize SpaceGraph with the container element
-        const space = new SpaceGraph(container, {
-            ui: {
-                contextMenuElement: document.createElement('div'), // Minimal context menu
-                confirmDialogElement: document.createElement('div'), // Minimal confirm dialog
-            }
-        });
-        
-        await space.init();
-        
+
+        // Initialize SpaceGraph with ergonomic factory method
+        const space = await SpaceGraph.the(container);
+
         // Create the demo graph - using the same logic as the original demo file
         const commonProps = {mass: 1.0};
         let yPos = -200;
         const yIncrement = 180;
 
-        const shapeNodeBox = space.createNode({
+        const shapeNodeBox = createNodeWithCommonProps(space, {
             id: 'shapeBox',
             type: 'shape',
             position: {x: -300, y: yPos, z: 0},
             data: {label: 'Box (ShapeNode)', shape: 'box', size: 80, color: 0xffaa00},
-            ...commonProps,
-        });
-        const shapeNodeSphere = space.createNode({
+        }, commonProps);
+        
+        const shapeNodeSphere = createNodeWithCommonProps(space, {
             id: 'shapeSphere',
             type: 'shape',
             position: {x: -100, y: yPos, z: 0},
             data: {label: 'Sphere (ShapeNode)', shape: 'sphere', size: 50, color: 0x00aaff},
-            ...commonProps,
-        });
-        const shapeNodeCapsule = space.createNode({
+        }, commonProps);
+        
+        const shapeNodeCapsule = createNodeWithCommonProps(space, {
             id: 'shapeCapsule',
             type: 'shape',
             position: {x: 100, y: yPos, z: 0},
@@ -99,11 +93,10 @@
                 size: {radius: 30, height: 80},
                 color: 0x00ffaa,
             },
-            ...commonProps,
-        });
+        }, commonProps);
 
         yPos += yIncrement;
-        const noteNode = space.createNode({
+        const noteNode = createNodeWithCommonProps(space, {
             id: 'noteNode',
             type: 'note',
             position: {x: -200, y: yPos, z: 0},
@@ -115,11 +108,10 @@
                 height: 120,
                 backgroundColor: '#334455',
             },
-            ...commonProps,
-        });
+        }, commonProps);
 
         yPos += yIncrement;
-        const imageNode = space.createNode({
+        const imageNode = createNodeWithCommonProps(space, {
             id: 'imageNode',
             type: 'image',
             position: {x: -200, y: yPos, z: 0},
@@ -128,11 +120,10 @@
                 imageUrl: 'https://placehold.co/200x150/FFAA00/000000?text=Image+Node',
                 size: 150,
             },
-            ...commonProps,
-        });
+        }, commonProps);
 
         yPos += yIncrement + 50; // More space for video
-        const videoNode = space.createNode({
+        const videoNode = createNodeWithCommonProps(space, {
             id: 'videoNode',
             type: 'video',
             position: {x: -200, y: yPos, z: 0},
@@ -147,19 +138,17 @@
                 muted: true,
                 loop: true,
             },
-            ...commonProps,
-        });
+        }, commonProps);
 
         yPos = -200; // Reset Y for the second column
         const xPosCol2 = 300;
 
-        const iframeNode = space.createNode({
+        const iframeNode = createNodeWithCommonProps(space, {
             id: 'iframeNode',
             type: 'iframe',
             position: {x: xPosCol2, y: yPos, z: 0},
             data: {label: 'IFrameNode', iframeUrl: 'https://example.com', width: 300, height: 200},
-            ...commonProps,
-        });
+        }, commonProps);
 
         yPos += yIncrement + 80;
 
@@ -186,7 +175,7 @@
 
         let groupNode = null;
         if (groupChild1 && groupChild2) {
-            groupNode = space.createNode({
+            groupNode = createNodeWithCommonProps(space, {
                 id: 'groupNode',
                 type: 'group',
                 position: {x: xPosCol2, y: yPos, z: 0},
@@ -197,8 +186,7 @@
                     borderColor: 'rgba(150,180,220,0.7)',
                     headerColor: 'rgba(40,60,80,0.5)',
                 },
-                ...commonProps,
-            });
+            }, commonProps);
             space.addEdge(groupChild1, groupChild2, {label: 'Internal', color: 0xaaaaaa, thickness: 1});
         }
 

@@ -62,17 +62,10 @@
 
     async function init() {
         const container = document.getElementById('container');
-        
-        // Initialize SpaceGraph with the container element
-        const space = new SpaceGraph(container, {
-            ui: {
-                contextMenuElement: document.createElement('div'), // Minimal context menu
-                confirmDialogElement: document.createElement('div'), // Minimal confirm dialog
-            }
-        });
-        
-        await space.init();
-        
+
+        // Initialize SpaceGraph with ergonomic factory method
+        const space = await SpaceGraph.the(container);
+
         // Clear any existing content
         space.importGraphFromJSON({nodes: [], edges: []});
 
@@ -103,13 +96,13 @@
                 content: `
                     <div style="background: #2c3e50; padding: 15px; border-radius: 8px; color: white; font-family: Arial, sans-serif; height: 100%;">
                         <h3 style="margin-top: 0; color: #3498db;">System Controls</h3>
-                        
+
                         <div style="margin-bottom: 10px;">
                             <label style="display: block; margin-bottom: 5px;">Volume</label>
                             <input type="range" id="volume" min="0" max="100" value="75" style="width: 100%;">
                             <span id="volume-value">75%</span>
                         </div>
-                        
+
                         <div style="margin-bottom: 10px;">
                             <label style="display: block; margin-bottom: 5px;">Quality</label>
                             <select id="quality" style="width: 100%; padding: 5px;">
@@ -119,14 +112,14 @@
                                 <option value="ultra">Ultra</option>
                             </select>
                         </div>
-                        
+
                         <div style="margin-bottom: 10px;">
                             <label style="display: flex; align-items: center;">
                                 <input type="checkbox" id="enabled" checked style="margin-right: 8px;">
                                 Enable Effects
                             </label>
                         </div>
-                        
+
                         <div style="margin-bottom: 10px;">
                             <button id="apply" style="width: 100%; padding: 8px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer;">Apply</button>
                         </div>
@@ -361,7 +354,7 @@
             const volumeValue = document.getElementById('volume-value');
             const qualitySelect = document.getElementById('quality');
             const progressBarFill = document.getElementById('progress-bar-fill');
-            
+
             if (volumeSlider && volumeValue) {
                 volumeSlider.addEventListener('input', e => {
                     const value = e.target.value;
@@ -390,16 +383,16 @@
                 ctx.strokeStyle = '#ffffff';
                 ctx.lineWidth = 2;
                 ctx.lineCap = 'round';
-                
+
                 let isDrawing = false;
                 let lastX = 0;
                 let lastY = 0;
-                
+
                 canvasElement.addEventListener('mousedown', e => {
                     isDrawing = true;
                     [lastX, lastY] = [e.offsetX, e.offsetY];
                 });
-                
+
                 canvasElement.addEventListener('mousemove', e => {
                     if (!isDrawing) return;
                     ctx.beginPath();
@@ -408,19 +401,19 @@
                     ctx.stroke();
                     [lastX, lastY] = [e.offsetX, e.offsetY];
                 });
-                
+
                 canvasElement.addEventListener('mouseup', () => isDrawing = false);
                 canvasElement.addEventListener('mouseout', () => isDrawing = false);
-                
+
                 document.getElementById('clear-canvas')?.addEventListener('click', () => {
                     ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
                 });
-                
+
                 document.getElementById('pen-tool')?.addEventListener('click', () => {
                     ctx.strokeStyle = '#ffffff';
                     ctx.lineWidth = 2;
                 });
-                
+
                 document.getElementById('eraser-tool')?.addEventListener('click', () => {
                     ctx.strokeStyle = '#0a0a15';
                     ctx.lineWidth = 10;

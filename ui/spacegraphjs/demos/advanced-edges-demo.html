@@ -58,15 +58,9 @@
     async function init() {
         const container = document.getElementById('container');
         
-        // Initialize SpaceGraph with the container element
-        const space = new SpaceGraph(container, {
-            ui: {
-                contextMenuElement: document.createElement('div'), // Minimal context menu
-                confirmDialogElement: document.createElement('div'), // Minimal confirm dialog
-            }
-        });
+        // Initialize SpaceGraph with ergonomic factory method
+        const space = await SpaceGraph.the(container);
         
-        await space.init();
         
         // Advanced Edges Demo Implementation
         function createAdvancedDynamicEdges(space, basePosition = {x: 0, y: 0, z: 0}) {
