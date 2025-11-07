@@ -455,7 +455,9 @@ class TestAnalyzer extends BaseAnalyzer {
 
                     if (parsedResult && parsedResult.testResults) {
                         const individualTestResults = this.extractIndividualTestResults(parsedResult.testResults);
-                        return this._buildTestResult(testResult, parsedResult, individualTestResults);
+                        // Enhance test results with coverage data
+                        const enhancedTestResults = await this.enhanceWithCoverageData(individualTestResults);
+                        return this._buildTestResult(testResult, parsedResult, enhancedTestResults);
                     }
                 }
             }
@@ -466,6 +468,15 @@ class TestAnalyzer extends BaseAnalyzer {
     }
 
     _buildTestResult(testResult, parsedResult, individualTestResults) {
+        // Prepare coverage analysis data
+        const coverageAnalysis = {
+            sourceFileToTestsMap: this.sourceFileToTestsMap || new Map(),
+            testToSourceFilesMap: this.testToSourceFilesMap || new Map(),
+            topFailingTestContributors: this.getTopFailingTestContributors(individualTestResults),
+            topPassingTestSupporters: this.getTopPassingTestSupporters(individualTestResults),
+            bottomPassingTestSupporters: this.getBottomPassingTestSupporters(individualTestResults)
+        };
+
         return {
             status: testResult.status === 0 ? 'success' : 'partial',
             totalTests: parsedResult.numTotalTests || 0,
@@ -481,7 +492,8 @@ class TestAnalyzer extends BaseAnalyzer {
             individualTestResults,
             slowestTests: this.getSlowestTests(individualTestResults),
             testFiles: FileAnalyzer.collectTestFiles(),
-            failureAnalysis: this._analyzeFailures(individualTestResults)
+            failureAnalysis: this._analyzeFailures(individualTestResults),
+            coverageAnalysis
         };
     }
 
@@ -639,6 +651,104 @@ class TestAnalyzer extends BaseAnalyzer {
         }
 
         return causes;
+    }
+
+    /**
+     * Enhance test results with coverage data to track which source files are associated with each test
+     * @param {Array} individualTestResults - Array of individual test results
+     * @returns {Array} Enhanced test results with coverage data
+     */
+    async enhanceWithCoverageData(individualTestResults) {
+        // Load coverage data if available
+        const coverageFinalPath = './coverage/coverage-final.json';
+        if (!fs.existsSync(coverageFinalPath)) {
+            this.log('Coverage data not found, returning original test results', 'warn');
+            return individualTestResults;
+        }
+
+        try {
+            const coverageData = JSON.parse(fs.readFileSync(coverageFinalPath, 'utf8'));
+            
+            // Create a map of source files to tests that cover them
+            const sourceFileToTestsMap = new Map();
+            const testToSourceFilesMap = new Map();
+
+            // Process each source file in coverage data
+            for (const [sourceFilePath, fileCoverage] of Object.entries(coverageData)) {
+                if (sourceFilePath === 'total') continue; // Skip summary entry
+                
+                const relativeSourcePath = path.relative(process.cwd(), sourceFilePath);
+                
+                // Check which tests cover this source file
+                const coveredTests = [];
+                
+                // For each test, check if it covers any lines in this source file
+                for (const testResult of individualTestResults) {
+                    // In Jest's coverage data, we can't directly tell which test covers which file
+                    // But we can associate tests with their corresponding source files based on naming convention
+                    const testSuiteName = testResult.suite;
+                    
+                    // Extract source file name from test file path
+                    // e.g., tests/unit/core/Truth.test.js -> src/Truth.js
+                    const sourceFileName = this.getSourceFileNameFromTestFile(testSuiteName);
+                    
+                    if (sourceFileName && relativeSourcePath.includes(sourceFileName)) {
+                        coveredTests.push({
+                            testName: testResult.fullName,
+                            testStatus: testResult.status,
+                            testDuration: testResult.duration
+                        });
+                        
+                        // Add this source file to the test's coverage list
+                        if (!testToSourceFilesMap.has(testResult.fullName)) {
+                            testToSourceFilesMap.set(testResult.fullName, []);
+                        }
+                        testToSourceFilesMap.get(testResult.fullName).push(relativeSourcePath);
+                    }
+                }
+                
+                if (coveredTests.length > 0) {
+                    sourceFileToTestsMap.set(relativeSourcePath, coveredTests);
+                }
+            }
+
+            // Enhance individual test results with coverage information
+            const enhancedTestResults = individualTestResults.map(testResult => {
+                const enhancedResult = {...testResult};
+                
+                // Add source files covered by this test
+                if (testToSourceFilesMap.has(testResult.fullName)) {
+                    enhancedResult.coveredSourceFiles = testToSourceFilesMap.get(testResult.fullName);
+                } else {
+                    enhancedResult.coveredSourceFiles = [];
+                }
+                
+                return enhancedResult;
+            });
+
+            // Add coverage analysis to the test analyzer instance for later use
+            this.sourceFileToTestsMap = sourceFileToTestsMap;
+            this.testToSourceFilesMap = testToSourceFilesMap;
+
+            return enhancedTestResults;
+        } catch (error) {
+            this.log(`Error enhancing test results with coverage data: ${error.message}`, 'warn');
+            return individualTestResults;
+        }
+    }
+
+    /**
+     * Extract source file name from test file path
+     * @param {string} testFilePath - Path to test file
+     * @returns {string|null} Source file name or null
+     */
+    getSourceFileNameFromTestFile(testFilePath) {
+        if (!testFilePath) return null;
+        
+        // Extract file name without extension and .test suffix
+        const basename = path.basename(testFilePath);
+        const withoutExtension = basename.replace(/\.(test|spec)\.js$/, '');
+        return withoutExtension;
     }
 
     async _runFallbackTest() {
