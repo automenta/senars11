@@ -82,19 +82,29 @@ class REPLCore {
     this.websocket.onopen = () => {
       this.setStatus('connected');
       console.log(`WebSocket connected for session ${this.sessionId}`);
+      this.sessionManager?.updateSessionStatus?.(this.sessionId, 'connected');
     };
     
     this.websocket.onclose = () => {
       this.setStatus('disconnected');
       console.log(`WebSocket disconnected for session ${this.sessionId}`);
+      this.sessionManager?.updateSessionStatus?.(this.sessionId, 'disconnected');
     };
     
     this.websocket.onerror = (error) => {
       this.setStatus('error');
       console.error(`WebSocket error for session ${this.sessionId}:`, error);
+      this.sessionManager?.updateSessionStatus?.(this.sessionId, 'error');
     };
     
-    this.websocket.onmessage = (event) => this.handleMessage(event);
+    this.websocket.onmessage = (event) => {
+      try {
+        this.handleMessage(event);
+      } catch (error) {
+        console.error('Error handling WebSocket message:', error);
+        this.addOutputLine({ type: 'error', text: `Message processing error: ${error.message}` });
+      }
+    };
   }
   
   bindEvents() {
@@ -170,26 +180,108 @@ class REPLCore {
   handleMessage(event) {
     try {
       const message = JSON.parse(event.data);
-      if (message.sessionId !== this.sessionId) return;
+      
+      // Only check sessionId if it's present in the message (some system messages may not have it)
+      if (message.sessionId && message.sessionId !== this.sessionId) {
+        return;
+      }
+      
       this.routeMessage(message);
     } catch (error) {
       console.error('Error parsing WebSocket message:', error);
+      console.log('Raw message:', event.data);
     }
   }
   
   routeMessage(message) {
     const handler = this.getMessageHandler(message.type);
-    handler ? handler(message.payload) : console.warn('Unknown message type:', message.type);
+    if (handler) {
+      try {
+        handler(message.payload || message.data);
+      } catch (error) {
+        console.error('Error in message handler for type:', message.type, error);
+      }
+    } else {
+      console.warn('Unknown message type:', message.type, 'with data:', message);
+      // Add a fallback for system events that might not have a specific handler
+      if (message.type === 'event') {
+        this.handleSystemEvent(message);
+      }
+    }
   }
   
   getMessageHandler(type) {
     const handlers = {
       'output': (payload) => this.handleOutput(payload),
       'status': (payload) => this.handleStatus(payload),
-      'reason/output': (payload) => this.handleReasonOutput(payload)
+      'reason/output': (payload) => this.handleReasonOutput(payload),
+      'task.added': (payload) => this.handleTaskAdded(payload),
+      'task.processed': (payload) => this.handleTaskProcessed(payload),
+      'cycle.complete': (payload) => this.handleCycleComplete(payload)
     };
     
     return handlers[type] ?? null;
+  }
+  
+  // Handler for system events
+  handleSystemEvent(message) {
+    // Handle various event types that come through the 'event' message type
+    const eventType = message.eventType;
+    const data = message.data;
+    
+    switch (eventType) {
+      case 'task.added':
+        this.handleTaskAdded(data?.data?.task || data?.task);
+        break;
+      case 'task.processed':
+        this.handleTaskProcessed(data);
+        break;
+      case 'cycle.complete':
+        this.handleCycleComplete(data);
+        break;
+      case 'system.started':
+      case 'system.stopped':
+        // These might be status updates
+        this.handleStatus(data);
+        break;
+      default:
+        console.log('Unhandled system event:', eventType);
+        break;
+    }
+  }
+  
+  handleTaskAdded(taskData) {
+    if (taskData && taskData.term) {
+      // Format the task for display
+      let outputText = taskData.term._name || taskData.term || 'Unknown task';
+      if (taskData.truth) {
+        outputText += ` %${taskData.truth.frequency || 0.0};${taskData.truth.confidence || 0.0}%`;
+      }
+      
+      this.addOutputLine({ 
+        type: 'task.added', 
+        text: outputText,
+        task: taskData 
+      });
+    }
+  }
+  
+  handleTaskProcessed(taskData) {
+    if (taskData) {
+      this.addOutputLine({ 
+        type: 'task.processed', 
+        text: 'Task processed',
+        task: taskData 
+      });
+    }
+  }
+  
+  handleCycleComplete(cycleData) {
+    this.addOutputLine({ 
+      type: 'cycle', 
+      text: 'Reasoning cycle completed',
+      data: cycleData 
+    });
   }
   
   shouldThrottle() {

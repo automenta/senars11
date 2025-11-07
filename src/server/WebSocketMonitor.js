@@ -300,7 +300,7 @@ class WebSocketMonitor {
                 ...message,
                 // Extract the text from payload for the narseseInput handler
                 payload: {
-                    input: message.payload?.text || message.payload?.input || ''
+                    input: message.payload?.text || message.payload?.input || message.payload || ''
                 }
             };
             this.messageHandlers.handleNarseseInput(client, formattedMessage);
