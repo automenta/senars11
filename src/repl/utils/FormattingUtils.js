@@ -1,0 +1,108 @@
+export class FormattingUtils {
+    static formatTask(task) {
+        const priority = this.formatPriority(task.budget?.priority);
+        const term = task.term?.toString?.() ?? task.term ?? 'Unknown';
+        const punctuation = this.getTypePunctuation(task.type ?? 'TASK');
+        const truthStr = this.formatTruth(task.truth);
+        const occurrence = this.formatOccurrence(task);
+
+        return `${priority}${term}${punctuation}${truthStr}${occurrence}`;
+    }
+
+    static formatPriority(priority) {
+        return priority !== undefined ? `$${priority.toFixed(3)} ` : '';
+    }
+
+    static formatTruth(truth) {
+        if (!truth) return ' %1.000,0.900%';
+
+        const freq = truth.frequency?.toFixed(3) ?? '1.000';
+        const conf = truth.confidence?.toFixed(3) ?? '0.900';
+        return ` %${freq},${conf}%`;
+    }
+
+    static formatOccurrence(task) {
+        if (task.occurrenceTime === undefined && !task.stamp) return '';
+
+        const timeStr = task.occurrenceTime ?? '';
+        const stampStr = task.stamp ? this.encodeShortId(task.stamp.id ?? task.stamp) : '';
+
+        return stampStr ? ` ${timeStr}@${stampStr}`.trim() : timeStr;
+    }
+
+    static getTypePunctuation(type) {
+        return { 'BELIEF': '.', 'GOAL': '!', 'QUESTION': '?' }[type?.toUpperCase()] ?? '.';
+    }
+
+    static encodeShortId(input) {
+        if (!input) return 'N/A';
+        
+        const inputStr = String(input);
+        const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+        
+        // Convert the input to a hash
+        let hash = 0;
+        for (let i = 0; i < inputStr.length; i++) {
+            hash = ((hash << 5) - hash) + inputStr.charCodeAt(i);
+            hash |= 0;
+        }
+        hash = Math.abs(hash);
+
+        if (hash === 0) return chars[0];
+
+        let result = '';
+        const base = chars.length;
+        let num = hash;
+
+        while (num > 0) {
+            result = chars[num % base] + result;
+            num = Math.floor(num / base);
+        }
+
+        return result.length > 8 ? result.substring(0, 8) : result;
+    }
+
+    static formatTaskDetails(task) {
+        const details = [
+            this.formatType(task.type),
+            this.formatTruthStr(task.truth),
+            this.formatPriorityStr(task.priority),
+            this.formatStamp(task.stamp),
+            this.formatOccurrenceTime(task.occurrenceTime)
+        ].filter(Boolean);
+
+        return details.join(' | ');
+    }
+
+    static formatType(type) { return type ? `Type: ${type}` : 'Type: Task'; }
+    static formatTruthStr(truth) { return truth ? `Truth: ${truth.toString()}` : 'Truth: N/A'; }
+    static formatPriorityStr(priority) { return priority !== undefined ? `Priority: ${priority.toFixed(3)}` : 'Priority: N/A'; }
+    static formatStamp(stamp) { return stamp ? `Stamp: ${stamp}` : 'Stamp: N/A'; }
+    static formatOccurrenceTime(occurrenceTime) { return occurrenceTime !== undefined ? `OccTime: ${occurrenceTime}` : null; }
+
+    static formatBeliefDetails(task) {
+        const details = [
+            this.formatBeliefTruth(task.truth),
+            this.formatBeliefPriority(task.priority),
+            this.formatBeliefOccurrence(task.stamp)
+        ].filter(Boolean);
+
+        return details.join('');
+    }
+
+    static formatBeliefTruth(truth) { return truth ? `${truth.toString()}` : null; }
+    static formatBeliefPriority(priority) { return priority !== undefined ? ` | P:${priority.toFixed(3)}` : null; }
+    static formatBeliefOccurrence(stamp) { return stamp ? ` | Occ:${stamp}` : null; }
+    
+    static formatNumber(num) {
+        return num >= 1000000 ? (num / 1000000).toFixed(1) + 'M' :
+               num >= 1000 ? (num / 1000).toFixed(1) + 'K' :
+               num.toString();
+    }
+    
+    static formatFileSize(sizeInBytes) {
+        return sizeInBytes >= 1000000 ? (sizeInBytes / 1000000).toFixed(2) + ' MB' :
+               sizeInBytes >= 1000 ? (sizeInBytes / 1000).toFixed(2) + ' KB' :
+               sizeInBytes + ' bytes';
+    }
+}

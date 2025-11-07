@@ -1,30 +1,33 @@
-import {Repl} from '../src/tui/Repl.js';
+import { ReplEngine } from '../src/repl/ReplEngine.js';
 
-// Create a simple test to verify the REPL functionality
-const repl = new Repl();
+// Create a simple test to verify the new unified REPL functionality
+const engine = new ReplEngine();
 
-// Initialize the NAR
-await repl.nar.initialize();
+// Initialize the engine
+await engine.initialize();
 
-console.log("Testing input processing...");
+console.log("Testing input processing with unified architecture...");
 
 // Test input
 try {
-    const result = await repl.nar.input("(a --> b).");
+    const result = await engine.processNarsese("(a --> b).");
     console.log("Input processed successfully:", result);
 
     // Process one step to ensure tasks are processed
-    await repl.nar.step();
+    await engine.executeCommand('next');
 
     // Get stats
-    const stats = repl.nar.getStats();
+    const stats = engine.getStats();
     console.log("Memory stats after input:");
-    console.log("- Total concepts in memoryUsage:", stats.memoryStats.memoryUsage?.concepts);
-    console.log("- Total concepts in totalConcepts:", stats.memoryStats.totalConcepts);
-    console.log("- Total tasks in memoryUsage:", stats.memoryStats.memoryUsage?.totalTasks);
-    console.log("- Total tasks in totalTasks:", stats.memoryStats.totalTasks);
+    console.log("- Total concepts:", stats.memoryStats?.conceptCount || stats.memoryStats?.totalConcepts || 0);
+    console.log("- Total tasks:", stats.memoryStats?.taskCount || stats.memoryStats?.totalTasks || 0);
+    
+    // Get beliefs
+    const beliefs = engine.getBeliefs();
+    console.log("Current beliefs:", beliefs.length);
 } catch (error) {
     console.error("Error during test:", error);
 }
 
-console.log("Test completed");
+console.log("Test completed with unified architecture");
+await engine.shutdown();
