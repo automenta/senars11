@@ -46,44 +46,68 @@ export class TaskMatch {
 
     async matches(task) {
         // Check term match
-        if (this.termFilter) {
-            const {NarseseParser} = await import('../parser/NarseseParser.js');
-            const {TermFactory} = await import('../term/TermFactory.js');
-            const termFactory = new TermFactory();
-            const parser = new NarseseParser(termFactory);
-            // Add punctuation to satisfy the parser
-            const expectedTerm = parser.parse(this.termFilter + '.').term;
-            if (!task.term.equals(expectedTerm)) {
-                return false;
-            }
+        if (this.termFilter && !await this._checkTermMatch(task)) {
+            return false;
         }
-
+        
         // Check punctuation match
-        if (this.punctuationFilter) {
-            const expectedType = this._punctToType(this.punctuationFilter);
-            if (task.type !== expectedType) {
-                return false;
-            }
+        if (this.punctuationFilter && !this._checkPunctuationMatch(task)) {
+            return false;
         }
 
         // Check truth values
-        if (this.minFreq !== null && task.truth && task.truth.f < this.minFreq) {
-            return false;
-        }
-        if (this.minConf !== null && task.truth && task.truth.c < this.minConf) {
+        if (!this._checkTruthValues(task)) {
             return false;
         }
 
         // Check flexible truth matching if specified
-        if (this.expectedFreq !== null && this.expectedConf !== null && this.tolerance !== null && task.truth) {
-            const freqDiff = Math.abs(task.truth.f - this.expectedFreq);
-            const confDiff = Math.abs(task.truth.c - this.expectedConf);
-            if (freqDiff > this.tolerance || confDiff > this.tolerance) {
-                return false;
-            }
+        if (!this._checkFlexibleTruth(task)) {
+            return false;
         }
 
         // Check range-based truth matching if specified
+        if (!this._checkRangeTruth(task)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    async _checkTermMatch(task) {
+        const {NarseseParser} = await import('../parser/NarseseParser.js');
+        const {TermFactory} = await import('../term/TermFactory.js');
+        const termFactory = new TermFactory();
+        const parser = new NarseseParser(termFactory);
+        const expectedTerm = parser.parse(this.termFilter + '.').term;
+        return task.term?.equals(expectedTerm);
+    }
+
+    _checkPunctuationMatch(task) {
+        const expectedType = this._punctToType(this.punctuationFilter);
+        return task.type === expectedType;
+    }
+
+    _checkTruthValues(task) {
+        if (this.minFreq !== null && task.truth?.f < this.minFreq) {
+            return false;
+        }
+        if (this.minConf !== null && task.truth?.c < this.minConf) {
+            return false;
+        }
+        return true;
+    }
+
+    _checkFlexibleTruth(task) {
+        if (this.expectedFreq === null || this.expectedConf === null || this.tolerance === null || !task.truth) {
+            return true; // Not applicable
+        }
+
+        const freqDiff = Math.abs(task.truth.f - this.expectedFreq);
+        const confDiff = Math.abs(task.truth.c - this.expectedConf);
+        return freqDiff <= this.tolerance && confDiff <= this.tolerance;
+    }
+
+    _checkRangeTruth(task) {
         if (this.minFreq !== null && this.maxFreq !== null && task.truth &&
             (task.truth.f < this.minFreq || task.truth.f > this.maxFreq)) {
             return false;
@@ -92,7 +116,6 @@ export class TaskMatch {
             (task.truth.c < this.minConf || task.truth.c > this.maxConf)) {
             return false;
         }
-
         return true;
     }
 

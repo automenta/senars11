@@ -220,33 +220,5 @@ ${taskList}
         return true;
     }
 
-    /**
-     * Process all input operations
-     */
-    async _processInputs() {
-        // Process only input operations first
-        for (const op of this.operations) {
-            if (op.type === 'input') {
-                try {
-                    // Format input with truth values: "term. %freq;conf%"
-                    const inputStr = `${op.termStr}. %${op.freq};${op.conf}%`;
-                    await this.nar.input(inputStr);
-                } catch (error) {
-                    this.logger?.warn(`Input failed: ${op.termStr}`, error);
-                }
-            }
-        }
-    }
 
-    /**
-     * Ensure derived tasks are properly processed into the system
-     */
-    async _ensureDerivedTasksAreProcessed() {
-        // In the new architecture, make sure the focus and memory are synchronized
-        // This helps ensure all tasks (input + derived) are available for the test check
-        if (this.nar._focus) {
-            // Allow any pending operations to complete
-            await new Promise(resolve => setTimeout(resolve, 50));
-        }
-    }
 }

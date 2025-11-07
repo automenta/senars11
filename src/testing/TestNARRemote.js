@@ -34,14 +34,14 @@ export class TestNARRemote {
         return this;
     }
 
-    expect(termStr) {
-        const matcher = termStr instanceof RemoteTaskMatch ? termStr : new RemoteTaskMatch(termStr);
+    expect(term) {
+        const matcher = term instanceof RemoteTaskMatch ? term : new RemoteTaskMatch(term);
         this.operations.push({ type: 'expect', matcher, shouldExist: true });
         return this;
     }
 
-    expectNot(termStr) {
-        const matcher = termStr instanceof RemoteTaskMatch ? termStr : new RemoteTaskMatch(termStr);
+    expectNot(term) {
+        const matcher = term instanceof RemoteTaskMatch ? term : new RemoteTaskMatch(term);
         this.operations.push({ type: 'expect', matcher, shouldExist: false });
         return this;
     }
@@ -50,23 +50,49 @@ export class TestNARRemote {
         await this.setup();
 
         try {
-            for (const op of this.operations) {
-                if (op.type === 'input') {
-                    const inputStr = `${op.termStr}. %${op.freq};${op.conf}%`;
-                    await this.sendNarsese(inputStr);
-                } else if (op.type === 'run') {
-                    for (let i = 0; i < op.cycles; i++) {
-                        await this.sendNarsese('*step');
-                    }
-                }
-            }
+            const { inputs, runs } = this._categorizeOperations();
+            
+            await this._executeInputOperations(inputs);
+            await this._executeRunOperations(runs);
 
-            // Wait for expectations to be met - use event-driven approach instead of polling
             const expectations = this.operations.filter(op => op.type === 'expect');
             await this.waitForExpectationsEventDriven(expectations);
 
         } finally {
             await this.teardown();
+        }
+    }
+
+    _categorizeOperations() {
+        const inputs = [];
+        const runs = [];
+
+        for (const op of this.operations) {
+            switch (op.type) {
+                case 'input':
+                    inputs.push(op);
+                    break;
+                case 'run':
+                    runs.push(op);
+                    break;
+            }
+        }
+
+        return { inputs, runs };
+    }
+
+    async _executeInputOperations(inputs) {
+        for (const op of inputs) {
+            const inputStr = `${op.termStr}. %${op.freq};${op.conf}%`;
+            await this.sendNarsese(inputStr);
+        }
+    }
+
+    async _executeRunOperations(runs) {
+        for (const op of runs) {
+            for (let i = 0; i < op.cycles; i++) {
+                await this.sendNarsese('*step');
+            }
         }
     }
 
