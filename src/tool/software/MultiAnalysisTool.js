@@ -62,13 +62,13 @@ export class MultiAnalysisTool extends SoftwareAnalysisTool {
      * @returns {Promise<any>} - Analysis result
      */
     async performAnalysis(params, context) {
-        const { analyses, verbose = false, concurrency = 2 } = params;
+        const {analyses, verbose = false, concurrency = 2} = params;
         const results = {};
-        
+
         // Analysis to tool mapping
         const analysisMap = {
             'tests': 'test-analysis',
-            'coverage': 'coverage-analysis', 
+            'coverage': 'coverage-analysis',
             'static': 'static-analysis',
             'technicaldebt': 'technical-debt-analysis',
             'architecture': 'architecture-analysis',
@@ -91,19 +91,19 @@ export class MultiAnalysisTool extends SoftwareAnalysisTool {
         // Run analyses with specified concurrency
         for (let i = 0; i < requestedAnalyses.length; i += concurrency) {
             const batch = requestedAnalyses.slice(i, i + concurrency);
-            
+
             if (verbose) {
                 console.log(`🔄 Running batch: ${batch.join(', ')}`);
             }
-            
+
             const batchPromises = batch.map(async (analysis) => {
                 try {
                     const toolId = analysisMap[analysis];
                     const toolData = this.toolEngine.getTool(toolId);
-                    
+
                     if (!toolData) {
                         console.warn(`⚠️  Tool ${toolId} not found for analysis: ${analysis}`);
-                        results[analysis] = { error: `Tool ${toolId} not found` };
+                        results[analysis] = {error: `Tool ${toolId} not found`};
                         return;
                     }
 
@@ -111,23 +111,23 @@ export class MultiAnalysisTool extends SoftwareAnalysisTool {
                     const tool = toolData.instance;
                     if (!tool || typeof tool.execute !== 'function') {
                         console.warn(`⚠️  Tool ${toolId} does not have a valid execute method for analysis: ${analysis}`);
-                        results[analysis] = { error: `Tool ${toolId} has no execute method` };
+                        results[analysis] = {error: `Tool ${toolId} has no execute method`};
                         return;
                     }
 
                     if (verbose) {
                         console.log(`🔍 Executing ${analysis} analysis...`);
                     }
-                    
-                    const result = await tool.execute({ verbose }, { ...context, analysisType: analysis });
+
+                    const result = await tool.execute({verbose}, {...context, analysisType: analysis});
                     results[analysis] = result;
-                    
+
                     if (verbose) {
                         console.log(`✅ ${analysis} analysis completed`);
                     }
                 } catch (error) {
                     console.error(`❌ ${analysis} analysis failed:`, error.message);
-                    results[analysis] = { error: `Analysis failed: ${error.message}`, details: error };
+                    results[analysis] = {error: `Analysis failed: ${error.message}`, details: error};
                 }
             });
 

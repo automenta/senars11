@@ -1,14 +1,14 @@
-import { safeGet, clamp, deepClone, formatNumber, safeAsync, debounce, groupBy, flatten } from '../../src/util/CommonUtils.js';
+import {clamp, deepClone, flatten, formatNumber, groupBy, safeAsync, safeGet} from '../../src/util/CommonUtils.js';
 
 describe('CommonUtils', () => {
     describe('safeGet', () => {
         test('should return value at path if exists', () => {
-            const obj = { a: { b: { c: 42 } } };
+            const obj = {a: {b: {c: 42}}};
             expect(safeGet(obj, 'a.b.c')).toBe(42);
         });
 
         test('should return default value if path does not exist', () => {
-            const obj = { a: { b: { c: 42 } } };
+            const obj = {a: {b: {c: 42}}};
             expect(safeGet(obj, 'a.b.d', 'default')).toBe('default');
         });
 
@@ -41,7 +41,7 @@ describe('CommonUtils', () => {
         });
 
         test('should clone objects', () => {
-            const obj = { a: 1, b: { c: 2 } };
+            const obj = {a: 1, b: {c: 2}};
             const cloned = deepClone(obj);
             expect(cloned).toEqual(obj);
             expect(cloned).not.toBe(obj);
@@ -87,7 +87,9 @@ describe('CommonUtils', () => {
         });
 
         test('should return default value if async function throws', async () => {
-            const result = await safeAsync(async () => { throw new Error('test'); }, 'default');
+            const result = await safeAsync(async () => {
+                throw new Error('test');
+            }, 'default');
             expect(result).toBe('default');
         });
     });
@@ -95,17 +97,17 @@ describe('CommonUtils', () => {
     describe('groupBy', () => {
         test('should group array by property name', () => {
             const arr = [
-                { category: 'A', value: 1 },
-                { category: 'B', value: 2 },
-                { category: 'A', value: 3 }
+                {category: 'A', value: 1},
+                {category: 'B', value: 2},
+                {category: 'A', value: 3}
             ];
             const result = groupBy(arr, 'category');
             expect(result.A).toEqual([
-                { category: 'A', value: 1 },
-                { category: 'A', value: 3 }
+                {category: 'A', value: 1},
+                {category: 'A', value: 3}
             ]);
             expect(result.B).toEqual([
-                { category: 'B', value: 2 }
+                {category: 'B', value: 2}
             ]);
         });
 

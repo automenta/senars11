@@ -190,26 +190,26 @@ export class ResultDisplay {
         // Test coverage analysis insights
         if (results.testcoverage && !results.testcoverage.error) {
             const tc = results.testcoverage;
-            
+
             // Add insights about test coverage relationships
             if (tc.passingTestSupports?.topSupports?.length > 0) {
                 const topFile = tc.passingTestSupports.topSupports[0];
                 insights.push(`Key well-tested file: ${path.basename(topFile.sourceFile)} (${topFile.passingTestCount} tests)`);
             }
-            
+
             if (tc.passingTestSupports?.bottomSupports?.length > 0) {
                 const bottomFiles = tc.passingTestSupports.bottomSupports.slice(0, 3);
                 const bottomFileNames = bottomFiles.map(f => path.basename(f.sourceFile)).join(', ');
                 recommendations.push(`Improve testing of least-tested files: ${bottomFileNames} (${bottomFiles[0].passingTestCount} tests each)`);
             }
-            
+
             if (tc.causalAnalysis) {
-                const { highCausalFiles, lowCausalFiles } = tc.causalAnalysis;
+                const {highCausalFiles, lowCausalFiles} = tc.causalAnalysis;
                 if (highCausalFiles?.length > 0) {
                     const topCausalFile = highCausalFiles[0];
                     insights.push(`Most tested file: ${path.basename(topCausalFile.sourceFile)} (${topCausalFile.testCount} tests)`);
                 }
-                
+
                 if (lowCausalFiles?.length > 0) {
                     const lowCausalFilesSample = lowCausalFiles.slice(0, 3);
                     const lowCausalNames = lowCausalFilesSample.map(f => path.basename(f.sourceFile)).join(', ');
@@ -296,7 +296,7 @@ export class ResultDisplay {
                 console.log(`    Top supporter: ${topSupporter.file} (${topSupporter.count} passing tests)`);
             }
         }
-        
+
         // Show test coverage analysis from new tool if available
         if (results.testcoverage && !results.testcoverage.error) {
             const coverage = results.testcoverage;
@@ -444,11 +444,11 @@ export class ResultDisplay {
         } else {
             console.log('  ❌ Test metrics unavailable');
         }
-        
+
         // Add test coverage analysis from new tool format
         if (results.testcoverage && !results.testcoverage.error) {
             const testCoverage = results.testcoverage;
-            
+
             if (testCoverage.failingTestCulprits && testCoverage.failingTestCulprits.length > 0) {
                 console.log(`  Top Failing Test Culprits:`);
                 testCoverage.failingTestCulprits.slice(0, 5).forEach(culprit => {
@@ -475,15 +475,15 @@ export class ResultDisplay {
 
             // Causal analysis
             if (testCoverage.causalAnalysis) {
-                const { highCausalFiles, lowCausalFiles } = testCoverage.causalAnalysis;
-                
+                const {highCausalFiles, lowCausalFiles} = testCoverage.causalAnalysis;
+
                 if (highCausalFiles && highCausalFiles.length > 0) {
                     console.log(`  Most Tested Files:`);
                     highCausalFiles.slice(0, 5).forEach(file => {
                         console.log(`    - ${file.sourceFile}: ${file.testCount} tests`);
                     });
                 }
-                
+
                 if (lowCausalFiles && lowCausalFiles.length > 0) {
                     console.log(`  Least Tested Files:`);
                     lowCausalFiles.slice(0, 5).forEach(file => {

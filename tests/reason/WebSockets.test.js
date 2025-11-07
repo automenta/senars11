@@ -5,9 +5,9 @@
  *              to direct reasoner tests, ensuring UI/REPL functionality is preserved.
  */
 
-import { TestNAR } from '../../src/testing/TestNAR.js';
-import { TestNARRemote } from '../../src/testing/TestNARRemote.js';
-import { RemoteTaskMatch } from '../../src/testing/TaskMatch.js';
+import {TestNAR} from '../../src/testing/TestNAR.js';
+import {TestNARRemote} from '../../src/testing/TestNARRemote.js';
+import {RemoteTaskMatch} from '../../src/testing/TaskMatch.js';
 
 describe('WebSocket Pathway Tests', () => {
     test('Basic inheritance chain via WebSocket - should match repl:test behavior', async () => {

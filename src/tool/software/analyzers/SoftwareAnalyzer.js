@@ -1,16 +1,7 @@
-import {spawnSync} from 'child_process';
-import fs from 'fs';
-import path from 'path';
-import {DisplayUtils} from '../../../tui/DisplayUtils.js';
-import * as dfd from 'danfojs';
-import {FileUtils} from '../../../util/FileUtils.js';
-import {CoverageUtils} from '../../../util/CoverageUtils.js';
-import {FileAnalyzer, TestUtils} from '../../../util/FileAnalyzer.js';
 import {AnalyzerFactory} from './AnalyzerFactory.js';
 import {SoftwareAnalyzerConfig} from './SoftwareAnalyzerConfig.js';
 import {ResultDisplay} from './ResultDisplay.js';
-import {AnalyzerError, ConfigurationError, AnalysisError} from '../../../util/AnalyzerErrors.js';
-import {safeGet, groupBy, formatNumber} from '../../../util/CommonUtils.js';
+import {AnalysisError, ConfigurationError} from '../../../util/AnalyzerErrors.js';
 
 // For integration with NAR system
 let NAR = null;
@@ -35,7 +26,7 @@ export class SoftwareAnalyzer {
             // Create analyzers using Object.fromEntries for better modern syntax
             this.analyzers = Object.fromEntries(
                 AnalyzerFactory.getAllAnalyzerTypes().map(type => [
-                    type, 
+                    type,
                     AnalyzerFactory.createAnalyzer(type, this.config.getAll(), this.config.get('verbose'))
                 ])
             );
@@ -256,7 +247,7 @@ export class SoftwareAnalyzer {
      */
     _convertToNarsese(results) {
         const statements = [];
-        const { tests, coverage, static: staticResults, technicaldebt, architecture } = results;
+        const {tests, coverage, static: staticResults, technicaldebt, architecture} = results;
 
         // Convert test results
         if (tests && !tests.error) {
@@ -315,11 +306,11 @@ export class SoftwareAnalyzer {
      * @private
      */
     _convertInsightsToGoals(results) {
-        const { tests, coverage, static: staticResults, technicaldebt, architecture } = results;
-        
+        const {tests, coverage, static: staticResults, technicaldebt, architecture} = results;
+
         // Use array of condition-action pairs to make the code more functional
         const goals = [];
-        
+
         // Add improvement goals based on analysis results
         if (tests?.failedTests > 0) {
             goals.push(`(improve_test_stability)! %0.9;0.9%`);
@@ -367,8 +358,8 @@ export class SoftwareAnalyzer {
      */
     _createSummary(results) {
         // Use object destructuring and nullish coalescing for cleaner code
-        const { tests, coverage, static: staticResults, technicaldebt } = results;
-        
+        const {tests, coverage, static: staticResults, technicaldebt} = results;
+
         return {
             ...(tests && !tests.error && {
                 tests: {

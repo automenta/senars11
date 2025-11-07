@@ -87,15 +87,15 @@ export function createDemoLayout(title, infoTitle, infoContent) {
  * @param {Object} options - SpaceGraph options
  */
 export async function initDemo(demoInitFn, title, infoTitle, infoContent, options = {}) {
-    const { container } = createDemoLayout(title, infoTitle, infoContent);
+    const {container} = createDemoLayout(title, infoTitle, infoContent);
     const space = await initSpaceGraph(container, options);
-    
+
     // Run the initialization function with the space instance
     await demoInitFn(space);
-    
+
     // Start animation loop
     space.animate();
-    
+
     return space;
 }
 
@@ -112,14 +112,18 @@ export function createNode(space, nodeData, commonProps = {}) {
         ...commonProps,
         ...nodeData,
         // If position is provided in nodeData, use it; otherwise create it
-        position: nodeData.position ? {...nodeData.position} : commonProps.position ? {...commonProps.position} : {x: 0, y: 0, z: 0},
+        position: nodeData.position ? {...nodeData.position} : commonProps.position ? {...commonProps.position} : {
+            x: 0,
+            y: 0,
+            z: 0
+        },
         // Merge data properties, with nodeData taking precedence
         data: {
             ...commonProps.data,
             ...nodeData.data
         }
     };
-    
+
     return space.createNode(finalNodeData);
 }
 
@@ -143,12 +147,12 @@ export function createMultipleNodes(space, nodeConfigs, commonProps = {}) {
  * @param {Object} defaultEdgeProps - Default properties for edges
  * @returns {Edge} The created edge
  */
-export function createEdge(space, source, target, edgeData = {}, defaultEdgeProps = { color: 0x888888, thickness: 1 }) {
+export function createEdge(space, source, target, edgeData = {}, defaultEdgeProps = {color: 0x888888, thickness: 1}) {
     const finalEdgeData = {
         ...defaultEdgeProps,
         ...edgeData
     };
-    
+
     return space.addEdge(source, target, finalEdgeData);
 }
 
@@ -159,7 +163,7 @@ export function createEdge(space, source, target, edgeData = {}, defaultEdgeProp
  * @param {Object} commonProps - Common properties to apply to all nodes
  * @returns {Node} The created node
  */
-export function createNodeWithCommonProps(space, nodeData, commonProps = { mass: 1.0 }) {
+export function createNodeWithCommonProps(space, nodeData, commonProps = {mass: 1.0}) {
     return space.createNode({
         ...commonProps,
         ...nodeData

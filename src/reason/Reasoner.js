@@ -106,30 +106,30 @@ export class Reasoner {
 
             // Create a set to track processed premise pairs to avoid duplicates
             const processedPairs = new Set();
-            
+
             for (let i = 0; i < focusTasks.length; i++) {
                 for (let j = i + 1; j < focusTasks.length; j++) {
                     if (Date.now() - startTime > timeoutMs) break;
 
                     const primaryPremise = focusTasks[i];
                     const secondaryPremise = focusTasks[j];
-                    
+
                     // Create a unique identifier for this premise pair to prevent duplicates
                     // Sort terms to ensure same pair with different order is treated as one
                     const primaryTermId = primaryPremise.term?._id || primaryPremise.term?._name || primaryPremise.term || 'unknown';
                     const secondaryTermId = secondaryPremise.term?._id || secondaryPremise.term?._name || secondaryPremise.term || 'unknown';
-                    
+
                     // Create sorted pair ID to avoid duplicate processing
-                    const pairId = primaryTermId < secondaryTermId 
-                        ? `${primaryTermId}-${secondaryTermId}` 
+                    const pairId = primaryTermId < secondaryTermId
+                        ? `${primaryTermId}-${secondaryTermId}`
                         : `${secondaryTermId}-${primaryTermId}`;
-                    
+
                     if (processedPairs.has(pairId)) {
                         continue; // Skip if this pair has already been processed
                     }
-                    
+
                     processedPairs.add(pairId);
-                    
+
                     const primaryTerm = primaryPremise.term?._name || primaryPremise.term || 'unknown';
                     const secondaryTerm = secondaryPremise.term?._name || secondaryPremise.term || 'unknown';
                     //console.log(`[STEP] Premise pair: [${primaryTerm}] + [${secondaryTerm}]`);

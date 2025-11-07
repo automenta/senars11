@@ -257,7 +257,10 @@ export class NAR extends BaseComponent {
         if (!this._streamRuleExecutor) return;
 
         // Import and register new stream reasoner rules from the refactored structure
-        const {InheritanceSyllogisticRule, ImplicationSyllogisticRuleNew} = await import('../reason/rules/nal/SyllogisticRule.js');
+        const {
+            InheritanceSyllogisticRule,
+            ImplicationSyllogisticRuleNew
+        } = await import('../reason/rules/nal/SyllogisticRule.js');
         const {ModusPonensRule} = await import('../reason/rules/nal/ModusPonensRule.js');
         const {MetacognitionRules} = await import('../reason/rules/nal/MetacognitionRules.js');
 

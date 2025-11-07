@@ -1,4 +1,4 @@
-import { ArgParser } from '../../src/util/ArgParser.js';
+import {ArgParser} from '../../src/util/ArgParser.js';
 
 describe('ArgParser', () => {
     describe('parse', () => {

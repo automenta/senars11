@@ -1,13 +1,10 @@
 #!/usr/bin/env node
 
-import {spawnSync} from 'child_process';
-import fs from 'fs';
-import path from 'path';
-import {DisplayUtils} from './src/tui/DisplayUtils.js';
-import * as dfd from 'danfojs';
-import {AnalyzerRunner} from './src/tool/software/analyzers/AnalyzerRunner.js';
+import {basename, dirname} from 'path';
 import {ArgParser} from './src/util/ArgParser.js';
 import {ToolSoftwareAnalyzer} from './src/tool/software/ToolSoftwareAnalyzer.js';
+// Check if this script is being run directly (not imported)
+import {fileURLToPath} from 'url';
 
 // For integration with NAR system
 let NAR = null;
@@ -33,7 +30,7 @@ async function main() {
     const analyzer = new ToolSoftwareAnalyzer(options);
 
     await analyzer.runAnalysis();
-    
+
     // Output tool usage stats
     if (typeof analyzer.getToolUsageStats === 'function') {
         console.log('\n📈 Tool usage statistics:');
@@ -43,10 +40,6 @@ async function main() {
         }
     }
 }
-
-// Check if this script is being run directly (not imported)
-import {fileURLToPath} from 'url';
-import {basename, dirname} from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

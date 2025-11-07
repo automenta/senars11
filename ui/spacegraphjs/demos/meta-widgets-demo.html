@@ -12,6 +12,7 @@
             color: white;
             font-family: Arial, sans-serif;
         }
+
         #container {
             position: fixed;
             top: 0;
@@ -19,6 +20,7 @@
             width: 100%;
             height: 100%;
         }
+
         #info {
             position: absolute;
             top: 10px;
@@ -30,6 +32,7 @@
             font-size: 14px;
             z-index: 100;
         }
+
         h3 {
             margin-top: 0;
             color: #4CAF50;
@@ -62,8 +65,8 @@
 
         // Initialize SpaceGraph with ergonomic factory method
         const space = await SpaceGraph.the(container);
-        
-        
+
+
         // Clear any existing content
         space.importGraphFromJSON({nodes: [], edges: []});
 
@@ -414,7 +417,7 @@
                     console.log(`Power level changed to: ${e.target.value}%`);
                 });
             }
-            
+
             // Fan speed slider
             const fanSpeedSlider = document.getElementById('fan-speed');
             const fanSpeedValue = document.getElementById('fan-speed-value');
@@ -424,7 +427,7 @@
                     console.log(`Fan speed changed to: ${e.target.value}%`);
                 });
             }
-            
+
             // Temperature target slider
             const tempTargetSlider = document.getElementById('temp-target');
             const tempTargetValue = document.getElementById('temp-target-value');
@@ -461,11 +464,11 @@
             const cpuUsage = 40 + Math.sin(animationTime) * 10;
             const memoryUsage = 65 + Math.sin(animationTime * 0.7) * 5;
             const networkIn = 75 + Math.sin(animationTime * 1.2) * 10;
-            
+
             const cpuBar = document.getElementById('cpu-usage-bar');
             const memoryBar = document.getElementById('memory-usage-bar');
             const networkInBar = document.getElementById('network-in-bar');
-            
+
             if (cpuBar) cpuBar.style.width = cpuUsage + '%';
             if (memoryBar) memoryBar.style.width = memoryUsage + '%';
             if (networkInBar) networkInBar.style.width = networkIn + '%';

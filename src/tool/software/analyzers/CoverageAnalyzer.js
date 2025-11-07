@@ -2,7 +2,6 @@ import fs from 'fs';
 import path from 'path';
 import * as dfd from 'danfojs';
 import {CoverageUtils} from '../../../util/CoverageUtils.js';
-import {FileAnalyzer} from '../../../util/FileAnalyzer.js';
 import {FileUtils} from '../../../util/FileUtils.js';
 import {BaseAnalyzer} from './BaseAnalyzer.js';
 

@@ -26,7 +26,7 @@ export class SoftwareAnalysisTool extends BaseTool {
      */
     async execute(params, context) {
         await this.beforeExecute(params, context);
-        
+
         // Validate parameters
         const validation = this.validate(params);
         if (!validation.isValid) {
@@ -35,7 +35,7 @@ export class SoftwareAnalysisTool extends BaseTool {
 
         // Perform the analysis
         const result = await this.performAnalysis(params, context);
-        
+
         const processedResult = await this.afterExecute(result, params, context);
         return processedResult;
     }

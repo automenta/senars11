@@ -9,7 +9,7 @@ export class AnalyzerError extends Error {
         this.code = code;
         this.originalError = originalError;
         this.timestamp = new Date().toISOString();
-        
+
         // Capture the stack trace
         if (originalError && originalError.stack) {
             this.stack = `${this.stack}\nCaused by: ${originalError.stack}`;

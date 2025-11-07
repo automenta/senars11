@@ -12,6 +12,7 @@
             color: white;
             font-family: Arial, sans-serif;
         }
+
         #container {
             position: fixed;
             top: 0;
@@ -19,6 +20,7 @@
             width: 100%;
             height: 100%;
         }
+
         #info {
             position: absolute;
             top: 10px;
@@ -30,6 +32,7 @@
             font-size: 14px;
             z-index: 100;
         }
+
         h3 {
             margin-top: 0;
             color: #4CAF50;
@@ -40,7 +43,8 @@
 <div id="container">
     <div id="info">
         <h3>Advanced Layout Systems</h3>
-        <p>Demonstrates next-generation layout capabilities including constraint-based positioning, nested container layouts, adaptive layout selection, and inter-layout connectivity.</p>
+        <p>Demonstrates next-generation layout capabilities including constraint-based positioning, nested container
+            layouts, adaptive layout selection, and inter-layout connectivity.</p>
         <ul>
             <li>Constraint-based layouts with distance, position, and angle constraints</li>
             <li>Nested container layouts with hierarchical arrangement</li>
@@ -63,8 +67,8 @@
 
         // Initialize SpaceGraph with ergonomic factory method
         const space = await SpaceGraph.the(container);
-        
-        
+
+
         // Advanced Layouts Demo Implementation
         const nodes = [];
         const edges = [];
@@ -308,7 +312,7 @@
 
         async function demonstrateMorphing() {
             const layouts = ['circular', 'grid', 'force', 'hierarchical'];
-            
+
             for (const layout of layouts) {
                 applySelectedLayout(layout, 'standard');
                 await new Promise(resolve => setTimeout(resolve, 2000));
@@ -320,7 +324,7 @@
 
             const node1 = nodes[Math.floor(Math.random() * nodes.length)];
             const node2 = nodes[Math.floor(Math.random() * nodes.length)];
-            
+
             if (node1 !== node2) {
                 // For simplicity, we'll just log the constraint addition
                 console.log(`Added distance constraint between ${node1.id} and ${node2.id}`);

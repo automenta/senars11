@@ -3,14 +3,13 @@
  * @description Test framework for NAR functionality using WebSocket pathway
  */
 
-import { spawn } from 'child_process';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-import { WebSocket } from 'ws';
-import { setTimeout as setTimeoutPromise } from 'timers/promises';
-import { RemoteTaskMatch } from './TaskMatch.js';
+import {spawn} from 'child_process';
+import {fileURLToPath} from 'url';
+import {dirname, join} from 'path';
+import {WebSocket} from 'ws';
+import {RemoteTaskMatch} from './TaskMatch.js';
 
-export { RemoteTaskMatch };
+export {RemoteTaskMatch};
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -25,24 +24,24 @@ export class TestNARRemote {
     }
 
     input(termStr, freq = 1.0, conf = 0.9) {
-        this.operations.push({ type: 'input', termStr, freq, conf });
+        this.operations.push({type: 'input', termStr, freq, conf});
         return this;
     }
 
     run(cycles = 1) {
-        this.operations.push({ type: 'run', cycles });
+        this.operations.push({type: 'run', cycles});
         return this;
     }
 
     expect(term) {
         const matcher = term instanceof RemoteTaskMatch ? term : new RemoteTaskMatch(term);
-        this.operations.push({ type: 'expect', matcher, shouldExist: true });
+        this.operations.push({type: 'expect', matcher, shouldExist: true});
         return this;
     }
 
     expectNot(term) {
         const matcher = term instanceof RemoteTaskMatch ? term : new RemoteTaskMatch(term);
-        this.operations.push({ type: 'expect', matcher, shouldExist: false });
+        this.operations.push({type: 'expect', matcher, shouldExist: false});
         return this;
     }
 
@@ -50,8 +49,8 @@ export class TestNARRemote {
         await this.setup();
 
         try {
-            const { inputs, runs } = this._categorizeOperations();
-            
+            const {inputs, runs} = this._categorizeOperations();
+
             await this._executeInputOperations(inputs);
             await this._executeRunOperations(runs);
 
@@ -78,7 +77,7 @@ export class TestNARRemote {
             }
         }
 
-        return { inputs, runs };
+        return {inputs, runs};
     }
 
     async _executeInputOperations(inputs) {
@@ -110,7 +109,7 @@ export class TestNARRemote {
         return new Promise((resolve, reject) => {
             this.serverProcess = spawn('node', [join(__dirname, '../index.js')], {
                 stdio: 'pipe',
-                env: { ...process.env, WS_PORT: this.port.toString(), NODE_ENV: 'test' },
+                env: {...process.env, WS_PORT: this.port.toString(), NODE_ENV: 'test'},
             });
 
             this.serverProcess.stdout.on('data', (data) => {
@@ -199,7 +198,7 @@ export class TestNARRemote {
                 message = {
                     sessionId: 'test',
                     type: 'reason/step',
-                    payload: { text: narseseString }
+                    payload: {text: narseseString}
                 };
             }
 
@@ -245,7 +244,7 @@ export class TestNARRemote {
                             }
                         }
                     }
-                    
+
                     // If we're looking for a task that should NOT exist and we don't find it, that's good
                     if (!exp.shouldExist && this.taskQueue.length > 0) {
                         clearTimeout(timeout);

@@ -12,6 +12,7 @@
             color: white;
             font-family: Arial, sans-serif;
         }
+
         #container {
             position: fixed;
             top: 0;
@@ -19,6 +20,7 @@
             width: 100%;
             height: 100%;
         }
+
         #info {
             position: absolute;
             top: 10px;
@@ -30,6 +32,7 @@
             font-size: 14px;
             z-index: 100;
         }
+
         h3 {
             margin-top: 0;
             color: #4CAF50;
@@ -42,9 +45,15 @@
         <h3>Comprehensive Edge Features Demo</h3>
         <p>Showcasing a wide variety of edge types, styles, and advanced functionalities:</p>
         <ol>
-            <li><b>Basic Styled Edges:</b> Demonstrates fundamental styling options like labels, colors, thickness, dashing, curvature, arrowheads, and gradients.</li>
-            <li><b>Specialized Static Edges:</b> Includes Dotted Edges and Dynamic Thickness Edges (thickness based on data).</li>
-            <li><b>Advanced Dynamic Edges:</b> Features interactive Flow Edges, physics-based Spring Edges, and controllable Bezier Edges.</li>
+            <li><b>Basic Styled Edges:</b> Demonstrates fundamental styling options like labels, colors, thickness,
+                dashing, curvature, arrowheads, and gradients.
+            </li>
+            <li><b>Specialized Static Edges:</b> Includes Dotted Edges and Dynamic Thickness Edges (thickness based on
+                data).
+            </li>
+            <li><b>Advanced Dynamic Edges:</b> Features interactive Flow Edges, physics-based Spring Edges, and
+                controllable Bezier Edges.
+            </li>
         </ol>
         <p><em>Interact with the control panel for dynamic edges and observe various styles.</em></p>
     </div>
@@ -57,11 +66,11 @@
 
     async function init() {
         const container = document.getElementById('container');
-        
+
         // Initialize SpaceGraph with ergonomic factory method
         const space = await SpaceGraph.the(container);
-        
-        
+
+
         // Advanced Edges Demo Implementation
         function createAdvancedDynamicEdges(space, basePosition = {x: 0, y: 0, z: 0}) {
             const centralNode = space.createNode({
@@ -185,7 +194,7 @@
                     color: 0xb084cc,
                 })
             );
-            
+
             // Add spring edges (as straight lines since we don't have SpringEdge in this context)
             edges.springs.push(
                 space.addEdge(centralNode, networkNodes[6], {
@@ -203,7 +212,7 @@
                     color: 0xf39c12,
                 })
             );
-            
+
             // Add bezier edges (as curved for now)
             edges.beziers.push(
                 space.addEdge(networkNodes[0], centralNode, {
@@ -272,22 +281,22 @@
                         const value = parseFloat(e.target.value);
                         edges.flows.forEach(edge => edge.setParticleSpeed?.(value) || console.log('Flow edge does not support setParticleSpeed'));
                     });
-                    
+
                     panel.querySelector('#flowDirection')?.addEventListener('change', e => {
                         const value = parseInt(e.target.value);
                         edges.flows.forEach(edge => edge.setFlowDirection?.(value) || console.log('Flow edge does not support setFlowDirection'));
                     });
-                    
+
                     panel.querySelector('#springStiffness')?.addEventListener('input', e => {
                         const value = parseFloat(e.target.value);
                         edges.springs.forEach(edge => edge.setStiffness?.(value) || console.log('Spring edge does not support setStiffness'));
                     });
-                    
+
                     panel.querySelector('#curveTension')?.addEventListener('input', e => {
                         const value = parseFloat(e.target.value);
                         edges.beziers.forEach(edge => edge.setCurveTension?.(value) || console.log('Bezier edge does not support setCurveTension'));
                     });
-                    
+
                     panel.querySelector('#showControls')?.addEventListener('change', e => {
                         const value = e.target.checked;
                         edges.beziers.forEach(edge => edge.setControlPointsVisible?.(value) || console.log('Bezier edge does not support setControlPointsVisible'));
@@ -315,7 +324,7 @@
                     color: 0x8e44ad,
                 },
             ];
-            
+
             infoNodesData.forEach(info => {
                 space.createNode({
                     id: info.id,
@@ -341,14 +350,14 @@
             let animationTime = 0;
             const animateAdvEdges = () => {
                 animationTime += 0.016;
-                
+
                 // For simplicity in this implementation, we'll just log that the animation is running
                 // In a full implementation, we would update edge animations here
-                
+
                 requestAnimationFrame(animateAdvEdges);
             };
             animateAdvEdges();
-            
+
             return centralNode;
         }
 
@@ -365,13 +374,18 @@
                 {x: 0, y: 100},
                 {x: 0, y: -100},
             ];
-            
+
             nodePositions.forEach((pos, i) => {
                 nodes.push(
                     space.createNode({
                         id: `bsn-${i}`,
                         position: {x: basePosition.x + pos.x, y: basePosition.y + pos.y, z: basePosition.z},
-                        data: {label: `N${i + 1}`, shape: 'sphere', size: 30, color: Math.floor(Math.random() * 0xffffff)},
+                        data: {
+                            label: `N${i + 1}`,
+                            shape: 'sphere',
+                            size: 30,
+                            color: Math.floor(Math.random() * 0xffffff)
+                        },
                         mass: 1.0,
                     })
                 );
@@ -449,28 +463,28 @@
 
         function createSpecializedStaticEdges(space, basePosition = {x: 800, y: -600, z: 0}) {
             const commonProps = {mass: 1.0, type: 'shape'};
-            
+
             const n1 = space.createNode({
                 id: 'ssen1',
                 position: {x: basePosition.x - 150, y: basePosition.y + 50, z: basePosition.z},
                 data: {label: 'SSE1', shape: 'sphere', size: 30, color: 0xff8888},
                 mass: 1.0,
             });
-            
+
             const n2 = space.createNode({
                 id: 'ssen2',
                 position: {x: basePosition.x + 150, y: basePosition.y + 50, z: basePosition.z},
                 data: {label: 'SSE2', shape: 'sphere', size: 30, color: 0x88ff88},
                 mass: 1.0,
             });
-            
+
             const n3 = space.createNode({
                 id: 'ssen3',
                 position: {x: basePosition.x - 150, y: basePosition.y - 50, z: basePosition.z},
                 data: {label: 'SSE3', shape: 'sphere', size: 30, color: 0x8888ff},
                 mass: 1.0,
             });
-            
+
             const n4 = space.createNode({
                 id: 'ssen4',
                 position: {x: basePosition.x + 150, y: basePosition.y - 50, z: basePosition.z},
@@ -492,7 +506,7 @@
                 thickness: 2,
                 curvature: 0.2,
             });
-            
+
             space.addEdge(n3, n4, {
                 label: 'Dynamic Thickness (Val:75)',
                 color: 0xffaa00,

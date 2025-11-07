@@ -73,14 +73,14 @@ export const memoize = (func, resolver) => {
     if (typeof func !== 'function') {
         throw new TypeError('Expected a function');
     }
-    const memoized = function(...args) {
+    const memoized = function (...args) {
         const key = resolver ? resolver.apply(this, args) : args[0];
         const cache = memoized.cache;
-        
+
         if (cache.has(key)) {
             return cache.get(key);
         }
-        
+
         const result = func.apply(this, args);
         cache.set(key, result);
         return result;
@@ -97,7 +97,7 @@ export const memoize = (func, resolver) => {
  */
 export const throttle = (func, limit) => {
     let inThrottle;
-    return function() {
+    return function () {
         const args = arguments;
         const context = this;
         if (!inThrottle) {

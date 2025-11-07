@@ -1,8 +1,9 @@
-
 ### SeNARS Web UI REPL
 
 #### **Shared Foundations Setup**
+
 *(Complete before any phase begins)*
+
 - [x] Create `ui/shared/ws.js` with:
     - Reusable WebSocket class accepting `url` and `sessionId` in constructor
     - Events: `onopen`, `onclose`, `onerror`, `onmessage`
@@ -24,9 +25,11 @@
 ---
 
 ### **Phase 1: Single-Session REPL Skeleton**
+
 *Goal: Working echo REPL in one session*
 
 #### **Infrastructure**
+
 - [x] Create directory structure:
   ```bash
   ui/repl/
@@ -41,6 +44,7 @@
     - `<div id="session-selector">` (top bar with "New Session" button)
 
 #### **Core Functionality**
+
 - [x] Implement `session-manager.js`:
     - `createSession(id)`: Creates DOM container with `data-session-id` attribute
     - `destroySession(id)`: Removes DOM container and cleans up resources
@@ -55,15 +59,18 @@
     - Status badge: `.status { position: absolute; top: 8px; right: 8px }`
 
 #### **Validation**
+
 - [x] Manual test: Type "hello" → see `. hello` output in main session
 - [x] Simulate disconnect: Kill server → status badge turns red with "Disconnected"
 
 ---
 
 ### **Phase 2: Multi-Session Architecture**
+
 *Goal: Isolated sessions with independent connections*
 
 #### **Session Management**
+
 - [x] Enhance `session-manager.js`:
     - Maintain `activeSessions = {}` registry (keyed by session ID)
     - "New Session" button: Generates UUID, calls `createSession()`
@@ -75,6 +82,7 @@
     - Scope DOM elements to session container using `data-session-id`
 
 #### **Connection Isolation**
+
 - [x] Modify WebSocket initialization:
     - Each session creates unique connection to `ws://localhost:8080/nar?session={id}`
     - Message routing: Filter incoming messages by `sessionId` field
@@ -86,6 +94,7 @@
     - Implement error handling and recovery mechanisms
 
 #### **Validation**
+
 - [x] Create 2 sessions → type in Session A → verify no echo in Session B
 - [x] Close Session A → confirm WebSocket terminates and DOM cleans up
 - [x] Reload page → verify only "main" session auto-restores
@@ -93,9 +102,11 @@
 ---
 
 ### **Phase 3: Reasoner Integration per Session**
+
 *Goal: Real NARS reasoning with structured output*
 
 #### **Protocol Implementation**
+
 - [x] Update server communication:
     - Input submission: Send `{ sessionId, type: "reason/step", payload: { text } }`
     - Handle `{ type: "reason/output" }` messages with structured data
@@ -105,6 +116,7 @@
     - Leverage command parsing utilities from `ui/src/utils/messageHandlers.js`
 
 #### **Session-Scoped Rendering**
+
 - [x] Create output renderer (per session):
     - Punctuation styling: Apply `.punct-statement` class to `.` outputs
     - Truth bars: `<meter value="${truth.frequency}" min="0" max="1">`
@@ -118,6 +130,7 @@
     - Use handler registry pattern from `ui/src/utils/handlerRegistry.js` for different output handlers
 
 #### **Validation**
+
 - [x] In Session A: Type `<bird --> animal>.` → verify colored punctuation + truth bar
 - [x] Run `/start` in Session A → confirm Session B remains idle
 - [x] Send invalid Narsese → verify red error message with raw payload
@@ -125,9 +138,11 @@
 ---
 
 ### **Phase 4: Per-Session Notebook & History**
+
 *Goal: Persistent cell-based history isolated by session*
 
 #### **Data Model**
+
 - [x] Define cell structure in `session-manager.js`:
   ```js
   {
@@ -151,6 +166,7 @@
     - Add combined filters (text + type + date)
 
 #### **UI Interactions**
+
 - [x] Cell grouping:
     - Wrap input/output pairs in `<div class="cell-group">`
     - Click input cell → copy content to active prompt
@@ -169,12 +185,14 @@
     - Add pin buttons to history cells
 
 #### **Validation**
+
 - [x] Type 10 commands in Session A → reload page → verify history restored
 - [x] Switch to Session B → press Up arrow → verify only Session B's history appears
 - [x] Exceed 500 cells → confirm oldest cells disappear without crash
 - [x] Search in history → verify filtered results
 
 #### **Validation**
+
 - [x] Type 10 commands in Session A → reload page → verify history restored
 - [x] Switch to Session B → press Up arrow → verify only Session B's history appears
 - [x] Exceed 500 cells → confirm oldest cells disappear without crash
@@ -185,220 +203,225 @@
 ##### **1. Data Model Implementation**
 
 ###### **Cell Structure**
+
 Extend the SessionManager to include history management capabilities:
 
 ```javascript
 // In session-manager.js
 class SessionManager {
-  constructor() {
-    this.activeSessions = {};
-    this.sessionHistories = {}; // New: Store history per session
-    // ... existing code
-  }
-  
-  // New: Create cell structure
-  createCell(sessionId, type, content) {
-    return {
-      id: `cell-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      type,
-      content,
-      timestamp: Date.now(),
-      sessionId,
-      pinned: false // New: Add pinned property
-    };
-  }
-  
-  // New: Add cell to session history
-  addCellToHistory(sessionId, type, content) {
-    if (!this.sessionHistories[sessionId]) {
-      this.sessionHistories[sessionId] = [];
+    constructor() {
+        this.activeSessions = {};
+        this.sessionHistories = {}; // New: Store history per session
+        // ... existing code
     }
-    
-    const cell = this.createCell(sessionId, type, content);
-    this.sessionHistories[sessionId].push(cell);
-    
-    // Cap at 500 cells, but keep pinned cells
-    if (this.sessionHistories[sessionId].length > 500) {
-      // Find the first unpinned cell to remove
-      const firstUnpinnedIndex = this.sessionHistories[sessionId].findIndex(cell => !cell.pinned);
-      if (firstUnpinnedIndex !== -1) {
-        this.sessionHistories[sessionId].splice(firstUnpinnedIndex, 1);
-      } else {
-        // If all cells are pinned, remove the oldest pinned cell
-        this.sessionHistories[sessionId].shift();
-      }
+
+    // New: Create cell structure
+    createCell(sessionId, type, content) {
+        return {
+            id: `cell-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            type,
+            content,
+            timestamp: Date.now(),
+            sessionId,
+            pinned: false // New: Add pinned property
+        };
     }
-    
-    // Persist to sessionStorage
-    this.persistSessionHistory(sessionId);
-  }
-  
-  // New: Persist session history to sessionStorage
-  persistSessionHistory(sessionId) {
-    try {
-      const history = this.sessionHistories[sessionId] || [];
-      sessionStorage.setItem(`nars-history-${sessionId}`, JSON.stringify(history));
-    } catch (error) {
-      console.warn(`Failed to persist history for session ${sessionId}:`, error);
+
+    // New: Add cell to session history
+    addCellToHistory(sessionId, type, content) {
+        if (!this.sessionHistories[sessionId]) {
+            this.sessionHistories[sessionId] = [];
+        }
+
+        const cell = this.createCell(sessionId, type, content);
+        this.sessionHistories[sessionId].push(cell);
+
+        // Cap at 500 cells, but keep pinned cells
+        if (this.sessionHistories[sessionId].length > 500) {
+            // Find the first unpinned cell to remove
+            const firstUnpinnedIndex = this.sessionHistories[sessionId].findIndex(cell => !cell.pinned);
+            if (firstUnpinnedIndex !== -1) {
+                this.sessionHistories[sessionId].splice(firstUnpinnedIndex, 1);
+            } else {
+                // If all cells are pinned, remove the oldest pinned cell
+                this.sessionHistories[sessionId].shift();
+            }
+        }
+
+        // Persist to sessionStorage
+        this.persistSessionHistory(sessionId);
     }
-  }
-  
-  // New: Load session history from sessionStorage
-  loadSessionHistory(sessionId) {
-    try {
-      const historyStr = sessionStorage.getItem(`nars-history-${sessionId}`);
-      if (historyStr) {
-        this.sessionHistories[sessionId] = JSON.parse(historyStr);
-      } else {
-        this.sessionHistories[sessionId] = [];
-      }
-    } catch (error) {
-      console.warn(`Failed to load history for session ${sessionId}:`, error);
-      this.sessionHistories[sessionId] = [];
+
+    // New: Persist session history to sessionStorage
+    persistSessionHistory(sessionId) {
+        try {
+            const history = this.sessionHistories[sessionId] || [];
+            sessionStorage.setItem(`nars-history-${sessionId}`, JSON.stringify(history));
+        } catch (error) {
+            console.warn(`Failed to persist history for session ${sessionId}:`, error);
+        }
     }
-  }
+
+    // New: Load session history from sessionStorage
+    loadSessionHistory(sessionId) {
+        try {
+            const historyStr = sessionStorage.getItem(`nars-history-${sessionId}`);
+            if (historyStr) {
+                this.sessionHistories[sessionId] = JSON.parse(historyStr);
+            } else {
+                this.sessionHistories[sessionId] = [];
+            }
+        } catch (error) {
+            console.warn(`Failed to load history for session ${sessionId}:`, error);
+            this.sessionHistories[sessionId] = [];
+        }
+    }
 }
 ```
 
 ##### **2. Integration with REPL Core**
 
 ###### **Adding Cells to History**
+
 Modify the REPLCore to add input/output cells to the session history:
 
 ```javascript
 // In repl-core.js
 class REPLCore {
-  submitInput() {
-    const inputText = this.inputElement.value.trim();
-    if (!inputText) return;
-    
-    // ... existing code
-    
-    // Add input cell to history
-    this.sessionManager.addCellToHistory(this.sessionId, 'input', inputText);
-    
-    // ... existing code
-  }
-  
-  addOutputLine(line) {
-    // ... existing code
-    
-    // Add output cell to history
-    this.sessionManager.addCellToHistory(this.sessionId, 'output', line);
-    
-    // ... existing code
-  }
-  
-  addStructuredOutputLine(line) {
-    // ... existing code
-    
-    // Add structured output cell to history
-    this.sessionManager.addCellToHistory(this.sessionId, 'output', line);
-    
-    // ... existing code
-  }
+    submitInput() {
+        const inputText = this.inputElement.value.trim();
+        if (!inputText) return;
+
+        // ... existing code
+
+        // Add input cell to history
+        this.sessionManager.addCellToHistory(this.sessionId, 'input', inputText);
+
+        // ... existing code
+    }
+
+    addOutputLine(line) {
+        // ... existing code
+
+        // Add output cell to history
+        this.sessionManager.addCellToHistory(this.sessionId, 'output', line);
+
+        // ... existing code
+    }
+
+    addStructuredOutputLine(line) {
+        // ... existing code
+
+        // Add structured output cell to history
+        this.sessionManager.addCellToHistory(this.sessionId, 'output', line);
+
+        // ... existing code
+    }
 }
 ```
 
 ##### **3. UI Components for History Display**
 
 ###### **Cell Grouping**
+
 Modify the output rendering to group input/output pairs:
 
 ```javascript
 // In repl-core.js
 class REPLCore {
-  addOutputLine(line) {
-    // Create cell group if it doesn't exist
-    let cellGroup = this.getCurrentCellGroup();
-    if (!cellGroup) {
-      cellGroup = this.createCellGroup();
+    addOutputLine(line) {
+        // Create cell group if it doesn't exist
+        let cellGroup = this.getCurrentCellGroup();
+        if (!cellGroup) {
+            cellGroup = this.createCellGroup();
+        }
+
+        // ... existing code for creating line element
+
+        cellGroup.appendChild(lineElement);
+
+        // ... existing code
     }
-    
-    // ... existing code for creating line element
-    
-    cellGroup.appendChild(lineElement);
-    
-    // ... existing code
-  }
-  
-  createCellGroup() {
-    const cellGroup = document.createElement('div');
-    cellGroup.className = 'cell-group';
-    this.outputElement.appendChild(cellGroup);
-    return cellGroup;
-  }
+
+    createCellGroup() {
+        const cellGroup = document.createElement('div');
+        cellGroup.className = 'cell-group';
+        this.outputElement.appendChild(cellGroup);
+        return cellGroup;
+    }
 }
 ```
 
 ##### **4. History Navigation**
 
 ###### **Arrow Key Handling**
+
 Add keyboard navigation for history:
 
 ```javascript
 // In repl-core.js
 class REPLCore {
-  bindEvents() {
-    // ... existing code
-    
-    // Handle history navigation
-    this.handleInputKeydown = (event) => {
-      if (event.key === 'ArrowUp') {
-        this.navigateHistory(-1);
-        event.preventDefault();
-      } else if (event.key === 'ArrowDown') {
-        this.navigateHistory(1);
-        event.preventDefault();
-      } else if (event.key === 'Enter' && !event.shiftKey) {
-        event.preventDefault();
-        this.submitInput();
-      }
-    };
-    
-    this.inputElement.addEventListener('keydown', this.handleInputKeydown);
-  }
-  
-  navigateHistory(direction) {
-    // Implementation for navigating through history
-    // This will depend on maintaining a history position per session
-  }
+    bindEvents() {
+        // ... existing code
+
+        // Handle history navigation
+        this.handleInputKeydown = (event) => {
+            if (event.key === 'ArrowUp') {
+                this.navigateHistory(-1);
+                event.preventDefault();
+            } else if (event.key === 'ArrowDown') {
+                this.navigateHistory(1);
+                event.preventDefault();
+            } else if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                this.submitInput();
+            }
+        };
+
+        this.inputElement.addEventListener('keydown', this.handleInputKeydown);
+    }
+
+    navigateHistory(direction) {
+        // Implementation for navigating through history
+        // This will depend on maintaining a history position per session
+    }
 }
 ```
 
 ##### **5. Persistence Handling**
 
 ###### **Page Load/Unload Events**
+
 Add event listeners for persistence:
 
 ```javascript
 // In session-manager.js
 class SessionManager {
-  constructor() {
-    // ... existing code
-    
-    // Handle page unload for persistence
-    window.addEventListener('beforeunload', () => {
-      this.persistAllHistories();
-    });
-    
-    // Load histories on initialization
-    this.loadAllHistories();
-  }
-  
-  persistAllHistories() {
-    Object.keys(this.activeSessions).forEach(sessionId => {
-      this.persistSessionHistory(sessionId);
-    });
-  }
-  
-  loadAllHistories() {
-    // Load histories for existing sessions
-    Object.keys(this.activeSessions).forEach(sessionId => {
-      this.loadSessionHistory(sessionId);
-      this.renderHistory(sessionId);
-    });
-  }
+    constructor() {
+        // ... existing code
+
+        // Handle page unload for persistence
+        window.addEventListener('beforeunload', () => {
+            this.persistAllHistories();
+        });
+
+        // Load histories on initialization
+        this.loadAllHistories();
+    }
+
+    persistAllHistories() {
+        Object.keys(this.activeSessions).forEach(sessionId => {
+            this.persistSessionHistory(sessionId);
+        });
+    }
+
+    loadAllHistories() {
+        // Load histories for existing sessions
+        Object.keys(this.activeSessions).forEach(sessionId => {
+            this.loadSessionHistory(sessionId);
+            this.renderHistory(sessionId);
+        });
+    }
 }
 ```
 
@@ -409,126 +432,126 @@ Enhance history filtering capabilities:
 ```javascript
 // In session-manager.js
 class SessionManager {
-  // ... existing code
-  
-  /**
-   * Filter session history by text search
-   * @param {string} sessionId - Session identifier
-   * @param {string} searchText - Text to search for
-   * @param {boolean} useRegex - Whether to treat searchText as regex
-   * @returns {Array} Filtered history
-   */
-  filterHistoryByText(sessionId, searchText, useRegex = false) {
-    if (!searchText.trim()) {
-      return this.sessionHistories[sessionId] || [];
-    }
-    
-    const history = this.sessionHistories[sessionId] || [];
-    
-    if (useRegex) {
-      try {
-        const regex = new RegExp(searchText, 'i'); // Case insensitive
-        return history.filter(cell => {
-          if (cell.type === 'input') {
-            return regex.test(cell.content);
-          } else {
-            // For output cells, search in text content
-            const textContent = cell.content.text || '';
-            return regex.test(textContent);
-          }
-        });
-      } catch (e) {
-        // If regex is invalid, fall back to simple text search
-        console.warn('Invalid regex, falling back to text search:', e);
-        const lowerSearchText = searchText.toLowerCase();
-        return history.filter(cell => {
-          if (cell.type === 'input') {
-            return cell.content.toLowerCase().includes(lowerSearchText);
-          } else {
-            // For output cells, search in text content
-            const textContent = cell.content.text || '';
-            return textContent.toLowerCase().includes(lowerSearchText);
-          }
-        });
-      }
-    } else {
-      const lowerSearchText = searchText.toLowerCase();
-      return history.filter(cell => {
-        if (cell.type === 'input') {
-          return cell.content.toLowerCase().includes(lowerSearchText);
-        } else {
-          // For output cells, search in text content
-          const textContent = cell.content.text || '';
-          return textContent.toLowerCase().includes(lowerSearchText);
+    // ... existing code
+
+    /**
+     * Filter session history by text search
+     * @param {string} sessionId - Session identifier
+     * @param {string} searchText - Text to search for
+     * @param {boolean} useRegex - Whether to treat searchText as regex
+     * @returns {Array} Filtered history
+     */
+    filterHistoryByText(sessionId, searchText, useRegex = false) {
+        if (!searchText.trim()) {
+            return this.sessionHistories[sessionId] || [];
         }
-      });
+
+        const history = this.sessionHistories[sessionId] || [];
+
+        if (useRegex) {
+            try {
+                const regex = new RegExp(searchText, 'i'); // Case insensitive
+                return history.filter(cell => {
+                    if (cell.type === 'input') {
+                        return regex.test(cell.content);
+                    } else {
+                        // For output cells, search in text content
+                        const textContent = cell.content.text || '';
+                        return regex.test(textContent);
+                    }
+                });
+            } catch (e) {
+                // If regex is invalid, fall back to simple text search
+                console.warn('Invalid regex, falling back to text search:', e);
+                const lowerSearchText = searchText.toLowerCase();
+                return history.filter(cell => {
+                    if (cell.type === 'input') {
+                        return cell.content.toLowerCase().includes(lowerSearchText);
+                    } else {
+                        // For output cells, search in text content
+                        const textContent = cell.content.text || '';
+                        return textContent.toLowerCase().includes(lowerSearchText);
+                    }
+                });
+            }
+        } else {
+            const lowerSearchText = searchText.toLowerCase();
+            return history.filter(cell => {
+                if (cell.type === 'input') {
+                    return cell.content.toLowerCase().includes(lowerSearchText);
+                } else {
+                    // For output cells, search in text content
+                    const textContent = cell.content.text || '';
+                    return textContent.toLowerCase().includes(lowerSearchText);
+                }
+            });
+        }
     }
-  }
-  
-  /**
-   * Filter session history by type
-   * @param {string} sessionId - Session identifier
-   * @param {string} type - Type to filter by ('input', 'output', or 'all')
-   * @returns {Array} Filtered history
-   */
-  filterHistoryByType(sessionId, type) {
-    if (type === 'all') {
-      return this.sessionHistories[sessionId] || [];
+
+    /**
+     * Filter session history by type
+     * @param {string} sessionId - Session identifier
+     * @param {string} type - Type to filter by ('input', 'output', or 'all')
+     * @returns {Array} Filtered history
+     */
+    filterHistoryByType(sessionId, type) {
+        if (type === 'all') {
+            return this.sessionHistories[sessionId] || [];
+        }
+
+        const history = this.sessionHistories[sessionId] || [];
+        return history.filter(cell => cell.type === type);
     }
-    
-    const history = this.sessionHistories[sessionId] || [];
-    return history.filter(cell => cell.type === type);
-  }
-  
-  /**
-   * Filter session history by date range
-   * @param {string} sessionId - Session identifier
-   * @param {number} startDate - Start timestamp (milliseconds since epoch)
-   * @param {number} endDate - End timestamp (milliseconds since epoch)
-   * @returns {Array} Filtered history
-   */
-  filterHistoryByDateRange(sessionId, startDate, endDate) {
-    const history = this.sessionHistories[sessionId] || [];
-    return history.filter(cell => {
-      return cell.timestamp >= startDate && cell.timestamp <= endDate;
-    });
-  }
-  
-  /**
-   * Apply combined filters to session history
-   * @param {string} sessionId - Session identifier
-   * @param {Object} filters - Filter criteria
-   * @param {string} filters.text - Text to search for
-   * @param {boolean} filters.useRegex - Whether to treat text as regex
-   * @param {string} filters.type - Type to filter by ('input', 'output', or 'all')
-   * @param {number} filters.startDate - Start timestamp (milliseconds since epoch)
-   * @param {number} filters.endDate - End timestamp (milliseconds since epoch)
-   * @returns {Array} Filtered history
-   */
-  filterHistoryCombined(sessionId, filters) {
-    let history = this.sessionHistories[sessionId] || [];
-    
-    // Apply text filter
-    if (filters.text) {
-      history = this.filterHistoryByText(sessionId, filters.text, filters.useRegex);
+
+    /**
+     * Filter session history by date range
+     * @param {string} sessionId - Session identifier
+     * @param {number} startDate - Start timestamp (milliseconds since epoch)
+     * @param {number} endDate - End timestamp (milliseconds since epoch)
+     * @returns {Array} Filtered history
+     */
+    filterHistoryByDateRange(sessionId, startDate, endDate) {
+        const history = this.sessionHistories[sessionId] || [];
+        return history.filter(cell => {
+            return cell.timestamp >= startDate && cell.timestamp <= endDate;
+        });
     }
-    
-    // Apply type filter
-    if (filters.type && filters.type !== 'all') {
-      history = history.filter(cell => cell.type === filters.type);
+
+    /**
+     * Apply combined filters to session history
+     * @param {string} sessionId - Session identifier
+     * @param {Object} filters - Filter criteria
+     * @param {string} filters.text - Text to search for
+     * @param {boolean} filters.useRegex - Whether to treat text as regex
+     * @param {string} filters.type - Type to filter by ('input', 'output', or 'all')
+     * @param {number} filters.startDate - Start timestamp (milliseconds since epoch)
+     * @param {number} filters.endDate - End timestamp (milliseconds since epoch)
+     * @returns {Array} Filtered history
+     */
+    filterHistoryCombined(sessionId, filters) {
+        let history = this.sessionHistories[sessionId] || [];
+
+        // Apply text filter
+        if (filters.text) {
+            history = this.filterHistoryByText(sessionId, filters.text, filters.useRegex);
+        }
+
+        // Apply type filter
+        if (filters.type && filters.type !== 'all') {
+            history = history.filter(cell => cell.type === filters.type);
+        }
+
+        // Apply date range filter
+        if (filters.startDate || filters.endDate) {
+            const startDate = filters.startDate || 0;
+            const endDate = filters.endDate || Date.now();
+            history = history.filter(cell => {
+                return cell.timestamp >= startDate && cell.timestamp <= endDate;
+            });
+        }
+
+        return history;
     }
-    
-    // Apply date range filter
-    if (filters.startDate || filters.endDate) {
-      const startDate = filters.startDate || 0;
-      const endDate = filters.endDate || Date.now();
-      history = history.filter(cell => {
-        return cell.timestamp >= startDate && cell.timestamp <= endDate;
-      });
-    }
-    
-    return history;
-  }
 }
 ```
 
@@ -539,76 +562,76 @@ Improve virtual scrolling with caching:
 ```javascript
 // In session-manager.js
 class SessionManager {
-  // ... existing code
-  
-  /**
-   * Set up virtual scrolling for a session's history
-   * @param {string} sessionId - Session identifier
-   * @param {Array} history - History array to render
-   */
-  setupVirtualScrolling(sessionId, history) {
-    const session = this.activeSessions[sessionId];
-    if (!session) return;
-    
-    // Store history reference for this session
-    session.history = history;
-    session.visibleCells = new Map(); // Track rendered cells
-    session.cellCache = new Map(); // Cache for cell elements
-    
-    // Set up scroll event listener
-    session.output.addEventListener('scroll', () => {
-      this.handleScroll(sessionId);
-    });
-    
-    // Initial render
-    this.handleScroll(sessionId);
-  }
-  
-  /**
-   * Update visible cells in the viewport
-   * @param {string} sessionId - Session identifier
-   * @param {number} startIdx - Start index of visible range
-   * @param {number} endIdx - End index of visible range
-   */
-  updateVisibleCells(sessionId, startIdx, endIdx) {
-    const session = this.activeSessions[sessionId];
-    if (!session || !session.history) return;
-    
-    const history = session.history;
-    const visibleCells = session.visibleCells;
-    const cellCache = session.cellCache;
-    
-    // Create a set of indices that should be visible
-    const shouldBeVisible = new Set();
-    for (let i = startIdx; i <= endIdx; i++) {
-      shouldBeVisible.add(i);
+    // ... existing code
+
+    /**
+     * Set up virtual scrolling for a session's history
+     * @param {string} sessionId - Session identifier
+     * @param {Array} history - History array to render
+     */
+    setupVirtualScrolling(sessionId, history) {
+        const session = this.activeSessions[sessionId];
+        if (!session) return;
+
+        // Store history reference for this session
+        session.history = history;
+        session.visibleCells = new Map(); // Track rendered cells
+        session.cellCache = new Map(); // Cache for cell elements
+
+        // Set up scroll event listener
+        session.output.addEventListener('scroll', () => {
+            this.handleScroll(sessionId);
+        });
+
+        // Initial render
+        this.handleScroll(sessionId);
     }
-    
-    // Remove cells that are no longer visible
-    for (const [index, cellElement] of visibleCells.entries()) {
-      if (!shouldBeVisible.has(index)) {
-        cellElement.remove();
-        visibleCells.delete(index);
-      }
-    }
-    
-    // Add new cells that should be visible
-    for (let i = startIdx; i <= endIdx; i++) {
-      if (!visibleCells.has(i) && history[i]) {
-        // Check if cell is already in cache
-        let cellElement = cellCache.get(i);
-        if (!cellElement) {
-          // Create new cell element if not in cache
-          cellElement = this.createCellElement(sessionId, history[i]);
-          cellCache.set(i, cellElement);
+
+    /**
+     * Update visible cells in the viewport
+     * @param {string} sessionId - Session identifier
+     * @param {number} startIdx - Start index of visible range
+     * @param {number} endIdx - End index of visible range
+     */
+    updateVisibleCells(sessionId, startIdx, endIdx) {
+        const session = this.activeSessions[sessionId];
+        if (!session || !session.history) return;
+
+        const history = session.history;
+        const visibleCells = session.visibleCells;
+        const cellCache = session.cellCache;
+
+        // Create a set of indices that should be visible
+        const shouldBeVisible = new Set();
+        for (let i = startIdx; i <= endIdx; i++) {
+            shouldBeVisible.add(i);
         }
-        cellElement.style.position = 'absolute';
-        cellElement.style.top = `${i * 24}px`; // Approximate row height
-        session.output.appendChild(cellElement);
-        visibleCells.set(i, cellElement);
-      }
+
+        // Remove cells that are no longer visible
+        for (const [index, cellElement] of visibleCells.entries()) {
+            if (!shouldBeVisible.has(index)) {
+                cellElement.remove();
+                visibleCells.delete(index);
+            }
+        }
+
+        // Add new cells that should be visible
+        for (let i = startIdx; i <= endIdx; i++) {
+            if (!visibleCells.has(i) && history[i]) {
+                // Check if cell is already in cache
+                let cellElement = cellCache.get(i);
+                if (!cellElement) {
+                    // Create new cell element if not in cache
+                    cellElement = this.createCellElement(sessionId, history[i]);
+                    cellCache.set(i, cellElement);
+                }
+                cellElement.style.position = 'absolute';
+                cellElement.style.top = `${i * 24}px`; // Approximate row height
+                session.output.appendChild(cellElement);
+                visibleCells.set(i, cellElement);
+            }
+        }
     }
-  }
 }
 ```
 
@@ -619,84 +642,87 @@ Add clear history and pinning functionality:
 ```javascript
 // In session-manager.js
 class SessionManager {
-  // ... existing code
-  
-  /**
-   * Clear session history
-   * @param {string} sessionId - Session identifier
-   */
-  clearSessionHistory(sessionId) {
-    if (this.sessionHistories[sessionId]) {
-      // Keep pinned cells when clearing history
-      this.sessionHistories[sessionId] = this.sessionHistories[sessionId].filter(cell => cell.pinned);
-      this.persistSessionHistory(sessionId);
-      this.renderHistory(sessionId);
-    }
-  }
-  
-  /**
-   * Pin a cell in the history
-   * @param {string} sessionId - Session identifier
-   * @param {string} cellId - Cell identifier
-   */
-  pinCell(sessionId, cellId) {
-    const history = this.sessionHistories[sessionId];
-    if (!history) return;
-    
-    const cellIndex = history.findIndex(cell => cell.id === cellId);
-    if (cellIndex !== -1) {
-      history[cellIndex].pinned = true;
-      this.persistSessionHistory(sessionId);
-    }
-  }
-  
-  /**
-   * Unpin a cell in the history
-   * @param {string} sessionId - Session identifier
-   * @param {string} cellId - Cell identifier
-   */
-  unpinCell(sessionId, cellId) {
-    const history = this.sessionHistories[sessionId];
-    if (!history) return;
-    
-class SessionManager {
-  constructor() {
     // ... existing code
-    
-    // Handle page unload for persistence
-    window.addEventListener('beforeunload', () => {
-      this.persistAllHistories();
-    });
-    
-    // Load histories on initialization
-    this.loadAllHistories();
-  }
-  
-  persistAllHistories() {
-    Object.keys(this.activeSessions).forEach(sessionId => {
-      this.persistSessionHistory(sessionId);
-    });
-  }
-  
-  loadAllHistories() {
-    // Load histories for existing sessions
-    Object.keys(this.activeSessions).forEach(sessionId => {
-      this.loadSessionHistory(sessionId);
-      this.renderHistory(sessionId);
-    });
-  }
-}
+
+    /**
+     * Clear session history
+     * @param {string} sessionId - Session identifier
+     */
+    clearSessionHistory(sessionId) {
+        if (this.sessionHistories[sessionId]) {
+            // Keep pinned cells when clearing history
+            this.sessionHistories[sessionId] = this.sessionHistories[sessionId].filter(cell => cell.pinned);
+            this.persistSessionHistory(sessionId);
+            this.renderHistory(sessionId);
+        }
+    }
+
+    /**
+     * Pin a cell in the history
+     * @param {string} sessionId - Session identifier
+     * @param {string} cellId - Cell identifier
+     */
+    pinCell(sessionId, cellId) {
+        const history = this.sessionHistories[sessionId];
+        if (!history) return;
+
+        const cellIndex = history.findIndex(cell => cell.id === cellId);
+        if (cellIndex !== -1) {
+            history[cellIndex].pinned = true;
+            this.persistSessionHistory(sessionId);
+        }
+    }
+
+    /**
+     * Unpin a cell in the history
+     * @param {string} sessionId - Session identifier
+     * @param {string} cellId - Cell identifier
+     */
+    unpinCell(sessionId, cellId) {
+        const history = this.sessionHistories[sessionId];
+        if (!history) return;
+
+        class SessionManager {
+            constructor() {
+                // ... existing code
+
+                // Handle page unload for persistence
+                window.addEventListener('beforeunload', () => {
+                    this.persistAllHistories();
+                });
+
+                // Load histories on initialization
+                this.loadAllHistories();
+            }
+
+            persistAllHistories() {
+                Object.keys(this.activeSessions).forEach(sessionId => {
+                    this.persistSessionHistory(sessionId);
+                });
+            }
+
+            loadAllHistories() {
+                // Load histories for existing sessions
+                Object.keys(this.activeSessions).forEach(sessionId => {
+                    this.loadSessionHistory(sessionId);
+                    this.renderHistory(sessionId);
+                });
+            }
+        }
 ```
 
 #### **Dependencies on Existing Utilities**
 
 ##### **From `ui/src/utils/dataProcessor.js`:**
+
 - Will use for advanced history data processing if needed
 
 ##### **From `ui/src/utils/filterUtils.js`:**
+
 - Will implement text search and type filtering for history
 
 ##### **From `ui/src/utils/utilityFunctions.js`:**
+
 - Will use `paginateData` for handling large histories
 - May use other utility functions as needed
 
@@ -713,6 +739,7 @@ class SessionManager {
 #### **Testing Approach**
 
 Since we're minimizing mocks, we'll test the actual history functionality:
+
 - Verify cells are added to history correctly
 - Verify history persistence works
 - Verify history loading works
@@ -729,9 +756,11 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 ---
 
 ### **Phase 5: Agent-Aware Features**
+
 *Goal: Cross-session interaction and visualization*
 
 #### **Session Communication**
+
 - [ ] Implement "Send to session" widget:
     - Per-output-line `⋯` menu with "Send to..." option
     - Dropdown shows active sessions (excluding self)
@@ -743,6 +772,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
     - Use display utilities from `ui/src/utils/displayUtils.js` for consistent rendering
 
 #### **Multi-Agent Visualization**
+
 - [ ] Session-scoped visualizers:
     - Truth chart: Toggle per output line (Chart.js loaded on-demand)
     - Derivation popup: Shows session-specific derivation tree on click
@@ -756,6 +786,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
     - Group related items for network views
 
 #### **Validation**
+
 - [ ] In Session A: Run inference → use "Send to Session B" → verify input appears in Session B
 - [ ] Open `/agents` → confirm all sessions show live status updates
 - [ ] Toggle network view → verify edges only connect related sessions
@@ -764,9 +795,11 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 ---
 
 ### **Phase 6: Optimization & Polish**
+
 *Goal: Performance and edge-case hardening*
 
 #### **Resource Management**
+
 - [ ] Implement session resource limits:
     - Background sessions throttle to N update/sec (default N=4)
     - Auto-close sessions inactive >1 hour
@@ -777,6 +810,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
     - Use memoization from `ui/src/utils/utilityFunctions.js` for expensive computations
 
 #### **Responsiveness**
+
 - [ ] Mobile adaptations:
     - Session selector → swipeable tabs on mobile
     - Input field expands to full width on focus
@@ -788,6 +822,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 ---
 
 ### **Final Validation Checklist**
+
 - [ ] **Session isolation**:
     - History/state never leaks between sessions
     - Closing session terminates all associated resources (timers, listeners)
@@ -807,12 +842,16 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 
 > **Execution Rules**
 > 1. **Strict phase gating**: No Phase 2 tasks until Phase 1 passes all validation checks
-> 2. **Session context first**: Every new feature (e.g., visualizations) must work in single-session mode before multi-session
+> 2. **Session context first**: Every new feature (e.g., visualizations) must work in single-session mode before
+     multi-session
 > 3. **Optimization ban**: Phase 6 work forbidden until Phase 5 validation complete
 > 4. **Debugging hooks**:
      >    - `?debug=true` URL param enables raw WebSocket logging
->    - `window.NARS_SESSIONS` exposes session registry to console
+     >
+- `window.NARS_SESSIONS` exposes session registry to console
+
 ### **Final Validation Checklist**
+
 - [ ] **Session isolation**:
     - History/state never leaks between sessions
     - Closing session terminates all associated resources (timers, listeners)
@@ -832,14 +871,17 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 
 > **Execution Rules**
 > 1. **Strict phase gating**: No Phase 2 tasks until Phase 1 passes all validation checks
-> 2. **Session context first**: Every new feature (e.g., visualizations) must work in single-session mode before multi-session
+> 2. **Session context first**: Every new feature (e.g., visualizations) must work in single-session mode before
+     multi-session
 > 3. **Optimization ban**: Phase 6 work forbidden until Phase 5 validation complete
 > 4. **Debugging hooks**:
      >    - `?debug=true` URL param enables raw WebSocket logging
->    - `window.NARS_SESSIONS` exposes session registry to console
+     >
+- `window.NARS_SESSIONS` exposes session registry to console
 >    - `window.NARS_SESSIONS` exposes session registry to console
 
 }
+
 ```
 
 ##### **2. Integration with REPL Core**
@@ -885,114 +927,120 @@ class REPLCore {
 ##### **3. UI Components for History Display**
 
 ###### **Cell Grouping**
+
 Modify the output rendering to group input/output pairs:
 
 ```javascript
 // In repl-core.js
 class REPLCore {
-  addOutputLine(line) {
-    // Create cell group if it doesn't exist
-    let cellGroup = this.getCurrentCellGroup();
-    if (!cellGroup) {
-      cellGroup = this.createCellGroup();
+    addOutputLine(line) {
+        // Create cell group if it doesn't exist
+        let cellGroup = this.getCurrentCellGroup();
+        if (!cellGroup) {
+            cellGroup = this.createCellGroup();
+        }
+
+        // ... existing code for creating line element
+
+        cellGroup.appendChild(lineElement);
+
+        // ... existing code
     }
-    
-    // ... existing code for creating line element
-    
-    cellGroup.appendChild(lineElement);
-    
-    // ... existing code
-  }
-  
-  createCellGroup() {
-    const cellGroup = document.createElement('div');
-    cellGroup.className = 'cell-group';
-    this.outputElement.appendChild(cellGroup);
-    return cellGroup;
-  }
+
+    createCellGroup() {
+        const cellGroup = document.createElement('div');
+        cellGroup.className = 'cell-group';
+        this.outputElement.appendChild(cellGroup);
+        return cellGroup;
+    }
 }
 ```
 
 ##### **4. History Navigation**
 
 ###### **Arrow Key Handling**
+
 Add keyboard navigation for history:
 
 ```javascript
 // In repl-core.js
 class REPLCore {
-  bindEvents() {
-    // ... existing code
-    
-    // Handle history navigation
-    this.handleInputKeydown = (event) => {
-      if (event.key === 'ArrowUp') {
-        this.navigateHistory(-1);
-        event.preventDefault();
-      } else if (event.key === 'ArrowDown') {
-        this.navigateHistory(1);
-        event.preventDefault();
-      } else if (event.key === 'Enter' && !event.shiftKey) {
-        event.preventDefault();
-        this.submitInput();
-      }
-    };
-    
-    this.inputElement.addEventListener('keydown', this.handleInputKeydown);
-  }
-  
-  navigateHistory(direction) {
-    // Implementation for navigating through history
-    // This will depend on maintaining a history position per session
-  }
+    bindEvents() {
+        // ... existing code
+
+        // Handle history navigation
+        this.handleInputKeydown = (event) => {
+            if (event.key === 'ArrowUp') {
+                this.navigateHistory(-1);
+                event.preventDefault();
+            } else if (event.key === 'ArrowDown') {
+                this.navigateHistory(1);
+                event.preventDefault();
+            } else if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                this.submitInput();
+            }
+        };
+
+        this.inputElement.addEventListener('keydown', this.handleInputKeydown);
+    }
+
+    navigateHistory(direction) {
+        // Implementation for navigating through history
+        // This will depend on maintaining a history position per session
+    }
 }
 ```
 
 ##### **5. Persistence Handling**
 
 ###### **Page Load/Unload Events**
+
 Add event listeners for persistence:
 
 ```javascript
 // In session-manager.js
 class SessionManager {
-  constructor() {
-    // ... existing code
-    
-    // Handle page unload for persistence
-    window.addEventListener('beforeunload', () => {
-      this.persistAllHistories();
-    });
-    
-    // Load histories on initialization
-    this.loadAllHistories();
-  }
-  
-  persistAllHistories() {
-    Object.keys(this.activeSessions).forEach(sessionId => {
-      this.persistSessionHistory(sessionId);
-    });
-  }
-  
-  loadAllHistories() {
-    // Load histories for existing sessions
-    Object.keys(this.activeSessions).forEach(sessionId => {
-      this.loadSessionHistory(sessionId);
-      this.renderHistory(sessionId);
-    });
-  }
+    constructor() {
+        // ... existing code
+
+        // Handle page unload for persistence
+        window.addEventListener('beforeunload', () => {
+            this.persistAllHistories();
+        });
+
+        // Load histories on initialization
+        this.loadAllHistories();
+    }
+
+    persistAllHistories() {
+        Object.keys(this.activeSessions).forEach(sessionId => {
+            this.persistSessionHistory(sessionId);
+        });
+    }
+
+    loadAllHistories() {
+        // Load histories for existing sessions
+        Object.keys(this.activeSessions).forEach(sessionId => {
+            this.loadSessionHistory(sessionId);
+            this.renderHistory(sessionId);
+        });
+    }
 }
 ```
 
 #### **Dependencies on Existing Utilities**
 
 ##### **From `ui/src/utils/dataProcessor.js`:**
+
 - Will use for advanced history data processing if needed
 
 ##### **From `ui/src/utils/filterUtils.js`:**
+
 - Will implement text search and type filtering for history
 
 ##### **From `ui/src/utils/utilityFunctions.js`:**
+
 - Will use `paginateData` for handling large histories
 - May use other utility functions as needed
 
@@ -1009,6 +1057,7 @@ class SessionManager {
 #### **Testing Approach**
 
 Since we're minimizing mocks, we'll test the actual history functionality:
+
 - Verify cells are added to history correctly
 - Verify history persistence works
 - Verify history loading works
@@ -1025,9 +1074,11 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 ---
 
 ### **Phase 5: Agent-Aware Features**
+
 *Goal: Cross-session interaction and visualization*
 
 #### **Session Communication**
+
 - [ ] Implement "Send to session" widget:
     - Per-output-line `⋯` menu with "Send to..." option
     - Dropdown shows active sessions (excluding self)
@@ -1039,6 +1090,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
     - Use display utilities from `ui/src/utils/displayUtils.js` for consistent rendering
 
 #### **Multi-Agent Visualization**
+
 - [ ] Session-scoped visualizers:
     - Truth chart: Toggle per output line (Chart.js loaded on-demand)
     - Derivation popup: Shows session-specific derivation tree on click
@@ -1052,6 +1104,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
     - Group related items for network views
 
 #### **Validation**
+
 - [ ] In Session A: Run inference → use "Send to Session B" → verify input appears in Session B
 - [ ] Open `/agents` → confirm all sessions show live status updates
 - [ ] Toggle network view → verify edges only connect related sessions
@@ -1060,9 +1113,11 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 ---
 
 ### **Phase 6: Optimization & Polish**
+
 *Goal: Performance and edge-case hardening*
 
 #### **Resource Management**
+
 - [ ] Implement session resource limits:
     - Background sessions throttle to 1 update/sec
     - Auto-close sessions inactive >1 hour
@@ -1073,6 +1128,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
     - Use memoization from `ui/src/utils/utilityFunctions.js` for expensive computations
 
 #### **Responsiveness**
+
 - [ ] Mobile adaptations:
     - Session selector → swipeable tabs on mobile
     - Input field expands to full width on focus
@@ -1082,6 +1138,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
     - Reduced-motion preference: Disable animations if `prefers-reduced-motion`
 
 #### **Stress Testing**
+
 - [ ] 10-session load test:
     - All sessions reasoning concurrently → verify <100ms input lag
     - Memory leak check: 1hr runtime → heap size growth <5%
@@ -1092,6 +1149,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 ---
 
 ### **Final Validation Checklist**
+
 - [ ] **Session isolation**:
     - History/state never leaks between sessions
     - Closing session terminates all associated resources (timers, listeners)
@@ -1111,12 +1169,16 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 
 > **Execution Rules**
 > 1. **Strict phase gating**: No Phase 2 tasks until Phase 1 passes all validation checks
-> 2. **Session context first**: Every new feature (e.g., visualizations) must work in single-session mode before multi-session
+> 2. **Session context first**: Every new feature (e.g., visualizations) must work in single-session mode before
+     multi-session
 > 3. **Optimization ban**: Phase 6 work forbidden until Phase 5 validation complete
 > 4. **Debugging hooks**:
      >    - `?debug=true` URL param enables raw WebSocket logging
->    - `window.NARS_SESSIONS` exposes session registry to console
+     >
+- `window.NARS_SESSIONS` exposes session registry to console
+
 ### **Final Validation Checklist**
+
 - [ ] **Session isolation**:
     - History/state never leaks between sessions
     - Closing session terminates all associated resources (timers, listeners)
@@ -1136,13 +1198,16 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 
 > **Execution Rules**
 > 1. **Strict phase gating**: No Phase 2 tasks until Phase 1 passes all validation checks
-> 2. **Session context first**: Every new feature (e.g., visualizations) must work in single-session mode before multi-session
+> 2. **Session context first**: Every new feature (e.g., visualizations) must work in single-session mode before
+     multi-session
 > 3. **Optimization ban**: Phase 6 work forbidden until Phase 5 validation complete
 > 4. **Debugging hooks**:
      >    - `?debug=true` URL param enables raw WebSocket logging
+     >
+- `window.NARS_SESSIONS` exposes session registry to console
 >    - `window.NARS_SESSIONS` exposes session registry to console
->    - `window.NARS_SESSIONS` exposes session registry to console
-}
+       }
+
 ```
 
 ##### **2. Integration with REPL Core**
@@ -1188,114 +1253,120 @@ class REPLCore {
 ##### **3. UI Components for History Display**
 
 ###### **Cell Grouping**
+
 Modify the output rendering to group input/output pairs:
 
 ```javascript
 // In repl-core.js
 class REPLCore {
-  addOutputLine(line) {
-    // Create cell group if it doesn't exist
-    let cellGroup = this.getCurrentCellGroup();
-    if (!cellGroup) {
-      cellGroup = this.createCellGroup();
+    addOutputLine(line) {
+        // Create cell group if it doesn't exist
+        let cellGroup = this.getCurrentCellGroup();
+        if (!cellGroup) {
+            cellGroup = this.createCellGroup();
+        }
+
+        // ... existing code for creating line element
+
+        cellGroup.appendChild(lineElement);
+
+        // ... existing code
     }
-    
-    // ... existing code for creating line element
-    
-    cellGroup.appendChild(lineElement);
-    
-    // ... existing code
-  }
-  
-  createCellGroup() {
-    const cellGroup = document.createElement('div');
-    cellGroup.className = 'cell-group';
-    this.outputElement.appendChild(cellGroup);
-    return cellGroup;
-  }
+
+    createCellGroup() {
+        const cellGroup = document.createElement('div');
+        cellGroup.className = 'cell-group';
+        this.outputElement.appendChild(cellGroup);
+        return cellGroup;
+    }
 }
 ```
 
 ##### **4. History Navigation**
 
 ###### **Arrow Key Handling**
+
 Add keyboard navigation for history:
 
 ```javascript
 // In repl-core.js
 class REPLCore {
-  bindEvents() {
-    // ... existing code
-    
-    // Handle history navigation
-    this.handleInputKeydown = (event) => {
-      if (event.key === 'ArrowUp') {
-        this.navigateHistory(-1);
-        event.preventDefault();
-      } else if (event.key === 'ArrowDown') {
-        this.navigateHistory(1);
-        event.preventDefault();
-      } else if (event.key === 'Enter' && !event.shiftKey) {
-        event.preventDefault();
-        this.submitInput();
-      }
-    };
-    
-    this.inputElement.addEventListener('keydown', this.handleInputKeydown);
-  }
-  
-  navigateHistory(direction) {
-    // Implementation for navigating through history
-    // This will depend on maintaining a history position per session
-  }
+    bindEvents() {
+        // ... existing code
+
+        // Handle history navigation
+        this.handleInputKeydown = (event) => {
+            if (event.key === 'ArrowUp') {
+                this.navigateHistory(-1);
+                event.preventDefault();
+            } else if (event.key === 'ArrowDown') {
+                this.navigateHistory(1);
+                event.preventDefault();
+            } else if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                this.submitInput();
+            }
+        };
+
+        this.inputElement.addEventListener('keydown', this.handleInputKeydown);
+    }
+
+    navigateHistory(direction) {
+        // Implementation for navigating through history
+        // This will depend on maintaining a history position per session
+    }
 }
 ```
 
 ##### **5. Persistence Handling**
 
 ###### **Page Load/Unload Events**
+
 Add event listeners for persistence:
 
 ```javascript
 // In session-manager.js
 class SessionManager {
-  constructor() {
-    // ... existing code
-    
-    // Handle page unload for persistence
-    window.addEventListener('beforeunload', () => {
-      this.persistAllHistories();
-    });
-    
-    // Load histories on initialization
-    this.loadAllHistories();
-  }
-  
-  persistAllHistories() {
-    Object.keys(this.activeSessions).forEach(sessionId => {
-      this.persistSessionHistory(sessionId);
-    });
-  }
-  
-  loadAllHistories() {
-    // Load histories for existing sessions
-    Object.keys(this.activeSessions).forEach(sessionId => {
-      this.loadSessionHistory(sessionId);
-      this.renderHistory(sessionId);
-    });
-  }
+    constructor() {
+        // ... existing code
+
+        // Handle page unload for persistence
+        window.addEventListener('beforeunload', () => {
+            this.persistAllHistories();
+        });
+
+        // Load histories on initialization
+        this.loadAllHistories();
+    }
+
+    persistAllHistories() {
+        Object.keys(this.activeSessions).forEach(sessionId => {
+            this.persistSessionHistory(sessionId);
+        });
+    }
+
+    loadAllHistories() {
+        // Load histories for existing sessions
+        Object.keys(this.activeSessions).forEach(sessionId => {
+            this.loadSessionHistory(sessionId);
+            this.renderHistory(sessionId);
+        });
+    }
 }
 ```
 
 #### **Dependencies on Existing Utilities**
 
 ##### **From `ui/src/utils/dataProcessor.js`:**
+
 - Will use for advanced history data processing if needed
 
 ##### **From `ui/src/utils/filterUtils.js`:**
+
 - Will implement text search and type filtering for history
 
 ##### **From `ui/src/utils/utilityFunctions.js`:**
+
 - Will use `paginateData` for handling large histories
 - May use other utility functions as needed
 
@@ -1312,6 +1383,7 @@ class SessionManager {
 #### **Testing Approach**
 
 Since we're minimizing mocks, we'll test the actual history functionality:
+
 - Verify cells are added to history correctly
 - Verify history persistence works
 - Verify history loading works
@@ -1328,9 +1400,11 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 ---
 
 ### **Phase 5: Agent-Aware Features**
+
 *Goal: Cross-session interaction and visualization*
 
 #### **Session Communication**
+
 - [ ] Implement "Send to session" widget:
     - Per-output-line `⋯` menu with "Send to..." option
     - Dropdown shows active sessions (excluding self)
@@ -1342,6 +1416,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
     - Use display utilities from `ui/src/utils/displayUtils.js` for consistent rendering
 
 #### **Multi-Agent Visualization**
+
 - [ ] Session-scoped visualizers:
     - Truth chart: Toggle per output line (Chart.js loaded on-demand)
     - Derivation popup: Shows session-specific derivation tree on click
@@ -1355,6 +1430,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
     - Group related items for network views
 
 #### **Validation**
+
 - [ ] In Session A: Run inference → use "Send to Session B" → verify input appears in Session B
 - [ ] Open `/agents` → confirm all sessions show live status updates
 - [ ] Toggle network view → verify edges only connect related sessions
@@ -1363,9 +1439,11 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 ---
 
 ### **Phase 6: Optimization & Polish**
+
 *Goal: Performance and edge-case hardening*
 
 #### **Resource Management**
+
 - [ ] Implement session resource limits:
     - Background sessions throttle to 1 update/sec
     - Auto-close sessions inactive >1 hour
@@ -1376,6 +1454,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
     - Use memoization from `ui/src/utils/utilityFunctions.js` for expensive computations
 
 #### **Responsiveness**
+
 - [ ] Mobile adaptations:
     - Session selector → swipeable tabs on mobile
     - Input field expands to full width on focus
@@ -1385,6 +1464,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
     - Reduced-motion preference: Disable animations if `prefers-reduced-motion`
 
 #### **Stress Testing**
+
 - [ ] 10-session load test:
     - All sessions reasoning concurrently → verify <100ms input lag
     - Memory leak check: 1hr runtime → heap size growth <5%
@@ -1395,6 +1475,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 ---
 
 ### **Final Validation Checklist**
+
 - [ ] **Session isolation**:
     - History/state never leaks between sessions
     - Closing session terminates all associated resources (timers, listeners)
@@ -1414,12 +1495,16 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 
 > **Execution Rules**
 > 1. **Strict phase gating**: No Phase 2 tasks until Phase 1 passes all validation checks
-> 2. **Session context first**: Every new feature (e.g., visualizations) must work in single-session mode before multi-session
+> 2. **Session context first**: Every new feature (e.g., visualizations) must work in single-session mode before
+     multi-session
 > 3. **Optimization ban**: Phase 6 work forbidden until Phase 5 validation complete
 > 4. **Debugging hooks**:
      >    - `?debug=true` URL param enables raw WebSocket logging
->    - `window.NARS_SESSIONS` exposes session registry to console
+     >
+- `window.NARS_SESSIONS` exposes session registry to console
+
 ### **Final Validation Checklist**
+
 - [ ] **Session isolation**:
     - History/state never leaks between sessions
     - Closing session terminates all associated resources (timers, listeners)
@@ -1439,38 +1524,41 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 
 > **Execution Rules**
 > 1. **Strict phase gating**: No Phase 2 tasks until Phase 1 passes all validation checks
-> 2. **Session context first**: Every new feature (e.g., visualizations) must work in single-session mode before multi-session
+> 2. **Session context first**: Every new feature (e.g., visualizations) must work in single-session mode before
+     multi-session
 > 3. **Optimization ban**: Phase 6 work forbidden until Phase 5 validation complete
 > 4. **Debugging hooks**:
      >    - `?debug=true` URL param enables raw WebSocket logging
->    - `window.NARS_SESSIONS` exposes session registry to console
+     >
+- `window.NARS_SESSIONS` exposes session registry to console
 >    - `window.NARS_SESSIONS` exposes session registry to console
 
 
-  persistSessionHistory(sessionId) {
-    try {
-      const history = this.sessionHistories[sessionId] || [];
-      sessionStorage.setItem(`nars-history-${sessionId}`, JSON.stringify(history));
-    } catch (error) {
-      console.warn(`Failed to persist history for session ${sessionId}:`, error);
-    }
-  }
-  
-  // New: Load session history from sessionStorage
-  loadSessionHistory(sessionId) {
-    try {
-      const historyStr = sessionStorage.getItem(`nars-history-${sessionId}`);
-      if (historyStr) {
-        this.sessionHistories[sessionId] = JSON.parse(historyStr);
-      } else {
-        this.sessionHistories[sessionId] = [];
-      }
-    } catch (error) {
-      console.warn(`Failed to load history for session ${sessionId}:`, error);
-      this.sessionHistories[sessionId] = [];
-    }
-  }
+persistSessionHistory(sessionId) {
+try {
+const history = this.sessionHistories[sessionId] || [];
+sessionStorage.setItem(`nars-history-${sessionId}`, JSON.stringify(history));
+} catch (error) {
+console.warn(`Failed to persist history for session ${sessionId}:`, error);
 }
+}
+
+// New: Load session history from sessionStorage
+loadSessionHistory(sessionId) {
+try {
+const historyStr = sessionStorage.getItem(`nars-history-${sessionId}`);
+if (historyStr) {
+this.sessionHistories[sessionId] = JSON.parse(historyStr);
+} else {
+this.sessionHistories[sessionId] = [];
+}
+} catch (error) {
+console.warn(`Failed to load history for session ${sessionId}:`, error);
+this.sessionHistories[sessionId] = [];
+}
+}
+}
+
 ```
 
 ##### **2. Integration with REPL Core**
@@ -1516,102 +1604,105 @@ class REPLCore {
 ##### **3. UI Components for History Display**
 
 ###### **Cell Grouping**
+
 Modify the output rendering to group input/output pairs:
 
 ```javascript
 // In repl-core.js
 class REPLCore {
-  addOutputLine(line) {
-    // Create cell group if it doesn't exist
-    let cellGroup = this.getCurrentCellGroup();
-    if (!cellGroup) {
-      cellGroup = this.createCellGroup();
+    addOutputLine(line) {
+        // Create cell group if it doesn't exist
+        let cellGroup = this.getCurrentCellGroup();
+        if (!cellGroup) {
+            cellGroup = this.createCellGroup();
+        }
+
+        // ... existing code for creating line element
+
+        cellGroup.appendChild(lineElement);
+
+        // ... existing code
     }
-    
-    // ... existing code for creating line element
-    
-    cellGroup.appendChild(lineElement);
-    
-    // ... existing code
-  }
-  
-  createCellGroup() {
-    const cellGroup = document.createElement('div');
-    cellGroup.className = 'cell-group';
-    this.outputElement.appendChild(cellGroup);
-    return cellGroup;
-  }
+
+    createCellGroup() {
+        const cellGroup = document.createElement('div');
+        cellGroup.className = 'cell-group';
+        this.outputElement.appendChild(cellGroup);
+        return cellGroup;
+    }
 }
 ```
 
 ##### **4. History Navigation**
 
 ###### **Arrow Key Handling**
+
 Add keyboard navigation for history:
 
 ```javascript
 // In repl-core.js
 class REPLCore {
-  bindEvents() {
-    // ... existing code
-    
-    // Handle history navigation
-    this.handleInputKeydown = (event) => {
-      if (event.key === 'ArrowUp') {
-        this.navigateHistory(-1);
-        event.preventDefault();
-      } else if (event.key === 'ArrowDown') {
-        this.navigateHistory(1);
-        event.preventDefault();
-      } else if (event.key === 'Enter' && !event.shiftKey) {
-        event.preventDefault();
-        this.submitInput();
-      }
-    };
-    
-    this.inputElement.addEventListener('keydown', this.handleInputKeydown);
-  }
-  
-  navigateHistory(direction) {
-    // Implementation for navigating through history
-    // This will depend on maintaining a history position per session
-  }
+    bindEvents() {
+        // ... existing code
+
+        // Handle history navigation
+        this.handleInputKeydown = (event) => {
+            if (event.key === 'ArrowUp') {
+                this.navigateHistory(-1);
+                event.preventDefault();
+            } else if (event.key === 'ArrowDown') {
+                this.navigateHistory(1);
+                event.preventDefault();
+            } else if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                this.submitInput();
+            }
+        };
+
+        this.inputElement.addEventListener('keydown', this.handleInputKeydown);
+    }
+
+    navigateHistory(direction) {
+        // Implementation for navigating through history
+        // This will depend on maintaining a history position per session
+    }
 }
 ```
 
 ##### **5. Persistence Handling**
 
 ###### **Page Load/Unload Events**
+
 Add event listeners for persistence:
 
 ```javascript
 // In session-manager.js
 class SessionManager {
-  constructor() {
-    // ... existing code
-    
-    // Handle page unload for persistence
-    window.addEventListener('beforeunload', () => {
-      this.persistAllHistories();
-    });
-    
-    // Load histories on initialization
-    this.loadAllHistories();
-  }
-  
-  persistAllHistories() {
-    Object.keys(this.activeSessions).forEach(sessionId => {
-      this.persistSessionHistory(sessionId);
-    });
-  }
-  
-  loadAllHistories() {
-    // Load histories for existing sessions
-    Object.keys(this.activeSessions).forEach(sessionId => {
-      this.loadSessionHistory(sessionId);
-      this.renderHistory(sessionId);
-    });
-  }
+    constructor() {
+        // ... existing code
+
+        // Handle page unload for persistence
+        window.addEventListener('beforeunload', () => {
+            this.persistAllHistories();
+        });
+
+        // Load histories on initialization
+        this.loadAllHistories();
+    }
+
+    persistAllHistories() {
+        Object.keys(this.activeSessions).forEach(sessionId => {
+            this.persistSessionHistory(sessionId);
+        });
+    }
+
+    loadAllHistories() {
+        // Load histories for existing sessions
+        Object.keys(this.activeSessions).forEach(sessionId => {
+            this.loadSessionHistory(sessionId);
+            this.renderHistory(sessionId);
+        });
+    }
 }
 ```
 
@@ -1622,126 +1713,126 @@ Enhance history filtering capabilities:
 ```javascript
 // In session-manager.js
 class SessionManager {
-  // ... existing code
-  
-  /**
-   * Filter session history by text search
-   * @param {string} sessionId - Session identifier
-   * @param {string} searchText - Text to search for
-   * @param {boolean} useRegex - Whether to treat searchText as regex
-   * @returns {Array} Filtered history
-   */
-  filterHistoryByText(sessionId, searchText, useRegex = false) {
-    if (!searchText.trim()) {
-      return this.sessionHistories[sessionId] || [];
-    }
-    
-    const history = this.sessionHistories[sessionId] || [];
-    
-    if (useRegex) {
-      try {
-        const regex = new RegExp(searchText, 'i'); // Case insensitive
-        return history.filter(cell => {
-          if (cell.type === 'input') {
-            return regex.test(cell.content);
-          } else {
-            // For output cells, search in text content
-            const textContent = cell.content.text || '';
-            return regex.test(textContent);
-          }
-        });
-      } catch (e) {
-        // If regex is invalid, fall back to simple text search
-        console.warn('Invalid regex, falling back to text search:', e);
-        const lowerSearchText = searchText.toLowerCase();
-        return history.filter(cell => {
-          if (cell.type === 'input') {
-            return cell.content.toLowerCase().includes(lowerSearchText);
-          } else {
-            // For output cells, search in text content
-            const textContent = cell.content.text || '';
-            return textContent.toLowerCase().includes(lowerSearchText);
-          }
-        });
-      }
-    } else {
-      const lowerSearchText = searchText.toLowerCase();
-      return history.filter(cell => {
-        if (cell.type === 'input') {
-          return cell.content.toLowerCase().includes(lowerSearchText);
-        } else {
-          // For output cells, search in text content
-          const textContent = cell.content.text || '';
-          return textContent.toLowerCase().includes(lowerSearchText);
+    // ... existing code
+
+    /**
+     * Filter session history by text search
+     * @param {string} sessionId - Session identifier
+     * @param {string} searchText - Text to search for
+     * @param {boolean} useRegex - Whether to treat searchText as regex
+     * @returns {Array} Filtered history
+     */
+    filterHistoryByText(sessionId, searchText, useRegex = false) {
+        if (!searchText.trim()) {
+            return this.sessionHistories[sessionId] || [];
         }
-      });
+
+        const history = this.sessionHistories[sessionId] || [];
+
+        if (useRegex) {
+            try {
+                const regex = new RegExp(searchText, 'i'); // Case insensitive
+                return history.filter(cell => {
+                    if (cell.type === 'input') {
+                        return regex.test(cell.content);
+                    } else {
+                        // For output cells, search in text content
+                        const textContent = cell.content.text || '';
+                        return regex.test(textContent);
+                    }
+                });
+            } catch (e) {
+                // If regex is invalid, fall back to simple text search
+                console.warn('Invalid regex, falling back to text search:', e);
+                const lowerSearchText = searchText.toLowerCase();
+                return history.filter(cell => {
+                    if (cell.type === 'input') {
+                        return cell.content.toLowerCase().includes(lowerSearchText);
+                    } else {
+                        // For output cells, search in text content
+                        const textContent = cell.content.text || '';
+                        return textContent.toLowerCase().includes(lowerSearchText);
+                    }
+                });
+            }
+        } else {
+            const lowerSearchText = searchText.toLowerCase();
+            return history.filter(cell => {
+                if (cell.type === 'input') {
+                    return cell.content.toLowerCase().includes(lowerSearchText);
+                } else {
+                    // For output cells, search in text content
+                    const textContent = cell.content.text || '';
+                    return textContent.toLowerCase().includes(lowerSearchText);
+                }
+            });
+        }
     }
-  }
-  
-  /**
-   * Filter session history by type
-   * @param {string} sessionId - Session identifier
-   * @param {string} type - Type to filter by ('input', 'output', or 'all')
-   * @returns {Array} Filtered history
-   */
-  filterHistoryByType(sessionId, type) {
-    if (type === 'all') {
-      return this.sessionHistories[sessionId] || [];
+
+    /**
+     * Filter session history by type
+     * @param {string} sessionId - Session identifier
+     * @param {string} type - Type to filter by ('input', 'output', or 'all')
+     * @returns {Array} Filtered history
+     */
+    filterHistoryByType(sessionId, type) {
+        if (type === 'all') {
+            return this.sessionHistories[sessionId] || [];
+        }
+
+        const history = this.sessionHistories[sessionId] || [];
+        return history.filter(cell => cell.type === type);
     }
-    
-    const history = this.sessionHistories[sessionId] || [];
-    return history.filter(cell => cell.type === type);
-  }
-  
-  /**
-   * Filter session history by date range
-   * @param {string} sessionId - Session identifier
-   * @param {number} startDate - Start timestamp (milliseconds since epoch)
-   * @param {number} endDate - End timestamp (milliseconds since epoch)
-   * @returns {Array} Filtered history
-   */
-  filterHistoryByDateRange(sessionId, startDate, endDate) {
-    const history = this.sessionHistories[sessionId] || [];
-    return history.filter(cell => {
-      return cell.timestamp >= startDate && cell.timestamp <= endDate;
-    });
-  }
-  
-  /**
-   * Apply combined filters to session history
-   * @param {string} sessionId - Session identifier
-   * @param {Object} filters - Filter criteria
-   * @param {string} filters.text - Text to search for
-   * @param {boolean} filters.useRegex - Whether to treat text as regex
-   * @param {string} filters.type - Type to filter by ('input', 'output', or 'all')
-   * @param {number} filters.startDate - Start timestamp (milliseconds since epoch)
-   * @param {number} filters.endDate - End timestamp (milliseconds since epoch)
-   * @returns {Array} Filtered history
-   */
-  filterHistoryCombined(sessionId, filters) {
-    let history = this.sessionHistories[sessionId] || [];
-    
-    // Apply text filter
-    if (filters.text) {
-      history = this.filterHistoryByText(sessionId, filters.text, filters.useRegex);
+
+    /**
+     * Filter session history by date range
+     * @param {string} sessionId - Session identifier
+     * @param {number} startDate - Start timestamp (milliseconds since epoch)
+     * @param {number} endDate - End timestamp (milliseconds since epoch)
+     * @returns {Array} Filtered history
+     */
+    filterHistoryByDateRange(sessionId, startDate, endDate) {
+        const history = this.sessionHistories[sessionId] || [];
+        return history.filter(cell => {
+            return cell.timestamp >= startDate && cell.timestamp <= endDate;
+        });
     }
-    
-    // Apply type filter
-    if (filters.type && filters.type !== 'all') {
-      history = history.filter(cell => cell.type === filters.type);
+
+    /**
+     * Apply combined filters to session history
+     * @param {string} sessionId - Session identifier
+     * @param {Object} filters - Filter criteria
+     * @param {string} filters.text - Text to search for
+     * @param {boolean} filters.useRegex - Whether to treat text as regex
+     * @param {string} filters.type - Type to filter by ('input', 'output', or 'all')
+     * @param {number} filters.startDate - Start timestamp (milliseconds since epoch)
+     * @param {number} filters.endDate - End timestamp (milliseconds since epoch)
+     * @returns {Array} Filtered history
+     */
+    filterHistoryCombined(sessionId, filters) {
+        let history = this.sessionHistories[sessionId] || [];
+
+        // Apply text filter
+        if (filters.text) {
+            history = this.filterHistoryByText(sessionId, filters.text, filters.useRegex);
+        }
+
+        // Apply type filter
+        if (filters.type && filters.type !== 'all') {
+            history = history.filter(cell => cell.type === filters.type);
+        }
+
+        // Apply date range filter
+        if (filters.startDate || filters.endDate) {
+            const startDate = filters.startDate || 0;
+            const endDate = filters.endDate || Date.now();
+            history = history.filter(cell => {
+                return cell.timestamp >= startDate && cell.timestamp <= endDate;
+            });
+        }
+
+        return history;
     }
-    
-    // Apply date range filter
-    if (filters.startDate || filters.endDate) {
-      const startDate = filters.startDate || 0;
-      const endDate = filters.endDate || Date.now();
-      history = history.filter(cell => {
-        return cell.timestamp >= startDate && cell.timestamp <= endDate;
-      });
-    }
-    
-    return history;
-  }
 }
 ```
 
@@ -1752,76 +1843,76 @@ Improve virtual scrolling with caching:
 ```javascript
 // In session-manager.js
 class SessionManager {
-  // ... existing code
-  
-  /**
-   * Set up virtual scrolling for a session's history
-   * @param {string} sessionId - Session identifier
-   * @param {Array} history - History array to render
-   */
-  setupVirtualScrolling(sessionId, history) {
-    const session = this.activeSessions[sessionId];
-    if (!session) return;
-    
-    // Store history reference for this session
-    session.history = history;
-    session.visibleCells = new Map(); // Track rendered cells
-    session.cellCache = new Map(); // Cache for cell elements
-    
-    // Set up scroll event listener
-    session.output.addEventListener('scroll', () => {
-      this.handleScroll(sessionId);
-    });
-    
-    // Initial render
-    this.handleScroll(sessionId);
-  }
-  
-  /**
-   * Update visible cells in the viewport
-   * @param {string} sessionId - Session identifier
-   * @param {number} startIdx - Start index of visible range
-   * @param {number} endIdx - End index of visible range
-   */
-  updateVisibleCells(sessionId, startIdx, endIdx) {
-    const session = this.activeSessions[sessionId];
-    if (!session || !session.history) return;
-    
-    const history = session.history;
-    const visibleCells = session.visibleCells;
-    const cellCache = session.cellCache;
-    
-    // Create a set of indices that should be visible
-    const shouldBeVisible = new Set();
-    for (let i = startIdx; i <= endIdx; i++) {
-      shouldBeVisible.add(i);
+    // ... existing code
+
+    /**
+     * Set up virtual scrolling for a session's history
+     * @param {string} sessionId - Session identifier
+     * @param {Array} history - History array to render
+     */
+    setupVirtualScrolling(sessionId, history) {
+        const session = this.activeSessions[sessionId];
+        if (!session) return;
+
+        // Store history reference for this session
+        session.history = history;
+        session.visibleCells = new Map(); // Track rendered cells
+        session.cellCache = new Map(); // Cache for cell elements
+
+        // Set up scroll event listener
+        session.output.addEventListener('scroll', () => {
+            this.handleScroll(sessionId);
+        });
+
+        // Initial render
+        this.handleScroll(sessionId);
     }
-    
-    // Remove cells that are no longer visible
-    for (const [index, cellElement] of visibleCells.entries()) {
-      if (!shouldBeVisible.has(index)) {
-        cellElement.remove();
-        visibleCells.delete(index);
-      }
-    }
-    
-    // Add new cells that should be visible
-    for (let i = startIdx; i <= endIdx; i++) {
-      if (!visibleCells.has(i) && history[i]) {
-        // Check if cell is already in cache
-        let cellElement = cellCache.get(i);
-        if (!cellElement) {
-          // Create new cell element if not in cache
-          cellElement = this.createCellElement(sessionId, history[i]);
-          cellCache.set(i, cellElement);
+
+    /**
+     * Update visible cells in the viewport
+     * @param {string} sessionId - Session identifier
+     * @param {number} startIdx - Start index of visible range
+     * @param {number} endIdx - End index of visible range
+     */
+    updateVisibleCells(sessionId, startIdx, endIdx) {
+        const session = this.activeSessions[sessionId];
+        if (!session || !session.history) return;
+
+        const history = session.history;
+        const visibleCells = session.visibleCells;
+        const cellCache = session.cellCache;
+
+        // Create a set of indices that should be visible
+        const shouldBeVisible = new Set();
+        for (let i = startIdx; i <= endIdx; i++) {
+            shouldBeVisible.add(i);
         }
-        cellElement.style.position = 'absolute';
-        cellElement.style.top = `${i * 24}px`; // Approximate row height
-        session.output.appendChild(cellElement);
-        visibleCells.set(i, cellElement);
-      }
+
+        // Remove cells that are no longer visible
+        for (const [index, cellElement] of visibleCells.entries()) {
+            if (!shouldBeVisible.has(index)) {
+                cellElement.remove();
+                visibleCells.delete(index);
+            }
+        }
+
+        // Add new cells that should be visible
+        for (let i = startIdx; i <= endIdx; i++) {
+            if (!visibleCells.has(i) && history[i]) {
+                // Check if cell is already in cache
+                let cellElement = cellCache.get(i);
+                if (!cellElement) {
+                    // Create new cell element if not in cache
+                    cellElement = this.createCellElement(sessionId, history[i]);
+                    cellCache.set(i, cellElement);
+                }
+                cellElement.style.position = 'absolute';
+                cellElement.style.top = `${i * 24}px`; // Approximate row height
+                session.output.appendChild(cellElement);
+                visibleCells.set(i, cellElement);
+            }
+        }
     }
-  }
 }
 ```
 
@@ -1832,84 +1923,87 @@ Add clear history and pinning functionality:
 ```javascript
 // In session-manager.js
 class SessionManager {
-  // ... existing code
-  
-  /**
-   * Clear session history
-   * @param {string} sessionId - Session identifier
-   */
-  clearSessionHistory(sessionId) {
-    if (this.sessionHistories[sessionId]) {
-      // Keep pinned cells when clearing history
-      this.sessionHistories[sessionId] = this.sessionHistories[sessionId].filter(cell => cell.pinned);
-      this.persistSessionHistory(sessionId);
-      this.renderHistory(sessionId);
-    }
-  }
-  
-  /**
-   * Pin a cell in the history
-   * @param {string} sessionId - Session identifier
-   * @param {string} cellId - Cell identifier
-   */
-  pinCell(sessionId, cellId) {
-    const history = this.sessionHistories[sessionId];
-    if (!history) return;
-    
-    const cellIndex = history.findIndex(cell => cell.id === cellId);
-    if (cellIndex !== -1) {
-      history[cellIndex].pinned = true;
-      this.persistSessionHistory(sessionId);
-    }
-  }
-  
-  /**
-   * Unpin a cell in the history
-   * @param {string} sessionId - Session identifier
-   * @param {string} cellId - Cell identifier
-   */
-  unpinCell(sessionId, cellId) {
-    const history = this.sessionHistories[sessionId];
-    if (!history) return;
-    
-class SessionManager {
-  constructor() {
     // ... existing code
-    
-    // Handle page unload for persistence
-    window.addEventListener('beforeunload', () => {
-      this.persistAllHistories();
-    });
-    
-    // Load histories on initialization
-    this.loadAllHistories();
-  }
-  
-  persistAllHistories() {
-    Object.keys(this.activeSessions).forEach(sessionId => {
-      this.persistSessionHistory(sessionId);
-    });
-  }
-  
-  loadAllHistories() {
-    // Load histories for existing sessions
-    Object.keys(this.activeSessions).forEach(sessionId => {
-      this.loadSessionHistory(sessionId);
-      this.renderHistory(sessionId);
-    });
-  }
-}
+
+    /**
+     * Clear session history
+     * @param {string} sessionId - Session identifier
+     */
+    clearSessionHistory(sessionId) {
+        if (this.sessionHistories[sessionId]) {
+            // Keep pinned cells when clearing history
+            this.sessionHistories[sessionId] = this.sessionHistories[sessionId].filter(cell => cell.pinned);
+            this.persistSessionHistory(sessionId);
+            this.renderHistory(sessionId);
+        }
+    }
+
+    /**
+     * Pin a cell in the history
+     * @param {string} sessionId - Session identifier
+     * @param {string} cellId - Cell identifier
+     */
+    pinCell(sessionId, cellId) {
+        const history = this.sessionHistories[sessionId];
+        if (!history) return;
+
+        const cellIndex = history.findIndex(cell => cell.id === cellId);
+        if (cellIndex !== -1) {
+            history[cellIndex].pinned = true;
+            this.persistSessionHistory(sessionId);
+        }
+    }
+
+    /**
+     * Unpin a cell in the history
+     * @param {string} sessionId - Session identifier
+     * @param {string} cellId - Cell identifier
+     */
+    unpinCell(sessionId, cellId) {
+        const history = this.sessionHistories[sessionId];
+        if (!history) return;
+
+        class SessionManager {
+            constructor() {
+                // ... existing code
+
+                // Handle page unload for persistence
+                window.addEventListener('beforeunload', () => {
+                    this.persistAllHistories();
+                });
+
+                // Load histories on initialization
+                this.loadAllHistories();
+            }
+
+            persistAllHistories() {
+                Object.keys(this.activeSessions).forEach(sessionId => {
+                    this.persistSessionHistory(sessionId);
+                });
+            }
+
+            loadAllHistories() {
+                // Load histories for existing sessions
+                Object.keys(this.activeSessions).forEach(sessionId => {
+                    this.loadSessionHistory(sessionId);
+                    this.renderHistory(sessionId);
+                });
+            }
+        }
 ```
 
 #### **Dependencies on Existing Utilities**
 
 ##### **From `ui/src/utils/dataProcessor.js`:**
+
 - Will use for advanced history data processing if needed
 
 ##### **From `ui/src/utils/filterUtils.js`:**
+
 - Will implement text search and type filtering for history
 
 ##### **From `ui/src/utils/utilityFunctions.js`:**
+
 - Will use `paginateData` for handling large histories
 - May use other utility functions as needed
 
@@ -1926,6 +2020,7 @@ class SessionManager {
 #### **Testing Approach**
 
 Since we're minimizing mocks, we'll test the actual history functionality:
+
 - Verify cells are added to history correctly
 - Verify history persistence works
 - Verify history loading works
@@ -1942,9 +2037,11 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 ---
 
 ### **Phase 5: Agent-Aware Features**
+
 *Goal: Cross-session interaction and visualization*
 
 #### **Session Communication**
+
 - [ ] Implement "Send to session" widget:
     - Per-output-line `⋯` menu with "Send to..." option
     - Dropdown shows active sessions (excluding self)
@@ -1956,6 +2053,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
     - Use display utilities from `ui/src/utils/displayUtils.js` for consistent rendering
 
 #### **Multi-Agent Visualization**
+
 - [ ] Session-scoped visualizers:
     - Truth chart: Toggle per output line (Chart.js loaded on-demand)
     - Derivation popup: Shows session-specific derivation tree on click
@@ -1969,6 +2067,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
     - Group related items for network views
 
 #### **Validation**
+
 - [ ] In Session A: Run inference → use "Send to Session B" → verify input appears in Session B
 - [ ] Open `/agents` → confirm all sessions show live status updates
 - [ ] Toggle network view → verify edges only connect related sessions
@@ -1977,9 +2076,11 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 ---
 
 ### **Phase 6: Optimization & Polish**
+
 *Goal: Performance and edge-case hardening*
 
 #### **Resource Management**
+
 - [ ] Implement session resource limits:
     - Background sessions throttle to 1 update/sec
     - Auto-close sessions inactive >1 hour
@@ -1990,6 +2091,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
     - Use memoization from `ui/src/utils/utilityFunctions.js` for expensive computations
 
 #### **Responsiveness**
+
 - [ ] Mobile adaptations:
     - Session selector → swipeable tabs on mobile
     - Input field expands to full width on focus
@@ -1999,6 +2101,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
     - Reduced-motion preference: Disable animations if `prefers-reduced-motion`
 
 #### **Stress Testing**
+
 - [ ] 10-session load test:
     - All sessions reasoning concurrently → verify <100ms input lag
     - Memory leak check: 1hr runtime → heap size growth <5%
@@ -2009,6 +2112,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 ---
 
 ### **Final Validation Checklist**
+
 - [ ] **Session isolation**:
     - History/state never leaks between sessions
     - Closing session terminates all associated resources (timers, listeners)
@@ -2028,12 +2132,16 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 
 > **Execution Rules**
 > 1. **Strict phase gating**: No Phase 2 tasks until Phase 1 passes all validation checks
-> 2. **Session context first**: Every new feature (e.g., visualizations) must work in single-session mode before multi-session
+> 2. **Session context first**: Every new feature (e.g., visualizations) must work in single-session mode before
+     multi-session
 > 3. **Optimization ban**: Phase 6 work forbidden until Phase 5 validation complete
 > 4. **Debugging hooks**:
      >    - `?debug=true` URL param enables raw WebSocket logging
->    - `window.NARS_SESSIONS` exposes session registry to console
+     >
+- `window.NARS_SESSIONS` exposes session registry to console
+
 ### **Final Validation Checklist**
+
 - [ ] **Session isolation**:
     - History/state never leaks between sessions
     - Closing session terminates all associated resources (timers, listeners)
@@ -2053,14 +2161,17 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 
 > **Execution Rules**
 > 1. **Strict phase gating**: No Phase 2 tasks until Phase 1 passes all validation checks
-> 2. **Session context first**: Every new feature (e.g., visualizations) must work in single-session mode before multi-session
+> 2. **Session context first**: Every new feature (e.g., visualizations) must work in single-session mode before
+     multi-session
 > 3. **Optimization ban**: Phase 6 work forbidden until Phase 5 validation complete
 > 4. **Debugging hooks**:
      >    - `?debug=true` URL param enables raw WebSocket logging
->    - `window.NARS_SESSIONS` exposes session registry to console
+     >
+- `window.NARS_SESSIONS` exposes session registry to console
 >    - `window.NARS_SESSIONS` exposes session registry to console
 
 }
+
 ```
 
 ##### **2. Integration with REPL Core**
@@ -2106,114 +2217,120 @@ class REPLCore {
 ##### **3. UI Components for History Display**
 
 ###### **Cell Grouping**
+
 Modify the output rendering to group input/output pairs:
 
 ```javascript
 // In repl-core.js
 class REPLCore {
-  addOutputLine(line) {
-    // Create cell group if it doesn't exist
-    let cellGroup = this.getCurrentCellGroup();
-    if (!cellGroup) {
-      cellGroup = this.createCellGroup();
+    addOutputLine(line) {
+        // Create cell group if it doesn't exist
+        let cellGroup = this.getCurrentCellGroup();
+        if (!cellGroup) {
+            cellGroup = this.createCellGroup();
+        }
+
+        // ... existing code for creating line element
+
+        cellGroup.appendChild(lineElement);
+
+        // ... existing code
     }
-    
-    // ... existing code for creating line element
-    
-    cellGroup.appendChild(lineElement);
-    
-    // ... existing code
-  }
-  
-  createCellGroup() {
-    const cellGroup = document.createElement('div');
-    cellGroup.className = 'cell-group';
-    this.outputElement.appendChild(cellGroup);
-    return cellGroup;
-  }
+
+    createCellGroup() {
+        const cellGroup = document.createElement('div');
+        cellGroup.className = 'cell-group';
+        this.outputElement.appendChild(cellGroup);
+        return cellGroup;
+    }
 }
 ```
 
 ##### **4. History Navigation**
 
 ###### **Arrow Key Handling**
+
 Add keyboard navigation for history:
 
 ```javascript
 // In repl-core.js
 class REPLCore {
-  bindEvents() {
-    // ... existing code
-    
-    // Handle history navigation
-    this.handleInputKeydown = (event) => {
-      if (event.key === 'ArrowUp') {
-        this.navigateHistory(-1);
-        event.preventDefault();
-      } else if (event.key === 'ArrowDown') {
-        this.navigateHistory(1);
-        event.preventDefault();
-      } else if (event.key === 'Enter' && !event.shiftKey) {
-        event.preventDefault();
-        this.submitInput();
-      }
-    };
-    
-    this.inputElement.addEventListener('keydown', this.handleInputKeydown);
-  }
-  
-  navigateHistory(direction) {
-    // Implementation for navigating through history
-    // This will depend on maintaining a history position per session
-  }
+    bindEvents() {
+        // ... existing code
+
+        // Handle history navigation
+        this.handleInputKeydown = (event) => {
+            if (event.key === 'ArrowUp') {
+                this.navigateHistory(-1);
+                event.preventDefault();
+            } else if (event.key === 'ArrowDown') {
+                this.navigateHistory(1);
+                event.preventDefault();
+            } else if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                this.submitInput();
+            }
+        };
+
+        this.inputElement.addEventListener('keydown', this.handleInputKeydown);
+    }
+
+    navigateHistory(direction) {
+        // Implementation for navigating through history
+        // This will depend on maintaining a history position per session
+    }
 }
 ```
 
 ##### **5. Persistence Handling**
 
 ###### **Page Load/Unload Events**
+
 Add event listeners for persistence:
 
 ```javascript
 // In session-manager.js
 class SessionManager {
-  constructor() {
-    // ... existing code
-    
-    // Handle page unload for persistence
-    window.addEventListener('beforeunload', () => {
-      this.persistAllHistories();
-    });
-    
-    // Load histories on initialization
-    this.loadAllHistories();
-  }
-  
-  persistAllHistories() {
-    Object.keys(this.activeSessions).forEach(sessionId => {
-      this.persistSessionHistory(sessionId);
-    });
-  }
-  
-  loadAllHistories() {
-    // Load histories for existing sessions
-    Object.keys(this.activeSessions).forEach(sessionId => {
-      this.loadSessionHistory(sessionId);
-      this.renderHistory(sessionId);
-    });
-  }
+    constructor() {
+        // ... existing code
+
+        // Handle page unload for persistence
+        window.addEventListener('beforeunload', () => {
+            this.persistAllHistories();
+        });
+
+        // Load histories on initialization
+        this.loadAllHistories();
+    }
+
+    persistAllHistories() {
+        Object.keys(this.activeSessions).forEach(sessionId => {
+            this.persistSessionHistory(sessionId);
+        });
+    }
+
+    loadAllHistories() {
+        // Load histories for existing sessions
+        Object.keys(this.activeSessions).forEach(sessionId => {
+            this.loadSessionHistory(sessionId);
+            this.renderHistory(sessionId);
+        });
+    }
 }
 ```
 
 #### **Dependencies on Existing Utilities**
 
 ##### **From `ui/src/utils/dataProcessor.js`:**
+
 - Will use for advanced history data processing if needed
 
 ##### **From `ui/src/utils/filterUtils.js`:**
+
 - Will implement text search and type filtering for history
 
 ##### **From `ui/src/utils/utilityFunctions.js`:**
+
 - Will use `paginateData` for handling large histories
 - May use other utility functions as needed
 
@@ -2230,6 +2347,7 @@ class SessionManager {
 #### **Testing Approach**
 
 Since we're minimizing mocks, we'll test the actual history functionality:
+
 - Verify cells are added to history correctly
 - Verify history persistence works
 - Verify history loading works
@@ -2246,9 +2364,11 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 ---
 
 ### **Phase 5: Agent-Aware Features**
+
 *Goal: Cross-session interaction and visualization*
 
 #### **Session Communication**
+
 - [ ] Implement "Send to session" widget:
     - Per-output-line `⋯` menu with "Send to..." option
     - Dropdown shows active sessions (excluding self)
@@ -2260,6 +2380,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
     - Use display utilities from `ui/src/utils/displayUtils.js` for consistent rendering
 
 #### **Multi-Agent Visualization**
+
 - [ ] Session-scoped visualizers:
     - Truth chart: Toggle per output line (Chart.js loaded on-demand)
     - Derivation popup: Shows session-specific derivation tree on click
@@ -2273,6 +2394,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
     - Group related items for network views
 
 #### **Validation**
+
 - [ ] In Session A: Run inference → use "Send to Session B" → verify input appears in Session B
 - [ ] Open `/agents` → confirm all sessions show live status updates
 - [ ] Toggle network view → verify edges only connect related sessions
@@ -2281,9 +2403,11 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 ---
 
 ### **Phase 6: Optimization & Polish**
+
 *Goal: Performance and edge-case hardening*
 
 #### **Resource Management**
+
 - [ ] Implement session resource limits:
     - Background sessions throttle to 1 update/sec
     - Auto-close sessions inactive >1 hour
@@ -2294,6 +2418,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
     - Use memoization from `ui/src/utils/utilityFunctions.js` for expensive computations
 
 #### **Responsiveness**
+
 - [ ] Mobile adaptations:
     - Session selector → swipeable tabs on mobile
     - Input field expands to full width on focus
@@ -2303,6 +2428,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
     - Reduced-motion preference: Disable animations if `prefers-reduced-motion`
 
 #### **Stress Testing**
+
 - [ ] 10-session load test:
     - All sessions reasoning concurrently → verify <100ms input lag
     - Memory leak check: 1hr runtime → heap size growth <5%
@@ -2313,6 +2439,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 ---
 
 ### **Final Validation Checklist**
+
 - [ ] **Session isolation**:
     - History/state never leaks between sessions
     - Closing session terminates all associated resources (timers, listeners)
@@ -2332,12 +2459,16 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 
 > **Execution Rules**
 > 1. **Strict phase gating**: No Phase 2 tasks until Phase 1 passes all validation checks
-> 2. **Session context first**: Every new feature (e.g., visualizations) must work in single-session mode before multi-session
+> 2. **Session context first**: Every new feature (e.g., visualizations) must work in single-session mode before
+     multi-session
 > 3. **Optimization ban**: Phase 6 work forbidden until Phase 5 validation complete
 > 4. **Debugging hooks**:
      >    - `?debug=true` URL param enables raw WebSocket logging
->    - `window.NARS_SESSIONS` exposes session registry to console
+     >
+- `window.NARS_SESSIONS` exposes session registry to console
+
 ### **Final Validation Checklist**
+
 - [ ] **Session isolation**:
     - History/state never leaks between sessions
     - Closing session terminates all associated resources (timers, listeners)
@@ -2357,13 +2488,16 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 
 > **Execution Rules**
 > 1. **Strict phase gating**: No Phase 2 tasks until Phase 1 passes all validation checks
-> 2. **Session context first**: Every new feature (e.g., visualizations) must work in single-session mode before multi-session
+> 2. **Session context first**: Every new feature (e.g., visualizations) must work in single-session mode before
+     multi-session
 > 3. **Optimization ban**: Phase 6 work forbidden until Phase 5 validation complete
 > 4. **Debugging hooks**:
      >    - `?debug=true` URL param enables raw WebSocket logging
+     >
+- `window.NARS_SESSIONS` exposes session registry to console
 >    - `window.NARS_SESSIONS` exposes session registry to console
->    - `window.NARS_SESSIONS` exposes session registry to console
-}
+       }
+
 ```
 
 ##### **2. Integration with REPL Core**
@@ -2409,114 +2543,120 @@ class REPLCore {
 ##### **3. UI Components for History Display**
 
 ###### **Cell Grouping**
+
 Modify the output rendering to group input/output pairs:
 
 ```javascript
 // In repl-core.js
 class REPLCore {
-  addOutputLine(line) {
-    // Create cell group if it doesn't exist
-    let cellGroup = this.getCurrentCellGroup();
-    if (!cellGroup) {
-      cellGroup = this.createCellGroup();
+    addOutputLine(line) {
+        // Create cell group if it doesn't exist
+        let cellGroup = this.getCurrentCellGroup();
+        if (!cellGroup) {
+            cellGroup = this.createCellGroup();
+        }
+
+        // ... existing code for creating line element
+
+        cellGroup.appendChild(lineElement);
+
+        // ... existing code
     }
-    
-    // ... existing code for creating line element
-    
-    cellGroup.appendChild(lineElement);
-    
-    // ... existing code
-  }
-  
-  createCellGroup() {
-    const cellGroup = document.createElement('div');
-    cellGroup.className = 'cell-group';
-    this.outputElement.appendChild(cellGroup);
-    return cellGroup;
-  }
+
+    createCellGroup() {
+        const cellGroup = document.createElement('div');
+        cellGroup.className = 'cell-group';
+        this.outputElement.appendChild(cellGroup);
+        return cellGroup;
+    }
 }
 ```
 
 ##### **4. History Navigation**
 
 ###### **Arrow Key Handling**
+
 Add keyboard navigation for history:
 
 ```javascript
 // In repl-core.js
 class REPLCore {
-  bindEvents() {
-    // ... existing code
-    
-    // Handle history navigation
-    this.handleInputKeydown = (event) => {
-      if (event.key === 'ArrowUp') {
-        this.navigateHistory(-1);
-        event.preventDefault();
-      } else if (event.key === 'ArrowDown') {
-        this.navigateHistory(1);
-        event.preventDefault();
-      } else if (event.key === 'Enter' && !event.shiftKey) {
-        event.preventDefault();
-        this.submitInput();
-      }
-    };
-    
-    this.inputElement.addEventListener('keydown', this.handleInputKeydown);
-  }
-  
-  navigateHistory(direction) {
-    // Implementation for navigating through history
-    // This will depend on maintaining a history position per session
-  }
+    bindEvents() {
+        // ... existing code
+
+        // Handle history navigation
+        this.handleInputKeydown = (event) => {
+            if (event.key === 'ArrowUp') {
+                this.navigateHistory(-1);
+                event.preventDefault();
+            } else if (event.key === 'ArrowDown') {
+                this.navigateHistory(1);
+                event.preventDefault();
+            } else if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                this.submitInput();
+            }
+        };
+
+        this.inputElement.addEventListener('keydown', this.handleInputKeydown);
+    }
+
+    navigateHistory(direction) {
+        // Implementation for navigating through history
+        // This will depend on maintaining a history position per session
+    }
 }
 ```
 
 ##### **5. Persistence Handling**
 
 ###### **Page Load/Unload Events**
+
 Add event listeners for persistence:
 
 ```javascript
 // In session-manager.js
 class SessionManager {
-  constructor() {
-    // ... existing code
-    
-    // Handle page unload for persistence
-    window.addEventListener('beforeunload', () => {
-      this.persistAllHistories();
-    });
-    
-    // Load histories on initialization
-    this.loadAllHistories();
-  }
-  
-  persistAllHistories() {
-    Object.keys(this.activeSessions).forEach(sessionId => {
-      this.persistSessionHistory(sessionId);
-    });
-  }
-  
-  loadAllHistories() {
-    // Load histories for existing sessions
-    Object.keys(this.activeSessions).forEach(sessionId => {
-      this.loadSessionHistory(sessionId);
-      this.renderHistory(sessionId);
-    });
-  }
+    constructor() {
+        // ... existing code
+
+        // Handle page unload for persistence
+        window.addEventListener('beforeunload', () => {
+            this.persistAllHistories();
+        });
+
+        // Load histories on initialization
+        this.loadAllHistories();
+    }
+
+    persistAllHistories() {
+        Object.keys(this.activeSessions).forEach(sessionId => {
+            this.persistSessionHistory(sessionId);
+        });
+    }
+
+    loadAllHistories() {
+        // Load histories for existing sessions
+        Object.keys(this.activeSessions).forEach(sessionId => {
+            this.loadSessionHistory(sessionId);
+            this.renderHistory(sessionId);
+        });
+    }
 }
 ```
 
 #### **Dependencies on Existing Utilities**
 
 ##### **From `ui/src/utils/dataProcessor.js`:**
+
 - Will use for advanced history data processing if needed
 
 ##### **From `ui/src/utils/filterUtils.js`:**
+
 - Will implement text search and type filtering for history
 
 ##### **From `ui/src/utils/utilityFunctions.js`:**
+
 - Will use `paginateData` for handling large histories
 - May use other utility functions as needed
 
@@ -2533,6 +2673,7 @@ class SessionManager {
 #### **Testing Approach**
 
 Since we're minimizing mocks, we'll test the actual history functionality:
+
 - Verify cells are added to history correctly
 - Verify history persistence works
 - Verify history loading works
@@ -2549,9 +2690,11 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 ---
 
 ### **Phase 5: Agent-Aware Features**
+
 *Goal: Cross-session interaction and visualization*
 
 #### **Session Communication**
+
 - [ ] Implement "Send to session" widget:
     - Per-output-line `⋯` menu with "Send to..." option
     - Dropdown shows active sessions (excluding self)
@@ -2563,6 +2706,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
     - Use display utilities from `ui/src/utils/displayUtils.js` for consistent rendering
 
 #### **Multi-Agent Visualization**
+
 - [ ] Session-scoped visualizers:
     - Truth chart: Toggle per output line (Chart.js loaded on-demand)
     - Derivation popup: Shows session-specific derivation tree on click
@@ -2576,6 +2720,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
     - Group related items for network views
 
 #### **Validation**
+
 - [ ] In Session A: Run inference → use "Send to Session B" → verify input appears in Session B
 - [ ] Open `/agents` → confirm all sessions show live status updates
 - [ ] Toggle network view → verify edges only connect related sessions
@@ -2584,9 +2729,11 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 ---
 
 ### **Phase 6: Optimization & Polish**
+
 *Goal: Performance and edge-case hardening*
 
 #### **Resource Management**
+
 - [ ] Implement session resource limits:
     - Background sessions throttle to 1 update/sec
     - Auto-close sessions inactive >1 hour
@@ -2597,6 +2744,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
     - Use memoization from `ui/src/utils/utilityFunctions.js` for expensive computations
 
 #### **Responsiveness**
+
 - [ ] Mobile adaptations:
     - Session selector → swipeable tabs on mobile
     - Input field expands to full width on focus
@@ -2606,6 +2754,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
     - Reduced-motion preference: Disable animations if `prefers-reduced-motion`
 
 #### **Stress Testing**
+
 - [ ] 10-session load test:
     - All sessions reasoning concurrently → verify <100ms input lag
     - Memory leak check: 1hr runtime → heap size growth <5%
@@ -2616,6 +2765,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 ---
 
 ### **Final Validation Checklist**
+
 - [ ] **Session isolation**:
     - History/state never leaks between sessions
     - Closing session terminates all associated resources (timers, listeners)
@@ -2635,12 +2785,16 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 
 > **Execution Rules**
 > 1. **Strict phase gating**: No Phase 2 tasks until Phase 1 passes all validation checks
-> 2. **Session context first**: Every new feature (e.g., visualizations) must work in single-session mode before multi-session
+> 2. **Session context first**: Every new feature (e.g., visualizations) must work in single-session mode before
+     multi-session
 > 3. **Optimization ban**: Phase 6 work forbidden until Phase 5 validation complete
 > 4. **Debugging hooks**:
      >    - `?debug=true` URL param enables raw WebSocket logging
->    - `window.NARS_SESSIONS` exposes session registry to console
+     >
+- `window.NARS_SESSIONS` exposes session registry to console
+
 ### **Final Validation Checklist**
+
 - [ ] **Session isolation**:
     - History/state never leaks between sessions
     - Closing session terminates all associated resources (timers, listeners)
@@ -2660,14 +2814,14 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 
 > **Execution Rules**
 > 1. **Strict phase gating**: No Phase 2 tasks until Phase 1 passes all validation checks
-> 2. **Session context first**: Every new feature (e.g., visualizations) must work in single-session mode before multi-session
+> 2. **Session context first**: Every new feature (e.g., visualizations) must work in single-session mode before
+     multi-session
 > 3. **Optimization ban**: Phase 6 work forbidden until Phase 5 validation complete
 > 4. **Debugging hooks**:
      >    - `?debug=true` URL param enables raw WebSocket logging
+     >
+- `window.NARS_SESSIONS` exposes session registry to console
 >    - `window.NARS_SESSIONS` exposes session registry to console
->    - `window.NARS_SESSIONS` exposes session registry to console
-
-
 
       if (historyStr) {
         this.sessionHistories[sessionId] = JSON.parse(historyStr);
@@ -2678,8 +2832,10 @@ Since we're minimizing mocks, we'll test the actual history functionality:
       console.warn(`Failed to load history for session ${sessionId}:`, error);
       this.sessionHistories[sessionId] = [];
     }
-  }
+
 }
+}
+
 ```
 
 ##### **2. Integration with REPL Core**
@@ -2725,102 +2881,105 @@ class REPLCore {
 ##### **3. UI Components for History Display**
 
 ###### **Cell Grouping**
+
 Modify the output rendering to group input/output pairs:
 
 ```javascript
 // In repl-core.js
 class REPLCore {
-  addOutputLine(line) {
-    // Create cell group if it doesn't exist
-    let cellGroup = this.getCurrentCellGroup();
-    if (!cellGroup) {
-      cellGroup = this.createCellGroup();
+    addOutputLine(line) {
+        // Create cell group if it doesn't exist
+        let cellGroup = this.getCurrentCellGroup();
+        if (!cellGroup) {
+            cellGroup = this.createCellGroup();
+        }
+
+        // ... existing code for creating line element
+
+        cellGroup.appendChild(lineElement);
+
+        // ... existing code
     }
-    
-    // ... existing code for creating line element
-    
-    cellGroup.appendChild(lineElement);
-    
-    // ... existing code
-  }
-  
-  createCellGroup() {
-    const cellGroup = document.createElement('div');
-    cellGroup.className = 'cell-group';
-    this.outputElement.appendChild(cellGroup);
-    return cellGroup;
-  }
+
+    createCellGroup() {
+        const cellGroup = document.createElement('div');
+        cellGroup.className = 'cell-group';
+        this.outputElement.appendChild(cellGroup);
+        return cellGroup;
+    }
 }
 ```
 
 ##### **4. History Navigation**
 
 ###### **Arrow Key Handling**
+
 Add keyboard navigation for history:
 
 ```javascript
 // In repl-core.js
 class REPLCore {
-  bindEvents() {
-    // ... existing code
-    
-    // Handle history navigation
-    this.handleInputKeydown = (event) => {
-      if (event.key === 'ArrowUp') {
-        this.navigateHistory(-1);
-        event.preventDefault();
-      } else if (event.key === 'ArrowDown') {
-        this.navigateHistory(1);
-        event.preventDefault();
-      } else if (event.key === 'Enter' && !event.shiftKey) {
-        event.preventDefault();
-        this.submitInput();
-      }
-    };
-    
-    this.inputElement.addEventListener('keydown', this.handleInputKeydown);
-  }
-  
-  navigateHistory(direction) {
-    // Implementation for navigating through history
-    // This will depend on maintaining a history position per session
-  }
+    bindEvents() {
+        // ... existing code
+
+        // Handle history navigation
+        this.handleInputKeydown = (event) => {
+            if (event.key === 'ArrowUp') {
+                this.navigateHistory(-1);
+                event.preventDefault();
+            } else if (event.key === 'ArrowDown') {
+                this.navigateHistory(1);
+                event.preventDefault();
+            } else if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                this.submitInput();
+            }
+        };
+
+        this.inputElement.addEventListener('keydown', this.handleInputKeydown);
+    }
+
+    navigateHistory(direction) {
+        // Implementation for navigating through history
+        // This will depend on maintaining a history position per session
+    }
 }
 ```
 
 ##### **5. Persistence Handling**
 
 ###### **Page Load/Unload Events**
+
 Add event listeners for persistence:
 
 ```javascript
 // In session-manager.js
 class SessionManager {
-  constructor() {
-    // ... existing code
-    
-    // Handle page unload for persistence
-    window.addEventListener('beforeunload', () => {
-      this.persistAllHistories();
-    });
-    
-    // Load histories on initialization
-    this.loadAllHistories();
-  }
-  
-  persistAllHistories() {
-    Object.keys(this.activeSessions).forEach(sessionId => {
-      this.persistSessionHistory(sessionId);
-    });
-  }
-  
-  loadAllHistories() {
-    // Load histories for existing sessions
-    Object.keys(this.activeSessions).forEach(sessionId => {
-      this.loadSessionHistory(sessionId);
-      this.renderHistory(sessionId);
-    });
-  }
+    constructor() {
+        // ... existing code
+
+        // Handle page unload for persistence
+        window.addEventListener('beforeunload', () => {
+            this.persistAllHistories();
+        });
+
+        // Load histories on initialization
+        this.loadAllHistories();
+    }
+
+    persistAllHistories() {
+        Object.keys(this.activeSessions).forEach(sessionId => {
+            this.persistSessionHistory(sessionId);
+        });
+    }
+
+    loadAllHistories() {
+        // Load histories for existing sessions
+        Object.keys(this.activeSessions).forEach(sessionId => {
+            this.loadSessionHistory(sessionId);
+            this.renderHistory(sessionId);
+        });
+    }
 }
 ```
 
@@ -2831,126 +2990,126 @@ Enhance history filtering capabilities:
 ```javascript
 // In session-manager.js
 class SessionManager {
-  // ... existing code
-  
-  /**
-   * Filter session history by text search
-   * @param {string} sessionId - Session identifier
-   * @param {string} searchText - Text to search for
-   * @param {boolean} useRegex - Whether to treat searchText as regex
-   * @returns {Array} Filtered history
-   */
-  filterHistoryByText(sessionId, searchText, useRegex = false) {
-    if (!searchText.trim()) {
-      return this.sessionHistories[sessionId] || [];
-    }
-    
-    const history = this.sessionHistories[sessionId] || [];
-    
-    if (useRegex) {
-      try {
-        const regex = new RegExp(searchText, 'i'); // Case insensitive
-        return history.filter(cell => {
-          if (cell.type === 'input') {
-            return regex.test(cell.content);
-          } else {
-            // For output cells, search in text content
-            const textContent = cell.content.text || '';
-            return regex.test(textContent);
-          }
-        });
-      } catch (e) {
-        // If regex is invalid, fall back to simple text search
-        console.warn('Invalid regex, falling back to text search:', e);
-        const lowerSearchText = searchText.toLowerCase();
-        return history.filter(cell => {
-          if (cell.type === 'input') {
-            return cell.content.toLowerCase().includes(lowerSearchText);
-          } else {
-            // For output cells, search in text content
-            const textContent = cell.content.text || '';
-            return textContent.toLowerCase().includes(lowerSearchText);
-          }
-        });
-      }
-    } else {
-      const lowerSearchText = searchText.toLowerCase();
-      return history.filter(cell => {
-        if (cell.type === 'input') {
-          return cell.content.toLowerCase().includes(lowerSearchText);
-        } else {
-          // For output cells, search in text content
-          const textContent = cell.content.text || '';
-          return textContent.toLowerCase().includes(lowerSearchText);
+    // ... existing code
+
+    /**
+     * Filter session history by text search
+     * @param {string} sessionId - Session identifier
+     * @param {string} searchText - Text to search for
+     * @param {boolean} useRegex - Whether to treat searchText as regex
+     * @returns {Array} Filtered history
+     */
+    filterHistoryByText(sessionId, searchText, useRegex = false) {
+        if (!searchText.trim()) {
+            return this.sessionHistories[sessionId] || [];
         }
-      });
+
+        const history = this.sessionHistories[sessionId] || [];
+
+        if (useRegex) {
+            try {
+                const regex = new RegExp(searchText, 'i'); // Case insensitive
+                return history.filter(cell => {
+                    if (cell.type === 'input') {
+                        return regex.test(cell.content);
+                    } else {
+                        // For output cells, search in text content
+                        const textContent = cell.content.text || '';
+                        return regex.test(textContent);
+                    }
+                });
+            } catch (e) {
+                // If regex is invalid, fall back to simple text search
+                console.warn('Invalid regex, falling back to text search:', e);
+                const lowerSearchText = searchText.toLowerCase();
+                return history.filter(cell => {
+                    if (cell.type === 'input') {
+                        return cell.content.toLowerCase().includes(lowerSearchText);
+                    } else {
+                        // For output cells, search in text content
+                        const textContent = cell.content.text || '';
+                        return textContent.toLowerCase().includes(lowerSearchText);
+                    }
+                });
+            }
+        } else {
+            const lowerSearchText = searchText.toLowerCase();
+            return history.filter(cell => {
+                if (cell.type === 'input') {
+                    return cell.content.toLowerCase().includes(lowerSearchText);
+                } else {
+                    // For output cells, search in text content
+                    const textContent = cell.content.text || '';
+                    return textContent.toLowerCase().includes(lowerSearchText);
+                }
+            });
+        }
     }
-  }
-  
-  /**
-   * Filter session history by type
-   * @param {string} sessionId - Session identifier
-   * @param {string} type - Type to filter by ('input', 'output', or 'all')
-   * @returns {Array} Filtered history
-   */
-  filterHistoryByType(sessionId, type) {
-    if (type === 'all') {
-      return this.sessionHistories[sessionId] || [];
+
+    /**
+     * Filter session history by type
+     * @param {string} sessionId - Session identifier
+     * @param {string} type - Type to filter by ('input', 'output', or 'all')
+     * @returns {Array} Filtered history
+     */
+    filterHistoryByType(sessionId, type) {
+        if (type === 'all') {
+            return this.sessionHistories[sessionId] || [];
+        }
+
+        const history = this.sessionHistories[sessionId] || [];
+        return history.filter(cell => cell.type === type);
     }
-    
-    const history = this.sessionHistories[sessionId] || [];
-    return history.filter(cell => cell.type === type);
-  }
-  
-  /**
-   * Filter session history by date range
-   * @param {string} sessionId - Session identifier
-   * @param {number} startDate - Start timestamp (milliseconds since epoch)
-   * @param {number} endDate - End timestamp (milliseconds since epoch)
-   * @returns {Array} Filtered history
-   */
-  filterHistoryByDateRange(sessionId, startDate, endDate) {
-    const history = this.sessionHistories[sessionId] || [];
-    return history.filter(cell => {
-      return cell.timestamp >= startDate && cell.timestamp <= endDate;
-    });
-  }
-  
-  /**
-   * Apply combined filters to session history
-   * @param {string} sessionId - Session identifier
-   * @param {Object} filters - Filter criteria
-   * @param {string} filters.text - Text to search for
-   * @param {boolean} filters.useRegex - Whether to treat text as regex
-   * @param {string} filters.type - Type to filter by ('input', 'output', or 'all')
-   * @param {number} filters.startDate - Start timestamp (milliseconds since epoch)
-   * @param {number} filters.endDate - End timestamp (milliseconds since epoch)
-   * @returns {Array} Filtered history
-   */
-  filterHistoryCombined(sessionId, filters) {
-    let history = this.sessionHistories[sessionId] || [];
-    
-    // Apply text filter
-    if (filters.text) {
-      history = this.filterHistoryByText(sessionId, filters.text, filters.useRegex);
+
+    /**
+     * Filter session history by date range
+     * @param {string} sessionId - Session identifier
+     * @param {number} startDate - Start timestamp (milliseconds since epoch)
+     * @param {number} endDate - End timestamp (milliseconds since epoch)
+     * @returns {Array} Filtered history
+     */
+    filterHistoryByDateRange(sessionId, startDate, endDate) {
+        const history = this.sessionHistories[sessionId] || [];
+        return history.filter(cell => {
+            return cell.timestamp >= startDate && cell.timestamp <= endDate;
+        });
     }
-    
-    // Apply type filter
-    if (filters.type && filters.type !== 'all') {
-      history = history.filter(cell => cell.type === filters.type);
+
+    /**
+     * Apply combined filters to session history
+     * @param {string} sessionId - Session identifier
+     * @param {Object} filters - Filter criteria
+     * @param {string} filters.text - Text to search for
+     * @param {boolean} filters.useRegex - Whether to treat text as regex
+     * @param {string} filters.type - Type to filter by ('input', 'output', or 'all')
+     * @param {number} filters.startDate - Start timestamp (milliseconds since epoch)
+     * @param {number} filters.endDate - End timestamp (milliseconds since epoch)
+     * @returns {Array} Filtered history
+     */
+    filterHistoryCombined(sessionId, filters) {
+        let history = this.sessionHistories[sessionId] || [];
+
+        // Apply text filter
+        if (filters.text) {
+            history = this.filterHistoryByText(sessionId, filters.text, filters.useRegex);
+        }
+
+        // Apply type filter
+        if (filters.type && filters.type !== 'all') {
+            history = history.filter(cell => cell.type === filters.type);
+        }
+
+        // Apply date range filter
+        if (filters.startDate || filters.endDate) {
+            const startDate = filters.startDate || 0;
+            const endDate = filters.endDate || Date.now();
+            history = history.filter(cell => {
+                return cell.timestamp >= startDate && cell.timestamp <= endDate;
+            });
+        }
+
+        return history;
     }
-    
-    // Apply date range filter
-    if (filters.startDate || filters.endDate) {
-      const startDate = filters.startDate || 0;
-      const endDate = filters.endDate || Date.now();
-      history = history.filter(cell => {
-        return cell.timestamp >= startDate && cell.timestamp <= endDate;
-      });
-    }
-    
-    return history;
-  }
 }
 ```
 
@@ -2961,76 +3120,76 @@ Improve virtual scrolling with caching:
 ```javascript
 // In session-manager.js
 class SessionManager {
-  // ... existing code
-  
-  /**
-   * Set up virtual scrolling for a session's history
-   * @param {string} sessionId - Session identifier
-   * @param {Array} history - History array to render
-   */
-  setupVirtualScrolling(sessionId, history) {
-    const session = this.activeSessions[sessionId];
-    if (!session) return;
-    
-    // Store history reference for this session
-    session.history = history;
-    session.visibleCells = new Map(); // Track rendered cells
-    session.cellCache = new Map(); // Cache for cell elements
-    
-    // Set up scroll event listener
-    session.output.addEventListener('scroll', () => {
-      this.handleScroll(sessionId);
-    });
-    
-    // Initial render
-    this.handleScroll(sessionId);
-  }
-  
-  /**
-   * Update visible cells in the viewport
-   * @param {string} sessionId - Session identifier
-   * @param {number} startIdx - Start index of visible range
-   * @param {number} endIdx - End index of visible range
-   */
-  updateVisibleCells(sessionId, startIdx, endIdx) {
-    const session = this.activeSessions[sessionId];
-    if (!session || !session.history) return;
-    
-    const history = session.history;
-    const visibleCells = session.visibleCells;
-    const cellCache = session.cellCache;
-    
-    // Create a set of indices that should be visible
-    const shouldBeVisible = new Set();
-    for (let i = startIdx; i <= endIdx; i++) {
-      shouldBeVisible.add(i);
+    // ... existing code
+
+    /**
+     * Set up virtual scrolling for a session's history
+     * @param {string} sessionId - Session identifier
+     * @param {Array} history - History array to render
+     */
+    setupVirtualScrolling(sessionId, history) {
+        const session = this.activeSessions[sessionId];
+        if (!session) return;
+
+        // Store history reference for this session
+        session.history = history;
+        session.visibleCells = new Map(); // Track rendered cells
+        session.cellCache = new Map(); // Cache for cell elements
+
+        // Set up scroll event listener
+        session.output.addEventListener('scroll', () => {
+            this.handleScroll(sessionId);
+        });
+
+        // Initial render
+        this.handleScroll(sessionId);
     }
-    
-    // Remove cells that are no longer visible
-    for (const [index, cellElement] of visibleCells.entries()) {
-      if (!shouldBeVisible.has(index)) {
-        cellElement.remove();
-        visibleCells.delete(index);
-      }
-    }
-    
-    // Add new cells that should be visible
-    for (let i = startIdx; i <= endIdx; i++) {
-      if (!visibleCells.has(i) && history[i]) {
-        // Check if cell is already in cache
-        let cellElement = cellCache.get(i);
-        if (!cellElement) {
-          // Create new cell element if not in cache
-          cellElement = this.createCellElement(sessionId, history[i]);
-          cellCache.set(i, cellElement);
+
+    /**
+     * Update visible cells in the viewport
+     * @param {string} sessionId - Session identifier
+     * @param {number} startIdx - Start index of visible range
+     * @param {number} endIdx - End index of visible range
+     */
+    updateVisibleCells(sessionId, startIdx, endIdx) {
+        const session = this.activeSessions[sessionId];
+        if (!session || !session.history) return;
+
+        const history = session.history;
+        const visibleCells = session.visibleCells;
+        const cellCache = session.cellCache;
+
+        // Create a set of indices that should be visible
+        const shouldBeVisible = new Set();
+        for (let i = startIdx; i <= endIdx; i++) {
+            shouldBeVisible.add(i);
         }
-        cellElement.style.position = 'absolute';
-        cellElement.style.top = `${i * 24}px`; // Approximate row height
-        session.output.appendChild(cellElement);
-        visibleCells.set(i, cellElement);
-      }
+
+        // Remove cells that are no longer visible
+        for (const [index, cellElement] of visibleCells.entries()) {
+            if (!shouldBeVisible.has(index)) {
+                cellElement.remove();
+                visibleCells.delete(index);
+            }
+        }
+
+        // Add new cells that should be visible
+        for (let i = startIdx; i <= endIdx; i++) {
+            if (!visibleCells.has(i) && history[i]) {
+                // Check if cell is already in cache
+                let cellElement = cellCache.get(i);
+                if (!cellElement) {
+                    // Create new cell element if not in cache
+                    cellElement = this.createCellElement(sessionId, history[i]);
+                    cellCache.set(i, cellElement);
+                }
+                cellElement.style.position = 'absolute';
+                cellElement.style.top = `${i * 24}px`; // Approximate row height
+                session.output.appendChild(cellElement);
+                visibleCells.set(i, cellElement);
+            }
+        }
     }
-  }
 }
 ```
 
@@ -3041,135 +3200,138 @@ Add clear history and pinning functionality:
 ```javascript
 // In session-manager.js
 class SessionManager {
-  // ... existing code
-  
-  /**
-   * Clear session history
-   * @param {string} sessionId - Session identifier
-   */
-  clearSessionHistory(sessionId) {
-    if (this.sessionHistories[sessionId]) {
-      // Keep pinned cells when clearing history
-      this.sessionHistories[sessionId] = this.sessionHistories[sessionId].filter(cell => cell.pinned);
-      this.persistSessionHistory(sessionId);
-      this.renderHistory(sessionId);
+    // ... existing code
+
+    /**
+     * Clear session history
+     * @param {string} sessionId - Session identifier
+     */
+    clearSessionHistory(sessionId) {
+        if (this.sessionHistories[sessionId]) {
+            // Keep pinned cells when clearing history
+            this.sessionHistories[sessionId] = this.sessionHistories[sessionId].filter(cell => cell.pinned);
+            this.persistSessionHistory(sessionId);
+            this.renderHistory(sessionId);
+        }
     }
-  }
-  
-  /**
-   * Pin a cell in the history
-   * @param {string} sessionId - Session identifier
-   * @param {string} cellId - Cell identifier
-   */
-  pinCell(sessionId, cellId) {
-    const history = this.sessionHistories[sessionId];
-    if (!history) return;
-    
-    const cellIndex = history.findIndex(cell => cell.id === cellId);
-    if (cellIndex !== -1) {
-      history[cellIndex].pinned = true;
-      this.persistSessionHistory(sessionId);
+
+    /**
+     * Pin a cell in the history
+     * @param {string} sessionId - Session identifier
+     * @param {string} cellId - Cell identifier
+     */
+    pinCell(sessionId, cellId) {
+        const history = this.sessionHistories[sessionId];
+        if (!history) return;
+
+        const cellIndex = history.findIndex(cell => cell.id === cellId);
+        if (cellIndex !== -1) {
+            history[cellIndex].pinned = true;
+            this.persistSessionHistory(sessionId);
+        }
     }
-  }
-  
-  /**
-   * Unpin a cell in the history
-   * @param {string} sessionId - Session identifier
-   * @param {string} cellId - Cell identifier
-   */
-  unpinCell(sessionId, cellId) {
-    const history = this.sessionHistories[sessionId];
-    if (!history) return;
-    
-    const cellIndex = history.findIndex(cell => cell.id === cellId);
-    if (cellIndex !== -1) {
-      history[cellIndex].pinned = false;
-      this.persistSessionHistory(sessionId);
+
+    /**
+     * Unpin a cell in the history
+     * @param {string} sessionId - Session identifier
+     * @param {string} cellId - Cell identifier
+     */
+    unpinCell(sessionId, cellId) {
+        const history = this.sessionHistories[sessionId];
+        if (!history) return;
+
+        const cellIndex = history.findIndex(cell => cell.id === cellId);
+        if (cellIndex !== -1) {
+            history[cellIndex].pinned = false;
+            this.persistSessionHistory(sessionId);
+        }
     }
-  }
-  
-  /**
-   * Create a DOM element for a cell
-   * @param {string} sessionId - Session identifier
-   * @param {Object} cell - Cell data
-   * @returns {HTMLElement} Cell element
-   */
-  createCellElement(sessionId, cell) {
-    // Create a container for the cell
-    const cellContainer = document.createElement('div');
-    cellContainer.className = 'history-cell';
-    cellContainer.style.width = '100%';
-    cellContainer.dataset.cellId = cell.id; // Store cell ID for later reference
-    
-    // Create line element based on cell type
-    const lineElement = document.createElement('div');
-    lineElement.className = 'output-line';
-    
-    if (cell.type === 'input') {
-      lineElement.classList.add('input-line');
-      lineElement.textContent = `${sessionId}> ${cell.content}`;
-    } else {
-      lineElement.textContent = cell.content.text || '';
-      
-      // Apply punctuation styling if available
-      if (cell.content.punctuation) {
-        const punctClass = this.getPunctuationClass(cell.content.punctuation);
-        lineElement.classList.add(punctClass);
-      }
-      
-      // Add truth bar if available
-      if (cell.content.truth) {
-        const truthBar = document.createElement('meter');
-        truthBar.className = 'truth-bar';
-        truthBar.min = 0;
-        truthBar.max = 1;
-        truthBar.value = cell.content.truth.frequency || 0;
-        truthBar.title = `Frequency: ${(cell.content.truth.frequency * 100).toFixed(1)}%, Confidence: ${(cell.content.truth.confidence * 100).toFixed(1)}%`;
-        lineElement.appendChild(truthBar);
-      }
-      
-      // Add priority badge if available
-      if (typeof cell.content.priority === 'number') {
-        const priorityBadge = document.createElement('span');
-        priorityBadge.className = 'priority-badge';
-        priorityBadge.textContent = cell.content.priority.toFixed(2);
-        lineElement.appendChild(priorityBadge);
-      }
+
+    /**
+     * Create a DOM element for a cell
+     * @param {string} sessionId - Session identifier
+     * @param {Object} cell - Cell data
+     * @returns {HTMLElement} Cell element
+     */
+    createCellElement(sessionId, cell) {
+        // Create a container for the cell
+        const cellContainer = document.createElement('div');
+        cellContainer.className = 'history-cell';
+        cellContainer.style.width = '100%';
+        cellContainer.dataset.cellId = cell.id; // Store cell ID for later reference
+
+        // Create line element based on cell type
+        const lineElement = document.createElement('div');
+        lineElement.className = 'output-line';
+
+        if (cell.type === 'input') {
+            lineElement.classList.add('input-line');
+            lineElement.textContent = `${sessionId}> ${cell.content}`;
+        } else {
+            lineElement.textContent = cell.content.text || '';
+
+            // Apply punctuation styling if available
+            if (cell.content.punctuation) {
+                const punctClass = this.getPunctuationClass(cell.content.punctuation);
+                lineElement.classList.add(punctClass);
+            }
+
+            // Add truth bar if available
+            if (cell.content.truth) {
+                const truthBar = document.createElement('meter');
+                truthBar.className = 'truth-bar';
+                truthBar.min = 0;
+                truthBar.max = 1;
+                truthBar.value = cell.content.truth.frequency || 0;
+                truthBar.title = `Frequency: ${(cell.content.truth.frequency * 100).toFixed(1)}%, Confidence: ${(cell.content.truth.confidence * 100).toFixed(1)}%`;
+                lineElement.appendChild(truthBar);
+            }
+
+            // Add priority badge if available
+            if (typeof cell.content.priority === 'number') {
+                const priorityBadge = document.createElement('span');
+                priorityBadge.className = 'priority-badge';
+                priorityBadge.textContent = cell.content.priority.toFixed(2);
+                lineElement.appendChild(priorityBadge);
+            }
+        }
+
+        // Add pin button for cells
+        const pinButton = document.createElement('button');
+        pinButton.className = 'pin-button';
+        pinButton.textContent = cell.pinned ? '📌' : '📍';
+        pinButton.title = cell.pinned ? 'Unpin cell' : 'Pin cell';
+        pinButton.addEventListener('click', () => {
+            if (cell.pinned) {
+                this.unpinCell(sessionId, cell.id);
+                pinButton.textContent = '📍';
+                pinButton.title = 'Pin cell';
+            } else {
+                this.pinCell(sessionId, cell.id);
+                pinButton.textContent = '📌';
+                pinButton.title = 'Unpin cell';
+            }
+        });
+
+        cellContainer.appendChild(pinButton);
+        cellContainer.appendChild(lineElement);
+        return cellContainer;
     }
-    
-    // Add pin button for cells
-    const pinButton = document.createElement('button');
-    pinButton.className = 'pin-button';
-    pinButton.textContent = cell.pinned ? '📌' : '📍';
-    pinButton.title = cell.pinned ? 'Unpin cell' : 'Pin cell';
-    pinButton.addEventListener('click', () => {
-      if (cell.pinned) {
-        this.unpinCell(sessionId, cell.id);
-        pinButton.textContent = '📍';
-        pinButton.title = 'Pin cell';
-      } else {
-        this.pinCell(sessionId, cell.id);
-        pinButton.textContent = '📌';
-        pinButton.title = 'Unpin cell';
-      }
-    });
-    
-    cellContainer.appendChild(pinButton);
-    cellContainer.appendChild(lineElement);
-    return cellContainer;
-  }
 }
 ```
 
 #### **Dependencies on Existing Utilities**
 
 ##### **From `ui/src/utils/dataProcessor.js`:**
+
 - Will use for advanced history data processing if needed
 
 ##### **From `ui/src/utils/filterUtils.js`:**
+
 - Will implement text search and type filtering for history
 
 ##### **From `ui/src/utils/utilityFunctions.js`:**
+
 - Will use `paginateData` for handling large histories
 - May use other utility functions as needed
 
@@ -3187,6 +3349,7 @@ class SessionManager {
 #### **Testing Approach**
 
 Since we're minimizing mocks, we'll test the actual history functionality:
+
 - Verify cells are added to history correctly
 - Verify history persistence works
 - Verify history loading works
@@ -3205,9 +3368,11 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 ---
 
 ### **Phase 5: Agent-Aware Features**
+
 *Goal: Cross-session interaction and visualization*
 
 #### **Session Communication**
+
 - [ ] Implement "Send to session" widget:
     - Per-output-line `⋯` menu with "Send to..." option
     - Dropdown shows active sessions (excluding self)
@@ -3219,6 +3384,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
     - Use display utilities from `ui/src/utils/displayUtils.js` for consistent rendering
 
 #### **Multi-Agent Visualization**
+
 - [ ] Session-scoped visualizers:
     - Truth chart: Toggle per output line (Chart.js loaded on-demand)
     - Derivation popup: Shows session-specific derivation tree on click
@@ -3232,6 +3398,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
     - Group related items for network views
 
 #### **Validation**
+
 - [ ] In Session A: Run inference → use "Send to Session B" → verify input appears in Session B
 - [ ] Open `/agents` → confirm all sessions show live status updates
 - [ ] Toggle network view → verify edges only connect related sessions
@@ -3240,9 +3407,11 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 ---
 
 ### **Phase 6: Optimization & Polish**
+
 *Goal: Performance and edge-case hardening*
 
 #### **Resource Management**
+
 - [ ] Implement session resource limits:
     - Background sessions throttle to 1 update/sec
     - Auto-close sessions inactive >1 hour
@@ -3253,6 +3422,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
     - Use memoization from `ui/src/utils/utilityFunctions.js` for expensive computations
 
 #### **Responsiveness**
+
 - [ ] Mobile adaptations:
     - Session selector → swipeable tabs on mobile
     - Input field expands to full width on focus
@@ -3262,6 +3432,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
     - Reduced-motion preference: Disable animations if `prefers-reduced-motion`
 
 #### **Stress Testing**
+
 - [ ] 10-session load test:
     - All sessions reasoning concurrently → verify <100ms input lag
     - Memory leak check: 1hr runtime → heap size growth <5%
@@ -3272,6 +3443,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 ---
 
 ### **Final Validation Checklist**
+
 - [ ] **Session isolation**:
     - History/state never leaks between sessions
     - Closing session terminates all associated resources (timers, listeners)
@@ -3291,28 +3463,31 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 
 > **Execution Rules**
 > 1. **Strict phase gating**: No Phase 2 tasks until Phase 1 passes all validation checks
-> 2. **Session context first**: Every new feature (e.g., visualizations) must work in single-session mode before multi-session
+> 2. **Session context first**: Every new feature (e.g., visualizations) must work in single-session mode before
+     multi-session
 > 3. **Optimization ban**: Phase 6 work forbidden until Phase 5 validation complete
 > 4. **Debugging hooks**:
      >    - `?debug=true` URL param enables raw WebSocket logging
->    - `window.NARS_SESSIONS` exposes session registry to console
+     >
+- `window.NARS_SESSIONS` exposes session registry to console
   }
-  
-  // New: Load session history from sessionStorage
-  loadSessionHistory(sessionId) {
-    try {
-      const historyStr = sessionStorage.getItem(`nars-history-${sessionId}`);
-      if (historyStr) {
-        this.sessionHistories[sessionId] = JSON.parse(historyStr);
-      } else {
-        this.sessionHistories[sessionId] = [];
-      }
-    } catch (error) {
-      console.warn(`Failed to load history for session ${sessionId}:`, error);
-      this.sessionHistories[sessionId] = [];
-    }
-  }
+
+// New: Load session history from sessionStorage
+loadSessionHistory(sessionId) {
+try {
+const historyStr = sessionStorage.getItem(`nars-history-${sessionId}`);
+if (historyStr) {
+this.sessionHistories[sessionId] = JSON.parse(historyStr);
+} else {
+this.sessionHistories[sessionId] = [];
 }
+} catch (error) {
+console.warn(`Failed to load history for session ${sessionId}:`, error);
+this.sessionHistories[sessionId] = [];
+}
+}
+}
+
 ```
 
 ##### **2. Integration with REPL Core**
@@ -3358,102 +3533,105 @@ class REPLCore {
 ##### **3. UI Components for History Display**
 
 ###### **Cell Grouping**
+
 Modify the output rendering to group input/output pairs:
 
 ```javascript
 // In repl-core.js
 class REPLCore {
-  addOutputLine(line) {
-    // Create cell group if it doesn't exist
-    let cellGroup = this.getCurrentCellGroup();
-    if (!cellGroup) {
-      cellGroup = this.createCellGroup();
+    addOutputLine(line) {
+        // Create cell group if it doesn't exist
+        let cellGroup = this.getCurrentCellGroup();
+        if (!cellGroup) {
+            cellGroup = this.createCellGroup();
+        }
+
+        // ... existing code for creating line element
+
+        cellGroup.appendChild(lineElement);
+
+        // ... existing code
     }
-    
-    // ... existing code for creating line element
-    
-    cellGroup.appendChild(lineElement);
-    
-    // ... existing code
-  }
-  
-  createCellGroup() {
-    const cellGroup = document.createElement('div');
-    cellGroup.className = 'cell-group';
-    this.outputElement.appendChild(cellGroup);
-    return cellGroup;
-  }
+
+    createCellGroup() {
+        const cellGroup = document.createElement('div');
+        cellGroup.className = 'cell-group';
+        this.outputElement.appendChild(cellGroup);
+        return cellGroup;
+    }
 }
 ```
 
 ##### **4. History Navigation**
 
 ###### **Arrow Key Handling**
+
 Add keyboard navigation for history:
 
 ```javascript
 // In repl-core.js
 class REPLCore {
-  bindEvents() {
-    // ... existing code
-    
-    // Handle history navigation
-    this.handleInputKeydown = (event) => {
-      if (event.key === 'ArrowUp') {
-        this.navigateHistory(-1);
-        event.preventDefault();
-      } else if (event.key === 'ArrowDown') {
-        this.navigateHistory(1);
-        event.preventDefault();
-      } else if (event.key === 'Enter' && !event.shiftKey) {
-        event.preventDefault();
-        this.submitInput();
-      }
-    };
-    
-    this.inputElement.addEventListener('keydown', this.handleInputKeydown);
-  }
-  
-  navigateHistory(direction) {
-    // Implementation for navigating through history
-    // This will depend on maintaining a history position per session
-  }
+    bindEvents() {
+        // ... existing code
+
+        // Handle history navigation
+        this.handleInputKeydown = (event) => {
+            if (event.key === 'ArrowUp') {
+                this.navigateHistory(-1);
+                event.preventDefault();
+            } else if (event.key === 'ArrowDown') {
+                this.navigateHistory(1);
+                event.preventDefault();
+            } else if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                this.submitInput();
+            }
+        };
+
+        this.inputElement.addEventListener('keydown', this.handleInputKeydown);
+    }
+
+    navigateHistory(direction) {
+        // Implementation for navigating through history
+        // This will depend on maintaining a history position per session
+    }
 }
 ```
 
 ##### **5. Persistence Handling**
 
 ###### **Page Load/Unload Events**
+
 Add event listeners for persistence:
 
 ```javascript
 // In session-manager.js
 class SessionManager {
-  constructor() {
-    // ... existing code
-    
-    // Handle page unload for persistence
-    window.addEventListener('beforeunload', () => {
-      this.persistAllHistories();
-    });
-    
-    // Load histories on initialization
-    this.loadAllHistories();
-  }
-  
-  persistAllHistories() {
-    Object.keys(this.activeSessions).forEach(sessionId => {
-      this.persistSessionHistory(sessionId);
-    });
-  }
-  
-  loadAllHistories() {
-    // Load histories for existing sessions
-    Object.keys(this.activeSessions).forEach(sessionId => {
-      this.loadSessionHistory(sessionId);
-      this.renderHistory(sessionId);
-    });
-  }
+    constructor() {
+        // ... existing code
+
+        // Handle page unload for persistence
+        window.addEventListener('beforeunload', () => {
+            this.persistAllHistories();
+        });
+
+        // Load histories on initialization
+        this.loadAllHistories();
+    }
+
+    persistAllHistories() {
+        Object.keys(this.activeSessions).forEach(sessionId => {
+            this.persistSessionHistory(sessionId);
+        });
+    }
+
+    loadAllHistories() {
+        // Load histories for existing sessions
+        Object.keys(this.activeSessions).forEach(sessionId => {
+            this.loadSessionHistory(sessionId);
+            this.renderHistory(sessionId);
+        });
+    }
 }
 ```
 
@@ -3464,126 +3642,126 @@ Enhance history filtering capabilities:
 ```javascript
 // In session-manager.js
 class SessionManager {
-  // ... existing code
-  
-  /**
-   * Filter session history by text search
-   * @param {string} sessionId - Session identifier
-   * @param {string} searchText - Text to search for
-   * @param {boolean} useRegex - Whether to treat searchText as regex
-   * @returns {Array} Filtered history
-   */
-  filterHistoryByText(sessionId, searchText, useRegex = false) {
-    if (!searchText.trim()) {
-      return this.sessionHistories[sessionId] || [];
-    }
-    
-    const history = this.sessionHistories[sessionId] || [];
-    
-    if (useRegex) {
-      try {
-        const regex = new RegExp(searchText, 'i'); // Case insensitive
-        return history.filter(cell => {
-          if (cell.type === 'input') {
-            return regex.test(cell.content);
-          } else {
-            // For output cells, search in text content
-            const textContent = cell.content.text || '';
-            return regex.test(textContent);
-          }
-        });
-      } catch (e) {
-        // If regex is invalid, fall back to simple text search
-        console.warn('Invalid regex, falling back to text search:', e);
-        const lowerSearchText = searchText.toLowerCase();
-        return history.filter(cell => {
-          if (cell.type === 'input') {
-            return cell.content.toLowerCase().includes(lowerSearchText);
-          } else {
-            // For output cells, search in text content
-            const textContent = cell.content.text || '';
-            return textContent.toLowerCase().includes(lowerSearchText);
-          }
-        });
-      }
-    } else {
-      const lowerSearchText = searchText.toLowerCase();
-      return history.filter(cell => {
-        if (cell.type === 'input') {
-          return cell.content.toLowerCase().includes(lowerSearchText);
-        } else {
-          // For output cells, search in text content
-          const textContent = cell.content.text || '';
-          return textContent.toLowerCase().includes(lowerSearchText);
+    // ... existing code
+
+    /**
+     * Filter session history by text search
+     * @param {string} sessionId - Session identifier
+     * @param {string} searchText - Text to search for
+     * @param {boolean} useRegex - Whether to treat searchText as regex
+     * @returns {Array} Filtered history
+     */
+    filterHistoryByText(sessionId, searchText, useRegex = false) {
+        if (!searchText.trim()) {
+            return this.sessionHistories[sessionId] || [];
         }
-      });
+
+        const history = this.sessionHistories[sessionId] || [];
+
+        if (useRegex) {
+            try {
+                const regex = new RegExp(searchText, 'i'); // Case insensitive
+                return history.filter(cell => {
+                    if (cell.type === 'input') {
+                        return regex.test(cell.content);
+                    } else {
+                        // For output cells, search in text content
+                        const textContent = cell.content.text || '';
+                        return regex.test(textContent);
+                    }
+                });
+            } catch (e) {
+                // If regex is invalid, fall back to simple text search
+                console.warn('Invalid regex, falling back to text search:', e);
+                const lowerSearchText = searchText.toLowerCase();
+                return history.filter(cell => {
+                    if (cell.type === 'input') {
+                        return cell.content.toLowerCase().includes(lowerSearchText);
+                    } else {
+                        // For output cells, search in text content
+                        const textContent = cell.content.text || '';
+                        return textContent.toLowerCase().includes(lowerSearchText);
+                    }
+                });
+            }
+        } else {
+            const lowerSearchText = searchText.toLowerCase();
+            return history.filter(cell => {
+                if (cell.type === 'input') {
+                    return cell.content.toLowerCase().includes(lowerSearchText);
+                } else {
+                    // For output cells, search in text content
+                    const textContent = cell.content.text || '';
+                    return textContent.toLowerCase().includes(lowerSearchText);
+                }
+            });
+        }
     }
-  }
-  
-  /**
-   * Filter session history by type
-   * @param {string} sessionId - Session identifier
-   * @param {string} type - Type to filter by ('input', 'output', or 'all')
-   * @returns {Array} Filtered history
-   */
-  filterHistoryByType(sessionId, type) {
-    if (type === 'all') {
-      return this.sessionHistories[sessionId] || [];
+
+    /**
+     * Filter session history by type
+     * @param {string} sessionId - Session identifier
+     * @param {string} type - Type to filter by ('input', 'output', or 'all')
+     * @returns {Array} Filtered history
+     */
+    filterHistoryByType(sessionId, type) {
+        if (type === 'all') {
+            return this.sessionHistories[sessionId] || [];
+        }
+
+        const history = this.sessionHistories[sessionId] || [];
+        return history.filter(cell => cell.type === type);
     }
-    
-    const history = this.sessionHistories[sessionId] || [];
-    return history.filter(cell => cell.type === type);
-  }
-  
-  /**
-   * Filter session history by date range
-   * @param {string} sessionId - Session identifier
-   * @param {number} startDate - Start timestamp (milliseconds since epoch)
-   * @param {number} endDate - End timestamp (milliseconds since epoch)
-   * @returns {Array} Filtered history
-   */
-  filterHistoryByDateRange(sessionId, startDate, endDate) {
-    const history = this.sessionHistories[sessionId] || [];
-    return history.filter(cell => {
-      return cell.timestamp >= startDate && cell.timestamp <= endDate;
-    });
-  }
-  
-  /**
-   * Apply combined filters to session history
-   * @param {string} sessionId - Session identifier
-   * @param {Object} filters - Filter criteria
-   * @param {string} filters.text - Text to search for
-   * @param {boolean} filters.useRegex - Whether to treat text as regex
-   * @param {string} filters.type - Type to filter by ('input', 'output', or 'all')
-   * @param {number} filters.startDate - Start timestamp (milliseconds since epoch)
-   * @param {number} filters.endDate - End timestamp (milliseconds since epoch)
-   * @returns {Array} Filtered history
-   */
-  filterHistoryCombined(sessionId, filters) {
-    let history = this.sessionHistories[sessionId] || [];
-    
-    // Apply text filter
-    if (filters.text) {
-      history = this.filterHistoryByText(sessionId, filters.text, filters.useRegex);
+
+    /**
+     * Filter session history by date range
+     * @param {string} sessionId - Session identifier
+     * @param {number} startDate - Start timestamp (milliseconds since epoch)
+     * @param {number} endDate - End timestamp (milliseconds since epoch)
+     * @returns {Array} Filtered history
+     */
+    filterHistoryByDateRange(sessionId, startDate, endDate) {
+        const history = this.sessionHistories[sessionId] || [];
+        return history.filter(cell => {
+            return cell.timestamp >= startDate && cell.timestamp <= endDate;
+        });
     }
-    
-    // Apply type filter
-    if (filters.type && filters.type !== 'all') {
-      history = history.filter(cell => cell.type === filters.type);
+
+    /**
+     * Apply combined filters to session history
+     * @param {string} sessionId - Session identifier
+     * @param {Object} filters - Filter criteria
+     * @param {string} filters.text - Text to search for
+     * @param {boolean} filters.useRegex - Whether to treat text as regex
+     * @param {string} filters.type - Type to filter by ('input', 'output', or 'all')
+     * @param {number} filters.startDate - Start timestamp (milliseconds since epoch)
+     * @param {number} filters.endDate - End timestamp (milliseconds since epoch)
+     * @returns {Array} Filtered history
+     */
+    filterHistoryCombined(sessionId, filters) {
+        let history = this.sessionHistories[sessionId] || [];
+
+        // Apply text filter
+        if (filters.text) {
+            history = this.filterHistoryByText(sessionId, filters.text, filters.useRegex);
+        }
+
+        // Apply type filter
+        if (filters.type && filters.type !== 'all') {
+            history = history.filter(cell => cell.type === filters.type);
+        }
+
+        // Apply date range filter
+        if (filters.startDate || filters.endDate) {
+            const startDate = filters.startDate || 0;
+            const endDate = filters.endDate || Date.now();
+            history = history.filter(cell => {
+                return cell.timestamp >= startDate && cell.timestamp <= endDate;
+            });
+        }
+
+        return history;
     }
-    
-    // Apply date range filter
-    if (filters.startDate || filters.endDate) {
-      const startDate = filters.startDate || 0;
-      const endDate = filters.endDate || Date.now();
-      history = history.filter(cell => {
-        return cell.timestamp >= startDate && cell.timestamp <= endDate;
-      });
-    }
-    
-    return history;
-  }
 }
 ```
 
@@ -3594,76 +3772,76 @@ Improve virtual scrolling with caching:
 ```javascript
 // In session-manager.js
 class SessionManager {
-  // ... existing code
-  
-  /**
-   * Set up virtual scrolling for a session's history
-   * @param {string} sessionId - Session identifier
-   * @param {Array} history - History array to render
-   */
-  setupVirtualScrolling(sessionId, history) {
-    const session = this.activeSessions[sessionId];
-    if (!session) return;
-    
-    // Store history reference for this session
-    session.history = history;
-    session.visibleCells = new Map(); // Track rendered cells
-    session.cellCache = new Map(); // Cache for cell elements
-    
-    // Set up scroll event listener
-    session.output.addEventListener('scroll', () => {
-      this.handleScroll(sessionId);
-    });
-    
-    // Initial render
-    this.handleScroll(sessionId);
-  }
-  
-  /**
-   * Update visible cells in the viewport
-   * @param {string} sessionId - Session identifier
-   * @param {number} startIdx - Start index of visible range
-   * @param {number} endIdx - End index of visible range
-   */
-  updateVisibleCells(sessionId, startIdx, endIdx) {
-    const session = this.activeSessions[sessionId];
-    if (!session || !session.history) return;
-    
-    const history = session.history;
-    const visibleCells = session.visibleCells;
-    const cellCache = session.cellCache;
-    
-    // Create a set of indices that should be visible
-    const shouldBeVisible = new Set();
-    for (let i = startIdx; i <= endIdx; i++) {
-      shouldBeVisible.add(i);
+    // ... existing code
+
+    /**
+     * Set up virtual scrolling for a session's history
+     * @param {string} sessionId - Session identifier
+     * @param {Array} history - History array to render
+     */
+    setupVirtualScrolling(sessionId, history) {
+        const session = this.activeSessions[sessionId];
+        if (!session) return;
+
+        // Store history reference for this session
+        session.history = history;
+        session.visibleCells = new Map(); // Track rendered cells
+        session.cellCache = new Map(); // Cache for cell elements
+
+        // Set up scroll event listener
+        session.output.addEventListener('scroll', () => {
+            this.handleScroll(sessionId);
+        });
+
+        // Initial render
+        this.handleScroll(sessionId);
     }
-    
-    // Remove cells that are no longer visible
-    for (const [index, cellElement] of visibleCells.entries()) {
-      if (!shouldBeVisible.has(index)) {
-        cellElement.remove();
-        visibleCells.delete(index);
-      }
-    }
-    
-    // Add new cells that should be visible
-    for (let i = startIdx; i <= endIdx; i++) {
-      if (!visibleCells.has(i) && history[i]) {
-        // Check if cell is already in cache
-        let cellElement = cellCache.get(i);
-        if (!cellElement) {
-          // Create new cell element if not in cache
-          cellElement = this.createCellElement(sessionId, history[i]);
-          cellCache.set(i, cellElement);
+
+    /**
+     * Update visible cells in the viewport
+     * @param {string} sessionId - Session identifier
+     * @param {number} startIdx - Start index of visible range
+     * @param {number} endIdx - End index of visible range
+     */
+    updateVisibleCells(sessionId, startIdx, endIdx) {
+        const session = this.activeSessions[sessionId];
+        if (!session || !session.history) return;
+
+        const history = session.history;
+        const visibleCells = session.visibleCells;
+        const cellCache = session.cellCache;
+
+        // Create a set of indices that should be visible
+        const shouldBeVisible = new Set();
+        for (let i = startIdx; i <= endIdx; i++) {
+            shouldBeVisible.add(i);
         }
-        cellElement.style.position = 'absolute';
-        cellElement.style.top = `${i * 24}px`; // Approximate row height
-        session.output.appendChild(cellElement);
-        visibleCells.set(i, cellElement);
-      }
+
+        // Remove cells that are no longer visible
+        for (const [index, cellElement] of visibleCells.entries()) {
+            if (!shouldBeVisible.has(index)) {
+                cellElement.remove();
+                visibleCells.delete(index);
+            }
+        }
+
+        // Add new cells that should be visible
+        for (let i = startIdx; i <= endIdx; i++) {
+            if (!visibleCells.has(i) && history[i]) {
+                // Check if cell is already in cache
+                let cellElement = cellCache.get(i);
+                if (!cellElement) {
+                    // Create new cell element if not in cache
+                    cellElement = this.createCellElement(sessionId, history[i]);
+                    cellCache.set(i, cellElement);
+                }
+                cellElement.style.position = 'absolute';
+                cellElement.style.top = `${i * 24}px`; // Approximate row height
+                session.output.appendChild(cellElement);
+                visibleCells.set(i, cellElement);
+            }
+        }
     }
-  }
 }
 ```
 
@@ -3674,135 +3852,138 @@ Add clear history and pinning functionality:
 ```javascript
 // In session-manager.js
 class SessionManager {
-  // ... existing code
-  
-  /**
-   * Clear session history
-   * @param {string} sessionId - Session identifier
-   */
-  clearSessionHistory(sessionId) {
-    if (this.sessionHistories[sessionId]) {
-      // Keep pinned cells when clearing history
-      this.sessionHistories[sessionId] = this.sessionHistories[sessionId].filter(cell => cell.pinned);
-      this.persistSessionHistory(sessionId);
-      this.renderHistory(sessionId);
+    // ... existing code
+
+    /**
+     * Clear session history
+     * @param {string} sessionId - Session identifier
+     */
+    clearSessionHistory(sessionId) {
+        if (this.sessionHistories[sessionId]) {
+            // Keep pinned cells when clearing history
+            this.sessionHistories[sessionId] = this.sessionHistories[sessionId].filter(cell => cell.pinned);
+            this.persistSessionHistory(sessionId);
+            this.renderHistory(sessionId);
+        }
     }
-  }
-  
-  /**
-   * Pin a cell in the history
-   * @param {string} sessionId - Session identifier
-   * @param {string} cellId - Cell identifier
-   */
-  pinCell(sessionId, cellId) {
-    const history = this.sessionHistories[sessionId];
-    if (!history) return;
-    
-    const cellIndex = history.findIndex(cell => cell.id === cellId);
-    if (cellIndex !== -1) {
-      history[cellIndex].pinned = true;
-      this.persistSessionHistory(sessionId);
+
+    /**
+     * Pin a cell in the history
+     * @param {string} sessionId - Session identifier
+     * @param {string} cellId - Cell identifier
+     */
+    pinCell(sessionId, cellId) {
+        const history = this.sessionHistories[sessionId];
+        if (!history) return;
+
+        const cellIndex = history.findIndex(cell => cell.id === cellId);
+        if (cellIndex !== -1) {
+            history[cellIndex].pinned = true;
+            this.persistSessionHistory(sessionId);
+        }
     }
-  }
-  
-  /**
-   * Unpin a cell in the history
-   * @param {string} sessionId - Session identifier
-   * @param {string} cellId - Cell identifier
-   */
-  unpinCell(sessionId, cellId) {
-    const history = this.sessionHistories[sessionId];
-    if (!history) return;
-    
-    const cellIndex = history.findIndex(cell => cell.id === cellId);
-    if (cellIndex !== -1) {
-      history[cellIndex].pinned = false;
-      this.persistSessionHistory(sessionId);
+
+    /**
+     * Unpin a cell in the history
+     * @param {string} sessionId - Session identifier
+     * @param {string} cellId - Cell identifier
+     */
+    unpinCell(sessionId, cellId) {
+        const history = this.sessionHistories[sessionId];
+        if (!history) return;
+
+        const cellIndex = history.findIndex(cell => cell.id === cellId);
+        if (cellIndex !== -1) {
+            history[cellIndex].pinned = false;
+            this.persistSessionHistory(sessionId);
+        }
     }
-  }
-  
-  /**
-   * Create a DOM element for a cell
-   * @param {string} sessionId - Session identifier
-   * @param {Object} cell - Cell data
-   * @returns {HTMLElement} Cell element
-   */
-  createCellElement(sessionId, cell) {
-    // Create a container for the cell
-    const cellContainer = document.createElement('div');
-    cellContainer.className = 'history-cell';
-    cellContainer.style.width = '100%';
-    cellContainer.dataset.cellId = cell.id; // Store cell ID for later reference
-    
-    // Create line element based on cell type
-    const lineElement = document.createElement('div');
-    lineElement.className = 'output-line';
-    
-    if (cell.type === 'input') {
-      lineElement.classList.add('input-line');
-      lineElement.textContent = `${sessionId}> ${cell.content}`;
-    } else {
-      lineElement.textContent = cell.content.text || '';
-      
-      // Apply punctuation styling if available
-      if (cell.content.punctuation) {
-        const punctClass = this.getPunctuationClass(cell.content.punctuation);
-        lineElement.classList.add(punctClass);
-      }
-      
-      // Add truth bar if available
-      if (cell.content.truth) {
-        const truthBar = document.createElement('meter');
-        truthBar.className = 'truth-bar';
-        truthBar.min = 0;
-        truthBar.max = 1;
-        truthBar.value = cell.content.truth.frequency || 0;
-        truthBar.title = `Frequency: ${(cell.content.truth.frequency * 100).toFixed(1)}%, Confidence: ${(cell.content.truth.confidence * 100).toFixed(1)}%`;
-        lineElement.appendChild(truthBar);
-      }
-      
-      // Add priority badge if available
-      if (typeof cell.content.priority === 'number') {
-        const priorityBadge = document.createElement('span');
-        priorityBadge.className = 'priority-badge';
-        priorityBadge.textContent = cell.content.priority.toFixed(2);
-        lineElement.appendChild(priorityBadge);
-      }
+
+    /**
+     * Create a DOM element for a cell
+     * @param {string} sessionId - Session identifier
+     * @param {Object} cell - Cell data
+     * @returns {HTMLElement} Cell element
+     */
+    createCellElement(sessionId, cell) {
+        // Create a container for the cell
+        const cellContainer = document.createElement('div');
+        cellContainer.className = 'history-cell';
+        cellContainer.style.width = '100%';
+        cellContainer.dataset.cellId = cell.id; // Store cell ID for later reference
+
+        // Create line element based on cell type
+        const lineElement = document.createElement('div');
+        lineElement.className = 'output-line';
+
+        if (cell.type === 'input') {
+            lineElement.classList.add('input-line');
+            lineElement.textContent = `${sessionId}> ${cell.content}`;
+        } else {
+            lineElement.textContent = cell.content.text || '';
+
+            // Apply punctuation styling if available
+            if (cell.content.punctuation) {
+                const punctClass = this.getPunctuationClass(cell.content.punctuation);
+                lineElement.classList.add(punctClass);
+            }
+
+            // Add truth bar if available
+            if (cell.content.truth) {
+                const truthBar = document.createElement('meter');
+                truthBar.className = 'truth-bar';
+                truthBar.min = 0;
+                truthBar.max = 1;
+                truthBar.value = cell.content.truth.frequency || 0;
+                truthBar.title = `Frequency: ${(cell.content.truth.frequency * 100).toFixed(1)}%, Confidence: ${(cell.content.truth.confidence * 100).toFixed(1)}%`;
+                lineElement.appendChild(truthBar);
+            }
+
+            // Add priority badge if available
+            if (typeof cell.content.priority === 'number') {
+                const priorityBadge = document.createElement('span');
+                priorityBadge.className = 'priority-badge';
+                priorityBadge.textContent = cell.content.priority.toFixed(2);
+                lineElement.appendChild(priorityBadge);
+            }
+        }
+
+        // Add pin button for cells
+        const pinButton = document.createElement('button');
+        pinButton.className = 'pin-button';
+        pinButton.textContent = cell.pinned ? '📌' : '📍';
+        pinButton.title = cell.pinned ? 'Unpin cell' : 'Pin cell';
+        pinButton.addEventListener('click', () => {
+            if (cell.pinned) {
+                this.unpinCell(sessionId, cell.id);
+                pinButton.textContent = '📍';
+                pinButton.title = 'Pin cell';
+            } else {
+                this.pinCell(sessionId, cell.id);
+                pinButton.textContent = '📌';
+                pinButton.title = 'Unpin cell';
+            }
+        });
+
+        cellContainer.appendChild(pinButton);
+        cellContainer.appendChild(lineElement);
+        return cellContainer;
     }
-    
-    // Add pin button for cells
-    const pinButton = document.createElement('button');
-    pinButton.className = 'pin-button';
-    pinButton.textContent = cell.pinned ? '📌' : '📍';
-    pinButton.title = cell.pinned ? 'Unpin cell' : 'Pin cell';
-    pinButton.addEventListener('click', () => {
-      if (cell.pinned) {
-        this.unpinCell(sessionId, cell.id);
-        pinButton.textContent = '📍';
-        pinButton.title = 'Pin cell';
-      } else {
-        this.pinCell(sessionId, cell.id);
-        pinButton.textContent = '📌';
-        pinButton.title = 'Unpin cell';
-      }
-    });
-    
-    cellContainer.appendChild(pinButton);
-    cellContainer.appendChild(lineElement);
-    return cellContainer;
-  }
 }
 ```
 
 #### **Dependencies on Existing Utilities**
 
 ##### **From `ui/src/utils/dataProcessor.js`:**
+
 - Will use for advanced history data processing if needed
 
 ##### **From `ui/src/utils/filterUtils.js`:**
+
 - Will implement text search and type filtering for history
 
 ##### **From `ui/src/utils/utilityFunctions.js`:**
+
 - Will use `paginateData` for handling large histories
 - May use other utility functions as needed
 
@@ -3820,6 +4001,7 @@ class SessionManager {
 #### **Testing Approach**
 
 Since we're minimizing mocks, we'll test the actual history functionality:
+
 - Verify cells are added to history correctly
 - Verify history persistence works
 - Verify history loading works
@@ -3838,9 +4020,11 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 ---
 
 ### **Phase 5: Agent-Aware Features**
+
 *Goal: Cross-session interaction and visualization*
 
 #### **Session Communication**
+
 - [ ] Implement "Send to session" widget:
     - Per-output-line `⋯` menu with "Send to..." option
     - Dropdown shows active sessions (excluding self)
@@ -3852,6 +4036,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
     - Use display utilities from `ui/src/utils/displayUtils.js` for consistent rendering
 
 #### **Multi-Agent Visualization**
+
 - [ ] Session-scoped visualizers:
     - Truth chart: Toggle per output line (Chart.js loaded on-demand)
     - Derivation popup: Shows session-specific derivation tree on click
@@ -3865,6 +4050,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
     - Group related items for network views
 
 #### **Validation**
+
 - [ ] In Session A: Run inference → use "Send to Session B" → verify input appears in Session B
 - [ ] Open `/agents` → confirm all sessions show live status updates
 - [ ] Toggle network view → verify edges only connect related sessions
@@ -3873,9 +4059,11 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 ---
 
 ### **Phase 6: Optimization & Polish**
+
 *Goal: Performance and edge-case hardening*
 
 #### **Resource Management**
+
 - [ ] Implement session resource limits:
     - Background sessions throttle to 1 update/sec
     - Auto-close sessions inactive >1 hour
@@ -3886,6 +4074,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
     - Use memoization from `ui/src/utils/utilityFunctions.js` for expensive computations
 
 #### **Responsiveness**
+
 - [ ] Mobile adaptations:
     - Session selector → swipeable tabs on mobile
     - Input field expands to full width on focus
@@ -3895,6 +4084,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
     - Reduced-motion preference: Disable animations if `prefers-reduced-motion`
 
 #### **Stress Testing**
+
 - [ ] 10-session load test:
     - All sessions reasoning concurrently → verify <100ms input lag
     - Memory leak check: 1hr runtime → heap size growth <5%
@@ -3905,6 +4095,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 ---
 
 ### **Final Validation Checklist**
+
 - [ ] **Session isolation**:
     - History/state never leaks between sessions
     - Closing session terminates all associated resources (timers, listeners)
@@ -3924,26 +4115,31 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 
 > **Execution Rules**
 > 1. **Strict phase gating**: No Phase 2 tasks until Phase 1 passes all validation checks
-> 2. **Session context first**: Every new feature (e.g., visualizations) must work in single-session mode before multi-session
+> 2. **Session context first**: Every new feature (e.g., visualizations) must work in single-session mode before
+     multi-session
 > 3. **Optimization ban**: Phase 6 work forbidden until Phase 5 validation complete
 > 4. **Debugging hooks**:
      >    - `?debug=true` URL param enables raw WebSocket logging
+     >
+- `window.NARS_SESSIONS` exposes session registry to console
 >    - `window.NARS_SESSIONS` exposes session registry to console
->    - `window.NARS_SESSIONS` exposes session registry to console
-    this.sessionManager.addCellToHistory(this.sessionId, 'output', line);
-    
+       this.sessionManager.addCellToHistory(this.sessionId, 'output', line);
+
     // ... existing code
-  }
-  
-  addStructuredOutputLine(line) {
-    // ... existing code
-    
+
+}
+
+addStructuredOutputLine(line) {
+// ... existing code
+
     // Add structured output cell to history
     this.sessionManager.addCellToHistory(this.sessionId, 'output', line);
     
     // ... existing code
-  }
+
 }
+}
+
 ```
 
 ##### **3. UI Components for History Display**
@@ -3980,83 +4176,88 @@ class REPLCore {
 ##### **4. History Navigation**
 
 ###### **Arrow Key Handling**
+
 Add keyboard navigation for history:
 
 ```javascript
 // In repl-core.js
 class REPLCore {
-  bindEvents() {
-    // ... existing code
-    
-    // Handle history navigation
-    this.handleInputKeydown = (event) => {
-      if (event.key === 'ArrowUp') {
-        this.navigateHistory(-1);
-        event.preventDefault();
-      } else if (event.key === 'ArrowDown') {
-        this.navigateHistory(1);
-        event.preventDefault();
-      } else if (event.key === 'Enter' && !event.shiftKey) {
-        event.preventDefault();
-        this.submitInput();
-      }
-    };
-    
-    this.inputElement.addEventListener('keydown', this.handleInputKeydown);
-  }
-  
-  navigateHistory(direction) {
-    // Implementation for navigating through history
-    // This will depend on maintaining a history position per session
-  }
+    bindEvents() {
+        // ... existing code
+
+        // Handle history navigation
+        this.handleInputKeydown = (event) => {
+            if (event.key === 'ArrowUp') {
+                this.navigateHistory(-1);
+                event.preventDefault();
+            } else if (event.key === 'ArrowDown') {
+                this.navigateHistory(1);
+                event.preventDefault();
+            } else if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                this.submitInput();
+            }
+        };
+
+        this.inputElement.addEventListener('keydown', this.handleInputKeydown);
+    }
+
+    navigateHistory(direction) {
+        // Implementation for navigating through history
+        // This will depend on maintaining a history position per session
+    }
 }
 ```
 
 ##### **5. Persistence Handling**
 
 ###### **Page Load/Unload Events**
+
 Add event listeners for persistence:
 
 ```javascript
 // In session-manager.js
 class SessionManager {
-  constructor() {
-    // ... existing code
-    
-    // Handle page unload for persistence
-    window.addEventListener('beforeunload', () => {
-      this.persistAllHistories();
-    });
-    
-    // Load histories on initialization
-    this.loadAllHistories();
-  }
-  
-  persistAllHistories() {
-    Object.keys(this.activeSessions).forEach(sessionId => {
-      this.persistSessionHistory(sessionId);
-    });
-  }
-  
-  loadAllHistories() {
-    // Load histories for existing sessions
-    Object.keys(this.activeSessions).forEach(sessionId => {
-      this.loadSessionHistory(sessionId);
-      this.renderHistory(sessionId);
-    });
-  }
+    constructor() {
+        // ... existing code
+
+        // Handle page unload for persistence
+        window.addEventListener('beforeunload', () => {
+            this.persistAllHistories();
+        });
+
+        // Load histories on initialization
+        this.loadAllHistories();
+    }
+
+    persistAllHistories() {
+        Object.keys(this.activeSessions).forEach(sessionId => {
+            this.persistSessionHistory(sessionId);
+        });
+    }
+
+    loadAllHistories() {
+        // Load histories for existing sessions
+        Object.keys(this.activeSessions).forEach(sessionId => {
+            this.loadSessionHistory(sessionId);
+            this.renderHistory(sessionId);
+        });
+    }
 }
 ```
 
 #### **Dependencies on Existing Utilities**
 
 ##### **From `ui/src/utils/dataProcessor.js`:**
+
 - Will use for advanced history data processing if needed
 
 ##### **From `ui/src/utils/filterUtils.js`:**
+
 - Will implement text search and type filtering for history
 
 ##### **From `ui/src/utils/utilityFunctions.js`:**
+
 - Will use `paginateData` for handling large histories
 - May use other utility functions as needed
 
@@ -4073,6 +4274,7 @@ class SessionManager {
 #### **Testing Approach**
 
 Since we're minimizing mocks, we'll test the actual history functionality:
+
 - Verify cells are added to history correctly
 - Verify history persistence works
 - Verify history loading works
@@ -4089,9 +4291,11 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 ---
 
 ### **Phase 5: Agent-Aware Features**
+
 *Goal: Cross-session interaction and visualization*
 
 #### **Session Communication**
+
 - [ ] Implement "Send to session" widget:
     - Per-output-line `⋯` menu with "Send to..." option
     - Dropdown shows active sessions (excluding self)
@@ -4103,6 +4307,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
     - Use display utilities from `ui/src/utils/displayUtils.js` for consistent rendering
 
 #### **Multi-Agent Visualization**
+
 - [ ] Session-scoped visualizers:
     - Truth chart: Toggle per output line (Chart.js loaded on-demand)
     - Derivation popup: Shows session-specific derivation tree on click
@@ -4116,6 +4321,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
     - Group related items for network views
 
 #### **Validation**
+
 - [ ] In Session A: Run inference → use "Send to Session B" → verify input appears in Session B
 - [ ] Open `/agents` → confirm all sessions show live status updates
 - [ ] Toggle network view → verify edges only connect related sessions
@@ -4124,9 +4330,11 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 ---
 
 ### **Phase 6: Optimization & Polish**
+
 *Goal: Performance and edge-case hardening*
 
 #### **Resource Management**
+
 - [ ] Implement session resource limits:
     - Background sessions throttle to 1 update/sec
     - Auto-close sessions inactive >1 hour
@@ -4137,6 +4345,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
     - Use memoization from `ui/src/utils/utilityFunctions.js` for expensive computations
 
 #### **Responsiveness**
+
 - [ ] Mobile adaptations:
     - Session selector → swipeable tabs on mobile
     - Input field expands to full width on focus
@@ -4146,6 +4355,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
     - Reduced-motion preference: Disable animations if `prefers-reduced-motion`
 
 #### **Stress Testing**
+
 - [ ] 10-session load test:
     - All sessions reasoning concurrently → verify <100ms input lag
     - Memory leak check: 1hr runtime → heap size growth <5%
@@ -4156,6 +4366,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 ---
 
 ### **Final Validation Checklist**
+
 - [ ] **Session isolation**:
     - History/state never leaks between sessions
     - Closing session terminates all associated resources (timers, listeners)
@@ -4175,12 +4386,16 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 
 > **Execution Rules**
 > 1. **Strict phase gating**: No Phase 2 tasks until Phase 1 passes all validation checks
-> 2. **Session context first**: Every new feature (e.g., visualizations) must work in single-session mode before multi-session
+> 2. **Session context first**: Every new feature (e.g., visualizations) must work in single-session mode before
+     multi-session
 > 3. **Optimization ban**: Phase 6 work forbidden until Phase 5 validation complete
 > 4. **Debugging hooks**:
      >    - `?debug=true` URL param enables raw WebSocket logging
->    - `window.NARS_SESSIONS` exposes session registry to console
+     >
+- `window.NARS_SESSIONS` exposes session registry to console
+
 ### **Final Validation Checklist**
+
 - [ ] **Session isolation**:
     - History/state never leaks between sessions
     - Closing session terminates all associated resources (timers, listeners)
@@ -4200,13 +4415,16 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 
 > **Execution Rules**
 > 1. **Strict phase gating**: No Phase 2 tasks until Phase 1 passes all validation checks
-> 2. **Session context first**: Every new feature (e.g., visualizations) must work in single-session mode before multi-session
+> 2. **Session context first**: Every new feature (e.g., visualizations) must work in single-session mode before
+     multi-session
 > 3. **Optimization ban**: Phase 6 work forbidden until Phase 5 validation complete
 > 4. **Debugging hooks**:
      >    - `?debug=true` URL param enables raw WebSocket logging
+     >
+- `window.NARS_SESSIONS` exposes session registry to console
 >    - `window.NARS_SESSIONS` exposes session registry to console
->    - `window.NARS_SESSIONS` exposes session registry to console
-}
+       }
+
 ```
 
 ##### **2. Integration with REPL Core**
@@ -4252,114 +4470,120 @@ class REPLCore {
 ##### **3. UI Components for History Display**
 
 ###### **Cell Grouping**
+
 Modify the output rendering to group input/output pairs:
 
 ```javascript
 // In repl-core.js
 class REPLCore {
-  addOutputLine(line) {
-    // Create cell group if it doesn't exist
-    let cellGroup = this.getCurrentCellGroup();
-    if (!cellGroup) {
-      cellGroup = this.createCellGroup();
+    addOutputLine(line) {
+        // Create cell group if it doesn't exist
+        let cellGroup = this.getCurrentCellGroup();
+        if (!cellGroup) {
+            cellGroup = this.createCellGroup();
+        }
+
+        // ... existing code for creating line element
+
+        cellGroup.appendChild(lineElement);
+
+        // ... existing code
     }
-    
-    // ... existing code for creating line element
-    
-    cellGroup.appendChild(lineElement);
-    
-    // ... existing code
-  }
-  
-  createCellGroup() {
-    const cellGroup = document.createElement('div');
-    cellGroup.className = 'cell-group';
-    this.outputElement.appendChild(cellGroup);
-    return cellGroup;
-  }
+
+    createCellGroup() {
+        const cellGroup = document.createElement('div');
+        cellGroup.className = 'cell-group';
+        this.outputElement.appendChild(cellGroup);
+        return cellGroup;
+    }
 }
 ```
 
 ##### **4. History Navigation**
 
 ###### **Arrow Key Handling**
+
 Add keyboard navigation for history:
 
 ```javascript
 // In repl-core.js
 class REPLCore {
-  bindEvents() {
-    // ... existing code
-    
-    // Handle history navigation
-    this.handleInputKeydown = (event) => {
-      if (event.key === 'ArrowUp') {
-        this.navigateHistory(-1);
-        event.preventDefault();
-      } else if (event.key === 'ArrowDown') {
-        this.navigateHistory(1);
-        event.preventDefault();
-      } else if (event.key === 'Enter' && !event.shiftKey) {
-        event.preventDefault();
-        this.submitInput();
-      }
-    };
-    
-    this.inputElement.addEventListener('keydown', this.handleInputKeydown);
-  }
-  
-  navigateHistory(direction) {
-    // Implementation for navigating through history
-    // This will depend on maintaining a history position per session
-  }
+    bindEvents() {
+        // ... existing code
+
+        // Handle history navigation
+        this.handleInputKeydown = (event) => {
+            if (event.key === 'ArrowUp') {
+                this.navigateHistory(-1);
+                event.preventDefault();
+            } else if (event.key === 'ArrowDown') {
+                this.navigateHistory(1);
+                event.preventDefault();
+            } else if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                this.submitInput();
+            }
+        };
+
+        this.inputElement.addEventListener('keydown', this.handleInputKeydown);
+    }
+
+    navigateHistory(direction) {
+        // Implementation for navigating through history
+        // This will depend on maintaining a history position per session
+    }
 }
 ```
 
 ##### **5. Persistence Handling**
 
 ###### **Page Load/Unload Events**
+
 Add event listeners for persistence:
 
 ```javascript
 // In session-manager.js
 class SessionManager {
-  constructor() {
-    // ... existing code
-    
-    // Handle page unload for persistence
-    window.addEventListener('beforeunload', () => {
-      this.persistAllHistories();
-    });
-    
-    // Load histories on initialization
-    this.loadAllHistories();
-  }
-  
-  persistAllHistories() {
-    Object.keys(this.activeSessions).forEach(sessionId => {
-      this.persistSessionHistory(sessionId);
-    });
-  }
-  
-  loadAllHistories() {
-    // Load histories for existing sessions
-    Object.keys(this.activeSessions).forEach(sessionId => {
-      this.loadSessionHistory(sessionId);
-      this.renderHistory(sessionId);
-    });
-  }
+    constructor() {
+        // ... existing code
+
+        // Handle page unload for persistence
+        window.addEventListener('beforeunload', () => {
+            this.persistAllHistories();
+        });
+
+        // Load histories on initialization
+        this.loadAllHistories();
+    }
+
+    persistAllHistories() {
+        Object.keys(this.activeSessions).forEach(sessionId => {
+            this.persistSessionHistory(sessionId);
+        });
+    }
+
+    loadAllHistories() {
+        // Load histories for existing sessions
+        Object.keys(this.activeSessions).forEach(sessionId => {
+            this.loadSessionHistory(sessionId);
+            this.renderHistory(sessionId);
+        });
+    }
 }
 ```
 
 #### **Dependencies on Existing Utilities**
 
 ##### **From `ui/src/utils/dataProcessor.js`:**
+
 - Will use for advanced history data processing if needed
 
 ##### **From `ui/src/utils/filterUtils.js`:**
+
 - Will implement text search and type filtering for history
 
 ##### **From `ui/src/utils/utilityFunctions.js`:**
+
 - Will use `paginateData` for handling large histories
 - May use other utility functions as needed
 
@@ -4376,6 +4600,7 @@ class SessionManager {
 #### **Testing Approach**
 
 Since we're minimizing mocks, we'll test the actual history functionality:
+
 - Verify cells are added to history correctly
 - Verify history persistence works
 - Verify history loading works
@@ -4392,9 +4617,11 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 ---
 
 ### **Phase 5: Agent-Aware Features**
+
 *Goal: Cross-session interaction and visualization*
 
 #### **Session Communication**
+
 - [ ] Implement "Send to session" widget:
     - Per-output-line `⋯` menu with "Send to..." option
     - Dropdown shows active sessions (excluding self)
@@ -4406,6 +4633,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
     - Use display utilities from `ui/src/utils/displayUtils.js` for consistent rendering
 
 #### **Multi-Agent Visualization**
+
 - [ ] Session-scoped visualizers:
     - Truth chart: Toggle per output line (Chart.js loaded on-demand)
     - Derivation popup: Shows session-specific derivation tree on click
@@ -4419,6 +4647,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
     - Group related items for network views
 
 #### **Validation**
+
 - [ ] In Session A: Run inference → use "Send to Session B" → verify input appears in Session B
 - [ ] Open `/agents` → confirm all sessions show live status updates
 - [ ] Toggle network view → verify edges only connect related sessions
@@ -4427,9 +4656,11 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 ---
 
 ### **Phase 6: Optimization & Polish**
+
 *Goal: Performance and edge-case hardening*
 
 #### **Resource Management**
+
 - [ ] Implement session resource limits:
     - Background sessions throttle to 1 update/sec
     - Auto-close sessions inactive >1 hour
@@ -4440,6 +4671,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
     - Use memoization from `ui/src/utils/utilityFunctions.js` for expensive computations
 
 #### **Responsiveness**
+
 - [ ] Mobile adaptations:
     - Session selector → swipeable tabs on mobile
     - Input field expands to full width on focus
@@ -4449,6 +4681,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
     - Reduced-motion preference: Disable animations if `prefers-reduced-motion`
 
 #### **Stress Testing**
+
 - [ ] 10-session load test:
     - All sessions reasoning concurrently → verify <100ms input lag
     - Memory leak check: 1hr runtime → heap size growth <5%
@@ -4459,6 +4692,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 ---
 
 ### **Final Validation Checklist**
+
 - [ ] **Session isolation**:
     - History/state never leaks between sessions
     - Closing session terminates all associated resources (timers, listeners)
@@ -4478,12 +4712,16 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 
 > **Execution Rules**
 > 1. **Strict phase gating**: No Phase 2 tasks until Phase 1 passes all validation checks
-> 2. **Session context first**: Every new feature (e.g., visualizations) must work in single-session mode before multi-session
+> 2. **Session context first**: Every new feature (e.g., visualizations) must work in single-session mode before
+     multi-session
 > 3. **Optimization ban**: Phase 6 work forbidden until Phase 5 validation complete
 > 4. **Debugging hooks**:
      >    - `?debug=true` URL param enables raw WebSocket logging
->    - `window.NARS_SESSIONS` exposes session registry to console
+     >
+- `window.NARS_SESSIONS` exposes session registry to console
+
 ### **Final Validation Checklist**
+
 - [ ] **Session isolation**:
     - History/state never leaks between sessions
     - Closing session terminates all associated resources (timers, listeners)
@@ -4503,11 +4741,13 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 
 > **Execution Rules**
 > 1. **Strict phase gating**: No Phase 2 tasks until Phase 1 passes all validation checks
-> 2. **Session context first**: Every new feature (e.g., visualizations) must work in single-session mode before multi-session
+> 2. **Session context first**: Every new feature (e.g., visualizations) must work in single-session mode before
+     multi-session
 > 3. **Optimization ban**: Phase 6 work forbidden until Phase 5 validation complete
 > 4. **Debugging hooks**:
      >    - `?debug=true` URL param enables raw WebSocket logging
->    - `window.NARS_SESSIONS` exposes session registry to console
+     >
+- `window.NARS_SESSIONS` exposes session registry to console
 >    - `window.NARS_SESSIONS` exposes session registry to console
 
 

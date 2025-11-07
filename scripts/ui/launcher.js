@@ -186,7 +186,7 @@ function startViteDevServer(config = DEFAULT_CONFIG) {
 
     // Determine command based on whether we're in repl mode
     const isReplMode = config.ui.mode === 'repl';
-    const viteArgs = isReplMode 
+    const viteArgs = isReplMode
         ? ['vite', 'dev', '--port', config.ui.port.toString(), '--config', 'vite.config.repl.js']
         : ['vite', 'dev', '--port', config.ui.port.toString()];
 

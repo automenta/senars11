@@ -549,7 +549,7 @@ export class TestAnalyzer extends BaseAnalyzer {
                     timeout: 60000,
                     encoding: 'utf8',
                     stdio: ['pipe', 'pipe', 'pipe'],
-                    env: { ...process.env, NODE_NO_WARNINGS: '1', NODE_OPTIONS: '--experimental-vm-modules' }
+                    env: {...process.env, NODE_NO_WARNINGS: '1', NODE_OPTIONS: '--experimental-vm-modules'}
                 });
 
                 if (jestRun.stdout) {
@@ -586,7 +586,7 @@ export class TestAnalyzer extends BaseAnalyzer {
 
         const enhancedTestResults = individualTestResults.map(testResult => {
             const coveredSourceFiles = this.testToSourceFilesMap.get(testResult.fullName) || [];
-            return { ...testResult, coveredSourceFiles };
+            return {...testResult, coveredSourceFiles};
         });
 
         this.log('Finished enhancing test results.');

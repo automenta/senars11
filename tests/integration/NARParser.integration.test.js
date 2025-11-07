@@ -127,7 +127,7 @@ describe('NAR Parser Integration', () => {
         test('processes tasks through reasoning cycle', async () => {
             // Start the NAR to ensure the stream reasoner is active
             await nar().start();
-            
+
             await nar().input('(a --> b). %1.0;0.9%');
             await nar().input('(b --> c). %1.0;0.9%');
 

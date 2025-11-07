@@ -3,11 +3,11 @@
  * @description Simple test framework for NAR functionality
  */
 
-import { TaskMatch } from './TaskMatch.js';
+import {TaskMatch} from './TaskMatch.js';
 
 // Re-export TaskMatch as before to maintain backward compatibility
 //export { SharedTaskMatch as TaskMatch };
-export { TaskMatch as TaskMatch };
+export {TaskMatch as TaskMatch};
 
 /**
  * Simplified test framework for NAR
@@ -55,16 +55,16 @@ export class TestNAR {
         this.operations.push({type: 'expect', matcher, shouldExist: false});
         return this;
     }
-    
+
     // Provide convenience methods for consistent API
     expectWithPunct(termStr, punct) {
         return this.expect(new TaskMatch(termStr).withPunctuation(punct));
     }
-    
+
     expectWithTruth(termStr, minFreq, minConf) {
         return this.expect(new TaskMatch(termStr).withTruth(minFreq, minConf));
     }
-    
+
     expectWithFlexibleTruth(termStr, expectedFreq, expectedConf, tolerance) {
         return this.expect(new TaskMatch(termStr).withFlexibleTruth(expectedFreq, expectedConf, tolerance));
     }
@@ -137,7 +137,7 @@ export class TestNAR {
 
         // Collect tasks emitted by the system
         let collectedTasks = [];
-        
+
         // Get tasks from memory and focus
         if (this.nar.memory) {
             collectedTasks = this.nar.memory.getAllConcepts().flatMap(c => c.getAllTasks());
@@ -151,7 +151,7 @@ export class TestNAR {
 
         // Get all tasks from memory and focus to catch derived results
         let allTasks = [...collectedTasks]; // Start with collected tasks
-        
+
         // Also get tasks from memory and focus to ensure nothing is missed
         if (this.nar.memory) {
             const memoryTasks = this.nar.memory.getAllConcepts().flatMap(c => c.getAllTasks());

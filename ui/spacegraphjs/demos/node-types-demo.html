@@ -12,6 +12,7 @@
             color: white;
             font-family: Arial, sans-serif;
         }
+
         #container {
             position: fixed;
             top: 0;
@@ -19,6 +20,7 @@
             width: 100%;
             height: 100%;
         }
+
         #info {
             position: absolute;
             top: 10px;
@@ -30,6 +32,7 @@
             font-size: 14px;
             z-index: 100;
         }
+
         h3 {
             margin-top: 0;
             color: #4CAF50;
@@ -75,14 +78,14 @@
             position: {x: -300, y: yPos, z: 0},
             data: {label: 'Box (ShapeNode)', shape: 'box', size: 80, color: 0xffaa00},
         }, commonProps);
-        
+
         const shapeNodeSphere = createNodeWithCommonProps(space, {
             id: 'shapeSphere',
             type: 'shape',
             position: {x: -100, y: yPos, z: 0},
             data: {label: 'Sphere (ShapeNode)', shape: 'sphere', size: 50, color: 0x00aaff},
         }, commonProps);
-        
+
         const shapeNodeCapsule = createNodeWithCommonProps(space, {
             id: 'shapeCapsule',
             type: 'shape',

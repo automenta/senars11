@@ -12,6 +12,7 @@
             color: white;
             font-family: Arial, sans-serif;
         }
+
         #container {
             position: fixed;
             top: 0;
@@ -19,6 +20,7 @@
             width: 100%;
             height: 100%;
         }
+
         #info {
             position: absolute;
             top: 10px;
@@ -30,6 +32,7 @@
             font-size: 14px;
             z-index: 100;
         }
+
         h3 {
             margin-top: 0;
             color: #4CAF50;
@@ -61,8 +64,8 @@
 
         // Initialize SpaceGraph with ergonomic factory method
         const space = await SpaceGraph.the(container);
-        
-        
+
+
         // Performance Demo Implementation
         const nodes = [];
         const edges = [];
@@ -185,7 +188,7 @@
             setInterval(() => {
                 const fps = Math.floor(30 + Math.random() * 30); // Simulate FPS between 30-60
                 const frameTime = (1000 / fps).toFixed(1);
-                
+
                 // Update FPS value
                 const fpsElement = document.getElementById('fps-value');
                 if (fpsElement) fpsElement.textContent = fps;
@@ -209,7 +212,7 @@
                 // Update memory usage
                 const memoryElement = document.getElementById('memory-value');
                 if (memoryElement) memoryElement.textContent = `${(nodes.length * 0.05).toFixed(1)}MB`;
-                
+
                 // Update optimization status color based on performance
                 const statusElement = document.getElementById('optimizations-active');
                 if (statusElement) {
@@ -244,7 +247,12 @@
                     id: `cluster-${cluster}-center`,
                     type: 'shape',
                     position: {x: clusterX, y: clusterY, z: clusterZ},
-                    data: {label: `Cluster ${cluster}`, shape: 'sphere', size: 20, color: `0x${(cluster * 72).toString(16).padStart(6, '0')}`}
+                    data: {
+                        label: `Cluster ${cluster}`,
+                        shape: 'sphere',
+                        size: 20,
+                        color: `0x${(cluster * 72).toString(16).padStart(6, '0')}`
+                    }
                 });
 
                 // Create surrounding nodes (these will be instanced due to similarity)
@@ -276,10 +284,10 @@
                             space.addEdge(node, targetNode, {label: 'Internal', color: 0xaaaaaa});
                         }
                     }
-                    
+
                     nodes.push(node);
                 }
-                
+
                 nodes.push(centerNode);
             }
         }
@@ -327,7 +335,7 @@
                             space.addEdge(node, targetNode, {label: `V-${x}-${y}`, color: 0x888888});
                         }
                     }
-                    
+
                     nodes.push(node);
                 }
             }
@@ -413,10 +421,10 @@
                     });
 
                     space.addEdge(detailNode, detailNodeInst, {label: `LOD-${index}-${i}`, color: 0x888888});
-                    
+
                     nodes.push(detailNodeInst);
                 }
-                
+
                 nodes.push(detailNode);
             });
         }
@@ -600,7 +608,7 @@
                         color: Math.floor(Math.random() * 0xffffff),
                     },
                 });
-                
+
                 nodes.push(node);
             }
         }

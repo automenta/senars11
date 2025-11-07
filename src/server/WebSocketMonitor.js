@@ -246,7 +246,7 @@ class WebSocketMonitor {
         try {
             const rawData = data.toString();
             console.log(`[WEBSOCKET MONITOR] Raw message received: ${rawData}`);
-            
+
             if (!rawData.trim()) {
                 this._sendToClient(client, {
                     type: 'error',
@@ -281,7 +281,7 @@ class WebSocketMonitor {
 
     _routeMessage(client, message) {
         console.log(`[WEBSOCKET MONITOR] Routing message of type: ${message.type}`);
-        
+
         const handlers = {
             'subscribe': (msg) => this.messageHandlers.handleSubscribe(client, msg),
             'unsubscribe': (msg) => this.messageHandlers.handleUnsubscribe(client, msg),
@@ -471,7 +471,7 @@ class WebSocketMonitor {
     _handleControlMessage(client, message) {
         // Handle control messages like start, stop, step
         const command = message.type.split('/')[1]; // Extract command from 'control/command'
-        
+
         if (!this._nar) {
             this._sendToClient(client, {
                 type: 'error',
@@ -485,37 +485,37 @@ class WebSocketMonitor {
                 this._nar.start();
                 this._sendToClient(client, {
                     type: 'control/ack',
-                    payload: { command: 'start', status: 'started' }
+                    payload: {command: 'start', status: 'started'}
                 });
                 break;
-                
+
             case 'stop':
                 this._nar.stop();
                 this._sendToClient(client, {
                     type: 'control/ack',
-                    payload: { command: 'stop', status: 'stopped' }
+                    payload: {command: 'stop', status: 'stopped'}
                 });
                 break;
-                
+
             case 'step':
                 this._nar.step();
                 this._sendToClient(client, {
                     type: 'control/ack',
-                    payload: { command: 'step', status: 'stepped' }
+                    payload: {command: 'step', status: 'stepped'}
                 });
                 break;
 
             case 'exit':
                 this._sendToClient(client, {
                     type: 'control/ack',
-                    payload: { command: 'exit', status: 'shutting down' }
+                    payload: {command: 'exit', status: 'shutting down'}
                 });
                 (async () => {
                     await this.stop();
                     process.exit(0);
                 })();
                 break;
-                
+
             default:
                 console.warn('Unknown control command:', command);
                 this._sendToClient(client, {
@@ -529,7 +529,7 @@ class WebSocketMonitor {
     _handleReasonMessage(client, message) {
         // Handle various reason/ messages appropriately
         const command = message.type.split('/')[1]; // Extract command from 'reason/command'
-        
+
         if (!this._nar) {
             this._sendToClient(client, {
                 type: 'error',
@@ -543,7 +543,7 @@ class WebSocketMonitor {
                 // This is handled above as narsese input, but if it comes here, it's an error
                 console.warn('reason/step should be handled separately, not here');
                 break;
-                
+
             default:
                 console.warn('Unknown reason command:', command);
                 this._sendToClient(client, {

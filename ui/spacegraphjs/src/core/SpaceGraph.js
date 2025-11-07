@@ -16,55 +16,10 @@ export class SpaceGraph {
     _listeners = new Map();
     plugins = null;
     options = {};
-
-    /**
-     * Async factory method to create and initialize a SpaceGraph instance with default configuration.
-     * This provides an ergonomic API that minimizes boilerplate while properly handling async initialization.
-     * @param {HTMLElement|string} containerOrContainerID - The container element or container ID for the graph
-     * @param {Object} options - Additional options to merge with defaults
-     * @returns {Promise<SpaceGraph>} The initialized and animated SpaceGraph instance
-     */
-    static async the(containerOrContainerID, options = {}) {
-        // Handle both element and ID inputs
-        const container = typeof containerOrContainerID === 'string' 
-            ? document.getElementById(containerOrContainerID) 
-            : containerOrContainerID;
-            
-        if (!container) {
-            throw new Error(`Container not found: ${containerOrContainerID}`);
-        }
-
-        const defaultOptions = {
-            ui: {
-                contextMenuElement: document.createElement('div'), // Minimal context menu
-                confirmDialogElement: document.createElement('div'), // Minimal confirm dialog
-            }
-        };
-
-        // Merge options with defaults
-        const config = {
-            ...defaultOptions,
-            ...options,
-            ui: {
-                ...defaultOptions.ui,
-                ...(options.ui || {})
-            }
-        };
-
-        const space = new SpaceGraph(container, config);
-        await space.init();
-        
-        // Start animation by default for immediate visual feedback
-        space.animate();
-        
-        return space;
-    }
-
     // Properties for camera mouse controls
     _isDragging = false;
     _lastMouseX = 0;
     _lastMouseY = 0;
-
     // Bound event handlers for camera mouse controls
     _boundHandleContextMenuEvent = null;
     _boundHandleMouseDownEvent = null;
@@ -96,6 +51,49 @@ export class SpaceGraph {
 
     get layoutManager() {
         return this._layoutPlugin?.layoutManager;
+    }
+
+    /**
+     * Async factory method to create and initialize a SpaceGraph instance with default configuration.
+     * This provides an ergonomic API that minimizes boilerplate while properly handling async initialization.
+     * @param {HTMLElement|string} containerOrContainerID - The container element or container ID for the graph
+     * @param {Object} options - Additional options to merge with defaults
+     * @returns {Promise<SpaceGraph>} The initialized and animated SpaceGraph instance
+     */
+    static async the(containerOrContainerID, options = {}) {
+        // Handle both element and ID inputs
+        const container = typeof containerOrContainerID === 'string'
+            ? document.getElementById(containerOrContainerID)
+            : containerOrContainerID;
+
+        if (!container) {
+            throw new Error(`Container not found: ${containerOrContainerID}`);
+        }
+
+        const defaultOptions = {
+            ui: {
+                contextMenuElement: document.createElement('div'), // Minimal context menu
+                confirmDialogElement: document.createElement('div'), // Minimal confirm dialog
+            }
+        };
+
+        // Merge options with defaults
+        const config = {
+            ...defaultOptions,
+            ...options,
+            ui: {
+                ...defaultOptions.ui,
+                ...(options.ui || {})
+            }
+        };
+
+        const space = new SpaceGraph(container, config);
+        await space.init();
+
+        // Start animation by default for immediate visual feedback
+        space.animate();
+
+        return space;
     }
 
     async init() {

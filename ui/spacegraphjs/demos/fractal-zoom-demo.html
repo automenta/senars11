@@ -12,6 +12,7 @@
             color: white;
             font-family: Arial, sans-serif;
         }
+
         #container {
             position: fixed;
             top: 0;
@@ -19,6 +20,7 @@
             width: 100%;
             height: 100%;
         }
+
         #info {
             position: absolute;
             top: 10px;
@@ -30,6 +32,7 @@
             font-size: 14px;
             z-index: 100;
         }
+
         h3 {
             margin-top: 0;
             color: #4CAF50;
@@ -60,8 +63,8 @@
 
         // Initialize SpaceGraph with ergonomic factory method
         const space = await SpaceGraph.the(container);
-        
-        
+
+
         console.log('Creating Fractal Zoom Demo...');
 
         // Create demonstration nodes with different content types

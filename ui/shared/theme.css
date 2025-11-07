@@ -1,61 +1,61 @@
 :root {
-  /* Core punctuation colors */
-  --punct-statement: #2ecc71;
-  --punct-question: #3498db;
-  --punct-goal: #e74c3c;
-  --punct-achievement: #f1c40f;
-  
-  /* Session identification colors */
-  --session-main: #3498db;
-  --session-agent1: #e74c3c;
-  --session-agent2: #9b59b6;
-  --session-agent3: #1abc9c;
-  --session-agent4: #f39c12;
-  --session-agent5: #34495e;
-  --session-agent6: #2ecc71;
-  
-  /* Base UI colors */
-  --background-primary: #ffffff;
-  --background-secondary: #f8f9fa;
-  --text-primary: #212529;
-  --text-secondary: #6c757d;
-  --border-color: #dee2e6;
-  
-  /* Typography */
-  --font-family-monospace: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
-  --font-family-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  
-  /* Spacing scale */
-  --spacing-xs: 0.25rem;
-  --spacing-sm: 0.5rem;
-  --spacing-md: 1rem;
-  --spacing-lg: 1.5rem;
-  --spacing-xl: 2rem;
-  
-  /* Connection status indicators */
-  --status-connected: #2ecc71;
-  --status-disconnected: #e74c3c;
-  --status-processing: #f39c12;
-  --status-error: #e74c3c;
+    /* Core punctuation colors */
+    --punct-statement: #2ecc71;
+    --punct-question: #3498db;
+    --punct-goal: #e74c3c;
+    --punct-achievement: #f1c40f;
+
+    /* Session identification colors */
+    --session-main: #3498db;
+    --session-agent1: #e74c3c;
+    --session-agent2: #9b59b6;
+    --session-agent3: #1abc9c;
+    --session-agent4: #f39c12;
+    --session-agent5: #34495e;
+    --session-agent6: #2ecc71;
+
+    /* Base UI colors */
+    --background-primary: #ffffff;
+    --background-secondary: #f8f9fa;
+    --text-primary: #212529;
+    --text-secondary: #6c757d;
+    --border-color: #dee2e6;
+
+    /* Typography */
+    --font-family-monospace: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    --font-family-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+    /* Spacing scale */
+    --spacing-xs: 0.25rem;
+    --spacing-sm: 0.5rem;
+    --spacing-md: 1rem;
+    --spacing-lg: 1.5rem;
+    --spacing-xl: 2rem;
+
+    /* Connection status indicators */
+    --status-connected: #2ecc71;
+    --status-disconnected: #e74c3c;
+    --status-processing: #f39c12;
+    --status-error: #e74c3c;
 }
 
 /* Punctuation styling utilities */
 .punct-statement {
-  color: var(--punct-statement);
-  font-weight: bold;
+    color: var(--punct-statement);
+    font-weight: bold;
 }
 
 .punct-question {
-  color: var(--punct-question);
-  font-weight: bold;
+    color: var(--punct-question);
+    font-weight: bold;
 }
 
 .punct-goal {
-  color: var(--punct-goal);
-  font-weight: bold;
+    color: var(--punct-goal);
+    font-weight: bold;
 }
 
 .punct-achievement {
-  color: var(--punct-achievement);
-  font-weight: bold;
+    color: var(--punct-achievement);
+    font-weight: bold;
 }

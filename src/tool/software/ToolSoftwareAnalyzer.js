@@ -24,9 +24,9 @@ export class ToolSoftwareAnalyzer {
     constructor(options = {}) {
         try {
             this.config = new SoftwareAnalyzerConfig(options);
-            
+
             // Initialize tool integration with proper configuration
-            this.toolIntegration = new ToolIntegration({ 
+            this.toolIntegration = new ToolIntegration({
                 enableRegistry: true,
                 engine: {
                     enableHistory: true,
@@ -34,13 +34,13 @@ export class ToolSoftwareAnalyzer {
                     maxConcurrent: this.config.get('analyzeConcurrency') || 4
                 }
             });
-            
+
             this.toolEngine = this.toolIntegration.engine;
             this.toolRegistry = new ToolRegistry(this.toolEngine);
-            
+
             // Register analysis tools
             this._registerAnalysisTools();
-            
+
             this.display = new ResultDisplay(this.config.getAll());
 
             // NAR integration properties
@@ -50,7 +50,7 @@ export class ToolSoftwareAnalyzer {
             // Result caching
             this.resultCache = new Map();
             this.cacheTimestamps = new Map();
-            
+
             // Track tool usage for performance monitoring
             this.toolUsageStats = new Map();
         } catch (error) {
@@ -72,15 +72,15 @@ export class ToolSoftwareAnalyzer {
             ['architecture-analysis', new ArchitectureAnalysisTool()],
             ['test-coverage-analysis', new TestCoverageAnalysisTool()]
         ];
-        
+
         for (const [id, tool] of toolsToRegister) {
             this.toolEngine.registerTool(id, tool);
         }
-        
+
         // Register the coordination tool with proper dependency injection
         const multiAnalysisTool = new MultiAnalysisTool(this.toolEngine);
         const multiToolRegistrationResult = this.toolEngine.registerTool('multi-analysis', multiAnalysisTool);
-        
+
         console.log(`🔧 Registered ${toolsToRegister.length + 1} analysis tools with Tool Engine`);
         console.log(`📋 MultiAnalysisTool registered: ${!!multiAnalysisTool}, execute method: ${typeof multiAnalysisTool.execute}`);
         console.log(`📋 Tool engine has multi-analysis: ${!!this.toolEngine.getTool('multi-analysis')}`);
@@ -207,9 +207,9 @@ export class ToolSoftwareAnalyzer {
 
         // Determine which analyses to run based on configuration
         const allAnalyses = ['tests', 'coverage', 'testcoverage', 'static', 'technicaldebt', 'architecture', 'requirements', 'featurespecs', 'project', 'planning'];
-        
+
         // Determine which analyses to run based on configuration
-        
+
         // If 'all' is set (default), or no specific analysis is requested but 'all' is true, include all analyses
         let requestedAnalyses = [];
         if (this.config.get('all')) {
@@ -220,7 +220,7 @@ export class ToolSoftwareAnalyzer {
             // Only include explicitly requested analyses
             requestedAnalyses = allAnalyses.filter(category => this.config.get(category));
         }
-        
+
         // Make sure we have at least one analysis to run
         if (requestedAnalyses.length === 0) {
             requestedAnalyses = allAnalyses; // fallback to all if none specified
@@ -233,20 +233,20 @@ export class ToolSoftwareAnalyzer {
             console.error('Available tools:', this.toolEngine.listTools ? this.toolEngine.listTools() : 'listTools method not available');
             throw new AnalyzerError('MultiAnalysisTool not available', 'tool_not_found');
         }
-        
+
         // Get the actual tool instance from the tool data
         const multiAnalysisTool = multiAnalysisToolData.instance;
         if (!multiAnalysisTool) {
             console.error('❌ MultiAnalysisTool instance not found in tool data');
             throw new AnalyzerError('MultiAnalysisTool instance not available', 'tool_instance_not_found');
         }
-        
+
         if (typeof multiAnalysisTool.execute !== 'function') {
             console.error('❌ MultiAnalysisTool does not have execute method');
             console.error('Tool object:', typeof multiAnalysisTool, multiAnalysisTool.constructor?.name);
             throw new AnalyzerError('MultiAnalysisTool execute method not found', 'execute_not_found');
         }
-        
+
         const toolParams = {
             analyses: requestedAnalyses,
             verbose: this.config.get('verbose'),
@@ -256,12 +256,12 @@ export class ToolSoftwareAnalyzer {
         let results;
         try {
             // Execute with proper context and tool integration
-            results = await multiAnalysisTool.execute(toolParams, { 
+            results = await multiAnalysisTool.execute(toolParams, {
                 config: this.config.getAll(),
                 analyzer: this,
                 startTime: Date.now()
             });
-            
+
             // Update tool usage stats
             this._updateToolUsageStats(toolParams.analyses, Date.now());
         } catch (error) {
@@ -429,8 +429,8 @@ export class ToolSoftwareAnalyzer {
      * @private
      */
     _createSummary(results) {
-        const { tests, coverage, static: staticResults, technicaldebt, architecture } = results;
-        
+        const {tests, coverage, static: staticResults, technicaldebt, architecture} = results;
+
         return {
             ...(tests && !tests.error && {
                 tests: {
@@ -464,7 +464,7 @@ export class ToolSoftwareAnalyzer {
             })
         };
     }
-    
+
     /**
      * Display additional results based on configuration
      * @private
@@ -486,42 +486,42 @@ export class ToolSoftwareAnalyzer {
             this.display.printLowestCoverageFiles(results);
             this.display.printCoverageByDirectory(results);
         }
-        
+
         if (this.config.get('all') && results.testcoverage) {
             this._displayTestCoverageAnalysis(results.testcoverage);
         }
     }
-    
+
     /**
      * Update tool usage statistics
      * @private
      */
     _updateToolUsageStats(analyses, startTime) {
         const executionTime = Date.now() - startTime;
-        
+
         for (const analysis of analyses) {
             const toolName = `${analysis}-analysis`;
             if (!this.toolUsageStats.has(toolName)) {
-                this.toolUsageStats.set(toolName, { count: 0, totalExecutionTime: 0 });
+                this.toolUsageStats.set(toolName, {count: 0, totalExecutionTime: 0});
             }
-            
+
             const stats = this.toolUsageStats.get(toolName);
             stats.count += 1;
             stats.totalExecutionTime += executionTime;
         }
     }
-    
+
     /**
      * Display test coverage analysis results
      * @private
      */
     _displayTestCoverageAnalysis(testCoverageResults) {
         if (!testCoverageResults || testCoverageResults.error) return;
-        
+
         console.log('\n🔍 TEST COVERAGE ANALYSIS:');
-        
+
         if (testCoverageResults.summary) {
-            const { totalTests, passedTests, failedTests, coveragePercentage } = testCoverageResults.summary;
+            const {totalTests, passedTests, failedTests, coveragePercentage} = testCoverageResults.summary;
             console.log(`  Total Tests: ${totalTests}`);
             console.log(`  Passed: ${passedTests}`);
             console.log(`  Failed: ${failedTests}`);
@@ -554,15 +554,15 @@ export class ToolSoftwareAnalyzer {
 
         // Display causal analysis
         if (testCoverageResults.causalAnalysis) {
-            const { highCausalFiles, lowCausalFiles } = testCoverageResults.causalAnalysis;
-            
+            const {highCausalFiles, lowCausalFiles} = testCoverageResults.causalAnalysis;
+
             if (highCausalFiles && highCausalFiles.length > 0) {
                 console.log('\n🔗 HIGH COVERAGE FILES (Most tested, Top 5):');
                 highCausalFiles.slice(0, 5).forEach((file, index) => {
                     console.log(`  ${index + 1}. ${file.sourceFile} (${file.testCount} tests)`);
                 });
             }
-            
+
             if (lowCausalFiles && lowCausalFiles.length > 0) {
                 console.log('\n⚠️  LOW COVERAGE FILES (Least tested, Bottom 5):');
                 lowCausalFiles.slice(0, 5).forEach((file, index) => {
@@ -571,7 +571,7 @@ export class ToolSoftwareAnalyzer {
             }
         }
     }
-    
+
     /**
      * Get tool usage statistics
      * @returns {Map} - Tool usage statistics

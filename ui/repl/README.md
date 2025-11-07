@@ -35,7 +35,9 @@ The REPL uses shared components from `ui/shared/`:
 - `protocol.md`: Protocol schema definition for client-server communication
 
 These shared components are necessary because:
-1. `ws.js` provides a simplified interface for WebSocket communication that's compatible with the REPL's needs while leveraging the robust WebSocketService
+
+1. `ws.js` provides a simplified interface for WebSocket communication that's compatible with the REPL's needs while
+   leveraging the robust WebSocketService
 2. `theme.css` provides consistent styling with the rest of the application
 3. `protocol.md` documents the specific protocol used by the REPL
 
@@ -57,11 +59,13 @@ These shared components are necessary because:
 ## Development
 
 ### Phase 1: Single-Session REPL Skeleton
+
 - Working echo REPL in one session
 - Basic WebSocket integration
 - Simple input/output handling
 
 ### Code Refactoring
+
 - Improved session ID generation
 - Enhanced WebSocket reconnection logic
 - Streamlined output handling
@@ -70,26 +74,31 @@ These shared components are necessary because:
 - Improved code modularity and organization
 
 ### Phase 2: Multi-Session Architecture
+
 - Isolated sessions with independent connections
 - Session management UI
 - Unique styling per session
 
 ### Phase 3: Reasoner Integration
+
 - Real NARS reasoning with structured output
 - Command parsing for reasoner controls
 - Session-scoped rendering
 
 ### Phase 4: Per-Session Notebook & History
+
 - Persistent cell-based history
 - Session-isolated history navigation
 - Local storage persistence
 
 ### Phase 5: Agent-Aware Features
+
 - Cross-session interaction
 - Session communication widgets
 - Multi-agent visualization
 
 ### Phase 6: Optimization & Polish
+
 - Resource management
 - Responsiveness improvements
 - Stress testing
@@ -113,6 +122,7 @@ npx vitest repl
 ## Debugging
 
 Enable debugging features by adding `?debug=true` to the URL:
+
 - Raw WebSocket logging
 - Access session registry via `window.NARS_SESSIONS`
 
@@ -124,14 +134,16 @@ See `ui/shared/protocol.md` for the complete client-server protocol specificatio
 
 This REPL implementation leverages the existing WebSocket infrastructure in the SeNARS codebase:
 
-- Uses `WebSocketService` from `ui/src/utils/websocket.js` for robust WebSocket communication through the wrapper in `ui/shared/ws.js`
+- Uses `WebSocketService` from `ui/src/utils/websocket.js` for robust WebSocket communication through the wrapper in
+  `ui/shared/ws.js`
 - Integrates with the message processing pipeline using `messageProcessor` and `handlerRegistry`
 - Follows the same validation patterns as the main UI using Zod schemas
 - Reuses connection state management and reconnection logic## Implementation Details
 
 This REPL implementation leverages the existing WebSocket infrastructure in the SeNARS codebase:
 
-- Uses `WebSocketService` from `ui/src/utils/websocket.js` for robust WebSocket communication through the wrapper in `ui/shared/ws.js`
+- Uses `WebSocketService` from `ui/src/utils/websocket.js` for robust WebSocket communication through the wrapper in
+  `ui/shared/ws.js`
 - Integrates with the message processing pipeline using `messageProcessor` and `handlerRegistry`
 - Follows the same validation patterns as the main UI using Zod schemas
 - Reuses connection state management and reconnection logic

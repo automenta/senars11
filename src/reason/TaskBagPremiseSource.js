@@ -235,7 +235,7 @@ export class TaskBagPremiseSource extends PremiseSource {
     _sampleFocusByPriority() {
         // Get all tasks from focus to enable fair roulette sampling
         const allTasks = this.focusComponent.getTasks(1000); // Get up to 1000 tasks (essentially all)
-        
+
         if (allTasks.length === 0) return null;
         if (allTasks.length === 1) return allTasks[0];
 
@@ -251,7 +251,7 @@ export class TaskBagPremiseSource extends PremiseSource {
 
         // Use fair roulette sampling: each task's selection probability is proportional to its priority
         const totalPriority = allTasks.reduce((sum, task) => sum + (task.budget?.priority || 0), 0);
-        
+
         if (totalPriority <= 0) {
             // If no priorities, do uniform random selection
             const randomIndex = Math.floor(Math.random() * allTasks.length);
@@ -259,7 +259,7 @@ export class TaskBagPremiseSource extends PremiseSource {
             //console.log(`[PREMISE SELECT] Random (no priority) - Selected: ${selectedTask.term?._name || selectedTask.term || 'unknown'}`);
             return selectedTask;
         }
-        
+
         // Perform roulette wheel selection
         let randomValue = Math.random() * totalPriority;
         for (const task of allTasks) {
@@ -271,7 +271,7 @@ export class TaskBagPremiseSource extends PremiseSource {
             }
             randomValue -= taskPriority;
         }
-        
+
         // Fallback (shouldn't reach here if totalPriority calculation is correct)
         const fallbackTask = allTasks[allTasks.length - 1];
         //console.log(`[PREMISE SELECT] Fallback - Selected: ${fallbackTask.term?._name || fallbackTask.term || 'unknown'}`);

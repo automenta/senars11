@@ -49,7 +49,7 @@ export class TaskMatch {
         if (this.termFilter && !await this._checkTermMatch(task)) {
             return false;
         }
-        
+
         // Check punctuation match
         if (this.punctuationFilter && !this._checkPunctuationMatch(task)) {
             return false;
@@ -139,10 +139,10 @@ export class RemoteTaskMatch extends TaskMatch {
             // Import parser and factory to properly compare terms
             const {NarseseParser} = await import('../parser/NarseseParser.js');
             const {TermFactory} = await import('../term/TermFactory.js');
-            
+
             const termFactory = new TermFactory();
             const parser = new NarseseParser(termFactory);
-            
+
             // Parse the expected term filter
             let expectedParsedTerm;
             try {
@@ -153,7 +153,7 @@ export class RemoteTaskMatch extends TaskMatch {
                 console.warn(`Could not parse expected term filter: ${this.termFilter}`, parseError);
                 return false;
             }
-            
+
             // The task.term from WebSocket is raw data, so we need to handle it properly
             // For the WebSocket pathway, we receive the actual term string in a format that can be parsed
             let actualParsedTerm = null;
@@ -186,7 +186,7 @@ export class RemoteTaskMatch extends TaskMatch {
                 const taskTermStr = task.term?._name || task.term || String(task.term || '');
                 return taskTermStr.includes(this.termFilter.replace(/[<>]/g, ''));
             }
-            
+
             // Compare the parsed terms with strict equality only
             if (actualParsedTerm && expectedParsedTerm) {
                 return actualParsedTerm.equals(expectedParsedTerm);
