@@ -30,40 +30,20 @@ describe('NarseseParser spacing tests', () => {
         expect(result.term._components[1]._name).toBe('b');
     });
 
-    test('angle-bracket format without spaces should work - BUG: THIS TEST SHOULD FAIL', () => {
-        // This test is designed to fail to highlight the bug
-        // Both spaced and tight formats should parse equivalently, but tight currently fails
-        const spacedResult = parser.parse('<a ==> b>.'); 
-        expect(spacedResult.term._operator).toBe('==>');
-
-        // This line should succeed but currently fails due to the bug
-        const tightResult = parser.parse('<a==>b>.'); // This is expected to fail and make test fail
-        expect(tightResult.term._operator).toBe('==>');
+    test('angle-bracket format without spaces should work', () => {
+        const result = parser.parse('<a==>b>.');
+        expect(result.term._operator).toBe('==>');
+        expect(result.term._components.length).toBe(2);
+        expect(result.term._components[0]._name).toBe('a');
+        expect(result.term._components[1]._name).toBe('b');
     });
 
-    test('parentheses format without spaces should work - BUG: THIS TEST SHOULD FAIL', () => {
-        // This test is designed to fail to highlight the bug
-        // Both spaced and tight formats should parse equivalently, but tight currently fails
-        const spacedResult = parser.parse('(a ==> b).'); 
-        expect(spacedResult.term._operator).toBe('==>');
-
-        // This line should succeed but currently fails due to the bug
-        const tightResult = parser.parse('(a==>b).'); // This is expected to fail and make test fail
-        expect(tightResult.term._operator).toBe('==>');
-    });
-
-    test('separate test: check if certain tight formats work', () => {
-        // Test specific tight formats to see which work and which don't
-        const tightFormats = [
-            '(a==>b).',   // This should fail
-            '<a==>b>.',   // This should fail
-        ];
-        
-        for (const format of tightFormats) {
-            expect(() => {
-                parser.parse(format);
-            }).toThrow();
-        }
+    test('parentheses format without spaces should work', () => {
+        const result = parser.parse('(a==>b).');
+        expect(result.term._operator).toBe('==>');
+        expect(result.term._components.length).toBe(2);
+        expect(result.term._components[0]._name).toBe('a');
+        expect(result.term._components[1]._name).toBe('b');
     });
 
     test('atomic terms should work regardless', () => {

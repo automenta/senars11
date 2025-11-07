@@ -1,4 +1,4 @@
-// Narsese Grammar for Peggy Parser v37
+// Narsese Grammar for Peggy Parser v38
 start
   = _ content:(Task / Term) _ { return content; }
 
@@ -32,16 +32,20 @@ TruthValue
 Term "term"
   = Statement
   / CompoundTerm
-  / PrefixCompound
-  / Product
   / Set
   / Variable
   / AtomicTerm
 
 CompoundTerm
-  = operator:AtomicTerm "(" _ components:TermList? _ ")" {
+  = "(" _ op:Operator _ components:TermList _ ")" {
+      return options.termFactory.create({ operator: op, components: components });
+    }
+  / operator:AtomicTerm "(" _ components:TermList? _ ")" {
       return options.termFactory.create({ operator: operator.name, components: components || [] });
-  }
+    }
+  / "(" _ components:TermList? _ ")" {
+      return options.termFactory.create({ operator: ',', components: components || [] });
+    }
 
 Statement
   = AngleBracketStatement
@@ -57,18 +61,11 @@ ParenthesizedStatement
       return options.termFactory.create({ operator: op.trim(), components: [subject, predicate] });
     }
 
+Operator
+  = op:("-->" / "<->" / "==>" / "<=>" / "=/>" / "=|" / "=/=" / "=" / "&&" / "||" / "&," / "|," / "-->," / "<->," / "==>," / "<=>,") { return op.endsWith(',') ? op.slice(0, -1) : op; }
+
 InfixOperator
   = op:("-->" / "<->" / "==>" / "<=>" / "=/>" / "=|" / "=/=" / "=" / "&&" / "||") { return op; }
-
-PrefixCompound
-  = "(" _ op:("-->," / "<->," / "==>," / "<=>,") _ components:TermList _ ")" {
-      return options.termFactory.create({ operator: op.slice(0, -1), components: components });
-    }
-
-Product
-  = "(" _ components:TermList? _ ")" {
-      return options.termFactory.create({ operator: ',', components: components || [] });
-    }
 
 Set
   = "{" _ components:TermList? _ "}" { return options.termFactory.create({ operator: '{}', components: components || [] }); }
@@ -86,10 +83,10 @@ TermList
     }
 
 AtomicTerm "atomic term"
-  = chars:$([^(){}<>.,!%?; \t\n\r-]+) { return options.termFactory.create(chars); }
+  = chars:$([^(){}<>.,!%?; \t\n\r=&/|>-]+) { return options.termFactory.create(chars); }
 
 Variable "variable"
-  = varName:$([?$#*][^(){}<>.,!%?; \t\n\r-]*) { return options.termFactory.create(varName); }
+  = varName:$([?$#*][^(){}<>.,!%?; \t\n\r=&/|>-]*) { return options.termFactory.create(varName); }
 
 Float "float"
   = val:$("-"? [0-9]+ ("." [0-9]+)?) { return parseFloat(val); }
