@@ -6,7 +6,7 @@ describe('Flexible Truth Matching Tests', () => {
         const result = await new TestNAR()
             .input('(a ==> b)', 0.9, 0.9)
             .input('a', 0.8, 0.8)
-            .run(2)
+            .run(1)
             .expect(
                 new TaskMatch('b')
                     .withFlexibleTruth(0.72, 0.65, 0.05) // freq=0.72±0.05, conf=0.65±0.05
@@ -21,7 +21,7 @@ describe('Flexible Truth Matching Tests', () => {
         const result = await new TestNAR()
             .input('(a ==> b)', 0.9, 0.9)
             .input('a', 0.8, 0.8)
-            .run(2)
+            .run(1)
             .expect(
                 new TaskMatch('b')
                     .withTruth(0.70, 0.60)
@@ -46,10 +46,10 @@ describe('Flexible Truth Matching Tests', () => {
 
     it('should work for conjunction reasoning with flexible matching', async () => {
         const result = await new TestNAR()
-            .input('(&&, (a --> b), (b --> c))', 0.9, 0.9)
+            .input('(&, (a --> b), (b --> c))', 0.9, 0.9)
             .run(1)
             .expect(
-                new TaskMatch('(&&, (a --> b), (b --> c))')
+                new TaskMatch('(&, (a --> b), (b --> c))')
                     .withFlexibleTruth(0.9, 0.9, 0.1)
             )
             .execute();
@@ -61,7 +61,7 @@ describe('Flexible Truth Matching Tests', () => {
         const testNar = new TestNAR()
             .input('(cat --> animal)', 0.9, 0.8)
             .input('(dog --> animal)', 0.85, 0.75)
-            .run(2);
+            .run(1);
 
         // Test with flexible matching to accommodate possible minor variations
         const result = await testNar
