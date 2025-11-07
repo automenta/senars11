@@ -61,8 +61,9 @@ export class TestNARRemote {
                 }
             }
 
-            // Wait for expectations to be met
-            await this.waitForExpectations(this.operations.filter(op => op.type === 'expect'));
+            // Wait for expectations to be met - use event-driven approach instead of polling
+            const expectations = this.operations.filter(op => op.type === 'expect');
+            await this.waitForExpectationsEventDriven(expectations);
 
         } finally {
             await this.teardown();
@@ -129,7 +130,7 @@ export class TestNARRemote {
             this.client.on('open', () => {
                 this.client.on('message', (data) => {
                     const message = JSON.parse(data);
-                    if (message.type === 'event' && (message.eventType === 'task.added' || message.eventType === 'task.processed')) {
+                    if (message.type === 'event' && (message.eventType === 'task.added' || message.eventType === 'task.processed' || message.eventType === 'reasoning.derivation')) {
                         const taskData = message.data?.data?.task || message.data?.task;
                         if (taskData) {
                             this.taskQueue.push(taskData);
@@ -148,8 +149,11 @@ export class TestNARRemote {
     disconnectClient() {
         return new Promise((resolve) => {
             if (this.client) {
+                // Remove all listeners to prevent memory leaks
+                this.client.removeAllListeners();
                 this.client.close();
-                this.client.on('close', () => resolve());
+                // Resolve immediately instead of waiting for close event to speed things up
+                resolve();
             } else {
                 resolve();
             }
@@ -193,35 +197,76 @@ export class TestNARRemote {
         });
     }
 
-    async waitForExpectations(expectations) {
-        const checkExpectations = async () => {
-            for (const exp of expectations) {
-                let found = false;
-                for (const task of this.taskQueue) {
-                    if (await exp.matcher.matches(task)) {
-                        found = true;
-                        break;
+    async waitForExpectationsEventDriven(expectations) {
+        // Create a promise for each expectation that resolves when the expectation is met
+        const expectationPromises = expectations.map(exp => {
+            return new Promise((resolve, reject) => {
+                // Set timeout for this expectation
+                const timeout = setTimeout(() => {
+                    reject(new Error(`Expectation timeout: ${exp.matcher.termFilter}`));
+                }, 10000); // 10 second timeout per expectation
+
+                // Check if the expectation is already satisfied with existing tasks
+                const checkExistingTasks = () => {
+                    for (const task of this.taskQueue) {
+                        if (exp.matcher.matches(task)) {
+                            if (exp.shouldExist) {
+                                clearTimeout(timeout);
+                                return resolve();
+                            } else if (!exp.shouldExist) {
+                                clearTimeout(timeout);
+                                return reject(new Error(`Unexpected task found: ${exp.matcher.termFilter}`));
+                            }
+                        }
                     }
-                }
-                if ((exp.shouldExist && !found) || (!exp.shouldExist && found)) {
-                    return false;
-                }
-            }
-            return true;
-        };
+                    
+                    // If we're looking for a task that should NOT exist and we don't find it, that's good
+                    if (!exp.shouldExist && this.taskQueue.length > 0) {
+                        clearTimeout(timeout);
+                        return resolve();
+                    }
+                };
 
-        const maxWaitTime = 20000;
-        const interval = 100;
-        let elapsedTime = 0;
+                checkExistingTasks();
 
-        while (elapsedTime < maxWaitTime) {
-            if (await checkExpectations()) {
-                return;
-            }
-            await setTimeoutPromise(interval);
-            elapsedTime += interval;
+                // If the expectation wasn't already met, set up listener for new tasks
+                if (exp.shouldExist || this.taskQueue.length === 0) {
+                    const messageHandler = (data) => {
+                        const message = JSON.parse(data);
+                        if (message.type === 'event' && (message.eventType === 'task.added' || message.eventType === 'task.processed' || message.eventType === 'reasoning.derivation')) {
+                            const taskData = message.data?.data?.task || message.data?.task;
+                            if (taskData) {
+                                if (exp.matcher.matches(taskData)) {
+                                    if (exp.shouldExist) {
+                                        clearTimeout(timeout);
+                                        this.client.removeListener('message', messageHandler);
+                                        resolve();
+                                    } else {
+                                        clearTimeout(timeout);
+                                        this.client.removeListener('message', messageHandler);
+                                        reject(new Error(`Unexpected task found: ${exp.matcher.termFilter}`));
+                                    }
+                                }
+                            }
+                        }
+                    };
+
+                    this.client.on('message', messageHandler);
+                }
+            });
+        });
+
+        try {
+            // Wait for all expectations to be satisfied
+            await Promise.all(expectationPromises);
+        } catch (error) {
+            // If any expectation failed, throw the error
+            throw new Error(`Test expectations not met: ${error.message}`);
         }
+    }
 
-        throw new Error('Expectations not met within timeout');
+    async waitForExpectations(expectations) {
+        // Legacy method - keeping for compatibility, but this should now call the event-driven method
+        return this.waitForExpectationsEventDriven(expectations);
     }
 }

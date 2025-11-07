@@ -99,31 +99,7 @@ export class TestNAR {
         this.nar = new NAR(config);
         await this.nar.initialize(); // Initialize the NAR to ensure components are set up
 
-        // If trace is enabled, set up event logging
-        if (this.trace) {
-            this.nar.on('task.input', (data) => {
-                this.eventLog.push({type: 'task.input', data, timestamp: Date.now()});
-                console.log('TRACE [task.input]:', data);
-            });
-            this.nar.on('task.added', (data) => {
-                this.eventLog.push({type: 'task.added', data, timestamp: Date.now()});
-                console.log('TRACE [task.added]:', data);
-            });
-            this.nar.on('streamReasoner.step', (data) => {
-                this.eventLog.push({type: 'streamReasoner.step', data, timestamp: Date.now()});
-                console.log('TRACE [streamReasoner.step]:', data);
-            });
-            this.nar.on('streamReasoner.metrics', (data) => {
-                this.eventLog.push({type: 'streamReasoner.metrics', data, timestamp: Date.now()});
-                console.log('TRACE [streamReasoner.metrics]:', data);
-            });
-            this.nar.on('reasoning.derivation', (data) => {
-                this.eventLog.push({type: 'reasoning.derivation', data, timestamp: Date.now()});
-                console.log('TRACE [reasoning.derivation]:', data);
-            });
-        }
-
-        // Process operations
+        // Process operations first
         const expectations = [];
 
         for (const op of this.operations) {
@@ -142,8 +118,6 @@ export class TestNAR {
                     // For stream reasoner, run iterative steps with enhanced processing
                     for (let i = 0; i < op.cycles; i++) {
                         await this.nar.step();
-                        // Small delay to allow async processing between steps
-                        await new Promise(resolve => setTimeout(resolve, 2));
                     }
                     break;
 
@@ -153,36 +127,36 @@ export class TestNAR {
             }
         }
 
-        // Additional reasoning cycles after all inputs to allow for inference
+        // Run additional reasoning cycles after all inputs to allow for inference
         // Execute multiple steps to make sure processing happens
         if (this.nar.streamReasoner) {
-            for (let i = 0; i < 200; i++) {  // Increased from 100 to 200 steps for better coverage
-                const stepResults = await this.nar.step();
-
-                // Make sure any derived tasks are also added to focus for next steps
-                for (const result of stepResults) {
-                    if (result && this.nar._focus) {
-                        this.nar._focus.addTaskToFocus(result);
-                    }
-                }
-
-                // Small delay to allow async processing
-                if (i % 10 === 0) { // Every 10th step, allow more processing time
-                    await new Promise(resolve => setTimeout(resolve, 5));
-                } else {
-                    await new Promise(resolve => setTimeout(resolve, 1)); // Small delay
-                }
+            for (let i = 0; i < 50; i++) {  // Run additional steps to allow for derivations
+                await this.nar.step();
             }
-
-            // Additional wait for any async rules to complete derivations
-            await new Promise(resolve => setTimeout(resolve, 500)); // Increased from 300 to 500 ms
         }
 
-        // Ensure all derived tasks are properly registered in memory
-        await this._ensureDerivedTasksAreProcessed();
+        // Collect tasks emitted by the system
+        let collectedTasks = [];
+        
+        // Get tasks from memory and focus
+        if (this.nar.memory) {
+            collectedTasks = this.nar.memory.getAllConcepts().flatMap(c => c.getAllTasks());
+        }
+
+        // Also check focus for tasks that might not be in memory yet
+        if (this.nar._focus) {
+            const focusTasks = this.nar._focus.getTasks(1000);
+            collectedTasks = [...collectedTasks, ...focusTasks];
+        }
 
         // Get all tasks from memory and focus to catch derived results
-        let allTasks = this.nar.memory.getAllConcepts().flatMap(c => c.getAllTasks());
+        let allTasks = [...collectedTasks]; // Start with collected tasks
+        
+        // Also get tasks from memory and focus to ensure nothing is missed
+        if (this.nar.memory) {
+            const memoryTasks = this.nar.memory.getAllConcepts().flatMap(c => c.getAllTasks());
+            allTasks = [...allTasks, ...memoryTasks];
+        }
 
         // Also check focus for tasks that might not be in memory yet
         if (this.nar._focus) {
