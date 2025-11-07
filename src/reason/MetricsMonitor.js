@@ -338,7 +338,7 @@ export class MetricsMonitor {
         }
 
         // Log anomaly
-        console.warn(`Metric anomaly detected: ${type} = ${value}`);
+        //console.warn(`Metric anomaly detected: ${type} = ${value}`);
     }
 
     /**

@@ -6,6 +6,7 @@
  */
 
 import { TestNARRemote } from '../../src/testing/TestNARRemote.js';
+import { RemoteTaskMatch } from '../../src/testing/TaskMatch.js';
 
 describe('WebSocket Pathway Tests', () => {
     test('Basic inheritance chain via WebSocket - should match repl:test behavior', async () => {
@@ -47,7 +48,7 @@ describe('WebSocket Pathway Tests', () => {
             .input('<x ==> y>', 1.0, 0.9)
             .input('<y ==> z>', 1.0, 0.9)
             .run(5)
-            .expect(new TestNARRemote.TaskMatch('<x ==> z>').withFlexibleTruth(1.0, 0.8, 0.1))
+            .expect(new RemoteTaskMatch('<x ==> z>').withFlexibleTruth(1.0, 0.8, 0.1))
             .execute();
     });
 

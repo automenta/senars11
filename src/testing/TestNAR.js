@@ -3,104 +3,11 @@
  * @description Simple test framework for NAR functionality
  */
 
-/**
- * Task matcher for test expectations
- */
-export class TaskMatch {
-    constructor(term) {
-        this.termFilter = term || null;
-        this.punctuationFilter = null;
-        this.minFreq = null;
-        this.maxFreq = null;
-        this.minConf = null;
-        this.maxConf = null;
-        this.expectedFreq = null;
-        this.expectedConf = null;
-        this.tolerance = null;
-    }
+import { TaskMatch } from './TaskMatch.js';
 
-    withPunctuation(punctuation) {
-        this.punctuationFilter = punctuation;
-        return this;
-    }
-
-    withTruth(minFrequency, minConfidence) {
-        this.minFreq = minFrequency;
-        this.minConf = minConfidence;
-        return this;
-    }
-
-    /**
-     * Add flexible truth matching with tolerance
-     * @param {number} expectedFrequency - Expected frequency value
-     * @param {number} expectedConfidence - Expected confidence value
-     * @param {number} tolerance - Tolerance for matching (e.g., 0.01 for 1% tolerance)
-     * @returns {TaskMatch} - Returns this for method chaining
-     */
-    withFlexibleTruth(expectedFrequency, expectedConfidence, tolerance) {
-        this.expectedFreq = expectedFrequency;
-        this.expectedConf = expectedConfidence;
-        this.tolerance = tolerance;
-        return this;
-    }
-
-    async matches(task) {
-        // Check term match
-        if (this.termFilter) {
-            const {NarseseParser} = await import('../parser/NarseseParser.js');
-            const {TermFactory} = await import('../term/TermFactory.js');
-            const termFactory = new TermFactory();
-            const parser = new NarseseParser(termFactory);
-            // Add punctuation to satisfy the parser
-            const expectedTerm = parser.parse(this.termFilter + '.').term;
-            if (!task.term.equals(expectedTerm)) {
-                return false;
-            }
-        }
-
-        // Check punctuation match
-        if (this.punctuationFilter) {
-            const expectedType = this._punctToType(this.punctuationFilter);
-            if (task.type !== expectedType) {
-                return false;
-            }
-        }
-
-        // Check truth values
-        if (this.minFreq !== null && task.truth && task.truth.f < this.minFreq) {
-            return false;
-        }
-        if (this.minConf !== null && task.truth && task.truth.c < this.minConf) {
-            return false;
-        }
-
-        // Check flexible truth matching if specified
-        if (this.expectedFreq !== null && this.expectedConf !== null && this.tolerance !== null && task.truth) {
-            const freqDiff = Math.abs(task.truth.f - this.expectedFreq);
-            const confDiff = Math.abs(task.truth.c - this.expectedConf);
-            if (freqDiff > this.tolerance || confDiff > this.tolerance) {
-                return false;
-            }
-        }
-
-        // Check range-based truth matching if specified
-        if (this.minFreq !== null && this.maxFreq !== null && task.truth &&
-            (task.truth.f < this.minFreq || task.truth.f > this.maxFreq)) {
-            return false;
-        }
-        if (this.minConf !== null && this.maxConf !== null && task.truth &&
-            (task.truth.c < this.minConf || task.truth.c > this.maxConf)) {
-            return false;
-        }
-
-        return true;
-    }
-
-    _punctToType(punct) {
-        const map = {'.': 'BELIEF', '!': 'GOAL', '?': 'QUESTION'};
-        return map[punct] || 'BELIEF';
-    }
-}
+// Re-export TaskMatch as before to maintain backward compatibility
+//export { SharedTaskMatch as TaskMatch };
+export { TaskMatch as TaskMatch };
 
 /**
  * Simplified test framework for NAR
@@ -133,16 +40,33 @@ export class TestNAR {
         return this;
     }
 
-    expect(criteria) {
-        const matcher = criteria instanceof TaskMatch ? criteria : new TaskMatch(criteria);
+    expect(termStr) {
+        // If termStr is already a TaskMatch instance, use it directly
+        // Otherwise, create a new TaskMatch with the provided term string
+        const matcher = termStr instanceof TaskMatch ? termStr : new TaskMatch(termStr);
         this.operations.push({type: 'expect', matcher, shouldExist: true});
         return this;
     }
 
-    expectNot(criteria) {
-        const matcher = criteria instanceof TaskMatch ? criteria : new TaskMatch(criteria);
+    expectNot(termStr) {
+        // If termStr is already a TaskMatch instance, use it directly
+        // Otherwise, create a new TaskMatch with the provided term string
+        const matcher = termStr instanceof TaskMatch ? termStr : new TaskMatch(termStr);
         this.operations.push({type: 'expect', matcher, shouldExist: false});
         return this;
+    }
+    
+    // Provide convenience methods for consistent API
+    expectWithPunct(termStr, punct) {
+        return this.expect(new TaskMatch(termStr).withPunctuation(punct));
+    }
+    
+    expectWithTruth(termStr, minFreq, minConf) {
+        return this.expect(new TaskMatch(termStr).withTruth(minFreq, minConf));
+    }
+    
+    expectWithFlexibleTruth(termStr, expectedFreq, expectedConf, tolerance) {
+        return this.expect(new TaskMatch(termStr).withFlexibleTruth(expectedFreq, expectedConf, tolerance));
     }
 
     async execute() {
