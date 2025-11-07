@@ -670,12 +670,18 @@ class LODManager {
         if (!this.enabled || !this.camera) return;
 
         this.lodObjects.forEach((currentLOD, object) => {
-            const distance = object.position.distanceTo(this.camera.position);
-            const newLOD = this._calculateLOD(distance);
+            // Check that object exists and has a position property before accessing it
+            if (object && object.position) {
+                const distance = object.position.distanceTo(this.camera.position);
+                const newLOD = this._calculateLOD(distance);
 
-            if (newLOD !== currentLOD) {
-                this._applyLOD(object, newLOD);
-                this.lodObjects.set(object, newLOD);
+                if (newLOD !== currentLOD) {
+                    this._applyLOD(object, newLOD);
+                    this.lodObjects.set(object, newLOD);
+                }
+            } else {
+                // If object is invalid, remove it from the LOD tracking
+                this.lodObjects.delete(object);
             }
         });
     }
