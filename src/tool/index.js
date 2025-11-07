@@ -14,3 +14,6 @@ export {WebAutomationTool} from './WebAutomationTool.js';
 export {MediaProcessingTool} from './MediaProcessingTool.js';
 export {EmbeddingTool} from './EmbeddingTool.js';
 export {SandboxedTool} from './SandboxedTool.js';
+
+// Analysis tools
+export * from './software/index.js';

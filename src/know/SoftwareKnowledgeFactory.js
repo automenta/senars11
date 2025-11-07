@@ -5,7 +5,7 @@ import {
     FileAnalysisKnowledge,
     FlexibleDataTableKnowledge,
     TestResultKnowledge
-} from './SelfAnalysisKnowledge.js';
+} from './SoftwareKnowledge.js';
 
 const TYPE_MAPPING = Object.freeze({
     fileAnalysis: FileAnalysisKnowledge,
@@ -15,7 +15,7 @@ const TYPE_MAPPING = Object.freeze({
     flexibleDataTable: FlexibleDataTableKnowledge
 });
 
-export class SelfAnalysisKnowledgeFactory {
+export class SoftwareKnowledgeFactory {
     static initialize() {
         Object.entries(TYPE_MAPPING).forEach(([type, klass]) => {
             KnowledgeFactory.registerKnowledgeType(type, klass);
@@ -43,4 +43,4 @@ export class SelfAnalysisKnowledgeFactory {
     }
 }
 
-SelfAnalysisKnowledgeFactory.initialize();
+SoftwareKnowledgeFactory.initialize();

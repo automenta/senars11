@@ -7,8 +7,8 @@ import {
     DirectoryStructureKnowledge,
     FileAnalysisKnowledge,
     TestResultKnowledge
-} from '../../../src/know/SelfAnalysisKnowledge.js';
-import {SelfAnalysisKnowledgeFactory} from '../../../src/know/SelfAnalysisKnowledgeFactory.js';
+} from '../../../src/know/SoftwareKnowledge.js';
+import {SoftwareKnowledgeFactory} from '../../../src/know/SoftwareKnowledgeFactory.js';
 
 describe('Self-Analysis Knowledge', () => {
     describe('FileAnalysisKnowledge', () => {
@@ -96,7 +96,7 @@ describe('Self-Analysis Knowledge', () => {
 
     describe('SelfAnalysisKnowledgeFactory', () => {
         test('should auto-detect self-analysis knowledge', () => {
-            const knowledge = SelfAnalysisKnowledgeFactory.autoDetectSelfAnalysisKnowledge({
+            const knowledge = SoftwareKnowledgeFactory.autoDetectSelfAnalysisKnowledge({
                 fileDetails: [{path: 'test.js', lines: 100}]
             });
 

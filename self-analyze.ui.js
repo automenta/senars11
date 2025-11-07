@@ -7,7 +7,7 @@
 
 import {fileURLToPath} from 'url';
 import {dirname} from 'path';
-import SeNARSSelfAnalyzer from './self-analyze.js';
+import {SoftwareAnalyzer} from './src/tool/software/analyzers/SoftwareAnalyzer.js';
 import {launchDataDrivenUI} from './src/ui/WebUILauncher.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -24,7 +24,7 @@ const runSelfAnalysis = async (monitor) => {
     console.log('Starting SeNARS self-analysis...');
 
     try {
-        const analyzer = new SeNARSSelfAnalyzer();
+        const analyzer = new SoftwareAnalyzer();
         await analyzer.initialize();
 
         // Collect all data

@@ -7,7 +7,7 @@ export {
     DirectoryStructureKnowledge,
     DependencyGraphKnowledge,
     FlexibleDataTableKnowledge
-} from './SelfAnalysisKnowledge.js';
+} from './SoftwareKnowledge.js';
 export {KnowledgeFactory} from './KnowledgeFactory.js';
-export {SelfAnalysisKnowledgeFactory} from './SelfAnalysisKnowledgeFactory.js';
+export {SoftwareKnowledgeFactory} from './SoftwareKnowledgeFactory.js';
 export {Knowing} from './Knowing.js';

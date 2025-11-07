@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import {NAR} from './src/nar/NAR.js';
-import SeNARSSelfAnalyzer from './self-analyze.js';
+import {SoftwareAnalyzer} from './src/tool/software/analyzers/SoftwareAnalyzer.js';
 import {SelfAnalysisManager} from './src/integration/SelfAnalysisKnowledgeBaseConnector.js';
 
 async function demoIntegration() {
@@ -14,7 +14,7 @@ async function demoIntegration() {
 
     // Method 1: Using the enhanced self-analyzer directly with NAR integration
     console.log('🔍 Method 1: Direct self-analyzer with NAR integration');
-    const analyzer = new SeNARSSelfAnalyzer({verbose: false});
+    const analyzer = new SoftwareAnalyzer({verbose: false});
     analyzer.connectToNAR(nar);  // Connect to NAR for automatic integration
     const results1 = await analyzer.runAnalysis();
     console.log('📊 Analysis completed and integrated with NAR\n');

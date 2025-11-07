@@ -1,11 +1,11 @@
-import SeNARSSelfAnalyzer from '../self-analyze.js';
+import {SeNARSSelfAnalyzer} from './SeNARSSelfAnalyzer.js';
 
 /**
  * SelfAnalysisKnowledgeBaseConnector
  * Connects the self-analysis results to the KnowledgeBaseConnector architecture
  * This allows the system's self-analysis to be treated as a knowledge source for reasoning
  */
-class SelfAnalysisKnowledgeBaseConnector {
+class SoftwareKnowledgeBaseConnector {
     constructor(config = {}) {
         this.config = config;
         this.analyzer = new SeNARSSelfAnalyzer(config.analyzer || {});
@@ -241,7 +241,7 @@ class SelfAnalysisKnowledgeBaseConnector {
 class SelfAnalysisManager {
     constructor(config = {}) {
         this.config = config;
-        this.connector = new SelfAnalysisKnowledgeBaseConnector(config.connector || {});
+        this.connector = new SoftwareKnowledgeBaseConnector(config.connector || {});
         this.nar = null; // Will be set when connected to NAR
         this.normalizer = new SelfAnalysisNormalizer();
     }
@@ -636,7 +636,7 @@ class SelfAnalysisNormalizer {
 const createSelfAnalysisManager = (config = {}) => new SelfAnalysisManager(config);
 
 export {
-    SelfAnalysisKnowledgeBaseConnector,
+    SoftwareKnowledgeBaseConnector,
     SelfAnalysisManager,
     createSelfAnalysisManager
 };

@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-import SeNARSSelfAnalyzer from './self-analyze.js';
+import {SoftwareAnalyzer} from './src/tool/software/analyzers/SoftwareAnalyzer.js';
 import {Knowing} from './src/know/Knowing.js';
-import {SelfAnalysisKnowledgeFactory} from './src/know/SelfAnalysisKnowledgeFactory.js';
+import {SoftwareKnowledgeFactory} from './src/know/SoftwareKnowledgeFactory.js';
 // Check if this script is being run directly (not imported)
 import {fileURLToPath} from 'url';
 import {basename, dirname} from 'path';
@@ -11,7 +11,7 @@ import {basename, dirname} from 'path';
  * Enhanced SeNARS Self Analyzer with Knowledge Integration
  * Extends the base self-analyzer to automatically integrate findings with a NAR system
  */
-export class SeNARSSelfAnalyzerNAR extends SeNARSSelfAnalyzer {
+export class SeNARSSelfAnalyzerNAR extends SoftwareAnalyzer {
     constructor(options = {}) {
         super(options);
         this.knowing = new Knowing({verbose: this.config.get('verbose')});
@@ -126,42 +126,42 @@ export class SeNARSSelfAnalyzerNAR extends SeNARSSelfAnalyzer {
 
         if (results.static && !results.static.error) {
             console.log('   Creating FileAnalysisKnowledge...');
-            const fileKnowledge = SelfAnalysisKnowledgeFactory.autoDetectSelfAnalysisKnowledge(results.static, 'file_analysis', {verbose: this.config.get('verbose')});
+            const fileKnowledge = SoftwareKnowledgeFactory.autoDetectSelfAnalysisKnowledge(results.static, 'file_analysis', {verbose: this.config.get('verbose')});
             await this.knowing.addKnowledge(fileKnowledge);
 
             console.log('   Creating DirectoryStructureKnowledge...');
-            const directoryKnowledge = SelfAnalysisKnowledgeFactory.autoDetectSelfAnalysisKnowledge({directoryStats: results.static.directoryStats}, 'directory_structure', {verbose: this.config.get('verbose')});
+            const directoryKnowledge = SoftwareKnowledgeFactory.autoDetectSelfAnalysisKnowledge({directoryStats: results.static.directoryStats}, 'directory_structure', {verbose: this.config.get('verbose')});
             await this.knowing.addKnowledge(directoryKnowledge);
         }
 
         if (results.tests && !results.tests.error) {
             console.log('   Creating TestResultKnowledge...');
-            const testKnowledge = SelfAnalysisKnowledgeFactory.autoDetectSelfAnalysisKnowledge(results.tests, 'test_results', {verbose: this.config.get('verbose')});
+            const testKnowledge = SoftwareKnowledgeFactory.autoDetectSelfAnalysisKnowledge(results.tests, 'test_results', {verbose: this.config.get('verbose')});
             await this.knowing.addKnowledge(testKnowledge);
         }
 
         if (results.coverage && !results.coverage.error && results.coverage.available !== false) {
             console.log('   Creating coverage-related FileAnalysisKnowledge...');
-            const coverageKnowledge = SelfAnalysisKnowledgeFactory.autoDetectSelfAnalysisKnowledge(results.coverage, 'coverage_analysis', {verbose: this.config.get('verbose')});
+            const coverageKnowledge = SoftwareKnowledgeFactory.autoDetectSelfAnalysisKnowledge(results.coverage, 'coverage_analysis', {verbose: this.config.get('verbose')});
             await this.knowing.addKnowledge(coverageKnowledge);
         }
 
         if (results.architecture && !results.architecture.error) {
             console.log('   Creating DependencyGraphKnowledge...');
-            const dependencyKnowledge = SelfAnalysisKnowledgeFactory.autoDetectSelfAnalysisKnowledge(results.architecture, 'dependency_graph', {verbose: this.config.get('verbose')});
+            const dependencyKnowledge = SoftwareKnowledgeFactory.autoDetectSelfAnalysisKnowledge(results.architecture, 'dependency_graph', {verbose: this.config.get('verbose')});
             await this.knowing.addKnowledge(dependencyKnowledge);
         }
 
         // Add other analysis results as needed
         if (results.technicaldebt && !results.technicaldebt.error) {
             console.log('   Creating TechnicalDebt Knowledge...');
-            const debtKnowledge = SelfAnalysisKnowledgeFactory.autoDetectSelfAnalysisKnowledge(results.technicaldebt, 'technical_debt', {verbose: this.config.get('verbose')});
+            const debtKnowledge = SoftwareKnowledgeFactory.autoDetectSelfAnalysisKnowledge(results.technicaldebt, 'technical_debt', {verbose: this.config.get('verbose')});
             await this.knowing.addKnowledge(debtKnowledge);
         }
 
         if (results.requirements && !results.requirements.error) {
             console.log('   Creating Requirements Knowledge...');
-            const reqKnowledge = SelfAnalysisKnowledgeFactory.autoDetectSelfAnalysisKnowledge(results.requirements, 'requirements', {verbose: this.config.get('verbose')});
+            const reqKnowledge = SoftwareKnowledgeFactory.autoDetectSelfAnalysisKnowledge(results.requirements, 'requirements', {verbose: this.config.get('verbose')});
             await this.knowing.addKnowledge(reqKnowledge);
         }
 
