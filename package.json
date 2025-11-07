@@ -13,7 +13,7 @@
     "web:prod": "node scripts/ui/launcher.js",
     "web:graph": "node scripts/ui/launcher.js --graph-ui",
     "repl": "node scripts/ui/launcher.js --repl",
-    "repl:tui": "node -e \"import('./src/tui/SeNARSInterface.js').then(m => new m.SeNARSInterface().start())\"",
+    "repl:tui": "node -e \"import('./src/tui/BlessedTUI.js').then(m => new m.BlessedTUI().start())\"",
     "repl:test": "node -e \"import('./src/repl/ReplEngine.js').then(async m => { const engine = new m.ReplEngine(); await engine.initialize(); console.log('✅ ReplEngine works'); await engine.shutdown(); })\"",
     "demo": "node scripts/utils/run-demo.js",
     "screenshots": "node scripts/utils/visualize.js --type screenshots",

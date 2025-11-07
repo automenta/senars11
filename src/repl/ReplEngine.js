@@ -3,6 +3,8 @@ import { NAR } from '../nar/NAR.js';
 import { CommandProcessor } from './utils/CommandProcessor.js';
 import { PersistenceManager } from '../io/PersistenceManager.js';
 
+const SPECIAL_COMMANDS = { 'next': 'n', 'n': 'n', 'run': 'go', 'go': 'go', 'stop': 'st', 'st': 'st', 'quit': 'exit', 'q': 'exit', 'exit': 'exit' };
+
 export class ReplEngine extends EventEmitter {
     constructor(config = {}) {
         super();
@@ -31,7 +33,7 @@ export class ReplEngine extends EventEmitter {
 
     async processInput(input) {
         const trimmedInput = input.trim();
-        if (!trimmedInput) return await this.executeCommand('next'); // Empty input triggers next cycle
+        if (!trimmedInput) return await this.executeCommand('next');
 
         this.sessionState.history.push(trimmedInput);
 
@@ -64,10 +66,9 @@ export class ReplEngine extends EventEmitter {
     }
 
     async executeCommand(cmd, ...args) {
-        // Handle special engine-specific commands
-        const specialCmds = { 'next': 'n', 'n': 'n', 'run': 'go', 'go': 'go', 'stop': 'st', 'st': 'st', 'quit': 'exit', 'q': 'exit', 'exit': 'exit' };
+        const cmdType = SPECIAL_COMMANDS[cmd] ?? cmd;
         
-        switch (specialCmds[cmd] ?? cmd) {
+        switch (cmdType) {
             case 'n': return await this._next();
             case 'go': return await this._run();
             case 'st': return await this._stop();
@@ -76,7 +77,6 @@ export class ReplEngine extends EventEmitter {
                 return '👋 Goodbye!';
         }
 
-        // Delegate to shared command processor for standard commands
         try {
             const result = await this.commandProcessor.executeCommand(cmd, ...args);
             this.emit(`command.${cmd}`, { command: cmd, args, result });
@@ -113,13 +113,11 @@ export class ReplEngine extends EventEmitter {
             this.emit('nar.trace.enable', { reason: 'run session' });
         }
 
-        this.runInterval = setInterval(async () => {
-            try {
-                await this.nar.step();
-            } catch (error) {
+        this.runInterval = setInterval(() => {
+            this.nar.step().catch(error => {
                 console.error(`❌ Error during run: ${error.message}`);
                 this._stopRun();
-            }
+            });
         }, 10);
 
         this.emit('nar.cycle.running', { interval: 10 });

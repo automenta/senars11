@@ -1,6 +1,41 @@
 import { DEMO_COMMANDS } from '../../config/constants.js';
 
 const COMMANDS = DEMO_COMMANDS;
+const EXAMPLE_MAP = {
+    'agent-builder': '../../examples/agent-builder-demo.js',
+    'agent-builder-demo': '../../examples/agent-builder-demo.js',
+    'causal-reasoning': '../../examples/causal-reasoning-demo.js',
+    'causal-reasoning-demo': '../../examples/causal-reasoning-demo.js',
+    'inductive-reasoning': '../../examples/inductive-reasoning-demo.js',
+    'inductive-reasoning-demo': '../../examples/inductive-reasoning-demo.js',
+    'syllogism': '../../examples/syllogism-demo.js',
+    'syllogism-demo': '../../examples/syllogism-demo.js',
+    'temporal': '../../examples/temporal-reasoning-demo.js',
+    'temporal-reasoning': '../../examples/temporal-reasoning-demo.js',
+    'temporal-reasoning-demo': '../../examples/temporal-reasoning-demo.js',
+    'performance': '../../examples/performance-benchmark.js',
+    'performance-benchmark': '../../examples/performance-benchmark.js',
+    'phase10-complete': '../../examples/phase10-complete-demo.js',
+    'phase10-final': '../../examples/phase10-final-demo.js',
+    'phase10-final-demo': '../../examples/phase10-final-demo.js',
+    'websocket': '../../examples/websocket-monitoring-test.js',
+    'websocket-demo': '../../examples/websocket-monitoring-test.js',
+    'websocket-monitoring': '../../examples/websocket-monitoring-test.js',
+    'lm-providers': '../../examples/lm-providers.js',
+    'basic-usage': '../../examples/basic-usage.js'
+};
+const EXAMPLE_LIST = [
+    'agent-builder-demo     - Demonstrates building agents with various capabilities',
+    'causal-reasoning       - Shows causal reasoning capabilities',
+    'inductive-reasoning    - Demonstrates inductive inference',
+    'syllogism              - Classic syllogistic reasoning examples',
+    'temporal               - Temporal reasoning demonstrations',
+    'performance            - Performance benchmarking example',
+    'phase10-complete       - Full phase 10 reasoning demonstration',
+    'phase10-final          - Final comprehensive demonstration',
+    'websocket              - WebSocket monitoring example',
+    'lm-providers           - Language model provider integrations'
+];
 
 export class CommandProcessor {
     constructor(nar, persistenceManager, sessionState) {
@@ -13,11 +48,11 @@ export class CommandProcessor {
     _createCommandMap() {
         return new Map(
             Object.entries(COMMANDS)
-                .filter(([method]) => method !== 'next') // Skip next command as it should be handled by the engine
+                .filter(([method]) => method !== 'next')
                 .flatMap(([method, aliases]) => 
                     aliases.map(alias => [alias, this[`_${method}`]?.bind(this)])
                 )
-                .filter(([_, handler]) => handler) // Only include commands with valid handlers
+                .filter(([, handler]) => handler)
         );
     }
 
@@ -62,26 +97,27 @@ export class CommandProcessor {
     _status() {
         const stats = this.nar.getStats();
         const { memoryStats = {} } = stats;
+        const conceptCount = memoryStats.conceptCount ?? memoryStats.totalConcepts ?? 0;
+        const focusTasks = memoryStats.focusTaskCount ?? memoryStats.focusConceptsCount ?? 0;
+        const totalTasks = memoryStats.taskCount ?? memoryStats.totalTasks ?? 0;
 
         return `📊 System Status:
   ⚡ Running: ${stats.isRunning ? 'Yes' : 'No'}
   🕒 Internal Clock: ${stats.cycleCount || 0}
   🔄 Cycles: ${stats.cycleCount || 0}
-  🧠 Memory Concepts: ${memoryStats.conceptCount || memoryStats.totalConcepts || 0}
-  🎯 Focus Tasks: ${memoryStats.focusTaskCount || memoryStats.focusConceptsCount || 0}
-  📋 Total Tasks: ${memoryStats.taskCount || memoryStats.totalTasks || 0}
+  🧠 Memory Concepts: ${conceptCount}
+  🎯 Focus Tasks: ${focusTasks}
+  📋 Total Tasks: ${totalTasks}
   🕐 Start Time: ${new Date(this.sessionState.startTime).toISOString()}`;
     }
 
     _memory() {
         const stats = this.nar.getStats();
         const { memoryStats = {} } = stats;
-        const { conceptCount, totalConcepts, taskCount, totalTasks, focusTaskCount, focusConceptsCount, avgPriority, averagePriority } = memoryStats;
-
-        const concepts = conceptCount ?? totalConcepts ?? 0;
-        const tasks = taskCount ?? totalTasks ?? 0;
-        const focusSize = focusTaskCount ?? focusConceptsCount ?? 0;
-        const avg = avgPriority ?? averagePriority ?? 0;
+        const concepts = memoryStats.conceptCount ?? memoryStats.totalConcepts ?? 0;
+        const tasks = memoryStats.taskCount ?? memoryStats.totalTasks ?? 0;
+        const focusSize = memoryStats.focusSize ?? memoryStats.focusTaskCount ?? memoryStats.focusConceptsCount ?? 0;
+        const avg = memoryStats.avgPriority ?? memoryStats.averagePriority ?? 0;
         const capacity = this.nar.config?.memory?.maxConcepts ?? 'N/A';
         const threshold = this.nar.config?.memory?.priorityThreshold ?? 'N/A';
 
@@ -148,59 +184,22 @@ export class CommandProcessor {
         const exampleName = args?.[0];
 
         if (!exampleName) {
-            const examples = [
-                'agent-builder-demo     - Demonstrates building agents with various capabilities',
-                'causal-reasoning       - Shows causal reasoning capabilities',
-                'inductive-reasoning    - Demonstrates inductive inference',
-                'syllogism              - Classic syllogistic reasoning examples',
-                'temporal               - Temporal reasoning demonstrations',
-                'performance            - Performance benchmarking example',
-                'phase10-complete       - Full phase 10 reasoning demonstration',
-                'phase10-final          - Final comprehensive demonstration',
-                'websocket              - WebSocket monitoring example',
-                'lm-providers           - Language model provider integrations'
-            ];
-
             return [
                 '🎭 Available examples:',
-                ...examples.map(line => `  ${line}`),
+                ...EXAMPLE_LIST.map(line => `  ${line}`),
                 '',
                 'Usage: /demo <example-name> (without the .js extension)'
             ].join('\n');
         }
 
-        const exampleMap = {
-            'agent-builder': '../../examples/agent-builder-demo.js',
-            'agent-builder-demo': '../../examples/agent-builder-demo.js',
-            'causal-reasoning': '../../examples/causal-reasoning-demo.js',
-            'causal-reasoning-demo': '../../examples/causal-reasoning-demo.js',
-            'inductive-reasoning': '../../examples/inductive-reasoning-demo.js',
-            'inductive-reasoning-demo': '../../examples/inductive-reasoning-demo.js',
-            'syllogism': '../../examples/syllogism-demo.js',
-            'syllogism-demo': '../../examples/syllogism-demo.js',
-            'temporal': '../../examples/temporal-reasoning-demo.js',
-            'temporal-reasoning': '../../examples/temporal-reasoning-demo.js',
-            'temporal-reasoning-demo': '../../examples/temporal-reasoning-demo.js',
-            'performance': '../../examples/performance-benchmark.js',
-            'performance-benchmark': '../../examples/performance-benchmark.js',
-            'phase10-complete': '../../examples/phase10-complete-demo.js',
-            'phase10-final': '../../examples/phase10-final-demo.js',
-            'phase10-final-demo': '../../examples/phase10-final-demo.js',
-            'websocket': '../../examples/websocket-monitoring-test.js',
-            'websocket-demo': '../../examples/websocket-monitoring-test.js',
-            'websocket-monitoring': '../../examples/websocket-monitoring-test.js',
-            'lm-providers': '../../examples/lm-providers.js',
-            'basic-usage': '../../examples/basic-usage.js'
-        };
-
-        const examplePath = exampleMap[exampleName];
+        const examplePath = EXAMPLE_MAP[exampleName];
         if (!examplePath) return `❌ Unknown example: ${exampleName}. Use "/demo" for a list of available examples.`;
 
         try {
             const { fileURLToPath } = await import('url');
-            const { dirname } = await import('path');
+            const { dirname, resolve } = await import('path');
             const __dirname = dirname(fileURLToPath(import.meta.url));
-            const filePath = (await import('path')).resolve(__dirname, examplePath);
+            const filePath = resolve(__dirname, examplePath);
 
             const exampleModule = await import(`file://${filePath}`);
             return exampleModule.default && typeof exampleModule.default === 'function'
@@ -208,7 +207,7 @@ export class CommandProcessor {
                 : `✅ Example ${exampleName} imported successfully. (No default function to execute)`;
         } catch (error) {
             return error.code === 'MODULE_NOT_FOUND'
-                ? `📁 Example file not found: ${exampleMap[exampleName]}. Make sure the file exists in the examples directory.`
+                ? `📁 Example file not found: ${EXAMPLE_MAP[exampleName]}. Make sure the file exists in the examples directory.`
                 : `❌ Error running example ${exampleName}: ${error.message}`;
         }
     }

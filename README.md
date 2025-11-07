@@ -136,8 +136,7 @@ The SeNARS architecture is built around several fundamental patterns that enable
 │   ├── tools/                  # Development and utility tools
 │   │   └── ...
 │   ├── tui/                    # Text-based user interface
-│   │   ├── Repl.js             # Interactive REPL interface
-│   │   └── SeNARSInterface.js  # Main TUI interface
+│   │   └── BlessedTUI.js       # Main blessed TUI interface with integrated adapter
 │   └── util/                   # Utility functions and helper classes
 │       ├── BaseComponent.js    # Base class for all system components
 │       └── ...

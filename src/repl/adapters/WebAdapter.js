@@ -1,4 +1,6 @@
-import { FormattingUtils } from '../utils/FormattingUtils.js';
+const CMD_HANDLERS = ['help', 'status', 'memory', 'trace', 'reset', 'save', 'load', 'demo'];
+const CMD_MAP = { 'start': 'run', 'stop': 'stop', 'step': 'next' };
+const WS_HANDLERS = ['reason/step', 'narseseInput', 'command.execute', 'control/start', 'control/stop', 'control/step'];
 
 export class WebAdapter {
     constructor(engine, websocketServer) {
@@ -21,21 +23,18 @@ export class WebAdapter {
             'engine.save': (data) => this._broadcastToAllClients({ type: 'engine.save', payload: data }),
             'engine.load': (data) => this._broadcastToAllClients({ type: 'engine.load', payload: data }),
             'nar.trace.enable': (data) => this._broadcastToAllClients({ type: 'nar.trace.enable', payload: data }),
-            'nar.trace.restore': (data) => this._broadcastToAllClients({ type: 'nar.trace.restore', payload: data })
+            'nar.trace.restore': (data) => this._broadcastToAllClients({ type: 'nar.trace.restore', payload: data }),
+            'command.error': (data) => this._broadcastToAllClients({ 
+                type: 'command.error', 
+                payload: { command: data.command, error: data.error } 
+            })
         };
 
-        // Register handlers for commands that broadcast command output
-        ['help', 'status', 'memory', 'trace', 'reset', 'save', 'load', 'demo'].forEach(cmd => {
+        CMD_HANDLERS.forEach(cmd => {
             eventHandlers[`command.${cmd}`] = (data) => this._broadcastToAllClients({ 
                 type: 'command.output', 
                 payload: { command: cmd, result: data.result } 
             });
-        });
-
-        // Register error handler
-        eventHandlers['command.error'] = (data) => this._broadcastToAllClients({ 
-            type: 'command.error', 
-            payload: { command: data.command, error: data.error } 
         });
 
         Object.entries(eventHandlers).forEach(([event, handler]) => this.engine.on(event, handler));
@@ -54,9 +53,8 @@ export class WebAdapter {
             }
             else if (message.type.startsWith('control/')) {
                 const command = message.type.split('/')[1];
-                const cmdMap = { 'start': 'run', 'stop': 'stop', 'step': 'next' };
-                const result = cmdMap[command] 
-                    ? await this.engine.executeCommand(cmdMap[command])
+                const result = CMD_MAP[command] 
+                    ? await this.engine.executeCommand(CMD_MAP[command])
                     : `Unknown control command: ${command}`;
                 
                 this._sendToClient(client, { type: 'control.result', payload: { command, result } });
@@ -112,8 +110,9 @@ export class WebAdapter {
 
     registerWithWebSocketServer() {
         if (this.websocketServer) {
-            const handlers = ['reason/step', 'narseseInput', 'command.execute', 'control/start', 'control/stop', 'control/step'];
-            handlers.forEach(type => this.websocketServer.registerClientMessageHandler(type, (message, client) => this.handleWebSocketMessage(client, message)));
+            WS_HANDLERS.forEach(type => 
+                this.websocketServer.registerClientMessageHandler(type, (message, client) => 
+                    this.handleWebSocketMessage(client, message)));
         }
     }
 

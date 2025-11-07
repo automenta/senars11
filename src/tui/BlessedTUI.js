@@ -1,12 +1,16 @@
+import { ReplEngine } from '../repl/ReplEngine.js';
 import blessed from 'blessed';
 import { EventEmitter } from 'events';
-import { FormattingUtils } from '../utils/FormattingUtils.js';
+import { FormattingUtils } from '../repl/utils/FormattingUtils.js';
 
-export class BlessedAdapter extends EventEmitter {
-    constructor(engine) {
+const SPINS = ['🌀', '◕', '◔', '◕'];
+const CMD_HANDLERS = ['help', 'status', 'memory', 'trace', 'reset', 'save', 'load', 'demo'];
+
+export class BlessedTUI extends EventEmitter {
+    constructor(config = {}) {
         super();
         
-        this.engine = engine;
+        this.engine = new ReplEngine(config);
         this.animationState = { spinningIndex: 0 };
         this.screen = blessed.screen({ smartCSR: true, title: 'SeNARS Reasoning Engine 🚀', dockBorders: true });
 
@@ -30,14 +34,7 @@ export class BlessedAdapter extends EventEmitter {
             statusBar: { bottom: '0', left: '0', width: '100%', height: '25%', border: { type: 'line' }, style: { fg: 'white', bg: 'red', border: { fg: 'yellow' } }, content: this._getStatusContent() }
         };
 
-        [this.header, this.input, this.output, this.memoryDisplay, this.statusBar] = [
-            blessed.box(this.elementConfigs.header),
-            blessed.textarea(this.elementConfigs.input),
-            blessed.box(this.elementConfigs.output),
-            blessed.box(this.elementConfigs.memoryDisplay),
-            blessed.box(this.elementConfigs.statusBar)
-        ];
-
+        [this.header, this.input, this.output, this.memoryDisplay, this.statusBar] = Object.values(this.elementConfigs).map(config => blessed[config.inputOnFocus ? 'textarea' : 'box'](config));
         [this.header, this.input, this.output, this.memoryDisplay, this.statusBar].forEach(el => this.screen.append(el));
 
         this.input.on('submit', (inputText) => {
@@ -82,8 +79,7 @@ export class BlessedAdapter extends EventEmitter {
             'engine.load': (data) => this._addToOutput(`💾 NAR state loaded successfully from ${data.filePath}`)
         };
 
-        // Register handlers for commands that just output their result
-        ['help', 'status', 'memory', 'trace', 'reset', 'save', 'load', 'demo'].forEach(cmd => {
+        CMD_HANDLERS.forEach(cmd => {
             eventHandlers[`command.${cmd}`] = (data) => this._addToOutput(data.result);
         });
 
@@ -99,9 +95,8 @@ export class BlessedAdapter extends EventEmitter {
     }
 
     _getStatusContent() {
-        const spins = ['🌀', '◕', '◔', '◕'];
         const stats = this.engine.getStats();
-        return `{bold}⚡ Status: ${spins[this.animationState.spinningIndex]} | Concepts: ${stats.memoryStats?.conceptCount ?? 0} | Cycles: ${stats.cycleCount ?? 0} | Tasks: ${stats.memoryStats?.taskCount ?? 0}{/bold}`;
+        return `{bold}⚡ Status: ${SPINS[this.animationState.spinningIndex]} | Concepts: ${stats.memoryStats?.conceptCount ?? 0} | Cycles: ${stats.cycleCount ?? 0} | Tasks: ${stats.memoryStats?.taskCount ?? 0}{/bold}`;
     }
 
     async start() {
@@ -129,7 +124,6 @@ export class BlessedAdapter extends EventEmitter {
     _updateMemoryDisplay() {
         const stats = this.engine.getStats();
         const memoryStats = stats.memoryStats ?? {};
-
         const tasks = this._getTasksFromMemory();
         const taskDetails = tasks.length 
             ? tasks.slice(-10).flatMap((task, index) => [
@@ -160,9 +154,7 @@ export class BlessedAdapter extends EventEmitter {
                 const concepts = this.engine.nar.memory.concepts;
                 return concepts instanceof Map 
                     ? Array.from(concepts.values()).flatMap(concept => concept?.tasks ?? [])
-                    : Array.isArray(concepts) || typeof concepts === 'object' 
-                        ? Object.values(concepts).flatMap(concept => concept?.tasks ?? [])
-                        : [];
+                    : Object.values(concepts).flatMap(concept => concept?.tasks ?? []);
             }
         } catch (e) {}
         return [];

@@ -40,7 +40,6 @@ export class FormattingUtils {
         const inputStr = String(input);
         const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
         
-        // Convert the input to a hash
         let hash = 0;
         for (let i = 0; i < inputStr.length; i++) {
             hash = ((hash << 5) - hash) + inputStr.charCodeAt(i);
@@ -63,15 +62,13 @@ export class FormattingUtils {
     }
 
     static formatTaskDetails(task) {
-        const details = [
+        return [
             this.formatType(task.type),
             this.formatTruthStr(task.truth),
             this.formatPriorityStr(task.priority),
             this.formatStamp(task.stamp),
             this.formatOccurrenceTime(task.occurrenceTime)
-        ].filter(Boolean);
-
-        return details.join(' | ');
+        ].filter(Boolean).join(' | ');
     }
 
     static formatType(type) { return type ? `Type: ${type}` : 'Type: Task'; }
@@ -81,13 +78,11 @@ export class FormattingUtils {
     static formatOccurrenceTime(occurrenceTime) { return occurrenceTime !== undefined ? `OccTime: ${occurrenceTime}` : null; }
 
     static formatBeliefDetails(task) {
-        const details = [
+        return [
             this.formatBeliefTruth(task.truth),
             this.formatBeliefPriority(task.priority),
             this.formatBeliefOccurrence(task.stamp)
-        ].filter(Boolean);
-
-        return details.join('');
+        ].filter(Boolean).join('');
     }
 
     static formatBeliefTruth(truth) { return truth ? `${truth.toString()}` : null; }

@@ -1,13 +1,14 @@
-import {Repl} from '../src/tui/Repl.js';
+import { ReplEngine } from '../src/repl/ReplEngine.js';
 
 // Test if syllogistic reasoning works with explicit truth values
 async function testSyllogisticExplicitTruth() {
     console.log('🧪 Testing syllogistic reasoning with explicit truth values...');
 
-    const repl = new Repl();
+    const engine = new ReplEngine();
+    const nar = engine.nar;
 
     try {
-        await repl.nar.initialize();
+        await nar.initialize();
         console.log('✅ NAR initialized');
     } catch (error) {
         console.error('❌ Failed to initialize NAR:', error);
@@ -16,9 +17,9 @@ async function testSyllogisticExplicitTruth() {
 
     console.log('\nInputting: (a-->b). %1.0;0.9%');
     try {
-        const result1 = await repl.nar.input('(a-->b). %1.0;0.9%');
+        const result1 = await nar.input('(a-->b). %1.0;0.9%');
         if (result1) {
-            await repl.nar.step();
+            await nar.step();
             console.log('✅ First statement input and processed');
         } else {
             console.log('❌ Failed to input first statement');
@@ -29,9 +30,9 @@ async function testSyllogisticExplicitTruth() {
 
     console.log('Inputting: (b-->c). %1.0;0.9%');
     try {
-        const result2 = await repl.nar.input('(b-->c). %1.0;0.9%');
+        const result2 = await nar.input('(b-->c). %1.0;0.9%');
         if (result2) {
-            await repl.nar.step();
+            await nar.step();
             console.log('✅ Second statement input and processed');
         } else {
             console.log('❌ Failed to input second statement');
@@ -41,7 +42,7 @@ async function testSyllogisticExplicitTruth() {
     }
 
     console.log('\nBeliefs after inputs:');
-    const beliefs1 = repl.nar.getBeliefs();
+    const beliefs1 = nar.getBeliefs();
     console.log(`Found ${beliefs1.length} beliefs:`);
     beliefs1.forEach((task, i) => {
         const term = task.term?.toString?.() || task.term || 'Unknown';
@@ -51,11 +52,11 @@ async function testSyllogisticExplicitTruth() {
 
     console.log('\nRunning 20 reasoning cycles...');
     for (let i = 0; i < 20; i++) {
-        await repl.nar.step();
+        await nar.step();
     }
 
     console.log('\nBeliefs after reasoning cycles:');
-    const beliefs2 = repl.nar.getBeliefs();
+    const beliefs2 = nar.getBeliefs();
     console.log(`Found ${beliefs2.length} beliefs:`);
     beliefs2.forEach((task, i) => {
         const term = task.term?.toString?.() || task.term || 'Unknown';
