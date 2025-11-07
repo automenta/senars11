@@ -504,6 +504,17 @@ class WebSocketMonitor {
                     payload: { command: 'step', status: 'stepped' }
                 });
                 break;
+
+            case 'exit':
+                this._sendToClient(client, {
+                    type: 'control/ack',
+                    payload: { command: 'exit', status: 'shutting down' }
+                });
+                (async () => {
+                    await this.stop();
+                    process.exit(0);
+                })();
+                break;
                 
             default:
                 console.warn('Unknown control command:', command);

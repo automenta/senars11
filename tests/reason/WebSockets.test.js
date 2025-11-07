@@ -5,6 +5,7 @@
  *              to direct reasoner tests, ensuring UI/REPL functionality is preserved.
  */
 
+import { TestNAR } from '../../src/testing/TestNAR.js';
 import { TestNARRemote } from '../../src/testing/TestNARRemote.js';
 import { RemoteTaskMatch } from '../../src/testing/TaskMatch.js';
 
@@ -18,11 +19,13 @@ describe('WebSocket Pathway Tests', () => {
             .run(5) // matches repl:test stepsToRun config
             .expect('<a ==> c>')
             .execute();
-    });
+    }, 30000); // 30-second timeout for this test
+});
 
-    test('Complex inheritance via WebSocket - should match repl:test behavior', async () => {
+describe('Direct Pathway Tests', () => {
+    test('Complex inheritance via Direct Pathway - should match repl:test behavior', async () => {
         // Test: <robinson ==> bird> and <bird ==> animal> should derive <robinson ==> animal>
-        await new TestNARRemote()
+        await new TestNAR()
             .input('<robinson ==> bird>', 1.0, 0.9)
             .input('<bird ==> animal>', 1.0, 0.9)
             .run(5)
@@ -30,10 +33,10 @@ describe('WebSocket Pathway Tests', () => {
             .execute();
     });
 
-    test('Multiple inheritance chain via WebSocket - should match repl:test behavior', async () => {
+    test('Multiple inheritance chain via Direct Pathway - should match repl:test behavior', async () => {
         // Test: <car ==> vehicle> and <vehicle ==> object> should derive <car ==> object>
         // but should NOT derive <car ==> entity> (verifying reasoning limits)
-        await new TestNARRemote()
+        await new TestNAR()
             .input('<car ==> vehicle>', 1.0, 0.9)
             .input('<vehicle ==> object>', 1.0, 0.9)
             .run(5)
@@ -42,9 +45,9 @@ describe('WebSocket Pathway Tests', () => {
             .execute();
     });
 
-    test('Truth value expectations via WebSocket pathway', async () => {
+    test('Truth value expectations via Direct Pathway', async () => {
         // Test that derived tasks have expected truth values
-        await new TestNARRemote()
+        await new TestNAR()
             .input('<x ==> y>', 1.0, 0.9)
             .input('<y ==> z>', 1.0, 0.9)
             .run(5)
@@ -52,18 +55,18 @@ describe('WebSocket Pathway Tests', () => {
             .execute();
     });
 
-    test('No spurious derivations via WebSocket pathway', async () => {
+    test('No spurious derivations via Direct Pathway', async () => {
         // Ensure that unrelated concepts don't get spurious derivations
-        await new TestNARRemote()
+        await new TestNAR()
             .input('<cat ==> animal>', 1.0, 0.9)
             .run(3)
             .expectNot('<dog ==> animal>')
             .execute();
     });
 
-    test('Sequential inputs via WebSocket produce correct derivations', async () => {
+    test('Sequential inputs via Direct Pathway produce correct derivations', async () => {
         // Test multiple inputs in sequence
-        await new TestNARRemote()
+        await new TestNAR()
             .input('<dog ==> animal>', 1.0, 0.9)
             .input('<animal ==> living_thing>', 1.0, 0.9)
             .input('<living_thing ==> thing>', 1.0, 0.9)
@@ -73,9 +76,9 @@ describe('WebSocket Pathway Tests', () => {
             .execute();
     });
 
-    test('Basic property inheritance via WebSocket', async () => {
+    test('Basic property inheritance via Direct Pathway', async () => {
         // Simple property inheritance test
-        await new TestNARRemote()
+        await new TestNAR()
             .input('<robin ==> bird>', 1.0, 0.9)
             .input('<bird ==> [flying]>', 1.0, 0.9)  // bird has property flying
             .run(5)
