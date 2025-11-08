@@ -246,8 +246,31 @@ export class TUIRepl extends EventEmitter {
         });
 
         this.components.statusBar.on('pulldown-menu-toggle', (data) => {
-            if (data.isOpen) {
-                this.components.logViewer.addInfo('📁 Menu opened: Use shortcuts for options');
+            if (data.isOpen && data.options) {
+                // Calculate position near the status bar
+                const position = {
+                    top: this.screen.height - Math.min(data.options.length + 3, 10), // Position near bottom, adjusted for menu size
+                    left: 2
+                };
+                
+                // Convert pulldown options to ContextMenu format
+                const menuItems = data.options.map(option => ({
+                    label: option.shortcut ? `${option.label} (${option.shortcut})` : option.label,
+                    action: () => {
+                        // Trigger the selection handler with the option
+                        data.onSelect?.(option);
+                    }
+                }));
+
+                // Show the context menu from the status bar
+                if (this.components.statusBar.contextMenu) {
+                    this.components.statusBar.contextMenu.show(position, menuItems);
+                }
+            } else {
+                // If menu is closing, hide the context menu
+                if (this.components.statusBar.contextMenu) {
+                    this.components.statusBar.contextMenu.hide();
+                }
             }
         });
 
@@ -600,15 +623,24 @@ export class TUIRepl extends EventEmitter {
             'C-l': () => this.viewManager.switchView('log-only'),
             'C-t': () => this.viewManager.switchView('vertical-split'),
             'C-g': () => this.viewManager.switchView('dynamic-grouping'),
+            'C-1': () => this.viewManager.switchView('vertical-split'),     // Ctrl+1: Vertical split view
+            'C-2': () => this.viewManager.switchView('log-only'),          // Ctrl+2: Log only view
+            'C-3': () => this.viewManager.switchView('dynamic-grouping'),  // Ctrl+3: Dynamic grouping view
             'C-k': () => {
                 this.components.logViewer.clearLogs();
                 this.components.logViewer.addInfo('🗑️ Logs cleared');
             },
-            'f1': () => this.components.logViewer.addInfo('💡 Press Ctrl+L/T/G to switch views, F1 for menu, Ctrl+C to exit'),
-            'f2': () => this.viewManager.switchView('vertical-split'),
-            'f3': () => this.viewManager.switchView('log-only'),
-            'f4': () => this.viewManager.switchView('dynamic-grouping'),
-            'C-h': () => this.components.logViewer.setLevelFilter('all'),
+            'C-h': () => {
+                this.components.statusBar._togglePulldownMenu();
+                this.components.logViewer.addInfo('💡 Press Ctrl+L/T/G to switch views, SPACE or click status bar for menu, Ctrl+H for help, Ctrl+C to exit');
+            },
+            'C-f': () => this.components.statusBar._showHelpMenu(),         // Ctrl+F: Help menu
+            'C-,': () => this.components.statusBar._showSettingsMenu(),     // Ctrl+,: Settings menu
+            'C-p': () => this.components.statusBar._showPerformanceMenu(),  // Ctrl+P: Performance menu
+            'C-i': () => this.components.statusBar._showSystemInfo(),       // Ctrl+I: System info
+            'C-m': () => this.components.statusBar._showMainMenu(),         // Ctrl+M: Main menu
+            'C-d': () => this.components.statusBar._showMemoryStats(),      // Ctrl+D: Memory stats
+            'C-a': () => this.components.logViewer.setLevelFilter('all'), // Ctrl+A: Show all messages
             'C-r': () => {
                 this.components.logViewer.addInfo('🔄 Refreshing system...');
                 this.engine.reset();
@@ -618,7 +650,7 @@ export class TUIRepl extends EventEmitter {
                 this._connectToWebSocket()
             ),
             'C-u': () => this.remoteConfig.enabled && this.toggleRemoteConnection(),
-            '?': () => this.components.logViewer.addInfo('❓ Keyboard shortcuts: Ctrl+L/T/G=Views, F1-F4=Functions, Ctrl+C=Exit, Ctrl+U=Toggle remote, ?=Help')
+            '?': () => this.components.logViewer.addInfo('❓ Keyboard shortcuts: Ctrl+L/T/G=Views, SPACE/click status bar=Menu, Ctrl+H=Help, Ctrl+C=Exit, Ctrl+U=Toggle remote, ?=Help')
         };
 
         Object.entries(keyBindings).forEach(([key, handler]) => {
@@ -630,7 +662,7 @@ export class TUIRepl extends EventEmitter {
         const welcomeMessages = [
             'Welcome to SeNARS! 🚀',
             'Type commands or enter Narsese statements.',
-            'Use Ctrl+L/T/G to switch views, F1 for menu, Ctrl+C to exit.'
+            'Use Ctrl+L/T/G to switch views, Ctrl+H for menu, Ctrl+C to exit.'
         ];
 
         welcomeMessages.forEach(msg => this.components.logViewer.addInfo(msg));

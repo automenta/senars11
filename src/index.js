@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import {Repl} from './repl/TUIRepl.js';
+import {TUIRepl as Repl} from './repl/TUIRepl.js';
 import {WebSocketMonitor} from './server/WebSocketMonitor.js';
 import {NAR} from './nar/NAR.js';
 

@@ -1,5 +1,6 @@
 import { BaseComponent } from './BaseComponent.js';
 import blessed from 'blessed';
+import { ContextMenu } from './ContextMenu.js';
 
 /**
  * Status Bar Component - displays status information and system metrics
@@ -15,6 +16,7 @@ export class StatusBarComponent extends BaseComponent {
         this.connectionState = 'local';
         this.alerts = 0;
         this.isPulldownMenuOpen = false;
+        this.contextMenu = null;
 
         this.elementConfig = this.elementConfig ?? this._getDefaultElementConfig();
     }
@@ -31,7 +33,12 @@ export class StatusBarComponent extends BaseComponent {
                 bg: 'blue',
                 border: { fg: 'yellow' }
             },
-            content: ''
+            content: 'Press [SPACE] or click for menu | Use Ctrl+H for help | Ctrl+L/T/G to switch views',
+            interactive: true,
+            keys: true,
+            vi: true,
+            mouse: true,
+            clickable: true
         };
     }
 
@@ -41,6 +48,13 @@ export class StatusBarComponent extends BaseComponent {
         if (this.parent && this.element) {
             this.parent.append(this.element);
         }
+
+        // Initialize context menu for pulldown menu
+        this.contextMenu = new ContextMenu({
+            parent: this.parent,
+            eventEmitter: this.eventEmitter
+        });
+        this.contextMenu.init();
 
         this._setupEventHandlers();
         this._startAnimationLoop();
@@ -58,27 +72,27 @@ export class StatusBarComponent extends BaseComponent {
 
         // Define key handlers with shared functions where possible
         const handlers = {
-            'f1': () => this._togglePulldownMenu(),
-            'f2': () => this._showHelpMenu(),
-            'f3': () => this._showSettingsMenu(),
-            'f4': () => this._showPerformanceMenu(),
-            'f5': () => this._showSystemInfo(),
-            'f10': () => this._showMainMenu(),
-            'c': () => this._toggleConnectionState(),
+            'C-h': () => this._togglePulldownMenu(),        // Ctrl+H: Toggle pulldown menu
+            'space': () => this._togglePulldownMenu(),      // Space: Toggle pulldown menu
+            'C-f': () => this._showHelpMenu(),              // Ctrl+F: Help menu (Find/Help)
+            'C-,': () => this._showSettingsMenu(),          // Ctrl+,: Settings menu
+            'C-p': () => this._showPerformanceMenu(),       // Ctrl+P: Performance menu
+            'C-i': () => this._showSystemInfo(),            // Ctrl+I: System info
+            'C-m': () => this._showMainMenu(),              // Ctrl+M: Main menu
+            'C-d': () => this._showMemoryStats(),           // Ctrl+D: Memory stats (D for Data/Memory)
+            'c': () => this._toggleConnectionState(),       // C: Toggle connection state
             'C': () => this._toggleConnectionState(),
-            'a': () => this.clearAlerts(),
+            'a': () => this.clearAlerts(),                  // A: Clear alerts
             'A': () => this.clearAlerts(),
-            'h': () => this._showHelp(),
+            'h': () => this._showHelp(),                    // H: Help
             'H': () => this._showHelp(),
-            's': () => this._showStatus(),
+            's': () => this._showStatus(),                  // S: Status
             'S': () => this._showStatus(),
-            'm': () => this._showMemoryStats(),
-            'M': () => this._showMemoryStats(),
-            'v': () => this._cycleView(),
+            'v': () => this._cycleView(),                   // V: Cycle view
             'V': () => this._cycleView(),
-            'q': () => this._requestExit(),
+            'q': () => this._requestExit(),                 // Q: Request exit
             'Q': () => this._requestExit(),
-            'x': () => this._requestExit(),
+            'x': () => this._requestExit(),                 // X: Request exit
             'X': () => this._requestExit()
         };
 
@@ -98,7 +112,7 @@ export class StatusBarComponent extends BaseComponent {
 
     // Menu and help methods
     _showHelpMenu() {
-        this._showStatusMessage('ℹ️  Press F1 for menu, Ctrl+L/T/G to switch views, Ctrl+C to exit');
+        this._showStatusMessage('ℹ️  Press SPACE or click status bar for menu, Ctrl+H for help, Ctrl+L/T/G to switch views, Ctrl+C to exit');
     }
 
     _showSettingsMenu() {
@@ -123,7 +137,7 @@ export class StatusBarComponent extends BaseComponent {
     }
 
     _showHelp() {
-        this._showStatusMessage('ℹ️  Help system would open here - F1=Menu, Ctrl+L/T/G=Views, Arrows=Navigate');
+        this._showStatusMessage('ℹ️  Help system - SPACE/click status bar=Menu, Ctrl+H=Help, Ctrl+L/T/G=Views, Arrows=Navigate');
     }
 
     _showStatus() {
