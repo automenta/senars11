@@ -61,9 +61,9 @@ Task Context menu (when clicked):
   - [ ] Establish component communication patterns (events, state management)
 
 - [ ] **Input Management System**
-  - [ ] Modify ReplEngine to create Input objects for each user input with UUID using crypto.randomUUID()
-  - [ ] Create InputManager (input.js) to handle the editable and reprioritizable set of user Input tasks
-  - [ ] Implement Input class that manages metadata and references to derived tasks in the system
+  - [ ] Modify ReplEngine to create and add Tasks to `Input` (renamed from existing InputTasks class) for each user input, which can be natural language (atom string, quoted if necessary) or Narsese (attempt parse)
+  - [ ] Rename existing `class InputTasks` (src/Agent.js) to `class Input` to handle the editable and reprioritizable set of user Input tasks
+  - [ ] `Input` manages input/user Task metadata and references to derived tasks in the system
   - [ ] Add method getTaskDependencies(inputId) to retrieve derivation tree
   - [ ] Add method deleteInputWithDependencies(inputId) to remove Input and all derived tasks
   - [ ] Add method editInputWithRecreate(inputId, newInput) to update and regenerate derived tasks
