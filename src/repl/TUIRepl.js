@@ -183,7 +183,6 @@ export class TUIRepl extends EventEmitter {
                 this.components.statusBar.updateContent();
             },
             'narsese.processed': (data) => {
-                this.components.logViewer.addInfo(data.result);
                 this._displayLatestBeliefs(data.beliefs);
                 this._updateTaskStatus(data.taskId, {
                     processed: true, pending: false, success: true, completionTime: Date.now()

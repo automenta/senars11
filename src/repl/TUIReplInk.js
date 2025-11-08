@@ -7,6 +7,8 @@ import { LogViewer } from './ink-components/LogViewer.js';
 import { StatusBar } from './ink-components/StatusBar.js';
 import { TaskInput } from './ink-components/TaskInput.js';
 import { v4 as uuidv4 } from 'uuid';
+import fs from 'fs';
+import path from 'path';
 import { PluginManager } from './utils/PluginManager.js';
 import { ThemeManager } from './utils/ThemeManager.js';
 import { CommandManager } from './utils/CommandManager.js';
@@ -56,18 +58,26 @@ const TUI = ({ engine, extensibleTUI }) => {
   const [logs, setLogs] = useState([{ id: uuidv4(), message: 'TUI component rendered' }]);
   const [tasks, setTasks] = useState([]);
   const [status, setStatus] = useState({ isRunning: false, cycle: 0, mode: 'idle' });
-  const [view, setView] = useState('vertical-split'); // 'vertical-split', 'log-only', 'dynamic-grouping'
-  const [selectedTaskId, setSelectedTaskId] = useState(null);
   const [commandHistory, setCommandHistory] = useState([]);
   const { isRawModeSupported } = useStdin();
   
+  if (!isRawModeSupported) {
+      return React.createElement(Text, null, "Raw mode is not supported. Please run in an interactive terminal.");
+  }
+
   // Initialize extensible TUI if not provided
   const extensible = useMemo(() => extensibleTUI || new ExtensibleTUI(), []);
 
   // Enhanced event handling to properly connect with the engine
   useEffect(() => {
     const handleLog = (message) => {
-      setLogs((prevLogs) => [...prevLogs, { id: uuidv4(), message, timestamp: Date.now() }]);
+        let EMOJI = 'ℹ️';
+        if (message.includes('Error')) {
+            EMOJI = '❌';
+        } else if (message.includes('successfully')) {
+            EMOJI = '✅';
+        }
+        setLogs((prevLogs) => [...prevLogs, { id: uuidv4(), message: `${EMOJI} ${message}`, timestamp: Date.now() }]);
     };
 
     const handleStatus = (newStatus) => {
@@ -123,165 +133,90 @@ const TUI = ({ engine, extensibleTUI }) => {
     };
   }, [engine]);
 
-  // Handle keyboard shortcuts and commands
-  useInput((input, key) => {
-    if (key.ctrl) {
-      switch (input) {
-        case 'l':
-        case 'L':
-          setView('log-only');
-          break;
-        case 't':
-        case 'T':
-          setView('vertical-split');
-          break;
-        case 'g':
-        case 'G':
-          setView('dynamic-grouping');
-          break;
-        case 'c':
-        case 'C':
-          // Exit on Ctrl+C - This doesn't work directly in Ink, but we handle it in the parent
-          break;
-      }
-    }
-    
-    // Handle command shortcuts
-    if (key.ctrl && input === '\\') {
-      // Execute a special command (for debugging or special operations)
-      console.log("Command shortcut triggered");
-    }
-  });
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const [inputValue, setInputValue] = useState('');
 
-  // Convert engine tasks to compatible format for UI
-  const convertEngineTasksToUIFormat = (engineTasks) => {
-    return engineTasks.map(task => ({
-      id: task.id,
-      content: task.task,
-      priority: task.priority,
-      timestamp: task.timestamp,
-      metadata: task.metadata,
-      processed: task.metadata?.processed || false,
-      pending: task.metadata?.pending || false,
-      error: task.metadata?.error || false
-    }));
-  };
-
-  const uiTasks = convertEngineTasksToUIFormat(tasks);
-
-  // Handle task operations
-  const handleTaskOperation = (operation, taskId, data) => {
-    switch(operation) {
-      case 'delete':
-        engine.inputManager.removeTaskById(taskId);
-        setTasks(engine.inputManager.getAllTasks());
-        break;
-      case 'edit':
-        const oldTask = engine.inputManager.getTaskById(taskId);
-        if (oldTask) {
-          engine.inputManager.editInputWithRecreate(taskId, data.newContent);
-          setTasks(engine.inputManager.getAllTasks());
+  // Handle keyboard shortcuts and commands (simplified)
+    useInput((input, key) => {
+        if (key.ctrl && input === 'c') {
+            // Exit handled by parent process
+            return;
         }
-        break;
-      case 'adjust-priority':
-        engine.inputManager.updatePriorityById(taskId, data.newPriority, data.mode || 'direct');
-        setTasks(engine.inputManager.getAllTasks());
-        break;
-    }
-  };
+
+        if (key.upArrow) {
+            if (historyIndex < commandHistory.length - 1) {
+                const newHistoryIndex = historyIndex + 1;
+                setHistoryIndex(newHistoryIndex);
+                setInputValue(commandHistory[newHistoryIndex]);
+            }
+        }
+
+        if (key.downArrow) {
+            if (historyIndex > 0) {
+                const newHistoryIndex = historyIndex - 1;
+                setHistoryIndex(newHistoryIndex);
+                setInputValue(commandHistory[newHistoryIndex]);
+            } else {
+                setHistoryIndex(-1);
+                setInputValue('');
+            }
+        }
+    });
 
   // Handle extended commands
-  const handleExtendedCommand = async (input) => {
-    if (input.startsWith('/')) {
-      const [cmdName, ...args] = input.slice(1).split(' ');
-      try {
-        const result = await extensible.commandManager.executeCommand(cmdName, args, { 
-          engine, 
-          setLogs, 
-          setTasks, 
-          setStatus 
-        });
-        if (result) {
-          setLogs(prev => [...prev, { id: uuidv4(), message: result, timestamp: Date.now() }]);
+    const handleExtendedCommand = async (input) => {
+        if (input.startsWith('/')) {
+            const [cmdName, ...args] = input.slice(1).split(' ');
+            try {
+                let result;
+                if (cmdName === 'exit') {
+                    process.exit(0);
+                } else if (cmdName === 'list-examples') {
+                    const files = await fs.promises.readdir('examples');
+                    result = files.join('\n');
+                } else if (cmdName === 'load') {
+                    const exampleDir = path.resolve('examples');
+                    const userPath = path.resolve(exampleDir, args[0]);
+
+                    if (userPath.startsWith(exampleDir)) {
+                        const content = await fs.promises.readFile(userPath, 'utf-8');
+                        engine.processInput(content);
+                        result = `Loaded ${path.basename(userPath)}`;
+                    } else {
+                        result = "Error: Path traversal detected.";
+                    }
+                } else {
+                    result = await extensible.commandManager.executeCommand(cmdName, args, {
+                        engine,
+                        setLogs,
+                        setTasks,
+                        setStatus
+                    });
+                }
+
+                if (result) {
+                    setLogs(prev => [...prev, { id: uuidv4(), message: result, timestamp: Date.now() }]);
+                }
+            } catch (error) {
+                setLogs(prev => [...prev, { id: uuidv4(), message: `Error: ${error.message}`, timestamp: Date.now() }]);
+            }
+            return true;
         }
-      } catch (error) {
-        setLogs(prev => [...prev, { id: uuidv4(), message: `Error: ${error.message}`, timestamp: Date.now() }]);
-      }
-      return true;
-    }
-    return false;
-  };
-
-  // Render based on current view using extensible architecture
-  const renderMainContent = () => {
-    // Get components from the extensible architecture - use provided components or defaults
-    const ComponentTaskEditor = extensible.getComponent('TaskEditor');
-    const ComponentLogViewer = extensible.getComponent('LogViewer');
-    
-    // Apply theme to components
-    const taskEditorProps = extensible.applyTheme('taskEditor', {
-      tasks: uiTasks,
-      onSelect: setSelectedTaskId,
-      selectedTaskId,
-      onTaskOperation: handleTaskOperation,
-      groupingMode: view === 'dynamic-grouping' ? 'priority' : null
-    });
-    
-    const logViewerProps = extensible.applyTheme('logViewer', { logs });
-
-    switch(view) {
-      case 'log-only':
-        return React.createElement(
-          Box,
-          { flexDirection: 'column', flexGrow: 1 },
-          React.createElement(ComponentLogViewer || LogViewer, logViewerProps)
-        );
-
-      case 'dynamic-grouping':
-        return React.createElement(
-          Box,
-          { flexDirection: 'row', flexGrow: 1 },
-          React.createElement(
-            Box,
-            { width: '70%', borderStyle: 'round' },
-            React.createElement(ComponentTaskEditor || TaskEditor, taskEditorProps)
-          ),
-          React.createElement(
-            Box,
-            { width: '30%', borderStyle: 'round' },
-            React.createElement(ComponentLogViewer || LogViewer, logViewerProps)
-          )
-        );
-
-      case 'vertical-split':
-      default:
-        return React.createElement(
-          Box,
-          { flexDirection: 'row', flexGrow: 1 },
-          React.createElement(
-            Box,
-            { width: '40%', borderStyle: 'round' },
-            React.createElement(ComponentTaskEditor || TaskEditor, taskEditorProps)
-          ),
-          React.createElement(
-            Box,
-            { width: '60%', borderStyle: 'round' },
-            React.createElement(ComponentLogViewer || LogViewer, logViewerProps)
-          )
-        );
-    }
-  };
+        return false;
+    };
 
   // Get themed components - use provided components or defaults
+  const ComponentLogViewer = extensible.getComponent('LogViewer');
   const ComponentTaskInput = extensible.getComponent('TaskInput');
   const ComponentStatusBar = extensible.getComponent('StatusBar');
   
+  const logViewerProps = extensible.applyTheme('logViewer', { logs });
   const taskInputProps = extensible.applyTheme('taskInput', {});
   const statusBarProps = extensible.applyTheme('statusBar', {
     status: {
       ...status,
-      view,
-      taskCount: uiTasks.length,
+      view: 'Simplified', // Simplified view name
+      taskCount: tasks.length,
       logCount: logs.length,
       alerts: logs.filter(log => log.message.includes('Error')).length
     }
@@ -289,26 +224,26 @@ const TUI = ({ engine, extensibleTUI }) => {
 
   return React.createElement(
     Box,
-    { flexDirection: 'column', width: '100%', height: '100%' },
-    renderMainContent(),
+    { flexDirection: 'column', width: '100%', height: '100%', borderStyle: 'round' },
+    React.createElement(ComponentStatusBar || StatusBar, statusBarProps),
     React.createElement(
-      Box,
-      { flexDirection: 'column' },
-      React.createElement(ComponentTaskInput || TaskInput, {
-        ...taskInputProps,
-        onSubmit: async (input) => {
-          // Try to handle as extended command first
-          if (!await handleExtendedCommand(input)) {
-            // If not a command, process as normal input
-            engine.processInput(input).then(() => {
-              // Refresh tasks after processing
-              setTasks(engine.inputManager.getAllTasks());
-            });
-          }
-        },
-      }),
-      React.createElement(ComponentStatusBar || StatusBar, statusBarProps)
-    )
+        Box,
+        { flexGrow: 1, borderStyle: 'round' },
+        React.createElement(ComponentLogViewer || LogViewer, logViewerProps)
+    ),
+    React.createElement(ComponentTaskInput || TaskInput, {
+      ...taskInputProps,
+      onSubmit: async (input) => {
+        // Try to handle as extended command first
+        if (!await handleExtendedCommand(input)) {
+          // If not a command, process as normal input
+          engine.processInput(input).then(() => {
+            // Refresh tasks after processing
+            setTasks(engine.inputManager.getAllTasks());
+          });
+        }
+      },
+    })
   );
 };
 
