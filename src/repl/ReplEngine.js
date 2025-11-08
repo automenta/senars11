@@ -113,7 +113,7 @@ export class ReplEngine extends EventEmitter {
     _handleNarseseError(input, error) {
         // Find the task by looking at the most recently added task
         const allTasks = this.inputManager.getAllTasks();
-        const latestTask = allTasks.length > 0 ? allTasks[allTasks.length - 1] : null;
+        const latestTask = allTasks.at(-1); // More concise way to get last element
 
         if (latestTask && latestTask.task === input) {
             latestTask.metadata.error = true;

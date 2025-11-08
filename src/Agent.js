@@ -54,7 +54,7 @@ export class Input {
     }
 
     getHighestPriorityTask() {
-        return this.tasks[0] || null;
+        return this.tasks[0] ?? null;
     }
 
     getAllTasks() {
@@ -66,7 +66,7 @@ export class Input {
     }
 
     getTaskById(taskId) {
-        return this.tasks.find(item => item.id === taskId) || null;
+        return this.tasks.find(item => item.id === taskId) ?? null;
     }
 
     size() {
@@ -159,16 +159,16 @@ export class Input {
 
 export class Agent {
     constructor(config = {}) {
-        this.nar = config.nar || new NAR(config.narConfig || {});
-        this.inputTasks = new Input();
+        this.nar = config.nar ?? new NAR(config.narConfig ?? {});
+        this.inputTasks = new Input(); // Manage user input tasks
         this.evaluator = this.nar._evaluator;
         this.isRunning = false;
-        this.config = {maxCyclesPerStep: config.maxCyclesPerStep || 100, ...config};
+        this.config = {maxCyclesPerStep: config.maxCyclesPerStep ?? 100, ...config};
         this._pluginManager = null;
     }
 
     addTask(task, priority = 0) {
-        this.inputTasks.addTask(task, priority);
+        return this.inputTasks.addTask(task, priority);
     }
 
     removeTask(index) {
@@ -177,6 +177,22 @@ export class Agent {
 
     updatePriority(index, newPriority) {
         return this.inputTasks.updatePriority(index, newPriority);
+    }
+
+    getTaskDependencies(inputId) {
+        return this.inputTasks.getTaskDependencies(inputId);
+    }
+
+    deleteInputWithDependencies(inputId) {
+        return this.inputTasks.deleteInputWithDependencies(inputId);
+    }
+
+    editInputWithRecreate(inputId, newInput, metadata = {}) {
+        return this.inputTasks.editInputWithRecreate(inputId, newInput, metadata);
+    }
+
+    updateInputPriority(inputId, newPriority, mode = 'direct') {
+        return this.inputTasks.updatePriorityById(inputId, newPriority, mode);
     }
 
     async run() {
@@ -242,9 +258,9 @@ export class Agent {
     _getNARStatus() {
         if (!this.nar) return 'N/A';
         return {
-            isRunning: this.nar.isRunning,
-            cycleCount: this.nar.cycleCount,
-            memoryStats: this.nar.memory?.getDetailedStats() || 'N/A'
+            isRunning: this.nar.isRunning ?? false,
+            cycleCount: this.nar.cycleCount ?? 0,
+            memoryStats: this.nar.memory?.getDetailedStats() ?? 'N/A'
         };
     }
 
@@ -261,23 +277,23 @@ export class Agent {
     }
 
     getLM() {
-        return this.nar.lm || null;
+        return this.nar.lm ?? null;
     }
 
     getMetricsMonitor() {
-        return this.nar.metricsMonitor || null;
+        return this.nar.metricsMonitor ?? null;
     }
 
     getEmbeddingLayer() {
-        return this.nar.embeddingLayer || null;
+        return this.nar.embeddingLayer ?? null;
     }
 
     getTermLayer() {
-        return this.nar.termLayer || null;
+        return this.nar.termLayer ?? null;
     }
 
     getTools() {
-        return this.nar.tools || null;
+        return this.nar.tools ?? null;
     }
 
     getPluginManager() {

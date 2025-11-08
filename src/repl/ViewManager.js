@@ -14,6 +14,7 @@ export class ViewManager {
         this.viewModes = this._initializeViewModes();
     }
 
+    // Initialization methods
     _initializeViews() {
         return {
             'vertical-split': this._createVerticalSplitView.bind(this),
@@ -42,6 +43,7 @@ export class ViewManager {
         };
     }
 
+    // View management methods
     switchView(viewName) {
         if (!this.views[viewName]) {
             throw new Error(`Unknown view: ${viewName}`);
@@ -70,24 +72,34 @@ export class ViewManager {
         this.screen.render();
     }
 
-    // Update the status bar to reflect current view
-    _updateStatusBar() {
-        if (this.components.statusBar && typeof this.components.statusBar.handleViewChange === 'function') {
-            const viewInfo = this.getCurrentViewInfo();
-            this.components.statusBar.handleViewChange(viewInfo);
-        }
+    _cycleViews() {
+        const views = this.getAvailableViews();
+        const currentIndex = views.indexOf(this.currentView);
+        const nextIndex = (currentIndex + 1) % views.length;
+        this.switchView(views[nextIndex]);
     }
 
+    getCurrentView() {
+        return this.currentView;
+    }
+
+    getAvailableViews() {
+        return Object.keys(this.views);
+    }
+
+    // View creation methods
     _createVerticalSplitView() {
         this._clearScreen();
         this._setupComponent('taskEditor', '0', '0', '40%', '100%-1');
         this._setupComponent('logViewer', '0', '40%', '60%', '100%-1');
+        this._setupTaskInput();
         this._setupStatusBar();
     }
 
     _createLogOnlyView() {
         this._clearScreen();
         this._setupComponent('logViewer', '0', '0', '100%', '100%-1');
+        this._setupTaskInput();
         this._setupStatusBar();
         this._hideComponent('taskEditor');
     }
@@ -96,11 +108,13 @@ export class ViewManager {
         this._clearScreen();
         this._setupComponent('taskEditor', '0', '0', '70%', '100%-1');
         this._setupComponent('logViewer', '0', '70%', '30%', '100%-1');
+        this._setupTaskInput();
         this._setupStatusBar();
         this._enableGroupingMode();
         this._showAllComponents();
     }
 
+    // Layout and component positioning methods
     _setupComponent(componentName, top, left, width, height) {
         const component = this.components[componentName];
         if (component) {
@@ -114,6 +128,18 @@ export class ViewManager {
         if (statusBar) {
             statusBar.setPosition('100%-1', '0', '100%', '1');
             this.screen.append(statusBar.getElement());
+        }
+    }
+
+    _setupTaskInput() {
+        const taskInput = this.components.taskInput;
+        if (taskInput) {
+            // Position task input at the bottom, above the status bar
+            taskInput.setPosition('100%-2', '0', '100%', '1');  // height '1', positioned at '100%-2'
+            // Make sure it's added to the screen if not already there
+            if (this.screen && taskInput.getElement() && !this.screen.children.includes(taskInput.getElement())) {
+                this.screen.append(taskInput.getElement());
+            }
         }
     }
 
@@ -144,6 +170,7 @@ export class ViewManager {
         this.screen.children.forEach(child => child.destroy());
     }
 
+    // State management methods
     _storeCurrentViewState() {
         if (!this.currentView) return;
 
@@ -196,14 +223,39 @@ export class ViewManager {
         });
     }
 
-    getCurrentView() {
-        return this.currentView;
+    // Event and UI update methods
+    handleResize() {
+        // Store current component states before resize
+        this._storeCurrentViewState();
+
+        // Recreate the current view layout based on new screen dimensions
+        this.views[this.currentView].call(this);
+
+        // Restore component states after layout change
+        this._restoreViewState(this.currentView);
+
+        // Final render to ensure everything is properly positioned
+        this.screen.render();
+
+        // Emit resize event so components can adjust if needed
+        this.emit('view-resized', {
+            view: this.currentView,
+            screen: {
+                width: this.screen.width,
+                height: this.screen.height
+            }
+        });
     }
 
-    getAvailableViews() {
-        return Object.keys(this.views);
+    // Update the status bar to reflect current view
+    _updateStatusBar() {
+        if (this.components.statusBar && typeof this.components.statusBar.handleViewChange === 'function') {
+            const viewInfo = this.getCurrentViewInfo();
+            this.components.statusBar.handleViewChange(viewInfo);
+        }
     }
 
+    // Component management methods
     setComponents(components) {
         this.components = { ...this.components, ...components };
     }
@@ -212,6 +264,7 @@ export class ViewManager {
         this.components[name] = component;
     }
 
+    // Keyboard shortcut methods
     addViewShortcuts(screen) {
         const shortcuts = {
             'C-l': () => this.switchView('log-only'),      // Ctrl+L: Log-only view
@@ -225,13 +278,7 @@ export class ViewManager {
         });
     }
 
-    _cycleViews() {
-        const views = this.getAvailableViews();
-        const currentIndex = views.indexOf(this.currentView);
-        const nextIndex = (currentIndex + 1) % views.length;
-        this.switchView(views[nextIndex]);
-    }
-
+    // Info methods
     getCurrentViewInfo() {
         return {
             name: this.currentView,
@@ -239,34 +286,11 @@ export class ViewManager {
         };
     }
 
-    handleResize() {
-        // Store current component states before resize
-        this._storeCurrentViewState();
-        
-        // Recreate the current view layout based on new screen dimensions
-        this.views[this.currentView].call(this);
-        
-        // Restore component states after layout change
-        this._restoreViewState(this.currentView);
-        
-        // Final render to ensure everything is properly positioned
-        this.screen.render();
-        
-        // Emit resize event so components can adjust if needed
-        this.emit('view-resized', {
-            view: this.currentView,
-            screen: {
-                width: this.screen.width,
-                height: this.screen.height
-            }
-        });
-    }
-
     // Add method to get view information for status bar
     getViewInfoForStatus() {
         const currentView = this.getCurrentViewInfo();
         const allViews = this.getAvailableViews();
-        
+
         return {
             current: currentView.label,
             icon: currentView.icon,
@@ -282,6 +306,7 @@ export class ViewManager {
         }
     }
 
+    // Event handling methods
     emit(event, data) {
         this.eventEmitter?.emit(event, data);
     }

@@ -5,12 +5,13 @@ import blessed from 'blessed';
  */
 export class BaseComponent {
     constructor(config = {}) {
-        const { elementConfig = {}, elementType = 'box', parent, eventEmitter } = config;
+        const { elementConfig = {}, elementType = 'box', parent, eventEmitter, engine } = config;
         this.config = config;
         this.elementConfig = elementConfig;
         this.elementType = elementType;
         this.parent = parent;
         this.eventEmitter = eventEmitter;
+        this.engine = config.engine; // Add engine reference if available
         this.element = null;
         this.isInitialized = false;
         this.children = [];
@@ -27,43 +28,14 @@ export class BaseComponent {
         return this.element;
     }
 
+    // Rendering methods
     render() {
         this.element?.screen?.render?.();
     }
 
+    // Element methods
     getElement() {
         return this.element;
-    }
-
-    /**
-     * Add visual feedback with optional animation
-     */
-    addVisualFeedback(content, options = {}) {
-        const { animate = true, flashDuration = 200, callback } = options;
-        const color = options.color || 'yellow';
-
-        if (animate && this.element) {
-            // Store original style properties to avoid object creation
-            const originalFg = this.element.style.fg;
-
-            // Flash effect
-            this.element.style.fg = color;
-            this.render();
-
-            setTimeout(() => {
-                // Restore original style
-                if (this.element?.style) {
-                    this.element.style.fg = originalFg;
-                    this.render();
-                }
-                if (callback) callback();
-            }, flashDuration);
-        }
-
-        if (typeof this.element?.setContent === 'function' && content !== undefined) {
-            this.element.setContent(content);
-            this.render();
-        }
     }
 
     setContent(content) {
@@ -109,14 +81,15 @@ export class BaseComponent {
         if (!this.element) return;
 
         const position = this.element.position;
-        top !== undefined && (position.top = top);
-        left !== undefined && (position.left = left);
-        width !== undefined && (position.width = width);
-        height !== undefined && (position.height = height);
+        if (top !== undefined) position.top = top;
+        if (left !== undefined) position.left = left;
+        if (width !== undefined) position.width = width;
+        if (height !== undefined) position.height = height;
 
         this.element.screen.render();
     }
 
+    // Event methods
     emit(event, data) {
         this.eventEmitter?.emit(event, data);
     }
@@ -125,27 +98,54 @@ export class BaseComponent {
         this.eventEmitter?.on(event, handler);
     }
 
+    // Child management methods
     addChild(child) {
         this.children.push(child);
     }
 
     removeChild(child) {
         const index = this.children.indexOf(child);
-        if (index !== -1) this.children.splice(index, 1);
+        if (index !== -1) {
+            this.children.splice(index, 1);
+        }
     }
 
     getChildren() {
         return [...this.children];
     }
 
-    destroy() {
-        this.element?.destroy?.();
+    /**
+     * Add visual feedback with optional animation
+     */
+    addVisualFeedback(content, options = {}) {
+        const { animate = true, flashDuration = 200, callback } = options;
+        const color = options.color ?? 'yellow';
 
-        this.children.forEach(child => child.destroy());
-        this.children = [];
-        this.isInitialized = false;
+        if (animate && this.element) {
+            // Store original style properties to avoid object creation
+            const originalFg = this.element.style.fg;
+
+            // Flash effect
+            this.element.style.fg = color;
+            this.render();
+
+            setTimeout(() => {
+                // Restore original style
+                if (this.element?.style) {
+                    this.element.style.fg = originalFg;
+                    this.render();
+                }
+                callback?.();
+            }, flashDuration);
+        }
+
+        if (typeof this.element?.setContent === 'function' && content !== undefined) {
+            this.element.setContent(content);
+            this.render();
+        }
     }
-    
+
+    // Progress and animation methods
     /**
      * Create an animated progress bar
      */
@@ -153,30 +153,27 @@ export class BaseComponent {
         const percentage = total > 0 ? current / total : 0;
         const filledWidth = Math.floor(percentage * width);
         const emptyWidth = width - filledWidth;
-        
-        const filledChar = options.filledChar || '█';
-        const emptyChar = options.emptyChar || '░';
-        const prefix = options.prefix || '';
-        const suffix = options.suffix || '';
-        
+
+        const { filledChar = '█', emptyChar = '░', prefix = '', suffix = '' } = options;
+
         const filled = filledChar.repeat(filledWidth);
         const empty = emptyChar.repeat(emptyWidth);
-        
+
         // Animate with color based on progress
         const progressColor = this._getProgressColor(percentage);
-        
+
         return `${prefix}[{${progressColor}}${filled}${empty}{/}] ${Math.round(percentage * 100)}%${suffix}`;
     }
-    
+
     /**
      * Get color based on progress percentage
      */
     _getProgressColor(percentage) {
-        if (percentage < 0.3) return 'red';
-        if (percentage < 0.7) return 'yellow';
-        return 'green';
+        return percentage < 0.3 ? 'red' :
+               percentage < 0.7 ? 'yellow' :
+               'green';
     }
-    
+
     /**
      * Show animated progress indicator for long operations
      */
@@ -187,12 +184,12 @@ export class BaseComponent {
             onComplete = () => {},
             onProgress = () => {}
         } = options;
-        
+
         if (!this.element) return;
-        
+
         const animationChars = ['◐', '◓', '◑', '◒'];
         let animIndex = 0;
-        
+
         const updateAnimation = () => {
             const animChar = animationChars[animIndex % animationChars.length];
             const originalContent = this.element.getContent();
@@ -200,11 +197,11 @@ export class BaseComponent {
             this.render();
             animIndex++;
         };
-        
+
         // Start animation
         updateAnimation();
         const intervalId = setInterval(updateAnimation, animationInterval);
-        
+
         // Stop animation after duration
         setTimeout(() => {
             clearInterval(intervalId);
@@ -213,13 +210,13 @@ export class BaseComponent {
             this.render();
         }, duration);
     }
-    
+
     /**
      * Create a modal progress dialog for long operations
      */
     createProgressDialog(title, options = {}) {
         if (!this.parent) return null;
-        
+
         const progressDialog = blessed.box({
             top: 'center',
             left: 'center',
@@ -235,11 +232,21 @@ export class BaseComponent {
             content: `{center}${title}{/center}\n`,
             hidden: false
         });
-        
+
         this.parent.append(progressDialog);
         this.render();
-        
+
         return progressDialog;
     }
-}
+
+    /**
+     * Destroy component and clean up resources
+     */
+    destroy() {
+        this.element?.destroy?.();
+
+        this.children.forEach(child => child.destroy());
+        this.children = [];
+        this.isInitialized = false;
+    }
 }

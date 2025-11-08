@@ -51,6 +51,7 @@ export class LogViewerComponent extends BaseComponent {
         return this.element;
     }
 
+    // Event handling methods
     _setupEventHandlers() {
         if (!this.element) return;
 
@@ -118,46 +119,8 @@ export class LogViewerComponent extends BaseComponent {
             'C-p': () => this._printLogStats() // Ctrl+P to print log stats
         };
     }
-    
-    _logPlaceholderAction(message, eventName) {
-        this.addInfo(message);
-        this.emit(eventName);
-    }
 
-    _copyLogEntry() {
-        this._logPlaceholderAction('📋 Copy log entry functionality would be implemented here', 'log-entry-copy-requested');
-    }
-    
-    _saveCurrentLogs() {
-        this._logPlaceholderAction('💾 Save logs functionality would be implemented here', 'log-save-requested');
-    }
-    
-    _exportLogs() {
-        this._logPlaceholderAction('📤 Export logs functionality would be implemented here', 'log-export-requested');
-    }
-    
-    _printLogStats() {
-        const stats = this.getStats();
-        const statsInfo = [
-            `📊 Log Statistics:`,
-            `   Total logs: ${stats.size}`,
-            `   Filtered: ${stats.filteredSize}`,
-            `   Errors: ${stats.counts.error}, Warnings: ${stats.counts.warn}, Info: ${stats.counts.info}, Debug: ${stats.counts.debug}`,
-            `   Capacity: ${Math.round(stats.capacityRatio * 100)}% (${stats.size}/${stats.maxScrollback})`
-        ];
-        
-        statsInfo.forEach(info => this.addInfo(info));
-        this.emit('log-stats-printed', stats);
-    }
-    
-    _selectAllLogs() {
-        this._logPlaceholderAction('📋 Select all logs functionality would be implemented here', 'log-select-all-requested');
-    }
-    
-    _clearLogSelection() {
-        this._logPlaceholderAction('📋 Clear log selection functionality would be implemented here', 'log-clear-selection-requested');
-    }
-
+    // Log addition and management methods
     addLog(message, level = 'info', timestamp = new Date()) {
         const logEntry = {
             message: typeof message === 'object' ? JSON.stringify(message) : message,
@@ -173,6 +136,11 @@ export class LogViewerComponent extends BaseComponent {
         this._maybeScrollToBottom();
         this.emit('log-added', logEntry);
     }
+
+    addInfo(message) { this.addLog(message, 'info'); }
+    addError(message) { this.addLog(message, 'error'); }
+    addWarning(message) { this.addLog(message, 'warn'); }
+    addDebug(message) { this.addLog(message, 'debug'); }
 
     _handleCapacityCheck() {
         const capacityRatio = this.logs.length / this.maxScrollback;
@@ -202,11 +170,6 @@ export class LogViewerComponent extends BaseComponent {
         }
     }
 
-    addInfo(message) { this.addLog(message, 'info'); }
-    addError(message) { this.addLog(message, 'error'); }
-    addWarning(message) { this.addLog(message, 'warn'); }
-    addDebug(message) { this.addLog(message, 'debug'); }
-
     clearLogs() {
         this.logs = [];
         this.filteredLogs = [];
@@ -215,6 +178,7 @@ export class LogViewerComponent extends BaseComponent {
         this.emit('logs-cleared');
     }
 
+    // Filtering methods
     _applyFilters() {
         this.filteredLogs = this.logs.filter(log => this._matchesFilters(log));
         this._updateDisplay();
@@ -223,10 +187,10 @@ export class LogViewerComponent extends BaseComponent {
     _matchesFilters(log) {
         // Check level filter first (most common) as a performance optimization
         if (this.filters.level !== 'all' && log.level !== this.filters.level) return false;
-        
+
         // Check keyword filter next if present
         if (this.filters.keyword && !log.message.toLowerCase().includes(this.filters.keyword.toLowerCase())) return false;
-        
+
         // Check time range filter last
         if (this.filters.timeRange) {
             const logTime = new Date(log.timestamp);
@@ -234,17 +198,74 @@ export class LogViewerComponent extends BaseComponent {
             const end = this.filters.timeRange.end ?? new Date();
             if (logTime < start || logTime > end) return false;
         }
-        
+
         return true;
     }
 
+    setLevelFilter(level) {
+        this.filters.level = level.toLowerCase();
+        this._applyFilters();
+        this.emit('filter-changed', { type: 'level', value: level });
+    }
+
+    setKeywordFilter(keyword) {
+        this.filters.keyword = keyword.toLowerCase();
+        this._applyFilters();
+        this.emit('filter-changed', { type: 'keyword', value: keyword });
+    }
+
+    setTimeRangeFilter(startDate, endDate) {
+        this.filters.timeRange = { start: startDate, end: endDate };
+        this._applyFilters();
+        this.emit('filter-changed', {
+            type: 'time-range',
+            start: startDate,
+            end: endDate
+        });
+    }
+
+    setRelativeTimeFilter(relativeTime) {
+        const now = new Date();
+        const timeRanges = {
+            'last-5-minutes': 5 * 60 * 1000,
+            'last-15-minutes': 15 * 60 * 1000,
+            'last-1-hour': 60 * 60 * 1000,
+            'last-24-hours': 24 * 60 * 60 * 1000
+        };
+
+        const startTime = timeRanges[relativeTime] ?
+            new Date(now.getTime() - timeRanges[relativeTime]) :
+            now;
+
+        this.filters.timeRange = { start: startTime, end: now };
+        this._applyFilters();
+        this.emit('filter-changed', {
+            type: 'relative-time',
+            value: relativeTime,
+            start: startTime,
+            end: now
+        });
+    }
+
+    toggleTimestampDisplay() {
+        this.filters.showTimestamp = !this.filters.showTimestamp;
+        this._applyFilters();
+        this.emit('filter-toggled', { type: 'timestamp', enabled: this.filters.showTimestamp });
+    }
+
+    toggleFollowMode() {
+        this.isFollowing = !this.isFollowing;
+        this.emit('follow-mode-toggled', { enabled: this.isFollowing });
+    }
+
+    // Display and formatting methods
     _updateDisplay() {
         if (!this.element) return;
 
         const content = this.filteredLogs
             .map(log => this._formatLogEntry(log))
             .join('\n');
-        
+
         this.setContent(content);
     }
 
@@ -265,58 +286,26 @@ export class LogViewerComponent extends BaseComponent {
     }
 
     _getLevelColor(level) {
-        const colors = { 
-            error: 'red', 
-            warn: 'yellow', 
+        const levelColors = {
+            error: 'red',
+            warn: 'yellow',
             debug: 'blue',
             info: 'cyan',
             success: 'green'
         };
-        return colors[level] || 'white';
+        return levelColors[level] ?? 'white';
     }
 
     _escapeBraces(str) {
         return str.toString().replace(/\{/g, '{open-brace}').replace(/\}/g, '{close-brace}');
     }
 
-    setLevelFilter(level) {
-        this.filters.level = level.toLowerCase();
-        this._applyFilters();
-        this.emit('filter-changed', { type: 'level', value: level });
-    }
-
-    setKeywordFilter(keyword) {
-        this.filters.keyword = keyword.toLowerCase();
-        this._applyFilters();
-        this.emit('filter-changed', { type: 'keyword', value: keyword });
-    }
-
-    setTimeRangeFilter(startDate, endDate) {
-        this.filters.timeRange = { start: startDate, end: endDate };
-        this._applyFilters();
-        this.emit('filter-changed', { 
-            type: 'time-range', 
-            start: startDate, 
-            end: endDate 
-        });
-    }
-
-    toggleTimestampDisplay() {
-        this.filters.showTimestamp = !this.filters.showTimestamp;
-        this._applyFilters();
-        this.emit('filter-toggled', { type: 'timestamp', enabled: this.filters.showTimestamp });
-    }
-
-    toggleFollowMode() {
-        this.isFollowing = !this.isFollowing;
-        this.emit('follow-mode-toggled', { enabled: this.isFollowing });
-    }
-
+    // Query and statistics methods
     getLogs() { return [...this.logs]; }
     getFilteredLogs() { return [...this.filteredLogs]; }
 
     getLogCount(level) {
-        return level 
+        return level
             ? this.logs.filter(log => log.level === level.toLowerCase()).length
             : this.logs.length;
     }
@@ -327,92 +316,9 @@ export class LogViewerComponent extends BaseComponent {
         );
     }
 
-    _toggleFilterMenu() {
-        this.emit('show-filter-menu', {
-            currentFilters: { ...this.filters },
-            onFilterChange: (type, value) => {
-                switch (type) {
-                    case 'level': this.setLevelFilter(value); break;
-                    case 'keyword': this.setKeywordFilter(value); break;
-                    case 'timestamp': this.toggleTimestampDisplay(); break;
-                }
-            }
-        });
-    }
-
-    _showContextMenu(mouse) {
-        // Calculate position for context menu
-        const position = {
-            top: Math.min(mouse.y, this.parent.height - 10),
-            left: Math.min(mouse.x, this.parent.width - 20)
-        };
-
-        // Define context menu items for log level controls
-        const menuItems = [
-            { 
-                label: this.filters.level === 'all' ? '✓ All Messages' : 'All Messages', 
-                action: () => this.setLevelFilter('all') 
-            },
-            { 
-                label: this.filters.level === 'error' ? '✓ Errors Only' : 'Show Errors', 
-                action: () => this.setLevelFilter('error') 
-            },
-            { 
-                label: this.filters.level === 'warn' ? '✓ Warnings Only' : 'Show Warnings', 
-                action: () => this.setLevelFilter('warn') 
-            },
-            { 
-                label: this.filters.level === 'info' ? '✓ Info Only' : 'Show Info', 
-                action: () => this.setLevelFilter('info') 
-            },
-            { 
-                label: this.filters.level === 'debug' ? '✓ Debug Only' : 'Show Debug', 
-                action: () => this.setLevelFilter('debug') 
-            },
-            { 
-                label: 'Clear Filters', 
-                action: () => {
-                    this.setLevelFilter('all');
-                    this.setKeywordFilter('');
-                    this.setTimeRangeFilter(null);
-                } 
-            },
-            { 
-                label: 'Search...', 
-                action: () => this._openAdvancedFilterDialog() 
-            },
-            { 
-                label: 'Compact Logs', 
-                action: () => this.compactLogs() 
-            },
-            { 
-                label: 'Exit', 
-                action: () => {} 
-            }
-        ];
-
-        this.emit('show-context-menu', { position, menuItems });
-    }
-
-    saveLogsToFile(filePath) {
-        try {
-            const fs = require('fs');
-            const logContent = this.logs
-                .map(log => `[${log.timestamp.toISOString()}] [${log.level.toUpperCase()}] ${log.message}`)
-                .join('\n');
-            
-            fs.writeFileSync(filePath, logContent);
-            this.emit('logs-saved', { filePath, count: this.logs.length });
-            return true;
-        } catch (error) {
-            this.emit('logs-save-error', { error: error.message });
-            return false;
-        }
-    }
-
     getStats() {
         const counts = this.logs.reduce((acc, log) => {
-            acc[log.level] = (acc[log.level] || 0) + 1;
+            acc[log.level] = (acc[log.level] ?? 0) + 1;
             acc.total++;
             return acc;
         }, { total: 0, error: 0, warn: 0, info: 0, debug: 0 });
@@ -421,8 +327,8 @@ export class LogViewerComponent extends BaseComponent {
             counts,
             size: this.logs.length,
             filteredSize: this.filteredLogs.length,
-            oldest: this.logs[0]?.timestamp || null,
-            newest: this.logs[this.logs.length - 1]?.timestamp || null,
+            oldest: this.logs[0]?.timestamp ?? null,
+            newest: this.logs[this.logs.length - 1]?.timestamp ?? null,
             currentFilters: { ...this.filters },
             maxScrollback: this.maxScrollback,
             isAtCapacity: this.isAtCapacity,
@@ -433,15 +339,15 @@ export class LogViewerComponent extends BaseComponent {
     // Scrollback capacity management methods
     setMaxScrollback(newMax) {
         this.maxScrollback = newMax;
-        
+
         // Truncate logs if new max is smaller than current size
         if (this.logs.length > this.maxScrollback) {
             this.logs = this.logs.slice(-this.maxScrollback);
         }
-        
-        this.emit('max-scrollback-changed', { 
-            oldMax: this.maxScrollback, 
-            newMax: newMax 
+
+        this.emit('max-scrollback-changed', {
+            oldMax: this.maxScrollback,
+            newMax: newMax
         });
     }
 
@@ -462,7 +368,7 @@ export class LogViewerComponent extends BaseComponent {
     compactLogs() {
         const originalCount = this.logs.length;
         const cutoffTime = Date.now() - (24 * 60 * 60 * 1000); // 24 hours ago
-        
+
         this.logs = this.logs.filter(log => new Date(log.timestamp).getTime() > cutoffTime);
 
         this._applyFilters();
@@ -471,62 +377,6 @@ export class LogViewerComponent extends BaseComponent {
             newCount: this.logs.length,
             removedCount: originalCount - this.logs.length
         });
-    }
-
-    // Additional filtering methods
-    _openAdvancedFilterDialog() {
-        this.emit('open-advanced-filter', {
-            currentFilters: { ...this.filters },
-            onFilterChange: (filterType, value) => {
-                switch (filterType) {
-                    case 'level':
-                        this.setLevelFilter(value);
-                        break;
-                    case 'keyword':
-                        this.setKeywordFilter(value);
-                        break;
-                    case 'time-range':
-                        this.setTimeRangeFilter(value.start, value.end);
-                        break;
-                    case 'relative-time':
-                        this.setRelativeTimeFilter(value);
-                        break;
-                }
-            }
-        });
-    }
-
-    setRelativeTimeFilter(relativeTime) {
-        const now = new Date();
-        const timeRanges = {
-            'last-5-minutes': 5 * 60 * 1000,
-            'last-15-minutes': 15 * 60 * 1000,
-            'last-1-hour': 60 * 60 * 1000,
-            'last-24-hours': 24 * 60 * 60 * 1000
-        };
-        
-        const startTime = timeRanges[relativeTime] ? 
-            new Date(now.getTime() - timeRanges[relativeTime]) : 
-            now;
-
-        this.filters.timeRange = { start: startTime, end: now };
-        this._applyFilters();
-        this.emit('filter-changed', { 
-            type: 'relative-time', 
-            value: relativeTime,
-            start: startTime,
-            end: now
-        });
-    }
-
-    _toggleRelativeTime() {
-        const timeOptions = ['last-5-minutes', 'last-15-minutes', 'last-1-hour', 'all'];
-        const currentIndex = timeOptions.indexOf(this.currentRelativeTime || 'all');
-        const nextIndex = (currentIndex + 1) % timeOptions.length;
-        const nextTimeOption = timeOptions[nextIndex];
-        
-        this.currentRelativeTime = nextTimeOption;
-        this.setRelativeTimeFilter(nextTimeOption);
     }
 
     // Helper methods for scrolling
@@ -552,6 +402,163 @@ export class LogViewerComponent extends BaseComponent {
                     this.render();
                 }
             }, 10);
+        }
+    }
+
+    // Context menu and filter methods
+    _toggleFilterMenu() {
+        this.emit('show-filter-menu', {
+            currentFilters: { ...this.filters },
+            onFilterChange: (type, value) => {
+                switch (type) {
+                    case 'level': this.setLevelFilter(value); break;
+                    case 'keyword': this.setKeywordFilter(value); break;
+                    case 'timestamp': this.toggleTimestampDisplay(); break;
+                }
+            }
+        });
+    }
+
+    _showContextMenu(mouse) {
+        // Calculate position for context menu
+        const position = {
+            top: Math.min(mouse.y, this.parent.height - 10),
+            left: Math.min(mouse.x, this.parent.width - 20)
+        };
+
+        // Define context menu items for log level controls
+        const menuItems = [
+            {
+                label: this.filters.level === 'all' ? '✓ All Messages' : 'All Messages',
+                action: () => this.setLevelFilter('all')
+            },
+            {
+                label: this.filters.level === 'error' ? '✓ Errors Only' : 'Show Errors',
+                action: () => this.setLevelFilter('error')
+            },
+            {
+                label: this.filters.level === 'warn' ? '✓ Warnings Only' : 'Show Warnings',
+                action: () => this.setLevelFilter('warn')
+            },
+            {
+                label: this.filters.level === 'info' ? '✓ Info Only' : 'Show Info',
+                action: () => this.setLevelFilter('info')
+            },
+            {
+                label: this.filters.level === 'debug' ? '✓ Debug Only' : 'Show Debug',
+                action: () => this.setLevelFilter('debug')
+            },
+            {
+                label: 'Clear Filters',
+                action: () => {
+                    this.setLevelFilter('all');
+                    this.setKeywordFilter('');
+                    this.setTimeRangeFilter(null);
+                }
+            },
+            {
+                label: 'Search...',
+                action: () => this._openAdvancedFilterDialog()
+            },
+            {
+                label: 'Compact Logs',
+                action: () => this.compactLogs()
+            },
+            {
+                label: 'Exit',
+                action: () => {}
+            }
+        ];
+
+        this.emit('show-context-menu', { position, menuItems });
+    }
+
+    _openAdvancedFilterDialog() {
+        this.emit('open-advanced-filter', {
+            currentFilters: { ...this.filters },
+            onFilterChange: (filterType, value) => {
+                switch (filterType) {
+                    case 'level':
+                        this.setLevelFilter(value);
+                        break;
+                    case 'keyword':
+                        this.setKeywordFilter(value);
+                        break;
+                    case 'time-range':
+                        this.setTimeRangeFilter(value.start, value.end);
+                        break;
+                    case 'relative-time':
+                        this.setRelativeTimeFilter(value);
+                        break;
+                }
+            }
+        });
+    }
+
+    _toggleRelativeTime() {
+        const timeOptions = ['last-5-minutes', 'last-15-minutes', 'last-1-hour', 'all'];
+        const currentIndex = timeOptions.indexOf(this.currentRelativeTime || 'all');
+        const nextIndex = (currentIndex + 1) % timeOptions.length;
+        const nextTimeOption = timeOptions[nextIndex];
+
+        this.currentRelativeTime = nextTimeOption;
+        this.setRelativeTimeFilter(nextTimeOption);
+    }
+
+    // Placeholder methods for extended functionality
+    _logPlaceholderAction(message, eventName) {
+        this.addInfo(message);
+        this.emit(eventName);
+    }
+
+    _copyLogEntry() {
+        this._logPlaceholderAction('📋 Copy log entry functionality would be implemented here', 'log-entry-copy-requested');
+    }
+
+    _saveCurrentLogs() {
+        this._logPlaceholderAction('💾 Save logs functionality would be implemented here', 'log-save-requested');
+    }
+
+    _exportLogs() {
+        this._logPlaceholderAction('📤 Export logs functionality would be implemented here', 'log-export-requested');
+    }
+
+    _printLogStats() {
+        const stats = this.getStats();
+        const statsInfo = [
+            `📊 Log Statistics:`,
+            `   Total logs: ${stats.size}`,
+            `   Filtered: ${stats.filteredSize}`,
+            `   Errors: ${stats.counts.error}, Warnings: ${stats.counts.warn}, Info: ${stats.counts.info}, Debug: ${stats.counts.debug}`,
+            `   Capacity: ${Math.round(stats.capacityRatio * 100)}% (${stats.size}/${stats.maxScrollback})`
+        ];
+
+        statsInfo.forEach(info => this.addInfo(info));
+        this.emit('log-stats-printed', stats);
+    }
+
+    _selectAllLogs() {
+        this._logPlaceholderAction('📋 Select all logs functionality would be implemented here', 'log-select-all-requested');
+    }
+
+    _clearLogSelection() {
+        this._logPlaceholderAction('📋 Clear log selection functionality would be implemented here', 'log-clear-selection-requested');
+    }
+
+    // File operations
+    saveLogsToFile(filePath) {
+        try {
+            const fs = require('fs');
+            const logContent = this.logs
+                .map(log => `[${log.timestamp.toISOString()}] [${log.level.toUpperCase()}] ${log.message}`)
+                .join('\n');
+
+            fs.writeFileSync(filePath, logContent);
+            this.emit('logs-saved', { filePath, count: this.logs.length });
+            return true;
+        } catch (error) {
+            this.emit('logs-save-error', { error: error.message });
+            return false;
         }
     }
 }

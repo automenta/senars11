@@ -30,7 +30,6 @@ export class TaskInputComponent extends BaseComponent {
     init() {
         this.element = blessed.textarea(this.elementConfig);
 
-        this.parent?.append?.(this.element);
         this._setupEventHandlers();
         this.isInitialized = true;
         return this.element;

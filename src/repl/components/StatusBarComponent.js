@@ -49,6 +49,7 @@ export class StatusBarComponent extends BaseComponent {
         return this.element;
     }
 
+    // Event handling methods
     _setupEventHandlers() {
         if (!this.element) return;
 
@@ -86,6 +87,16 @@ export class StatusBarComponent extends BaseComponent {
         });
     }
 
+    _startAnimationLoop() {
+        setInterval(() => {
+            if (this.element) {
+                this.animationState.spinningIndex = (this.animationState.spinningIndex + 1) % 4;
+                this.updateContent();
+            }
+        }, 250); // Updated to 250ms for faster animation
+    }
+
+    // Menu and help methods
     _showHelpMenu() {
         this._showStatusMessage('ℹ️  Press F1 for menu, Ctrl+L/T/G to switch views, Ctrl+C to exit');
     }
@@ -111,17 +122,6 @@ export class StatusBarComponent extends BaseComponent {
         this._togglePulldownMenu();
     }
 
-    _cycleView() {
-        if (this.engine?.viewManager) {
-            this.engine.viewManager._cycleViews();
-        }
-    }
-
-    _requestExit() {
-        this._showStatusMessage('🚪 Press Ctrl+C to exit the application');
-        this.emit('exit-requested');
-    }
-
     _showHelp() {
         this._showStatusMessage('ℹ️  Help system would open here - F1=Menu, Ctrl+L/T/G=Views, Arrows=Navigate');
     }
@@ -136,15 +136,104 @@ export class StatusBarComponent extends BaseComponent {
         this._showStatusMessage(`🧠 Memory: ${metrics.memoryUsageMB}MB | Performance: ${metrics.cps} CPS`);
     }
 
-    _startAnimationLoop() {
-        setInterval(() => {
-            if (this.element) {
-                this.animationState.spinningIndex = (this.animationState.spinningIndex + 1) % 4;
-                this.updateContent();
-            }
-        }, 250); // Updated to 250ms for faster animation
+    _togglePulldownMenu() {
+        this.isPulldownMenuOpen = !this.isPulldownMenuOpen;
+
+        // Get current performance metrics for display
+        const performanceMetrics = this._getPerformanceMetrics();
+
+        this.emit('pulldown-menu-toggle', {
+            isOpen: this.isPulldownMenuOpen,
+            options: [
+                { key: 'load', label: '📁 Load Session', shortcut: 'Ctrl+O' },
+                { key: 'save', label: '💾 Save Session', shortcut: 'Ctrl+S' },
+                { key: 'settings', label: '⚙️ Settings', shortcut: 'Ctrl+,' },
+                { key: 'performance', label: `📈 Performance: ${performanceMetrics.cps} CPS`, shortcut: '' },
+                { key: 'help', label: '❓ Help', shortcut: 'F1' },
+                { key: 'exit', label: '🚪 Exit', shortcut: 'Ctrl+C' }
+            ],
+            onSelect: (option) => this._handleMenuSelection(option)
+        });
     }
 
+    _handleMenuSelection(option) {
+        const menuActions = this._getMenuActions();
+        const event = menuActions[option.key];
+        event && this.emit(event);
+
+        // Close the menu after selection
+        this.isPulldownMenuOpen = false;
+    }
+
+    _getMenuActions() {
+        return {
+            'load': 'menu-load',
+            'save': 'menu-save',
+            'settings': 'menu-settings',
+            'help': 'menu-help',
+            'exit': 'menu-exit'
+        };
+    }
+
+    // Connection and state methods
+    setConnectionState(state) {
+        this.connectionState = state.toLowerCase();
+        this.updateContent();
+        this.emit('connection-state-changed', { state: this.connectionState });
+    }
+
+    _toggleConnectionState() {
+        this.connectionState = this.connectionState === 'local' ? 'remote' : 'local';
+        this.updateContent();
+        this.emit('connection-state-toggled', { state: this.connectionState });
+    }
+
+    getConnectionState() {
+        return this.connectionState;
+    }
+
+    // Alert methods
+    updateAlerts(count) {
+        this.alerts = count;
+        this.updateContent();
+        this.emit('alerts-updated', { count: this.alerts });
+    }
+
+    addAlert() {
+        this.alerts++;
+        this.updateContent();
+        this.emit('alert-added', { count: this.alerts });
+    }
+
+    clearAlerts() {
+        this.alerts = 0;
+        this.updateContent();
+        this.emit('alerts-cleared');
+    }
+
+    getAlerts() {
+        return this.alerts;
+    }
+
+    // View and navigation methods
+    _cycleView() {
+        if (this.engine?.viewManager) {
+            this.engine.viewManager._cycleViews();
+        }
+    }
+
+    _requestExit() {
+        this._showStatusMessage('🚪 Press Ctrl+C to exit the application');
+        this.emit('exit-requested');
+    }
+
+    // Method to handle view changes and update status bar
+    handleViewChange(viewInfo) {
+        this.updateContent();
+        this.emit('view-changed-status', viewInfo);
+    }
+
+    // Content update and formatting methods
     updateContent() {
         if (!this.element) return;
 
@@ -172,62 +261,11 @@ export class StatusBarComponent extends BaseComponent {
 
         // Add a separator and session information
         statusParts.push(this._getSessionInfo());
-        
+
         return statusParts.filter(part => part && part.trim() !== '').join(' │ ');
     }
 
-    _getPerformanceMetricsStatus() {
-        const performanceMetrics = this._getPerformanceMetrics();
-        const cps = performanceMetrics.cps;
-        const memoryUsage = performanceMetrics.memoryUsageMB;
-        
-        // Color code based on performance metrics
-        const cpsColor = this._getColorByValue(cps, { high: 50, medium: 10, highColor: 'green', mediumColor: 'yellow', lowColor: 'red' });
-        const memoryColor = this._getColorByValue(memoryUsage, { high: 500, medium: 200, highColor: 'red', mediumColor: 'yellow', lowColor: 'green' });
-        
-        return `{bold}${this._getAnimatedPerformanceIndicator()} │ CPS: {${cpsColor}}${cps}{/} │ Mem: {${memoryColor}}${memoryUsage}MB{/}{/bold}`;
-    }
-    
-    /**
-     * Update and display connection quality metrics
-     */
-    updateConnectionQuality(qualityMetrics) {
-        this.connectionQuality = { ...this.connectionQuality, ...qualityMetrics };
-        this.updateContent();
-    }
-    
-    /**
-     * Get connection quality status for display
-     */
-    _getConnectionQualityStatus() {
-        if (!this.connectionQuality) {
-            return '';
-        }
-        
-        const { state, isHealthy, pingLatency } = this.connectionQuality;
-        const stateText = state === 1 ? 'OPEN' : state === 2 ? 'CLOSING' : state === 3 ? 'CLOSED' : 'CONNECTING';
-        const stateColor = isHealthy ? 'green' : 'red';
-        const latency = pingLatency ? `${pingLatency}ms` : 'N/A';
-        
-        return `{bold}🔗 Quality: {${stateColor}}${stateText}{/} │ Latency: ${latency}{/bold}`;
-    }
-
-    _getSessionInfo() {
-        const startTime = this.engine?.sessionState?.startTime || Date.now();
-        const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
-        const hours = Math.floor(elapsedSeconds / 3600);
-        const minutes = Math.floor((elapsedSeconds % 3600) / 60);
-        const seconds = elapsedSeconds % 60;
-        
-        const timeString = hours > 0 
-            ? `${hours}h ${minutes}m ${seconds}s` 
-            : minutes > 0 
-                ? `${minutes}m ${seconds}s` 
-                : `${seconds}s`;
-        
-        return `{bold}⏱️  Session: ${timeString}{/bold}`;
-    }
-
+    // Status display methods
     _getConnectionStatus() {
         const connectionIndicator = this.connectionState === 'remote' ? '🌐' : '💻';
         const connectionText = this.connectionState === 'remote' ? 'REMOTE' : 'LOCAL';
@@ -252,6 +290,18 @@ export class StatusBarComponent extends BaseComponent {
         return `{bold}Concepts: ${conceptCount} | Focus: ${focusSetSize} | Inputs: ${inputCount} | Queued: ${queuedInputCount} | Cycles: ${cycleCount} | Mem: ${memoryUsageMB}MB{/bold}`;
     }
 
+    _getPerformanceMetricsStatus() {
+        const performanceMetrics = this._getPerformanceMetrics();
+        const cps = performanceMetrics.cps;
+        const memoryUsage = performanceMetrics.memoryUsageMB;
+
+        // Color code based on performance metrics
+        const cpsColor = this._getColorByValue(cps, { high: 50, medium: 10, highColor: 'green', mediumColor: 'yellow', lowColor: 'red' });
+        const memoryColor = this._getColorByValue(memoryUsage, { high: 500, medium: 200, highColor: 'red', mediumColor: 'yellow', lowColor: 'green' });
+
+        return `{bold}${this._getAnimatedPerformanceIndicator()} │ CPS: {${cpsColor}}${cps}{/} │ Mem: {${memoryColor}}${memoryUsage}MB{/}{/bold}`;
+    }
+
     _getAlertsStatus() {
         return `{bold}Alerts: ${this.alerts}{/bold}`;
     }
@@ -260,26 +310,33 @@ export class StatusBarComponent extends BaseComponent {
         return `{red}{bold}⚠️ ${this.alerts} ALERTS{/bold}{/red}`;
     }
 
-    _getQueuedInputCount() {
-        return this.engine?.inputManager?.getAllTasks?.()?.length ?? 0;
+    _getSessionInfo() {
+        const startTime = this.engine?.sessionState?.startTime || Date.now();
+        const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+        const hours = Math.floor(elapsedSeconds / 3600);
+        const minutes = Math.floor((elapsedSeconds % 3600) / 60);
+        const seconds = elapsedSeconds % 60;
+
+        const timeString = hours > 0
+            ? `${hours}h ${minutes}m ${seconds}s`
+            : minutes > 0
+                ? `${minutes}m ${seconds}s`
+                : `${seconds}s`;
+
+        return `{bold}⏱️  Session: ${timeString}{/bold}`;
     }
 
+    // Performance and metrics methods
     _getPerformanceMetrics() {
-        const stats = this.engine?.getStats() || {};
-        const cycleCount = stats.cycleCount || 0;
-        const startTime = this.engine?.sessionState?.startTime || Date.now();
+        const stats = this.engine?.getStats() ?? {};
+        const cycleCount = stats.cycleCount ?? 0;
+        const startTime = this.engine?.sessionState?.startTime ?? Date.now();
         const elapsedSeconds = (Date.now() - startTime) / 1000;
         const cps = elapsedSeconds > 0 ? (cycleCount / elapsedSeconds).toFixed(2) : '0.00';
-        const memoryUsage = process.memoryUsage?.() || {};
+        const memoryUsage = process.memoryUsage?.() ?? {};
         const rssInMB = memoryUsage.rss ? (memoryUsage.rss / 1024 / 1024).toFixed(2) : 'N/A';
 
-        return {
-            cps,
-            cycleCount,
-            startTime,
-            memoryUsageMB: rssInMB,
-            cpuUsage: 'N/A'
-        };
+        return { cps, cycleCount, startTime, memoryUsageMB: rssInMB, cpuUsage: 'N/A' };
     }
 
     _getAnimatedPerformanceIndicator() {
@@ -289,91 +346,52 @@ export class StatusBarComponent extends BaseComponent {
         return `{bold}${spinningElement} ${cps} CPS{/bold}`;
     }
 
+    // Connection quality methods
+    /**
+     * Update and display connection quality metrics
+     */
+    updateConnectionQuality(qualityMetrics) {
+        this.connectionQuality = { ...this.connectionQuality, ...qualityMetrics };
+        this.updateContent();
+    }
+
+    /**
+     * Get connection quality status for display
+     */
+    _getConnectionQualityStatus() {
+        if (!this.connectionQuality) {
+            return '';
+        }
+
+        const { state, isHealthy, pingLatency } = this.connectionQuality;
+        const stateText = state === 1 ? 'OPEN' : state === 2 ? 'CLOSING' : state === 3 ? 'CLOSED' : 'CONNECTING';
+        const stateColor = isHealthy ? 'green' : 'red';
+        const latency = pingLatency ? `${pingLatency}ms` : 'N/A';
+
+        return `{bold}🔗 Quality: {${stateColor}}${stateText}{/} │ Latency: ${latency}{/bold}`;
+    }
+
+    // Utility methods
+    _getQueuedInputCount() {
+        return this.engine?.inputManager?.getAllTasks?.()?.length ?? 0;
+    }
+
+    /**
+     * Get color based on value thresholds
+     */
+    _getColorByValue(value, thresholds) {
+        const { high, medium, highColor, mediumColor, lowColor } = thresholds;
+        return value > high ? highColor : value > medium ? mediumColor : lowColor;
+    }
+
     updateStats(newStats) {
         this.stats = { ...this.stats, ...newStats };
         this.updateContent();
     }
 
-    setConnectionState(state) {
-        this.connectionState = state.toLowerCase();
-        this.updateContent();
-        this.emit('connection-state-changed', { state: this.connectionState });
-    }
-
-    updateAlerts(count) {
-        this.alerts = count;
-        this.updateContent();
-        this.emit('alerts-updated', { count: this.alerts });
-    }
-
-    addAlert() {
-        this.alerts++;
-        this.updateContent();
-        this.emit('alert-added', { count: this.alerts });
-    }
-
-    clearAlerts() {
-        this.alerts = 0;
-        this.updateContent();
-        this.emit('alerts-cleared');
-    }
-
-    _togglePulldownMenu() {
-        this.isPulldownMenuOpen = !this.isPulldownMenuOpen;
-
-        // Get current performance metrics for display
-        const performanceMetrics = this._getPerformanceMetrics();
-
-        this.emit('pulldown-menu-toggle', {
-            isOpen: this.isPulldownMenuOpen,
-            options: [
-                { key: 'load', label: '📁 Load Session', shortcut: 'Ctrl+O' },
-                { key: 'save', label: '💾 Save Session', shortcut: 'Ctrl+S' },
-                { key: 'settings', label: '⚙️ Settings', shortcut: 'Ctrl+,' },
-                { key: 'performance', label: `📈 Performance: ${performanceMetrics.cps} CPS`, shortcut: '' },
-                { key: 'help', label: '❓ Help', shortcut: 'F1' },
-                { key: 'exit', label: '🚪 Exit', shortcut: 'Ctrl+C' }
-            ],
-            onSelect: (option) => this._handleMenuSelection(option)
-        });
-    }
-
-    _handleMenuSelection(option) {
-        const menuActions = this._getMenuActions();
-        const event = menuActions[option.key];
-        if (event) this.emit(event);
-
-        // Close the menu after selection
-        this.isPulldownMenuOpen = false;
-    }
-
-    _getMenuActions() {
-        return {
-            'load': 'menu-load',
-            'save': 'menu-save',
-            'settings': 'menu-settings',
-            'help': 'menu-help',
-            'exit': 'menu-exit'
-        };
-    }
-
-    _toggleConnectionState() {
-        this.connectionState = this.connectionState === 'local' ? 'remote' : 'local';
-        this.updateContent();
-        this.emit('connection-state-toggled', { state: this.connectionState });
-    }
-
     setMemoryStats(memoryStats) {
         this.stats.memoryStats = { ...this.stats.memoryStats, ...memoryStats };
         this.updateContent();
-    }
-
-    getConnectionState() {
-        return this.connectionState;
-    }
-
-    getAlerts() {
-        return this.alerts;
     }
 
     getStatusInfo() {
@@ -415,19 +433,5 @@ export class StatusBarComponent extends BaseComponent {
 
     setEngine(engine) {
         this.engine = engine;
-    }
-
-    // Method to handle view changes and update status bar
-    handleViewChange(viewInfo) {
-        this.updateContent();
-        this.emit('view-changed-status', viewInfo);
-    }
-    
-    /**
-     * Get color based on value thresholds
-     */
-    _getColorByValue(value, thresholds) {
-        const { high, medium, highColor, mediumColor, lowColor } = thresholds;
-        return value > high ? highColor : value > medium ? mediumColor : lowColor;
     }
 }

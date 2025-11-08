@@ -59,7 +59,7 @@ describe('TaskEditorComponent', () => {
         };
 
         const formattedTask = taskEditorComponent._formatTaskForDisplay(task);
-        expect(formattedTask).toContain('🔴'); // High priority indicator
+        expect(formattedTask).toContain('❗'); // High priority indicator for 0.8
         expect(formattedTask).toContain('Test task');
     });
 
