@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { render, Box, useStdin, Text, useInput } from 'ink';
 import { ReplEngine } from './ReplEngine.js';
 import { EventEmitter } from 'events';
@@ -7,14 +7,62 @@ import { LogViewer } from './ink-components/LogViewer.js';
 import { StatusBar } from './ink-components/StatusBar.js';
 import { TaskInput } from './ink-components/TaskInput.js';
 import { v4 as uuidv4 } from 'uuid';
+import { PluginManager } from './utils/PluginManager.js';
+import { ThemeManager } from './utils/ThemeManager.js';
+import { CommandManager } from './utils/CommandManager.js';
 
-const TUI = ({ engine }) => {
+class ExtensibleTUI {
+  constructor() {
+    this.pluginManager = new PluginManager();
+    this.themeManager = new ThemeManager();
+    this.commandManager = new CommandManager();
+    this.componentRegistry = this.pluginManager.getComponentRegistry();
+    this.customComponents = {};
+  }
+
+  // Register a custom component
+  registerComponent(name, component) {
+    this.customComponents[name] = component;
+  }
+
+  // Get a component (custom or registered)
+  getComponent(name) {
+    // First check custom components
+    if (this.customComponents[name]) {
+      return this.customComponents[name];
+    }
+    
+    // Then check registered components
+    const registered = this.componentRegistry.getComponent(name);
+    return registered ? registered.component : null;
+  }
+
+  // Apply theme to component props
+  applyTheme(componentName, props = {}) {
+    const theme = this.themeManager.getCurrentTheme();
+    const componentConfig = theme.components[componentName] || {};
+    const styles = theme.styles[componentName] || {};
+    
+    return {
+      ...props,
+      theme: theme,
+      customStyles: styles,
+      ...componentConfig
+    };
+  }
+}
+
+const TUI = ({ engine, extensibleTUI }) => {
   const [logs, setLogs] = useState([{ id: uuidv4(), message: 'TUI component rendered' }]);
   const [tasks, setTasks] = useState([]);
   const [status, setStatus] = useState({ isRunning: false, cycle: 0, mode: 'idle' });
   const [view, setView] = useState('vertical-split'); // 'vertical-split', 'log-only', 'dynamic-grouping'
   const [selectedTaskId, setSelectedTaskId] = useState(null);
+  const [commandHistory, setCommandHistory] = useState([]);
   const { isRawModeSupported } = useStdin();
+  
+  // Initialize extensible TUI if not provided
+  const extensible = useMemo(() => extensibleTUI || new ExtensibleTUI(), []);
 
   // Enhanced event handling to properly connect with the engine
   useEffect(() => {
@@ -75,7 +123,7 @@ const TUI = ({ engine }) => {
     };
   }, [engine]);
 
-  // Handle keyboard shortcuts
+  // Handle keyboard shortcuts and commands
   useInput((input, key) => {
     if (key.ctrl) {
       switch (input) {
@@ -96,6 +144,12 @@ const TUI = ({ engine }) => {
           // Exit on Ctrl+C - This doesn't work directly in Ink, but we handle it in the parent
           break;
       }
+    }
+    
+    // Handle command shortcuts
+    if (key.ctrl && input === '\\') {
+      // Execute a special command (for debugging or special operations)
+      console.log("Command shortcut triggered");
     }
   });
 
@@ -136,16 +190,53 @@ const TUI = ({ engine }) => {
     }
   };
 
-  // Render based on current view
+  // Handle extended commands
+  const handleExtendedCommand = async (input) => {
+    if (input.startsWith('/')) {
+      const [cmdName, ...args] = input.slice(1).split(' ');
+      try {
+        const result = await extensible.commandManager.executeCommand(cmdName, args, { 
+          engine, 
+          setLogs, 
+          setTasks, 
+          setStatus 
+        });
+        if (result) {
+          setLogs(prev => [...prev, { id: uuidv4(), message: result, timestamp: Date.now() }]);
+        }
+      } catch (error) {
+        setLogs(prev => [...prev, { id: uuidv4(), message: `Error: ${error.message}`, timestamp: Date.now() }]);
+      }
+      return true;
+    }
+    return false;
+  };
+
+  // Render based on current view using extensible architecture
   const renderMainContent = () => {
+    // Get components from the extensible architecture - use provided components or defaults
+    const ComponentTaskEditor = extensible.getComponent('TaskEditor');
+    const ComponentLogViewer = extensible.getComponent('LogViewer');
+    
+    // Apply theme to components
+    const taskEditorProps = extensible.applyTheme('taskEditor', {
+      tasks: uiTasks,
+      onSelect: setSelectedTaskId,
+      selectedTaskId,
+      onTaskOperation: handleTaskOperation,
+      groupingMode: view === 'dynamic-grouping' ? 'priority' : null
+    });
+    
+    const logViewerProps = extensible.applyTheme('logViewer', { logs });
+
     switch(view) {
       case 'log-only':
         return React.createElement(
           Box,
           { flexDirection: 'column', flexGrow: 1 },
-          React.createElement(LogViewer, { logs })
+          React.createElement(ComponentLogViewer || LogViewer, logViewerProps)
         );
-      
+
       case 'dynamic-grouping':
         return React.createElement(
           Box,
@@ -153,21 +244,15 @@ const TUI = ({ engine }) => {
           React.createElement(
             Box,
             { width: '70%', borderStyle: 'round' },
-            React.createElement(TaskEditor, { 
-              tasks: uiTasks,
-              onSelect: setSelectedTaskId,
-              selectedTaskId,
-              onTaskOperation: handleTaskOperation,
-              groupingMode: 'priority' // Default grouping mode
-            })
+            React.createElement(ComponentTaskEditor || TaskEditor, taskEditorProps)
           ),
           React.createElement(
             Box,
             { width: '30%', borderStyle: 'round' },
-            React.createElement(LogViewer, { logs })
+            React.createElement(ComponentLogViewer || LogViewer, logViewerProps)
           )
         );
-      
+
       case 'vertical-split':
       default:
         return React.createElement(
@@ -176,21 +261,31 @@ const TUI = ({ engine }) => {
           React.createElement(
             Box,
             { width: '40%', borderStyle: 'round' },
-            React.createElement(TaskEditor, { 
-              tasks: uiTasks,
-              onSelect: setSelectedTaskId,
-              selectedTaskId,
-              onTaskOperation: handleTaskOperation
-            })
+            React.createElement(ComponentTaskEditor || TaskEditor, taskEditorProps)
           ),
           React.createElement(
             Box,
             { width: '60%', borderStyle: 'round' },
-            React.createElement(LogViewer, { logs })
+            React.createElement(ComponentLogViewer || LogViewer, logViewerProps)
           )
         );
     }
   };
+
+  // Get themed components - use provided components or defaults
+  const ComponentTaskInput = extensible.getComponent('TaskInput');
+  const ComponentStatusBar = extensible.getComponent('StatusBar');
+  
+  const taskInputProps = extensible.applyTheme('taskInput', {});
+  const statusBarProps = extensible.applyTheme('statusBar', {
+    status: {
+      ...status,
+      view,
+      taskCount: uiTasks.length,
+      logCount: logs.length,
+      alerts: logs.filter(log => log.message.includes('Error')).length
+    }
+  });
 
   return React.createElement(
     Box,
@@ -199,23 +294,20 @@ const TUI = ({ engine }) => {
     React.createElement(
       Box,
       { flexDirection: 'column' },
-      React.createElement(TaskInput, {
-        onSubmit: (input) => {
-          engine.processInput(input).then(() => {
-            // Refresh tasks after processing
-            setTasks(engine.inputManager.getAllTasks());
-          });
+      React.createElement(ComponentTaskInput || TaskInput, {
+        ...taskInputProps,
+        onSubmit: async (input) => {
+          // Try to handle as extended command first
+          if (!await handleExtendedCommand(input)) {
+            // If not a command, process as normal input
+            engine.processInput(input).then(() => {
+              // Refresh tasks after processing
+              setTasks(engine.inputManager.getAllTasks());
+            });
+          }
         },
       }),
-      React.createElement(StatusBar, { 
-        status: { 
-          ...status, 
-          view, 
-          taskCount: uiTasks.length,
-          logCount: logs.length,
-          alerts: logs.filter(log => log.message.includes('Error')).length
-        } 
-      })
+      React.createElement(ComponentStatusBar || StatusBar, statusBarProps)
     )
   );
 };
@@ -224,19 +316,102 @@ export class TUIReplInk extends EventEmitter {
   constructor(config = {}) {
     super();
     this.engine = new ReplEngine(config);
+    this.extensibleTUI = new ExtensibleTUI();
     this.view = 'vertical-split';
   }
 
+  // Register a custom component
+  registerComponent(name, component) {
+    this.extensibleTUI.registerComponent(name, component);
+    return this;
+  }
+
+  // Get the component registry for plugins
+  getComponentRegistry() {
+    return this.extensibleTUI.componentRegistry;
+  }
+
+  // Get the plugin manager
+  getPluginManager() {
+    return this.extensibleTUI.pluginManager;
+  }
+
+  // Get the theme manager
+  getThemeManager() {
+    return this.extensibleTUI.themeManager;
+  }
+
+  // Get the command manager
+  getCommandManager() {
+    return this.extensibleTUI.commandManager;
+  }
+
+  // Load a plugin
+  async loadPlugin(plugin, name, options = {}) {
+    await this.extensibleTUI.pluginManager.loadPlugin(plugin, name, options);
+    return this;
+  }
+
+  // Apply a theme
+  applyTheme(themeName) {
+    this.extensibleTUI.themeManager.applyTheme(themeName);
+    return this;
+  }
+
+  // Register a command
+  registerCommand(name, handler, metadata = {}) {
+    this.extensibleTUI.commandManager.registerCommand(name, handler, metadata);
+    return this;
+  }
+
   async start() {
-    console.log('Starting Enhanced Ink TUI...');
+    console.log('Starting Extensible Ink TUI...');
 
     await this.engine.initialize();
 
     // Connect to engine events before rendering
     this.engine.on('engine.ready', () => {
-      console.log('✅ Ink TUI connected to engine');
+      console.log('✅ Extensible Ink TUI connected to engine');
     });
 
-    render(React.createElement(TUI, { engine: this.engine }));
+    // Register default commands
+    this.registerCommand('help', (args, context) => {
+      return this.extensibleTUI.commandManager.getAllHelp();
+    }, {
+      description: 'Show help for all commands',
+      usage: '/help',
+      category: 'system'
+    });
+
+    this.registerCommand('theme', (args, context) => {
+      if (args.length > 0) {
+        const themeName = args[0];
+        if (this.extensibleTUI.themeManager.applyTheme(themeName)) {
+          return `Theme changed to: ${themeName}`;
+        } else {
+          return `Theme ${themeName} not found`;
+        }
+      }
+      return `Current theme: ${this.extensibleTUI.themeManager.getCurrentTheme().name}`;
+    }, {
+      description: 'Change UI theme',
+      usage: '/theme [theme-name]',
+      category: 'ui'
+    });
+
+    this.registerCommand('plugins', (args, context) => {
+      const plugins = this.extensibleTUI.pluginManager.getAllPlugins();
+      if (plugins.length === 0) {
+        return 'No plugins loaded';
+      }
+      return `Loaded plugins: ${plugins.map(p => p.name).join(', ')}`;
+    }, {
+      description: 'Show loaded plugins',
+      usage: '/plugins',
+      category: 'system'
+    });
+
+    // Render with extensible TUI context
+    render(React.createElement(TUI, { engine: this.engine, extensibleTUI: this.extensibleTUI }));
   }
 }
