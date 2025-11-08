@@ -12,11 +12,15 @@ export class StatusBarComponent extends BaseComponent {
         this.animationState = { spinningIndex: 0 };
         this.spinningElements = ['🌀', '◕', '◔', '◕'];
         this.stats = {};
-        this.connectionState = 'local'; // 'local' or 'remote'
-        this.alerts = 0; // Number of queued alerts
+        this.connectionState = 'local';
+        this.alerts = 0;
         this.isPulldownMenuOpen = false;
 
-        this.elementConfig = this.elementConfig || {
+        this.elementConfig = this.elementConfig ?? this._getDefaultElementConfig();
+    }
+
+    _getDefaultElementConfig() {
+        return {
             bottom: '0',
             left: '0',
             width: '100%',
@@ -51,15 +55,85 @@ export class StatusBarComponent extends BaseComponent {
         // Handle mouse clicks for pulldown menu
         this.element.on('click', () => this._togglePulldownMenu());
 
-        const keyBindings = {
+        // Define key handlers with shared functions where possible
+        const handlers = {
             'f1': () => this._togglePulldownMenu(),
+            'f2': () => this._showHelpMenu(),
+            'f3': () => this._showSettingsMenu(),
+            'f4': () => this._showPerformanceMenu(),
+            'f5': () => this._showSystemInfo(),
+            'f10': () => this._showMainMenu(),
             'c': () => this._toggleConnectionState(),
-            'a': () => this.clearAlerts()
+            'C': () => this._toggleConnectionState(),
+            'a': () => this.clearAlerts(),
+            'A': () => this.clearAlerts(),
+            'h': () => this._showHelp(),
+            'H': () => this._showHelp(),
+            's': () => this._showStatus(),
+            'S': () => this._showStatus(),
+            'm': () => this._showMemoryStats(),
+            'M': () => this._showMemoryStats(),
+            'v': () => this._cycleView(),
+            'V': () => this._cycleView(),
+            'q': () => this._requestExit(),
+            'Q': () => this._requestExit(),
+            'x': () => this._requestExit(),
+            'X': () => this._requestExit()
         };
 
-        Object.entries(keyBindings).forEach(([key, handler]) => {
+        Object.entries(handlers).forEach(([key, handler]) => {
             this.element.key([key], handler);
         });
+    }
+
+    _showHelpMenu() {
+        this._showStatusMessage('ℹ️  Press F1 for menu, Ctrl+L/T/G to switch views, Ctrl+C to exit');
+    }
+
+    _showSettingsMenu() {
+        this._showStatusMessage('⚙️  Settings menu would open here');
+        this.emit('settings-menu-requested');
+    }
+
+    _showPerformanceMenu() {
+        const metrics = this._getPerformanceMetrics();
+        this._showStatusMessage(`📈 Performance: ${metrics.cps} CPS, Memory: ${metrics.memoryUsageMB}MB`);
+        this.emit('performance-menu-requested', metrics);
+    }
+
+    _showSystemInfo() {
+        const info = this.getStatusInfo();
+        this._showStatusMessage(`💻 System: Concepts: ${info.conceptCount}, Cycles: ${info.cycleCount}, Alerts: ${info.alerts}`);
+        this.emit('system-info-requested', info);
+    }
+
+    _showMainMenu() {
+        this._togglePulldownMenu();
+    }
+
+    _cycleView() {
+        if (this.engine?.viewManager) {
+            this.engine.viewManager._cycleViews();
+        }
+    }
+
+    _requestExit() {
+        this._showStatusMessage('🚪 Press Ctrl+C to exit the application');
+        this.emit('exit-requested');
+    }
+
+    _showHelp() {
+        this._showStatusMessage('ℹ️  Help system would open here - F1=Menu, Ctrl+L/T/G=Views, Arrows=Navigate');
+    }
+
+    _showStatus() {
+        const info = this.getStatusInfo();
+        this._showStatusMessage(`📊 Status: ${info.connectionState.toUpperCase()} | Concepts: ${info.conceptCount} | Cycle: ${info.cycleCount} | Alerts: ${info.alerts}`);
+    }
+
+    _showMemoryStats() {
+        const metrics = this._getPerformanceMetrics();
+        this._showStatusMessage(`🧠 Memory: ${metrics.memoryUsageMB}MB | Performance: ${metrics.cps} CPS`);
     }
 
     _startAnimationLoop() {
@@ -68,7 +142,7 @@ export class StatusBarComponent extends BaseComponent {
                 this.animationState.spinningIndex = (this.animationState.spinningIndex + 1) % 4;
                 this.updateContent();
             }
-        }, 500);
+        }, 250); // Updated to 250ms for faster animation
     }
 
     updateContent() {
@@ -77,27 +151,142 @@ export class StatusBarComponent extends BaseComponent {
         const stats = this.engine?.getStats() || {};
         const memoryStats = stats.memoryStats || {};
         const statusContent = this._getStatusContent(stats, memoryStats);
-        
+
         this.setContent(statusContent);
         this.render();
     }
 
     _getStatusContent(stats, memoryStats) {
-        const spinningElement = this.spinningElements[this.animationState.spinningIndex];
-        const connectionIndicator = this.connectionState === 'remote' ? '🌐' : '💻';
-        const connectionText = this.connectionState === 'remote' ? 'REMOTE' : 'LOCAL';
-        
-        const parts = [
-            `{bold}⚡ ${connectionIndicator} ${connectionText} | Concepts: ${memoryStats.conceptCount || 0} | Cycles: ${stats.cycleCount || 0} | Tasks: ${memoryStats.taskCount || 0}{/bold}`,
-            `|`,
-            `{bold}Alerts: ${this.alerts}{/bold}`
+        const statusParts = [
+            this._getConnectionStatus(),
+            this._getViewStatus(),
+            this._getSystemStats(memoryStats, stats),
+            this._getPerformanceMetricsStatus(),
+            this._getAlertsStatus(),
+            this._getConnectionQualityStatus()
         ];
 
         if (this.alerts > 0) {
-            parts.push(`|`, `{red}{bold}⚠️ ${this.alerts} ALERTS{/bold}{/red}`);
+            statusParts.push(this._getAlertsWarning());
         }
 
-        return parts.join(' ');
+        // Add a separator and session information
+        statusParts.push(this._getSessionInfo());
+        
+        return statusParts.filter(part => part && part.trim() !== '').join(' │ ');
+    }
+
+    _getPerformanceMetricsStatus() {
+        const performanceMetrics = this._getPerformanceMetrics();
+        const cps = performanceMetrics.cps;
+        const memoryUsage = performanceMetrics.memoryUsageMB;
+        
+        // Color code based on performance metrics
+        const cpsColor = this._getColorByValue(cps, { high: 50, medium: 10, highColor: 'green', mediumColor: 'yellow', lowColor: 'red' });
+        const memoryColor = this._getColorByValue(memoryUsage, { high: 500, medium: 200, highColor: 'red', mediumColor: 'yellow', lowColor: 'green' });
+        
+        return `{bold}${this._getAnimatedPerformanceIndicator()} │ CPS: {${cpsColor}}${cps}{/} │ Mem: {${memoryColor}}${memoryUsage}MB{/}{/bold}`;
+    }
+    
+    /**
+     * Update and display connection quality metrics
+     */
+    updateConnectionQuality(qualityMetrics) {
+        this.connectionQuality = { ...this.connectionQuality, ...qualityMetrics };
+        this.updateContent();
+    }
+    
+    /**
+     * Get connection quality status for display
+     */
+    _getConnectionQualityStatus() {
+        if (!this.connectionQuality) {
+            return '';
+        }
+        
+        const { state, isHealthy, pingLatency } = this.connectionQuality;
+        const stateText = state === 1 ? 'OPEN' : state === 2 ? 'CLOSING' : state === 3 ? 'CLOSED' : 'CONNECTING';
+        const stateColor = isHealthy ? 'green' : 'red';
+        const latency = pingLatency ? `${pingLatency}ms` : 'N/A';
+        
+        return `{bold}🔗 Quality: {${stateColor}}${stateText}{/} │ Latency: ${latency}{/bold}`;
+    }
+
+    _getSessionInfo() {
+        const startTime = this.engine?.sessionState?.startTime || Date.now();
+        const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+        const hours = Math.floor(elapsedSeconds / 3600);
+        const minutes = Math.floor((elapsedSeconds % 3600) / 60);
+        const seconds = elapsedSeconds % 60;
+        
+        const timeString = hours > 0 
+            ? `${hours}h ${minutes}m ${seconds}s` 
+            : minutes > 0 
+                ? `${minutes}m ${seconds}s` 
+                : `${seconds}s`;
+        
+        return `{bold}⏱️  Session: ${timeString}{/bold}`;
+    }
+
+    _getConnectionStatus() {
+        const connectionIndicator = this.connectionState === 'remote' ? '🌐' : '💻';
+        const connectionText = this.connectionState === 'remote' ? 'REMOTE' : 'LOCAL';
+        return `{bold}⚡ ${connectionIndicator} ${connectionText}{/bold}`;
+    }
+
+    _getViewStatus() {
+        const viewInfo = this.engine?.viewManager?.getViewInfoForStatus?.() ?? {};
+        const viewIcon = viewInfo.icon ?? '🔄';
+        const viewLabel = viewInfo.current ?? 'Unknown';
+        return `{bold}${viewIcon} ${viewLabel}{/bold}`;
+    }
+
+    _getSystemStats(memoryStats, stats) {
+        const conceptCount = memoryStats.conceptCount ?? 0;
+        const cycleCount = stats.cycleCount ?? 0;
+        const focusSetSize = memoryStats.focusSetSize ?? 0;
+        const inputCount = this.engine?.inputManager?.size?.() ?? 0;
+        const queuedInputCount = this._getQueuedInputCount();
+        const memoryUsageMB = this._getPerformanceMetrics().memoryUsageMB;
+
+        return `{bold}Concepts: ${conceptCount} | Focus: ${focusSetSize} | Inputs: ${inputCount} | Queued: ${queuedInputCount} | Cycles: ${cycleCount} | Mem: ${memoryUsageMB}MB{/bold}`;
+    }
+
+    _getAlertsStatus() {
+        return `{bold}Alerts: ${this.alerts}{/bold}`;
+    }
+
+    _getAlertsWarning() {
+        return `{red}{bold}⚠️ ${this.alerts} ALERTS{/bold}{/red}`;
+    }
+
+    _getQueuedInputCount() {
+        return this.engine?.inputManager?.getAllTasks?.()?.length ?? 0;
+    }
+
+    _getPerformanceMetrics() {
+        const stats = this.engine?.getStats() || {};
+        const cycleCount = stats.cycleCount || 0;
+        const startTime = this.engine?.sessionState?.startTime || Date.now();
+        const elapsedSeconds = (Date.now() - startTime) / 1000;
+        const cps = elapsedSeconds > 0 ? (cycleCount / elapsedSeconds).toFixed(2) : '0.00';
+        const memoryUsage = process.memoryUsage?.() || {};
+        const rssInMB = memoryUsage.rss ? (memoryUsage.rss / 1024 / 1024).toFixed(2) : 'N/A';
+
+        return {
+            cps,
+            cycleCount,
+            startTime,
+            memoryUsageMB: rssInMB,
+            cpuUsage: 'N/A'
+        };
+    }
+
+    _getAnimatedPerformanceIndicator() {
+        const spinningElement = this.spinningElements[this.animationState.spinningIndex];
+        const { cps } = this._getPerformanceMetrics();
+
+        return `{bold}${spinningElement} ${cps} CPS{/bold}`;
     }
 
     updateStats(newStats) {
@@ -132,33 +321,40 @@ export class StatusBarComponent extends BaseComponent {
     _togglePulldownMenu() {
         this.isPulldownMenuOpen = !this.isPulldownMenuOpen;
 
+        // Get current performance metrics for display
+        const performanceMetrics = this._getPerformanceMetrics();
+
         this.emit('pulldown-menu-toggle', {
             isOpen: this.isPulldownMenuOpen,
             options: [
-                { key: 'load', label: 'Load Session', shortcut: 'Ctrl+O' },
-                { key: 'save', label: 'Save Session', shortcut: 'Ctrl+S' },
-                { key: 'settings', label: 'Settings', shortcut: 'Ctrl+,' },
-                { key: 'help', label: 'Help', shortcut: 'F1' },
-                { key: 'exit', label: 'Exit', shortcut: 'Ctrl+C' }
+                { key: 'load', label: '📁 Load Session', shortcut: 'Ctrl+O' },
+                { key: 'save', label: '💾 Save Session', shortcut: 'Ctrl+S' },
+                { key: 'settings', label: '⚙️ Settings', shortcut: 'Ctrl+,' },
+                { key: 'performance', label: `📈 Performance: ${performanceMetrics.cps} CPS`, shortcut: '' },
+                { key: 'help', label: '❓ Help', shortcut: 'F1' },
+                { key: 'exit', label: '🚪 Exit', shortcut: 'Ctrl+C' }
             ],
             onSelect: (option) => this._handleMenuSelection(option)
         });
     }
 
     _handleMenuSelection(option) {
-        const menuActions = {
+        const menuActions = this._getMenuActions();
+        const event = menuActions[option.key];
+        if (event) this.emit(event);
+
+        // Close the menu after selection
+        this.isPulldownMenuOpen = false;
+    }
+
+    _getMenuActions() {
+        return {
             'load': 'menu-load',
             'save': 'menu-save',
             'settings': 'menu-settings',
             'help': 'menu-help',
             'exit': 'menu-exit'
         };
-
-        const event = menuActions[option.key];
-        if (event) this.emit(event);
-
-        // Close the menu after selection
-        this.isPulldownMenuOpen = false;
     }
 
     _toggleConnectionState() {
@@ -189,6 +385,7 @@ export class StatusBarComponent extends BaseComponent {
             conceptCount: memoryStats.conceptCount || 0,
             cycleCount: stats.cycleCount || 0,
             taskCount: memoryStats.taskCount || 0,
+            queuedInputCount: this._getQueuedInputCount(),
             alerts: this.alerts,
             spinningIndex: this.animationState.spinningIndex,
             spinningElement: this.spinningElements[this.animationState.spinningIndex]
@@ -218,5 +415,19 @@ export class StatusBarComponent extends BaseComponent {
 
     setEngine(engine) {
         this.engine = engine;
+    }
+
+    // Method to handle view changes and update status bar
+    handleViewChange(viewInfo) {
+        this.updateContent();
+        this.emit('view-changed-status', viewInfo);
+    }
+    
+    /**
+     * Get color based on value thresholds
+     */
+    _getColorByValue(value, thresholds) {
+        const { high, medium, highColor, mediumColor, lowColor } = thresholds;
+        return value > high ? highColor : value > medium ? mediumColor : lowColor;
     }
 }

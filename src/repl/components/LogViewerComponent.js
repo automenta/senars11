@@ -8,17 +8,19 @@ export class LogViewerComponent extends BaseComponent {
     constructor(config = {}) {
         super(config);
         this.elementType = 'box';
-        this.maxScrollback = config.maxScrollback || 1000;
+        this.maxScrollback = config.maxScrollback ?? 1000;
+        this.warningThreshold = config.warningThreshold ?? 0.8;
         this.logs = [];
         this.filteredLogs = [];
         this.filters = {
-            level: 'all', // 'all', 'error', 'warn', 'info', 'debug'
+            level: 'all',
             keyword: '',
             showTimestamp: true
         };
-        this.isFollowing = true; // Auto-scroll to newest entries
+        this.isFollowing = true;
+        this.isAtCapacity = false;
 
-        this.elementConfig = this.elementConfig || {
+        this.elementConfig = this.elementConfig ?? {
             top: '0',
             left: '40%',
             width: '60%',
@@ -52,44 +54,152 @@ export class LogViewerComponent extends BaseComponent {
     _setupEventHandlers() {
         if (!this.element) return;
 
-        // Handle scrolling
+        this._setupScrollHandler();
+        this._setupMouseHandler();
+        this._setupKeyBindings();
+    }
+
+    _setupScrollHandler() {
         this.element.on('scroll', () => {
             const currentScroll = this.element.getScroll();
             const maxScroll = this.element.getScrollHeight() - this.element.height;
-            this.isFollowing = (currentScroll >= maxScroll - 1);
+            this.isFollowing = currentScroll >= maxScroll - 1;
         });
+    }
 
-        // Add custom key bindings for log filtering and navigation
-        const keyBindings = {
-            'f': () => this._toggleFilterMenu(),
-            'C-l': () => this.clearLogs(),
-            'home': () => this._scrollToTop(),
-            'end': () => this._scrollToBottom()
-        };
+    _setupMouseHandler() {
+        this.element.on('mouse', (mouse) => {
+            if (mouse.action === 'mousedown' && mouse.button === 'right') {
+                this._showContextMenu(mouse);
+            }
+        });
+    }
 
+    _setupKeyBindings() {
+        const keyBindings = this._getKeyBindings();
         Object.entries(keyBindings).forEach(([key, handler]) => {
             this.element.key([key], handler);
         });
+    }
+
+    _getKeyBindings() {
+        return {
+            'f': () => this._toggleFilterMenu(),
+            'F': () => this._openAdvancedFilterDialog(), // Shift+F for advanced filter
+            'C-l': () => this.clearLogs(),
+            'C-c': () => this.clearLogs(), // Ctrl+C also clears logs
+            'home': () => this._scrollToTop(),
+            'end': () => this._scrollToBottom(),
+            'C-f': () => this._openAdvancedFilterDialog(),
+            'r': () => this._toggleRelativeTime(),
+            'R': () => this._toggleRelativeTime(), // Shift+R for relative time
+            '1': () => this.setLevelFilter('error'),
+            '2': () => this.setLevelFilter('warn'),
+            '3': () => this.setLevelFilter('info'),
+            '4': () => this.setLevelFilter('debug'),
+            '0': () => this.setLevelFilter('all'),
+            'C-0': () => this.setLevelFilter('all'), // Ctrl+0 for all
+            'C-1': () => this.setLevelFilter('error'), // Ctrl+1 for errors
+            'C-2': () => this.setLevelFilter('warn'), // Ctrl+2 for warnings
+            'C-3': () => this.setLevelFilter('info'), // Ctrl+3 for info
+            'C-4': () => this.setLevelFilter('debug'), // Ctrl+4 for debug
+            't': () => this.toggleTimestampDisplay(), // Toggle timestamps
+            'T': () => this.toggleTimestampDisplay(), // Shift+T for timestamps
+            'y': () => this._copyLogEntry(), // Copy current log to clipboard
+            'Y': () => this._copyLogEntry(), // Shift+Y for copy
+            'C-s': () => this._saveCurrentLogs(), // Save logs to file
+            'C-S': () => this._compactLogs(), // Ctrl+Shift+S to compact logs
+            'a': () => this.toggleFollowMode(), // Toggle auto-scroll
+            'A': () => this.toggleFollowMode(), // Shift+A for auto-scroll
+            'C-a': () => this._selectAllLogs(), // Ctrl+A to select all logs
+            'C-u': () => this._clearLogSelection(), // Ctrl+U to clear selection
+            'C-k': () => this.clearLogs(), // Ctrl+K also clears logs (like in some terminals)
+            'C-e': () => this._exportLogs(), // Ctrl+E to export logs
+            'C-p': () => this._printLogStats() // Ctrl+P to print log stats
+        };
+    }
+    
+    _logPlaceholderAction(message, eventName) {
+        this.addInfo(message);
+        this.emit(eventName);
+    }
+
+    _copyLogEntry() {
+        this._logPlaceholderAction('📋 Copy log entry functionality would be implemented here', 'log-entry-copy-requested');
+    }
+    
+    _saveCurrentLogs() {
+        this._logPlaceholderAction('💾 Save logs functionality would be implemented here', 'log-save-requested');
+    }
+    
+    _exportLogs() {
+        this._logPlaceholderAction('📤 Export logs functionality would be implemented here', 'log-export-requested');
+    }
+    
+    _printLogStats() {
+        const stats = this.getStats();
+        const statsInfo = [
+            `📊 Log Statistics:`,
+            `   Total logs: ${stats.size}`,
+            `   Filtered: ${stats.filteredSize}`,
+            `   Errors: ${stats.counts.error}, Warnings: ${stats.counts.warn}, Info: ${stats.counts.info}, Debug: ${stats.counts.debug}`,
+            `   Capacity: ${Math.round(stats.capacityRatio * 100)}% (${stats.size}/${stats.maxScrollback})`
+        ];
+        
+        statsInfo.forEach(info => this.addInfo(info));
+        this.emit('log-stats-printed', stats);
+    }
+    
+    _selectAllLogs() {
+        this._logPlaceholderAction('📋 Select all logs functionality would be implemented here', 'log-select-all-requested');
+    }
+    
+    _clearLogSelection() {
+        this._logPlaceholderAction('📋 Clear log selection functionality would be implemented here', 'log-clear-selection-requested');
     }
 
     addLog(message, level = 'info', timestamp = new Date()) {
         const logEntry = {
             message: typeof message === 'object' ? JSON.stringify(message) : message,
             level: level.toLowerCase(),
-            timestamp: timestamp,
-            id: Date.now() + Math.random() // Unique ID for the log entry
+            timestamp,
+            id: Date.now() + Math.random()
         };
 
         this.logs.push(logEntry);
-
-        // Maintain scrollback limit
-        if (this.logs.length > this.maxScrollback) {
-            this.logs = this.logs.slice(-this.maxScrollback);
-        }
+        this._handleCapacityCheck();
 
         this._applyFilters();
         this._maybeScrollToBottom();
         this.emit('log-added', logEntry);
+    }
+
+    _handleCapacityCheck() {
+        const capacityRatio = this.logs.length / this.maxScrollback;
+        const wasAtCapacity = this.isAtCapacity;
+
+        // Maintain scrollback limit
+        if (this.logs.length > this.maxScrollback) {
+            this.logs = this.logs.slice(-this.maxScrollback);
+            this.isAtCapacity = true;
+            this.emit('log-capped', {
+                removedCount: this.logs.length - this.maxScrollback,
+                currentCount: this.logs.length,
+                maxCapacity: this.maxScrollback
+            });
+        } else {
+            // Check capacity threshold
+            if (capacityRatio >= this.warningThreshold && !wasAtCapacity) {
+                this.isAtCapacity = true;
+                this.emit('log-capacity-warning', {
+                    currentCount: this.logs.length,
+                    maxCapacity: this.maxScrollback,
+                    ratio: capacityRatio
+                });
+            } else if (capacityRatio < this.warningThreshold && wasAtCapacity) {
+                this.isAtCapacity = false;
+            }
+        }
     }
 
     addInfo(message) { this.addLog(message, 'info'); }
@@ -111,17 +221,20 @@ export class LogViewerComponent extends BaseComponent {
     }
 
     _matchesFilters(log) {
-        // Level filter
-        if (this.filters.level !== 'all' && log.level !== this.filters.level) {
-            return false;
+        // Check level filter first (most common) as a performance optimization
+        if (this.filters.level !== 'all' && log.level !== this.filters.level) return false;
+        
+        // Check keyword filter next if present
+        if (this.filters.keyword && !log.message.toLowerCase().includes(this.filters.keyword.toLowerCase())) return false;
+        
+        // Check time range filter last
+        if (this.filters.timeRange) {
+            const logTime = new Date(log.timestamp);
+            const start = this.filters.timeRange.start;
+            const end = this.filters.timeRange.end ?? new Date();
+            if (logTime < start || logTime > end) return false;
         }
-
-        // Keyword filter
-        if (this.filters.keyword && 
-            !log.message.toLowerCase().includes(this.filters.keyword.toLowerCase())) {
-            return false;
-        }
-
+        
         return true;
     }
 
@@ -152,7 +265,13 @@ export class LogViewerComponent extends BaseComponent {
     }
 
     _getLevelColor(level) {
-        const colors = { error: 'red', warn: 'yellow', debug: 'blue' };
+        const colors = { 
+            error: 'red', 
+            warn: 'yellow', 
+            debug: 'blue',
+            info: 'cyan',
+            success: 'green'
+        };
         return colors[level] || 'white';
     }
 
@@ -170,6 +289,16 @@ export class LogViewerComponent extends BaseComponent {
         this.filters.keyword = keyword.toLowerCase();
         this._applyFilters();
         this.emit('filter-changed', { type: 'keyword', value: keyword });
+    }
+
+    setTimeRangeFilter(startDate, endDate) {
+        this.filters.timeRange = { start: startDate, end: endDate };
+        this._applyFilters();
+        this.emit('filter-changed', { 
+            type: 'time-range', 
+            start: startDate, 
+            end: endDate 
+        });
     }
 
     toggleTimestampDisplay() {
@@ -211,6 +340,60 @@ export class LogViewerComponent extends BaseComponent {
         });
     }
 
+    _showContextMenu(mouse) {
+        // Calculate position for context menu
+        const position = {
+            top: Math.min(mouse.y, this.parent.height - 10),
+            left: Math.min(mouse.x, this.parent.width - 20)
+        };
+
+        // Define context menu items for log level controls
+        const menuItems = [
+            { 
+                label: this.filters.level === 'all' ? '✓ All Messages' : 'All Messages', 
+                action: () => this.setLevelFilter('all') 
+            },
+            { 
+                label: this.filters.level === 'error' ? '✓ Errors Only' : 'Show Errors', 
+                action: () => this.setLevelFilter('error') 
+            },
+            { 
+                label: this.filters.level === 'warn' ? '✓ Warnings Only' : 'Show Warnings', 
+                action: () => this.setLevelFilter('warn') 
+            },
+            { 
+                label: this.filters.level === 'info' ? '✓ Info Only' : 'Show Info', 
+                action: () => this.setLevelFilter('info') 
+            },
+            { 
+                label: this.filters.level === 'debug' ? '✓ Debug Only' : 'Show Debug', 
+                action: () => this.setLevelFilter('debug') 
+            },
+            { 
+                label: 'Clear Filters', 
+                action: () => {
+                    this.setLevelFilter('all');
+                    this.setKeywordFilter('');
+                    this.setTimeRangeFilter(null);
+                } 
+            },
+            { 
+                label: 'Search...', 
+                action: () => this._openAdvancedFilterDialog() 
+            },
+            { 
+                label: 'Compact Logs', 
+                action: () => this.compactLogs() 
+            },
+            { 
+                label: 'Exit', 
+                action: () => {} 
+            }
+        ];
+
+        this.emit('show-context-menu', { position, menuItems });
+    }
+
     saveLogsToFile(filePath) {
         try {
             const fs = require('fs');
@@ -240,8 +423,110 @@ export class LogViewerComponent extends BaseComponent {
             filteredSize: this.filteredLogs.length,
             oldest: this.logs[0]?.timestamp || null,
             newest: this.logs[this.logs.length - 1]?.timestamp || null,
-            currentFilters: { ...this.filters }
+            currentFilters: { ...this.filters },
+            maxScrollback: this.maxScrollback,
+            isAtCapacity: this.isAtCapacity,
+            capacityRatio: this.logs.length / this.maxScrollback
         };
+    }
+
+    // Scrollback capacity management methods
+    setMaxScrollback(newMax) {
+        this.maxScrollback = newMax;
+        
+        // Truncate logs if new max is smaller than current size
+        if (this.logs.length > this.maxScrollback) {
+            this.logs = this.logs.slice(-this.maxScrollback);
+        }
+        
+        this.emit('max-scrollback-changed', { 
+            oldMax: this.maxScrollback, 
+            newMax: newMax 
+        });
+    }
+
+    getCapacity() {
+        return {
+            current: this.logs.length,
+            max: this.maxScrollback,
+            ratio: this.logs.length / this.maxScrollback,
+            isAtCapacity: this.isAtCapacity
+        };
+    }
+
+    clearCapacityWarning() {
+        this.isAtCapacity = false;
+        this.emit('capacity-warning-cleared');
+    }
+
+    compactLogs() {
+        const originalCount = this.logs.length;
+        const cutoffTime = Date.now() - (24 * 60 * 60 * 1000); // 24 hours ago
+        
+        this.logs = this.logs.filter(log => new Date(log.timestamp).getTime() > cutoffTime);
+
+        this._applyFilters();
+        this.emit('logs-compacted', {
+            originalCount,
+            newCount: this.logs.length,
+            removedCount: originalCount - this.logs.length
+        });
+    }
+
+    // Additional filtering methods
+    _openAdvancedFilterDialog() {
+        this.emit('open-advanced-filter', {
+            currentFilters: { ...this.filters },
+            onFilterChange: (filterType, value) => {
+                switch (filterType) {
+                    case 'level':
+                        this.setLevelFilter(value);
+                        break;
+                    case 'keyword':
+                        this.setKeywordFilter(value);
+                        break;
+                    case 'time-range':
+                        this.setTimeRangeFilter(value.start, value.end);
+                        break;
+                    case 'relative-time':
+                        this.setRelativeTimeFilter(value);
+                        break;
+                }
+            }
+        });
+    }
+
+    setRelativeTimeFilter(relativeTime) {
+        const now = new Date();
+        const timeRanges = {
+            'last-5-minutes': 5 * 60 * 1000,
+            'last-15-minutes': 15 * 60 * 1000,
+            'last-1-hour': 60 * 60 * 1000,
+            'last-24-hours': 24 * 60 * 60 * 1000
+        };
+        
+        const startTime = timeRanges[relativeTime] ? 
+            new Date(now.getTime() - timeRanges[relativeTime]) : 
+            now;
+
+        this.filters.timeRange = { start: startTime, end: now };
+        this._applyFilters();
+        this.emit('filter-changed', { 
+            type: 'relative-time', 
+            value: relativeTime,
+            start: startTime,
+            end: now
+        });
+    }
+
+    _toggleRelativeTime() {
+        const timeOptions = ['last-5-minutes', 'last-15-minutes', 'last-1-hour', 'all'];
+        const currentIndex = timeOptions.indexOf(this.currentRelativeTime || 'all');
+        const nextIndex = (currentIndex + 1) % timeOptions.length;
+        const nextTimeOption = timeOptions[nextIndex];
+        
+        this.currentRelativeTime = nextTimeOption;
+        this.setRelativeTimeFilter(nextTimeOption);
     }
 
     // Helper methods for scrolling
