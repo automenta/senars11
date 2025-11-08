@@ -2,6 +2,7 @@ import { EventEmitter } from 'events';
 import { NAR } from '../nar/NAR.js';
 import { CommandProcessor } from './utils/CommandProcessor.js';
 import { PersistenceManager } from '../io/PersistenceManager.js';
+import { Input } from '../Agent.js';
 
 const SPECIAL_COMMANDS = { 'next': 'n', 'n': 'n', 'run': 'go', 'go': 'go', 'stop': 'st', 'st': 'st', 'quit': 'exit', 'q': 'exit', 'exit': 'exit' };
 const EVENTS = {
@@ -27,12 +28,13 @@ const EVENTS = {
 export class ReplEngine extends EventEmitter {
     constructor(config = {}) {
         super();
-        
+
         this.nar = new NAR(config.nar ?? {});
+        this.inputManager = new Input(); // Manage user input tasks
         this.sessionState = { history: [], lastResult: null, startTime: Date.now() };
         this.persistenceManager = new PersistenceManager({ defaultPath: config.persistence?.defaultPath ?? './agent.json' });
         this.commandProcessor = new CommandProcessor(this.nar, this.persistenceManager, this.sessionState);
-        
+
         this.isRunningLoop = false;
         this.runInterval = null;
         this.originalTraceState = false;
@@ -56,42 +58,80 @@ export class ReplEngine extends EventEmitter {
 
         this.sessionState.history.push(trimmedInput);
 
-        return trimmedInput.startsWith('/') 
+        return trimmedInput.startsWith('/')
             ? await this.executeCommand(...trimmedInput.slice(1).split(' '))
             : await this.processNarsese(trimmedInput);
     }
 
     async processNarsese(input) {
         try {
+            const taskId = this.inputManager.addTask(input, 0.5, {
+                type: 'user_input',
+                source: 'narsese',
+                timestamp: Date.now()
+            });
+
             const startTime = Date.now();
             const result = await this.nar.input(input);
             await this.nar.step();
             const duration = Date.now() - startTime;
 
             if (result) {
-                const output = `✅ Input processed successfully (${duration}ms)`;
-                this.emit(EVENTS.NARSESE_PROCESSED, { input, result, duration, beliefs: this.nar.getBeliefs?.() ?? [] });
-                return output;
+                this._handleSuccessfulNarsese(input, result, duration, taskId);
+                return `✅ Input processed successfully (${duration}ms)`;
             } else {
-                const error = '❌ Failed to process input';
-                this.emit(EVENTS.NARSESE_ERROR, { input, error });
-                return error;
+                this._handleFailedNarsese(input, taskId);
+                return '❌ Failed to process input';
             }
         } catch (error) {
-            const errorMsg = `❌ Error: ${error.message}`;
-            this.emit(EVENTS.NARSESE_ERROR, { input, error: error.message });
-            return errorMsg;
+            this._handleNarseseError(input, error);
+            return `❌ Error: ${error.message}`;
         }
+    }
+
+    _handleSuccessfulNarsese(input, result, duration, taskId) {
+        this.inputManager.updatePriorityById(taskId, 0.8); // Increase priority after successful processing
+        this.emit(EVENTS.NARSESE_PROCESSED, {
+            input,
+            result,
+            duration,
+            taskId, // Include the task ID in the event
+            beliefs: this.nar.getBeliefs?.() ?? []
+        });
+    }
+
+    _handleFailedNarsese(input, taskId) {
+        const task = this.inputManager.getTaskById(taskId);
+        if (task) {
+            task.metadata.error = true;
+            task.metadata.errorTime = Date.now();
+            this.inputManager.updatePriorityById(taskId, 0.1); // Lower priority for failed tasks
+        }
+        this.emit(EVENTS.NARSESE_ERROR, { input, error: '❌ Failed to process input', taskId });
+    }
+
+    _handleNarseseError(input, error) {
+        // Find the task by looking at the most recently added task
+        const allTasks = this.inputManager.getAllTasks();
+        const latestTask = allTasks.length > 0 ? allTasks[allTasks.length - 1] : null;
+
+        if (latestTask && latestTask.task === input) {
+            latestTask.metadata.error = true;
+            latestTask.metadata.errorTime = Date.now();
+            this.inputManager.updatePriorityById(latestTask.id, 0.1);
+        }
+
+        this.emit(EVENTS.NARSESE_ERROR, { input, error: error.message });
     }
 
     async executeCommand(cmd, ...args) {
         const cmdType = SPECIAL_COMMANDS[cmd] ?? cmd;
-        
+
         switch (cmdType) {
             case 'n': return await this._next();
             case 'go': return await this._run();
             case 'st': return await this._stop();
-            case 'exit': 
+            case 'exit':
                 this.emit('engine.quit');
                 return '👋 Goodbye!';
         }

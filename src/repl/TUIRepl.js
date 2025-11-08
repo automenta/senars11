@@ -1,235 +1,252 @@
 import { ReplEngine } from './ReplEngine.js';
-import blessed from 'blessed';
 import { EventEmitter } from 'events';
-import { FormattingUtils } from './utils/FormattingUtils.js';
+import { TaskEditorComponent } from './components/TaskEditorComponent.js';
+import { LogViewerComponent } from './components/LogViewerComponent.js';
+import { StatusBarComponent } from './components/StatusBarComponent.js';
+import { ViewManager } from '../repl/ViewManager.js';
+import blessed from 'blessed';
 
-const SPINS = ['🌀', '◕', '◔', '◕'];
-const CMD_HANDLERS = ['help', 'status', 'memory', 'trace', 'reset', 'save', 'load', 'demo'];
-const UI_ELEMENTS = {
-    HEADER: 'header',
-    INPUT: 'input',
-    OUTPUT: 'output',
-    MEMORY_DISPLAY: 'memoryDisplay',
-    STATUS_BAR: 'statusBar'
-};
-const ELEMENT_CONFIGS = {
-    header: { 
-        top: '0', 
-        left: '0', 
-        width: '100%', 
-        height: '6%', 
-        content: '{bold}{center}SeNARS Reasoning Engine 🚀{/center}{/bold}', 
-        tags: true, 
-        border: { type: 'line' }, 
-        style: { fg: 'white', bg: 'blue', border: { fg: '#f0f0f0' } } 
-    },
-    input: { 
-        top: '6%', 
-        left: '0', 
-        width: '100%', 
-        height: '15%', 
-        border: { type: 'line' }, 
-        style: { fg: 'white', bg: 'black', border: { fg: 'green' } }, 
-        inputOnFocus: true 
-    },
-    output: { 
-        top: '21%', 
-        left: '0', 
-        width: '70%', 
-        height: '54%', 
-        border: { type: 'line' }, 
-        style: { fg: 'white', bg: 'black', border: { fg: 'cyan' } }, 
-        scrollable: true, 
-        alwaysScroll: true, 
-        mouse: true, 
-        keys: true, 
-        vi: true 
-    },
-    memoryDisplay: { 
-        top: '21%', 
-        left: '70%', 
-        width: '30%', 
-        height: '54%', 
-        border: { type: 'line' }, 
-        style: { fg: 'white', bg: 'black', border: { fg: 'magenta' } }, 
-        scrollable: true, 
-        alwaysScroll: true, 
-        mouse: true, 
-        keys: true, 
-        vi: true 
-    },
-    statusBar: { 
-        bottom: '0', 
-        left: '0', 
-        width: '100%', 
-        height: '25%', 
-        border: { type: 'line' }, 
-        style: { fg: 'white', bg: 'red', border: { fg: 'yellow' } }, 
-        content: '' 
-    }
-};
-const ELEMENT_TYPES = {
-    TEXTAREA: 'textarea',
-    BOX: 'box'
-};
-
+/**
+ * New TUI REPL with component-based architecture
+ * Implements the full observability and control of system state through editing the active set of Input Tasks
+ */
 export class TUIRepl extends EventEmitter {
     constructor(config = {}) {
         super();
-        
+
         this.engine = new ReplEngine(config);
-        this.animationState = { spinningIndex: 0 };
-        this.screen = blessed.screen({ smartCSR: true, title: 'SeNARS Reasoning Engine 🚀', dockBorders: true });
+        this.screen = blessed.screen({
+            smartCSR: true,
+            title: 'SeNARS Reasoning Engine 🚀',
+            dockBorders: true,
+            fullUnicode: true // Enable Unicode characters like emojis
+        });
 
-        this._setupLayout();
-        this._startAnimationLoop();
+        this.components = {};
+        this.viewManager = null;
+
+        this._setupComponents();
         this._setupEventListeners();
+        this._setupViewManager();
+        this._setupGlobalKeyBindings();
+    }
 
+    _setupComponents() {
+        this.components.statusBar = new StatusBarComponent({
+            elementConfig: {
+                bottom: '0',
+                left: '0',
+                width: '100%',
+                height: '1',
+                border: { type: 'line' },
+                style: { fg: 'white', bg: 'blue', border: { fg: 'yellow' } },
+                content: ''
+            },
+            parent: this.screen,
+            eventEmitter: this,
+            engine: this.engine
+        });
+
+        this.components.taskEditor = new TaskEditorComponent({
+            elementConfig: {
+                top: '0',
+                left: '0',
+                width: '40%',
+                height: '100%-1',
+                border: { type: 'line' },
+                style: {
+                    fg: 'white',
+                    bg: 'black',
+                    border: { fg: 'green' },
+                    selected: { fg: 'black', bg: 'lightgreen' }
+                },
+                selectedFg: 'black',
+                selectedBg: 'lightgreen',
+                selectedBold: true,
+                items: [],
+                interactive: true,
+                scrollable: true,
+                mouse: true,
+                keys: true,
+                vi: true
+            },
+            parent: this.screen,
+            eventEmitter: this,
+            engine: this.engine
+        });
+
+        this.components.logViewer = new LogViewerComponent({
+            elementConfig: {
+                top: '0',
+                left: '40%',
+                width: '60%',
+                height: '100%-1',
+                border: { type: 'line' },
+                style: { fg: 'white', bg: 'black', border: { fg: 'cyan' } },
+                scrollable: true,
+                alwaysScroll: true,
+                mouse: true,
+                keys: true,
+                vi: true
+            },
+            parent: this.screen,
+            eventEmitter: this,
+            maxScrollback: 1000
+        });
+
+        // Initialize all components
+        Object.values(this.components).forEach(component => component.init());
+
+        this.components.taskInput = this.components.taskEditor.addNewTaskInput(this.screen);
+    }
+
+    _setupViewManager() {
+        this.viewManager = new ViewManager({
+            screen: this.screen,
+            eventEmitter: this,
+            components: this.components
+        });
+
+        this.viewManager.addViewShortcuts(this.screen);
+        this.viewManager.switchView('vertical-split');
+    }
+
+    _setupEventListeners() {
+        // Engine event handlers
+        const engineHandlers = {
+            'engine.ready': (data) => {
+                this.components.logViewer.addInfo(data.message);
+                this.components.statusBar.updateContent();
+            },
+            'narsese.processed': (data) => {
+                this.components.logViewer.addInfo(data.result);
+                this._displayLatestBeliefs(data.beliefs);
+                this._updateTaskStatus(data.taskId, {
+                    processed: true, pending: false, success: true, completionTime: Date.now()
+                });
+            },
+            'narsese.error': (data) => {
+                this.components.logViewer.addError(`❌ Error: ${data.error}`);
+                this._updateTaskStatus(data.taskId, {
+                    processed: true, pending: false, error: true, errorTime: Date.now(), error: data.error
+                });
+            },
+            'command.error': (data) => this.components.logViewer.addError(`❌ Error executing command: ${data.error}`),
+            'engine.quit': () => { this.screen.destroy(); process.exit(0); },
+            'nar.cycle.step': (data) => this.components.logViewer.addInfo(`⏭️  Single cycle executed. Cycle: ${data.cycle}`),
+            'nar.cycle.running': () => this.components.logViewer.addInfo('🏃 Running continuously...'),
+            'nar.cycle.stop': () => this.components.logViewer.addInfo('🛑 Run stopped by user.'),
+            'engine.reset': () => this.components.logViewer.addInfo('🔄 NAR system reset successfully.'),
+            'engine.save': (data) => this.components.logViewer.addInfo(`💾 NAR state saved successfully to ${data.filePath}`),
+            'engine.load': (data) => this.components.logViewer.addInfo(`💾 NAR state loaded successfully from ${data.filePath}`)
+        };
+
+        // Register command-specific handlers
+        ['help', 'status', 'memory', 'trace', 'reset', 'save', 'load', 'demo'].forEach(cmd => {
+            engineHandlers[`command.${cmd}`] = (data) => this.components.logViewer.addInfo(data.result);
+        });
+
+        // Register all event handlers
+        Object.entries(engineHandlers).forEach(([event, handler]) => this.engine.on(event, handler));
+
+        // Component-specific events
+        this._setupComponentEventHandlers();
+    }
+
+    _displayLatestBeliefs(beliefs) {
+        if (beliefs?.length > 0) {
+            this.components.logViewer.addInfo('🎯 Latest beliefs:');
+            beliefs.slice(-3).forEach(task => {
+                const truthStr = task.truth?.toString() ?? '';
+                this.components.logViewer.addInfo(`  ${task.term?.name ?? 'Unknown'} ${truthStr} [P: ${task.priority?.toFixed(3) ?? 'N/A'}]`);
+            });
+        }
+    }
+
+    _updateTaskStatus(taskId, updates) {
+        if (taskId) {
+            this.components.taskEditor.updateTaskStatus(taskId, updates);
+        }
+    }
+
+    _setupComponentEventHandlers() {
+        this.components.taskEditor.on('new-task', (data) => {
+            this.engine.processInput(data.task.content).catch(error => {
+                this.components.logViewer.addError(`❌ Error processing task: ${error.message}`);
+            });
+        });
+
+        const taskActions = {
+            'task-deleted': (data) => this.components.logViewer.addInfo(`🗑️ Task deleted: ${data.task.content}`),
+            'task-edited': (data) => this.components.logViewer.addInfo(`✏️ Task edited: ${data.newTask.content}`),
+            'priority-adjusted': (data) => {
+                if (data.task.id) {
+                    this.engine.inputManager.updatePriorityById(data.task.id, data.newPriority, data.mode);
+                }
+                this.components.logViewer.addInfo(`⚖️ Priority adjusted for task: ${data.newPriority} (mode: ${data.mode})`);
+            }
+        };
+
+        Object.entries(taskActions).forEach(([event, handler]) => {
+            this.components.taskEditor.on(event, handler);
+        });
+
+        this.components.logViewer.on('log-added', (data) => {
+            if (data.level === 'error') {
+                this.components.statusBar.addAlert();
+            }
+        });
+
+        this.components.statusBar.on('pulldown-menu-toggle', (data) => {
+            if (data.isOpen) {
+                this.components.logViewer.addInfo('📁 Menu opened: Use shortcuts for options');
+            }
+        });
+
+        this.components.statusBar.on('menu-exit', () => {
+            this.engine.shutdown();
+            this.screen.destroy();
+            process.exit(0);
+        });
+
+        this.components.statusBar.on('connection-state-changed', (data) => {
+            this.components.logViewer.addInfo(`🌐 Connection state changed to: ${data.state}`);
+        });
+    }
+
+    _setupGlobalKeyBindings() {
+        // Exit on Ctrl+C
         this.screen.key(['C-c'], () => {
             this.engine.shutdown();
             this.screen.destroy();
             process.exit(0);
         });
-    }
 
-    _setupLayout() {
-        this.elementConfigs = ELEMENT_CONFIGS;
-
-        // Create UI elements using explicit assignments for better maintainability
-        this.header = blessed.box(this.elementConfigs.header);
-        this.input = blessed.textarea(this.elementConfigs.input);
-        this.output = blessed.box(this.elementConfigs.output);
-        this.memoryDisplay = blessed.box(this.elementConfigs.memoryDisplay);
-        this.statusBar = blessed.box(this.elementConfigs.statusBar);
-
-        // Update status bar content
-        this.statusBar.setContent(this._getStatusContent());
-
-        // Append elements to screen
-        [this.header, this.input, this.output, this.memoryDisplay, this.statusBar]
-            .forEach(el => this.screen.append(el));
-
-        this.input.on('submit', (inputText) => {
-            this._handleInput(inputText);
-            this.input.clearValue();
-            this.screen.render();
-        });
-
-        this.input.key(['enter'], () => {
-            const inputText = this.input.getValue();
-            if (inputText.trim()) {
-                this._handleInput(inputText.trim());
-                this.input.clearValue();
+        const keyBindings = {
+            'C-l': () => this.viewManager.switchView('log-only'),
+            'C-t': () => this.viewManager.switchView('vertical-split'),
+            'C-g': () => this.viewManager.switchView('dynamic-grouping'),
+            'C-k': () => {
+                this.components.logViewer.clearLogs();
+                this.components.logViewer.addInfo('🗑️ Logs cleared');
             }
-        });
-
-        this.screen.render();
-        this._updateMemoryDisplay();
-    }
-
-    _setupEventListeners() {
-        const eventHandlers = {
-            'engine.ready': (data) => this._addToOutput(data.message),
-            'narsese.processed': (data) => {
-                this._addToOutput(data.result);
-                if (data.beliefs?.length > 0) {
-                    this._addToOutput('🎯 Latest beliefs:');
-                    data.beliefs.slice(-3).forEach(task => {
-                        const truthStr = task.truth?.toString() ?? '';
-                        this._addToOutput(`  {blue}${task.term?.name ?? 'Unknown'}{/blue} ${truthStr} {magenta}[P: ${task.priority?.toFixed(3) ?? 'N/A'}]{/magenta}`);
-                    });
-                }
-            },
-            'narsese.error': (data) => this._addToOutput(`❌ Error: ${data.error}`),
-            'command.error': (data) => this._addToOutput(`❌ Error executing command: ${data.error}`),
-            'engine.quit': () => { this.screen.destroy(); process.exit(0); },
-            'nar.cycle.step': (data) => this._addToOutput(`⏭️  Single cycle executed. Cycle: ${data.cycle}`),
-            'nar.cycle.running': () => this._addToOutput('🏃 Running continuously...'),
-            'nar.cycle.stop': () => this._addToOutput('🛑 Run stopped by user.'),
-            'engine.reset': () => this._addToOutput('🔄 NAR system reset successfully.'),
-            'engine.save': (data) => this._addToOutput(`💾 NAR state saved successfully to ${data.filePath}`),
-            'engine.load': (data) => this._addToOutput(`💾 NAR state loaded successfully from ${data.filePath}`)
         };
 
-        CMD_HANDLERS.forEach(cmd => {
-            eventHandlers[`command.${cmd}`] = (data) => this._addToOutput(data.result);
+        Object.entries(keyBindings).forEach(([key, handler]) => {
+            this.screen.key([key], handler);
         });
-
-        Object.entries(eventHandlers).forEach(([event, handler]) => this.engine.on(event, handler));
-    }
-
-    _startAnimationLoop() {
-        setInterval(() => {
-            this.animationState.spinningIndex = (this.animationState.spinningIndex + 1) % 4;
-            this.statusBar.setContent(this._getStatusContent());
-            this.screen.render();
-        }, 500);
-    }
-
-    _getStatusContent() {
-        const stats = this.engine.getStats();
-        const memoryStats = stats.memoryStats ?? {};
-        return `{bold}⚡ Status: ${SPINS[this.animationState.spinningIndex]} | Concepts: ${memoryStats.conceptCount ?? 0} | Cycles: ${stats.cycleCount ?? 0} | Tasks: ${memoryStats.taskCount ?? 0}{/bold}`;
     }
 
     async start() {
-        this.output.setContent('Welcome to SeNARS! Type {bold}/help{/bold} for commands or enter Narsese statements.\n');
-        this.screen.render();
+        this.components.logViewer.addInfo('Welcome to SeNARS! 🚀');
+        this.components.logViewer.addInfo('Type commands or enter Narsese statements.');
+        this.components.logViewer.addInfo('Use Ctrl+L/T/G to switch views, F1 for menu, Ctrl+C to exit.');
+
+        if (this.components.taskInput) {
+            this.components.taskInput.focus();
+        }
+
         await this.engine.initialize();
-    }
-
-    _handleInput(inputText) {
-        this.engine.processInput(inputText).catch(error => this._addToOutput(`❌ Error: ${error.message}`));
-        
-        setTimeout(() => {
-            this._updateMemoryDisplay();
-            this.screen.render();
-        }, 100);
-    }
-
-    _addToOutput(text) {
-        const formattedText = `[${new Date().toLocaleTimeString()}] ${text}`;
-        this.output.pushLine(formattedText);
-        this.output.setScrollPerc(100);
         this.screen.render();
-    }
-
-    _updateMemoryDisplay() {
-        const stats = this.engine.getStats();
-        const memoryStats = stats.memoryStats ?? {};
-        const tasks = this._getTasksFromMemory();
-        const taskDetails = tasks.length 
-            ? tasks.slice(-10).flatMap((task, index) => [
-                `{cyan}[${index + 1}]{/cyan} {green}${task.term?.name ?? 'Unknown Task'}{/green}`,
-                `    {blue}| ${FormattingUtils.formatTaskDetails(task)}{/blue}`
-            ])
-            : ['{red}No tasks in memory{/red}'];
-
-        const content = [
-            '{bold}🧠 Memory Status{/bold}',
-            ` Concepts: ${memoryStats.conceptCount ?? 0}`,
-            ` Tasks: ${memoryStats.taskCount ?? 0}`,
-            ` Focus Size: ${memoryStats.focusSize ?? 0}`,
-            '',
-            '{bold}📋 Recent Tasks{/bold}',
-            ...taskDetails
-        ].join('\n');
-
-        this.memoryDisplay.setContent(content);
-        this.screen.render();
-    }
-
-    _getTasksFromMemory() {
-        try {
-            if (this.engine.nar.getTasks) return this.engine.nar.getTasks() ?? [];
-            if (this.engine.nar.memory?.getTasks) return this.engine.nar.memory.getTasks() ?? [];
-            if (this.engine.nar.memory?.concepts) {
-                const concepts = this.engine.nar.memory.concepts;
-                return concepts instanceof Map 
-                    ? Array.from(concepts.values()).flatMap(concept => concept?.tasks ?? [])
-                    : Object.values(concepts).flatMap(concept => concept?.tasks ?? []);
-            }
-        } catch (e) {}
-        return [];
     }
 }

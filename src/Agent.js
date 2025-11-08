@@ -1,25 +1,56 @@
 import {NAR} from './nar/NAR.js';
 
-export class InputTasks {
+export class Input {
     constructor() {
         this.tasks = [];
+        this.idCounter = 0; // For generating unique IDs
     }
 
-    addTask(task, priority = 0) {
+    addTask(task, priority = 0, metadata = {}) {
         if (!this._validateTask(task)) throw new Error('Invalid task format');
-        this.tasks.push({task, priority, timestamp: Date.now()});
+
+        const taskId = this._generateId();
+        const taskItem = {
+            id: taskId,
+            task,
+            priority,
+            timestamp: Date.now(),
+            metadata: { ...metadata, createdAt: Date.now() },
+            derivedTasks: [] // Track derived tasks from this input
+        };
+
+        this.tasks.push(taskItem);
         this._sortTasks();
+
+        return taskId;
     }
 
     removeTask(index) {
         return this._isValidIndex(index) ? this.tasks.splice(index, 1)[0] : null;
     }
 
-    updatePriority(index, newPriority) {
+    removeTaskById(taskId) {
+        const index = this.tasks.findIndex(item => item.id === taskId);
+        return index !== -1 ? this.tasks.splice(index, 1)[0] : null;
+    }
+
+    updatePriority(index, newPriority, mode = 'direct') {
         if (!this._isValidIndex(index)) return false;
-        this.tasks[index].priority = newPriority;
+
+        const taskItem = this.tasks[index];
+        taskItem.priority = newPriority;
+
+        if (mode === 'cascade') {
+            this._updateDerivedPriorities(taskItem.id, newPriority);
+        }
+
         this._sortTasks();
         return true;
+    }
+
+    updatePriorityById(taskId, newPriority, mode = 'direct') {
+        const index = this.tasks.findIndex(item => item.id === taskId);
+        return index !== -1 ? this.updatePriority(index, newPriority, mode) : false;
     }
 
     getHighestPriorityTask() {
@@ -34,12 +65,81 @@ export class InputTasks {
         return this.tasks.filter(item => item.priority >= minPriority);
     }
 
+    getTaskById(taskId) {
+        return this.tasks.find(item => item.id === taskId) || null;
+    }
+
     size() {
         return this.tasks.length;
     }
 
     clear() {
         this.tasks = [];
+    }
+
+    getTaskDependencies(inputId) {
+        const inputTask = this.getTaskById(inputId);
+        return inputTask ? [...inputTask.derivedTasks] : [];
+    }
+
+    deleteInputWithDependencies(inputId) {
+        const taskItem = this.removeTaskById(inputId);
+        if (taskItem) {
+            this._removeDerivedTasks(inputId);
+            return taskItem;
+        }
+        return null;
+    }
+
+    editInputWithRecreate(inputId, newInput, metadata = {}) {
+        const index = this.tasks.findIndex(item => item.id === inputId);
+        if (index !== -1) {
+            const oldTaskItem = this.tasks[index];
+            const newPriority = oldTaskItem.priority;
+
+            this._removeDerivedTasks(inputId);
+
+            this.tasks[index] = {
+                id: inputId,
+                task: newInput,
+                priority: newPriority,
+                timestamp: Date.now(), // Update timestamp
+                metadata: { ...oldTaskItem.metadata, ...metadata, modifiedAt: Date.now() },
+                derivedTasks: [] // Reset derived tasks
+            };
+
+            this._sortTasks();
+            return true;
+        }
+        return false;
+    }
+
+    addDerivedTask(inputId, derivedTask) {
+        const taskItem = this.getTaskById(inputId);
+        if (taskItem) {
+            if (!taskItem.derivedTasks) {
+                taskItem.derivedTasks = [];
+            }
+            taskItem.derivedTasks.push(derivedTask);
+        }
+    }
+
+    _updateDerivedPriorities(inputId, priority) {
+        const taskItem = this.getTaskById(inputId);
+        if (taskItem?.derivedTasks) {
+            taskItem.derivedTasks.forEach(derivedTask => {
+                if (derivedTask.metadata) {
+                    derivedTask.metadata.priority = priority;
+                }
+            });
+        }
+    }
+
+    _removeDerivedTasks(inputId) {
+        const taskItem = this.getTaskById(inputId);
+        if (taskItem?.derivedTasks) {
+            taskItem.derivedTasks = [];
+        }
     }
 
     _validateTask = task => task != null;
@@ -51,12 +151,16 @@ export class InputTasks {
     _sortTasks() {
         this.tasks.sort((a, b) => b.priority - a.priority || a.timestamp - b.timestamp);
     }
+
+    _generateId() {
+        return `input_${++this.idCounter}_${Date.now()}`;
+    }
 }
 
 export class Agent {
     constructor(config = {}) {
         this.nar = config.nar || new NAR(config.narConfig || {});
-        this.inputTasks = new InputTasks();
+        this.inputTasks = new Input();
         this.evaluator = this.nar._evaluator;
         this.isRunning = false;
         this.config = {maxCyclesPerStep: config.maxCyclesPerStep || 100, ...config};
