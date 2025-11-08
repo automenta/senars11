@@ -39,6 +39,14 @@ export class ReplEngine extends EventEmitter {
         this.runInterval = null;
         this.originalTraceState = false;
         this.traceEnabled = false;
+        
+        // Session persistence for UI states
+        this.uiState = {
+            taskGrouping: null,
+            taskSelection: [],
+            taskFilters: {},
+            viewMode: 'vertical-split'
+        };
     }
 
     async initialize() {
@@ -72,13 +80,57 @@ export class ReplEngine extends EventEmitter {
             });
 
             const startTime = Date.now();
+            
+            // Set up event listener to capture derived tasks during processing
+            const derivedTasks = [];
+            
+            const derivationHandler = (task) => {
+                // Capture any derived tasks
+                derivedTasks.push({
+                    id: task.id || `derived_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                    content: task.term?.toString?.() || task.toString?.() || String(task),
+                    origin: taskId,
+                    timestamp: Date.now(),
+                    type: 'derived'
+                });
+            };
+            
+            // Attach to NAR's task.derived event
+            if (this.nar.on) {
+                this.nar.on('task.derived', derivationHandler);
+            }
+            
+            // Also listen for task.input events to capture the original task
+            let inputTaskCaptured = false;
+            const inputHandler = (data) => {
+                if (!inputTaskCaptured) {
+                    inputTaskCaptured = true;
+                }
+            };
+            
+            if (this.nar.on) {
+                this.nar.on('task.input', inputHandler);
+            }
+            
             const result = await this.nar.input(input);
             await this.nar.step();
+            
+            // Remove event listeners
+            if (this.nar.off) {
+                this.nar.off('task.derived', derivationHandler);
+                this.nar.off('task.input', inputHandler);
+            }
+            
             const duration = Date.now() - startTime;
 
+            // Add derived tasks to the input manager
+            if (derivedTasks.length > 0) {
+                this.inputManager.addMultipleDerivedTasks(taskId, derivedTasks);
+            }
+
             if (result) {
-                this._handleSuccessfulNarsese(input, result, duration, taskId);
-                return `✅ Input processed successfully (${duration}ms)`;
+                this._handleSuccessfulNarsese(input, result, duration, taskId, derivedTasks);
+                return `✅ Input processed successfully (${duration}ms) - ${derivedTasks.length} derived tasks`;
             } else {
                 this._handleFailedNarsese(input, taskId);
                 return '❌ Failed to process input';
@@ -89,13 +141,14 @@ export class ReplEngine extends EventEmitter {
         }
     }
 
-    _handleSuccessfulNarsese(input, result, duration, taskId) {
+    _handleSuccessfulNarsese(input, result, duration, taskId, derivedTasks = []) {
         this.inputManager.updatePriorityById(taskId, 0.8); // Increase priority after successful processing
         this.emit(EVENTS.NARSESE_PROCESSED, {
             input,
             result,
             duration,
             taskId, // Include the task ID in the event
+            derivedTasks, // Include derived tasks
             beliefs: this.nar.getBeliefs?.() ?? []
         });
     }
@@ -245,6 +298,70 @@ export class ReplEngine extends EventEmitter {
         } catch (error) {
             this.emit(EVENTS.ENGINE_ERROR, { error: error.message });
             return `❌ Error loading NAR state: ${error.message}`;
+        }
+    }
+
+    // Session state management methods
+    setUIState(newState) {
+        this.uiState = { ...this.uiState, ...newState };
+        this.emit('ui.state.updated', { state: this.uiState });
+    }
+
+    getUIState() {
+        return { ...this.uiState };
+    }
+
+    async saveSessionState(filePath) {
+        const sessionData = {
+            uiState: this.uiState,
+            inputTasks: this.inputManager.getAllTasks(),
+            narState: this.nar.serialize ? await this.nar.serialize() : null,
+            history: this.sessionState.history,
+            timestamp: Date.now()
+        };
+
+        try {
+            const result = await this.persistenceManager.saveToPath(sessionData, filePath);
+            this.emit(EVENTS.ENGINE_SAVE, { filePath: result.filePath, size: result.size });
+            return result;
+        } catch (error) {
+            this.emit(EVENTS.ENGINE_ERROR, { error: error.message });
+            throw error;
+        }
+    }
+
+    async loadSessionState(filePath) {
+        try {
+            const sessionData = await this.persistenceManager.loadFromPath(filePath);
+            
+            if (sessionData.uiState) {
+                this.uiState = { ...this.uiState, ...sessionData.uiState };
+            }
+            
+            if (sessionData.inputTasks) {
+                // Clear current tasks and restore from saved state
+                // This is a simplified restoration - in a real implementation, 
+                // we'd need to properly recreate the input manager state
+                this.inputManager.clear();
+                sessionData.inputTasks.forEach(task => {
+                    this.inputManager.addTask(task.task, task.priority, task.metadata);
+                });
+            }
+            
+            if (sessionData.narState && this.nar.deserialize) {
+                await this.nar.deserialize(sessionData.narState);
+            }
+            
+            if (sessionData.history) {
+                this.sessionState.history = [...sessionData.history];
+            }
+            
+            this.emit(EVENTS.ENGINE_LOAD, { filePath });
+            this.emit('session.restored', { filePath, uiState: this.uiState });
+            return sessionData;
+        } catch (error) {
+            this.emit(EVENTS.ENGINE_ERROR, { error: error.message });
+            throw error;
         }
     }
 

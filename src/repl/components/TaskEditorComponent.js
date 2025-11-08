@@ -19,6 +19,11 @@ export class TaskEditorComponent extends BaseComponent {
         this.expandedGroups = new Set();
         this.allGroupsExpanded = false;
 
+        // Initialize undo/redo stack
+        this.historyStack = [];
+        this.historyIndex = -1;  // Points to the current state in the history
+        this.maxHistorySize = 50;
+
         this.elementConfig = this.elementConfig ?? this._getDefaultElementConfig();
     }
 
@@ -117,11 +122,21 @@ export class TaskEditorComponent extends BaseComponent {
             'C-r': () => this.setGroupingCriteria('relationships'),
             'C-s': () => this.setGroupingCriteria('similarity-content'),
             'C-p': () => this.setGroupingCriteria('priority'),
+            'C-A-p': () => this._pinTask(selectedIndex()), // Ctrl+Alt+P for pinning
             'C-e': () => this.expandAllGroups(),
             'C-h': () => this.collapseAllGroups(),
             'C-a': () => this._selectAllTasks(),
             'C-u': () => this._clearSelection(),
             'C-d': () => this._duplicateTask(selectedIndex()),
+            'C-y': () => this._duplicateSelectedTasks(), // Duplicate all selected tasks
+            'C-x': () => this._cutSelectedTasks(), // Cut selected tasks
+            'C-b': () => this._batchPriorityAdjustment(), // Batch priority adjustment
+            'C-m': () => this._batchMoveTasks(), // Batch move tasks
+            'C-z': () => this.undo(), // Undo
+            'C-S-z': () => this.redo(), // Redo (Ctrl+Shift+Z)
+            'C-p': () => this._pinTask(this.element.selected), // Pin task
+            'C-S-p': () => this._unpinTask(this.element.selected), // Unpin task (Ctrl+Shift+P)
+            'C-A': () => this._archiveTask(this.element.selected), // Archive task (Ctrl+Alt+A)
             's': () => this._toggleSelection(selectedIndex()),
             'S': () => this._toggleSelection(selectedIndex()),
             'u': () => this._clearSelection(),
@@ -865,6 +880,8 @@ export class TaskEditorComponent extends BaseComponent {
                         label: '⚖️ Adjust Priority',
                         action: () => this._showPriorityMenu(task, index)
                     },
+                    { label: task.pinned ? '📍 Unpin Task' : '📌 Pin Task', action: () => this._togglePinTask(index) },
+                    { label: task.archived ? '📂 Unarchive Task' : '📦 Archive Task', action: () => this._toggleArchiveTask(index) },
                     { label: '📋 Duplicate Task', action: () => this._duplicateTask(index) },
                     { label: 'Cancel', action: () => {} }
                 ];
@@ -873,6 +890,26 @@ export class TaskEditorComponent extends BaseComponent {
                 this.contextMenu.show(position, menuItems);
             }
         });
+    }
+
+    _togglePinTask(index) {
+        if (index >= 0 && index < this.tasks.length) {
+            if (this.tasks[index].pinned) {
+                this._unpinTask(index);
+            } else {
+                this._pinTask(index);
+            }
+        }
+    }
+
+    _toggleArchiveTask(index) {
+        if (index >= 0 && index < this.tasks.length) {
+            if (this.tasks[index].archived) {
+                this._unarchiveTask(index);
+            } else {
+                this._archiveTask(index);
+            }
+        }
     }
 
     _calculateMenuPosition(index) {
@@ -1062,6 +1099,183 @@ export class TaskEditorComponent extends BaseComponent {
         this.emit('task-content-paste-requested');
     }
 
+    // Batch operations
+    _duplicateSelectedTasks() {
+        const selected = this.getSelectedTasks();
+        if (selected.length === 0) {
+            this.engine?.components?.logViewer?.addWarning('⚠️  No tasks selected to duplicate');
+            return;
+        }
+
+        this._saveStateToHistory('batch-duplicate', { count: selected.length });
+
+        const duplicatedTasks = [];
+        for (const item of selected) {
+            const originalTask = item.task;
+            const duplicatedTask = {
+                ...originalTask,
+                id: Date.now().toString() + Math.random().toString(),
+                timestamp: Date.now(),
+                metadata: {
+                    ...originalTask.metadata,
+                    duplicatedFrom: originalTask.id,
+                    duplicatedAt: Date.now(),
+                    isDuplicated: true
+                }
+            };
+            this.tasks.push(duplicatedTask);
+            duplicatedTasks.push(duplicatedTask);
+        }
+
+        this._updateDisplay();
+        this.engine?.components?.logViewer?.addInfo(`📋 Duplicated ${selected.length} task(s)`);
+        this.emit('batch-tasks-duplicated', { original: selected, duplicated: duplicatedTasks });
+    }
+
+    _cutSelectedTasks() {
+        const selected = this.getSelectedTasks();
+        if (selected.length === 0) {
+            this.engine?.components?.logViewer?.addWarning('⚠️  No tasks selected to cut');
+            return;
+        }
+
+        // For now, just delete the selected tasks (in a real implementation, 
+        // we'd store them in a clipboard buffer)
+        this._batchDeleteTasks(selected);
+    }
+
+    _batchPriorityAdjustment() {
+        const selected = this.getSelectedTasks();
+        if (selected.length === 0) {
+            this.engine?.components?.logViewer?.addWarning('⚠️  No tasks selected for priority adjustment');
+            return;
+        }
+
+        // Show a prompt for the new priority value
+        this.emit('batch-priority-adjustment-requested', {
+            taskCount: selected.length,
+            onConfirm: (newPriority, mode) => {
+                this._saveStateToHistory('batch-priority-adjustment', { 
+                    count: selected.length, 
+                    oldPriorities: selected.map(item => item.task.priority),
+                    newPriority, 
+                    mode 
+                });
+
+                for (const item of selected) {
+                    this.tasks[item.index].priority = newPriority;
+                    // If cascade mode, update derived tasks too
+                    if (mode === 'cascade' && this.engine?.inputManager) {
+                        this.engine.inputManager.updatePriorityById(item.task.id, newPriority, mode);
+                    }
+                }
+
+                this._updateDisplay();
+                this.engine?.components?.logViewer?.addInfo(`⚖️ Adjusted priority of ${selected.length} task(s) to ${newPriority} (mode: ${mode})`);
+                this.emit('batch-priority-adjusted', { 
+                    count: selected.length, 
+                    newPriority, 
+                    mode,
+                    tasks: selected.map(item => item.task)
+                });
+            }
+        });
+    }
+
+    _batchMoveTasks() {
+        // Placeholder for batch move functionality
+        const selected = this.getSelectedTasks();
+        if (selected.length === 0) {
+            this.engine?.components?.logViewer?.addWarning('⚠️  No tasks selected to move');
+            return;
+        }
+
+        this.engine?.components?.logViewer?.addInfo(`📋 Batch move functionality would be implemented here - ${selected.length} tasks selected`);
+        this.emit('batch-move-requested', { count: selected.length });
+    }
+
+    // Advanced batch operations
+    _batchDeleteTasks(selectedTasks) {
+        if (selectedTasks.length === 0) return;
+
+        // Sort indices in descending order to avoid index shifting issues
+        const sortedIndices = selectedTasks
+            .map(item => item.index)
+            .sort((a, b) => b - a);
+
+        this._saveStateToHistory('batch-delete', { 
+            count: sortedIndices.length,
+            deletedTasks: selectedTasks.map(item => item.task)
+        });
+
+        for (const index of sortedIndices) {
+            if (index >= 0 && index < this.tasks.length) {
+                this.tasks.splice(index, 1);
+            }
+        }
+
+        this._updateDisplay();
+        this.engine?.components?.logViewer?.addInfo(`🗑️ Deleted ${sortedIndices.length} task(s)`);
+        this.emit('batch-tasks-deleted', { count: sortedIndices.length });
+    }
+
+    // Task archiving and pinning methods
+    _archiveTask(index) {
+        if (index >= 0 && index < this.tasks.length) {
+            this.tasks[index].archived = true;
+            this.tasks[index].archivedAt = Date.now();
+            this._updateDisplay();
+            this.engine?.components?.logViewer?.addInfo(`📦 Archived task: ${this.tasks[index].content.substring(0, 50)}...`);
+            this.emit('task-archived', { task: this.tasks[index], index });
+        }
+    }
+
+    _unarchiveTask(index) {
+        if (index >= 0 && index < this.tasks.length) {
+            delete this.tasks[index].archived;
+            delete this.tasks[index].archivedAt;
+            this._updateDisplay();
+            this.engine?.components?.logViewer?.addInfo(`📂 Unarchived task: ${this.tasks[index].content.substring(0, 50)}...`);
+            this.emit('task-unarchived', { task: this.tasks[index], index });
+        }
+    }
+
+    _pinTask(index) {
+        if (index >= 0 && index < this.tasks.length) {
+            this.tasks[index].pinned = true;
+            this._updateDisplay();
+            this.engine?.components?.logViewer?.addInfo(`📌 Pinned task: ${this.tasks[index].content.substring(0, 50)}...`);
+            this.emit('task-pinned', { task: this.tasks[index], index });
+        }
+    }
+
+    _unpinTask(index) {
+        if (index >= 0 && index < this.tasks.length) {
+            this.tasks[index].pinned = false;
+            this._updateDisplay();
+            this.engine?.components?.logViewer?.addInfo(`📍 Unpinned task: ${this.tasks[index].content.substring(0, 50)}...`);
+            this.emit('task-unpinned', { task: this.tasks[index], index });
+        }
+    }
+
+    // Update the display formatting to show pinned/archived status
+    _formatTaskForDisplay(task) {
+        const priority = task.priority ?? 0;
+        const priorityIndicator = this._getPriorityIndicator(priority);
+        const priorityBar = this._getPriorityBarStyle(priority, 'gradient'); // Use gradient style by default
+        const statusColor = this._getStatusColor(task);
+        const priorityBgColor = this._getPriorityBgColor(priority);
+        const timestamp = new Date(task.timestamp ?? Date.now()).toLocaleTimeString();
+        const content = task.content ?? 'Unknown Task';
+        const relationshipIndicator = this._getRelationshipIndicator(task);
+        
+        // Add pin and archive indicators
+        const pinIndicator = task.pinned ? '📌' : '  ';
+        const archiveIndicator = task.archived ? '{red}📦{/}' : '  ';
+
+        return `{${priorityBgColor}}{${statusColor}}${pinIndicator}${archiveIndicator}${priorityIndicator} ${priorityBar} ${relationshipIndicator} [${timestamp}] ${content}{/}{/}`;
+    }
+
     // Filtering methods
     _showFilterMenu() {
         const filterOptions = [
@@ -1069,11 +1283,25 @@ export class TaskEditorComponent extends BaseComponent {
             { label: 'Filter by Status', action: () => this._applyStatusFilter() },
             { label: 'Filter by Time', action: () => this._applyTimeFilter() },
             { label: 'Show All', action: () => this._showAllTasks() },
+            { label: 'Show Pinned', action: () => this._showPinnedTasks() },
+            { label: 'Show Archived', action: () => this._showArchivedTasks() },
             { label: 'Cancel', action: () => {} }
         ];
 
         const position = { top: 5, left: 5 };
         this.contextMenu.show(position, filterOptions);
+    }
+
+    _showPinnedTasks() {
+        // In a real implementation, this would filter to show only pinned tasks
+        this.engine?.components?.logViewer?.addInfo('📋 Showing only pinned tasks');
+        this.emit('show-pinned-tasks');
+    }
+
+    _showArchivedTasks() {
+        // In a real implementation, this would filter to show only archived tasks
+        this.engine?.components?.logViewer?.addInfo('📦 Showing archived tasks');
+        this.emit('show-archived-tasks');
     }
 
     _applyPriorityFilter() {
@@ -1097,9 +1325,164 @@ export class TaskEditorComponent extends BaseComponent {
     }
 
     _showSearchDialog() {
-        this.emit('search-requested');
-        this.engine?.components?.logViewer?.addInfo('🔍 Search dialog would open here');
+        this.emit('search-requested', {
+            onSearch: (searchTerm, options = {}) => {
+                this._performTaskSearch(searchTerm, options);
+            }
+        });
     }
+
+    _performTaskSearch(searchTerm, options = {}) {
+        const { useRegex = false, matchCase = false, searchFields = ['content'] } = options;
+        
+        try {
+            let matches = [];
+            let searchRegex = null;
+            
+            if (useRegex) {
+                const flags = matchCase ? 'g' : 'gi';
+                searchRegex = new RegExp(searchTerm, flags);
+            } else {
+                const searchTermNormalized = matchCase ? searchTerm : searchTerm.toLowerCase();
+                const testFunction = matchCase 
+                    ? (text) => text.includes(searchTermNormalized) 
+                    : (text) => text.toLowerCase().includes(searchTermNormalized);
+                
+                // Search through all specified fields
+                for (let i = 0; i < this.tasks.length; i++) {
+                    const task = this.tasks[i];
+                    
+                    for (const field of searchFields) {
+                        let fieldValue = '';
+                        
+                        switch (field) {
+                            case 'content':
+                                fieldValue = task.content || '';
+                                break;
+                            case 'timestamp':
+                                fieldValue = new Date(task.timestamp).toISOString();
+                                break;
+                            case 'id':
+                                fieldValue = task.id || '';
+                                break;
+                            case 'priority':
+                                fieldValue = task.priority ? task.priority.toString() : '';
+                                break;
+                            case 'all':
+                                fieldValue = JSON.stringify(task);
+                                break;
+                            default:
+                                fieldValue = task[field] || '';
+                        }
+                        
+                        if (testFunction(fieldValue)) {
+                            matches.push({ index: i, task, field });
+                            break; // Found a match in one field, no need to check others
+                        }
+                    }
+                }
+            }
+            
+            if (useRegex) {
+                for (let i = 0; i < this.tasks.length; i++) {
+                    const task = this.tasks[i];
+                    
+                    for (const field of searchFields) {
+                        let fieldValue = '';
+                        
+                        switch (field) {
+                            case 'content':
+                                fieldValue = task.content || '';
+                                break;
+                            case 'timestamp':
+                                fieldValue = new Date(task.timestamp).toISOString();
+                                break;
+                            case 'id':
+                                fieldValue = task.id || '';
+                                break;
+                            case 'priority':
+                                fieldValue = task.priority ? task.priority.toString() : '';
+                                break;
+                            case 'all':
+                                fieldValue = JSON.stringify(task);
+                                break;
+                            default:
+                                fieldValue = task[field] || '';
+                        }
+                        
+                        if (searchRegex.test(fieldValue)) {
+                            matches.push({ index: i, task, field });
+                            break;
+                        }
+                    }
+                }
+            }
+
+            this.engine?.components?.logViewer?.addInfo(`🔍 Found ${matches.length} matches for: "${searchTerm}"`);
+            this.emit('search-completed', { searchTerm, options, matches, count: matches.length });
+            
+            // Optionally highlight matches in the UI
+            if (matches.length > 0) {
+                // Maybe highlight the first match or provide navigation
+                this.element.select(matches[0].index);
+            }
+            
+            return matches;
+        } catch (error) {
+            this.engine?.components?.logViewer?.addError(`🔍 Search error: ${error.message}`);
+            this.emit('search-error', { error: error.message, searchTerm });
+            return [];
+        }
+    }
+
+    // Advanced filtering methods
+    _applyAdvancedTaskFilter(filterConfig) {
+        // Apply complex filters to tasks
+        if (!filterConfig) return this.tasks;
+
+        const filteredTasks = [];
+        
+        for (const task of this.tasks) {
+            let matches = true;
+            
+            if (filterConfig.priorityRange) {
+                const { min, max } = filterConfig.priorityRange;
+                if (task.priority < min || task.priority > max) {
+                    matches = false;
+                }
+            }
+            
+            if (filterConfig.timeRange) {
+                const { start, end } = filterConfig.timeRange;
+                const taskTime = new Date(task.timestamp);
+                if (taskTime < start || taskTime > end) {
+                    matches = false;
+                }
+            }
+            
+            if (filterConfig.status && task.status !== filterConfig.status) {
+                matches = false;
+            }
+            
+            if (filterConfig.contentType) {
+                if (filterConfig.contentType === 'question' && !task.content?.includes('?')) {
+                    matches = false;
+                } else if (filterConfig.contentType === 'goal' && !task.content?.includes('!')) {
+                    matches = false;
+                } else if (filterConfig.contentType === 'statement' && !task.content?.includes('.')) {
+                    matches = false;
+                }
+            }
+            
+            if (matches) {
+                filteredTasks.push(task);
+            }
+        }
+        
+        return filteredTasks;
+    }
+
+    // Filtering methods
 
     // Progress and tracking methods
     /**
@@ -1162,6 +1545,201 @@ export class TaskEditorComponent extends BaseComponent {
                 percentage: (completed / total) * 100,
                 message: progressMessage
             });
+        }
+    }
+
+    // History and undo/redo methods
+    _saveStateToHistory(operation, data) {
+        // Create a snapshot of current state - deep copy tasks
+        const stateSnapshot = {
+            tasks: JSON.parse(JSON.stringify(this.tasks)), // Deep copy to avoid reference issues
+            timestamp: Date.now(),
+            operation: operation,
+            data: data
+        };
+
+        // Trim history if it exceeds max size (remove any states after the current one)
+        this.historyStack = this.historyStack.slice(0, this.historyIndex + 1);
+
+        this.historyStack.push(stateSnapshot);
+        this.historyIndex = this.historyStack.length - 1;
+
+        // Limit history size - remove oldest entries if needed
+        if (this.historyStack.length > this.maxHistorySize) {
+            this.historyStack.shift();
+            this.historyIndex = this.historyStack.length - 1;
+        }
+    }
+
+    canUndo() {
+        return this.historyIndex >= 0 && this.historyStack.length > 0;
+    }
+
+    canRedo() {
+        return this.historyIndex < this.historyStack.length - 1;
+    }
+
+    undo() {
+        if (!this.canUndo()) {
+            this.engine?.components?.logViewer?.addWarning('❌ No more operations to undo');
+            return false;
+        }
+
+        // Get the state we're moving to (before we move the index)
+        const stateToRestoreIndex = this.historyIndex - 1;
+        
+        if (stateToRestoreIndex >= 0) {
+            // Restore to a saved state in the history
+            const prevState = this.historyStack[stateToRestoreIndex];
+            this.tasks = JSON.parse(JSON.stringify(prevState.tasks)); // Restore to previous state
+        } else {
+            // If we're going before the first saved state, restore to initial empty state
+            this.tasks = [];
+        }
+        
+        // Now update the index
+        this.historyIndex = stateToRestoreIndex;
+        
+        this._updateDisplay();
+        
+        // Get the operation from the state we're leaving (the one we were at before)
+        const nextOperation = this.historyStack[this.historyIndex + 1]?.operation || 'unknown';
+        this.engine?.components?.logViewer?.addInfo(`↩️  Undo: ${nextOperation}`);
+        this.emit('history-undo', { operation: nextOperation, index: this.historyIndex });
+        return true;
+    }
+
+    redo() {
+        if (!this.canRedo()) {
+            this.engine?.components?.logViewer?.addWarning('❌ No more operations to redo');
+            return false;
+        }
+
+        // Get the state we're moving to (before we move the index)
+        const stateToRestoreIndex = this.historyIndex + 1;
+        
+        // Now we're at the state we want to restore
+        const nextState = this.historyStack[stateToRestoreIndex];
+        if (nextState) {
+            this.tasks = JSON.parse(JSON.stringify(nextState.tasks)); // Restore to next state
+        }
+        
+        // Now update the index
+        this.historyIndex = stateToRestoreIndex;
+        
+        this._updateDisplay();
+        this.engine?.components?.logViewer?.addInfo(`↪️  Redo: ${nextState.operation}`);
+        this.emit('history-redo', { operation: nextState.operation, index: this.historyIndex });
+        return true;
+    }
+
+    // Enhanced task management with history
+    setTasks(tasks = []) {
+        this._saveStateToHistory('set-tasks', { previousCount: this.tasks.length, newCount: tasks.length });
+        this.tasks = [...tasks];
+        this._updateDisplay();
+    }
+
+    addTask(task) {
+        // Add the task (changing the current state)
+        this.tasks.push(task);
+        // Now save the new state after adding the task
+        this._saveStateToHistory('add-task', { task });
+        // Current display shows the new state
+        this._updateDisplay();
+    }
+
+    removeTask(index) {
+        if (index >= 0 && index < this.tasks.length) {
+            const removedTask = this.tasks[index];
+            this._saveStateToHistory('remove-task', { index, task: removedTask });
+            this.tasks.splice(index, 1);
+            this._updateDisplay();
+        }
+    }
+
+    deleteTask(index) {
+        if (index >= 0 && index < this.tasks.length) {
+            const task = this.tasks[index];
+
+            this.emit('confirm-delete', {
+                task,
+                index,
+                onConfirm: () => {
+                    // Add visual feedback for deletion
+                    this.addVisualFeedback(null, {
+                        animate: true,
+                        color: 'red',
+                        flashDuration: 150,
+                        callback: () => {
+                            this.removeTask(index);
+                            this.emit('task-deleted', { task, index });
+                            this.engine?.components?.logViewer?.addInfo(`🗑️ Task deleted: ${task.content.substring(0, 50)}${task.content.length > 50 ? '...' : ''}`);
+                        }
+                    });
+                }
+            });
+        }
+    }
+
+    editTask(index) {
+        if (index >= 0 && index < this.tasks.length) {
+            const task = this.tasks[index];
+
+            this.emit('edit-task', {
+                task,
+                index,
+                onConfirm: (newContent) => {
+                    // Add visual feedback for edit
+                    this.addVisualFeedback(null, {
+                        animate: true,
+                        color: 'yellow',
+                        flashDuration: 150,
+                        callback: () => {
+                            const oldTask = { ...this.tasks[index] };
+                            this._saveStateToHistory('edit-task', { oldTask, newTask: { ...this.tasks[index], content: newContent } });
+                            this.tasks[index].content = newContent;
+                            this._updateDisplay();
+
+                            this.emit('task-edited', {
+                                oldTask,
+                                newTask: this.tasks[index],
+                                index
+                            });
+
+                            this.engine?.components?.logViewer?.addInfo(`✏️ Task edited: ${oldTask.content.substring(0, 30)}... → ${newContent.substring(0, 30)}...`);
+                        }
+                    });
+                }
+            });
+        }
+    }
+
+    // Additional operation methods with history
+    _duplicateTask(index) {
+        if (index >= 0 && index < this.tasks.length) {
+            const originalTask = this.tasks[index];
+            const duplicatedTask = {
+                ...originalTask,
+                id: Date.now().toString() + Math.random().toString(),
+                timestamp: Date.now(),
+                metadata: {
+                    ...originalTask.metadata,
+                    duplicatedFrom: originalTask.id,
+                    duplicatedAt: Date.now()
+                }
+            };
+
+            this._saveStateToHistory('duplicate-task', { originalTask, duplicatedTask });
+            this.tasks.push(duplicatedTask);
+            this._updateDisplay();
+
+            this.emit('task-duplicated', {
+                originalTask,
+                duplicatedTask
+            });
+
+            this.engine?.components?.logViewer?.addInfo(`📋 Duplicated task: ${originalTask.content}`);
         }
     }
 

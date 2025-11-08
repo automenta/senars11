@@ -38,9 +38,14 @@ export class Input {
         if (!this._isValidIndex(index)) return false;
 
         const taskItem = this.tasks[index];
+        const oldPriority = taskItem.priority;
         taskItem.priority = newPriority;
 
         if (mode === 'cascade') {
+            this._updateDerivedPriorities(taskItem.id, newPriority);
+        } else if (mode === 'custom') {
+            // Custom mode would allow specific derived task selection
+            // For now, implement as cascade but allow for future extension
             this._updateDerivedPriorities(taskItem.id, newPriority);
         }
 
@@ -81,6 +86,15 @@ export class Input {
         const inputTask = this.getTaskById(inputId);
         return inputTask ? [...inputTask.derivedTasks] : [];
     }
+    
+    getDerivationPath(taskId) {
+        const task = this.getTaskById(taskId);
+        if (!task) return [];
+        
+        // In a full implementation, this would trace the full derivation path
+        // For now, return direct dependencies
+        return task.derivedTasks ? [...task.derivedTasks] : [];
+    }
 
     deleteInputWithDependencies(inputId) {
         const taskItem = this.removeTaskById(inputId);
@@ -120,8 +134,66 @@ export class Input {
             if (!taskItem.derivedTasks) {
                 taskItem.derivedTasks = [];
             }
+            // Ensure derivedTask has an ID if it doesn't have one
+            if (!derivedTask.id) {
+                derivedTask.id = `derived_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            }
             taskItem.derivedTasks.push(derivedTask);
         }
+    }
+
+    // Method to add multiple derived tasks at once
+    addMultipleDerivedTasks(inputId, derivedTasks) {
+        const taskItem = this.getTaskById(inputId);
+        if (taskItem) {
+            if (!taskItem.derivedTasks) {
+                taskItem.derivedTasks = [];
+            }
+            for (const derivedTask of derivedTasks) {
+                if (!derivedTask.id) {
+                    derivedTask.id = `derived_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                }
+                taskItem.derivedTasks.push(derivedTask);
+            }
+        }
+    }
+
+    // Method to remove a specific derived task
+    removeDerivedTask(inputId, derivedTaskId) {
+        const taskItem = this.getTaskById(inputId);
+        if (taskItem && taskItem.derivedTasks) {
+            taskItem.derivedTasks = taskItem.derivedTasks.filter(task => task.id !== derivedTaskId);
+        }
+    }
+
+    // Method to clear all derived tasks for an input
+    clearDerivedTasks(inputId) {
+        const taskItem = this.getTaskById(inputId);
+        if (taskItem) {
+            taskItem.derivedTasks = [];
+        }
+    }
+
+    // Method to update a derived task
+    updateDerivedTask(inputId, derivedTaskId, updatedTask) {
+        const taskItem = this.getTaskById(inputId);
+        if (taskItem && taskItem.derivedTasks) {
+            const index = taskItem.derivedTasks.findIndex(task => task.id === derivedTaskId);
+            if (index !== -1) {
+                taskItem.derivedTasks[index] = { ...taskItem.derivedTasks[index], ...updatedTask };
+            }
+        }
+    }
+
+    // Method to get all derived tasks for an input
+    getDerivedTasks(inputId) {
+        const taskItem = this.getTaskById(inputId);
+        return taskItem ? [...taskItem.derivedTasks] : [];
+    }
+
+    // Method to get all inputs that have derived tasks
+    getInputsWithDerivedTasks() {
+        return this.tasks.filter(taskItem => taskItem.derivedTasks && taskItem.derivedTasks.length > 0);
     }
 
     _updateDerivedPriorities(inputId, priority) {

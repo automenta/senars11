@@ -97,6 +97,14 @@ export class PersistenceManager {
         return this.load(this.defaultAdapter, this.defaultPath);
     }
 
+    async saveToPath(state, filePath) {
+        return this.save(state, this.defaultAdapter, filePath);
+    }
+
+    async loadFromPath(filePath) {
+        return this.load(this.defaultAdapter, filePath);
+    }
+
     async exists(identifier = this.defaultPath) {
         try {
             await fs.access(identifier);

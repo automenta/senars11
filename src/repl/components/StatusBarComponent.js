@@ -285,9 +285,9 @@ export class StatusBarComponent extends BaseComponent {
         const focusSetSize = memoryStats.focusSetSize ?? 0;
         const inputCount = this.engine?.inputManager?.size?.() ?? 0;
         const queuedInputCount = this._getQueuedInputCount();
-        const memoryUsageMB = this._getPerformanceMetrics().memoryUsageMB;
+        const metrics = this._getPerformanceMetrics();
 
-        return `{bold}Concepts: ${conceptCount} | Focus: ${focusSetSize} | Inputs: ${inputCount} | Queued: ${queuedInputCount} | Cycles: ${cycleCount} | Mem: ${memoryUsageMB}MB{/bold}`;
+        return `{bold}C: ${metrics.concepts} | F: ${metrics.focusSetSize} | I: ${inputCount} | Q: ${queuedInputCount} | Cy: ${cycleCount} | M: ${metrics.memoryUsageMB}MB{/bold}`;
     }
 
     _getPerformanceMetricsStatus() {
@@ -335,8 +335,26 @@ export class StatusBarComponent extends BaseComponent {
         const cps = elapsedSeconds > 0 ? (cycleCount / elapsedSeconds).toFixed(2) : '0.00';
         const memoryUsage = process.memoryUsage?.() ?? {};
         const rssInMB = memoryUsage.rss ? (memoryUsage.rss / 1024 / 1024).toFixed(2) : 'N/A';
+        const heapUsedMB = memoryUsage.heapUsed ? (memoryUsage.heapUsed / 1024 / 1024).toFixed(2) : 'N/A';
+        const heapTotalMB = memoryUsage.heapTotal ? (memoryUsage.heapTotal / 1024 / 1024).toFixed(2) : 'N/A';
 
-        return { cps, cycleCount, startTime, memoryUsageMB: rssInMB, cpuUsage: 'N/A' };
+        // Calculate additional metrics
+        const concepts = stats.memoryStats?.conceptCount ?? 0;
+        const focusSetSize = stats.memoryStats?.focusSetSize ?? 0;
+        const tasksInMemory = stats.memoryStats?.taskCount ?? 0;
+
+        return { 
+            cps, 
+            cycleCount, 
+            startTime, 
+            memoryUsageMB: parseFloat(rssInMB),
+            heapUsedMB: parseFloat(heapUsedMB),
+            heapTotalMB: parseFloat(heapTotalMB),
+            concepts,
+            focusSetSize,
+            tasksInMemory,
+            cpuUsage: 'N/A' 
+        };
     }
 
     _getAnimatedPerformanceIndicator() {

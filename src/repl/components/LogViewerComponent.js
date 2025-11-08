@@ -490,9 +490,120 @@ export class LogViewerComponent extends BaseComponent {
                     case 'relative-time':
                         this.setRelativeTimeFilter(value);
                         break;
+                    case 'regex':
+                        this.setRegexFilter(value);
+                        break;
+                    case 'complex':
+                        this.setComplexFilter(value);
+                        break;
                 }
             }
         });
+    }
+
+    // Advanced filtering methods
+    setRegexFilter(pattern) {
+        try {
+            const regex = new RegExp(pattern, 'i'); // Case insensitive
+            this.filters.regex = regex;
+            this.filters.keyword = null; // Clear keyword filter when using regex
+            this._applyFilters();
+            this.emit('filter-changed', { type: 'regex', value: pattern });
+        } catch (error) {
+            this.addError(`Invalid regex pattern: ${pattern} - ${error.message}`);
+            this.emit('filter-error', { error: error.message, pattern });
+        }
+    }
+
+    setComplexFilter(filterConfig) {
+        // Support complex filtering configurations
+        this.filters.complex = filterConfig;
+        this._applyFilters();
+        this.emit('filter-changed', { type: 'complex', config: filterConfig });
+    }
+
+    _matchesFilters(log) {
+        // Check level filter first (most common) as a performance optimization
+        if (this.filters.level !== 'all' && log.level !== this.filters.level) return false;
+
+        // Check keyword filter next if present
+        if (this.filters.keyword && !log.message.toLowerCase().includes(this.filters.keyword.toLowerCase())) return false;
+
+        // Check regex filter if present
+        if (this.filters.regex && !this.filters.regex.test(log.message)) return false;
+
+        // Check complex filter if present
+        if (this.filters.complex && !this._matchesComplexFilter(log, this.filters.complex)) return false;
+
+        // Check time range filter last
+        if (this.filters.timeRange) {
+            const logTime = new Date(log.timestamp);
+            const start = this.filters.timeRange.start;
+            const end = this.filters.timeRange.end ?? new Date();
+            if (logTime < start || logTime > end) return false;
+        }
+
+        return true;
+    }
+
+    _matchesComplexFilter(log, filterConfig) {
+        // Apply multiple conditions based on filter configuration
+        const conditions = filterConfig.conditions || [];
+        
+        for (const condition of conditions) {
+            const { field, operator, value } = condition;
+            
+            let fieldValue;
+            switch (field) {
+                case 'message':
+                    fieldValue = log.message;
+                    break;
+                case 'level':
+                    fieldValue = log.level;
+                    break;
+                case 'timestamp':
+                    fieldValue = log.timestamp;
+                    break;
+                default:
+                    fieldValue = log[field];
+            }
+
+            if (fieldValue === undefined) continue;
+
+            switch (operator) {
+                case 'equals':
+                    if (fieldValue != value) return false;
+                    break;
+                case 'contains':
+                    if (typeof fieldValue === 'string' && !fieldValue.toLowerCase().includes(value.toLowerCase())) return false;
+                    break;
+                case 'startsWith':
+                    if (typeof fieldValue === 'string' && !fieldValue.toLowerCase().startsWith(value.toLowerCase())) return false;
+                    break;
+                case 'endsWith':
+                    if (typeof fieldValue === 'string' && !fieldValue.toLowerCase().endsWith(value.toLowerCase())) return false;
+                    break;
+                case 'greaterThan':
+                    if (fieldValue <= value) return false;
+                    break;
+                case 'lessThan':
+                    if (fieldValue >= value) return false;
+                    break;
+                case 'between':
+                    if (fieldValue < value.min || fieldValue > value.max) return false;
+                    break;
+                case 'matches':
+                    try {
+                        const regex = new RegExp(value);
+                        if (typeof fieldValue === 'string' && !regex.test(fieldValue)) return false;
+                    } catch (e) {
+                        // Invalid regex, skip condition
+                    }
+                    break;
+            }
+        }
+
+        return true;
     }
 
     _toggleRelativeTime() {
