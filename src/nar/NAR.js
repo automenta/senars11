@@ -293,6 +293,19 @@ export class NAR extends BaseComponent {
             if (!parsed?.term) throw new Error('Invalid parse result');
 
             const task = this._createTask(parsed);
+            
+            // Check if a task with the same semantic properties is already in memory
+            const existingConcept = this._memory.getConcept(task.term);
+            if (existingConcept) {
+                // Check if an equal task already exists in the appropriate storage
+                const storage = existingConcept._getStorage(task.type);
+                for (const [existingTask] of storage._items) {
+                    if (task.equals(existingTask)) {
+                        return false; // Task already exists in memory, return false
+                    }
+                }
+            }
+
             const added = this._taskManager.addTask(task);
 
             if (added) {
