@@ -21,11 +21,11 @@ class ExtensibleTUI {
         this.commandManager = new CommandManager();
         this.componentRegistry = this.pluginManager.getComponentRegistry();
         this.customComponents = {};
-        
+
         // Initialize configuration
         this._initConfig();
     }
-    
+
     /**
      * Initialize configuration settings
      * @private
@@ -262,7 +262,11 @@ const TUI = ({engine, extensibleTUI, config = {}}) => {
                     setLogs(prev => [...prev, {id: uuidv4(), message: result, timestamp: Date.now()}]);
                 }
             } catch (error) {
-                setLogs(prev => [...prev, {id: uuidv4(), message: `❌ Command Error: ${error.message}`, timestamp: Date.now()}]);
+                setLogs(prev => [...prev, {
+                    id: uuidv4(),
+                    message: `❌ Command Error: ${error.message}`,
+                    timestamp: Date.now()
+                }]);
             }
             return true;
         }
@@ -326,7 +330,11 @@ const TUI = ({engine, extensibleTUI, config = {}}) => {
                             // Refresh tasks after processing
                             setTasks(engine.inputManager.getAllTasks());
                         } catch (error) {
-                            setLogs(prev => [...prev, {id: uuidv4(), message: `❌ Processing Error: ${error.message}`, timestamp: Date.now()}]);
+                            setLogs(prev => [...prev, {
+                                id: uuidv4(),
+                                message: `❌ Processing Error: ${error.message}`,
+                                timestamp: Date.now()
+                            }]);
                         }
                     }
                 },
@@ -405,7 +413,7 @@ export class TUIReplInk extends EventEmitter {
      */
     _deepMerge(target, source) {
         const output = {...target};
-        
+
         for (const key in source) {
             if (source[key] !== null && typeof source[key] === 'object' && !Array.isArray(source[key])) {
                 output[key] = this._deepMerge(output[key] || {}, source[key]);
@@ -413,7 +421,7 @@ export class TUIReplInk extends EventEmitter {
                 output[key] = source[key];
             }
         }
-        
+
         return output;
     }
 
@@ -514,7 +522,11 @@ export class TUIReplInk extends EventEmitter {
             this._registerDefaultCommands();
 
             // Render with extensible TUI context
-            render(React.createElement(TUI, {engine: this.engine, extensibleTUI: this.extensibleTUI, config: this.config}));
+            render(React.createElement(TUI, {
+                engine: this.engine,
+                extensibleTUI: this.extensibleTUI,
+                config: this.config
+            }));
         } catch (error) {
             console.error('❌ Failed to start TUI:', error);
             throw error;
@@ -573,7 +585,7 @@ export class TUIReplInk extends EventEmitter {
         this.registerCommand('notebook', async (args, context) => {
             const format = args[0] || 'json';
             const title = args.slice(1).join(' ') || 'SeNARS Session';
-            
+
             try {
                 if (this.engine && typeof this.engine.captureNotebook === 'function') {
                     const notebook = await this.engine.captureNotebook(format, title);
@@ -591,7 +603,7 @@ export class TUIReplInk extends EventEmitter {
             category: 'report'
         });
     }
-    
+
     /**
      * Get the current engine instance
      * @returns {ReplEngine} The engine instance
@@ -599,7 +611,7 @@ export class TUIReplInk extends EventEmitter {
     getEngine() {
         return this.engine;
     }
-    
+
     /**
      * Check if the TUI is ready
      * @returns {boolean} True if TUI is ready, false otherwise
@@ -607,7 +619,7 @@ export class TUIReplInk extends EventEmitter {
     isReady() {
         return this.isReady;
     }
-    
+
     /**
      * Shutdown the TUI and clean up resources
      * @returns {Promise<void>}

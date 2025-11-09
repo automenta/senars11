@@ -450,7 +450,7 @@ export class ReplEngine extends EventEmitter {
         notebook.entries.forEach((entry, index) => {
             markdown += `## Entry ${index + 1}: ${entry.type}\n\n`;
             markdown += `**Time:** ${new Date(entry.timestamp).toLocaleString()}\n\n`;
-            
+
             if (entry.type === 'input') {
                 markdown += `**Input:** \`\`\`\n${entry.content}\n\`\`\`\n\n`;
             } else if (entry.type === 'beliefs') {
@@ -458,7 +458,7 @@ export class ReplEngine extends EventEmitter {
             } else {
                 markdown += `**Content:** ${JSON.stringify(entry.content, null, 2)}\n\n`;
             }
-            
+
             markdown += `---\n\n`;
         });
 
@@ -474,7 +474,7 @@ export class ReplEngine extends EventEmitter {
         notebook.entries.forEach((entry, index) => {
             text += `--- Entry ${index + 1}: ${entry.type} ---\n`;
             text += `Time: ${new Date(entry.timestamp).toLocaleString()}\n`;
-            
+
             if (entry.type === 'input') {
                 text += `Input: ${entry.content}\n`;
             } else if (entry.type === 'beliefs') {
@@ -482,7 +482,7 @@ export class ReplEngine extends EventEmitter {
             } else {
                 text += `Content: ${JSON.stringify(entry.content)}\n`;
             }
-            
+
             text += '\n';
         });
 
