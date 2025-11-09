@@ -15,6 +15,7 @@
     "repl": "node scripts/ui/launcher.js --repl",
     "repl:tui": "node -e \"import('./src/repl/TUIReplInk.js').then(m => new m.TUIReplInk().start())\"",
     "repl:test": "node -e \"import('./src/repl/ReplEngine.js').then(async m => { const engine = new m.ReplEngine(); await engine.initialize(); console.log('✅ ReplEngine works'); await engine.shutdown(); })\"",
+    "demo:tui": "node -e \"import('./src/repl/tui-demo.js').then(m => m.runTUIDemo())\"",
     "demo": "node scripts/utils/run-demo.js",
     "screenshots": "node scripts/utils/visualize.js --type screenshots",
     "movies": "node scripts/utils/visualize.js --type movie",

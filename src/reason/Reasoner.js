@@ -203,7 +203,9 @@ export class Reasoner {
     }
 
     _processDerivation(result) {
-        return processDerivation(result, this.config.maxDerivationDepth);
+        // Return the derivation for centralized processing by the NAR
+        // Don't emit events or add to task manager here to maintain uniform flow
+        return result;
     }
 
     async _cpuThrottle() {
@@ -309,19 +311,9 @@ export class Reasoner {
     }
 
     _processDerivation(derivation) {
-        if (this.parentNAR && derivation) {
-            try {
-                this.parentNAR._eventBus.emit('reasoning.derivation', {
-                    derivedTask: derivation,
-                    source: 'streamReasoner',
-                    timestamp: Date.now()
-                });
-
-                this.parentNAR._taskManager.addTask(derivation);
-            } catch (error) {
-                console.error('Error adding derived task back to system:', error);
-            }
-        }
+        // Return the derivation for centralized processing by the NAR
+        // Don't emit events or add to task manager here to maintain uniform flow
+        return derivation;
     }
 
     getMetrics() {

@@ -53,11 +53,36 @@ export class ReplEngine extends EventEmitter {
     async initialize() {
         try {
             await this.nar.initialize();
+            
+            // Register event handlers once during initialization
+            this._registerEventHandlers();
+            
             this.emit(EVENTS.ENGINE_READY, { success: true, message: 'NAR initialized successfully' });
             return true;
         } catch (error) {
             this.emit(EVENTS.ENGINE_ERROR, { error: error.message });
             return false;
+        }
+    }
+    
+    // Register event handlers for the lifetime of the engine
+    _registerEventHandlers() {
+        // Listen for task.focus events to capture when tasks enter focus
+        this._focusHandler = (task) => {
+            // Only print focused tasks
+            const formattedTask = this.formatTaskForDisplay(task);
+            this.emit('log', `🎯 FOCUSED: ${formattedTask}`);
+        };
+        
+        if (this.nar.on) {
+            this.nar.on('task.focus', this._focusHandler);
+        }
+    }
+    
+    // Unregister event handlers when shutting down
+    _unregisterEventHandlers() {
+        if (this.nar.off && this._focusHandler) {
+            this.nar.off('task.focus', this._focusHandler);
         }
     }
 
@@ -85,13 +110,6 @@ export class ReplEngine extends EventEmitter {
             // Set up event listener to capture derived tasks during processing
             const derivedTasks = [];
             
-            // Listen for task.focus events to capture when tasks enter focus
-            const focusHandler = (task) => {
-                // Only print focused tasks
-                const formattedTask = this.formatTaskForDisplay(task);
-                this.emit('log', `🎯 FOCUSED: ${formattedTask}`);
-            };
-            
             const derivationHandler = (task) => {
                 // Capture any derived tasks
                 derivedTasks.push({
@@ -118,7 +136,7 @@ export class ReplEngine extends EventEmitter {
             
             if (this.nar.on) {
                 this.nar.on('task.input', inputHandler);
-                this.nar.on('task.focus', focusHandler);  // Listen for focused tasks
+                // task.focus handler is registered once in _registerEventHandlers
             }
             
             const result = await this.nar.input(input);
@@ -128,7 +146,6 @@ export class ReplEngine extends EventEmitter {
             if (this.nar.off) {
                 this.nar.off('task.derived', derivationHandler);
                 this.nar.off('task.input', inputHandler);
-                this.nar.off('task.focus', focusHandler);  // Remove focus listener too
             }
             
             const duration = Date.now() - startTime;
@@ -382,14 +399,7 @@ export class ReplEngine extends EventEmitter {
             return FormattingUtils.formatTask(task);
         } catch (error) {
             console.error('Error formatting task:', error);
-            // Fallback formatting if FormattingUtils fails
-            const priority = task.budget?.priority !== undefined ? `$${task.budget.priority.toFixed(3)} ` : '';
-            const term = task.term?.toString?.() ?? task.term ?? 'Unknown';
-            const punctuation = this.getTypePunctuation(task.type || 'TASK');
-            const truthStr = this.formatTruth(task.truth);
-            const occurrence = this.formatOccurrence(task);
-
-            return `${priority}${term}${punctuation}${truthStr}${occurrence}`;
+            return 'Formatting error';
         }
     }
 
@@ -397,6 +407,7 @@ export class ReplEngine extends EventEmitter {
 
     async shutdown() {
         if (this.isRunningLoop) this._stopRun();
+        this._unregisterEventHandlers();
         this.emit(EVENTS.ENGINE_SHUTDOWN);
     }
 }

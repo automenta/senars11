@@ -305,7 +305,10 @@ export class NAR extends BaseComponent {
 
                 // For stream reasoner: explicitly add to focus so the stream can access it
                 if (this._focus) {
-                    this._focus.addTaskToFocus(task);
+                    const addedToFocus = this._focus.addTaskToFocus(task);
+                    if (addedToFocus) {
+                        this._eventBus.emit('task.focus', task, {traceId: options.traceId});
+                    }
                 }
 
                 await this._processPendingTasks(options.traceId);
@@ -437,32 +440,16 @@ export class NAR extends BaseComponent {
         try {
             await this._processPendingTasks(options.traceId);
 
-            //console.log(`[NAR STEP] Executing stream reasoner step...`);
-            // Execute a single step of the stream reasoner (now returns array of derivations)
             const results = await this._streamReasoner.step();
 
-            //console.log(`[NAR STEP] Stream reasoner generated ${results.length} results:`);
-            for (let i = 0; i < results.length; i++) {
-                const result = results[i];
-                if (result && result.term) {
-                    const termName = result.term._name || result.term || 'unknown';
-                    const truth = result.truth ? `f:${result.truth.frequency}, c:${result.truth.confidence}` : 'no truth';
-                    console.log(`  [${i}] ${termName} ${truth ? `(${truth})` : ''}`);
-                }
-            }
-
-            // Add all derivations back to the system
+            // Process all derivations through the same Input/Memory/Focus/Event process
             for (const result of results) {
                 if (result) {
-                    this._taskManager.addTask(result);
-                    if (this._focus) {
-                        this._focus.addTaskToFocus(result);
-                    }
-
-                    // Emit event for each derivation
+                    const added = await this._inputTask(result, { traceId: options.traceId });
+                    
                     this._eventBus.emit('reasoning.derivation', {
                         derivedTask: result,
-                        source: 'streamReasoner.step',
+                        source: 'streamReasoner.step.method',
                         timestamp: Date.now()
                     }, {traceId: options.traceId});
                 }
@@ -472,7 +459,7 @@ export class NAR extends BaseComponent {
                 results,
                 count: results.length
             }, {traceId: options.traceId});
-            return results;  // Return the array of results
+            return results;
         } catch (error) {
             this._eventBus.emit('streamReasoner.error', {error: error.message}, {traceId: options.traceId});
             this.logError('Error in reasoning step:', error);
@@ -868,4 +855,60 @@ export class NAR extends BaseComponent {
             ...context
         };
     }
+    
+    // Check if a semantically equivalent task already exists in memory
+    _isTaskDuplicate(task) {
+        const existingConcept = this._memory.getConcept(task.term);
+        if (existingConcept) {
+            const storage = existingConcept._getStorage(task.type);
+            for (const [existingTask] of storage._items) {
+                if (task.equals(existingTask)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    // Internal method to input an already-constructed Task object following the same 
+    // Input/Memory/Focus/Event process as the main input method
+    async _inputTask(task, options = {}) {
+        try {
+            // Check if a semantically equivalent task already exists in memory
+            if (this._isTaskDuplicate(task)) {
+                return false; // Task already exists, return false
+            }
+
+            const added = this._taskManager.addTask(task);
+
+            if (added) {
+                this._eventBus.emit('task.input', {
+                    task,
+                    source: 'derived',
+                    originalInput: null,
+                    parsed: null
+                }, {traceId: options.traceId});
+
+                // Add to focus and emit focus event if successful
+                if (this._focus) {
+                    const addedToFocus = this._focus.addTaskToFocus(task);
+                    if (addedToFocus) {
+                        this._eventBus.emit('task.focus', task, {traceId: options.traceId});
+                    }
+                }
+
+                await this._processPendingTasks(options.traceId);
+            }
+
+            return added;
+        } catch (error) {
+            this._eventBus.emit('input.error', {
+                error: error.message,
+                input: 'derived-task'
+            }, {traceId: options.traceId});
+            throw error;
+        }
+    }
+    
+
 }
