@@ -3,6 +3,7 @@ import { NAR } from '../nar/NAR.js';
 import { CommandProcessor } from './utils/CommandProcessor.js';
 import { PersistenceManager } from '../io/PersistenceManager.js';
 import { Input } from '../Agent.js';
+import { FormattingUtils } from './utils/FormattingUtils.js';
 
 const SPECIAL_COMMANDS = { 'next': 'n', 'n': 'n', 'run': 'go', 'go': 'go', 'stop': 'st', 'st': 'st', 'quit': 'exit', 'q': 'exit', 'exit': 'exit' };
 const EVENTS = {
@@ -84,6 +85,13 @@ export class ReplEngine extends EventEmitter {
             // Set up event listener to capture derived tasks during processing
             const derivedTasks = [];
             
+            // Listen for task.focus events to capture when tasks enter focus
+            const focusHandler = (task) => {
+                // Only print focused tasks
+                const formattedTask = this.formatTaskForDisplay(task);
+                this.emit('log', `🎯 FOCUSED: ${formattedTask}`);
+            };
+            
             const derivationHandler = (task) => {
                 // Capture any derived tasks
                 derivedTasks.push({
@@ -110,6 +118,7 @@ export class ReplEngine extends EventEmitter {
             
             if (this.nar.on) {
                 this.nar.on('task.input', inputHandler);
+                this.nar.on('task.focus', focusHandler);  // Listen for focused tasks
             }
             
             const result = await this.nar.input(input);
@@ -119,6 +128,7 @@ export class ReplEngine extends EventEmitter {
             if (this.nar.off) {
                 this.nar.off('task.derived', derivationHandler);
                 this.nar.off('task.input', inputHandler);
+                this.nar.off('task.focus', focusHandler);  // Remove focus listener too
             }
             
             const duration = Date.now() - startTime;
@@ -364,6 +374,26 @@ export class ReplEngine extends EventEmitter {
             throw error;
         }
     }
+
+    // Format a task for display using appropriate formatting utilities
+    formatTaskForDisplay(task) {
+        try {
+            // Use the FormattingUtils to format the task properly
+            return FormattingUtils.formatTask(task);
+        } catch (error) {
+            console.error('Error formatting task:', error);
+            // Fallback formatting if FormattingUtils fails
+            const priority = task.budget?.priority !== undefined ? `$${task.budget.priority.toFixed(3)} ` : '';
+            const term = task.term?.toString?.() ?? task.term ?? 'Unknown';
+            const punctuation = this.getTypePunctuation(task.type || 'TASK');
+            const truthStr = this.formatTruth(task.truth);
+            const occurrence = this.formatOccurrence(task);
+
+            return `${priority}${term}${punctuation}${truthStr}${occurrence}`;
+        }
+    }
+
+
 
     async shutdown() {
         if (this.isRunningLoop) this._stopRun();

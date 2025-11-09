@@ -56,7 +56,6 @@ const TUI = ({ engine, extensibleTUI }) => {
   const [logs, setLogs] = useState([{ id: uuidv4(), message: 'TUI component rendered' }]);
   const [tasks, setTasks] = useState([]);
   const [status, setStatus] = useState({ isRunning: false, cycle: 0, mode: 'idle' });
-  const [view, setView] = useState('vertical-split'); // 'vertical-split', 'log-only', 'dynamic-grouping'
   const [selectedTaskId, setSelectedTaskId] = useState(null);
   const [commandHistory, setCommandHistory] = useState([]);
   const { isRawModeSupported } = useStdin();
@@ -89,7 +88,10 @@ const TUI = ({ engine, extensibleTUI }) => {
 
     // Listen for task-related events from the engine
     const handleNarseseProcessed = (data) => {
-      handleLog(`✅ Input processed successfully (${data.duration}ms)`);
+      // Only log success with derived tasks to avoid spam for duplicate detection
+      if (data.derivedTasks && data.derivedTasks.length > 0) {
+        handleLog(`✅ Input processed successfully (${data.duration}ms) - ${data.derivedTasks.length} derived tasks`);
+      }
       // Update tasks from the input manager
       const allTasks = engine.inputManager.getAllTasks();
       setTasks(allTasks);
@@ -125,25 +127,15 @@ const TUI = ({ engine, extensibleTUI }) => {
 
   // Handle keyboard shortcuts and commands
   useInput((input, key) => {
-    if (key.ctrl) {
-      switch (input) {
-        case 'l':
-        case 'L':
-          setView('log-only');
-          break;
-        case 't':
-        case 'T':
-          setView('vertical-split');
-          break;
-        case 'g':
-        case 'G':
-          setView('dynamic-grouping');
-          break;
-        case 'c':
-        case 'C':
-          // Exit on Ctrl+C - This doesn't work directly in Ink, but we handle it in the parent
-          break;
-      }
+    // Handle Enter key to run one cycle when input is empty (for stepping)
+    if (key.return && input === '') {
+      // When the input field is empty and user presses Enter, run a single cycle
+      engine._next().then(result => {
+        // Only show meaningful results, avoid spammy cycle messages
+        if (result && !result.includes('Single cycle executed')) {
+          setLogs(prev => [...prev, { id: uuidv4(), message: result, timestamp: Date.now() }]);
+        }
+      });
     }
     
     // Handle command shortcuts
@@ -213,63 +205,20 @@ const TUI = ({ engine, extensibleTUI }) => {
   };
 
   // Render based on current view using extensible architecture
+    // Render only log viewer as the main content area - single interactive REPL view
   const renderMainContent = () => {
     // Get components from the extensible architecture - use provided components or defaults
-    const ComponentTaskEditor = extensible.getComponent('TaskEditor');
     const ComponentLogViewer = extensible.getComponent('LogViewer');
-    
+
     // Apply theme to components
-    const taskEditorProps = extensible.applyTheme('taskEditor', {
-      tasks: uiTasks,
-      onSelect: setSelectedTaskId,
-      selectedTaskId,
-      onTaskOperation: handleTaskOperation,
-      groupingMode: view === 'dynamic-grouping' ? 'priority' : null
-    });
-    
     const logViewerProps = extensible.applyTheme('logViewer', { logs });
 
-    switch(view) {
-      case 'log-only':
-        return React.createElement(
-          Box,
-          { flexDirection: 'column', flexGrow: 1 },
-          React.createElement(ComponentLogViewer || LogViewer, logViewerProps)
-        );
-
-      case 'dynamic-grouping':
-        return React.createElement(
-          Box,
-          { flexDirection: 'row', flexGrow: 1 },
-          React.createElement(
-            Box,
-            { width: '70%', borderStyle: 'round' },
-            React.createElement(ComponentTaskEditor || TaskEditor, taskEditorProps)
-          ),
-          React.createElement(
-            Box,
-            { width: '30%', borderStyle: 'round' },
-            React.createElement(ComponentLogViewer || LogViewer, logViewerProps)
-          )
-        );
-
-      case 'vertical-split':
-      default:
-        return React.createElement(
-          Box,
-          { flexDirection: 'row', flexGrow: 1 },
-          React.createElement(
-            Box,
-            { width: '40%', borderStyle: 'round' },
-            React.createElement(ComponentTaskEditor || TaskEditor, taskEditorProps)
-          ),
-          React.createElement(
-            Box,
-            { width: '60%', borderStyle: 'round' },
-            React.createElement(ComponentLogViewer || LogViewer, logViewerProps)
-          )
-        );
-    }
+    // Render only the log viewer as the main content area
+    return React.createElement(
+      Box,
+      { flexDirection: 'column', flexGrow: 1 },
+      React.createElement(ComponentLogViewer || LogViewer, logViewerProps)
+    );
   };
 
   // Get themed components - use provided components or defaults
@@ -280,7 +229,7 @@ const TUI = ({ engine, extensibleTUI }) => {
   const statusBarProps = extensible.applyTheme('statusBar', {
     status: {
       ...status,
-      view,
+      view: 'log-only',  // Fixed view mode since we removed multiple view modes
       taskCount: uiTasks.length,
       logCount: logs.length,
       alerts: logs.filter(log => log.message.includes('Error')).length
