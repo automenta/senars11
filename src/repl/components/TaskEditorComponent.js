@@ -606,14 +606,9 @@ export class TaskEditorComponent extends BaseComponent {
 
                 // Define common keywords to group by
                 const keywords = ['think', 'consider', 'analyze', 'compute', 'process', 'remember', 'believe', 'wonder', 'question', 'answer', 'plan', 'execute', 'create', 'find', 'solve'];
-
-                for (const keyword of keywords) {
-                    if (task.content.toLowerCase().includes(keyword)) {
-                        return `Action: ${keyword}`;
-                    }
-                }
-
-                return 'Other Actions';
+                
+                const matchedKeyword = keywords.find(keyword => task.content.toLowerCase().includes(keyword));
+                return matchedKeyword ? `Action: ${matchedKeyword}` : 'Other Actions';
             },
             'similarity-terms': (task) => {
                 if (!task.content) return 'No Content';
@@ -687,8 +682,8 @@ export class TaskEditorComponent extends BaseComponent {
     }
 
     _getTaskStatus(task) {
-        return task.processed ? 'Processed' :
-               task.pending ? 'Pending' :
+        return task.processed ? 'Processed' : 
+               task.pending ? 'Pending' : 
                task.error ? 'Error' : 'Unknown';
     }
 

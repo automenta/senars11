@@ -108,56 +108,52 @@ export class ReplEngine extends EventEmitter {
             const startTime = Date.now();
             
             // Set up event listener to capture derived tasks during processing
-            const derivedTasks = [];
+            // const derivedTasks = [];
             
-            const derivationHandler = (task) => {
-                // Capture any derived tasks
-                derivedTasks.push({
-                    id: task.id || `derived_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                    content: task.term?.toString?.() || task.toString?.() || String(task),
-                    origin: taskId,
-                    timestamp: Date.now(),
-                    type: 'derived'
-                });
-            };
+            // const derivationHandler = (task) => {
+            //     // Capture any derived tasks
+            //     derivedTasks.push({
+            //         id: task.id || `derived_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            //         content: task.term?.toString?.() || task.toString?.() || String(task),
+            //         origin: taskId,
+            //         timestamp: Date.now(),
+            //         type: 'derived'
+            //     });
+            // };
             
             // Attach to NAR's task.derived event
-            if (this.nar.on) {
-                this.nar.on('task.derived', derivationHandler);
-            }
+            // if (this.nar.on) {
+            //     this.nar.on('task.derived', derivationHandler);
+            // }
             
-            // Also listen for task.input events to capture the original task
-            let inputTaskCaptured = false;
-            const inputHandler = (data) => {
-                if (!inputTaskCaptured) {
-                    inputTaskCaptured = true;
-                }
-            };
+            // const inputHandler = (data) => {
+            //     // Capture original task input
+            // };
+            //
+            // if (this.nar.on) {
+            //     this.nar.on('task.input', inputHandler);
+            // }
+
+            // Process the input and execute a reasoning step
+            const inputResult = await this.nar.input(input);
+            //const stepResult = await this.nar.step(); // Actual processing happens here
             
-            if (this.nar.on) {
-                this.nar.on('task.input', inputHandler);
-                // task.focus handler is registered once in _registerEventHandlers
-            }
-            
-            const result = await this.nar.input(input);
-            await this.nar.step();
-            
-            // Remove event listeners
-            if (this.nar.off) {
-                this.nar.off('task.derived', derivationHandler);
-                this.nar.off('task.input', inputHandler);
-            }
+            // // Remove event listeners
+            // if (this.nar.off) {
+            //     this.nar.off('task.derived', derivationHandler);
+            //     this.nar.off('task.input', inputHandler);
+            // }
             
             const duration = Date.now() - startTime;
 
             // Add derived tasks to the input manager
-            if (derivedTasks.length > 0) {
-                this.inputManager.addMultipleDerivedTasks(taskId, derivedTasks);
-            }
+            // if (derivedTasks.length > 0) {
+            //     this.inputManager.addMultipleDerivedTasks(taskId, derivedTasks);
+            // }
 
-            if (result) {
-                this._handleSuccessfulNarsese(input, result, duration, taskId, derivedTasks);
-                return `✅ Input processed successfully (${duration}ms) - ${derivedTasks.length} derived tasks`;
+            if (inputResult !== false && inputResult !== null) {
+                this._handleSuccessfulNarsese(input, inputResult, duration, taskId);
+                return `✅ Input processed successfully (${duration}ms)`;
             } else {
                 this._handleFailedNarsese(input, taskId);
                 return '❌ Failed to process input';
@@ -168,14 +164,14 @@ export class ReplEngine extends EventEmitter {
         }
     }
 
-    _handleSuccessfulNarsese(input, result, duration, taskId, derivedTasks = []) {
+    _handleSuccessfulNarsese(input, result, duration, taskId) {
         this.inputManager.updatePriorityById(taskId, 0.8); // Increase priority after successful processing
         this.emit(EVENTS.NARSESE_PROCESSED, {
             input,
             result,
             duration,
             taskId, // Include the task ID in the event
-            derivedTasks, // Include derived tasks
+            derivedTasks: [], // DEPRECATED Include derived tasks
             beliefs: this.nar.getBeliefs?.() ?? []
         });
     }
@@ -186,8 +182,8 @@ export class ReplEngine extends EventEmitter {
             task.metadata.error = true;
             task.metadata.errorTime = Date.now();
             this.inputManager.updatePriorityById(taskId, 0.1); // Lower priority for failed tasks
-        }
-        this.emit(EVENTS.NARSESE_ERROR, { input, error: '❌ Failed to process input', taskId });
+        } else
+            this.emit(EVENTS.NARSESE_ERROR, { input, error: '❌ Failed to process input', taskId });
     }
 
     _handleNarseseError(input, error) {

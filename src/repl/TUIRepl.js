@@ -666,24 +666,15 @@ export class TUIRepl extends EventEmitter {
         ];
 
         welcomeMessages.forEach(msg => this.components.logViewer.addInfo(msg));
-
         if (this.remoteConfig.enabled) {
             this.components.logViewer.addInfo(`🌐 Remote console: ${this.remoteConfig.wsUrl} (Ctrl+U to toggle)`);
         }
 
         await this.engine.initialize();
-
-        // Render the screen first
         this.screen.render();
 
         // Add a slight delay to ensure all components are properly sized
-        setTimeout(() => {
-            try {
-                this.components.taskInput?.focus?.();
-            } catch (e) {
-                console.warn('Could not focus task input:', e.message);
-            }
-        }, 200);
+        setTimeout(() => this.components.taskInput?.focus?.(), 200);
     }
 
     async shutdown() {

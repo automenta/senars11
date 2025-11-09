@@ -208,9 +208,10 @@ export class CommandProcessor {
                 ? `✅ Example ${exampleName} is ready to run.`
                 : `✅ Example ${exampleName} imported successfully. (No default function to execute)`;
         } catch (error) {
-            return error.code === 'MODULE_NOT_FOUND'
+            const message = error.code === 'MODULE_NOT_FOUND'
                 ? `📁 Example file not found: ${EXAMPLE_MAP[exampleName]}. Make sure the file exists in the examples directory.`
                 : `❌ Error running example ${exampleName}: ${error.message}`;
+            return message;
         }
     }
 }

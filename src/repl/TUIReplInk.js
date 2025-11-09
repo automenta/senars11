@@ -323,6 +323,14 @@ export class TUIReplInk extends EventEmitter {
       console.log('✅ Extensible Ink TUI connected to engine');
     });
 
+    this.registerCommand('n', (args, context) => {
+      this.engine.nar.step();
+    }, {
+      description: 'Execute cycle',
+      usage: '/n',
+      category: 'system'
+    });
+
     // Register default commands
     this.registerCommand('help', (args, context) => {
       return this.extensibleTUI.commandManager.getAllHelp();
