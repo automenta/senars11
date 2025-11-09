@@ -4,6 +4,7 @@ import {CommandProcessor} from './utils/CommandProcessor.js';
 import {PersistenceManager} from '../io/PersistenceManager.js';
 import {Input} from '../Agent.js';
 import {FormattingUtils} from './utils/FormattingUtils.js';
+import {v4 as uuidv4} from 'uuid';
 
 const SPECIAL_COMMANDS = {
     'next': 'n',
@@ -130,6 +131,7 @@ export class ReplEngine extends EventEmitter {
                 return '❌ Failed to process input';
             }
         } catch (error) {
+            console.error('Narsese processing error:', error);
             this._handleNarseseError(input, error);
             return `❌ Error: ${error.message}`;
         }
@@ -161,9 +163,12 @@ export class ReplEngine extends EventEmitter {
         const allTasks = this.inputManager.getAllTasks();
         const latestTask = allTasks.at(-1); // More concise way to get last element
 
-        if (latestTask && latestTask.task === input) {
-            latestTask.metadata.error = true;
-            latestTask.metadata.errorTime = Date.now();
+        if (latestTask?.task === input) {
+            latestTask.metadata = {
+                ...latestTask.metadata,
+                error: true,
+                errorTime: Date.now()
+            };
             this.inputManager.updatePriorityById(latestTask.id, 0.1);
         }
 
@@ -203,6 +208,7 @@ export class ReplEngine extends EventEmitter {
             this.emit(EVENTS.NAR_CYCLE_STEP, {cycle: this.nar.cycleCount});
             return output;
         } catch (error) {
+            console.error('Cycle execution error:', error);
             const errorMsg = `❌ Error executing single cycle: ${error.message}`;
             this.emit(EVENTS.NAR_ERROR, {error: error.message});
             return errorMsg;
@@ -385,6 +391,103 @@ export class ReplEngine extends EventEmitter {
         }
     }
 
+    // Generate a notebook entry from the current session state
+    generateNotebookEntry(type, content, metadata = {}) {
+        return {
+            id: uuidv4(),
+            type,
+            content,
+            timestamp: Date.now(),
+            metadata: {
+                ...metadata,
+                cycle: this.nar.cycleCount || 0,
+                memoryStats: this.getStats()
+            }
+        };
+    }
+
+    // Capture the current session as a notebook
+    async captureNotebook(format = 'json', title = 'SeNARS Session', description = 'Interactive reasoning session') {
+        const notebook = {
+            id: uuidv4(),
+            title,
+            description,
+            format: 'seNARS-notebook-v1',
+            timestamp: Date.now(),
+            metadata: {
+                version: '1.0',
+                engineConfig: this.nar.config || {},
+                sessionStats: this.getStats()
+            },
+            entries: [
+                // Include the history of inputs and outputs
+                ...this.sessionState.history.map(input => this.generateNotebookEntry('input', input)),
+                // Add current beliefs and state
+                this.generateNotebookEntry('beliefs', this.getBeliefs(), {type: 'beliefs'}),
+                // Add system status
+                this.generateNotebookEntry('status', this.getStats(), {type: 'system-status'})
+            ]
+        };
+
+        switch (format.toLowerCase()) {
+            case 'json':
+                return JSON.stringify(notebook, null, 2);
+            case 'markdown':
+                return this._convertNotebookToMarkdown(notebook);
+            case 'text':
+                return this._convertNotebookToText(notebook);
+            default:
+                throw new Error(`Unsupported notebook format: ${format}`);
+        }
+    }
+
+    // Convert notebook to markdown format for reporting
+    _convertNotebookToMarkdown(notebook) {
+        let markdown = `# ${notebook.title}\n\n`;
+        markdown += `> ${notebook.description}\n\n`;
+        markdown += `**Generated:** ${new Date(notebook.timestamp).toLocaleString()}\n\n`;
+
+        notebook.entries.forEach((entry, index) => {
+            markdown += `## Entry ${index + 1}: ${entry.type}\n\n`;
+            markdown += `**Time:** ${new Date(entry.timestamp).toLocaleString()}\n\n`;
+            
+            if (entry.type === 'input') {
+                markdown += `**Input:** \`\`\`\n${entry.content}\n\`\`\`\n\n`;
+            } else if (entry.type === 'beliefs') {
+                markdown += `**Beliefs:** \`\`\`json\n${JSON.stringify(entry.content, null, 2)}\n\`\`\`\n\n`;
+            } else {
+                markdown += `**Content:** ${JSON.stringify(entry.content, null, 2)}\n\n`;
+            }
+            
+            markdown += `---\n\n`;
+        });
+
+        return markdown;
+    }
+
+    // Convert notebook to text format for reporting
+    _convertNotebookToText(notebook) {
+        let text = `=== ${notebook.title} ===\n\n`;
+        text += `${notebook.description}\n\n`;
+        text += `Generated: ${new Date(notebook.timestamp).toLocaleString()}\n\n`;
+
+        notebook.entries.forEach((entry, index) => {
+            text += `--- Entry ${index + 1}: ${entry.type} ---\n`;
+            text += `Time: ${new Date(entry.timestamp).toLocaleString()}\n`;
+            
+            if (entry.type === 'input') {
+                text += `Input: ${entry.content}\n`;
+            } else if (entry.type === 'beliefs') {
+                text += `Beliefs: ${JSON.stringify(entry.content)}\n`;
+            } else {
+                text += `Content: ${JSON.stringify(entry.content)}\n`;
+            }
+            
+            text += '\n';
+        });
+
+        return text;
+    }
 
     async shutdown() {
         if (this.isRunningLoop) this._stopRun();

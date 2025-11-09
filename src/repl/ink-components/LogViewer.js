@@ -18,7 +18,7 @@ export const LogViewer = ({logs = []}) => {
         // Apply filter
         if (filter !== 'all') {
             result = result.filter(log => {
-                const message = log.message.toLowerCase();
+                const message = String(log.message || '').toLowerCase();
                 switch (filter) {
                     case 'error':
                         return message.includes('error') || message.includes('❌');
@@ -42,7 +42,7 @@ export const LogViewer = ({logs = []}) => {
         let color = 'white';
         let symbol = 'ℹ️';
 
-        const message = log.message.toLowerCase();
+        const message = String(log.message || '').toLowerCase();
         if (message.includes('error') || message.includes('❌')) {
             color = 'red';
             symbol = '❌';

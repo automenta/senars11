@@ -1,7 +1,3 @@
-/**
- * Shared command processor for SeNARS TUI components
- * Provides common command handling functionality shared between different UI components
- */
 import {DEMO_COMMANDS} from '../config/constants.js';
 import {DisplayUtils} from './DisplayUtils.js';
 
@@ -50,6 +46,7 @@ export class CommandProcessor {
             const result = await commandFn(args);
             return result;
         } catch (error) {
+            console.error(`Command execution error for '${cmd}':`, error);
             return `❌ Error executing command: ${error.message}`;
         }
     }
