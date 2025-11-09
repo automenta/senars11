@@ -1,4 +1,4 @@
-import { ReplEngine } from '../src/repl/ReplEngine.js';
+import {ReplEngine} from '../src/repl/ReplEngine.js';
 
 // Test if syllogistic reasoning works with explicit truth values
 async function testSyllogisticExplicitTruth() {

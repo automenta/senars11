@@ -68,9 +68,9 @@ export class CommandManager {
         }
 
         const command = this.commands.get(actualCommandName);
-        
+
         // Add to history
-        this._addToHistory({ name: actualCommandName, args, timestamp: Date.now() });
+        this._addToHistory({name: actualCommandName, args, timestamp: Date.now()});
 
         try {
             const result = await command.handler(args, context);
@@ -144,10 +144,10 @@ export class CommandManager {
         const command = this.getCommand(commandName);
         if (!command) return `Command '${commandName}' not found`;
 
-        const aliases = command.metadata.aliases.length 
-            ? ` (Aliases: ${command.metadata.aliases.join(', ')})` 
+        const aliases = command.metadata.aliases.length
+            ? ` (Aliases: ${command.metadata.aliases.join(', ')})`
             : '';
-            
+
         return `${command.name}: ${command.metadata.description}${aliases}\nUsage: ${command.metadata.usage}`;
     }
 
@@ -158,18 +158,18 @@ export class CommandManager {
     getAllHelp() {
         const categories = Array.from(this.categories.keys()).sort();
         let helpText = 'Available commands:\n\n';
-        
+
         for (const category of categories) {
             helpText += `--- ${category.toUpperCase()} ---\n`;
             const commands = this.categories.get(category);
-            
+
             for (const cmdName of commands) {
                 const cmd = this.commands.get(cmdName);
                 helpText += `  ${cmd.name} - ${cmd.metadata.description}\n`;
             }
             helpText += '\n';
         }
-        
+
         return helpText;
     }
 

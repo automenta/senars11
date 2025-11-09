@@ -16,7 +16,7 @@ export class ComponentRegistry {
      * @param {Object} metadata - Component metadata
      */
     registerComponent(name, component, metadata = {}) {
-        this.components.set(name, { component, metadata });
+        this.components.set(name, {component, metadata});
         return this;
     }
 
@@ -124,8 +124,8 @@ export class ComponentRegistry {
      */
     filterComponents(filterFn) {
         const result = [];
-        for (const [name, { metadata }] of this.components) {
-            if (filterFn({ name, metadata })) {
+        for (const [name, {metadata}] of this.components) {
+            if (filterFn({name, metadata})) {
                 result.push(name);
             }
         }

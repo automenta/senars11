@@ -1,4 +1,4 @@
-const PUNCTUATION_MAP = { 'BELIEF': '.', 'GOAL': '!', 'QUESTION': '?' };
+const PUNCTUATION_MAP = {'BELIEF': '.', 'GOAL': '!', 'QUESTION': '?'};
 const DEFAULT_TRUTH = ' %1.000,0.900%';
 const DEFAULT_PRIORITY = '';
 const DEFAULT_TERM = 'Unknown';
@@ -46,10 +46,10 @@ export class FormattingUtils {
 
     static encodeShortId(input) {
         if (!input) return 'N/A';
-        
+
         const inputStr = String(input);
         const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
-        
+
         let hash = 0;
         for (let i = 0; i < inputStr.length; i++) {
             hash = ((hash << 5) - hash) + inputStr.charCodeAt(i);
@@ -81,11 +81,25 @@ export class FormattingUtils {
         ].filter(Boolean).join(' | ');
     }
 
-    static formatType(type) { return type ? `Type: ${type}` : 'Type: Task'; }
-    static formatTruthStr(truth) { return truth ? `Truth: ${truth.toString()}` : 'Truth: N/A'; }
-    static formatPriorityStr(priority) { return priority !== undefined ? `Priority: ${priority.toFixed(3)}` : 'Priority: N/A'; }
-    static formatStamp(stamp) { return stamp ? `Stamp: ${stamp}` : 'Stamp: N/A'; }
-    static formatOccurrenceTime(occurrenceTime) { return occurrenceTime !== undefined ? `OccTime: ${occurrenceTime}` : null; }
+    static formatType(type) {
+        return type ? `Type: ${type}` : 'Type: Task';
+    }
+
+    static formatTruthStr(truth) {
+        return truth ? `Truth: ${truth.toString()}` : 'Truth: N/A';
+    }
+
+    static formatPriorityStr(priority) {
+        return priority !== undefined ? `Priority: ${priority.toFixed(3)}` : 'Priority: N/A';
+    }
+
+    static formatStamp(stamp) {
+        return stamp ? `Stamp: ${stamp}` : 'Stamp: N/A';
+    }
+
+    static formatOccurrenceTime(occurrenceTime) {
+        return occurrenceTime !== undefined ? `OccTime: ${occurrenceTime}` : null;
+    }
 
     static formatBeliefDetails(task) {
         return [
@@ -95,19 +109,27 @@ export class FormattingUtils {
         ].filter(Boolean).join('');
     }
 
-    static formatBeliefTruth(truth) { return truth ? `${truth.toString()}` : null; }
-    static formatBeliefPriority(priority) { return priority !== undefined ? ` | P:${priority.toFixed(3)}` : null; }
-    static formatBeliefOccurrence(stamp) { return stamp ? ` | Occ:${stamp}` : null; }
-    
+    static formatBeliefTruth(truth) {
+        return truth ? `${truth.toString()}` : null;
+    }
+
+    static formatBeliefPriority(priority) {
+        return priority !== undefined ? ` | P:${priority.toFixed(3)}` : null;
+    }
+
+    static formatBeliefOccurrence(stamp) {
+        return stamp ? ` | Occ:${stamp}` : null;
+    }
+
     static formatNumber(num) {
         return num >= 1000000 ? (num / 1000000).toFixed(1) + 'M' :
-               num >= 1000 ? (num / 1000).toFixed(1) + 'K' :
-               num.toString();
+            num >= 1000 ? (num / 1000).toFixed(1) + 'K' :
+                num.toString();
     }
-    
+
     static formatFileSize(sizeInBytes) {
         return sizeInBytes >= 1000000 ? (sizeInBytes / 1000000).toFixed(2) + ' MB' :
-               sizeInBytes >= 1000 ? (sizeInBytes / 1000).toFixed(2) + ' KB' :
-               sizeInBytes + ' bytes';
+            sizeInBytes >= 1000 ? (sizeInBytes / 1000).toFixed(2) + ' KB' :
+                sizeInBytes + ' bytes';
     }
 }

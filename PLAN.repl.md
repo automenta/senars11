@@ -848,6 +848,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 > 4. **Debugging hooks**:
      >    - `?debug=true` URL param enables raw WebSocket logging
      >
+
 - `window.NARS_SESSIONS` exposes session registry to console
 
 ### **Final Validation Checklist**
@@ -877,8 +878,10 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 > 4. **Debugging hooks**:
      >    - `?debug=true` URL param enables raw WebSocket logging
      >
+
 - `window.NARS_SESSIONS` exposes session registry to console
->    - `window.NARS_SESSIONS` exposes session registry to console
+
+> - `window.NARS_SESSIONS` exposes session registry to console
 
 }
 
@@ -1175,6 +1178,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 > 4. **Debugging hooks**:
      >    - `?debug=true` URL param enables raw WebSocket logging
      >
+
 - `window.NARS_SESSIONS` exposes session registry to console
 
 ### **Final Validation Checklist**
@@ -1204,9 +1208,11 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 > 4. **Debugging hooks**:
      >    - `?debug=true` URL param enables raw WebSocket logging
      >
+
 - `window.NARS_SESSIONS` exposes session registry to console
->    - `window.NARS_SESSIONS` exposes session registry to console
-       }
+
+> - `window.NARS_SESSIONS` exposes session registry to console
+    }
 
 ```
 
@@ -1501,6 +1507,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 > 4. **Debugging hooks**:
      >    - `?debug=true` URL param enables raw WebSocket logging
      >
+
 - `window.NARS_SESSIONS` exposes session registry to console
 
 ### **Final Validation Checklist**
@@ -1530,8 +1537,10 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 > 4. **Debugging hooks**:
      >    - `?debug=true` URL param enables raw WebSocket logging
      >
+
 - `window.NARS_SESSIONS` exposes session registry to console
->    - `window.NARS_SESSIONS` exposes session registry to console
+
+> - `window.NARS_SESSIONS` exposes session registry to console
 
 
 persistSessionHistory(sessionId) {
@@ -2138,6 +2147,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 > 4. **Debugging hooks**:
      >    - `?debug=true` URL param enables raw WebSocket logging
      >
+
 - `window.NARS_SESSIONS` exposes session registry to console
 
 ### **Final Validation Checklist**
@@ -2167,8 +2177,10 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 > 4. **Debugging hooks**:
      >    - `?debug=true` URL param enables raw WebSocket logging
      >
+
 - `window.NARS_SESSIONS` exposes session registry to console
->    - `window.NARS_SESSIONS` exposes session registry to console
+
+> - `window.NARS_SESSIONS` exposes session registry to console
 
 }
 
@@ -2465,6 +2477,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 > 4. **Debugging hooks**:
      >    - `?debug=true` URL param enables raw WebSocket logging
      >
+
 - `window.NARS_SESSIONS` exposes session registry to console
 
 ### **Final Validation Checklist**
@@ -2494,9 +2507,11 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 > 4. **Debugging hooks**:
      >    - `?debug=true` URL param enables raw WebSocket logging
      >
+
 - `window.NARS_SESSIONS` exposes session registry to console
->    - `window.NARS_SESSIONS` exposes session registry to console
-       }
+
+> - `window.NARS_SESSIONS` exposes session registry to console
+    }
 
 ```
 
@@ -2791,6 +2806,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 > 4. **Debugging hooks**:
      >    - `?debug=true` URL param enables raw WebSocket logging
      >
+
 - `window.NARS_SESSIONS` exposes session registry to console
 
 ### **Final Validation Checklist**
@@ -2820,8 +2836,10 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 > 4. **Debugging hooks**:
      >    - `?debug=true` URL param enables raw WebSocket logging
      >
+
 - `window.NARS_SESSIONS` exposes session registry to console
->    - `window.NARS_SESSIONS` exposes session registry to console
+
+> - `window.NARS_SESSIONS` exposes session registry to console
 
       if (historyStr) {
         this.sessionHistories[sessionId] = JSON.parse(historyStr);
@@ -3469,6 +3487,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 > 4. **Debugging hooks**:
      >    - `?debug=true` URL param enables raw WebSocket logging
      >
+
 - `window.NARS_SESSIONS` exposes session registry to console
   }
 
@@ -4121,9 +4140,11 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 > 4. **Debugging hooks**:
      >    - `?debug=true` URL param enables raw WebSocket logging
      >
+
 - `window.NARS_SESSIONS` exposes session registry to console
->    - `window.NARS_SESSIONS` exposes session registry to console
-       this.sessionManager.addCellToHistory(this.sessionId, 'output', line);
+
+> - `window.NARS_SESSIONS` exposes session registry to console
+    this.sessionManager.addCellToHistory(this.sessionId, 'output', line);
 
     // ... existing code
 
@@ -4392,6 +4413,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 > 4. **Debugging hooks**:
      >    - `?debug=true` URL param enables raw WebSocket logging
      >
+
 - `window.NARS_SESSIONS` exposes session registry to console
 
 ### **Final Validation Checklist**
@@ -4421,9 +4443,11 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 > 4. **Debugging hooks**:
      >    - `?debug=true` URL param enables raw WebSocket logging
      >
+
 - `window.NARS_SESSIONS` exposes session registry to console
->    - `window.NARS_SESSIONS` exposes session registry to console
-       }
+
+> - `window.NARS_SESSIONS` exposes session registry to console
+    }
 
 ```
 
@@ -4718,6 +4742,7 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 > 4. **Debugging hooks**:
      >    - `?debug=true` URL param enables raw WebSocket logging
      >
+
 - `window.NARS_SESSIONS` exposes session registry to console
 
 ### **Final Validation Checklist**
@@ -4747,7 +4772,9 @@ Since we're minimizing mocks, we'll test the actual history functionality:
 > 4. **Debugging hooks**:
      >    - `?debug=true` URL param enables raw WebSocket logging
      >
+
 - `window.NARS_SESSIONS` exposes session registry to console
->    - `window.NARS_SESSIONS` exposes session registry to console
+
+> - `window.NARS_SESSIONS` exposes session registry to console
 
 

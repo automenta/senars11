@@ -1,3 +1,0 @@
-
-> senars@10.0.0 repl:tui
-> node -e "import('./src/repl/TUIReplInk.js').then(m => new m.TUIReplInk().start())"

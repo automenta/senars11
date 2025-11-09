@@ -5,7 +5,7 @@ import blessed from 'blessed';
  */
 export class ContextMenu {
     constructor(config = {}) {
-        const { eventEmitter, parent, menuItems = [], position = { top: 0, left: 0 } } = config;
+        const {eventEmitter, parent, menuItems = [], position = {top: 0, left: 0}} = config;
         this.eventEmitter = eventEmitter;
         this.parent = parent;
         this.menuItems = menuItems;
@@ -21,12 +21,12 @@ export class ContextMenu {
             left: this.position.left,
             width: 'shrink',
             height: 'shrink',
-            border: { type: 'line' },
+            border: {type: 'line'},
             style: {
                 fg: 'white',
                 bg: 'black',
-                border: { fg: 'green' },
-                selected: { fg: 'black', bg: 'lightgreen' }
+                border: {fg: 'green'},
+                selected: {fg: 'black', bg: 'lightgreen'}
             },
             hidden: true,
             clickable: true,
@@ -140,7 +140,7 @@ export class ContextMenu {
                 const originalFg = this.element.style.fg;
                 this.element.style.fg = 'magenta';
                 this.element.screen.render();
-                
+
                 setTimeout(() => {
                     selectedItem.action();
                     if (this.element) {
@@ -156,7 +156,7 @@ export class ContextMenu {
     }
 
     setPosition(top, left) {
-        this.position = { top, left };
+        this.position = {top, left};
         if (this.element) {
             this.element.position.top = top;
             this.element.position.left = left;

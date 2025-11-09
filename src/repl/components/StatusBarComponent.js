@@ -1,6 +1,6 @@
-import { BaseComponent } from './BaseComponent.js';
+import {BaseComponent} from './BaseComponent.js';
 import blessed from 'blessed';
-import { ContextMenu } from './ContextMenu.js';
+import {ContextMenu} from './ContextMenu.js';
 
 /**
  * Status Bar Component - displays status information and system metrics
@@ -10,7 +10,7 @@ export class StatusBarComponent extends BaseComponent {
         super(config);
         this.elementType = 'box';
         this.engine = config.engine;
-        this.animationState = { spinningIndex: 0 };
+        this.animationState = {spinningIndex: 0};
         this.spinningElements = ['🌀', '◕', '◔', '◕'];
         this.stats = {};
         this.connectionState = 'local';
@@ -27,11 +27,11 @@ export class StatusBarComponent extends BaseComponent {
             left: '0',
             width: '100%',
             height: '1',
-            border: { type: 'line' },
+            border: {type: 'line'},
             style: {
                 fg: 'white',
                 bg: 'blue',
-                border: { fg: 'yellow' }
+                border: {fg: 'yellow'}
             },
             content: 'Press [SPACE] or click for menu | Use Ctrl+H for help | Ctrl+L/T/G to switch views',
             interactive: true,
@@ -159,12 +159,12 @@ export class StatusBarComponent extends BaseComponent {
         this.emit('pulldown-menu-toggle', {
             isOpen: this.isPulldownMenuOpen,
             options: [
-                { key: 'load', label: '📁 Load Session', shortcut: 'Ctrl+O' },
-                { key: 'save', label: '💾 Save Session', shortcut: 'Ctrl+S' },
-                { key: 'settings', label: '⚙️ Settings', shortcut: 'Ctrl+,' },
-                { key: 'performance', label: `📈 Performance: ${performanceMetrics.cps} CPS`, shortcut: '' },
-                { key: 'help', label: '❓ Help', shortcut: 'F1' },
-                { key: 'exit', label: '🚪 Exit', shortcut: 'Ctrl+C' }
+                {key: 'load', label: '📁 Load Session', shortcut: 'Ctrl+O'},
+                {key: 'save', label: '💾 Save Session', shortcut: 'Ctrl+S'},
+                {key: 'settings', label: '⚙️ Settings', shortcut: 'Ctrl+,'},
+                {key: 'performance', label: `📈 Performance: ${performanceMetrics.cps} CPS`, shortcut: ''},
+                {key: 'help', label: '❓ Help', shortcut: 'F1'},
+                {key: 'exit', label: '🚪 Exit', shortcut: 'Ctrl+C'}
             ],
             onSelect: (option) => this._handleMenuSelection(option)
         });
@@ -193,13 +193,13 @@ export class StatusBarComponent extends BaseComponent {
     setConnectionState(state) {
         this.connectionState = state.toLowerCase();
         this.updateContent();
-        this.emit('connection-state-changed', { state: this.connectionState });
+        this.emit('connection-state-changed', {state: this.connectionState});
     }
 
     _toggleConnectionState() {
         this.connectionState = this.connectionState === 'local' ? 'remote' : 'local';
         this.updateContent();
-        this.emit('connection-state-toggled', { state: this.connectionState });
+        this.emit('connection-state-toggled', {state: this.connectionState});
     }
 
     getConnectionState() {
@@ -210,13 +210,13 @@ export class StatusBarComponent extends BaseComponent {
     updateAlerts(count) {
         this.alerts = count;
         this.updateContent();
-        this.emit('alerts-updated', { count: this.alerts });
+        this.emit('alerts-updated', {count: this.alerts});
     }
 
     addAlert() {
         this.alerts++;
         this.updateContent();
-        this.emit('alert-added', { count: this.alerts });
+        this.emit('alert-added', {count: this.alerts});
     }
 
     clearAlerts() {
@@ -310,8 +310,20 @@ export class StatusBarComponent extends BaseComponent {
         const memoryUsage = performanceMetrics.memoryUsageMB;
 
         // Color code based on performance metrics
-        const cpsColor = this._getColorByValue(cps, { high: 50, medium: 10, highColor: 'green', mediumColor: 'yellow', lowColor: 'red' });
-        const memoryColor = this._getColorByValue(memoryUsage, { high: 500, medium: 200, highColor: 'red', mediumColor: 'yellow', lowColor: 'green' });
+        const cpsColor = this._getColorByValue(cps, {
+            high: 50,
+            medium: 10,
+            highColor: 'green',
+            mediumColor: 'yellow',
+            lowColor: 'red'
+        });
+        const memoryColor = this._getColorByValue(memoryUsage, {
+            high: 500,
+            medium: 200,
+            highColor: 'red',
+            mediumColor: 'yellow',
+            lowColor: 'green'
+        });
 
         return `{bold}${this._getAnimatedPerformanceIndicator()} │ CPS: {${cpsColor}}${cps}{/} │ Mem: {${memoryColor}}${memoryUsage}MB{/}{/bold}`;
     }
@@ -357,23 +369,23 @@ export class StatusBarComponent extends BaseComponent {
         const focusSetSize = stats.memoryStats?.focusSetSize ?? 0;
         const tasksInMemory = stats.memoryStats?.taskCount ?? 0;
 
-        return { 
-            cps, 
-            cycleCount, 
-            startTime, 
+        return {
+            cps,
+            cycleCount,
+            startTime,
             memoryUsageMB: parseFloat(rssInMB),
             heapUsedMB: parseFloat(heapUsedMB),
             heapTotalMB: parseFloat(heapTotalMB),
             concepts,
             focusSetSize,
             tasksInMemory,
-            cpuUsage: 'N/A' 
+            cpuUsage: 'N/A'
         };
     }
 
     _getAnimatedPerformanceIndicator() {
         const spinningElement = this.spinningElements[this.animationState.spinningIndex];
-        const { cps } = this._getPerformanceMetrics();
+        const {cps} = this._getPerformanceMetrics();
 
         return `{bold}${spinningElement} ${cps} CPS{/bold}`;
     }
@@ -383,7 +395,7 @@ export class StatusBarComponent extends BaseComponent {
      * Update and display connection quality metrics
      */
     updateConnectionQuality(qualityMetrics) {
-        this.connectionQuality = { ...this.connectionQuality, ...qualityMetrics };
+        this.connectionQuality = {...this.connectionQuality, ...qualityMetrics};
         this.updateContent();
     }
 
@@ -395,7 +407,7 @@ export class StatusBarComponent extends BaseComponent {
             return '';
         }
 
-        const { state, isHealthy, pingLatency } = this.connectionQuality;
+        const {state, isHealthy, pingLatency} = this.connectionQuality;
         const stateText = state === 1 ? 'OPEN' : state === 2 ? 'CLOSING' : state === 3 ? 'CLOSED' : 'CONNECTING';
         const stateColor = isHealthy ? 'green' : 'red';
         const latency = pingLatency ? `${pingLatency}ms` : 'N/A';
@@ -412,17 +424,17 @@ export class StatusBarComponent extends BaseComponent {
      * Get color based on value thresholds
      */
     _getColorByValue(value, thresholds) {
-        const { high, medium, highColor, mediumColor, lowColor } = thresholds;
+        const {high, medium, highColor, mediumColor, lowColor} = thresholds;
         return value > high ? highColor : value > medium ? mediumColor : lowColor;
     }
 
     updateStats(newStats) {
-        this.stats = { ...this.stats, ...newStats };
+        this.stats = {...this.stats, ...newStats};
         this.updateContent();
     }
 
     setMemoryStats(memoryStats) {
-        this.stats.memoryStats = { ...this.stats.memoryStats, ...memoryStats };
+        this.stats.memoryStats = {...this.stats.memoryStats, ...memoryStats};
         this.updateContent();
     }
 
@@ -443,7 +455,7 @@ export class StatusBarComponent extends BaseComponent {
     }
 
     updatePerformanceMetrics(metrics) {
-        this.stats.performance = { ...this.stats.performance, ...metrics };
+        this.stats.performance = {...this.stats.performance, ...metrics};
         this.updateContent();
         this.emit('performance-metrics-updated', metrics);
     }
@@ -460,7 +472,7 @@ export class StatusBarComponent extends BaseComponent {
             }
         }, duration);
 
-        this.emit('status-message-shown', { message, duration });
+        this.emit('status-message-shown', {message, duration});
     }
 
     setEngine(engine) {

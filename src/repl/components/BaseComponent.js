@@ -5,7 +5,7 @@ import blessed from 'blessed';
  */
 export class BaseComponent {
     constructor(config = {}) {
-        const { elementConfig = {}, elementType = 'box', parent, eventEmitter, engine } = config;
+        const {elementConfig = {}, elementType = 'box', parent, eventEmitter, engine} = config;
         this.config = config;
         this.elementConfig = elementConfig;
         this.elementType = elementType;
@@ -118,7 +118,7 @@ export class BaseComponent {
      * Add visual feedback with optional animation
      */
     addVisualFeedback(content, options = {}) {
-        const { animate = true, flashDuration = 200, callback } = options;
+        const {animate = true, flashDuration = 200, callback} = options;
         const color = options.color ?? 'yellow';
 
         if (animate && this.element) {
@@ -154,7 +154,7 @@ export class BaseComponent {
         const filledWidth = Math.floor(percentage * width);
         const emptyWidth = width - filledWidth;
 
-        const { filledChar = '█', emptyChar = '░', prefix = '', suffix = '' } = options;
+        const {filledChar = '█', emptyChar = '░', prefix = '', suffix = ''} = options;
 
         const filled = filledChar.repeat(filledWidth);
         const empty = emptyChar.repeat(emptyWidth);
@@ -170,8 +170,8 @@ export class BaseComponent {
      */
     _getProgressColor(percentage) {
         return percentage < 0.3 ? 'red' :
-               percentage < 0.7 ? 'yellow' :
-               'green';
+            percentage < 0.7 ? 'yellow' :
+                'green';
     }
 
     /**
@@ -181,8 +181,10 @@ export class BaseComponent {
         const {
             duration = 1000,
             animationInterval = 200,
-            onComplete = () => {},
-            onProgress = () => {}
+            onComplete = () => {
+            },
+            onProgress = () => {
+            }
         } = options;
 
         if (!this.element) return;
@@ -222,11 +224,11 @@ export class BaseComponent {
             left: 'center',
             width: options.width || '50%',
             height: options.height || 5,
-            border: { type: 'line' },
+            border: {type: 'line'},
             style: {
                 fg: 'white',
                 bg: 'black',
-                border: { fg: 'green' }
+                border: {fg: 'green'}
             },
             tags: true,
             content: `{center}${title}{/center}\n`,

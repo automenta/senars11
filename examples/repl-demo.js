@@ -1,4 +1,4 @@
-import { ReplEngine } from '../src/repl/ReplEngine.js';
+import {ReplEngine} from '../src/repl/ReplEngine.js';
 
 // Create a simple test to verify the new unified REPL functionality
 const engine = new ReplEngine();
@@ -21,7 +21,7 @@ try {
     console.log("Memory stats after input:");
     console.log("- Total concepts:", stats.memoryStats?.conceptCount || stats.memoryStats?.totalConcepts || 0);
     console.log("- Total tasks:", stats.memoryStats?.taskCount || stats.memoryStats?.totalTasks || 0);
-    
+
     // Get beliefs
     const beliefs = engine.getBeliefs();
     console.log("Current beliefs:", beliefs.length);

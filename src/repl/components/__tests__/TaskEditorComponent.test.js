@@ -1,5 +1,5 @@
-import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
-import { TaskEditorComponent } from '../TaskEditorComponent.js';
+import {afterEach, beforeEach, describe, expect, test, vi} from 'vitest';
+import {TaskEditorComponent} from '../TaskEditorComponent.js';
 import blessed from 'blessed';
 
 describe('TaskEditorComponent', () => {
@@ -107,7 +107,7 @@ describe('TaskEditorComponent', () => {
         expect(taskEditorComponent.tasks).toHaveLength(1);
         expect(taskEditorComponent.tasks[0].content).toBe('Test task');
 
-        taskEditorComponent.updateTaskStatus('test_1', { processed: true });
+        taskEditorComponent.updateTaskStatus('test_1', {processed: true});
         expect(taskEditorComponent.tasks[0].processed).toBe(true);
     });
 

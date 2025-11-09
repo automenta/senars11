@@ -1,4 +1,4 @@
-import { BaseComponent } from './BaseComponent.js';
+import {BaseComponent} from './BaseComponent.js';
 import blessed from 'blessed';
 
 /**
@@ -25,11 +25,11 @@ export class LogViewerComponent extends BaseComponent {
             left: '40%',
             width: '60%',
             height: '100%-1',
-            border: { type: 'line' },
+            border: {type: 'line'},
             style: {
                 fg: 'white',
                 bg: 'black',
-                border: { fg: 'cyan' }
+                border: {fg: 'cyan'}
             },
             scrollable: true,
             alwaysScroll: true,
@@ -137,10 +137,21 @@ export class LogViewerComponent extends BaseComponent {
         this.emit('log-added', logEntry);
     }
 
-    addInfo(message) { this.addLog(message, 'info'); }
-    addError(message) { this.addLog(message, 'error'); }
-    addWarning(message) { this.addLog(message, 'warn'); }
-    addDebug(message) { this.addLog(message, 'debug'); }
+    addInfo(message) {
+        this.addLog(message, 'info');
+    }
+
+    addError(message) {
+        this.addLog(message, 'error');
+    }
+
+    addWarning(message) {
+        this.addLog(message, 'warn');
+    }
+
+    addDebug(message) {
+        this.addLog(message, 'debug');
+    }
 
     _handleCapacityCheck() {
         const capacityRatio = this.logs.length / this.maxScrollback;
@@ -205,17 +216,17 @@ export class LogViewerComponent extends BaseComponent {
     setLevelFilter(level) {
         this.filters.level = level.toLowerCase();
         this._applyFilters();
-        this.emit('filter-changed', { type: 'level', value: level });
+        this.emit('filter-changed', {type: 'level', value: level});
     }
 
     setKeywordFilter(keyword) {
         this.filters.keyword = keyword.toLowerCase();
         this._applyFilters();
-        this.emit('filter-changed', { type: 'keyword', value: keyword });
+        this.emit('filter-changed', {type: 'keyword', value: keyword});
     }
 
     setTimeRangeFilter(startDate, endDate) {
-        this.filters.timeRange = { start: startDate, end: endDate };
+        this.filters.timeRange = {start: startDate, end: endDate};
         this._applyFilters();
         this.emit('filter-changed', {
             type: 'time-range',
@@ -237,7 +248,7 @@ export class LogViewerComponent extends BaseComponent {
             new Date(now.getTime() - timeRanges[relativeTime]) :
             now;
 
-        this.filters.timeRange = { start: startTime, end: now };
+        this.filters.timeRange = {start: startTime, end: now};
         this._applyFilters();
         this.emit('filter-changed', {
             type: 'relative-time',
@@ -250,12 +261,12 @@ export class LogViewerComponent extends BaseComponent {
     toggleTimestampDisplay() {
         this.filters.showTimestamp = !this.filters.showTimestamp;
         this._applyFilters();
-        this.emit('filter-toggled', { type: 'timestamp', enabled: this.filters.showTimestamp });
+        this.emit('filter-toggled', {type: 'timestamp', enabled: this.filters.showTimestamp});
     }
 
     toggleFollowMode() {
         this.isFollowing = !this.isFollowing;
-        this.emit('follow-mode-toggled', { enabled: this.isFollowing });
+        this.emit('follow-mode-toggled', {enabled: this.isFollowing});
     }
 
     // Display and formatting methods
@@ -281,7 +292,7 @@ export class LogViewerComponent extends BaseComponent {
     }
 
     _getLevelSymbol(level) {
-        const symbols = { error: '❌', warn: '⚠️', debug: '🔬' };
+        const symbols = {error: '❌', warn: '⚠️', debug: '🔬'};
         return symbols[level] || 'ℹ️';
     }
 
@@ -301,8 +312,13 @@ export class LogViewerComponent extends BaseComponent {
     }
 
     // Query and statistics methods
-    getLogs() { return [...this.logs]; }
-    getFilteredLogs() { return [...this.filteredLogs]; }
+    getLogs() {
+        return [...this.logs];
+    }
+
+    getFilteredLogs() {
+        return [...this.filteredLogs];
+    }
 
     getLogCount(level) {
         return level
@@ -321,7 +337,7 @@ export class LogViewerComponent extends BaseComponent {
             acc[log.level] = (acc[log.level] ?? 0) + 1;
             acc.total++;
             return acc;
-        }, { total: 0, error: 0, warn: 0, info: 0, debug: 0 });
+        }, {total: 0, error: 0, warn: 0, info: 0, debug: 0});
 
         return {
             counts,
@@ -329,7 +345,7 @@ export class LogViewerComponent extends BaseComponent {
             filteredSize: this.filteredLogs.length,
             oldest: this.logs[0]?.timestamp ?? null,
             newest: this.logs[this.logs.length - 1]?.timestamp ?? null,
-            currentFilters: { ...this.filters },
+            currentFilters: {...this.filters},
             maxScrollback: this.maxScrollback,
             isAtCapacity: this.isAtCapacity,
             capacityRatio: this.logs.length / this.maxScrollback
@@ -408,12 +424,18 @@ export class LogViewerComponent extends BaseComponent {
     // Context menu and filter methods
     _toggleFilterMenu() {
         this.emit('show-filter-menu', {
-            currentFilters: { ...this.filters },
+            currentFilters: {...this.filters},
             onFilterChange: (type, value) => {
                 switch (type) {
-                    case 'level': this.setLevelFilter(value); break;
-                    case 'keyword': this.setKeywordFilter(value); break;
-                    case 'timestamp': this.toggleTimestampDisplay(); break;
+                    case 'level':
+                        this.setLevelFilter(value);
+                        break;
+                    case 'keyword':
+                        this.setKeywordFilter(value);
+                        break;
+                    case 'timestamp':
+                        this.toggleTimestampDisplay();
+                        break;
                 }
             }
         });
@@ -466,16 +488,17 @@ export class LogViewerComponent extends BaseComponent {
             },
             {
                 label: 'Exit',
-                action: () => {}
+                action: () => {
+                }
             }
         ];
 
-        this.emit('show-context-menu', { position, menuItems });
+        this.emit('show-context-menu', {position, menuItems});
     }
 
     _openAdvancedFilterDialog() {
         this.emit('open-advanced-filter', {
-            currentFilters: { ...this.filters },
+            currentFilters: {...this.filters},
             onFilterChange: (filterType, value) => {
                 switch (filterType) {
                     case 'level':
@@ -508,10 +531,10 @@ export class LogViewerComponent extends BaseComponent {
             this.filters.regex = regex;
             this.filters.keyword = null; // Clear keyword filter when using regex
             this._applyFilters();
-            this.emit('filter-changed', { type: 'regex', value: pattern });
+            this.emit('filter-changed', {type: 'regex', value: pattern});
         } catch (error) {
             this.addError(`Invalid regex pattern: ${pattern} - ${error.message}`);
-            this.emit('filter-error', { error: error.message, pattern });
+            this.emit('filter-error', {error: error.message, pattern});
         }
     }
 
@@ -519,7 +542,7 @@ export class LogViewerComponent extends BaseComponent {
         // Support complex filtering configurations
         this.filters.complex = filterConfig;
         this._applyFilters();
-        this.emit('filter-changed', { type: 'complex', config: filterConfig });
+        this.emit('filter-changed', {type: 'complex', config: filterConfig});
     }
 
     _matchesFilters(log) {
@@ -549,10 +572,10 @@ export class LogViewerComponent extends BaseComponent {
     _matchesComplexFilter(log, filterConfig) {
         // Apply multiple conditions based on filter configuration
         const conditions = filterConfig.conditions || [];
-        
+
         for (const condition of conditions) {
-            const { field, operator, value } = condition;
-            
+            const {field, operator, value} = condition;
+
             let fieldValue;
             switch (field) {
                 case 'message':
@@ -665,10 +688,10 @@ export class LogViewerComponent extends BaseComponent {
                 .join('\n');
 
             fs.writeFileSync(filePath, logContent);
-            this.emit('logs-saved', { filePath, count: this.logs.length });
+            this.emit('logs-saved', {filePath, count: this.logs.length});
             return true;
         } catch (error) {
-            this.emit('logs-save-error', { error: error.message });
+            this.emit('logs-save-error', {error: error.message});
             return false;
         }
     }

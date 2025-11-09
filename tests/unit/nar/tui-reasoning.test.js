@@ -88,7 +88,7 @@ describe('TUIRepl NAR Reasoning with Duplicate Suppression', () => {
 
         // Input a task
         const inputResult = await nar.input('(x==>y).');
-        
+
         // Verify input was successful
         expect(inputResult).toBe(true);
 
@@ -98,7 +98,7 @@ describe('TUIRepl NAR Reasoning with Duplicate Suppression', () => {
         // Verify that input task goes through both input and focus
         const inputTerms = events.taskInput.map(e => e.term);
         const focusTerms = events.taskFocus.map(e => e.term);
-        
+
         expect(inputTerms).toContain('(==>, x, y)');
         expect(focusTerms).toContain('(==>, x, y)');
     });
@@ -129,7 +129,7 @@ describe('TUIRepl NAR Reasoning with Duplicate Suppression', () => {
 
         // Count how many times the derived task appears in focus
         const derivedFocusTasks = events.capturedFocusTasks.filter(task => task.includes('(==>, x, z)'));
-        
+
         // The derived task should appear in focus exactly once (duplicate suppression working)
         expect(derivedFocusTasks.length).toBe(1);
     });
@@ -140,7 +140,7 @@ describe('TUIRepl NAR Reasoning with Duplicate Suppression', () => {
         await nar.step();
 
         // Verify it can be formatted properly
-        const events = { capturedTasks: [] };
+        const events = {capturedTasks: []};
         nar.on('task.focus', (task) => {
             const formatted = FormattingUtils.formatTask(task);
             events.capturedTasks.push(formatted);

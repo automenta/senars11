@@ -1,5 +1,3 @@
-import blessed from 'blessed';
-
 /**
  * View Manager - handles different layout configurations and view switching
  */
@@ -183,7 +181,7 @@ export class ViewManager {
             logViewer: this._getComponentState(this.components.logViewer, ['getScroll'])
         };
 
-        this.viewStates[this.currentView] = { ...state, ...componentStates };
+        this.viewStates[this.currentView] = {...state, ...componentStates};
     }
 
     _getComponentState(component, methods) {
@@ -257,7 +255,7 @@ export class ViewManager {
 
     // Component management methods
     setComponents(components) {
-        this.components = { ...this.components, ...components };
+        this.components = {...this.components, ...components};
     }
 
     addComponent(name, component) {

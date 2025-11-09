@@ -150,7 +150,7 @@ export class ThemeManager {
     updateTheme(updates, themeName = null) {
         const name = themeName || this.currentTheme;
         const existing = this.themes.get(name) || this.getDefaultTheme();
-        
+
         const updatedTheme = {
             ...existing,
             ...updates,
@@ -158,11 +158,11 @@ export class ThemeManager {
         };
 
         this.themes.set(name, updatedTheme);
-        
+
         if (name === this.currentTheme) {
             this.config.current = updatedTheme;
         }
-        
+
         return this;
     }
 
@@ -187,7 +187,7 @@ export class ThemeManager {
             ...customizations,
             name: newThemeName
         };
-        
+
         this.registerTheme(newThemeName, newTheme);
         return this;
     }
@@ -198,10 +198,10 @@ export class ThemeManager {
      * @param {string} name - Theme name
      */
     importTheme(themeData, name) {
-        const theme = typeof themeData === 'string' 
-            ? JSON.parse(themeData) 
+        const theme = typeof themeData === 'string'
+            ? JSON.parse(themeData)
             : themeData;
-            
+
         this.registerTheme(name, theme);
         return this;
     }

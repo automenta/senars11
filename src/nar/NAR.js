@@ -293,7 +293,7 @@ export class NAR extends BaseComponent {
             if (!parsed?.term) throw new Error('Invalid parse result');
 
             const task = this._createTask(parsed);
-            
+
             // Check if a task with the same semantic properties is already in memory
             const existingConcept = this._memory.getConcept(task.term);
             if (existingConcept) {
@@ -458,8 +458,8 @@ export class NAR extends BaseComponent {
             // Process all derivations through the same Input/Memory/Focus/Event process
             for (const result of results) {
                 if (result) {
-                    const added = await this._inputTask(result, { traceId: options.traceId });
-                    
+                    const added = await this._inputTask(result, {traceId: options.traceId});
+
                     this._eventBus.emit('reasoning.derivation', {
                         derivedTask: result,
                         source: 'streamReasoner.step.method',
@@ -868,7 +868,7 @@ export class NAR extends BaseComponent {
             ...context
         };
     }
-    
+
     // Check if a semantically equivalent task already exists in memory
     _isTaskDuplicate(task) {
         const existingConcept = this._memory.getConcept(task.term);
@@ -922,6 +922,6 @@ export class NAR extends BaseComponent {
             throw error;
         }
     }
-    
+
 
 }

@@ -1,4 +1,4 @@
-import { BaseComponent } from './BaseComponent.js';
+import {BaseComponent} from './BaseComponent.js';
 import blessed from 'blessed';
 
 /**
@@ -7,7 +7,10 @@ import blessed from 'blessed';
 export class TaskInputComponent extends BaseComponent {
     constructor(config = {}) {
         super(config);
-        const { engine, onSubmit = () => {} } = config;
+        const {
+            engine, onSubmit = () => {
+            }
+        } = config;
         this.engine = engine;
         this.elementType = 'textarea';
         this.onSubmit = onSubmit;
@@ -17,11 +20,11 @@ export class TaskInputComponent extends BaseComponent {
             left: 0,
             right: 0,
             height: '1',
-            border: { type: 'line' },
+            border: {type: 'line'},
             style: {
                 fg: 'white',
                 bg: 'black',
-                border: { fg: 'cyan' }
+                border: {fg: 'cyan'}
             },
             inputOnFocus: true
         };

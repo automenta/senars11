@@ -1,5 +1,5 @@
-import { BaseComponent } from './BaseComponent.js';
-import { ContextMenu } from './ContextMenu.js';
+import {BaseComponent} from './BaseComponent.js';
+import {ContextMenu} from './ContextMenu.js';
 import blessed from 'blessed';
 
 /**
@@ -8,7 +8,7 @@ import blessed from 'blessed';
 export class TaskEditorComponent extends BaseComponent {
     constructor(config = {}) {
         super(config);
-        const { engine } = config;
+        const {engine} = config;
         this.engine = engine;
         this.elementType = 'list';
         this.tasks = [];
@@ -33,11 +33,11 @@ export class TaskEditorComponent extends BaseComponent {
             left: '0',
             width: '40%',
             height: '100%-1',
-            border: { type: 'line' },
+            border: {type: 'line'},
             style: {
                 fg: 'white',
                 bg: 'black',
-                border: { fg: 'green' },
+                border: {fg: 'green'},
                 selected: {
                     fg: 'black',
                     bg: 'lightgreen'
@@ -220,9 +220,9 @@ export class TaskEditorComponent extends BaseComponent {
     }
 
     _selectAllTasks() {
-        this.selectedIndices = Array.from({ length: this.tasks.length }, (_, i) => i);
+        this.selectedIndices = Array.from({length: this.tasks.length}, (_, i) => i);
         this._updateDisplay();
-        this.emit('tasks-selected', { count: this.selectedIndices.length, indices: this.selectedIndices });
+        this.emit('tasks-selected', {count: this.selectedIndices.length, indices: this.selectedIndices});
     }
 
     _clearSelection() {
@@ -325,8 +325,8 @@ export class TaskEditorComponent extends BaseComponent {
         const index = this.tasks.findIndex(task => task.id === taskId);
         if (index !== -1) {
             // Store old status for animation comparison
-            const oldTask = { ...this.tasks[index] };
-            this.tasks[index] = { ...this.tasks[index], ...updates };
+            const oldTask = {...this.tasks[index]};
+            this.tasks[index] = {...this.tasks[index], ...updates};
 
             // Animate the change
             this.animateTaskStateChange(taskId, updates.status || 'updated');
@@ -416,14 +416,14 @@ export class TaskEditorComponent extends BaseComponent {
      */
     _getPriorityGradientColor(priority) {
         const priorityColors = [
-            { threshold: 0.9, color: 'red' },
-            { threshold: 0.7, color: 'lightred' },
-            { threshold: 0.5, color: 'yellow' },
-            { threshold: 0.3, color: 'lightyellow' },
-            { threshold: 0.1, color: 'green' }
+            {threshold: 0.9, color: 'red'},
+            {threshold: 0.7, color: 'lightred'},
+            {threshold: 0.5, color: 'yellow'},
+            {threshold: 0.3, color: 'lightyellow'},
+            {threshold: 0.1, color: 'green'}
         ];
 
-        const matched = priorityColors.find(({ threshold }) => priority >= threshold);
+        const matched = priorityColors.find(({threshold}) => priority >= threshold);
         return matched?.color || 'lightgreen'; // Default to lightgreen for lowest priority
     }
 
@@ -482,14 +482,14 @@ export class TaskEditorComponent extends BaseComponent {
         const color = this._getPriorityGradientColor(priority);
 
         const priorityIndicators = [
-            { threshold: 0.9, indicator: '🔴' },
-            { threshold: 0.7, indicator: '❗' },
-            { threshold: 0.5, indicator: '🟡' },
-            { threshold: 0.3, indicator: '🔸' },
-            { threshold: 0.1, indicator: '🟢' }
+            {threshold: 0.9, indicator: '🔴'},
+            {threshold: 0.7, indicator: '❗'},
+            {threshold: 0.5, indicator: '🟡'},
+            {threshold: 0.3, indicator: '🔸'},
+            {threshold: 0.1, indicator: '🟢'}
         ];
 
-        const matched = priorityIndicators.find(({ threshold }) => priority >= threshold);
+        const matched = priorityIndicators.find(({threshold}) => priority >= threshold);
         const indicator = matched?.indicator ?? '⚪';
 
         return `{${color}}${indicator}{/}`;
@@ -500,14 +500,14 @@ export class TaskEditorComponent extends BaseComponent {
      */
     _getPriorityBgColor(priority) {
         const priorityBgColors = [
-            { threshold: 0.9, color: 'bg-red' },
-            { threshold: 0.7, color: 'bg-lightred' },
-            { threshold: 0.5, color: 'bg-yellow' },
-            { threshold: 0.3, color: 'bg-lightyellow' },
-            { threshold: 0.1, color: 'bg-green' }
+            {threshold: 0.9, color: 'bg-red'},
+            {threshold: 0.7, color: 'bg-lightred'},
+            {threshold: 0.5, color: 'bg-yellow'},
+            {threshold: 0.3, color: 'bg-lightyellow'},
+            {threshold: 0.1, color: 'bg-green'}
         ];
 
-        const matched = priorityBgColors.find(({ threshold }) => priority >= threshold);
+        const matched = priorityBgColors.find(({threshold}) => priority >= threshold);
         return matched?.color || 'bg-black'; // Default to black for minimal priority
     }
 
@@ -606,7 +606,7 @@ export class TaskEditorComponent extends BaseComponent {
 
                 // Define common keywords to group by
                 const keywords = ['think', 'consider', 'analyze', 'compute', 'process', 'remember', 'believe', 'wonder', 'question', 'answer', 'plan', 'execute', 'create', 'find', 'solve'];
-                
+
                 const matchedKeyword = keywords.find(keyword => task.content.toLowerCase().includes(keyword));
                 return matchedKeyword ? `Action: ${matchedKeyword}` : 'Other Actions';
             },
@@ -682,9 +682,9 @@ export class TaskEditorComponent extends BaseComponent {
     }
 
     _getTaskStatus(task) {
-        return task.processed ? 'Processed' : 
-               task.pending ? 'Pending' : 
-               task.error ? 'Error' : 'Unknown';
+        return task.processed ? 'Processed' :
+            task.pending ? 'Pending' :
+                task.error ? 'Error' : 'Unknown';
     }
 
     setCurrentGrouping(criteria) {
@@ -711,32 +711,35 @@ export class TaskEditorComponent extends BaseComponent {
 
     _showGroupingMenu() {
         const groupingOptions = [
-            { label: 'Group by Priority', action: () => this.setCurrentGrouping('priority') },
-            { label: 'Group by Time (Daily)', action: () => this.setCurrentGrouping('time-daily') },
-            { label: 'Group by Time (Hourly)', action: () => this.setCurrentGrouping('time-hourly') },
-            { label: 'Group by Time (Weekly)', action: () => this.setCurrentGrouping('time-weekly') },
-            { label: 'Group by Time (Monthly)', action: () => this.setCurrentGrouping('time-monthly') },
-            { label: 'Group by Status', action: () => this.setCurrentGrouping('status') },
-            { label: 'Group by Derivations', action: () => this.setCurrentGrouping('derived') },
-            { label: 'Group by Content Similarity', action: () => this.setCurrentGrouping('similarity-content') },
-            { label: 'Group by Keywords', action: () => this.setCurrentGrouping('similarity-keywords') },
-            { label: 'Group by Terms', action: () => this.setCurrentGrouping('similarity-terms') },
-            { label: 'Group by Relationships (Basic)', action: () => this.setCurrentGrouping('relationships') },
-            { label: 'Group by Task Relations', action: () => this.setCurrentGrouping('task-relationships') },
-            { label: 'Group by Derivation Path', action: () => this.setCurrentGrouping('derivation-path') },
-            { label: 'Group by Inference Type', action: () => this.setCurrentGrouping('inference-type') },
-            { label: 'Ungroup', action: () => this._disableGrouping() },
-            { label: 'Cancel', action: () => {} }
+            {label: 'Group by Priority', action: () => this.setCurrentGrouping('priority')},
+            {label: 'Group by Time (Daily)', action: () => this.setCurrentGrouping('time-daily')},
+            {label: 'Group by Time (Hourly)', action: () => this.setCurrentGrouping('time-hourly')},
+            {label: 'Group by Time (Weekly)', action: () => this.setCurrentGrouping('time-weekly')},
+            {label: 'Group by Time (Monthly)', action: () => this.setCurrentGrouping('time-monthly')},
+            {label: 'Group by Status', action: () => this.setCurrentGrouping('status')},
+            {label: 'Group by Derivations', action: () => this.setCurrentGrouping('derived')},
+            {label: 'Group by Content Similarity', action: () => this.setCurrentGrouping('similarity-content')},
+            {label: 'Group by Keywords', action: () => this.setCurrentGrouping('similarity-keywords')},
+            {label: 'Group by Terms', action: () => this.setCurrentGrouping('similarity-terms')},
+            {label: 'Group by Relationships (Basic)', action: () => this.setCurrentGrouping('relationships')},
+            {label: 'Group by Task Relations', action: () => this.setCurrentGrouping('task-relationships')},
+            {label: 'Group by Derivation Path', action: () => this.setCurrentGrouping('derivation-path')},
+            {label: 'Group by Inference Type', action: () => this.setCurrentGrouping('inference-type')},
+            {label: 'Ungroup', action: () => this._disableGrouping()},
+            {
+                label: 'Cancel', action: () => {
+                }
+            }
         ];
 
-        const position = { top: 5, left: 5 };
+        const position = {top: 5, left: 5};
         this.contextMenu.show(position, groupingOptions);
     }
 
     _disableGrouping() {
         this.enableGrouping = false;
         this._updateDisplay();
-        this.emit('grouping-mode-changed', { mode: 'none', totalModes: 0 });
+        this.emit('grouping-mode-changed', {mode: 'none', totalModes: 0});
     }
 
     /**
@@ -811,20 +814,20 @@ export class TaskEditorComponent extends BaseComponent {
      */
     getAvailableGroupingCriteria() {
         return [
-            { id: 'priority', label: 'Priority' },
-            { id: 'time-daily', label: 'Time (Daily)' },
-            { id: 'time-hourly', label: 'Time (Hourly)' },
-            { id: 'time-weekly', label: 'Time (Weekly)' },
-            { id: 'time-monthly', label: 'Time (Monthly)' },
-            { id: 'status', label: 'Status' },
-            { id: 'derived', label: 'Derivations' },
-            { id: 'similarity-content', label: 'Content Similarity' },
-            { id: 'similarity-keywords', label: 'Keyword Similarity' },
-            { id: 'similarity-terms', label: 'Term Similarity' },
-            { id: 'relationships', label: 'Relationships' },
-            { id: 'task-relationships', label: 'Task Relations' },
-            { id: 'derivation-path', label: 'Derivation Path' },
-            { id: 'inference-type', label: 'Inference Type' }
+            {id: 'priority', label: 'Priority'},
+            {id: 'time-daily', label: 'Time (Daily)'},
+            {id: 'time-hourly', label: 'Time (Hourly)'},
+            {id: 'time-weekly', label: 'Time (Weekly)'},
+            {id: 'time-monthly', label: 'Time (Monthly)'},
+            {id: 'status', label: 'Status'},
+            {id: 'derived', label: 'Derivations'},
+            {id: 'similarity-content', label: 'Content Similarity'},
+            {id: 'similarity-keywords', label: 'Keyword Similarity'},
+            {id: 'similarity-terms', label: 'Term Similarity'},
+            {id: 'relationships', label: 'Relationships'},
+            {id: 'task-relationships', label: 'Task Relations'},
+            {id: 'derivation-path', label: 'Derivation Path'},
+            {id: 'inference-type', label: 'Inference Type'}
         ];
     }
 
@@ -833,14 +836,14 @@ export class TaskEditorComponent extends BaseComponent {
         this.allGroupsExpanded = true;
         this.expandedGroups.clear();
         this._updateDisplay();
-        this.emit('groups-expanded', { count: this.tasks.length });
+        this.emit('groups-expanded', {count: this.tasks.length});
     }
 
     collapseAllGroups() {
         this.allGroupsExpanded = false;
         this.expandedGroups.clear();
         this._updateDisplay();
-        this.emit('groups-collapsed', { count: this.tasks.length });
+        this.emit('groups-collapsed', {count: this.tasks.length});
     }
 
     toggleGroup(groupKey) {
@@ -850,7 +853,7 @@ export class TaskEditorComponent extends BaseComponent {
             this.expandedGroups.add(groupKey);
         }
         this._updateDisplay();
-        this.emit('group-toggled', { group: groupKey, isExpanded: this.expandedGroups.has(groupKey) });
+        this.emit('group-toggled', {group: groupKey, isExpanded: this.expandedGroups.has(groupKey)});
     }
 
     // Context menu and task operation methods
@@ -869,16 +872,22 @@ export class TaskEditorComponent extends BaseComponent {
             flashDuration: 100,
             callback: () => {
                 const menuItems = [
-                    { label: '🗑️ Delete Task', action: () => this.deleteTask(index) },
-                    { label: '✏️ Edit Task', action: () => this.editTask(index) },
+                    {label: '🗑️ Delete Task', action: () => this.deleteTask(index)},
+                    {label: '✏️ Edit Task', action: () => this.editTask(index)},
                     {
                         label: '⚖️ Adjust Priority',
                         action: () => this._showPriorityMenu(task, index)
                     },
-                    { label: task.pinned ? '📍 Unpin Task' : '📌 Pin Task', action: () => this._togglePinTask(index) },
-                    { label: task.archived ? '📂 Unarchive Task' : '📦 Archive Task', action: () => this._toggleArchiveTask(index) },
-                    { label: '📋 Duplicate Task', action: () => this._duplicateTask(index) },
-                    { label: 'Cancel', action: () => {} }
+                    {label: task.pinned ? '📍 Unpin Task' : '📌 Pin Task', action: () => this._togglePinTask(index)},
+                    {
+                        label: task.archived ? '📂 Unarchive Task' : '📦 Archive Task',
+                        action: () => this._toggleArchiveTask(index)
+                    },
+                    {label: '📋 Duplicate Task', action: () => this._duplicateTask(index)},
+                    {
+                        label: 'Cancel', action: () => {
+                        }
+                    }
                 ];
 
                 const position = this._calculateMenuPosition(index);
@@ -908,7 +917,7 @@ export class TaskEditorComponent extends BaseComponent {
     }
 
     _calculateMenuPosition(index) {
-        if (!this.element) return { top: 0, left: 0 };
+        if (!this.element) return {top: 0, left: 0};
 
         const itemHeight = 1;
         const topOffset = this.element.ibottom + (index * itemHeight);
@@ -922,10 +931,16 @@ export class TaskEditorComponent extends BaseComponent {
 
     _showPriorityMenu(task, index) {
         const priorityMenuItems = [
-            { label: 'Priority: Direct Only', action: () => this._adjustPriorityWithMode(task, index, 'direct') },
-            { label: 'Priority: Cascade to Derived Tasks', action: () => this._adjustPriorityWithMode(task, index, 'cascade') },
-            { label: 'Priority: Custom Override', action: () => this._adjustPriorityWithMode(task, index, 'custom') },
-            { label: 'Cancel', action: () => {} }
+            {label: 'Priority: Direct Only', action: () => this._adjustPriorityWithMode(task, index, 'direct')},
+            {
+                label: 'Priority: Cascade to Derived Tasks',
+                action: () => this._adjustPriorityWithMode(task, index, 'cascade')
+            },
+            {label: 'Priority: Custom Override', action: () => this._adjustPriorityWithMode(task, index, 'custom')},
+            {
+                label: 'Cancel', action: () => {
+                }
+            }
         ];
 
         const position = this._calculateMenuPosition(index);
@@ -968,7 +983,7 @@ export class TaskEditorComponent extends BaseComponent {
                         flashDuration: 150,
                         callback: () => {
                             this.removeTask(index);
-                            this.emit('task-deleted', { task, index });
+                            this.emit('task-deleted', {task, index});
                             this.engine?.components?.logViewer?.addInfo(`🗑️ Task deleted: ${task.content.substring(0, 50)}${task.content.length > 50 ? '...' : ''}`);
                         }
                     });
@@ -991,7 +1006,7 @@ export class TaskEditorComponent extends BaseComponent {
                         color: 'yellow',
                         flashDuration: 150,
                         callback: () => {
-                            const oldTask = { ...this.tasks[index] };
+                            const oldTask = {...this.tasks[index]};
                             this.tasks[index].content = newContent;
                             this._updateDisplay();
 
@@ -1064,7 +1079,7 @@ export class TaskEditorComponent extends BaseComponent {
         const selected = this.getSelectedTasks();
         if (selected.length > 0) {
             const task = selected[0].task;
-            this.emit('execute-task', { task });
+            this.emit('execute-task', {task});
             this.engine?.components?.logViewer?.addInfo(`🏃 Executing task: ${task.content}`);
         }
     }
@@ -1073,7 +1088,7 @@ export class TaskEditorComponent extends BaseComponent {
         const selected = this.getSelectedTasks();
         if (selected.length > 0) {
             selected.forEach((item, idx) => {
-                setTimeout(() => this.emit('execute-task', { task: item.task }), idx * 100);
+                setTimeout(() => this.emit('execute-task', {task: item.task}), idx * 100);
             });
             this.engine?.components?.logViewer?.addInfo(`🏃 Executing ${selected.length} tasks...`);
         }
@@ -1084,7 +1099,7 @@ export class TaskEditorComponent extends BaseComponent {
             const content = this.tasks[index].content;
             // In a real implementation, this would copy to clipboard
             this.engine?.components?.logViewer?.addInfo(`📋 Copied task content to buffer: ${content}`);
-            this.emit('task-content-copied', { content, index });
+            this.emit('task-content-copied', {content, index});
         }
     }
 
@@ -1102,7 +1117,7 @@ export class TaskEditorComponent extends BaseComponent {
             return;
         }
 
-        this._saveStateToHistory('batch-duplicate', { count: selected.length });
+        this._saveStateToHistory('batch-duplicate', {count: selected.length});
 
         const duplicatedTasks = [];
         for (const item of selected) {
@@ -1124,7 +1139,7 @@ export class TaskEditorComponent extends BaseComponent {
 
         this._updateDisplay();
         this.engine?.components?.logViewer?.addInfo(`📋 Duplicated ${selected.length} task(s)`);
-        this.emit('batch-tasks-duplicated', { original: selected, duplicated: duplicatedTasks });
+        this.emit('batch-tasks-duplicated', {original: selected, duplicated: duplicatedTasks});
     }
 
     _cutSelectedTasks() {
@@ -1150,11 +1165,11 @@ export class TaskEditorComponent extends BaseComponent {
         this.emit('batch-priority-adjustment-requested', {
             taskCount: selected.length,
             onConfirm: (newPriority, mode) => {
-                this._saveStateToHistory('batch-priority-adjustment', { 
-                    count: selected.length, 
+                this._saveStateToHistory('batch-priority-adjustment', {
+                    count: selected.length,
                     oldPriorities: selected.map(item => item.task.priority),
-                    newPriority, 
-                    mode 
+                    newPriority,
+                    mode
                 });
 
                 for (const item of selected) {
@@ -1167,9 +1182,9 @@ export class TaskEditorComponent extends BaseComponent {
 
                 this._updateDisplay();
                 this.engine?.components?.logViewer?.addInfo(`⚖️ Adjusted priority of ${selected.length} task(s) to ${newPriority} (mode: ${mode})`);
-                this.emit('batch-priority-adjusted', { 
-                    count: selected.length, 
-                    newPriority, 
+                this.emit('batch-priority-adjusted', {
+                    count: selected.length,
+                    newPriority,
                     mode,
                     tasks: selected.map(item => item.task)
                 });
@@ -1186,7 +1201,7 @@ export class TaskEditorComponent extends BaseComponent {
         }
 
         this.engine?.components?.logViewer?.addInfo(`📋 Batch move functionality would be implemented here - ${selected.length} tasks selected`);
-        this.emit('batch-move-requested', { count: selected.length });
+        this.emit('batch-move-requested', {count: selected.length});
     }
 
     // Advanced batch operations
@@ -1198,7 +1213,7 @@ export class TaskEditorComponent extends BaseComponent {
             .map(item => item.index)
             .sort((a, b) => b - a);
 
-        this._saveStateToHistory('batch-delete', { 
+        this._saveStateToHistory('batch-delete', {
             count: sortedIndices.length,
             deletedTasks: selectedTasks.map(item => item.task)
         });
@@ -1211,7 +1226,7 @@ export class TaskEditorComponent extends BaseComponent {
 
         this._updateDisplay();
         this.engine?.components?.logViewer?.addInfo(`🗑️ Deleted ${sortedIndices.length} task(s)`);
-        this.emit('batch-tasks-deleted', { count: sortedIndices.length });
+        this.emit('batch-tasks-deleted', {count: sortedIndices.length});
     }
 
     // Task archiving and pinning methods
@@ -1221,7 +1236,7 @@ export class TaskEditorComponent extends BaseComponent {
             this.tasks[index].archivedAt = Date.now();
             this._updateDisplay();
             this.engine?.components?.logViewer?.addInfo(`📦 Archived task: ${this.tasks[index].content.substring(0, 50)}...`);
-            this.emit('task-archived', { task: this.tasks[index], index });
+            this.emit('task-archived', {task: this.tasks[index], index});
         }
     }
 
@@ -1231,7 +1246,7 @@ export class TaskEditorComponent extends BaseComponent {
             delete this.tasks[index].archivedAt;
             this._updateDisplay();
             this.engine?.components?.logViewer?.addInfo(`📂 Unarchived task: ${this.tasks[index].content.substring(0, 50)}...`);
-            this.emit('task-unarchived', { task: this.tasks[index], index });
+            this.emit('task-unarchived', {task: this.tasks[index], index});
         }
     }
 
@@ -1240,7 +1255,7 @@ export class TaskEditorComponent extends BaseComponent {
             this.tasks[index].pinned = true;
             this._updateDisplay();
             this.engine?.components?.logViewer?.addInfo(`📌 Pinned task: ${this.tasks[index].content.substring(0, 50)}...`);
-            this.emit('task-pinned', { task: this.tasks[index], index });
+            this.emit('task-pinned', {task: this.tasks[index], index});
         }
     }
 
@@ -1249,7 +1264,7 @@ export class TaskEditorComponent extends BaseComponent {
             this.tasks[index].pinned = false;
             this._updateDisplay();
             this.engine?.components?.logViewer?.addInfo(`📍 Unpinned task: ${this.tasks[index].content.substring(0, 50)}...`);
-            this.emit('task-unpinned', { task: this.tasks[index], index });
+            this.emit('task-unpinned', {task: this.tasks[index], index});
         }
     }
 
@@ -1263,7 +1278,7 @@ export class TaskEditorComponent extends BaseComponent {
         const timestamp = new Date(task.timestamp ?? Date.now()).toLocaleTimeString();
         const content = task.content ?? 'Unknown Task';
         const relationshipIndicator = this._getRelationshipIndicator(task);
-        
+
         // Add pin and archive indicators
         const pinIndicator = task.pinned ? '📌' : '  ';
         const archiveIndicator = task.archived ? '{red}📦{/}' : '  ';
@@ -1274,16 +1289,19 @@ export class TaskEditorComponent extends BaseComponent {
     // Filtering methods
     _showFilterMenu() {
         const filterOptions = [
-            { label: 'Filter by Priority', action: () => this._applyPriorityFilter() },
-            { label: 'Filter by Status', action: () => this._applyStatusFilter() },
-            { label: 'Filter by Time', action: () => this._applyTimeFilter() },
-            { label: 'Show All', action: () => this._showAllTasks() },
-            { label: 'Show Pinned', action: () => this._showPinnedTasks() },
-            { label: 'Show Archived', action: () => this._showArchivedTasks() },
-            { label: 'Cancel', action: () => {} }
+            {label: 'Filter by Priority', action: () => this._applyPriorityFilter()},
+            {label: 'Filter by Status', action: () => this._applyStatusFilter()},
+            {label: 'Filter by Time', action: () => this._applyTimeFilter()},
+            {label: 'Show All', action: () => this._showAllTasks()},
+            {label: 'Show Pinned', action: () => this._showPinnedTasks()},
+            {label: 'Show Archived', action: () => this._showArchivedTasks()},
+            {
+                label: 'Cancel', action: () => {
+                }
+            }
         ];
 
-        const position = { top: 5, left: 5 };
+        const position = {top: 5, left: 5};
         this.contextMenu.show(position, filterOptions);
     }
 
@@ -1328,28 +1346,28 @@ export class TaskEditorComponent extends BaseComponent {
     }
 
     _performTaskSearch(searchTerm, options = {}) {
-        const { useRegex = false, matchCase = false, searchFields = ['content'] } = options;
-        
+        const {useRegex = false, matchCase = false, searchFields = ['content']} = options;
+
         try {
             let matches = [];
             let searchRegex = null;
-            
+
             if (useRegex) {
                 const flags = matchCase ? 'g' : 'gi';
                 searchRegex = new RegExp(searchTerm, flags);
             } else {
                 const searchTermNormalized = matchCase ? searchTerm : searchTerm.toLowerCase();
-                const testFunction = matchCase 
-                    ? (text) => text.includes(searchTermNormalized) 
+                const testFunction = matchCase
+                    ? (text) => text.includes(searchTermNormalized)
                     : (text) => text.toLowerCase().includes(searchTermNormalized);
-                
+
                 // Search through all specified fields
                 for (let i = 0; i < this.tasks.length; i++) {
                     const task = this.tasks[i];
-                    
+
                     for (const field of searchFields) {
                         let fieldValue = '';
-                        
+
                         switch (field) {
                             case 'content':
                                 fieldValue = task.content || '';
@@ -1369,22 +1387,22 @@ export class TaskEditorComponent extends BaseComponent {
                             default:
                                 fieldValue = task[field] || '';
                         }
-                        
+
                         if (testFunction(fieldValue)) {
-                            matches.push({ index: i, task, field });
+                            matches.push({index: i, task, field});
                             break; // Found a match in one field, no need to check others
                         }
                     }
                 }
             }
-            
+
             if (useRegex) {
                 for (let i = 0; i < this.tasks.length; i++) {
                     const task = this.tasks[i];
-                    
+
                     for (const field of searchFields) {
                         let fieldValue = '';
-                        
+
                         switch (field) {
                             case 'content':
                                 fieldValue = task.content || '';
@@ -1404,9 +1422,9 @@ export class TaskEditorComponent extends BaseComponent {
                             default:
                                 fieldValue = task[field] || '';
                         }
-                        
+
                         if (searchRegex.test(fieldValue)) {
-                            matches.push({ index: i, task, field });
+                            matches.push({index: i, task, field});
                             break;
                         }
                     }
@@ -1414,18 +1432,18 @@ export class TaskEditorComponent extends BaseComponent {
             }
 
             this.engine?.components?.logViewer?.addInfo(`🔍 Found ${matches.length} matches for: "${searchTerm}"`);
-            this.emit('search-completed', { searchTerm, options, matches, count: matches.length });
-            
+            this.emit('search-completed', {searchTerm, options, matches, count: matches.length});
+
             // Optionally highlight matches in the UI
             if (matches.length > 0) {
                 // Maybe highlight the first match or provide navigation
                 this.element.select(matches[0].index);
             }
-            
+
             return matches;
         } catch (error) {
             this.engine?.components?.logViewer?.addError(`🔍 Search error: ${error.message}`);
-            this.emit('search-error', { error: error.message, searchTerm });
+            this.emit('search-error', {error: error.message, searchTerm});
             return [];
         }
     }
@@ -1436,29 +1454,29 @@ export class TaskEditorComponent extends BaseComponent {
         if (!filterConfig) return this.tasks;
 
         const filteredTasks = [];
-        
+
         for (const task of this.tasks) {
             let matches = true;
-            
+
             if (filterConfig.priorityRange) {
-                const { min, max } = filterConfig.priorityRange;
+                const {min, max} = filterConfig.priorityRange;
                 if (task.priority < min || task.priority > max) {
                     matches = false;
                 }
             }
-            
+
             if (filterConfig.timeRange) {
-                const { start, end } = filterConfig.timeRange;
+                const {start, end} = filterConfig.timeRange;
                 const taskTime = new Date(task.timestamp);
                 if (taskTime < start || taskTime > end) {
                     matches = false;
                 }
             }
-            
+
             if (filterConfig.status && task.status !== filterConfig.status) {
                 matches = false;
             }
-            
+
             if (filterConfig.contentType) {
                 if (filterConfig.contentType === 'question' && !task.content?.includes('?')) {
                     matches = false;
@@ -1468,12 +1486,12 @@ export class TaskEditorComponent extends BaseComponent {
                     matches = false;
                 }
             }
-            
+
             if (matches) {
                 filteredTasks.push(task);
             }
         }
-        
+
         return filteredTasks;
     }
 
@@ -1582,7 +1600,7 @@ export class TaskEditorComponent extends BaseComponent {
 
         // Get the state we're moving to (before we move the index)
         const stateToRestoreIndex = this.historyIndex - 1;
-        
+
         if (stateToRestoreIndex >= 0) {
             // Restore to a saved state in the history
             const prevState = this.historyStack[stateToRestoreIndex];
@@ -1591,16 +1609,16 @@ export class TaskEditorComponent extends BaseComponent {
             // If we're going before the first saved state, restore to initial empty state
             this.tasks = [];
         }
-        
+
         // Now update the index
         this.historyIndex = stateToRestoreIndex;
-        
+
         this._updateDisplay();
-        
+
         // Get the operation from the state we're leaving (the one we were at before)
         const nextOperation = this.historyStack[this.historyIndex + 1]?.operation || 'unknown';
         this.engine?.components?.logViewer?.addInfo(`↩️  Undo: ${nextOperation}`);
-        this.emit('history-undo', { operation: nextOperation, index: this.historyIndex });
+        this.emit('history-undo', {operation: nextOperation, index: this.historyIndex});
         return true;
     }
 
@@ -1612,25 +1630,25 @@ export class TaskEditorComponent extends BaseComponent {
 
         // Get the state we're moving to (before we move the index)
         const stateToRestoreIndex = this.historyIndex + 1;
-        
+
         // Now we're at the state we want to restore
         const nextState = this.historyStack[stateToRestoreIndex];
         if (nextState) {
             this.tasks = JSON.parse(JSON.stringify(nextState.tasks)); // Restore to next state
         }
-        
+
         // Now update the index
         this.historyIndex = stateToRestoreIndex;
-        
+
         this._updateDisplay();
         this.engine?.components?.logViewer?.addInfo(`↪️  Redo: ${nextState.operation}`);
-        this.emit('history-redo', { operation: nextState.operation, index: this.historyIndex });
+        this.emit('history-redo', {operation: nextState.operation, index: this.historyIndex});
         return true;
     }
 
     // Enhanced task management with history
     setTasks(tasks = []) {
-        this._saveStateToHistory('set-tasks', { previousCount: this.tasks.length, newCount: tasks.length });
+        this._saveStateToHistory('set-tasks', {previousCount: this.tasks.length, newCount: tasks.length});
         this.tasks = [...tasks];
         this._updateDisplay();
     }
@@ -1639,7 +1657,7 @@ export class TaskEditorComponent extends BaseComponent {
         // Add the task (changing the current state)
         this.tasks.push(task);
         // Now save the new state after adding the task
-        this._saveStateToHistory('add-task', { task });
+        this._saveStateToHistory('add-task', {task});
         // Current display shows the new state
         this._updateDisplay();
     }
@@ -1647,7 +1665,7 @@ export class TaskEditorComponent extends BaseComponent {
     removeTask(index) {
         if (index >= 0 && index < this.tasks.length) {
             const removedTask = this.tasks[index];
-            this._saveStateToHistory('remove-task', { index, task: removedTask });
+            this._saveStateToHistory('remove-task', {index, task: removedTask});
             this.tasks.splice(index, 1);
             this._updateDisplay();
         }
@@ -1668,7 +1686,7 @@ export class TaskEditorComponent extends BaseComponent {
                         flashDuration: 150,
                         callback: () => {
                             this.removeTask(index);
-                            this.emit('task-deleted', { task, index });
+                            this.emit('task-deleted', {task, index});
                             this.engine?.components?.logViewer?.addInfo(`🗑️ Task deleted: ${task.content.substring(0, 50)}${task.content.length > 50 ? '...' : ''}`);
                         }
                     });
@@ -1691,8 +1709,11 @@ export class TaskEditorComponent extends BaseComponent {
                         color: 'yellow',
                         flashDuration: 150,
                         callback: () => {
-                            const oldTask = { ...this.tasks[index] };
-                            this._saveStateToHistory('edit-task', { oldTask, newTask: { ...this.tasks[index], content: newContent } });
+                            const oldTask = {...this.tasks[index]};
+                            this._saveStateToHistory('edit-task', {
+                                oldTask,
+                                newTask: {...this.tasks[index], content: newContent}
+                            });
                             this.tasks[index].content = newContent;
                             this._updateDisplay();
 
@@ -1725,7 +1746,7 @@ export class TaskEditorComponent extends BaseComponent {
                 }
             };
 
-            this._saveStateToHistory('duplicate-task', { originalTask, duplicatedTask });
+            this._saveStateToHistory('duplicate-task', {originalTask, duplicatedTask});
             this.tasks.push(duplicatedTask);
             this._updateDisplay();
 

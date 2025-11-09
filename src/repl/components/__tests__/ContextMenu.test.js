@@ -1,5 +1,5 @@
-import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
-import { ContextMenu } from '../ContextMenu.js';
+import {afterEach, beforeEach, describe, expect, test} from 'vitest';
+import {ContextMenu} from '../ContextMenu.js';
 import blessed from 'blessed';
 
 describe('ContextMenu', () => {
@@ -29,7 +29,7 @@ describe('ContextMenu', () => {
     test('should initialize without errors', () => {
         contextMenu = new ContextMenu({
             parent: screen,
-            position: { top: 5, left: 10 }
+            position: {top: 5, left: 10}
         });
 
         const element = contextMenu.init();
@@ -40,16 +40,22 @@ describe('ContextMenu', () => {
     test('should show and hide properly', () => {
         contextMenu = new ContextMenu({
             parent: screen,
-            position: { top: 5, left: 10 }
+            position: {top: 5, left: 10}
         });
         contextMenu.init();
 
         const menuItems = [
-            { label: 'Option 1', action: () => {} },
-            { label: 'Option 2', action: () => {} }
+            {
+                label: 'Option 1', action: () => {
+                }
+            },
+            {
+                label: 'Option 2', action: () => {
+                }
+            }
         ];
 
-        contextMenu.show({ top: 5, left: 10 }, menuItems);
+        contextMenu.show({top: 5, left: 10}, menuItems);
         expect(contextMenu.isVisible).toBe(true);
 
         contextMenu.hide();
@@ -59,17 +65,20 @@ describe('ContextMenu', () => {
     test('should set and get menu items correctly', () => {
         contextMenu = new ContextMenu({
             parent: screen,
-            position: { top: 5, left: 10 }
+            position: {top: 5, left: 10}
         });
         contextMenu.init();
 
         const menuItems = [
-            { label: 'Test Option', action: () => {} }
+            {
+                label: 'Test Option', action: () => {
+                }
+            }
         ];
 
         contextMenu.setMenuItems(menuItems);
         const retrievedItems = contextMenu.getMenuItems();
-        
+
         expect(retrievedItems).toHaveLength(1);
         expect(retrievedItems[0].label).toBe('Test Option');
     });

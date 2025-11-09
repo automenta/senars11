@@ -1,4 +1,4 @@
-import { DEMO_COMMANDS } from '../../config/constants.js';
+import {DEMO_COMMANDS} from '../../config/constants.js';
 
 const COMMANDS = DEMO_COMMANDS;
 const HELP_MESSAGE = `🤖 Available commands:
@@ -71,15 +71,20 @@ export class CommandProcessor {
         return new Map(
             Object.entries(COMMANDS)
                 .filter(([method]) => method !== 'next')
-                .flatMap(([method, aliases]) => 
+                .flatMap(([method, aliases]) =>
                     aliases.map(alias => [alias, this[`_${method}`]?.bind(this)])
                 )
                 .filter(([, handler]) => handler)
         );
     }
 
-    getCommandMap() { return this.commands; }
-    getCommandFunction(commandName) { return this.commands.get(commandName); }
+    getCommandMap() {
+        return this.commands;
+    }
+
+    getCommandFunction(commandName) {
+        return this.commands.get(commandName);
+    }
 
     async executeCommand(cmd, ...args) {
         const commandFn = this.commands.get(cmd);
@@ -98,7 +103,7 @@ export class CommandProcessor {
 
     _status() {
         const stats = this.nar.getStats();
-        const { memoryStats = {} } = stats;
+        const {memoryStats = {}} = stats;
         const conceptCount = memoryStats.conceptCount ?? memoryStats.totalConcepts ?? 0;
         const focusTasks = memoryStats.focusTaskCount ?? memoryStats.focusConceptsCount ?? 0;
         const totalTasks = memoryStats.taskCount ?? memoryStats.totalTasks ?? 0;
@@ -115,7 +120,7 @@ export class CommandProcessor {
 
     _memory() {
         const stats = this.nar.getStats();
-        const { memoryStats = {} } = stats;
+        const {memoryStats = {}} = stats;
         const concepts = memoryStats.conceptCount ?? memoryStats.totalConcepts ?? 0;
         const tasks = memoryStats.taskCount ?? memoryStats.totalTasks ?? 0;
         const focusSize = memoryStats.focusSize ?? memoryStats.focusTaskCount ?? memoryStats.focusConceptsCount ?? 0;
@@ -198,8 +203,8 @@ export class CommandProcessor {
         if (!examplePath) return `❌ Unknown example: ${exampleName}. Use "/demo" for a list of available examples.`;
 
         try {
-            const { fileURLToPath } = await import('url');
-            const { dirname, resolve } = await import('path');
+            const {fileURLToPath} = await import('url');
+            const {dirname, resolve} = await import('path');
             const __dirname = dirname(fileURLToPath(import.meta.url));
             const filePath = resolve(__dirname, examplePath);
 

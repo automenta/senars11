@@ -1,10 +1,10 @@
-import { ReplEngine } from './ReplEngine.js';
-import { EventEmitter } from 'events';
-import { TaskEditorComponent } from './components/TaskEditorComponent.js';
-import { LogViewerComponent } from './components/LogViewerComponent.js';
-import { StatusBarComponent } from './components/StatusBarComponent.js';
-import { TaskInputComponent } from './components/TaskInputComponent.js';
-import { ViewManager } from '../repl/ViewManager.js';
+import {ReplEngine} from './ReplEngine.js';
+import {EventEmitter} from 'events';
+import {TaskEditorComponent} from './components/TaskEditorComponent.js';
+import {LogViewerComponent} from './components/LogViewerComponent.js';
+import {StatusBarComponent} from './components/StatusBarComponent.js';
+import {TaskInputComponent} from './components/TaskInputComponent.js';
+import {ViewManager} from '../repl/ViewManager.js';
 import blessed from 'blessed';
 import WebSocket from 'ws';
 
@@ -71,8 +71,8 @@ export class TUIRepl extends EventEmitter {
                 left: '0',
                 width: '100%',
                 height: '1',
-                border: { type: 'line' },
-                style: { fg: 'white', bg: 'blue', border: { fg: 'yellow' } },
+                border: {type: 'line'},
+                style: {fg: 'white', bg: 'blue', border: {fg: 'yellow'}},
                 content: ''
             },
             parent: this.screen,
@@ -86,12 +86,12 @@ export class TUIRepl extends EventEmitter {
                 left: '0',
                 width: '40%',
                 height: '100%-1',
-                border: { type: 'line' },
+                border: {type: 'line'},
                 style: {
                     fg: 'white',
                     bg: 'black',
-                    border: { fg: 'green' },
-                    selected: { fg: 'black', bg: 'lightgreen' }
+                    border: {fg: 'green'},
+                    selected: {fg: 'black', bg: 'lightgreen'}
                 },
                 selectedFg: 'black',
                 selectedBg: 'lightgreen',
@@ -114,8 +114,8 @@ export class TUIRepl extends EventEmitter {
                 left: '40%',
                 width: '60%',
                 height: '100%-1',
-                border: { type: 'line' },
-                style: { fg: 'white', bg: 'black', border: { fg: 'cyan' } },
+                border: {type: 'line'},
+                style: {fg: 'white', bg: 'black', border: {fg: 'cyan'}},
                 scrollable: true,
                 alwaysScroll: true,
                 mouse: true,
@@ -155,7 +155,7 @@ export class TUIRepl extends EventEmitter {
         });
 
         this.components.taskInput.init();
-        
+
         // Add taskInput to screen so ViewManager can manage its positioning
         if (this.screen && this.components.taskInput.getElement()) {
             this.screen.append(this.components.taskInput.getElement());
@@ -196,7 +196,10 @@ export class TUIRepl extends EventEmitter {
                 });
             },
             'command.error': (data) => this.components.logViewer.addError(`❌ Error executing command: ${data.error}`),
-            'engine.quit': () => { this.screen.destroy(); process.exit(0); },
+            'engine.quit': () => {
+                this.screen.destroy();
+                process.exit(0);
+            },
             'nar.cycle.step': (data) => this.components.logViewer.addInfo(`⏭️  Single cycle executed. Cycle: ${data.cycle}`),
             'nar.cycle.running': () => this.components.logViewer.addInfo('🏃 Running continuously...'),
             'nar.cycle.stop': () => this.components.logViewer.addInfo('🛑 Run stopped by user.'),
@@ -252,7 +255,7 @@ export class TUIRepl extends EventEmitter {
                     top: this.screen.height - Math.min(data.options.length + 3, 10), // Position near bottom, adjusted for menu size
                     left: 2
                 };
-                
+
                 // Convert pulldown options to ContextMenu format
                 const menuItems = data.options.map(option => ({
                     label: option.shortcut ? `${option.label} (${option.shortcut})` : option.label,
@@ -375,7 +378,7 @@ export class TUIRepl extends EventEmitter {
                     }, this.remoteConfig.reconnectInterval);
                 } else {
                     this.components.logViewer.addError('❌ Max reconnection attempts reached. Manual reconnection required.');
-                    this.emit('remote.disconnected', { reason: 'max_attempts' });
+                    this.emit('remote.disconnected', {reason: 'max_attempts'});
                 }
             });
 
@@ -384,7 +387,7 @@ export class TUIRepl extends EventEmitter {
                 this.components.logViewer.addError(`❌ WebSocket error: ${error.message}`);
 
                 if (!this.isReconnecting) {
-                    this.emit('remote.error', { error: error.message });
+                    this.emit('remote.error', {error: error.message});
                 }
             });
 
@@ -434,7 +437,7 @@ export class TUIRepl extends EventEmitter {
                 this.sessionMetadata.lastActivity = Date.now();
             },
             'connection-quality': (payload) => {
-                this.connectionQuality = { ...this.connectionQuality, ...payload };
+                this.connectionQuality = {...this.connectionQuality, ...payload};
                 this.components.statusBar?.updateConnectionQuality?.(this.connectionQuality);
             }
         };
@@ -647,7 +650,7 @@ export class TUIRepl extends EventEmitter {
             },
             'C-R': () => this.remoteConfig.enabled && (
                 this.components.logViewer.addInfo('🔄 Forcing remote reconnection...'),
-                this._connectToWebSocket()
+                    this._connectToWebSocket()
             ),
             'C-u': () => this.remoteConfig.enabled && this.toggleRemoteConnection(),
             '?': () => this.components.logViewer.addInfo('❓ Keyboard shortcuts: Ctrl+L/T/G=Views, SPACE/click status bar=Menu, Ctrl+H=Help, Ctrl+C=Exit, Ctrl+U=Toggle remote, ?=Help')

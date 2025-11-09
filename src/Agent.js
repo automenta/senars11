@@ -15,7 +15,7 @@ export class Input {
             task,
             priority,
             timestamp: Date.now(),
-            metadata: { ...metadata, createdAt: Date.now() },
+            metadata: {...metadata, createdAt: Date.now()},
             derivedTasks: [] // Track derived tasks from this input
         };
 
@@ -86,11 +86,11 @@ export class Input {
         const inputTask = this.getTaskById(inputId);
         return inputTask ? [...inputTask.derivedTasks] : [];
     }
-    
+
     getDerivationPath(taskId) {
         const task = this.getTaskById(taskId);
         if (!task) return [];
-        
+
         // In a full implementation, this would trace the full derivation path
         // For now, return direct dependencies
         return task.derivedTasks ? [...task.derivedTasks] : [];
@@ -118,7 +118,7 @@ export class Input {
                 task: newInput,
                 priority: newPriority,
                 timestamp: Date.now(), // Update timestamp
-                metadata: { ...oldTaskItem.metadata, ...metadata, modifiedAt: Date.now() },
+                metadata: {...oldTaskItem.metadata, ...metadata, modifiedAt: Date.now()},
                 derivedTasks: [] // Reset derived tasks
             };
 
@@ -180,7 +180,7 @@ export class Input {
         if (taskItem && taskItem.derivedTasks) {
             const index = taskItem.derivedTasks.findIndex(task => task.id === derivedTaskId);
             if (index !== -1) {
-                taskItem.derivedTasks[index] = { ...taskItem.derivedTasks[index], ...updatedTask };
+                taskItem.derivedTasks[index] = {...taskItem.derivedTasks[index], ...updatedTask};
             }
         }
     }

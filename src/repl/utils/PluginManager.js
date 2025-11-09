@@ -1,5 +1,5 @@
-import { ComponentRegistry } from './ComponentRegistry.js';
-import { EventEmitter } from 'events';
+import {ComponentRegistry} from './ComponentRegistry.js';
+import {EventEmitter} from 'events';
 
 /**
  * Plugin Manager - handles plugin loading, unloading, and lifecycle management
@@ -30,8 +30,8 @@ export class PluginManager extends EventEmitter {
 
         try {
             // Create plugin instance
-            const pluginInstance = typeof plugin === 'function' 
-                ? new plugin(this, options) 
+            const pluginInstance = typeof plugin === 'function'
+                ? new plugin(this, options)
                 : plugin;
 
             // Validate plugin interface
@@ -51,12 +51,12 @@ export class PluginManager extends EventEmitter {
                 metadata: pluginInstance.metadata || {}
             });
 
-            this.emit('plugin-loaded', { name, metadata: pluginInstance.metadata });
+            this.emit('plugin-loaded', {name, metadata: pluginInstance.metadata});
             console.log(`Plugin ${name} loaded successfully`);
             return true;
         } catch (error) {
             console.error(`Failed to load plugin ${name}:`, error);
-            this.emit('plugin-error', { name, error: error.message });
+            this.emit('plugin-error', {name, error: error.message});
             throw error;
         }
     }
@@ -72,7 +72,7 @@ export class PluginManager extends EventEmitter {
 
         try {
             const plugin = this.plugins.get(name);
-            
+
             // Call plugin's uninstall method if it exists
             if (plugin.instance.uninstall && typeof plugin.instance.uninstall === 'function') {
                 await plugin.instance.uninstall(this.componentRegistry);
@@ -80,12 +80,12 @@ export class PluginManager extends EventEmitter {
 
             // Remove plugin
             this.plugins.delete(name);
-            this.emit('plugin-unloaded', { name });
+            this.emit('plugin-unloaded', {name});
             console.log(`Plugin ${name} unloaded successfully`);
             return true;
         } catch (error) {
             console.error(`Failed to unload plugin ${name}:`, error);
-            this.emit('plugin-error', { name, error: error.message });
+            this.emit('plugin-error', {name, error: error.message});
             throw error;
         }
     }
