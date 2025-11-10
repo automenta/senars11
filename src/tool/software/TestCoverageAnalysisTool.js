@@ -69,28 +69,49 @@ export class TestCoverageAnalysisTool extends SoftwareAnalysisTool {
         // Collect test file relationships and coverage data
         const testResults = await this._collectTestResults();
         const coverageData = await this._collectCoverageData();
-        const sourceMappings = await this._mapSourceToTests(testResults, coverageData);
+        
+        // Only perform detailed source mapping if we have actual test results
+        let sourceMappings = {};
+        if (testResults.totalTests > 0) {
+            sourceMappings = await this._mapSourceToTests(testResults, coverageData);
+        } else {
+            // If no actual test results, still try to map based on file structure
+            sourceMappings = await this._mapSourceToTests(testResults, coverageData);
+        }
 
         const results = {
             summary: {
                 totalTests: testResults.totalTests || 0,
                 passedTests: testResults.passedTests || 0,
-                failedTests: testResults.failedTests || 0,
+                failedTests: Array.isArray(testResults.failedTests) ? testResults.failedTests.length : testResults.failedTests || 0,
                 coveragePercentage: coverageData?.lines || 0
             }
         };
 
-        // Analyze culprits of failing tests
-        if (includeFailing && testResults.failedTests && testResults.failedTests.length > 0) {
-            results.failingTestCulprits = await this._analyzeFailingTestCulprits(testResults.failedTests, sourceMappings, topN);
+        // Only analyze if we have actual test results
+        if (testResults.totalTests > 0) {
+            // Analyze culprits of failing tests
+            if (includeFailing && Array.isArray(testResults.failedTests) && testResults.failedTests.length > 0) {
+                results.failingTestCulprits = await this._analyzeFailingTestCulprits(testResults.failedTests, sourceMappings, topN);
+            }
+
+            // Analyze supports of passing tests
+            if (includePassing && Array.isArray(testResults.passedTestDetails) && testResults.passedTestDetails.length > 0) {
+                results.passingTestSupports = await this._analyzePassingTestSupports(testResults.passedTestDetails, sourceMappings, topN);
+            } else if (includePassing && Array.isArray(testResults.passedTestDetails) && testResults.passedTestDetails.length === 0 && Array.isArray(testResults.passedTestFiles) && testResults.passedTestFiles.length > 0) {
+                // Fallback to using the passed test files if detailed test info is not available
+                results.passingTestSupports = await this._analyzePassingTestSupports(testResults.passedTestFiles, sourceMappings, topN);
+            }
+        } else {
+            // When no test results, we can't provide meaningful test-to-source mappings
+            results.failingTestCulprits = [];
+            results.passingTestSupports = {
+                topSupports: [],
+                bottomSupports: []
+            };
         }
 
-        // Analyze supports of passing tests
-        if (includePassing && testResults.passedTests && testResults.passedTests.length > 0) {
-            results.passingTestSupports = await this._analyzePassingTestSupports(testResults.passedTests, sourceMappings, topN);
-        }
-
-        // Additional causal analysis
+        // Additional causal analysis (but results quality depends on having real test data)
         results.causalAnalysis = await this._performCausalAnalysis(sourceMappings, topN);
 
         if (verbose) {
@@ -113,15 +134,64 @@ export class TestCoverageAnalysisTool extends SoftwareAnalysisTool {
         // For now, we'll simulate by reading existing test reports
         // In a real implementation, we'd run the test framework
         try {
-            // Try to read existing test report
-            if (fs.existsSync('./test-results.json')) {
-                const testReport = JSON.parse(fs.readFileSync('./test-results.json', 'utf8'));
-                return this._parseTestReport(testReport);
+            // Try to read existing test report from various common locations
+            const possiblePaths = [
+                './test-results.json', 
+                './test-result.json', 
+                './junit.xml', // check if this should be parsed differently
+                './coverage/test-results.json' // some coverage setups output here
+            ];
+            
+            for (const path of possiblePaths) {
+                if (fs.existsSync(path)) {
+                    const testReport = JSON.parse(fs.readFileSync(path, 'utf8'));
+                    return this._parseTestReport(testReport);
+                }
             }
 
-            // If no test report exists, run tests to get results
+            // If no existing test report, try to run tests to get results
             const {spawnSync} = await import('child_process');
-            const testResult = spawnSync('npx', ['jest', '--config', 'jest.config.cjs', '--json', '--silent'], {
+            // Try different possible config file names
+            const possibleConfigs = ['jest.config.cjs', 'jest.config.js', 'jest.config.json', 'package.json'];
+            
+            for (const config of possibleConfigs) {
+                if (fs.existsSync(config)) {
+                    const testResult = spawnSync('npx', ['jest', `--config`, config, '--json', '--testLocationInResults', '--verbose=false'], {
+                        cwd: process.cwd(),
+                        timeout: 180000, // 3 minutes timeout
+                        encoding: 'utf8',
+                        stdio: ['pipe', 'pipe', 'pipe'],
+                        env: {
+                            ...process.env,
+                            NODE_NO_WARNINGS: '1',
+                            NODE_OPTIONS: '--experimental-vm-modules'
+                        }
+                    });
+
+                    if (testResult.status === 0 && testResult.stdout) {
+                        try {
+                            // Jest might output additional text alongside JSON, so parse carefully
+                            let output = testResult.stdout.trim();
+                            
+                            // Find the JSON part in the output (Jest sometimes prefixes with extra messages)
+                            const jsonStart = output.indexOf('{');
+                            const jsonEnd = output.lastIndexOf('}') + 1;
+                            if (jsonStart !== -1 && jsonEnd > jsonStart) {
+                                output = output.substring(jsonStart, jsonEnd);
+                            }
+                            
+                            const testOutput = JSON.parse(output);
+                            return this._parseTestReport(testOutput);
+                        } catch (parseError) {
+                            // If parsing fails, try other config files
+                            continue;
+                        }
+                    }
+                }
+            }
+
+            // If all configs fail, try running without explicit config
+            const testResult = spawnSync('npx', ['jest', '--json', '--testLocationInResults'], {
                 cwd: process.cwd(),
                 timeout: 180000,
                 encoding: 'utf8',
@@ -133,11 +203,25 @@ export class TestCoverageAnalysisTool extends SoftwareAnalysisTool {
                 }
             });
 
-            if (testResult.status === 0) {
-                const testOutput = JSON.parse(testResult.stdout);
-                return this._parseTestReport(testOutput);
+            if (testResult.status === 0 && testResult.stdout) {
+                try {
+                    let output = testResult.stdout.trim();
+                    
+                    // Find the JSON part in the output
+                    const jsonStart = output.indexOf('{');
+                    const jsonEnd = output.lastIndexOf('}') + 1;
+                    if (jsonStart !== -1 && jsonEnd > jsonStart) {
+                        output = output.substring(jsonStart, jsonEnd);
+                    }
+                    
+                    const testOutput = JSON.parse(output);
+                    return this._parseTestReport(testOutput);
+                } catch (parseError) {
+                    console.debug('Failed to parse Jest output with auto-detection');
+                }
             }
 
+            console.log('⚠️ No test results file found and jest execution did not produce results');
             return {
                 totalTests: 0,
                 passedTests: 0,
@@ -146,6 +230,7 @@ export class TestCoverageAnalysisTool extends SoftwareAnalysisTool {
             };
         } catch (error) {
             console.error('❌ Error collecting test results:', error.message);
+            console.error('Stack:', error.stack);
             return {
                 totalTests: 0,
                 passedTests: 0,
@@ -335,37 +420,40 @@ export class TestCoverageAnalysisTool extends SoftwareAnalysisTool {
         const testDirs = ['tests', 'test', 'spec', '__tests__'];
         const sourceDirs = ['src', 'lib', 'source'];
 
-        for (const sourceDir of sourceDirs) {
-            if (fs.existsSync(sourceDir)) {
-                this._scanDirectory(sourceDir, (sourceFile) => {
-                    if (path.extname(sourceFile) === '.js') {
-                        // Look for corresponding test files
-                        for (const testDir of testDirs) {
-                            const testVariations = [
-                                sourceFile.replace(sourceDir, testDir).replace('.js', '.test.js'),
-                                sourceFile.replace(sourceDir, testDir).replace('.js', '.spec.js'),
-                                sourceFile.replace(sourceDir, testDir).replace('.js', '_test.js'),
-                                sourceFile.replace(sourceDir, testDir).replace('.js', '_spec.js'),
-                                sourceFile.replace(/\/([^\/]+)\.js$/, '/$1.test.js').replace(sourceDir + '/', testDir + '/')
-                            ];
+        // Get all source files first
+        const allSourceFiles = this._getAllSourceFiles();
 
-                            for (const testVariant of testVariations) {
-                                if (fs.existsSync(testVariant)) {
-                                    if (!sourceToTestMap[sourceFile]) {
-                                        sourceToTestMap[sourceFile] = [];
-                                    }
-                                    // Create a mock test object
-                                    sourceToTestMap[sourceFile].push({
-                                        name: path.basename(testVariant),
-                                        file: testVariant,
-                                        duration: 0
-                                    });
-                                    break;
-                                }
-                            }
+        for (const sourceFile of allSourceFiles) {
+            // Extract basename to match with test files
+            const sourceBasename = path.basename(sourceFile, '.js');
+            
+            // Look for corresponding test files in various patterns
+            for (const testDir of testDirs) {
+                const testPatterns = [
+                    path.join(testDir, sourceBasename + '.test.js'),
+                    path.join(testDir, sourceBasename + '.spec.js'),
+                    path.join(testDir, sourceBasename + '_test.js'),
+                    path.join(testDir, sourceBasename + '_spec.js'),
+                    // Also check subdirectories that might mirror src structure
+                    ...['unit', 'integration', 'e2e'].map(subdir => 
+                        path.join(testDir, subdir, sourceBasename + '.test.js')
+                    )
+                ];
+
+                for (const testPattern of testPatterns) {
+                    if (fs.existsSync(testPattern)) {
+                        if (!sourceToTestMap[sourceFile]) {
+                            sourceToTestMap[sourceFile] = [];
                         }
+                        // Create a mock test object
+                        sourceToTestMap[sourceFile].push({
+                            name: path.basename(testPattern),
+                            file: testPattern,
+                            duration: 0
+                        });
+                        // Don't break - a source file might have multiple test files
                     }
-                });
+                }
             }
         }
 
@@ -474,6 +562,24 @@ export class TestCoverageAnalysisTool extends SoftwareAnalysisTool {
         const fileTestCounts = {};
         for (const [sourceFile, tests] of Object.entries(sourceMappings)) {
             fileTestCounts[sourceFile] = tests.length;
+        }
+
+        // If all files have the same low test count (e.g., 1), the data is likely artificial
+        // and not meaningful for ranking
+        const testCounts = Object.values(fileTestCounts);
+        if (testCounts.length > 0) {
+            const uniqueCounts = [...new Set(testCounts)];
+            
+            // If all counts are the same and low (e.g., all 1s), it's likely artificial mapping
+            if (uniqueCounts.length === 1 && uniqueCounts[0] <= 1) {
+                // In this case, don't return any meaningful ranking since the data isn't reliable
+                // Instead, we'll just return empty arrays indicating unreliable data
+                return {
+                    highCausalFiles: [],
+                    lowCausalFiles: [],
+                    testCohesion: {}
+                };
+            }
         }
 
         // Sort by test count for high and low causal analysis
