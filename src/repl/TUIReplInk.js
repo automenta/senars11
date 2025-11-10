@@ -244,13 +244,15 @@ const TUI = ({engine, extensibleTUI, config = {}}) => {
     };
 
     /**
-     * Handle extended commands
+     * Handle extended commands using the common message handler
      * @param {string} input - User input string
      * @returns {Promise<boolean>} True if command was handled, false otherwise
      */
     const handleExtendedCommand = async (input) => {
         if (input.startsWith('/')) {
             const [cmdName, ...args] = input.slice(1).split(' ');
+            
+            // First try the plugin/command manager for TUI-specific commands
             try {
                 const result = await extensible.commandManager.executeCommand(cmdName, args, {
                     engine,
@@ -261,14 +263,30 @@ const TUI = ({engine, extensibleTUI, config = {}}) => {
                 if (result) {
                     setLogs(prev => [...prev, {id: uuidv4(), message: result, timestamp: Date.now()}]);
                 }
+                return true;
             } catch (error) {
-                setLogs(prev => [...prev, {
-                    id: uuidv4(),
-                    message: `❌ Command Error: ${error.message}`,
-                    timestamp: Date.now()
-                }]);
+                // If plugin manager fails, try the common message handler
+                try {
+                    // Handle as a command execution message
+                    const message = {
+                        type: 'command.execute',
+                        payload: { command: cmdName, args }
+                    };
+                    
+                    const result = await engine.processInput(input.slice(1)); // Use engine's own command processing
+                    if (result && typeof result === 'string') {
+                        setLogs(prev => [...prev, {id: uuidv4(), message: result, timestamp: Date.now()}]);
+                    }
+                    return true;
+                } catch (engineError) {
+                    setLogs(prev => [...prev, {
+                        id: uuidv4(),
+                        message: `❌ Command Error: ${engineError.message}`,
+                        timestamp: Date.now()
+                    }]);
+                    return true; // Still return true since we handled it (even if with error)
+                }
             }
-            return true;
         }
         return false;
     };

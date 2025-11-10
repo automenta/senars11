@@ -2,6 +2,7 @@ import {WebSocketServer} from 'ws';
 import {EventEmitter} from 'events';
 import {ClientMessageHandlers} from './ClientMessageHandlers.js';
 import {DEFAULT_CLIENT_CAPABILITIES, NAR_EVENTS, WEBSOCKET_CONFIG} from '../config/constants.js';
+import {ReplMessageHandler} from '../repl/ReplMessageHandler.js';
 
 const DEFAULT_OPTIONS = Object.freeze({
     port: WEBSOCKET_CONFIG.defaultPort,
@@ -175,8 +176,12 @@ class WebSocketMonitor {
 
     _sendToClient(client, message) {
         try {
-            if (client.readyState === client.OPEN) {
+            if (client && typeof client.send === 'function' && client.readyState === client.OPEN) {
                 client.send(JSON.stringify(message));
+            } else if (client && typeof client.send === 'function') {
+                console.warn('Attempted to send to client in non-OPEN state:', client.readyState);
+            } else {
+                console.warn('Attempted to send to invalid client:', typeof client);
             }
         } catch (error) {
             console.error('Error sending message to client:', error);
@@ -282,46 +287,20 @@ class WebSocketMonitor {
     _routeMessage(client, message) {
         console.log(`[WEBSOCKET MONITOR] Routing message of type: ${message.type}`);
 
+        // Check if this message should be handled by ReplMessageHandler
+        if (this._shouldRouteToReplHandler(message)) {
+            this._routeToReplHandler(client, message);
+            return;
+        }
+
         const handlers = {
             'subscribe': (msg) => this.messageHandlers.handleSubscribe(client, msg),
             'unsubscribe': (msg) => this.messageHandlers.handleUnsubscribe(client, msg),
             'ping': () => this.messageHandlers.handlePing(client),
-            'narseseInput': (msg) => this.messageHandlers.handleNarseseInput(client, msg),
             'testLMConnection': (msg) => this.messageHandlers.handleTestLMConnection(client, msg),
             'log': (msg) => this.messageHandlers.handleLog(client, msg),
             'requestCapabilities': (msg) => this.messageHandlers.handleRequestCapabilities(client, msg)
         };
-
-        // Check if it's a reason/step message - this should be treated as narsese input
-        if (message.type === 'reason/step') {
-            console.log(`[WEBSOCKET MONITOR] Handling reason/step message as narsese input, extracting text:`, message.payload?.text || message.payload?.input || '');
-            // Format the message to match narseseInput expectations
-            const formattedMessage = {
-                ...message,
-                // Extract the text from payload for the narseseInput handler
-                payload: {
-                    input: message.payload?.text || message.payload?.input || message.payload || ''
-                }
-            };
-            this.messageHandlers.handleNarseseInput(client, formattedMessage);
-            return;
-        }
-        // For other reason/ messages, they might be for other purposes
-        else if (message.type.startsWith('reason/')) {
-            console.log(`[WEBSOCKET MONITOR] Handling other reason/ message type: ${message.type}`);
-            // Handle other reason types appropriately
-            this._handleReasonMessage(client, message);
-            return;
-        }
-
-        // Check if it's a control/* message type - these might need special handling
-        if (message.type.startsWith('control/')) {
-            console.log(`[WEBSOCKET MONITOR] Handling control/ message`);
-            // For now, route to narseseInput handler but in the future
-            // we might want to implement specific control handlers
-            this._handleControlMessage(client, message);
-            return;
-        }
 
         const handler = handlers[message.type];
         if (handler) {
@@ -331,6 +310,51 @@ class WebSocketMonitor {
             console.log(`[WEBSOCKET MONITOR] No handler found for type: ${message.type}, using custom`);
             this._handleCustomMessage(client, message);
         }
+    }
+
+    /**
+     * Check if a message should be routed to the ReplMessageHandler
+     */
+    _shouldRouteToReplHandler(message) {
+        return message.type === 'narseseInput' || 
+               message.type === 'reason/step' || 
+               message.type?.startsWith('control/') || 
+               message.type === 'command.execute' ||
+               message.type?.startsWith('/');
+    }
+
+    /**
+     * Route message to ReplMessageHandler if available
+     */
+    _routeToReplHandler(client, message) {
+        // Check if a ReplMessageHandler is available (through an associated WebRepl instance)
+        if (this._replMessageHandler) {
+            this._replMessageHandler.processMessage(message)
+                .then(result => {
+                    this._sendToClient(client, result);
+                })
+                .catch(error => {
+                    console.error('Error in ReplMessageHandler:', error);
+                    this._sendToClient(client, {
+                        type: 'error',
+                        message: error.message
+                    });
+                });
+        } else {
+            // Fallback to the NAR instance if no specific handler is available
+            if (message.type === 'narseseInput' || message.type === 'reason/step') {
+                this.messageHandlers.handleNarseseInput(client, message);
+            } else if (message.type?.startsWith('control/')) {
+                this._handleControlMessage(client, message);
+            }
+        }
+    }
+
+    /**
+     * Attach a ReplMessageHandler to this WebSocket monitor
+     */
+    attachReplMessageHandler(replMessageHandler) {
+        this._replMessageHandler = replMessageHandler;
     }
 
     _handleCustomMessage(client, message) {

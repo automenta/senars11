@@ -19,7 +19,9 @@ const PANELS = {
         {name: 'Relationships', component: 'ConceptRelationshipPanel'},
         {name: 'Trace', component: 'ReasoningTracePanel'},
         {name: 'Time Series', component: 'TimeSeriesPanel'},
-        {name: 'Meta-Cognition', component: 'MetaCognitionPanel'}
+        {name: 'Meta-Cognition', component: 'MetaCognitionPanel'},
+        {name: 'Trace Inspector', component: 'TraceInspector'},
+        {name: 'Visualization', component: 'VisualizationPanel'}
     ],
 
     DASHBOARD: [
@@ -27,7 +29,8 @@ const PANELS = {
         {name: 'Main', component: 'MainPanel'},
         {name: 'Task Monitor', component: 'TaskMonitorPanel'},
         {name: 'Self Analysis', component: 'SelfAnalysisPanel'},
-        {name: 'Graph UI', component: 'GraphUI'}
+        {name: 'Graph UI', component: 'GraphUI'},
+        {name: 'Cognitive IDE', component: 'CognitiveIDE'}
     ],
 
     EXECUTION: [

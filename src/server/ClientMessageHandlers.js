@@ -17,7 +17,24 @@ export class ClientMessageHandlers {
     }
 
     handleNarseseInput(client, message) {
-        return this._handleNarseseInput(client, message);
+        // Check if there's a ReplMessageHandler attached to the monitor
+        if (this.monitor._replMessageHandler) {
+            // Let the ReplMessageHandler handle this message
+            this.monitor._replMessageHandler.processMessage(message)
+                .then(result => {
+                    this._sendToClient(client, result);
+                })
+                .catch(error => {
+                    console.error('Error in ReplMessageHandler:', error);
+                    this._sendToClient(client, {
+                        type: 'error',
+                        message: error.message
+                    });
+                });
+        } else {
+            // Fallback to the original NAR-based handling
+            this._handleNarseseInput(client, message);
+        }
     }
 
     handleTestLMConnection(client, message) {
@@ -268,6 +285,17 @@ export class ClientMessageHandlers {
     }
 
     _sendToClient(client, message) {
+        // Validate that we have both client and monitor before sending
+        if (!client) {
+            console.warn('Attempt to send message to null/undefined client:', message);
+            return;
+        }
+        
+        if (!this.monitor || typeof this.monitor._sendToClient !== 'function') {
+            console.error('Monitor or its _sendToClient method is not available');
+            return;
+        }
+        
         this.monitor._sendToClient(client, message);
     }
 }

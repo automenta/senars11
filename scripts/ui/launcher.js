@@ -143,22 +143,76 @@ async function startWebSocketServer(config = DEFAULT_CONFIG) {
     await monitor.start();
     nar.connectToWebSocketMonitor(monitor);
 
-    // Register a handler for NAR instance requests from the UI
-    monitor.registerClientMessageHandler('requestNAR', async (message, client, monitorInstance) => {
-        // For security reasons, we only send information that's safe for the UI, not the full NAR instance
-        const narInfo = {
-            cycleCount: nar.cycleCount,
-            isRunning: nar.isRunning,
-            config: nar.config.toJSON(),
-            stats: nar.getStats(),
-            reasoningState: nar.getReasoningState ? nar.getReasoningState() : null
-        };
+    // Check if we're in REPL mode to use the proper message handler
+    if (config.ui.mode === 'repl') {
+        try {
+            // Import and use WebRepl for handling REPL messages
+            const {WebRepl} = await import('../../src/repl/WebRepl.js');
+            const webRepl = new WebRepl(nar, monitor);
+            
+            // Register WebRepl with the WebSocket server
+            webRepl.registerWithWebSocketServer();
+            
+            // Register a handler for NAR instance requests from the UI
+            monitor.registerClientMessageHandler('requestNAR', async (message, client, monitorInstance) => {
+                try {
+                    // For security reasons, we only send information that's safe for the UI, not the full NAR instance
+                    const narInfo = {
+                        cycleCount: nar.cycleCount,
+                        isRunning: nar.isRunning,
+                        config: nar.config.toJSON(),
+                        stats: webRepl.getStats(),
+                        reasoningState: nar.getReasoningState ? nar.getReasoningState() : null
+                    };
 
-        monitorInstance._sendToClient(client, {
-            type: 'narInstance',
-            payload: narInfo
+                    monitorInstance._sendToClient(client, {
+                        type: 'narInstance',
+                        payload: narInfo
+                    });
+                } catch (error) {
+                    console.error('Error handling requestNAR:', error);
+                    monitorInstance._sendToClient(client, {
+                        type: 'error',
+                        payload: { error: error.message }
+                    });
+                }
+            });
+        } catch (error) {
+            console.error('Error initializing WebRepl in launcher:', error);
+            // Fallback to standard handler if WebRepl initialization fails
+            monitor.registerClientMessageHandler('requestNAR', async (message, client, monitorInstance) => {
+                const narInfo = {
+                    cycleCount: nar.cycleCount,
+                    isRunning: nar.isRunning,
+                    config: nar.config.toJSON(),
+                    stats: nar.getStats(),
+                    reasoningState: nar.getReasoningState ? nar.getReasoningState() : null
+                };
+
+                monitorInstance._sendToClient(client, {
+                    type: 'narInstance',
+                    payload: narInfo
+                });
+            });
+        }
+    } else {
+        // Register a handler for NAR instance requests from the UI
+        monitor.registerClientMessageHandler('requestNAR', async (message, client, monitorInstance) => {
+            // For security reasons, we only send information that's safe for the UI, not the full NAR instance
+            const narInfo = {
+                cycleCount: nar.cycleCount,
+                isRunning: nar.isRunning,
+                config: nar.config.toJSON(),
+                stats: nar.getStats(),
+                reasoningState: nar.getReasoningState ? nar.getReasoningState() : null
+            };
+
+            monitorInstance._sendToClient(client, {
+                type: 'narInstance',
+                payload: narInfo
+            });
         });
-    });
+    }
 
     // Initialize DemoWrapper to provide remote control and introspection
     const demoWrapper = new DemoWrapper();

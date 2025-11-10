@@ -20,6 +20,12 @@ import LMConfigPanel from './LMConfigPanel.js';
 import MetaCognitionPanel from './MetaCognitionPanel.js';
 import SelfAnalysisPanel from './SelfAnalysisPanel.js';
 import GraphUI from './GraphUI.js';
+import CognitiveIDE from './CognitiveIDE.js';
+import VisualizationPanel from './VisualizationPanel.js';
+import TraceInspector from './TraceInspector.js';
+import ReasonerControls from './ReasonerControls.js';
+import EnhancedInputInterface from './EnhancedInputInterface.js';
+import LayoutManager from './LayoutManager.js';
 
 export const contentMap = {
     'ExplorerPanel': ExplorerPanel,
@@ -43,4 +49,10 @@ export const contentMap = {
     'MetaCognitionPanel': MetaCognitionPanel,
     'SelfAnalysisPanel': SelfAnalysisPanel,
     'GraphUI': GraphUI,
+    'CognitiveIDE': CognitiveIDE,
+    'VisualizationPanel': VisualizationPanel,
+    'TraceInspector': TraceInspector,
+    'ReasonerControls': ReasonerControls,
+    'EnhancedInputInterface': EnhancedInputInterface,
+    'LayoutManager': LayoutManager,
 };
