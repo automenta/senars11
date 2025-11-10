@@ -1,6 +1,5 @@
 /**
  * SeNARS MCP System - Main Entry Point
- * Unified interface for dual-mode MCP operations as described in PLAN.mcp.md
  */
 
 import { MCPManager } from './MCPManager.js';
@@ -55,19 +54,18 @@ export class SeNARSMCPSystem {
   async initialize(mode = 'dual', options = {}) {
     this.mode = mode;
     this.options = { ...this.options, ...options };
-    
-    // Create the MCP manager
+
     this.manager = new MCPManager(this.options);
     await this.manager.initialize();
-    
+
     if (mode === 'client' || mode === 'dual') {
       console.log('SeNARS MCP System initialized in client mode');
     }
-    
+
     if (mode === 'server' || mode === 'dual') {
       console.log('SeNARS MCP System initialized in server mode');
     }
-    
+
     return this;
   }
 
@@ -78,11 +76,11 @@ export class SeNARSMCPSystem {
     if (!this.manager) {
       throw new Error('SeNARS MCP System not initialized');
     }
-    
+
     if (this.mode !== 'client' && this.mode !== 'dual') {
       throw new Error('SeNARS MCP System not configured for client mode');
     }
-    
+
     return await this.manager.connectAsClient(endpoint, options);
   }
 
@@ -93,11 +91,11 @@ export class SeNARSMCPSystem {
     if (!this.manager) {
       throw new Error('SeNARS MCP System not initialized');
     }
-    
+
     if (this.mode !== 'server' && this.mode !== 'dual') {
       throw new Error('SeNARS MCP System not configured for server mode');
     }
-    
+
     return await this.manager.setupServer(port, options);
   }
 
@@ -108,7 +106,7 @@ export class SeNARSMCPSystem {
     if (!this.manager) {
       throw new Error('SeNARS MCP System not initialized');
     }
-    
+
     return await this.manager.callMCPTool(toolName, input);
   }
 
@@ -119,7 +117,7 @@ export class SeNARSMCPSystem {
     if (!this.manager) {
       throw new Error('SeNARS MCP System not initialized');
     }
-    
+
     return this.manager.getAvailableTools();
   }
 
@@ -130,7 +128,7 @@ export class SeNARSMCPSystem {
     if (!this.manager?.client) {
       throw new Error('Code execution requires an active client connection');
     }
-    
+
     return await this.manager.client.executeCode(code, context);
   }
 
@@ -151,7 +149,7 @@ export class SeNARSMCPSystem {
     if (!this.manager) {
       return { initialized: false, mode: this.mode };
     }
-    
+
     return {
       initialized: true,
       mode: this.mode,
@@ -170,8 +168,8 @@ export default SeNARSMCPSystem;
  */
 export async function runSeNARSMCP(config) {
   const system = new SeNARSMCPSystem(config);
-  await system.initialize(config.mode || 'dual', config.options || {});
-  
+  await system.initialize(config.mode ?? 'dual', config.options ?? {});
+
   // Setup event listeners for monitoring
   if (system.manager) {
     system.manager.on('initialized', () => console.log('MCP System initialized'));
@@ -180,6 +178,6 @@ export async function runSeNARSMCP(config) {
     system.manager.on('toolCalled', (data) => console.log('Tool called:', data));
     system.manager.on('shutdown', () => console.log('MCP System shutdown'));
   }
-  
+
   return system;
 }
