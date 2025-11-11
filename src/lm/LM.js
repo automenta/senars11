@@ -21,8 +21,8 @@ export class LM extends BaseComponent {
             avgResponseTime: 0,
             providerUsage: new Map()
         };
-
-        Object.freeze(this);
+        // Don't freeze during construction, freeze after initialization if needed
+        // Object.freeze(this);
     }
 
     get config() {

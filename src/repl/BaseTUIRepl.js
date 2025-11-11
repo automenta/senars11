@@ -1,16 +1,68 @@
-import {BaseTUIRepl} from './BaseTUIRepl.js';
+import {ReplEngine} from './ReplEngine.js';
+import {EventEmitter} from 'events';
+import {TaskEditorComponent} from './components/TaskEditorComponent.js';
+import {LogViewerComponent} from './components/LogViewerComponent.js';
+import {StatusBarComponent} from './components/StatusBarComponent.js';
+import {TaskInputComponent} from './components/TaskInputComponent.js';
+import {ViewManager} from '../repl/ViewManager.js';
+import blessed from 'blessed';
+import WebSocket from 'ws';
 
 /**
- * Standard TUI REPL with component-based architecture
- * Implements the full observability and control of system state through editing the active set of Input Tasks
+ * Base TUI REPL class with common functionality
  */
-export class TUIRepl extends BaseTUIRepl {
+export class BaseTUIRepl extends EventEmitter {
     constructor(config = {}) {
-        config.title = config.title || 'SeNARS Reasoning Engine 🚀';
-        super(config);
+        super();
+
+        this.engine = new ReplEngine(config);
+        this.screen = blessed.screen({
+            smartCSR: true,
+            title: config.title || 'SeNARS Reasoning Engine 🚀',
+            dockBorders: true,
+            fullUnicode: true, // Enable Unicode characters like emojis
+            autoPadding: true
+        });
+
+        this.components = {};
+        this.viewManager = null;
+
+        // WebSocket remote console configuration
+        this.remoteConfig = {
+            wsUrl: config.remote?.wsUrl ?? 'ws://localhost:8080/ws',
+            reconnectInterval: config.remote?.reconnectInterval ?? 5000,
+            maxReconnectAttempts: config.remote?.maxReconnectAttempts ?? 10,
+            enabled: config.remote?.enabled === true, // Default to disabled unless explicitly enabled
+            session: config.remote?.session ?? 'tui-session',
+            auth: {
+                enabled: config.remote?.auth?.enabled !== false,
+                token: config.remote?.auth?.token ?? null,
+                user: config.remote?.auth?.user ?? null,
+                password: config.remote?.auth?.password ?? null
+            },
+            security: {
+                useTLS: config.remote?.security?.useTLS ?? false,  // Use wss:// instead of ws://
+                validateCert: config.remote?.security?.validateCert !== false,  // Validate SSL certificates
+                encryption: config.remote?.security?.encryption ?? 'none'  // 'none', 'aes', etc.
+            }
+        };
+
+        this.ws = null;
+        this.wsConnected = false;
+        this.reconnectAttempts = 0;
+        this.isReconnecting = false;
+
+        this._setupComponents();
+        this._setupViewManager();
+        this._setupEventListeners();
+        this._setupGlobalKeyBindings();
+
+        if (this.remoteConfig.enabled) {
+            this._setupRemoteConnection();
+        }
     }
 
-    // Component setup methods
+    // Base component setup methods - to be extended by subclasses
     _setupComponents() {
         this.components.statusBar = new StatusBarComponent({
             elementConfig: {
@@ -121,7 +173,7 @@ export class TUIRepl extends BaseTUIRepl {
         this.viewManager.switchView('vertical-split');
     }
 
-    // Event handling methods
+    // Base event handling methods
     _setupEventListeners() {
         // Engine event handlers
         const engineHandlers = {
@@ -144,6 +196,7 @@ export class TUIRepl extends BaseTUIRepl {
             },
             'command.error': (data) => this.components.logViewer.addError(`❌ Error executing command: ${data.error}`),
             'engine.quit': () => {
+                this._cleanup();
                 this.screen.destroy();
                 process.exit(0);
             },
@@ -225,7 +278,7 @@ export class TUIRepl extends BaseTUIRepl {
         });
 
         this.components.statusBar.on('menu-exit', () => {
-            this.engine.shutdown();
+            this._cleanup();
             this.screen.destroy();
             process.exit(0);
         });
@@ -251,7 +304,7 @@ export class TUIRepl extends BaseTUIRepl {
         }
     }
 
-    // Remote connection methods
+    // Remote connection methods - made overridable
     _setupRemoteConnection() {
         if (!this.remoteConfig.enabled) return;
 
@@ -345,7 +398,16 @@ export class TUIRepl extends BaseTUIRepl {
     }
 
     _handleRemoteMessage(message) {
-        const messageTypeHandlers = {
+        const baseMessageHandlers = this._getBaseRemoteMessageHandlers();
+        const allMessageHandlers = {...baseMessageHandlers, ...this._getExtendedRemoteMessageHandlers()};
+
+        const handler = allMessageHandlers[message.type] || this._getDefaultRemoteMessageHandler();
+        handler(message.payload);
+    }
+    
+    // Base message handlers that can be extended by subclasses
+    _getBaseRemoteMessageHandlers() {
+        return {
             'narsese.processed': (payload) => this.components.logViewer.addInfo(`🌐 Remote: ${payload?.result || 'Task processed'}`),
             'narsese.error': (payload) => this.components.logViewer.addError(`🌐 Remote: ${payload?.error || 'Processing error'}`),
             'nar.cycle.step': (payload) => this.components.logViewer.addInfo(`🌐 Remote cycle: ${payload?.cycle || 'Unknown'}`),
@@ -388,30 +450,31 @@ export class TUIRepl extends BaseTUIRepl {
                 this.components.statusBar?.updateConnectionQuality?.(this.connectionQuality);
             }
         };
-
-        const handler = messageTypeHandlers[message.type] || ((payload) => this.components.logViewer.addInfo(`🌐 Remote (${message.type}): ${JSON.stringify(payload || {})}`));
-        handler(message.payload);
+    }
+    
+    // Extendable method for subclasses to add additional message handlers
+    _getExtendedRemoteMessageHandlers() {
+        return {}; // To be overridden by subclasses
+    }
+    
+    // Default handler for unhandled message types
+    _getDefaultRemoteMessageHandler() {
+        return (payload) => this.components.logViewer.addInfo(`🌐 Remote (${message.type}): ${JSON.stringify(payload || {})}`);
     }
 
     _setupRemoteEventListeners() {
         // Listen for local events and potentially relay them to remote
-        const localEventToRemote = {
-            'narsese.processed': 'narsese.processed',
-            'narsese.error': 'narsese.error',
-            'nar.cycle.step': 'nar.cycle.step',
-            'engine.reset': 'engine.reset',
-            'engine.save': 'engine.save',
-            'engine.load': 'engine.load'
-        };
+        const baseEvents = this._getBaseRemoteEvents();
+        const allEvents = {...baseEvents, ...this._getExtendedRemoteEvents()};
 
-        Object.entries(localEventToRemote).forEach(([localEvent, remoteType]) => {
+        Object.entries(allEvents).forEach(([localEvent, remoteType]) => {
             this.engine.on(localEvent, (data) => {
                 if (this.wsConnected && this.ws && this.ws.readyState === WebSocket.OPEN) {
                     // Send event to remote server
                     const remoteMessage = {
                         type: remoteType,
                         payload: data,
-                        source: 'tui-client',
+                        source: this._getRemoteSource(),
                         timestamp: Date.now()
                     };
 
@@ -423,6 +486,28 @@ export class TUIRepl extends BaseTUIRepl {
                 }
             });
         });
+    }
+    
+    // Base events to relay to remote - extendable by subclasses
+    _getBaseRemoteEvents() {
+        return {
+            'narsese.processed': 'narsese.processed',
+            'narsese.error': 'narsese.error',
+            'nar.cycle.step': 'nar.cycle.step',
+            'engine.reset': 'engine.reset',
+            'engine.save': 'engine.save',
+            'engine.load': 'engine.load'
+        };
+    }
+    
+    // Extendable method for subclasses to add additional events
+    _getExtendedRemoteEvents() {
+        return {}; // To be overridden by subclasses
+    }
+    
+    // Method to determine the source string for remote messages
+    _getRemoteSource() {
+        return 'tui-client';
     }
 
     // Remote communication methods
@@ -535,7 +620,7 @@ export class TUIRepl extends BaseTUIRepl {
     _handleSessionRestoration() {
         if (this.sessionMetadata) {
             this.sessionMetadata.reconnectCount++;
-            this.components.logViewer.addInfo(`🔄 Restoring session: ...`);
+            this.components.logViewer.addInfo(`🔄 Restoring session: ${this.sessionMetadata.id}...`);
 
             // Send session restoration request
             const restoreMessage = {
@@ -560,11 +645,7 @@ export class TUIRepl extends BaseTUIRepl {
     _setupGlobalKeyBindings() {
         // Exit on Ctrl+C
         this.screen.key(['C-c'], () => {
-            // Close WebSocket connection gracefully
-            if (this.ws) {
-                this.ws.close();
-            }
-            this.engine.shutdown();
+            this._cleanup();
             this.screen.destroy();
             process.exit(0);
         });
@@ -627,7 +708,22 @@ export class TUIRepl extends BaseTUIRepl {
         setTimeout(() => this.components.taskInput?.focus?.(), 200);
     }
 
+    _cleanup() {
+        // Base cleanup - to be extended by subclasses
+        if (this.pingInterval) {
+            clearInterval(this.pingInterval);
+            this.pingInterval = null;
+        }
+        
+        if (this.connectionQualityMonitor) {
+            clearInterval(this.connectionQualityMonitor);
+            this.connectionQualityMonitor = null;
+        }
+    }
+
     async shutdown() {
+        this._cleanup();
+        
         // Close WebSocket connection gracefully
         if (this.ws) {
             this.ws.close();

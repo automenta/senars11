@@ -17,7 +17,8 @@ export class ViewManager {
         return {
             'vertical-split': this._createVerticalSplitView.bind(this),
             'log-only': this._createLogOnlyView.bind(this),
-            'dynamic-grouping': this._createDynamicGroupingView.bind(this)
+            'dynamic-grouping': this._createDynamicGroupingView.bind(this),
+            'agent-dashboard': this._createAgentDashboardView.bind(this)
         };
     }
 
@@ -37,6 +38,11 @@ export class ViewManager {
                 label: 'Dynamic Grouping',
                 description: 'Tasks organized by relationships, time, priority',
                 icon: '📊'
+            },
+            'agent-dashboard': {
+                label: 'Agent Dashboard',
+                description: 'Agent status, reasoning trace, metrics, and task management',
+                icon: '🤖'
             }
         };
     }
@@ -112,12 +118,47 @@ export class ViewManager {
         this._showAllComponents();
     }
 
+    _createAgentDashboardView() {
+        this._clearScreen();
+        
+        // Agent Status Panel (left side, top) 30%
+        this._setupComponent('agentStatus', '0', '0', '30%', '30%');
+        
+        // Task Editor (left side, middle) 40% 
+        this._setupComponent('taskEditor', '30%', '0', '30%', '40%');
+        
+        // Metrics Dashboard (left side, bottom) 29% (leaving 1% for status bar)
+        this._setupComponent('metricsDashboard', '70%', '0', '30%', '29%');
+        
+        // Reasoning Trace (right side, top) 50%
+        this._setupComponent('reasoningTrace', '0', '30%', '70%', '50%');
+        
+        // Log Viewer (right side, bottom) 49%
+        this._setupComponent('logViewer', '50%', '30%', '70%', '49%');
+        
+        this._setupTaskInput();
+        this._setupStatusBar();
+    }
+
     // Layout and component positioning methods
     _setupComponent(componentName, top, left, width, height) {
         const component = this.components[componentName];
-        if (component) {
+        if (component && typeof component.setPosition === 'function') {
             component.setPosition(top, left, width, height);
-            this.screen.append(component.getElement());
+            // Make sure the element is on screen if it has one
+            if (component.getElement()) {
+                this.screen.append(component.getElement());
+            }
+        } else if (component && component.getElement) {
+            // If no setPosition, try to set properties directly on the blessed element
+            const element = component.getElement();
+            if (element) {
+                if (top !== undefined) element.position.top = top;
+                if (left !== undefined) element.position.left = left;
+                if (width !== undefined) element.position.width = width;
+                if (height !== undefined) element.position.height = height;
+                this.screen.append(element);
+            }
         }
     }
 
