@@ -1,3 +1,306 @@
+**SeNARS Agent REPL – Hierarchical Design Menu**  
+*Modular, dependency-aware architecture. Select core → then enable compatible extensions.*  
+*Current time: November 11, 2025 10:18 AM EST | User: @S__e__H (US)*
+
+---
+
+## **Tier 0: Core Runtime (Required)**
+> *Always enabled. Foundation for all functionality.*
+
+- [x] **MCP Interface Layer (`src/mcp`)**
+  - Async, typed, event-rich bridge to SeNARS engine
+  - Tools: `input()`, `step()`, `query()`, `queryMemory()`, `getBelief()`, `expandWithLM()`
+  - Event bus: `on('inference'|'lm_call'|'focus_shift')`
+  - Dynamic tool registration: `registerTool(name, fn)`
+
+- [x] **NAL Reasoning Engine**
+  - Non-axiomatic logic core with memory, cycle, and rule execution
+  - Narsese parser + truth value propagation
+
+- [x] **LM Integration Layer (`LM.js`)**
+  - Bidirectional Narsese ↔ Natural Language translation
+  - Prompt templating, response parsing, confidence fusion
+
+---
+
+## **Tier 1: Interface & Input (Choose 1+)**
+> *Requires Tier 0. Select primary interaction mode.*
+
+- [ ] **Interactive CLI (TUI)**
+  - Real-time `>` prompt with history, syntax highlighting
+  - Multi-line input, tab completion (commands, terms, tools)
+  - Hotkeys: `F1` help, `F5` step, `Ctrl+R` search
+
+- [ ] **WebSocket Server**
+  - Bidirectional streaming for remote clients
+  - Session multiplexing, auth via API key
+
+- [ ] **REST API Server**
+  - `POST /execute`, `GET /session/{id}`
+  - JSON schema validation, rate limiting
+
+- [ ] **Batch File Processor**
+  - Load `.nars`, `.txt`, `.json` (facts, goals, queries)
+  - Watch mode for live file updates
+
+- [ ] **Voice Input (MCP Audio Tool)**
+  - Speech-to-text → natural language → Narsese
+  - Requires MCP audio server
+
+---
+
+## **Tier 2: Operating Modes (Choose 1+)**
+> *Requires Tier 1 interface. Modes can run in parallel.*
+
+### **2.1 User-Controlled Modes**
+- [ ] **Interactive Mode**
+  - Direct Narsese + natural language input
+  - Immediate output per command
+
+- [ ] **Goal-Driven Agent Mode**
+  - User sets goal → agent decomposes → plans → executes
+  - Uses MCP tools autonomously
+
+### **2.2 Autonomous Modes** *(requires Agent Mode)*
+- [ ] **Fully Autonomous Mode**
+  - Self-directed with meta-goals (e.g., “maximize truth”)
+  - Periodic self-questioning
+
+- [ ] **Exploratory Mode**
+  - Auto-generates questions to reduce uncertainty
+  - Prioritizes high-evidence-gap concepts
+
+### **2.3 Multi-Agent Systems** *(requires Agent Mode + WebSocket or API)*
+- [ ] **Multi-Agent Debate Mode**
+  - 2+ agents with opposing goals
+  - MCP moderates, logs arguments, resolves via evidence
+
+- [ ] **Metacognitive Mode**
+  - Self-reflection on strategy, rule success, LM cost
+  - Triggers Tier 4 self-optimization
+
+---
+
+## **Tier 3: Command System**
+> *Requires Tier 1. Extends input parsing.*
+
+- [x] **Core Narsese Commands**
+  - `<A --> B>.`, `<goal>!`, `<query>?`
+
+- [ ] **Meta & Control Commands**
+  - `/step N`, `/trace on`, `/viz open`, `/pause`
+
+- [ ] **Hybrid Reasoning Commands**
+  - `?explain <A --> B>`, `.lm "Why?"`, `verify_with_lm <term>`
+
+- [ ] **Configuration Commands**
+  - `.config lm.provider=claude`, `.config rules=hybrid`
+
+- [ ] **Session Commands**
+  - `.save "demo"`, `.load "demo"`, `.export pdf`
+
+---
+
+## **Tier 4: Observability & Visualization**
+> *Requires Tier 0. Optional UI layers.*
+
+### **4.1 Text-Based Observability**
+- [ ] **Live Reasoning Trace**
+  - Step-by-step log: `[NAL]`, `[LM]`, `[Hybrid]`
+  - Confidence, timestamps, task IDs
+
+- [ ] **Interactive Trace Explorer**
+  - Click to expand derivations
+  - Filter by source, confidence, depth
+
+- [ ] **Memory Inspector**
+  - `concepts`, `beliefs`, `focus`, `memory_stats`
+  - ASCII concept graph
+
+### **4.2 TUI Dashboard** *(requires CLI interface)*
+- [ ] **Multi-Panel Layout**
+  - Input | Live Graph | Trace | Metrics
+  - Real-time updates via `blessed.js`
+
+- [ ] **Progress & Status Bar**
+  - MCP status, LM provider, cycle count, memory
+
+### **4.3 Web UI (React + Vite)** *(requires WebSocket or API)*
+- [ ] **Force-Directed Concept Graph**
+  - Nodes = concepts, edges = inheritance/similarity
+  - Click to focus, drag to explore
+
+- [ ] **Inference Timeline**
+  - Horizontal scroll of task lifecycle
+
+- [ ] **Contribution Heatmap**
+  - % LM vs NAL per inference cluster
+
+- [ ] **Confidence Evolution Chart**
+  - Line graph of belief truth value over time
+
+- [ ] **Exportable Dashboard**
+  - PNG, SVG, interactive HTML
+
+---
+
+## **Tier 5: Metrics & Compound Intelligence**
+> *Requires Tier 4 observability.*
+
+- [ ] **Real-Time Metrics Panel**
+  - Belief count ↑↓, synergy score, inference depth
+  - Focus efficiency, hybrid agreement rate
+
+- [ ] **Self-Improvement Event Log**
+  - “LM provider switched: claude → gpt-4 (latency -42%)”
+  - “Rule priority boosted: induction (+0.15)”
+
+---
+
+## **Tier 6: Hybrid Reasoning Showcase**
+> *Requires Tier 0 + LM + observability.*
+
+- [ ] **Side-by-Side Rule Panel**
+  - LM suggestion vs NAL revision with diff
+
+- [ ] **Hallucination Correction Flow**
+  - LM claim → NAL conflict → correction → update
+
+- [ ] **Analogy Visualization**
+  - `<bird --> flyer>` → LM → `<bat --> flyer>?` → NAL induction
+
+- [ ] **Confidence Fusion Indicator**
+  - `0.71 → 0.89 (LM validated)`
+
+---
+
+## **Tier 7: Session & State Management**
+> *Requires Tier 0.*
+
+- [ ] **Conversation Memory**
+  - Full context across turns
+
+- [ ] **Checkpoint & Restore**
+  - Save/rollback to cycle N
+
+- [ ] **Session Branching**
+  - Fork to test “what-if” scenarios
+
+- [ ] **Persistent Storage**
+  - Auto-save to `.senars/sessions/`
+
+- [ ] **Export Session Report**
+  - Full trace + metrics + graph
+
+---
+
+## **Tier 8: Self-Improvement Engine**
+> *Requires Metacognitive Mode + Metrics.*
+
+- [ ] **Performance Monitor**
+  - Rule success rate, LM latency/accuracy, memory pressure
+
+- [ ] **Auto LM Provider Switching**
+  - Promote best performer based on cost/speed/accuracy
+
+- [ ] **Dynamic Rule Priority**
+  - Boost high-yield inference paths
+
+- [ ] **Concept Pruning**
+  - Forget low-activation, low-confidence beliefs
+
+- [ ] **Insight Emission**
+  - `<self_optimization --> achieved>! {0.9, 0.95}`
+
+---
+
+## **Tier 9: Educational & Demo Layer**
+> *Requires Tier 4+.*
+
+- [ ] **Interactive Tutorial Mode**
+  - Guided lessons: pure NAL → pure LM → hybrid
+
+- [ ] **Built-in Demo Scripts**
+  - LM bootstraps NAL
+  - NAL corrects LM
+  - Goal-driven discovery
+
+- [ ] **Modality Toggle**
+  - Disable LM or NAL for comparison
+
+- [ ] **Truth Value Editor**
+  - Manual override → observe ripple effects
+
+- [ ] **Hypothesis Testing Mode**
+  - Propose `<X --> Y>` → validate/reject with evidence
+
+---
+
+## **Tier 10: Extensibility & Plugins**
+> *Requires Tier 0.*
+
+- [ ] **Plugin API**
+  - `registerAgent()`, `registerTool()`, `registerVisualizer()`
+
+- [ ] **Custom Agent Roles**
+  - Researcher, Critic, Planner, Debater
+
+- [ ] **Custom Visualizers**
+  - 3D UMAP, VR concept space, timeline slider
+
+- [ ] **Rule Pack Importer**
+  - Load domain-specific NAL rule sets
+
+---
+
+## **Tier 11: Performance, Resilience & Testing**
+> *Requires Tier 0.*
+
+- [ ] **<50ms Local Cycle Latency**
+- [ ] **LM Circuit Breaker** → fallback to pure NAL
+- [ ] **Graceful Error Handling** → suggestions, no crash
+- [ ] **Lazy-Loaded Traces**
+- [ ] **Multi-LM A/B Testing Mode**
+  - GPT-4 vs Claude vs Ollama
+- [ ] **Structured Tool Output Parsing**
+
+---
+
+## **Tier 12: Accessibility & Export**
+> *Requires Tier 4+.*
+
+- [ ] **Screen Reader Compatible Output**
+- [ ] **High-Contrast Mode** (TUI + Web)
+- [ ] **Full Export Suite**
+  - JSON, PDF, HTML, Markdown, PNG
+- [ ] **Embeddable Trace Widgets**
+
+---
+
+## **Dependency Summary**
+
+| Tier | Depends On | Enables |
+|------|------------|---------|
+| 0 | — | All |
+| 1 | 0 | 2, 3 |
+| 2 | 1 | 8, 9 |
+| 3 | 1 | — |
+| 4 | 0 | 5, 6, 9, 12 |
+| 5 | 4 | 8 |
+| 6 | 0 + LM + 4 | — |
+| 7 | 0 | — |
+| 8 | 2 (Metacog) + 5 | — |
+| 9 | 4+ | — |
+| 10 | 0 | — |
+| 11 | 0 | — |
+| 12 | 4+ | — |
+
+---
+
+*Select from **Tier 1+** to build your custom REPL. All modules are hot-swappable, MCP-integrated, and production-grade.*
+
+----
+
 **Enhanced Prompt: Design a Production-Ready Agent REPL for SeNARS with MCP-Driven Hybrid Reasoning Showcase**
 
 Design a **high-performance, observable, and extensible Agent REPL** for **SeNARS** that serves as a **live demonstration platform** for its **compound hybrid intelligence** — specifically the **bidirectional synergy between Non-Axiomatic Logic (NAL) and Language Models (LM)** via the **MCP (Memory-Concept-Processor) interface layer** in `src/mcp`.
