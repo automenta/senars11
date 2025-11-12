@@ -27,6 +27,70 @@ export const handleLoadCommand = async (engine, args, addLog) => {
     }
 };
 
+// Helper method for tools configuration command
+export const handleToolsCommand = (engine, addLog) => {
+    try {
+        // Check if engine has agent LM with tools/mcp configuration
+        if (engine.agentLM && engine.agentLM.providers) {
+            const providers = engine.agentLM.providers;
+            addLog('🔧 Tools/MCP Configuration:', 'info');
+            
+            // Show current provider
+            addLog(`  Current Provider: ${providers.defaultProviderId || 'Default'}`, 'info');
+            
+            // Check if the provider has tools configuration
+            if (providers.getDefault() && providers.getDefault().tools) {
+                const tools = providers.getDefault().tools;
+                if (Array.isArray(tools) && tools.length > 0) {
+                    addLog(`  Available Tools (${tools.length}):`, 'info');
+                    tools.forEach((tool, index) => {
+                        addLog(`    ${index + 1}. ${tool.name || 'unnamed'}: ${tool.description || 'no description'}`, 'info');
+                    });
+                } else {
+                    addLog('  No specific tools configured', 'info');
+                }
+            } else {
+                addLog('  No tools available in current provider', 'info');
+            }
+        } else {
+            addLog('  No agent LM provider found', 'info');
+        }
+        
+        // Also check base LM configuration if exists
+        if (engine.lm && engine.lm.providers) {
+            const baseProviders = engine.lm.providers;
+            addLog('  Base LM Providers Configuration:', 'info');
+            addLog(`    Default Provider: ${baseProviders.defaultProviderId || 'None'}`, 'info');
+            addLog(`    Available Providers: ${Array.from(baseProviders.providers.keys()).join(', ') || 'None'}`, 'info');
+        }
+    } catch (error) {
+        addLog(`❌ Error showing tools configuration: ${error.message}`, 'error');
+    }
+};
+
+// Helper method for nars command to force input as narsese
+export const handleNarsCommand = async (engine, args, addLog) => {
+    try {
+        const narseseInput = args.join(' ');
+        if (!narseseInput) {
+            addLog('❌ Usage: /nars <narsese-statement>', 'error');
+            return;
+        }
+
+        addLog(`> /nars ${narseseInput}`, 'info');
+        
+        // Process directly as narsese without going through LM
+        const result = await engine.processNarsese(narseseInput);
+        if (result) {
+            addLog(`✅ Narsese processed: ${result}`, 'success');
+        } else {
+            addLog(`✅ Narsese processed successfully`, 'success');
+        }
+    } catch (error) {
+        addLog(`❌ Narsese processing error: ${error.message}`, 'error');
+    }
+};
+
 // Helper method for help command
 export const handleHelpCommand = (addLog) => {
     const helpMessages = [
@@ -37,9 +101,11 @@ export const handleHelpCommand = (addLog) => {
         '  /run, /go - Start continuous reasoning',
         '  /step, /n, [Enter] - Execute single reasoning cycle',
         '  /stop, /st - Stop continuous reasoning',
+        '  /tools - Show Tools/MCP configuration',
+        '  /nars <statement> - Force input as narsese',
         '  /help - Show this help',
         '  Use ↑↓ arrows for command history',
-        '  Hotkeys: Ctrl+R(run) Ctrl+S(step) Ctrl+P(pause)',
+        '  Hotkeys: Ctrl+R(run) Ctrl+S(step) Ctrl+P(pause) Ctrl+H(help)',
         '  🤖 Agent commands:',
         '  agent create <name> - Create a new agent',
         '  agent list - List all agents',

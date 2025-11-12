@@ -12,6 +12,8 @@ import {
     handleRunCommand,
     handleStepCommand,
     handleStopCommand,
+    handleToolsCommand,
+    handleNarsCommand,
     executeAndLog
 } from './SlashCommandHandlers.js';
 
@@ -107,6 +109,10 @@ const handleSlashCommand = async (engine, command, addLog) => {
         case 'stop':
         case 'st': 
             return await handleStopCommand(engine, addLog);
+        case 'tools': 
+            return handleToolsCommand(engine, addLog);
+        case 'nars': 
+            return handleNarsCommand(engine, args, addLog);
         case 'help': 
             return handleHelpCommand(addLog);
         default:
@@ -120,6 +126,7 @@ export const AgentInkTUI = ({engine}) => {
     const [inputValue, setInputValue] = useState('');
     const [status, setStatus] = useState({isRunning: false, cycle: 0, mode: 'idle', agentCount: 0});
     const streamingResponseRef = useRef(null);
+    const streamControllerRef = useRef(null);
 
     const {isRawModeSupported} = useStdin();
     const {navigateHistory, addToHistory} = useCommandHistory();
@@ -223,12 +230,27 @@ export const AgentInkTUI = ({engine}) => {
 
     // Handle keyboard shortcuts
     useInput((input, key) => {
+        // Escape key to interrupt LM streaming
+        if (key.escape) {
+            if (streamControllerRef.current) {
+                streamControllerRef.current.abort(); // Abort the current stream
+                streamControllerRef.current = null;
+                addLog('🛑 LM streaming interrupted', 'info');
+            }
+            // Don't add the escape character to the input
+            return;
+        }
+
         // Reasoner control shortcuts
         if (key.ctrl) {
             switch (input) {
                 case 'r': return handleRunCommand();
                 case 's': return handleStepCommand();
                 case 'p': return handleStopCommand();
+                case 'h': 
+                    handleHelpCommand(addLog);
+                    // Don't add the h character to the input
+                    return;
                 case 'c': 
                     addLog('👋 Agent TUI terminated', 'info');
                     return process.exit(0);
@@ -253,7 +275,7 @@ export const AgentInkTUI = ({engine}) => {
         setInputValue(''); // Clear input immediately so user can type again
 
         // Log that the command is being processed
-        addLog(`⏳ Processing: ${command}`, 'info');
+        addLog(`> ${command}`, 'info');
 
         // Process command in the background to prevent blocking the UI
         // Using a promise wrapper to avoid potential duplicate submissions
@@ -267,6 +289,10 @@ export const AgentInkTUI = ({engine}) => {
                     streamingResponseRef.current = responseLogId; // Track the streaming response
                     addLog('🔄 LM response streaming...', 'info');
                     
+                    // Create an AbortController for this streaming request
+                    const abortController = new AbortController();
+                    streamControllerRef.current = abortController;
+
                     // Set a timeout for the LM call to prevent indefinite hanging
                     const timeoutPromise = new Promise((_, reject) => {
                         setTimeout(() => reject(new Error('Request timeout after 120 seconds')), 120000);
@@ -286,7 +312,10 @@ export const AgentInkTUI = ({engine}) => {
 
                                 const streamIterator = await engine.agentLM.streamText(
                                     prompt,
-                                    { temperature: engine.inputProcessingConfig?.lmTemperature || 0.7 }
+                                    { 
+                                        temperature: engine.inputProcessingConfig?.lmTemperature || 0.7,
+                                        signal: abortController.signal  // Pass the abort signal
+                                    }
                                 );
 
                                 // Add initial streaming entry to logs
@@ -297,6 +326,12 @@ export const AgentInkTUI = ({engine}) => {
 
                                 // Stream the response - get all chunks and update the log immediately
                                 for await (const chunk of streamIterator) {
+                                    // Check if the stream was aborted
+                                    if (abortController.signal.aborted) {
+                                        addLog('🛑 LM streaming was interrupted', 'info');
+                                        break;
+                                    }
+                                    
                                     fullResponse += chunk;
                                     // Update the specific streaming log with the current response
                                     setLogs(prevLogs => {
@@ -308,6 +343,12 @@ export const AgentInkTUI = ({engine}) => {
                                     });
                                 }
                             } catch (streamError) {
+                                // Check if it's an abort error
+                                if (streamError.name === 'AbortError' || streamError.message.includes('abort')) {
+                                    addLog('🛑 LM streaming was interrupted by user', 'info');
+                                    return; // Exit early if aborted
+                                }
+                                
                                 // If streaming fails, update the log with error
                                 setLogs(prevLogs => {
                                     return prevLogs.map(log => 
@@ -369,7 +410,7 @@ export const AgentInkTUI = ({engine}) => {
         // Input Box
         React.createElement(
             Box,
-            {borderStyle: 'round', padding: 1, width: '100%'},
+            {borderStyle: 'round', width: '100%'},
             React.createElement(
                 Box,
                 {flexDirection: 'row', alignItems: 'center'},
@@ -400,7 +441,7 @@ export const AgentInkTUI = ({engine}) => {
             React.createElement(
                 Box,
                 {flexDirection: 'row'},
-                React.createElement(Text, {color: 'yellow'}, 'F1-Help | '),
+                React.createElement(Text, {color: 'yellow'}, 'Ctrl+H-Help | '),
                 React.createElement(Text, {color: 'yellow'}, '↑↓ History | '),
                 React.createElement(Text, {color: 'yellow'}, 'Ctrl+R/S/P | '),
                 React.createElement(Text, {color: 'yellow'}, 'Ctrl+C Exit')
