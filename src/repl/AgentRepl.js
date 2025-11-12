@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 
+import inquirer from 'inquirer';
+
 import {AgentReplEngine} from './AgentReplEngine.js';
-import {AgentTUIRepl} from './AgentTUIRepl.js';
 import {AgentInkRepl} from './AgentInkRepl.js';
 import {LMConfigurator} from '../lm/LMConfigurator.js';
 import {LangChainProvider} from '../lm/LangChainProvider.js';
-import inquirer from 'inquirer';
 
 class AgentRepl {
     constructor() {
@@ -153,11 +153,13 @@ class AgentRepl {
                 }
             });
         } else {
-            // Use the full-screen blessed TUI for detailed agent visualization
-            console.log('🎨 Using full-screen TUI for detailed visualization...\n');
-            this.repl = new AgentTUIRepl({
+            // Use the ink-based REPL for agent visualization
+            console.log('🎨 Using Ink-based TUI for agent...\n');
+            this.repl = new AgentInkRepl({
                 nar: {},
-                remote: { enabled: false } // Disable remote for agent mode initially
+                lm: {
+                    provider: this.config.lm.provider
+                }
             });
         }
 

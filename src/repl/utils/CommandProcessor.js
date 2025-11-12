@@ -1,6 +1,7 @@
 import {DEMO_COMMANDS} from '../../config/constants.js';
 
 const COMMANDS = DEMO_COMMANDS;
+
 const HELP_MESSAGE = `🤖 Available commands:
   /help, /h, /?     - Show this help message 📚
   /quit, /q, /exit  - Quit the REPL 🚪
@@ -35,6 +36,7 @@ const EXAMPLE_LIST = [
     'websocket              - WebSocket monitoring example',
     'lm-providers           - Language model provider integrations'
 ];
+
 const EXAMPLE_MAP = {
     'agent-builder': '../../examples/agent-builder-demo.js',
     'agent-builder-demo': '../../examples/agent-builder-demo.js',

@@ -1,12 +1,9 @@
-const PUNCTUATION_MAP = {'BELIEF': '.', 'GOAL': '!', 'QUESTION': '?'};
+const PUNCTUATION_MAP = { 'BELIEF': '.', 'GOAL': '!', 'QUESTION': '?' };
 const DEFAULT_TRUTH = ' %1.000,0.900%';
 const DEFAULT_PRIORITY = '';
 const DEFAULT_TERM = 'Unknown';
 const DEFAULT_TASK_TYPE = 'TASK';
 const ID_CHARS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
-const MAX_ID_LENGTH = 8;
-const MIN_ID = 0;
-const BASE = ID_CHARS.length;
 
 export class FormattingUtils {
     static formatTask(task) {

@@ -1,10 +1,12 @@
 import {EventEmitter} from 'events';
-import {NAR} from '../nar/NAR.js';
-import {CommandProcessor} from './utils/CommandProcessor.js';
-import {PersistenceManager} from '../io/PersistenceManager.js';
-import {Input} from '../Agent.js';
-import {FormattingUtils} from './utils/FormattingUtils.js';
 import {v4 as uuidv4} from 'uuid';
+
+import {NAR} from '../nar/NAR.js';
+import {Input} from '../Agent.js';
+import {PersistenceManager} from '../io/PersistenceManager.js';
+
+import {CommandProcessor} from './utils/CommandProcessor.js';
+import {FormattingUtils} from './utils/FormattingUtils.js';
 
 const SPECIAL_COMMANDS = {
     'next': 'n',
@@ -42,9 +44,11 @@ export class ReplEngine extends EventEmitter {
         super();
 
         this.nar = new NAR(config.nar ?? {});
-        this.inputManager = new Input(); // Manage user input tasks
-        this.sessionState = {history: [], lastResult: null, startTime: Date.now()};
-        this.persistenceManager = new PersistenceManager({defaultPath: config.persistence?.defaultPath ?? './agent.json'});
+        this.inputManager = new Input();
+        this.sessionState = { history: [], lastResult: null, startTime: Date.now() };
+        this.persistenceManager = new PersistenceManager({
+            defaultPath: config.persistence?.defaultPath ?? './agent.json'
+        });
         this.commandProcessor = new CommandProcessor(this.nar, this.persistenceManager, this.sessionState);
 
         this.isRunningLoop = false;
@@ -117,10 +121,7 @@ export class ReplEngine extends EventEmitter {
             });
 
             const startTime = Date.now();
-
-            // Process the input and execute a reasoning step
             const inputResult = await this.nar.input(input);
-
             const duration = Date.now() - startTime;
 
             if (inputResult !== false && inputResult !== null) {
@@ -192,11 +193,11 @@ export class ReplEngine extends EventEmitter {
 
         try {
             const result = await this.commandProcessor.executeCommand(cmd, ...args);
-            this.emit(`command.${cmd}`, {command: cmd, args, result});
+            this.emit(`command.${cmd}`, { command: cmd, args, result });
             return result;
         } catch (error) {
             const errorMsg = `❌ Error executing command: ${error.message}`;
-            this.emit('command.error', {command: cmd, args, error: error.message});
+            this.emit('command.error', { command: cmd, args, error: error.message });
             return errorMsg;
         }
     }

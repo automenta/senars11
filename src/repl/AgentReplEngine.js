@@ -1,6 +1,8 @@
+import {EventEmitter} from 'events';
+
 import {ReplEngine} from './ReplEngine.js';
 import {LM} from '../lm/LM.js';
-import {EventEmitter} from 'events';
+
 import {handleError, logError} from '../util/ErrorHandler.js';
 import {
     AgentCommandRegistry,
@@ -21,6 +23,19 @@ export class AgentReplEngine extends ReplEngine {
         this.agents = new Map();
         this.activeAgent = null;
         this.commandRegistry = this._initializeCommandRegistry();
+        
+        // Configure input processing behavior
+        this.inputProcessingConfig = {
+            // Default behavior: send to LM with instructions to use tools if needed
+            lmPromptTemplate: config.inputProcessing?.lmPromptTemplate || 
+                `As an intelligent reasoning system, please respond to this query: "{{input}}". If this is a request that should interact with the NARS system, please use appropriate tools.`,
+            // Whether to fallback to Narsese processing when LM fails
+            enableNarseseFallback: config.inputProcessing?.enableNarseseFallback ?? true,
+            // Whether to check if input looks like Narsese before trying Narsese fallback
+            checkNarseseSyntax: config.inputProcessing?.checkNarseseSyntax ?? true,
+            // Temperature for LM calls
+            lmTemperature: config.inputProcessing?.lmTemperature ?? 0.7
+        };
     }
 
     _initializeCommandRegistry() {
@@ -129,30 +144,36 @@ export class AgentReplEngine extends ReplEngine {
         }
 
         try {
+            // Use the configurable LM prompt template
+            const promptTemplate = this.inputProcessingConfig.lmPromptTemplate;
+            const prompt = promptTemplate.replace('{{input}}', trimmedInput);
+            
             const response = await this.agentLM.generateText(
-                `As an intelligent reasoning system, please respond to this query: "${trimmedInput}". If this is a request that should interact with the NARS system, please use appropriate tools.`,
-                { temperature: 0.7 }
+                prompt,
+                { temperature: this.inputProcessingConfig.lmTemperature }
             );
             return `🤖: ${response}`;
         } catch (lmError) {
             logError(lmError, 'LM processing');
-            
-            // Instead of falling back to Narsese for any input, 
-            // only fall back for inputs that look like potential Narsese
-            const looksLikeNarsese = this._isPotentialNarsese(trimmedInput);
-            
-            if (looksLikeNarsese) {
-                try {
-                    return await this.processNarsese(trimmedInput);
-                } catch (narseseError) {
-                    logError(narseseError, 'Narsese processing');
-                    // Return a more user-friendly error
-                    return `💭 Agent processed: Input "${trimmedInput}" may not be valid Narsese. LM Error: ${lmError.message}`;
+
+            // Only attempt Narsese fallback if enabled in config
+            if (this.inputProcessingConfig.enableNarseseFallback) {
+                // Only check Narsese syntax if enabled in config, otherwise always try Narsese fallback
+                const shouldTryNarsese = !this.inputProcessingConfig.checkNarseseSyntax || this._isPotentialNarsese(trimmedInput);
+
+                if (shouldTryNarsese) {
+                    try {
+                        return await this.processNarsese(trimmedInput);
+                    } catch (narseseError) {
+                        logError(narseseError, 'Narsese processing');
+                        // Return a more user-friendly error
+                        return `💭 Agent processed: Input "${trimmedInput}" may not be valid Narsese. LM Error: ${lmError.message}`;
+                    }
                 }
-            } else {
-                // For non-Narsese-like inputs, just report the LM error
-                return handleError(lmError, 'Agent processing');
             }
+
+            // For non-Narsese-like inputs or when fallback is disabled, just report the LM error
+            return handleError(lmError, 'Agent processing');
         }
     }
     
@@ -177,5 +198,86 @@ export class AgentReplEngine extends ReplEngine {
         this.activeAgent = null;
         if (this.agentLM?.shutdown) await this.agentLM.shutdown();
         await super.shutdown();
+    }
+
+    // New method to support streaming responses from LM
+    async processInputStreaming(input, onChunk) {
+        const trimmedInput = input.trim();
+        if (!trimmedInput) {
+            const result = await this.executeCommand('next');
+            if (onChunk) onChunk(result);
+            return result;
+        }
+
+        this.sessionState.history.push(trimmedInput);
+
+        if (trimmedInput.startsWith('/')) {
+            const result = await this.executeCommand(...trimmedInput.slice(1).split(' '));
+            if (onChunk) onChunk(result);
+            return result;
+        }
+
+        const [firstPart, ...rest] = trimmedInput.split(' ');
+        if (this.commandRegistry.get(firstPart)) {
+            const result = await this.commandRegistry.execute(firstPart, this, ...rest);
+            if (onChunk) onChunk(result);
+            return result;
+        }
+
+        try {
+            // Use the configurable LM prompt template
+            const promptTemplate = this.inputProcessingConfig.lmPromptTemplate;
+            const prompt = promptTemplate.replace('{{input}}', trimmedInput);
+
+            // Check if the LM supports streaming
+            if (typeof this.agentLM.streamText === 'function') {
+                const streamIterator = await this.agentLM.streamText(
+                    prompt,
+                    { temperature: this.inputProcessingConfig.lmTemperature }
+                );
+
+                let fullResponse = '';
+                for await (const chunk of streamIterator) {
+                    fullResponse += chunk;
+                    if (onChunk) onChunk(`🤖: ${chunk}`);
+                }
+
+                return `🤖: ${fullResponse}`;
+            } else {
+                // Fallback to regular generateText if streaming not available
+                const response = await this.agentLM.generateText(
+                    prompt,
+                    { temperature: this.inputProcessingConfig.lmTemperature }
+                );
+                if (onChunk) onChunk(`🤖: ${response}`);
+                return `🤖: ${response}`;
+            }
+        } catch (lmError) {
+            logError(lmError, 'LM processing');
+
+            // Only attempt Narsese fallback if enabled in config
+            if (this.inputProcessingConfig.enableNarseseFallback) {
+                // Only check Narsese syntax if enabled in config, otherwise always try Narsese fallback
+                const shouldTryNarsese = !this.inputProcessingConfig.checkNarseseSyntax || this._isPotentialNarsese(trimmedInput);
+
+                if (shouldTryNarsese) {
+                    try {
+                        const result = await this.processNarsese(trimmedInput);
+                        if (onChunk) onChunk(result);
+                        return result;
+                    } catch (narseseError) {
+                        logError(narseseError, 'Narsese processing');
+                        const errorMsg = `💭 Agent processed: Input "${trimmedInput}" may not be valid Narsese. LM Error: ${lmError.message}`;
+                        if (onChunk) onChunk(errorMsg);
+                        return errorMsg;
+                    }
+                }
+            }
+
+            // For non-Narsese-like inputs or when fallback is disabled, just report the LM error
+            const errorMsg = handleError(lmError, 'Agent processing');
+            if (onChunk) onChunk(errorMsg);
+            return errorMsg;
+        }
     }
 }

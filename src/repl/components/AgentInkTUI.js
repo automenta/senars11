@@ -274,7 +274,7 @@ export const AgentInkTUI = ({engine}) => {
                     
                     // Set a timeout for the LM call to prevent indefinite hanging
                     const timeoutPromise = new Promise((_, reject) => {
-                        setTimeout(() => reject(new Error('Request timeout after 30 seconds')), 30000);
+                        setTimeout(() => reject(new Error('Request timeout after 120 seconds')), 120000);
                     });
                     
                     // Create a promise that handles the streaming response
@@ -284,18 +284,22 @@ export const AgentInkTUI = ({engine}) => {
                         // Check if agentLM has streaming capability
                         if (engine.agentLM && typeof engine.agentLM.streamText === 'function') {
                             try {
-                                // Get the stream iterator
+                                // Get the stream iterator - use the engine's configuration if available
+                                const promptTemplate = engine.inputProcessingConfig?.lmPromptTemplate || 
+                                    'As an intelligent reasoning system, please respond to this query: "{{input}}". If this is a request that should interact with the NARS system, please use appropriate tools.';
+                                const prompt = promptTemplate.replace('{{input}}', command);
+
                                 const streamIterator = await engine.agentLM.streamText(
-                                    `As an intelligent reasoning system, please respond to this query: "${command}". If this is a request that should interact with the NARS system, please use appropriate tools.`,
-                                    { temperature: 0.7 }
+                                    prompt,
+                                    { temperature: engine.inputProcessingConfig?.lmTemperature || 0.7 }
                                 );
-                                
+
                                 // Add initial streaming entry to logs
                                 setLogs(prevLogs => [
                                     ...prevLogs.slice(-49),
                                     {id: responseLogId, message: '🔄 LM response streaming...', timestamp: Date.now(), type: 'info'}
                                 ]);
-                                
+
                                 // Stream the response - get all chunks and update the log immediately
                                 for await (const chunk of streamIterator) {
                                     fullResponse += chunk;
@@ -317,7 +321,7 @@ export const AgentInkTUI = ({engine}) => {
                                             : log
                                     ).slice(-50);
                                 });
-                                
+
                                 // Then fallback to regular generateText
                                 const response = await engine.processInput(command);
                                 if (response && typeof response === 'string') {
@@ -329,7 +333,7 @@ export const AgentInkTUI = ({engine}) => {
                             const response = await engine.processInput(command);
                             if (response && typeof response === 'string') {
                                 addLog(`🤖 Response: ${response}`, response.includes('❌') ? 'error' : 'success');
-                                }
+                            }
                         }
                     })();
                     
