@@ -7,6 +7,7 @@
   "scripts": {
     "repl:agent": "node src/repl/AgentRepl.js",
     "repl:agent:ollama": "node src/repl/AgentRepl.js --ollama hf.co/unsloth/granite-4.0-micro-GGUF:Q4_K_M",
+    "repl:agent:ollama:new": "node src/repl/AgentReplOllama.js --model llama3.2",
     "start": "node scripts/cli/run.js",
     "cli": "node scripts/cli/run.js",
     "dev": "node scripts/cli/run.js --dev",

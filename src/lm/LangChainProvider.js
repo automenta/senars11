@@ -4,7 +4,7 @@ import {ChatOllama} from '@langchain/ollama';
 import {ChatOpenAI} from '@langchain/openai';
 import {HumanMessage, AIMessage, ToolMessage} from '@langchain/core/messages';
 import {ChatPromptTemplate, MessagesPlaceholder} from '@langchain/core/prompts';
-import {StateGraph, END} from '@langchain/langgraph';
+import {StateGraph, END, START} from '@langchain/langgraph';
 import {ToolNode} from '@langchain/langgraph/prebuilt';
 import {ModelNotFoundError, ConnectionError} from '../util/ErrorHandler.js';
 import {DynamicTool} from '@langchain/core/tools';
@@ -147,7 +147,8 @@ export class LangChainProvider extends BaseProvider {
 
         const toolNode = hasTools ? new ToolNode(tools) : null;
 
-        const agent = async (state) => {
+        // Create the agent node that invokes the model
+        const agentNode = async (state) => {
             try {
                 const messages = await modelWithTools.invoke(state.messages);
                 return { messages: [messages] };
@@ -163,67 +164,34 @@ export class LangChainProvider extends BaseProvider {
             }
         };
 
-        // Function to format the response for output
-        const formatMessages = (state) => {
-            const { messages } = state;
-            // Return the last message content for output
-            if (messages && messages.length > 0) {
-                const lastMessage = messages[messages.length - 1];
-                // If there's content, return it; otherwise return a JSON representation
-                const content = lastMessage.content || JSON.stringify(lastMessage);
-                // If it contains an error, make it clear
-                if (typeof content === 'string' && content.includes('Error:')) {
-                    return { formatted_response: content };
-                }
-                return { formatted_response: content };
-            }
-            return { formatted_response: 'No response generated' };
-        };
-
-        // Define the agent workflow
-        const workflow = new StateGraph({
-            channels: {
-                messages: {
-                    value: (x, y) => y, // reducer function - use latest value
-                    default: () => []
-                },
-                formatted_response: {
-                    value: (x, y) => y, // reducer function - use latest value
-                    default: () => ""
-                }
-            }
+        // Define the agent state using Zod for newer LangGraph versions
+        const AgentState = z.object({
+            messages: z.array(z.any()).default([]),
         });
 
-        workflow.addNode('agent', agent);
-        workflow.addNode('formatMessages', formatMessages);
+        // Build the graph using the proper LangGraph patterns
+        const workflow = new StateGraph(AgentState);
 
+        // Add nodes
+        workflow.addNode("agent", agentNode);
         if (hasTools) {
-            workflow.addNode('tools', toolNode);
-            
-            const shouldInvokeTools = (state) => {
-                const { messages } = state;
-                const lastMessage = messages[messages.length - 1];
-                // Check if there are any tool calls to execute
-                if (lastMessage?.tool_calls && lastMessage.tool_calls.length > 0) {
-                    return 'tools';
-                }
-                return 'formatMessages'; // Go to formatMessages if no tool calls
-            };
-
-            workflow.addConditionalEdges('agent', shouldInvokeTools, {
-                tools: 'tools',
-                formatMessages: 'formatMessages'
-            });
-
-            workflow.addEdge('tools', 'agent');
-        } else {
-            // If no tools, always go to formatMessages
-            workflow.addEdge('agent', 'formatMessages');
+            workflow.addNode("tools", toolNode);
         }
 
-        workflow.addEdge('formatMessages', END);
-        
-        workflow.setEntryPoint('agent');
+        // Add edges - START to agent
+        workflow.addEdge(START, "agent");
+
+        // Add conditional edges for tool calling
+        if (hasTools) {
+            workflow.addConditionalEdges("agent", (state) => {
+                const lastMsg = state.messages[state.messages.length - 1];
+                return lastMsg?.tool_calls?.length > 0 ? "tools" : END;
+            });
+            workflow.addEdge("tools", "agent"); // Loop back to agent after tool execution
+        } else {
+            // If no tools, always end after agent
+            workflow.addEdge("agent", END);
+        }
 
         this.agent = workflow.compile();
     }
@@ -239,9 +207,12 @@ export class LangChainProvider extends BaseProvider {
                     const response = await this.agent.invoke({
                         messages: [new HumanMessage(prompt)],
                     });
-                    // The response should contain the formatted_response from the formatMessages node
-                    return response.formatted_response || (response.messages && response.messages.length > 0 ? 
-                        response.messages[response.messages.length - 1]?.content || 'No content' : 'No response');
+                    // The response contains messages; get the last message content
+                    if (response.messages && response.messages.length > 0) {
+                        const lastMessage = response.messages[response.messages.length - 1];
+                        return lastMessage.content || JSON.stringify(lastMessage);
+                    }
+                    return 'No response generated';
                 } catch (error) {
                     // Throw specific error types for better error handling upstream
                     if (error.message.includes('model') && error.message.includes('not found')) {
@@ -265,65 +236,67 @@ export class LangChainProvider extends BaseProvider {
             throw new Error('Agent not initialized. Please call initialize() first.');
         }
 
-        // Create an async iterator that implements timeout
-        const asyncIterator = {
+        const timeout = options.timeout || 60000;
+        
+        // Create a callback-based timeout mechanism
+        return {
             async *[Symbol.asyncIterator]() {
-                const timeout = options.timeout || 60000;
+                let timeoutId;
                 
-                // Create a timeout promise to handle timeout
-                const timeoutPromise = new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error(`Streaming request timed out after ${timeout}ms`)), timeout)
-                );
-                
-                // Set up the actual streaming operation as a Promise that can be raced with timeout
-                const streamPromise = (async () => {
-                    try {
-                        // Use LangGraph's streaming with 'values' mode to get state changes during workflow
-                        const stream = this.agent.stream({
-                            messages: [new HumanMessage(prompt)],
-                        }, {
-                            streamMode: 'values'
-                        });
+                try {
+                    // Set up the timeout
+                    timeoutId = setTimeout(() => {
+                        throw new Error(`Streaming request timed out after ${timeout}ms`);
+                    }, timeout);
 
-                        // Process the stream and collect all results to be yielded later
-                        const results = [];
-                        for await (const stateUpdate of stream) {
-                            // Check if there's formatted_response in the state update
-                            if (stateUpdate && stateUpdate.formatted_response) {
-                                results.push(stateUpdate.formatted_response);
-                            }
-                            // Also check for messages in the state
-                            else if (stateUpdate && stateUpdate.messages && stateUpdate.messages.length > 0) {
-                                const lastMessage = stateUpdate.messages[stateUpdate.messages.length - 1];
-                                if (lastMessage && lastMessage.content) {
-                                    results.push(lastMessage.content);
-                                }
+                    // Use LangGraph's streaming to get real-time state updates
+                    const stream = this.agent.stream(
+                        { messages: [new HumanMessage(prompt)] },
+                        { 
+                            streamMode: 'values' 
+                        }
+                    );
+                    
+                    // Process the stream in real-time and yield content immediately
+                    for await (const chunk of stream) {
+                        // Clear and reset timeout on each chunk to avoid premature timeout
+                        clearTimeout(timeoutId);
+                        
+                        // Look for content in the state update (now using the new state structure)
+                        if (chunk && chunk.messages && chunk.messages.length > 0) {
+                            const lastMessage = chunk.messages[chunk.messages.length - 1];
+                            if (lastMessage && lastMessage.content) {
+                                yield lastMessage.content;
                             }
                         }
-                        return results; // Return the collected results
-                    } catch (error) {
-                        // Throw specific error types for better error handling upstream
-                        if (error.message.includes('model') && error.message.includes('not found')) {
-                            throw new ModelNotFoundError(this.modelName);
-                        } else if (error.message.includes('ECONNREFUSED') || error.message.includes('fetch failed')) {
-                            throw new ConnectionError(`Connection to ${this.providerType} service failed. Please ensure the service is running at ${this.baseURL}`);
-                        } else {
-                            throw new Error(`LangChainProvider streamText failed: ${error.message}`);
-                        }
+                        
+                        // Reset the timeout after each chunk
+                        timeoutId = setTimeout(() => {
+                            throw new Error(`Streaming request timed out after ${timeout}ms`);
+                        }, timeout);
                     }
-                })();
-
-                // Wait for results with timeout protection
-                const results = await Promise.race([streamPromise, timeoutPromise]);
-                
-                // Yield all collected results
-                for (const result of results) {
-                    yield result;
+                    
+                    // Clear timeout after the stream completes successfully
+                    if (timeoutId) {
+                        clearTimeout(timeoutId);
+                    }
+                } catch (error) {
+                    // Clear timeout on error
+                    if (timeoutId) {
+                        clearTimeout(timeoutId);
+                    }
+                    
+                    // Throw specific error types for better error handling upstream
+                    if (error.message.includes('model') && error.message.includes('not found')) {
+                        throw new ModelNotFoundError(this.modelName);
+                    } else if (error.message.includes('ECONNREFUSED') || error.message.includes('fetch failed')) {
+                        throw new ConnectionError(`Connection to ${this.providerType} service failed. Please ensure the service is running at ${this.baseURL}`);
+                    } else {
+                        throw new Error(`LangChainProvider streamText failed: ${error.message}`);
+                    }
                 }
             }
         };
-
-        return asyncIterator;
     }
 
     async generateEmbedding() {
