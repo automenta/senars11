@@ -6,10 +6,7 @@
   "type": "module",
   "scripts": {
     "repl:agent": "node src/repl/AgentRepl.js",
-    "repl:agent:ollama": "node src/repl/AgentRepl.js --ollama gemma:4b",
-    "repl:agent:ollama:custom": "node src/repl/AgentRepl.js --ollama",
-    "repl:agent:ollama:llama3": "node src/repl/AgentRepl.js --ollama llama3",
-    "repl:agent:ollama:mistral": "node src/repl/AgentRepl.js --ollama mistral",
+    "repl:agent:ollama": "node src/repl/AgentRepl.js --ollama gemma3:4b",
     "start": "node scripts/cli/run.js",
     "cli": "node scripts/cli/run.js",
     "dev": "node scripts/cli/run.js --dev",

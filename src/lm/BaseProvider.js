@@ -18,6 +18,10 @@ export class BaseProvider {
         return this.process(prompt, options);
     }
 
+    async streamText(prompt, options = {}) {
+        throw new Error(`Streaming not implemented for ${this.constructor.name}. Implement in subclass.`);
+    }
+
     getModelName() {
         return this.config.modelName || this.id;
     }

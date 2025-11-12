@@ -1,9 +1,9 @@
-import React, {useCallback, useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useState, useRef} from 'react';
 import {Box, Text, useInput, useStdin} from 'ink';
 import TextInput from 'ink-text-input';
 import {v4 as uuidv4} from 'uuid';
 import {FormattingUtils} from '../utils/FormattingUtils.js';
-import {handleError} from '../../../util/ErrorHandler.js';
+import {handleError} from '../../../src/util/ErrorHandler.js';
 import {
     handleLoadCommand,
     handleHelpCommand, 
@@ -11,7 +11,8 @@ import {
     handleExamplesCommand,
     handleRunCommand,
     handleStepCommand,
-    handleStopCommand
+    handleStopCommand,
+    executeAndLog
 } from './SlashCommandHandlers.js';
 
 // Define log types and their visual representation
@@ -118,16 +119,28 @@ export const AgentInkTUI = ({engine}) => {
     const [logs, setLogs] = useState([{id: uuidv4(), message: '🤖 Agent TUI initialized', timestamp: Date.now(), type: 'info'}]);
     const [inputValue, setInputValue] = useState('');
     const [status, setStatus] = useState({isRunning: false, cycle: 0, mode: 'idle', agentCount: 0});
+    const streamingResponseRef = useRef(null);
 
     const {isRawModeSupported} = useStdin();
     const {navigateHistory, addToHistory} = useCommandHistory();
 
-    // Add log message with color coding
+    // Add log message with color coding, avoiding duplicates
     const addLog = useCallback((message, type = 'info') => {
-        setLogs(prevLogs => [
-            ...prevLogs.slice(-49), // Keep max 50 logs in memory for performance
-            {id: uuidv4(), message, timestamp: Date.now(), type}
-        ]);
+        setLogs(prevLogs => {
+            // Check if the exact same message already exists recently (last 2 entries)
+            const isDuplicate = prevLogs.slice(-2).some(log => 
+                log.message === message && log.type === type
+            );
+            
+            if (isDuplicate) {
+                return prevLogs; // Don't add duplicate
+            }
+            
+            return [
+                ...prevLogs.filter(log => log.id !== streamingResponseRef.current), // Remove current streaming log if adding a new one
+                {id: uuidv4(), message, timestamp: Date.now(), type}
+            ].slice(-50); // Keep max 50 logs in memory for performance
+        });
     }, []);
 
     // Event listener registration
@@ -222,6 +235,12 @@ export const AgentInkTUI = ({engine}) => {
             }
         }
 
+        // Submit on Enter key
+        if (key.return || key.enter) {
+            handleSubmit();
+            return;
+        }
+
         // Command history navigation
         if (key.upArrow) navigateHistory('up', setInputValue);
         if (key.downArrow) navigateHistory('down', setInputValue);
@@ -237,25 +256,100 @@ export const AgentInkTUI = ({engine}) => {
         }
 
         addToHistory(command);
+        setInputValue(''); // Clear input immediately so user can type again
 
-        try {
-            if (command.startsWith('/')) {
-                await handleSlashCommand(engine, command, addLog);
-            } else {
-                const result = await engine.processInput(command);
-                // If the engine returns a result string, we might want to log it depending on type
-                if (result && typeof result === 'string') {
-                    // Only log results that are informational, not confirmation messages
-                    if (!result.includes('Agent') || result.includes('❌')) {
-                        addLog(result, result.includes('❌') ? 'error' : 'info');
-                    }
+        // Log that the command is being processed
+        addLog(`⏳ Processing: ${command}`, 'info');
+
+        // Process command in the background to prevent blocking the UI
+        (async () => {
+            try {
+                if (command.startsWith('/')) {
+                    await handleSlashCommand(engine, command, addLog);
+                } else {
+                    // Use streaming for LM responses to provide real-time feedback
+                    const responseLogId = uuidv4();
+                    streamingResponseRef.current = responseLogId; // Track the streaming response
+                    addLog('🔄 LM response streaming...', 'info');
+                    
+                    // Set a timeout for the LM call to prevent indefinite hanging
+                    const timeoutPromise = new Promise((_, reject) => {
+                        setTimeout(() => reject(new Error('Request timeout after 30 seconds')), 30000);
+                    });
+                    
+                    // Create a promise that handles the streaming response
+                    const streamPromise = (async () => {
+                        let fullResponse = '';
+                        
+                        // Check if agentLM has streaming capability
+                        if (engine.agentLM && typeof engine.agentLM.streamText === 'function') {
+                            try {
+                                // Get the stream iterator
+                                const streamIterator = await engine.agentLM.streamText(
+                                    `As an intelligent reasoning system, please respond to this query: "${command}". If this is a request that should interact with the NARS system, please use appropriate tools.`,
+                                    { temperature: 0.7 }
+                                );
+                                
+                                // Add initial streaming entry to logs
+                                setLogs(prevLogs => [
+                                    ...prevLogs.slice(-49),
+                                    {id: responseLogId, message: '🔄 LM response streaming...', timestamp: Date.now(), type: 'info'}
+                                ]);
+                                
+                                // Stream the response - get all chunks and update the log immediately
+                                for await (const chunk of streamIterator) {
+                                    fullResponse += chunk;
+                                    // Update the specific streaming log with the current response
+                                    setLogs(prevLogs => {
+                                        return prevLogs.map(log => 
+                                            log.id === responseLogId 
+                                                ? {...log, message: `🤖: ${fullResponse}`, type: 'success'} 
+                                                : log
+                                        ).slice(-50);
+                                    });
+                                }
+                            } catch (streamError) {
+                                // If streaming fails, update the log with error
+                                setLogs(prevLogs => {
+                                    return prevLogs.map(log => 
+                                        log.id === responseLogId 
+                                            ? {...log, message: `❌ Streaming error: ${streamError.message}`, type: 'error'} 
+                                            : log
+                                    ).slice(-50);
+                                });
+                                
+                                // Then fallback to regular generateText
+                                const response = await engine.processInput(command);
+                                if (response && typeof response === 'string') {
+                                    addLog(`🤖 Response: ${response}`, response.includes('❌') ? 'error' : 'success');
+                                }
+                            }
+                        } else {
+                            // Fallback to original approach if streaming not available
+                            const response = await engine.processInput(command);
+                            if (response && typeof response === 'string') {
+                                addLog(`🤖 Response: ${response}`, response.includes('❌') ? 'error' : 'success');
+                                }
+                        }
+                    })();
+                    
+                    // Race the streaming against timeout
+                    await Promise.race([
+                        streamPromise,
+                        timeoutPromise
+                    ]);
+                    
+                    // Reset the streaming ref after completion
+                    streamingResponseRef.current = null;
+                }
+            } catch (error) {
+                if (error.message.includes('timeout')) {
+                    addLog('⏰ Request timed out - LM may be slow or unavailable', 'error');
+                } else {
+                    addLog(handleError(error, 'Command processing'), 'error');
                 }
             }
-        } catch (error) {
-            addLog(handleError(error, 'Command processing'), 'error');
-        }
-
-        setInputValue('');
+        })();
     };
 
     // Render UI components

@@ -70,6 +70,41 @@ export class LangChainProvider extends BaseProvider {
         }
     }
 
+    async streamText(prompt, options = {}) {
+        // Return a promise that resolves with the full text, but simulate streaming via callback
+        // since the underlying implementation might not support true async iteration
+        return new Promise(async (resolve, reject) => {
+            try {
+                const messages = [new HumanMessage(prompt)];
+                const stream = await this.chatModel.stream(messages, {
+                    temperature: options.temperature ?? this.temperature,
+                    max_tokens: options.maxTokens ?? this.maxTokens,
+                    ...options,
+                });
+
+                // Create an async iterator that can be used by the caller
+                const asyncIterator = {
+                    async *[Symbol.asyncIterator]() {
+                        for await (const chunk of stream) {
+                            yield chunk.content ?? '';
+                        }
+                    }
+                };
+                
+                resolve(asyncIterator);
+            } catch (error) {
+                // Throw specific error types for better error handling upstream
+                if (error.message.includes('model') && error.message.includes('not found')) {
+                    reject(new ModelNotFoundError(this.modelName));
+                } else if (error.message.includes('ECONNREFUSED') || error.message.includes('fetch failed')) {
+                    reject(new ConnectionError(`Connection to ${this.providerType} service failed. Please ensure the service is running at ${this.baseURL}`));
+                } else {
+                    reject(new Error(`LangChainProvider streamText failed: ${error.message}`));
+                }
+            }
+        });
+    }
+
     async generateEmbedding() {
         throw new Error("Embeddings not fully implemented for LangChainProvider due to LangChain's varied embedding support across providers");
     }

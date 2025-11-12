@@ -101,6 +101,27 @@ export class LM extends BaseComponent {
         }
     }
 
+    async streamText(prompt, options = {}, providerId = null) {
+        const provider = this._getProvider(providerId);
+        if (!provider) throw new Error(`Provider "${providerId || this.providers.defaultProviderId}" not found.`);
+
+        try {
+            return await this._executeWithCircuitBreaker(provider, provider.streamText, prompt, options);
+        } catch (error) {
+            if (this._handleCircuitBreakerError(error, prompt)) {
+                // For streaming, we return a simulated async iterator as fallback
+                this.logInfo('Circuit breaker fallback for streaming - streaming unavailable');
+                return {
+                    async *[Symbol.asyncIterator]() {
+                        yield 'Streaming unavailable - using fallback response';
+                    }
+                };
+            } else {
+                throw error;
+            }
+        }
+    }
+
     async generateEmbedding(text, providerId = null) {
         const provider = this._getProvider(providerId);
         if (!provider) throw new Error(`Provider "${providerId || this.providers.defaultProviderId}" not found.`);
