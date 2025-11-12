@@ -3,15 +3,13 @@
 /**
  * @file AgentReplOllama.js
  * @description Complete self-contained Agent REPL implementation with Ollama, LangChain, and streaming support
- * This implements the LangGraph-based agent with proper streaming, tool calls, and MCP integration.
+ * Rewritten to use direct LangChain streaming instead of LangGraph to avoid tool call loops.
  */
 
 import { z } from "zod";
 import { ChatOllama } from "@langchain/ollama";
-import { tool } from "@langchain/core/tools";
-import { StateGraph, END, START, Annotation } from "@langchain/langgraph";
-import { ToolNode } from "@langchain/langgraph/prebuilt";
-import { HumanMessage, AIMessage, ToolMessage } from "@langchain/core/messages";
+import { tool, DynamicTool } from "@langchain/core/tools";
+import { HumanMessage, ToolMessage } from "@langchain/core/messages";
 import React from 'react';
 import { render, Box, Text, useInput, useStdin } from 'ink';
 import TextInput from 'ink-text-input';
@@ -20,7 +18,7 @@ import {v4 as uuidv4} from 'uuid';
 // Import existing SeNARS tools
 import { NARControlTool } from '../tool/NARControlTool.js';
 
-// 1. Define example tools using Zod schema (can be extended with SeNARS tools)
+// 1. Define example tools using Zod schema
 const getWeather = tool(async ({ location }) => {
   // Simulate API call
   await new Promise(r => setTimeout(r, 500));
@@ -33,9 +31,7 @@ const getWeather = tool(async ({ location }) => {
   }),
 });
 
-// 2. SeNARS-specific tool for NAR control (using the existing NARControlTool)
-import { DynamicTool } from "@langchain/core/tools";
-
+// 2. SeNARS-specific tool for NAR control
 class SeNARSControlTool extends DynamicTool {
   constructor(nar = null) {
     super({
@@ -63,15 +59,15 @@ class SeNARSControlTool extends DynamicTool {
   }
 }
 
-// 3. Agent REPL Class - Self-contained implementation
+// 3. Agent REPL Class - Self-contained implementation with direct streaming
 export class AgentReplOllama {
   constructor(options = {}) {
-    this.modelName = options.modelName || "llama3.2";
+    this.modelName = options.modelName || "hf.co/unsloth/granite-4.0-micro-GGUF:Q4_K_M";
     this.temperature = options.temperature || 0;
     this.baseUrl = options.baseUrl || "http://localhost:11434";
     this.nar = options.nar || null;
     this.tools = this._initializeTools();
-    this.graph = null;
+    this.model = null;
     this.streamingComponent = null;
   }
 
@@ -95,83 +91,93 @@ export class AgentReplOllama {
       temperature: this.temperature,
     }).bindTools(this.tools);
 
-    // Define agent state - compatible with newer LangGraph versions
-    const AgentState = Annotation.Root({
-      messages: Annotation({
-        reducer: (x, y) => x.concat(y),
-        default: () => [],
-      }),
-    });
-    
-    this.AgentState = AgentState;
-
-    // Create nodes
-    this.agentNode = async (state) => {
-      const { messages } = state;
-      try {
-        const response = await this.model.invoke(messages);
-        return { messages: [response] };
-      } catch (error) {
-        console.error("Error in agent node:", error);
-        return { messages: [new AIMessage({ content: `Error: ${error.message}` })] };
-      }
-    };
-
-    this.toolsNode = new ToolNode(this.tools);
-
-    // Build the graph
-    this.graph = new StateGraph(this.AgentState)
-      .addNode("agent", this.agentNode)
-      .addNode("tools", this.toolsNode)
-      .addEdge(START, "agent")
-      .addConditionalEdges("agent", (state) => {
-        const lastMsg = state.messages[state.messages.length - 1];
-        return lastMsg?.tool_calls?.length > 0 ? "tools" : END;
-      })
-      .addEdge("tools", "agent")
-      .compile();
-
     console.log(`✅ Agent initialized with model: ${this.modelName}`);
     console.log(`🔧 Tools registered: ${this.tools.map(t => t.name).join(', ') || 'None'}`);
   }
 
-  // Streaming execution function - follows the exact pattern from the example
+  // Streaming execution function - direct approach without LangGraph
   async * streamExecution(input) {
-    if (!this.graph) {
+    if (!this.model) {
       throw new Error("Agent not initialized. Call initialize() first.");
     }
 
-    const stream = await this.graph.stream(
-      { messages: [new HumanMessage(input)] },
-      { streamMode: "values" }
-    );
+    // Create initial messages
+    const messages = [new HumanMessage(input)];
+    let toolCalls = [];
 
-    // Stream the execution following the example code pattern
-    for await (const chunk of stream) {
-      const lastMsg = chunk.messages[chunk.messages.length - 1];
-      if (!lastMsg) continue;
+    // === First pass: Stream assistant response and detect tool calls ===
+    process.stdout.write("🤖 ");
+    const firstStream = await this.model.stream(messages);
 
-      // Print agent thoughts - check message type properly using constructor name like in UI
-      if (lastMsg.constructor.name === 'AIMessage' && (!lastMsg.tool_calls || lastMsg.tool_calls.length === 0)) {
-        yield { type: "agent_response", content: lastMsg.content };
+    let assistantContent = "";
+    for await (const chunk of firstStream) {
+      if (chunk.content) {
+        assistantContent += chunk.content;
+      }
+      if (chunk.tool_calls?.length > 0) {
+        toolCalls = chunk.tool_calls;
+      }
+    }
+
+    // Yield the initial assistant response if there's content
+    if (assistantContent) {
+      yield { type: "agent_response", content: assistantContent };
+    }
+
+    // If there are no tool calls, we're done
+    if (toolCalls.length === 0) {
+      return;
+    }
+
+    // === Execute each tool call and stream results ===
+    for (const tc of toolCalls) {
+      const { name, args, id } = tc;
+      
+      // Yield the tool call notification
+      yield { type: "tool_call", name, args };
+      
+      // Execute the tool
+      let toolResult;
+      const tool = this.tools.find(t => t.name === name);
+      if (tool) {
+        try {
+          toolResult = await tool.invoke(args);
+          // Yield the tool result
+          yield { type: "tool_result", content: toolResult };
+        } catch (error) {
+          const errorResult = `Error executing ${name}: ${error.message}`;
+          yield { type: "tool_result", content: errorResult };
+        }
+      } else {
+        const errorResult = `Error: Tool ${name} not found`;
+        yield { type: "tool_result", content: errorResult };
       }
 
-      // Print tool calls
-      if (lastMsg.tool_calls?.length > 0) {
-        for (const tc of lastMsg.tool_calls) {
-          yield { type: "tool_call", name: tc.name, args: tc.args };
+      // Create messages for final response with tool results
+      const messagesWithResults = [
+        new HumanMessage(input),
+        { role: "assistant", content: assistantContent, tool_calls: toolCalls },
+        new ToolMessage({ content: toolResult, tool_call_id: id, name })
+      ];
+
+      // === Stream final response with tool result in context ===
+      const finalStream = await this.model.stream(messagesWithResults);
+      let finalContent = "";
+      for await (const chunk of finalStream) {
+        if (chunk.content) {
+          finalContent += chunk.content;
         }
       }
-
-      // Print tool results
-      if (lastMsg.constructor.name === 'ToolMessage' || lastMsg._getType?.() === "tool") {
-        yield { type: "tool_result", content: lastMsg.content };
+      
+      // Yield the final assistant response
+      if (finalContent) {
+        yield { type: "agent_response", content: finalContent };
       }
     }
   }
 
   async start() {
-    if (!this.graph) {
+    if (!this.model) {
       await this.initialize();
     }
 
@@ -226,31 +232,18 @@ const AgentStreamingUI = ({ agent, nar }) => {
     setIsProcessing(true);
 
     try {
-      // Process the input with streaming - following the example code pattern
-      console.log('Starting stream for input:', input); // Debug logging
-      const stream = await agent.graph.stream(
-        { messages: [new HumanMessage(input)] },
-        { streamMode: "values" }
-      );
-
-      for await (const chunk of stream) {
-        const lastMsg = chunk.messages[chunk.messages.length - 1];
-        if (!lastMsg) continue;
-
-        // Print agent thoughts - check message type properly
-        if (lastMsg.constructor.name === 'AIMessage' && (!lastMsg.tool_calls || lastMsg.tool_calls.length === 0)) {
-          addLog(`🤖 ${lastMsg.content || 'No content'}`, 'success');
-        }
-        else if (lastMsg.constructor.name === 'ToolMessage' || lastMsg._getType?.() === "tool") {
-          // Print tool results
-          addLog(`✅ ${lastMsg.content || 'No tool result'}`, 'success');
-        }
-
-        // Print tool calls
-        if (lastMsg.tool_calls?.length > 0) {
-          for (const tc of lastMsg.tool_calls) {
-            addLog(`🔧 Calling: ${tc.name}(${JSON.stringify(tc.args)})`, 'info');
-          }
+      // Process the input with streaming
+      for await (const chunk of agent.streamExecution(input)) {
+        switch (chunk.type) {
+          case 'agent_response':
+            addLog(`🤖 ${chunk.content}`, 'success');
+            break;
+          case 'tool_call':
+            addLog(`🔧 Calling: ${chunk.name}(${JSON.stringify(chunk.args)})`, 'info');
+            break;
+          case 'tool_result':
+            addLog(`✅ ${chunk.content}`, 'success');
+            break;
         }
       }
     } catch (error) {
@@ -293,7 +286,7 @@ const AgentStreamingUI = ({ agent, nar }) => {
   return React.createElement(
     Box,
     { flexDirection: 'column', width: '100%', height: '100%' },
-    
+
     // Header
     React.createElement(
       Box,
@@ -301,7 +294,7 @@ const AgentStreamingUI = ({ agent, nar }) => {
       React.createElement(Text, { color: 'white', bold: true }, '🤖 SeNARS Agent REPL'),
       React.createElement(Text, { color: 'white' }, `Model: ${agent.modelName}`)
     ),
-    
+
     // Log Viewer
     React.createElement(
       Box,
@@ -313,7 +306,7 @@ const AgentStreamingUI = ({ agent, nar }) => {
         ...logs.slice(-20).map(formatLogEntry) // Show last 20 logs
       )
     ),
-    
+
     // Input Box
     React.createElement(
       Box,
@@ -334,7 +327,7 @@ const AgentStreamingUI = ({ agent, nar }) => {
         )
       )
     ),
-    
+
     // Status Bar
     React.createElement(
       Box,
@@ -400,38 +393,28 @@ if (import.meta.url === `file://${process.argv[1]}`) {
         
         addInput: function(input) {
           console.log(`Mock NAR addInput: ${input}`);
-          // In a real implementation, this would process Narsese input
           if (input.includes('!')) {
-            // Goal input - ends with !
             this.goals.push({ content: input, timestamp: Date.now() });
-          } else if (input.includes('?')) {
-            // Query input - ends with ?
-            // This would trigger a query in the real system
           } else {
-            // Belief input
             this.beliefs.push({ content: input, timestamp: Date.now() });
           }
           return { success: true, message: `Input processed: ${input}` };
         },
         
         execute: function(input) {
-          console.log(`Mock NAR execute: ${input}`);
           return this.addInput(input);
         },
         
         cycle: function(steps = 1) {
           console.log(`Mock NAR cycle: ${steps} step(s)`);
-          // In a real implementation, this would run the reasoning cycle
           return { cycles: steps, status: 'completed' };
         },
         
         getBeliefs: function() {
-          console.log('Mock NAR getBeliefs');
           return this.beliefs;
         },
         
         getGoals: function() {
-          console.log('Mock NAR getGoals');
           return this.goals;
         },
         
