@@ -16,10 +16,8 @@ describe('LangChainProvider', () => {
             expect(provider.getModelName()).toBe(modelName);
         });
 
-        test('uses default values when not specified', () => {
-            const provider = new LangChainProvider({});
-            expect(provider.providerType).toBeDefined();
-            expect(provider.modelName).toBeDefined();
+        test('requires modelName to be specified', () => {
+            expect(() => new LangChainProvider({})).toThrow('modelName is required for LangChainProvider');
         });
 
         test('throws error for OpenAI without API key', () => {

@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "repl:agent": "node src/repl/AgentRepl.js",
-    "repl:agent:ollama": "node src/repl/AgentRepl.js --ollama gemma3:4b",
+    "repl:agent:ollama": "node src/repl/AgentRepl.js --ollama hf.co/unsloth/granite-4.0-micro-GGUF:Q4_K_M",
     "start": "node scripts/cli/run.js",
     "cli": "node scripts/cli/run.js",
     "dev": "node scripts/cli/run.js --dev",
@@ -71,6 +71,7 @@
   "license": "AGPL-3.0-or-later",
   "dependencies": {
     "@langchain/core": "^1.0.2",
+    "@langchain/langgraph": "^1.0.2",
     "@langchain/ollama": "^1.0.0",
     "@langchain/openai": "^1.0.0",
     "@modelcontextprotocol/sdk": "^1.21.1",

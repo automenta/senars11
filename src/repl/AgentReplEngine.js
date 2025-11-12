@@ -3,6 +3,7 @@ import {EventEmitter} from 'events';
 import {ReplEngine} from './ReplEngine.js';
 import {LM} from '../lm/LM.js';
 
+import {NARControlTool} from '../tool/NARControlTool.js';
 import {handleError, logError} from '../util/ErrorHandler.js';
 import {
     AgentCommandRegistry,
@@ -26,9 +27,6 @@ export class AgentReplEngine extends ReplEngine {
         
         // Configure input processing behavior
         this.inputProcessingConfig = {
-            // Default behavior: send to LM with instructions to use tools if needed
-            lmPromptTemplate: config.inputProcessing?.lmPromptTemplate || 
-                `As an intelligent reasoning system, please respond to this query: "{{input}}". If this is a request that should interact with the NARS system, please use appropriate tools.`,
             // Whether to fallback to Narsese processing when LM fails
             enableNarseseFallback: config.inputProcessing?.enableNarseseFallback ?? true,
             // Whether to check if input looks like Narsese before trying Narsese fallback
@@ -67,6 +65,53 @@ export class AgentReplEngine extends ReplEngine {
 
         this._syncLMProviders();
         this._registerAgentEventHandlers();
+        
+        // Register NAR control tools with the LM provider
+        this._registerNARTools();
+
+        // Initialize the provider's agent after tools are registered
+        const defaultProviderId = this.agentLM.providers.defaultProviderId;
+        if (defaultProviderId) {
+            const provider = this.agentLM.providers.get(defaultProviderId);
+            if (provider && typeof provider.initialize === 'function') {
+                provider.initialize();
+            }
+        }
+    }
+
+    _registerNARTools() {
+        try {
+            // Create NAR control tool with reference to this engine's nar instance
+            const narControlTool = new NARControlTool(this.nar);
+            
+            // Find the current provider and add the tool to it
+            const defaultProviderId = this.agentLM.providers.defaultProviderId;
+            if (defaultProviderId) {
+                const provider = this.agentLM.providers.get(defaultProviderId);
+                if (provider) {
+                    // Initialize the tools array if it doesn't exist
+                    if (!Array.isArray(provider.tools)) {
+                        provider.tools = [];
+                    }
+                    
+                    // Check if the tool is already registered to avoid duplicates
+                    const existingToolIndex = provider.tools.findIndex(tool => 
+                        tool.name === narControlTool.name || 
+                        tool.constructor.name === narControlTool.constructor.name
+                    );
+                    
+                    if (existingToolIndex === -1) {
+                        // Only add the tool if it's not already present
+                        provider.tools.push(narControlTool);
+                        console.log(`🔧 Registered NAR control tool with LM provider`);
+                    } else {
+                        console.log(`🔧 NAR control tool already registered`);
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('❌ Error registering NAR tools:', error.message);
+        }
     }
 
     _syncLMProviders() {
@@ -144,14 +189,20 @@ export class AgentReplEngine extends ReplEngine {
         }
 
         try {
-            // Use the configurable LM prompt template
-            const promptTemplate = this.inputProcessingConfig.lmPromptTemplate;
-            const prompt = promptTemplate.replace('{{input}}', trimmedInput);
-            
-            const response = await this.agentLM.generateText(
-                prompt,
-                { temperature: this.inputProcessingConfig.lmTemperature }
+            // Add timeout wrapper for safety
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('LM generation timed out after 30 seconds')), 30000)
             );
+            
+            const generatePromise = this.agentLM.generateText(
+                trimmedInput,
+                { 
+                    temperature: this.inputProcessingConfig.lmTemperature,
+                    timeout: 30000  // Add timeout to the call
+                }
+            );
+            
+            const response = await Promise.race([generatePromise, timeoutPromise]);
             return `🤖: ${response}`;
         } catch (lmError) {
             logError(lmError, 'LM processing');
@@ -225,30 +276,50 @@ export class AgentReplEngine extends ReplEngine {
         }
 
         try {
-            // Use the configurable LM prompt template
-            const promptTemplate = this.inputProcessingConfig.lmPromptTemplate;
-            const prompt = promptTemplate.replace('{{input}}', trimmedInput);
-
             // Check if the LM supports streaming
             if (typeof this.agentLM.streamText === 'function') {
-                const streamIterator = await this.agentLM.streamText(
-                    prompt,
-                    { temperature: this.inputProcessingConfig.lmTemperature }
+                // Add timeout wrapper for safety
+                const timeoutPromise = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('LM streaming timed out after 60 seconds')), 60000)
                 );
+                
+                const streamPromise = (async () => {
+                    const streamIterator = await this.agentLM.streamText(
+                        trimmedInput,
+                        { 
+                            temperature: this.inputProcessingConfig.lmTemperature,
+                            timeout: 60000  // Add timeout option to the call
+                        }
+                    );
 
-                let fullResponse = '';
-                for await (const chunk of streamIterator) {
-                    fullResponse += chunk;
-                    if (onChunk) onChunk(`🤖: ${chunk}`);
-                }
+                    let fullResponse = '';
+                    for await (const chunk of streamIterator) {
+                        fullResponse += chunk;
+                        if (onChunk) onChunk(`🤖: ${chunk}`);
+                    }
 
-                return `🤖: ${fullResponse}`;
+                    return `🤖: ${fullResponse}`;
+                })();
+                
+                // Race the streaming operation with timeout
+                const result = await Promise.race([streamPromise, timeoutPromise]);
+                return result;
             } else {
                 // Fallback to regular generateText if streaming not available
-                const response = await this.agentLM.generateText(
-                    prompt,
-                    { temperature: this.inputProcessingConfig.lmTemperature }
+                // Add timeout wrapper for safety
+                const timeoutPromise = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('LM generation timed out after 30 seconds')), 30000)
                 );
+                
+                const generatePromise = this.agentLM.generateText(
+                    trimmedInput,
+                    { 
+                        temperature: this.inputProcessingConfig.lmTemperature,
+                        timeout: 30000  // Add timeout to the call
+                    }
+                );
+                
+                const response = await Promise.race([generatePromise, timeoutPromise]);
                 if (onChunk) onChunk(`🤖: ${response}`);
                 return `🤖: ${response}`;
             }

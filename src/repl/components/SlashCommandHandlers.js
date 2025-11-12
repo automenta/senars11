@@ -30,39 +30,86 @@ export const handleLoadCommand = async (engine, args, addLog) => {
 // Helper method for tools configuration command
 export const handleToolsCommand = (engine, addLog) => {
     try {
-        // Check if engine has agent LM with tools/mcp configuration
+        addLog('🔧 Tools/MCP Configuration:', 'info');
+        
+        // Show current provider info
         if (engine.agentLM && engine.agentLM.providers) {
             const providers = engine.agentLM.providers;
-            addLog('🔧 Tools/MCP Configuration:', 'info');
-            
-            // Show current provider
-            addLog(`  Current Provider: ${providers.defaultProviderId || 'Default'}`, 'info');
-            
-            // Check if the provider has tools configuration
-            if (providers.getDefault() && providers.getDefault().tools) {
-                const tools = providers.getDefault().tools;
-                if (Array.isArray(tools) && tools.length > 0) {
-                    addLog(`  Available Tools (${tools.length}):`, 'info');
-                    tools.forEach((tool, index) => {
-                        addLog(`    ${index + 1}. ${tool.name || 'unnamed'}: ${tool.description || 'no description'}`, 'info');
-                    });
-                } else {
-                    addLog('  No specific tools configured', 'info');
-                }
-            } else {
-                addLog('  No tools available in current provider', 'info');
-            }
+            addLog(`  Current Agent LM Provider: ${providers.defaultProviderId || 'Default'}`, 'info');
         } else {
-            addLog('  No agent LM provider found', 'info');
+            addLog('  Current Agent LM Provider: None', 'info');
         }
         
-        // Also check base LM configuration if exists
-        if (engine.lm && engine.lm.providers) {
-            const baseProviders = engine.lm.providers;
-            addLog('  Base LM Providers Configuration:', 'info');
-            addLog(`    Default Provider: ${baseProviders.defaultProviderId || 'None'}`, 'info');
-            addLog(`    Available Providers: ${Array.from(baseProviders.providers.keys()).join(', ') || 'None'}`, 'info');
+        // Check NARS tool integration
+        if (engine.nar && typeof engine.nar.getAvailableTools === 'function') {
+            const availableTools = engine.nar.getAvailableTools();
+            if (Array.isArray(availableTools) && availableTools.length > 0) {
+                addLog(`  NARS Available Tools (${availableTools.length}):`, 'info');
+                availableTools.forEach((tool, index) => {
+                    const toolName = typeof tool === 'string' ? tool : 
+                                    tool.name || tool.id || 'unnamed';
+                    addLog(`    ${index + 1}. ${toolName}`, 'info');
+                });
+            } else {
+                addLog('  NARS Tools: None available', 'info');
+            }
+        } else {
+            addLog('  NARS Tools: Not available', 'info');
         }
+        
+        // Check if NAR control tool is registered with LM
+        if (engine.agentLM) {
+            const defaultProviderId = engine.agentLM.providers.defaultProviderId;
+            if (defaultProviderId) {
+                const provider = engine.agentLM.providers.get(defaultProviderId);
+                if (provider && Array.isArray(provider.tools) && provider.tools.length > 0) {
+                    const narTools = provider.tools.filter(tool => 
+                        tool.name === 'nar_control' || tool.constructor.name === 'NARControlTool'
+                    );
+                    if (narTools.length > 0) {
+                        addLog(`  🤖 LM NAR Control Tools (${narTools.length}):`, 'info');
+                        narTools.forEach((tool, index) => {
+                            addLog(`    ${index + 1}. ${tool.name || tool.constructor.name}: ${tool.description || 'NAR system control'}`, 'info');
+                            
+                            // Show tool schema details if available
+                            if (tool.schema) {
+                                addLog(`        Parameters:`, 'debug');
+                                if (tool.schema.properties) {
+                                    for (const [propName, propDef] of Object.entries(tool.schema.properties)) {
+                                        const type = propDef.type || 'unknown';
+                                        const desc = propDef.description || 'No description';
+                                        addLog(`          ${propName} (${type}): ${desc}`, 'debug');
+                                        
+                                        if (propDef.enum) {
+                                            addLog(`            Options: [${propDef.enum.join(', ')}]`, 'debug');
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                        addLog(`  Note: These tools allow the LM to control the NARS reasoning system`, 'info');
+                    }
+                }
+            }
+        }
+        
+        // Check MCP system if available
+        if (engine.nar && engine.nar.mcp) {
+            const mcpTools = engine.nar.mcp.getAvailableTools();
+            if (mcpTools && mcpTools.allTools && mcpTools.allTools.length > 0) {
+                addLog(`  MCP Tools (${mcpTools.allTools.length}):`, 'info');
+                mcpTools.allTools.forEach((tool, index) => {
+                    addLog(`    ${index + 1}. ${typeof tool === 'string' ? tool : tool.name || 'unnamed'}`, 'info');
+                });
+            } else {
+                addLog('  MCP Tools: None available', 'info');
+            }
+        } else {
+            addLog('  MCP Tools: Not available', 'info');
+        }
+        
+        // Information about tools integration
+        addLog('  How Tools Work: LM can call tools based on user requests to interact with NARS', 'info');
     } catch (error) {
         addLog(`❌ Error showing tools configuration: ${error.message}`, 'error');
     }
@@ -105,7 +152,7 @@ export const handleHelpCommand = (addLog) => {
         '  /nars <statement> - Force input as narsese',
         '  /help - Show this help',
         '  Use ↑↓ arrows for command history',
-        '  Hotkeys: Ctrl+R(run) Ctrl+S(step) Ctrl+P(pause) Ctrl+H(help)',
+        '  Hotkeys: Ctrl+R(run) Ctrl+P(pause) Ctrl+H(help)',
         '  🤖 Agent commands:',
         '  agent create <name> - Create a new agent',
         '  agent list - List all agents',

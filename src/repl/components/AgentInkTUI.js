@@ -244,12 +244,14 @@ export const AgentInkTUI = ({engine}) => {
         // Reasoner control shortcuts
         if (key.ctrl) {
             switch (input) {
-                case 'r': return handleRunCommand();
-                case 's': return handleStepCommand();
-                case 'p': return handleStopCommand();
+                case 'r': 
+                    handleRunCommand();
+                    return;
+                case 'p': 
+                    handleStopCommand();
+                    return;
                 case 'h': 
                     handleHelpCommand(addLog);
-                    // Don't add the h character to the input
                     return;
                 case 'c': 
                     addLog('👋 Agent TUI terminated', 'info');
@@ -443,7 +445,7 @@ export const AgentInkTUI = ({engine}) => {
                 {flexDirection: 'row'},
                 React.createElement(Text, {color: 'yellow'}, 'Ctrl+H-Help | '),
                 React.createElement(Text, {color: 'yellow'}, '↑↓ History | '),
-                React.createElement(Text, {color: 'yellow'}, 'Ctrl+R/S/P | '),
+                React.createElement(Text, {color: 'yellow'}, 'Ctrl+R/P | '),
                 React.createElement(Text, {color: 'yellow'}, 'Ctrl+C Exit')
             )
         )

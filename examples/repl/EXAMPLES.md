@@ -88,7 +88,7 @@ For Ollama-specific demonstrations, you can run:
 npm run repl:agent:ollama
 ```
 
-Make sure Ollama is running with a compatible model (e.g., `gemma:4b`).
+Make sure Ollama is running with a compatible model specified via the command line or OLLAMA_MODEL environment variable.
 
 ## Key Features Demonstrated
 

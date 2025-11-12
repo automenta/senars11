@@ -19,7 +19,7 @@ async function runFallbackDemo() {
         
         const ollamaProvider = new LangChainProvider({
             provider: 'ollama',
-            modelName: process.env.OLLAMA_MODEL || 'gemma:4b',
+            modelName: process.env.OLLAMA_MODEL,
             baseURL: process.env.OLLAMA_URL || 'http://localhost:11434',
             temperature: 0.7,
             maxTokens: 300

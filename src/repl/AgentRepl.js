@@ -24,9 +24,8 @@ class AgentRepl {
                 if (process.argv[i + 1] && !process.argv[i + 1].startsWith('--')) {
                     args.model = process.argv[i + 1];
                     i++; // Skip the next arg since we used it
-                } else {
-                    args.model = 'gemma:4b'; // default Ollama model
-                }
+                } 
+                // Note: If no model follows --ollama, we'll rely on later --model arg if present
             } else if (process.argv[i] === '--model') {
                 args.model = process.argv[i + 1];
                 i++; // Skip the next arg
@@ -64,7 +63,7 @@ class AgentRepl {
     }
 
     _isOllamaMode() {
-        return this.args.ollama || (this.args.model && this.args.model.includes('gemma'));
+        return this.args.ollama || this.args.model !== undefined; // If a model is specified, use Ollama mode
     }
 
     async _configureOllamaLM() {
@@ -90,8 +89,13 @@ class AgentRepl {
     }
 
     _getOllamaConfig() {
+        if (!this.args.model) {
+            console.error('❌ Error: No model specified. Please provide a model using --model parameter.');
+            console.error('   Example: npm run repl:agent:ollama -- --model hf.co/unsloth/granite-4.0-micro-GGUF:Q4_K_M');
+            process.exit(1);
+        }
         return {
-            modelName: this.args.model || 'gemma:4b',
+            modelName: this.args.model,
             baseURL: this.args.baseUrl || 'http://localhost:11434',
             apiKey: this.args.apiKey || undefined
         };
