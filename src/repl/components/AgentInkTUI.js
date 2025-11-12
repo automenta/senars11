@@ -235,13 +235,7 @@ export const AgentInkTUI = ({engine}) => {
             }
         }
 
-        // Submit on Enter key
-        if (key.return || key.enter) {
-            handleSubmit();
-            return;
-        }
-
-        // Command history navigation
+        // Command history navigation (Enter key handling is done by TextInput onSubmit)
         if (key.upArrow) navigateHistory('up', setInputValue);
         if (key.downArrow) navigateHistory('down', setInputValue);
     });
@@ -262,6 +256,7 @@ export const AgentInkTUI = ({engine}) => {
         addLog(`⏳ Processing: ${command}`, 'info');
 
         // Process command in the background to prevent blocking the UI
+        // Using a promise wrapper to avoid potential duplicate submissions
         (async () => {
             try {
                 if (command.startsWith('/')) {

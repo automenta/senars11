@@ -90,19 +90,19 @@ export class BaseComponent {
     async _executeLifecycleOperation(operation, checkCondition, action, metricName = null) {
         if (checkCondition) {
             if (operation === 'start' && !this._initialized) {
-                this._logger.error('Cannot start uninitialized component');
+                this._logger.error(`Cannot start uninitialized component ${this._name}`);
                 return false;
             }
             if (operation === 'stop' && !this._started) {
-                this.logWarn('Component not started');
+                this.logWarn(`Component ${this._name} not started`);
                 return true;
             }
             if (operation === 'initialize' && this._initialized) {
-                this.logWarn('Component already initialized');
+                this.logWarn(`Component ${this._name} already initialized`);
                 return true;
             }
             if (operation === 'dispose' && this._disposed) {
-                this.logWarn('Component already disposed');
+                this.logWarn(`Component ${this._name} already disposed`);
                 return true;
             }
         }
