@@ -34,7 +34,7 @@ export class Client extends EventEmitter {
 
     for (let attempts = 0; attempts < this.retryAttempts; attempts++) {
       try {
-        const validatedOptions = await this.safety.validateClientOptions(this.options);
+        // Note: validateClientOptions is not used here as _makeRequest handles its own validation
         const initResponse = await this._makeRequest('/mcp/initialize', 'POST', {});
         
         if (initResponse?.serverInfo) {
@@ -98,41 +98,37 @@ export class Client extends EventEmitter {
   }
 
   async discoverTools() {
-    if (!this.isConnected) throw new Error('Not connected to MCP server');
-
-    try {
-      const response = await this._makeRequest('/mcp/tools/list', 'GET');
-      const tools = response.tools ?? [];
-      
-      for (const tool of tools) {
-        const normalizedTool = this.adapter.normalizeMCPTool(tool);
-        this.discoveredTools.set(normalizedTool.name, normalizedTool);
-      }
-      
-      this.emit('toolsDiscovered', { count: tools.length, tools: Array.from(this.discoveredTools.keys()) });
-      return tools;
-    } catch (error) {
-      console.error('Failed to discover tools from MCP server:', error);
-      throw error;
+    if (!this.isConnected) {
+      throw new Error('Not connected to MCP server');
     }
+
+    const response = await this._makeRequest('/mcp/tools/list', 'GET');
+    const tools = response.tools ?? [];
+    
+    for (const tool of tools) {
+      const normalizedTool = this.adapter.normalizeMCPTool(tool);
+      this.discoveredTools.set(normalizedTool.name, normalizedTool);
+    }
+    
+    this.emit('toolsDiscovered', { count: tools.length, tools: Array.from(this.discoveredTools.keys()) });
+    return tools;
   }
 
   async callTool(toolName, input) {
-    if (!this.isConnected) throw new Error('Not connected to MCP server');
-    if (!this.discoveredTools.has(toolName)) throw new Error(`Tool "${toolName}" not available on connected server`);
-
-    try {
-      const validatedInput = await this.safety.validateInput(toolName, input);
-      const response = await this._makeRequest(`/mcp/tools/call/${toolName}`, 'POST', validatedInput);
-      const result = response.result;
-      const validatedOutput = await this.safety.validateOutput(toolName, result);
-      
-      this.emit('toolCalled', { toolName, input: validatedInput, result: validatedOutput });
-      return validatedOutput;
-    } catch (error) {
-      console.error(`Failed to call tool "${toolName}":`, error);
-      throw error;
+    if (!this.isConnected) {
+      throw new Error('Not connected to MCP server');
     }
+    if (!this.discoveredTools.has(toolName)) {
+      throw new Error(`Tool "${toolName}" not available on connected server`);
+    }
+
+    const validatedInput = await this.safety.validateInput(toolName, input);
+    const response = await this._makeRequest(`/mcp/tools/call/${toolName}`, 'POST', validatedInput);
+    const result = response.result;
+    const validatedOutput = await this.safety.validateOutput(toolName, result);
+    
+    this.emit('toolCalled', { toolName, input: validatedInput, result: validatedOutput });
+    return validatedOutput;
   }
 
   getAvailableTools() {
@@ -153,20 +149,17 @@ export class Client extends EventEmitter {
   }
 
   async executeCode(code, context = {}) {
-    if (!this.isConnected) throw new Error('Not connected to MCP server');
-
-    const validatedRequest = await this.safety.validateCodeExecution(code, context);
-    
-    try {
-      console.log('Code execution is simulated in this demo');
-      return {
-        success: true,
-        result: `Code execution completed: ${code.substring(0, 100)}...`
-      };
-    } catch (error) {
-      console.error('Failed to execute code:', error);
-      throw error;
+    if (!this.isConnected) {
+      throw new Error('Not connected to MCP server');
     }
+
+    await this.safety.validateCodeExecution(code, context);
+    
+    console.log('Code execution is simulated in this demo');
+    return {
+      success: true,
+      result: `Code execution completed: ${code.substring(0, 100)}...`
+    };
   }
 
   async disconnect() {

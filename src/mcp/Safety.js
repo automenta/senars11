@@ -46,15 +46,7 @@ export class Safety {
       headers: z.record(z.string()).optional()
     }).partial();
 
-    try {
-      if (this.config.schemaValidation) {
-        const validated = clientOptionsSchema.parse(options);
-        return { ...options, ...validated };
-      }
-      return options;
-    } catch (error) {
-      throw new Error(`Invalid client options: ${error.errors?.[0]?.message ?? error.message}`);
-    }
+    return this._validateWithOptions(options, clientOptionsSchema, 'client options');
   }
 
   async validateServerOptions(options) {
@@ -68,14 +60,18 @@ export class Safety {
       }).optional()
     }).partial();
 
+    return this._validateWithOptions(options, serverOptionsSchema, 'server options');
+  }
+
+  _validateWithOptions(options, schema, errorContext) {
     try {
       if (this.config.schemaValidation) {
-        const validated = serverOptionsSchema.parse(options);
+        const validated = schema.parse(options);
         return { ...options, ...validated };
       }
       return options;
     } catch (error) {
-      throw new Error(`Invalid server options: ${error.errors?.[0]?.message ?? error.message}`);
+      throw new Error(`Invalid ${errorContext}: ${error.errors?.[0]?.message ?? error.message}`);
     }
   }
 
@@ -88,16 +84,7 @@ export class Safety {
       input = this.detectAndTokenizePII(input);
     }
 
-    if (this.inputValidators.has(toolName)) {
-      try {
-        const validator = this.inputValidators.get(toolName);
-        return typeof validator === 'function' ? await validator(input) : validator.parse(input);
-      } catch (error) {
-        throw new Error(`Input validation failed for tool "${toolName}": ${error.errors?.[0]?.message ?? error.message}`);
-      }
-    }
-
-    return input;
+    return this._validateByTool(toolName, input, this.inputValidators, `Input validation failed for tool "${toolName}"`);
   }
 
   async validateOutput(toolName, output) {
@@ -105,16 +92,20 @@ export class Safety {
       output = this.validateOutputStructure(output);
     }
 
-    if (this.outputValidators.has(toolName)) {
+    return this._validateByTool(toolName, output, this.outputValidators, `Output validation failed for tool "${toolName}"`);
+  }
+
+  async _validateByTool(toolName, data, validatorMap, errorMessage) {
+    if (validatorMap.has(toolName)) {
       try {
-        const validator = this.outputValidators.get(toolName);
-        return typeof validator === 'function' ? await validator(output) : validator.parse(output);
+        const validator = validatorMap.get(toolName);
+        return typeof validator === 'function' ? await validator(data) : validator.parse(data);
       } catch (error) {
-        throw new Error(`Output validation failed for tool "${toolName}": ${error.errors?.[0]?.message ?? error.message}`);
+        throw new Error(`${errorMessage}: ${error.errors?.[0]?.message ?? error.message}`);
       }
     }
 
-    return output;
+    return data;
   }
 
   async validateToolRegistration(toolName, config) {

@@ -29,42 +29,37 @@ export class Server extends EventEmitter {
       return;
     }
 
-    try {
-      const validatedOptions = await this.safety.validateServerOptions(this.options);
-      
-      this.httpServer = createHttpServer((req, res) => {
-        this.handleRequest(req, res).catch(error => {
-          console.error('Error handling request:', error);
-          res.writeHead(500, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: error.message }));
-        });
+    const validatedOptions = await this.safety.validateServerOptions(this.options);
+    
+    this.httpServer = createHttpServer((req, res) => {
+      this.handleRequest(req, res).catch(error => {
+        console.error('Error handling request:', error);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: error.message }));
       });
+    });
+    
+    await this.registerBuiltInTools();
+    
+    await new Promise((resolve, reject) => {
+      this.httpServer.listen(
+        { port: validatedOptions.port ?? this.port, host: validatedOptions.host ?? this.host },
+        () => {
+          console.log(`MCP server listening on http://${this.host}:${this.port}`);
+          this.isRunning = true;
+          this.serverUrl = `http://${this.host}:${this.port}`;
+          this.emit('serverStarted', { port: this.port, host: this.host, url: this.serverUrl });
+          resolve();
+        }
+      );
       
-      await this.registerBuiltInTools();
-      
-      await new Promise((resolve, reject) => {
-        this.httpServer.listen(
-          { port: validatedOptions.port ?? this.port, host: validatedOptions.host ?? this.host },
-          () => {
-            console.log(`MCP server listening on http://${this.host}:${this.port}`);
-            this.isRunning = true;
-            this.serverUrl = `http://${this.host}:${this.port}`;
-            this.emit('serverStarted', { port: this.port, host: this.host, url: this.serverUrl });
-            resolve();
-          }
-        );
-        
-        this.httpServer.on('error', (err) => {
-          console.error('MCP server error:', err);
-          reject(err);
-        });
+      this.httpServer.on('error', (err) => {
+        console.error('MCP server error:', err);
+        reject(err);
       });
-      
-      return true;
-    } catch (error) {
-      console.error('Failed to start MCP server:', error);
-      throw error;
-    }
+    });
+    
+    return true;
   }
 
   async handleRequest(req, res) {
@@ -146,7 +141,7 @@ export class Server extends EventEmitter {
       
       this.emit('toolCalled', { toolName, input: validatedInput, result: validatedOutput });
     } catch (error) {
-      console.error(`Error calling tool ${toolName}:`, error);
+      console.error(`Error calling tool ${toolName}:`, error.message);
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: error.message }));
     }
@@ -279,19 +274,13 @@ export class Server extends EventEmitter {
       throw new Error(`Tool "${toolName}" not exposed by this server`);
     }
 
-    const toolConfig = this.exposedTools.get(toolName);
+    // Note: toolConfig is retrieved but not used in the original implementation
+    const validatedInput = await this.safety.validateInput(toolName, input);
+    const result = await this.executeToolHandler(toolName, validatedInput);
+    const validatedOutput = await this.safety.validateOutput(toolName, result);
     
-    try {
-      const validatedInput = await this.safety.validateInput(toolName, input);
-      const result = await this.executeToolHandler(toolName, validatedInput);
-      const validatedOutput = await this.safety.validateOutput(toolName, result);
-      
-      this.emit('localToolExecuted', { toolName, input: validatedInput, result: validatedOutput });
-      return validatedOutput;
-    } catch (error) {
-      console.error(`Error executing local tool "${toolName}":`, error);
-      throw error;
-    }
+    this.emit('localToolExecuted', { toolName, input: validatedInput, result: validatedOutput });
+    return validatedOutput;
   }
 
   async stop() {

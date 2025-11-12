@@ -27,6 +27,8 @@ export class MCPManager extends EventEmitter {
    * Initialize the MCP manager
    */
   async initialize() {
+    if (this.isInitialized) return true;
+    
     try {
       await this.safety.initialize(this.options.safety ?? {});
       this.emit('initialized');
@@ -44,23 +46,18 @@ export class MCPManager extends EventEmitter {
   async connectAsClient(endpoint, options = {}) {
     if (!this.isInitialized) await this.initialize();
 
-    try {
-      const validatedOptions = await this.safety.validateClientOptions(options);
-      const { Client: MCPClient } = await import('./Client.js');
-      this.client = new MCPClient({ endpoint, ...validatedOptions });
+    const validatedOptions = await this.safety.validateClientOptions(options);
+    const { Client: MCPClient } = await import('./Client.js');
+    this.client = new MCPClient({ endpoint, ...validatedOptions });
 
-      await this.client.connect();
-      await this.discoverTools();
-      
-      const connectionId = `client_${Date.now()}`;
-      this.connections.set(connectionId, this.client);
-      
-      this.emit('clientConnected', { endpoint, connectionId });
-      return connectionId;
-    } catch (error) {
-      console.error('Failed to connect as MCP client:', error);
-      throw error;
-    }
+    await this.client.connect();
+    await this.discoverTools();
+    
+    const connectionId = `client_${Date.now()}`;
+    this.connections.set(connectionId, this.client);
+    
+    this.emit('clientConnected', { endpoint, connectionId });
+    return connectionId;
   }
 
   /**
@@ -69,62 +66,51 @@ export class MCPManager extends EventEmitter {
   async setupServer(port, options = {}) {
     if (!this.isInitialized) await this.initialize();
     
-    try {
-      const { Server: MCPServer } = await import('./Server.js');
-      this.server = new MCPServer({ port, ...options, safety: this.safety });
-      await this.server.start();
-      this.emit('serverStarted', { port });
-      return this.server;
-    } catch (error) {
-      console.error('Failed to setup MCP server:', error);
-      throw error;
-    }
+    const { Server: MCPServer } = await import('./Server.js');
+    this.server = new MCPServer({ port, ...options, safety: this.safety });
+    await this.server.start();
+    this.emit('serverStarted', { port });
+    return this.server;
   }
 
   /**
    * Discover tools from connected MCP server
    */
   async discoverTools() {
-    if (!this.client) throw new Error('No client connected');
-
-    try {
-      // Discover available tools from the server
-      await this.client.discoverTools();
-      this.discoveredTools = this.client.discoveredTools;
-      const tools = Array.from(this.discoveredTools.values());
-      this.emit('toolsDiscovered', { count: tools.length });
-      return tools;
-    } catch (error) {
-      console.error('Failed to discover tools:', error);
-      throw error;
+    if (!this.client) {
+      throw new Error('No client connected');
     }
+
+    // Discover available tools from the server
+    await this.client.discoverTools();
+    this.discoveredTools = this.client.discoveredTools;
+    const tools = Array.from(this.discoveredTools.values());
+    this.emit('toolsDiscovered', { count: tools.length });
+    return tools;
   }
 
   /**
    * Call an MCP tool either from a connected server or execute locally
    */
   async callMCPTool(toolName, input) {
-    if (!this.isInitialized) throw new Error('MCPManager not initialized');
+    if (!this.isInitialized) {
+      throw new Error('MCPManager not initialized');
+    }
 
-    try {
-      const validatedInput = await this.safety.validateInput(toolName, input);
-      
-      if (this.client?.discoveredTools?.has(toolName)) {
-        const result = await this.client.callTool(toolName, validatedInput);
-        const validatedOutput = await this.safety.validateOutput(toolName, result);
-        this.emit('toolCalled', { toolName, result: validatedOutput });
-        return validatedOutput;
-      } else if (this.server) {
-        const result = await this.server.executeLocalTool(toolName, validatedInput);
-        const validatedOutput = await this.safety.validateOutput(toolName, result);
-        this.emit('toolCalled', { toolName, result: validatedOutput });
-        return validatedOutput;
-      } else {
-        throw new Error(`Tool "${toolName}" not available. No client connected or server running.`);
-      }
-    } catch (error) {
-      console.error(`Failed to call MCP tool "${toolName}":`, error);
-      throw error;
+    const validatedInput = await this.safety.validateInput(toolName, input);
+    
+    if (this.client?.discoveredTools?.has(toolName)) {
+      const result = await this.client.callTool(toolName, validatedInput);
+      const validatedOutput = await this.safety.validateOutput(toolName, result);
+      this.emit('toolCalled', { toolName, result: validatedOutput });
+      return validatedOutput;
+    } else if (this.server) {
+      const result = await this.server.executeLocalTool(toolName, validatedInput);
+      const validatedOutput = await this.safety.validateOutput(toolName, result);
+      this.emit('toolCalled', { toolName, result: validatedOutput });
+      return validatedOutput;
+    } else {
+      throw new Error(`Tool "${toolName}" not available. No client connected or server running.`);
     }
   }
 
@@ -146,26 +132,21 @@ export class MCPManager extends EventEmitter {
    * Close all connections and clean up resources
    */
   async shutdown() {
-    try {
-      if (this.client) {
-        await this.client.disconnect();
-        this.client = null;
-      }
-      
-      if (this.server) {
-        await this.server.stop();
-        this.server = null;
-      }
-      
-      this.connections.clear();
-      this.sessions.clear();
-      this.discoveredTools.clear();
-      this.isInitialized = false;
-      
-      this.emit('shutdown');
-    } catch (error) {
-      console.error('Error during MCPManager shutdown:', error);
-      throw error;
+    if (this.client) {
+      await this.client.disconnect();
+      this.client = null;
     }
+    
+    if (this.server) {
+      await this.server.stop();
+      this.server = null;
+    }
+    
+    this.connections.clear();
+    this.sessions.clear();
+    this.discoveredTools.clear();
+    this.isInitialized = false;
+    
+    this.emit('shutdown');
   }
 }

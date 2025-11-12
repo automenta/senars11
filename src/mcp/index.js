@@ -115,7 +115,7 @@ export class SeNARSMCPSystem {
    */
   getAvailableTools() {
     if (!this.manager) {
-      throw new Error('SeNARS MCP System not initialized');
+      return { clientTools: [], serverTools: [], allTools: [] }; // Return empty structure instead of throwing
     }
 
     return this.manager.getAvailableTools();

@@ -45,41 +45,30 @@ export class Adapter {
   }
 
   toMCPFormat(senarsData, context = null) {
-    if (typeof senarsData !== 'object' || senarsData === null) {
-      return senarsData;
-    }
-
-    if (Array.isArray(senarsData)) {
-      return senarsData.map(item => this.toMCPFormat(item, context));
-    }
-
-    const mcpData = {};
-    for (const [key, value] of Object.entries(senarsData)) {
-      mcpData[key] = typeof value === 'object' && value !== null && !Array.isArray(value) 
-        ? this.toMCPFormat(value, context) 
-        : value;
-    }
-
-    return mcpData;
+    return this._transformData(senarsData, context, (item, ctx) => this.toMCPFormat(item, ctx));
   }
 
   fromMCPFormat(mcpData, context = null) {
-    if (typeof mcpData !== 'object' || mcpData === null) {
-      return mcpData;
+    return this._transformData(mcpData, context, (item, ctx) => this.fromMCPFormat(item, ctx));
+  }
+
+  _transformData(data, context, transformFn) {
+    if (typeof data !== 'object' || data === null) {
+      return data;
     }
 
-    if (Array.isArray(mcpData)) {
-      return mcpData.map(item => this.fromMCPFormat(item, context));
+    if (Array.isArray(data)) {
+      return data.map(item => transformFn(item, context));
     }
 
-    const senarsData = {};
-    for (const [key, value] of Object.entries(mcpData)) {
-      senarsData[key] = typeof value === 'object' && value !== null && !Array.isArray(value)
-        ? this.fromMCPFormat(value, context)
+    const result = {};
+    for (const [key, value] of Object.entries(data)) {
+      result[key] = typeof value === 'object' && value !== null && !Array.isArray(value)
+        ? transformFn(value, context)
         : value;
     }
 
-    return senarsData;
+    return result;
   }
 
   adaptTaskForMCP(task) {
