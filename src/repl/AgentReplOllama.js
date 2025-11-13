@@ -18,7 +18,24 @@ import {v4 as uuidv4} from 'uuid';
 // Import existing SeNARS tools
 import { NARControlTool } from '../tool/NARControlTool.js';
 
-// 1. Define example tools using Zod schema
+// Define reusable constants for logging and UI
+const LOG_TYPES = {
+  INFO: 'info',
+  SUCCESS: 'success', 
+  ERROR: 'error',
+  USER: 'user',
+  TOOL_CALL: 'tool_call'
+};
+
+const COLORS = {
+  ERROR: 'red',
+  INFO: 'blue', 
+  SUCCESS: 'green',
+  USER: 'yellow',
+  TOOL_CALL: 'cyan'
+};
+
+// Define example tools using Zod schema
 const getWeather = tool(async ({ location }) => {
   // Simulate API call
   await new Promise(r => setTimeout(r, 500));
@@ -31,7 +48,132 @@ const getWeather = tool(async ({ location }) => {
   }),
 });
 
-// 2. SeNARS-specific tool for NAR control
+/**
+ * Parses raw arguments for NAR control tool
+ * @param {any} rawArgs - Raw arguments received from the model
+ * @returns {object} Processed arguments with action and content
+ */
+const parseNARControlArgs = (rawArgs) => {
+  // Handle different possible input formats
+  if (typeof rawArgs === 'string') {
+    // If args is just a string (unexpected but possible)
+    const input = rawArgs.toLowerCase().trim();
+    switch (input) {
+      case 'get_beliefs': 
+        return { action: 'get_beliefs', content: '' };
+      case 'get_goals':
+        return { action: 'get_goals', content: '' };
+      case 'step':
+        return { action: 'step', content: '' };
+      default:
+        return { action: 'query', content: input };
+    }
+  } else if (typeof rawArgs === 'object') {
+    if (rawArgs.action) {
+      // If action is directly provided (the schema-compliant way)
+      return rawArgs;
+    } else if (rawArgs.input) {
+      // If input is provided (the model's preferred way), parse it
+      return parseNARCommand(rawArgs.input);
+    } else {
+      throw new Error("Invalid arguments: object must have 'action' or 'input' field");
+    }
+  } else {
+    throw new Error("Invalid arguments: expected object or string");
+  }
+};
+
+/**
+ * Parses NAR command from string input
+ * @param {string} input - Command input from the model
+ * @returns {object} Parsed action and content
+ */
+const parseNARCommand = (input) => {
+  const lowerInput = input.toLowerCase().trim();
+
+  // Handle actions based on keywords - check more specific patterns first to avoid conflicts
+  if (lowerInput.includes('get_beliefs') || lowerInput.includes('get beliefs')) {
+    return { action: 'get_beliefs', content: '' };
+  } else if (lowerInput.includes('get_goals') || lowerInput.includes('get goals')) {
+    return { action: 'get_goals', content: '' };
+  } else if (lowerInput.includes('step') || lowerInput.includes('cycle') || lowerInput.includes('run')) {
+    return { action: 'step', content: '' };
+  } else if (lowerInput.includes('add_goal') || lowerInput.includes('add goal')) {
+    // Handle goal additions first (more specific)
+    const narseseMatch = input.match(/<[^>]+>[!]?/i);
+    let content = '';
+    if (narseseMatch) {
+      content = narseseMatch[0];
+    } else {
+      // Extract content after the add command
+      const cleaned = input.replace(/^(add_goal|add goal|add)\s*/i, '').trim();
+      content = cleaned || input;
+      if (content && !content.endsWith('!')) content += '!';
+    }
+    return { action: 'add_goal', content };
+  } else if (lowerInput.includes('add_belief') || lowerInput.includes('add belief') || (lowerInput.includes('add') && !lowerInput.includes('goal') && input.includes('-->'))) {
+    // Handle belief additions - ensure it doesn't overlap with goal
+    const narseseMatch = input.match(/<[^>]+>/i);
+    let content = '';
+    if (narseseMatch) {
+      content = narseseMatch[0];
+    } else {
+      // Extract content after the add command
+      const cleaned = input.replace(/^(add_belief|add belief|add)\s*/i, '').trim();
+      content = cleaned || input;
+    }
+    return { action: 'add_belief', content };
+  } else if (lowerInput.includes('add')) {
+    // Fallback for add commands that don't clearly fit belief/goal
+    if (lowerInput.includes('!')) {
+      // Likely a goal
+      const narseseMatch = input.match(/<[^>]+>[!]?/i);
+      let content = '';
+      if (narseseMatch) {
+        content = narseseMatch[0];
+      } else {
+        const cleaned = input.replace(/^(add)\s*/i, '').trim();
+        content = cleaned;
+        if (content && !content.endsWith('!')) content += '!';
+      }
+      return { action: 'add_goal', content };
+    } else {
+      // Likely a belief
+      const narseseMatch = input.match(/<[^>]+>/i);
+      let content = '';
+      if (narseseMatch) {
+        content = narseseMatch[0];
+      } else {
+        const cleaned = input.replace(/^(add)\s*/i, '').trim();
+        content = cleaned || input;
+      }
+      return { action: 'add_belief', content };
+    }
+  } else if (lowerInput.includes('query') || lowerInput.includes('what') || lowerInput.includes('show')) {
+    const content = input.replace(/^(query|show|what\s+is\s*)\s*/i, '').trim();
+    return { action: 'query', content };
+  } else {
+    // Default fallback - if none of the specific patterns match, treat as query
+    return { action: 'query', content: input };
+  }
+};
+
+/**
+ * Standardized error handler
+ * @param {Error} error - The error to handle
+ * @param {string} context - Context where the error occurred
+ * @returns {object} Standardized error response
+ */
+const handleExecutionError = (error, context = 'execution') => {
+  console.error(`❌ Error in ${context}:`, error);
+  return {
+    error: true,
+    message: error.message || 'An unknown error occurred',
+    context
+  };
+};
+
+// SeNARS-specific tool for NAR control
 class SeNARSControlTool extends DynamicTool {
   constructor(nar = null) {
     super({
@@ -42,114 +184,17 @@ class SeNARSControlTool extends DynamicTool {
           return JSON.stringify({ error: "NAR system not initialized" });
         }
 
-        console.log("SeNARSControlTool received args:", rawArgs); // Debug log
-        console.log("Type of args:", typeof rawArgs); // Debug log
+        try {
+          // Process the arguments to ensure they match the expected NARControlTool format
+          const processedArgs = parseNARControlArgs(rawArgs);
 
-        // Process the arguments to ensure they match the expected NARControlTool format
-        let processedArgs;
-        
-        // Handle different possible input formats
-        if (typeof rawArgs === 'string') {
-          // If args is just a string (unexpected but possible)
-          const input = rawArgs.toLowerCase().trim();
-          if (input === 'get_beliefs') {
-            processedArgs = { action: 'get_beliefs', content: '' };
-          } else if (input === 'get_goals') {
-            processedArgs = { action: 'get_goals', content: '' };
-          } else if (input === 'step') {
-            processedArgs = { action: 'step', content: '' };
-          } else {
-            processedArgs = { action: 'query', content: input };
-          }
-        } else if (typeof rawArgs === 'object') {
-          if (rawArgs.action) {
-            // If action is directly provided (the schema-compliant way)
-            processedArgs = rawArgs;
-          } else if (rawArgs.input) {
-            // If input is provided (the model's preferred way), parse it
-            const input = rawArgs.input.toLowerCase().trim();
-            
-            // Handle actions based on keywords - check more specific patterns first to avoid conflicts
-            if (input.includes('get_beliefs') || input.includes('get beliefs')) {
-              processedArgs = { action: 'get_beliefs', content: '' };
-            } else if (input.includes('get_goals') || input.includes('get goals')) {
-              processedArgs = { action: 'get_goals', content: '' };
-            } else if (input.includes('step') || input.includes('cycle') || input.includes('run')) {
-              processedArgs = { action: 'step', content: '' };
-            } else if (input.includes('add_goal') || input.includes('add goal')) {
-              // Handle goal additions first (more specific)
-              const narseseMatch = input.match(/<[^>]+>[!]?/i);
-              let content = '';
-              if (narseseMatch) {
-                content = narseseMatch[0];
-              } else {
-                // Extract content after the add command
-                const cleaned = input.replace(/^(add_goal|add goal|add)\s*/i, '').trim();
-                content = cleaned || input;
-                if (content && !content.endsWith('!')) content += '!';
-              }
-              processedArgs = { action: 'add_goal', content: content };
-            } else if (input.includes('add_belief') || input.includes('add belief') || (input.includes('add') && !input.includes('goal') && input.includes('-->'))) {
-              // Handle belief additions - ensure it doesn't overlap with goal
-              const narseseMatch = input.match(/<[^>]+>/i);
-              let content = '';
-              if (narseseMatch) {
-                content = narseseMatch[0];
-              } else {
-                // Extract content after the add command
-                const cleaned = input.replace(/^(add_belief|add belief|add)\s*/i, '').trim();
-                content = cleaned || input;
-              }
-              processedArgs = { action: 'add_belief', content: content };
-            } else if (input.includes('add')) {
-              // Fallback for add commands that don't clearly fit belief/goal
-              if (input.includes('!')) {
-                // Likely a goal
-                const narseseMatch = input.match(/<[^>]+>[!]?/i);
-                let content = '';
-                if (narseseMatch) {
-                  content = narseseMatch[0];
-                } else {
-                  const cleaned = input.replace(/^(add)\s*/i, '').trim();
-                  content = cleaned;
-                  if (content && !content.endsWith('!')) content += '!';
-                }
-                processedArgs = { action: 'add_goal', content: content };
-              } else {
-                // Likely a belief
-                const narseseMatch = input.match(/<[^>]+>/i);
-                let content = '';
-                if (narseseMatch) {
-                  content = narseseMatch[0];
-                } else {
-                  const cleaned = input.replace(/^(add)\s*/i, '').trim();
-                  content = cleaned || input;
-                }
-                processedArgs = { action: 'add_belief', content: content };
-              }
-            } else if (input.includes('query') || input.includes('what') || input.includes('show')) {
-              const content = input.replace(/^(query|show|what\s+is\s*)\s*/i, '').trim();
-              processedArgs = { action: 'query', content: content };
-            } else {
-              // Default fallback - if none of the specific patterns match, treat as query
-              processedArgs = { action: 'query', content: input };
-            }
-          } else {
-            // If neither action nor input provided in object, return error
-            return JSON.stringify({ error: "Invalid arguments: object must have 'action' or 'input' field" });
-          }
-        } else {
-          // Unexpected type
-          return JSON.stringify({ error: "Invalid arguments: expected object or string" });
+          // Execute the tool using our existing NARControlTool
+          const narTool = new NARControlTool(nar);
+          const result = await narTool.execute(processedArgs);
+          return JSON.stringify(result);
+        } catch (error) {
+          return JSON.stringify({ error: error.message });
         }
-
-        console.log("Processed args:", processedArgs); // Debug log
-
-        // Execute the tool using our existing NARControlTool
-        const narTool = new NARControlTool(nar);
-        const result = await narTool.execute(processedArgs);
-        console.log("Tool result:", result); // Debug log
-        return JSON.stringify(result);
       },
       schema: z.union([
         // Expected schema
@@ -216,73 +261,83 @@ export class AgentReplOllama {
     let toolCalls = [];
 
     // === First pass: Stream assistant response and detect tool calls ===
-    process.stdout.write("🤖 ");
-    const firstStream = await this.model.stream(messages);
+    try {
+      process.stdout.write("🤖 ");
+      const firstStream = await this.model.stream(messages);
 
-    let assistantContent = "";
-    for await (const chunk of firstStream) {
-      if (chunk.content) {
-        assistantContent += chunk.content;
+      let assistantContent = "";
+      for await (const chunk of firstStream) {
+        if (chunk.content) {
+          assistantContent += chunk.content;
+        }
+        if (chunk.tool_calls?.length > 0) {
+          toolCalls = chunk.tool_calls;
+        }
       }
-      if (chunk.tool_calls?.length > 0) {
-        toolCalls = chunk.tool_calls;
+
+      // Yield the initial assistant response if there's content
+      if (assistantContent) {
+        yield { type: "agent_response", content: assistantContent };
       }
-    }
 
-    // Yield the initial assistant response if there's content
-    if (assistantContent) {
-      yield { type: "agent_response", content: assistantContent };
-    }
+      // If there are no tool calls, we're done
+      if (toolCalls.length === 0) {
+        return;
+      }
 
-    // If there are no tool calls, we're done
-    if (toolCalls.length === 0) {
-      return;
-    }
-
-    // === Execute each tool call and stream results ===
-    for (const tc of toolCalls) {
-      const { name, args, id } = tc;
-      
-      // Yield the tool call notification
-      yield { type: "tool_call", name, args };
-      
-      // Execute the tool
-      let toolResult;
-      const tool = this.tools.find(t => t.name === name);
-      if (tool) {
-        try {
-          toolResult = await tool.invoke(args);
-          // Yield the tool result
-          yield { type: "tool_result", content: toolResult };
-        } catch (error) {
-          const errorResult = `Error executing ${name}: ${error.message}`;
+      // === Execute each tool call and stream results ===
+      for (const tc of toolCalls) {
+        const { name, args, id } = tc;
+        
+        // Yield the tool call notification
+        yield { type: "tool_call", name, args };
+        
+        // Execute the tool
+        let toolResult;
+        const tool = this.tools.find(t => t.name === name);
+        if (tool) {
+          try {
+            toolResult = await tool.invoke(args);
+            // Yield the tool result
+            yield { type: "tool_result", content: toolResult };
+          } catch (error) {
+            const errorResult = `Error executing ${name}: ${error.message}`;
+            yield { type: "tool_result", content: errorResult };
+          }
+        } else {
+          const errorResult = `Error: Tool ${name} not found`;
           yield { type: "tool_result", content: errorResult };
         }
-      } else {
-        const errorResult = `Error: Tool ${name} not found`;
-        yield { type: "tool_result", content: errorResult };
-      }
 
-      // Create messages for final response with tool results
-      const messagesWithResults = [
-        new HumanMessage(input),
-        { role: "assistant", content: assistantContent, tool_calls: toolCalls },
-        new ToolMessage({ content: toolResult, tool_call_id: id, name })
-      ];
+        // Create messages for final response with tool results
+        const messagesWithResults = [
+          new HumanMessage(input),
+          { role: "assistant", content: assistantContent, tool_calls: toolCalls },
+          new ToolMessage({ content: toolResult, tool_call_id: id, name })
+        ];
 
-      // === Stream final response with tool result in context ===
-      const finalStream = await this.model.stream(messagesWithResults);
-      let finalContent = "";
-      for await (const chunk of finalStream) {
-        if (chunk.content) {
-          finalContent += chunk.content;
+        // === Stream final response with tool result in context ===
+        try {
+          const finalStream = await this.model.stream(messagesWithResults);
+          let finalContent = "";
+          for await (const chunk of finalStream) {
+            if (chunk.content) {
+              finalContent += chunk.content;
+            }
+          }
+          
+          // Yield the final assistant response
+          if (finalContent) {
+            yield { type: "agent_response", content: finalContent };
+          }
+        } catch (error) {
+          const errorResponse = `Error generating final response: ${error.message}`;
+          yield { type: "agent_response", content: errorResponse };
         }
       }
-      
-      // Yield the final assistant response
-      if (finalContent) {
-        yield { type: "agent_response", content: finalContent };
-      }
+    } catch (error) {
+      yield { type: "agent_response", content: `❌ Streaming error: ${error.message}` };
+      console.error('Streaming execution error:', error);
     }
   }
 
@@ -304,10 +359,18 @@ export class AgentReplOllama {
   }
 
   async shutdown() {
+    console.log("\n🔄 Shutting down Agent REPL...");
+    
+    // Clean up resources if needed
     if (this.streamingComponent) {
       // Ink handles unmounting automatically
     }
-    console.log("\n👋 Agent REPL session ended. Goodbye!");
+    
+    // Clear any pending operations
+    this.model = null;
+    this.tools = [];
+    
+    console.log("👋 Agent REPL session ended. Goodbye!");
   }
 }
 
@@ -372,15 +435,7 @@ const AgentStreamingUI = ({ agent, nar }) => {
 
   // Format log entries
   const formatLogEntry = (log) => {
-    let color = 'white';
-    switch (log.type) {
-      case 'error': color = 'red'; break;
-      case 'info': color = 'blue'; break;
-      case 'success': color = 'green'; break;
-      case 'user': color = 'yellow'; break;
-      case 'tool_call': color = 'cyan'; break;
-    }
-
+    const color = COLORS[log.type?.toUpperCase()] || 'white';
     const timestamp = new Date(log.timestamp).toLocaleTimeString();
     return React.createElement(
       Box,
@@ -393,97 +448,111 @@ const AgentStreamingUI = ({ agent, nar }) => {
     );
   };
 
+  // Header component
+  const header = React.createElement(
+    Box,
+    { flexDirection: 'row', justifyContent: 'space-between', paddingX: 1, backgroundColor: 'blue' },
+    React.createElement(Text, { color: 'white', bold: true }, '🤖 SeNARS Agent REPL'),
+    React.createElement(Text, { color: 'white' }, `Model: ${agent.modelName}`)
+  );
+
+  // Log Viewer component
+  const logViewer = React.createElement(
+    Box,
+    { flexDirection: 'column', flexGrow: 1, padding: 1, maxHeight: '100%' },
+    React.createElement(Text, { bold: true, color: 'cyan' }, `Conversation Log (${logs.length})`),
+    React.createElement(
+      Box,
+      { flexDirection: 'column', flexGrow: 1, marginTop: 1, marginBottom: 1 },
+      ...logs.slice(-20).map(formatLogEntry) // Show last 20 logs
+    )
+  );
+
+  // Input Box component
+  const inputBox = React.createElement(
+    Box,
+    { borderStyle: 'round', width: '100%' },
+    React.createElement(
+      Box,
+      { flexDirection: 'row', alignItems: 'center' },
+      React.createElement(Text, { color: 'green', bold: true }, '> '),
+      React.createElement(
+        TextInput,
+        {
+          value: inputValue,
+          onChange: setInputValue,
+          onSubmit: handleSubmit,
+          placeholder: isProcessing ? 'Processing...' : 'Enter query for agent (e.g., "What is the weather in Paris?")...',
+          disabled: isProcessing
+        }
+      )
+    )
+  );
+
+  // Status Bar component
+  const statusBar = React.createElement(
+    Box,
+    { paddingX: 1, backgroundColor: 'gray', width: '100%', flexDirection: 'row', justifyContent: 'space-between' },
+    React.createElement(
+      Box,
+      { flexDirection: 'row' },
+      React.createElement(Text, { color: 'white' }, `Status: ${isProcessing ? '🔄 Processing' : '✅ Ready'} | `),
+      React.createElement(Text, { color: 'white' }, `Raw Mode: ${isRawModeSupported ? 'Yes' : 'No'}`)
+    ),
+    React.createElement(
+      Box,
+      { flexDirection: 'row' },
+      React.createElement(Text, { color: 'yellow' }, 'Ctrl+C to exit')
+    )
+  );
+
   return React.createElement(
     Box,
     { flexDirection: 'column', width: '100%', height: '100%' },
-
-    // Header
-    React.createElement(
-      Box,
-      { flexDirection: 'row', justifyContent: 'space-between', paddingX: 1, backgroundColor: 'blue' },
-      React.createElement(Text, { color: 'white', bold: true }, '🤖 SeNARS Agent REPL'),
-      React.createElement(Text, { color: 'white' }, `Model: ${agent.modelName}`)
-    ),
-
-    // Log Viewer
-    React.createElement(
-      Box,
-      { flexDirection: 'column', flexGrow: 1, padding: 1, maxHeight: '100%' },
-      React.createElement(Text, { bold: true, color: 'cyan' }, `Conversation Log (${logs.length})`),
-      React.createElement(
-        Box,
-        { flexDirection: 'column', flexGrow: 1, marginTop: 1, marginBottom: 1 },
-        ...logs.slice(-20).map(formatLogEntry) // Show last 20 logs
-      )
-    ),
-
-    // Input Box
-    React.createElement(
-      Box,
-      { borderStyle: 'round', width: '100%' },
-      React.createElement(
-        Box,
-        { flexDirection: 'row', alignItems: 'center' },
-        React.createElement(Text, { color: 'green', bold: true }, '> '),
-        React.createElement(
-          TextInput,
-          {
-            value: inputValue,
-            onChange: setInputValue,
-            onSubmit: handleSubmit,
-            placeholder: isProcessing ? 'Processing...' : 'Enter query for agent (e.g., "What is the weather in Paris?")...',
-            disabled: isProcessing
-          }
-        )
-      )
-    ),
-
-    // Status Bar
-    React.createElement(
-      Box,
-      { paddingX: 1, backgroundColor: 'gray', width: '100%', flexDirection: 'row', justifyContent: 'space-between' },
-      React.createElement(
-        Box,
-        { flexDirection: 'row' },
-        React.createElement(Text, { color: 'white' }, `Status: ${isProcessing ? '🔄 Processing' : '✅ Ready'} | `),
-        React.createElement(Text, { color: 'white' }, `Raw Mode: ${isRawModeSupported ? 'Yes' : 'No'}`)
-      ),
-      React.createElement(
-        Box,
-        { flexDirection: 'row' },
-        React.createElement(Text, { color: 'yellow' }, 'Ctrl+C to exit')
-      )
-    )
+    header,
+    logViewer,
+    inputBox,
+    statusBar
   );
 };
 
 // Command-line argument parsing
-function parseArgs() {
+const parseArgs = () => {
   const args = {};
-  for (let i = 0; i < process.argv.length; i++) {
-    if (process.argv[i] === '--model' || process.argv[i] === '--ollama') {
-      // Check for model name in next argument
-      if (process.argv[i + 1] && !process.argv[i + 1].startsWith('--')) {
-        args.modelName = process.argv[i + 1];
-        i++; // Skip the next arg since we used it
-      } else {
-        // Default to granite model if no specific model provided after --ollama
-        args.modelName = "hf.co/unsloth/granite-4.0-micro-GGUF:Q4_K_M";
-      }
-    } else if (process.argv[i] === '--temperature') {
-      args.temperature = parseFloat(process.argv[i + 1]);
-      i++; // Skip the next arg
-    } else if (process.argv[i] === '--base-url') {
-      args.baseUrl = process.argv[i + 1];
-      i++; // Skip the next arg
+  const argv = process.argv;
+  
+  for (let i = 0; i < argv.length; i++) {
+    switch (argv[i]) {
+      case '--model':
+      case '--ollama':
+        args.modelName = argv[i + 1]?.startsWith('--') ? "hf.co/unsloth/granite-4.0-micro-GGUF:Q4_K_M" : argv[++i];
+        break;
+      case '--temperature':
+        args.temperature = parseFloat(argv[++i]);
+        break;
+      case '--base-url':
+        args.baseUrl = argv[++i];
+        break;
     }
   }
+  
+  // Default model if --ollama flag is provided without specific model
+  if (process.argv.includes('--ollama') && !args.modelName) {
+    args.modelName = "hf.co/unsloth/granite-4.0-micro-GGUF:Q4_K_M";
+  }
+  
   return args;
-}
+};
 
 // Handle graceful shutdown
+let agentReplInstance = null;
 process.on('SIGINT', async () => {
-  console.log('\n👋 Agent REPL session ended. Goodbye!');
+  console.log('\n🔄 Received SIGINT, shutting down gracefully...');
+  if (agentReplInstance && typeof agentReplInstance.shutdown === 'function') {
+    await agentReplInstance.shutdown();
+  } else {
+    console.log("👋 Agent REPL session ended. Goodbye!");
+  }
   process.exit(0);
 });
 
