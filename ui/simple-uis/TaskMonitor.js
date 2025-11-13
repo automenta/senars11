@@ -1,5 +1,5 @@
 import React from 'react';
-import useUiStore from '../src/stores/uiStore';
+import useUiStore from '../src/stores/uiStore.js';
 
 const TaskMonitor = () => {
     const tasks = useUiStore(state => state.tasks);

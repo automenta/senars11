@@ -2,6 +2,7 @@ import React, {memo, useCallback, useState} from 'react';
 import useUiStore from '../stores/uiStore.js';
 import {DataPanel} from './DataPanel.js';
 import {themeUtils} from '../utils/themeUtils.js';
+import {Button} from './GenericComponents.js';
 
 const InputInterfacePanel = memo(() => {
   const [inputText, setInputText] = useState('');
@@ -126,17 +127,11 @@ const InputInterfacePanel = memo(() => {
       }
     }),
     React.createElement('div', {style: {display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem'}},
-      React.createElement('button', {
+      React.createElement(Button, {
         onClick: sendInput,
         disabled: !inputText.trim() || !wsService || !wsConnected,
-        style: {
-          padding: '0.5rem 1rem',
-          backgroundColor: (wsService && wsConnected) ? themeUtils.get('COLORS.PRIMARY') : '#6c757d',
-          color: 'white',
-          border: 'none',
-          borderRadius: themeUtils.get('BORDERS.RADIUS.SM'),
-          cursor: (inputText.trim() && wsService && wsConnected) ? 'pointer' : 'not-allowed'
-        }
+        variant: (wsService && wsConnected) ? 'primary' : 'light',
+        size: 'md'
       }, wsConnected ? 'Submit Input' : 'Disconnected')
     )
   );

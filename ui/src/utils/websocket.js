@@ -601,50 +601,64 @@ class WebSocketService {
 
         if (command !== 'ensurePanelActivity' && command !== 'generateInitialData') return;
 
-        if (!targetPanels || targetPanels.includes('concepts')) {
-            [
+        // Helper function to send messages for specific data types
+        const sendSampleData = (dataType, itemsGenerator, messageTransformer) => {
+            if (targetPanels && !targetPanels.includes(dataType)) return;
+
+            const items = itemsGenerator();
+            items.forEach(item => {
+                const message = messageTransformer(item);
+                this.routeMessage(message);
+            });
+        };
+
+        const now = Date.now();
+
+        // Send sample concepts
+        sendSampleData(
+            'concepts',
+            () => [
                 {term: 'sample_concept_1', priority: 0.8, taskCount: 2, beliefCount: 1, questionCount: 0},
                 {term: 'sample_concept_2', priority: 0.65, taskCount: 1, beliefCount: 0, questionCount: 1},
                 {term: 'sample_concept_3', priority: 0.92, taskCount: 3, beliefCount: 2, questionCount: 1}
-            ].forEach(({term, priority, taskCount, beliefCount, questionCount}) =>
-                this.routeMessage({
-                    type: 'conceptUpdate',
-                    payload: {
-                        concept: {
-                            term,
-                            priority,
-                            occurrenceTime: Date.now(),
-                            taskCount,
-                            beliefCount,
-                            questionCount,
-                            lastAccess: Date.now()
-                        },
-                        changeType: 'added'
-                    }
-                })
-            );
-        }
+            ],
+            ({term, priority, taskCount, beliefCount, questionCount}) => ({
+                type: 'conceptUpdate',
+                payload: {
+                    concept: {
+                        term,
+                        priority,
+                        occurrenceTime: now,
+                        taskCount,
+                        beliefCount,
+                        questionCount,
+                        lastAccess: now
+                    },
+                    changeType: 'added'
+                }
+            })
+        );
 
-        if (!targetPanels || targetPanels.includes('tasks')) {
-            const now = Date.now();
-            [
+        // Send sample tasks
+        sendSampleData(
+            'tasks',
+            () => [
                 {id: `task_${now}_sample1`, content: '<sample --> task>.', priority: 0.75, type: 'belief'},
                 {id: `task_${now}_sample2`, content: '<another --> example>?', priority: 0.62, type: 'question'}
-            ].forEach(({id, content, priority, type}) =>
-                this.routeMessage({
-                    type: 'taskUpdate',
-                    payload: {
-                        task: {id, content, priority, creationTime: now, type},
-                        changeType: 'input'
-                    }
-                })
-            );
-        }
+            ],
+            ({id, content, priority, type}) => ({
+                type: 'taskUpdate',
+                payload: {
+                    task: {id, content, priority, creationTime: now, type},
+                    changeType: 'input'
+                }
+            })
+        );
 
-        // Add sample beliefs
-        if (!targetPanels || targetPanels.includes('beliefs')) {
-            const now = Date.now();
-            [
+        // Send sample beliefs
+        sendSampleData(
+            'beliefs',
+            () => [
                 {
                     id: `belief_${now}_sample1`,
                     term: '<cat --> animal>.',
@@ -659,18 +673,17 @@ class WebSocketService {
                     type: 'belief',
                     truth: {frequency: 0.85, confidence: 0.75}
                 }
-            ].forEach(({id, term, priority, type, truth}) =>
-                this.routeMessage({
-                    type: 'beliefUpdate',
-                    payload: {id, term, priority, creationTime: now, type, truth}
-                })
-            );
-        }
+            ],
+            ({id, term, priority, type, truth}) => ({
+                type: 'beliefUpdate',
+                payload: {id, term, priority, creationTime: now, type, truth}
+            })
+        );
 
-        // Add sample goals
-        if (!targetPanels || targetPanels.includes('goals')) {
-            const now = Date.now();
-            [
+        // Send sample goals
+        sendSampleData(
+            'goals',
+            () => [
                 {
                     id: `goal_${now}_sample1`,
                     term: '<find_solution --> desirable>!',
@@ -685,13 +698,12 @@ class WebSocketService {
                     type: 'goal',
                     truth: {desire: 0.8, confidence: 0.7}
                 }
-            ].forEach(({id, term, priority, type, truth}) =>
-                this.routeMessage({
-                    type: 'goalUpdate',
-                    payload: {id, term, priority, creationTime: now, type, truth}
-                })
-            );
-        }
+            ],
+            ({id, term, priority, type, truth}) => ({
+                type: 'goalUpdate',
+                payload: {id, term, priority, creationTime: now, type, truth}
+            })
+        );
     }
 
     handlePanelCommand(data) {

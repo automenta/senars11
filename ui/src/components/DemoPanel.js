@@ -3,6 +3,7 @@ import useUiStore from '../stores/uiStore.js';
 import {DataPanel} from './DataPanel.js';
 import {createProgressBar} from '../utils/dashboardUtils.js';
 import {themeUtils} from '../utils/themeUtils.js';
+import {Button} from './GenericComponents.js';
 
 const DemoPanel = memo(() => {
   const demos = useUiStore(state => state.demos);
@@ -35,29 +36,25 @@ const DemoPanel = memo(() => {
   };
 
   const getStateColors = (state) => {
-    switch (state) {
-    case 'running':
-      return {bg: '#e8f5e8', border: '#28a745'};
-    case 'paused':
-      return {bg: '#fff3cd', border: '#ffc107'};
-    case 'completed':
-      return {bg: '#d4edda', border: '#28a745'};
-    case 'error':
-      return {bg: '#f8d7da', border: '#dc3545'};
-    default:
-      return {bg: 'white', border: '#ddd'};
-    }
+    const colorMap = {
+      running: themeUtils.get('COLORS.SUCCESS'),
+      paused: themeUtils.get('COLORS.WARNING'),
+      completed: themeUtils.get('COLORS.SUCCESS'),
+      error: themeUtils.get('COLORS.DANGER')
+    };
+
+    const color = colorMap[state] || themeUtils.get('COLORS.INFO');
+    return {
+      bg: color + '20',
+      border: color
+    };
   };
 
-  const getButtonStyles = (isActive, isDisabled = false) => ({
-    padding: '0.25rem 0.5rem',
-    backgroundColor: isDisabled ? '#6c757d' : isActive ? '#28a745' : '#6c757d',
-    color: 'white',
-    border: 'none',
-    borderRadius: '3px',
-    cursor: isDisabled ? 'not-allowed' : 'pointer',
-    opacity: isDisabled ? 0.6 : 1
-  });
+  const getButtonVariant = (isActive, isDisabled = false) => {
+    if (isDisabled) return 'light';
+    if (isActive) return 'success';
+    return 'secondary';
+  };
 
   const DemoRow = memo(({demo}) => {
     const [expanded, setExpanded] = useState(false);
@@ -65,14 +62,21 @@ const DemoPanel = memo(() => {
     const toggleExpanded = () => setExpanded(!expanded);
     const stateColors = getStateColors(state.state);
 
+    // Get progress color based on state
+    const getProgressColor = () => {
+      if (state.state === 'running' || state.state === 'completed') return themeUtils.get('COLORS.SUCCESS');
+      if (state.state === 'paused') return themeUtils.get('COLORS.WARNING');
+      return themeUtils.get('COLORS.PRIMARY');
+    };
+
     return React.createElement('div',
       {
         style: {
-          padding: '0.75rem',
-          margin: '0.5rem 0',
+          padding: themeUtils.get('SPACING.MD'),
+          margin: `${themeUtils.get('SPACING.SM')} 0`,
           backgroundColor: stateColors.bg,
           border: `1px solid ${stateColors.border}`,
-          borderRadius: themeUtils.get('BORDERS.RADIUS.SM'),
+          borderRadius: themeUtils.get('BORDERS.RADIUS.MD'),
           fontSize: themeUtils.get('FONTS.SIZE.SM')
         }
       },
@@ -87,35 +91,42 @@ const DemoPanel = memo(() => {
         React.createElement('div', {
           style: {
             fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD'),
-            cursor: 'pointer'
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center'
           }
         },
-        React.createElement('span', {onClick: toggleExpanded},
-          expanded ? '▼ ' : '► '
+        React.createElement('span', {onClick: toggleExpanded, style: {marginRight: themeUtils.get('SPACING.XS')}},
+          expanded ? '▼' : '►'
         ),
-        `${demo.name} (${state.state})`
+        `${demo.name} `,
+        React.createElement('span', {
+          style: {
+            fontSize: themeUtils.get('FONTS.SIZE.XS'),
+            color: themeUtils.get('TEXT.SECONDARY'),
+            marginLeft: themeUtils.get('SPACING.SM')
+          }
+        }, `(${state.state})`)
         ),
         React.createElement('div', {
           style: {
             fontSize: themeUtils.get('FONTS.SIZE.XS'),
             color: themeUtils.get('TEXT.SECONDARY'),
-            marginTop: '0.25rem'
+            marginTop: themeUtils.get('SPACING.XS')
           }
         },
         demo.description
         ),
         // Show progress bar and additional info
-        React.createElement('div', null,
+        React.createElement('div', {style: {marginTop: themeUtils.get('SPACING.SM')}},
           createProgressBar(React, {
             percentage: state.progress || 0,
-            color: state.state === 'running' ? '#28a745' :
-              state.state === 'completed' ? '#28a745' :
-                state.state === 'paused' ? '#ffc107' : '#007bff'
+            color: getProgressColor()
           }),
           state.progress && React.createElement('div', {
             style: {
-              fontSize: themeUtils.get('FONTS.SIZE.XXS'),
-              marginTop: '0.25rem',
+              fontSize: themeUtils.get('FONTS.SIZE.XS'),
+              marginTop: themeUtils.get('SPACING.XS'),
               color: themeUtils.get('TEXT.TERTIARY')
             }
           },
@@ -123,8 +134,8 @@ const DemoPanel = memo(() => {
           )
         )
       ),
-      React.createElement('div', {style: {display: 'flex', gap: '0.25rem'}},
-        React.createElement('button', {
+      React.createElement('div', {style: {display: 'flex', gap: themeUtils.get('SPACING.XS'), flexShrink: 0}},
+        React.createElement(Button, {
           onClick: () => {
             // First ensure other panels are activated, then start demo
             if (wsService) {
@@ -140,29 +151,33 @@ const DemoPanel = memo(() => {
             }
             sendDemoControl(demo.id, 'start');
           },
+          variant: getButtonVariant(state.state !== 'running', state.state === 'running'),
           disabled: state.state === 'running',
-          style: getButtonStyles(state.state !== 'running', state.state === 'running')
+          size: 'sm'
         }, 'Start'),
-        React.createElement('button', {
+        React.createElement(Button, {
           onClick: () => sendDemoControl(demo.id, 'pause'),
+          variant: getButtonVariant(state.state === 'paused', state.state !== 'running'),
           disabled: state.state !== 'running',
-          style: getButtonStyles(state.state === 'paused', state.state !== 'running')
+          size: 'sm'
         }, 'Pause'),
-        React.createElement('button', {
+        React.createElement(Button, {
           onClick: () => sendDemoControl(demo.id, 'resume'),
+          variant: getButtonVariant(state.state === 'running', state.state !== 'paused'),
           disabled: state.state !== 'paused',
-          style: getButtonStyles(state.state === 'running', state.state !== 'paused')
+          size: 'sm'
         }, 'Resume'),
-        React.createElement('button', {
+        React.createElement(Button, {
           onClick: () => sendDemoControl(demo.id, 'stop'),
-          style: getButtonStyles(true)
+          variant: 'danger',
+          size: 'sm'
         }, 'Stop')
       )
       ),
       expanded && React.createElement('div', {
         style: {
-          marginTop: '0.5rem',
-          paddingTop: '0.5rem',
+          marginTop: themeUtils.get('SPACING.MD'),
+          paddingTop: themeUtils.get('SPACING.MD'),
           borderTop: `1px solid ${themeUtils.get('BORDERS.COLOR')}`
         }
       },
@@ -171,18 +186,20 @@ const DemoPanel = memo(() => {
           React.createElement('div', {
             style: {
               fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD'),
-              marginBottom: '0.5rem'
+              marginBottom: themeUtils.get('SPACING.SM'),
+              color: themeUtils.get('TEXT.PRIMARY')
             }
           }, 'Parameters:'),
           demo.parameters.map(param =>
             React.createElement('div', {
               key: param.name,
-              style: {marginBottom: '0.25rem', display: 'flex', alignItems: 'center'}
+              style: {marginBottom: themeUtils.get('SPACING.SM'), display: 'flex', alignItems: 'center'}
             },
             React.createElement('label', {
               style: {
                 width: '150px',
-                fontSize: themeUtils.get('FONTS.SIZE.XS')
+                fontSize: themeUtils.get('FONTS.SIZE.SM'),
+                color: themeUtils.get('TEXT.SECONDARY')
               }
             }, param.name),
             React.createElement('input', {
@@ -195,9 +212,9 @@ const DemoPanel = memo(() => {
               },
               style: {
                 flex: 1,
-                padding: '0.25rem',
+                padding: themeUtils.get('SPACING.XS'),
                 border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`,
-                borderRadius: themeUtils.get('BORDERS.RADIUS.XS')
+                borderRadius: themeUtils.get('BORDERS.RADIUS.SM')
               }
             })
             )
@@ -205,7 +222,7 @@ const DemoPanel = memo(() => {
         )
         : React.createElement('div', {
           style: {
-            fontSize: themeUtils.get('FONTS.SIZE.XS'),
+            fontSize: themeUtils.get('FONTS.SIZE.SM'),
             color: themeUtils.get('TEXT.MUTED')
           }
         }, 'No configurable parameters')

@@ -11,9 +11,9 @@
 import React, {memo, useState, useCallback} from 'react';
 import useUiStore from '../stores/uiStore.js';
 import {themeUtils} from '../utils/themeUtils.js';
-import {TaskPanel} from './TaskPanel.js';
-import {ConceptPanel} from './ConceptPanel.js';
-import {GraphUI} from './GraphUI.js';
+import TaskPanel from './TaskPanel.js';
+import ConceptPanel from './ConceptPanel.js';
+import GraphUI from './GraphUI.js';
 import {DataPanel} from './DataPanel.js';
 
 const VisualizationPanel = memo(() => {

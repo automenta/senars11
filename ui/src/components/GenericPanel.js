@@ -12,7 +12,8 @@ const GenericPanel = memo(({
   title = null,
   autoScroll = false,
   maxItems = null,
-  showCount = false
+  showCount = false,
+  className = ''
 }) => {
   const [containerRef, setContainerRef] = useState(null);
 
@@ -27,6 +28,7 @@ const GenericPanel = memo(({
   const containerStyleComputed = useMemo(() => ({
     maxHeight,
     overflowY: 'auto',
+    padding: themeUtils.get('SPACING.SM'),
     ...containerStyle
   }), [maxHeight, containerStyle]);
 
@@ -35,7 +37,8 @@ const GenericPanel = memo(({
     marginBottom: themeUtils.get('SPACING.SM'),
     display: 'flex',
     justifyContent: 'space-between',
-    alignItems: 'center'
+    alignItems: 'center',
+    color: themeUtils.get('TEXT.PRIMARY')
   };
 
   const countStyle = {
@@ -46,7 +49,13 @@ const GenericPanel = memo(({
   const emptyStateStyle = {
     padding: themeUtils.get('SPACING.MD'),
     textAlign: 'center',
-    color: themeUtils.get('TEXT.MUTED')
+    color: themeUtils.get('TEXT.MUTED'),
+    fontStyle: 'italic',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: '200px'
   };
 
   const timestampStyle = {
@@ -57,7 +66,7 @@ const GenericPanel = memo(({
     paddingRight: themeUtils.get('SPACING.SM')
   };
 
-  return React.createElement('div', {className: 'genericPanel'},
+  return React.createElement('div', {className: `genericPanel ${className}`.trim()},
     title && React.createElement('div', {style: titleStyle},
       React.createElement('span', null, title),
       showCount && React.createElement('span', {style: countStyle}, `(${displayItems.length})`)
@@ -68,7 +77,10 @@ const GenericPanel = memo(({
     },
     displayItems.length > 0
       ? displayItems.map((item, index) => React.createElement('div', {key: index}, renderItem(item, index)))
-      : React.createElement('div', {className: 'emptyState', style: emptyStateStyle}, emptyMessage)
+      : React.createElement('div', {className: 'emptyState', style: emptyStateStyle},
+          React.createElement('div', {style: {fontSize: '2rem', marginBottom: themeUtils.get('SPACING.SM')}}, '🔍'),
+          React.createElement('div', null, emptyMessage)
+        )
     ),
     withTimestamp && React.createElement('div', {style: timestampStyle},
       React.createElement(TimeDisplay, {timestamp: Date.now(), formatType: 'time'})
