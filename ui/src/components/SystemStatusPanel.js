@@ -5,151 +5,151 @@ import {getStatusColor} from '../utils/dashboardUtils.js';
 import {createMetricDisplay, createSection} from '../utils/panelUtils.js';
 
 const SystemStatusPanel = memo(() => {
-    const {systemMetrics, demoMetrics, wsConnected, demos, demoStates} = useUiStore(state => ({
-        systemMetrics: state.systemMetrics,
-        demoMetrics: state.demoMetrics,
-        wsConnected: state.wsConnected,
-        demos: state.demos,
-        demoStates: state.demoStates
-    }));
+  const {systemMetrics, demoMetrics, wsConnected, demos, demoStates} = useUiStore(state => ({
+    systemMetrics: state.systemMetrics,
+    demoMetrics: state.demoMetrics,
+    wsConnected: state.wsConnected,
+    demos: state.demos,
+    demoStates: state.demoStates
+  }));
 
-    // Calculate aggregated system metrics from demo metrics
-    const aggregatedMetrics = useMemo(() => {
-        if (!demoMetrics || Object.keys(demoMetrics).length === 0) return null;
+  // Calculate aggregated system metrics from demo metrics
+  const aggregatedMetrics = useMemo(() => {
+    if (!demoMetrics || Object.keys(demoMetrics).length === 0) return null;
 
-        const allMetrics = Object.values(demoMetrics)
-            .map(m => m.systemMetrics)
-            .filter(m => m);
+    const allMetrics = Object.values(demoMetrics)
+      .map(m => m.systemMetrics)
+      .filter(m => m);
 
-        return allMetrics.length > 0 ? {
-            tasksProcessed: allMetrics.reduce((sum, m) => sum + (m.tasksProcessed || 0), 0),
-            conceptsActive: allMetrics.reduce((sum, m) => sum + (m.conceptsActive || 0), 0),
-            cyclesCompleted: allMetrics.reduce((sum, m) => sum + (m.cyclesCompleted || 0), 0),
-            memoryUsage: allMetrics.reduce((sum, m) => sum + (m.memoryUsage || 0), 0),
-            activeDemos: allMetrics.reduce((sum, m) => sum + (m.activeDemos || 0), 0),
-            totalPriorityFluctuations: allMetrics.reduce((sum, m) => sum + (m.priorityFluctuations?.length || 0), 0),
-        } : null;
-    }, [demoMetrics]);
+    return allMetrics.length > 0 ? {
+      tasksProcessed: allMetrics.reduce((sum, m) => sum + (m.tasksProcessed || 0), 0),
+      conceptsActive: allMetrics.reduce((sum, m) => sum + (m.conceptsActive || 0), 0),
+      cyclesCompleted: allMetrics.reduce((sum, m) => sum + (m.cyclesCompleted || 0), 0),
+      memoryUsage: allMetrics.reduce((sum, m) => sum + (m.memoryUsage || 0), 0),
+      activeDemos: allMetrics.reduce((sum, m) => sum + (m.activeDemos || 0), 0),
+      totalPriorityFluctuations: allMetrics.reduce((sum, m) => sum + (m.priorityFluctuations?.length || 0), 0),
+    } : null;
+  }, [demoMetrics]);
 
-    // System status display
-    const systemStatus = useMemo(() => React.createElement('div', null,
+  // System status display
+  const systemStatus = useMemo(() => React.createElement('div', null,
+    createMetricDisplay(React, {
+      label: 'WebSocket Connection',
+      value: wsConnected ? 'Connected' : 'Disconnected',
+      color: wsConnected ? '#28a745' : '#dc3545'
+    }),
+    createMetricDisplay(React, {
+      label: 'Active Demos',
+      value: demos.length
+    }),
+    createMetricDisplay(React, {
+      label: 'Running Demos',
+      value: Object.keys(demoStates).filter(id => demoStates[id]?.state === 'running').length,
+      color: getStatusColor(Object.keys(demoStates).filter(id => demoStates[id]?.state === 'running').length, 1)
+    })
+  ), [wsConnected, demos.length, demoStates]);
+
+  // Performance metrics display
+  const performanceMetrics = useMemo(() => React.createElement('div', null,
+    createMetricDisplay(React, {
+      label: 'Cycles Completed',
+      value: aggregatedMetrics?.cyclesCompleted || 0
+    }),
+    createMetricDisplay(React, {
+      label: 'Tasks Processed',
+      value: aggregatedMetrics?.tasksProcessed || 0
+    }),
+    createMetricDisplay(React, {
+      label: 'Active Concepts',
+      value: aggregatedMetrics?.conceptsActive || 0
+    }),
+    createMetricDisplay(React, {
+      label: 'Priority Fluctuations',
+      value: aggregatedMetrics?.totalPriorityFluctuations || 0,
+      color: getStatusColor(aggregatedMetrics?.totalPriorityFluctuations, 10)
+    })
+  ), [aggregatedMetrics]);
+
+  // Memory usage display
+  const memoryUsage = useMemo(() => React.createElement('div', null,
+    createMetricDisplay(React, {
+      label: 'Memory Usage',
+      value: `${aggregatedMetrics?.memoryUsage?.toFixed(2) || 0} units`,
+      color: getStatusColor(aggregatedMetrics?.memoryUsage, 500)
+    })
+  ), [aggregatedMetrics]);
+
+  // Active demo states
+  const activeDemoStates = useMemo(() => React.createElement('div', null,
+    Object.entries(demoStates).map(([id, state]) => createSection(React, {
+      key: id,
+      title: id,
+      children: [
         createMetricDisplay(React, {
-            label: 'WebSocket Connection',
-            value: wsConnected ? 'Connected' : 'Disconnected',
-            color: wsConnected ? '#28a745' : '#dc3545'
+          label: 'State',
+          value: state.state,
+          color: getStatusColor(state.state === 'running' ? 1 : 0, 0.5)
         }),
-        createMetricDisplay(React, {
-            label: 'Active Demos',
-            value: demos.length
+        state.progress !== undefined && createMetricDisplay(React, {
+          label: 'Progress',
+          value: `${state.progress}%`
         }),
-        createMetricDisplay(React, {
-            label: 'Running Demos',
-            value: Object.keys(demoStates).filter(id => demoStates[id]?.state === 'running').length,
-            color: getStatusColor(Object.keys(demoStates).filter(id => demoStates[id]?.state === 'running').length, 1)
+        state.currentStep && createMetricDisplay(React, {
+          label: 'Current Step',
+          value: state.currentStep
+        }),
+        state.error && createMetricDisplay(React, {
+          label: 'Error',
+          value: state.error,
+          color: '#dc3545'
         })
-    ), [wsConnected, demos.length, demoStates]);
+      ].filter(Boolean)
+    }))
+  ), [demoStates]);
 
-    // Performance metrics display
-    const performanceMetrics = useMemo(() => React.createElement('div', null,
-        createMetricDisplay(React, {
-            label: 'Cycles Completed',
-            value: aggregatedMetrics?.cyclesCompleted || 0
-        }),
-        createMetricDisplay(React, {
-            label: 'Tasks Processed',
-            value: aggregatedMetrics?.tasksProcessed || 0
-        }),
-        createMetricDisplay(React, {
-            label: 'Active Concepts',
-            value: aggregatedMetrics?.conceptsActive || 0
-        }),
-        createMetricDisplay(React, {
-            label: 'Priority Fluctuations',
-            value: aggregatedMetrics?.totalPriorityFluctuations || 0,
-            color: getStatusColor(aggregatedMetrics?.totalPriorityFluctuations, 10)
-        })
-    ), [aggregatedMetrics]);
+  const items = useMemo(() => [
+    {type: 'header', content: 'System Status'},
+    {type: 'section', title: 'Connection & Demos', content: systemStatus},
+    {type: 'section', title: 'Performance Metrics', content: performanceMetrics},
+    {type: 'section', title: 'Memory Usage', content: memoryUsage},
+    {type: 'section', title: 'Active Demos', content: activeDemoStates}
+  ], [systemStatus, performanceMetrics, memoryUsage, activeDemoStates]);
 
-    // Memory usage display
-    const memoryUsage = useMemo(() => React.createElement('div', null,
-        createMetricDisplay(React, {
-            label: 'Memory Usage',
-            value: `${aggregatedMetrics?.memoryUsage?.toFixed(2) || 0} units`,
-            color: getStatusColor(aggregatedMetrics?.memoryUsage, 500)
-        })
-    ), [aggregatedMetrics]);
-
-    // Active demo states
-    const activeDemoStates = useMemo(() => React.createElement('div', null,
-        Object.entries(demoStates).map(([id, state]) => createSection(React, {
-            key: id,
-            title: id,
-            children: [
-                createMetricDisplay(React, {
-                    label: 'State',
-                    value: state.state,
-                    color: getStatusColor(state.state === 'running' ? 1 : 0, 0.5)
-                }),
-                state.progress !== undefined && createMetricDisplay(React, {
-                    label: 'Progress',
-                    value: `${state.progress}%`
-                }),
-                state.currentStep && createMetricDisplay(React, {
-                    label: 'Current Step',
-                    value: state.currentStep
-                }),
-                state.error && createMetricDisplay(React, {
-                    label: 'Error',
-                    value: state.error,
-                    color: '#dc3545'
-                })
-            ].filter(Boolean)
-        }))
-    ), [demoStates]);
-
-    const items = useMemo(() => [
-        {type: 'header', content: 'System Status'},
-        {type: 'section', title: 'Connection & Demos', content: systemStatus},
-        {type: 'section', title: 'Performance Metrics', content: performanceMetrics},
-        {type: 'section', title: 'Memory Usage', content: memoryUsage},
-        {type: 'section', title: 'Active Demos', content: activeDemoStates}
-    ], [systemStatus, performanceMetrics, memoryUsage, activeDemoStates]);
-
-    const renderStatusItemFinal = useCallback((item) => {
-        switch (item.type) {
-            case 'header':
-                return React.createElement('div', {
-                    style: {
-                        fontWeight: 'bold',
-                        fontSize: '1.2rem',
-                        margin: '0 0 1rem 0',
-                        padding: '0.5rem 0',
-                        borderBottom: '2px solid #007bff',
-                        color: '#333'
-                    }
-                }, item.content);
-            case 'section':
-                return createSection(React, {
-                    key: item.title,
-                    title: item.title,
-                    children: item.content
-                });
-            default:
-                return null;
+  const renderStatusItemFinal = useCallback((item) => {
+    switch (item.type) {
+    case 'header':
+      return React.createElement('div', {
+        style: {
+          fontWeight: 'bold',
+          fontSize: '1.2rem',
+          margin: '0 0 1rem 0',
+          padding: '0.5rem 0',
+          borderBottom: '2px solid #007bff',
+          color: '#333'
         }
-    }, []);
+      }, item.content);
+    case 'section':
+      return createSection(React, {
+        key: item.title,
+        title: item.title,
+        children: item.content
+      });
+    default:
+      return null;
+    }
+  }, []);
 
-    return React.createElement(DataPanel, {
-        title: 'System Status',
-        dataSource: () => items,
-        renderItem: renderStatusItemFinal,
-        config: {
-            itemLabel: 'sections',
-            showItemCount: false,
-            emptyMessage: 'System status information will be displayed once connected to the reasoning engine.',
-            containerHeight: 400
-        }
-    });
+  return React.createElement(DataPanel, {
+    title: 'System Status',
+    dataSource: () => items,
+    renderItem: renderStatusItemFinal,
+    config: {
+      itemLabel: 'sections',
+      showItemCount: false,
+      emptyMessage: 'System status information will be displayed once connected to the reasoning engine.',
+      containerHeight: 400
+    }
+  });
 });
 
 export default SystemStatusPanel;
