@@ -128,19 +128,33 @@ export class TestNARRemote {
     stopServer() {
         return new Promise((resolve) => {
             if (this.serverProcess) {
+                // Remove all listeners to prevent hanging
+                this.serverProcess.removeAllListeners();
+                
                 // Try graceful shutdown first
+                const timeout = setTimeout(() => {
+                    // Force kill if graceful shutdown takes too long
+                    this.serverProcess.kill('SIGKILL');
+                }, 3000); // 3 second timeout for shutdown
+                
+                this.serverProcess.on('close', () => {
+                    clearTimeout(timeout);
+                    resolve();
+                });
+                
+                // Try sending exit command
                 if (this.client && this.client.readyState === WebSocket.OPEN) {
                     this.sendNarsese('*exit').then(() => {
-                        this.serverProcess.on('close', () => resolve());
+                        setTimeout(() => {
+                            this.serverProcess.kill('SIGTERM');
+                        }, 500);
                     }).catch(() => {
                         // Fallback to SIGTERM
                         this.serverProcess.kill('SIGTERM');
-                        this.serverProcess.on('close', () => resolve());
                     });
                 } else {
                     // Fallback to SIGTERM
                     this.serverProcess.kill('SIGTERM');
-                    this.serverProcess.on('close', () => resolve());
                 }
             } else {
                 resolve();
@@ -176,7 +190,9 @@ export class TestNARRemote {
             if (this.client) {
                 // Remove all listeners to prevent memory leaks
                 this.client.removeAllListeners();
-                this.client.close();
+                if (this.client.readyState === WebSocket.OPEN) {
+                    this.client.close();
+                }
                 // Resolve immediately instead of waiting for close event to speed things up
                 resolve();
             } else {
