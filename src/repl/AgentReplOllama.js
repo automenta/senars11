@@ -36,23 +36,133 @@ class SeNARSControlTool extends DynamicTool {
   constructor(nar = null) {
     super({
       name: "nar_control",
-      description: "Control and interact with the SeNARS reasoning system",
-      func: async (args) => {
+      description: "Control and interact with the SeNARS reasoning system. You can specify action and content, or provide an input command like 'get_beliefs', 'add_belief <content>', etc.",
+      func: async (rawArgs) => {
         if (!nar) {
           return JSON.stringify({ error: "NAR system not initialized" });
         }
 
+        console.log("SeNARSControlTool received args:", rawArgs); // Debug log
+        console.log("Type of args:", typeof rawArgs); // Debug log
+
+        // Process the arguments to ensure they match the expected NARControlTool format
+        let processedArgs;
+        
+        // Handle different possible input formats
+        if (typeof rawArgs === 'string') {
+          // If args is just a string (unexpected but possible)
+          const input = rawArgs.toLowerCase().trim();
+          if (input === 'get_beliefs') {
+            processedArgs = { action: 'get_beliefs', content: '' };
+          } else if (input === 'get_goals') {
+            processedArgs = { action: 'get_goals', content: '' };
+          } else if (input === 'step') {
+            processedArgs = { action: 'step', content: '' };
+          } else {
+            processedArgs = { action: 'query', content: input };
+          }
+        } else if (typeof rawArgs === 'object') {
+          if (rawArgs.action) {
+            // If action is directly provided (the schema-compliant way)
+            processedArgs = rawArgs;
+          } else if (rawArgs.input) {
+            // If input is provided (the model's preferred way), parse it
+            const input = rawArgs.input.toLowerCase().trim();
+            
+            // Handle actions based on keywords - check more specific patterns first to avoid conflicts
+            if (input.includes('get_beliefs') || input.includes('get beliefs')) {
+              processedArgs = { action: 'get_beliefs', content: '' };
+            } else if (input.includes('get_goals') || input.includes('get goals')) {
+              processedArgs = { action: 'get_goals', content: '' };
+            } else if (input.includes('step') || input.includes('cycle') || input.includes('run')) {
+              processedArgs = { action: 'step', content: '' };
+            } else if (input.includes('add_goal') || input.includes('add goal')) {
+              // Handle goal additions first (more specific)
+              const narseseMatch = input.match(/<[^>]+>[!]?/i);
+              let content = '';
+              if (narseseMatch) {
+                content = narseseMatch[0];
+              } else {
+                // Extract content after the add command
+                const cleaned = input.replace(/^(add_goal|add goal|add)\s*/i, '').trim();
+                content = cleaned || input;
+                if (content && !content.endsWith('!')) content += '!';
+              }
+              processedArgs = { action: 'add_goal', content: content };
+            } else if (input.includes('add_belief') || input.includes('add belief') || (input.includes('add') && !input.includes('goal') && input.includes('-->'))) {
+              // Handle belief additions - ensure it doesn't overlap with goal
+              const narseseMatch = input.match(/<[^>]+>/i);
+              let content = '';
+              if (narseseMatch) {
+                content = narseseMatch[0];
+              } else {
+                // Extract content after the add command
+                const cleaned = input.replace(/^(add_belief|add belief|add)\s*/i, '').trim();
+                content = cleaned || input;
+              }
+              processedArgs = { action: 'add_belief', content: content };
+            } else if (input.includes('add')) {
+              // Fallback for add commands that don't clearly fit belief/goal
+              if (input.includes('!')) {
+                // Likely a goal
+                const narseseMatch = input.match(/<[^>]+>[!]?/i);
+                let content = '';
+                if (narseseMatch) {
+                  content = narseseMatch[0];
+                } else {
+                  const cleaned = input.replace(/^(add)\s*/i, '').trim();
+                  content = cleaned;
+                  if (content && !content.endsWith('!')) content += '!';
+                }
+                processedArgs = { action: 'add_goal', content: content };
+              } else {
+                // Likely a belief
+                const narseseMatch = input.match(/<[^>]+>/i);
+                let content = '';
+                if (narseseMatch) {
+                  content = narseseMatch[0];
+                } else {
+                  const cleaned = input.replace(/^(add)\s*/i, '').trim();
+                  content = cleaned || input;
+                }
+                processedArgs = { action: 'add_belief', content: content };
+              }
+            } else if (input.includes('query') || input.includes('what') || input.includes('show')) {
+              const content = input.replace(/^(query|show|what\s+is\s*)\s*/i, '').trim();
+              processedArgs = { action: 'query', content: content };
+            } else {
+              // Default fallback - if none of the specific patterns match, treat as query
+              processedArgs = { action: 'query', content: input };
+            }
+          } else {
+            // If neither action nor input provided in object, return error
+            return JSON.stringify({ error: "Invalid arguments: object must have 'action' or 'input' field" });
+          }
+        } else {
+          // Unexpected type
+          return JSON.stringify({ error: "Invalid arguments: expected object or string" });
+        }
+
+        console.log("Processed args:", processedArgs); // Debug log
+
         // Execute the tool using our existing NARControlTool
         const narTool = new NARControlTool(nar);
-        const result = await narTool.execute(args);
+        const result = await narTool.execute(processedArgs);
+        console.log("Tool result:", result); // Debug log
         return JSON.stringify(result);
       },
-      schema: z.object({
-        action: z.enum(["add_belief", "add_goal", "query", "step", "get_beliefs", "get_goals"]).describe(
-          "The action to perform on the NAR system"
-        ),
-        content: z.string().optional().describe("Narsese content for the action"),
-      }),
+      schema: z.union([
+        // Expected schema
+        z.object({
+          action: z.enum(["add_belief", "add_goal", "query", "step", "get_beliefs", "get_goals"])
+                .describe("The action to perform on the NAR system"),
+          content: z.string().optional().describe("Narsese content for the action"),
+        }),
+        // Model's likely format
+        z.object({
+          input: z.string().describe("Single command like 'get_beliefs', 'add_belief <content>', etc."),
+        })
+      ]),
     });
     
     this.nar = nar;
