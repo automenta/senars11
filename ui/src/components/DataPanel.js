@@ -12,6 +12,8 @@ import {
   createSearchInput,
   createSortButton
 } from '../utils/dataPanelUtils.js';
+import { EmptyState } from './shared/EmptyState.js';
+import { ErrorState } from './shared/ErrorState.js';
 
 // Helper function to compare values for sorting
 const compareValues = (valueA, valueB) => {

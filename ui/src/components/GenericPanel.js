@@ -78,9 +78,9 @@ const GenericPanel = memo(({
     displayItems.length > 0
       ? displayItems.map((item, index) => React.createElement('div', {key: index}, renderItem(item, index)))
       : React.createElement('div', {className: 'emptyState', style: emptyStateStyle},
-          React.createElement('div', {style: {fontSize: '2rem', marginBottom: themeUtils.get('SPACING.SM')}}, '🔍'),
-          React.createElement('div', null, emptyMessage)
-        )
+        React.createElement('div', {style: {fontSize: '2rem', marginBottom: themeUtils.get('SPACING.SM')}}, '🔍'),
+        React.createElement('div', null, emptyMessage)
+      )
     ),
     withTimestamp && React.createElement('div', {style: timestampStyle},
       React.createElement(TimeDisplay, {timestamp: Date.now(), formatType: 'time'})

@@ -1,33 +1,33 @@
 // Consolidated utility functions
 import {
-    debounce,
-    deepClone,
-    deepEqual,
-    delay,
-    formatDateTime,
-    formatTimestamp,
-    generateId,
-    getNestedProperty,
-    isEmpty,
-    memoize,
-    setNestedProperty,
-    throttle
+  debounce,
+  deepClone,
+  deepEqual,
+  delay,
+  formatDateTime,
+  formatTimestamp,
+  generateId,
+  getNestedProperty,
+  isEmpty,
+  memoize,
+  setNestedProperty,
+  throttle
 } from './helpers.js';
 
 // Export all helper functions
 export {
-    generateId,
-    debounce,
-    throttle,
-    deepClone,
-    formatTimestamp,
-    formatDateTime,
-    isEmpty,
-    deepEqual,
-    delay,
-    getNestedProperty,
-    setNestedProperty,
-    memoize
+  generateId,
+  debounce,
+  throttle,
+  deepClone,
+  formatTimestamp,
+  formatDateTime,
+  isEmpty,
+  deepEqual,
+  delay,
+  getNestedProperty,
+  setNestedProperty,
+  memoize
 };
 
 // Additional utility functions from utilityFunctions.js
@@ -35,49 +35,49 @@ export {safeTransformData, paginateData, createSearchableCollection} from './uti
 
 // Formatting functions from formatters.js
 export {
-    formatTruth,
-    formatBudget,
-    formatDate,
-    formatNumber,
-    formatNumberWithCommas,
-    formatNumberWithUnits,
-    formatPercentage,
-    formatDateLong,
-    formatDuration,
-    truncateString,
-    formatFileSize,
-    formatValue,
-    formatObject,
-    formatByType,
-    formatByDataType,
-    getTruthColor
+  formatTruth,
+  formatBudget,
+  formatDate,
+  formatNumber,
+  formatNumberWithCommas,
+  formatNumberWithUnits,
+  formatPercentage,
+  formatDateLong,
+  formatDuration,
+  truncateString,
+  formatFileSize,
+  formatValue,
+  formatObject,
+  formatByType,
+  formatByDataType,
+  getTruthColor
 } from './formatters.js';
 
 // Component creation utilities
 export {
-    createListItem,
-    createHeader,
-    createControlBar,
-    createTimelineItem,
-    createMetricDisplay
+  createListItem,
+  createHeader,
+  createControlBar,
+  createTimelineItem,
+  createMetricDisplay
 } from './componentUtils.js';
 
 // Dashboard utilities
 export {
-    createStatusBadge,
-    createMetricCard,
-    createProgressBar,
-    createDistributionBar,
-    getStatusColor,
-    getPerformanceMetricColor
+  createStatusBadge,
+  createMetricCard,
+  createProgressBar,
+  createDistributionBar,
+  getStatusColor,
+  getPerformanceMetricColor
 } from './dashboardUtils.js';
 
 // Styling utilities
 export {
-    themeVariables,
-    listItemStyles,
-    typography,
-    mergeStyles,
-    buildListItemStyle,
-    buildTextStyle
+  themeVariables,
+  listItemStyles,
+  typography,
+  mergeStyles,
+  buildListItemStyle,
+  buildTextStyle
 } from './styles.js';

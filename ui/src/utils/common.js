@@ -1,120 +1,80 @@
-import React from 'react';
+/**
+ * Common utilities and constants
+ * Following AGENTS.md: Organized, Modular, DRY
+ */
 
-export const UI_CONSTANTS = {
-    COLORS: {
-        PRIMARY: '#3498db',
-        SUCCESS: '#2ecc71',
-        WARNING: '#f39c12',
-        DANGER: '#e74c3c',
-        INFO: '#3498db',
-        DARK: '#2c3e50',
-        LIGHT: '#ecf0f1'
-    },
-    SPACING: {
-        XS: '0.25rem',
-        SM: '0.5rem',
-        MD: '1rem',
-        LG: '1.5rem',
-        XL: '2rem'
-    },
-    BREAKPOINTS: {
-        MOBILE: '768px',
-        TABLET: '1024px',
-        DESKTOP: '1200px'
-    }
-};
+// Use themeUtils instead of local constants to avoid duplication
+export * from './themeUtils.js';
 
-export const Components = {
-    LoadingSpinner: ({size = '1.5rem', color = UI_CONSTANTS.COLORS.PRIMARY, ...props}) =>
-        React.createElement('div', {
-                style: {
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: UI_CONSTANTS.SPACING.MD,
-                    ...props.style
-                }
-            },
-            React.createElement('div', {
-                style: {
-                    width: size,
-                    height: size,
-                    border: `2px solid ${color}40`,
-                    borderTop: `2px solid ${color}`,
-                    borderRadius: '50%',
-                    animation: 'spin 1s linear infinite',
-                    ...props.spinnerStyle
-                }
-            })
-        ),
+// Export common utility functions
+export * from './helpers.js';
 
-    EmptyState: ({message = 'No data to display', icon = '🔍', ...props}) =>
-        React.createElement('div', {
-                style: {
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: UI_CONSTANTS.SPACING.LG,
-                    textAlign: 'center',
-                    color: '#999',
-                    ...props.style
-                }
-            },
-            React.createElement('div', {style: {fontSize: '2rem', marginBottom: UI_CONSTANTS.SPACING.MD}}, icon),
-            React.createElement('div', null, message)
-        ),
+// Export common constants
+export const BREAKPOINTS = Object.freeze({
+  MOBILE: '768px',
+  TABLET: '1024px',
+  DESKTOP: '1200px'
+});
 
-    ErrorState: ({message = 'An error occurred', onRetry = null, ...props}) =>
-        React.createElement('div', {
-                style: {
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: UI_CONSTANTS.SPACING.LG,
-                    textAlign: 'center',
-                    color: UI_CONSTANTS.COLORS.DANGER,
-                    ...props.style
-                }
-            },
-            React.createElement('div', {style: {fontSize: '2rem', marginBottom: UI_CONSTANTS.SPACING.MD}}, '❌'),
-            React.createElement('div', null, message),
-            onRetry && React.createElement('button', {
-                onClick: onRetry,
-                style: {
-                    marginTop: UI_CONSTANTS.SPACING.MD,
-                    padding: `${UI_CONSTANTS.SPACING.XS} ${UI_CONSTANTS.SPACING.SM}`,
-                    backgroundColor: UI_CONSTANTS.COLORS.DANGER,
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer'
-                }
-            }, 'Retry')
-        ),
+export const PADDING = Object.freeze({
+  XS: '0.25rem',
+  SM: '0.5rem',
+  MD: '1rem',
+  LG: '1.5rem',
+  XL: '2rem'
+});
 
-    StatusBadge: ({status, label, ...props}) => {
-        const statusConfig = {
-            success: {color: UI_CONSTANTS.COLORS.SUCCESS, bg: UI_CONSTANTS.COLORS.SUCCESS + '20'},
-            warning: {color: UI_CONSTANTS.COLORS.WARNING, bg: UI_CONSTANTS.COLORS.WARNING + '20'},
-            error: {color: UI_CONSTANTS.COLORS.DANGER, bg: UI_CONSTANTS.COLORS.DANGER + '20'},
-            info: {color: UI_CONSTANTS.COLORS.INFO, bg: UI_CONSTANTS.COLORS.INFO + '20'},
-            default: {color: '#666', bg: '#f0f0f0'}
-        };
+// Export common type definitions if needed
+export const PANEL_TYPES = Object.freeze({
+  EXPLORER: 'ExplorerPanel',
+  MAIN: 'MainPanel',
+  CONSOLE: 'ConsolePanel',
+  VARIABLES: 'VariablesPanel',
+  TASK: 'TaskPanel',
+  CONCEPT: 'ConceptPanel',
+  CYCLE: 'CyclePanel',
+  DEMO: 'DemoPanel',
+  SYSTEM_STATUS: 'SystemStatusPanel',
+  INPUT_INTERFACE: 'InputInterfacePanel',
+  REASONING_TRACE: 'ReasoningTracePanel',
+  GRAPH: 'GraphUI',
+  DASHBOARD: 'DashboardPanel',
+  PRIORITY_FLUCTUATION: 'PriorityFluctuationPanel',
+  PRIORITY_HISTOGRAM: 'PriorityHistogram',
+  META_COGNITION: 'MetaCognitionPanel',
+  SELF_ANALYSIS: 'SelfAnalysisPanel',
+  TASK_MONITOR: 'TaskMonitorPanel',
+  CONCEPT_RELATIONSHIP: 'ConceptRelationshipPanel',
+  TIME_SERIES: 'TimeSeriesPanel',
+  VISUALIZATION: 'VisualizationPanel',
+  TRACE_INSPECTOR: 'TraceInspector',
+  REASONER_CONTROLS: 'ReasonerControls',
+  ENHANCED_INPUT: 'EnhancedInputInterface',
+  LAYOUT_MANAGER: 'LayoutManager'
+});
 
-        const config = statusConfig[status] || statusConfig.default;
-
-        return React.createElement('span', {
-            style: {
-                padding: '0.125rem 0.5rem',
-                borderRadius: '12px',
-                backgroundColor: config.bg,
-                color: config.color,
-                fontSize: '0.75rem',
-                fontWeight: 'normal',
-                ...props.style
-            }
-        }, label || status);
-    }
-};
+export const MESSAGE_TYPES = Object.freeze({
+  REASONING_STEP: 'reasoningStep',
+  TASK_UPDATE: 'taskUpdate',
+  CONCEPT_UPDATE: 'conceptUpdate',
+  BELIEF_UPDATE: 'beliefUpdate',
+  GOAL_UPDATE: 'goalUpdate',
+  CYCLE_UPDATE: 'cycleUpdate',
+  SYSTEM_METRICS: 'systemMetrics',
+  DEMO_STATE: 'demoState',
+  DEMO_STEP: 'demoStep',
+  DEMO_METRICS: 'demoMetrics',
+  DEMO_LIST: 'demoList',
+  NARSESE_INPUT: 'narseseInput',
+  ERROR: 'error',
+  NOTIFICATION: 'notification',
+  LOG: 'log',
+  CONNECTION: 'connection',
+  LAYOUT_UPDATE: 'layoutUpdate',
+  PANEL_UPDATE: 'panelUpdate',
+  SESSION_UPDATE: 'sessionUpdate',
+  REASONING_STATE: 'reasoningState',
+  META_COGNITIVE_ANALYSIS: 'metaCognitiveAnalysis',
+  SELF_CORRECTION: 'selfCorrection',
+  NAR_INSTANCE: 'narInstance'
+});

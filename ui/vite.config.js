@@ -10,8 +10,14 @@ export default defineConfig(({mode}) => {
         plugins: [react()],
         define: {
             'process.env': JSON.stringify({
-                VITE_TEST_MODE: env.VITE_TEST_MODE
+                VITE_TEST_MODE: env.VITE_TEST_MODE,
+                VITE_WS_HOST: env.VITE_WS_HOST || 'localhost',
+                VITE_WS_PORT: env.VITE_WS_PORT || '8080',
+                VITE_DEFAULT_LAYOUT: env.VITE_DEFAULT_LAYOUT || 'default'
             })
-        }
+        },
+        server: {
+            open: '/', // Open the launcher by default
+        },
     };
 })

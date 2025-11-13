@@ -34,16 +34,17 @@ const ListPanel = memo(({
 
   // Memoize filtered and sorted items to prevent unnecessary computations
   const processedItems = useMemo(() => {
-    // Filter items based on search term
+    // Filter items based on search term - optimize by pre-computing lowercase search term
     const filteredItems = searchTerm
       ? filterFn
         ? items.filter(item => filterFn(item, searchTerm))
         : items.filter(item => {
+          const lowerSearchTerm = searchTerm.toLowerCase();
           if (typeof item === 'string') {
-            return item.toLowerCase().includes(searchTerm.toLowerCase());
+            return item.toLowerCase().includes(lowerSearchTerm);
           } else if (typeof item === 'object') {
             return Object.values(item).some(value =>
-              String(value).toLowerCase().includes(searchTerm.toLowerCase())
+              String(value).toLowerCase().includes(lowerSearchTerm)
             );
           }
           return false;
@@ -53,12 +54,17 @@ const ListPanel = memo(({
     // Sort items
     return sortBy
       ? [...filteredItems].sort((a, b) => {
-        let valueA = typeof sortBy === 'string' && sortBy.includes('.')
-          ? sortBy.split('.').reduce((obj, key) => obj?.[key], a)
-          : a[sortBy];
-        let valueB = typeof sortBy === 'string' && sortBy.includes('.')
-          ? sortBy.split('.').reduce((obj, key) => obj?.[key], b)
-          : b[sortBy];
+        // Optimized path for simple property access
+        let valueA, valueB;
+        if (typeof sortBy === 'string' && sortBy.includes('.')) {
+          // Cache the path parts to avoid repeated splitting
+          const pathParts = sortBy.split('.');
+          valueA = pathParts.reduce((obj, key) => obj?.[key], a);
+          valueB = pathParts.reduce((obj, key) => obj?.[key], b);
+        } else {
+          valueA = a[sortBy];
+          valueB = b[sortBy];
+        }
 
         // Handle different data types
         let comparison = 0;

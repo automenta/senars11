@@ -13,7 +13,7 @@ const SystemStatusPanel = memo(() => {
     demoStates: state.demoStates
   }));
 
-  // Calculate aggregated system metrics from demo metrics
+  // Calculate aggregated system metrics from demo metrics in a single pass
   const aggregatedMetrics = useMemo(() => {
     if (!demoMetrics || Object.keys(demoMetrics).length === 0) return null;
 
@@ -21,15 +21,34 @@ const SystemStatusPanel = memo(() => {
       .map(m => m.systemMetrics)
       .filter(m => m);
 
-    return allMetrics.length > 0 ? {
-      tasksProcessed: allMetrics.reduce((sum, m) => sum + (m.tasksProcessed || 0), 0),
-      conceptsActive: allMetrics.reduce((sum, m) => sum + (m.conceptsActive || 0), 0),
-      cyclesCompleted: allMetrics.reduce((sum, m) => sum + (m.cyclesCompleted || 0), 0),
-      memoryUsage: allMetrics.reduce((sum, m) => sum + (m.memoryUsage || 0), 0),
-      activeDemos: allMetrics.reduce((sum, m) => sum + (m.activeDemos || 0), 0),
-      totalPriorityFluctuations: allMetrics.reduce((sum, m) => sum + (m.priorityFluctuations?.length || 0), 0),
-    } : null;
+    if (allMetrics.length === 0) return null;
+
+    // Single pass calculation to avoid multiple array traversals
+    const aggregated = allMetrics.reduce((acc, m) => {
+      acc.tasksProcessed += m.tasksProcessed || 0;
+      acc.conceptsActive += m.conceptsActive || 0;
+      acc.cyclesCompleted += m.cyclesCompleted || 0;
+      acc.memoryUsage += m.memoryUsage || 0;
+      acc.activeDemos += m.activeDemos || 0;
+      acc.totalPriorityFluctuations += m.priorityFluctuations?.length || 0;
+      return acc;
+    }, {
+      tasksProcessed: 0,
+      conceptsActive: 0,
+      cyclesCompleted: 0,
+      memoryUsage: 0,
+      activeDemos: 0,
+      totalPriorityFluctuations: 0
+    });
+
+    return aggregated;
   }, [demoMetrics]);
+
+  // Calculate running demos once to avoid repeated filtering
+  const runningDemoCount = useMemo(() => {
+    if (!demoStates) return 0;
+    return Object.values(demoStates).filter(state => state?.state === 'running').length;
+  }, [demoStates]);
 
   // System status display
   const systemStatus = useMemo(() => React.createElement('div', null,
@@ -44,10 +63,10 @@ const SystemStatusPanel = memo(() => {
     }),
     createMetricDisplay(React, {
       label: 'Running Demos',
-      value: Object.keys(demoStates).filter(id => demoStates[id]?.state === 'running').length,
-      color: getStatusColor(Object.keys(demoStates).filter(id => demoStates[id]?.state === 'running').length, 1)
+      value: runningDemoCount,
+      color: getStatusColor(runningDemoCount, 1)
     })
-  ), [wsConnected, demos.length, demoStates]);
+  ), [wsConnected, demos.length, runningDemoCount]);
 
   // Performance metrics display
   const performanceMetrics = useMemo(() => React.createElement('div', null,

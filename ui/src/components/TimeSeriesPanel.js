@@ -43,19 +43,29 @@ const TimeSeriesPanel = memo(() => {
       );
     }
 
-    // Find min/max values for scaling
-    const timestamps = timeSeriesData.map(d => d.timestamp);
-    const minTime = Math.min(...timestamps);
-    const maxTime = Math.max(...timestamps);
+    // Find min/max values for scaling in a single pass for efficiency
+    let minTime = Infinity;
+    let maxTime = -Infinity;
+    let maxTasks = -Infinity;
+    let maxConcepts = -Infinity;
+    let maxCycles = -Infinity;
+
+    for (const d of timeSeriesData) {
+      minTime = Math.min(minTime, d.timestamp);
+      maxTime = Math.max(maxTime, d.timestamp);
+      maxTasks = Math.max(maxTasks, d.tasksProcessed);
+      maxConcepts = Math.max(maxConcepts, d.conceptsActive);
+      maxCycles = Math.max(maxCycles, d.cyclesCompleted);
+    }
+
+    // Ensure we have valid values to avoid division by zero
+    minTime = minTime === Infinity ? (timeSeriesData[0]?.timestamp || 0) : minTime;
+    maxTime = maxTime === -Infinity ? (timeSeriesData[0]?.timestamp || 0) : maxTime;
+    maxTasks = maxTasks === -Infinity ? 1 : maxTasks;
+    maxConcepts = maxConcepts === -Infinity ? 1 : maxConcepts;
+    maxCycles = maxCycles === -Infinity ? 1 : maxCycles;
+
     const timeRangeMs = maxTime - minTime || 1;
-
-    const tasks = timeSeriesData.map(d => d.tasksProcessed);
-    const concepts = timeSeriesData.map(d => d.conceptsActive);
-    const cyclesCount = timeSeriesData.map(d => d.cyclesCompleted);
-
-    const maxTasks = Math.max(...tasks) || 1;
-    const maxConcepts = Math.max(...concepts) || 1;
-    const maxCycles = Math.max(...cyclesCount) || 1;
 
     const chartWidth = 600;
     const chartHeight = 250;

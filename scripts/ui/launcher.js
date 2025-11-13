@@ -30,14 +30,12 @@ Options:
   --host <host>     Specify host (default: localhost)
   --graph-ui        Launch with Graph UI layout
   --layout <name>   Specify layout (default, self-analysis, graph)
-  --repl            Launch with REPL UI (serves ui/repl directory)
 
 Examples:
   node scripts/ui/launcher.js --dev
   node scripts/ui/launcher.js --prod --port 3000
   node scripts/ui/launcher.js --dev --port 8081 --ws-port 8082
   node scripts/ui/launcher.js --graph-ui
-  node scripts/ui/launcher.js --repl
 `;
 
 // Parse arguments to support flexible server configuration
@@ -112,14 +110,6 @@ function parseArgs(args) {
                 }
             };
             i++; // Skip next argument since it's the value
-        } else if (args[i] === '--repl') {
-            config = {
-                ...config,
-                ui: {
-                    ...config.ui,
-                    mode: 'repl'
-                }
-            };
         }
     }
 
@@ -143,76 +133,29 @@ async function startWebSocketServer(config = DEFAULT_CONFIG) {
     await monitor.start();
     nar.connectToWebSocketMonitor(monitor);
 
-    // Check if we're in REPL mode to use the proper message handler
-    if (config.ui.mode === 'repl') {
-        try {
-            // Import and use WebRepl for handling REPL messages
-            const {WebRepl} = await import('../../src/repl/WebRepl.js');
-            const webRepl = new WebRepl(nar, monitor);
-            
-            // Register WebRepl with the WebSocket server
-            webRepl.registerWithWebSocketServer();
-            
-            // Register a handler for NAR instance requests from the UI
-            monitor.registerClientMessageHandler('requestNAR', async (message, client, monitorInstance) => {
-                try {
-                    // For security reasons, we only send information that's safe for the UI, not the full NAR instance
-                    const narInfo = {
-                        cycleCount: nar.cycleCount,
-                        isRunning: nar.isRunning,
-                        config: nar.config.toJSON(),
-                        stats: webRepl.getStats(),
-                        reasoningState: nar.getReasoningState ? nar.getReasoningState() : null
-                    };
+    // Import and initialize WebRepl for handling all UIs with comprehensive message support
+    const {WebRepl} = await import('../../src/repl/WebRepl.js');
+    const webRepl = new WebRepl(nar, monitor);
 
-                    monitorInstance._sendToClient(client, {
-                        type: 'narInstance',
-                        payload: narInfo
-                    });
-                } catch (error) {
-                    console.error('Error handling requestNAR:', error);
-                    monitorInstance._sendToClient(client, {
-                        type: 'error',
-                        payload: { error: error.message }
-                    });
-                }
-            });
-        } catch (error) {
-            console.error('Error initializing WebRepl in launcher:', error);
-            // Fallback to standard handler if WebRepl initialization fails
-            monitor.registerClientMessageHandler('requestNAR', async (message, client, monitorInstance) => {
-                const narInfo = {
-                    cycleCount: nar.cycleCount,
-                    isRunning: nar.isRunning,
-                    config: nar.config.toJSON(),
-                    stats: nar.getStats(),
-                    reasoningState: nar.getReasoningState ? nar.getReasoningState() : null
-                };
+    // Register WebRepl with the WebSocket server to provide comprehensive message support
+    webRepl.registerWithWebSocketServer();
 
-                monitorInstance._sendToClient(client, {
-                    type: 'narInstance',
-                    payload: narInfo
-                });
-            });
-        }
-    } else {
-        // Register a handler for NAR instance requests from the UI
-        monitor.registerClientMessageHandler('requestNAR', async (message, client, monitorInstance) => {
-            // For security reasons, we only send information that's safe for the UI, not the full NAR instance
-            const narInfo = {
-                cycleCount: nar.cycleCount,
-                isRunning: nar.isRunning,
-                config: nar.config.toJSON(),
-                stats: nar.getStats(),
-                reasoningState: nar.getReasoningState ? nar.getReasoningState() : null
-            };
+    // Register a handler for NAR instance requests from the UI
+    monitor.registerClientMessageHandler('requestNAR', async (message, client, monitorInstance) => {
+        // For security reasons, we only send information that's safe for the UI, not the full NAR instance
+        const narInfo = {
+            cycleCount: nar.cycleCount,
+            isRunning: nar.isRunning,
+            config: nar.config.toJSON(),
+            stats: webRepl.getStats ? webRepl.getStats() : nar.getStats(),
+            reasoningState: nar.getReasoningState ? nar.getReasoningState() : null
+        };
 
-            monitorInstance._sendToClient(client, {
-                type: 'narInstance',
-                payload: narInfo
-            });
+        monitorInstance._sendToClient(client, {
+            type: 'narInstance',
+            payload: narInfo
         });
-    }
+    });
 
     // Initialize DemoWrapper to provide remote control and introspection
     const demoWrapper = new DemoWrapper();
@@ -238,11 +181,7 @@ async function startWebSocketServer(config = DEFAULT_CONFIG) {
 function startViteDevServer(config = DEFAULT_CONFIG) {
     console.log(`Starting Vite dev server on port ${config.ui.port}...`);
 
-    // Determine command based on whether we're in repl mode
-    const isReplMode = config.ui.mode === 'repl';
-    const viteArgs = isReplMode
-        ? ['vite', 'dev', '--host', '--port', config.ui.port.toString(), '--config', 'vite.config.repl.js']
-        : ['vite', 'dev', '--host', '--port', config.ui.port.toString()];
+    const viteArgs = ['vite', 'dev', '--host', '--port', config.ui.port.toString()];
 
     // Change to ui directory and run vite dev server
     const viteProcess = spawn('npx', viteArgs, {
@@ -255,8 +194,7 @@ function startViteDevServer(config = DEFAULT_CONFIG) {
             VITE_WS_PORT: config.webSocket.port.toString(),
             VITE_WS_PATH: DEFAULT_CONFIG.webSocket.path || undefined,
             PORT: config.ui.port.toString(), // Also set PORT for compatibility
-            VITE_DEFAULT_LAYOUT: config.ui.layout || 'default',
-            VITE_UI_MODE: config.ui.mode || 'default'
+            VITE_DEFAULT_LAYOUT: config.ui.layout || 'default'
         }
     });
 

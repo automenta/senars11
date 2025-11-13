@@ -10,7 +10,7 @@
  * - Visual indicators for priority levels
  * - Performance optimization with limited display
  */
-import React, {memo, useState, useCallback} from 'react';
+import React, {memo, useState, useCallback, useMemo} from 'react';
 import useUiStore from '../stores/uiStore.js';
 import {themeUtils} from '../utils/themeUtils.js';
 import {DataPanel} from './DataPanel.js';
@@ -21,13 +21,19 @@ const TraceInspector = memo(() => {
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Filter reasoning steps based on user selection
-  const filteredSteps = reasoningSteps.filter(step => {
-    if (filter !== 'all' && step.type !== filter) return false;
-    if (searchTerm && !step.input?.toLowerCase().includes(searchTerm.toLowerCase()) && 
-            !step.output?.toLowerCase().includes(searchTerm.toLowerCase())) return false;
-    return true;
-  }).slice(0, 100); // Limit to last 100 steps for performance
+  // Filter reasoning steps based on user selection with memoization for performance
+  const filteredSteps = useMemo(() => {
+    const lowerSearchTerm = searchTerm.toLowerCase();
+    return reasoningSteps.filter(step => {
+      if (filter !== 'all' && step.type !== filter) return false;
+      if (searchTerm &&
+          !step.input?.toLowerCase().includes(lowerSearchTerm) &&
+          !step.output?.toLowerCase().includes(lowerSearchTerm)) {
+        return false;
+      }
+      return true;
+    }).slice(0, 100); // Limit to last 100 steps for performance
+  }, [reasoningSteps, filter, searchTerm]); // Only recompute when dependencies change
 
   // Type filter options for different reasoning types
   const typeFilters = [

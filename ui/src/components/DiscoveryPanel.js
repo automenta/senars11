@@ -1,5 +1,3 @@
-/* global alert, Blob, URL */
-
 import React, {memo, useCallback, useEffect, useMemo, useState} from 'react';
 import {DataPanel} from './DataPanel.js';
 import {captureScreenshot} from '../utils/screenshot.js';

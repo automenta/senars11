@@ -1,0 +1,35 @@
+/**
+ * Main export file for UI components and utilities
+ * Following AGENTS.md: Organized, Consolidated, Modular
+ */
+
+// Core components
+export { default as BaseApp } from './components/BaseApp.js';
+export { default as AppShell } from './components/AppShell.js';
+export { useAppContext } from './components/AppShell.js';
+
+// Shared components
+export * from './components/shared/index.js';
+
+// Layouts
+export { default as AppLayout } from './layouts/AppLayout.js';
+export { DEFAULT_LAYOUTS, createLayout, createLayoutElements } from './layouts/LayoutUtils.js';
+
+// Hooks
+export { useWebSocket, useUiData, useDataOperations } from './hooks/useWebSocket.js';
+
+// Utilities
+export { themeUtils } from './utils/themeUtils.js';
+export { default as themeUtilsModule } from './utils/themeUtils.js';
+export { THEME } from './utils/themeUtils.js';
+export { createCollectionManager, createObjectManager, batchUpdate } from './utils/CollectionManager.js';
+
+// Store
+export { default as useUiStore } from './stores/uiStore.js';
+
+// App Registry
+export { default as appRegistry } from './AppRegistry.js';
+
+// Core application components
+export { default as App } from './App.js';
+export { default as Launcher } from './Launcher.js';

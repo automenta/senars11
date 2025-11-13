@@ -22,7 +22,14 @@ export default [
                 React: true,
                 zustand: true,
                 performance: true,
-                process: true
+                process: true,
+                URLSearchParams: true,
+                global: true,
+                FileReader: true,
+                navigator: true,
+                Chart: true,
+                Blob: true,
+                URL: true
             },
             ecmaVersion: 'latest',
             sourceType: 'module',
