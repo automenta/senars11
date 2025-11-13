@@ -81,53 +81,83 @@ export class NARControlTool extends BaseTool {
 
     async _addBelief(content) {
         // Execute Narsese statement to add a belief
-        if (this.nar.addInput) {
-            await this.nar.addInput(content);
-        } else if (this.nar.execute) {
-            await this.nar.execute(content);
+        try {
+            if (this.nar.addInput) {
+                await this.nar.addInput(content);
+            } else if (this.nar.execute) {
+                await this.nar.execute(content);
+            }
+        } catch (error) {
+            console.error(`Error adding belief "${content}":`, error);
+            throw error;
         }
     }
 
     async _addGoal(content) {
         // Execute Narsese statement to add a goal (typically ends with !)
-        if (this.nar.addInput) {
-            await this.nar.addInput(content);
-        } else if (this.nar.execute) {
-            await this.nar.execute(content);
+        try {
+            if (this.nar.addInput) {
+                await this.nar.addInput(content);
+            } else if (this.nar.execute) {
+                await this.nar.execute(content);
+            }
+        } catch (error) {
+            console.error(`Error adding goal "${content}":`, error);
+            throw error;
         }
     }
 
     async _query(content) {
         // Execute a query to the NAR system
-        let results = [];
-        if (this.nar.getBeliefs) {
-            results = this.nar.getBeliefs();
+        try {
+            let results = [];
+            if (this.nar.getBeliefs) {
+                results = this.nar.getBeliefs();
+            }
+            return results.length > 0 ? results : 'No results found for the query';
+        } catch (error) {
+            console.error(`Error querying "${content}":`, error);
+            return 'Error executing query';
         }
-        return results.length > 0 ? results : 'No results found for the query';
     }
 
     async _step() {
         // Execute a single reasoning step
-        if (this.nar.cycle) {
-            await this.nar.cycle(1); // Execute 1 cycle
-        } else if (this.nar.step) {
-            await this.nar.step();
+        try {
+            if (this.nar.cycle) {
+                await this.nar.cycle(1); // Execute 1 cycle
+            } else if (this.nar.step) {
+                await this.nar.step();
+            }
+        } catch (error) {
+            console.error('Error executing reasoning step:', error);
+            throw error;
         }
     }
 
     async _getBeliefs() {
         // Get current beliefs from the NAR system
-        if (this.nar.getBeliefs) {
-            return this.nar.getBeliefs();
+        try {
+            if (this.nar.getBeliefs) {
+                return this.nar.getBeliefs();
+            }
+            return [];
+        } catch (error) {
+            console.error('Error getting beliefs:', error);
+            return [];
         }
-        return [];
     }
 
     async _getGoals() {
         // Get current goals from the NAR system
-        if (this.nar.getGoals) {
-            return this.nar.getGoals();
+        try {
+            if (this.nar.getGoals) {
+                return this.nar.getGoals();
+            }
+            return [];
+        } catch (error) {
+            console.error('Error getting goals:', error);
+            return [];
         }
-        return [];
     }
 }

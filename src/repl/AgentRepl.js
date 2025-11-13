@@ -3,40 +3,14 @@
 import { AgentReplOllama } from './AgentReplOllama.js'; // Our new implementation
 import inquirer from 'inquirer';
 import {LMConfigurator} from '../lm/LMConfigurator.js';
+import { parseReplArgs } from './utils/ReplArgsParser.js';
+import { DEFAULT_CONFIG } from './utils/ReplConstants.js';
 
 class AgentRepl {
     constructor() {
         this.agentRepl = null;
         this.config = {};
-        this.args = this._parseArgs();
-    }
-
-    _parseArgs() {
-        const args = {};
-        for (let i = 0; i < process.argv.length; i++) {
-            if (process.argv[i] === '--ollama') {
-                args.ollama = true;
-                // Check for model name in next argument
-                if (process.argv[i + 1] && !process.argv[i + 1].startsWith('--')) {
-                    args.model = process.argv[i + 1];
-                    i++; // Skip the next arg since we used it
-                }
-                // Note: If no model follows --ollama, we'll rely on later --model arg if present
-            } else if (process.argv[i] === '--model') {
-                args.model = process.argv[i + 1];
-                i++; // Skip the next arg
-            } else if (process.argv[i] === '--api-key') {
-                args.apiKey = process.argv[i + 1];
-                i++; // Skip the next arg
-            } else if (process.argv[i] === '--base-url') {
-                args.baseUrl = process.argv[i + 1];
-                i++; // Skip the next arg
-            } else if (process.argv[i] === '--temperature') {
-                args.temperature = parseFloat(process.argv[i + 1]);
-                i++; // Skip the next arg
-            }
-        }
-        return args;
+        this.args = parseReplArgs();
     }
 
     async start() {
@@ -51,7 +25,7 @@ class AgentRepl {
     }
 
     _isOllamaMode() {
-        return this.args.ollama || this.args.model !== undefined; // If a model is specified, use Ollama mode
+        return this.args.ollama || this.args.model !== undefined || this.args.modelName !== undefined; // If a model is specified, use Ollama mode
     }
 
     async configureOllama() {
@@ -73,19 +47,19 @@ class AgentRepl {
                     type: 'input',
                     name: 'modelName',
                     message: 'Enter Ollama model name:',
-                    default: 'hf.co/unsloth/granite-4.0-micro-GGUF:Q4_K_M'
+                    default: DEFAULT_CONFIG.OLLAMA.modelName
                 },
                 {
                     type: 'input',
                     name: 'baseUrl',
                     message: 'Enter Ollama base URL:',
-                    default: 'http://localhost:11434'
+                    default: DEFAULT_CONFIG.OLLAMA.baseUrl
                 },
                 {
                     type: 'number',
                     name: 'temperature',
                     message: 'Enter temperature (0-1):',
-                    default: 0
+                    default: DEFAULT_CONFIG.OLLAMA.temperature
                 }
             ]);
 
@@ -99,14 +73,14 @@ class AgentRepl {
 
     _getOllamaConfig() {
         if (!this.args.model) {
-            console.error('❌ Error: No model specified. Please provide a model using --model parameter.');
-            console.error('   Example: npm run repl:agent:ollama -- --model hf.co/unsloth/granite-4.0-micro-GGUF:Q4_K_M');
+            console.error(`❌ Error: No model specified. Please provide a model using --model parameter.`);
+            console.error(`   Example: npm run repl:agent:ollama -- --model ${DEFAULT_CONFIG.OLLAMA.modelName}`);
             process.exit(1);
         }
         return {
             modelName: this.args.model,
-            baseURL: this.args.baseUrl || 'http://localhost:11434',
-            temperature: this.args.temperature || 0
+            baseURL: this.args.baseUrl || DEFAULT_CONFIG.OLLAMA.baseUrl,
+            temperature: this.args.temperature || DEFAULT_CONFIG.OLLAMA.temperature
         };
     }
 
@@ -135,9 +109,16 @@ class AgentRepl {
 
 // Handle graceful shutdown
 process.on('SIGINT', async () => {
+    console.log('\n🔄 Received SIGINT, shutting down gracefully...');
     const agentRepl = global.agentReplInstance;
     if (agentRepl) {
-        await agentRepl.shutdown();
+        try {
+            await agentRepl.shutdown();
+        } catch (error) {
+            console.error('Error during shutdown:', error);
+        }
+    } else {
+        console.log("👋 Agent REPL session ended. Goodbye!");
     }
     process.exit(0);
 });
@@ -150,7 +131,7 @@ async function main() {
     try {
         await agentRepl.start();
     } catch (error) {
-        console.error('❌ Error starting Agent REPL:', error);
+        console.error('❌ Error starting Agent REPL:', { error: error.message, stack: error.stack });
         process.exit(1);
     }
 }

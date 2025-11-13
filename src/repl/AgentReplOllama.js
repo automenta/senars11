@@ -17,23 +17,8 @@ import {v4 as uuidv4} from 'uuid';
 
 // Import existing SeNARS tools
 import { NARControlTool } from '../tool/NARControlTool.js';
-
-// Define reusable constants for logging and UI
-const LOG_TYPES = {
-  INFO: 'info',
-  SUCCESS: 'success', 
-  ERROR: 'error',
-  USER: 'user',
-  TOOL_CALL: 'tool_call'
-};
-
-const COLORS = {
-  ERROR: 'red',
-  INFO: 'blue', 
-  SUCCESS: 'green',
-  USER: 'yellow',
-  TOOL_CALL: 'cyan'
-};
+import { parseOllamaArgs } from './utils/ReplArgsParser.js';
+import { LOG_TYPES, COLORS, DEFAULT_CONFIG } from './utils/ReplConstants.js';
 
 // Define example tools using Zod schema
 const getWeather = tool(async ({ location }) => {
@@ -59,7 +44,7 @@ const parseNARControlArgs = (rawArgs) => {
     // If args is just a string (unexpected but possible)
     const input = rawArgs.toLowerCase().trim();
     switch (input) {
-      case 'get_beliefs': 
+      case 'get_beliefs':
         return { action: 'get_beliefs', content: '' };
       case 'get_goals':
         return { action: 'get_goals', content: '' };
@@ -181,7 +166,9 @@ class SeNARSControlTool extends DynamicTool {
       description: "Control and interact with the SeNARS reasoning system. You can specify action and content, or provide an input command like 'get_beliefs', 'add_belief <content>', etc.",
       func: async (rawArgs) => {
         if (!nar) {
-          return JSON.stringify({ error: "NAR system not initialized" });
+          const errorResult = { error: "NAR system not initialized" };
+          console.error('NAR system error:', errorResult.error);
+          return JSON.stringify(errorResult);
         }
 
         try {
@@ -193,7 +180,9 @@ class SeNARSControlTool extends DynamicTool {
           const result = await narTool.execute(processedArgs);
           return JSON.stringify(result);
         } catch (error) {
-          return JSON.stringify({ error: error.message });
+          const errorResult = { error: error.message };
+          console.error('Error in SeNARSControlTool:', error);
+          return JSON.stringify(errorResult);
         }
       },
       schema: z.union([
@@ -209,7 +198,7 @@ class SeNARSControlTool extends DynamicTool {
         })
       ]),
     });
-    
+
     this.nar = nar;
   }
 }
@@ -217,9 +206,9 @@ class SeNARSControlTool extends DynamicTool {
 // 3. Agent REPL Class - Self-contained implementation with direct streaming
 export class AgentReplOllama {
   constructor(options = {}) {
-    this.modelName = options.modelName || "hf.co/unsloth/granite-4.0-micro-GGUF:Q4_K_M";
-    this.temperature = options.temperature || 0;
-    this.baseUrl = options.baseUrl || "http://localhost:11434";
+    this.modelName = options.modelName || DEFAULT_CONFIG.OLLAMA.modelName;
+    this.temperature = options.temperature || DEFAULT_CONFIG.OLLAMA.temperature;
+    this.baseUrl = options.baseUrl || DEFAULT_CONFIG.OLLAMA.baseUrl;
     this.nar = options.nar || null;
     this.tools = this._initializeTools();
     this.model = null;
@@ -229,12 +218,12 @@ export class AgentReplOllama {
   _initializeTools() {
     // Use the SeNARS control tool with NAR instance if available
     const tools = [getWeather]; // Add example tool
-    
+
     if (this.nar) {
       const senarsTool = new SeNARSControlTool(this.nar);
       tools.push(senarsTool);
     }
-    
+
     return tools;
   }
 
@@ -253,7 +242,10 @@ export class AgentReplOllama {
   // Streaming execution function - direct approach without LangGraph
   async * streamExecution(input) {
     if (!this.model) {
-      throw new Error("Agent not initialized. Call initialize() first.");
+      const errorMsg = "Agent not initialized. Call initialize() first.";
+      console.error(errorMsg);
+      yield { type: "agent_response", content: `❌ ${errorMsg}` };
+      return;
     }
 
     // Create initial messages
@@ -287,57 +279,69 @@ export class AgentReplOllama {
 
       // === Execute each tool call and stream results ===
       for (const tc of toolCalls) {
-        const { name, args, id } = tc;
-        
-        // Yield the tool call notification
-        yield { type: "tool_call", name, args };
-        
-        // Execute the tool
-        let toolResult;
-        const tool = this.tools.find(t => t.name === name);
-        if (tool) {
-          try {
-            toolResult = await tool.invoke(args);
-            // Yield the tool result
-            yield { type: "tool_result", content: toolResult };
-          } catch (error) {
-            const errorResult = `Error executing ${name}: ${error.message}`;
-            yield { type: "tool_result", content: errorResult };
-          }
-        } else {
-          const errorResult = `Error: Tool ${name} not found`;
-          yield { type: "tool_result", content: errorResult };
-        }
-
-        // Create messages for final response with tool results
-        const messagesWithResults = [
-          new HumanMessage(input),
-          { role: "assistant", content: assistantContent, tool_calls: toolCalls },
-          new ToolMessage({ content: toolResult, tool_call_id: id, name })
-        ];
-
-        // === Stream final response with tool result in context ===
-        try {
-          const finalStream = await this.model.stream(messagesWithResults);
-          let finalContent = "";
-          for await (const chunk of finalStream) {
-            if (chunk.content) {
-              finalContent += chunk.content;
-            }
-          }
-          
-          // Yield the final assistant response
-          if (finalContent) {
-            yield { type: "agent_response", content: finalContent };
-          }
-        } catch (error) {
-          const errorResponse = `Error generating final response: ${error.message}`;
-          yield { type: "agent_response", content: errorResponse };
-        }
+        yield* this._executeToolCall(tc, input, assistantContent, toolCalls);
       }
     } catch (error) {
-      yield { type: "agent_response", content: `❌ Streaming error: ${error.message}` };
-      console.error('Streaming execution error:', error);
+      const errorMsg = `❌ Streaming error: ${error.message}`;
+      console.error('Streaming execution error:', { error, input });
+      yield { type: "agent_response", content: errorMsg };
+    }
+  }
+
+  // Helper method to execute a single tool call with its follow-up response
+  async * _executeToolCall(toolCall, originalInput, assistantContent, allToolCalls) {
+    const { name, args, id } = toolCall;
+
+    // Yield the tool call notification
+    yield { type: "tool_call", name, args };
+
+    // Execute the tool
+    const tool = this.tools.find(t => t.name === name);
+    const toolResult = await this._executeTool(tool, name, args);
+    yield { type: "tool_result", content: toolResult };
+
+    // Create messages for final response with tool results
+    const messagesWithResults = [
+      new HumanMessage(originalInput),
+      { role: "assistant", content: assistantContent, tool_calls: allToolCalls },
+      new ToolMessage({ content: toolResult, tool_call_id: id, name })
+    ];
+
+    // === Stream final response with tool result in context ===
+    try {
+      const finalStream = await this.model.stream(messagesWithResults);
+      let finalContent = "";
+      for await (const chunk of finalStream) {
+        if (chunk.content) {
+          finalContent += chunk.content;
+        }
+      }
+
+      // Yield the final assistant response
+      if (finalContent) {
+        yield { type: "agent_response", content: finalContent };
+      }
+    } catch (error) {
+      const errorResponse = `Error generating final response: ${error.message}`;
+      console.error('Error in final response generation:', error);
+      yield { type: "agent_response", content: errorResponse };
+    }
+  }
+
+  // Helper method to execute a tool and return result or error message
+  async _executeTool(tool, name, args) {
+    if (!tool) {
+      const errorMsg = `Error: Tool ${name} not found`;
+      console.error(errorMsg);
+      return errorMsg;
+    }
+
+    try {
+      return await tool.invoke(args);
+    } catch (error) {
+      const errorMsg = `Error executing ${name}: ${error.message}`;
+      console.error(errorMsg, { error, toolName: name, args });
+      return errorMsg;
     }
   }
 
@@ -348,28 +352,28 @@ export class AgentReplOllama {
 
     console.log('🤖 SeNARS Agent REPL with Ollama - Streaming Support');
     console.log('=================================================');
-    
+
     // Start the Ink UI
-    this.streamingComponent = React.createElement(AgentStreamingUI, { 
+    this.streamingComponent = React.createElement(AgentStreamingUI, {
       agent: this,
       nar: this.nar
     });
-    
+
     render(this.streamingComponent);
   }
 
   async shutdown() {
     console.log("\n🔄 Shutting down Agent REPL...");
-    
+
     // Clean up resources if needed
     if (this.streamingComponent) {
       // Ink handles unmounting automatically
     }
-    
+
     // Clear any pending operations
     this.model = null;
     this.tools = [];
-    
+
     console.log("👋 Agent REPL session ended. Goodbye!");
   }
 }
@@ -377,7 +381,7 @@ export class AgentReplOllama {
 // React UI Component for streaming display
 const AgentStreamingUI = ({ agent, nar }) => {
   const [logs, setLogs] = React.useState([
-    {id: uuidv4(), type: 'info', message: '🤖 Agent initialized - Type your query below', timestamp: Date.now()}
+    {id: uuidv4(), type: LOG_TYPES.INFO, message: '🤖 Agent initialized - Type your query below', timestamp: Date.now()}
   ]);
   const [inputValue, setInputValue] = React.useState('');
   const [isProcessing, setIsProcessing] = React.useState(false);
@@ -385,21 +389,21 @@ const AgentStreamingUI = ({ agent, nar }) => {
   const { isRawModeSupported } = useStdin();
 
   // Add log entry
-  const addLog = (message, type = 'info') => {
+  const addLog = React.useCallback((message, type = LOG_TYPES.INFO) => {
     setLogs(prevLogs => [
       ...prevLogs,
       { id: uuidv4(), type, message, timestamp: Date.now() }
     ].slice(-50)); // Keep last 50 logs
-  };
+  }, []);
 
   // Handle input submission
-  const handleSubmit = async () => {
+  const handleSubmit = React.useCallback(async () => {
     const input = inputValue.trim();
     if (!input || isProcessing) return;
 
     setLogs(prevLogs => [
       ...prevLogs,
-      { id: uuidv4(), type: 'user', message: `> ${input}`, timestamp: Date.now() }
+      { id: uuidv4(), type: LOG_TYPES.USER, message: `> ${input}`, timestamp: Date.now() }
     ].slice(-50));
     setInputValue('');
     setIsProcessing(true);
@@ -409,22 +413,22 @@ const AgentStreamingUI = ({ agent, nar }) => {
       for await (const chunk of agent.streamExecution(input)) {
         switch (chunk.type) {
           case 'agent_response':
-            addLog(`🤖 ${chunk.content}`, 'success');
+            addLog(`🤖 ${chunk.content}`, LOG_TYPES.SUCCESS);
             break;
           case 'tool_call':
-            addLog(`🔧 Calling: ${chunk.name}(${JSON.stringify(chunk.args)})`, 'info');
+            addLog(`🔧 Calling: ${chunk.name}(${JSON.stringify(chunk.args)})`, LOG_TYPES.INFO);
             break;
           case 'tool_result':
-            addLog(`✅ ${chunk.content}`, 'success');
+            addLog(`✅ ${chunk.content}`, LOG_TYPES.SUCCESS);
             break;
         }
       }
     } catch (error) {
-      addLog(`❌ Error: ${error.message}`, 'error');
+      addLog(`❌ Error: ${error.message}`, LOG_TYPES.ERROR);
     } finally {
       setIsProcessing(false);
     }
-  };
+  }, [inputValue, isProcessing, agent, addLog]);
 
   // Handle key inputs
   useInput((input, key) => {
@@ -434,7 +438,7 @@ const AgentStreamingUI = ({ agent, nar }) => {
   });
 
   // Format log entries
-  const formatLogEntry = (log) => {
+  const formatLogEntry = React.useCallback((log) => {
     const color = COLORS[log.type?.toUpperCase()] || 'white';
     const timestamp = new Date(log.timestamp).toLocaleTimeString();
     return React.createElement(
@@ -446,18 +450,18 @@ const AgentStreamingUI = ({ agent, nar }) => {
         `${timestamp} ${log.message}`
       )
     );
-  };
+  }, []);
 
   // Header component
-  const header = React.createElement(
+  const header = React.useMemo(() => React.createElement(
     Box,
     { flexDirection: 'row', justifyContent: 'space-between', paddingX: 1, backgroundColor: 'blue' },
     React.createElement(Text, { color: 'white', bold: true }, '🤖 SeNARS Agent REPL'),
     React.createElement(Text, { color: 'white' }, `Model: ${agent.modelName}`)
-  );
+  ), [agent.modelName]);
 
   // Log Viewer component
-  const logViewer = React.createElement(
+  const logViewer = React.useMemo(() => React.createElement(
     Box,
     { flexDirection: 'column', flexGrow: 1, padding: 1, maxHeight: '100%' },
     React.createElement(Text, { bold: true, color: 'cyan' }, `Conversation Log (${logs.length})`),
@@ -466,10 +470,10 @@ const AgentStreamingUI = ({ agent, nar }) => {
       { flexDirection: 'column', flexGrow: 1, marginTop: 1, marginBottom: 1 },
       ...logs.slice(-20).map(formatLogEntry) // Show last 20 logs
     )
-  );
+  ), [logs, formatLogEntry]);
 
   // Input Box component
-  const inputBox = React.createElement(
+  const inputBox = React.useMemo(() => React.createElement(
     Box,
     { borderStyle: 'round', width: '100%' },
     React.createElement(
@@ -487,10 +491,10 @@ const AgentStreamingUI = ({ agent, nar }) => {
         }
       )
     )
-  );
+  ), [inputValue, isProcessing, handleSubmit]);
 
   // Status Bar component
-  const statusBar = React.createElement(
+  const statusBar = React.useMemo(() => React.createElement(
     Box,
     { paddingX: 1, backgroundColor: 'gray', width: '100%', flexDirection: 'row', justifyContent: 'space-between' },
     React.createElement(
@@ -504,7 +508,7 @@ const AgentStreamingUI = ({ agent, nar }) => {
       { flexDirection: 'row' },
       React.createElement(Text, { color: 'yellow' }, 'Ctrl+C to exit')
     )
-  );
+  ), [isProcessing, isRawModeSupported]);
 
   return React.createElement(
     Box,
@@ -514,34 +518,6 @@ const AgentStreamingUI = ({ agent, nar }) => {
     inputBox,
     statusBar
   );
-};
-
-// Command-line argument parsing
-const parseArgs = () => {
-  const args = {};
-  const argv = process.argv;
-  
-  for (let i = 0; i < argv.length; i++) {
-    switch (argv[i]) {
-      case '--model':
-      case '--ollama':
-        args.modelName = argv[i + 1]?.startsWith('--') ? "hf.co/unsloth/granite-4.0-micro-GGUF:Q4_K_M" : argv[++i];
-        break;
-      case '--temperature':
-        args.temperature = parseFloat(argv[++i]);
-        break;
-      case '--base-url':
-        args.baseUrl = argv[++i];
-        break;
-    }
-  }
-  
-  // Default model if --ollama flag is provided without specific model
-  if (process.argv.includes('--ollama') && !args.modelName) {
-    args.modelName = "hf.co/unsloth/granite-4.0-micro-GGUF:Q4_K_M";
-  }
-  
-  return args;
 };
 
 // Handle graceful shutdown
@@ -560,16 +536,16 @@ process.on('SIGINT', async () => {
 if (import.meta.url === `file://${process.argv[1]}`) {
   async function main() {
     try {
-      const args = parseArgs();
-      
+      const args = parseOllamaArgs();
       console.log('🤖 Starting SeNARS Agent REPL with Ollama...\n');
-      
+      console.log(`🔧 Configuration:`, args);
+
       // Create a more sophisticated mock NAR for testing
       const mockNAR = {
         beliefs: [],
         goals: [],
         tasks: [],
-        
+
         addInput: function(input) {
           console.log(`Mock NAR addInput: ${input}`);
           if (input.includes('!')) {
@@ -579,41 +555,41 @@ if (import.meta.url === `file://${process.argv[1]}`) {
           }
           return { success: true, message: `Input processed: ${input}` };
         },
-        
+
         execute: function(input) {
           return this.addInput(input);
         },
-        
+
         cycle: function(steps = 1) {
           console.log(`Mock NAR cycle: ${steps} step(s)`);
           return { cycles: steps, status: 'completed' };
         },
-        
+
         getBeliefs: function() {
           return this.beliefs;
         },
-        
+
         getGoals: function() {
           return this.goals;
         },
-        
+
         addTask: function(task) {
           this.tasks.push(task);
           return { success: true, taskId: task.id || Date.now() };
         }
       };
-      
+
       const agentRepl = new AgentReplOllama({
         ...args,
         nar: mockNAR  // In a real implementation, this would be the actual NAR instance
       });
-      
+
       await agentRepl.start();
     } catch (error) {
-      console.error('❌ Error starting Agent REPL:', error);
+      console.error('❌ Error starting Agent REPL:', { error: error.message, stack: error.stack });
       process.exit(1);
     }
   }
-  
+
   main();
 }

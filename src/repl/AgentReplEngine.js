@@ -15,6 +15,7 @@ import {
     LMCommand,
     ProvidersCommand
 } from './commands/AgentCommands.js';
+import {DEFAULT_CONFIG} from './utils/ReplConstants.js';
 
 export class AgentReplEngine extends ReplEngine {
     constructor(config = {}) {
