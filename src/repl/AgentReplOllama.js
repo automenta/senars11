@@ -6,221 +6,53 @@
  * Rewritten to use direct LangChain streaming instead of LangGraph to avoid tool call loops.
  */
 
-import { z } from "zod";
 import { ChatOllama } from "@langchain/ollama";
-import { tool, DynamicTool } from "@langchain/core/tools";
 import { HumanMessage, ToolMessage } from "@langchain/core/messages";
 import React from 'react';
 import { render, Box, Text, useInput, useStdin } from 'ink';
 import TextInput from 'ink-text-input';
 import {v4 as uuidv4} from 'uuid';
 
-// Import existing SeNARS tools
-import { NARControlTool } from '../tool/NARControlTool.js';
+// Import base class and utilities
+import { AgentBase } from './base/AgentBase.js';
+import { createWeatherTool, createSeNARSControlTool, getDefaultToolDefinitions } from './utils/ToolUtils.js';
+import { ToolRegistry } from './utils/ToolRegistry.js';
 import { parseOllamaArgs } from './utils/ReplArgsParser.js';
 import { LOG_TYPES, COLORS, DEFAULT_CONFIG } from './utils/ReplConstants.js';
 
-// Define example tools using Zod schema
-const getWeather = tool(async ({ location }) => {
-  // Simulate API call
-  await new Promise(r => setTimeout(r, 500));
-  return `Sunny, 22°C in ${location}`;
-}, {
-  name: "get_weather",
-  description: "Get current weather for a location",
-  schema: z.object({
-    location: z.string().describe("City name"),
-  }),
-});
-
-/**
- * Parses raw arguments for NAR control tool
- * @param {any} rawArgs - Raw arguments received from the model
- * @returns {object} Processed arguments with action and content
- */
-const parseNARControlArgs = (rawArgs) => {
-  // Handle different possible input formats
-  if (typeof rawArgs === 'string') {
-    // If args is just a string (unexpected but possible)
-    const input = rawArgs.toLowerCase().trim();
-    switch (input) {
-      case 'get_beliefs':
-        return { action: 'get_beliefs', content: '' };
-      case 'get_goals':
-        return { action: 'get_goals', content: '' };
-      case 'step':
-        return { action: 'step', content: '' };
-      default:
-        return { action: 'query', content: input };
-    }
-  } else if (typeof rawArgs === 'object') {
-    if (rawArgs.action) {
-      // If action is directly provided (the schema-compliant way)
-      return rawArgs;
-    } else if (rawArgs.input) {
-      // If input is provided (the model's preferred way), parse it
-      return parseNARCommand(rawArgs.input);
-    } else {
-      throw new Error("Invalid arguments: object must have 'action' or 'input' field");
-    }
-  } else {
-    throw new Error("Invalid arguments: expected object or string");
-  }
-};
-
-/**
- * Parses NAR command from string input
- * @param {string} input - Command input from the model
- * @returns {object} Parsed action and content
- */
-const parseNARCommand = (input) => {
-  const lowerInput = input.toLowerCase().trim();
-
-  // Handle actions based on keywords - check more specific patterns first to avoid conflicts
-  if (lowerInput.includes('get_beliefs') || lowerInput.includes('get beliefs')) {
-    return { action: 'get_beliefs', content: '' };
-  } else if (lowerInput.includes('get_goals') || lowerInput.includes('get goals')) {
-    return { action: 'get_goals', content: '' };
-  } else if (lowerInput.includes('step') || lowerInput.includes('cycle') || lowerInput.includes('run')) {
-    return { action: 'step', content: '' };
-  } else if (lowerInput.includes('add_goal') || lowerInput.includes('add goal')) {
-    // Handle goal additions first (more specific)
-    const narseseMatch = input.match(/<[^>]+>[!]?/i);
-    let content = '';
-    if (narseseMatch) {
-      content = narseseMatch[0];
-    } else {
-      // Extract content after the add command
-      const cleaned = input.replace(/^(add_goal|add goal|add)\s*/i, '').trim();
-      content = cleaned || input;
-      if (content && !content.endsWith('!')) content += '!';
-    }
-    return { action: 'add_goal', content };
-  } else if (lowerInput.includes('add_belief') || lowerInput.includes('add belief') || (lowerInput.includes('add') && !lowerInput.includes('goal') && input.includes('-->'))) {
-    // Handle belief additions - ensure it doesn't overlap with goal
-    const narseseMatch = input.match(/<[^>]+>/i);
-    let content = '';
-    if (narseseMatch) {
-      content = narseseMatch[0];
-    } else {
-      // Extract content after the add command
-      const cleaned = input.replace(/^(add_belief|add belief|add)\s*/i, '').trim();
-      content = cleaned || input;
-    }
-    return { action: 'add_belief', content };
-  } else if (lowerInput.includes('add')) {
-    // Fallback for add commands that don't clearly fit belief/goal
-    if (lowerInput.includes('!')) {
-      // Likely a goal
-      const narseseMatch = input.match(/<[^>]+>[!]?/i);
-      let content = '';
-      if (narseseMatch) {
-        content = narseseMatch[0];
-      } else {
-        const cleaned = input.replace(/^(add)\s*/i, '').trim();
-        content = cleaned;
-        if (content && !content.endsWith('!')) content += '!';
-      }
-      return { action: 'add_goal', content };
-    } else {
-      // Likely a belief
-      const narseseMatch = input.match(/<[^>]+>/i);
-      let content = '';
-      if (narseseMatch) {
-        content = narseseMatch[0];
-      } else {
-        const cleaned = input.replace(/^(add)\s*/i, '').trim();
-        content = cleaned || input;
-      }
-      return { action: 'add_belief', content };
-    }
-  } else if (lowerInput.includes('query') || lowerInput.includes('what') || lowerInput.includes('show')) {
-    const content = input.replace(/^(query|show|what\s+is\s*)\s*/i, '').trim();
-    return { action: 'query', content };
-  } else {
-    // Default fallback - if none of the specific patterns match, treat as query
-    return { action: 'query', content: input };
-  }
-};
-
-/**
- * Standardized error handler
- * @param {Error} error - The error to handle
- * @param {string} context - Context where the error occurred
- * @returns {object} Standardized error response
- */
-const handleExecutionError = (error, context = 'execution') => {
-  console.error(`❌ Error in ${context}:`, error);
-  return {
-    error: true,
-    message: error.message || 'An unknown error occurred',
-    context
-  };
-};
-
-// SeNARS-specific tool for NAR control
-class SeNARSControlTool extends DynamicTool {
-  constructor(nar = null) {
-    super({
-      name: "nar_control",
-      description: "Control and interact with the SeNARS reasoning system. You can specify action and content, or provide an input command like 'get_beliefs', 'add_belief <content>', etc.",
-      func: async (rawArgs) => {
-        if (!nar) {
-          const errorResult = { error: "NAR system not initialized" };
-          console.error('NAR system error:', errorResult.error);
-          return JSON.stringify(errorResult);
-        }
-
-        try {
-          // Process the arguments to ensure they match the expected NARControlTool format
-          const processedArgs = parseNARControlArgs(rawArgs);
-
-          // Execute the tool using our existing NARControlTool
-          const narTool = new NARControlTool(nar);
-          const result = await narTool.execute(processedArgs);
-          return JSON.stringify(result);
-        } catch (error) {
-          const errorResult = { error: error.message };
-          console.error('Error in SeNARSControlTool:', error);
-          return JSON.stringify(errorResult);
-        }
-      },
-      schema: z.union([
-        // Expected schema
-        z.object({
-          action: z.enum(["add_belief", "add_goal", "query", "step", "get_beliefs", "get_goals"])
-                .describe("The action to perform on the NAR system"),
-          content: z.string().optional().describe("Narsese content for the action"),
-        }),
-        // Model's likely format
-        z.object({
-          input: z.string().describe("Single command like 'get_beliefs', 'add_belief <content>', etc."),
-        })
-      ]),
-    });
-
-    this.nar = nar;
-  }
-}
-
-// 3. Agent REPL Class - Self-contained implementation with direct streaming
-export class AgentReplOllama {
+export class AgentReplOllama extends AgentBase {
   constructor(options = {}) {
-    this.modelName = options.modelName || DEFAULT_CONFIG.OLLAMA.modelName;
-    this.temperature = options.temperature || DEFAULT_CONFIG.OLLAMA.temperature;
-    this.baseUrl = options.baseUrl || DEFAULT_CONFIG.OLLAMA.baseUrl;
-    this.nar = options.nar || null;
-    this.tools = this._initializeTools();
-    this.model = null;
+    super({
+      ...options,
+      modelName: options.modelName ?? DEFAULT_CONFIG.OLLAMA.modelName,
+      temperature: options.temperature ?? DEFAULT_CONFIG.OLLAMA.temperature,
+      baseUrl: options.baseUrl ?? DEFAULT_CONFIG.OLLAMA.baseUrl,
+      nar: options.nar ?? null
+    });
+    
+    this.toolRegistry = this._initializeToolRegistry();
     this.streamingComponent = null;
+    
+    // Initialize tools after setting up the base
+    this.setTools(this._initializeTools());
+  }
+
+  _initializeToolRegistry() {
+    const registry = new ToolRegistry();
+    
+    // Register default tools
+    const defaultTools = getDefaultToolDefinitions();
+    registry.registerMany(defaultTools);
+    
+    return registry;
   }
 
   _initializeTools() {
     // Use the SeNARS control tool with NAR instance if available
-    const tools = [getWeather]; // Add example tool
+    const tools = [createWeatherTool()]; // Add example tool
 
     if (this.nar) {
-      const senarsTool = new SeNARSControlTool(this.nar);
+      const senarsTool = createSeNARSControlTool(this.nar);
       tools.push(senarsTool);
     }
 
@@ -233,10 +65,10 @@ export class AgentReplOllama {
       model: this.modelName,
       baseUrl: this.baseUrl,
       temperature: this.temperature,
-    }).bindTools(this.tools);
+    }).bindTools(this.getTools());
 
     console.log(`✅ Agent initialized with model: ${this.modelName}`);
-    console.log(`🔧 Tools registered: ${this.tools.map(t => t.name).join(', ') || 'None'}`);
+    console.log(`🔧 Tools registered: ${this.getTools().map(t => t.name).join(', ') || 'None'}`);
   }
 
   // Streaming execution function - direct approach without LangGraph
@@ -296,7 +128,7 @@ export class AgentReplOllama {
     yield { type: "tool_call", name, args };
 
     // Execute the tool
-    const tool = this.tools.find(t => t.name === name);
+    const tool = this._findTool(name);
     const toolResult = await this._executeTool(tool, name, args);
     yield { type: "tool_result", content: toolResult };
 
@@ -345,6 +177,15 @@ export class AgentReplOllama {
     }
   }
 
+  /**
+   * Find a tool by name
+   * @param {string} name - Name of the tool to find
+   * @returns {Object} Tool instance or null if not found
+   */
+  _findTool(name) {
+    return this.getTools().find(t => t.name === name);
+  }
+
   async start() {
     if (!this.model) {
       await this.initialize();
@@ -372,7 +213,7 @@ export class AgentReplOllama {
 
     // Clear any pending operations
     this.model = null;
-    this.tools = [];
+    this.setTools([]);  // Use the setter from base class
 
     console.log("👋 Agent REPL session ended. Goodbye!");
   }
@@ -540,49 +381,70 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       console.log('🤖 Starting SeNARS Agent REPL with Ollama...\n');
       console.log(`🔧 Configuration:`, args);
 
-      // Create a more sophisticated mock NAR for testing
-      const mockNAR = {
-        beliefs: [],
-        goals: [],
-        tasks: [],
+      // Initialize a real NAR instance for standalone usage
+      const { NAR } = await import('../nar/NAR.js');
+      const nar = new NAR({
+        tools: { enabled: true },
+        lm: { enabled: true },
+        debug: { pipeline: false }
+      });
 
-        addInput: function(input) {
-          console.log(`Mock NAR addInput: ${input}`);
-          if (input.includes('!')) {
-            this.goals.push({ content: input, timestamp: Date.now() });
-          } else {
-            this.beliefs.push({ content: input, timestamp: Date.now() });
+      let narInstance;
+      try {
+        await nar.initialize();
+        console.log('✅ NAR system initialized successfully for standalone agent');
+        narInstance = nar;
+      } catch (error) {
+        console.error('⚠️  Warning: Failed to initialize NAR system:', error.message);
+        console.log('⚠️  Continuing with mock NAR for testing purposes...');
+
+        // Fallback to mock NAR if initialization fails
+        narInstance = {
+          beliefs: [],
+          goals: [],
+          tasks: [],
+
+          addInput: function(input) {
+            console.log(`Mock NAR addInput: ${input}`);
+            if (input.includes('!')) {
+              this.goals.push({ content: input, timestamp: Date.now() });
+            } else {
+              this.beliefs.push({ content: input, timestamp: Date.now() });
+            }
+            return { success: true, message: `Input processed: ${input}` };
+          },
+
+          execute: function(input) {
+            return this.addInput(input);
+          },
+
+          cycle: function(steps = 1) {
+            console.log(`Mock NAR cycle: ${steps} step(s)`);
+            return { cycles: steps, status: 'completed' };
+          },
+
+          getBeliefs: function() {
+            return this.beliefs;
+          },
+
+          getGoals: function() {
+            return this.goals;
+          },
+
+          addTask: function(task) {
+            this.tasks.push(task);
+            return { success: true, taskId: task.id || Date.now() };
           }
-          return { success: true, message: `Input processed: ${input}` };
-        },
-
-        execute: function(input) {
-          return this.addInput(input);
-        },
-
-        cycle: function(steps = 1) {
-          console.log(`Mock NAR cycle: ${steps} step(s)`);
-          return { cycles: steps, status: 'completed' };
-        },
-
-        getBeliefs: function() {
-          return this.beliefs;
-        },
-
-        getGoals: function() {
-          return this.goals;
-        },
-
-        addTask: function(task) {
-          this.tasks.push(task);
-          return { success: true, taskId: task.id || Date.now() };
-        }
-      };
+        };
+      }
 
       const agentRepl = new AgentReplOllama({
         ...args,
-        nar: mockNAR  // In a real implementation, this would be the actual NAR instance
+        nar: narInstance
       });
+
+      // Assign to global variable for proper shutdown handling
+      agentReplInstance = agentRepl;
 
       await agentRepl.start();
     } catch (error) {

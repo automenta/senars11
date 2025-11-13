@@ -5,6 +5,7 @@ import inquirer from 'inquirer';
 import {LMConfigurator} from '../lm/LMConfigurator.js';
 import { parseReplArgs } from './utils/ReplArgsParser.js';
 import { DEFAULT_CONFIG } from './utils/ReplConstants.js';
+import { NAR } from '../nar/NAR.js';
 
 class AgentRepl {
     constructor() {
@@ -87,13 +88,27 @@ class AgentRepl {
     async startNewRepl() {
         console.log('🚀 Starting new Agent REPL with LangGraph & streaming support...\n');
 
-        // Create and initialize the new AgentReplOllama instance
-        // In a full implementation, we would connect to the real NAR instance
+        // Create and initialize a real NAR instance
+        const nar = new NAR({
+            tools: { enabled: true },
+            lm: { enabled: true },
+            debug: { pipeline: false }
+        });
+
+        try {
+            await nar.initialize();
+            console.log('✅ NAR system initialized successfully');
+        } catch (error) {
+            console.error('⚠️  Warning: Failed to initialize NAR system:', error.message);
+            console.log('⚠️  Continuing with mock NAR for testing purposes...');
+        }
+
+        // Create and initialize the new AgentReplOllama instance with the real NAR
         this.agentRepl = new AgentReplOllama({
             modelName: this.config.modelName,
             baseUrl: this.config.baseUrl,
             temperature: this.config.temperature,
-            nar: null // Would connect to real NAR in production
+            nar: nar
         });
 
         await this.agentRepl.start();

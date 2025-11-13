@@ -1,17 +1,9 @@
 /**
- * Repl module - Main entry point for the unified REPL system
+ * @file index.js
+ * @description Main export file for agent REPL utilities
  */
-export {ReplEngine} from './ReplEngine.js';
-export {AgentReplEngine} from './AgentReplEngine.js';
-export {AgentInkRepl} from './AgentInkRepl.js';
-export {WebRepl} from './WebRepl.js';
-export {TUIReplInk} from './TUIReplInk.js';
-export {ReplMessageHandler} from './ReplMessageHandler.js';
-export {ReplCommonInterface} from './ReplCommonInterface.js';
-export {SimplifiedTUIRepl} from './SimplifiedTUIRepl.js';
 
-// Export commands
-export * from './commands/AgentCommands.js';
-
-// Export utils
-export * from './utils/index.js';
+export { AgentReplOllama } from './AgentReplOllama.js';
+export { AgentBase } from './base/AgentBase.js';
+export { ToolRegistry } from './utils/ToolRegistry.js';
+export { createWeatherTool, createSeNARSControlTool, getDefaultToolDefinitions } from './utils/ToolUtils.js';

@@ -80,12 +80,41 @@ export class NARControlTool extends BaseTool {
     }
 
     async _addBelief(content) {
-        // Execute Narsese statement to add a belief
+        // Execute Narsese statement to add a belief using the full NAR input pipeline
         try {
-            if (this.nar.addInput) {
-                await this.nar.addInput(content);
+            if (this.nar.input) {
+                const result = await this.nar.input(content);
+                
+                // Run a reasoning step to ensure processing
+                if (this.nar.step) {
+                    await this.nar.step();
+                } else if (this.nar.cycle) {
+                    await this.nar.cycle(1);
+                }
+                
+                return result;
+            } else if (this.nar.addInput) {
+                const result = await this.nar.addInput(content);
+                
+                // Run a cycle to ensure the belief gets properly stored in memory
+                if (this.nar.step) {
+                    await this.nar.step();
+                } else if (this.nar.cycle) {
+                    await this.nar.cycle(1);
+                }
+                
+                return result;
             } else if (this.nar.execute) {
-                await this.nar.execute(content);
+                const result = await this.nar.execute(content);
+                
+                // Run a cycle to ensure the belief gets properly stored in memory
+                if (this.nar.step) {
+                    await this.nar.step();
+                } else if (this.nar.cycle) {
+                    await this.nar.cycle(1);
+                }
+                
+                return result;
             }
         } catch (error) {
             console.error(`Error adding belief "${content}":`, error);
@@ -96,10 +125,39 @@ export class NARControlTool extends BaseTool {
     async _addGoal(content) {
         // Execute Narsese statement to add a goal (typically ends with !)
         try {
-            if (this.nar.addInput) {
-                await this.nar.addInput(content);
+            if (this.nar.input) {
+                const result = await this.nar.input(content);
+                
+                // Run a reasoning step to ensure processing
+                if (this.nar.step) {
+                    await this.nar.step();
+                } else if (this.nar.cycle) {
+                    await this.nar.cycle(1);
+                }
+                
+                return result;
+            } else if (this.nar.addInput) {
+                const result = await this.nar.addInput(content);
+                
+                // Run a cycle to ensure the goal gets properly stored in memory
+                if (this.nar.step) {
+                    await this.nar.step();
+                } else if (this.nar.cycle) {
+                    await this.nar.cycle(1);
+                }
+                
+                return result;
             } else if (this.nar.execute) {
-                await this.nar.execute(content);
+                const result = await this.nar.execute(content);
+                
+                // Run a cycle to ensure the goal gets properly stored in memory
+                if (this.nar.step) {
+                    await this.nar.step();
+                } else if (this.nar.cycle) {
+                    await this.nar.cycle(1);
+                }
+                
+                return result;
             }
         } catch (error) {
             console.error(`Error adding goal "${content}":`, error);
@@ -108,13 +166,37 @@ export class NARControlTool extends BaseTool {
     }
 
     async _query(content) {
-        // Execute a query to the NAR system
+        // Execute a query to the NAR system by adding the query as a question task
         try {
-            let results = [];
-            if (this.nar.getBeliefs) {
-                results = this.nar.getBeliefs();
+            // Input the query content as a question to the NAR
+            if (this.nar.addInput) {
+                // Ensure the content ends with '?' for questions
+                let questionContent = content.trim();
+                if (!questionContent.endsWith('?')) {
+                    // Only add '?' if no other punctuation is present
+                    if (!['.', '!', '?'].includes(questionContent.slice(-1))) {
+                        questionContent += '?';
+                    }
+                }
+                await this.nar.addInput(questionContent);
+                
+                // Run a step to process the query
+                if (this.nar.step) {
+                    await this.nar.step();
+                } else if (this.nar.cycle) {
+                    await this.nar.cycle(1);
+                }
+                
+                // For now, return a success message since actual query results might need different handling
+                return `Query "${questionContent}" processed`;
+            } else if (this.nar.execute) {
+                await this.nar.execute(content);
+                return `Query "${content}" executed`;
+            } else {
+                // Fallback: just return all beliefs if we can't process the query properly
+                const beliefs = this.nar.getBeliefs ? this.nar.getBeliefs() : [];
+                return beliefs.length > 0 ? beliefs : 'No results found for the query';
             }
-            return results.length > 0 ? results : 'No results found for the query';
         } catch (error) {
             console.error(`Error querying "${content}":`, error);
             return 'Error executing query';
