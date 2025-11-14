@@ -17,10 +17,13 @@ export const useWebSocket = () => {
     }
   }, [wsService, wsConnected]);
 
-  // Register a message handler
+  // Register a message handler - check if wsService has the method
   const registerHandler = useCallback((type, handler) => {
-    if (wsService) {
+    if (wsService && typeof wsService.registerHandler === 'function') {
       wsService.registerHandler(type, handler);
+    } else if (wsService && typeof wsService.addListener === 'function') {
+      // Fallback to addListener if registerHandler is not available
+      wsService.addListener(type, handler);
     }
   }, [wsService]);
 

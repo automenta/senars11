@@ -19,7 +19,8 @@ export default defineConfig(({mode}) => {
             })
         },
         server: {
-            open: '/', // Open the launcher by default
+            host: true, // Allow external connections for --host flag
+            open: '/', // Open the merged launcher by default
         },
     };
 })

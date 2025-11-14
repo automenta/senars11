@@ -1,15 +1,14 @@
-import React from 'react';
-import { BaseApp } from './components/BaseApp.js';
-import { Button, Card } from './components/GenericComponents.js';
-import { themeUtils } from './utils/themeUtils.js';
-import useUiStore from './stores/uiStore.js';
-import { UI_APPS } from './constants/index.js';
-
-
 /**
- * Diagnostic Panel - Shows connection status and troubleshooting info
+ * Diagnostics Panel - Shows connection status and troubleshooting info
+ * Extracted from Launcher for docking framework integration
  */
-const DiagnosticPanel = () => {
+
+import React from 'react';
+import { Button, Card } from './GenericComponents.js';
+import { themeUtils } from '../utils/themeUtils.js';
+import useUiStore from '../stores/uiStore.js';
+
+const DiagnosticsPanel = () => {
   const wsConnected = useUiStore(state => state.wsConnected);
   const wsService = useUiStore(state => state.wsService);
   const error = useUiStore(state => state.error);
@@ -170,10 +169,7 @@ const DiagnosticPanel = () => {
 
   const connectivityInfo = checkConnectivity();
 
-  return React.createElement(Card, {
-    title: 'System Status & Diagnostics',
-    style: { marginTop: themeUtils.get('SPACING.MD') }
-  },
+  return React.createElement('div', { style: { padding: themeUtils.get('SPACING.MD') } },
     // Connection status
     React.createElement('div', { style: { marginBottom: themeUtils.get('SPACING.MD') } },
       React.createElement('div', {
@@ -403,110 +399,4 @@ const DiagnosticPanel = () => {
   );
 };
 
-/**
- * Application card component using React.createElement
- */
-const AppCard = ({ app, onClick }) => {
-  const cardStyle = React.useMemo(() => ({
-    cursor: 'pointer',
-    transform: 'scale(1)',
-    transition: 'transform 0.2s, box-shadow 0.2s',
-    borderLeft: `4px solid ${app.color}`,
-    ':hover': {
-      transform: 'scale(1.02)',
-      boxShadow: themeUtils.get('SHADOWS.MD')
-    }
-  }), [app.color]);
-
-  const contentStyle = React.useMemo(() => ({
-    display: 'flex',
-    alignItems: 'center'
-  }), []);
-
-  const iconStyle = React.useMemo(() => ({
-    fontSize: '1.5rem',
-    marginRight: '0.5rem'
-  }), []);
-
-  const descriptionStyle = React.useMemo(() => ({
-    marginBottom: themeUtils.get('SPACING.MD')
-  }), []);
-
-  const handleCardClick = React.useCallback(() => onClick(app), [onClick, app]);
-
-  const handleLaunchClick = React.useCallback((e) => {
-    e.stopPropagation();
-    onClick(app);
-  }, [onClick, app]);
-
-  return React.createElement('div', {
-    style: cardStyle,
-    onClick: handleCardClick,
-    onMouseEnter: (e) => e.target.style.transform = 'scale(1.02)',
-    onMouseLeave: (e) => e.target.style.transform = 'scale(1',
-  },
-  React.createElement(Card, {
-    title: React.createElement('div', { style: contentStyle },
-      React.createElement('span', { style: iconStyle }, app.icon),
-      app.name
-    )
-  },
-  React.createElement('p', { style: descriptionStyle }, app.description),
-  React.createElement(Button, {
-    variant: 'light',
-    size: 'sm',
-    onClick: handleLaunchClick
-  }, 'Launch')
-  )
-  );
-};
-
-/**
- * Launcher: Main launcher component with proper loading and error handling
- */
-const Launcher = ({ appId = 'launcher', appConfig = {} }) => {
-  // Function to handle app selection
-  const handleAppSelect = React.useCallback((app) => {
-    // Redirect to the selected application
-    if (app.id === 'minimal-repl') {
-      // For minimal REPL, we'll add a special case to load it directly
-      window.location.href = '/repl/#minimal';
-    } else {
-      window.location.href = app.path;
-    }
-  }, []);
-
-  const LauncherContent = () => React.createElement('div', { style: { padding: themeUtils.get('SPACING.LG'), textAlign: 'center' } },
-    React.createElement('h2', { style: { marginBottom: themeUtils.get('SPACING.XL') } },
-      'Select an Interface to Begin'
-    ),
-    React.createElement('div', {
-      style: {
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-        gap: themeUtils.get('SPACING.MD'),
-        maxWidth: '1200px',
-        margin: '0 auto'
-      }
-    },
-    UI_APPS.map(app =>
-      React.createElement(AppCard, {
-        key: app.id,
-        app: app,
-        onClick: handleAppSelect
-      })
-    )
-    ),
-    // Add diagnostic panel below the app cards
-    React.createElement(DiagnosticPanel, null)
-  );
-
-  return React.createElement(BaseApp, {
-    appId,
-    appConfig: { title: 'SeNARS Web UI Launcher', ...appConfig },
-    showWebSocketStatus: false, // We're showing our own diagnostic
-    layoutComponent: LauncherContent
-  });
-};
-
-export default Launcher;
+export default DiagnosticsPanel;

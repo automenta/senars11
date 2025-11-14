@@ -16,7 +16,7 @@ const APP_DEFINITIONS = Object.freeze({
     description: 'Main IDE interface with flexible layout panels',
     icon: '🧠',
     component: () => import('./App.js'),
-    routes: ['/', '/ide'],
+    routes: ['/ide'],
     defaultLayout: 'ide'
   },
   'repl': {
@@ -52,7 +52,7 @@ const APP_DEFINITIONS = Object.freeze({
     description: 'Application launcher interface',
     icon: '🚀',
     component: () => import('./Launcher.js'),
-    routes: ['/'],
+    routes: ['/launcher'],
     defaultLayout: 'launcher'
   },
   'merged': {
@@ -61,7 +61,7 @@ const APP_DEFINITIONS = Object.freeze({
     description: 'Launcher and REPL in one view',
     icon: '🌐',
     component: () => import('./MergedLauncher.js'),
-    routes: ['/merged'],
+    routes: ['/'], // Set MergedLauncher as the root route
     defaultLayout: 'merged'
   }
 });

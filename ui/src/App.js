@@ -12,7 +12,7 @@ function App({ appId = 'ide', appConfig = {} }) {
   // Determine layout type from appConfig or URL parameters
   const urlParams = new URLSearchParams(window.location.search);
   const layoutParam = urlParams.get('layout');
-  const layoutType = appConfig.layoutType || layoutParam || 'ide';
+  const layoutType = appConfig.layoutType || layoutParam || 'ide'; // Default to 'ide' layout
 
   // Special handling for REPL-specific layouts
   if (appId === 'repl' && layoutType === 'enhanced') {

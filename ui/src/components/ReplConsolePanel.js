@@ -1,76 +1,15 @@
+/**
+ * REPL Console Panel - Interactive command interface
+ * Extracted from MergedLauncher for docking framework integration
+ */
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { BaseApp } from './components/BaseApp.js';
-import { Button, Card } from './components/GenericComponents.js';
-import { themeUtils } from './utils/themeUtils.js';
-import useUiStore from './stores/uiStore.js';
-import SharedComponents from './components/shared/SharedComponents.js';
-import { useWebSocket, useUiData } from './hooks/useWebSocket.js';
-import { UI_APPS } from './constants/index.js';
+import { BaseComponent, InputComponent, StatusIndicator, DataDisplay } from './shared/SharedComponents.js';
+import { Button } from './GenericComponents.js';
+import { themeUtils } from '../utils/themeUtils.js';
+import { useWebSocket, useUiData } from '../hooks/useWebSocket.js';
 
-const { BaseComponent, InputComponent, StatusIndicator, DataDisplay } = SharedComponents;
-
-/**
- * Application card component using React.createElement
- */
-const AppCard = ({ app, onClick }) => {
-  const cardStyle = React.useMemo(() => ({
-    cursor: 'pointer',
-    transform: 'scale(1)',
-    transition: 'transform 0.2s, box-shadow 0.2s',
-    borderLeft: `4px solid ${app.color}`,
-    ':hover': {
-      transform: 'scale(1.02)',
-      boxShadow: themeUtils.get('SHADOWS.MD')
-    }
-  }), [app.color]);
-
-  const contentStyle = React.useMemo(() => ({
-    display: 'flex',
-    alignItems: 'center'
-  }), []);
-
-  const iconStyle = React.useMemo(() => ({
-    fontSize: '1.5rem',
-    marginRight: '0.5rem'
-  }), []);
-
-  const descriptionStyle = React.useMemo(() => ({
-    marginBottom: themeUtils.get('SPACING.MD')
-  }), []);
-
-  const handleCardClick = React.useCallback(() => onClick(app), [onClick, app]);
-
-  const handleLaunchClick = React.useCallback((e) => {
-    e.stopPropagation();
-    onClick(app);
-  }, [onClick, app]);
-
-  return React.createElement('div', {
-    style: cardStyle,
-    onClick: handleCardClick,
-    onMouseEnter: (e) => e.target.style.transform = 'scale(1.02)',
-    onMouseLeave: (e) => e.target.style.transform = 'scale(1)',
-  },
-  React.createElement(Card, {
-    title: React.createElement('div', { style: contentStyle },
-      React.createElement('span', { style: iconStyle }, app.icon),
-      app.name
-    )
-  },
-  React.createElement('p', { style: descriptionStyle }, app.description),
-  React.createElement(Button, {
-    variant: 'light',
-    size: 'sm',
-    onClick: handleLaunchClick
-  }, 'Launch')
-  )
-  );
-};
-
-/**
- * Enhanced REPL Component for the merged view
- */
-const MergedRepl = () => {
+const ReplConsolePanel = () => {
   const [input, setInput] = useState('');
   const [history, setHistory] = useState([]);
   const [commandHistory, setCommandHistory] = useState([]);
@@ -85,10 +24,10 @@ const MergedRepl = () => {
   const suggestionsRef = useRef(null);
 
   // Use the shared WebSocket hook
-  const { wsConnected, sendMessage, registerHandler } = useWebSocket();
+  const { wsConnected, sendMessage, wsService } = useWebSocket();
 
   // Use the shared UI data hook
-  const { tasks, concepts, beliefs, addNotification } = useUiData();
+  const { addNotification } = useUiData();
 
   // Enhanced history navigation with arrow keys
   const handleKeyDown = useCallback((e) => {
@@ -171,8 +110,12 @@ const MergedRepl = () => {
     }
   }, [input, commandHistory]);
 
-  // Register message handlers for real-time updates
+  // Register message listeners for real-time updates using wsService directly
   useEffect(() => {
+    if (!wsService) {
+      return; // Exit early if wsService is not available yet
+    }
+
     const handleTaskUpdate = (data) => {
       if (data.payload?.task) {
         setHistory(prev => [...prev, {
@@ -203,18 +146,18 @@ const MergedRepl = () => {
       }
     };
 
-    // Register handlers using the hook's registerHandler function
-    if (typeof registerHandler === 'function') {
-      registerHandler('taskUpdate', handleTaskUpdate);
-      registerHandler('conceptUpdate', handleConceptUpdate);
-      registerHandler('narseseInput', handleNarseseResponse);
-    }
+    // Register listeners using wsService.addListener if available
+    const taskUnsubscribe = wsService.addListener ? wsService.addListener('taskUpdate', handleTaskUpdate) : null;
+    const conceptUnsubscribe = wsService.addListener ? wsService.addListener('conceptUpdate', handleConceptUpdate) : null;
+    const narseseUnsubscribe = wsService.addListener ? wsService.addListener('narseseInput', handleNarseseResponse) : null;
 
     // Clean up handlers on unmount
     return () => {
-      // Note: In a real implementation, we'd have unregisterHandler
+      if (taskUnsubscribe) taskUnsubscribe();
+      if (conceptUnsubscribe) conceptUnsubscribe();
+      if (narseseUnsubscribe) narseseUnsubscribe();
     };
-  }, [registerHandler]);
+  }, [wsService]);
 
   const handleSubmit = async (inputValue) => {
     if (!inputValue.trim()) return;
@@ -294,9 +237,7 @@ const MergedRepl = () => {
     return { isValid: true, message: 'Valid Narsese syntax' };
   };
 
-  return React.createElement(BaseComponent, {
-    loading,
-    error,
+  return React.createElement('div', {
     style: {
       display: 'flex',
       flexDirection: 'column',
@@ -439,94 +380,4 @@ const MergedRepl = () => {
   );
 };
 
-/**
- * Merged Launcher: Main component with launcher buttons on left, REPL on right
- */
-const MergedLauncher = ({ appId = 'merged-launcher', appConfig = {} }) => {
-  // Function to handle app selection
-  const handleAppSelect = React.useCallback((app) => {
-    // Redirect to the selected application
-    if (app.id === 'minimal-repl') {
-      // For minimal REPL, we'll add a special case to load it directly
-      window.location.href = '/repl/#minimal';
-    } else if (app.id === 'merged') {
-      // If merged interface is selected, stay on the current page
-      // But could potentially reload or update state if needed
-      window.location.reload();
-    } else {
-      // For other apps, navigate to their path
-      window.location.href = app.path;
-    }
-  }, []);
-
-  const MergedContent = () => React.createElement('div', {
-    style: {
-      display: 'flex',
-      flexDirection: 'row',
-      height: '100vh',
-      width: '100%'
-    }
-  },
-    // Left panel - Launcher buttons
-    React.createElement('div', {
-      style: {
-        width: '40%',
-        maxWidth: '400px',
-        padding: themeUtils.get('SPACING.MD'),
-        overflowY: 'auto',
-        borderRight: `1px solid ${themeUtils.get('BORDERS.COLOR')}`,
-        backgroundColor: themeUtils.get('BACKGROUNDS.PRIMARY')
-      }
-    },
-      React.createElement('h2', {
-        style: {
-          marginBottom: themeUtils.get('SPACING.XL'),
-          textAlign: 'center',
-          color: themeUtils.get('TEXT.PRIMARY')
-        }
-      }, 'SeNARS Interface'),
-      React.createElement('div', {
-        style: {
-          display: 'flex',
-          flexDirection: 'column',
-          gap: themeUtils.get('SPACING.MD')
-        }
-      },
-        UI_APPS.map(app =>
-          React.createElement(AppCard, {
-            key: app.id,
-            app: app,
-            onClick: handleAppSelect
-          })
-        )
-      )
-    ),
-    
-    // Right panel - REPL Console
-    React.createElement('div', {
-      style: {
-        width: '60%',
-        padding: themeUtils.get('SPACING.MD'),
-        backgroundColor: themeUtils.get('BACKGROUNDS.SECONDARY')
-      }
-    },
-      React.createElement('h3', {
-        style: {
-          marginBottom: themeUtils.get('SPACING.MD'),
-          textAlign: 'center',
-          color: themeUtils.get('TEXT.PRIMARY')
-        }
-      }, 'REPL Console'),
-      React.createElement(MergedRepl, {})
-    )
-  );
-
-  return React.createElement(BaseApp, {
-    appId,
-    appConfig: { title: 'SeNARS Merged Interface', ...appConfig },
-    showWebSocketStatus: false, // We're showing our own diagnostic
-    layoutComponent: MergedContent
-  });
-};
-
-export default MergedLauncher;
+export default ReplConsolePanel;

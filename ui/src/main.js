@@ -2,6 +2,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.js';
 import Launcher from './Launcher.js';
+import MergedLauncher from './MergedLauncher.js';
 import './index.css';
 import { initializeTheme } from './utils/theme.js';
 import { themeUtils } from './utils/themeUtils.js';
@@ -55,8 +56,15 @@ const getCurrentApp = () => {
       return SelfAnalysisApp;
     };
   } else if (path === '/' || path === '/index.html' || path === '') {
-    // For root path, show launcher
-    return () => Launcher;
+    // For root path, use App component with merged layout
+    return () => {
+      const RootApp = (props) => React.createElement(App, {
+        appId: 'merged',
+        appConfig: { layoutType: 'merged', title: 'Merged Interface' },
+        ...props
+      });
+      return RootApp;
+    };
   } else {
     // Default to main app
     return () => App;

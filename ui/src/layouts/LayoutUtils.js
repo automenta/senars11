@@ -241,6 +241,44 @@ export const createLayout = (layoutElements, layoutType, config = {}) => {
       };
 
     case 'simple':
+      return {
+        ...DEFAULT_LAYOUTS.simple,
+        layout: createTabSet([
+          createTab('Main', 'MainPanel')
+        ], 100)
+      };
+
+    case 'merged':
+      return {
+        ...DEFAULT_LAYOUTS.ide, // Use IDE-style configuration for merged layout
+        borders: [
+          createBorder('left', 300, [
+            createTab('App Launcher', 'AppLauncherPanel'),
+            createTab('Diagnostics', 'DiagnosticsPanel'),
+            createTab('Tasks', 'TaskPanel'),
+            createTab('Concepts', 'ConceptPanel')
+          ]),
+          createBorder('bottom', 250, [
+            createTab('REPL Console', 'ReplConsolePanel'),
+            createTab('Console', 'ConsolePanel'),
+            createTab('System Status', 'SystemStatusPanel'),
+            createTab('Reasoning Trace', 'ReasoningTracePanel')
+          ])
+        ],
+        layout: createRow([
+          createTabSet([
+            createTab('Main', 'MainPanel'),
+            createTab('Input Interface', 'InputInterfacePanel'),
+            createTab('Cognitive IDE', 'CognitiveIDE')
+          ], 60),
+          createTabSet([
+            createTab('Variables', 'VariablesPanel'),
+            createTab('Cycle', 'CyclePanel'),
+            createTab('Demo', 'DemoPanel')
+          ], 40)
+        ])
+      };
+
     default:
       return {
         ...DEFAULT_LAYOUTS.simple,

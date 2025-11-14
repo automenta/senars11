@@ -26,6 +26,9 @@ import TraceInspector from './TraceInspector.js';
 import ReasonerControls from './ReasonerControls.js';
 import EnhancedInputInterface from './EnhancedInputInterface.js';
 import LayoutManager from './LayoutManager.js';
+import AppLauncherPanel from './AppLauncherPanel.js';
+import DiagnosticsPanel from './DiagnosticsPanel.js';
+import ReplConsolePanel from './ReplConsolePanel.js';
 
 export const contentMap = {
   'ExplorerPanel': ExplorerPanel,
@@ -55,4 +58,7 @@ export const contentMap = {
   'ReasonerControls': ReasonerControls,
   'EnhancedInputInterface': EnhancedInputInterface,
   'LayoutManager': LayoutManager,
+  'AppLauncherPanel': AppLauncherPanel,
+  'DiagnosticsPanel': DiagnosticsPanel,
+  'ReplConsolePanel': ReplConsolePanel,
 };

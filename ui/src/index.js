@@ -27,9 +27,18 @@ export { createCollectionManager, createObjectManager, batchUpdate } from './uti
 // Store
 export { default as useUiStore } from './stores/uiStore.js';
 
+// Constants
+export { UI_APPS } from './constants/uiApps.js';
+
 // App Registry
 export { default as appRegistry } from './AppRegistry.js';
 
 // Core application components
 export { default as App } from './App.js';
 export { default as Launcher } from './Launcher.js';
+export { default as MergedLauncher } from './MergedLauncher.js';
+
+// Panel components for docking framework
+export { default as AppLauncherPanel } from './components/AppLauncherPanel.js';
+export { default as DiagnosticsPanel } from './components/DiagnosticsPanel.js';
+export { default as ReplConsolePanel } from './components/ReplConsolePanel.js';
