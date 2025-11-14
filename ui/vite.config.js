@@ -8,8 +8,7 @@ export default defineConfig(({mode}) => {
 
     return {
         plugins: [react({
-            jsxRuntime: 'classic',
-            include: /\.(js|jsx)$/
+            jsxRuntime: 'classic'
         })],
         define: {
             'process.env': JSON.stringify({

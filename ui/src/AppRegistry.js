@@ -96,3 +96,6 @@ export {
   useUiData,
   useDataOperations
 } from './index.js';
+
+// Default export for the createApp function
+export default createApp;

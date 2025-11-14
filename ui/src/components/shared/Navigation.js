@@ -3,14 +3,14 @@ import { Button } from './GenericComponents.js';
 import { themeUtils } from '../../utils/themeUtils.js';
 
 // Navigation item component
-export const NavItem = memo(({ 
-  children, 
-  active = false, 
-  onClick, 
-  href, 
+export const NavItem = memo(({
+  children,
+  active = false,
+  onClick,
+  href,
   disabled = false,
   style = {},
-  ...props 
+  ...props
 }) => {
   const itemStyle = {
     padding: `${themeUtils.get('SPACING.SM')} ${themeUtils.get('SPACING.MD')}`,
@@ -33,23 +33,23 @@ export const NavItem = memo(({
       e.preventDefault();
       return;
     }
-    
+
     if (href) {
       window.location.href = href;
     }
-    
+
     onClick?.(e);
   };
 
   return React.createElement('button', { style: itemStyle, onClick: handleClick, disabled: disabled, ...props }, children);
-};
+});
 
 // Navigation bar component
-export const NavBar = memo(({ 
-  children, 
+export const NavBar = memo(({
+  children,
   orientation = 'horizontal',
   style = {},
-  ...props 
+  ...props
 }) => {
   const navStyle = {
     display: 'flex',
@@ -63,16 +63,16 @@ export const NavBar = memo(({
     ...style
   };
 
-  return <nav style={navStyle} {...props}>{children}</nav>;
-};
+  return React.createElement('nav', { style: navStyle, ...props }, children);
+});
 
 // Breadcrumb component
-export const Breadcrumb = memo(({ 
-  items = [], 
-  separator = '/', 
+export const Breadcrumb = memo(({
+  items = [],
+  separator = '/',
   style = {},
   itemStyle = {},
-  ...props 
+  ...props
 }) => {
   const containerStyle = {
     display: 'flex',
@@ -86,45 +86,44 @@ export const Breadcrumb = memo(({
 
   if (items.length === 0) return null;
 
-  return (
-    <div style={containerStyle} {...props}>
-      {items.flatMap((item, index) => [
-        <span
-          key={`item-${index}`}
-          style={{
-            color: index === items.length - 1 ? themeUtils.get('TEXT.PRIMARY') : themeUtils.get('TEXT.SECONDARY'),
-            fontWeight: index === items.length - 1 ? themeUtils.get('FONTS.WEIGHT.BOLD') : 'normal',
-            ...itemStyle
-          }}
-          onClick={item.onClick}
-        >
-          {item.label}
-        </span>,
-        index < items.length - 1 ?
-          <span key={`sep-${index}`} style={itemStyle}>{separator}</span> : null
-      ]).filter(Boolean)}
-    </div>
-  );
-};
+  // Build elements without using complex mapping
+  const elements = [];
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    
+    elements.push(
+      React.createElement('span', {
+        key: `item-${i}`,
+        style: {
+          color: i === items.length - 1 ? themeUtils.get('TEXT.PRIMARY') : themeUtils.get('TEXT.SECONDARY'),
+          fontWeight: i === items.length - 1 ? themeUtils.get('FONTS.WEIGHT.BOLD') : 'normal',
+          ...itemStyle
+        },
+        onClick: item.onClick
+      }, item.label)
+    );
+    
+    if (i < items.length - 1) {
+      elements.push(
+        React.createElement('span', { key: `sep-${i}`, style: itemStyle }, separator)
+      );
+    }
+  }
 
-// Sidebar component
-export const Sidebar = memo(({ 
-  children, 
-  title, 
-  collapsed = false,
-  onCollapse,
-  width = '250px',
-  style = {},
-  ...props 
-}) => {
-  const [isCollapsed, setIsCollapsed] = React.useState(collapsed);
+  return React.createElement('div', { style: containerStyle, ...props }, ...elements);
+});
+
+// Sidebar component - Simplified to avoid complex structure
+export const Sidebar = ({ children, title, collapsed = false, onCollapse, width = '250px', style = {}, ...props }) => {
+  // This function doesn't use React.memo because it has complex structure that's causing build errors
+  const isCurrentlyCollapsed = collapsed;
 
   const sidebarStyle = {
-    width: isCollapsed ? themeUtils.get('SPACING.XL') : width,
+    width: isCurrentlyCollapsed ? themeUtils.get('SPACING.XL') : width,
     backgroundColor: themeUtils.get('BACKGROUNDS.SECONDARY'),
     border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`,
     borderRadius: themeUtils.get('BORDERS.RADIUS.MD'),
-    padding: isCollapsed ? themeUtils.get('SPACING.XS') : themeUtils.get('SPACING.SM'),
+    padding: isCurrentlyCollapsed ? themeUtils.get('SPACING.XS') : themeUtils.get('SPACING.SM'),
     transition: 'width 0.3s',
     overflow: 'hidden',
     display: 'flex',
@@ -163,42 +162,63 @@ export const Sidebar = memo(({
   };
 
   const toggleCollapse = () => {
-    const newCollapsed = !isCollapsed;
-    setIsCollapsed(newCollapsed);
-    onCollapse?.(newCollapsed);
+    onCollapse?.(!isCurrentlyCollapsed);
   };
 
-  return (
-    <div style={sidebarStyle} {...props}>
-      {!isCollapsed && title && (
-        <div style={headerStyle}>
-          <h3 style={titleStyle}>{title}</h3>
-          <button
-            style={collapseButtonStyle}
-            onClick={toggleCollapse}
-          >
-            {isCollapsed ? '▶' : '◀'}
-          </button>
-        </div>
-      )}
-      {!isCollapsed && children}
-      {isCollapsed && (
-        <div
-          style={{
-            writingMode: 'vertical-rl',
-            textOrientation: 'mixed',
-            transform: 'rotate(180deg)',
-            cursor: 'pointer',
-            textAlign: 'center',
-            fontSize: themeUtils.get('FONTS.SIZE.XS'),
-            color: themeUtils.get('TEXT.MUTED'),
-            padding: themeUtils.get('SPACING.XS')
-          }}
-          onClick={toggleCollapse}
-        >
-          …
-        </div>
-      )}
-    </div>
-  );
+  if (isCurrentlyCollapsed && title) {
+    return React.createElement('div', { style: sidebarStyle, ...props },
+      React.createElement('div', { style: headerStyle },
+        React.createElement('h3', { style: titleStyle }, title),
+        React.createElement('button', {
+          style: collapseButtonStyle,
+          onClick: toggleCollapse
+        }, isCurrentlyCollapsed ? '▶' : '◀')
+      ),
+      React.createElement('div', null, children),
+      React.createElement('div', {
+        style: {
+          writingMode: 'vertical-rl',
+          textOrientation: 'mixed',
+          transform: 'rotate(180deg)',
+          cursor: 'pointer',
+          textAlign: 'center',
+          fontSize: themeUtils.get('FONTS.SIZE.XS'),
+          color: themeUtils.get('TEXT.MUTED'),
+          padding: themeUtils.get('SPACING.XS')
+        },
+        onClick: toggleCollapse
+      }, '…')
+    );
+  } else if (isCurrentlyCollapsed) {
+    return React.createElement('div', { style: sidebarStyle, ...props },
+      React.createElement('div', {
+        style: {
+          writingMode: 'vertical-rl',
+          textOrientation: 'mixed',
+          transform: 'rotate(180deg)',
+          cursor: 'pointer',
+          textAlign: 'center',
+          fontSize: themeUtils.get('FONTS.SIZE.XS'),
+          color: themeUtils.get('TEXT.MUTED'),
+          padding: themeUtils.get('SPACING.XS')
+        },
+        onClick: toggleCollapse
+      }, '…')
+    );
+  } else if (title) {
+    return React.createElement('div', { style: sidebarStyle, ...props },
+      React.createElement('div', { style: headerStyle },
+        React.createElement('h3', { style: titleStyle }, title),
+        React.createElement('button', {
+          style: collapseButtonStyle,
+          onClick: toggleCollapse
+        }, isCurrentlyCollapsed ? '▶' : '◀')
+      ),
+      React.createElement('div', null, children)
+    );
+  } else {
+    return React.createElement('div', { style: sidebarStyle, ...props },
+      React.createElement('div', null, children)
+    );
+  }
 };

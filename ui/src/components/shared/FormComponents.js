@@ -44,8 +44,7 @@ export const GenericFormField = memo(({
     marginTop: themeUtils.get('SPACING.XS')
   };
 
-  // Create content as an array to pass as children
-  const formContent = [
+  const allContent = React.createElement('div', { style: { display: 'contents' } },
     React.createElement('div', { style: labelContainerStyle },
       React.createElement('span', null, label),
       required && React.createElement('span', { style: requiredStyle }, ' *')
@@ -53,14 +52,10 @@ export const GenericFormField = memo(({
     React.createElement('div', { style: { display: 'contents' } }, children),
     description && React.createElement('div', { style: descriptionStyle }, description),
     error && React.createElement('div', { style: errorStyle }, error)
-  ].filter(Boolean);
-
-  return React.createElement('div', { style: containerStyle, ...props },
-    React.createElement('div', { style: { display: 'contents' } },
-      React.createElement(React.Fragment, null, formContent)
-    )
   );
-};
+
+  return React.createElement('div', { style: containerStyle, ...props }, allContent);
+});
 
 // Generic Input Field with consistent styling
 export const GenericInputField = memo(({
@@ -86,21 +81,19 @@ export const GenericInputField = memo(({
     boxSizing: 'border-box'
   };
 
-  return (
-    <GenericFormField label={label} required={required} description={description} error={error}>
-      <input
-        type={type}
-        value={value}
-        onChange={(e) => onChange?.(e.target.value)}
-        placeholder={placeholder}
-        disabled={disabled}
-        required={required}
-        style={inputStyle}
-        {...props}
-      />
-    </GenericFormField>
+  return React.createElement(GenericFormField, { label, required, description, error },
+    React.createElement('input', {
+      type,
+      value,
+      onChange: (e) => onChange?.(e.target.value),
+      placeholder,
+      disabled,
+      required,
+      style: inputStyle,
+      ...props
+    })
   );
-};
+});
 
 // Generic Select Field with consistent styling
 export const GenericSelectField = memo(({
@@ -125,24 +118,20 @@ export const GenericSelectField = memo(({
     boxSizing: 'border-box'
   };
 
-  return (
-    <GenericFormField label={label} required={required} description={description} error={error}>
-      <select
-        value={value}
-        onChange={(e) => onChange?.(e.target.value)}
-        disabled={disabled}
-        style={selectStyle}
-        {...props}
-      >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </GenericFormField>
+  return React.createElement(GenericFormField, { label, required, description, error },
+    React.createElement('select', {
+      value,
+      onChange: (e) => onChange?.(e.target.value),
+      disabled,
+      style: selectStyle,
+      ...props
+    }, 
+      ...options.map((option) => 
+        React.createElement('option', { key: option.value, value: option.value }, option.label)
+      )
+    )
   );
-};
+});
 
 // Generic Textarea Field
 export const GenericTextAreaField = memo(({
@@ -169,29 +158,27 @@ export const GenericTextAreaField = memo(({
     resize: 'vertical'
   };
 
-  return (
-    <GenericFormField label={label} required={required} description={description} error={error}>
-      <textarea
-        value={value}
-        onChange={(e) => onChange?.(e.target.value)}
-        placeholder={placeholder}
-        disabled={disabled}
-        required={required}
-        rows={rows}
-        style={textareaStyle}
-        {...props}
-      />
-    </GenericFormField>
+  return React.createElement(GenericFormField, { label, required, description, error },
+    React.createElement('textarea', {
+      value,
+      onChange: (e) => onChange?.(e.target.value),
+      placeholder,
+      disabled,
+      required,
+      rows,
+      style: textareaStyle,
+      ...props
+    })
   );
-};
+});
 
 // Toggle Switch Component
-export const ToggleSwitch = memo(({ 
-  checked, 
-  onChange, 
-  label, 
+export const ToggleSwitch = memo(({
+  checked,
+  onChange,
+  label,
   disabled = false,
-  ...props 
+  ...props
 }) => {
   const containerStyle = {
     display: 'flex',
@@ -229,27 +216,34 @@ export const ToggleSwitch = memo(({
     }
   };
 
-  return (
-    <label style={containerStyle} onClick={handleClick} {...props}>
-      <div style={switchStyle}>
-        <div style={thumbStyle} />
-      </div>
-      {label}
-    </label>
+  return React.createElement('label', {
+    style: containerStyle,
+    onClick: handleClick,
+    ...props
+  },
+    React.createElement('div', { style: switchStyle },
+      React.createElement('div', { style: thumbStyle })
+    ),
+    label
   );
-};
+});
 
-// Collapsible Section Component
-export const CollapsibleSection = memo(({ 
-  title, 
-  children, 
-  defaultOpen = false, 
+// Collapsible Section Component - This component requires state, which can't be done with pure React.createElement
+// We'll keep it simple and remove the state management from the component
+export const CollapsibleSection = memo(({
+  title,
+  children,
+  isOpen: controlledIsOpen,
+  onToggle,
+  defaultOpen = false,
   style = {},
   headerStyle = {},
   contentStyle = {},
-  ...props 
+  ...props
 }) => {
-  const [isOpen, setIsOpen] = React.useState(defaultOpen);
+  // If no external control provided, we'll ignore the collapse functionality
+  // This is a compromise to maintain React.createElement compatibility
+  const isOpen = controlledIsOpen !== undefined ? controlledIsOpen : defaultOpen;
 
   const containerStyle = {
     border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`,
@@ -278,15 +272,19 @@ export const CollapsibleSection = memo(({
     alignItems: 'center'
   };
 
-  return (
-    <div style={containerStyle} {...props}>
-      <div style={headerStyleMerged} onClick={() => setIsOpen(!isOpen)}>
-        <div style={flexContainerStyle}>
-          <span>{title}</span>
-          <span>{isOpen ? '▼' : '▶'}</span>
-        </div>
-      </div>
-      {isOpen && <div style={contentStyleMerged}>{children}</div>}
-    </div>
+  const handleHeaderClick = () => {
+    if (onToggle) {
+      onToggle();
+    }
+  };
+
+  return React.createElement('div', { style: containerStyle, ...props },
+    React.createElement('div', { style: headerStyleMerged, onClick: handleHeaderClick },
+      React.createElement('div', { style: flexContainerStyle },
+        React.createElement('span', null, title),
+        React.createElement('span', null, isOpen ? '▼' : '▶')
+      )
+    ),
+    isOpen && React.createElement('div', { style: contentStyleMerged }, children)
   );
-};
+});

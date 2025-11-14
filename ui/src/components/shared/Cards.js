@@ -2,13 +2,13 @@ import React, { memo } from 'react';
 import { themeUtils } from '../../utils/themeUtils.js';
 
 // Card component
-export const Card = memo(({ 
-  children, 
-  title, 
-  style = {}, 
+export const Card = memo(({
+  children,
+  title,
+  style = {},
   headerStyle = {},
   contentStyle = {},
-  ...props 
+  ...props
 }) => {
   const cardStyle = {
     border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`,
@@ -37,28 +37,21 @@ export const Card = memo(({
     ...contentStyle
   };
 
-  let content = React.createElement('div', { style: contentBaseStyle }, children);
-  if (title) {
-    content = React.createElement(React.Fragment, null,
-      React.createElement('div', { style: titleStyle }, title),
-      content
-    );
-  }
-
   return React.createElement('div', { style: cardStyle, ...props },
-    React.createElement('div', { style: { display: 'contents' } }, content)
+    title && React.createElement('div', { style: titleStyle }, title),
+    React.createElement('div', { style: contentBaseStyle }, children)
   );
-};
+});
 
 // Stat card component
-export const StatCard = memo(({ 
-  title, 
-  value, 
-  description, 
-  icon, 
+export const StatCard = memo(({
+  title,
+  value,
+  description,
+  icon,
   trend,
   style = {},
-  ...props 
+  ...props
 }) => {
   const statCardStyle = {
     border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`,
@@ -120,7 +113,7 @@ export const StatCard = memo(({
     React.createElement('div', { style: valueStyle }, value),
     description && React.createElement('div', { style: descriptionStyle }, description)
   );
-};
+});
 
 // Feature card component
 export const FeatureCard = memo(({
@@ -197,4 +190,4 @@ export const FeatureCard = memo(({
     title && React.createElement('div', { style: titleStyle }, title),
     description && React.createElement('div', { style: descriptionStyle }, description)
   );
-};
+});

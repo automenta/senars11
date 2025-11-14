@@ -5,14 +5,6 @@ import useUiStore from '../stores/uiStore.js';
 import {getTaskColor} from '../utils/taskUtils.js';
 import {themeUtils} from '../utils/themeUtils.js';
 
-// Node types for different system items
-const nodeTypes = {
-  concept: ConceptNode,
-  task: TaskNode,
-  belief: BeliefNode,
-  goal: GoalNode
-};
-
 // Custom node components
 const ConceptNode = memo(({data}) => {
   return React.createElement('div', {
@@ -83,6 +75,14 @@ const GoalNode = memo(({data}) => {
   React.createElement('div', {style: {fontSize: '0.6em'}}, `Desire: ${(data.desire || 0).toFixed(2)}`)
   );
 });
+
+// Node types for different system items - defined after components to avoid circular reference
+const nodeTypes = {
+  concept: ConceptNode,
+  task: TaskNode,
+  belief: BeliefNode,
+  goal: GoalNode
+};
 
 const GraphUI = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);

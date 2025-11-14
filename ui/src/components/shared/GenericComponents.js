@@ -83,32 +83,6 @@ const StatusBadge = memo(({ status = 'default', label, style = {} }) => {
   return React.createElement('span', { style: badgeStyle }, label ?? status);
 });
 
-/**
- * LoadingSpinner: Parameterized with default values
- */
-const LoadingSpinner = memo(({ size = themeUtils.get('SPACING.XL'), color = themeUtils.get('COLORS.PRIMARY'), style = {}, spinnerStyle = {} }) => {
-  const computedStyle = React.useMemo(() => ({
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: themeUtils.get('SPACING.MD'),
-    ...style
-  }), [style]);
-
-  const computedSpinnerStyle = React.useMemo(() => ({
-    width: size,
-    height: size,
-    border: `2px solid ${color}40`,
-    borderTop: `2px solid ${color}`,
-    borderRadius: '50%',
-    animation: 'spin 1s linear infinite',
-    ...spinnerStyle
-  }), [size, color, spinnerStyle]);
-
-  return React.createElement('div', { style: computedStyle },
-    React.createElement('div', { style: computedSpinnerStyle })
-  );
-});
 
 /**
  * EmptyState: Default message and icon with flexibility
@@ -450,7 +424,6 @@ const Card = memo(({ children, title, style = {}, ...props }) => {
 
 export {
   StatusBadge,
-  LoadingSpinner,
   EmptyState,
   ErrorState,
   TimeDisplay,
