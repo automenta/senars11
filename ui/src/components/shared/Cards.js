@@ -1,8 +1,3 @@
-/**
- * Cards: Shared card components
- * Following AGENTS.md: Modular, Consistent
- */
-
 import React, { memo } from 'react';
 import { themeUtils } from '../../utils/themeUtils.js';
 
@@ -42,9 +37,16 @@ export const Card = memo(({
     ...contentStyle
   };
 
+  let content = React.createElement('div', { style: contentBaseStyle }, children);
+  if (title) {
+    content = React.createElement(React.Fragment, null,
+      React.createElement('div', { style: titleStyle }, title),
+      content
+    );
+  }
+
   return React.createElement('div', { style: cardStyle, ...props },
-    title && React.createElement('div', { style: titleStyle }, title),
-    React.createElement('div', { style: contentBaseStyle }, children)
+    React.createElement('div', { style: { display: 'contents' } }, content)
   );
 };
 

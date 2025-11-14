@@ -6,7 +6,7 @@
 import React, { memo } from 'react';
 import { Layout as FlexLayout, Model } from 'flexlayout-react';
 import 'flexlayout-react/style/light.css';
-import { themeUtils } from '../utils/themeUtils.js';
+import { themeUtils } from '../../utils/themeUtils.js';
 import { Panel } from './Panel.js';
 
 // Default layout configurations for different application types

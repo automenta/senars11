@@ -1,21 +1,16 @@
-/**
- * FormComponents: Shared form components with consistent styling
- * Following AGENTS.md: DRY, Modular, Consistent
- */
-
 import React, { memo } from 'react';
 import { themeUtils } from '../../utils/themeUtils.js';
 
 // Generic Form Field Container
-export const GenericFormField = memo(({ 
-  label, 
-  children, 
-  required = false, 
-  description, 
+export const GenericFormField = memo(({
+  label,
+  children,
+  required = false,
+  description,
   error,
   style = {},
   labelStyle = {},
-  ...props 
+  ...props
 }) => {
   const containerStyle = {
     marginBottom: themeUtils.get('SPACING.MD'),
@@ -49,14 +44,21 @@ export const GenericFormField = memo(({
     marginTop: themeUtils.get('SPACING.XS')
   };
 
-  return React.createElement('div', { style: containerStyle, ...props },
+  // Create content as an array to pass as children
+  const formContent = [
     React.createElement('div', { style: labelContainerStyle },
       React.createElement('span', null, label),
       required && React.createElement('span', { style: requiredStyle }, ' *')
     ),
-    children,
+    React.createElement('div', { style: { display: 'contents' } }, children),
     description && React.createElement('div', { style: descriptionStyle }, description),
     error && React.createElement('div', { style: errorStyle }, error)
+  ].filter(Boolean);
+
+  return React.createElement('div', { style: containerStyle, ...props },
+    React.createElement('div', { style: { display: 'contents' } },
+      React.createElement(React.Fragment, null, formContent)
+    )
   );
 };
 
@@ -84,22 +86,19 @@ export const GenericInputField = memo(({
     boxSizing: 'border-box'
   };
 
-  return React.createElement(GenericFormField, { 
-    label, 
-    required, 
-    description, 
-    error 
-  },
-    React.createElement('input', {
-      type,
-      value,
-      onChange: (e) => onChange?.(e.target.value),
-      placeholder,
-      disabled,
-      required,
-      style: inputStyle,
-      ...props
-    })
+  return (
+    <GenericFormField label={label} required={required} description={description} error={error}>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange?.(e.target.value)}
+        placeholder={placeholder}
+        disabled={disabled}
+        required={required}
+        style={inputStyle}
+        {...props}
+      />
+    </GenericFormField>
   );
 };
 
@@ -126,23 +125,22 @@ export const GenericSelectField = memo(({
     boxSizing: 'border-box'
   };
 
-  return React.createElement(GenericFormField, { 
-    label, 
-    required, 
-    description, 
-    error 
-  },
-    React.createElement('select', {
-      value,
-      onChange: (e) => onChange?.(e.target.value),
-      disabled,
-      style: selectStyle,
-      ...props
-    },
-    options.map((option) =>
-      React.createElement('option', { key: option.value, value: option.value }, option.label)
-    )
-    )
+  return (
+    <GenericFormField label={label} required={required} description={description} error={error}>
+      <select
+        value={value}
+        onChange={(e) => onChange?.(e.target.value)}
+        disabled={disabled}
+        style={selectStyle}
+        {...props}
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </GenericFormField>
   );
 };
 
@@ -171,22 +169,19 @@ export const GenericTextAreaField = memo(({
     resize: 'vertical'
   };
 
-  return React.createElement(GenericFormField, { 
-    label, 
-    required, 
-    description, 
-    error 
-  },
-    React.createElement('textarea', {
-      value,
-      onChange: (e) => onChange?.(e.target.value),
-      placeholder,
-      disabled,
-      required,
-      rows,
-      style: textareaStyle,
-      ...props
-    })
+  return (
+    <GenericFormField label={label} required={required} description={description} error={error}>
+      <textarea
+        value={value}
+        onChange={(e) => onChange?.(e.target.value)}
+        placeholder={placeholder}
+        disabled={disabled}
+        required={required}
+        rows={rows}
+        style={textareaStyle}
+        {...props}
+      />
+    </GenericFormField>
   );
 };
 
@@ -234,15 +229,13 @@ export const ToggleSwitch = memo(({
     }
   };
 
-  return React.createElement('label', { 
-    style: containerStyle, 
-    onClick: handleClick,
-    ...props 
-  },
-    React.createElement('div', { style: switchStyle },
-      React.createElement('div', { style: thumbStyle })
-    ),
-    label
+  return (
+    <label style={containerStyle} onClick={handleClick} {...props}>
+      <div style={switchStyle}>
+        <div style={thumbStyle} />
+      </div>
+      {label}
+    </label>
   );
 };
 
@@ -285,16 +278,15 @@ export const CollapsibleSection = memo(({
     alignItems: 'center'
   };
 
-  return React.createElement('div', { style: containerStyle, ...props },
-    React.createElement('div', { 
-      style: headerStyleMerged, 
-      onClick: () => setIsOpen(!isOpen) 
-    },
-      React.createElement('div', { style: flexContainerStyle },
-        React.createElement('span', null, title),
-        React.createElement('span', null, isOpen ? '▼' : '▶')
-      )
-    ),
-    isOpen && React.createElement('div', { style: contentStyleMerged }, children)
+  return (
+    <div style={containerStyle} {...props}>
+      <div style={headerStyleMerged} onClick={() => setIsOpen(!isOpen)}>
+        <div style={flexContainerStyle}>
+          <span>{title}</span>
+          <span>{isOpen ? '▼' : '▶'}</span>
+        </div>
+      </div>
+      {isOpen && <div style={contentStyleMerged}>{children}</div>}
+    </div>
   );
 };

@@ -126,16 +126,21 @@ if (helpRequested) {
 async function startWebSocketServer(config = DEFAULT_CONFIG) {
     console.log(`Starting WebSocket server on ${config.webSocket.host}:${config.webSocket.port}...`);
 
+    const {ReplEngine} = await import('../../src/repl/ReplEngine.js');
     const nar = new NAR(config.nar);
     await nar.initialize();
 
+    // Create a ReplEngine to provide the processInput method required by WebRepl
+    const replEngine = new ReplEngine(config);
+    await replEngine.initialize();
+
     const monitor = new WebSocketMonitor(config.webSocket);
     await monitor.start();
-    nar.connectToWebSocketMonitor(monitor);
+    replEngine.nar.connectToWebSocketMonitor(monitor);
 
     // Import and initialize WebRepl for handling all UIs with comprehensive message support
     const {WebRepl} = await import('../../src/repl/WebRepl.js');
-    const webRepl = new WebRepl(nar, monitor);
+    const webRepl = new WebRepl(replEngine, monitor);
 
     // Register WebRepl with the WebSocket server to provide comprehensive message support
     webRepl.registerWithWebSocketServer();
@@ -144,11 +149,11 @@ async function startWebSocketServer(config = DEFAULT_CONFIG) {
     monitor.registerClientMessageHandler('requestNAR', async (message, client, monitorInstance) => {
         // For security reasons, we only send information that's safe for the UI, not the full NAR instance
         const narInfo = {
-            cycleCount: nar.cycleCount,
-            isRunning: nar.isRunning,
-            config: nar.config.toJSON(),
-            stats: webRepl.getStats ? webRepl.getStats() : nar.getStats(),
-            reasoningState: nar.getReasoningState ? nar.getReasoningState() : null
+            cycleCount: replEngine.nar.cycleCount,
+            isRunning: replEngine.nar.isRunning,
+            config: replEngine.nar.config.toJSON(),
+            stats: webRepl.getStats ? webRepl.getStats() : replEngine.getStats(),
+            reasoningState: replEngine.nar.getReasoningState ? replEngine.nar.getReasoningState() : null
         };
 
         monitorInstance._sendToClient(client, {
@@ -168,11 +173,11 @@ async function startWebSocketServer(config = DEFAULT_CONFIG) {
     demoWrapper.runPeriodicMetricsUpdate();
 
     // Start the NAR reasoning cycle
-    nar.start();
+    replEngine.nar.start();
 
     console.log('WebSocket server started successfully');
 
-    return {nar, monitor, demoWrapper};
+    return {nar: replEngine.nar, replEngine, monitor, demoWrapper};
 }
 
 /**
@@ -216,11 +221,16 @@ function startViteDevServer(config = DEFAULT_CONFIG) {
 /**
  * Save the NAR state to file
  */
-async function saveNarState(nar) {
+async function saveNarState(nar, replEngine = null) {
     const fs = await import('fs');
     const state = nar.serialize();
     await fs.promises.writeFile(DEFAULT_CONFIG.persistence.defaultPath, JSON.stringify(state, null, 2));
     console.log('Current state saved to agent.json');
+
+    // Also save ReplEngine state if available
+    if (replEngine) {
+        await replEngine.save();
+    }
 }
 
 /**
@@ -229,9 +239,14 @@ async function saveNarState(nar) {
 async function shutdownServices(webSocketServer) {
     // Save NAR state
     try {
-        await saveNarState(webSocketServer.nar);
+        await saveNarState(webSocketServer.nar, webSocketServer.replEngine);
     } catch (saveError) {
         console.error('Error saving state on shutdown:', saveError.message);
+    }
+
+    // Shutdown ReplEngine if available
+    if (webSocketServer.replEngine) {
+        await webSocketServer.replEngine.shutdown();
     }
 
     // Stop WebSocket server
@@ -280,6 +295,7 @@ async function main() {
         // Set up graceful shutdown
         await setupGracefulShutdown({
             nar: webSocketServer.nar,
+            replEngine: webSocketServer.replEngine,
             monitor: webSocketServer.monitor
         });
 

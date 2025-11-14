@@ -7,7 +7,10 @@ export default defineConfig(({mode}) => {
     const env = loadEnv(mode, process.cwd(), '');
 
     return {
-        plugins: [react()],
+        plugins: [react({
+            jsxRuntime: 'classic',
+            include: /\.(js|jsx)$/
+        })],
         define: {
             'process.env': JSON.stringify({
                 VITE_TEST_MODE: env.VITE_TEST_MODE,

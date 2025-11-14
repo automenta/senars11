@@ -1,8 +1,3 @@
-/**
- * Navigation: Shared navigation components
- * Following AGENTS.md: Modular, Abstract, Parameterized
- */
-
 import React, { memo } from 'react';
 import { Button } from './GenericComponents.js';
 import { themeUtils } from '../../utils/themeUtils.js';
@@ -21,7 +16,7 @@ export const NavItem = memo(({
     padding: `${themeUtils.get('SPACING.SM')} ${themeUtils.get('SPACING.MD')}`,
     textDecoration: 'none',
     color: active ? themeUtils.get('COLORS.PRIMARY') : themeUtils.get('TEXT.SECONDARY'),
-    backgroundColor: active ? themeUtils.get('COLORS.PRIMARY') + '10' : 'transparent',
+    backgroundColor: active ? 'var(--primary-color)10' : 'transparent',
     border: 'none',
     borderRadius: themeUtils.get('BORDERS.RADIUS.MD'),
     cursor: disabled ? 'not-allowed' : 'pointer',
@@ -46,12 +41,7 @@ export const NavItem = memo(({
     onClick?.(e);
   };
 
-  return React.createElement('button', {
-    style: itemStyle,
-    onClick: handleClick,
-    disabled: disabled,
-    ...props
-  }, children);
+  return React.createElement('button', { style: itemStyle, onClick: handleClick, disabled: disabled, ...props }, children);
 };
 
 // Navigation bar component
@@ -73,7 +63,7 @@ export const NavBar = memo(({
     ...style
   };
 
-  return React.createElement('nav', { style: navStyle, ...props }, children);
+  return <nav style={navStyle} {...props}>{children}</nav>;
 };
 
 // Breadcrumb component
@@ -96,21 +86,25 @@ export const Breadcrumb = memo(({
 
   if (items.length === 0) return null;
 
-  const breadcrumbItems = items.flatMap((item, index) => [
-    React.createElement('span', { 
-      key: `item-${index}`,
-      style: { 
-        color: index === items.length - 1 ? themeUtils.get('TEXT.PRIMARY') : themeUtils.get('TEXT.SECONDARY'),
-        fontWeight: index === items.length - 1 ? themeUtils.get('FONTS.WEIGHT.BOLD') : 'normal',
-        ...itemStyle
-      },
-      onClick: item.onClick
-    }, item.label),
-    index < items.length - 1 ? 
-      React.createElement('span', { key: `sep-${index}`, style: itemStyle }, separator) : null
-  ]).filter(Boolean);
-
-  return React.createElement('div', { style: containerStyle, ...props }, ...breadcrumbItems);
+  return (
+    <div style={containerStyle} {...props}>
+      {items.flatMap((item, index) => [
+        <span
+          key={`item-${index}`}
+          style={{
+            color: index === items.length - 1 ? themeUtils.get('TEXT.PRIMARY') : themeUtils.get('TEXT.SECONDARY'),
+            fontWeight: index === items.length - 1 ? themeUtils.get('FONTS.WEIGHT.BOLD') : 'normal',
+            ...itemStyle
+          }}
+          onClick={item.onClick}
+        >
+          {item.label}
+        </span>,
+        index < items.length - 1 ?
+          <span key={`sep-${index}`} style={itemStyle}>{separator}</span> : null
+      ]).filter(Boolean)}
+    </div>
+  );
 };
 
 // Sidebar component
@@ -174,27 +168,37 @@ export const Sidebar = memo(({
     onCollapse?.(newCollapsed);
   };
 
-  return React.createElement('div', { style: sidebarStyle, ...props },
-    !isCollapsed && title && React.createElement('div', { style: headerStyle },
-      React.createElement('h3', { style: titleStyle }, title),
-      React.createElement('button', { 
-        style: collapseButtonStyle,
-        onClick: toggleCollapse
-      }, isCollapsed ? '▶' : '◀')
-    ),
-    !isCollapsed && children,
-    isCollapsed && React.createElement('div', { 
-      style: { 
-        writingMode: 'vertical-rl', 
-        textOrientation: 'mixed',
-        transform: 'rotate(180deg)',
-        cursor: 'pointer',
-        textAlign: 'center',
-        fontSize: themeUtils.get('FONTS.SIZE.XS'),
-        color: themeUtils.get('TEXT.MUTED'),
-        padding: themeUtils.get('SPACING.XS')
-      },
-      onClick: toggleCollapse
-    }, '…')
+  return (
+    <div style={sidebarStyle} {...props}>
+      {!isCollapsed && title && (
+        <div style={headerStyle}>
+          <h3 style={titleStyle}>{title}</h3>
+          <button
+            style={collapseButtonStyle}
+            onClick={toggleCollapse}
+          >
+            {isCollapsed ? '▶' : '◀'}
+          </button>
+        </div>
+      )}
+      {!isCollapsed && children}
+      {isCollapsed && (
+        <div
+          style={{
+            writingMode: 'vertical-rl',
+            textOrientation: 'mixed',
+            transform: 'rotate(180deg)',
+            cursor: 'pointer',
+            textAlign: 'center',
+            fontSize: themeUtils.get('FONTS.SIZE.XS'),
+            color: themeUtils.get('TEXT.MUTED'),
+            padding: themeUtils.get('SPACING.XS')
+          }}
+          onClick={toggleCollapse}
+        >
+          …
+        </div>
+      )}
+    </div>
   );
 };
