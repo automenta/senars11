@@ -1,23 +1,31 @@
 // REPL app loader that renders the main App with REPL-specific configuration
 import React from 'react';
 import App from './App.js';
-import MinimalRepl from './components/MinimalRepl.js';
 
-// Check if minimal REPL is requested via URL hash
-const isMinimalRepl = () => window.location.hash.includes('minimal');
+// Check if specific REPL layout is requested via URL hash or search params
+const getReplLayout = () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const layoutFromParams = urlParams.get('layout');
+
+  // Check URL hash for legacy support
+  if (window.location.hash.includes('minimal')) {
+    return 'minimal';
+  }
+
+  // Default to enhanced if no specific layout requested
+  return layoutFromParams || 'enhanced'; // Changed from 'simple' to 'enhanced'
+};
 
 // This is a wrapper that passes the app ID and config to the main App component for REPL
 const REPLApp = (props) => {
-  // If minimal REPL is requested, return the minimal interface instead
-  if (isMinimalRepl()) {
-    return React.createElement(MinimalRepl, { onBackToLauncher: () => window.location.href = '/' });
-  }
+  const layoutType = getReplLayout();
 
   return React.createElement(App, {
     appId: 'repl',
     appConfig: {
-      title: 'REPL Interface',
-      layoutType: 'simple' // REPL uses a simple layout
+      title: layoutType === 'minimal' ? 'Minimal REPL Interface' :
+             layoutType === 'enhanced' ? 'Enhanced REPL Interface' : 'REPL Interface',
+      layoutType
     },
     ...props
   });
