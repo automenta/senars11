@@ -33,37 +33,45 @@ export const BaseApp = ({
 
   // Initialize WebSocket connection in BaseApp so it's available for all components
   React.useEffect(() => {
-    // Check if WebSocket service is already initialized
-    if (useUiStore.getState().wsService) return;
+    // Check if WebSocket service is already initialized in the store
+    const existingWsService = useUiStore.getState().wsService;
 
-    // Initialize WebSocket connection using page's host to avoid CORS issues
-    // Get host from the environment, but fallback to current page's host if available
-    const { VITE_WS_HOST = null, VITE_WS_PORT = '8080', VITE_WS_PATH = '/ws' } = import.meta.env;
+    if (!existingWsService) {
+      // Always use the page's host for WebSocket connection to ensure same-origin policy compliance
+      // This will work regardless of how the backend was started
+      const { VITE_WS_PORT = '8080', VITE_WS_PATH = '/ws' } = import.meta.env;
 
-    // Determine WebSocket host based on current page URL to avoid mixed origin issues
-    let wsHost = VITE_WS_HOST;
-    if (!wsHost || wsHost === '0.0.0.0') {
       // Use the same host as the current page to avoid CORS issues
-      wsHost = window.location.hostname || 'localhost';
+      // If the page is loaded from localhost, connect to localhost
+      // If the page is loaded from an IP address, connect to that IP
+      const wsHost = window.location.hostname || 'localhost';
+      const wsPort = VITE_WS_PORT; // Use the port from environment or default
+
+      const wsUrl = `ws://${wsHost}:${wsPort}${VITE_WS_PATH}`;
+
+      console.log('Initializing WebSocket connection to:', wsUrl);
+      console.log('Page loaded from:', window.location.href, 'Connecting to WebSocket host:', wsHost);
+
+      const wsService = new WebSocketService(wsUrl);
+      window.wsService = wsService;
+      useUiStore.getState().setWsService(wsService);
+
+      wsService.connect();
+    } else {
+      // Make sure window reference is set if store has service but window doesn't
+      if (!window.wsService) {
+        window.wsService = existingWsService;
+      }
+      console.log('WebSocket service already exists, reusing:', existingWsService.url);
     }
 
-    const wsUrl = `ws://${wsHost}:${VITE_WS_PORT}${VITE_WS_PATH}`;
-
-    console.log('Initializing WebSocket connection to:', wsUrl);
-
-    const wsService = new WebSocketService(wsUrl);
-    window.wsService = wsService;
-    useUiStore.getState().setWsService(wsService);
-
-    wsService.connect();
-
-    // Clean up on unmount
+    // Clean up on unmount - only disconnect if this specific service is in the store
+    // This prevents disconnecting when React StrictMode causes re-renders during development
     return () => {
-      if (window.wsService === wsService) window.wsService = null;
-      useUiStore.getState().setWsService(null);
-      wsService.disconnect();
+      // Don't disconnect the service here - let the service lifecycle be managed elsewhere
+      // The service should persist for the entire app session
     };
-  }, []);
+  }, []); // Empty dependency array to ensure this only runs once
 
   // Show loading state if still connecting
   if (loading && !wsConnected) {

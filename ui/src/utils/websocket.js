@@ -363,7 +363,10 @@ class WebSocketService {
         if (!handlerProcessed) {
           // Update UI store with received data even if no specific handler exists
           this._updateUiStore(processedData);
-          
+
+          // Check for any pending listeners waiting for this message type
+          this._notifyListeners(processedData);
+
           if (this.isTestEnvironment && processedData.type === 'narseseInput') {
             return this.handleNarseseInput({type: processedData.type, payload: processedData.payload});
           }
@@ -386,6 +389,54 @@ class WebSocketService {
         title: 'Message processing error',
         message: error?.message || 'Unknown error in message processing'
       });
+    }
+  }
+
+  /**
+   * Add a listener for specific message types
+   */
+  addListener(messageType, callback) {
+    if (!this.listeners) {
+      this.listeners = new Map();
+    }
+
+    if (!this.listeners.has(messageType)) {
+      this.listeners.set(messageType, []);
+    }
+
+    this.listeners.get(messageType).push(callback);
+    return () => this.removeListener(messageType, callback); // Return unsubscribe function
+  }
+
+  /**
+   * Remove a listener for a specific message type
+   */
+  removeListener(messageType, callback) {
+    if (this.listeners && this.listeners.has(messageType)) {
+      const listeners = this.listeners.get(messageType);
+      const index = listeners.indexOf(callback);
+      if (index > -1) {
+        listeners.splice(index, 1);
+      }
+    }
+  }
+
+  /**
+   * Notify all listeners waiting for a specific message type
+   */
+  _notifyListeners(data) {
+    if (this.listeners && data?.type) {
+      const listeners = this.listeners.get(data.type);
+      if (listeners) {
+        // Call all listeners for this message type
+        listeners.forEach(callback => {
+          try {
+            callback(data);
+          } catch (error) {
+            console.error(`Error in listener for ${data.type}:`, error);
+          }
+        });
+      }
     }
   }
   
