@@ -24,24 +24,18 @@ const AppLayout = ({ layoutType = 'ide', onLayoutChange, children }) => {
     setModel(Model.fromJson(layout));
   }, [layoutType]);
 
+  // The WebSocket connection is now handled by BaseApp, so we don't need to initialize it here
+  // We'll just ensure the connection status is monitored properly
   React.useEffect(() => {
     if (!model) return;
 
-    // Initialize WebSocket connection with environment-based configuration
-    const { VITE_WS_HOST = 'localhost', VITE_WS_PORT = '8080', VITE_WS_PATH = '/ws' } = import.meta.env;
-    const wsUrl = `ws://${VITE_WS_HOST}:${VITE_WS_PORT}${VITE_WS_PATH}`;
-
-    const wsService = new WebSocketService(wsUrl);
-    window.wsService = wsService;
-    useUiStore.getState().setWsService(wsService);
-
-    wsService.connect();
-
-    return () => {
-      if (window.wsService === wsService) window.wsService = null;
-      useUiStore.getState().setWsService(null);
-      wsService.disconnect();
-    };
+    // Log WebSocket service status for debugging
+    const wsService = useUiStore.getState().wsService;
+    if (!wsService) {
+      console.warn('WebSocket service not available in AppLayout');
+    } else {
+      console.log('AppLayout: WebSocket service already initialized, connection state:', wsService.state);
+    }
   }, [model]);
 
   const handleLayoutChange = (newModel) => {

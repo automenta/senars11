@@ -9,6 +9,8 @@ import { useWebSocket } from '../hooks/useWebSocket.js';
 import { GlobalErrorDisplay } from '../components/shared/ErrorBoundary.js';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner.js';
 import { themeUtils } from '../utils/themeUtils.js';
+import useUiStore from '../stores/uiStore.js';
+import WebSocketService from '../utils/websocket.js';
 
 /**
  * Base application component with common infrastructure
@@ -28,6 +30,40 @@ export const BaseApp = ({
   layoutComponent: LayoutComponent = null
 }) => {
   const { wsConnected, loading } = useWebSocket();
+
+  // Initialize WebSocket connection in BaseApp so it's available for all components
+  React.useEffect(() => {
+    // Check if WebSocket service is already initialized
+    if (useUiStore.getState().wsService) return;
+
+    // Initialize WebSocket connection using page's host to avoid CORS issues
+    // Get host from the environment, but fallback to current page's host if available
+    const { VITE_WS_HOST = null, VITE_WS_PORT = '8080', VITE_WS_PATH = '/ws' } = import.meta.env;
+
+    // Determine WebSocket host based on current page URL to avoid mixed origin issues
+    let wsHost = VITE_WS_HOST;
+    if (!wsHost || wsHost === '0.0.0.0') {
+      // Use the same host as the current page to avoid CORS issues
+      wsHost = window.location.hostname || 'localhost';
+    }
+
+    const wsUrl = `ws://${wsHost}:${VITE_WS_PORT}${VITE_WS_PATH}`;
+
+    console.log('Initializing WebSocket connection to:', wsUrl);
+
+    const wsService = new WebSocketService(wsUrl);
+    window.wsService = wsService;
+    useUiStore.getState().setWsService(wsService);
+
+    wsService.connect();
+
+    // Clean up on unmount
+    return () => {
+      if (window.wsService === wsService) window.wsService = null;
+      useUiStore.getState().setWsService(null);
+      wsService.disconnect();
+    };
+  }, []);
 
   // Show loading state if still connecting
   if (loading && !wsConnected) {

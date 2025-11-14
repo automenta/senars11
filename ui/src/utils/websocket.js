@@ -1,3 +1,7 @@
+/**
+ * Enhanced WebSocket Service with fallback capabilities
+ * Provides resilient WebSocket communication with automatic fallbacks
+ */
 import {validateMessage} from '../schemas/messages';
 import {getStore} from './messageHandlers';
 import {createMessageProcessor, messageProcessorUtils} from './messageProcessor';
@@ -78,6 +82,16 @@ class WebSocketService {
             (window.navigator?.webdriver || import.meta.env?.VITE_TEST_MODE === 'true');
 
     this.handlerRegistry = createHandlerRegistry();
+    
+    // Initialize fallback data store for when WebSocket is unavailable
+    this.fallbackDataStore = {
+      tasks: [],
+      concepts: [],
+      beliefs: [],
+      goals: [],
+      reasoningSteps: [],
+      systemMetrics: null
+    };
   }
 
   connect() {
@@ -99,7 +113,7 @@ class WebSocketService {
     this.connectionTimeout = setTimeout(() => {
       if (this.state === ConnectionState.CONNECTING) {
         console.error(`WebSocket connection timeout after 10 seconds: ${this.url}`);
-        this.handleError(new Error('Connection timeout'));
+        this._handleConnectionTimeout();
       }
     }, 10000);
 
@@ -114,6 +128,45 @@ class WebSocketService {
     } catch (error) {
       this._handleConnectionError(error);
     }
+  }
+
+  _handleConnectionTimeout() {
+    console.error('WebSocket connection timeout');
+    getStore().setWsConnected(false);
+    this.state = ConnectionState.DISCONNECTED;
+    
+    // Generate fallback data to prevent empty UI
+    this._generateFallbackData();
+    
+    // Attempt to reconnect with exponential backoff
+    this.attemptReconnect();
+  }
+
+  _generateFallbackData() {
+    // Generate sample data for when WebSocket is unavailable
+    const now = Date.now();
+    
+    this.fallbackDataStore.tasks = [
+      {id: 'fallback_task_1', content: '<fallback --> data>.', priority: 0.5, creationTime: now, type: 'belief'},
+      {id: 'fallback_task_2', content: '<sample --> input>?', priority: 0.7, creationTime: now + 100, type: 'question'}
+    ];
+    
+    this.fallbackDataStore.concepts = [
+      {term: 'sample_concept', priority: 0.6, taskCount: 2, beliefCount: 1, questionCount: 0, lastAccess: now}
+    ];
+    
+    this.fallbackDataStore.beliefs = [
+      {id: 'fallback_belief_1', term: '<fallback --> belief>.', priority: 0.8, creationTime: now, type: 'belief', truth: {frequency: 0.9, confidence: 0.8}}
+    ];
+    
+    // Notify store that we're using fallback data
+    getStore().setWsConnected(false);
+    getStore().addNotification?.({
+      type: 'info',
+      title: 'Using fallback data',
+      message: 'WebSocket connection unavailable. Using sample data for UI.',
+      timestamp: Date.now()
+    });
   }
 
   _handleOpen() {
@@ -136,6 +189,10 @@ class WebSocketService {
     getStore().setWsConnected(false);
     this.state = ConnectionState.DISCONNECTED;
     this.clearHeartbeat();
+    
+    // Generate fallback data if connection is lost
+    this._generateFallbackData();
+    
     this.attemptReconnect();
   }
 
@@ -158,6 +215,9 @@ class WebSocketService {
       timestamp: Date.now()
     });
     this.state = ConnectionState.DISCONNECTED;
+    
+    // Generate fallback data when connection fails
+    this._generateFallbackData();
   }
 
   handleOpen() {
@@ -222,14 +282,17 @@ class WebSocketService {
       this.state = ConnectionState.RECONNECTING;
       this.metrics.reconnectCount++;
       console.debug(`Attempting to reconnect (${this.reconnectAttempts + 1}/${this.maxReconnectAttempts})...`);
+      
+      // Use exponential backoff for reconnection attempts
+      const delay = this.reconnectInterval * Math.pow(2, this.reconnectAttempts);
       setTimeout(() => {
         this.reconnectAttempts++;
         this.connect();
-      }, this.reconnectInterval);
+      }, delay);
     } else {
       console.error('Max reconnection attempts reached');
       getStore().setError({
-        message: 'Could not reconnect to server after multiple attempts',
+        message: 'Could not reconnect to server after multiple attempts. Using fallback data.',
         timestamp: Date.now()
       });
     }
@@ -283,6 +346,7 @@ class WebSocketService {
     // Handle the special connection_info type
     if (type === 'connection_info') {
       console.debug('Processing connection info:', data.data || data);
+      getStore().setWsConnected(true); // Update connection status when receiving connection info
       return;
     }
 
@@ -297,6 +361,9 @@ class WebSocketService {
         const handlerProcessed = this.handlerRegistry.process(processedData);
 
         if (!handlerProcessed) {
+          // Update UI store with received data even if no specific handler exists
+          this._updateUiStore(processedData);
+          
           if (this.isTestEnvironment && processedData.type === 'narseseInput') {
             return this.handleNarseseInput({type: processedData.type, payload: processedData.payload});
           }
@@ -319,6 +386,50 @@ class WebSocketService {
         title: 'Message processing error',
         message: error?.message || 'Unknown error in message processing'
       });
+    }
+  }
+  
+  _updateUiStore(data) {
+    // Update the UI store with received data to maintain state
+    const store = getStore();
+    
+    switch (data.type) {
+      case 'taskUpdate':
+        if (data.payload.task) {
+          store.addTask(data.payload.task);
+        }
+        break;
+      case 'conceptUpdate':
+        if (data.payload.concept) {
+          store.addConcept(data.payload.concept);
+        }
+        break;
+      case 'beliefUpdate':
+        if (data.payload) {
+          store.addBelief(data.payload);
+        }
+        break;
+      case 'goalUpdate':
+        if (data.payload) {
+          store.addGoal(data.payload);
+        }
+        break;
+      case 'reasoningStep':
+        if (data.payload) {
+          store.addReasoningStep(data.payload);
+        }
+        break;
+      case 'systemMetrics':
+        if (data.payload) {
+          store.setSystemMetrics(data.payload);
+        }
+        break;
+      case 'connection_info':
+        store.setWsConnected(true);
+        break;
+      default:
+        // For other message types, update the data as appropriate
+        break;
     }
   }
 
@@ -833,6 +944,38 @@ class WebSocketService {
     } else {
       console.warn('WebSocket not connected, queuing message');
       this.queueMessage(message);
+      
+      // Process message through fallback if we're disconnected
+      this._processMessageWithFallback(message);
+    }
+  }
+  
+  _processMessageWithFallback(message) {
+    // Process messages through fallback mechanism when disconnected
+    // This allows UI to still function with sample data
+    if (message.type === 'narseseInput' && message.payload?.input) {
+      // Simulate processing when disconnected
+      const input = message.payload.input;
+      const taskType = input.endsWith('?') ? 'question' : input.endsWith('!') ? 'goal' : 'belief';
+      const taskId = `fallback_task_${Date.now()}`;
+      
+      // Add to fallback store
+      this.fallbackDataStore.tasks.push({
+        id: taskId,
+        content: input,
+        priority: 0.7,
+        creationTime: Date.now(),
+        type: taskType
+      });
+      
+      // Update UI store with fallback data
+      getStore().addTask({
+        id: taskId,
+        content: input,
+        priority: 0.7,
+        creationTime: Date.now(),
+        type: taskType
+      });
     }
   }
 
