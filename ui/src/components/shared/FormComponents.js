@@ -2,7 +2,7 @@ import React, { memo } from 'react';
 import { themeUtils } from '../../utils/themeUtils.js';
 
 // Generic Form Field Container
-export const GenericFormField = memo(({
+function GenericFormField({
   label,
   children,
   required = false,
@@ -11,7 +11,7 @@ export const GenericFormField = memo(({
   style = {},
   labelStyle = {},
   ...props
-}) => {
+}) {
   const containerStyle = {
     marginBottom: themeUtils.get('SPACING.MD'),
     ...style
@@ -60,10 +60,12 @@ export const GenericFormField = memo(({
       React.createElement(React.Fragment, null, formContent)
     )
   );
-};
+}
+
+export const GenericFormField = memo(GenericFormField);
 
 // Generic Input Field with consistent styling
-export const GenericInputField = memo(({
+function GenericInputField({
   label,
   value,
   onChange,
@@ -74,7 +76,7 @@ export const GenericInputField = memo(({
   disabled = false,
   error,
   ...props
-}) => {
+}) {
   const inputStyle = {
     width: '100%',
     padding: themeUtils.get('SPACING.SM'),
@@ -86,24 +88,29 @@ export const GenericInputField = memo(({
     boxSizing: 'border-box'
   };
 
-  return (
-    <GenericFormField label={label} required={required} description={description} error={error}>
-      <input
-        type={type}
-        value={value}
-        onChange={(e) => onChange?.(e.target.value)}
-        placeholder={placeholder}
-        disabled={disabled}
-        required={required}
-        style={inputStyle}
-        {...props}
-      />
-    </GenericFormField>
+  return React.createElement(GenericFormField, {
+      label: label,
+      required: required,
+      description: description,
+      error: error
+    },
+    React.createElement('input', {
+      type: type,
+      value: value,
+      onChange: (e) => onChange?.(e.target.value),
+      placeholder: placeholder,
+      disabled: disabled,
+      required: required,
+      style: inputStyle,
+      ...props
+    })
   );
-};
+}
+
+export const GenericInputField = memo(GenericInputField);
 
 // Generic Select Field with consistent styling
-export const GenericSelectField = memo(({
+function GenericSelectField({
   label,
   value,
   onChange,
@@ -113,7 +120,7 @@ export const GenericSelectField = memo(({
   disabled = false,
   error,
   ...props
-}) => {
+}) {
   const selectStyle = {
     width: '100%',
     padding: themeUtils.get('SPACING.SM'),
@@ -125,27 +132,33 @@ export const GenericSelectField = memo(({
     boxSizing: 'border-box'
   };
 
-  return (
-    <GenericFormField label={label} required={required} description={description} error={error}>
-      <select
-        value={value}
-        onChange={(e) => onChange?.(e.target.value)}
-        disabled={disabled}
-        style={selectStyle}
-        {...props}
-      >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </GenericFormField>
+  return React.createElement(GenericFormField, {
+      label: label,
+      required: required,
+      description: description,
+      error: error
+    },
+    React.createElement('select', {
+        value: value,
+        onChange: (e) => onChange?.(e.target.value),
+        disabled: disabled,
+        style: selectStyle,
+        ...props
+      },
+      options.map((option) =>
+        React.createElement('option', {
+          key: option.value,
+          value: option.value
+        }, option.label)
+      )
+    )
   );
-};
+}
+
+export const GenericSelectField = memo(GenericSelectField);
 
 // Generic Textarea Field
-export const GenericTextAreaField = memo(({
+function GenericTextAreaField({
   label,
   value,
   onChange,
@@ -156,7 +169,7 @@ export const GenericTextAreaField = memo(({
   rows = 4,
   error,
   ...props
-}) => {
+}) {
   const textareaStyle = {
     width: '100%',
     padding: themeUtils.get('SPACING.SM'),
@@ -169,30 +182,35 @@ export const GenericTextAreaField = memo(({
     resize: 'vertical'
   };
 
-  return (
-    <GenericFormField label={label} required={required} description={description} error={error}>
-      <textarea
-        value={value}
-        onChange={(e) => onChange?.(e.target.value)}
-        placeholder={placeholder}
-        disabled={disabled}
-        required={required}
-        rows={rows}
-        style={textareaStyle}
-        {...props}
-      />
-    </GenericFormField>
+  return React.createElement(GenericFormField, {
+      label: label,
+      required: required,
+      description: description,
+      error: error
+    },
+    React.createElement('textarea', {
+      value: value,
+      onChange: (e) => onChange?.(e.target.value),
+      placeholder: placeholder,
+      disabled: disabled,
+      required: required,
+      rows: rows,
+      style: textareaStyle,
+      ...props
+    })
   );
-};
+}
+
+export const GenericTextAreaField = memo(GenericTextAreaField);
 
 // Toggle Switch Component
-export const ToggleSwitch = memo(({ 
-  checked, 
-  onChange, 
-  label, 
+function ToggleSwitch({
+  checked,
+  onChange,
+  label,
   disabled = false,
-  ...props 
-}) => {
+  ...props
+}) {
   const containerStyle = {
     display: 'flex',
     alignItems: 'center',
@@ -229,26 +247,32 @@ export const ToggleSwitch = memo(({
     }
   };
 
-  return (
-    <label style={containerStyle} onClick={handleClick} {...props}>
-      <div style={switchStyle}>
-        <div style={thumbStyle} />
-      </div>
-      {label}
-    </label>
+  return React.createElement('label', {
+      style: containerStyle,
+      onClick: handleClick,
+      ...props
+    },
+    React.createElement('div', {
+      style: switchStyle
+    }, React.createElement('div', {
+      style: thumbStyle
+    })),
+    label
   );
-};
+}
+
+export const ToggleSwitch = memo(ToggleSwitch);
 
 // Collapsible Section Component
-export const CollapsibleSection = memo(({ 
-  title, 
-  children, 
-  defaultOpen = false, 
+function CollapsibleSection({
+  title,
+  children,
+  defaultOpen = false,
   style = {},
   headerStyle = {},
   contentStyle = {},
-  ...props 
-}) => {
+  ...props
+}) {
   const [isOpen, setIsOpen] = React.useState(defaultOpen);
 
   const containerStyle = {
@@ -278,15 +302,25 @@ export const CollapsibleSection = memo(({
     alignItems: 'center'
   };
 
-  return (
-    <div style={containerStyle} {...props}>
-      <div style={headerStyleMerged} onClick={() => setIsOpen(!isOpen)}>
-        <div style={flexContainerStyle}>
-          <span>{title}</span>
-          <span>{isOpen ? '▼' : '▶'}</span>
-        </div>
-      </div>
-      {isOpen && <div style={contentStyleMerged}>{children}</div>}
-    </div>
+  return React.createElement('div', {
+      style: containerStyle,
+      ...props
+    },
+    React.createElement('div', {
+        style: headerStyleMerged,
+        onClick: () => setIsOpen(!isOpen)
+      },
+      React.createElement('div', {
+          style: flexContainerStyle
+        },
+        React.createElement('span', null, title),
+        React.createElement('span', null, isOpen ? '▼' : '▶')
+      )
+    ),
+    isOpen && React.createElement('div', {
+      style: contentStyleMerged
+    }, children)
   );
-};
+}
+
+export const CollapsibleSection = memo(CollapsibleSection);

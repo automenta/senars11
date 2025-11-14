@@ -3,15 +3,15 @@ import { Button } from './GenericComponents.js';
 import { themeUtils } from '../../utils/themeUtils.js';
 
 // Navigation item component
-export const NavItem = memo(({ 
-  children, 
-  active = false, 
-  onClick, 
-  href, 
+function NavItem({
+  children,
+  active = false,
+  onClick,
+  href,
   disabled = false,
   style = {},
-  ...props 
-}) => {
+  ...props
+}) {
   const itemStyle = {
     padding: `${themeUtils.get('SPACING.SM')} ${themeUtils.get('SPACING.MD')}`,
     textDecoration: 'none',
@@ -33,24 +33,31 @@ export const NavItem = memo(({
       e.preventDefault();
       return;
     }
-    
+
     if (href) {
       window.location.href = href;
     }
-    
+
     onClick?.(e);
   };
 
-  return React.createElement('button', { style: itemStyle, onClick: handleClick, disabled: disabled, ...props }, children);
-};
+  return React.createElement('button', {
+    style: itemStyle,
+    onClick: handleClick,
+    disabled: disabled,
+    ...props
+  }, children);
+}
+
+export const NavItem = memo(NavItem);
 
 // Navigation bar component
-export const NavBar = memo(({ 
-  children, 
+function NavBar({
+  children,
   orientation = 'horizontal',
   style = {},
-  ...props 
-}) => {
+  ...props
+}) {
   const navStyle = {
     display: 'flex',
     flexDirection: orientation === 'vertical' ? 'column' : 'row',
@@ -63,17 +70,22 @@ export const NavBar = memo(({
     ...style
   };
 
-  return <nav style={navStyle} {...props}>{children}</nav>;
-};
+  return React.createElement('nav', {
+    style: navStyle,
+    ...props
+  }, children);
+}
+
+export const NavBar = memo(NavBar);
 
 // Breadcrumb component
-export const Breadcrumb = memo(({ 
-  items = [], 
-  separator = '/', 
+function Breadcrumb({
+  items = [],
+  separator = '/',
   style = {},
   itemStyle = {},
-  ...props 
-}) => {
+  ...props
+}) {
   const containerStyle = {
     display: 'flex',
     alignItems: 'center',
@@ -86,37 +98,41 @@ export const Breadcrumb = memo(({
 
   if (items.length === 0) return null;
 
-  return (
-    <div style={containerStyle} {...props}>
-      {items.flatMap((item, index) => [
-        <span
-          key={`item-${index}`}
-          style={{
-            color: index === items.length - 1 ? themeUtils.get('TEXT.PRIMARY') : themeUtils.get('TEXT.SECONDARY'),
-            fontWeight: index === items.length - 1 ? themeUtils.get('FONTS.WEIGHT.BOLD') : 'normal',
-            ...itemStyle
-          }}
-          onClick={item.onClick}
-        >
-          {item.label}
-        </span>,
-        index < items.length - 1 ?
-          <span key={`sep-${index}`} style={itemStyle}>{separator}</span> : null
-      ]).filter(Boolean)}
-    </div>
+  return React.createElement('div', {
+      style: containerStyle,
+      ...props
+    },
+    items.flatMap((item, index) => [
+      React.createElement('span', {
+        key: `item-${index}`,
+        style: {
+          color: index === items.length - 1 ? themeUtils.get('TEXT.PRIMARY') : themeUtils.get('TEXT.SECONDARY'),
+          fontWeight: index === items.length - 1 ? themeUtils.get('FONTS.WEIGHT.BOLD') : 'normal',
+          ...itemStyle
+        },
+        onClick: item.onClick
+      }, item.label),
+      index < items.length - 1 ?
+      React.createElement('span', {
+        key: `sep-${index}`,
+        style: itemStyle
+      }, separator) : null
+    ]).filter(Boolean)
   );
-};
+}
+
+export const Breadcrumb = memo(Breadcrumb);
 
 // Sidebar component
-export const Sidebar = memo(({ 
-  children, 
-  title, 
+function Sidebar({
+  children,
+  title,
   collapsed = false,
   onCollapse,
   width = '250px',
   style = {},
-  ...props 
-}) => {
+  ...props
+}) {
   const [isCollapsed, setIsCollapsed] = React.useState(collapsed);
 
   const sidebarStyle = {
@@ -168,37 +184,40 @@ export const Sidebar = memo(({
     onCollapse?.(newCollapsed);
   };
 
-  return (
-    <div style={sidebarStyle} {...props}>
-      {!isCollapsed && title && (
-        <div style={headerStyle}>
-          <h3 style={titleStyle}>{title}</h3>
-          <button
-            style={collapseButtonStyle}
-            onClick={toggleCollapse}
-          >
-            {isCollapsed ? '▶' : '◀'}
-          </button>
-        </div>
-      )}
-      {!isCollapsed && children}
-      {isCollapsed && (
-        <div
-          style={{
-            writingMode: 'vertical-rl',
-            textOrientation: 'mixed',
-            transform: 'rotate(180deg)',
-            cursor: 'pointer',
-            textAlign: 'center',
-            fontSize: themeUtils.get('FONTS.SIZE.XS'),
-            color: themeUtils.get('TEXT.MUTED'),
-            padding: themeUtils.get('SPACING.XS')
-          }}
-          onClick={toggleCollapse}
-        >
-          …
-        </div>
-      )}
-    </div>
+  return React.createElement('div', {
+      style: sidebarStyle,
+      ...props
+    },
+    !isCollapsed && title &&
+    React.createElement('div', {
+        style: headerStyle
+      },
+      React.createElement('h3', {
+        style: titleStyle
+      }, title),
+      React.createElement('button', {
+        style: collapseButtonStyle,
+        onClick: toggleCollapse
+      }, isCollapsed ? '▶' : '◀')
+    ),
+    !isCollapsed && children,
+    isCollapsed &&
+    React.createElement('div', {
+        style: {
+          writingMode: 'vertical-rl',
+          textOrientation: 'mixed',
+          transform: 'rotate(180deg)',
+          cursor: 'pointer',
+          textAlign: 'center',
+          fontSize: themeUtils.get('FONTS.SIZE.XS'),
+          color: themeUtils.get('TEXT.MUTED'),
+          padding: themeUtils.get('SPACING.XS')
+        },
+        onClick: toggleCollapse
+      },
+      '…'
+    )
   );
-};
+}
+
+export const Sidebar = memo(Sidebar);

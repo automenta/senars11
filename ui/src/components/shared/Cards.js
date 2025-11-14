@@ -2,14 +2,14 @@ import React, { memo } from 'react';
 import { themeUtils } from '../../utils/themeUtils.js';
 
 // Card component
-export const Card = memo(({ 
-  children, 
-  title, 
-  style = {}, 
+function Card({
+  children,
+  title,
+  style = {},
   headerStyle = {},
   contentStyle = {},
-  ...props 
-}) => {
+  ...props
+}) {
   const cardStyle = {
     border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`,
     borderRadius: themeUtils.get('BORDERS.RADIUS.MD'),
@@ -37,29 +37,42 @@ export const Card = memo(({
     ...contentStyle
   };
 
-  let content = React.createElement('div', { style: contentBaseStyle }, children);
+  let content = React.createElement('div', {
+    style: contentBaseStyle
+  }, children);
   if (title) {
     content = React.createElement(React.Fragment, null,
-      React.createElement('div', { style: titleStyle }, title),
+      React.createElement('div', {
+        style: titleStyle
+      }, title),
       content
     );
   }
 
-  return React.createElement('div', { style: cardStyle, ...props },
-    React.createElement('div', { style: { display: 'contents' } }, content)
+  return React.createElement('div', {
+      style: cardStyle,
+      ...props
+    },
+    React.createElement('div', {
+      style: {
+        display: 'contents'
+      }
+    }, content)
   );
-};
+}
+
+export const Card = memo(Card);
 
 // Stat card component
-export const StatCard = memo(({ 
-  title, 
-  value, 
-  description, 
-  icon, 
+function StatCard({
+  title,
+  value,
+  description,
+  icon,
   trend,
   style = {},
-  ...props 
-}) => {
+  ...props
+}) {
   const statCardStyle = {
     border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`,
     borderRadius: themeUtils.get('BORDERS.RADIUS.MD'),
@@ -109,21 +122,38 @@ export const StatCard = memo(({
     color: trend && trend.startsWith('+') ? themeUtils.get('COLORS.SUCCESS') : themeUtils.get('COLORS.DANGER')
   };
 
-  return React.createElement('div', { style: statCardStyle, ...props },
-    React.createElement('div', { style: headerStyle },
+  return React.createElement('div', {
+      style: statCardStyle,
+      ...props
+    },
+    React.createElement('div', {
+        style: headerStyle
+      },
       React.createElement('div', null,
-        icon && React.createElement('span', { style: iconStyle }, icon),
-        React.createElement('div', { style: titleStyle }, title)
+        icon && React.createElement('span', {
+          style: iconStyle
+        }, icon),
+        React.createElement('div', {
+          style: titleStyle
+        }, title)
       ),
-      trend && React.createElement('div', { style: trendStyle }, trend)
+      trend && React.createElement('div', {
+        style: trendStyle
+      }, trend)
     ),
-    React.createElement('div', { style: valueStyle }, value),
-    description && React.createElement('div', { style: descriptionStyle }, description)
+    React.createElement('div', {
+      style: valueStyle
+    }, value),
+    description && React.createElement('div', {
+      style: descriptionStyle
+    }, description)
   );
-};
+}
+
+export const StatCard = memo(StatCard);
 
 // Feature card component
-export const FeatureCard = memo(({
+function FeatureCard({
   title,
   description,
   icon,
@@ -131,7 +161,7 @@ export const FeatureCard = memo(({
   disabled = false,
   style = {},
   ...props
-}) => {
+}) {
   const cardStyle = {
     border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`,
     borderRadius: themeUtils.get('BORDERS.RADIUS.MD'),
@@ -187,14 +217,22 @@ export const FeatureCard = memo(({
   };
 
   return React.createElement('div', {
-    style: cardStyle,
-    onClick: handleClick,
-    onMouseEnter: handleMouseEnter,
-    onMouseLeave: handleMouseLeave,
-    ...props
-  },
-    icon && React.createElement('div', { style: iconStyle }, icon),
-    title && React.createElement('div', { style: titleStyle }, title),
-    description && React.createElement('div', { style: descriptionStyle }, description)
+      style: cardStyle,
+      onClick: handleClick,
+      onMouseEnter: handleMouseEnter,
+      onMouseLeave: handleMouseLeave,
+      ...props
+    },
+    icon && React.createElement('div', {
+      style: iconStyle
+    }, icon),
+    title && React.createElement('div', {
+      style: titleStyle
+    }, title),
+    description && React.createElement('div', {
+      style: descriptionStyle
+    }, description)
   );
-};
+}
+
+export const FeatureCard = memo(FeatureCard);

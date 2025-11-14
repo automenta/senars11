@@ -91,12 +91,14 @@
     "puppeteer": "^24.27.0",
     "react": "^19.1.1",
     "slidev-theme-dracula": "^0.2.0",
+    "tree-kill": "^1.2.2",
     "uuid": "^9.0.1",
     "ws": "^8.18.3",
     "zod": "^3.25.76"
   },
   "devDependencies": {
     "@babel/core": "^7.28.4",
+    "@babel/node": "^7.28.0",
     "@babel/plugin-syntax-import-meta": "^7.10.4",
     "@babel/preset-env": "^7.28.3",
     "@slidev/cli": "^52.6.0",
