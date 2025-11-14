@@ -8,6 +8,34 @@ import { Button, Card } from './GenericComponents.js';
 import { themeUtils } from '../utils/themeUtils.js';
 import useUiStore from '../stores/uiStore.js';
 
+// Check WebSocket service status
+const checkConnection = () => {
+  const service = useUiStore.getState().wsService;
+  if (service) {
+    return {
+      status: service.state || 'unknown',
+      url: service.url,
+      connected: service.state === 'CONNECTED' || service.state === 2 // WebSocket.OPEN
+    };
+  }
+  return { status: 'disconnected', url: null, connected: false };
+};
+
+// Check connectivity from page context
+const checkConnectivity = () => {
+  const { VITE_WS_PORT = '8080' } = import.meta.env;
+  const expectedWsUrl = `ws://${window.location.hostname}:${VITE_WS_PORT}/ws`;
+  const wsService = useUiStore.getState().wsService;
+
+  return {
+    pageHost: window.location.hostname,
+    pagePort: window.location.port,
+    expectedWsUrl,
+    actualWsUrl: wsService?.url || 'Not connected',
+    hostsMatch: (wsService?.url || '').includes(window.location.hostname)
+  };
+};
+
 const DiagnosticsPanel = () => {
   const wsConnected = useUiStore(state => state.wsConnected);
   const wsService = useUiStore(state => state.wsService);
@@ -21,20 +49,8 @@ const DiagnosticsPanel = () => {
   const connectionTestResultRef = React.useRef(connectionTestResult);
   const [backendInfo, setBackendInfo] = React.useState(null);
 
-  const checkConnection = () => {
-    // Check WebSocket service status
-    const service = useUiStore.getState().wsService;
-    if (service) {
-      return {
-        status: service.state || 'unknown',
-        url: service.url,
-        connected: service.state === 'CONNECTED' || service.state === 2 // WebSocket.OPEN
-      };
-    }
-    return { status: 'disconnected', url: null, connected: false };
-  };
-
-  const connectionInfo = checkConnection();
+  const connectionInfo = React.useMemo(checkConnection, [wsConnected]);
+  const connectivityInfo = React.useMemo(checkConnectivity, []);
 
   // Sync ref with state
   React.useEffect(() => {
@@ -54,6 +70,38 @@ const DiagnosticsPanel = () => {
     ]);
   }, [wsConnected, connectionInfo.status, connectionInfo.url]);
 
+  // Create test connection message handler
+  const createTestMessageHandler = (startTime, setResult) => {
+    let hasResponded = false; // Flag to prevent multiple responses
+
+    return (data) => {
+      if (!hasResponded) {
+        hasResponded = true;
+        setResult({
+          success: true,
+          message: `Connection test successful! Received NAR info.`,
+          timestamp: Date.now(),
+          responseTime: `${Date.now() - startTime}ms`
+        });
+      }
+    };
+  };
+
+  // Create backend info request handler
+  const createBackendInfoHandler = (startTime, setResult) => {
+    let hasReceived = false; // Prevent duplicate responses
+
+    return (data) => {
+      if (!hasReceived) {
+        hasReceived = true;
+        setResult({
+          data: data.payload,
+          timestamp: Date.now()
+        });
+      }
+    };
+  };
+
   // Test connection functionality
   const testConnection = async () => {
     console.log('Testing WebSocket connection...');
@@ -71,8 +119,6 @@ const DiagnosticsPanel = () => {
 
     console.log('WebSocket service found:', service.state, 'URL:', service.url);
 
-    // Try to send a test message and wait for response
-    // Use a known message type that the backend supports
     const testMessage = {
       type: 'requestNAR',
       id: `test_${Date.now()}`,
@@ -80,25 +126,10 @@ const DiagnosticsPanel = () => {
     };
 
     try {
-      // Store the test start time to check for response
       const startTime = Date.now();
+      const handler = createTestMessageHandler(startTime, setConnectionTestResult);
 
-      // Add a temporary listener for the narInstance response
-      let receivedResponse = false;
-      const unsubscribeListener = service.addListener('narInstance', (data) => {
-        if (!receivedResponse) {  // Prevent multiple responses from triggering
-          receivedResponse = true;
-          setConnectionTestResult({
-            success: true,
-            message: `Connection test successful! Received NAR info.`,
-            timestamp: Date.now(),
-            responseTime: `${Date.now() - startTime}ms`
-          });
-          // Remove the listener after receiving the response
-          unsubscribeListener();
-        }
-      });
-
+      const unsubscribe = service.addListener('narInstance', handler);
       service.sendMessage(testMessage);
 
       setConnectionTestResult({
@@ -108,11 +139,9 @@ const DiagnosticsPanel = () => {
         responseTime: 'Pending...'
       });
 
-      // Set timeout to report timeout if no response received in 3 seconds
-      // Using a ref to get the current value of connectionTestResult
+      // Timeout after 3 seconds if no response
       setTimeout(() => {
-        // Check if the connection test is still pending (no response received yet)
-        if (connectionTestResultRef.current?.message === 'Pending...') {
+        if (!hasResponded && connectionTestResultRef.current?.message === 'Pending...') {
           setConnectionTestResult(prev => ({
             ...prev,
             message: `Test timed out after 3 seconds - no response received`
@@ -135,23 +164,10 @@ const DiagnosticsPanel = () => {
     const service = useUiStore.getState().wsService;
     if (service) {
       try {
-        // Add a temporary listener for the narInstance response
         const startTime = Date.now();
-        let isSubscribed = true;  // Flag to prevent duplicate calls
+        const handler = createBackendInfoHandler(startTime, setBackendInfo);
 
-        const unsubscribe = service.addListener('narInstance', (data) => {
-          if (isSubscribed) {  // Prevent multiple calls from triggering
-            isSubscribed = false;
-            setBackendInfo({
-              data: data.payload,
-              timestamp: Date.now()
-            });
-            // Remove the listener after receiving the response
-            unsubscribe && unsubscribe();
-          }
-        });
-
-        // Send request for NAR information
+        const unsubscribe = service.addListener('narInstance', handler);
         service.sendMessage({
           type: 'requestNAR',
           timestamp: Date.now()
@@ -164,25 +180,9 @@ const DiagnosticsPanel = () => {
     }
   };
 
-  // Check connectivity from page context
-  const checkConnectivity = () => {
-    const { VITE_WS_PORT = '8080' } = import.meta.env;
-    const expectedWsUrl = `ws://${window.location.hostname}:${VITE_WS_PORT}/ws`;
-
-    return {
-      pageHost: window.location.hostname,
-      pagePort: window.location.port,
-      expectedWsUrl,
-      actualWsUrl: wsService?.url || 'Not connected',
-      hostsMatch: (wsService?.url || '').includes(window.location.hostname)
-    };
-  };
-
-  const connectivityInfo = checkConnectivity();
-
-  return React.createElement('div', { style: { padding: themeUtils.get('SPACING.MD') } },
-    // Connection status
-    React.createElement('div', { style: { marginBottom: themeUtils.get('SPACING.MD') } },
+  // Helper function to render connection status
+  const renderConnectionStatus = React.useCallback(() => {
+    return React.createElement('div', { style: { marginBottom: themeUtils.get('SPACING.MD') } },
       React.createElement('div', {
         style: {
           display: 'flex',
@@ -215,7 +215,39 @@ const DiagnosticsPanel = () => {
           }, `To: ${connectionInfo.url}`)
         )
       )
-    ),
+    );
+  }, [connectionInfo]);
+
+  // Helper function to render connection history
+  const renderConnectionHistory = React.useCallback(() => {
+    if (connectionHistory.length === 0) return null;
+
+    return React.createElement('div', {
+      style: {
+        padding: themeUtils.get('SPACING.SM'),
+        backgroundColor: themeUtils.get('BACKGROUNDS.TERTIARY'),
+        borderRadius: themeUtils.get('BORDERS.RADIUS.MD'),
+        marginBottom: themeUtils.get('SPACING.MD')
+      }
+    },
+      React.createElement('div', { style: { fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD'), marginBottom: themeUtils.get('SPACING.XS') } }, 'Connection History:'),
+      ...connectionHistory.slice().reverse().map((entry, index) =>
+        React.createElement('div', {
+          key: entry.timestamp,
+          style: {
+            fontSize: themeUtils.get('FONTS.SIZE.SM'),
+            marginBottom: index < connectionHistory.length - 1 ? themeUtils.get('SPACING.XS') : 0,
+            color: entry.connected ? themeUtils.get('COLORS.SUCCESS') : themeUtils.get('COLORS.WARNING')
+          }
+        },
+          `${new Date(entry.timestamp).toLocaleTimeString()} - ${entry.connected ? '✓ Connected' : '✗ Disconnected'}`
+        )
+      )
+    );
+  }, [connectionHistory]);
+
+  return React.createElement('div', { style: { padding: themeUtils.get('SPACING.MD') } },
+    renderConnectionStatus(),
 
     // Connectivity Check
     React.createElement('div', {
@@ -275,29 +307,7 @@ const DiagnosticsPanel = () => {
       )
     ),
 
-    // Connection history
-    connectionHistory.length > 0 && React.createElement('div', {
-      style: {
-        padding: themeUtils.get('SPACING.SM'),
-        backgroundColor: themeUtils.get('BACKGROUNDS.TERTIARY'),
-        borderRadius: themeUtils.get('BORDERS.RADIUS.MD'),
-        marginBottom: themeUtils.get('SPACING.MD')
-      }
-    },
-      React.createElement('div', { style: { fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD'), marginBottom: themeUtils.get('SPACING.XS') } }, 'Connection History:'),
-      ...connectionHistory.slice().reverse().map((entry, index) =>
-        React.createElement('div', {
-          key: entry.timestamp,
-          style: {
-            fontSize: themeUtils.get('FONTS.SIZE.SM'),
-            marginBottom: index < connectionHistory.length - 1 ? themeUtils.get('SPACING.XS') : 0,
-            color: entry.connected ? themeUtils.get('COLORS.SUCCESS') : themeUtils.get('COLORS.WARNING')
-          }
-        },
-          `${new Date(entry.timestamp).toLocaleTimeString()} - ${entry.connected ? '✓ Connected' : '✗ Disconnected'}`
-        )
-      )
-    ),
+    renderConnectionHistory(),
 
     // Test connection result
     connectionTestResult && React.createElement('div', {

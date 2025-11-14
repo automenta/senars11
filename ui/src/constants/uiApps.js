@@ -1,23 +1,7 @@
-/**
- * UI Application Registry: Shared Application Definitions
- *
- * This constant provides a centralized registry of all available UI applications
- * that can be launched from interfaces like the AppLauncherPanel.
- *
- * Structure: Each app definition includes:
- * - id: Unique identifier for the application
- * - name: Display name
- * - description: Brief explanation of functionality
- * - icon: Visual representation (emoji)
- * - color: Theme color from themeUtils
- * - path: Navigation path
- *
- * Following AGENTS.md: DRY, Modular, Abstract
- */
-
 import { themeUtils } from '../utils/themeUtils.js';
 
-export const UI_APPS = Object.freeze([
+// Application configurations for the launcher panel
+const APPLICATION_DEFINITIONS = Object.freeze([
   {
     id: 'ide',
     name: 'Cognitive IDE',
@@ -75,3 +59,5 @@ export const UI_APPS = Object.freeze([
     path: '/' // This is now the main interface
   }
 ]);
+
+export const UI_APPS = APPLICATION_DEFINITIONS;

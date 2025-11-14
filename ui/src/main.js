@@ -6,40 +6,63 @@ import './index.css';
 import { initializeTheme } from './utils/theme.js';
 import RootErrorBoundary from './components/RootErrorBoundary.js';
 
-// Route resolver that maps URLs to appropriate UI components
-const getRouteComponent = () => {
-  const { pathname: path, hash, search } = window.location;
-
-  // REPL routes
-  if (path.includes('/repl') || hash.includes('minimal')) {
-    return async () => {
-      if (hash.includes('minimal') || path.includes('minimal-repl')) {
-        const { default: MinimalRepl } = await import('./components/MinimalRepl.js');
-        return MinimalRepl;
-      }
-      const { default: ReplApp } = await import('./repl-app.js');
-      return ReplApp;
-    };
-  }
-
-  // Simple UI routes
-  if (path.includes('/simple-uis') || path.includes('/simple-ui')) {
-    return async () => {
-      const { default: SimpleUIApp } = await import('./simple-ui-app.js');
-      return SimpleUIApp;
-    };
-  }
-
-  // Layout-specific routes
-  const layoutParam = new URLSearchParams(search).get('layout');
-  const layoutRoutes = {
+// Route configuration
+const ROUTE_CONFIG = {
+  repl: { pattern: '/repl', hashPattern: 'minimal' },
+  simple: { pattern: ['/simple-uis', '/simple-ui'] },
+  layout: {
     graph: 'Graph UI',
     'self-analysis': 'Self Analysis',
     merged: 'Unified Interface'
-  };
+  }
+};
 
-  if (layoutParam && layoutRoutes[layoutParam]) {
-    const title = layoutRoutes[layoutParam];
+// Dynamic import functions
+const loadReplComponent = async (minimal = false) => {
+  if (minimal) {
+    const { default: MinimalRepl } = await import('./components/MinimalRepl.js');
+    return MinimalRepl;
+  }
+  const { default: ReplApp } = await import('./repl-app.js');
+  return ReplApp;
+};
+
+const loadSimpleUIComponent = async () => {
+  const { default: SimpleUIApp } = await import('./simple-ui-app.js');
+  return SimpleUIApp;
+};
+
+// Check if a path contains any of the provided patterns
+const matchesRoute = (path, patterns) => {
+  if (typeof patterns === 'string') {
+    return path.includes(patterns);
+  }
+  if (Array.isArray(patterns)) {
+    return patterns.some(pattern => path.includes(pattern));
+  }
+  return false;
+};
+
+// Determine the route component based on current URL
+const getRouteComponent = () => {
+  const { pathname: path, hash, search } = window.location;
+  const urlParams = new URLSearchParams(search);
+  const layoutParam = urlParams.get('layout');
+
+  // REPL routes
+  if (matchesRoute(path, ROUTE_CONFIG.repl.pattern) || hash.includes(ROUTE_CONFIG.repl.hashPattern)) {
+    const minimal = hash.includes(ROUTE_CONFIG.repl.hashPattern) || path.includes('minimal-repl');
+    return () => loadReplComponent(minimal);
+  }
+
+  // Simple UI routes
+  if (matchesRoute(path, ROUTE_CONFIG.simple.pattern)) {
+    return () => loadSimpleUIComponent();
+  }
+
+  // Layout-based routes
+  if (layoutParam && ROUTE_CONFIG.layout[layoutParam]) {
+    const title = ROUTE_CONFIG.layout[layoutParam];
     const layoutType = layoutParam === 'self-analysis' ? 'analysis' : layoutParam;
 
     return () => (props) => React.createElement(App, {
@@ -49,7 +72,7 @@ const getRouteComponent = () => {
     });
   }
 
-  // Root route - main unified interface
+  // Default route
   if (['/', '/index.html', ''].includes(path)) {
     return () => (props) => React.createElement(App, {
       appId: 'ide',
@@ -58,7 +81,7 @@ const getRouteComponent = () => {
     });
   }
 
-  // Default case
+  // Fallback to default app component
   return () => App;
 };
 
@@ -79,13 +102,16 @@ async function renderApp() {
     const rootElement = document.getElementById('root');
     const root = createRoot(rootElement);
 
+    // Determine the component to render
     let ComponentToRender;
-
     if (typeof routeFunction === 'function') {
-      if (routeFunction.constructor.name === 'AsyncFunction') {
-        ComponentToRender = await routeFunction();
+      const routeResult = routeFunction();
+      if (routeResult.constructor.name === 'AsyncFunction') {
+        ComponentToRender = await routeResult();
+      } else if (typeof routeResult === 'function') {
+        ComponentToRender = routeResult();
       } else {
-        ComponentToRender = routeFunction();
+        ComponentToRender = routeResult;
       }
     } else {
       ComponentToRender = routeFunction;

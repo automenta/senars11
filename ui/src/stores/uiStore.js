@@ -2,24 +2,24 @@ import { create } from 'zustand';
 import { batchUpdate, createCollectionManager, createObjectManager } from '../utils/CollectionManager.js';
 
 // Predefined collection managers - consolidated for efficiency
-const COLLECTION_MANAGERS = {
+const COLLECTION_MANAGERS = Object.freeze({
   reasoningSteps: createCollectionManager('reasoningSteps'),
   tasks: createCollectionManager('tasks'),
   concepts: createCollectionManager('concepts'),
   cycles: createCollectionManager('cycles'),
   demoSteps: createCollectionManager('demoSteps'),
   notifications: createCollectionManager('notifications')
-};
+});
 
 // Predefined object managers
-const OBJECT_MANAGERS = {
+const OBJECT_MANAGERS = Object.freeze({
   demoStates: createObjectManager('demoStates'),
   demoMetrics: createObjectManager('demoMetrics'),
   savedLayouts: createObjectManager('savedLayouts')
-};
+});
 
 // Memoized selectors for consistent access patterns
-const selectors = Object.freeze({
+const SELECTORS = Object.freeze({
   getWebSocketState: (state) => ({ wsConnected: state.wsConnected, wsService: state.wsService }),
   getLayoutState: (state) => ({ layout: state.layout, savedLayouts: state.savedLayouts }),
   getUiStatus: (state) => ({ error: state.error, isLoading: state.isLoading, theme: state.theme }),
@@ -28,7 +28,7 @@ const selectors = Object.freeze({
 });
 
 // Initial state - using Object.freeze for performance
-const initialState = Object.freeze({
+const INITIAL_STATE = Object.freeze({
   layout: null,
   savedLayouts: Object.create(null),
   wsConnected: false,
@@ -57,14 +57,14 @@ const initialState = Object.freeze({
   nar: null
 });
 
-// Main store definition with optimized methods
-const useUiStore = create((set, get) => {
+// Store action creators for better organization
+const createActions = (set, get) => {
   // Utility function to create simple state setters
   const createSimpleSetter = (key) => (value) => set({ [key]: value });
 
   return {
     // Initial state
-    ...initialState,
+    ...INITIAL_STATE,
 
     // WebSocket state management
     setWsConnected: createSimpleSetter('wsConnected'),
@@ -178,9 +178,12 @@ const useUiStore = create((set, get) => {
 
     // Utility methods
     batchUpdate: (updates) => batchUpdate(set, updates),
-    selectors,
-    resetStore: () => set(initialState)
+    selectors: SELECTORS,
+    resetStore: () => set(INITIAL_STATE)
   };
-});
+};
+
+// Main store definition with optimized methods
+const useUiStore = create((set, get) => createActions(set, get));
 
 export default useUiStore;

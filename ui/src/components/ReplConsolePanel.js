@@ -9,6 +9,64 @@ import { Button } from './GenericComponents.js';
 import { themeUtils } from '../utils/themeUtils.js';
 import { useWebSocket, useUiData } from '../hooks/useWebSocket.js';
 
+// Narsese input validation with helpful feedback
+const validateNarsese = (input) => {
+  const trimmed = input.trim();
+
+  if (!trimmed) {
+    return { isValid: false, message: 'Input cannot be empty' };
+  }
+
+  const isValidSyntax = /^[\w\s<>=\-()&]+[.!?]$/.test(trimmed);
+
+  return {
+    isValid: isValidSyntax,
+    message: isValidSyntax
+      ? 'Valid Narsese syntax'
+      : 'Input should follow Narsese format (e.g., <subject --> predicate>.)'
+  };
+};
+
+// Create message handlers that update the command history
+const createMessageHandlers = (historyRef, setHistory) => {
+  const updateHistory = (entry) => {
+    historyRef.current = [...historyRef.current, entry];
+    setHistory(historyRef.current);
+  };
+
+  return {
+    handleTaskUpdate: (data) => {
+      if (data.payload?.task) {
+        updateHistory({
+          type: 'output',
+          content: `Task processed: ${data.payload.task.content}`,
+          timestamp: Date.now()
+        });
+      }
+    },
+
+    handleConceptUpdate: (data) => {
+      if (data.payload?.concept) {
+        updateHistory({
+          type: 'concept',
+          content: `Concept updated: ${data.payload.concept.term}`,
+          timestamp: Date.now()
+        });
+      }
+    },
+
+    handleNarseseResponse: (data) => {
+      if (data.type === 'narseseInput') {
+        updateHistory({
+          type: 'response',
+          content: data.payload.message || `Processed: ${data.payload.input}`,
+          timestamp: Date.now()
+        });
+      }
+    }
+  };
+};
+
 const ReplConsolePanel = () => {
   const [input, setInput] = useState('');
   const [history, setHistory] = useState([]);
@@ -22,12 +80,23 @@ const ReplConsolePanel = () => {
   const inputRef = useRef(null);
   const messagesEndRef = useRef(null);
   const suggestionsRef = useRef(null);
+  const historyRef = useRef(history); // Maintain history reference to prevent stale closures
 
   // Use the shared WebSocket hook
   const { wsConnected, sendMessage, wsService } = useWebSocket();
 
   // Use the shared UI data hook
   const { addNotification } = useUiData();
+
+  // Update history reference whenever history changes
+  useEffect(() => {
+    historyRef.current = history;
+  }, [history]);
+
+  // Auto-scroll to bottom of messages
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [history]);
 
   // Enhanced history navigation with arrow keys
   const handleKeyDown = useCallback((e) => {
@@ -60,11 +129,6 @@ const ReplConsolePanel = () => {
       setSuggestions([]);
     }
   }, [commandHistory, historyIndex, suggestions, showSuggestions, selectedSuggestion]);
-
-  // Auto-scroll to bottom of messages
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [history]);
 
   // Focus input on mount and add keyboard event listener
   useEffect(() => {
@@ -110,57 +174,12 @@ const ReplConsolePanel = () => {
     }
   }, [input, commandHistory]);
 
-  // Maintain current values in event handlers to prevent stale closures
-  const historyRef = useRef(history);
-  useEffect(() => {
-    historyRef.current = history;
-  }, [history]);
-
-  // WebSocket message handlers that update the command history
-  const createMessageHandlers = () => {
-    const updateHistory = (entry) => {
-      historyRef.current = [...historyRef.current, entry];
-      setHistory(historyRef.current);
-    };
-
-    return {
-      handleTaskUpdate: (data) => {
-        if (data.payload?.task) {
-          updateHistory({
-            type: 'output',
-            content: `Task processed: ${data.payload.task.content}`,
-            timestamp: Date.now()
-          });
-        }
-      },
-
-      handleConceptUpdate: (data) => {
-        if (data.payload?.concept) {
-          updateHistory({
-            type: 'concept',
-            content: `Concept updated: ${data.payload.concept.term}`,
-            timestamp: Date.now()
-          });
-        }
-      },
-
-      handleNarseseResponse: (data) => {
-        if (data.type === 'narseseInput') {
-          updateHistory({
-            type: 'response',
-            content: data.payload.message || `Processed: ${data.payload.input}`,
-            timestamp: Date.now()
-          });
-        }
-      }
-    };
-  };
-
   // Register and unregister WebSocket message listeners
   useEffect(() => {
     if (!wsService || !wsService.addListener) return;
 
-    const { handleTaskUpdate, handleConceptUpdate, handleNarseseResponse } = createMessageHandlers();
+    const { handleTaskUpdate, handleConceptUpdate, handleNarseseResponse } =
+      createMessageHandlers(historyRef, setHistory);
 
     // Register all event listeners
     const subscriptions = [
@@ -173,9 +192,10 @@ const ReplConsolePanel = () => {
     return () => {
       subscriptions.forEach(unsubscribe => unsubscribe?.());
     };
-  }, [wsService]);
+  }, [wsService, historyRef, setHistory]);
 
-  const handleSubmit = async (inputValue) => {
+  // Handle form submission
+  const handleSubmit = useCallback(async (inputValue) => {
     const trimmedInput = inputValue.trim();
     if (!trimmedInput) return;
 
@@ -232,25 +252,45 @@ const ReplConsolePanel = () => {
       setSuggestions([]);
       setShowSuggestions(false);
     }
-  };
+  }, [wsConnected, sendMessage, addNotification]);
 
-  // Narsese input validation with helpful feedback
-  const validateNarsese = (input) => {
-    const trimmed = input.trim();
+  // Memoize item rendering function to prevent unnecessary re-creation
+  const renderItem = useCallback((item, index) => {
+    const isInput = item.type === 'input';
+    const isError = item.type === 'error';
+    const isResponse = item.type === 'response';
+    const isConcept = item.type === 'concept';
 
-    if (!trimmed) {
-      return { isValid: false, message: 'Input cannot be empty' };
-    }
-
-    const isValidSyntax = /^[\w\s<>=\-()&]+[.!?]$/.test(trimmed);
-
-    return {
-      isValid: isValidSyntax,
-      message: isValidSyntax
-        ? 'Valid Narsese syntax'
-        : 'Input should follow Narsese format (e.g., <subject --> predicate>.)'
-    };
-  };
+    return React.createElement('div', {
+      key: index,
+      style: {
+        marginBottom: themeUtils.get('SPACING.SM'),
+        padding: themeUtils.get('SPACING.SM'),
+        borderRadius: themeUtils.get('BORDERS.RADIUS.SM'),
+        backgroundColor: isInput
+          ? themeUtils.get('COLORS.PRIMARY') + '10'
+          : isError
+            ? themeUtils.get('COLORS.DANGER') + '10'
+            : isConcept
+              ? themeUtils.get('COLORS.INFO') + '10'
+              : themeUtils.get('BACKGROUNDS.TERTIARY'),
+        border: `1px solid ${isInput ? themeUtils.get('COLORS.PRIMARY') : isError ? themeUtils.get('COLORS.DANGER') : isConcept ? themeUtils.get('COLORS.INFO') : themeUtils.get('BORDERS.COLOR')}`,
+        color: isError ? themeUtils.get('COLORS.DANGER') : themeUtils.get('TEXT.PRIMARY')
+      }
+    },
+      React.createElement('div', {
+        style: {
+          fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD'),
+          marginBottom: themeUtils.get('SPACING.XS'),
+          fontSize: themeUtils.get('FONTS.SIZE.XS'),
+          color: isInput ? themeUtils.get('COLORS.PRIMARY') :
+                 isError ? themeUtils.get('COLORS.DANGER') :
+                 themeUtils.get('TEXT.SECONDARY')
+        }
+      }, isInput ? 'INPUT' : isError ? 'ERROR' : isConcept ? 'CONCEPT' : 'OUTPUT'),
+      React.createElement('div', null, item.content)
+    );
+  }, []);
 
   return React.createElement('div', {
     style: {
@@ -305,42 +345,7 @@ const ReplConsolePanel = () => {
         data: history,
         dataType: 'history',
         emptyMessage: 'No interactions yet. Type a command and submit.',
-        renderItem: (item, index) => {
-          const isInput = item.type === 'input';
-          const isError = item.type === 'error';
-          const isResponse = item.type === 'response';
-          const isConcept = item.type === 'concept';
-
-          return React.createElement('div', {
-            key: index,
-            style: {
-              marginBottom: themeUtils.get('SPACING.SM'),
-              padding: themeUtils.get('SPACING.SM'),
-              borderRadius: themeUtils.get('BORDERS.RADIUS.SM'),
-              backgroundColor: isInput
-                ? themeUtils.get('COLORS.PRIMARY') + '10'
-                : isError
-                  ? themeUtils.get('COLORS.DANGER') + '10'
-                  : isConcept
-                    ? themeUtils.get('COLORS.INFO') + '10'
-                    : themeUtils.get('BACKGROUNDS.TERTIARY'),
-              border: `1px solid ${isInput ? themeUtils.get('COLORS.PRIMARY') : isError ? themeUtils.get('COLORS.DANGER') : isConcept ? themeUtils.get('COLORS.INFO') : themeUtils.get('BORDERS.COLOR')}`,
-              color: isError ? themeUtils.get('COLORS.DANGER') : themeUtils.get('TEXT.PRIMARY')
-            }
-          },
-            React.createElement('div', {
-              style: {
-                fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD'),
-                marginBottom: themeUtils.get('SPACING.XS'),
-                fontSize: themeUtils.get('FONTS.SIZE.XS'),
-                color: isInput ? themeUtils.get('COLORS.PRIMARY') :
-                       isError ? themeUtils.get('COLORS.DANGER') :
-                       themeUtils.get('TEXT.SECONDARY')
-              }
-            }, isInput ? 'INPUT' : isError ? 'ERROR' : isConcept ? 'CONCEPT' : 'OUTPUT'),
-            React.createElement('div', null, item.content)
-          );
-        }
+        renderItem
       }),
       React.createElement('div', { ref: messagesEndRef })
     ),

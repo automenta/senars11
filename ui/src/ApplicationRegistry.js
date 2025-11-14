@@ -7,9 +7,8 @@ import React from 'react';
 import { BaseApp, AppShell } from './components/BaseApp.js';
 import { createApp } from './AppRegistry.js';
 
-// Application definitions with metadata
-const APP_DEFINITIONS = Object.freeze({
-  // Core applications
+// Application configuration definitions
+const APPLICATION_CONFIG = {
   'ide': {
     id: 'ide',
     name: 'Cognitive IDE',
@@ -52,7 +51,7 @@ const APP_DEFINITIONS = Object.freeze({
     description: 'Application launcher interface',
     icon: '🚀',
     component: () => import('./Launcher.js'),
-    routes: ['/old-launcher'], // Move launcher to a different route
+    routes: ['/old-launcher'], // Legacy launcher access
     defaultLayout: 'launcher'
   },
   'merged': {
@@ -60,11 +59,14 @@ const APP_DEFINITIONS = Object.freeze({
     name: 'Unified Interface',
     description: 'Comprehensive interface combining launcher, REPL, and IDE capabilities',
     icon: '🌐',
-    component: () => import('./App.js'), // Use App component with merged layout
-    routes: ['/'], // Set as the root route
+    component: () => import('./App.js'), // Main docking framework interface
+    routes: ['/'], // Main application route
     defaultLayout: 'merged'
   }
-});
+};
+
+// Frozen application definitions
+const APP_DEFINITIONS = Object.freeze(APPLICATION_CONFIG);
 
 // Utility class for application management
 class ApplicationRegistry {
