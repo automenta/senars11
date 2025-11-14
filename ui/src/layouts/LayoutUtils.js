@@ -249,32 +249,34 @@ export const createLayout = (layoutElements, layoutType, config = {}) => {
       };
 
     case 'merged':
+      // Comprehensive layout combining MergedLauncher functionality with full IDE capabilities
+      // Provides launcher, diagnostics, REPL, and all IDE panels in a unified docking framework
       return {
         ...DEFAULT_LAYOUTS.ide, // Use IDE-style configuration for merged layout
         borders: [
           createBorder('left', 300, [
-            createTab('App Launcher', 'AppLauncherPanel'),
-            createTab('Diagnostics', 'DiagnosticsPanel'),
-            createTab('Tasks', 'TaskPanel'),
-            createTab('Concepts', 'ConceptPanel')
+            createTab('App Launcher', 'AppLauncherPanel'),  // Application selection panel
+            createTab('Diagnostics', 'DiagnosticsPanel'),  // Connection and system diagnostics
+            createTab('Tasks', 'TaskPanel'),                // Task management panel
+            createTab('Concepts', 'ConceptPanel')           // Concept management panel
           ]),
           createBorder('bottom', 250, [
-            createTab('REPL Console', 'ReplConsolePanel'),
-            createTab('Console', 'ConsolePanel'),
-            createTab('System Status', 'SystemStatusPanel'),
-            createTab('Reasoning Trace', 'ReasoningTracePanel')
+            createTab('REPL Console', 'ReplConsolePanel'),  // Interactive REPL console
+            createTab('Console', 'ConsolePanel'),           // General console output
+            createTab('System Status', 'SystemStatusPanel'), // System health and metrics
+            createTab('Reasoning Trace', 'ReasoningTracePanel') // Reasoning process visualization
           ])
         ],
         layout: createRow([
           createTabSet([
-            createTab('Main', 'MainPanel'),
-            createTab('Input Interface', 'InputInterfacePanel'),
-            createTab('Cognitive IDE', 'CognitiveIDE')
+            createTab('Main', 'MainPanel'),                 // Primary workspace
+            createTab('Input Interface', 'InputInterfacePanel'), // Narsese input interface
+            createTab('Cognitive IDE', 'CognitiveIDE')      // Full IDE view
           ], 60),
           createTabSet([
-            createTab('Variables', 'VariablesPanel'),
-            createTab('Cycle', 'CyclePanel'),
-            createTab('Demo', 'DemoPanel')
+            createTab('Variables', 'VariablesPanel'),       // Variable inspection
+            createTab('Cycle', 'CyclePanel'),               // Cycle information
+            createTab('Demo', 'DemoPanel')                  // Demo controls
           ], 40)
         ])
       };

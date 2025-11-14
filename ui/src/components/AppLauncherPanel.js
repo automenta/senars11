@@ -18,11 +18,11 @@ const AppLauncherPanel = () => {
     }
   };
 
-  const cardStyle = React.useMemo(() => ({
+  const createCardStyle = React.useCallback((color) => ({
     cursor: 'pointer',
     transform: 'scale(1)',
     transition: 'transform 0.2s, box-shadow 0.2s',
-    borderLeft: `4px solid ${themeUtils.get('COLORS.PRIMARY')}`,
+    borderLeft: `4px solid ${color}`,
     ':hover': {
       transform: 'scale(1.02)',
       boxShadow: themeUtils.get('SHADOWS.MD')
@@ -55,7 +55,7 @@ const AppLauncherPanel = () => {
       UI_APPS.filter(app => app.id !== 'merged').map(app =>
         React.createElement('div', {
           key: app.id,
-          style: cardStyle,
+          style: createCardStyle(app.color),
           onClick: () => handleAppSelect(app),
           onMouseEnter: (e) => e.target.style.transform = 'scale(1.02)',
           onMouseLeave: (e) => e.target.style.transform = 'scale(1)'

@@ -110,6 +110,15 @@ const ReplConsolePanel = () => {
     }
   }, [input, commandHistory]);
 
+  // Refs to maintain current values in event handlers
+  const historyRef = useRef(history);
+  const setHistoryRef = useRef(setHistory);
+
+  // Update refs when state changes
+  useEffect(() => {
+    historyRef.current = history;
+  }, [history]);
+
   // Register message listeners for real-time updates using wsService directly
   useEffect(() => {
     if (!wsService) {
@@ -118,7 +127,7 @@ const ReplConsolePanel = () => {
 
     const handleTaskUpdate = (data) => {
       if (data.payload?.task) {
-        setHistory(prev => [...prev, {
+        setHistoryRef.current(prev => [...prev, {
           type: 'output',
           content: `Task processed: ${data.payload.task.content}`,
           timestamp: Date.now()
@@ -128,7 +137,7 @@ const ReplConsolePanel = () => {
 
     const handleConceptUpdate = (data) => {
       if (data.payload?.concept) {
-        setHistory(prev => [...prev, {
+        setHistoryRef.current(prev => [...prev, {
           type: 'concept',
           content: `Concept updated: ${data.payload.concept.term}`,
           timestamp: Date.now()
@@ -138,7 +147,7 @@ const ReplConsolePanel = () => {
 
     const handleNarseseResponse = (data) => {
       if (data.type === 'narseseInput') {
-        setHistory(prev => [...prev, {
+        setHistoryRef.current(prev => [...prev, {
           type: 'response',
           content: data.payload.message || `Processed: ${data.payload.input}`,
           timestamp: Date.now()

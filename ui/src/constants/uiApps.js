@@ -56,8 +56,8 @@ export const UI_APPS = Object.freeze([
   },
   {
     id: 'merged',
-    name: 'Merged Interface',
-    description: 'Launcher and REPL in one view',
+    name: 'Unified Interface (Docking Framework)',
+    description: 'Comprehensive interface with all panels combined',
     icon: '🌐',
     color: themeUtils.get('COLORS.INFO'),
     path: '/' // This is now the main interface

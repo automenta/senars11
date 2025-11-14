@@ -18,6 +18,7 @@ const DiagnosticsPanel = () => {
 
   const [connectionHistory, setConnectionHistory] = React.useState([]);
   const [connectionTestResult, setConnectionTestResult] = React.useState(null);
+  const connectionTestResultRef = React.useRef(connectionTestResult);
   const [backendInfo, setBackendInfo] = React.useState(null);
 
   const checkConnection = () => {
@@ -34,6 +35,11 @@ const DiagnosticsPanel = () => {
   };
 
   const connectionInfo = checkConnection();
+
+  // Sync ref with state
+  React.useEffect(() => {
+    connectionTestResultRef.current = connectionTestResult;
+  }, [connectionTestResult]);
 
   // Add connection to history
   React.useEffect(() => {
@@ -103,10 +109,10 @@ const DiagnosticsPanel = () => {
       });
 
       // Set timeout to report timeout if no response received in 3 seconds
+      // Using a ref to get the current value of connectionTestResult
       setTimeout(() => {
-        // Check if the listener was already removed (meaning we got a response)
-        // If not removed, the response hasn't come yet
-        if (connectionTestResult?.message === 'Pending...') {
+        // Check if the connection test is still pending (no response received yet)
+        if (connectionTestResultRef.current?.message === 'Pending...') {
           setConnectionTestResult(prev => ({
             ...prev,
             message: `Test timed out after 3 seconds - no response received`
@@ -131,13 +137,18 @@ const DiagnosticsPanel = () => {
       try {
         // Add a temporary listener for the narInstance response
         const startTime = Date.now();
+        let isSubscribed = true;  // Flag to prevent duplicate calls
+
         const unsubscribe = service.addListener('narInstance', (data) => {
-          setBackendInfo({
-            data: data.payload,
-            timestamp: Date.now()
-          });
-          // Remove the listener after receiving the response
-          unsubscribe();
+          if (isSubscribed) {  // Prevent multiple calls from triggering
+            isSubscribed = false;
+            setBackendInfo({
+              data: data.payload,
+              timestamp: Date.now()
+            });
+            // Remove the listener after receiving the response
+            unsubscribe && unsubscribe();
+          }
         });
 
         // Send request for NAR information

@@ -29,6 +29,7 @@ export { default as useUiStore } from './stores/uiStore.js';
 
 // Constants
 export { UI_APPS } from './constants/uiApps.js';
+export { MERGED_LAYOUT_INFO } from './constants/layoutInfo.js';
 
 // App Registry
 export { default as appRegistry } from './AppRegistry.js';

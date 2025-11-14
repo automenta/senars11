@@ -52,16 +52,16 @@ const APP_DEFINITIONS = Object.freeze({
     description: 'Application launcher interface',
     icon: '🚀',
     component: () => import('./Launcher.js'),
-    routes: ['/launcher'],
+    routes: ['/old-launcher'], // Move launcher to a different route
     defaultLayout: 'launcher'
   },
   'merged': {
     id: 'merged',
-    name: 'Merged Interface',
-    description: 'Launcher and REPL in one view',
+    name: 'Unified Interface',
+    description: 'Comprehensive interface combining launcher, REPL, and IDE capabilities',
     icon: '🌐',
-    component: () => import('./MergedLauncher.js'),
-    routes: ['/'], // Set MergedLauncher as the root route
+    component: () => import('./App.js'), // Use App component with merged layout
+    routes: ['/'], // Set as the root route
     defaultLayout: 'merged'
   }
 });
