@@ -1,4 +1,4 @@
-import React, { memo, useState } from 'react';
+import React, { memo, useState, useMemo } from 'react';
 import { format } from 'date-fns';
 import useUiStore from '../stores/uiStore.js';
 import { themeUtils } from '../utils/themeUtils.js';
@@ -33,7 +33,7 @@ const buttonSizeStyles = Object.freeze({
 });
 
 const Button = memo(({ children, onClick, variant = 'primary', style = {}, disabled = false, size = 'md', ...props }) => {
-  const buttonStyle = React.useMemo(() => {
+  const buttonStyle = useMemo(() => {
     const baseStyle = {
       border: 'none',
       borderRadius: themeUtils.get('BORDERS.RADIUS.MD'),
@@ -69,7 +69,7 @@ const STATUS_CONFIGS = Object.freeze({
 const StatusBadge = memo(({ status = 'default', label, style = {} }) => {
   const config = STATUS_CONFIGS[status] ?? STATUS_CONFIGS.default;
 
-  const badgeStyle = React.useMemo(() => ({
+  const badgeStyle = useMemo(() => ({
     padding: `${themeUtils.get('SPACING.XS')} ${themeUtils.get('SPACING.SM')}`,
     borderRadius: '12px',
     backgroundColor: config.bg,
@@ -87,7 +87,7 @@ const StatusBadge = memo(({ status = 'default', label, style = {} }) => {
  * LoadingSpinner: Parameterized with default values
  */
 const LoadingSpinner = memo(({ size = themeUtils.get('SPACING.XL'), color = themeUtils.get('COLORS.PRIMARY'), style = {}, spinnerStyle = {} }) => {
-  const computedStyle = React.useMemo(() => ({
+  const computedStyle = useMemo(() => ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -95,7 +95,7 @@ const LoadingSpinner = memo(({ size = themeUtils.get('SPACING.XL'), color = them
     ...style
   }), [style]);
 
-  const computedSpinnerStyle = React.useMemo(() => ({
+  const computedSpinnerStyle = useMemo(() => ({
     width: size,
     height: size,
     border: `2px solid ${color}40`,
@@ -114,7 +114,7 @@ const LoadingSpinner = memo(({ size = themeUtils.get('SPACING.XL'), color = them
  * EmptyState: Default message and icon with flexibility
  */
 const EmptyState = memo(({ message = 'No data to display', icon = '🔍', ...props }) => {
-  const containerStyle = React.useMemo(() => ({
+  const containerStyle = useMemo(() => ({
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
@@ -125,7 +125,7 @@ const EmptyState = memo(({ message = 'No data to display', icon = '🔍', ...pro
     ...props.style
   }), [props.style]);
 
-  const iconStyle = React.useMemo(() => ({
+  const iconStyle = useMemo(() => ({
     fontSize: '2rem',
     marginBottom: themeUtils.get('SPACING.MD')
   }), []);
@@ -140,7 +140,7 @@ const EmptyState = memo(({ message = 'No data to display', icon = '🔍', ...pro
  * ErrorState: Error handling with retry option
  */
 const ErrorState = memo(({ message = 'An error occurred', onRetry, ...props }) => {
-  const containerStyle = {
+  const containerStyle = useMemo(() => ({
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
@@ -149,12 +149,12 @@ const ErrorState = memo(({ message = 'An error occurred', onRetry, ...props }) =
     textAlign: 'center',
     color: themeUtils.get('COLORS.DANGER'),
     ...props.style
-  };
+  }), [props.style]);
 
-  const iconStyle = {
+  const iconStyle = useMemo(() => ({
     fontSize: '2rem',
     marginBottom: themeUtils.get('SPACING.MD')
-  };
+  }), []);
 
   return React.createElement('div', { style: containerStyle },
     React.createElement('div', { style: iconStyle }, '❌'),
@@ -173,7 +173,9 @@ const ErrorState = memo(({ message = 'An error occurred', onRetry, ...props }) =
 const TimeDisplay = memo(({ timestamp, formatType = 'relative', ...props }) => {
   if (!timestamp) return React.createElement('span', { style: props.style }, '-');
 
-  const displayText = React.useMemo(() => {
+  const displayText = useMemo(() => {
+    if (!timestamp) return '-';
+
     const date = new Date(timestamp);
     const now = Date.now();
     const diffInSeconds = Math.floor((now - timestamp) / 1000);
@@ -200,19 +202,19 @@ const TimeDisplay = memo(({ timestamp, formatType = 'relative', ...props }) => {
 const WebSocketStatus = memo(({ showLabel = true, ...props }) => {
   const wsConnected = useUiStore(state => state.wsConnected);
 
-  const containerStyle = {
+  const containerStyle = useMemo(() => ({
     display: 'flex',
     alignItems: 'center',
     ...props.style
-  };
+  }), [props.style]);
 
-  const indicatorStyle = {
+  const indicatorStyle = useMemo(() => ({
     width: '0.75rem',
     height: '0.75rem',
     borderRadius: '50%',
     backgroundColor: themeUtils.getWebSocketStatusColor(wsConnected),
     marginRight: themeUtils.get('SPACING.SM')
-  };
+  }), [wsConnected]);
 
   return React.createElement('div', { className: 'websocket-status', style: containerStyle },
     React.createElement('div', { style: indicatorStyle }),
@@ -224,28 +226,28 @@ const WebSocketStatus = memo(({ showLabel = true, ...props }) => {
  * Generic Form Field Container
  */
 const GenericFormField = memo(({ label, children, required = false, description, style = {} }) => {
-  const containerStyle = {
+  const containerStyle = useMemo(() => ({
     marginBottom: themeUtils.get('SPACING.MD'),
     ...style
-  };
+  }), [style]);
 
-  const labelStyle = {
+  const labelStyle = useMemo(() => ({
     display: 'block',
     fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD'),
     marginBottom: themeUtils.get('SPACING.XS'),
     fontSize: themeUtils.get('FONTS.SIZE.SM'),
     color: themeUtils.get('TEXT.PRIMARY')
-  };
+  }), []);
 
-  const requiredStyle = {
+  const requiredStyle = useMemo(() => ({
     color: themeUtils.get('COLORS.DANGER')
-  };
+  }), []);
 
-  const descriptionStyle = {
+  const descriptionStyle = useMemo(() => ({
     fontSize: themeUtils.get('FONTS.SIZE.SM'),
     color: themeUtils.get('TEXT.SECONDARY'),
     marginTop: themeUtils.get('SPACING.XS')
-  };
+  }), []);
 
   return React.createElement('div', { style: containerStyle },
     React.createElement('label', { style: labelStyle },
@@ -272,7 +274,7 @@ const GenericInputField = memo(({
   style = {},
   ...props
 }) => {
-  const inputStyle = React.useMemo(() => ({
+  const inputStyle = useMemo(() => ({
     width: '100%',
     padding: themeUtils.get('SPACING.SM'),
     border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`,
@@ -312,7 +314,7 @@ const GenericSelectField = memo(({
   style = {},
   ...props
 }) => {
-  const selectStyle = React.useMemo(() => ({
+  const selectStyle = useMemo(() => ({
     width: '100%',
     padding: themeUtils.get('SPACING.SM'),
     border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`,
@@ -345,30 +347,30 @@ const GenericSelectField = memo(({
 const CollapsibleSection = memo(({ title, children, defaultOpen = false, ...props }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
-  const containerStyle = {
+  const containerStyle = useMemo(() => ({
     border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`,
     borderRadius: themeUtils.get('BORDERS.RADIUS.MD'),
     marginBottom: themeUtils.get('SPACING.MD'),
     ...props.style
-  };
+  }), [props.style]);
 
-  const headerStyle = {
+  const headerStyle = useMemo(() => ({
     padding: themeUtils.get('SPACING.SM'),
     backgroundColor: themeUtils.get('BACKGROUNDS.SECONDARY'),
     borderBottom: isOpen ? `1px solid ${themeUtils.get('BORDERS.COLOR')}` : 'none',
     cursor: 'pointer',
     fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD')
-  };
+  }), [isOpen]);
 
-  const contentStyle = {
+  const contentStyle = useMemo(() => ({
     padding: themeUtils.get('SPACING.MD')
-  };
+  }), []);
 
-  const flexContainerStyle = {
+  const flexContainerStyle = useMemo(() => ({
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center'
-  };
+  }), []);
 
   return React.createElement('div', { style: containerStyle },
     React.createElement('div', { style: headerStyle, onClick: () => setIsOpen(!isOpen) },
@@ -385,14 +387,14 @@ const CollapsibleSection = memo(({ title, children, defaultOpen = false, ...prop
  * Toggle Switch Component
  */
 const ToggleSwitch = memo(({ checked, onChange, label }) => {
-  const containerStyle = {
+  const containerStyle = useMemo(() => ({
     display: 'flex',
     alignItems: 'center',
     cursor: 'pointer',
     fontSize: themeUtils.get('FONTS.SIZE.SM')
-  };
+  }), []);
 
-  const switchStyle = {
+  const switchStyle = useMemo(() => ({
     position: 'relative',
     width: '40px',
     height: '20px',
@@ -400,9 +402,9 @@ const ToggleSwitch = memo(({ checked, onChange, label }) => {
     borderRadius: '10px',
     marginRight: themeUtils.get('SPACING.SM'),
     transition: 'background-color 0.3s'
-  };
+  }), [checked]);
 
-  const thumbStyle = {
+  const thumbStyle = useMemo(() => ({
     position: 'absolute',
     top: '2px',
     left: checked ? '22px' : '2px',
@@ -411,7 +413,7 @@ const ToggleSwitch = memo(({ checked, onChange, label }) => {
     backgroundColor: 'white',
     borderRadius: '50%',
     transition: 'left 0.3s'
-  };
+  }), [checked]);
 
   return React.createElement('label', { style: containerStyle },
     React.createElement('div', { style: switchStyle },
@@ -425,7 +427,7 @@ const ToggleSwitch = memo(({ checked, onChange, label }) => {
  * Card Component
  */
 const Card = memo(({ children, title, style = {}, ...props }) => {
-  const cardStyle = React.useMemo(() => ({
+  const cardStyle = useMemo(() => ({
     border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`,
     borderRadius: themeUtils.get('BORDERS.RADIUS.MD'),
     padding: themeUtils.get('SPACING.MD'),
@@ -434,7 +436,7 @@ const Card = memo(({ children, title, style = {}, ...props }) => {
     ...style
   }), [style]);
 
-  const titleStyle = React.useMemo(() => ({
+  const titleStyle = useMemo(() => ({
     fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD'),
     marginBottom: themeUtils.get('SPACING.SM'),
     paddingBottom: themeUtils.get('SPACING.SM'),

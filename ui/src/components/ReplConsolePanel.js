@@ -3,7 +3,7 @@
  * Extracted from MergedLauncher for docking framework integration
  */
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { BaseComponent, InputComponent, StatusIndicator, DataDisplay } from './shared/SharedComponents.js';
 import { Button } from './GenericComponents.js';
 import { themeUtils } from '../utils/themeUtils.js';
@@ -141,38 +141,51 @@ const ReplConsolePanel = () => {
     }
   }, [handleKeyDown]);
 
-  // Handle input changes with autocomplete suggestions
+  // Debounced input handling for autocomplete suggestions to improve performance
+  const debouncedSuggestionUpdate = useMemo(() => {
+    let timeoutId = null;
+
+    return (inputValue, commandHistoryValue) => {
+      clearTimeout(timeoutId);
+
+      timeoutId = setTimeout(() => {
+        if (inputValue.trim()) {
+          // Simple autocomplete based on recent commands and common patterns
+          const recentCommands = commandHistoryValue.filter(cmd =>
+            cmd.toLowerCase().includes(inputValue.toLowerCase())
+          ).slice(0, 3);
+
+          // Common Narsese patterns
+          const patterns = [
+            '<subject --> predicate>.',
+            '<subject --> predicate>?',
+            '<subject --> predicate>!',
+            '<(subject & property) --> predicate>.',
+            '<subject =/> predicate>.',
+            '<subject =/> predicate>?'
+          ];
+
+          const patternMatches = patterns.filter(pattern =>
+            pattern.toLowerCase().includes(inputValue.toLowerCase())
+          ).slice(0, 3);
+
+          const allSuggestions = [...new Set([...recentCommands, ...patternMatches])];
+
+          setSuggestions(allSuggestions);
+          setShowSuggestions(allSuggestions.length > 0);
+          setSelectedSuggestion(0);
+        } else {
+          setSuggestions([]);
+          setShowSuggestions(false);
+        }
+      }, 150); // 150ms debounce
+    };
+  }, []);
+
+  // Handle input changes with debounced autocomplete suggestions
   useEffect(() => {
-    if (input.trim()) {
-      // Simple autocomplete based on recent commands and common patterns
-      const recentCommands = commandHistory.filter(cmd =>
-        cmd.toLowerCase().includes(input.toLowerCase())
-      ).slice(0, 3);
-
-      // Common Narsese patterns
-      const patterns = [
-        '<subject --> predicate>.',
-        '<subject --> predicate>?',
-        '<subject --> predicate>!',
-        '<(subject & property) --> predicate>.',
-        '<subject =/> predicate>.',
-        '<subject =/> predicate>?'
-      ];
-
-      const patternMatches = patterns.filter(pattern =>
-        pattern.toLowerCase().includes(input.toLowerCase())
-      ).slice(0, 3);
-
-      const allSuggestions = [...new Set([...recentCommands, ...patternMatches])];
-
-      setSuggestions(allSuggestions);
-      setShowSuggestions(allSuggestions.length > 0);
-      setSelectedSuggestion(0);
-    } else {
-      setSuggestions([]);
-      setShowSuggestions(false);
-    }
-  }, [input, commandHistory]);
+    debouncedSuggestionUpdate(input, commandHistory);
+  }, [input, commandHistory, debouncedSuggestionUpdate]);
 
   // Register and unregister WebSocket message listeners
   useEffect(() => {
@@ -292,6 +305,65 @@ const ReplConsolePanel = () => {
     );
   }, []);
 
+  // Memoize command history display to prevent re-rendering
+  const historyDisplay = useMemo(() => (
+    React.createElement('div', {
+      style: {
+        flex: 1,
+        overflowY: 'auto',
+        marginBottom: themeUtils.get('SPACING.MD'),
+        padding: themeUtils.get('SPACING.SM'),
+        backgroundColor: themeUtils.get('BACKGROUNDS.TERTIARY'),
+        borderRadius: themeUtils.get('BORDERS.RADIUS.MD'),
+        border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`
+      }
+    },
+      React.createElement(DataDisplay, {
+        data: history,
+        dataType: 'history',
+        emptyMessage: 'No interactions yet. Type a command and submit.',
+        renderItem
+      }),
+      React.createElement('div', { ref: messagesEndRef })
+    )
+  ), [history, renderItem]);
+
+  // Memoize autocomplete suggestions display to prevent unnecessary re-renders
+  const suggestionsDisplay = useMemo(() => (
+    showSuggestions && suggestions.length > 0 && React.createElement('div', {
+      ref: suggestionsRef,
+      style: {
+        position: 'absolute',
+        backgroundColor: themeUtils.get('BACKGROUNDS.PRIMARY'),
+        border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`,
+        borderRadius: themeUtils.get('BORDERS.RADIUS.MD'),
+        zIndex: 1000,
+        width: '400px',
+        maxHeight: '200px',
+        overflowY: 'auto',
+        boxShadow: themeUtils.get('SHADOWS.MD')
+      }
+    },
+      suggestions.map((suggestion, index) =>
+        React.createElement('div', {
+          key: index,
+          onClick: () => {
+            setInput(suggestion);
+            setShowSuggestions(false);
+            setSuggestions([]);
+          },
+          style: {
+            padding: themeUtils.get('SPACING.SM'),
+            cursor: 'pointer',
+            backgroundColor: index === selectedSuggestion ? themeUtils.get('COLORS.PRIMARY') + '20' : 'transparent',
+            borderBottom: index < suggestions.length - 1 ? `1px solid ${themeUtils.get('BORDERS.COLOR')}` : 'none'
+          },
+          onMouseEnter: () => setSelectedSuggestion(index)
+        }, suggestion)
+      )
+    )
+  ), [showSuggestions, suggestions, selectedSuggestion]);
+
   return React.createElement('div', {
     style: {
       display: 'flex',
@@ -329,60 +401,9 @@ const ReplConsolePanel = () => {
       )
     ),
 
-    // History display
-    React.createElement('div', {
-      style: {
-        flex: 1,
-        overflowY: 'auto',
-        marginBottom: themeUtils.get('SPACING.MD'),
-        padding: themeUtils.get('SPACING.SM'),
-        backgroundColor: themeUtils.get('BACKGROUNDS.TERTIARY'),
-        borderRadius: themeUtils.get('BORDERS.RADIUS.MD'),
-        border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`
-      }
-    },
-      React.createElement(DataDisplay, {
-        data: history,
-        dataType: 'history',
-        emptyMessage: 'No interactions yet. Type a command and submit.',
-        renderItem
-      }),
-      React.createElement('div', { ref: messagesEndRef })
-    ),
+    historyDisplay,
 
-    // Autocomplete suggestions
-    showSuggestions && suggestions.length > 0 && React.createElement('div', {
-      ref: suggestionsRef,
-      style: {
-        position: 'absolute',
-        backgroundColor: themeUtils.get('BACKGROUNDS.PRIMARY'),
-        border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`,
-        borderRadius: themeUtils.get('BORDERS.RADIUS.MD'),
-        zIndex: 1000,
-        width: '400px',
-        maxHeight: '200px',
-        overflowY: 'auto',
-        boxShadow: themeUtils.get('SHADOWS.MD')
-      }
-    },
-      suggestions.map((suggestion, index) =>
-        React.createElement('div', {
-          key: index,
-          onClick: () => {
-            setInput(suggestion);
-            setShowSuggestions(false);
-            setSuggestions([]);
-          },
-          style: {
-            padding: themeUtils.get('SPACING.SM'),
-            cursor: 'pointer',
-            backgroundColor: index === selectedSuggestion ? themeUtils.get('COLORS.PRIMARY') + '20' : 'transparent',
-            borderBottom: index < suggestions.length - 1 ? `1px solid ${themeUtils.get('BORDERS.COLOR')}` : 'none'
-          },
-          onMouseEnter: () => setSelectedSuggestion(index)
-        }, suggestion)
-      )
-    ),
+    suggestionsDisplay,
 
     // Input component using shared component
     React.createElement('div', {

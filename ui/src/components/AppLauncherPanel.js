@@ -3,7 +3,7 @@
  * Extracted from MergedLauncher for docking framework integration
  */
 
-import React from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { Button, Card } from './GenericComponents.js';
 import { themeUtils } from '../utils/themeUtils.js';
 import { UI_APPS } from '../constants/uiApps.js';
@@ -15,21 +15,21 @@ const navigateToApp = (app) => {
 };
 
 // Predefined common styles
-const COMMON_STYLES = {
+const COMMON_STYLES = Object.freeze({
   content: { display: 'flex', alignItems: 'center' },
   icon: { fontSize: '1.5rem', marginRight: themeUtils.get('SPACING.SM') },
   description: { marginBottom: themeUtils.get('SPACING.MD') }
-};
+});
 
 const AppLauncherPanel = () => {
   // Filter out the 'merged' app to prevent circular navigation
-  const availableApps = React.useMemo(() =>
+  const availableApps = useMemo(() =>
     UI_APPS.filter(app => app.id !== 'merged'),
     []
   );
 
-  // Create app card element
-  const createAppCard = React.useCallback((app) => {
+  // Create app card element with optimized event handlers
+  const createAppCard = useCallback((app) => {
     const cardStyle = {
       cursor: 'pointer',
       transform: 'scale(1)',
@@ -46,15 +46,11 @@ const AppLauncherPanel = () => {
       e.stopPropagation();
       navigateToApp(app);
     };
-    const handleMouseEnter = (e) => e.target.style.transform = 'scale(1.02)';
-    const handleMouseLeave = (e) => e.target.style.transform = 'scale(1)';
 
     return React.createElement('div', {
       key: app.id,
       style: cardStyle,
-      onClick: handleCardClick,
-      onMouseEnter: handleMouseEnter,
-      onMouseLeave: handleMouseLeave
+      onClick: handleCardClick
     },
       React.createElement(Card, {
         title: React.createElement('div', { style: COMMON_STYLES.content },
@@ -73,7 +69,7 @@ const AppLauncherPanel = () => {
   }, []);
 
   // Memoize app cards to prevent unnecessary re-rendering
-  const appCards = React.useMemo(() =>
+  const appCards = useMemo(() =>
     availableApps.map(createAppCard),
     [availableApps, createAppCard]
   );

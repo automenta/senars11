@@ -18,15 +18,6 @@ const OBJECT_MANAGERS = Object.freeze({
   savedLayouts: createObjectManager('savedLayouts')
 });
 
-// Memoized selectors for consistent access patterns
-const SELECTORS = Object.freeze({
-  getWebSocketState: (state) => ({ wsConnected: state.wsConnected, wsService: state.wsService }),
-  getLayoutState: (state) => ({ layout: state.layout, savedLayouts: state.savedLayouts }),
-  getUiStatus: (state) => ({ error: state.error, isLoading: state.isLoading, theme: state.theme }),
-  getNotificationState: (state) => ({ notifications: state.notifications }),
-  getDemoState: (state) => ({ demos: state.demos, demoStates: state.demoStates, demoSteps: state.demoSteps }),
-});
-
 // Initial state - using Object.freeze for performance
 const INITIAL_STATE = Object.freeze({
   layout: null,
@@ -56,6 +47,40 @@ const INITIAL_STATE = Object.freeze({
   corrections: [],
   nar: null
 });
+
+// Create optimized selectors
+const createSelectors = (useStore) => {
+  return Object.freeze({
+    getWebSocketState: () => useStore(state => ({ wsConnected: state.wsConnected, wsService: state.wsService })),
+    getLayoutState: () => useStore(state => ({ layout: state.layout, savedLayouts: state.savedLayouts })),
+    getUiStatus: () => useStore(state => ({ error: state.error, isLoading: state.isLoading, theme: state.theme })),
+    getNotificationState: () => useStore(state => ({ notifications: state.notifications })),
+    getDemoState: () => useStore(state => ({ demos: state.demos, demoStates: state.demoStates, demoSteps: state.demoSteps })),
+    getTasks: () => useStore(state => state.tasks),
+    getConcepts: () => useStore(state => state.concepts),
+    getBeliefs: () => useStore(state => state.beliefs),
+    getGoals: () => useStore(state => state.goals),
+    getReasoningSteps: () => useStore(state => state.reasoningSteps),
+    getCycles: () => useStore(state => state.cycles),
+    getCycleCount: () => useStore(state => state.cycles.length),
+    getActiveSession: () => useStore(state => state.activeSession),
+    getTheme: () => useStore(state => state.theme),
+    getError: () => useStore(state => state.error),
+    isLoading: () => useStore(state => state.isLoading),
+    getWsConnected: () => useStore(state => state.wsConnected),
+    getWsService: () => useStore(state => state.wsService),
+    getNotifications: () => useStore(state => state.notifications),
+    getDemos: () => useStore(state => state.demos),
+    getDemoState: () => useStore(state => state.demoStates),
+    getDemoSteps: () => useStore(state => state.demoSteps),
+    getSystemMetrics: () => useStore(state => state.systemMetrics),
+    getNar: () => useStore(state => state.nar),
+    getReasoningState: () => useStore(state => state.reasoningState),
+    getMetaCognitiveResults: () => useStore(state => state.metaCognitiveResults),
+    getCorrections: () => useStore(state => state.corrections),
+    getLMTestResult: () => useStore(state => state.lmTestResult)
+  });
+};
 
 // Store action creators for better organization
 const createActions = (set, get) => {
@@ -178,12 +203,14 @@ const createActions = (set, get) => {
 
     // Utility methods
     batchUpdate: (updates) => batchUpdate(set, updates),
-    selectors: SELECTORS,
     resetStore: () => set(INITIAL_STATE)
   };
 };
 
 // Main store definition with optimized methods
 const useUiStore = create((set, get) => createActions(set, get));
+
+// Create and attach selectors to the store
+useUiStore.selectors = createSelectors(useUiStore);
 
 export default useUiStore;

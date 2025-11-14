@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Layout, Model } from 'flexlayout-react';
 import 'flexlayout-react/style/light.css';
 import useUiStore from '../stores/uiStore.js';
@@ -9,11 +9,11 @@ import { createLayoutElements, createLayout } from './LayoutUtils.js';
 
 // AppLayout component that uses different layouts based on app type
 const AppLayout = ({ layoutType = 'ide', onLayoutChange, children }) => {
-  const [model, setModel] = React.useState(null);
-  const layoutRef = React.useRef(null);
+  const [model, setModel] = useState(null);
+  const layoutRef = useRef(null);
 
   // Memoized component factory to prevent unnecessary re-creation
-  const componentFactory = React.useCallback((node) => {
+  const componentFactory = useCallback((node) => {
     const component = node.getComponent();
     const ContentComponent = contentMap[component] || (() => `Content for ${component}`);
     const title = component.replace('Panel', '') || 'Panel';
@@ -23,15 +23,19 @@ const AppLayout = ({ layoutType = 'ide', onLayoutChange, children }) => {
     );
   }, []);
 
-  // Initialize layout model
-  React.useEffect(() => {
+  // Memoize layout initialization parameters to avoid unnecessary re-creation
+  const layoutInitialization = useMemo(() => {
     const layoutElements = createLayoutElements(React, themeUtils);
-    const layout = createLayout(layoutElements, layoutType);
-    setModel(Model.fromJson(layout));
+    return createLayout(layoutElements, layoutType);
   }, [layoutType]);
 
+  // Initialize layout model
+  useEffect(() => {
+    setModel(Model.fromJson(layoutInitialization));
+  }, [layoutInitialization]);
+
   // Monitor WebSocket service status for debugging
-  React.useEffect(() => {
+  useEffect(() => {
     if (!model) return;
 
     const wsService = useUiStore.getState().wsService;
@@ -43,11 +47,18 @@ const AppLayout = ({ layoutType = 'ide', onLayoutChange, children }) => {
   }, [model]);
 
   // Handle layout changes and persist to store
-  const handleLayoutChange = React.useCallback((newModel) => {
+  const handleLayoutChange = useCallback((newModel) => {
     const jsonLayout = newModel.toJson();
     useUiStore.getState().setLayout(jsonLayout);
     onLayoutChange?.(jsonLayout);
   }, [onLayoutChange]);
+
+  // Memoized loading element to avoid recreation
+  const loadingElement = useMemo(() => (
+    React.createElement('div', { className: 'loading', style: { padding: '20px' } },
+      React.createElement('p', null, 'Loading layout...')
+    )
+  ), []);
 
   return React.createElement(React.Fragment, null,
     model
@@ -56,11 +67,9 @@ const AppLayout = ({ layoutType = 'ide', onLayoutChange, children }) => {
           ref: layoutRef,
           onModelChange: handleLayoutChange,
           factory: componentFactory,
-          key: 'flexlayout-root'
+          key: `flexlayout-root-${layoutType}`
         })
-      : React.createElement('div', { className: 'loading', style: { padding: '20px' } },
-          React.createElement('p', null, 'Loading layout...')
-        ),
+      : loadingElement,
     children
   );
 };

@@ -54,6 +54,7 @@ const THEME = Object.freeze({
   }),
   FONTS: Object.freeze({
     SIZE: Object.freeze({
+      XS: 'var(--font-size-xs)',
       SM: 'var(--font-size-sm)',
       BASE: 'var(--font-size-base)',
       MD: 'var(--font-size-md)',
@@ -65,6 +66,10 @@ const THEME = Object.freeze({
       MEDIUM: 'var(--font-weight-medium)',
       SEMIBOLD: 'var(--font-weight-semibold)',
       BOLD: 'var(--font-weight-bold)',
+    }),
+    FAMILY: Object.freeze({
+      BASE: 'var(--font-family-base)',
+      MONO: 'var(--font-family-mono)',
     }),
   }),
   BACKGROUNDS: Object.freeze({
@@ -156,6 +161,49 @@ const themeUtils = {
     return path.split('.').reduce((obj, key) => obj?.[key], THEME) !== undefined;
   }
 };
+
+// Initialize theme cache with common values to improve performance
+const initializeThemeCache = () => {
+  // Pre-populate cache with commonly used theme values
+  const commonPaths = [
+    'COLORS.PRIMARY',
+    'COLORS.SECONDARY',
+    'COLORS.SUCCESS',
+    'COLORS.WARNING',
+    'COLORS.DANGER',
+    'COLORS.INFO',
+    'SPACING.XS',
+    'SPACING.SM',
+    'SPACING.MD',
+    'SPACING.LG',
+    'SPACING.XL',
+    'BORDERS.RADIUS.SM',
+    'BORDERS.RADIUS.MD',
+    'BORDERS.RADIUS.LG',
+    'BORDERS.COLOR',
+    'FONTS.SIZE.BASE',
+    'FONTS.SIZE.SM',
+    'FONTS.SIZE.MD',
+    'FONTS.SIZE.LG',
+    'FONTS.WEIGHT.NORMAL',
+    'FONTS.WEIGHT.BOLD',
+    'BACKGROUNDS.PRIMARY',
+    'BACKGROUNDS.SECONDARY',
+    'BACKGROUNDS.TERTIARY',
+    'TEXT.PRIMARY',
+    'TEXT.SECONDARY',
+    'TEXT.MUTED',
+    'TEXT.LIGHT'
+  ];
+
+  commonPaths.forEach(path => {
+    const value = path.split('.').reduce((obj, key) => obj?.[key], THEME);
+    themeCache.set(path, value);
+  });
+};
+
+// Initialize the cache with common values
+initializeThemeCache();
 
 export {THEME, themeUtils};
 export default themeUtils;

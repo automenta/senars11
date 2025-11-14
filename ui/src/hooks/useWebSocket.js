@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useMemo } from 'react';
 import useUiStore from '../stores/uiStore.js';
 
 // Optimized WebSocket hook with improved performance and consistency
@@ -12,7 +12,7 @@ export const useWebSocket = () => {
     if (wsService && wsConnected) {
       return wsService.sendMessage(message);
     } else {
-      console.warn('WebSocket not connected, message queued');
+      console.warn('WebSocket not connected, message not sent');
       return Promise.reject(new Error('WebSocket not connected'));
     }
   }, [wsService, wsConnected]);
@@ -22,10 +22,10 @@ export const useWebSocket = () => {
     if (!wsService) return;
 
     if (typeof wsService.registerHandler === 'function') {
-      wsService.registerHandler(type, handler);
+      return wsService.registerHandler(type, handler);
     } else if (typeof wsService.addListener === 'function') {
       // Fallback to addListener if registerHandler is not available
-      wsService.addListener(type, handler);
+      return wsService.addListener(type, handler);
     }
   }, [wsService]);
 
@@ -80,11 +80,13 @@ const UI_DATA_SELECTORS = Object.freeze({
   toggleTheme: state => state.toggleTheme,
 });
 
-// Optimized hook to get UI data from store
+// Optimized hook to get UI data from store with memoization
 export const useUiData = () => {
-  return Object.fromEntries(
-    Object.entries(UI_DATA_SELECTORS).map(([key, selector]) => [key, useUiStore(selector)])
-  );
+  return useMemo(() => {
+    return Object.fromEntries(
+      Object.entries(UI_DATA_SELECTORS).map(([key, selector]) => [key, useUiStore(selector)])
+    );
+  }, []);
 };
 
 // Operation definitions for useDataOperations hook
@@ -120,14 +122,16 @@ const DATA_OPERATIONS = Object.freeze({
   }
 });
 
-// Optimized hook to get data operation functions from store
+// Optimized hook to get data operation functions from store with memoization
 export const useDataOperations = () => {
-  return Object.fromEntries(
-    Object.entries(DATA_OPERATIONS).flatMap(([category, ops]) =>
-      Object.entries(ops).map(([opName, selector]) => [
-        `${category}${opName.charAt(0).toUpperCase() + opName.slice(1)}`,
-        useUiStore(selector)
-      ])
-    )
-  );
+  return useMemo(() => {
+    return Object.fromEntries(
+      Object.entries(DATA_OPERATIONS).flatMap(([category, ops]) =>
+        Object.entries(ops).map(([opName, selector]) => [
+          `${category}${opName.charAt(0).toUpperCase() + opName.slice(1)}`,
+          useUiStore(selector)
+        ])
+      )
+    );
+  }, []);
 };

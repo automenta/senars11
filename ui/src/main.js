@@ -49,40 +49,45 @@ const getRouteComponent = () => {
   const urlParams = new URLSearchParams(search);
   const layoutParam = urlParams.get('layout');
 
-  // REPL routes
+  // Handle REPL routes
   if (matchesRoute(path, ROUTE_CONFIG.repl.pattern) || hash.includes(ROUTE_CONFIG.repl.hashPattern)) {
     const minimal = hash.includes(ROUTE_CONFIG.repl.hashPattern) || path.includes('minimal-repl');
-    return () => loadReplComponent(minimal);
+    return { loader: () => loadReplComponent(minimal), type: 'repl' };
   }
 
-  // Simple UI routes
+  // Handle Simple UI routes
   if (matchesRoute(path, ROUTE_CONFIG.simple.pattern)) {
-    return () => loadSimpleUIComponent();
+    return { loader: loadSimpleUIComponent, type: 'simple' };
   }
 
-  // Layout-based routes
+  // Handle Layout-based routes
   if (layoutParam && ROUTE_CONFIG.layout[layoutParam]) {
     const title = ROUTE_CONFIG.layout[layoutParam];
     const layoutType = layoutParam === 'self-analysis' ? 'analysis' : layoutParam;
-
-    return () => (props) => React.createElement(App, {
-      appId: 'ide',
-      appConfig: { layoutType, title },
-      ...props
-    });
+    return {
+      component: (props) => React.createElement(App, {
+        appId: 'ide',
+        appConfig: { layoutType, title },
+        ...props
+      }),
+      type: 'layout'
+    };
   }
 
   // Default route
   if (['/', '/index.html', ''].includes(path)) {
-    return () => (props) => React.createElement(App, {
-      appId: 'ide',
-      appConfig: { layoutType: 'merged', title: 'Unified Interface' },
-      ...props
-    });
+    return {
+      component: (props) => React.createElement(App, {
+        appId: 'ide',
+        appConfig: { layoutType: 'merged', title: 'Unified Interface' },
+        ...props
+      }),
+      type: 'default'
+    };
   }
 
   // Fallback to default app component
-  return () => App;
+  return { component: App, type: 'fallback' };
 };
 
 // Initialize theme before rendering the app
@@ -95,50 +100,45 @@ if (typeof process !== 'undefined' && process.env.NODE_ENV === 'development') {
   });
 }
 
+// Unified render function with proper error handling
+const renderComponent = (ComponentToRender, containerId = 'root') => {
+  const rootElement = document.getElementById(containerId);
+  if (!rootElement) {
+    throw new Error(`Root element with id '${containerId}' not found`);
+  }
+
+  const root = createRoot(rootElement);
+  root.render(
+    React.createElement(React.StrictMode, null,
+      React.createElement(RootErrorBoundary, null,
+        typeof ComponentToRender === 'function'
+          ? React.createElement(ComponentToRender, null)
+          : ComponentToRender
+      )
+    )
+  );
+};
+
 // Render the appropriate app based on the current path with root error boundary
 async function renderApp() {
   try {
-    const routeFunction = getRouteComponent();
-    const rootElement = document.getElementById('root');
-    const root = createRoot(rootElement);
+    const routeInfo = getRouteComponent();
 
-    // Determine the component to render
-    let ComponentToRender;
-    if (typeof routeFunction === 'function') {
-      const routeResult = routeFunction();
-      if (routeResult.constructor.name === 'AsyncFunction') {
-        ComponentToRender = await routeResult();
-      } else if (typeof routeResult === 'function') {
-        ComponentToRender = routeResult();
-      } else {
-        ComponentToRender = routeResult;
-      }
+    if (routeInfo.loader) {
+      // Handle async component loading
+      const Component = await routeInfo.loader();
+      renderComponent(Component);
+    } else if (routeInfo.component) {
+      // Handle direct component reference
+      renderComponent(routeInfo.component);
     } else {
-      ComponentToRender = routeFunction;
+      // Fallback to App component
+      renderComponent(App);
     }
-
-    root.render(
-      React.createElement(React.StrictMode, null,
-        React.createElement(RootErrorBoundary, null,
-          typeof ComponentToRender === 'function'
-            ? React.createElement(ComponentToRender, null)
-            : ComponentToRender
-        )
-      )
-    );
   } catch (error) {
     console.error('Error loading app:', error);
     // Fallback to launcher wrapped in error boundary if there's an error
-    const rootElement = document.getElementById('root');
-    const root = createRoot(rootElement);
-
-    root.render(
-      React.createElement(React.StrictMode, null,
-        React.createElement(RootErrorBoundary, null,
-          React.createElement(Launcher, null)
-        )
-      )
-    );
+    renderComponent(Launcher);
   }
 }
 

@@ -3,49 +3,56 @@
  * Provides all available UI layouts
  */
 
+// Default layout element creators
+const DEFAULT_CREATE_TAB = (name, component) => ({
+  type: 'tab',
+  name,
+  component
+});
+
+const DEFAULT_CREATE_TABSET = (children, weight = 50, id = null) => ({
+  type: 'tabset',
+  weight,
+  children,
+  ...(id && { id })
+});
+
+const DEFAULT_CREATE_ROW = (children, weight = 100) => ({
+  type: 'row',
+  weight,
+  children
+});
+
+const DEFAULT_CREATE_COLUMN = (children, weight = 100) => ({
+  type: 'column',
+  weight,
+  children
+});
+
+const DEFAULT_CREATE_BORDER = (location, size, children) => ({
+  type: 'border',
+  location,
+  size,
+  children
+});
+
 /**
  * Common layout element creators
  */
 export const createLayoutElements = (React, themeUtils) => {
-  const createTab = (name, component) => ({
-    type: 'tab',
-    name,
-    component
-  });
+  const createTab = (name, component) => DEFAULT_CREATE_TAB(name, component);
+  const createTabSet = (children, weight = 50, id = null) => DEFAULT_CREATE_TABSET(children, weight, id);
+  const createRow = (children, weight = 100) => DEFAULT_CREATE_ROW(children, weight);
+  const createColumn = (children, weight = 100) => DEFAULT_CREATE_COLUMN(children, weight);
+  const createBorder = (location, size, children) => DEFAULT_CREATE_BORDER(location, size, children);
 
-  const createTabSet = (children, weight = 50, id = null) => ({
-    type: 'tabset',
-    weight,
-    children,
-    ...(id && { id })
-  });
-
-  const createRow = (children, weight = 100) => ({
-    type: 'row',
-    weight,
-    children
-  });
-
-  const createColumn = (children, weight = 100) => ({
-    type: 'column',
-    weight,
-    children
-  });
-
-  const createBorder = (location, size, children) => ({
-    type: 'border',
-    location,
-    size,
-    children
-  });
-
-  return {
+  return Object.freeze({
     createTab,
     createTabSet,
     createRow,
     createColumn,
     createBorder
-  };
+  });
 };
 
 // Global layout settings configuration for different layout types
@@ -99,10 +106,10 @@ export const DEFAULT_LAYOUTS = Object.freeze({
 const createStandardTab = (createTab, name, component) => createTab(name, component);
 
 // Layout factories for different layout types
-const layoutFactories = {
+const layoutFactories = Object.freeze({
   dashboard: (elements) => {
     const { createTab, createTabSet, createRow } = elements;
-    return {
+    return Object.freeze({
       layout: createRow([
         createTabSet([
           createStandardTab(createTab, 'Dashboard', 'DashboardPanel'),
@@ -114,12 +121,12 @@ const layoutFactories = {
           createStandardTab(createTab, 'System Status', 'SystemStatusPanel')
         ], 40)
       ])
-    };
+    });
   },
 
   ide: (elements) => {
     const { createTab, createTabSet, createRow, createBorder } = elements;
-    return {
+    return Object.freeze({
       borders: [
         createBorder('left', 250, [
           createStandardTab(createTab, 'Explorer', 'ExplorerPanel'),
@@ -142,12 +149,12 @@ const layoutFactories = {
           createStandardTab(createTab, 'Cycle', 'CyclePanel')
         ], 40)
       ])
-    };
+    });
   },
 
   analysis: (elements) => {
     const { createTab, createTabSet, createRow, createColumn } = elements;
-    return {
+    return Object.freeze({
       layout: createColumn([
         createRow([
           createTabSet([
@@ -164,12 +171,12 @@ const layoutFactories = {
           createStandardTab(createTab, 'Visualization', 'VisualizationPanel')
         ], 40)
       ])
-    };
+    });
   },
 
   visualization: (elements) => {
     const { createTab, createTabSet, createRow } = elements;
-    return {
+    return Object.freeze({
       layout: createRow([
         createTabSet([
           createStandardTab(createTab, 'Graph UI', 'GraphUI'),
@@ -180,21 +187,21 @@ const layoutFactories = {
           createStandardTab(createTab, 'Concept Relationships', 'ConceptRelationshipPanel')
         ], 30)
       ])
-    };
+    });
   },
 
   simple: (elements) => {
     const { createTab, createTabSet } = elements;
-    return {
+    return Object.freeze({
       layout: createTabSet([
         createStandardTab(createTab, 'Main', 'MainPanel')
       ], 100)
-    };
+    });
   },
 
   merged: (elements) => {
     const { createTab, createTabSet, createRow, createBorder } = elements;
-    return {
+    return Object.freeze({
       borders: [
         createBorder('left', 300, [
           createStandardTab(createTab, 'App Launcher', 'AppLauncherPanel'),
@@ -221,9 +228,9 @@ const layoutFactories = {
           createStandardTab(createTab, 'Demo', 'DemoPanel')
         ], 40)
       ])
-    };
+    });
   }
-};
+});
 
 /**
  * Layout factory function to generate layouts based on type and configuration
@@ -236,8 +243,8 @@ export const createLayout = (layoutElements, layoutType, config = {}) => {
   const baseLayout = DEFAULT_LAYOUTS[layoutType] || DEFAULT_LAYOUTS.simple;
   const layoutData = layoutFactories[layoutType]?.(layoutElements) || layoutFactories.simple(layoutElements);
 
-  return {
+  return Object.freeze({
     ...baseLayout,
     ...layoutData
-  };
+  });
 };

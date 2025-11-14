@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, useMemo } from 'react';
 import useUiStore from '../stores/uiStore.js';
 import ErrorBoundary from './ErrorBoundary.js';
 import { WebSocketStatus } from './GenericComponents.js';
@@ -20,7 +20,7 @@ const Panel = memo(({
   const wsConnected = useUiStore(state => state.wsConnected);
 
   // Memoized styles for performance
-  const panelStyle = React.useMemo(() => ({
+  const panelStyle = useMemo(() => ({
     display: 'flex',
     flexDirection: 'column',
     height: '100%',
@@ -31,7 +31,7 @@ const Panel = memo(({
     ...style
   }), [style]);
 
-  const headerStyle = React.useMemo(() => ({
+  const headerStyle = useMemo(() => ({
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -40,13 +40,13 @@ const Panel = memo(({
     borderBottom: `1px solid ${themeUtils.get('BORDERS.COLOR')}`
   }), []);
 
-  const contentStyle = React.useMemo(() => ({
+  const contentStyle = useMemo(() => ({
     flex: 1,
     padding: themeUtils.get('SPACING.SM'),
     overflow: 'auto'
   }), []);
 
-  const statusStyle = React.useMemo(() => ({
+  const statusStyle = useMemo(() => ({
     fontSize: themeUtils.get('FONTS.SIZE.SM'),
     marginLeft: themeUtils.get('SPACING.SM'),
     padding: `${themeUtils.get('SPACING.XS')} ${themeUtils.get('SPACING.SM')}`,
@@ -54,13 +54,16 @@ const Panel = memo(({
     borderRadius: themeUtils.get('BORDERS.RADIUS.SM')
   }), [wsConnected]);
 
-  const headerContentStyle = React.useMemo(() => ({
+  const headerContentStyle = useMemo(() => ({
     display: 'flex',
     alignItems: 'center'
   }), []);
 
-  return React.createElement('div', { className, style: panelStyle },
-    showHeader && React.createElement('div', { style: headerStyle },
+  // Memoize header content to avoid recreation
+  const headerContent = useMemo(() => {
+    if (!showHeader) return null;
+
+    return React.createElement('div', { style: headerStyle },
       createHeader(React, { content: title, level: 3 }),
       React.createElement('div', { style: headerContentStyle },
         showWebSocketStatus && React.createElement(WebSocketStatus, {
@@ -69,13 +72,22 @@ const Panel = memo(({
         }),
         headerExtra
       )
-    ),
+    );
+  }, [showHeader, headerStyle, title, showWebSocketStatus, statusStyle, headerExtra, headerContentStyle]);
+
+  // Memoize content area to avoid recreation
+  const contentArea = useMemo(() => (
     React.createElement('div', { style: contentStyle },
       React.createElement(ErrorBoundary, {
         componentName: 'Panel',
         showErrorDetails: false
       }, children)
     )
+  ), [contentStyle, children]);
+
+  return React.createElement('div', { className, style: panelStyle },
+    headerContent,
+    contentArea
   );
 });
 
