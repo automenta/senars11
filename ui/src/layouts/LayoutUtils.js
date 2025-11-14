@@ -1,5 +1,27 @@
 /**
- * Layout utilities for consistent layout management across different applications
+ * Layout System: Centralized Layout Configuration
+ *
+ * This module defines all available application layouts using a structured,
+ * dockable panel system based on flexlayout-react.
+ *
+ * Architecture:
+ * - Layout elements factory: Provides consistent building blocks (tabs, tabsets, rows, cols, borders)
+ * - Layout definitions: Predefined configurations for different use cases
+ * - The 'merged' layout: Comprehensive unified interface combining all functionality
+ *
+ * Layout Types:
+ * - 'ide': Standard development environment layout
+ * - 'dashboard': Overview and monitoring layout
+ * - 'analysis': Meta-cognition and analysis layout
+ * - 'visualization': Graph and data visualization layout
+ * - 'simple': Minimal interface layout
+ * - 'merged': Unified interface with launcher, REPL, diagnostics and IDE panels
+ *
+ * The 'merged' layout (added for unified UI) includes:
+ * - Left border: AppLauncher, Diagnostics, Tasks, Concepts
+ * - Bottom border: REPL Console, Console, System Status, Reasoning Trace
+ * - Main area: Primary workspace with Input Interface and IDE components
+ *
  * Following AGENTS.md: DRY, Modular, Organized
  */
 
@@ -249,37 +271,43 @@ export const createLayout = (layoutElements, layoutType, config = {}) => {
       };
 
     case 'merged':
-      // Comprehensive layout combining MergedLauncher functionality with full IDE capabilities
-      // Provides launcher, diagnostics, REPL, and all IDE panels in a unified docking framework
-      return {
-        ...DEFAULT_LAYOUTS.ide, // Use IDE-style configuration for merged layout
-        borders: [
-          createBorder('left', 300, [
-            createTab('App Launcher', 'AppLauncherPanel'),  // Application selection panel
-            createTab('Diagnostics', 'DiagnosticsPanel'),  // Connection and system diagnostics
-            createTab('Tasks', 'TaskPanel'),                // Task management panel
-            createTab('Concepts', 'ConceptPanel')           // Concept management panel
-          ]),
-          createBorder('bottom', 250, [
-            createTab('REPL Console', 'ReplConsolePanel'),  // Interactive REPL console
-            createTab('Console', 'ConsolePanel'),           // General console output
-            createTab('System Status', 'SystemStatusPanel'), // System health and metrics
-            createTab('Reasoning Trace', 'ReasoningTracePanel') // Reasoning process visualization
-          ])
-        ],
-        layout: createRow([
-          createTabSet([
-            createTab('Main', 'MainPanel'),                 // Primary workspace
-            createTab('Input Interface', 'InputInterfacePanel'), // Narsese input interface
-            createTab('Cognitive IDE', 'CognitiveIDE')      // Full IDE view
-          ], 60),
-          createTabSet([
-            createTab('Variables', 'VariablesPanel'),       // Variable inspection
-            createTab('Cycle', 'CyclePanel'),               // Cycle information
-            createTab('Demo', 'DemoPanel')                  // Demo controls
-          ], 40)
+    // Unified workspace: combines launcher, diagnostics, REPL, and IDE capabilities
+    const unifiedLayoutConfiguration = {
+      ...DEFAULT_LAYOUTS.ide,
+      borders: [
+        // Left sidebar with control and monitoring panels
+        createBorder('left', 300, [
+          createTab('App Launcher', 'AppLauncherPanel'),    // Application selector
+          createTab('Diagnostics', 'DiagnosticsPanel'),     // Connection & system status
+          createTab('Tasks', 'TaskPanel'),                  // Task management
+          createTab('Concepts', 'ConceptPanel')             // Concept management
+        ]),
+        // Bottom panel with logs and trace information
+        createBorder('bottom', 250, [
+          createTab('REPL Console', 'ReplConsolePanel'),    // Interactive console
+          createTab('Console', 'ConsolePanel'),             // General output
+          createTab('System Status', 'SystemStatusPanel'),  // Health metrics
+          createTab('Reasoning Trace', 'ReasoningTracePanel') // Process visualization
         ])
-      };
+      ],
+      // Main workspace area split into two sections
+      layout: createRow([
+        // Left section: primary work area
+        createTabSet([
+          createTab('Main', 'MainPanel'),                    // Primary workspace
+          createTab('Input Interface', 'InputInterfacePanel'), // Narsese input
+          createTab('Cognitive IDE', 'CognitiveIDE')         // Full IDE
+        ], 60),
+        // Right section: supplementary tools
+        createTabSet([
+          createTab('Variables', 'VariablesPanel'),          // Variable inspection
+          createTab('Cycle', 'CyclePanel'),                  // Cycle tracking
+          createTab('Demo', 'DemoPanel')                     // Demo controls
+        ], 40)
+      ])
+    };
+
+    return unifiedLayoutConfiguration;
 
     default:
       return {

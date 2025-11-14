@@ -1,6 +1,18 @@
 /**
- * UI Application definitions with metadata
- * Shared constant following AGENTS.md: DRY, Modular, Abstract
+ * UI Application Registry: Shared Application Definitions
+ *
+ * This constant provides a centralized registry of all available UI applications
+ * that can be launched from interfaces like the AppLauncherPanel.
+ *
+ * Structure: Each app definition includes:
+ * - id: Unique identifier for the application
+ * - name: Display name
+ * - description: Brief explanation of functionality
+ * - icon: Visual representation (emoji)
+ * - color: Theme color from themeUtils
+ * - path: Navigation path
+ *
+ * Following AGENTS.md: DRY, Modular, Abstract
  */
 
 import { themeUtils } from '../utils/themeUtils.js';

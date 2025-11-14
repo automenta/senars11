@@ -9,15 +9,13 @@ import { themeUtils } from '../utils/themeUtils.js';
 import { UI_APPS } from '../constants/uiApps.js';
 
 const AppLauncherPanel = () => {
-  const handleAppSelect = (app) => {
-    // Redirect to the selected application
-    if (app.id === 'minimal-repl') {
-      window.location.href = '/repl/#minimal';
-    } else {
-      window.location.href = app.path;
-    }
+  // Navigation handler for app selection
+  const navigateToApp = (app) => {
+    const targetUrl = app.id === 'minimal-repl' ? '/repl/#minimal' : app.path;
+    window.location.href = targetUrl;
   };
 
+  // Create dynamic card styling based on app color
   const createCardStyle = React.useCallback((color) => ({
     cursor: 'pointer',
     transform: 'scale(1)',
@@ -29,56 +27,58 @@ const AppLauncherPanel = () => {
     }
   }), []);
 
-  const contentStyle = React.useMemo(() => ({
-    display: 'flex',
-    alignItems: 'center'
-  }), []);
+  // Common styles used across app cards
+  const styles = {
+    content: React.useMemo(() => ({ display: 'flex', alignItems: 'center' }), []),
+    icon: React.useMemo(() => ({ fontSize: '1.5rem', marginRight: themeUtils.get('SPACING.SM') }), []),
+    description: React.useMemo(() => ({ marginBottom: themeUtils.get('SPACING.MD') }), [])
+  };
 
-  const iconStyle = React.useMemo(() => ({
-    fontSize: '1.5rem',
-    marginRight: '0.5rem'
-  }), []);
+  // Filter out the 'merged' app to prevent circular navigation
+  const availableApps = UI_APPS.filter(app => app.id !== 'merged');
 
-  const descriptionStyle = React.useMemo(() => ({
-    marginBottom: themeUtils.get('SPACING.MD')
-  }), []);
+  // Create app cards with consistent behavior
+  const appCards = availableApps.map(app =>
+    React.createElement('div', {
+      key: app.id,
+      style: createCardStyle(app.color),
+      onClick: () => navigateToApp(app),
+      onMouseEnter: (e) => e.target.style.transform = 'scale(1.02)',
+      onMouseLeave: (e) => e.target.style.transform = 'scale(1)'
+    },
+      React.createElement(Card, {
+        title: React.createElement('div', { style: styles.content },
+          React.createElement('span', { style: styles.icon }, app.icon),
+          app.name
+        )
+      },
+        React.createElement('p', { style: styles.description }, app.description),
+        React.createElement(Button, {
+          variant: 'light',
+          size: 'sm',
+          onClick: (e) => {
+            e.stopPropagation();
+            navigateToApp(app);
+          }
+        }, 'Launch')
+      )
+    )
+  );
 
   return React.createElement('div', { style: { padding: themeUtils.get('SPACING.MD') } },
-    React.createElement('h3', { style: { marginBottom: themeUtils.get('SPACING.LG'), textAlign: 'center' } }, 'Applications'),
+    React.createElement('h3', {
+      style: {
+        marginBottom: themeUtils.get('SPACING.LG'),
+        textAlign: 'center'
+      }
+    }, 'Applications'),
     React.createElement('div', {
       style: {
         display: 'flex',
         flexDirection: 'column',
         gap: themeUtils.get('SPACING.MD')
       }
-    },
-      UI_APPS.filter(app => app.id !== 'merged').map(app =>
-        React.createElement('div', {
-          key: app.id,
-          style: createCardStyle(app.color),
-          onClick: () => handleAppSelect(app),
-          onMouseEnter: (e) => e.target.style.transform = 'scale(1.02)',
-          onMouseLeave: (e) => e.target.style.transform = 'scale(1)'
-        },
-          React.createElement(Card, {
-            title: React.createElement('div', { style: contentStyle },
-              React.createElement('span', { style: iconStyle }, app.icon),
-              app.name
-            )
-          },
-            React.createElement('p', { style: descriptionStyle }, app.description),
-            React.createElement(Button, {
-              variant: 'light',
-              size: 'sm',
-              onClick: (e) => {
-                e.stopPropagation();
-                handleAppSelect(app);
-              }
-            }, 'Launch')
-          )
-        )
-      )
-    )
+    }, appCards)
   );
 };
 

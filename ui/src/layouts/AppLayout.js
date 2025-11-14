@@ -1,6 +1,21 @@
 /**
- * App-specific layouts that can use common components
- * These layouts provide different arrangements for various app types
+ * AppLayout: Docking Framework Implementation
+ *
+ * This component implements the flexlayout-react docking framework that provides
+ * a flexible, panel-based interface where users can arrange components as needed.
+ *
+ * Key responsibilities:
+ * - Initialize layout model based on layoutType from props
+ * - Connect layout configuration from LayoutUtils to flexlayout-react
+ * - Map named panel components to actual React components via contentMap
+ * - Handle layout persistence and changes
+ * - Provide consistent panel wrapping with Panel component
+ *
+ * Integration points:
+ * - Layout definition: layouts/LayoutUtils.js (createLayout function)
+ * - Panel components: components/panelContent.js (contentMap)
+ * - Theme configuration: utils/themeUtils.js
+ * - State management: stores/uiStore.js
  */
 
 import React from 'react';

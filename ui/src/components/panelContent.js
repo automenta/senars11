@@ -1,4 +1,20 @@
-// Panel content mapping to reduce duplication in App.js
+/**
+ * Panel Content Mapping System
+ *
+ * This module provides the crucial mapping between layout configuration names
+ * and actual React components. The contentMap connects the string names used
+ * in LayoutUtils.js with their corresponding React component implementations.
+ *
+ * Purpose:
+ * - Centralized mapping of panel names to components
+ * - Enables flexlayout-react to render correct components
+ * - Maintains consistency across the layout system
+ * - Supports extensibility with new panel types
+ *
+ * Usage: When LayoutUtils defines a tab with component name 'TaskPanel',
+ * AppLayout uses this map to render the actual TaskPanel React component.
+ */
+
 import ExplorerPanel from './ExplorerPanel.js';
 import MainPanel from './MainPanel.js';
 import ConsolePanel from './ConsolePanel.js';

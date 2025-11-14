@@ -3,36 +3,54 @@ import { BaseApp } from './components/BaseApp.js';
 import AppLayout from './layouts/AppLayout.js';
 import EnhancedRepl from './components/EnhancedRepl.js';
 import MinimalRepl from './components/MinimalRepl.js';
-import { applicationRegistry } from './ApplicationRegistry.js';
 
 /**
- * App: Main application component with proper loading and error handling
+ * App: Main application router and layout coordinator
+ *
+ * This component serves as the central routing mechanism that determines which
+ * interface layout to display based on URL parameters and app configuration.
+ *
+ * Key responsibilities:
+ * - Parse URL parameters to determine desired layout
+ * - Route to specific component layouts (REPL modes)
+ * - Default to AppLayout with specified layout type for general interfaces
+ * - Provide consistent BaseApp wrapper for all interfaces
+ *
+ * Layout types supported:
+ * - 'ide': Standard IDE interface
+ * - 'graph': Graph visualization interface
+ * - 'analysis': Self-analysis interface
+ * - 'merged': Unified docking framework with all panels (default main UI)
+ * - 'enhanced'/'minimal': REPL-specific layouts
+ *
+ * URL parameter example: /?layout=merged
  */
 function App({ appId = 'ide', appConfig = {} }) {
-  // Determine layout type from appConfig or URL parameters
+  // Extract layout type from configuration or URL parameters
   const urlParams = new URLSearchParams(window.location.search);
-  const layoutParam = urlParams.get('layout');
-  const layoutType = appConfig.layoutType || layoutParam || 'ide'; // Default to 'ide' layout
+  const urlLayout = urlParams.get('layout');
+  const layoutType = appConfig.layoutType || urlLayout || 'ide';
 
   // Special handling for REPL-specific layouts
-  if (appId === 'repl' && layoutType === 'enhanced') {
-    return React.createElement(BaseApp, {
-      appId,
-      appConfig: { title: 'Enhanced REPL Interface', ...appConfig },
-      layoutComponent: () => React.createElement(EnhancedRepl, {
-        onBackToLauncher: () => window.location.href = '/'
-      })
-    });
-  } else if (appId === 'repl' && layoutType === 'minimal') {
-    return React.createElement(BaseApp, {
-      appId,
-      appConfig: { title: 'Minimal REPL Interface', ...appConfig },
-      layoutComponent: () => React.createElement(MinimalRepl, {
-        onBackToLauncher: () => window.location.href = '/'
-      })
-    });
+  if (appId === 'repl') {
+    const replConfig = {
+      enhanced: { title: 'Enhanced REPL Interface', component: EnhancedRepl },
+      minimal: { title: 'Minimal REPL Interface', component: MinimalRepl }
+    };
+
+    const config = replConfig[layoutType];
+    if (config) {
+      return React.createElement(BaseApp, {
+        appId,
+        appConfig: { title: config.title, ...appConfig },
+        layoutComponent: () => React.createElement(config.component, {
+          onBackToLauncher: () => window.location.href = '/'
+        })
+      });
+    }
   }
 
+  // Default: use AppLayout with specified layout type
   return React.createElement(BaseApp, {
     appId,
     appConfig: { title: 'Cognitive IDE', ...appConfig },

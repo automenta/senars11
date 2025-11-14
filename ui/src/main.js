@@ -6,78 +6,60 @@ import './index.css';
 import { initializeTheme } from './utils/theme.js';
 import RootErrorBoundary from './components/RootErrorBoundary.js';
 
-// Determine which app to render based on URL
-const getCurrentApp = () => {
-  const path = window.location.pathname;
-  const hash = window.location.hash;
-  const search = window.location.search;
+// Route resolver that maps URLs to appropriate UI components
+const getRouteComponent = () => {
+  const { pathname: path, hash, search } = window.location;
 
-  // Based on path, hash, and search params, return the appropriate component
+  // REPL routes
   if (path.includes('/repl') || hash.includes('minimal')) {
-    // For REPL, we need to load the REPL app
     return async () => {
-      // If minimal REPL is requested (either via hash or path), load MinimalRepl
       if (hash.includes('minimal') || path.includes('minimal-repl')) {
-        // For minimal REPL, return the actual component directly
-        const minimalModule = await import('./components/MinimalRepl.js');
-        return minimalModule.default;
+        const { default: MinimalRepl } = await import('./components/MinimalRepl.js');
+        return MinimalRepl;
       }
-      const replModule = await import('./repl-app.js');
-      return replModule.default;
+      const { default: ReplApp } = await import('./repl-app.js');
+      return ReplApp;
     };
-  } else if (path.includes('/simple-uis') || path.includes('/simple-ui')) {
-    // For simple UIs, load the simple UI app
-    return async () => {
-      const simpleModule = await import('./simple-ui-app.js');
-      return simpleModule.default;
-    };
-  } else if (search.includes('layout=graph') || hash.includes('layout=graph')) {
-    // For graph layout, load the main app with graph layout
-    return () => {
-      // Update the appConfig with the graph layout
-      const GraphApp = (props) => React.createElement(App, {
-        appId: 'ide',
-        appConfig: { layoutType: 'graph', title: 'Graph UI' },
-        ...props
-      });
-      return GraphApp;
-    };
-  } else if (search.includes('layout=self-analysis') || hash.includes('layout=self-analysis')) {
-    // For self-analysis layout, load the main app with self-analysis layout
-    return () => {
-      // Update the appConfig with the self-analysis layout
-      const SelfAnalysisApp = (props) => React.createElement(App, {
-        appId: 'ide',
-        appConfig: { layoutType: 'analysis', title: 'Self Analysis' },
-        ...props
-      });
-      return SelfAnalysisApp;
-    };
-  } else if (path === '/' || path === '/index.html' || path === '') {
-    // For root path, use App component with merged layout (docking framework)
-    return () => {
-      const RootApp = (props) => React.createElement(App, {
-        appId: 'ide',
-        appConfig: { layoutType: 'merged', title: 'Unified Interface' },
-        ...props
-      });
-      return RootApp;
-    };
-  } else if (search.includes('layout=merged') || hash.includes('layout=merged')) {
-    // For merged layout, load the main app with merged layout
-    return () => {
-      // Update the appConfig with the merged layout
-      const MergedApp = (props) => React.createElement(App, {
-        appId: 'ide',
-        appConfig: { layoutType: 'merged', title: 'Unified Interface' },
-        ...props
-      });
-      return MergedApp;
-    };
-  } else {
-    // Default to main app
-    return () => App;
   }
+
+  // Simple UI routes
+  if (path.includes('/simple-uis') || path.includes('/simple-ui')) {
+    return async () => {
+      const { default: SimpleUIApp } = await import('./simple-ui-app.js');
+      return SimpleUIApp;
+    };
+  }
+
+  // Layout-specific routes
+  const layoutParam = new URLSearchParams(search).get('layout');
+  const layoutRoutes = {
+    graph: 'Graph UI',
+    'self-analysis': 'Self Analysis',
+    merged: 'Unified Interface'
+  };
+
+  if (layoutParam && layoutRoutes[layoutParam]) {
+    const title = layoutRoutes[layoutParam];
+    const layoutType = layoutParam === 'self-analysis' ? 'analysis' : layoutParam;
+
+    return () => (props) => React.createElement(App, {
+      appId: 'ide',
+      appConfig: { layoutType, title },
+      ...props
+    });
+  }
+
+  // Root route - main unified interface
+  if (['/', '/index.html', ''].includes(path)) {
+    return () => (props) => React.createElement(App, {
+      appId: 'ide',
+      appConfig: { layoutType: 'merged', title: 'Unified Interface' },
+      ...props
+    });
+  }
+
+  // Default case
+  return () => App;
 };
 
 // Initialize theme before rendering the app
@@ -93,41 +75,39 @@ if (typeof process !== 'undefined' && process.env.NODE_ENV === 'development') {
 // Render the appropriate app based on the current path with root error boundary
 async function renderApp() {
   try {
-    const getAppFunction = getCurrentApp();
+    const routeFunction = getRouteComponent();
+    const rootElement = document.getElementById('root');
+    const root = createRoot(rootElement);
 
-    let AppComponent;
+    let ComponentToRender;
 
-    if (typeof getAppFunction === 'function') {
-      if (getAppFunction.constructor.name === 'AsyncFunction') {
-        // If it's an async function, await the result
-        AppComponent = await getAppFunction();
+    if (typeof routeFunction === 'function') {
+      if (routeFunction.constructor.name === 'AsyncFunction') {
+        ComponentToRender = await routeFunction();
       } else {
-        // If it's a sync function, just call it to get the component
-        AppComponent = getAppFunction();
+        ComponentToRender = routeFunction();
       }
     } else {
-      // If it's already a component, use it directly
-      AppComponent = getAppFunction;
+      ComponentToRender = routeFunction;
     }
 
-    const root = createRoot(document.getElementById('root'));
     root.render(
-      React.createElement(
-        React.StrictMode,
-        null,
+      React.createElement(React.StrictMode, null,
         React.createElement(RootErrorBoundary, null,
-          React.createElement(AppComponent, null)
+          typeof ComponentToRender === 'function'
+            ? React.createElement(ComponentToRender, null)
+            : ComponentToRender
         )
       )
     );
   } catch (error) {
     console.error('Error loading app:', error);
     // Fallback to launcher wrapped in error boundary if there's an error
-    const root = createRoot(document.getElementById('root'));
+    const rootElement = document.getElementById('root');
+    const root = createRoot(rootElement);
+
     root.render(
-      React.createElement(
-        React.StrictMode,
-        null,
+      React.createElement(React.StrictMode, null,
         React.createElement(RootErrorBoundary, null,
           React.createElement(Launcher, null)
         )

@@ -110,98 +110,103 @@ const ReplConsolePanel = () => {
     }
   }, [input, commandHistory]);
 
-  // Refs to maintain current values in event handlers
+  // Maintain current values in event handlers to prevent stale closures
   const historyRef = useRef(history);
-  const setHistoryRef = useRef(setHistory);
-
-  // Update refs when state changes
   useEffect(() => {
     historyRef.current = history;
   }, [history]);
 
-  // Register message listeners for real-time updates using wsService directly
+  // WebSocket message handlers that update the command history
+  const createMessageHandlers = () => {
+    const updateHistory = (entry) => {
+      historyRef.current = [...historyRef.current, entry];
+      setHistory(historyRef.current);
+    };
+
+    return {
+      handleTaskUpdate: (data) => {
+        if (data.payload?.task) {
+          updateHistory({
+            type: 'output',
+            content: `Task processed: ${data.payload.task.content}`,
+            timestamp: Date.now()
+          });
+        }
+      },
+
+      handleConceptUpdate: (data) => {
+        if (data.payload?.concept) {
+          updateHistory({
+            type: 'concept',
+            content: `Concept updated: ${data.payload.concept.term}`,
+            timestamp: Date.now()
+          });
+        }
+      },
+
+      handleNarseseResponse: (data) => {
+        if (data.type === 'narseseInput') {
+          updateHistory({
+            type: 'response',
+            content: data.payload.message || `Processed: ${data.payload.input}`,
+            timestamp: Date.now()
+          });
+        }
+      }
+    };
+  };
+
+  // Register and unregister WebSocket message listeners
   useEffect(() => {
-    if (!wsService) {
-      return; // Exit early if wsService is not available yet
-    }
+    if (!wsService || !wsService.addListener) return;
 
-    const handleTaskUpdate = (data) => {
-      if (data.payload?.task) {
-        setHistoryRef.current(prev => [...prev, {
-          type: 'output',
-          content: `Task processed: ${data.payload.task.content}`,
-          timestamp: Date.now()
-        }]);
-      }
-    };
+    const { handleTaskUpdate, handleConceptUpdate, handleNarseseResponse } = createMessageHandlers();
 
-    const handleConceptUpdate = (data) => {
-      if (data.payload?.concept) {
-        setHistoryRef.current(prev => [...prev, {
-          type: 'concept',
-          content: `Concept updated: ${data.payload.concept.term}`,
-          timestamp: Date.now()
-        }]);
-      }
-    };
+    // Register all event listeners
+    const subscriptions = [
+      wsService.addListener('taskUpdate', handleTaskUpdate),
+      wsService.addListener('conceptUpdate', handleConceptUpdate),
+      wsService.addListener('narseseInput', handleNarseseResponse)
+    ].filter(Boolean); // Filter out null/undefined subscriptions
 
-    const handleNarseseResponse = (data) => {
-      if (data.type === 'narseseInput') {
-        setHistoryRef.current(prev => [...prev, {
-          type: 'response',
-          content: data.payload.message || `Processed: ${data.payload.input}`,
-          timestamp: Date.now()
-        }]);
-      }
-    };
-
-    // Register listeners using wsService.addListener if available
-    const taskUnsubscribe = wsService.addListener ? wsService.addListener('taskUpdate', handleTaskUpdate) : null;
-    const conceptUnsubscribe = wsService.addListener ? wsService.addListener('conceptUpdate', handleConceptUpdate) : null;
-    const narseseUnsubscribe = wsService.addListener ? wsService.addListener('narseseInput', handleNarseseResponse) : null;
-
-    // Clean up handlers on unmount
+    // Clean up all listeners on unmount
     return () => {
-      if (taskUnsubscribe) taskUnsubscribe();
-      if (conceptUnsubscribe) conceptUnsubscribe();
-      if (narseseUnsubscribe) narseseUnsubscribe();
+      subscriptions.forEach(unsubscribe => unsubscribe?.());
     };
   }, [wsService]);
 
   const handleSubmit = async (inputValue) => {
-    if (!inputValue.trim()) return;
+    const trimmedInput = inputValue.trim();
+    if (!trimmedInput) return;
 
-    // Add to command history
-    if (!commandHistory.includes(inputValue)) {
-      setCommandHistory(prev => [inputValue, ...prev.slice(0, 19)]); // Keep last 20 commands
-    }
+    // Update command history with new input (avoid duplicates)
+    setCommandHistory(prev =>
+      prev.includes(trimmedInput)
+        ? prev
+        : [trimmedInput, ...prev.slice(0, 19)] // Keep last 20 commands
+    );
     setHistoryIndex(-1); // Reset history index
 
     // Add input to history
-    const newHistory = [...history, {
-      type: 'input',
-      content: inputValue,
-      timestamp: Date.now()
-    }];
-    setHistory(newHistory);
+    const inputEntry = { type: 'input', content: trimmedInput, timestamp: Date.now() };
+    setHistory(prev => [...prev, inputEntry]);
 
     try {
       setLoading(true);
-      setError(null);
 
-      // Send message via WebSocket
       if (wsConnected) {
         await sendMessage({
           type: 'narseseInput',
-          payload: { input: inputValue }
+          payload: { input: trimmedInput }
         });
       } else {
-        // Add error message if not connected
-        setHistory(prev => [...prev, {
+        // Handle disconnected state
+        const errorEntry = {
           type: 'error',
           content: 'Not connected to backend - try running: npm run web',
           timestamp: Date.now()
-        }]);
+        };
+        setHistory(prev => [...prev, errorEntry]);
         addNotification({
           type: 'error',
           title: 'Not Connected',
@@ -210,11 +215,12 @@ const ReplConsolePanel = () => {
       }
     } catch (err) {
       setError(err);
-      setHistory(prev => [...prev, {
+      const errorEntry = {
         type: 'error',
         content: `Error: ${err.message}`,
         timestamp: Date.now()
-      }]);
+      };
+      setHistory(prev => [...prev, errorEntry]);
       addNotification({
         type: 'error',
         title: 'Command Failed',
@@ -228,22 +234,22 @@ const ReplConsolePanel = () => {
     }
   };
 
-  // Validation function for Narsese input
+  // Narsese input validation with helpful feedback
   const validateNarsese = (input) => {
-    if (!input.trim()) {
+    const trimmed = input.trim();
+
+    if (!trimmed) {
       return { isValid: false, message: 'Input cannot be empty' };
     }
 
-    // Simple validation for common Narsese patterns
-    const narsesePattern = /^[\w\s<>=\-()&]+[.!?]$/;
-    if (!narsesePattern.test(input.trim())) {
-      return {
-        isValid: false,
-        message: 'Input should follow Narsese format (e.g., <subject --> predicate>.)'
-      };
-    }
+    const isValidSyntax = /^[\w\s<>=\-()&]+[.!?]$/.test(trimmed);
 
-    return { isValid: true, message: 'Valid Narsese syntax' };
+    return {
+      isValid: isValidSyntax,
+      message: isValidSyntax
+        ? 'Valid Narsese syntax'
+        : 'Input should follow Narsese format (e.g., <subject --> predicate>.)'
+    };
   };
 
   return React.createElement('div', {

@@ -1,5 +1,9 @@
 /**
- * Constants export file
+ * Constants Registry: Centralized Export for Shared Constants
+ *
+ * This module provides a consolidated access point for all shared constants
+ * used across the UI system, maintaining consistency and organization.
+ *
  * Following AGENTS.md: Organized, Consolidated, Modular
  */
 
