@@ -248,22 +248,20 @@ describe('UI Store - Direct Integration Tests', () => {
     });
 
     test('should provide selector functions', () => {
-        const state = useUiStore.getState();
-
-        // Test websocket selector
-        const wsState = state.selectors.getWebSocketState(state);
+        // Test websocket selector - selectors should work and return expected values
+        const wsState = useUiStore.selectors.getWebSocketState();
         expect(wsState).toBeDefined();
         expect(wsState.wsConnected).toBe(false);
         expect(wsState.wsService).toBeNull();
 
         // Test layout selector
-        const layoutState = state.selectors.getLayoutState(state);
+        const layoutState = useUiStore.selectors.getLayoutState();
         expect(layoutState).toBeDefined();
         expect(layoutState.layout).toBeNull;
         expect(layoutState.savedLayouts).toEqual({});
 
         // Test UI status selector
-        const uiStatus = state.selectors.getUiStatus(state);
+        const uiStatus = useUiStore.selectors.getUiStatus();
         expect(uiStatus).toBeDefined();
         expect(uiStatus.error).toBeNull();
         expect(uiStatus.isLoading).toBe(false);

@@ -1,7 +1,10 @@
 import { themeUtils } from '../utils/themeUtils.js';
 
-// Application configurations for the launcher panel
-const APPLICATION_DEFINITIONS = Object.freeze([
+/**
+ * Application configurations for the launcher panel
+ * Following AGENTS.md: Organized, Consolidated, Consistent
+ */
+export const UI_APPS = Object.freeze([
   {
     id: 'ide',
     name: 'Cognitive IDE',
@@ -59,5 +62,3 @@ const APPLICATION_DEFINITIONS = Object.freeze([
     path: '/' // This is now the main interface
   }
 ]);
-
-export const UI_APPS = APPLICATION_DEFINITIONS;

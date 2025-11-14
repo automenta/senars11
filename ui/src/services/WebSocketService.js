@@ -1,39 +1,41 @@
 /**
  * Enhanced WebSocket Service with proper connection lifecycle management
  * Provides resilient WebSocket communication following the pattern defined in PLAN.ui.md
- * 
+ *
  * Key improvements:
  * - Better connection state management
  * - Improved error handling
  * - Proper request-response pattern
  * - Enhanced message routing
+ * - Performance optimizations
  */
-import {validateMessage} from '../schemas/messages';
-import {getStore} from './messageHandlers';
-import {createMessageProcessor, messageProcessorUtils} from './messageProcessor';
-import {ConnectionState, DEFAULT_OPTIONS} from './wsConstants';
-import {createHandlerRegistry} from './handlerRegistry';
+import { validateMessage } from '../schemas/messages';
+import { getStore } from './messageHandlers';
+import { createMessageProcessor, messageProcessorUtils } from './messageProcessor';
+import { ConnectionState, DEFAULT_OPTIONS } from './wsConstants';
+import { createHandlerRegistry } from './handlerRegistry';
+import { debounce } from '../utils/performance.js';
 
 // WebSocket message routing configuration
-const MESSAGE_HANDLERS = {
-  demoControl: (wsService, data) => wsService.isTestEnvironment && wsService.handleDemoControl({type: data.type, payload: data.payload}),
-  systemCommand: (wsService, data) => wsService.handleSystemCommand({type: data.type, payload: data.payload}),
-  panelCommand: (wsService, data) => wsService.handlePanelCommand({type: data.type, payload: data.payload})
-};
+const MESSAGE_HANDLERS = Object.freeze({
+  demoControl: (wsService, data) => wsService.isTestEnvironment && wsService.handleDemoControl({ type: data.type, payload: data.payload }),
+  systemCommand: (wsService, data) => wsService.handleSystemCommand({ type: data.type, payload: data.payload }),
+  panelCommand: (wsService, data) => wsService.handlePanelCommand({ type: data.type, payload: data.payload })
+});
 
 // Demo content configuration
-const DEMO_CONFIG = {
+const DEMO_CONFIG = Object.freeze({
   demoList: [
-    {id: 'basic-reasoning', name: 'Basic Reasoning Demo', description: 'A simple reasoning demonstration'},
-    {id: 'syllogistic', name: 'Syllogistic Reasoning', description: 'Classic syllogistic inference patterns'},
-    {id: 'complex-inference', name: 'Complex Inference', description: 'Advanced inference chaining'}
+    { id: 'basic-reasoning', name: 'Basic Reasoning Demo', description: 'A simple reasoning demonstration' },
+    { id: 'syllogistic', name: 'Syllogistic Reasoning', description: 'Classic syllogistic inference patterns' },
+    { id: 'complex-inference', name: 'Complex Inference', description: 'Advanced inference chaining' }
   ],
   contentElements: {
     subjects: ['cat', 'dog', 'bird', 'fish', 'horse', 'rabbit'],
     predicates: ['animal', 'pet', 'mammal', 'water', 'farm'],
     punctuation: ['.', '?', '!']
   }
-};
+});
 
 class WebSocketService {
   constructor(url, options = {}) {
@@ -101,6 +103,9 @@ class WebSocketService {
       reasoningSteps: [],
       systemMetrics: null
     };
+
+    // Debounced message processor to prevent excessive UI updates
+    this.debouncedRouteMessage = debounce(this.routeMessage.bind(this), 50);
   }
 
   /**
@@ -159,16 +164,16 @@ class WebSocketService {
       }
       this.ws = null;
     }
-    
+
     // Clean up pending requests
     this.pendingRequests.forEach((rejectFn) => {
       rejectFn(new Error('WebSocket disconnected'));
     });
     this.pendingRequests.clear();
-    
+
     this.state = ConnectionState.DISCONNECTED;
     this.clearHeartbeat();
-    
+
     // Update store connection status
     getStore().setWsConnected(false);
   }
@@ -190,16 +195,16 @@ class WebSocketService {
     const now = Date.now();
 
     this.fallbackDataStore.tasks = [
-      {id: 'fallback_task_1', content: '<fallback --> data>.', priority: 0.5, creationTime: now, type: 'belief'},
-      {id: 'fallback_task_2', content: '<sample --> input>?', priority: 0.7, creationTime: now + 100, type: 'question'}
+      { id: 'fallback_task_1', content: '<fallback --> data>.', priority: 0.5, creationTime: now, type: 'belief' },
+      { id: 'fallback_task_2', content: '<sample --> input>?', priority: 0.7, creationTime: now + 100, type: 'question' }
     ];
 
     this.fallbackDataStore.concepts = [
-      {term: 'sample_concept', priority: 0.6, taskCount: 2, beliefCount: 1, questionCount: 0, lastAccess: now}
+      { term: 'sample_concept', priority: 0.6, taskCount: 2, beliefCount: 1, questionCount: 0, lastAccess: now }
     ];
 
     this.fallbackDataStore.beliefs = [
-      {id: 'fallback_belief_1', term: '<fallback --> belief>.', priority: 0.8, creationTime: now, type: 'belief', truth: {frequency: 0.9, confidence: 0.8}}
+      { id: 'fallback_belief_1', term: '<fallback --> belief>.', priority: 0.8, creationTime: now, type: 'belief', truth: { frequency: 0.9, confidence: 0.8 } }
     ];
 
     // Notify store that we're using fallback data
@@ -284,7 +289,7 @@ class WebSocketService {
 
     this.heartbeatInterval = setInterval(() => {
       if (this.state === ConnectionState.CONNECTED && this.ws?.readyState === WebSocket.OPEN) {
-        this.sendMessage({type: 'ping', timestamp: Date.now()});
+        this.sendMessage({ type: 'ping', timestamp: Date.now() });
 
         this.heartbeatTimeout = setTimeout(() => {
           console.warn('Heartbeat timeout - connection may be lost');
@@ -361,7 +366,7 @@ class WebSocketService {
       } else {
         this.routeMessage(message);
       }
-      return Promise.resolve({success: true});
+      return Promise.resolve({ success: true });
     }
 
     if (this.state === ConnectionState.CONNECTED && this.ws?.readyState === WebSocket.OPEN) {
@@ -373,7 +378,7 @@ class WebSocketService {
         // Create promise to handle response
         const responsePromise = new Promise((resolve, reject) => {
           // Store the resolve/reject functions for later use
-          this.pendingRequests.set(requestId, {resolve, reject});
+          this.pendingRequests.set(requestId, { resolve, reject });
 
           // Set up timeout for the request
           setTimeout(() => {
@@ -421,7 +426,7 @@ class WebSocketService {
 
       // Process message through fallback if we're disconnected
       this._processMessageWithFallback(message);
-      
+
       if (message.expectResponse) {
         return Promise.reject(new Error('WebSocket not connected'));
       }
@@ -479,7 +484,7 @@ class WebSocketService {
   }
 
   async routeMessage(data) {
-    const {type} = data || {};
+    const { type } = data || {};
 
     if (!type) {
       console.warn('Received message without type:', data);
@@ -497,7 +502,7 @@ class WebSocketService {
     if (handler) return handler(this, data);
 
     try {
-      const result = await this.messageProcessor.process(data, {wsService: this});
+      const result = await this.messageProcessor.process(data, { wsService: this });
 
       if (result.success) {
         const processedData = result.data;
@@ -510,8 +515,8 @@ class WebSocketService {
           // Check for any pending listeners waiting for this message type
           this._notifyListeners(processedData);
 
-          if (this.isTestEnvironment && processedData.type === 'narseseInput') {
-            return this.handleNarseseInput({type: processedData.type, payload: processedData.payload});
+          if (this.isTestEnvironment && processedData.type === 'narseseInput) {
+            return this.handleNarseseInput({ type: processedData.type, payload: processedData.payload });
           }
           if (Math.random() < 0.1) {
             console.debug('Unknown message type:', processedData.type, processedData);
@@ -639,7 +644,7 @@ class WebSocketService {
   }
 
   simulateTestData() {
-    this.routeMessage({type: 'demoList', payload: DEMO_CONFIG.demoList});
+    this.routeMessage({ type: 'demoList', payload: DEMO_CONFIG.demoList });
 
     setTimeout(() => {
       this.routeMessage({
@@ -649,7 +654,7 @@ class WebSocketService {
             term: 'cat',
             priority: 0.8,
             occurrenceTime: Date.now(),
-            truth: {frequency: 0.9, confidence: 0.9}
+            truth: { frequency: 0.9, confidence: 0.9 }
           },
           changeType: 'added'
         }
@@ -662,7 +667,7 @@ class WebSocketService {
             term: 'animal',
             priority: 0.7,
             occurrenceTime: Date.now(),
-            truth: {frequency: 0.8, confidence: 0.85}
+            truth: { frequency: 0.8, confidence: 0.85 }
           },
           changeType: 'added'
         }
@@ -725,13 +730,13 @@ class WebSocketService {
     }, 1500);
   }
 
-  handleDemoControl({payload: {command, demoId}}) {
+  handleDemoControl({ payload: { command, demoId } }) {
     console.debug(`Handling demo control: ${command} for demo ${demoId}`);
 
     const sendDemoState = (status, progress, currentStep) =>
       this.routeMessage({
         type: 'demoState',
-        payload: {demoId, status, progress, currentStep}
+        payload: { demoId, status, progress, currentStep }
       });
 
     const sendConceptUpdate = (term, priority, taskCount = 0, beliefCount = 0, questionCount = 0) =>
@@ -772,110 +777,110 @@ class WebSocketService {
     const generateRandomTaskType = () => getRandomElement(['belief', 'question', 'goal']);
 
     switch (command) {
-    case 'start':
-      setTimeout(() => sendDemoState('running', 0, 'Initializing'), 100);
+      case 'start':
+        setTimeout(() => sendDemoState('running', 0, 'Initializing'), 100);
 
-      setTimeout(() => {
-        sendConceptUpdate(`concept_${demoId}_A`, 0.85, 3, 2, 1);
-        sendConceptUpdate(`concept_${demoId}_B`, 0.72, 2, 1, 0);
-        sendConceptUpdate(`concept_${demoId}_C`, 0.91, 4, 3, 2);
-      }, 150);
+        setTimeout(() => {
+          sendConceptUpdate(`concept_${demoId}_A`, 0.85, 3, 2, 1);
+          sendConceptUpdate(`concept_${demoId}_B`, 0.72, 2, 1, 0);
+          sendConceptUpdate(`concept_${demoId}_C`, 0.91, 4, 3, 2);
+        }, 150);
 
-      setTimeout(() => {
-        const task1Type = generateRandomTaskType();
-        const task2Type = generateRandomTaskType();
+        setTimeout(() => {
+          const task1Type = generateRandomTaskType();
+          const task2Type = generateRandomTaskType();
 
-        sendTaskUpdate(
-          `task_${demoId}_1`,
-          generateRandomContent(),
-          0.78,
-          task1Type
-        );
+          sendTaskUpdate(
+            `task_${demoId}_1`,
+            generateRandomContent(),
+            0.78,
+            task1Type
+          );
 
-        // Also send belief or goal updates to separate collections
-        if (task1Type === 'belief') {
-          this.routeMessage({
-            type: 'beliefUpdate',
-            payload: {
-              id: `task_${demoId}_1`,
-              term: generateRandomContent(),
-              priority: 0.78,
-              creationTime: Date.now(),
-              type: task1Type,
-              truth: {frequency: Math.random(), confidence: Math.random()}
-            }
-          });
-        } else if (task1Type === 'goal') {
-          this.routeMessage({
-            type: 'goalUpdate',
-            payload: {
-              id: `task_${demoId}_1`,
-              term: generateRandomContent(),
-              priority: 0.78,
-              creationTime: Date.now(),
-              type: task1Type,
-              truth: {desire: Math.random(), confidence: Math.random()}
-            }
-          });
-        }
+          // Also send belief or goal updates to separate collections
+          if (task1Type === 'belief') {
+            this.routeMessage({
+              type: 'beliefUpdate',
+              payload: {
+                id: `task_${demoId}_1`,
+                term: generateRandomContent(),
+                priority: 0.78,
+                creationTime: Date.now(),
+                type: task1Type,
+                truth: { frequency: Math.random(), confidence: Math.random() }
+              }
+            });
+          } else if (task1Type === 'goal') {
+            this.routeMessage({
+              type: 'goalUpdate',
+              payload: {
+                id: `task_${demoId}_1`,
+                term: generateRandomContent(),
+                priority: 0.78,
+                creationTime: Date.now(),
+                type: task1Type,
+                truth: { desire: Math.random(), confidence: Math.random() }
+              }
+            });
+          }
 
-        sendTaskUpdate(
-          `task_${demoId}_2`,
-          generateRandomContent(),
-          0.65,
-          task2Type
-        );
+          sendTaskUpdate(
+            `task_${demoId}_2`,
+            generateRandomContent(),
+            0.65,
+            task2Type
+          );
 
-        // Also send belief or goal updates to separate collections
-        if (task2Type === 'belief') {
-          this.routeMessage({
-            type: 'beliefUpdate',
-            payload: {
-              id: `task_${demoId}_2`,
-              term: generateRandomContent(),
-              priority: 0.65,
-              creationTime: Date.now(),
-              type: task2Type,
-              truth: {frequency: Math.random(), confidence: Math.random()}
-            }
-          });
-        } else if (task2Type === 'goal') {
-          this.routeMessage({
-            type: 'goalUpdate',
-            payload: {
-              id: `task_${demoId}_2`,
-              term: generateRandomContent(),
-              priority: 0.65,
-              creationTime: Date.now(),
-              type: task2Type,
-              truth: {desire: Math.random(), confidence: Math.random()}
-            }
-          });
-        }
-      }, 250);
+          // Also send belief or goal updates to separate collections
+          if (task2Type === 'belief') {
+            this.routeMessage({
+              type: 'beliefUpdate',
+              payload: {
+                id: `task_${demoId}_2`,
+                term: generateRandomContent(),
+                priority: 0.65,
+                creationTime: Date.now(),
+                type: task2Type,
+                truth: { frequency: Math.random(), confidence: Math.random() }
+              }
+            });
+          } else if (task2Type === 'goal') {
+            this.routeMessage({
+              type: 'goalUpdate',
+              payload: {
+                id: `task_${demoId}_2`,
+                term: generateRandomContent(),
+                priority: 0.65,
+                creationTime: Date.now(),
+                type: task2Type,
+                truth: { desire: Math.random(), confidence: Math.random() }
+              }
+            });
+          }
+        }, 250);
 
-      setTimeout(() => sendDemoState('running', 25, 'Processing input'), 300);
-      setTimeout(() => sendConceptUpdate(`derived_${demoId}_X`, 0.68, 1, 1, 0), 400);
-      setTimeout(() => sendDemoState('running', 50, 'Running inference'), 600);
-      setTimeout(() => sendDemoState('running', 75, 'Generating output'), 900);
-      setTimeout(() => sendDemoState('completed', 100, 'Completed'), 1200);
-      break;
+        setTimeout(() => sendDemoState('running', 25, 'Processing input'), 300);
+        setTimeout(() => sendConceptUpdate(`derived_${demoId}_X`, 0.68, 1, 1, 0), 400);
+        setTimeout(() => sendDemoState('running', 50, 'Running inference'), 600);
+        setTimeout(() => sendDemoState('running', 75, 'Generating output'), 900);
+        setTimeout(() => sendDemoState('completed', 100, 'Completed'), 1200);
+        break;
 
-    case 'stop':
-      sendDemoState('stopped', 0, '');
-      break;
+      case 'stop':
+        sendDemoState('stopped', 0, '');
+        break;
 
-    case 'pause':
-      sendDemoState('paused', payload.progress || 50, '');
-      break;
+      case 'pause':
+        sendDemoState('paused', payload.progress || 50, '');
+        break;
 
-    case 'resume':
-      sendDemoState('running', payload.progress || 50, '');
-      break;
+      case 'resume':
+        sendDemoState('running', payload.progress || 50, '');
+        break;
     }
   }
 
-  handleNarseseInput({payload: {input}}) {
+  handleNarseseInput({ payload: { input } }) {
     console.debug(`Handling narsese input: ${input}`);
 
     setTimeout(() => {
@@ -912,7 +917,7 @@ class WebSocketService {
             priority: Math.random(),
             creationTime: Date.now(),
             type: taskType,
-            truth: {frequency: Math.random(), confidence: Math.random()}
+            truth: { frequency: Math.random(), confidence: Math.random() }
           }
         });
       } else if (taskType === 'goal') {
@@ -924,7 +929,7 @@ class WebSocketService {
             priority: Math.random(),
             creationTime: Date.now(),
             type: taskType,
-            truth: {desire: Math.random(), confidence: Math.random()}
+            truth: { desire: Math.random(), confidence: Math.random() }
           }
         });
       }
@@ -932,7 +937,7 @@ class WebSocketService {
   }
 
   handleSystemCommand(data) {
-    const {command, targetPanels} = data.payload;
+    const { command, targetPanels } = data.payload;
     console.debug(`Handling system command: ${command}`, targetPanels);
 
     if (command !== 'ensurePanelActivity' && command !== 'generateInitialData') return;
@@ -954,11 +959,11 @@ class WebSocketService {
     sendSampleData(
       'concepts',
       () => [
-        {term: 'sample_concept_1', priority: 0.8, taskCount: 2, beliefCount: 1, questionCount: 0},
-        {term: 'sample_concept_2', priority: 0.65, taskCount: 1, beliefCount: 0, questionCount: 1},
-        {term: 'sample_concept_3', priority: 0.92, taskCount: 3, beliefCount: 2, questionCount: 1}
+        { term: 'sample_concept_1', priority: 0.8, taskCount: 2, beliefCount: 1, questionCount: 0 },
+        { term: 'sample_concept_2', priority: 0.65, taskCount: 1, beliefCount: 0, questionCount: 1 },
+        { term: 'sample_concept_3', priority: 0.92, taskCount: 3, beliefCount: 2, questionCount: 1 }
       ],
-      ({term, priority, taskCount, beliefCount, questionCount}) => ({
+      ({ term, priority, taskCount, beliefCount, questionCount }) => ({
         type: 'conceptUpdate',
         payload: {
           concept: {
@@ -979,13 +984,13 @@ class WebSocketService {
     sendSampleData(
       'tasks',
       () => [
-        {id: `task_${now}_sample1`, content: '<sample --> task>.', priority: 0.75, type: 'belief'},
-        {id: `task_${now}_sample2', content: '<another --> example>?', priority: 0.62, type: 'question'}
+        { id: `task_${now}_sample1`, content: '<sample --> task>.', priority: 0.75, type: 'belief' },
+        { id: `task_${now}_sample2`, content: '<another --> example>?', priority: 0.62, type: 'question' }
       ],
-      ({id, content, priority, type}) => ({
+      ({ id, content, priority, type }) => ({
         type: 'taskUpdate',
         payload: {
-          task: {id, content, priority, creationTime: now, type},
+          task: { id, content, priority, creationTime: now, type },
           changeType: 'input'
         }
       })
@@ -1000,19 +1005,19 @@ class WebSocketService {
           term: '<cat --> animal>.',
           priority: 0.9,
           type: 'belief',
-          truth: {frequency: 0.9, confidence: 0.8}
+          truth: { frequency: 0.9, confidence: 0.8 }
         },
         {
           id: `belief_${now}_sample2`,
           term: '<dog --> mammal>.',
           priority: 0.85,
           type: 'belief',
-          truth: {frequency: 0.85, confidence: 0.75}
+          truth: { frequency: 0.85, confidence: 0.75 }
         }
       ],
-      ({id, term, priority, type, truth}) => ({
+      ({ id, term, priority, type, truth }) => ({
         type: 'beliefUpdate',
-        payload: {id, term, priority, creationTime: now, type, truth}
+        payload: { id, term, priority, creationTime: now, type, truth }
       })
     );
 
@@ -1025,62 +1030,62 @@ class WebSocketService {
           term: '<find_solution --> desirable>!',
           priority: 0.95,
           type: 'goal',
-          truth: {desire: 0.9, confidence: 0.85}
+          truth: { desire: 0.9, confidence: 0.85 }
         },
         {
           id: `goal_${now}_sample2`,
           term: '<achieve_target --> intended>!',
           priority: 0.8,
           type: 'goal',
-          truth: {desire: 0.8, confidence: 0.7}
+          truth: { desire: 0.8, confidence: 0.7 }
         }
       ],
-      ({id, term, priority, type, truth}) => ({
+      ({ id, term, priority, type, truth }) => ({
         type: 'goalUpdate',
-        payload: {id, term, priority, creationTime: now, type, truth}
+        payload: { id, term, priority, creationTime: now, type, truth }
       })
     );
   }
 
   handlePanelCommand(data) {
-    const {command, panel, panels, duration, demoId} = data.payload;
-    console.debug(`Handling panel command: ${command}`, {panel, panels, duration});
+    const { command, panel, panels, duration, demoId } = data.payload;
+    console.debug(`Handling panel command: ${command}`, { panel, panels, duration });
 
     if (command === 'activateVisualization' && panels) {
       panels.forEach(panelName => {
         switch (panelName) {
-        case 'ConceptPanel':
-          this.routeMessage({
-            type: 'conceptUpdate',
-            payload: {
-              concept: {
-                term: `demo_${demoId}_${Date.now()}`,
-                priority: Math.random(),
-                occurrenceTime: Date.now(),
-                taskCount: Math.floor(Math.random() * 3),
-                beliefCount: Math.floor(Math.random() * 2),
-                questionCount: Math.floor(Math.random() * 2),
-                lastAccess: Date.now()
-              },
-              changeType: 'added'
-            }
-          });
-          break;
-        case 'TaskPanel':
-          this.routeMessage({
-            type: 'taskUpdate',
-            payload: {
-              task: {
-                id: `demo_task_${demoId}_${Date.now()}`,
-                content: `<demo_${demoId} --> example>.`,
-                priority: Math.random(),
-                creationTime: Date.now(),
-                type: ['belief', 'question', 'goal'][Math.floor(Math.random() * 3)]
-              },
-              changeType: 'input'
-            }
-          });
-          break;
+          case 'ConceptPanel':
+            this.routeMessage({
+              type: 'conceptUpdate',
+              payload: {
+                concept: {
+                  term: `demo_${demoId}_${Date.now()}`,
+                  priority: Math.random(),
+                  occurrenceTime: Date.now(),
+                  taskCount: Math.floor(Math.random() * 3),
+                  beliefCount: Math.floor(Math.random() * 2),
+                  questionCount: Math.floor(Math.random() * 2),
+                  lastAccess: Date.now()
+                },
+                changeType: 'added'
+              }
+            });
+            break;
+          case 'TaskPanel':
+            this.routeMessage({
+              type: 'taskUpdate',
+              payload: {
+                task: {
+                  id: `demo_task_${demoId}_${Date.now()}`,
+                  content: `<demo_${demoId} --> example>.`,
+                  priority: Math.random(),
+                  creationTime: Date.now(),
+                  type: ['belief', 'question', 'goal'][Math.floor(Math.random() * 3)]
+                },
+                changeType: 'input'
+              }
+            });
+            break;
         }
       });
     } else if (command === 'highlight' && panel) {

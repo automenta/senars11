@@ -1,6 +1,11 @@
 import { create } from 'zustand';
 import { batchUpdate, createCollectionManager, createObjectManager } from '../utils/CollectionManager.js';
 
+/**
+ * Zustand store for UI state management
+ * Following AGENTS.md: Elegant, Consolidated, Consistent, Organized, DRY
+ */
+
 // Predefined collection managers - consolidated for efficiency
 const COLLECTION_MANAGERS = Object.freeze({
   reasoningSteps: createCollectionManager('reasoningSteps'),
@@ -51,38 +56,51 @@ const INITIAL_STATE = Object.freeze({
 // Create optimized selectors
 const createSelectors = (useStore) => {
   return Object.freeze({
-    getWebSocketState: () => useStore(state => ({ wsConnected: state.wsConnected, wsService: state.wsService })),
-    getLayoutState: () => useStore(state => ({ layout: state.layout, savedLayouts: state.savedLayouts })),
-    getUiStatus: () => useStore(state => ({ error: state.error, isLoading: state.isLoading, theme: state.theme })),
-    getNotificationState: () => useStore(state => ({ notifications: state.notifications })),
-    getDemoState: () => useStore(state => ({ demos: state.demos, demoStates: state.demoStates, demoSteps: state.demoSteps })),
-    getTasks: () => useStore(state => state.tasks),
-    getConcepts: () => useStore(state => state.concepts),
-    getBeliefs: () => useStore(state => state.beliefs),
-    getGoals: () => useStore(state => state.goals),
-    getReasoningSteps: () => useStore(state => state.reasoningSteps),
-    getCycles: () => useStore(state => state.cycles),
-    getCycleCount: () => useStore(state => state.cycles.length),
-    getActiveSession: () => useStore(state => state.activeSession),
-    getTheme: () => useStore(state => state.theme),
-    getError: () => useStore(state => state.error),
-    isLoading: () => useStore(state => state.isLoading),
-    getWsConnected: () => useStore(state => state.wsConnected),
-    getWsService: () => useStore(state => state.wsService),
-    getNotifications: () => useStore(state => state.notifications),
-    getDemos: () => useStore(state => state.demos),
-    getDemoState: () => useStore(state => state.demoStates),
-    getDemoSteps: () => useStore(state => state.demoSteps),
-    getSystemMetrics: () => useStore(state => state.systemMetrics),
-    getNar: () => useStore(state => state.nar),
-    getReasoningState: () => useStore(state => state.reasoningState),
-    getMetaCognitiveResults: () => useStore(state => state.metaCognitiveResults),
-    getCorrections: () => useStore(state => state.corrections),
-    getLMTestResult: () => useStore(state => state.lmTestResult)
+    // Connection state selectors
+    getWebSocketState: () => ({ wsConnected: useStore.getState().wsConnected, wsService: useStore.getState().wsService }),
+
+    // Layout state selectors
+    getLayoutState: () => ({ layout: useStore.getState().layout, savedLayouts: useStore.getState().savedLayouts }),
+
+    // UI status selectors
+    getUiStatus: () => ({ error: useStore.getState().error, isLoading: useStore.getState().isLoading, theme: useStore.getState().theme }),
+
+    // Notification selectors
+    getNotificationState: () => ({ notifications: useStore.getState().notifications }),
+
+    // Demo state selectors
+    getDemoState: () => ({ demos: useStore.getState().demos, demoStates: useStore.getState().demoStates, demoSteps: useStore.getState().demoSteps }),
+
+    // Data collection selectors
+    getTasks: () => useStore.getState().tasks,
+    getConcepts: () => useStore.getState().concepts,
+    getBeliefs: () => useStore.getState().beliefs,
+    getGoals: () => useStore.getState().goals,
+    getReasoningSteps: () => useStore.getState().reasoningSteps,
+    getCycles: () => useStore.getState().cycles,
+    getCycleCount: () => useStore.getState().cycles.length,
+
+    // System state selectors
+    getActiveSession: () => useStore.getState().activeSession,
+    getTheme: () => useStore.getState().theme,
+    getError: () => useStore.getState().error,
+    isLoading: () => useStore.getState().isLoading,
+    getWsConnected: () => useStore.getState().wsConnected,
+    getWsService: () => useStore.getState().wsService,
+    getNotifications: () => useStore.getState().notifications,
+    getDemos: () => useStore.getState().demos,
+    getDemoState: () => useStore.getState().demoStates,
+    getDemoSteps: () => useStore.getState().demoSteps,
+    getSystemMetrics: () => useStore.getState().systemMetrics,
+    getNar: () => useStore.getState().nar,
+    getReasoningState: () => useStore.getState().reasoningState,
+    getMetaCognitiveResults: () => useStore.getState().metaCognitiveResults,
+    getCorrections: () => useStore.getState().corrections,
+    getLMTestResult: () => useStore.getState().lmTestResult
   });
 };
 
-// Store action creators for better organization
+// Create action creators organized by domain
 const createActions = (set, get) => {
   // Utility function to create simple state setters
   const createSimpleSetter = (key) => (value) => set({ [key]: value });
@@ -91,7 +109,7 @@ const createActions = (set, get) => {
     // Initial state
     ...INITIAL_STATE,
 
-    // WebSocket state management
+    // WebSocket and connection management
     setWsConnected: createSimpleSetter('wsConnected'),
     setWsService: createSimpleSetter('wsService'),
 
@@ -111,25 +129,26 @@ const createActions = (set, get) => {
       panels: Object.fromEntries(Object.entries(state.panels).filter(([key]) => key !== id))
     })),
 
-    // Collection management with unified patterns
+    // Collection operations - using managers for consistency
     // Reasoning steps
     addReasoningStep: (step) => set(COLLECTION_MANAGERS.reasoningSteps.add(step, 'id')),
     updateReasoningStep: (id, updates) => set(COLLECTION_MANAGERS.reasoningSteps.update(id, 'id', updates)),
+    removeReasoningStep: (id) => set(COLLECTION_MANAGERS.reasoningSteps.remove(id, 'id')),
     clearReasoningSteps: () => set(COLLECTION_MANAGERS.reasoningSteps.clear()),
 
-    // Tasks
+    // Task operations
     addTask: (task) => set(COLLECTION_MANAGERS.tasks.add(task, 'id')),
     updateTask: (id, updates) => set(COLLECTION_MANAGERS.tasks.update(id, 'id', updates)),
     removeTask: (id) => set(COLLECTION_MANAGERS.tasks.remove(id, 'id')),
     clearTasks: () => set(COLLECTION_MANAGERS.tasks.clear()),
 
-    // Concepts
+    // Concept operations
     addConcept: (concept) => set(COLLECTION_MANAGERS.concepts.add(concept, 'term')),
     updateConcept: (term, updates) => set(COLLECTION_MANAGERS.concepts.update(term, 'term', updates)),
     removeConcept: (term) => set(COLLECTION_MANAGERS.concepts.remove(term, 'term')),
     clearConcepts: () => set(COLLECTION_MANAGERS.concepts.clear()),
 
-    // Beliefs
+    // Belief operations - direct array manipulation for performance
     addBelief: (belief) => set(state => ({ beliefs: [...state.beliefs, belief] })),
     updateBelief: (id, updates) => set(state => ({
       beliefs: state.beliefs.map(belief => belief.id === id ? { ...belief, ...updates } : belief)
@@ -139,7 +158,7 @@ const createActions = (set, get) => {
     })),
     clearBeliefs: createSimpleSetter('beliefs'),
 
-    // Goals
+    // Goal operations - direct array manipulation
     addGoal: (goal) => set(state => ({ goals: [...state.goals, goal] })),
     updateGoal: (id, updates) => set(state => ({
       goals: state.goals.map(goal => goal.id === id ? { ...goal, ...updates } : goal)
@@ -149,7 +168,7 @@ const createActions = (set, get) => {
     })),
     clearGoals: createSimpleSetter('goals'),
 
-    // Cycles
+    // Cycle operations - with size limit
     addCycle: (cycle) => set(COLLECTION_MANAGERS.cycles.addLimited(cycle, 50, 'id')),
     clearCycles: createSimpleSetter('cycles'),
 
@@ -157,7 +176,7 @@ const createActions = (set, get) => {
     setSystemMetrics: createSimpleSetter('systemMetrics'),
     clearSystemMetrics: createSimpleSetter('systemMetrics'),
 
-    // Demo management
+    // Demo management - using managers for consistent patterns
     setDemoList: createSimpleSetter('demos'),
     setDemoState: (key, value) => set(OBJECT_MANAGERS.demoStates.set(key, value)),
     setDemoStateDirect: (demoId, state) => set(prev => ({
@@ -182,14 +201,14 @@ const createActions = (set, get) => {
     setActiveSession: createSimpleSetter('activeSession'),
     endSession: () => set({ activeSession: null }),
 
-    // UI status
+    // UI status management
     setError: createSimpleSetter('error'),
     clearError: () => set({ error: null }),
     setLoading: createSimpleSetter('isLoading'),
     setTheme: createSimpleSetter('theme'),
     toggleTheme: () => set(state => ({ theme: state.theme === 'light' ? 'dark' : 'light' })),
 
-    // Notifications with optimized ID generation
+    // Notification management with optimized ID generation
     addNotification: (notification) => set(state => {
       const id = notification?.id ?? `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
       return { notifications: [...state.notifications, { ...notification, id }] };
@@ -201,7 +220,7 @@ const createActions = (set, get) => {
     // Configuration state
     setLMTestResult: createSimpleSetter('lmTestResult'),
 
-    // Utility methods
+    // Utility and batch operations
     batchUpdate: (updates) => batchUpdate(set, updates),
     resetStore: () => set(INITIAL_STATE)
   };

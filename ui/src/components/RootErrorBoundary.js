@@ -1,6 +1,7 @@
 /**
  * Enhanced Root Level Error Boundary
  * Provides comprehensive error handling for the entire application
+ * Following AGENTS.md: Elegant, Consolidated, Consistent, Organized, DRY
  */
 import React from 'react';
 import useUiStore from '../stores/uiStore.js';
@@ -15,7 +16,9 @@ class RootErrorBoundary extends React.Component {
       error: null,
       errorInfo: null,
       errorId: null,
-      showDetails: false
+      showDetails: false,
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+      windowLocation: typeof window !== 'undefined' ? window.location.href : ''
     };
   }
 
@@ -35,19 +38,43 @@ class RootErrorBoundary extends React.Component {
     });
 
     // Store error in global state with additional context
-    useUiStore.getState().setError({
+    const errorData = {
       id: errorId,
       message: error.message,
       name: error.name,
       stack: error.stack,
       componentStack: errorInfo.componentStack,
       timestamp: Date.now(),
-      component: this.props.componentName || 'RootApp'
-    });
+      component: this.props.componentName || 'RootApp',
+      userAgent: this.state.userAgent,
+      location: this.state.windowLocation
+    };
+
+    useUiStore.getState().setError(errorData);
 
     // Log error for debugging
     console.error('Root Error Boundary caught an error:', error, errorInfo);
+
+    // Report error to logging service if available
+    this.reportError(errorData);
   }
+
+  /**
+   * Report error to external logging service
+   */
+  reportError = (errorData) => {
+    // This could be integrated with a logging service like Sentry, LogRocket, etc.
+    // For now, we'll just log to console
+    console.group('Error Report');
+    console.log('Error ID:', errorData.id);
+    console.log('Error Name:', errorData.name);
+    console.log('Error Message:', errorData.message);
+    console.log('Component Stack:', errorData.componentStack);
+    console.log('Timestamp:', new Date(errorData.timestamp).toISOString());
+    console.log('User Agent:', errorData.userAgent);
+    console.log('Location:', errorData.location);
+    console.groupEnd();
+  };
 
   handleRetry = () => {
     // Reset the component state to retry rendering
@@ -61,16 +88,47 @@ class RootErrorBoundary extends React.Component {
 
     // Clear global error state
     useUiStore.getState().clearError();
-    
+
     // Force a re-render by updating the window location hash
-    window.location.hash = '#retry';
-    window.location.hash = '';
+    if (typeof window !== 'undefined') {
+      window.location.hash = '#retry';
+      window.location.hash = '';
+    }
+  };
+
+  handleReload = () => {
+    // Reload the entire page
+    if (typeof window !== 'undefined') {
+      window.location.reload();
+    }
   };
 
   toggleDetails = () => {
     this.setState(prevState => ({
       showDetails: !prevState.showDetails
     }));
+  };
+
+  copyErrorDetails = () => {
+    const errorDetails = `
+Error ID: ${this.state.errorId}
+Error Name: ${this.state.error?.name}
+Error Message: ${this.state.error?.message}
+Component Stack: ${this.state.errorInfo?.componentStack}
+Timestamp: ${new Date().toISOString()}
+User Agent: ${this.state.userAgent}
+Location: ${this.state.windowLocation}
+    `.trim();
+
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(errorDetails);
+      // Add a notification about the copy
+      useUiStore.getState().addNotification({
+        type: 'info',
+        title: 'Error details copied',
+        message: 'Copied error details to clipboard'
+      });
+    }
   };
 
   render() {
@@ -89,7 +147,8 @@ class RootErrorBoundary extends React.Component {
             position: 'fixed',
             top: 0,
             left: 0,
-            zIndex: 9999
+            zIndex: 9999,
+            overflow: 'auto'
           }
         },
         React.createElement(Card, {
@@ -98,7 +157,8 @@ class RootErrorBoundary extends React.Component {
             maxWidth: '800px',
             border: `2px solid ${themeUtils.get('COLORS.DANGER')}`,
             backgroundColor: themeUtils.get('COLORS.DANGER') + '10',
-            margin: 'auto'
+            margin: 'auto',
+            boxShadow: themeUtils.get('SHADOWS.LG')
           }
         },
         React.createElement('h2', {
@@ -124,9 +184,20 @@ class RootErrorBoundary extends React.Component {
             fontFamily: 'monospace',
             padding: themeUtils.get('SPACING.SM'),
             backgroundColor: themeUtils.get('BACKGROUNDS.TERTIARY'),
-            borderRadius: themeUtils.get('BORDERS.RADIUS.SM')
+            borderRadius: themeUtils.get('BORDERS.RADIUS.SM'),
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
           }
-        }, `Error ID: ${this.state.errorId}`),
+        },
+        React.createElement('span', null, `Error ID: ${this.state.errorId}`),
+        React.createElement(Button, {
+          onClick: this.copyErrorDetails,
+          variant: 'secondary',
+          size: 'sm',
+          style: { marginLeft: themeUtils.get('SPACING.SM') }
+        }, 'Copy Details')
+        ),
 
         this.state.error && React.createElement('div', {
           style: {
@@ -137,28 +208,34 @@ class RootErrorBoundary extends React.Component {
             border: `1px solid ${themeUtils.get('BORDERS.COLOR')}`
           }
         },
-        React.createElement('div', { style: { fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD') } }, 
+        React.createElement('div', { style: { fontWeight: themeUtils.get('FONTS.WEIGHT.BOLD') } },
           this.state.error.name || 'Error'
         ),
-        React.createElement('div', null, this.state.error.message)
+        React.createElement('div', { style: { wordBreak: 'break-word' } }, this.state.error.message)
         ),
 
-        React.createElement('div', { 
-          style: { 
-            display: 'flex', 
+        React.createElement('div', {
+          style: {
+            display: 'flex',
             gap: themeUtils.get('SPACING.SM'),
-            marginBottom: themeUtils.get('SPACING.MD') 
-          } 
+            marginBottom: themeUtils.get('SPACING.MD')
+          }
         },
         React.createElement(Button, {
-          onClick: this.handleRetry,
+          onClick: this.handleReload,
           variant: 'danger',
           style: { flex: 1 }
         }, 'Reload Application'),
 
         React.createElement(Button, {
-          onClick: this.toggleDetails,
+          onClick: this.handleRetry,
           variant: 'secondary',
+          style: { flex: 1 }
+        }, 'Retry'),
+
+        React.createElement(Button, {
+          onClick: this.toggleDetails,
+          variant: 'light',
           style: { flex: 1 }
         }, this.state.showDetails ? 'Hide Details' : 'Show Details')
         ),
@@ -187,7 +264,11 @@ class RootErrorBoundary extends React.Component {
             whiteSpace: 'pre-wrap',
             fontFamily: 'monospace',
             fontSize: themeUtils.get('FONTS.SIZE.XS'),
-            color: themeUtils.get('TEXT.MUTED')
+            color: themeUtils.get('TEXT.MUTED'),
+            padding: themeUtils.get('SPACING.SM'),
+            backgroundColor: themeUtils.get('BACKGROUNDS.SECONDARY'),
+            borderRadius: themeUtils.get('BORDERS.RADIUS.SM'),
+            overflow: 'auto'
           }
         }, this.state.errorInfo.componentStack)
         ),
