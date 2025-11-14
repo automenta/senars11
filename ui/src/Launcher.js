@@ -55,6 +55,14 @@ const UI_APPS = Object.freeze([
     icon: '🔍',
     color: themeUtils.get('COLORS.DANGER'),
     path: '/?layout=self-analysis'
+  },
+  {
+    id: 'merged',
+    name: 'Merged Interface',
+    description: 'Launcher and REPL in one view',
+    icon: '🌐',
+    color: themeUtils.get('COLORS.INFO'),
+    path: '/merged'
   }
 ]);
 

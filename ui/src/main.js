@@ -11,57 +11,55 @@ import RootErrorBoundary from './components/RootErrorBoundary.js';
 const getCurrentApp = () => {
   const path = window.location.pathname;
   const hash = window.location.hash;
+  const search = window.location.search;
 
-  // Based on path and hash, return the appropriate component
+  // Based on path, hash, and search params, return the appropriate component
   if (path.includes('/repl') || hash.includes('minimal')) {
     // For REPL, we need to load the REPL app
-    return () => import('./repl-app.js').then(module => {
-      // If minimal REPL is requested, we'll handle it differently
-      if (hash.includes('minimal')) {
-        return () => React.createElement(() => {
-          const [MinimalRepl, setMinimalRepl] = React.useState(null);
-
-          React.useEffect(() => {
-            import('./components/MinimalRepl.js').then(module => {
-              setMinimalRepl(() => module.default);
-            }).catch(err => {
-              console.error('Error loading MinimalRepl:', err);
-            });
-          }, []);
-
-          if (MinimalRepl) {
-            return React.createElement(MinimalRepl, { onBackToLauncher: () => window.location.href = '/' });
-          }
-
-          return React.createElement('div', {
-            style: {
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              height: '100vh',
-              fontSize: '16px',
-              color: themeUtils.get('TEXT.PRIMARY')
-            }
-          }, 'Loading minimal REPL...');
-        });
+    return async () => {
+      // If minimal REPL is requested (either via hash or path), load MinimalRepl
+      if (hash.includes('minimal') || path.includes('minimal-repl')) {
+        // For minimal REPL, return the actual component directly
+        const minimalModule = await import('./components/MinimalRepl.js');
+        return minimalModule.default;
       }
-      return module.default;
-    });
+      const replModule = await import('./repl-app.js');
+      return replModule.default;
+    };
   } else if (path.includes('/simple-uis') || path.includes('/simple-ui')) {
     // For simple UIs, load the simple UI app
-    return () => import('./simple-ui-app.js').then(module => module.default);
-  } else if (path.includes('/?layout=graph') || path.includes('layout=graph')) {
+    return async () => {
+      const simpleModule = await import('./simple-ui-app.js');
+      return simpleModule.default;
+    };
+  } else if (search.includes('layout=graph') || hash.includes('layout=graph')) {
     // For graph layout, load the main app with graph layout
-    return () => Promise.resolve(App);
-  } else if (path.includes('/?layout=self-analysis') || path.includes('layout=self-analysis')) {
+    return () => {
+      // Update the appConfig with the graph layout
+      const GraphApp = (props) => React.createElement(App, {
+        appId: 'ide',
+        appConfig: { layoutType: 'graph', title: 'Graph UI' },
+        ...props
+      });
+      return GraphApp;
+    };
+  } else if (search.includes('layout=self-analysis') || hash.includes('layout=self-analysis')) {
     // For self-analysis layout, load the main app with self-analysis layout
-    return () => Promise.resolve(App);
-  } else if (path === '/' || path === '/index.html') {
+    return () => {
+      // Update the appConfig with the self-analysis layout
+      const SelfAnalysisApp = (props) => React.createElement(App, {
+        appId: 'ide',
+        appConfig: { layoutType: 'analysis', title: 'Self Analysis' },
+        ...props
+      });
+      return SelfAnalysisApp;
+    };
+  } else if (path === '/' || path === '/index.html' || path === '') {
     // For root path, show launcher
-    return () => Promise.resolve(Launcher);
+    return () => Launcher;
   } else {
     // Default to main app
-    return () => Promise.resolve(App);
+    return () => App;
   }
 };
 
@@ -76,8 +74,25 @@ if (typeof process !== 'undefined' && process.env.NODE_ENV === 'development') {
 }
 
 // Render the appropriate app based on the current path with root error boundary
-getCurrentApp()()
-  .then(AppComponent => {
+async function renderApp() {
+  try {
+    const getAppFunction = getCurrentApp();
+
+    let AppComponent;
+
+    if (typeof getAppFunction === 'function') {
+      if (getAppFunction.constructor.name === 'AsyncFunction') {
+        // If it's an async function, await the result
+        AppComponent = await getAppFunction();
+      } else {
+        // If it's a sync function, just call it to get the component
+        AppComponent = getAppFunction();
+      }
+    } else {
+      // If it's already a component, use it directly
+      AppComponent = getAppFunction;
+    }
+
     const root = createRoot(document.getElementById('root'));
     root.render(
       React.createElement(
@@ -88,8 +103,7 @@ getCurrentApp()()
         )
       )
     );
-  })
-  .catch(error => {
+  } catch (error) {
     console.error('Error loading app:', error);
     // Fallback to launcher wrapped in error boundary if there's an error
     const root = createRoot(document.getElementById('root'));
@@ -102,4 +116,7 @@ getCurrentApp()()
         )
       )
     );
-  });
+  }
+}
+
+renderApp();

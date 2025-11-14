@@ -54,6 +54,15 @@ const APP_DEFINITIONS = Object.freeze({
     component: () => import('./Launcher.js'),
     routes: ['/'],
     defaultLayout: 'launcher'
+  },
+  'merged': {
+    id: 'merged',
+    name: 'Merged Interface',
+    description: 'Launcher and REPL in one view',
+    icon: '🌐',
+    component: () => import('./MergedLauncher.js'),
+    routes: ['/merged'],
+    defaultLayout: 'merged'
   }
 });
 
