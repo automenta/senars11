@@ -9,16 +9,16 @@
  */
 export const sendGraphInitialData = (wsService) => {
   console.log('Sending initial data for Graph UI');
-  
+
   const now = Date.now();
-  
+
   // Send some initial concepts
   const concepts = [
-    { term: 'cat', priority: 0.9, taskCount: 2, beliefCount: 1, questionCount: 1 },
-    { term: 'animal', priority: 0.85, taskCount: 1, beliefCount: 2, questionCount: 0 },
-    { term: 'mammal', priority: 0.8, taskCount: 1, beliefCount: 1, questionCount: 0 },
-    { term: 'pet', priority: 0.75, taskCount: 0, beliefCount: 1, questionCount: 1 },
-    { term: 'dog', priority: 0.7, taskCount: 1, beliefCount: 1, questionCount: 0 }
+    { term: 'cat', priority: 0.9, occurrenceTime: now, taskCount: 2, beliefCount: 1, questionCount: 1, lastAccess: now },
+    { term: 'animal', priority: 0.85, occurrenceTime: now, taskCount: 1, beliefCount: 2, questionCount: 0, lastAccess: now },
+    { term: 'mammal', priority: 0.8, occurrenceTime: now, taskCount: 1, beliefCount: 1, questionCount: 0, lastAccess: now },
+    { term: 'pet', priority: 0.75, occurrenceTime: now, taskCount: 0, beliefCount: 1, questionCount: 1, lastAccess: now },
+    { term: 'dog', priority: 0.7, occurrenceTime: now, taskCount: 1, beliefCount: 1, questionCount: 0, lastAccess: now }
   ];
 
   concepts.forEach((concept, index) => {
@@ -26,11 +26,7 @@ export const sendGraphInitialData = (wsService) => {
       wsService.routeMessage({
         type: 'conceptUpdate',
         payload: {
-          concept: {
-            ...concept,
-            occurrenceTime: now + index,
-            lastAccess: now + index
-          },
+          concept: concept,
           changeType: 'added'
         }
       });
@@ -39,12 +35,30 @@ export const sendGraphInitialData = (wsService) => {
 
   // Send some initial tasks (beliefs, questions, goals)
   const tasks = [
-    { id: `task_${now}_1`, content: '<cat --> animal>.', priority: 0.85, type: 'belief' },
-    { id: `task_${now}_2`, content: '<animal --> mammal>.', priority: 0.82, type: 'belief' },
-    { id: `task_${now}_3`, content: '<cat --> pet>?', priority: 0.78, type: 'question' },
-    { id: `task_${now}_4`, content: '<dog --> pet>.', priority: 0.75, type: 'belief' },
-    { id: `task_${now}_5`, content: '<cat --> mammal>?', priority: 0.72, type: 'question' },
-    { id: `task_${now}_6`, content: '<become_loved --> pet>!', priority: 0.90, type: 'goal' }
+    { id: `task_${now}_1`, term: '<cat --> animal>.', type: 'belief', creationTime: now + 100, occurrenceTime: now + 100,
+      truth: { frequency: 0.9, confidence: 0.8 },
+      budget: { priority: 0.85, durability: 0.7, quality: 0.75 }
+    },
+    { id: `task_${now}_2`, term: '<animal --> mammal>.', type: 'belief', creationTime: now + 110, occurrenceTime: now + 110,
+      truth: { frequency: 0.85, confidence: 0.75 },
+      budget: { priority: 0.82, durability: 0.65, quality: 0.7 }
+    },
+    { id: `task_${now}_3`, term: '<cat --> pet>?', type: 'question', creationTime: now + 120, occurrenceTime: now + 120,
+      truth: { frequency: 0.5, confidence: 0.6 },
+      budget: { priority: 0.78, durability: 0.6, quality: 0.65 }
+    },
+    { id: `task_${now}_4`, term: '<dog --> pet>.', type: 'belief', creationTime: now + 130, occurrenceTime: now + 130,
+      truth: { frequency: 0.8, confidence: 0.7 },
+      budget: { priority: 0.75, durability: 0.7, quality: 0.65 }
+    },
+    { id: `task_${now}_5`, term: '<cat --> mammal>?', type: 'question', creationTime: now + 140, occurrenceTime: now + 140,
+      truth: { frequency: 0.6, confidence: 0.55 },
+      budget: { priority: 0.72, durability: 0.55, quality: 0.6 }
+    },
+    { id: `task_${now}_6`, term: '<become_loved --> pet>!', type: 'goal', creationTime: now + 150, occurrenceTime: now + 150,
+      truth: { frequency: 0.95, confidence: 0.85 },
+      budget: { priority: 0.90, durability: 0.85, quality: 0.9 }
+    }
   ];
 
   tasks.forEach((task, index) => {
@@ -52,52 +66,10 @@ export const sendGraphInitialData = (wsService) => {
       wsService.routeMessage({
         type: 'taskUpdate',
         payload: {
-          task: {
-            ...task,
-            creationTime: now + index * 10 + 100
-          },
+          task: task,
           changeType: 'input'
         }
       });
-      
-      // Also send to the specific collections based on type
-      if (task.type === 'belief') {
-        wsService.routeMessage({
-          type: 'beliefUpdate',
-          payload: {
-            id: task.id,
-            term: task.content,
-            priority: task.priority,
-            creationTime: now + index * 10 + 100,
-            type: task.type,
-            truth: { frequency: 0.9, confidence: 0.8 }
-          }
-        });
-      } else if (task.type === 'question') {
-        wsService.routeMessage({
-          type: 'beliefUpdate', // questions may also be treated as beliefs in some contexts
-          payload: {
-            id: task.id,
-            term: task.content,
-            priority: task.priority,
-            creationTime: now + index * 10 + 100,
-            type: task.type,
-            truth: { frequency: 0.5, confidence: 0.6 } // questions have different truth values
-          }
-        });
-      } else if (task.type === 'goal') {
-        wsService.routeMessage({
-          type: 'goalUpdate',
-          payload: {
-            id: task.id,
-            term: task.content,
-            priority: task.priority,
-            creationTime: now + index * 10 + 100,
-            type: task.type,
-            truth: { desire: 0.95, confidence: 0.85 }
-          }
-        });
-      }
     }, index * 100 + 200);
   });
 
@@ -105,21 +77,19 @@ export const sendGraphInitialData = (wsService) => {
   const reasoningSteps = [
     {
       id: `step_${now}_1`,
+      step: 1,
+      description: 'Deduction: <cat --> animal>., <animal --> mammal>. => <cat --> mammal>.',
+      result: '<cat --> mammal>.',
       timestamp: now + 300,
-      input: '<cat --> animal>., <animal --> mammal>.',
-      output: '<cat --> mammal>.',
-      rule: 'deduction',
-      confidence: 0.8,
-      priority: 0.75
+      metadata: { rule: 'deduction', confidence: 0.8, priority: 0.75 }
     },
     {
       id: `step_${now}_2`,
+      step: 2,
+      description: 'Induction: <cat --> pet>?, <cat --> animal>. => Implication: <animal --> pet>?',
+      result: 'Implication: <animal --> pet>?',
       timestamp: now + 400,
-      input: '<cat --> pet>?, <cat --> animal>.',
-      output: 'Implication: <animal --> pet>?',
-      rule: 'induction',
-      confidence: 0.7,
-      priority: 0.7
+      metadata: { rule: 'induction', confidence: 0.7, priority: 0.7 }
     }
   ];
 
@@ -127,7 +97,7 @@ export const sendGraphInitialData = (wsService) => {
     setTimeout(() => {
       wsService.routeMessage({
         type: 'reasoningStep',
-        payload: step
+        payload: { step }
       });
     }, index * 100 + 500);
   });
@@ -137,14 +107,12 @@ export const sendGraphInitialData = (wsService) => {
     wsService.routeMessage({
       type: 'systemMetrics',
       payload: {
-        wsConnected: true,
-        clock: 100,
-        running: true,
-        cpu: 15,
-        memory: 25,
-        activeTasks: 5,
-        reasoningSpeed: 75,
-        concepts: concepts.length
+        cycleCount: 100,
+        taskCount: tasks.length,
+        conceptCount: concepts.length,
+        runtime: 5000,
+        connectedClients: 1,
+        startTime: now - 5000
       }
     });
   }, 700);
@@ -169,10 +137,10 @@ export const setupGraphInitialData = (wsService, onReady = null) => {
   const handleOpen = () => {
     // Remove listener after connection
     wsService.ws.removeEventListener('open', handleOpen);
-    
+
     // Send initial data
     sendGraphInitialData(wsService);
-    
+
     if (onReady) onReady();
   };
 
