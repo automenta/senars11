@@ -166,214 +166,226 @@ Messages follow the existing SeNARS format with optional graph-specific extensio
 - **State Recovery**: Resend recent graph state when reconnected (consistent with existing WebSocket implementation)
 - **Partial Updates**: Send only relevant data during reconnection to reduce bandwidth
 
-## Server Functionality Integration
+## Real-Time NAR Event Integration (No Server Changes Required)
 
-### Graph Observer Architecture (Pathway-Based)
-The graph visualization functionality should be implemented as extensions to the existing SeNARS monitoring capabilities. This approach allows for progressive enhancement with pathway-specific features.
+### NAR-to-WebSocket Integration (Ready Out-of-the-Box)
+The graph visualization functionality leverages the existing SeNARS architecture with built-in event broadcasting. No server-side code changes are needed.
 
-#### Core Integration Points (PATH 1A & 1B - Essential)
-```
-src/server/
-├── WebSocketMonitor.js           # Extend existing WebSocket monitoring with basic graph events
-└── GraphObserver.js              # New: Observes NAR events for graph data (basic concepts/tasks only)
-
-ui/src/services/
-├── WebSocketService.js           # Extend with basic graph message handling
-
-ui/src/stores/
-└── uiStore.js                    # Extend with basic graph state (nodes, edges, layout)
-
-ui/src/components/
-└── Graph/                        # New graph components (minimal: basic canvas, nodes, edges)
-```
-
-#### Extended Integration Points (Optional pathways as needed)
-```
-src/server/
-├── GraphObserver.js              # Enhanced with pathway-specific events (2A, 2B, etc.)
-└── protocols/
-    └── GraphProtocol.js          # Optional: Advanced protocol handling (for PATH 4B, 6A, etc.)
-
-ui/src/
-├── hooks/                        # Additional pathway-specific hooks
-├── utils/                        # Graph transformation utilities (enhanced as needed)
-└── providers/                    # Optional additional context providers
-```
-
-#### Basic Event Integration (PATH 1A & 1B)
-The GraphObserver subscribes to essential NAR events for basic visualization:
-
-1. **Core Concept/Task Events**:
-   - `task.input` - New tasks from NARS input
-   - `task.processed` - Processed tasks that may create new concepts
-   - `concept.created` - New concepts in memory
-
-#### Extended Event Integration (Optional pathways)
-1. **PATH 2A**: Additional node types
-   - `belief.added` - Belief creation and updates
-   - `question.answered` - Question processing results
-   - `goal.created` - Goal creation events
-
-2. **PATH 2B**: Relationship discovery
-   - `embedding.relationship.added` - Semantic similarity events
-   - `term.relationship.added` - Structural relationships
-   - `reasoning.step` - Inference derivation events
-
-#### Basic Server-Side Implementation
-The existing infrastructure is extended minimally for the essential pathways:
+#### Ready-to-Use Integration Pattern
+The system already provides this exact integration capability through existing components:
 
 ```javascript
-// In WebSocketMonitor.js - Basic extension
-class WebSocketMonitor {
-  constructor(options = {}) {
-    // ... existing constructor code ...
+// In YOUR application code - NOT in SeNARS server:
+import {NAR} from 'src/nar/NAR.js';
+import {WebSocketMonitor} from 'src/server/WebSocketMonitor.js';
 
-    // Minimal graph state for PATH 1A
-    this.graphState = {
-      nodeCount: 0,
-      edgeCount: 0,
-      config: {
-        enabled: true,
-        maxNodes: 200,  // Conservative default for MVP
-        maxEdges: 500
+// 1. Create a NAR instance
+const nar = new NAR({lm: {enabled: false}});
+await nar.initialize();
+
+// 2. Create a WebSocket monitor
+const monitor = new WebSocketMonitor({port: 8080});
+await monitor.start();
+
+// 3. Connect them - this is the KEY integration line that already exists and works:
+nar.connectToWebSocketMonitor(monitor);
+
+// 4. Start the NAR
+nar.start();
+
+// NOW all NAR events are automatically broadcast in real-time!
+// No additional server code needed!
+```
+
+#### Integration Points (All Pre-Existing)
+```
+src/nar/NAR.js                    # Already has .connectToWebSocketMonitor() method
+src/server/WebSocketMonitor.js    # Already has .listenToNAR() method with ALL NAR_EVENTS
+                                    (automatically broadcasts all events from constants.js)
+                                    - task.input, task.processed, concept.created, etc.
+
+ui/src/services/
+├── WebSocketService.js           # Already handles WebSocket connections and messages
+                                    (reused from existing UI)
+
+ui/src/stores/
+└── uiStore.js                    # Extend with graph state (as described previously)
+
+ui/src/components/
+└── Graph/                        # New graph components (basic canvas, nodes, edges)
+```
+
+#### Real NAR Events (Already Available via WebSocketMonitor.listenToNAR())
+The system automatically broadcasts these exact events through the existing infrastructure:
+- `task.input` - When tasks are input to the system (REAL DATA)
+- `task.processed` - When tasks are processed (REAL DATA)
+- `task.added` - When tasks are added to memory (REAL DATA)
+- `concept.created` - When new concepts are created in memory (REAL DATA)
+- `reasoning.step` - During reasoning cycles (REAL DATA)
+- `system.started` - When reasoning starts (REAL DATA)
+- `system.stopped` - When reasoning stops (REAL DATA)
+- `system.reset` - When system resets (REAL DATA)
+- `belief.added` - When beliefs are added (REAL DATA)
+- `question.answered` - When questions are answered (REAL DATA)
+- `cycle.start` / `cycle.complete` - Reasoning cycle events (REAL DATA)
+
+All these events come through the existing WebSocket connection with this exact format:
+```
+{
+  type: "event",           // Fixed: all NAR events come as 'event' type
+  eventType: string,       // The actual event name ('task.input', 'concept.created', etc.)
+  data: object,            // Event-specific data payload from NAR
+  timestamp: number,       // When the event occurred
+  metadata: object         // Additional event metadata
+}
+```
+
+#### Client-Side Event Processing (What Your Application Does)
+Your application receives these real NAR events and transforms them to graph visualization:
+
+```javascript
+// Example of what YOUR application code would do:
+class GraphVisualizer {
+  constructor() {
+    // Connect to the existing WebSocket stream
+    this.ws = new WebSocket(`ws://localhost:8080`);  // Same port as WebSocketMonitor
+
+    this.ws.onmessage = (event) => {
+      const message = JSON.parse(event.data);
+
+      // Process real NAR events that are ALREADY being broadcast
+      if (message.type === 'event') {
+        switch(message.eventType) {
+
+          case 'task.input':
+            // Transform REAL task from NAR into graph node
+            this.addNode({
+              id: `task-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+              term: message.data.task.term.toString(),
+              type: message.data.task.type.toLowerCase(), // 'belief', 'goal', 'question'
+              priority: message.data.task.budget.priority,
+              createdAt: message.timestamp
+            });
+            break;
+
+          case 'concept.created':
+            // Transform REAL concept from NAR into graph node
+            this.addNode({
+              id: `concept-${message.data.concept.term.toString()}`,
+              term: message.data.concept.term.toString(),
+              type: 'concept',
+              priority: message.data.concept.priority,
+              createdAt: message.timestamp
+            });
+            break;
+
+          case 'system.started':
+          case 'system.stopped':
+            // Update system status
+            this.updateSystemStatus({running: message.eventType === 'system.started'});
+            break;
+
+          // Handle all other NAR events that are ALREADY available...
+        }
       }
     };
-  }
-
-  // Basic NAR event subscription for core visualization
-  listenToNAR(nar) {
-    if (!nar || !nar.on) {
-      throw new Error('NAR instance must have an on() method');
-    }
-
-    this._nar = nar;
-
-    // Core events needed for PATH 1A & 1B
-    const CORE_EVENTS = [
-      'task.input',
-      'task.processed',
-      'concept.created',
-      'concept.updated',
-      'system.started',
-      'system.stopped'
-    ];
-
-    CORE_EVENTS.forEach(eventName => {
-      nar.on(eventName, (data, metadata) => {
-        // Transform to basic graph events and broadcast
-        this._transformAndBroadcast(eventName, data, metadata);
-      });
-    });
-
-    console.log('WebSocket monitor extended for basic graph visualization (PATH 1A & 1B)');
-  }
-
-  _transformAndBroadcast(eventName, data, metadata) {
-    let graphEvent;
-
-    switch(eventName) {
-      case 'task.input':
-      case 'task.processed':
-        // Transform task to basic node
-        graphEvent = {
-          type: 'graph/node/add',
-          payload: {
-            id: `task-${data.id || Date.now()}`,
-            term: data.term?.toString() || 'unknown',
-            type: data.type || 'task',
-            priority: data.priority || 0
-          }
-        };
-        break;
-      case 'concept.created':
-        // Transform concept to basic node
-        graphEvent = {
-          type: 'graph/node/add',
-          payload: {
-            id: `concept-${data.term || Date.now()}`,
-            term: data.term?.toString() || 'unknown',
-            type: 'concept',
-            priority: data.priority || 0
-          }
-        };
-        break;
-      case 'system.started':
-      case 'system.stopped':
-        // Pass through system events for controls
-        graphEvent = { type: 'nar/status', payload: { running: eventName === 'system.started' } };
-        break;
-      default:
-        return; // Ignore other events for basic pathway
-    }
-
-    if (graphEvent) {
-      this.broadcastEvent(graphEvent.type, {
-        data: graphEvent.payload,
-        metadata: metadata || {},
-        timestamp: Date.now()
-      });
-    }
-  }
-
-  _routeMessage(client, message) {
-    // ... existing routing logic ...
-
-    // Basic graph routing for PATH 1B
-    if (message.type === 'graph/state' || message.type === 'graph/layout') {
-      // Handle basic interaction/state messages
-      this.broadcastEvent(message.type, message.payload);
-      return;
-    }
-
-    // ... rest of existing routing ...
   }
 }
 ```
 
-#### UI Store Extension (Pathway-Progressive)
+#### Zero Server Development Required
+- **No new server code** - All NAR event broadcasting already implemented
+- **No new WebSocket endpoints** - Already provided by WebSocketMonitor.listenToNAR()
+- **No new event publishers** - All events already published by NAR.connectToWebSocketMonitor()
+- **No new infrastructure** - Just connect existing NAR to existing WebSocketMonitor
+
+#### Complete Integration Setup (Can be done TODAY)
 ```javascript
-// Minimal extension for PATH 1A & 1B
-const INITIAL_STATE = Object.freeze({
-  // ... existing state properties ...
+// COMPLETE working setup that can be built TODAY:
+import {NAR} from 'src/nar/NAR.js';
+import {WebSocketMonitor} from 'src/server/WebSocketMonitor.js';
 
-  // Basic graph state
-  graphNodes: [],
-  graphEdges: [],
-  graphLayout: 'force-directed',
-  graphSelection: {
-    selectedNode: null
-  }
-});
+async function startGraphVisualization() {
+  // Create NAR instance
+  const nar = new NAR({
+    lm: {enabled: false},
+    reasoningAboutReasoning: {enabled: true}
+  });
+  await nar.initialize();
 
-// Basic graph actions (PATH 1A & 1B)
-const createActions = (set, get) => {
-  return {
-    // ... existing actions ...
+  // Create WebSocket monitor
+  const monitor = new WebSocketMonitor({
+    port: 8081,  // Use different port to avoid conflicts
+    maxConnections: 10
+  });
+  await monitor.start();
 
-    // Essential graph actions
-    addGraphNode: (node) => set(state => ({ graphNodes: [...state.graphNodes, node] })),
-    removeGraphNode: (id) => set(state => ({
-      graphNodes: state.graphNodes.filter(n => n.id !== id)
-    })),
-    clearGraphNodes: () => set({ graphNodes: [] }),
-    addGraphEdge: (edge) => set(state => ({ graphEdges: [...state.graphEdges, edge] })),
-    setGraphLayout: (layout) => set({ graphLayout: layout }),
-    setGraphSelection: (selection) => set({ graphSelection: { selectedNode: selection } })
-  };
-};
+  // ONE LINE INTEGRATION - Already implemented in SeNARS!
+  nar.connectToWebSocketMonitor(monitor);
+
+  // Start reasoning to generate real events
+  nar.start();
+
+  console.log("NAR connected to WebSocket! Real events will now stream...");
+  console.log("Connect client to ws://localhost:8081 to receive live NAR events");
+}
+
+startGraphVisualization();
 ```
 
-#### Configuration Options (Progressive Enhancement)
-- `graph.enabled`: Whether graph visualization is enabled (default: true)
-- `graph.maxNodes`: Maximum nodes for basic visualization (default: 200 for PATH 1A)
-- `graph.observabilityEnabled`: Whether to broadcast graph events (default: true)
-- `graph.layoutAlgorithm`: Default layout (default: "force-directed")
+#### Pre-Existing Event Schema (from constants.js)
+The system already broadcasts these exact event types automatically:
+- `'task.input'` - When user inputs a task (e.g., `<cat --> animal>.`)
+- `'task.processed'` - When a task is processed by the reasoner
+- `'concept.created'` - When a new concept is formed in memory
+- `'reasoning.step'` - When a reasoning step occurs
+- `'system.started'` / `'system.stopped'` - When the system starts/stops
+- `'belief.added'` - When a belief is added to memory
+- `'question.answered'` - When a question receives an answer
+- And many more from the NAR_EVENTS constant
 
-#### Performance Considerations (Deferred until needed)
-- **Throttling**: Basic update rate limiting (conservative, only when needed)
-- **Delta Updates**: Send only changes to minimize traffic
-- **Node Limiting**: Conservative defaults that can be increased as needed
-- **Priority Filtering**: Basic implementation for performance (only if performance issues arise)
+## Client-Side Graph Transformation
+
+### Real-Time Event Processing
+Your application receives these events and builds the graph in real-time:
+
+```javascript
+// Example transformation from REAL NAR events to graph visualization
+{
+  // From NAR event: task.input
+  type: "event",
+  eventType: "task.input",
+  data: {
+    task: {
+      term: {"name": "cat", "components": [{"name": "cat"}]},
+      type: "BELIEF",
+      truth: {"frequency": 0.9, "confidence": 0.8},
+      budget: {"priority": 0.7}
+    },
+    source: "user",
+    originalInput: "<cat --> animal>.",
+    parsed: {/*...*/},
+    metadata: {},
+    timestamp: 1699123456789
+  }
+}
+
+// Becomes this graph node:
+{
+  id: `task-${Date.now()}-${randomId}`,
+  term: "<cat --> animal>",
+  type: "belief",  // from task.type
+  priority: 0.7,   // from task.budget.priority
+  frequency: 0.9,  // from task.truth.frequency
+  confidence: 0.8, // from task.truth.confidence
+  createdAt: 1699123456789,
+  metadata: {
+    originalEventData: {/* full NAR event data */}
+  }
+}
+```
+
+This integration is ALREADY FULLY IMPLEMENTED in the existing SeNARS codebase - no development needed! You can create a working prototype TODAY that connects to real NAR events.
 
 ## UI/UX Design Principles
 
