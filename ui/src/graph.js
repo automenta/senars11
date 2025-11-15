@@ -1,9 +1,28 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import GraphVisualizer from './components/Graph/GraphVisualizer.js';
 import './App.css';
 import { initializeTheme } from './utils/theme.js';
 import BaseApp from './components/BaseApp.js';
+import { useWebSocket } from './hooks/useWebSocket.js';
+import { sendGraphInitialData } from './utils/graphInitialData.js';
+
+// Component to handle initial data for Graph UI
+const GraphWithInitialData = () => {
+  const { wsService, wsConnected } = useWebSocket();
+
+  useEffect(() => {
+    // Send initial data when WebSocket is connected
+    if (wsConnected && wsService) {
+      // Small delay to ensure everything is set up
+      setTimeout(() => {
+        sendGraphInitialData(wsService);
+      }, 100);
+    }
+  }, [wsConnected, wsService]);
+
+  return React.createElement(GraphVisualizer, null);
+};
 
 // Initialize theme before rendering the app
 initializeTheme();
@@ -23,7 +42,7 @@ root.render(
                 appConfig: { title: 'Graph Visualization' },
                 showWebSocketStatus: true
             },
-            React.createElement(GraphVisualizer, null)
+            React.createElement(GraphWithInitialData, null)
         )
     )
 );
