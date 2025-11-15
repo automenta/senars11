@@ -41,11 +41,11 @@ export const ForceGraphRenderer = ({ filters, priorityRange }) => {
   const [selectedNode, setSelectedNode] = useState(null);
   const fgRef = useRef();
 
-  // Get data from store
-  const { 
-    tasks, concepts, beliefs, goals, 
-    wsConnected, 
-    addNotification 
+  // Get data from store (consolidated - no separate beliefs/goals arrays)
+  const {
+    tasks, concepts, // Removed beliefs and goals since we're consolidating
+    wsConnected,
+    addNotification
   } = useUiData();
 
   // Transform store data to graph format based on filters
@@ -71,47 +71,53 @@ export const ForceGraphRenderer = ({ filters, priorityRange }) => {
       });
     }
 
+    // Consolidate all tasks (including beliefs, questions, goals) with filtering by punctuation/type
+    // Show tasks only if the main tasks filter is enabled
     if (filters.tasks) {
       tasks.forEach(task => {
         if (task.priority >= priorityRange.min && task.priority <= priorityRange.max) {
-          nodes.push({
-            id: `task-${task.id}`,
-            term: task.content || task.term,
-            type: task.type || 'task',
-            priority: task.priority,
-            creationTime: task.creationTime,
-            truth: task.truth
-          });
-        }
-      });
-    }
+          // Determine task type based on punctuation or type field
+          let taskType = task.type || 'task';
+          const content = task.content || task.term || task.id || '';
 
-    if (filters.beliefs) {
-      beliefs.forEach(belief => {
-        if (belief.priority >= priorityRange.min && belief.priority <= priorityRange.max) {
-          nodes.push({
-            id: `belief-${belief.id}`,
-            term: belief.term,
-            type: 'belief',
-            priority: belief.priority,
-            creationTime: belief.creationTime,
-            truth: belief.truth
-          });
-        }
-      });
-    }
+          // Determine type from punctuation if not provided
+          if (!task.type) {
+            if (content.endsWith('?')) {
+              taskType = 'question';
+            } else if (content.endsWith('!')) {
+              taskType = 'goal';
+            } else if (content.endsWith('.')) {
+              taskType = 'belief';
+            } else {
+              taskType = 'task';
+            }
+          }
 
-    if (filters.goals) {
-      goals.forEach(goal => {
-        if (goal.priority >= priorityRange.min && goal.priority <= priorityRange.max) {
-          nodes.push({
-            id: `goal-${goal.id}`,
-            term: goal.term,
-            type: 'goal',
-            priority: goal.priority,
-            creationTime: goal.creationTime,
-            truth: goal.truth
-          });
+          // For the filters, we'll consider the task type based on punctuation
+          // Check if this task type should be shown based on filters
+          let shouldShow = false;
+          if (taskType === 'question' && filters.questions) {
+            shouldShow = true;
+          } else if (taskType === 'belief' && filters.beliefs) {
+            shouldShow = true;
+          } else if (taskType === 'goal' && filters.goals) {
+            shouldShow = true;
+          } else if (taskType === 'task') { // Regular tasks without specific punctuation
+            // We can show these if any of the other filters are active
+            shouldShow = filters.beliefs || filters.questions || filters.goals;
+          }
+
+          if (shouldShow) {
+            nodes.push({
+              id: `task-${task.id}`,
+              term: task.content || task.term || task.id,
+              type: taskType,
+              priority: task.priority,
+              creationTime: task.creationTime,
+              truth: task.truth,
+              ...task
+            });
+          }
         }
       });
     }
@@ -130,7 +136,7 @@ export const ForceGraphRenderer = ({ filters, priorityRange }) => {
     });
 
     return { nodes, links };
-  }, [concepts, tasks, beliefs, goals, filters, priorityRange]);
+  }, [concepts, tasks, filters, priorityRange]);
 
   const getColorForNodeType = useCallback((type) => NODE_TYPE_COLORS[type] ?? '#999', []);
 

@@ -452,7 +452,11 @@ class WebSocketService {
     switch (data.type) {
       case 'taskUpdate':
         if (data.payload.task) {
+          // Add just the task object, not the entire payload
           store.addTask(data.payload.task);
+        } else {
+          // Fallback for cases where task is directly in payload
+          store.addTask(data.payload);
         }
         break;
       case 'conceptUpdate':

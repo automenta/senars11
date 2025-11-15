@@ -39,10 +39,10 @@ const AbstractGraphVisualizer = () => {
   const [selectedRenderer, setSelectedRenderer] = useState(DEFAULT_RENDERER);
   const [filters, setFilters] = useState({
     concepts: true,
-    tasks: true,
-    beliefs: true,
-    goals: true,
-    questions: true
+    tasks: true,      // Show all tasks regardless of type (includes beliefs, questions, goals)
+    beliefs: true,    // Show belief-type tasks (ending with '.')
+    questions: true,  // Show question-type tasks (ending with '?')
+    goals: true       // Show goal-type tasks (ending with '!')
   });
 
   const [priorityRange, setPriorityRange] = useState({
@@ -200,7 +200,7 @@ const AbstractGraphVisualizer = () => {
                 style: { marginRight: '0.5rem' }
               }),
               React.createElement('label', { htmlFor: `filter-${type}` },
-                `${type.charAt(0).toUpperCase() + type.slice(1)}s`
+                `${type.charAt(0).toUpperCase() + type.slice(1)}${type === 'concepts' ? '' : 's'}`
               )
             )
           )

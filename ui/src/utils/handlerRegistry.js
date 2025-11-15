@@ -7,7 +7,8 @@ import {
   createMessageHandler,
   createMessageHandlerWithParams,
   createNarseseInputHandler,
-  createSessionUpdateHandler
+  createSessionUpdateHandler,
+  getStore
 } from './messageHandlers';
 
 const createOptimizedMessageHandlers = () => Object.freeze({
@@ -18,7 +19,14 @@ const createOptimizedMessageHandlers = () => Object.freeze({
   notification: createMessageHandler('addNotification'),
   error: createMessageHandler('setError'),
   conceptUpdate: createConceptUpdateHandler,
-  taskUpdate: createMessageHandler('addTask'),
+  taskUpdate: (data) => {
+    // Extract the task object from payload, not the entire payload
+    if (data?.payload?.task) {
+      getStore().addTask(data.payload.task);
+    } else {
+      getStore().addTask(data.payload);
+    }
+  },
   beliefUpdate: createMessageHandler('addBelief'),
   goalUpdate: createMessageHandler('addGoal'),
   cycleUpdate: createMessageHandler('addCycle'),

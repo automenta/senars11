@@ -20,14 +20,16 @@ const GraphWithInitialData = () => {
   const { wsService, wsConnected } = useWebSocket();
 
   useEffect(() => {
-    // Send initial data when WebSocket is connected
-    if (wsConnected && wsService) {
+    // Send initial data regardless of WebSocket connection status
+    // This ensures the graph has data to display even without backend connection
+    // The sendGraphInitialData function works by routing messages directly to the store
+    if (wsService) {
       // Small delay to ensure everything is set up
       setTimeout(() => {
         sendGraphInitialData(wsService);
       }, GRAPH_CONFIG.initialDataDelay);
     }
-  }, [wsConnected, wsService]);
+  }, [wsService, wsConnected]); // Include wsConnected to ensure trigger on connection status changes
 
   return React.createElement(GraphVisualizer, null);
 };

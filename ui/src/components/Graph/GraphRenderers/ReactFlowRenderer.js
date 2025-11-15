@@ -84,8 +84,8 @@ const NODE_STYLES = {
 };
 
 export const ReactFlowRenderer = ({ filters, priorityRange }) => {
-  const { tasks, concepts, beliefs, goals } = useUiData();
-  
+  const { tasks, concepts } = useUiData(); // Removed beliefs and goals since we're consolidating
+
   // Transform store data to ReactFlow format
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -103,7 +103,7 @@ export const ReactFlowRenderer = ({ filters, priorityRange }) => {
             id: `concept-${concept.term}`,
             type: 'default',
             position: { x: 100 + (index % 5) * 150, y: 100 + Math.floor(index / 5) * 100 },
-            data: { 
+            data: {
               label: `${concept.term}\nPriority: ${concept.priority.toFixed(2)}`,
               type: 'concept',
               ...concept
@@ -114,59 +114,67 @@ export const ReactFlowRenderer = ({ filters, priorityRange }) => {
       });
     }
 
-    // Add filtered tasks
+    // Consolidate all tasks (including beliefs, questions, goals) with filtering by punctuation/type
+    // Show tasks only if the main tasks filter is enabled
     if (filters.tasks) {
       tasks.forEach((task, index) => {
         if (task.priority >= priorityRange.min && task.priority <= priorityRange.max) {
-          newNodes.push({
-            id: `task-${task.id}`,
-            type: 'default',
-            position: { x: 200 + (index % 4) * 150, y: 250 + Math.floor(index / 4) * 100 },
-            data: { 
-              label: `${task.term || task.content || task.id}\nPriority: ${task.priority.toFixed(2)}`,
-              type: task.type || 'task',
-              ...task
-            },
-            style: NODE_STYLES[task.type] || NODE_STYLES.task
-          });
-        }
-      });
-    }
+          // Determine task type based on punctuation or type field
+          let taskType = task.type || 'task';
+          const content = task.term || task.content || task.id || '';
 
-    // Add filtered beliefs
-    if (filters.beliefs) {
-      beliefs.forEach((belief, index) => {
-        if (belief.priority >= priorityRange.min && belief.priority <= priorityRange.max) {
-          newNodes.push({
-            id: `belief-${belief.id}`,
-            type: 'default',
-            position: { x: 150 + (index % 4) * 150, y: 400 + Math.floor(index / 4) * 100 },
-            data: { 
-              label: `${belief.term}\nFreq: ${(belief.truth?.frequency || 0).toFixed(2)}`,
-              type: 'belief',
-              ...belief
-            },
-            style: NODE_STYLES.belief
-          });
-        }
-      });
-    }
+          // Determine type from punctuation if not provided
+          if (!task.type) {
+            if (content.endsWith('?')) {
+              taskType = 'question';
+            } else if (content.endsWith('!')) {
+              taskType = 'goal';
+            } else if (content.endsWith('.')) {
+              taskType = 'belief';
+            } else {
+              taskType = 'task';
+            }
+          }
 
-    // Add filtered goals
-    if (filters.goals) {
-      goals.forEach((goal, index) => {
-        if (goal.priority >= priorityRange.min && goal.priority <= priorityRange.max) {
-          newNodes.push({
-            id: `goal-${goal.id}`,
-            type: 'default',
-            position: { x: 250 + (index % 4) * 150, y: 550 + Math.floor(index / 4) * 100 },
-            data: { 
-              label: `${goal.term}\nDesire: ${(goal.truth?.desire || 0).toFixed(2)}`,
-              type: 'goal',
-              ...goal
-            },
-            style: NODE_STYLES.goal
-          });
+          // For the filters, we'll consider the task type based on punctuation
+          // Check if this task type should be shown based on filters
+          let shouldShow = false;
+          if (taskType === 'question' && filters.questions) {
+            shouldShow = true;
+          } else if (taskType === 'belief' && filters.beliefs) {
+            shouldShow = true;
+          } else if (taskType === 'goal' && filters.goals) {
+            shouldShow = true;
+          } else if (taskType === 'task') { // Regular tasks without specific punctuation
+            // We can show these if any of the other filters are active
+            shouldShow = filters.beliefs || filters.questions || filters.goals;
+          }
+
+          if (shouldShow) {
+            // Create label based on task type
+            let label = `${content}`;
+            if (taskType === 'belief') {
+              label += `\nFreq: ${(task.truth?.frequency || task.budget?.priority || task.priority || 0).toFixed(2)}`;
+            } else if (taskType === 'goal') {
+              label += `\nDesire: ${(task.truth?.desire || task.budget?.priority || task.priority || 0).toFixed(2)}`;
+            } else if (taskType === 'question') {
+              label += `\nPriority: ${(task.budget?.priority || task.priority || 0).toFixed(2)}`;
+            } else {
+              label += `\nPriority: ${(task.budget?.priority || task.priority || 0).toFixed(2)}`;
+            }
+
+            newNodes.push({
+              id: `task-${task.id}`,
+              type: 'default',
+              position: { x: 200 + (index % 4) * 150, y: 250 + Math.floor(index / 4) * 100 },
+              data: {
+                label: label,
+                type: taskType,
+                ...task
+              },
+              style: NODE_STYLES[taskType] || NODE_STYLES.task
+            });
+          }
         }
       });
     }
@@ -187,7 +195,7 @@ export const ReactFlowRenderer = ({ filters, priorityRange }) => {
 
     setNodes(newNodes);
     setEdges(newEdges);
-  }, [concepts, tasks, beliefs, goals, filters, priorityRange, setNodes, setEdges]);
+  }, [concepts, tasks, filters, priorityRange, setNodes, setEdges]);
 
   // Event handlers
   const onConnect = useCallback((params) => setEdges((eds) => eds.concat(params)), [setEdges]);

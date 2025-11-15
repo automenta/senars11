@@ -6,10 +6,10 @@ import React from 'react';
 import { useUiData } from '../../../hooks/useWebSocket.js';
 
 export const JsonRenderer = ({ filters, priorityRange }) => {
-  const { 
-    tasks, concepts, beliefs, goals, 
-    wsConnected, 
-    systemMetrics 
+  const {
+    tasks, concepts, // Removed beliefs and goals since we're consolidating
+    wsConnected,
+    systemMetrics
   } = useUiData();
 
   // Filter data based on filters and priority range
@@ -17,34 +17,56 @@ export const JsonRenderer = ({ filters, priorityRange }) => {
     const result = {};
 
     if (filters.concepts) {
-      result.concepts = concepts.filter(concept => 
+      result.concepts = concepts.filter(concept =>
         concept.priority >= priorityRange.min && concept.priority <= priorityRange.max
       );
     }
 
+    // Consolidate task filtering based on punctuation/type
+    // Show tasks only if the main tasks filter is enabled
     if (filters.tasks) {
-      result.tasks = tasks.filter(task => 
-        task.priority >= priorityRange.min && task.priority <= priorityRange.max
-      );
-    }
+      result.tasks = tasks.filter(task => {
+        if (task.priority < priorityRange.min || task.priority > priorityRange.max) {
+          return false;
+        }
 
-    if (filters.beliefs) {
-      result.beliefs = beliefs.filter(belief => 
-        belief.priority >= priorityRange.min && belief.priority <= priorityRange.max
-      );
-    }
+        // Determine task type based on punctuation or type field
+        let taskType = task.type || 'task';
+        const content = task.term || task.content || task.id || '';
 
-    if (filters.goals) {
-      result.goals = goals.filter(goal => 
-        goal.priority >= priorityRange.min && goal.priority <= priorityRange.max
-      );
+        if (!task.type) {
+          if (content.endsWith('?')) {
+            taskType = 'question';
+          } else if (content.endsWith('!')) {
+            taskType = 'goal';
+          } else if (content.endsWith('.')) {
+            taskType = 'belief';
+          } else {
+            taskType = 'task';
+          }
+        }
+
+        // Check if this task type should be included based on filters
+        if (taskType === 'question' && filters.questions) {
+          return true;
+        } else if (taskType === 'belief' && filters.beliefs) {
+          return true;
+        } else if (taskType === 'goal' && filters.goals) {
+          return true;
+        } else if (taskType === 'task') {
+          // Include if any filter is active
+          return filters.beliefs || filters.questions || filters.goals;
+        }
+
+        return false;
+      });
     }
 
     result.systemMetrics = systemMetrics;
     result.wsConnected = wsConnected;
 
     return result;
-  }, [concepts, tasks, beliefs, goals, filters, priorityRange, wsConnected, systemMetrics]);
+  }, [concepts, tasks, filters, priorityRange, wsConnected, systemMetrics]);
 
   const jsonContent = JSON.stringify(filteredData, null, 2);
 
