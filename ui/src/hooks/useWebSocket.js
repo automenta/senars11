@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useMemo } from 'react';
+import { useEffect, useCallback } from 'react';
 import useUiStore from '../stores/uiStore.js';
 
 // Optimized WebSocket hook with improved performance and consistency
@@ -80,13 +80,52 @@ const UI_DATA_SELECTORS = Object.freeze({
   toggleTheme: state => state.toggleTheme,
 });
 
-// Optimized hook to get UI data from store with memoization
+// Optimized hook to get UI data from store with proper hook usage
 export const useUiData = () => {
-  return useMemo(() => {
-    return Object.fromEntries(
-      Object.entries(UI_DATA_SELECTORS).map(([key, selector]) => [key, useUiStore(selector)])
-    );
-  }, []);
+  const wsConnected = useUiStore(UI_DATA_SELECTORS.wsConnected);
+  const tasks = useUiStore(UI_DATA_SELECTORS.tasks);
+  const concepts = useUiStore(UI_DATA_SELECTORS.concepts);
+  const reasoningSteps = useUiStore(UI_DATA_SELECTORS.reasoningSteps);
+  const systemMetrics = useUiStore(UI_DATA_SELECTORS.systemMetrics);
+  const demos = useUiStore(UI_DATA_SELECTORS.demos);
+  const beliefs = useUiStore(UI_DATA_SELECTORS.beliefs);
+  const goals = useUiStore(UI_DATA_SELECTORS.goals);
+  const cycles = useUiStore(UI_DATA_SELECTORS.cycles);
+  const reasoningState = useUiStore(UI_DATA_SELECTORS.reasoningState);
+  const corrections = useUiStore(UI_DATA_SELECTORS.corrections);
+  const activeSession = useUiStore(UI_DATA_SELECTORS.activeSession);
+  const theme = useUiStore(UI_DATA_SELECTORS.theme);
+  const notifications = useUiStore(UI_DATA_SELECTORS.notifications);
+
+  const addNotification = useUiStore(UI_DATA_SELECTORS.addNotification);
+  const removeNotification = useUiStore(UI_DATA_SELECTORS.removeNotification);
+  const setError = useUiStore(UI_DATA_SELECTORS.setError);
+  const setLoading = useUiStore(UI_DATA_SELECTORS.setLoading);
+  const setTheme = useUiStore(UI_DATA_SELECTORS.setTheme);
+  const toggleTheme = useUiStore(UI_DATA_SELECTORS.toggleTheme);
+
+  return {
+    wsConnected,
+    tasks,
+    concepts,
+    reasoningSteps,
+    systemMetrics,
+    demos,
+    beliefs,
+    goals,
+    cycles,
+    reasoningState,
+    corrections,
+    activeSession,
+    theme,
+    notifications,
+    addNotification,
+    removeNotification,
+    setError,
+    setLoading,
+    setTheme,
+    toggleTheme
+  };
 };
 
 // Operation definitions for useDataOperations hook
@@ -122,16 +161,54 @@ const DATA_OPERATIONS = Object.freeze({
   }
 });
 
-// Optimized hook to get data operation functions from store with memoization
+// Optimized hook to get data operation functions from store with proper hook usage
 export const useDataOperations = () => {
-  return useMemo(() => {
-    return Object.fromEntries(
-      Object.entries(DATA_OPERATIONS).flatMap(([category, ops]) =>
-        Object.entries(ops).map(([opName, selector]) => [
-          `${category}${opName.charAt(0).toUpperCase() + opName.slice(1)}`,
-          useUiStore(selector)
-        ])
-      )
-    );
-  }, []);
+  // Task operations
+  const taskAdd = useUiStore(state => state.addTask);
+  const taskUpdate = useUiStore(state => state.updateTask);
+  const taskRemove = useUiStore(state => state.removeTask);
+
+  // Concept operations
+  const conceptAdd = useUiStore(state => state.addConcept);
+  const conceptUpdate = useUiStore(state => state.updateConcept);
+  const conceptRemove = useUiStore(state => state.removeConcept);
+
+  // Reasoning operations
+  const reasoningAddStep = useUiStore(state => state.addReasoningStep);
+  const reasoningClearSteps = useUiStore(state => state.clearReasoningSteps);
+
+  // Belief operations
+  const beliefAdd = useUiStore(state => state.addBelief);
+  const beliefUpdate = useUiStore(state => state.updateBelief);
+  const beliefRemove = useUiStore(state => state.removeBelief);
+
+  // Goal operations
+  const goalAdd = useUiStore(state => state.addGoal);
+  const goalUpdate = useUiStore(state => state.updateGoal);
+  const goalRemove = useUiStore(state => state.removeGoal);
+
+  // Notification operations
+  const notificationAdd = useUiStore(state => state.addNotification);
+  const notificationRemove = useUiStore(state => state.removeNotification);
+  const notificationClear = useUiStore(state => state.clearNotifications);
+
+  return {
+    taskAdd,
+    taskUpdate,
+    taskRemove,
+    conceptAdd,
+    conceptUpdate,
+    conceptRemove,
+    reasoningAddStep,
+    reasoningClearSteps,
+    beliefAdd,
+    beliefUpdate,
+    beliefRemove,
+    goalAdd,
+    goalUpdate,
+    goalRemove,
+    notificationAdd,
+    notificationRemove,
+    notificationClear
+  };
 };
