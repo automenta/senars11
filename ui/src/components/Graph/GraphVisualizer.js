@@ -9,7 +9,7 @@ import SystemControls from './GraphVisualizer/SystemControls.js';
 import NarStatusDisplay from './GraphVisualizer/NarStatusDisplay.js';
 import NodeTypeFilter from './GraphFilters/NodeTypeFilter.js';
 import PriorityFilter from './GraphFilters/PriorityFilter.js';
-import useUiStore from '../stores/uiStore.js';
+import useUiStore from '../../stores/uiStore.js';
 
 const GraphVisualizer = () => {
   const [filters, setFilters] = useState({
@@ -64,7 +64,7 @@ const GraphVisualizer = () => {
     {
       style: {
         width: '100%',
-        height: '100vh',
+        height: '100%',
         display: 'flex',
         flexDirection: 'column',
         position: 'relative',

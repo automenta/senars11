@@ -4,8 +4,8 @@
  * Reuses patterns from existing status components
  */
 import React, { memo, useEffect, useState } from 'react';
-import useUiStore from '../stores/uiStore.js';
-import { themeUtils } from '../utils/themeUtils.js';
+import useUiStore from '../../../stores/uiStore.js';
+import { themeUtils } from '../../../utils/themeUtils.js';
 
 const NarStatusDisplay = memo(({ className = '' }) => {
   const [clockTime, setClockTime] = useState(0);

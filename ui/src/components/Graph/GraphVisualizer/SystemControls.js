@@ -4,8 +4,8 @@
  * Reuses existing patterns from ReasonerControls
  */
 import React, { memo, useCallback } from 'react';
-import useUiStore from '../stores/uiStore.js';
-import { themeUtils } from '../utils/themeUtils.js';
+import useUiStore from '../../../stores/uiStore.js';
+import { themeUtils } from '../../../utils/themeUtils.js';
 
 const SystemControls = memo(({ className = '' }) => {
   const wsService = useUiStore(state => state.wsService);

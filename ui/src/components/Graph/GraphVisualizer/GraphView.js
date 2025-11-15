@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import GraphCanvas from '../GraphCore/GraphCanvas.js';
 import GraphControls from '../GraphCore/GraphControls.js';
-import useGraphWebSocket from '../../hooks/useGraphWebSocket.js';
+import useGraphWebSocket from '../../../hooks/useGraphWebSocket.js';
 
 const CONNECTION_STYLES = {
   connected: { backgroundColor: '#d4edda', color: '#155724' },

@@ -10,10 +10,10 @@
  * - Performance optimizations
  */
 import { validateMessage } from '../schemas/messages';
-import { getStore } from './messageHandlers';
-import { createMessageProcessor, messageProcessorUtils } from './messageProcessor';
-import { ConnectionState, DEFAULT_OPTIONS } from './wsConstants';
-import { createHandlerRegistry } from './handlerRegistry';
+import { getStore } from '../utils/messageHandlers';
+import { createMessageProcessor, messageProcessorUtils } from '../utils/messageProcessor';
+import { ConnectionState, DEFAULT_OPTIONS } from '../utils/wsConstants';
+import { createHandlerRegistry } from '../utils/handlerRegistry';
 import { debounce } from '../utils/performance.js';
 
 // WebSocket message routing configuration
@@ -515,7 +515,7 @@ class WebSocketService {
           // Check for any pending listeners waiting for this message type
           this._notifyListeners(processedData);
 
-          if (this.isTestEnvironment && processedData.type === 'narseseInput) {
+          if (this.isTestEnvironment && processedData.type === 'narseseInput') {
             return this.handleNarseseInput({ type: processedData.type, payload: processedData.payload });
           }
           if (Math.random() < 0.1) {
