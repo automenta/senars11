@@ -442,8 +442,13 @@ class WebSocketService {
   
   _updateUiStore(data) {
     // Update the UI store with received data to maintain state
+    // Add null check to prevent errors
+    if (!data || !data.type) {
+      return;
+    }
+
     const store = getStore();
-    
+
     switch (data.type) {
       case 'taskUpdate':
         if (data.payload.task) {

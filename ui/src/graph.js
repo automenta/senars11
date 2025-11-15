@@ -7,6 +7,14 @@ import BaseApp from './components/BaseApp.js';
 import { useWebSocket } from './hooks/useWebSocket.js';
 import { sendGraphInitialData } from './utils/graphInitialData.js';
 
+// Configuration constants
+const GRAPH_CONFIG = Object.freeze({
+  appId: 'graph',
+  title: 'Graph Visualization',
+  containerId: 'graph-root',
+  initialDataDelay: 100
+});
+
 // Component to handle initial data for Graph UI
 const GraphWithInitialData = () => {
   const { wsService, wsConnected } = useWebSocket();
@@ -17,7 +25,7 @@ const GraphWithInitialData = () => {
       // Small delay to ensure everything is set up
       setTimeout(() => {
         sendGraphInitialData(wsService);
-      }, 100);
+      }, GRAPH_CONFIG.initialDataDelay);
     }
   }, [wsConnected, wsService]);
 
@@ -27,22 +35,27 @@ const GraphWithInitialData = () => {
 // Initialize theme before rendering the app
 initializeTheme();
 
-// Render the graph visualization component wrapped in BaseApp to ensure WebSocket connectivity
-const rootElement = document.getElementById('graph-root');
-if (!rootElement) {
-    throw new Error('Root element with id "graph-root" not found');
-}
+// Render function with error handling
+const renderApp = () => {
+  const rootElement = document.getElementById(GRAPH_CONFIG.containerId);
+  if (!rootElement) {
+    throw new Error(`Root element with id "${GRAPH_CONFIG.containerId}" not found`);
+  }
 
-const root = createRoot(rootElement);
-root.render(
+  const root = createRoot(rootElement);
+  root.render(
     React.createElement(React.StrictMode, null,
-        React.createElement(BaseApp,
-            {
-                appId: 'graph',
-                appConfig: { title: 'Graph Visualization' },
-                showWebSocketStatus: true
-            },
-            React.createElement(GraphWithInitialData, null)
-        )
+      React.createElement(BaseApp,
+        {
+          appId: GRAPH_CONFIG.appId,
+          appConfig: { title: GRAPH_CONFIG.title },
+          showWebSocketStatus: true
+        },
+        React.createElement(GraphWithInitialData, null)
+      )
     )
-);
+  );
+};
+
+// Initialize and render the app
+renderApp();
