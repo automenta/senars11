@@ -25,42 +25,30 @@ const createSampleLinks = (nodes) => {
   return links;
 };
 
-export const ForceGraphRenderer = ({ filters, priorityRange }) => {
+export const ForceGraphRenderer = ({ concepts, filters, priorityRange }) => {
   const [selectedNode, setSelectedNode] = useState(null);
   const fgRef = useRef();
-
-  // Get data from store
-  const {
-    tasks, concepts,
-    wsConnected,
-    addNotification
-  } = useUiData();
 
   // Transform store data to graph format based on filters
   const graphData = React.useMemo(() => {
     const nodes = [];
+    const links = [];
 
-    // Add filtered concepts
     if (filters.concepts) {
-      const filteredConcepts = concepts.filter(concept =>
-        concept.priority >= priorityRange.min && concept.priority <= priorityRange.max
-      );
-      const conceptNodes = filteredConcepts.map(createConceptNode);
-      nodes.push(...conceptNodes);
+        concepts.forEach(concept => {
+            const conceptNode = createConceptNode(concept);
+            nodes.push(conceptNode);
+
+            concept.tasks.forEach(task => {
+                const taskNode = createTaskNode(task);
+                nodes.push(taskNode);
+                links.push({ source: conceptNode.id, target: taskNode.id, type: 'task_of' });
+            });
+        });
     }
 
-    // Add all tasks (using budget.priority if available, otherwise priority)
-    const filteredTasks = tasks.filter(task => {
-      const priority = task.budget?.priority ?? task.priority ?? 0;
-      return priority >= priorityRange.min && priority <= priorityRange.max;
-    });
-    const taskNodes = filteredTasks.map(createTaskNode);
-    nodes.push(...taskNodes);
-
-    const links = createSampleLinks(nodes);
-
     return { nodes, links };
-  }, [concepts, tasks, filters, priorityRange]);
+  }, [concepts, filters, priorityRange]);
 
   const drawNode = useCallback((node, ctx, globalScale) => {
     drawNodeWithDetails(node, ctx, globalScale, selectedNode, NODE_TYPE_CONFIG);
@@ -73,13 +61,7 @@ export const ForceGraphRenderer = ({ filters, priorityRange }) => {
   // Event handlers
   const handleNodeClick = useCallback((node) => {
     setSelectedNode(node);
-    addNotification?.({
-      type: 'info',
-      title: 'Node Selected',
-      message: `Selected: ${node.term ?? node.id} (${node.type})`,
-      timestamp: Date.now()
-    });
-  }, [addNotification]);
+  }, []);
 
   const handleNodeHover = useCallback(() => {
     // Could implement highlighting on hover
@@ -94,21 +76,6 @@ export const ForceGraphRenderer = ({ filters, priorityRange }) => {
       fgRef.current.zoomToFit(400);
     }
   }, [graphData]);
-
-  // Connection status indicator
-  const connectionIndicator = React.createElement('div', {
-    style: {
-      position: 'absolute',
-      top: '10px',
-      left: '10px',
-      zIndex: 100,
-      padding: '5px 10px',
-      borderRadius: '4px',
-      fontSize: '0.8em',
-      backgroundColor: wsConnected ? '#d4edda' : '#f8d7da',
-      color: wsConnected ? '#155724' : '#721c24'
-    }
-  }, wsConnected ? 'Connected' : 'Disconnected');
 
   // Selected node info panel
   const nodeInfoPanel = selectedNode && React.createElement('div', {
@@ -163,7 +130,6 @@ export const ForceGraphRenderer = ({ filters, priorityRange }) => {
       position: 'relative'
     }
   },
-  connectionIndicator,
   nodeInfoPanel,
   React.createElement(ForceGraph2D,
     {

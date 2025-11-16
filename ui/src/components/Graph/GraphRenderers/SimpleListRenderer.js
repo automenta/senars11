@@ -5,19 +5,16 @@
 import React from 'react';
 import { useUiData } from '../../../hooks/useWebSocket.js';
 
-export const SimpleListRenderer = ({ filters, priorityRange }) => {
-  const { tasks, concepts } = useUiData();
+export const SimpleListRenderer = ({ concepts, filters, priorityRange }) => {
+  const filteredConcepts = concepts.filter(concept => {
+    const priority = concept.priority ?? 0;
+    return priority >= priorityRange.min && priority <= priorityRange.max;
+  });
 
-  // Filter concepts based on priority
-  const filteredConcepts = concepts.filter(concept => 
-    concept.priority >= priorityRange.min && concept.priority <= priorityRange.max
-  );
-
-  // Filter tasks based on priority (using budget.priority if available, otherwise priority)
-  const filteredTasks = tasks.filter(task =>
-    (task.budget?.priority ?? task.priority ?? 0) >= priorityRange.min &&
-    (task.budget?.priority ?? task.priority ?? 0) <= priorityRange.max
-  );
+  const filteredTasks = concepts.flatMap(c => c.tasks).filter(task => {
+    const priority = task.budget?.priority ?? task.priority ?? 0;
+    return priority >= priorityRange.min && priority <= priorityRange.max;
+  });
 
   return React.createElement('div',
     {

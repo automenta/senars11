@@ -10,8 +10,11 @@ import {fileURLToPath} from 'url';
 import {dirname, join} from 'path';
 import {parseArgs as parseCliArgs, showUsageAndExit} from '../utils/script-utils.js';
 import {WebSocketMonitor} from '../../src/server/WebSocketMonitor.js';
+import { startSyncServer, getSharedDoc } from '../../src/server/SyncServer.js';
 import {NAR} from '../../src/nar/NAR.js';
 import {DemoWrapper} from '../../src/demo/DemoWrapper.js';
+import http from 'http';
+import fs from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -126,6 +129,16 @@ if (helpRequested) {
 async function startWebSocketServer(config = DEFAULT_CONFIG) {
     console.log(`Starting WebSocket server on ${config.webSocket.host}:${config.webSocket.port}...`);
 
+    const syncServerPort = config.webSocket.port + 1;
+    const httpServer = http.createServer((request, response) => {
+        response.writeHead(200, { 'Content-Type': 'text/plain' });
+        response.end('okay');
+    });
+    startSyncServer(httpServer);
+    httpServer.listen(syncServerPort, () => {
+        console.log(`Sync server is running on port ${syncServerPort}`);
+    });
+
     const {ReplEngine} = await import('../../src/repl/ReplEngine.js');
     const nar = new NAR(config.nar);
     await nar.initialize();
@@ -175,6 +188,31 @@ async function startWebSocketServer(config = DEFAULT_CONFIG) {
     // Start the NAR reasoning cycle
     replEngine.nar.start();
 
+    // Connect NAR to Sync Server
+    const ydoc = getSharedDoc();
+    const concepts = ydoc.getMap('concepts');
+
+    replEngine.nar.on('memory:concept:created', (event) => {
+        const { concept } = event.payload;
+        const conceptId = concept.term.toString();
+        if (!concepts.has(conceptId)) {
+            const yConcept = new Y.Map();
+            yConcept.set('term', concept.term.toString());
+            yConcept.set('tasks', new Y.Array());
+            concepts.set(conceptId, yConcept);
+        }
+    });
+
+    replEngine.nar.on('memory:task:added', (event) => {
+        const { task } = event.payload;
+        const conceptId = task.term.toString();
+        if (concepts.has(conceptId)) {
+            const yConcept = concepts.get(conceptId);
+            const yTasks = yConcept.get('tasks');
+            yTasks.push([task.serialize()]);
+        }
+    });
+
     console.log('WebSocket server started successfully');
 
     return {nar: replEngine.nar, replEngine, monitor, demoWrapper};
@@ -191,17 +229,22 @@ function startViteDevServer(config = DEFAULT_CONFIG) {
     // Change to ui directory and run vite dev server
     const viteProcess = spawn('npx', viteArgs, {
         cwd: join(__dirname, '../../ui'),
-        stdio: 'inherit', // This allows the Vite server to control the terminal properly
+        stdio: 'pipe',
         env: {
             ...process.env,
             // Pass WebSocket connection info to UI
             VITE_WS_HOST: config.webSocket.host,
             VITE_WS_PORT: config.webSocket.port.toString(),
+            VITE_SYNC_PORT: (config.webSocket.port + 1).toString(),
             VITE_WS_PATH: DEFAULT_CONFIG.webSocket.path || undefined,
             PORT: config.ui.port.toString(), // Also set PORT for compatibility
             VITE_DEFAULT_LAYOUT: config.ui.layout || 'default'
         }
     });
+
+    const logStream = fs.createWriteStream('vite.log', { flags: 'a' });
+    viteProcess.stdout.pipe(logStream);
+    viteProcess.stderr.pipe(logStream);
 
     viteProcess.on('error', (err) => {
         console.error('Error starting Vite server:', err.message);
