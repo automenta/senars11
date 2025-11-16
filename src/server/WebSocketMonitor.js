@@ -47,6 +47,7 @@ class WebSocketMonitor {
         // Initialize YjsStateManager for CRDT-based state synchronization
         this.yjsStateManager = new YjsStateManager({
             websocketPort: options.yjsPort || 1234,
+            host: options.host || '0.0.0.0',  // Use same host as main WebSocket server
             documentId: options.yjsDocumentId || 'senars-document'
         });
     }
@@ -155,7 +156,7 @@ class WebSocketMonitor {
                 console.log(`Max connections: ${this.maxConnections}, Rate limit: ${this.maxMessagesPerWindow}/${this.rateLimitWindowMs}ms`);
 
                 // Y.js server is already started by YjsStateManager constructor
-                console.log(`Y.js synchronization server available at ws://localhost:${this.yjsStateManager.port}/${this.yjsStateManager.documentId}`);
+                console.log(`Y.js synchronization server available at ws://${this.host}:${this.yjsStateManager.port}/${this.yjsStateManager.documentId}`);
 
                 resolve();
             });

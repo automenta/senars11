@@ -14,7 +14,7 @@ class YjsDocServer {
   constructor(options = {}) {
     this.options = {
       port: options.port || 1234,
-      host: options.host || 'localhost',
+      host: '0.0.0.0',  // Always bind to 0.0.0.0 to accept external connections
       documentId: options.documentId || 'senars-document'
     };
 
@@ -64,13 +64,6 @@ class YjsDocServer {
       // Setup connection handlers
       this.setupConnection(conn, doc, docName, docAwareness);
 
-      // Send current document state
-      const encoder = encoding.createEncoder();
-      encoding.writeVarUint(encoder, syncProtocol.messageYjsSyncStep1);
-      syncProtocol.writeSyncStep1(encoder, doc);
-      if (encoding.length(encoder) > 1) {
-        conn.send(encoding.toUint8Array(encoder));
-      }
     });
 
     console.log(`YjsDocServer started on ws://${this.options.host}:${this.options.port}`);
@@ -81,70 +74,6 @@ class YjsDocServer {
    * Setup connection handlers for document synchronization
    */
   setupConnection(conn, doc, docName, awareness) {
-    // Send awareness updates to this client
-    const awarenessChangeHandler = ({ added, updated, removed }, origin) => {
-      const changedClients = added.concat(updated).concat(removed);
-      const encoder = encoding.createEncoder();
-      encoding.writeVarUint(encoder, awarenessProtocol.messageAwareness);
-      awarenessProtocol.writeAwarenessUpdate(encoder, awareness, changedClients);
-      try {
-        conn.send(encoding.toUint8Array(encoder));
-      } catch (e) {}
-    };
-    
-    // Listen to awareness changes
-    awareness.on('change', awarenessChangeHandler);
-
-    // Handle document updates
-    const docUpdateHandler = (update, origin) => {
-      const encoder = encoding.createEncoder();
-      encoding.writeVarUint(encoder, syncProtocol.messageYjsUpdate);
-      syncProtocol.writeUpdate(encoder, update);
-      try {
-        conn.send(encoding.toUint8Array(encoder));
-      } catch (e) {}
-    };
-    
-    doc.on('update', docUpdateHandler);
-
-    // Handle messages from client
-    conn.on('message', (message) => {
-      try {
-        const decoder = decoding.createDecoder(new Uint8Array(message));
-        const encoder = encoding.createEncoder();
-        const messageType = decoding.readVarUint(decoder);
-
-        switch (messageType) {
-          case syncProtocol.messageYjsSyncStep1:
-          case syncProtocol.messageYjsSyncStep2:
-            syncProtocol.readSyncMessage(decoder, encoder, doc, null);
-            if (encoding.length(encoder) > 1) {
-              conn.send(encoding.toUint8Array(encoder));
-            }
-            break;
-          case awarenessProtocol.messageAwareness:
-            awarenessProtocol.readAwarenessUpdate(decoder, awareness, conn);
-            break;
-          default:
-            console.warn('YjsDocServer: Unexpected message type:', messageType);
-        }
-      } catch (err) {
-        console.error('YjsDocServer: Error processing message:', err);
-      }
-    });
-
-    // Cleanup on connection close
-    conn.on('close', () => {
-      awareness.off('change', awarenessChangeHandler);
-      doc.off('update', docUpdateHandler);
-      
-      if (this.conns.has(conn)) {
-        this.conns.get(conn).delete(doc);
-        if (this.conns.get(conn).size === 0) {
-          this.conns.delete(conn);
-        }
-      }
-    });
   }
 
   /**

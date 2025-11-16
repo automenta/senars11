@@ -27,6 +27,7 @@ Options:
   --prod            Start production mode
   --port <port>     Specify port for the UI server (default: 5173)
   --ws-port <port>  Specify WebSocket port (default: 8080)
+  --yjs-port <port> Specify Yjs WebSocket port (default: 1234)
   --host <host>     Specify host (default: localhost)
   --graph-ui        Launch with Graph UI layout
   --layout <name>   Specify layout (default, self-analysis, graph)
@@ -35,6 +36,7 @@ Examples:
   node scripts/ui/launcher.js --dev
   node scripts/ui/launcher.js --prod --port 3000
   node scripts/ui/launcher.js --dev --port 8081 --ws-port 8082
+  node scripts/ui/launcher.js --dev --ws-port 8081 --yjs-port 1235
   node scripts/ui/launcher.js --graph-ui
 `;
 

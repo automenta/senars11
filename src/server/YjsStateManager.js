@@ -9,6 +9,7 @@ class YjsStateManager {
   constructor(options = {}) {
     this.options = {
       websocketPort: options.websocketPort || 1234, // Default Y.js WebSocket port
+      host: options.host || '0.0.0.0', // Use 0.0.0.0 to accept external connections
       documentId: options.documentId || 'senars-document'
     };
 
@@ -19,6 +20,7 @@ class YjsStateManager {
     // Create the YjsDocServer to handle WebSocket connections
     this.server = new YjsDocServer({
       port: this.options.websocketPort,
+      host: this.options.host,
       documentId: this.options.documentId
     });
 
@@ -49,7 +51,7 @@ class YjsStateManager {
       notifications: this.ydoc.getArray('notifications')
     };
 
-    console.log(`Y.js document server started at ws://localhost:${this.port}/${this.documentId}`);
+    console.log(`Y.js document server started at ws://${this.options.host}:${this.port}/${this.documentId}`);
 
     // Track current NAR instance to listen to its events
     this.nar = null;
