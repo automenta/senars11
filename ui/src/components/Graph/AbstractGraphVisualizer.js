@@ -3,7 +3,7 @@
  * Supports multiple renderers with UI to switch between them
  */
 import React, { useState, useCallback, useMemo } from 'react';
-import { useUiData } from '../../hooks/useWebSocket.js';
+import { useSync } from '../../hooks/useSync.js';
 import { GenericSelectField } from '../GenericComponents.js';
 import NarseseInput from '../../../simple-uis/NarseseInput.js';
 
@@ -51,7 +51,7 @@ const AbstractGraphVisualizer = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Get data from store - concepts and tasks (with types: belief, question, goal)
-  const { tasks, concepts } = useUiData();
+  const { concepts } = useSync();
 
   // Handle filter changes
   const handleFilterChange = useCallback((filterType, value) => {
@@ -192,6 +192,7 @@ const AbstractGraphVisualizer = () => {
           }
         },
         React.createElement(CurrentRenderer, {
+          concepts,
           filters,
           priorityRange
         })

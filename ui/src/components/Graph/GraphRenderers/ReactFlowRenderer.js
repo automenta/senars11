@@ -85,9 +85,7 @@ const createSampleEdges = (nodes) => {
   return edges;
 };
 
-export const ReactFlowRenderer = ({ filters, priorityRange }) => {
-  const { tasks, concepts } = useUiData();
-
+export const ReactFlowRenderer = ({ concepts, filters, priorityRange }) => {
   // Transform store data to ReactFlow format
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -95,31 +93,31 @@ export const ReactFlowRenderer = ({ filters, priorityRange }) => {
   // Update nodes and edges when data changes
   React.useEffect(() => {
     const newNodes = [];
+    const newEdges = [];
 
-    // Add filtered concepts
     if (filters.concepts) {
-      concepts
-        .filter(concept => concept.priority >= priorityRange.min && concept.priority <= priorityRange.max)
-        .forEach((concept, index) => {
-          newNodes.push(conceptToReactFlowNode(concept, index));
+        concepts.forEach((concept, conceptIndex) => {
+            const conceptNode = conceptToReactFlowNode(concept, conceptIndex);
+            newNodes.push(conceptNode);
+
+            concept.tasks.forEach((task, taskIndex) => {
+                const taskNode = taskToReactFlowNode(task, taskIndex);
+                newNodes.push(taskNode);
+                newEdges.push({
+                    id: `edge-${concept.term}-${task.id}`,
+                    source: conceptNode.id,
+                    target: taskNode.id,
+                    animated: true,
+                    style: { stroke: '#999', strokeWidth: 1 },
+                    label: "task_of"
+                });
+            });
         });
     }
 
-    // Add all tasks (using budget.priority if available, otherwise priority)
-    tasks
-      .filter(task => {
-        const priority = task.budget?.priority ?? task.priority ?? 0;
-        return priority >= priorityRange.min && priority <= priorityRange.max;
-      })
-      .forEach((task, index) => {
-        newNodes.push(taskToReactFlowNode(task, index));
-      });
-
-    const newEdges = newNodes.length > 1 ? createSampleEdges(newNodes) : [];
-
     setNodes(newNodes);
     setEdges(newEdges);
-  }, [concepts, tasks, filters, priorityRange, setNodes, setEdges]);
+  }, [concepts, filters, priorityRange, setNodes, setEdges]);
 
   // Event handlers
   const onConnect = useCallback((params) => setEdges((eds) => eds.concat(params)), [setEdges]);
