@@ -8,6 +8,51 @@ const CONNECTION_STYLES = {
   disconnected: { backgroundColor: '#f8d7da', color: '#721c24' }
 };
 
+const NodeInfoPanel = ({ node, onClose }) => React.createElement('div', {
+  style: {
+    position: 'absolute',
+    bottom: '20px',
+    left: '20px',
+    backgroundColor: 'white',
+    border: '1px solid #ddd',
+    borderRadius: '4px',
+    padding: '15px',
+    maxWidth: '300px',
+    zIndex: 100,
+    boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+  }
+},
+React.createElement('h4', null, 'Node Details'),
+React.createElement('p', null,
+  React.createElement('strong', null, 'ID: '),
+  node.id
+),
+React.createElement('p', null,
+  React.createElement('strong', null, 'Term: '),
+  node.term
+),
+React.createElement('p', null,
+  React.createElement('strong', null, 'Type: '),
+  node.type
+),
+node.priority != null && React.createElement('p', null,
+  React.createElement('strong', null, 'Priority: '),
+  node.priority.toFixed(3)
+),
+React.createElement('button', {
+  onClick: onClose,
+  style: {
+    marginTop: '10px',
+    padding: '5px 10px',
+    background: '#007bff',
+    color: 'white',
+    border: 'none',
+    borderRadius: '3px',
+    cursor: 'pointer'
+  }
+}, 'Close')
+);
+
 const GraphView = () => {
   const [selectedNode, setSelectedNode] = useState(null);
 
@@ -85,50 +130,5 @@ const GraphView = () => {
   })
   );
 };
-
-const NodeInfoPanel = ({ node, onClose }) => React.createElement('div', {
-  style: {
-    position: 'absolute',
-    bottom: '20px',
-    left: '20px',
-    backgroundColor: 'white',
-    border: '1px solid #ddd',
-    borderRadius: '4px',
-    padding: '15px',
-    maxWidth: '300px',
-    zIndex: 100,
-    boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-  }
-},
-React.createElement('h4', null, 'Node Details'),
-React.createElement('p', null,
-  React.createElement('strong', null, 'ID: '),
-  node.id
-),
-React.createElement('p', null,
-  React.createElement('strong', null, 'Term: '),
-  node.term
-),
-React.createElement('p', null,
-  React.createElement('strong', null, 'Type: '),
-  node.type
-),
-node.priority != null && React.createElement('p', null,
-  React.createElement('strong', null, 'Priority: '),
-  node.priority.toFixed(3)
-),
-React.createElement('button', {
-  onClick: onClose,
-  style: {
-    marginTop: '10px',
-    padding: '5px 10px',
-    background: '#007bff',
-    color: 'white',
-    border: 'none',
-    borderRadius: '3px',
-    cursor: 'pointer'
-  }
-}, 'Close')
-);
 
 export default GraphView;

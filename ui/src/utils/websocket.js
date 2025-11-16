@@ -336,7 +336,7 @@ class WebSocketService {
   }
 
   async routeMessage(data) {
-    const {type} = data || {};
+    const {type} = data ?? {};
 
     if (!type) {
       console.warn('Received message without type:', data);
@@ -345,7 +345,7 @@ class WebSocketService {
 
     // Handle the special connection_info type
     if (type === 'connection_info') {
-      console.debug('Processing connection info:', data.data || data);
+      console.debug('Processing connection info:', data.data ?? data);
       getStore().setWsConnected(true); // Update connection status when receiving connection info
       return;
     }
@@ -387,7 +387,7 @@ class WebSocketService {
       this._addNotification({
         type: 'error',
         title: 'Message processing error',
-        message: error?.message || 'Unknown error in message processing'
+        message: error?.message ?? 'Unknown error in message processing'
       });
     }
   }
@@ -805,96 +805,64 @@ class WebSocketService {
 
     const now = Date.now();
 
-    // Send sample concepts
-    sendSampleData(
-      'concepts',
-      () => [
-        {term: 'sample_concept_1', priority: 0.8, taskCount: 2, beliefCount: 1, questionCount: 0},
-        {term: 'sample_concept_2', priority: 0.65, taskCount: 1, beliefCount: 0, questionCount: 1},
-        {term: 'sample_concept_3', priority: 0.92, taskCount: 3, beliefCount: 2, questionCount: 1}
-      ],
-      ({term, priority, taskCount, beliefCount, questionCount}) => ({
-        type: 'conceptUpdate',
-        payload: {
-          concept: {
-            term,
-            priority,
-            occurrenceTime: now,
-            taskCount,
-            beliefCount,
-            questionCount,
-            lastAccess: now
-          },
-          changeType: 'added'
-        }
-      })
-    );
+    // Define sample data generators using a more concise approach
+  const sampleDataGenerators = {
+    concepts: () => [
+      {term: 'sample_concept_1', priority: 0.8, taskCount: 2, beliefCount: 1, questionCount: 0},
+      {term: 'sample_concept_2', priority: 0.65, taskCount: 1, beliefCount: 0, questionCount: 1},
+      {term: 'sample_concept_3', priority: 0.92, taskCount: 3, beliefCount: 2, questionCount: 1}
+    ],
+    tasks: () => [
+      {id: `task_${now}_sample1`, content: '<sample --> task>.', priority: 0.75, type: 'belief'},
+      {id: `task_${now}_sample2`, content: '<another --> example>?', priority: 0.62, type: 'question'}
+    ],
+    beliefs: () => [
+      {id: `belief_${now}_sample1`, term: '<cat --> animal>.', priority: 0.9, type: 'belief', truth: {frequency: 0.9, confidence: 0.8}},
+      {id: `belief_${now}_sample2`, term: '<dog --> mammal>.', priority: 0.85, type: 'belief', truth: {frequency: 0.85, confidence: 0.75}}
+    ],
+    goals: () => [
+      {id: `goal_${now}_sample1`, term: '<find_solution --> desirable>!', priority: 0.95, type: 'goal', truth: {desire: 0.9, confidence: 0.85}},
+      {id: `goal_${now}_sample2`, term: '<achieve_target --> intended>!', priority: 0.8, type: 'goal', truth: {desire: 0.8, confidence: 0.7}}
+    ]
+  };
 
-    // Send sample tasks
-    sendSampleData(
-      'tasks',
-      () => [
-        {id: `task_${now}_sample1`, content: '<sample --> task>.', priority: 0.75, type: 'belief'},
-        {id: `task_${now}_sample2`, content: '<another --> example>?', priority: 0.62, type: 'question'}
-      ],
-      ({id, content, priority, type}) => ({
-        type: 'taskUpdate',
-        payload: {
-          task: {id, content, priority, creationTime: now, type},
-          changeType: 'input'
-        }
-      })
-    );
-
-    // Send sample beliefs
-    sendSampleData(
-      'beliefs',
-      () => [
-        {
-          id: `belief_${now}_sample1`,
-          term: '<cat --> animal>.',
-          priority: 0.9,
-          type: 'belief',
-          truth: {frequency: 0.9, confidence: 0.8}
+  const sampleDataTransformers = {
+    concepts: ({term, priority, taskCount, beliefCount, questionCount}) => ({
+      type: 'conceptUpdate',
+      payload: {
+        concept: {
+          term,
+          priority,
+          occurrenceTime: now,
+          taskCount,
+          beliefCount,
+          questionCount,
+          lastAccess: now
         },
-        {
-          id: `belief_${now}_sample2`,
-          term: '<dog --> mammal>.',
-          priority: 0.85,
-          type: 'belief',
-          truth: {frequency: 0.85, confidence: 0.75}
-        }
-      ],
-      ({id, term, priority, type, truth}) => ({
-        type: 'beliefUpdate',
-        payload: {id, term, priority, creationTime: now, type, truth}
-      })
-    );
+        changeType: 'added'
+      }
+    }),
+    tasks: ({id, content, priority, type}) => ({
+      type: 'taskUpdate',
+      payload: {
+        task: {id, content, priority, creationTime: now, type},
+        changeType: 'input'
+      }
+    }),
+    beliefs: ({id, term, priority, type, truth}) => ({
+      type: 'beliefUpdate',
+      payload: {id, term, priority, creationTime: now, type, truth}
+    }),
+    goals: ({id, term, priority, type, truth}) => ({
+      type: 'goalUpdate',
+      payload: {id, term, priority, creationTime: now, type, truth}
+    })
+  };
 
-    // Send sample goals
-    sendSampleData(
-      'goals',
-      () => [
-        {
-          id: `goal_${now}_sample1`,
-          term: '<find_solution --> desirable>!',
-          priority: 0.95,
-          type: 'goal',
-          truth: {desire: 0.9, confidence: 0.85}
-        },
-        {
-          id: `goal_${now}_sample2`,
-          term: '<achieve_target --> intended>!',
-          priority: 0.8,
-          type: 'goal',
-          truth: {desire: 0.8, confidence: 0.7}
-        }
-      ],
-      ({id, term, priority, type, truth}) => ({
-        type: 'goalUpdate',
-        payload: {id, term, priority, creationTime: now, type, truth}
-      })
-    );
+  // Process all sample data types using the same pattern
+  Object.entries(sampleDataGenerators).forEach(([type, generator]) => {
+    sendSampleData(type, generator, sampleDataTransformers[type]);
+  });
   }
 
   handlePanelCommand(data) {

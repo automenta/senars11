@@ -9,18 +9,10 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { useUiData } from '../../../hooks/useWebSocket.js';
+import { NODE_TYPE_CONFIG } from '../../../utils/graph/graphConstants.js';
 
-// Node type configuration
-const NODE_CONFIG = Object.freeze({
-  concept: { color: '#007bff', label: 'Concept' },
-  task: { color: '#28a745', label: 'Task' },
-  belief: { color: '#fd7e14', label: 'Belief' },
-  goal: { color: '#dc3545', label: 'Goal' },
-  question: { color: '#6f42c1', label: 'Question' }
-});
-
-// Get color for node type
-const getNodeColor = (type) => NODE_CONFIG[type]?.color ?? '#999';
+// Get color for node type - using shared constants
+const getNodeColor = (type) => NODE_TYPE_CONFIG[type]?.color ?? '#999';
 
 // Get node style based on type
 const getNodeStyle = (type) => ({
@@ -38,8 +30,8 @@ const getNodeStyle = (type) => ({
 
 // Determine task type from content
 const getTaskType = (task) => {
-  const content = task.term || task.content || task.id || '';
-  return task.type ||
+  const content = task.term ?? task.content ?? task.id ?? '';
+  return task.type ??
     (content.endsWith('?') ? 'question' :
      content.endsWith('!') ? 'goal' :
      content.endsWith('.') ? 'belief' : 'task');
@@ -60,7 +52,7 @@ const getTaskPriorityValue = (task, taskType) => {
 // Create task node
 const createTaskNode = (task, index) => {
   const taskType = getTaskType(task);
-  const content = task.term || task.content || task.id || '';
+  const content = task.term ?? task.content ?? task.id ?? '';
   const priorityValue = getTaskPriorityValue(task, taskType);
 
   let label = `${content}`;
@@ -142,7 +134,7 @@ export const ReactFlowRenderer = ({ filters, priorityRange }) => {
     // Add all tasks (using budget.priority if available, otherwise priority)
     tasks
       .filter(task => {
-        const priority = task.budget?.priority || task.priority || 0;
+        const priority = task.budget?.priority ?? task.priority ?? 0;
         return priority >= priorityRange.min && priority <= priorityRange.max;
       })
       .forEach((task, index) => {

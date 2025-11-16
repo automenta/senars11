@@ -6,72 +6,10 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
 import { themeUtils } from '../../../utils/themeUtils.js';
 import { useUiData } from '../../../hooks/useWebSocket.js';
+import { NODE_TYPE_CONFIG, LINK_TYPE_STYLES, DEFAULT_NODE_SIZE, MAX_NODE_SIZE } from '../../../utils/graph/graphConstants.js';
+import { drawNodeWithDetails, drawLinkWithDetails } from '../../../utils/graph/renderingUtils.js';
+import { createConceptNode, createTaskNode } from '../../../utils/graph/nodeUtils.js';
 
-// Node type configuration
-const NODE_CONFIG = Object.freeze({
-  concept: { color: '#007bff', label: 'Concept' },
-  task: { color: '#28a745', label: 'Task' },
-  belief: { color: '#fd7e14', label: 'Belief' },
-  goal: { color: '#dc3545', label: 'Goal' },
-  question: { color: '#6f42c1', label: 'Question' }
-});
-
-// Link type styles
-const LINK_TYPE_STYLES = Object.freeze({
-  'task-concept-association': { color: '#007bff', width: 1, dash: null, type: 'solid' },
-  'belief-concept-association': { color: '#fd7e14', width: 1, dash: null, type: 'solid' },
-  'goal-concept-association': { color: '#dc3545', width: 1, dash: null, type: 'solid' },
-  'question-concept-association': { color: '#6f42c1', width: 1, dash: null, type: 'solid' },
-  'concept-embedding': { color: '#6c757d', width: 1.5, dash: [5, 3], type: 'dashed' },
-  'concept-subterm': { color: '#20c997', width: 1.2, dash: [2, 3], type: 'dotted' },
-  'task-inference': { color: '#28a745', width: 2, dash: [5, 5], type: 'dashed' },
-  'belief-similarity': { color: '#ffc107', width: 1.5, dash: [2, 2], type: 'dotted' },
-  'goal-similarity': { color: '#e83e8c', width: 1.5, dash: [2, 2], type: 'dotted' },
-  'question-answer': { color: '#6610f2', width: 2, dash: [3, 3, 6, 3], type: 'dash-dot' },
-  association: { color: '#999', width: 1, dash: null, type: 'solid' },
-  inference: { color: '#28a745', width: 2, dash: [5, 5], type: 'dashed' },
-  similarity: { color: '#ffc107', width: 1.5, dash: [2, 2], type: 'dotted' }
-});
-
-// Default node and link properties
-const DEFAULT_NODE_SIZE = 8;
-const MAX_NODE_SIZE = 24;
-
-// Determine task type from content
-const getTaskType = (task) => {
-  const content = task.content || task.term || task.id || '';
-  return task.type ||
-    (content.endsWith('?') ? 'question' :
-     content.endsWith('!') ? 'goal' :
-     content.endsWith('.') ? 'belief' : 'task');
-};
-
-
-// Create concept node
-const createConceptNode = (concept) => ({
-  id: `concept-${concept.term}`,
-  term: concept.term,
-  type: 'concept',
-  priority: concept.priority,
-  taskCount: concept.taskCount,
-  beliefCount: concept.beliefCount,
-  questionCount: concept.questionCount,
-  occurrenceTime: concept.occurrenceTime
-});
-
-// Create task node
-const createTaskNode = (task) => {
-  const taskType = getTaskType(task);
-  return {
-    id: `task-${task.id}`,
-    term: task.content || task.term || task.id,
-    type: taskType,
-    priority: task.priority,
-    creationTime: task.creationTime,
-    truth: task.truth,
-    ...task
-  };
-};
 
 // Create sample links between nodes
 const createSampleLinks = (nodes) => {
@@ -103,214 +41,32 @@ export const ForceGraphRenderer = ({ filters, priorityRange }) => {
 
     // Add filtered concepts
     if (filters.concepts) {
-      concepts
-        .filter(concept => concept.priority >= priorityRange.min && concept.priority <= priorityRange.max)
-        .forEach(concept => nodes.push(createConceptNode(concept)));
+      const filteredConcepts = concepts.filter(concept =>
+        concept.priority >= priorityRange.min && concept.priority <= priorityRange.max
+      );
+      const conceptNodes = filteredConcepts.map(createConceptNode);
+      nodes.push(...conceptNodes);
     }
 
     // Add all tasks (using budget.priority if available, otherwise priority)
-    tasks
-      .filter(task => {
-        const priority = task.budget?.priority || task.priority || 0;
-        return priority >= priorityRange.min && priority <= priorityRange.max;
-      })
-      .forEach(task => {
-        nodes.push(createTaskNode(task));
-      });
+    const filteredTasks = tasks.filter(task => {
+      const priority = task.budget?.priority ?? task.priority ?? 0;
+      return priority >= priorityRange.min && priority <= priorityRange.max;
+    });
+    const taskNodes = filteredTasks.map(createTaskNode);
+    nodes.push(...taskNodes);
 
     const links = createSampleLinks(nodes);
 
     return { nodes, links };
   }, [concepts, tasks, filters, priorityRange]);
 
-  const getColorForNodeType = useCallback((type) => NODE_CONFIG[type]?.color ?? '#999', []);
-
   const drawNode = useCallback((node, ctx, globalScale) => {
-    const label = node.term ?? node.id;
-    const fontSize = 12 / globalScale;
-    ctx.font = `${fontSize}px Sans-Serif`;
-
-    // Calculate radius based on priority
-    const baseRadius = DEFAULT_NODE_SIZE / globalScale;
-    const priorityRadius = node.priority ? (node.priority * MAX_NODE_SIZE / globalScale) : baseRadius;
-    const radius = Math.max(baseRadius, priorityRadius);
-
-    // Draw main node circle
-    ctx.beginPath();
-    ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI, false);
-    ctx.fillStyle = getColorForNodeType(node.type);
-    ctx.fill();
-
-    // Highlight selected node
-    if (selectedNode?.id === node.id) {
-      ctx.strokeStyle = '#000';
-      ctx.lineWidth = 2 / globalScale;
-      ctx.stroke();
-    }
-
-    // Draw label
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = themeUtils.get('TEXT.PRIMARY');
-    ctx.fillText(label, node.x, node.y + fontSize * 1.2);
-
-    // Draw priority indicator as border thickness
-    if (node.priority != null) {
-      const priority = Math.max(0, Math.min(1, node.priority));
-      const borderWidth = Math.max(1, priority * 5) / globalScale;
-      ctx.beginPath();
-      ctx.arc(node.x, node.y, radius + borderWidth, 0, 2 * Math.PI, false);
-      ctx.strokeStyle = `rgba(255, 255, 255, ${priority})`;
-      ctx.lineWidth = borderWidth;
-      ctx.stroke();
-    }
-
-    // Draw node-specific information based on type
-    switch (node.type) {
-      case 'belief':
-        drawBeliefInfo(ctx, node, radius, fontSize, globalScale);
-        break;
-      case 'goal':
-        drawGoalInfo(ctx, node, radius, fontSize, globalScale);
-        break;
-      case 'question':
-        drawQuestionInfo(ctx, node, radius, fontSize, globalScale);
-        break;
-    }
-  }, [selectedNode, getColorForNodeType]);
-
-  // Helper function to draw belief-specific information (frequency and confidence)
-  const drawBeliefInfo = (ctx, node, radius, fontSize, globalScale) => {
-    if (!node.truth) return;
-
-    const frequency = node.truth.frequency;
-    const confidence = node.truth.confidence;
-
-    // Draw frequency indicator as inner circle
-    if (frequency != null) {
-      const freqRadius = radius * 0.6;
-      ctx.beginPath();
-      ctx.arc(node.x, node.y, freqRadius, 0, 2 * Math.PI, false);
-      ctx.strokeStyle = `rgba(255, 0, 0, ${frequency})`; // Red for frequency
-      ctx.lineWidth = 1.5 / globalScale;
-      ctx.stroke();
-
-      // Add frequency text
-      ctx.font = `${fontSize * 0.8}px Sans-Serif`;
-      ctx.fillStyle = '#000';
-      ctx.fillText(`${frequency.toFixed(2)}`, node.x, node.y - fontSize * 0.5);
-    }
-
-    // Draw confidence indicator
-    if (confidence != null) {
-      // Draw confidence as a small bar at the bottom
-      const barWidth = 12 / globalScale;
-      const barHeight = 4 / globalScale;
-      const barX = node.x - barWidth / 2;
-      const barY = node.y + radius + 2 / globalScale;
-
-      // Background bar (gray)
-      ctx.fillStyle = 'rgba(200, 200, 200, 0.5)';
-      ctx.fillRect(barX, barY, barWidth, barHeight);
-
-      // Confidence bar (blue)
-      ctx.fillStyle = `rgba(0, 123, 255, ${confidence})`;
-      ctx.fillRect(barX, barY, barWidth * confidence, barHeight);
-    }
-  };
-
-  // Helper function to draw goal-specific information (desire and confidence)
-  const drawGoalInfo = (ctx, node, radius, fontSize, globalScale) => {
-    if (!node.truth) return;
-
-    const desire = node.truth.desire;
-    const confidence = node.truth.confidence;
-
-    if (desire != null) {
-      // Draw desire as an outer ring around the goal node
-      const desireRadius = radius * 1.3;
-      ctx.beginPath();
-      ctx.arc(node.x, node.y, desireRadius, 0, 2 * Math.PI, false);
-      ctx.strokeStyle = `rgba(255, 0, 0, ${Math.abs(desire)})`; // Red for positive, blue for negative
-      ctx.lineWidth = 2 / globalScale;
-      ctx.stroke();
-
-      // Add desire text
-      ctx.font = `${fontSize * 0.8}px Sans-Serif`;
-      ctx.fillStyle = '#000';
-      ctx.fillText(`${desire.toFixed(2)}`, node.x, node.y + fontSize * 1.8);
-    }
-
-    if (confidence != null) {
-      // Draw confidence as a small bar at the bottom
-      const barWidth = 12 / globalScale;
-      const barHeight = 4 / globalScale;
-      const barX = node.x - barWidth / 2;
-      const barY = node.y + radius + 6 / globalScale;
-
-      // Background bar (gray)
-      ctx.fillStyle = 'rgba(200, 200, 200, 0.5)';
-      ctx.fillRect(barX, barY, barWidth, barHeight);
-
-      // Confidence bar (red for goals)
-      ctx.fillStyle = `rgba(220, 53, 69, ${confidence})`;
-      ctx.fillRect(barX, barY, barWidth * confidence, barHeight);
-    }
-  };
-
-  // Helper function to draw question-specific information (priority indicators)
-  const drawQuestionInfo = (ctx, node, radius, fontSize, globalScale) => {
-    if (node.priority == null) return;
-
-    // Draw question priority as a pulsing border effect
-    const pulseOffset = (Date.now() % 1000) / 1000; // 0 to 1 over 1 second
-    const pulseValue = Math.sin(pulseOffset * Math.PI * 2) * 0.5 + 0.5; // 0 to 1
-    const pulseRadius = radius * (1.1 + 0.2 * pulseValue); // Pulsing radius
-
-    ctx.beginPath();
-    ctx.arc(node.x, node.y, pulseRadius, 0, 2 * Math.PI, false);
-    ctx.strokeStyle = `rgba(111, 66, 193, ${0.3 + 0.7 * pulseValue})`; // Purple for questions
-    ctx.lineWidth = 1 / globalScale;
-    ctx.stroke();
-  };
+    drawNodeWithDetails(node, ctx, globalScale, selectedNode, NODE_TYPE_CONFIG);
+  }, [selectedNode, NODE_TYPE_CONFIG]);
 
   const drawLink = useCallback((link, ctx, globalScale) => {
-    ctx.beginPath();
-    ctx.moveTo(link.source.x, link.source.y);
-    ctx.lineTo(link.target.x, link.target.y);
-
-    // Get style based on link type
-    const style = LINK_TYPE_STYLES[link.type] ?? LINK_TYPE_STYLES.association;
-    ctx.strokeStyle = style.color;
-    ctx.lineWidth = style.width / globalScale;
-
-    // Apply dash pattern if specified
-    if (style.dash) {
-      ctx.setLineDash(style.dash);
-    }
-
-    ctx.stroke();
-    ctx.setLineDash([]); // Reset dash
-
-    // Draw arrow for directional relationships
-    if (link.directional) {
-      const angle = Math.atan2(link.target.y - link.source.y, link.target.x - link.source.x);
-      const arrowSize = 5 / globalScale;
-
-      ctx.beginPath();
-      ctx.moveTo(link.target.x, link.target.y);
-      ctx.lineTo(
-        link.target.x - arrowSize * Math.cos(angle - Math.PI / 6),
-        link.target.y - arrowSize * Math.sin(angle - Math.PI / 6)
-      );
-      ctx.lineTo(
-        link.target.x - arrowSize * Math.cos(angle + Math.PI / 6),
-        link.target.y - arrowSize * Math.sin(angle + Math.PI / 6)
-      );
-      ctx.closePath();
-      ctx.fillStyle = ctx.strokeStyle;
-      ctx.fill();
-    }
+    drawLinkWithDetails(link, ctx, globalScale, LINK_TYPE_STYLES);
   }, []);
 
   // Event handlers
@@ -319,7 +75,7 @@ export const ForceGraphRenderer = ({ filters, priorityRange }) => {
     addNotification?.({
       type: 'info',
       title: 'Node Selected',
-      message: `Selected: ${node.term || node.id} (${node.type})`,
+      message: `Selected: ${node.term ?? node.id} (${node.type})`,
       timestamp: Date.now()
     });
   }, [addNotification]);
@@ -416,9 +172,9 @@ export const ForceGraphRenderer = ({ filters, priorityRange }) => {
         let label = `${node.term ?? node.id}`;
 
         if (node.type === 'belief' && node.truth) {
-          label += `\nFreq: ${(node.truth.frequency || 0).toFixed(2)}, Conf: ${(node.truth.confidence || 0).toFixed(2)}`;
+          label += `\nFreq: ${(node.truth.frequency ?? 0).toFixed(2)}, Conf: ${(node.truth.confidence ?? 0).toFixed(2)}`;
         } else if (node.type === 'goal' && node.truth) {
-          label += `\nDesire: ${(node.truth.desire || 0).toFixed(2)}, Conf: ${(node.truth.confidence || 0).toFixed(2)}`;
+          label += `\nDesire: ${(node.truth.desire ?? 0).toFixed(2)}, Conf: ${(node.truth.confidence ?? 0).toFixed(2)}`;
         } else if (node.type === 'question' && node.priority) {
           label += `\nPriority: ${node.priority.toFixed(2)}`;
         } else if (node.priority) {
@@ -434,7 +190,7 @@ export const ForceGraphRenderer = ({ filters, priorityRange }) => {
       linkDirectionalArrowRelPos: 1,
       linkAutoColorBy: "type",
       linkLabel: link => {
-        const linkType = link.type || 'association';
+        const linkType = link.type ?? 'association';
         const typeLabels = {
           'task-concept-association': 'Task-Concept',
           'belief-concept-association': 'Belief-Concept',
@@ -450,7 +206,7 @@ export const ForceGraphRenderer = ({ filters, priorityRange }) => {
           inference: 'Inference',
           similarity: 'Similarity'
         };
-        return typeLabels[linkType] || linkType;
+        return typeLabels[linkType] ?? linkType;
       },
       onNodeClick: handleNodeClick,
       onNodeHover: handleNodeHover,

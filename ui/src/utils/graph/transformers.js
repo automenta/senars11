@@ -2,8 +2,7 @@
  * Utility functions for transforming NAR data to graph format
  */
 
-const DEFAULT_PRIORITY = 0;
-const DEFAULT_TERM = 'Unknown';
+import { DEFAULT_PRIORITY, DEFAULT_TERM } from './graphConstants.js';
 
 // Helper function to generate node ID
 const generateNodeId = (prefix, id, fallback) =>
@@ -13,15 +12,35 @@ const generateNodeId = (prefix, id, fallback) =>
 const getCreationTime = (item, timeField = 'creationTime', fallbackField = 'occurrenceTime') =>
   item[timeField] ?? item[fallbackField] ?? Date.now();
 
+// Get priority value from task based on its type
+const getPriorityValue = (task, taskType) => {
+  if (taskType === 'belief') {
+    return task.truth?.frequency ?? task.budget?.priority ?? task.priority ?? DEFAULT_PRIORITY;
+  } else if (taskType === 'goal') {
+    return task.truth?.desire ?? task.budget?.priority ?? task.priority ?? DEFAULT_PRIORITY;
+  } else {
+    return task.budget?.priority ?? task.priority ?? DEFAULT_PRIORITY;
+  }
+};
+
 // Transform NAR tasks to graph nodes
-export const transformTaskToNode = (task) => ({
-  id: generateNodeId('task', task.id),
-  term: task.content ?? task.term ?? DEFAULT_TERM,
-  type: task.type?.toLowerCase() ?? 'task',
-  priority: task.priority ?? DEFAULT_PRIORITY,
-  createdAt: getCreationTime(task),
-  ...(task.truth && { truth: task.truth })
-});
+export const transformTaskToNode = (task) => {
+  const taskType = task.type?.toLowerCase() ??
+    (task.content?.endsWith('?') ? 'question' :
+     task.content?.endsWith('!') ? 'goal' :
+     task.content?.endsWith('.') ? 'belief' : 'task');
+
+  const priorityValue = getPriorityValue(task, taskType);
+
+  return {
+    id: generateNodeId('task', task.id),
+    term: task.content ?? task.term ?? DEFAULT_TERM,
+    type: taskType,
+    priority: priorityValue,
+    createdAt: getCreationTime(task),
+    ...(task.truth && { truth: task.truth })
+  };
+};
 
 // Transform NAR concepts to graph nodes
 export const transformConceptToNode = (concept) => ({
@@ -35,34 +54,14 @@ export const transformConceptToNode = (concept) => ({
   questionCount: concept.questionCount ?? 0
 });
 
-// Transform NAR beliefs to graph nodes
-export const transformBeliefToNode = (belief) => ({
-  id: generateNodeId('belief', belief.id),
-  term: belief.term ?? DEFAULT_TERM,
-  type: 'belief',
-  priority: belief.priority ?? DEFAULT_PRIORITY,
-  createdAt: getCreationTime(belief),
-  ...(belief.truth && { truth: belief.truth })
-});
+// Transform NAR beliefs to graph nodes (Beliefs ARE Tasks)
+export const transformBeliefToNode = (belief) => transformTaskToNode({ ...belief, type: 'belief' });
 
-// Transform NAR goals to graph nodes
-export const transformGoalToNode = (goal) => ({
-  id: generateNodeId('goal', goal.id),
-  term: goal.term ?? DEFAULT_TERM,
-  type: 'goal',
-  priority: goal.priority ?? DEFAULT_PRIORITY,
-  createdAt: getCreationTime(goal),
-  ...(goal.truth && { truth: goal.truth })
-});
+// Transform NAR goals to graph nodes (Goals ARE Tasks)
+export const transformGoalToNode = (goal) => transformTaskToNode({ ...goal, type: 'goal' });
 
-// Transform NAR questions to graph nodes
-export const transformQuestionToNode = (question) => ({
-  id: generateNodeId('question', question.id),
-  term: question.term ?? DEFAULT_TERM,
-  type: 'question',
-  priority: question.priority ?? DEFAULT_PRIORITY,
-  createdAt: getCreationTime(question)
-});
+// Transform NAR questions to graph nodes (Questions ARE Tasks)
+export const transformQuestionToNode = (question) => transformTaskToNode({ ...question, type: 'question' });
 
 // Transform NAR event to graph node based on event type
 export const transformNarEventToNode = (event) => {

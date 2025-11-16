@@ -90,6 +90,95 @@ const AbstractGraphVisualizer = () => {
   // Get current renderer component
   const CurrentRenderer = getRendererComponent(selectedRenderer);
 
+  // Top control bar component
+  const ControlBar = React.createElement('div',
+    {
+      style: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: '0.5rem 1rem',
+        backgroundColor: '#e9ecef',
+        borderBottom: '1px solid #dee2e6',
+        zIndex: 50
+      }
+    },
+    // Left side: Controls
+    React.createElement('div',
+      {
+        style: {
+          display: 'flex',
+          gap: '0.5rem',
+          alignItems: 'center'
+        }
+      },
+      React.createElement('div',
+        { style: { minWidth: '180px' } },
+        React.createElement(GenericSelectField, {
+          label: 'Renderer',
+          value: selectedRenderer,
+          onChange: setSelectedRenderer,
+          options: getRendererOptions(),
+          style: { width: '100%' }
+        })
+      )
+    ),
+
+    // Right side: Additional controls
+    React.createElement('div',
+      {
+        style: {
+          display: 'flex',
+          gap: '0.5rem',
+          alignItems: 'center'
+        }
+      },
+      React.createElement('button',
+        {
+          onClick: () => setSidebarCollapsed(!sidebarCollapsed),
+          style: {
+            padding: '0.25rem 0.5rem',
+            backgroundColor: '#6c757d',
+            color: 'white',
+            border: 'none',
+            borderRadius: '3px',
+            cursor: 'pointer'
+          }
+        },
+        sidebarCollapsed ? 'Expand' : 'Collapse'
+      )
+    )
+  );
+
+  // Sidebar component
+  const Sidebar = !sidebarCollapsed && React.createElement('div',
+    {
+      style: {
+        width: '250px',
+        height: '100%',
+        borderRight: '1px solid #dee2e6',
+        backgroundColor: 'white',
+        overflowY: 'auto',
+        zIndex: 20
+      }
+    },
+    React.createElement('div',
+      { style: { padding: '1rem' } },
+      React.createElement('h3', { style: { margin: 0 } }, 'Graph Controls')
+    ),
+    React.createElement('div',
+      { style: { padding: '10px' } },
+      React.createElement('h4', { style: { margin: '0 0 0.5rem 0' } }, 'Node Filters')
+    ),
+    React.createElement('div',
+      { style: { padding: '0 10px 10px' } },
+      React.createElement(FilterControls, {
+        filters,
+        onFilterChange: handleFilterChange
+      })
+    )
+  );
+
   return React.createElement('div',
     {
       style: {
@@ -101,68 +190,7 @@ const AbstractGraphVisualizer = () => {
         backgroundColor: '#f8f9fa'
       }
     },
-
-    // Top control bar
-    React.createElement('div',
-      {
-        style: {
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: '0.5rem 1rem',
-          backgroundColor: '#e9ecef',
-          borderBottom: '1px solid #dee2e6',
-          zIndex: 50
-        }
-      },
-      // Left side: Controls
-      React.createElement('div',
-        {
-          style: {
-            display: 'flex',
-            gap: '0.5rem',
-            alignItems: 'center'
-          }
-        },
-        React.createElement('div',
-          { style: { minWidth: '180px' } },
-          React.createElement(GenericSelectField, {
-            label: 'Renderer',
-            value: selectedRenderer,
-            onChange: setSelectedRenderer,
-            options: getRendererOptions(),
-            style: { width: '100%' }
-          })
-        )
-      ),
-
-      // Right side: Additional controls
-      React.createElement('div',
-        {
-          style: {
-            display: 'flex',
-            gap: '0.5rem',
-            alignItems: 'center'
-          }
-        },
-        React.createElement('button',
-          {
-            onClick: () => setSidebarCollapsed(!sidebarCollapsed),
-            style: {
-              padding: '0.25rem 0.5rem',
-              backgroundColor: '#6c757d',
-              color: 'white',
-              border: 'none',
-              borderRadius: '3px',
-              cursor: 'pointer'
-            }
-          },
-          sidebarCollapsed ? 'Expand' : 'Collapse'
-        )
-      )
-    ),
-
-    // Main content area with sidebar and graph
+    ControlBar,
     React.createElement('div',
       {
         style: {
@@ -171,36 +199,7 @@ const AbstractGraphVisualizer = () => {
           overflow: 'hidden'
         }
       },
-
-      // Sidebar (conditionally rendered)
-      !sidebarCollapsed && React.createElement('div',
-        {
-          style: {
-            width: '250px',
-            height: '100%',
-            borderRight: '1px solid #dee2e6',
-            backgroundColor: 'white',
-            overflowY: 'auto',
-            zIndex: 20
-          }
-        },
-        React.createElement('div',
-          { style: { padding: '1rem' } },
-          React.createElement('h3', { style: { margin: 0 } }, 'Graph Controls')
-        ),
-        React.createElement('div',
-          { style: { padding: '10px' } },
-          React.createElement('h4', { style: { margin: '0 0 0.5rem 0' } }, 'Node Filters')
-        ),
-        React.createElement('div',
-          { style: { padding: '0 10px 10px' } },
-          React.createElement(FilterControls, {
-            filters,
-            onFilterChange: handleFilterChange
-          })
-        )
-      ),
-
+      Sidebar,
       // Graph view (takes remaining space)
       React.createElement('div',
         {

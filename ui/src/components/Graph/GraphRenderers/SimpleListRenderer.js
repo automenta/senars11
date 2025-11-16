@@ -15,8 +15,8 @@ export const SimpleListRenderer = ({ filters, priorityRange }) => {
 
   // Filter tasks based on priority (using budget.priority if available, otherwise priority)
   const filteredTasks = tasks.filter(task =>
-    (task.budget?.priority || task.priority || 0) >= priorityRange.min &&
-    (task.budget?.priority || task.priority || 0) <= priorityRange.max
+    (task.budget?.priority ?? task.priority ?? 0) >= priorityRange.min &&
+    (task.budget?.priority ?? task.priority ?? 0) <= priorityRange.max
   );
 
   return React.createElement('div',
@@ -124,21 +124,21 @@ export const SimpleListRenderer = ({ filters, priorityRange }) => {
                   backgroundColor: '#f8f9fa'
                 }
               },
-              React.createElement('div', 
-                { style: { fontWeight: 'bold', marginBottom: '0.25rem' } }, 
-                task.term || task.content || task.id
+              React.createElement('div',
+                { style: { fontWeight: 'bold', marginBottom: '0.25rem' } },
+                task.term ?? task.content ?? task.id
               ),
-              React.createElement('div', 
-                { style: { fontSize: '0.8em', color: '#6c757d', marginBottom: '0.25rem' } }, 
-                `Type: ${task.type || 'unknown'}`
+              React.createElement('div',
+                { style: { fontSize: '0.8em', color: '#6c757d', marginBottom: '0.25rem' } },
+                `Type: ${task.type ?? 'unknown'}`
               ),
-              React.createElement('div', 
-                { style: { fontSize: '0.8em', color: '#495057' } }, 
-                `Priority: ${(task.budget?.priority || task.priority || 0).toFixed(2)}`
+              React.createElement('div',
+                { style: { fontSize: '0.8em', color: '#495057' } },
+                `Priority: ${(task.budget?.priority ?? task.priority ?? 0).toFixed(2)}`
               ),
-              task.truth && React.createElement('div', 
-                { style: { fontSize: '0.8em', color: '#495057', marginTop: '0.25rem' } }, 
-                `Truth: Freq=${task.truth.frequency?.toFixed(2) || 'N/A'}, Conf=${task.truth.confidence?.toFixed(2) || 'N/A'}, Des=${task.truth.desire?.toFixed(2) || 'N/A'}`
+              task.truth && React.createElement('div',
+                { style: { fontSize: '0.8em', color: '#495057', marginTop: '0.25rem' } },
+                `Truth: Freq=${task.truth.frequency?.toFixed(2) ?? 'N/A'}, Conf=${task.truth.confidence?.toFixed(2) ?? 'N/A'}, Des=${task.truth.desire?.toFixed(2) ?? 'N/A'}`
               )
             )
           )

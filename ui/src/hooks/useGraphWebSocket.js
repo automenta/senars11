@@ -1,16 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import useUiStore from '../stores/uiStore.js';
 import { createGraphDataFromNarEvents, transformNarEventToNode, createRelationshipLinks } from '../utils/graph/transformers.js';
-
-// Function to create node from store data
-const createNodeFromStoreData = (item, type, idPrefix, contentField = 'content', termField = 'term') => ({
-  id: `${idPrefix}-${item.id ?? item.term}`,
-  term: item[contentField] ?? item[termField],
-  type,
-  priority: item.priority,
-  createdAt: item.creationTime ?? item.occurrenceTime ?? Date.now(),
-  ...(item.truth && { truth: item.truth })
-});
+import { createConceptNode, createTaskNode } from '../utils/graph/nodeUtils.js';
 
 // Function to update or add a node in graph data
 const updateOrAddNode = (graphData, newNode) => {
@@ -38,8 +29,6 @@ const useGraphWebSocket = () => {
   // Initialize graph data from existing store data
   const concepts = useUiStore(state => state.concepts);
   const tasks = useUiStore(state => state.tasks);
-  const beliefs = useUiStore(state => state.beliefs);
-  const goals = useUiStore(state => state.goals);
 
   // Update initial graph data from store
   useEffect(() => {
@@ -47,24 +36,24 @@ const useGraphWebSocket = () => {
     const nodeMap = new Set();
 
     // Process items with deduplication
-    const processItems = (items, type, idPrefix, contentField = 'content', termField = 'term') => {
+    // NOTE: Beliefs, Goals, and Questions ARE Tasks with different punctuation
+    const processItems = (items, createNodeFn) => {
       items.forEach(item => {
-        const nodeId = `${idPrefix}-${item.id ?? item.term}`;
+        const nodeId = createNodeFn(item).id;
         if (!nodeMap.has(nodeId)) {
-          initialNodes.push(createNodeFromStoreData(item, type, idPrefix, contentField, termField));
+          initialNodes.push(createNodeFn(item));
           nodeMap.add(nodeId);
         }
       });
     };
 
-    processItems(concepts, 'concept', 'concept', 'term', 'term');
-    processItems(tasks, 'task', 'task', 'content', 'term');
-    processItems(beliefs, 'belief', 'belief', 'term', 'term');
-    processItems(goals, 'goal', 'goal', 'term', 'term');
+    processItems(concepts, createConceptNode);
+    // Process all tasks (Beliefs, Goals, Questions ARE all Tasks)
+    processItems(tasks, createTaskNode);
 
     const initialLinks = createRelationshipLinks(initialNodes);
     setGraphData({ nodes: initialNodes, links: initialLinks });
-  }, [concepts, tasks, beliefs, goals]);
+  }, [concepts, tasks]);
 
   // Handle different message types
   const handleMessage = useCallback((data) => {
@@ -75,19 +64,11 @@ const useGraphWebSocket = () => {
         setGraphData(prevData => updateOrAddNode(prevData, node));
       }
     } else if (data.type === 'taskUpdate' && data.payload?.task) {
-      const taskNode = createNodeFromStoreData(data.payload.task, 'task', 'task', 'content', 'term');
+      const taskNode = createTaskNode(data.payload.task);
       setGraphData(prevData => updateOrAddNode(prevData, taskNode));
     } else if (data.type === 'conceptUpdate' && data.payload?.concept) {
-      const conceptNode = createNodeFromStoreData(data.payload.concept, 'concept', 'concept', 'term', 'term');
+      const conceptNode = createConceptNode(data.payload.concept);
       setGraphData(prevData => updateOrAddNode(prevData, conceptNode));
-    } else if (data.type === 'beliefUpdate' && data.payload) {
-      const beliefNode = createNodeFromStoreData(data.payload, 'belief', 'belief', 'term', 'term');
-      beliefNode.truth = data.payload.truth;
-      setGraphData(prevData => updateOrAddNode(prevData, beliefNode));
-    } else if (data.type === 'goalUpdate' && data.payload) {
-      const goalNode = createNodeFromStoreData(data.payload, 'goal', 'goal', 'term', 'term');
-      goalNode.truth = data.payload.truth;
-      setGraphData(prevData => updateOrAddNode(prevData, goalNode));
     }
   }, []);
 

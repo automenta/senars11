@@ -1,16 +1,8 @@
 import React from 'react';
+import { NODE_TYPE_CONFIG } from '../../../utils/graph/graphConstants.js';
 
 const Node = ({ node, isSelected, onClick, themeUtils }) => {
-  const getNodeColor = (type) => {
-    const colors = {
-      concept: '#007bff', // Blue
-      task: '#28a745',    // Green
-      belief: '#ffc107',  // Yellow
-      goal: '#dc3545',    // Red
-      question: '#6f42c1' // Purple
-    };
-    return colors[type] || '#999';
-  };
+  const getNodeColor = (type) => NODE_TYPE_CONFIG[type]?.color ?? '#999';
 
   const size = Math.max(10, 20 * (node.priority || 0.5)); // Scale based on priority
 

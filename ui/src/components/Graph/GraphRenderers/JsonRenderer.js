@@ -30,8 +30,8 @@ export const JsonRenderer = ({ filters, priorityRange }) => {
       }
 
       // Determine task type based on punctuation or type field
-      let taskType = task.type || 'task';
-      const content = task.term || task.content || task.id || '';
+      let taskType = task.type ?? 'task';
+      const content = task.term ?? task.content ?? task.id ?? '';
 
       if (!task.type) {
         if (content.endsWith('?')) {
