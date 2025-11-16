@@ -2,13 +2,11 @@ import {z} from 'zod';
 import {BaseProvider} from './BaseProvider.js';
 import {ChatOllama} from '@langchain/ollama';
 import {ChatOpenAI} from '@langchain/openai';
-import {HumanMessage, AIMessage, ToolMessage} from '@langchain/core/messages';
-import {ChatPromptTemplate, MessagesPlaceholder} from '@langchain/core/prompts';
-import {StateGraph, END, START} from '@langchain/langgraph';
+import {AIMessage, HumanMessage} from '@langchain/core/messages';
+import {END, START, StateGraph} from '@langchain/langgraph';
 import {ToolNode} from '@langchain/langgraph/prebuilt';
-import {ModelNotFoundError, ConnectionError} from '../util/ErrorHandler.js';
+import {ConnectionError, ModelNotFoundError} from '../util/ErrorHandler.js';
 import {DynamicTool} from '@langchain/core/tools';
-import {StructuredTool} from '@langchain/core/tools';
 
 export class LangChainProvider extends BaseProvider {
     constructor(config = {}) {
@@ -64,18 +62,18 @@ export class LangChainProvider extends BaseProvider {
                                 args = JSON.parse(input);
                             } catch {
                                 // If it's not JSON, pass as-is
-                                args = { content: input };
+                                args = {content: input};
                             }
                         }
                         const result = await (typeof tool.execute === 'function'
                             ? tool.execute(args)
-                            : { error: 'Tool has no execute method' });
+                            : {error: 'Tool has no execute method'});
                         return JSON.stringify(result);
                     } catch (error) {
-                        return JSON.stringify({ error: error.message });
+                        return JSON.stringify({error: error.message});
                     }
                 },
-                schema: tool.schema || { type: 'object', properties: {}, required: [] }
+                schema: tool.schema || {type: 'object', properties: {}, required: []}
             });
         });
     }
@@ -118,14 +116,14 @@ export class LangChainProvider extends BaseProvider {
     _initAgent() {
         const tools = this._convertToLangchainTools(this.tools);
         let hasTools = tools && tools.length > 0;
-        
+
         // Only attempt to create the model with tools if we have tools to bind
         let modelWithTools;
         let model;
-        
+
         try {
             model = this._initChatModel();
-            
+
             if (hasTools) {
                 try {
                     // Attempt to bind tools - if the model doesn't support tools, this will cause issues
@@ -151,15 +149,15 @@ export class LangChainProvider extends BaseProvider {
         const agentNode = async (state) => {
             try {
                 const messages = await modelWithTools.invoke(state.messages);
-                return { messages: [messages] };
+                return {messages: [messages]};
             } catch (invokeError) {
                 // If there's an error during invoke (like model not found), handle it gracefully
                 console.error(`Error during model invocation:`, invokeError.message);
                 // Return an error message as a message
-                return { 
+                return {
                     messages: [new AIMessage({
                         content: `Error: ${invokeError.message}`
-                    })] 
+                    })]
                 };
             }
         };
@@ -200,7 +198,7 @@ export class LangChainProvider extends BaseProvider {
         if (!this.agent) {
             throw new Error('Agent not initialized. Please call initialize() first.');
         }
-        
+
         return Promise.race([
             (async () => {
                 try {
@@ -224,9 +222,9 @@ export class LangChainProvider extends BaseProvider {
                     }
                 }
             })(),
-            new Promise((_, reject) => 
-                setTimeout(() => reject(new Error(`Request timed out after ${options.timeout || 30000}ms`)), 
-                options.timeout || 30000)
+            new Promise((_, reject) =>
+                setTimeout(() => reject(new Error(`Request timed out after ${options.timeout || 30000}ms`)),
+                    options.timeout || 30000)
             )
         ]);
     }
@@ -237,12 +235,12 @@ export class LangChainProvider extends BaseProvider {
         }
 
         const timeout = options.timeout || 60000;
-        
+
         // Create a callback-based timeout mechanism
         return {
-            async *[Symbol.asyncIterator]() {
+            async* [Symbol.asyncIterator]() {
                 let timeoutId;
-                
+
                 try {
                     // Set up the timeout
                     timeoutId = setTimeout(() => {
@@ -251,17 +249,17 @@ export class LangChainProvider extends BaseProvider {
 
                     // Use LangGraph's streaming to get real-time state updates
                     const stream = this.agent.stream(
-                        { messages: [new HumanMessage(prompt)] },
-                        { 
-                            streamMode: 'values' 
+                        {messages: [new HumanMessage(prompt)]},
+                        {
+                            streamMode: 'values'
                         }
                     );
-                    
+
                     // Process the stream in real-time and yield content immediately
                     for await (const chunk of stream) {
                         // Clear and reset timeout on each chunk to avoid premature timeout
                         clearTimeout(timeoutId);
-                        
+
                         // Look for content in the state update (now using the new state structure)
                         if (chunk && chunk.messages && chunk.messages.length > 0) {
                             const lastMessage = chunk.messages[chunk.messages.length - 1];
@@ -269,13 +267,13 @@ export class LangChainProvider extends BaseProvider {
                                 yield lastMessage.content;
                             }
                         }
-                        
+
                         // Reset the timeout after each chunk
                         timeoutId = setTimeout(() => {
                             throw new Error(`Streaming request timed out after ${timeout}ms`);
                         }, timeout);
                     }
-                    
+
                     // Clear timeout after the stream completes successfully
                     if (timeoutId) {
                         clearTimeout(timeoutId);
@@ -285,7 +283,7 @@ export class LangChainProvider extends BaseProvider {
                     if (timeoutId) {
                         clearTimeout(timeoutId);
                     }
-                    
+
                     // Throw specific error types for better error handling upstream
                     if (error.message.includes('model') && error.message.includes('not found')) {
                         throw new ModelNotFoundError(this.modelName);

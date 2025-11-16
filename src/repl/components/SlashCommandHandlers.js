@@ -14,7 +14,7 @@ export const handleLoadCommand = async (engine, args, addLog) => {
         const path = await import('path');
         const normalizedPath = path.resolve('.', filePath);
         const currentDir = path.resolve();
-        
+
         if (!normalizedPath.startsWith(currentDir)) {
             addLog('❌ Invalid path: Access denied', 'error');
             return;
@@ -31,7 +31,7 @@ export const handleLoadCommand = async (engine, args, addLog) => {
 export const handleToolsCommand = (engine, addLog) => {
     try {
         addLog('🔧 Tools/MCP Configuration:', 'info');
-        
+
         // Show current provider info
         if (engine.agentLM && engine.agentLM.providers) {
             const providers = engine.agentLM.providers;
@@ -39,15 +39,15 @@ export const handleToolsCommand = (engine, addLog) => {
         } else {
             addLog('  Current Agent LM Provider: None', 'info');
         }
-        
+
         // Check NARS tool integration
         if (engine.nar && typeof engine.nar.getAvailableTools === 'function') {
             const availableTools = engine.nar.getAvailableTools();
             if (Array.isArray(availableTools) && availableTools.length > 0) {
                 addLog(`  NARS Available Tools (${availableTools.length}):`, 'info');
                 availableTools.forEach((tool, index) => {
-                    const toolName = typeof tool === 'string' ? tool : 
-                                    tool.name || tool.id || 'unnamed';
+                    const toolName = typeof tool === 'string' ? tool :
+                        tool.name || tool.id || 'unnamed';
                     addLog(`    ${index + 1}. ${toolName}`, 'info');
                 });
             } else {
@@ -56,21 +56,21 @@ export const handleToolsCommand = (engine, addLog) => {
         } else {
             addLog('  NARS Tools: Not available', 'info');
         }
-        
+
         // Check if NAR control tool is registered with LM
         if (engine.agentLM) {
             const defaultProviderId = engine.agentLM.providers.defaultProviderId;
             if (defaultProviderId) {
                 const provider = engine.agentLM.providers.get(defaultProviderId);
                 if (provider && Array.isArray(provider.tools) && provider.tools.length > 0) {
-                    const narTools = provider.tools.filter(tool => 
+                    const narTools = provider.tools.filter(tool =>
                         tool.name === 'nar_control' || tool.constructor.name === 'NARControlTool'
                     );
                     if (narTools.length > 0) {
                         addLog(`  🤖 LM NAR Control Tools (${narTools.length}):`, 'info');
                         narTools.forEach((tool, index) => {
                             addLog(`    ${index + 1}. ${tool.name || tool.constructor.name}: ${tool.description || 'NAR system control'}`, 'info');
-                            
+
                             // Show tool schema details if available
                             if (tool.schema) {
                                 addLog(`        Parameters:`, 'debug');
@@ -79,7 +79,7 @@ export const handleToolsCommand = (engine, addLog) => {
                                         const type = propDef.type || 'unknown';
                                         const desc = propDef.description || 'No description';
                                         addLog(`          ${propName} (${type}): ${desc}`, 'debug');
-                                        
+
                                         if (propDef.enum) {
                                             addLog(`            Options: [${propDef.enum.join(', ')}]`, 'debug');
                                         }
@@ -92,7 +92,7 @@ export const handleToolsCommand = (engine, addLog) => {
                 }
             }
         }
-        
+
         // Check MCP system if available
         if (engine.nar && engine.nar.mcp) {
             const mcpTools = engine.nar.mcp.getAvailableTools();
@@ -107,7 +107,7 @@ export const handleToolsCommand = (engine, addLog) => {
         } else {
             addLog('  MCP Tools: Not available', 'info');
         }
-        
+
         // Information about tools integration
         addLog('  How Tools Work: LM can call tools based on user requests to interact with NARS', 'info');
     } catch (error) {
@@ -125,7 +125,7 @@ export const handleNarsCommand = async (engine, args, addLog) => {
         }
 
         addLog(`> /nars ${narseseInput}`, 'info');
-        
+
         // Process directly as narsese without going through LM
         const result = await engine.processNarsese(narseseInput);
         if (result) {
@@ -143,7 +143,7 @@ export const handleHelpCommand = (addLog) => {
     const helpMessages = [
         '📖 Help - Available commands:',
         '  /exit, /quit, /q - Exit the TUI',
-        '  /list-examples, /examples - Show available examples', 
+        '  /list-examples, /examples - Show available examples',
         '  /load <filepath> - Load session from file',
         '  /run, /go - Start continuous reasoning',
         '  /step, /n, [Enter] - Execute single reasoning cycle',
@@ -169,7 +169,10 @@ export const handleHelpCommand = (addLog) => {
 export const handleExitCommand = (engine, addLog) => {
     addLog('👋 Goodbye!', 'info');
     setTimeout(() => {
-        try { engine.shutdown(); } catch (e) { /* ignore */ }
+        try {
+            engine.shutdown();
+        } catch (e) { /* ignore */
+        }
         process.exit(0);
     }, 100);
 };
@@ -178,8 +181,8 @@ export const handleExitCommand = (engine, addLog) => {
 export const handleExamplesCommand = (addLog) => {
     addLog('🎭 Available examples:', 'info');
     [
-        'agent-builder-demo', 'causal-reasoning', 'inductive-reasoning', 
-        'syllogism', 'temporal', 'performance', 'phase10-complete', 
+        'agent-builder-demo', 'causal-reasoning', 'inductive-reasoning',
+        'syllogism', 'temporal', 'performance', 'phase10-complete',
         'phase10-final', 'websocket', 'lm-providers'
     ].forEach(example => addLog(`  ${example}`, 'info'));
 };

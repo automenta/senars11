@@ -6,7 +6,6 @@
 import {SoftwareAnalysisTool} from './SoftwareAnalysisTool.js';
 import fs from 'fs';
 import path from 'path';
-import * as dfd from 'danfojs';
 import {FileUtils} from '../../util/FileUtils.js';
 
 /**
@@ -58,7 +57,7 @@ export class CoverageAnalysisTool extends SoftwareAnalysisTool {
      */
     async performAnalysis(params, context) {
         const {verbose = false} = params;
-        
+
         if (verbose) console.log('ℹ️ [CoverageAnalysisTool] Collecting Coverage Data...');
 
         // Load coverage summary

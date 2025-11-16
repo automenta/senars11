@@ -7,7 +7,6 @@
 
 import {AgentReplEngine} from './src/repl/AgentReplEngine.js';
 import {DummyProvider} from './src/lm/DummyProvider.js';
-import {HuggingFaceProvider} from './src/lm/HuggingFaceProvider.js';
 
 async function runAgentDemo() {
     console.log('🎨 SeNARS Agent REPL Demo\n');
@@ -26,7 +25,7 @@ async function runAgentDemo() {
 
         // Register the provider
         engine.registerLMProvider('dummy', dummyProvider);
-        
+
         // Add agent commands
         engine.addAgentCommands();
 
@@ -67,7 +66,7 @@ async function runAgentDemo() {
         await runCommand(engine, 'memory');
 
         console.log('\n🎉 DEMO COMPLETE: Agent REPL functionality demonstrated!\n');
-        
+
         // Show what the UI would display
         console.log('🖼️  VISUALIZATION SIMULATION:');
         console.log('┌─ Agent Status Panel ──────────────────────┐');
@@ -104,7 +103,7 @@ async function runCommand(engine, command) {
     const parts = command.split(' ');
     const cmd = parts[0];
     const args = parts.slice(1);
-    
+
     try {
         const result = await engine.executeCommand(cmd, ...args);
         console.log(`💬 Command: /${command}`);

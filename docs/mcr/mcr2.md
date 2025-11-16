@@ -1,25 +1,36 @@
 # 🧠 MCR: The Neurosymbolic Reasoning Core
 
-**Model Context Reasoner (MCR)** is a library designed to be the foundation for the next generation of AI systems. It fuses the perceptual power of Large Language Models (LLMs) with the rigorous logic of symbolic reasoners, creating a hybrid system that is both intuitive and verifiable.
+**Model Context Reasoner (MCR)** is a library designed to be the foundation for the next generation of AI systems. It
+fuses the perceptual power of Large Language Models (LLMs) with the rigorous logic of symbolic reasoners, creating a
+hybrid system that is both intuitive and verifiable.
 
-This is not just a tool; it is the starting point for building the ultimate neurosymbolic reasoner—an AI that can understand the world, reason about it with logical precision, and explain its conclusions.
+This is not just a tool; it is the starting point for building the ultimate neurosymbolic reasoner—an AI that can
+understand the world, reason about it with logical precision, and explain its conclusions.
 
 ## 🏛️ Core Principles
 
 MCR is built on a foundation designed for limitless growth.
 
-1.  **Symbolic Core, Neural Interface:** At its heart is a deterministic, verifiable logic engine (Prolog). LLMs act as a fluid, intuitive interface, translating the unstructured, ambiguous human world into the structured, logical core.
-2.  **Explainable by Design:** Every conclusion can be traced back to the specific facts and rules that produced it. The system can always "show its work," providing a level of transparency impossible with purely neural systems.
-3.  **Dynamic Knowledge Graph:** The knowledge base is not a static set of facts but a living, dynamic graph that is continuously updated and refined through interaction.
-4.  **Evolvable Reasoning:** The methods for translating language to logic (**Translation Strategies**) are designed to be pluggable, comparable, and ultimately, evolvable. The system is built to learn and improve its own reasoning processes over time.
+1. **Symbolic Core, Neural Interface:** At its heart is a deterministic, verifiable logic engine (Prolog). LLMs act as a
+   fluid, intuitive interface, translating the unstructured, ambiguous human world into the structured, logical core.
+2. **Explainable by Design:** Every conclusion can be traced back to the specific facts and rules that produced it. The
+   system can always "show its work," providing a level of transparency impossible with purely neural systems.
+3. **Dynamic Knowledge Graph:** The knowledge base is not a static set of facts but a living, dynamic graph that is
+   continuously updated and refined through interaction.
+4. **Evolvable Reasoning:** The methods for translating language to logic (**Translation Strategies**) are designed to
+   be pluggable, comparable, and ultimately, evolvable. The system is built to learn and improve its own reasoning
+   processes over time.
 
 ## ✨ Features (The Foundation)
 
-*   **Library-First API**: A clean, modern `async/await` API that integrates directly into your application.
-*   **Stateful Reasoning Sessions**: Create isolated reasoning contexts, each with its own independent, persistent knowledge graph.
-*   **Pluggable LLMs & Strategies**: Swap LLM providers and reasoning strategies with configuration changes.
-*   **Direct & Hybrid Reasoning**: Execute pure symbolic logic for speed and precision, or allow the system to fall back to the LLM for sub-symbolic queries when formal deduction yields no answer.
-*   **Rich, Explainable Outputs**: Queries don't just return an answer; they return the answer *and* the logical steps used to reach it, along with confidence scores.
+* **Library-First API**: A clean, modern `async/await` API that integrates directly into your application.
+* **Stateful Reasoning Sessions**: Create isolated reasoning contexts, each with its own independent, persistent
+  knowledge graph.
+* **Pluggable LLMs & Strategies**: Swap LLM providers and reasoning strategies with configuration changes.
+* **Direct & Hybrid Reasoning**: Execute pure symbolic logic for speed and precision, or allow the system to fall back
+  to the LLM for sub-symbolic queries when formal deduction yields no answer.
+* **Rich, Explainable Outputs**: Queries don't just return an answer; they return the answer *and* the logical steps
+  used to reach it, along with confidence scores.
 
 ## 🏗️ Ontology Support
 
@@ -41,6 +52,7 @@ await session.assert('Nemo is a fish');
 ```
 
 The ontology ensures your knowledge graph maintains semantic consistency by:
+
 - Validating all asserted facts and rules
 - Preventing undefined predicates
 - Maintaining type consistency
@@ -279,6 +291,7 @@ Total LLM Prompt Tokens: <some-number>
 Total LLM Completion Tokens: <some-number>
 Total LLM Latency (ms): <some-number>
 ````
+
 ````javascript
 src/translation/agenticReasoning.js
 <<<<<<< SEARCH

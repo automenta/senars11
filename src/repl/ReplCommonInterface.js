@@ -5,7 +5,7 @@ export class ReplCommonInterface {
         if (!engine || typeof engine.processInput !== 'function') {
             throw new Error('ReplCommonInterface requires a valid engine with processInput method');
         }
-        
+
         this.engine = engine;
         this.messageHandler = new ReplMessageHandler(engine);
     }
@@ -14,9 +14,9 @@ export class ReplCommonInterface {
         try {
             const message = {
                 type: 'narseseInput',
-                payload: { input }
+                payload: {input}
             };
-            
+
             const result = await this.messageHandler.processMessage(message);
             return result;
         } catch (error) {
@@ -29,9 +29,9 @@ export class ReplCommonInterface {
         try {
             const message = {
                 type: 'command.execute',
-                payload: { command, args }
+                payload: {command, args}
             };
-            
+
             const result = await this.messageHandler.processMessage(message);
             return result;
         } catch (error) {
@@ -46,7 +46,7 @@ export class ReplCommonInterface {
                 type: `control/${command}`,
                 payload: {}
             };
-            
+
             const result = await this.messageHandler.processMessage(message);
             return result;
         } catch (error) {
@@ -86,7 +86,7 @@ export class ReplCommonInterface {
         }
         this.messageHandler.registerMessageHandler(type, handler);
     }
-    
+
     async shutdown() {
         this.messageHandler.removeAllListeners();
     }

@@ -1,21 +1,28 @@
 # Combine the best of all the designs.
 
 ## Write a terse software specification for the minimum complete "viable" system
+
 ## Prefer [psuedo-]code, tables, diagrams, outlines over paragraph/sentences
 
-Below is a terse software specification for **Netention v5**, a minimum complete "viable" system that synthesizes the best elements from all provided designs (Documents 1-10). It unifies Notes as autonomous entities, eliminates redundant distinctions (e.g., Note-Agent), leverages powerful dependencies (LangChain.js, IPFS, Deno), and ensures self-evolution, resource efficiency, and a dynamic UI. The design is stripped to essentials while retaining the core vision—recursive, scalable, and user-centric. Pseudocode, tables, and outlines dominate for clarity and density.
+Below is a terse software specification for **Netention v5**, a minimum complete "viable" system that synthesizes the
+best elements from all provided designs (Documents 1-10). It unifies Notes as autonomous entities, eliminates redundant
+distinctions (e.g., Note-Agent), leverages powerful dependencies (LangChain.js, IPFS, Deno), and ensures self-evolution,
+resource efficiency, and a dynamic UI. The design is stripped to essentials while retaining the core vision—recursive,
+scalable, and user-centric. Pseudocode, tables, and outlines dominate for clarity and density.
 
 ---
 
 # **Netention v5: Minimum Viable Specification**
 
 ## **Vision**
+
 - **Notes**: Unified, self-acting entities (data + behavior).
 - **Root**: Any Note can bootstrap the system; no privileged "Root Note."
 - **Self-Evolution**: Grows from a seed via recursive self-definition.
 - **Reality**: Tasks, tools, UI, and system state as Notes.
 
 ## **Guiding Principles**
+
 1. **Unification**: Notes subsume Agents, Plans, Tools—single entity.
 2. **Recursion**: Every Note embeds sub-Notes, fractal-like.
 3. **Dependencies**: LangChain.js (AI), IPFS (storage), Deno (runtime).
@@ -27,6 +34,7 @@ Below is a terse software specification for **Netention v5**, a minimum complete
 ## **Core Data Structure**
 
 ### **Note**
+
 ```typescript
 type Note = {
   id: string;           // UUIDv7, time-ordered
@@ -47,19 +55,20 @@ type Note = {
 
 ## **Dependencies**
 
-| Dependency   | Role                     | Benefit             |
-|--------------|--------------------------|---------------------|
-| **Deno**     | Runtime, sandboxed JS/TS | Secure, lightweight |
-| **LangChain.js** | LLM, tools, memory    | Cuts ~80% AI code   |
-| **IPFS**     | Distributed storage      | Scalable, immutable |
-| **Hono**     | HTTP/WebSocket API       | Real-time sync      |
-| **Cytoscape.js** | Graph UI visualization | Dynamic rendering   |
+| Dependency       | Role                     | Benefit             |
+|------------------|--------------------------|---------------------|
+| **Deno**         | Runtime, sandboxed JS/TS | Secure, lightweight |
+| **LangChain.js** | LLM, tools, memory       | Cuts ~80% AI code   |
+| **IPFS**         | Distributed storage      | Scalable, immutable |
+| **Hono**         | HTTP/WebSocket API       | Real-time sync      |
+| **Cytoscape.js** | Graph UI visualization   | Dynamic rendering   |
 
 ---
 
 ## **Core Components**
 
 ### **Note Class**
+
 ```typescript
 class Note {
   constructor(data: Note) {
@@ -130,6 +139,7 @@ class Note {
 ## **Persistence**
 
 ### **IPFS Storage**
+
 - **Schema**: Notes as IPLD JSON blocks, `id` as CID.
 - **Operations**:
   ```typescript
@@ -141,6 +151,7 @@ class Note {
 - **Sync**: `Deno.watchFs("./ipfs")` triggers reload on external edits.
 
 ### **In-Memory**
+
 - **Structure**: `Map<string, Note>` for active Notes.
 - **Eviction**: Low-priority Notes archived to IPFS.
 
@@ -170,20 +181,20 @@ class Note {
    ```
 
 3. **Cycle**:
-   - `think`: LangChain LLM updates `plan`.
-   - `act`: Executes next step via `AgentExecutor`.
-   - `sync`: Saves to IPFS, broadcasts via Hono.
+    - `think`: LangChain LLM updates `plan`.
+    - `act`: Executes next step via `AgentExecutor`.
+    - `sync`: Saves to IPFS, broadcasts via Hono.
 
 ---
 
 ## **Tools**
 
-| Name         | Role                   | Impl                        |
-|--------------|------------------------|-----------------------------|
-| `code_gen`   | Generate JS code       | LangChain LLM              |
-| `file_write` | Write to IPFS          | Deno `writeFile` + IPFS    |
-| `reflect`    | Self-analyze, optimize | LangChain `RetrievalQA`    |
-| `notify`     | User interaction       | Hono WebSocket push        |
+| Name         | Role                   | Impl                    |
+|--------------|------------------------|-------------------------|
+| `code_gen`   | Generate JS code       | LangChain LLM           |
+| `file_write` | Write to IPFS          | Deno `writeFile` + IPFS |
+| `reflect`    | Self-analyze, optimize | LangChain `RetrievalQA` |
+| `notify`     | User interaction       | Hono WebSocket push     |
 
 - **Dynamic**: Notes spawn new tools via `code_gen`.
 
@@ -202,8 +213,8 @@ class Note {
   hono.on("update", (id) => cy.getElementById(id).data(await db.get(id)));
   ```
 - **Features**:
-  - Zoom: High-level (Note clusters) -> Detail (content edit).
-  - Drag: Rewires `graph`.
+    - Zoom: High-level (Note clusters) -> Detail (content edit).
+    - Drag: Rewires `graph`.
 
 ---
 
@@ -234,51 +245,59 @@ class Note {
 
 ## **Scalability**
 
-| Aspect       | Limit             | Mitigation          |
-|--------------|-------------------|---------------------|
-| Notes        | ~1M active       | IPFS offload        |
-| Memory       | 100 entries/Note | Summarize/archive   |
-| Network      | 10k peers        | Hono WebSocket      |
-| Tokens       | 10k/day          | Priority throttling |
+| Aspect  | Limit            | Mitigation          |
+|---------|------------------|---------------------|
+| Notes   | ~1M active       | IPFS offload        |
+| Memory  | 100 entries/Note | Summarize/archive   |
+| Network | 10k peers        | Hono WebSocket      |
+| Tokens  | 10k/day          | Priority throttling |
 
 ---
 
 ## **Comparison to Designs**
 
-| Feature               | Doc 1 | Doc 2 | Doc 3 | v5  |
-|-----------------------|-------|-------|-------|-----|
-| Unified Notes         | ✓     | ✗     | ✓     | ✓   |
-| Self-Evolution        | ✗     | ✗     | ✓     | ✓   |
-| Graph Planning        | ✓     | ✓     | ✓     | ✓   |
-| Implicit Assistance   | ✓     | ✓     | ✗     | ✓   |
-| Flow UI               | ✗     | ✓     | ✓     | ✓   |
-| Resource Efficiency   | ✗     | ✗     | ✓     | ✓   |
-| Dependency Leverage   | ✗     | ✓     | ✓     | ✓++ |
+| Feature             | Doc 1 | Doc 2 | Doc 3 | v5  |
+|---------------------|-------|-------|-------|-----|
+| Unified Notes       | ✓     | ✗     | ✓     | ✓   |
+| Self-Evolution      | ✗     | ✗     | ✓     | ✓   |
+| Graph Planning      | ✓     | ✓     | ✓     | ✓   |
+| Implicit Assistance | ✓     | ✓     | ✗     | ✓   |
+| Flow UI             | ✗     | ✓     | ✓     | ✓   |
+| Resource Efficiency | ✗     | ✗     | ✓     | ✓   |
+| Dependency Leverage | ✗     | ✓     | ✓     | ✓++ |
 
 - **v5 Edge**: Hyper-recursive, minimal LOC, reality-spanning tools.
 
 ---
 
 ## **Why Viable**
+
 - **Minimal**: Core fits in ~200 LOC, rest self-generated.
 - **Complete**: Tasks, UI, evolution—all present.
 - **Scalable**: IPFS/Deno/LangChain handle growth.
 - **Elegant**: One entity, infinite potential.
 
-This spec delivers a terse, viable Netention v5—unified, recursive, and ready to evolve from a single seed into a reality-defining system.
+This spec delivers a terse, viable Netention v5—unified, recursive, and ready to evolve from a single seed into a
+reality-defining system.
 
-Below is an updated specification for **Netention v5**, integrating a priority/memory system designed to run in a continuous open loop forever, fairly allocating resources based on priority. The design ensures long-term stability, equitable resource distribution, and self-sustainability by embedding resource management into the core Note lifecycle. Additionally, I’ll explore and push helpful features into the boot stage to maximize initial autonomy and utility, keeping the spec terse with pseudocode, tables, and outlines.
+Below is an updated specification for **Netention v5**, integrating a priority/memory system designed to run in a
+continuous open loop forever, fairly allocating resources based on priority. The design ensures long-term stability,
+equitable resource distribution, and self-sustainability by embedding resource management into the core Note lifecycle.
+Additionally, I’ll explore and push helpful features into the boot stage to maximize initial autonomy and utility,
+keeping the spec terse with pseudocode, tables, and outlines.
 
 ---
 
 # **Netention v5: Continuous Priority-Driven System**
 
 ## **Vision**
+
 - **Infinite Loop**: Notes run perpetually, self-regulating via priority and memory.
 - **Fair Allocation**: Resources (CPU, memory, LLM tokens) distributed proportionally to priority.
 - **Boot Power**: Seed Note packed with tools/UI for immediate utility and growth.
 
 ## **Guiding Principles**
+
 1. **Unified Notes**: Single entity, self-acting, recursive.
 2. **Priority-Driven**: Higher priority = more resources, dynamically adjusted.
 3. **Memory Equilibrium**: Self-pruning keeps footprint bounded.
@@ -290,6 +309,7 @@ Below is an updated specification for **Netention v5**, integrating a priority/m
 ## **Core Data Structure**
 
 ### **Note**
+
 ```typescript
 type Note = {
   id: string;           // UUIDv7
@@ -320,7 +340,8 @@ type Note = {
 ## **Priority/Memory System**
 
 ### **Priority Calculation**
-- **Formula**:  
+
+- **Formula**:
   ```typescript
   state.priority = clamp(
     (urgency(deadline) + relevance(LLM) - entropy(ts)) * contextBoost,
@@ -328,13 +349,14 @@ type Note = {
     100
   );
   ```
-  - `urgency`: `(deadline - now) / maxDeadline`, normalized 0-1.
-  - `relevance`: LLM score (0-1) from `reflect` tool.
-  - `entropy`: `1 - exp(-age(ts) / decayRate)`, grows with staleness.
-  - `contextBoost`: `1 + sum(parent.priority) / 100`, amplifies nested importance.
+    - `urgency`: `(deadline - now) / maxDeadline`, normalized 0-1.
+    - `relevance`: LLM score (0-1) from `reflect` tool.
+    - `entropy`: `1 - exp(-age(ts) / decayRate)`, grows with staleness.
+    - `contextBoost`: `1 + sum(parent.priority) / 100`, amplifies nested importance.
 - **Update**: Recalculated in `think()` phase.
 
 ### **Memory Management**
+
 - **Cap**: 50 entries per Note (adjustable via seed config).
 - **Pruning**:
   ```typescript
@@ -355,6 +377,7 @@ type Note = {
 - **Fairness**: Higher-priority memories retained; low-priority summarized or archived.
 
 ### **Resource Allocation**
+
 - **Queue**: Global priority queue (`PriorityQueue<Note>`).
 - **Cycle**:
   ```typescript
@@ -374,8 +397,8 @@ type Note = {
   }
   ```
 - **Constants**:
-  - `MAX_CYCLES_PER_TICK`: 1000 (CPU cycles).
-  - `MAX_TOKENS_PER_TICK`: 100 (LLM tokens).
+    - `MAX_CYCLES_PER_TICK`: 1000 (CPU cycles).
+    - `MAX_TOKENS_PER_TICK`: 100 (LLM tokens).
 - **Fairness**: Resources scale with priority, ensuring high-priority Notes get more compute.
 
 ---
@@ -383,6 +406,7 @@ type Note = {
 ## **Core Components**
 
 ### **Note Class**
+
 ```typescript
 class Note {
   constructor(data: Note) {
@@ -445,6 +469,7 @@ class Note {
 ## **Bootstrap Enhancements**
 
 ### **Seed Note**
+
 ```typescript
 const seed: Note = {
   id: crypto.randomUUID(),
@@ -470,19 +495,20 @@ const seed: Note = {
 ```
 
 ### **Pushed Boot Features**
-| Feature             | Description                          | Why in Boot?              |
-|---------------------|--------------------------------------|---------------------------|
-| **UI Generator**    | `ui_gen` tool creates Cytoscape UI   | Instant user interaction  |
-| **Notification**    | `notify` tool for implicit assistance| Early user feedback loop  |
-| **Reflection**      | `reflect` tool for self-optimization | Immediate self-evolution  |
-| **Configurability**| Seed config (memory, tick rate)      | Tunable from start        |
-| **Multi-Toolset**   | Core tools (code, file, reflect)     | Broad initial capability  |
 
-- **Rationale**:  
-  - **UI**: Early visualization accelerates adoption/debugging.
-  - **Notify**: Implicit assistance engages users from tick one.
-  - **Reflect**: Self-improvement kicks off without delay.
-  - **Config**: Allows tuning for hardware/user needs at boot.
+| Feature             | Description                           | Why in Boot?             |
+|---------------------|---------------------------------------|--------------------------|
+| **UI Generator**    | `ui_gen` tool creates Cytoscape UI    | Instant user interaction |
+| **Notification**    | `notify` tool for implicit assistance | Early user feedback loop |
+| **Reflection**      | `reflect` tool for self-optimization  | Immediate self-evolution |
+| **Configurability** | Seed config (memory, tick rate)       | Tunable from start       |
+| **Multi-Toolset**   | Core tools (code, file, reflect)      | Broad initial capability |
+
+- **Rationale**:
+    - **UI**: Early visualization accelerates adoption/debugging.
+    - **Notify**: Implicit assistance engages users from tick one.
+    - **Reflect**: Self-improvement kicks off without delay.
+    - **Config**: Allows tuning for hardware/user needs at boot.
 
 ---
 
@@ -497,27 +523,28 @@ const seed: Note = {
    ```
 
 2. **Continuous Loop**:
-   - Queue sorts by `state.priority`.
-   - Each tick allocates resources proportionally.
-   - Notes self-regulate via `runTick()`.
+    - Queue sorts by `state.priority`.
+    - Each tick allocates resources proportionally.
+    - Notes self-regulate via `runTick()`.
 
 ---
 
 ## **Scalability & Stability**
 
-- **Infinite Run**:  
-  - Priority ensures active Notes dominate; dormant ones fade.
-  - Memory pruning bounds footprint (~50 Notes/Note, summarized).
-- **Fairness**:  
-  - Proportional resource share prevents starvation.
-  - Entropy decay balances old vs. new tasks.
-- **Limits**:  
-  - ~1M active Notes on 16GB RAM.
-  - IPFS scales to billions off-memory.
+- **Infinite Run**:
+    - Priority ensures active Notes dominate; dormant ones fade.
+    - Memory pruning bounds footprint (~50 Notes/Note, summarized).
+- **Fairness**:
+    - Proportional resource share prevents starvation.
+    - Entropy decay balances old vs. new tasks.
+- **Limits**:
+    - ~1M active Notes on 16GB RAM.
+    - IPFS scales to billions off-memory.
 
 ---
 
 ## **Bootstrap Code**
+
 ```typescript
 // main.ts
 import { PriorityQueue } from "deno_std";
@@ -540,20 +567,27 @@ runForever();
 ---
 
 ## **Why This Works**
+
 - **Continuous**: Priority/memory system self-balances forever.
 - **Fair**: Resource allocation scales with priority, no bottlenecks.
 - **Boot-Ready**: Seed packs UI, tools, and reflection for instant utility.
 - **Minimal**: Core logic fits in ~250 LOC, rest emerges.
 
-This spec delivers a lean, infinite-running Netention v5, with a boot stage primed for autonomy and user value from the first tick.
+This spec delivers a lean, infinite-running Netention v5, with a boot stage primed for autonomy and user value from the
+first tick.
 
-To maximize utility and value in the seed Note of **Netention v5**, we’ll pack it with features, tools, and configurations that enable immediate functionality, adaptability, and growth potential while keeping it terse and viable. The goal is to embed a rich starting point that minimizes human intervention post-boot, leveraging the system’s recursive nature and dependencies (LangChain.js, IPFS, etc.). Below, I’ll outline additions to the seed, focusing on pseudocode and tables for density, ensuring the system is maximally useful out of the gate.
+To maximize utility and value in the seed Note of **Netention v5**, we’ll pack it with features, tools, and
+configurations that enable immediate functionality, adaptability, and growth potential while keeping it terse and
+viable. The goal is to embed a rich starting point that minimizes human intervention post-boot, leveraging the system’s
+recursive nature and dependencies (LangChain.js, IPFS, etc.). Below, I’ll outline additions to the seed, focusing on
+pseudocode and tables for density, ensuring the system is maximally useful out of the gate.
 
 ---
 
 # **Netention v5: Enhanced Seed Specification**
 
 ## **Seed Design Goals**
+
 - **Instant Utility**: Tools/UI for common tasks (e.g., notes, planning, search).
 - **Adaptability**: Configs and self-optimization for diverse environments/users.
 - **Growth Potential**: Seeds for collaboration, external integration, and learning.
@@ -564,6 +598,7 @@ To maximize utility and value in the seed Note of **Netention v5**, we’ll pack
 ## **Enhanced Seed Note**
 
 ### **Structure**
+
 ```typescript
 const seed: Note = {
   id: crypto.randomUUID(),
@@ -615,107 +650,108 @@ const seed: Note = {
 ## **Packed Seed Features**
 
 ### **Table of Additions**
-| Feature                | Description                                  | Utility/Value Impact                  |
-|------------------------|----------------------------------------------|---------------------------------------|
-| **Rich Config**        | Tunable params (memory, tokens, peers)       | Adapts to hardware/user needs         |
-| **Metamodel**          | Self-describing rules and schema             | Enables recursive evolution           |
-| **Search Tool**        | Web search via SerpAPI/LangChain             | Immediate external data access        |
-| **Summarize Tool**     | Text summarization via LLM                   | Enhances memory pruning, usability    |
-| **Spawn Tool**         | Creates new Notes dynamically                | Core of recursive growth              |
-| **Sync Tool**          | Replicates Notes across IPFS peers           | Distributed resilience, collaboration |
-| **Learn Tool**         | Vectorizes memory for semantic learning      | Boosts intelligence over time         |
-| **UI Templates**       | Predefined UI Notes (list, graph, editor)    | Instant user interaction              |
-| **Task Templates**     | Sample tasks (e.g., "Plan day", "Take note") | Quickstart user workflows             |
-| **Prompt Library**     | Reusable LLM prompts in `content.prompts`    | Speeds up tool/plan generation        |
+
+| Feature            | Description                                  | Utility/Value Impact                  |
+|--------------------|----------------------------------------------|---------------------------------------|
+| **Rich Config**    | Tunable params (memory, tokens, peers)       | Adapts to hardware/user needs         |
+| **Metamodel**      | Self-describing rules and schema             | Enables recursive evolution           |
+| **Search Tool**    | Web search via SerpAPI/LangChain             | Immediate external data access        |
+| **Summarize Tool** | Text summarization via LLM                   | Enhances memory pruning, usability    |
+| **Spawn Tool**     | Creates new Notes dynamically                | Core of recursive growth              |
+| **Sync Tool**      | Replicates Notes across IPFS peers           | Distributed resilience, collaboration |
+| **Learn Tool**     | Vectorizes memory for semantic learning      | Boosts intelligence over time         |
+| **UI Templates**   | Predefined UI Notes (list, graph, editor)    | Instant user interaction              |
+| **Task Templates** | Sample tasks (e.g., "Plan day", "Take note") | Quickstart user workflows             |
+| **Prompt Library** | Reusable LLM prompts in `content.prompts`    | Speeds up tool/plan generation        |
 
 ---
 
 ### **Detailed Additions**
 
 1. **Rich Configuration**
-   - **Purpose**: Predefine system behavior for diverse contexts.
-   - **Content**: `config` includes memory limits, tick rate, token budget, replication targets.
-   - **Value**: Immediate adaptability (e.g., low-memory devices, high-user networks).
+    - **Purpose**: Predefine system behavior for diverse contexts.
+    - **Content**: `config` includes memory limits, tick rate, token budget, replication targets.
+    - **Value**: Immediate adaptability (e.g., low-memory devices, high-user networks).
 
 2. **Metamodel**
-   - **Purpose**: Seed the recursive self-definition process.
-   - **Content**: 
-     ```json
-     "metamodel": {
-       "note": { "id": "string", "content": "any", "graph": "array", "state": "object", ... },
-       "rules": ["spawn sub-Notes", "prune memory", "sync via IPFS"]
-     }
-     ```
-   - **Value**: System understands itself from boot, evolves structure autonomously.
+    - **Purpose**: Seed the recursive self-definition process.
+    - **Content**:
+      ```json
+      "metamodel": {
+        "note": { "id": "string", "content": "any", "graph": "array", "state": "object", ... },
+        "rules": ["spawn sub-Notes", "prune memory", "sync via IPFS"]
+      }
+      ```
+    - **Value**: System understands itself from boot, evolves structure autonomously.
 
 3. **Search Tool**
-   - **Purpose**: Fetch external data (web, APIs).
-   - **Impl**: LangChain.js SerpAPI integration.
-   - **Value**: Instant research capability, enriches task context.
+    - **Purpose**: Fetch external data (web, APIs).
+    - **Impl**: LangChain.js SerpAPI integration.
+    - **Value**: Instant research capability, enriches task context.
 
 4. **Summarize Tool**
-   - **Purpose**: Condense memory/tasks for efficiency.
-   - **Impl**: LangChain.js `summarize` chain.
-   - **Value**: Keeps memory lean, improves long-term recall.
+    - **Purpose**: Condense memory/tasks for efficiency.
+    - **Impl**: LangChain.js `summarize` chain.
+    - **Value**: Keeps memory lean, improves long-term recall.
 
 5. **Spawn Tool**
-   - **Purpose**: Core mechanism for creating new Notes.
-   - **Impl**: 
-     ```typescript
-     async spawn(args: { content: any }): Promise<string> {
-       const id = crypto.randomUUID();
-       db.put({ id, content: args.content, state: { status: "pending", priority: 50 }, ... });
-       return id;
-     }
-     ```
-   - **Value**: Drives recursive expansion from boot.
+    - **Purpose**: Core mechanism for creating new Notes.
+    - **Impl**:
+      ```typescript
+      async spawn(args: { content: any }): Promise<string> {
+        const id = crypto.randomUUID();
+        db.put({ id, content: args.content, state: { status: "pending", priority: 50 }, ... });
+        return id;
+      }
+      ```
+    - **Value**: Drives recursive expansion from boot.
 
 6. **Sync Tool**
-   - **Purpose**: Replicate Notes across IPFS peers.
-   - **Impl**: 
-     ```typescript
-     async sync(args: { noteId: string }): Promise<void> {
-       const note = await db.get(args.noteId);
-       await ipfs.pubsub.publish("netention-sync", JSON.stringify(note));
-     }
-     ```
-   - **Value**: Enables distributed operation, collaboration out of the box.
+    - **Purpose**: Replicate Notes across IPFS peers.
+    - **Impl**:
+      ```typescript
+      async sync(args: { noteId: string }): Promise<void> {
+        const note = await db.get(args.noteId);
+        await ipfs.pubsub.publish("netention-sync", JSON.stringify(note));
+      }
+      ```
+    - **Value**: Enables distributed operation, collaboration out of the box.
 
 7. **Learn Tool**
-   - **Purpose**: Train a vector store on memory for semantic reasoning.
-   - **Impl**: 
-     ```typescript
-     async learn(args: { data: string[] }): Promise<void> {
-       const store = new VectorStore();
-       await store.add(args.data);
-       db.put({ id: crypto.randomUUID(), content: { type: "vector", store }, ... });
-     }
-     ```
-   - **Value**: Builds intelligence incrementally, enhances future decisions.
+    - **Purpose**: Train a vector store on memory for semantic reasoning.
+    - **Impl**:
+      ```typescript
+      async learn(args: { data: string[] }): Promise<void> {
+        const store = new VectorStore();
+        await store.add(args.data);
+        db.put({ id: crypto.randomUUID(), content: { type: "vector", store }, ... });
+      }
+      ```
+    - **Value**: Builds intelligence incrementally, enhances future decisions.
 
 8. **UI Templates**
-   - **Purpose**: Prebuilt UI Notes for immediate interaction.
-   - **Content**: 
-     ```typescript
-     const uiList = db.put({ id: crypto.randomUUID(), content: { type: "ui", desc: "Note List", render: "cytoscape.list" }, ... });
-     const uiGraph = db.put({ id: crypto.randomUUID(), content: { type: "ui", desc: "Flow Graph", render: "cytoscape.graph" }, ... });
-     seed.graph.push({ target: uiList.id, rel: "embeds" }, { target: uiGraph.id, rel: "embeds" });
-     ```
-   - **Value**: Visual feedback from tick one, no delay for UI generation.
+    - **Purpose**: Prebuilt UI Notes for immediate interaction.
+    - **Content**:
+      ```typescript
+      const uiList = db.put({ id: crypto.randomUUID(), content: { type: "ui", desc: "Note List", render: "cytoscape.list" }, ... });
+      const uiGraph = db.put({ id: crypto.randomUUID(), content: { type: "ui", desc: "Flow Graph", render: "cytoscape.graph" }, ... });
+      seed.graph.push({ target: uiList.id, rel: "embeds" }, { target: uiGraph.id, rel: "embeds" });
+      ```
+    - **Value**: Visual feedback from tick one, no delay for UI generation.
 
 9. **Task Templates**
-   - **Purpose**: Sample tasks for quickstart.
-   - **Content**: 
-     ```typescript
-     const planDay = db.put({ id: crypto.randomUUID(), content: { type: "task", desc: "Plan my day", deadline: "2025-03-16" }, ... });
-     const takeNote = db.put({ id: crypto.randomUUID(), content: { type: "task", desc: "Take a note", data: "..." }, ... });
-     seed.graph.push({ target: planDay.id, rel: "embeds" }, { target: takeNote.id, rel: "embeds" });
-     ```
-   - **Value**: Demonstrates functionality, seeds user workflows.
+    - **Purpose**: Sample tasks for quickstart.
+    - **Content**:
+      ```typescript
+      const planDay = db.put({ id: crypto.randomUUID(), content: { type: "task", desc: "Plan my day", deadline: "2025-03-16" }, ... });
+      const takeNote = db.put({ id: crypto.randomUUID(), content: { type: "task", desc: "Take a note", data: "..." }, ... });
+      seed.graph.push({ target: planDay.id, rel: "embeds" }, { target: takeNote.id, rel: "embeds" });
+      ```
+    - **Value**: Demonstrates functionality, seeds user workflows.
 
 10. **Prompt Library**
     - **Purpose**: Predefined LLM prompts for efficiency.
-    - **Content**: 
+    - **Content**:
       ```json
       "prompts": {
         "plan": "Generate a plan for: {desc}",
@@ -730,6 +766,7 @@ const seed: Note = {
 ## **Updated Bootstrap**
 
 ### **Code**
+
 ```typescript
 // main.ts
 import { PriorityQueue } from "deno_std";
@@ -754,31 +791,38 @@ runForever();
 
 ## **Utility & Value Impact**
 
-| Aspect              | Seed Additions Impact                        | Outcome                              |
-|---------------------|---------------------------------------------|--------------------------------------|
-| **User Productivity**| Task templates, UI, search, summarize       | Instant task management, insights    |
-| **System Autonomy** | Metamodel, spawn, reflect, learn            | Self-evolves without human input     |
-| **Collaboration**   | Sync tool, replication config               | Distributed network from start       |
-| **Intelligence**    | Learn tool, prompt library                  | Smarter decisions, efficient LLM use |
-| **Resilience**      | Config, sync, memory pruning                | Adapts to constraints, scales        |
+| Aspect                | Seed Additions Impact                 | Outcome                              |
+|-----------------------|---------------------------------------|--------------------------------------|
+| **User Productivity** | Task templates, UI, search, summarize | Instant task management, insights    |
+| **System Autonomy**   | Metamodel, spawn, reflect, learn      | Self-evolves without human input     |
+| **Collaboration**     | Sync tool, replication config         | Distributed network from start       |
+| **Intelligence**      | Learn tool, prompt library            | Smarter decisions, efficient LLM use |
+| **Resilience**        | Config, sync, memory pruning          | Adapts to constraints, scales        |
 
 ---
 
 ## **Why Max Utility**
+
 - **Breadth**: Covers tasks, UI, search, collaboration, learning in ~300 LOC.
 - **Depth**: Tools like `learn` and `sync` enable long-term growth.
 - **Flexibility**: Config and metamodel adapt to any context.
 - **No Delay**: Everything’s ready at boot—no "Stage 1" required.
 
-This enhanced seed transforms Netention v5 into a powerhouse from the first tick—productive, intelligent, and infinitely scalable, all while staying minimal and leveraging recursive elegance.
+This enhanced seed transforms Netention v5 into a powerhouse from the first tick—productive, intelligent, and infinitely
+scalable, all while staying minimal and leveraging recursive elegance.
 
-Below, I’ll enhance the **Netention v5** seed Note by integrating additional programming-focused features—expression evaluators (for numbers, strings, etc.) and graph search, traversal, and metrics tools—pushing even more utility and value into the boot stage. These additions empower the system with immediate computational power and graph-based reasoning, enhancing its ability to handle complex tasks and self-evolve from the start. The spec remains terse, using pseudocode and tables for density.
+Below, I’ll enhance the **Netention v5** seed Note by integrating additional programming-focused features—expression
+evaluators (for numbers, strings, etc.) and graph search, traversal, and metrics tools—pushing even more utility and
+value into the boot stage. These additions empower the system with immediate computational power and graph-based
+reasoning, enhancing its ability to handle complex tasks and self-evolve from the start. The spec remains terse, using
+pseudocode and tables for density.
 
 ---
 
 # **Netention v5: Enhanced Seed with Programming Features**
 
 ## **Seed Design Goals**
+
 - **Max Utility**: Embed computational and graph tools for instant power.
 - **Value**: Enable math/string processing, graph analysis from boot.
 - **Minimal**: Add ~50-100 LOC, leverage dependencies for rest.
@@ -788,6 +832,7 @@ Below, I’ll enhance the **Netention v5** seed Note by integrating additional p
 ## **Updated Seed Note**
 
 ### **Structure**
+
 ```typescript
 const seed: Note = {
   id: crypto.randomUUID(),
@@ -853,8 +898,9 @@ seed.graph.push({ target: uiList.id, rel: "embeds" }, { target: uiGraph.id, rel:
 ## **New Programming Features**
 
 ### **1. Expression Evaluator (`eval_expr`)**
+
 - **Purpose**: Evaluate mathematical and string expressions dynamically.
-- **Impl**: 
+- **Impl**:
   ```typescript
   async evalExpr(args: { expr: string, context?: Record<string, any> }): Promise<any> {
     const safeEval = (expr: string) => {
@@ -872,15 +918,16 @@ seed.graph.push({ target: uiList.id, rel: "embeds" }, { target: uiGraph.id, rel:
     }
   }
   ```
-- **Utility**: 
-  - Compute numbers: `"2 + 3 * Math.sin(1)"` → `4.524`.
-  - Process strings: `"Hello'.concat(' World')"` → `"Hello World"`.
-  - Fallback to LLM for complex cases (e.g., symbolic math).
+- **Utility**:
+    - Compute numbers: `"2 + 3 * Math.sin(1)"` → `4.524`.
+    - Process strings: `"Hello'.concat(' World')"` → `"Hello World"`.
+    - Fallback to LLM for complex cases (e.g., symbolic math).
 - **Value**: Immediate computation for tasks, plans, and self-optimization.
 
 ### **2. Graph Search (`graph_search`)**
+
 - **Purpose**: Find Notes by criteria in the graph.
-- **Impl**: 
+- **Impl**:
   ```typescript
   async graphSearch(args: { startId: string, query: string }): Promise<string[]> {
     const visited = new Set<string>();
@@ -897,14 +944,15 @@ seed.graph.push({ target: uiList.id, rel: "embeds" }, { target: uiGraph.id, rel:
     return results;
   }
   ```
-- **Utility**: 
-  - Search: `"priority > 50"` → list of high-priority Note IDs.
-  - Filter: `"type: task"` → task-specific Notes.
+- **Utility**:
+    - Search: `"priority > 50"` → list of high-priority Note IDs.
+    - Filter: `"type: task"` → task-specific Notes.
 - **Value**: Rapid querying for planning, UI, and reflection.
 
 ### **3. Graph Traversal (`graph_traverse`)**
+
 - **Purpose**: Walk the graph to execute or analyze paths.
-- **Impl**: 
+- **Impl**:
   ```typescript
   async graphTraverse(args: { startId: string, mode: "dfs" | "bfs", callback: string }): Promise<any[]> {
     const visited = new Set<string>();
@@ -923,14 +971,15 @@ seed.graph.push({ target: uiList.id, rel: "embeds" }, { target: uiGraph.id, rel:
     return results;
   }
   ```
-- **Utility**: 
-  - DFS: Deep task dependency resolution.
-  - BFS: Broad UI rendering order.
+- **Utility**:
+    - DFS: Deep task dependency resolution.
+    - BFS: Broad UI rendering order.
 - **Value**: Flexible graph navigation for execution and analysis.
 
 ### **4. Graph Metrics (`graph_metrics`)**
+
 - **Purpose**: Compute graph properties (e.g., depth, centrality).
-- **Impl**: 
+- **Impl**:
   ```typescript
   async graphMetrics(args: { startId: string }): Promise<any> {
     const nodes = new Set<string>();
@@ -949,74 +998,84 @@ seed.graph.push({ target: uiList.id, rel: "embeds" }, { target: uiGraph.id, rel:
     return { nodeCount: nodes.size, edgeCount: edges.length, maxDepth: depth, centrality };
   }
   ```
-- **Utility**: 
-  - Depth: Max dependency chain length.
-  - Centrality: Identify critical Notes.
+- **Utility**:
+    - Depth: Max dependency chain length.
+    - Centrality: Identify critical Notes.
 - **Value**: Optimizes system structure, prioritizes key nodes.
 
 ---
 
 ## **Updated Tools Table**
 
-| Tool             | Description                          | Utility Impact                     |
-|------------------|--------------------------------------|------------------------------------|
-| `eval_expr`      | Evaluates math/string expressions   | Computational power for tasks      |
-| `graph_search`   | Searches graph by query             | Fast Note retrieval                |
-| `graph_traverse` | Traverses graph (DFS/BFS)           | Path-based execution/analysis      |
-| `graph_metrics`  | Computes graph properties           | System optimization, diagnostics   |
+| Tool             | Description                       | Utility Impact                   |
+|------------------|-----------------------------------|----------------------------------|
+| `eval_expr`      | Evaluates math/string expressions | Computational power for tasks    |
+| `graph_search`   | Searches graph by query           | Fast Note retrieval              |
+| `graph_traverse` | Traverses graph (DFS/BFS)         | Path-based execution/analysis    |
+| `graph_metrics`  | Computes graph properties         | System optimization, diagnostics |
 
 ---
 
 ## **Bootstrap Impact**
 
 ### **Updated Seed Size**
+
 - **LOC**: ~350 (adds ~50-100 LOC for new tools).
 - **Dependencies**: No new ones; leverages LangChain.js for LLM fallbacks.
 
 ### **Utility & Value Boost**
-| Aspect              | New Feature Impact                        | Outcome                              |
-|---------------------|------------------------------------------|--------------------------------------|
-| **Task Processing** | `eval_expr` for dynamic computation      | Solve math, string ops instantly     |
-| **Graph Reasoning** | Search, traverse, metrics tools          | Analyze/optimize Note network        |
-| **System Insight**  | Metrics for depth, centrality            | Self-diagnose structure, bottlenecks |
-| **Flexibility**     | Tools work on any Note/graph             | Broad applicability from boot        |
+
+| Aspect              | New Feature Impact                  | Outcome                              |
+|---------------------|-------------------------------------|--------------------------------------|
+| **Task Processing** | `eval_expr` for dynamic computation | Solve math, string ops instantly     |
+| **Graph Reasoning** | Search, traverse, metrics tools     | Analyze/optimize Note network        |
+| **System Insight**  | Metrics for depth, centrality       | Self-diagnose structure, bottlenecks |
+| **Flexibility**     | Tools work on any Note/graph        | Broad applicability from boot        |
 
 ---
 
 ## **Example Usage**
 
-1. **Expression Eval**: 
-   - Task Note: `{ content: { type: "task", desc: "Calc budget", expr: "100 + 50 * 2" } }`
-   - `eval_expr` → `{ value: 200, error: null }`
+1. **Expression Eval**:
+    - Task Note: `{ content: { type: "task", desc: "Calc budget", expr: "100 + 50 * 2" } }`
+    - `eval_expr` → `{ value: 200, error: null }`
 
-2. **Graph Search**: 
-   - Query: `"priority > 50"`
-   - `graph_search` → `[id1, id2, id3]`
+2. **Graph Search**:
+    - Query: `"priority > 50"`
+    - `graph_search` → `[id1, id2, id3]`
 
-3. **Traversal**: 
-   - `graph_traverse({ startId: seed.id, mode: "bfs", callback: "notify status" })`
-   - Alerts user of all Note statuses breadth-first.
+3. **Traversal**:
+    - `graph_traverse({ startId: seed.id, mode: "bfs", callback: "notify status" })`
+    - Alerts user of all Note statuses breadth-first.
 
-4. **Metrics**: 
-   - `graph_metrics({ startId: seed.id })`
-   - `{ nodeCount: 10, edgeCount: 15, maxDepth: 3, centrality: { "id1": 0.8 } }`
+4. **Metrics**:
+    - `graph_metrics({ startId: seed.id })`
+    - `{ nodeCount: 10, edgeCount: 15, maxDepth: 3, centrality: { "id1": 0.8 } }`
 
 ---
 
 ## **Why These Features**
+
 - **Expr Eval**: Immediate computational backbone for tasks, plans, and self-tuning (e.g., priority formulas).
-- **Graph Tools**: Unlocks the full power of the Note graph—search for planning, traversal for execution, metrics for optimization.
+- **Graph Tools**: Unlocks the full power of the Note graph—search for planning, traversal for execution, metrics for
+  optimization.
 - **Boot Value**: Adds ~50-100 LOC but multiplies capability, making v5 a programming powerhouse from tick one.
 
-This seed now packs a dense toolkit—computational, analytical, and structural—ensuring Netention v5 is not just viable but a formidable, self-evolving system right out of the gate.
+This seed now packs a dense toolkit—computational, analytical, and structural—ensuring Netention v5 is not just viable
+but a formidable, self-evolving system right out of the gate.
 
-Below, I’ll enhance the **Netention v5** seed Note by integrating a **Testing** feature—specifically tools for creating and running unit tests—to ensure functionality persists as the system evolves. Unit tests will act as "temporary milestones" embedded in the graph, providing a living specification. I’ll also explore additional fundamental tools that combine powerfully with existing ones, focusing on terse pseudocode and tables for density. These additions maximize utility, adaptability, and creative potential from boot.
+Below, I’ll enhance the **Netention v5** seed Note by integrating a **Testing** feature—specifically tools for creating
+and running unit tests—to ensure functionality persists as the system evolves. Unit tests will act as "temporary
+milestones" embedded in the graph, providing a living specification. I’ll also explore additional fundamental tools that
+combine powerfully with existing ones, focusing on terse pseudocode and tables for density. These additions maximize
+utility, adaptability, and creative potential from boot.
 
 ---
 
 # **Netention v5: Enhanced Seed with Testing & Fundamental Tools**
 
 ## **Seed Design Goals**
+
 - **Testing**: Embed unit test creation/running for persistent functionality.
 - **Combinatorial Power**: Add tools that synergize with existing ones.
 - **Minimal Footprint**: Keep seed ~400 LOC, leveraging dependencies.
@@ -1026,6 +1085,7 @@ Below, I’ll enhance the **Netention v5** seed Note by integrating a **Testing*
 ## **Updated Seed Note**
 
 ### **Structure**
+
 ```typescript
 const seed: Note = {
   id: crypto.randomUUID(),
@@ -1098,8 +1158,9 @@ seed.graph.push({ target: uiList.id, rel: "embeds" }, { target: uiGraph.id, rel:
 ## **New Features**
 
 ### **1. Testing: Unit Test Creation (`test_gen`)**
+
 - **Purpose**: Generate unit tests for code/tools to retain functionality.
-- **Impl**: 
+- **Impl**:
   ```typescript
   async testGen(args: { code: string, targetId: string }): Promise<string> {
     const prompt = `Generate Jest unit tests for: ${args.code}`;
@@ -1119,14 +1180,15 @@ seed.graph.push({ target: uiList.id, rel: "embeds" }, { target: uiGraph.id, rel:
     return testId;
   }
   ```
-- **Utility**: 
-  - Auto-generates tests: `"expect(add(2, 3)).toBe(5)"` for `add` function.
-  - Links tests to target Notes via `graph`.
+- **Utility**:
+    - Auto-generates tests: `"expect(add(2, 3)).toBe(5)"` for `add` function.
+    - Links tests to target Notes via `graph`.
 - **Value**: Defines spec as graph nodes, persists functionality.
 
 ### **2. Testing: Unit Test Runner (`test_run`)**
+
 - **Purpose**: Execute unit tests and report results.
-- **Impl**: 
+- **Impl**:
   ```typescript
   async testRun(args: { testId: string }): Promise<any> {
     const testNote = await db.get(args.testId);
@@ -1147,14 +1209,15 @@ seed.graph.push({ target: uiList.id, rel: "embeds" }, { target: uiGraph.id, rel:
     return results;
   }
   ```
-- **Utility**: 
-  - Runs tests: Reports pass/fail for each assertion.
-  - Stores results in `memory` as Notes.
+- **Utility**:
+    - Runs tests: Reports pass/fail for each assertion.
+    - Stores results in `memory` as Notes.
 - **Value**: Ensures stability, acts as milestone in graph.
 
 ### **3. Tool Composition (`compose`)**
+
 - **Purpose**: Combine tools into workflows.
-- **Impl**: 
+- **Impl**:
   ```typescript
   async composeTools(args: { tools: string[], inputs: any }): Promise<any> {
     let result = args.inputs;
@@ -1165,13 +1228,14 @@ seed.graph.push({ target: uiList.id, rel: "embeds" }, { target: uiGraph.id, rel:
     return result;
   }
   ```
-- **Utility**: 
-  - Chain: `["eval_expr", "summarize"]` → Eval "2+2", summarize "Result: 4".
+- **Utility**:
+    - Chain: `["eval_expr", "summarize"]` → Eval "2+2", summarize "Result: 4".
 - **Value**: Enables complex operations via tool synergy.
 
 ### **4. Task Scheduler (`schedule`)**
+
 - **Purpose**: Schedule Notes for future execution.
-- **Impl**: 
+- **Impl**:
   ```typescript
   async scheduleTask(args: { noteId: string, time: string }): Promise<void> {
     const note = await db.get(args.noteId);
@@ -1186,13 +1250,14 @@ seed.graph.push({ target: uiList.id, rel: "embeds" }, { target: uiGraph.id, rel:
     }, new Date(args.time).getTime() - Date.now());
   }
   ```
-- **Utility**: 
-  - Delay: Schedule "Plan day" for "2025-03-16T08:00".
+- **Utility**:
+    - Delay: Schedule "Plan day" for "2025-03-16T08:00".
 - **Value**: Adds time-based control, combos with `notify`.
 
 ### **5. Debug Tool (`debug`)**
+
 - **Purpose**: Inspect and log Note state.
-- **Impl**: 
+- **Impl**:
   ```typescript
   async debugState(args: { noteId: string }): Promise<string> {
     const note = await db.get(args.noteId);
@@ -1209,86 +1274,96 @@ seed.graph.push({ target: uiList.id, rel: "embeds" }, { target: uiGraph.id, rel:
     return debugId;
   }
   ```
-- **Utility**: 
-  - Log: Detailed snapshot of any Note.
+- **Utility**:
+    - Log: Detailed snapshot of any Note.
 - **Value**: Aids self-diagnosis, combos with `reflect`.
 
 ---
 
 ## **Updated Tools Table**
 
-| Tool             | Description                          | Utility Impact                     | Combos With                  |
-|------------------|--------------------------------------|------------------------------------|------------------------------|
-| `test_gen`       | Generates unit tests                | Defines persistent spec            | `code_gen`, `test_run`       |
-| `test_run`       | Runs unit tests, logs results       | Validates functionality            | `reflect`, `notify`          |
-| `compose`        | Chains tools into workflows         | Multi-tool operations              | `eval_expr`, `summarize`     |
-| `schedule`       | Schedules Notes for later           | Time-based task management         | `notify`, `planDay`          |
-| `debug`          | Logs Note state for inspection      | Debugging, self-diagnosis          | `reflect`, `ui_gen`          |
+| Tool       | Description                    | Utility Impact             | Combos With              |
+|------------|--------------------------------|----------------------------|--------------------------|
+| `test_gen` | Generates unit tests           | Defines persistent spec    | `code_gen`, `test_run`   |
+| `test_run` | Runs unit tests, logs results  | Validates functionality    | `reflect`, `notify`      |
+| `compose`  | Chains tools into workflows    | Multi-tool operations      | `eval_expr`, `summarize` |
+| `schedule` | Schedules Notes for later      | Time-based task management | `notify`, `planDay`      |
+| `debug`    | Logs Note state for inspection | Debugging, self-diagnosis  | `reflect`, `ui_gen`      |
 
 ---
 
 ## **Combinatorial Potential**
 
-| Combo                  | Example Use Case                          | Outcome                              |
-|------------------------|------------------------------------------|--------------------------------------|
-| `test_gen` + `test_run`| Generate/run tests for new tool          | Ensures tool reliability             |
-| `compose` + `eval_expr`| Eval "2+2" then notify result            | Automated computation + alert        |
-| `schedule` + `notify`  | Schedule "Meeting reminder" at 9 AM      | Timely user prompts                  |
-| `debug` + `reflect`    | Debug Note, reflect on issues            | Self-correcting system               |
-| `graph_search` + `test_run`| Search for tasks, test their logic    | Validates task graph                 |
-| `learn` + `summarize`  | Summarize memory, train vector store     | Smarter context over time            |
-| `ui_gen` + `graph_metrics`| Render graph with centrality highlights| Visual system optimization           |
+| Combo                       | Example Use Case                        | Outcome                       |
+|-----------------------------|-----------------------------------------|-------------------------------|
+| `test_gen` + `test_run`     | Generate/run tests for new tool         | Ensures tool reliability      |
+| `compose` + `eval_expr`     | Eval "2+2" then notify result           | Automated computation + alert |
+| `schedule` + `notify`       | Schedule "Meeting reminder" at 9 AM     | Timely user prompts           |
+| `debug` + `reflect`         | Debug Note, reflect on issues           | Self-correcting system        |
+| `graph_search` + `test_run` | Search for tasks, test their logic      | Validates task graph          |
+| `learn` + `summarize`       | Summarize memory, train vector store    | Smarter context over time     |
+| `ui_gen` + `graph_metrics`  | Render graph with centrality highlights | Visual system optimization    |
 
 ---
 
 ## **Bootstrap Impact**
 
 ### **Updated Seed Size**
+
 - **LOC**: ~400 (adds ~50-100 LOC for new tools).
 - **Dependencies**: No new ones; leverages LangChain.js/Deno.
 
 ### **Utility & Value Boost**
-| Aspect              | New Feature Impact                        | Outcome                              |
-|---------------------|------------------------------------------|--------------------------------------|
-| **Stability**       | Testing tools ensure functionality       | Robust evolution, spec retention     |
-| **Flexibility**     | `compose`, `schedule` for workflows      | Dynamic task chaining, timing        |
-| **Diagnostics**     | `debug` for state inspection             | Rapid issue detection, correction    |
-| **Creativity**      | Tool combos unlock novel behaviors       | Emergent solutions from boot         |
+
+| Aspect          | New Feature Impact                  | Outcome                           |
+|-----------------|-------------------------------------|-----------------------------------|
+| **Stability**   | Testing tools ensure functionality  | Robust evolution, spec retention  |
+| **Flexibility** | `compose`, `schedule` for workflows | Dynamic task chaining, timing     |
+| **Diagnostics** | `debug` for state inspection        | Rapid issue detection, correction |
+| **Creativity**  | Tool combos unlock novel behaviors  | Emergent solutions from boot      |
 
 ---
 
 ## **Example Usage**
 
-1. **Testing**: 
-   - `test_gen({ code: "add(a,b) { return a+b; }" })` → Test Note: `"expect(add(2,3)).toBe(5)"`.
-   - `test_run({ testId: "test-123" })` → `{ pass: true, actual: 5, expected: 5 }`.
+1. **Testing**:
+    - `test_gen({ code: "add(a,b) { return a+b; }" })` → Test Note: `"expect(add(2,3)).toBe(5)"`.
+    - `test_run({ testId: "test-123" })` → `{ pass: true, actual: 5, expected: 5 }`.
 
-2. **Compose**: 
-   - `compose({ tools: ["eval_expr", "notify"], inputs: "2+3" })` → Alerts "5".
+2. **Compose**:
+    - `compose({ tools: ["eval_expr", "notify"], inputs: "2+3" })` → Alerts "5".
 
-3. **Schedule**: 
-   - `schedule({ noteId: planDay.id, time: "2025-03-16T08:00" })` → Activates task later.
+3. **Schedule**:
+    - `schedule({ noteId: planDay.id, time: "2025-03-16T08:00" })` → Activates task later.
 
-4. **Debug**: 
-   - `debug({ noteId: seed.id })` → Logs seed state, notifies user.
+4. **Debug**:
+    - `debug({ noteId: seed.id })` → Logs seed state, notifies user.
 
 ---
 
 ## **Why These Features**
-- **Testing**: `test_gen`/`test_run` embed a living spec in the graph, ensuring evolution doesn’t break core functionality—critical for a self-modifying system.
+
+- **Testing**: `test_gen`/`test_run` embed a living spec in the graph, ensuring evolution doesn’t break core
+  functionality—critical for a self-modifying system.
 - **Compose**: Unlocks tool synergy, amplifying utility with minimal code.
 - **Schedule**: Adds temporal control, enhancing task management.
 - **Debug**: Provides visibility, crucial for autonomous debugging and user trust.
 
-This seed now packs a robust, combinatorial toolkit—testing, workflow, timing, and diagnostics—making Netention v5 a self-sustaining, creative powerhouse from boot, all within ~400 LOC.
+This seed now packs a robust, combinatorial toolkit—testing, workflow, timing, and diagnostics—making Netention v5 a
+self-sustaining, creative powerhouse from boot, all within ~400 LOC.
 
-Below, I’ll enhance the **Netention v5** seed Note by adding **generic machine-learning (ML) model Notes**—dynamic, pluggable decision trees, classifiers, PCA, and clustering tools that act as "glue" in the graph. I’ll also enhance **planning and anticipatory planning** by integrating these ML tools with existing ones, plus new pathfinding tools like A* to boost foresight and optimization. The spec remains terse, using pseudocode and tables for density, pushing maximum utility into the boot stage.
+Below, I’ll enhance the **Netention v5** seed Note by adding **generic machine-learning (ML) model Notes**—dynamic,
+pluggable decision trees, classifiers, PCA, and clustering tools that act as "glue" in the graph. I’ll also enhance *
+*planning and anticipatory planning** by integrating these ML tools with existing ones, plus new pathfinding tools like
+A* to boost foresight and optimization. The spec remains terse, using pseudocode and tables for density, pushing maximum
+utility into the boot stage.
 
 ---
 
 # **Netention v5: Enhanced Seed with ML & Advanced Planning**
 
 ## **Seed Design Goals**
+
 - **ML Glue**: Generic, dynamic ML models as Notes for universal integration.
 - **Planning Power**: Leverage ML and pathfinding (A*) for smarter anticipation.
 - **Minimal**: Add ~100-150 LOC, lean on LangChain.js/Deno.
@@ -1298,6 +1373,7 @@ Below, I’ll enhance the **Netention v5** seed Note by adding **generic machine
 ## **Updated Seed Note**
 
 ### **Structure**
+
 ```typescript
 const seed: Note = {
   id: crypto.randomUUID(),
@@ -1351,8 +1427,9 @@ seed.graph.push({ target: uiGraph.id, rel: "embeds" }, { target: planDay.id, rel
 ## **New Features**
 
 ### **1. Generic ML Model Training (`ml_train`)**
+
 - **Purpose**: Train dynamic ML models (decision tree, classifier, PCA, clustering) as Notes.
-- **Impl**: 
+- **Impl**:
   ```typescript
   async mlTrain(args: { modelType: "dtree" | "classifier" | "pca" | "cluster", data: any[], targetId?: string }): Promise<string> {
     const modelId = crypto.randomUUID();
@@ -1372,16 +1449,17 @@ seed.graph.push({ target: uiGraph.id, rel: "embeds" }, { target: planDay.id, rel
     return modelId;
   }
   ```
-- **Utility**: 
-  - Decision Tree: Classify task priorities.
-  - Classifier: Predict task success.
-  - PCA: Reduce memory dimensionality.
-  - Clustering: Group similar Notes.
+- **Utility**:
+    - Decision Tree: Classify task priorities.
+    - Classifier: Predict task success.
+    - PCA: Reduce memory dimensionality.
+    - Clustering: Group similar Notes.
 - **Value**: "Glue" for graph—adds intelligence anywhere.
 
 ### **2. ML Prediction (`ml_predict`)**
+
 - **Purpose**: Use trained ML models for dynamic inference.
-- **Impl**: 
+- **Impl**:
   ```typescript
   async mlPredict(args: { modelId: string, input: any }): Promise<any> {
     const modelNote = await db.get(args.modelId);
@@ -1391,13 +1469,14 @@ seed.graph.push({ target: uiGraph.id, rel: "embeds" }, { target: planDay.id, rel
     return prediction;
   }
   ```
-- **Utility**: 
-  - Predict: Task completion time, cluster membership.
+- **Utility**:
+    - Predict: Task completion time, cluster membership.
 - **Value**: Real-time insights from graph data.
 
 ### **3. A* Pathfinding (`astar`)**
+
 - **Purpose**: Optimize planning with shortest-path search.
-- **Impl**: 
+- **Impl**:
   ```typescript
   async astarPath(args: { startId: string, goalId: string }): Promise<string[]> {
     const open = new PriorityQueue<{ id: string, f: number }>((a, b) => a.f - b.f);
@@ -1428,13 +1507,14 @@ seed.graph.push({ target: uiGraph.id, rel: "embeds" }, { target: planDay.id, rel
     return path;
   }
   ```
-- **Utility**: 
-  - Find: Shortest path from task to goal in graph.
+- **Utility**:
+    - Find: Shortest path from task to goal in graph.
 - **Value**: Enhances anticipatory planning.
 
 ### **4. Plan Optimization (`plan_optimize`)**
+
 - **Purpose**: Refine plans with ML and pathfinding.
-- **Impl**: 
+- **Impl**:
   ```typescript
   async planOptimize(args: { planId: string }): Promise<void> {
     const plan = await db.get(args.planId);
@@ -1450,92 +1530,103 @@ seed.graph.push({ target: uiGraph.id, rel: "embeds" }, { target: planDay.id, rel
     db.put(plan);
   }
   ```
-- **Utility**: 
-  - Reorders: Steps by ML-predicted priority + A* path.
+- **Utility**:
+    - Reorders: Steps by ML-predicted priority + A* path.
 - **Value**: Smarter, anticipatory plans.
 
 ---
 
 ## **Updated Tools Table**
 
-| Tool             | Description                          | Utility Impact                     | Combos With                  |
-|------------------|--------------------------------------|------------------------------------|------------------------------|
-| `ml_train`       | Trains ML models (dtree, etc.)      | Dynamic learning anywhere          | `ml_predict`, `plan_optimize`|
-| `ml_predict`     | Predicts with trained models        | Real-time inference                | `reflect`, `test_run`        |
-| `astar`          | A* pathfinding in graph             | Optimal planning paths             | `plan_optimize`, `graph_traverse` |
-| `plan_optimize`  | Optimizes plans with ML/A*          | Enhanced anticipation              | `ml_train`, `astar`          |
+| Tool            | Description                    | Utility Impact            | Combos With                       |
+|-----------------|--------------------------------|---------------------------|-----------------------------------|
+| `ml_train`      | Trains ML models (dtree, etc.) | Dynamic learning anywhere | `ml_predict`, `plan_optimize`     |
+| `ml_predict`    | Predicts with trained models   | Real-time inference       | `reflect`, `test_run`             |
+| `astar`         | A* pathfinding in graph        | Optimal planning paths    | `plan_optimize`, `graph_traverse` |
+| `plan_optimize` | Optimizes plans with ML/A*     | Enhanced anticipation     | `ml_train`, `astar`               |
 
 ---
 
 ## **Enhanced Planning**
 
 ### **Improvements**
-- **ML Integration**: 
-  - `ml_train` creates models from step data (e.g., priority predictors).
-  - `ml_predict` adjusts step priorities dynamically.
-- **A* Pathfinding**: 
-  - `astar` finds optimal step sequences, minimizing dependencies.
-- **Optimization**: 
-  - `plan_optimize` combines ML predictions and A* paths for anticipatory, efficient plans.
+
+- **ML Integration**:
+    - `ml_train` creates models from step data (e.g., priority predictors).
+    - `ml_predict` adjusts step priorities dynamically.
+- **A* Pathfinding**:
+    - `astar` finds optimal step sequences, minimizing dependencies.
+- **Optimization**:
+    - `plan_optimize` combines ML predictions and A* paths for anticipatory, efficient plans.
 
 ### **Example**
+
 - **Task**: "Plan a trip" → Steps: "Book flight", "Reserve hotel", "Pack".
-- **Process**: 
-  - `ml_train` on step history → Decision tree predicts urgency.
-  - `astar` finds path: "Book flight" → "Reserve hotel" → "Pack".
-  - `plan_optimize` reorders: High-priority "Book flight" first.
+- **Process**:
+    - `ml_train` on step history → Decision tree predicts urgency.
+    - `astar` finds path: "Book flight" → "Reserve hotel" → "Pack".
+    - `plan_optimize` reorders: High-priority "Book flight" first.
 
 ---
 
 ## **Combinatorial Potential**
 
-| Combo                  | Example Use Case                          | Outcome                              |
-|------------------------|------------------------------------------|--------------------------------------|
-| `ml_train` + `ml_predict`| Train classifier on task success         | Predicts task outcomes               |
-| `astar` + `graph_traverse`| Optimal path then execute steps         | Efficient plan execution             |
-| `plan_optimize` + `test_run`| Optimize plan, test new order           | Validated, smart plans               |
-| `ml_predict` + `notify`  | Predict delay, alert user               | Proactive user assistance            |
-| `graph_metrics` + `ml_train`| Train PCA on graph centrality           | Reduces graph complexity             |
-| `compose` + `astar`     | Chain A* with notification              | Optimized path + user update         |
+| Combo                        | Example Use Case                 | Outcome                      |
+|------------------------------|----------------------------------|------------------------------|
+| `ml_train` + `ml_predict`    | Train classifier on task success | Predicts task outcomes       |
+| `astar` + `graph_traverse`   | Optimal path then execute steps  | Efficient plan execution     |
+| `plan_optimize` + `test_run` | Optimize plan, test new order    | Validated, smart plans       |
+| `ml_predict` + `notify`      | Predict delay, alert user        | Proactive user assistance    |
+| `graph_metrics` + `ml_train` | Train PCA on graph centrality    | Reduces graph complexity     |
+| `compose` + `astar`          | Chain A* with notification       | Optimized path + user update |
 
 ---
 
 ## **Bootstrap Impact**
 
 ### **Updated Seed Size**
+
 - **LOC**: ~450 (adds ~50-100 LOC for ML/planning tools).
 - **Dependencies**: No new ones; leverages LangChain.js for ML.
 
 ### **Utility & Value Boost**
-| Aspect              | New Feature Impact                        | Outcome                              |
-|---------------------|------------------------------------------|--------------------------------------|
-| **Intelligence**    | ML models as graph glue                  | Adaptive reasoning anywhere          |
-| **Planning**        | A*, ML-optimized plans                   | Smarter, anticipatory workflows      |
-| **Robustness**      | Testing + ML validation                  | Persistent, reliable evolution       |
-| **Versatility**     | ML/pathfinding combos                    | Infinite task-solving potential      |
+
+| Aspect           | New Feature Impact      | Outcome                         |
+|------------------|-------------------------|---------------------------------|
+| **Intelligence** | ML models as graph glue | Adaptive reasoning anywhere     |
+| **Planning**     | A*, ML-optimized plans  | Smarter, anticipatory workflows |
+| **Robustness**   | Testing + ML validation | Persistent, reliable evolution  |
+| **Versatility**  | ML/pathfinding combos   | Infinite task-solving potential |
 
 ---
 
 ## **Example Usage**
 
-1. **ML Model**: 
-   - `ml_train({ modelType: "cluster", data: memory })` → Clusters similar Notes.
-   - `ml_predict({ modelId: "cluster-123", input: "New task" })` → Assigns cluster.
+1. **ML Model**:
+    - `ml_train({ modelType: "cluster", data: memory })` → Clusters similar Notes.
+    - `ml_predict({ modelId: "cluster-123", input: "New task" })` → Assigns cluster.
 
-2. **Planning**: 
-   - `astar({ startId: "step1", goalId: "step3" })` → Path: `["step1", "step2", "step3"]`.
-   - `plan_optimize({ planId: "trip-123" })` → Reordered, ML-prioritized trip plan.
+2. **Planning**:
+    - `astar({ startId: "step1", goalId: "step3" })` → Path: `["step1", "step2", "step3"]`.
+    - `plan_optimize({ planId: "trip-123" })` → Reordered, ML-prioritized trip plan.
 
 ---
 
 ## **Why These Features**
-- **ML Glue**: `ml_train`/`ml_predict` add dynamic learning anywhere—classifiers for priorities, clustering for organization, PCA for simplification.
-- **Planning Boost**: `astar` and `plan_optimize` make plans predictive and optimal, leveraging ML and graph tools for foresight.
+
+- **ML Glue**: `ml_train`/`ml_predict` add dynamic learning anywhere—classifiers for priorities, clustering for
+  organization, PCA for simplification.
+- **Planning Boost**: `astar` and `plan_optimize` make plans predictive and optimal, leveraging ML and graph tools for
+  foresight.
 - **Synergy**: Combines with `test_run`, `graph_traverse`, etc., for a self-improving, intelligent system from boot.
 
-This seed now packs a formidable toolkit—ML adaptability and advanced planning—making Netention v5 a recursive, learning, planning juggernaut in ~450 LOC.
+This seed now packs a formidable toolkit—ML adaptability and advanced planning—making Netention v5 a recursive,
+learning, planning juggernaut in ~450 LOC.
 
-Below is a terse outline of the **Netention v5** system's components and their interactions, synthesizing the enhanced seed design with ML models, advanced planning, and testing features. The focus is on clarity and density, using tables and pseudocode to depict the structure and flow. This reflects a self-evolving, priority-driven system running in a continuous open loop, with components interacting via the Note graph and tools.
+Below is a terse outline of the **Netention v5** system's components and their interactions, synthesizing the enhanced
+seed design with ML models, advanced planning, and testing features. The focus is on clarity and density, using tables
+and pseudocode to depict the structure and flow. This reflects a self-evolving, priority-driven system running in a
+continuous open loop, with components interacting via the Note graph and tools.
 
 ---
 
@@ -1543,22 +1634,23 @@ Below is a terse outline of the **Netention v5** system's components and their i
 
 ## **Components Overview**
 
-| Component          | Role                                      | Key Features                       |
-|--------------------|-------------------------------------------|------------------------------------|
+| Component          | Role                                     | Key Features                       |
+|--------------------|------------------------------------------|------------------------------------|
 | **Note**           | Core entity: data + behavior             | Self-acting, recursive, ML-enabled |
-| **Tools**          | Executable functions as Notes            | ML, planning, testing, utilities  |
-| **Graph**          | Note relationships and structure         | Edges: depends, embeds, tools     |
-| **Priority Queue** | Manages Note execution order             | Fair resource allocation          |
-| **IPFS Storage**   | Persistent, distributed Note storage     | Immutable, scalable               |
-| **UI (Cytoscape)** | Visualizes Notes and graph               | Dynamic, interactive              |
-| **Runtime (Deno)** | Executes system in sandboxed environment | Secure, lightweight               |
+| **Tools**          | Executable functions as Notes            | ML, planning, testing, utilities   |
+| **Graph**          | Note relationships and structure         | Edges: depends, embeds, tools      |
+| **Priority Queue** | Manages Note execution order             | Fair resource allocation           |
+| **IPFS Storage**   | Persistent, distributed Note storage     | Immutable, scalable                |
+| **UI (Cytoscape)** | Visualizes Notes and graph               | Dynamic, interactive               |
+| **Runtime (Deno)** | Executes system in sandboxed environment | Secure, lightweight                |
 
 ---
 
 ## **Component Details**
 
 ### **1. Note**
-- **Structure**: 
+
+- **Structure**:
   ```typescript
   type Note = {
     id: string; content: any; graph: {target: string, rel: string}[];
@@ -1567,7 +1659,7 @@ Below is a terse outline of the **Netention v5** system's components and their i
     ts: string; resources: {tokens: number, cycles: number};
   };
   ```
-- **Behavior**: 
+- **Behavior**:
   ```typescript
   class Note {
     think(): void { /* LLM plans, updates priority */ }
@@ -1578,34 +1670,38 @@ Below is a terse outline of the **Netention v5** system's components and their i
 - **Subtypes**: Task, Tool, ML Model, Test, UI, etc.
 
 ### **2. Tools**
+
 - **Structure**: Notes with `content.execute` (e.g., JS or LLM call).
-- **Key Tools**: 
-  | Tool            | Function                          | Inputs                |
+- **Key Tools**:
+  | Tool | Function | Inputs |
   |-----------------|-----------------------------------|-----------------------|
-  | `spawn`         | Creates new Notes                | `{content: any}`     |
-  | `ml_train`      | Trains ML models                 | `{modelType, data}`  |
-  | `ml_predict`    | Predicts with ML                 | `{modelId, input}`   |
-  | `astar`         | A* pathfinding                   | `{startId, goalId}`  |
-  | `test_gen`      | Generates unit tests             | `{code, targetId}`   |
-  | `test_run`      | Runs unit tests                  | `{testId}`           |
-  | `graph_search`  | Searches graph                   | `{startId, query}`   |
+  | `spawn`         | Creates new Notes | `{content: any}`     |
+  | `ml_train`      | Trains ML models | `{modelType, data}`  |
+  | `ml_predict`    | Predicts with ML | `{modelId, input}`   |
+  | `astar`         | A* pathfinding | `{startId, goalId}`  |
+  | `test_gen`      | Generates unit tests | `{code, targetId}`   |
+  | `test_run`      | Runs unit tests | `{testId}`           |
+  | `graph_search`  | Searches graph | `{startId, query}`   |
 
 ### **3. Graph**
-- **Structure**: 
-  - Nodes: Notes.
-  - Edges: `graph: [{target: id, rel: "depends" | "embeds" | "tools" | "tests"}]`.
+
+- **Structure**:
+    - Nodes: Notes.
+    - Edges: `graph: [{target: id, rel: "depends" | "embeds" | "tools" | "tests"}]`.
 - **Role**: Defines dependencies, execution order, and tool access.
 
 ### **4. Priority Queue**
-- **Structure**: 
+
+- **Structure**:
   ```typescript
   const queue = new PriorityQueue<Note>((a, b) => b.state.priority - a.state.priority);
   ```
 - **Role**: Orders Notes by priority for resource allocation.
 
 ### **5. IPFS Storage**
+
 - **Structure**: Notes as IPLD JSON blocks, CID as `id`.
-- **Ops**: 
+- **Ops**:
   ```typescript
   const db = {
     put: async (n: Note) => ipfs.add(JSON.stringify(n)),
@@ -1614,13 +1710,15 @@ Below is a terse outline of the **Netention v5** system's components and their i
   ```
 
 ### **6. UI (Cytoscape)**
-- **Structure**: 
+
+- **Structure**:
   ```typescript
   const cy = cytoscape({ container: "#cy", elements: db.all().map(n => ({ data: { id: n.id, label: n.content.desc } })) });
   ```
 - **Role**: Visualizes Notes/graph, updates via Hono.
 
 ### **7. Runtime (Deno)**
+
 - **Role**: Executes `runForever()`, manages sandboxed JS/TS.
 
 ---
@@ -1628,6 +1726,7 @@ Below is a terse outline of the **Netention v5** system's components and their i
 ## **Interactions**
 
 ### **Flow Diagram**
+
 ```
 [Seed Note]
     ↓ (spawn)
@@ -1639,6 +1738,7 @@ Below is a terse outline of the **Netention v5** system's components and their i
 ```
 
 ### **Core Interaction Loop**
+
 1. **Bootstrap**:
    ```typescript
    db.put(seed);
@@ -1663,69 +1763,77 @@ Below is a terse outline of the **Netention v5** system's components and their i
 
 ### **Component Interactions**
 
-| Interaction           | Source → Target         | Mechanism                       | Outcome                          |
-|-----------------------|-------------------------|---------------------------------|----------------------------------|
-| **Note Spawns**       | Note → Note            | `spawn` tool                   | New Note in graph               |
-| **Tool Execution**    | Note → Tool            | `act()` calls `executor.invoke`| Executes task/ML/pathfinding    |
-| **Priority Update**   | Note → Queue           | `think()` recalcs priority     | Reorders execution              |
-| **Graph Search**      | Note → Graph           | `graph_search` traverses       | Finds relevant Notes            |
-| **ML Training**       | Note → ML Model Note   | `ml_train` creates model       | Enhances graph with predictions |
-| **Planning**          | Note → Plan Notes      | `astar` + `plan_optimize`      | Optimized step sequence         |
-| **Testing**           | Note → Test Note       | `test_gen` + `test_run`        | Validates functionality         |
-| **Sync**              | Note → IPFS            | `db.put` + `ipfs.pubsub`       | Persists/distributes state      |
-| **UI Update**         | Note → Cytoscape       | `ui_gen` + Hono broadcast      | Visualizes graph changes        |
+| Interaction         | Source → Target      | Mechanism                       | Outcome                         |
+|---------------------|----------------------|---------------------------------|---------------------------------|
+| **Note Spawns**     | Note → Note          | `spawn` tool                    | New Note in graph               |
+| **Tool Execution**  | Note → Tool          | `act()` calls `executor.invoke` | Executes task/ML/pathfinding    |
+| **Priority Update** | Note → Queue         | `think()` recalcs priority      | Reorders execution              |
+| **Graph Search**    | Note → Graph         | `graph_search` traverses        | Finds relevant Notes            |
+| **ML Training**     | Note → ML Model Note | `ml_train` creates model        | Enhances graph with predictions |
+| **Planning**        | Note → Plan Notes    | `astar` + `plan_optimize`       | Optimized step sequence         |
+| **Testing**         | Note → Test Note     | `test_gen` + `test_run`         | Validates functionality         |
+| **Sync**            | Note → IPFS          | `db.put` + `ipfs.pubsub`        | Persists/distributes state      |
+| **UI Update**       | Note → Cytoscape     | `ui_gen` + Hono broadcast       | Visualizes graph changes        |
 
 ---
 
 ## **Detailed Interactions**
 
 ### **1. Note Lifecycle**
-- **Think**: 
-  - Uses `ml_predict` to adjust `state.priority`.
-  - Calls `astar` for path to goal, updates `graph`.
-- **Act**: 
-  - Executes `tools` (e.g., `test_run`, `graph_traverse`).
-  - Spawns sub-Notes via `spawn`.
+
+- **Think**:
+    - Uses `ml_predict` to adjust `state.priority`.
+    - Calls `astar` for path to goal, updates `graph`.
+- **Act**:
+    - Executes `tools` (e.g., `test_run`, `graph_traverse`).
+    - Spawns sub-Notes via `spawn`.
 - **Sync**: Saves to IPFS, updates UI.
 
 ### **2. Tool Synergy**
-- **ML + Planning**: 
-  - `ml_train` on task history → `ml_predict` prioritizes → `plan_optimize` reorders with `astar`.
-- **Testing + Debug**: 
-  - `test_gen` creates test → `test_run` validates → `debug` logs failures.
+
+- **ML + Planning**:
+    - `ml_train` on task history → `ml_predict` prioritizes → `plan_optimize` reorders with `astar`.
+- **Testing + Debug**:
+    - `test_gen` creates test → `test_run` validates → `debug` logs failures.
 
 ### **3. Graph Dynamics**
+
 - **Traversal**: `graph_traverse` executes steps in order.
 - **Metrics**: `graph_metrics` informs `plan_optimize` for efficiency.
 
 ### **4. Resource Allocation**
-- **Queue**: 
-  - High-priority Notes get more `cycles`/`tokens`.
-  - `pruneMemory()` ensures bounded memory via `summarize`.
+
+- **Queue**:
+    - High-priority Notes get more `cycles`/`tokens`.
+    - `pruneMemory()` ensures bounded memory via `summarize`.
 
 ### **5. Persistence & UI**
+
 - **IPFS**: Stores Notes, syncs via `sync` tool.
 - **Cytoscape**: Reflects `graph` updates in real-time.
 
 ---
 
 ## **Example Flow**
-1. **Seed Starts**: 
-   - `think()`: Plans "Evolve system" → Spawns ML model Note.
-   - `act()`: `ml_train` on memory → `ml_predict` adjusts priorities.
-2. **Planning**: 
-   - `astar` finds path to "Plan day" → `plan_optimize` refines.
-3. **Testing**: 
-   - `test_gen` for `astar` → `test_run` validates → `debug` logs.
-4. **UI**: 
-   - `ui_gen` updates Cytoscape with new Notes.
+
+1. **Seed Starts**:
+    - `think()`: Plans "Evolve system" → Spawns ML model Note.
+    - `act()`: `ml_train` on memory → `ml_predict` adjusts priorities.
+2. **Planning**:
+    - `astar` finds path to "Plan day" → `plan_optimize` refines.
+3. **Testing**:
+    - `test_gen` for `astar` → `test_run` validates → `debug` logs.
+4. **UI**:
+    - `ui_gen` updates Cytoscape with new Notes.
 
 ---
 
 ## **Why It Works**
+
 - **Unified**: Notes drive all actions via tools/graph.
 - **Recursive**: Self-spawning and ML enhance adaptability.
 - **Efficient**: Priority queue ensures fair, continuous operation.
 - **Visual**: UI reflects system state instantly.
 
-This outline captures Netention v5’s components—Notes, Tools, Graph, Queue, Storage, UI, Runtime—and their tight-knit interactions, forming a self-sustaining, intelligent fabric from a single seed.
+This outline captures Netention v5’s components—Notes, Tools, Graph, Queue, Storage, UI, Runtime—and their tight-knit
+interactions, forming a self-sustaining, intelligent fabric from a single seed.

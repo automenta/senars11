@@ -1117,8 +1117,9 @@ This API defines how external applications (like the UI) can interact with Neten
     * This is where the "anticipatory" aspect comes in.
     * After the initial plan is created, the agent can analyze the plan steps and use the LLM to *infer* dependencies
       between them.
-      * Prompt:  "Analyze this plan: \[plan]. Are there any implicit dependencies between the steps? Return a JSON array
-      of dependencies, where each dependency is an object: `{ dependentStep: number, dependsOnStep: number}`".
+        * Prompt:  "Analyze this plan: \[plan]. Are there any implicit dependencies between the steps? Return a JSON
+          array
+          of dependencies, where each dependency is an object: `{ dependentStep: number, dependsOnStep: number}`".
     * Add edges to the plan's graph representation based on the inferred dependencies.
 
 5. **Plan Storage:**
@@ -2826,7 +2827,8 @@ serving as a blueprint for its development and future evolution.
 
 > Recursively unify the system design within its own descriptive power. Emerge its logical elegant form that can grow
 > everything from a seed.
-> Okay, let's recursively unify the Netention system design, distilling it to its core essence and expressing that essence
+> Okay, let's recursively unify the Netention system design, distilling it to its core essence and expressing that
+> essence
 > in a way that can be used to "grow" the entire system. This is a highly conceptual and metalinguistic exercise, aiming
 > to create a self-describing and self-generating system design.
 

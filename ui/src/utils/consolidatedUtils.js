@@ -16,17 +16,17 @@
  * @returns {Function} Debounced function
  */
 export const debounce = (func, wait, immediate = false) => {
-  let timeout;
-  return function executedFunction(...args) {
-    const later = () => {
-      timeout = null;
-      if (!immediate) func.apply(this, args);
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            timeout = null;
+            if (!immediate) func.apply(this, args);
+        };
+        const callNow = immediate && !timeout;
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+        if (callNow) func.apply(this, args);
     };
-    const callNow = immediate && !timeout;
-    clearTimeout(timeout);
-    timeout = setTimeout(later, wait);
-    if (callNow) func.apply(this, args);
-  };
 };
 
 /**
@@ -36,16 +36,16 @@ export const debounce = (func, wait, immediate = false) => {
  * @returns {Function} Throttled function
  */
 export const throttle = (func, limit) => {
-  let inThrottle;
-  return function () {
-    const args = arguments;
-    const context = this;
-    if (!inThrottle) {
-      func.apply(context, args);
-      inThrottle = true;
-      setTimeout(() => inThrottle = false, limit);
-    }
-  };
+    let inThrottle;
+    return function () {
+        const args = arguments;
+        const context = this;
+        if (!inThrottle) {
+            func.apply(context, args);
+            inThrottle = true;
+            setTimeout(() => inThrottle = false, limit);
+        }
+    };
 };
 
 /**
@@ -63,7 +63,7 @@ export const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
  * @returns {string} Formatted time string
  */
 export const formatTimestamp = (timestamp) =>
-  new Date(timestamp).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', second: '2-digit'});
+    new Date(timestamp).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', second: '2-digit'});
 
 /**
  * Format timestamp to date-time string
@@ -71,13 +71,13 @@ export const formatTimestamp = (timestamp) =>
  * @returns {string} Formatted date-time string
  */
 export const formatDateTime = (timestamp) =>
-  new Date(timestamp).toLocaleString([], {
-    month: '2-digit',
-    day: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
+    new Date(timestamp).toLocaleString([], {
+        month: '2-digit',
+        day: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
 
 /**
  * Format truth values for display
@@ -85,10 +85,10 @@ export const formatDateTime = (timestamp) =>
  * @returns {string} Formatted truth string
  */
 export const formatTruth = (truth) => {
-  if (!truth) return 'N/A';
-  const frequency = (truth.frequency || 0) * 100;
-  const confidence = (truth.confidence || 0) * 100;
-  return `${frequency.toFixed(1)}% @ ${confidence.toFixed(1)}%`;
+    if (!truth) return 'N/A';
+    const frequency = (truth.frequency || 0) * 100;
+    const confidence = (truth.confidence || 0) * 100;
+    return `${frequency.toFixed(1)}% @ ${confidence.toFixed(1)}%`;
 };
 
 /**
@@ -97,11 +97,11 @@ export const formatTruth = (truth) => {
  * @returns {string} Formatted budget string
  */
 export const formatBudget = (budget) => {
-  if (!budget) return 'N/A';
-  const priority = budget.priority || 0;
-  const durability = budget.durability || 0;
-  const quality = budget.quality || 0;
-  return `P:${priority.toFixed(2)} D:${durability.toFixed(2)} Q:${quality.toFixed(2)}`;
+    if (!budget) return 'N/A';
+    const priority = budget.priority || 0;
+    const durability = budget.durability || 0;
+    const quality = budget.quality || 0;
+    return `P:${priority.toFixed(2)} D:${durability.toFixed(2)} Q:${quality.toFixed(2)}`;
 };
 
 /**
@@ -111,7 +111,7 @@ export const formatBudget = (budget) => {
  * @returns {string} Formatted number string
  */
 export const formatNumber = (num, decimals = 2) =>
-  num != null ? Number(num).toFixed(decimals) : 'N/A';
+    num != null ? Number(num).toFixed(decimals) : 'N/A';
 
 /**
  * Add commas to number for readability
@@ -119,7 +119,7 @@ export const formatNumber = (num, decimals = 2) =>
  * @returns {string} Formatted number with commas
  */
 export const formatNumberWithCommas = (num) =>
-  num == null ? 'N/A' : num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    num == null ? 'N/A' : num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
 /**
  * Format large numbers with units (K, M, B)
@@ -128,11 +128,11 @@ export const formatNumberWithCommas = (num) =>
  * @returns {string} Formatted number with units
  */
 export const formatNumberWithUnits = (num, decimals = 2) => {
-  if (num == null) return 'N/A';
-  if (num >= 1e9) return (num / 1e9).toFixed(decimals) + 'B';
-  if (num >= 1e6) return (num / 1e6).toFixed(decimals) + 'M';
-  if (num >= 1e3) return (num / 1e3).toFixed(decimals) + 'K';
-  return num.toFixed(decimals);
+    if (num == null) return 'N/A';
+    if (num >= 1e9) return (num / 1e9).toFixed(decimals) + 'B';
+    if (num >= 1e6) return (num / 1e6).toFixed(decimals) + 'M';
+    if (num >= 1e3) return (num / 1e3).toFixed(decimals) + 'K';
+    return num.toFixed(decimals);
 };
 
 /**
@@ -142,8 +142,8 @@ export const formatNumberWithUnits = (num, decimals = 2) => {
  * @returns {string} Formatted percentage string
  */
 export const formatPercentage = (value, decimals = 2) => {
-  if (value == null) return 'N/A';
-  return `${(value * 100).toFixed(decimals)}%`;
+    if (value == null) return 'N/A';
+    return `${(value * 100).toFixed(decimals)}%`;
 };
 
 /**
@@ -152,18 +152,18 @@ export const formatPercentage = (value, decimals = 2) => {
  * @returns {string} Formatted duration string
  */
 export const formatDuration = (ms) => {
-  if (ms < 0) ms = 0;
+    if (ms < 0) ms = 0;
 
-  const seconds = Math.floor(ms / 1000);
-  const minutes = Math.floor(seconds / 60);
-  const hours = Math.floor(minutes / 60);
-  const days = Math.floor(hours / 24);
+    const seconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
 
-  if (days) return `${days}d ${hours % 24}h`;
-  if (hours) return `${hours}h ${minutes % 60}m`;
-  if (minutes) return `${minutes}m ${seconds % 60}s`;
-  if (seconds) return `${seconds}s`;
-  return `${ms}ms`;
+    if (days) return `${days}d ${hours % 24}h`;
+    if (hours) return `${hours}h ${minutes % 60}m`;
+    if (minutes) return `${minutes}m ${seconds % 60}s`;
+    if (seconds) return `${seconds}s`;
+    return `${ms}ms`;
 };
 
 // ===== DATA UTILITIES =====
@@ -174,32 +174,32 @@ export const formatDuration = (ms) => {
  * @returns {*} Deep cloned object
  */
 export const deepClone = (obj) => {
-  if (obj === null || typeof obj !== 'object') return obj;
+    if (obj === null || typeof obj !== 'object') return obj;
 
-  // Handle Date
-  if (obj instanceof Date) {
-    const copy = new Date();
-    copy.setTime(obj.getTime());
-    return copy;
-  }
-
-  // Handle Array
-  if (Array.isArray(obj)) {
-    return obj.map(item => deepClone(item));
-  }
-
-  // Handle Object
-  if (typeof obj === 'object') {
-    const copy = {};
-    for (const key in obj) {
-      if (Object.prototype.hasOwnProperty.call(obj, key)) {
-        copy[key] = deepClone(obj[key]);
-      }
+    // Handle Date
+    if (obj instanceof Date) {
+        const copy = new Date();
+        copy.setTime(obj.getTime());
+        return copy;
     }
-    return copy;
-  }
 
-  return obj;
+    // Handle Array
+    if (Array.isArray(obj)) {
+        return obj.map(item => deepClone(item));
+    }
+
+    // Handle Object
+    if (typeof obj === 'object') {
+        const copy = {};
+        for (const key in obj) {
+            if (Object.prototype.hasOwnProperty.call(obj, key)) {
+                copy[key] = deepClone(obj[key]);
+            }
+        }
+        return copy;
+    }
+
+    return obj;
 };
 
 /**
@@ -208,7 +208,7 @@ export const deepClone = (obj) => {
  * @returns {boolean} Whether value is empty
  */
 export const isEmpty = (value) =>
-  value == null ||
+    value == null ||
     (typeof value === 'string' && value.trim() === '') ||
     (Array.isArray(value) && value.length === 0) ||
     (typeof value === 'object' && Object.keys(value).length === 0);
@@ -220,23 +220,23 @@ export const isEmpty = (value) =>
  * @returns {boolean} Whether objects are deeply equal
  */
 export const deepEqual = (obj1, obj2) => {
-  if (obj1 === obj2) return true;
+    if (obj1 === obj2) return true;
 
-  if (obj1 == null || obj2 == null) return false;
+    if (obj1 == null || obj2 == null) return false;
 
-  if (typeof obj1 !== 'object' || typeof obj2 !== 'object') return obj1 === obj2;
+    if (typeof obj1 !== 'object' || typeof obj2 !== 'object') return obj1 === obj2;
 
-  const keys1 = Object.keys(obj1);
-  const keys2 = Object.keys(obj2);
+    const keys1 = Object.keys(obj1);
+    const keys2 = Object.keys(obj2);
 
-  if (keys1.length !== keys2.length) return false;
+    if (keys1.length !== keys2.length) return false;
 
-  for (const key of keys1) {
-    if (!keys2.includes(key)) return false;
-    if (!deepEqual(obj1[key], obj2[key])) return false;
-  }
+    for (const key of keys1) {
+        if (!keys2.includes(key)) return false;
+        if (!deepEqual(obj1[key], obj2[key])) return false;
+    }
 
-  return true;
+    return true;
 };
 
 /**
@@ -247,17 +247,17 @@ export const deepEqual = (obj1, obj2) => {
  * @returns {*} Property value or default
  */
 export const getNestedProperty = (obj, path, defaultValue = undefined) => {
-  const keys = path.split('.');
-  let result = obj;
+    const keys = path.split('.');
+    let result = obj;
 
-  for (const key of keys) {
-    if (result === null || result === undefined) {
-      return defaultValue;
+    for (const key of keys) {
+        if (result === null || result === undefined) {
+            return defaultValue;
+        }
+        result = result[key];
     }
-    result = result[key];
-  }
 
-  return result !== undefined ? result : defaultValue;
+    return result !== undefined ? result : defaultValue;
 };
 
 /**
@@ -268,19 +268,19 @@ export const getNestedProperty = (obj, path, defaultValue = undefined) => {
  * @returns {Object} Modified object
  */
 export const setNestedProperty = (obj, path, value) => {
-  const keys = path.split('.');
-  const lastKey = keys.pop();
-  let current = obj;
+    const keys = path.split('.');
+    const lastKey = keys.pop();
+    let current = obj;
 
-  for (const key of keys) {
-    if (!(key in current) || current[key] === null || typeof current[key] !== 'object') {
-      current[key] = {};
+    for (const key of keys) {
+        if (!(key in current) || current[key] === null || typeof current[key] !== 'object') {
+            current[key] = {};
+        }
+        current = current[key];
     }
-    current = current[key];
-  }
 
-  current[lastKey] = value;
-  return obj;
+    current[lastKey] = value;
+    return obj;
 };
 
 /**
@@ -289,16 +289,16 @@ export const setNestedProperty = (obj, path, value) => {
  * @returns {Function} Memoized function
  */
 export const memoize = (fn) => {
-  const cache = new Map();
-  return (...args) => {
-    const key = JSON.stringify(args);
-    if (cache.has(key)) {
-      return cache.get(key);
-    }
-    const result = fn(...args);
-    cache.set(key, result);
-    return result;
-  };
+    const cache = new Map();
+    return (...args) => {
+        const key = JSON.stringify(args);
+        if (cache.has(key)) {
+            return cache.get(key);
+        }
+        const result = fn(...args);
+        cache.set(key, result);
+        return result;
+    };
 };
 
 /**
@@ -309,12 +309,12 @@ export const memoize = (fn) => {
  * @returns {*} Transformed data or original data if error
  */
 export const safeTransformData = (data, transformFn, errorHandler = null) => {
-  try {
-    return transformFn(data);
-  } catch (error) {
-    console.error('Error in data transformation:', error);
-    return errorHandler?.(error) ?? data;
-  }
+    try {
+        return transformFn(data);
+    } catch (error) {
+        console.error('Error in data transformation:', error);
+        return errorHandler?.(error) ?? data;
+    }
 };
 
 /**
@@ -324,32 +324,32 @@ export const safeTransformData = (data, transformFn, errorHandler = null) => {
  * @returns {Object} Searchable collection object with search method
  */
 export const createSearchableCollection = (data, fields) => {
-  // Ensure data is an array before calling map
-  if (!Array.isArray(data)) {
-    console.debug('createSearchableCollection: data is not an array, using empty array instead', data);
-    data = [];
-  }
-
-  const getNestedValue = (obj, path) => path.split('.').reduce((current, key) => current?.[key], obj);
-
-  const searchIndex = new Map(data.map((item, index) => {
-    const searchableText = fields.map(field => getNestedValue(item, field)).join(' ').toLowerCase();
-    return [index, searchableText];
-  }));
-
-  return {
-    search: (term) => {
-      if (!term) return [...data]; // Return a copy of original data if no search term
-      const lowercasedTerm = term.toLowerCase();
-      const results = [];
-      for (const [index, text] of searchIndex.entries()) {
-        if (text.includes(lowercasedTerm)) {
-          results.push(data[index]);
-        }
-      }
-      return results; // Always return an array
+    // Ensure data is an array before calling map
+    if (!Array.isArray(data)) {
+        console.debug('createSearchableCollection: data is not an array, using empty array instead', data);
+        data = [];
     }
-  };
+
+    const getNestedValue = (obj, path) => path.split('.').reduce((current, key) => current?.[key], obj);
+
+    const searchIndex = new Map(data.map((item, index) => {
+        const searchableText = fields.map(field => getNestedValue(item, field)).join(' ').toLowerCase();
+        return [index, searchableText];
+    }));
+
+    return {
+        search: (term) => {
+            if (!term) return [...data]; // Return a copy of original data if no search term
+            const lowercasedTerm = term.toLowerCase();
+            const results = [];
+            for (const [index, text] of searchIndex.entries()) {
+                if (text.includes(lowercasedTerm)) {
+                    results.push(data[index]);
+                }
+            }
+            return results; // Always return an array
+        }
+    };
 };
 
 /**
@@ -360,19 +360,19 @@ export const createSearchableCollection = (data, fields) => {
  * @returns {Object} Paginated data with metadata
  */
 export const paginateData = (data, page = 1, pageSize = 20) => {
-  const startIndex = (page - 1) * pageSize;
-  const endIndex = startIndex + pageSize;
-  const paginatedData = data.slice(startIndex, endIndex);
+    const startIndex = (page - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    const paginatedData = data.slice(startIndex, endIndex);
 
-  return {
-    data: paginatedData,
-    page,
-    pageSize,
-    total: data.length,
-    totalPages: Math.ceil(data.length / pageSize),
-    hasNext: endIndex < data.length,
-    hasPrev: startIndex > 0
-  };
+    return {
+        data: paginatedData,
+        page,
+        pageSize,
+        total: data.length,
+        totalPages: Math.ceil(data.length / pageSize),
+        hasNext: endIndex < data.length,
+        hasPrev: startIndex > 0
+    };
 };
 
 /**

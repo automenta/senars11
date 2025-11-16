@@ -1,30 +1,30 @@
-import React, {useCallback, useEffect, useState, useRef} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {Box, Text, useInput, useStdin} from 'ink';
 import TextInput from 'ink-text-input';
 import {v4 as uuidv4} from 'uuid';
 import {FormattingUtils} from '../utils/FormattingUtils.js';
 import {handleError} from '../../../src/util/ErrorHandler.js';
 import {
-    handleLoadCommand,
-    handleHelpCommand, 
-    handleExitCommand,
+    executeAndLog,
     handleExamplesCommand,
+    handleExitCommand,
+    handleHelpCommand,
+    handleLoadCommand,
+    handleNarsCommand,
     handleRunCommand,
     handleStepCommand,
     handleStopCommand,
-    handleToolsCommand,
-    handleNarsCommand,
-    executeAndLog
+    handleToolsCommand
 } from './SlashCommandHandlers.js';
 
 // Define log types and their visual representation
 const LOG_TYPES = {
-    error: { color: 'red', symbol: '❌' },
-    warn: { color: 'yellow', symbol: '⚠️' },
-    warning: { color: 'yellow', symbol: '⚠️' },
-    success: { color: 'green', symbol: '✅' },
-    debug: { color: 'blue', symbol: '🔬' },
-    default: { color: 'white', symbol: 'ℹ️' }
+    error: {color: 'red', symbol: '❌'},
+    warn: {color: 'yellow', symbol: '⚠️'},
+    warning: {color: 'yellow', symbol: '⚠️'},
+    success: {color: 'green', symbol: '✅'},
+    debug: {color: 'blue', symbol: '🔬'},
+    default: {color: 'white', symbol: 'ℹ️'}
 };
 
 // Format log entry with color coding
@@ -73,7 +73,7 @@ const useCommandHistory = () => {
         }
     };
 
-    return { commandHistory, historyIndex, setHistoryIndex, addToHistory, navigateHistory };
+    return {commandHistory, historyIndex, setHistoryIndex, addToHistory, navigateHistory};
 };
 
 // Handle slash commands
@@ -100,20 +100,20 @@ const handleSlashCommand = async (engine, command, addLog) => {
             return handleLoadCommand(engine, args, addLog);
 
         case 'run':
-        case 'go': 
+        case 'go':
             return await handleRunCommand(engine, addLog);
         case 'step':
         case 'next':
-        case 'n': 
+        case 'n':
             return await handleStepCommand(engine, addLog);
         case 'stop':
-        case 'st': 
+        case 'st':
             return await handleStopCommand(engine, addLog);
-        case 'tools': 
+        case 'tools':
             return handleToolsCommand(engine, addLog);
-        case 'nars': 
+        case 'nars':
             return handleNarsCommand(engine, args, addLog);
-        case 'help': 
+        case 'help':
             return handleHelpCommand(addLog);
         default:
             addLog(`❌ Unknown command: ${cmd}. Type /help for available commands.`, 'error');
@@ -122,7 +122,12 @@ const handleSlashCommand = async (engine, command, addLog) => {
 
 // Agent-specific TUI component
 export const AgentInkTUI = ({engine}) => {
-    const [logs, setLogs] = useState([{id: uuidv4(), message: '🤖 Agent TUI initialized', timestamp: Date.now(), type: 'info'}]);
+    const [logs, setLogs] = useState([{
+        id: uuidv4(),
+        message: '🤖 Agent TUI initialized',
+        timestamp: Date.now(),
+        type: 'info'
+    }]);
     const [inputValue, setInputValue] = useState('');
     const [status, setStatus] = useState({isRunning: false, cycle: 0, mode: 'idle', agentCount: 0});
     const streamingResponseRef = useRef(null);
@@ -135,14 +140,14 @@ export const AgentInkTUI = ({engine}) => {
     const addLog = useCallback((message, type = 'info') => {
         setLogs(prevLogs => {
             // Check if the exact same message already exists recently (last 2 entries)
-            const isDuplicate = prevLogs.slice(-2).some(log => 
+            const isDuplicate = prevLogs.slice(-2).some(log =>
                 log.message === message && log.type === type
             );
-            
+
             if (isDuplicate) {
                 return prevLogs; // Don't add duplicate
             }
-            
+
             return [
                 ...prevLogs.filter(log => log.id !== streamingResponseRef.current), // Remove current streaming log if adding a new one
                 {id: uuidv4(), message, timestamp: Date.now(), type}
@@ -155,10 +160,14 @@ export const AgentInkTUI = ({engine}) => {
         // Generic event handlers with consistent error handling
         const handleLog = (message) => addLog(message, 'info');
         const handleStatus = (newStatus) => setStatus(prev => ({...prev, ...newStatus}));
-        const handleCycleStep = (data) => setStatus(prev => ({...prev, cycle: data.cycleAfter ?? data.cycle ?? 0, mode: 'stepped'}));
+        const handleCycleStep = (data) => setStatus(prev => ({
+            ...prev,
+            cycle: data.cycleAfter ?? data.cycle ?? 0,
+            mode: 'stepped'
+        }));
         const handleCycleRunning = () => setStatus(prev => ({...prev, isRunning: true, mode: 'running'}));
         const handleCycleStop = () => setStatus(prev => ({...prev, isRunning: false, mode: 'idle'}));
-        
+
         const handleTaskFocused = (data) => {
             const task = data.task;
             if (task) {
@@ -168,7 +177,7 @@ export const AgentInkTUI = ({engine}) => {
         };
 
         // Agent-specific event handlers
-        const handleGenericAgentEvent = (prefix, data) => 
+        const handleGenericAgentEvent = (prefix, data) =>
             addLog(`${prefix}: ${data.action ?? data.decision ?? data.description} ${data.details ? `- ${data.details}` : ''}`, 'info');
 
         const handlers = {
@@ -217,7 +226,7 @@ export const AgentInkTUI = ({engine}) => {
             if (recentBeliefs.length > 0) {
                 recentBeliefs.forEach(belief => {
                     const term = belief.term?.toString?.() ?? 'Unknown';
-                    const truth = belief.truth ? 
+                    const truth = belief.truth ?
                         `%${(belief.truth.frequency ?? 1.000).toFixed(3)},${(belief.truth.confidence ?? 0.900).toFixed(3)}%` : '';
                     addLog(`_BELIEF_: ${term} ${truth}`, 'success');
                 });
@@ -244,16 +253,16 @@ export const AgentInkTUI = ({engine}) => {
         // Reasoner control shortcuts
         if (key.ctrl) {
             switch (input) {
-                case 'r': 
+                case 'r':
                     handleRunCommand();
                     return;
-                case 'p': 
+                case 'p':
                     handleStopCommand();
                     return;
-                case 'h': 
+                case 'h':
                     handleHelpCommand(addLog);
                     return;
-                case 'c': 
+                case 'c':
                     addLog('👋 Agent TUI terminated', 'info');
                     return process.exit(0);
             }
@@ -290,7 +299,7 @@ export const AgentInkTUI = ({engine}) => {
                     const responseLogId = uuidv4();
                     streamingResponseRef.current = responseLogId; // Track the streaming response
                     addLog('🔄 LM response streaming...', 'info');
-                    
+
                     // Create an AbortController for this streaming request
                     const abortController = new AbortController();
                     streamControllerRef.current = abortController;
@@ -299,22 +308,22 @@ export const AgentInkTUI = ({engine}) => {
                     const timeoutPromise = new Promise((_, reject) => {
                         setTimeout(() => reject(new Error('Request timeout after 120 seconds')), 120000);
                     });
-                    
+
                     // Create a promise that handles the streaming response
                     const streamPromise = (async () => {
                         let fullResponse = '';
-                        
+
                         // Check if agentLM has streaming capability
                         if (engine.agentLM && typeof engine.agentLM.streamText === 'function') {
                             try {
                                 // Get the stream iterator - use the engine's configuration if available
-                                const promptTemplate = engine.inputProcessingConfig?.lmPromptTemplate || 
+                                const promptTemplate = engine.inputProcessingConfig?.lmPromptTemplate ||
                                     'As an intelligent reasoning system, please respond to this query: "{{input}}". If this is a request that should interact with the NARS system, please use appropriate tools.';
                                 const prompt = promptTemplate.replace('{{input}}', command);
 
                                 const streamIterator = await engine.agentLM.streamText(
                                     prompt,
-                                    { 
+                                    {
                                         temperature: engine.inputProcessingConfig?.lmTemperature || 0.7,
                                         signal: abortController.signal  // Pass the abort signal
                                     }
@@ -323,7 +332,12 @@ export const AgentInkTUI = ({engine}) => {
                                 // Add initial streaming entry to logs
                                 setLogs(prevLogs => [
                                     ...prevLogs.slice(-49),
-                                    {id: responseLogId, message: '🔄 LM response streaming...', timestamp: Date.now(), type: 'info'}
+                                    {
+                                        id: responseLogId,
+                                        message: '🔄 LM response streaming...',
+                                        timestamp: Date.now(),
+                                        type: 'info'
+                                    }
                                 ]);
 
                                 // Stream the response - get all chunks and update the log immediately
@@ -333,13 +347,13 @@ export const AgentInkTUI = ({engine}) => {
                                         addLog('🛑 LM streaming was interrupted', 'info');
                                         break;
                                     }
-                                    
+
                                     fullResponse += chunk;
                                     // Update the specific streaming log with the current response
                                     setLogs(prevLogs => {
-                                        return prevLogs.map(log => 
-                                            log.id === responseLogId 
-                                                ? {...log, message: `🤖: ${fullResponse}`, type: 'success'} 
+                                        return prevLogs.map(log =>
+                                            log.id === responseLogId
+                                                ? {...log, message: `🤖: ${fullResponse}`, type: 'success'}
                                                 : log
                                         ).slice(-50);
                                     });
@@ -350,12 +364,16 @@ export const AgentInkTUI = ({engine}) => {
                                     addLog('🛑 LM streaming was interrupted by user', 'info');
                                     return; // Exit early if aborted
                                 }
-                                
+
                                 // If streaming fails, update the log with error
                                 setLogs(prevLogs => {
-                                    return prevLogs.map(log => 
-                                        log.id === responseLogId 
-                                            ? {...log, message: `❌ Streaming error: ${streamError.message}`, type: 'error'} 
+                                    return prevLogs.map(log =>
+                                        log.id === responseLogId
+                                            ? {
+                                                ...log,
+                                                message: `❌ Streaming error: ${streamError.message}`,
+                                                type: 'error'
+                                            }
                                             : log
                                     ).slice(-50);
                                 });
@@ -374,13 +392,13 @@ export const AgentInkTUI = ({engine}) => {
                             }
                         }
                     })();
-                    
+
                     // Race the streaming against timeout
                     await Promise.race([
                         streamPromise,
                         timeoutPromise
                     ]);
-                    
+
                     // Reset the streaming ref after completion
                     streamingResponseRef.current = null;
                 }
@@ -431,7 +449,13 @@ export const AgentInkTUI = ({engine}) => {
         // Status Bar
         React.createElement(
             Box,
-            {paddingX: 1, backgroundColor: 'blue', width: '100%', flexDirection: 'row', justifyContent: 'space-between'},
+            {
+                paddingX: 1,
+                backgroundColor: 'blue',
+                width: '100%',
+                flexDirection: 'row',
+                justifyContent: 'space-between'
+            },
             React.createElement(
                 Box,
                 {flexDirection: 'row'},

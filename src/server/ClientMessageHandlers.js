@@ -290,12 +290,12 @@ export class ClientMessageHandlers {
             console.warn('Attempt to send message to null/undefined client:', message);
             return;
         }
-        
+
         if (!this.monitor || typeof this.monitor._sendToClient !== 'function') {
             console.error('Monitor or its _sendToClient method is not available');
             return;
         }
-        
+
         this.monitor._sendToClient(client, message);
     }
 }

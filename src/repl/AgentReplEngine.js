@@ -1,5 +1,3 @@
-import {EventEmitter} from 'events';
-
 import {ReplEngine} from './ReplEngine.js';
 import {LM} from '../lm/LM.js';
 
@@ -9,13 +7,12 @@ import {
     AgentCommandRegistry,
     AgentCreateCommand,
     GoalCommand,
-    PlanCommand,
-    ThinkCommand,
-    ReasonCommand,
     LMCommand,
-    ProvidersCommand
+    PlanCommand,
+    ProvidersCommand,
+    ReasonCommand,
+    ThinkCommand
 } from './commands/AgentCommands.js';
-import {DEFAULT_CONFIG} from './utils/ReplConstants.js';
 
 export class AgentReplEngine extends ReplEngine {
     constructor(config = {}) {
@@ -25,7 +22,7 @@ export class AgentReplEngine extends ReplEngine {
         this.agents = new Map();
         this.activeAgent = null;
         this.commandRegistry = this._initializeCommandRegistry();
-        
+
         // Configure input processing behavior
         this.inputProcessingConfig = {
             // Whether to fallback to Narsese processing when LM fails
@@ -39,7 +36,7 @@ export class AgentReplEngine extends ReplEngine {
 
     _initializeCommandRegistry() {
         const registry = new AgentCommandRegistry();
-        
+
         // Register all agent commands
         registry.register(new AgentCreateCommand());
         registry.register(new GoalCommand());
@@ -48,7 +45,7 @@ export class AgentReplEngine extends ReplEngine {
         registry.register(new ReasonCommand());
         registry.register(new LMCommand());
         registry.register(new ProvidersCommand());
-        
+
         return registry;
     }
 
@@ -66,7 +63,7 @@ export class AgentReplEngine extends ReplEngine {
 
         this._syncLMProviders();
         this._registerAgentEventHandlers();
-        
+
         // Register NAR control tools with the LM provider
         this._registerNARTools();
 
@@ -84,7 +81,7 @@ export class AgentReplEngine extends ReplEngine {
         try {
             // Create NAR control tool with reference to this engine's nar instance
             const narControlTool = new NARControlTool(this.nar);
-            
+
             // Find the current provider and add the tool to it
             const defaultProviderId = this.agentLM.providers.defaultProviderId;
             if (defaultProviderId) {
@@ -94,13 +91,13 @@ export class AgentReplEngine extends ReplEngine {
                     if (!Array.isArray(provider.tools)) {
                         provider.tools = [];
                     }
-                    
+
                     // Check if the tool is already registered to avoid duplicates
-                    const existingToolIndex = provider.tools.findIndex(tool => 
-                        tool.name === narControlTool.name || 
+                    const existingToolIndex = provider.tools.findIndex(tool =>
+                        tool.name === narControlTool.name ||
                         tool.constructor.name === narControlTool.constructor.name
                     );
-                    
+
                     if (existingToolIndex === -1) {
                         // Only add the tool if it's not already present
                         provider.tools.push(narControlTool);
@@ -142,11 +139,11 @@ export class AgentReplEngine extends ReplEngine {
         this.executeCommand = async (cmd, ...args) => {
             // Handle special case for agent-status
             if (cmd === 'agent-status') {
-                return this.activeAgent 
+                return this.activeAgent
                     ? await this.commandRegistry.execute('agent', this, 'status', ...args)
                     : 'No active agent. Use "agent create <name>" or "agent select <name>".';
             }
-            
+
             // Check if it's a registered agent command first
             if (this.commandRegistry.get(cmd)) {
                 return await this.commandRegistry.execute(cmd, this, ...args);
@@ -163,7 +160,7 @@ export class AgentReplEngine extends ReplEngine {
 
             if (input.includes('!') && this.activeAgent) {
                 const agent = this.agents.get(this.activeAgent);
-                agent?.goals.push({ content: input, timestamp: Date.now(), status: 'pending' });
+                agent?.goals.push({content: input, timestamp: Date.now(), status: 'pending'});
             }
 
             return result;
@@ -191,18 +188,18 @@ export class AgentReplEngine extends ReplEngine {
 
         try {
             // Add timeout wrapper for safety
-            const timeoutPromise = new Promise((_, reject) => 
+            const timeoutPromise = new Promise((_, reject) =>
                 setTimeout(() => reject(new Error('LM generation timed out after 30 seconds')), 30000)
             );
-            
+
             const generatePromise = this.agentLM.generateText(
                 trimmedInput,
-                { 
+                {
                     temperature: this.inputProcessingConfig.lmTemperature,
                     timeout: 30000  // Add timeout to the call
                 }
             );
-            
+
             const response = await Promise.race([generatePromise, timeoutPromise]);
             return `🤖: ${response}`;
         } catch (lmError) {
@@ -228,7 +225,7 @@ export class AgentReplEngine extends ReplEngine {
             return handleError(lmError, 'Agent processing');
         }
     }
-    
+
     // Determine if input looks like potential Narsese syntax
     _isPotentialNarsese(input) {
         // Check for more specific Narsese patterns
@@ -241,7 +238,7 @@ export class AgentReplEngine extends ReplEngine {
             /%[\d.]*;[\d.]*%/,                                // Narsese truth values: %f;c%
             /<.*\^.*>.*[!.]/,                                 // Narsese with op and goal/question
         ];
-        
+
         return narsesePatterns.some(pattern => pattern.test(input));
     }
 
@@ -280,14 +277,14 @@ export class AgentReplEngine extends ReplEngine {
             // Check if the LM supports streaming
             if (typeof this.agentLM.streamText === 'function') {
                 // Add timeout wrapper for safety
-                const timeoutPromise = new Promise((_, reject) => 
+                const timeoutPromise = new Promise((_, reject) =>
                     setTimeout(() => reject(new Error('LM streaming timed out after 60 seconds')), 60000)
                 );
-                
+
                 const streamPromise = (async () => {
                     const streamIterator = await this.agentLM.streamText(
                         trimmedInput,
-                        { 
+                        {
                             temperature: this.inputProcessingConfig.lmTemperature,
                             timeout: 60000  // Add timeout option to the call
                         }
@@ -301,25 +298,25 @@ export class AgentReplEngine extends ReplEngine {
 
                     return `🤖: ${fullResponse}`;
                 })();
-                
+
                 // Race the streaming operation with timeout
                 const result = await Promise.race([streamPromise, timeoutPromise]);
                 return result;
             } else {
                 // Fallback to regular generateText if streaming not available
                 // Add timeout wrapper for safety
-                const timeoutPromise = new Promise((_, reject) => 
+                const timeoutPromise = new Promise((_, reject) =>
                     setTimeout(() => reject(new Error('LM generation timed out after 30 seconds')), 30000)
                 );
-                
+
                 const generatePromise = this.agentLM.generateText(
                     trimmedInput,
-                    { 
+                    {
                         temperature: this.inputProcessingConfig.lmTemperature,
                         timeout: 30000  // Add timeout to the call
                     }
                 );
-                
+
                 const response = await Promise.race([generatePromise, timeoutPromise]);
                 if (onChunk) onChunk(`🤖: ${response}`);
                 return `🤖: ${response}`;

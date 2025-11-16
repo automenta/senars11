@@ -59,7 +59,7 @@ export const handleError = (error, context = '', fallbackMessage = 'An error occ
     }
 
     // Return formatted error with context
-    return context 
+    return context
         ? `❌ ${context}: ${error.message || fallbackMessage}`
         : `❌ Error: ${error.message || fallbackMessage}`;
 };

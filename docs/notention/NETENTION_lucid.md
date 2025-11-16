@@ -522,7 +522,8 @@ serving as a blueprint for its development and future evolution.
 
 > Recursively unify the system design within its own descriptive power. Emerge its logical elegant form that can grow
 > everything from a seed.
-> Okay, let's recursively unify the Netention system design, distilling it to its core essence and expressing that essence
+> Okay, let's recursively unify the Netention system design, distilling it to its core essence and expressing that
+> essence
 > in a way that can be used to "grow" the entire system. This is a highly conceptual and metalinguistic exercise, aiming
 > to create a self-describing and self-generating system design.
 

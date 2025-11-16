@@ -69,7 +69,7 @@ export class TestCoverageAnalysisTool extends SoftwareAnalysisTool {
         // Collect test file relationships and coverage data
         const testResults = await this._collectTestResults();
         const coverageData = await this._collectCoverageData();
-        
+
         // Only perform detailed source mapping if we have actual test results
         let sourceMappings = {};
         if (testResults.totalTests > 0) {
@@ -136,12 +136,12 @@ export class TestCoverageAnalysisTool extends SoftwareAnalysisTool {
         try {
             // Try to read existing test report from various common locations
             const possiblePaths = [
-                './test-results.json', 
-                './test-result.json', 
+                './test-results.json',
+                './test-result.json',
                 './junit.xml', // check if this should be parsed differently
                 './coverage/test-results.json' // some coverage setups output here
             ];
-            
+
             for (const path of possiblePaths) {
                 if (fs.existsSync(path)) {
                     const testReport = JSON.parse(fs.readFileSync(path, 'utf8'));
@@ -153,7 +153,7 @@ export class TestCoverageAnalysisTool extends SoftwareAnalysisTool {
             const {spawnSync} = await import('child_process');
             // Try different possible config file names
             const possibleConfigs = ['jest.config.cjs', 'jest.config.js', 'jest.config.json', 'package.json'];
-            
+
             for (const config of possibleConfigs) {
                 if (fs.existsSync(config)) {
                     const testResult = spawnSync('npx', ['jest', `--config`, config, '--json', '--testLocationInResults', '--verbose=false'], {
@@ -172,14 +172,14 @@ export class TestCoverageAnalysisTool extends SoftwareAnalysisTool {
                         try {
                             // Jest might output additional text alongside JSON, so parse carefully
                             let output = testResult.stdout.trim();
-                            
+
                             // Find the JSON part in the output (Jest sometimes prefixes with extra messages)
                             const jsonStart = output.indexOf('{');
                             const jsonEnd = output.lastIndexOf('}') + 1;
                             if (jsonStart !== -1 && jsonEnd > jsonStart) {
                                 output = output.substring(jsonStart, jsonEnd);
                             }
-                            
+
                             const testOutput = JSON.parse(output);
                             return this._parseTestReport(testOutput);
                         } catch (parseError) {
@@ -206,14 +206,14 @@ export class TestCoverageAnalysisTool extends SoftwareAnalysisTool {
             if (testResult.status === 0 && testResult.stdout) {
                 try {
                     let output = testResult.stdout.trim();
-                    
+
                     // Find the JSON part in the output
                     const jsonStart = output.indexOf('{');
                     const jsonEnd = output.lastIndexOf('}') + 1;
                     if (jsonStart !== -1 && jsonEnd > jsonStart) {
                         output = output.substring(jsonStart, jsonEnd);
                     }
-                    
+
                     const testOutput = JSON.parse(output);
                     return this._parseTestReport(testOutput);
                 } catch (parseError) {
@@ -426,7 +426,7 @@ export class TestCoverageAnalysisTool extends SoftwareAnalysisTool {
         for (const sourceFile of allSourceFiles) {
             // Extract basename to match with test files
             const sourceBasename = path.basename(sourceFile, '.js');
-            
+
             // Look for corresponding test files in various patterns
             for (const testDir of testDirs) {
                 const testPatterns = [
@@ -435,7 +435,7 @@ export class TestCoverageAnalysisTool extends SoftwareAnalysisTool {
                     path.join(testDir, sourceBasename + '_test.js'),
                     path.join(testDir, sourceBasename + '_spec.js'),
                     // Also check subdirectories that might mirror src structure
-                    ...['unit', 'integration', 'e2e'].map(subdir => 
+                    ...['unit', 'integration', 'e2e'].map(subdir =>
                         path.join(testDir, subdir, sourceBasename + '.test.js')
                     )
                 ];
@@ -569,7 +569,7 @@ export class TestCoverageAnalysisTool extends SoftwareAnalysisTool {
         const testCounts = Object.values(fileTestCounts);
         if (testCounts.length > 0) {
             const uniqueCounts = [...new Set(testCounts)];
-            
+
             // If all counts are the same and low (e.g., all 1s), it's likely artificial mapping
             if (uniqueCounts.length === 1 && uniqueCounts[0] <= 1) {
                 // In this case, don't return any meaningful ranking since the data isn't reliable

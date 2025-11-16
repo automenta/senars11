@@ -3,12 +3,14 @@
 ## 1. Design Philosophy
 
 ### **User-Centric Cognitive IDE**
+
 - **Primary Persona**: Cognitive Architect / Agent Developer
 - **Core Need**: Transparent insight and control over AI reasoning
 - **Experience Goal**: "Glass-box cockpit" with debugging capabilities
 - **Interaction Model**: Visual, interactive, steerable reasoning
 
 ### **Design Principles**
+
 - **Transparency First**: Every reasoning step visible and inspectable
 - **Control Always Available**: Pause, step, inspect, modify at any point
 - **Visual Clarity**: Clear representation of concepts, relationships, and flow
@@ -18,6 +20,7 @@
 ## 2. Shared Foundation Architecture (Consolidated)
 
 ### **Core Message Handling System**
+
 ```
 Shared Foundation Structure:
 ├── src/
@@ -30,6 +33,7 @@ Shared Foundation Structure:
 ```
 
 **Implementation Details:**
+
 - `ReplMessageHandler.js`: Centralized message processing for narsese, commands, and control messages
 - `ReplCommonInterface.js`: Unified API abstracting engine operations for all UI form factors
 - Input validation and type checking at the foundation level
@@ -37,6 +41,7 @@ Shared Foundation Structure:
 - Handler caching for improved performance on repeated message types
 
 ### **WebSocket Communication Protocol**
+
 ```
 Protocol Structure:
 ├── Client → Server Messages:
@@ -52,12 +57,14 @@ Protocol Structure:
 ```
 
 **Implementation Details:**
+
 - Session-based routing with `sessionId` in all messages
 - Reconnection logic with exponential backoff
 - Message queuing during disconnection
 - Connection state monitoring across all UI implementations
 
 ### **Session Management System**
+
 ```
 Session Management Structure:
 ├── Data Model: {id, config, history, tasks, state}
@@ -67,6 +74,7 @@ Session Management Structure:
 ```
 
 **Implementation Details:**
+
 - Cell-based history system with pinning capability
 - Auto-pruning of oldest unpinned cells (500 cell limit)
 - Cross-session comparison tools
@@ -75,9 +83,11 @@ Session Management Structure:
 ## 3. Development Approach
 
 ### **Agile Iterative Phases**
+
 Each iteration focuses on delivering complete, testable functionality with immediate user value.
 
 ### **Feature Development Pipeline**
+
 ```
 Feature Pipeline:
 ├── 1. User Story & Acceptance Criteria
@@ -91,6 +101,7 @@ Feature Pipeline:
 ## 4. Technical Architecture
 
 ### **React Component Hierarchy (Web IDE)**
+
 ```
 Cognitive IDE Root
 ├── SessionManager
@@ -117,6 +128,7 @@ Cognitive IDE Root
 ```
 
 ### **Shared State Management Strategy**
+
 ```
 State Architecture:
 ├── Core State (Shared Foundation)
@@ -135,6 +147,7 @@ State Architecture:
 ```
 
 ### **TUI Component Architecture (Blessed.js)**
+
 ```
 TUI Structure:
 ├── TUIRepl (Root Manager)
@@ -153,6 +166,7 @@ TUI Structure:
 ## 5. Development Phases
 
 ### **Phase 1: Foundation Setup**
+
 ```
 Foundation Implementation:
 ├── Shared Foundation Components
@@ -175,12 +189,14 @@ Foundation Implementation:
 ```
 
 **Implementation References:**
+
 - Use React Context for shared session state
 - Implement WebSocket abstraction with reconnection
 - Create shared formatting utilities
 - Establish component communication patterns
 
 ### **Phase 2: Core Debugger Features**
+
 ```
 Core Debugger Implementation:
 ├── Reasoner Control Implementation
@@ -205,12 +221,14 @@ Core Debugger Implementation:
 ```
 
 **Implementation References:**
+
 - Implement command abstraction in ReplMessageHandler
 - Create visualization data structures
 - Build priority adjustment tools
 - Establish relationship mapping utilities
 
 ### **Phase 3: Usability Enhancement**
+
 ```
 Usability Enhancement:
 ├── Input/Editing Improvements
@@ -235,12 +253,14 @@ Usability Enhancement:
 ```
 
 **Implementation References:**
+
 - Use Monaco Editor or similar for syntax highlighting
 - Implement virtual scrolling for large datasets
 - Create keyboard shortcut management
 - Build export/import utilities
 
 ### **Phase 4: Advanced Visualization**
+
 ```
 Advanced Visualization:
 ├── Interactive Graph Components
@@ -265,12 +285,14 @@ Advanced Visualization:
 ```
 
 **Implementation References:**
+
 - Use D3.js or similar for graph visualization
 - Implement WebGL for performance-intensive visualizations
 - Create layout algorithms for relationship mapping
 - Build animation systems for state transitions
 
 ### **Phase 5: Session & Knowledge Management**
+
 ```
 Session & Knowledge Management:
 ├── Session Management Tools
@@ -295,12 +317,14 @@ Session & Knowledge Management:
 ```
 
 **Implementation References:**
+
 - Build JSON schema for session templates
 - Create import/export utilities using shared formatting
 - Implement validation systems
 - Build annotation and markup systems
 
 ### **Phase 6: Analysis & Debugging Tools**
+
 ```
 Analysis & Debugging:
 ├── Detailed Inspection Tools
@@ -325,6 +349,7 @@ Analysis & Debugging:
 ```
 
 **Implementation References:**
+
 - Create trace analysis algorithms
 - Build statistical analysis utilities
 - Implement pattern recognition systems
@@ -333,6 +358,7 @@ Analysis & Debugging:
 ## 6. Quality Assurance Process
 
 ### **Testing Strategy**
+
 ```
 Testing Hierarchy:
 ├── Unit Tests (Component Level)
@@ -354,12 +380,14 @@ Testing Hierarchy:
 ```
 
 **Implementation References:**
+
 - Use Jest for unit testing
 - Use React Testing Library for component testing
 - Use Cypress for end-to-end testing
 - Implement accessibility testing with axe-core
 
 ### **Code Quality Standards**
+
 - **Component Standards**: Pure functions, prop validation, error boundaries
 - **Accessibility**: WCAG 2.1 AA compliance, keyboard navigation, screen reader support
 - **Performance**: React.memo optimization, virtual scrolling, efficient rendering
@@ -368,6 +396,7 @@ Testing Hierarchy:
 ## 7. Continuous Integration/Deployment
 
 ### **CI/CD Pipeline**
+
 ```
 Pipeline Stages:
 ├── 1. Code Quality (ESLint, Prettier)
@@ -379,6 +408,7 @@ Pipeline Stages:
 ```
 
 ### **Feature Flags System**
+
 - **Development Features**: Feature gates for incomplete functionality
 - **User Segmentation**: Beta vs stable feature access
 - **Rollback Capability**: Quick disable for problematic features
@@ -387,6 +417,7 @@ Pipeline Stages:
 ## 8. User Feedback Integration
 
 ### **Feedback Collection Points**
+
 ```
 Feedback Sources:
 ├── In-App Feedback Tool
@@ -397,6 +428,7 @@ Feedback Sources:
 ```
 
 ### **Feedback Processing Workflow**
+
 ```
 Feedback Processing:
 ├── Categorize (Bug/Enhancement/Question)
@@ -409,6 +441,7 @@ Feedback Processing:
 ## 9. Documentation & Onboarding
 
 ### **Documentation Strategy**
+
 ```
 Documentation Layers:
 ├── Getting Started Guide
@@ -419,6 +452,7 @@ Documentation Layers:
 ```
 
 ### **Onboarding Sequence**
+
 ```
 User Onboarding:
 ├── 1. Welcome & Purpose
@@ -432,12 +466,14 @@ User Onboarding:
 ## 10. Performance & Scalability Planning
 
 ### **Performance Optimization**
+
 - **Early Performance Monitoring**: Identify bottlenecks during development
 - **Progressive Enhancement**: Core functionality first, enhancements layered
 - **Efficient Data Structures**: Optimize for common use cases
 - **Lazy Loading**: Load only required components and data
 
 ### **Scalability Considerations**
+
 - **Session Isolation**: Independent memory management per session
 - **WebSocket Optimization**: Efficient message handling and queuing
 - **Component Virtualization**: Handle large datasets gracefully
@@ -446,18 +482,21 @@ User Onboarding:
 ## 11. Risk Mitigation Strategy
 
 ### **Technical Risks**
+
 - **Complexity Management**: Component decomposition and clear interfaces
 - **Performance Degradation**: Early monitoring and optimization
 - **Browser Compatibility**: Progressive enhancement approach
 - **Data Integrity**: Validation and recovery mechanisms
 
 ### **User Experience Risks**
+
 - **Feature Overload**: Focus groups and usability testing
 - **Learning Curve**: Comprehensive onboarding and documentation
 - **Performance Expectations**: Clear communication of capabilities
 - **Reliability**: Robust error handling and recovery
 
 ### **Implementation Risk Mitigation**
+
 - **Foundation-First Development**: Build shared components before UI-specific features
 - **Progressive Enhancement**: Core functionality works without JS, enhance progressively
 - **Cross-Platform Consistency**: Validate common features work identically across UIs
@@ -466,16 +505,21 @@ User Onboarding:
 ## 12. Implementation Status & Next Steps
 
 ### **Completed Features**
-- ✅ **Shared Foundation Architecture**: Core message handling system with ReplMessageHandler.js, ReplCommonInterface.js, and ReplEngine.js implemented
-- ✅ **WebSocket Communication Protocol**: Session-based routing, reconnection logic, and message queuing implemented  
-- ✅ **Session Management System**: Cell-based history, pinning capability, auto-pruning, and JSON import/export implemented
+
+- ✅ **Shared Foundation Architecture**: Core message handling system with ReplMessageHandler.js, ReplCommonInterface.js,
+  and ReplEngine.js implemented
+- ✅ **WebSocket Communication Protocol**: Session-based routing, reconnection logic, and message queuing implemented
+- ✅ **Session Management System**: Cell-based history, pinning capability, auto-pruning, and JSON import/export
+  implemented
 - ✅ **Web IDE Shell**: Layout system (flexlayout-react), session management, input/output panels implemented
 - ✅ **Core Debugger Features**: Reasoner controls (Run/Pause/Step), basic visualization components implemented
-- ✅ **Usability Enhancements**: Enhanced input interface with syntax suggestions, command palette, history navigation, layout management tools implemented
+- ✅ **Usability Enhancements**: Enhanced input interface with syntax suggestions, command palette, history navigation,
+  layout management tools implemented
 
 ### **Next Steps for Implementation**
 
 #### **Phase 4: Advanced Visualization (Pending)**
+
 - Implement interactive graph components using D3.js for relationship visualization
 - Add priority-based sizing and color-coded relationships
 - Create layout algorithms for relationship mapping
@@ -483,6 +527,7 @@ User Onboarding:
 - Implement WebGL for performance-intensive visualizations (optional)
 
 #### **Phase 5: Session & Knowledge Management (Pending)**
+
 - Add session templates functionality
 - Implement knowledge import/export capabilities
 - Create session comparison tools
@@ -491,6 +536,7 @@ User Onboarding:
 - Implement version control for sessions
 
 #### **Phase 6: Analysis & Debugging Tools (Pending)**
+
 - Build detailed inspection tools for tasks and traces
 - Create performance analysis utilities
 - Implement pattern recognition systems
@@ -498,7 +544,9 @@ User Onboarding:
 - Add reporting and visualization for reasoning metrics
 
 ### **Component Architecture Notes**
+
 The following React components have been implemented as part of the Cognitive IDE:
+
 - `ReasonerControls.js` - Control buttons for reasoning engine (Run/Pause/Step)
 - `VisualizationPanel.js` - Tabbed interface for different visualization types
 - `TraceInspector.js` - Detailed reasoning step inspection with filtering
@@ -507,16 +555,21 @@ The following React components have been implemented as part of the Cognitive ID
 - `LayoutManager.js` - UI layout persistence and management
 
 ### **Integration Points**
-- New visualization components should follow the same pattern as existing panels and integrate with `ui/src/components/panelContent.js`
+
+- New visualization components should follow the same pattern as existing panels and integrate with
+  `ui/src/components/panelContent.js`
 - WebSocket communication follows the protocol defined in ReplMessageHandler.js
 - State management uses the zustand store in `ui/src/stores/uiStore.js`
 - Theming follows the `themeUtils.js` pattern for consistent styling
 - All components implement proper error boundaries and loading states
 
 ### **Performance Considerations**
+
 - Virtual scrolling implemented for large datasets in visualization components
 - Memoization used with React.memo and useCallback for performance optimization
 - WebSocket message handling optimized to prevent UI blocking
 - Component lazy loading can be implemented for less frequently used panels
 
-This enhanced development procedure ensures maximum code sharing between UI form factors while providing clear implementation guidance. Each phase builds upon the shared foundation, with common functionality implemented once and reused across all implementations.
+This enhanced development procedure ensures maximum code sharing between UI form factors while providing clear
+implementation guidance. Each phase builds upon the shared foundation, with common functionality implemented once and
+reused across all implementations.

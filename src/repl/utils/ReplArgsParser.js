@@ -10,7 +10,7 @@
  */
 export function parseReplArgs(argv = process.argv) {
     const args = {};
-    
+
     for (let i = 0; i < argv.length; i++) {
         if (argv[i] === '--ollama') {
             args.ollama = true;
@@ -34,7 +34,7 @@ export function parseReplArgs(argv = process.argv) {
             i++; // Skip the next arg
         }
     }
-    
+
     return args;
 }
 
@@ -45,7 +45,7 @@ export function parseReplArgs(argv = process.argv) {
  */
 export function parseOllamaArgs(argv = process.argv) {
     const args = {};
-    
+
     for (let i = 0; i < argv.length; i++) {
         switch (argv[i]) {
             case '--model':
@@ -60,11 +60,11 @@ export function parseOllamaArgs(argv = process.argv) {
                 break;
         }
     }
-    
+
     // Default model if --ollama flag is provided without specific model
     if (argv.includes('--ollama') && !args.modelName) {
         args.modelName = "hf.co/unsloth/granite-4.0-micro-GGUF:Q4_K_M";
     }
-    
+
     return args;
 }

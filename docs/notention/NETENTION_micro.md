@@ -1,15 +1,21 @@
-Below is a distilled, unified, and synergistic specification for **Netention v5**, representing the minimum viable seed that combines the best elements from all prior designs (v4 and v5 iterations). This seed is a single, recursively defined Note that bootstraps a self-evolving, intelligent system with extreme minimalism, leveraging LangChain.js, Deno, and IPFS. The design is terse, using pseudocode, tables, and outlines to maximize clarity and density while ensuring immediate utility and infinite potential.
+Below is a distilled, unified, and synergistic specification for **Netention v5**, representing the minimum viable seed
+that combines the best elements from all prior designs (v4 and v5 iterations). This seed is a single, recursively
+defined Note that bootstraps a self-evolving, intelligent system with extreme minimalism, leveraging LangChain.js, Deno,
+and IPFS. The design is terse, using pseudocode, tables, and outlines to maximize clarity and density while ensuring
+immediate utility and infinite potential.
 
 ---
 
 # **Netention v5: Minimum Viable Seed**
 
 ## **Vision**
+
 - **Single Note**: A unified, self-contained entity that spawns and evolves the system.
 - **Recursive Power**: Everything emerges from one seed via LangChain-driven recursion.
 - **Infinite Run**: Continuous, fair, priority-driven operation with self-pruning memory.
 
 ## **Guiding Principles**
+
 1. **Unification**: One Note type, no classes—pure data + LangChain `Runnable`.
 2. **Minimalism**: ~150 LOC human-coded, then autonomous.
 3. **Dependencies**: Deno (runtime), LangChain.js (AI), IPFS (storage).
@@ -20,6 +26,7 @@ Below is a distilled, unified, and synergistic specification for **Netention v5*
 ## **Seed Note**
 
 ### **Structure**
+
 ```typescript
 const seed: Note = {
   id: "root",
@@ -50,6 +57,7 @@ const seed: Note = {
 ```
 
 ### **Schema**
+
 ```typescript
 type Note = {
   id: string;           // UUIDv7
@@ -69,11 +77,11 @@ type Note = {
 
 ## **Dependencies**
 
-| Dependency   | Role                     | Why Minimal              |
-|--------------|--------------------------|--------------------------|
-| **Deno**     | Sandboxed runtime        | Secure, no npm overhead  |
-| **LangChain.js** | AI execution engine  | Replaces custom logic    |
-| **IPFS**     | Distributed persistence  | Simple, scalable storage |
+| Dependency       | Role                    | Why Minimal              |
+|------------------|-------------------------|--------------------------|
+| **Deno**         | Sandboxed runtime       | Secure, no npm overhead  |
+| **LangChain.js** | AI execution engine     | Replaces custom logic    |
+| **IPFS**         | Distributed persistence | Simple, scalable storage |
 
 ---
 
@@ -148,11 +156,11 @@ main();
 
 ## **Tools (Spawned from Seed)**
 
-| Tool        | Description             | Utility                   | Combos With          |
-|-------------|-------------------------|---------------------------|----------------------|
-| `spawn`     | Creates new Notes       | Recursive growth          | All tools            |
-| `code_gen`  | Generates code          | System extension          | `spawn`, `reflect`   |
-| `reflect`   | Self-analyzes Notes     | Optimization, debugging   | `code_gen`, `spawn`  |
+| Tool       | Description         | Utility                 | Combos With         |
+|------------|---------------------|-------------------------|---------------------|
+| `spawn`    | Creates new Notes   | Recursive growth        | All tools           |
+| `code_gen` | Generates code      | System extension        | `spawn`, `reflect`  |
+| `reflect`  | Self-analyzes Notes | Optimization, debugging | `code_gen`, `spawn` |
 
 ---
 
@@ -174,12 +182,15 @@ main();
 ---
 
 ## **Why Viable**
+
 - **Minimal**: ~150 LOC, one file + seed.
 - **Complete**: Spawns tools/UI/tasks instantly.
 - **Scalable**: File-based, LangChain-driven, concurrency-limited.
 - **Powerful**: Recursive evolution from a single Note.
 
-This seed distills Netention v5 into its purest form—a single, self-bootstrapping Note that leverages LangChain.js for all behavior, Deno for security, and a filesystem (IPFS-ready) for persistence, achieving maximum utility with minimal complexity.
+This seed distills Netention v5 into its purest form—a single, self-bootstrapping Note that leverages LangChain.js for
+all behavior, Deno for security, and a filesystem (IPFS-ready) for persistence, achieving maximum utility with minimal
+complexity.
 
 ----
 
@@ -193,19 +204,25 @@ Design a console UI for controlling, interacting with, and visualizing the syste
 Integrate it elegantly with the system.  This will be the first thing a user sees when they get it running, so it should be impressive and special.
 ```
 
-Below is a design for a console UI for **Netention v5**, integrated elegantly with the minimal seed system. This UI provides a dynamic, visually engaging interface that mirrors the system's activity, offering control and insight from the first run. It features an animating process tree of active Notes, a scrolling color-coded log, an always-available input prompt, and execution control (pause/resume). The design leverages Deno’s terminal capabilities and integrates seamlessly with the filesystem-based, LangChain-driven architecture.
+Below is a design for a console UI for **Netention v5**, integrated elegantly with the minimal seed system. This UI
+provides a dynamic, visually engaging interface that mirrors the system's activity, offering control and insight from
+the first run. It features an animating process tree of active Notes, a scrolling color-coded log, an always-available
+input prompt, and execution control (pause/resume). The design leverages Deno’s terminal capabilities and integrates
+seamlessly with the filesystem-based, LangChain-driven architecture.
 
 ---
 
 # **Netention v5: Console UI Design**
 
 ## **Goals**
+
 - **Impressive First Impression**: Dynamic, colorful, and intuitive—captures the system’s alive, evolving nature.
 - **Activity Visualization**: Animated tree of active Notes and subgoals, sorted by priority (like `top`/`pstree`).
 - **Interactive Control**: Input prompt for root-level commands, execution toggle (pause/resume).
 - **Rich Feedback**: Scrolling log with color and emoji coding for clarity and engagement.
 
 ## **Integration Principle**
+
 - **Filesystem-Driven**: UI reads Note states directly from the filesystem, updates via `chokidar` events.
 - **Minimal Overhead**: Adds ~100-150 LOC, runs alongside `Netention.ts` without altering core logic.
 
@@ -214,21 +231,25 @@ Below is a design for a console UI for **Netention v5**, integrated elegantly wi
 ## **UI Components**
 
 ### **1. Activity Tree**
+
 - **Display**: Animated tree of active Notes/subgoals, sorted by priority.
 - **Behavior**: Updates every 500ms, showing `id`, `title`, `priority`, `status`.
 - **Style**: Nested, indented layout with ASCII/Unicode art (like `pstree`).
 
 ### **2. Scrolling Log**
+
 - **Display**: Color-coded, emoji-prefixed messages (e.g., errors, successes, info).
 - **Behavior**: Scrolls up, capped at 20 lines, persists recent activity.
 - **Style**: ANSI colors + emojis (e.g., 🟢 success, 🔴 error, ℹ️ info).
 
 ### **3. Input Prompt**
+
 - **Display**: Persistent `> ` prompt at the bottom, accepts commands.
 - **Behavior**: Non-blocking, processes input instantly (e.g., `pause`, `spawn task "Plan day"`).
 - **Style**: Bold, highlighted for visibility.
 
 ### **4. Execution Control**
+
 - **Commands**: `pause`/`resume` toggle system execution.
 - **Indicator**: Top-right status (e.g., "RUNNING" in green, "PAUSED" in yellow).
 
@@ -485,6 +506,7 @@ main();
 ---
 
 ## **Elegant Integration**
+
 - **Filesystem Sync**: UI reads directly from `cache`, updated by `chokidar` events.
 - **Pause/Resume**: Toggles `paused` flag, halts `runNote` without stopping UI.
 - **Input Commands**: Writes Notes to filesystem, triggering system updates naturally.
@@ -493,6 +515,7 @@ main();
 ---
 
 ## **First Impression**
+
 ```
 Netention v5 - RUNNING
 
@@ -509,6 +532,7 @@ Log:
 
 > 
 ```
+
 - **Dynamic**: Tree animates with Note activity.
 - **Colorful**: Green/yellow dots, red/yellow/green log entries.
 - **Special**: Feels alive, responsive, and powerful.
@@ -516,26 +540,34 @@ Log:
 ---
 
 ## **Why Impressive**
+
 - **Immediate Insight**: Tree shows system state at a glance.
 - **Engaging**: Colors and emojis make it visually striking.
 - **Control**: Prompt invites exploration (e.g., `spawn task "Plan day"`).
 - **Minimal Yet Rich**: Adds flair without bloat, enhancing the seed’s elegance.
 
-This console UI transforms the minimal seed into an impressive, interactive experience, seamlessly integrated with the filesystem-driven core.
+This console UI transforms the minimal seed into an impressive, interactive experience, seamlessly integrated with the
+filesystem-driven core.
 
-Below is a refined design for the **Netention v5 Console UI**, fully integrated with the system using Notes and Tools. Instead of directly managing UI logic within `Netention.ts`, this approach leverages the system's existing Note-based architecture by defining the UI as a set of Notes and Tools. This preserves the system's elegance, enhances synergy, and ensures the UI emerges organically from the seed, aligning with the recursive, self-evolving vision. The design remains terse, using pseudocode and tables for clarity.
+Below is a refined design for the **Netention v5 Console UI**, fully integrated with the system using Notes and Tools.
+Instead of directly managing UI logic within `Netention.ts`, this approach leverages the system's existing Note-based
+architecture by defining the UI as a set of Notes and Tools. This preserves the system's elegance, enhances synergy, and
+ensures the UI emerges organically from the seed, aligning with the recursive, self-evolving vision. The design remains
+terse, using pseudocode and tables for clarity.
 
 ---
 
 # **Netention v5: Refined Console UI (Note-Driven)**
 
 ## **Goals**
+
 - **Note-Based UI**: Define UI components as Notes, managed by Tools.
 - **Tool-Driven Logic**: Use Tools for rendering, input handling, and control.
 - **Seamless Integration**: UI emerges from the seed, no core code changes.
 - **Impressive First Run**: Dynamic, colorful, and interactive from boot.
 
 ## **Integration Strategy**
+
 - **UI Notes**: Represent tree, log, prompt, and control as Notes (`type: "UI"`).
 - **UI Tools**: Handle rendering (`ui_render`), input (`ui_input`), and control (`ui_control`).
 - **Seed-Driven**: Seed spawns UI Notes/Tools, integrating them into the system.
@@ -545,6 +577,7 @@ Below is a refined design for the **Netention v5 Console UI**, fully integrated 
 ## **Updated Seed Note**
 
 ### **Structure**
+
 ```typescript
 const seed: Note = {
   id: "root",
@@ -586,12 +619,12 @@ const seed: Note = {
 
 ## **UI Notes**
 
-| Note ID       | Type | Description         | Logic (Runnable)                       | Graph Relations         |
-|---------------|------|---------------------|----------------------------------------|-------------------------|
-| `ui-tree`     | UI   | Activity Tree       | `{ tool: "ui_render", input: { target: "tree" } }` | `embeds` subgoals       |
-| `ui-log`      | UI   | Scrolling Log       | `{ tool: "ui_render", input: { target: "log" } }`  | `embeds` memory notes   |
-| `ui-prompt`   | UI   | Input Prompt        | `{ tool: "ui_input" }`                 | None                    |
-| `ui-status`   | UI   | Execution Status    | `{ tool: "ui_control" }`               | None                    |
+| Note ID     | Type | Description      | Logic (Runnable)                                   | Graph Relations       |
+|-------------|------|------------------|----------------------------------------------------|-----------------------|
+| `ui-tree`   | UI   | Activity Tree    | `{ tool: "ui_render", input: { target: "tree" } }` | `embeds` subgoals     |
+| `ui-log`    | UI   | Scrolling Log    | `{ tool: "ui_render", input: { target: "log" } }`  | `embeds` memory notes |
+| `ui-prompt` | UI   | Input Prompt     | `{ tool: "ui_input" }`                             | None                  |
+| `ui-status` | UI   | Execution Status | `{ tool: "ui_control" }`                           | None                  |
 
 - **Content**: Each Note defines its UI component and links to relevant data (e.g., `graph` for tree, `memory` for log).
 - **Logic**: Executes rendering/input/control via Tools.
@@ -601,8 +634,9 @@ const seed: Note = {
 ## **UI Tools**
 
 ### **1. `ui_render`**
+
 - **Purpose**: Renders tree or log to console.
-- **Impl**: 
+- **Impl**:
   ```typescript
   async uiRender(args: { target: "tree" | "log", note: Note }): Promise<void> {
     const { green, red, yellow, blue, bold } = await import("https://deno.land/std/fmt/colors.ts");
@@ -628,8 +662,9 @@ const seed: Note = {
   ```
 
 ### **2. `ui_input`**
+
 - **Purpose**: Handles user input, spawns Notes or toggles control.
-- **Impl**: 
+- **Impl**:
   ```typescript
   async uiInput(args: { note: Note }): Promise<void> {
     const stdin = Deno.stdin;
@@ -648,8 +683,9 @@ const seed: Note = {
   ```
 
 ### **3. `ui_control`**
+
 - **Purpose**: Toggles execution state, updates status display.
-- **Impl**: 
+- **Impl**:
   ```typescript
   async uiControl(args: { command?: string, note: Note }): Promise<void> {
     const statusNote = await loadNote("ui-status");
@@ -736,16 +772,19 @@ main();
 ---
 
 ## **Execution Flow**
-1. **Seed Boot**: Spawns UI Tools (`ui_render`, `ui_input`, `ui_control`) and UI Notes (`ui-tree`, `ui-log`, `ui-prompt`, `ui-status`).
-2. **UI Notes Run**: 
-   - `ui-tree` and `ui-log` periodically call `ui_render` to display activity and logs.
-   - `ui-prompt` runs `ui_input` for user commands.
-   - `ui-status` manages pause/resume via `ui_control`.
+
+1. **Seed Boot**: Spawns UI Tools (`ui_render`, `ui_input`, `ui_control`) and UI Notes (`ui-tree`, `ui-log`,
+   `ui-prompt`, `ui-status`).
+2. **UI Notes Run**:
+    - `ui-tree` and `ui-log` periodically call `ui_render` to display activity and logs.
+    - `ui-prompt` runs `ui_input` for user commands.
+    - `ui-status` manages pause/resume via `ui_control`.
 3. **System Sync**: File events trigger `runNote`, respecting `ui-status` pause state.
 
 ---
 
 ## **First Impression**
+
 ```
 Netention v5 - RUNNING
 Active Notes:
@@ -757,6 +796,7 @@ Log:
 🟢 ui-tree: Rendering active notes
 > 
 ```
+
 - **Dynamic**: Tree updates as Notes spawn/run.
 - **Colorful**: Green/yellow status dots, emoji-coded log.
 - **Interactive**: Prompt ready for `spawn task "Plan day"` or `pause`.
@@ -764,25 +804,32 @@ Log:
 ---
 
 ## **Why Refined**
+
 - **Elegant**: UI is just Notes/Tools, no external logic in `Netention.ts`.
 - **Synergistic**: Leverages `spawn`, `code_gen`, and filesystem events.
 - **Minimal**: Adds ~50 LOC to seed (Tools/Notes), core unchanged.
 - **Impressive**: Emerges from seed, showcasing system power instantly.
 
-This refined UI integrates seamlessly, using Notes and Tools to create a dynamic, user-friendly console experience while preserving the system’s minimal, recursive ethos.
+This refined UI integrates seamlessly, using Notes and Tools to create a dynamic, user-friendly console experience while
+preserving the system’s minimal, recursive ethos.
 
-Below is a revised **Netention v5** specification with a fully integrated console UI, using Notes and Tools exclusively. The design is terse, letting the seed Note define the system and UI. The complete source code is provided, ensuring seamless integration with no external UI logic—everything emerges from the seed. This version maintains the minimal, recursive ethos while delivering an impressive, interactive console experience.
+Below is a revised **Netention v5** specification with a fully integrated console UI, using Notes and Tools exclusively.
+The design is terse, letting the seed Note define the system and UI. The complete source code is provided, ensuring
+seamless integration with no external UI logic—everything emerges from the seed. This version maintains the minimal,
+recursive ethos while delivering an impressive, interactive console experience.
 
 ---
 
 # **Netention v5: Fully Integrated Console UI**
 
 ## **Vision**
+
 - **Unified Seed**: Single Note bootstraps system and UI via recursive spawning.
 - **Tool-Driven UI**: Console rendering, input, and control as Notes/Tools.
 - **Minimal Core**: ~150 LOC, all behavior in LangChain `Runnable`s.
 
 ## **Dependencies**
+
 - **Deno**: Sandboxed runtime.
 - **LangChain.js**: AI execution engine.
 - **IPFS**: Storage (stubbed as filesystem).
@@ -790,6 +837,7 @@ Below is a revised **Netention v5** specification with a fully integrated consol
 ---
 
 ## **Seed Note**
+
 ```typescript
 // Seed.ts
 export const seed: Note = {
@@ -990,16 +1038,19 @@ main();
 ---
 
 ## **Execution Flow**
-1. **Seed Boot**: Saves `root`, spawns core Tools (`spawn`, `code_gen`, `reflect`) and UI Tools/Notes (`ui_render`, `ui-tree`, etc.).
-2. **UI Emergence**: 
-   - `ui-tree` and `ui-log` run `ui_render` to display activity and logs.
-   - `ui-prompt` runs `ui_input` for commands.
-   - `ui-status` runs `ui_control` for pause/resume.
+
+1. **Seed Boot**: Saves `root`, spawns core Tools (`spawn`, `code_gen`, `reflect`) and UI Tools/Notes (`ui_render`,
+   `ui-tree`, etc.).
+2. **UI Emergence**:
+    - `ui-tree` and `ui-log` run `ui_render` to display activity and logs.
+    - `ui-prompt` runs `ui_input` for commands.
+    - `ui-status` runs `ui_control` for pause/resume.
 3. **System Loop**: File events trigger `runNote`, respecting `ui-status.paused`.
 
 ---
 
 ## **First Impression**
+
 ```
 Netention v5 - RUNNING
 Active Notes:
@@ -1015,8 +1066,10 @@ Log:
 ---
 
 ## **Notes**
+
 - **Size**: ~150 LOC (core + stubbed LangChain).
 - **Integration**: UI is fully Note-driven, no external logic.
 - **LangChain Stub**: Replace `Runnable` stub with actual LangChain.js imports when available in Deno.
 
-This complete source code ensures the console UI integrates seamlessly, emerging from the seed as Notes and Tools, maintaining minimalism and showcasing the system’s power from the first run.
+This complete source code ensures the console UI integrates seamlessly, emerging from the seed as Notes and Tools,
+maintaining minimalism and showcasing the system’s power from the first run.

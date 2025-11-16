@@ -8,355 +8,361 @@ import NarseseInput from '../../simple-uis/NarseseInput.js';
 
 // Custom node components
 const ConceptNode = memo(({data}) => {
-  return React.createElement('div', {
-    style: {
-      padding: '10px',
-      borderRadius: '8px',
-      backgroundColor: themeUtils.get('BACKGROUNDS.SECONDARY'),
-      border: `2px solid ${data.isSelected ? '#007bff' : '#666'}`,
-      textAlign: 'center',
-      minWidth: '120px',
-      boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-    }
-  },
-  React.createElement('div', {style: {fontWeight: 'bold', marginBottom: '5px'}}, data.label),
-  React.createElement('div', {style: {fontSize: '0.8em'}}, `Priority: ${(data.priority || 0).toFixed(2)}`)
-  );
+    return React.createElement('div', {
+            style: {
+                padding: '10px',
+                borderRadius: '8px',
+                backgroundColor: themeUtils.get('BACKGROUNDS.SECONDARY'),
+                border: `2px solid ${data.isSelected ? '#007bff' : '#666'}`,
+                textAlign: 'center',
+                minWidth: '120px',
+                boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+            }
+        },
+        React.createElement('div', {style: {fontWeight: 'bold', marginBottom: '5px'}}, data.label),
+        React.createElement('div', {style: {fontSize: '0.8em'}}, `Priority: ${(data.priority || 0).toFixed(2)}`)
+    );
 });
 
 const TaskNode = memo(({data}) => {
-  return React.createElement('div', {
-    style: {
-      padding: '8px',
-      borderRadius: '6px',
-      backgroundColor: getTaskColor(data.type),
-      border: `2px solid ${data.isSelected ? '#007bff' : '#666'}`,
-      textAlign: 'center',
-      minWidth: '100px',
-      boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-    }
-  },
-  React.createElement('div', {style: {fontWeight: 'bold', marginBottom: '3px'}}, data.type),
-  React.createElement('div', {style: {fontSize: '0.7em'}}, data.label)
-  );
+    return React.createElement('div', {
+            style: {
+                padding: '8px',
+                borderRadius: '6px',
+                backgroundColor: getTaskColor(data.type),
+                border: `2px solid ${data.isSelected ? '#007bff' : '#666'}`,
+                textAlign: 'center',
+                minWidth: '100px',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+            }
+        },
+        React.createElement('div', {style: {fontWeight: 'bold', marginBottom: '3px'}}, data.type),
+        React.createElement('div', {style: {fontSize: '0.7em'}}, data.label)
+    );
 });
 
 const BeliefNode = memo(({data}) => {
-  return React.createElement('div', {
-    style: {
-      padding: '8px',
-      borderRadius: '6px',
-      backgroundColor: '#d4edda',
-      border: `2px solid ${data.isSelected ? '#007bff' : '#666'}`,
-      textAlign: 'center',
-      minWidth: '100px',
-      boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-    }
-  },
-  React.createElement('div', {style: {fontWeight: 'bold', marginBottom: '3px'}}, 'Belief'),
-  React.createElement('div', {style: {fontSize: '0.7em'}}, data.label),
-  React.createElement('div', {style: {fontSize: '0.6em'}}, `Freq: ${(data.frequency || 0).toFixed(2)}`)
-  );
+    return React.createElement('div', {
+            style: {
+                padding: '8px',
+                borderRadius: '6px',
+                backgroundColor: '#d4edda',
+                border: `2px solid ${data.isSelected ? '#007bff' : '#666'}`,
+                textAlign: 'center',
+                minWidth: '100px',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+            }
+        },
+        React.createElement('div', {style: {fontWeight: 'bold', marginBottom: '3px'}}, 'Belief'),
+        React.createElement('div', {style: {fontSize: '0.7em'}}, data.label),
+        React.createElement('div', {style: {fontSize: '0.6em'}}, `Freq: ${(data.frequency || 0).toFixed(2)}`)
+    );
 });
 
 const GoalNode = memo(({data}) => {
-  return React.createElement('div', {
-    style: {
-      padding: '8px',
-      borderRadius: '6px',
-      backgroundColor: '#f8d7da',
-      border: `2px solid ${data.isSelected ? '#007bff' : '#666'}`,
-      textAlign: 'center',
-      minWidth: '100px',
-      boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-    }
-  },
-  React.createElement('div', {style: {fontWeight: 'bold', marginBottom: '3px'}}, 'Goal'),
-  React.createElement('div', {style: {fontSize: '0.7em'}}, data.label),
-  React.createElement('div', {style: {fontSize: '0.6em'}}, `Desire: ${(data.desire || 0).toFixed(2)}`)
-  );
+    return React.createElement('div', {
+            style: {
+                padding: '8px',
+                borderRadius: '6px',
+                backgroundColor: '#f8d7da',
+                border: `2px solid ${data.isSelected ? '#007bff' : '#666'}`,
+                textAlign: 'center',
+                minWidth: '100px',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+            }
+        },
+        React.createElement('div', {style: {fontWeight: 'bold', marginBottom: '3px'}}, 'Goal'),
+        React.createElement('div', {style: {fontSize: '0.7em'}}, data.label),
+        React.createElement('div', {style: {fontSize: '0.6em'}}, `Desire: ${(data.desire || 0).toFixed(2)}`)
+    );
 });
 
 // Node types for different system items - defined after components to avoid circular reference
 const nodeTypes = {
-  concept: ConceptNode,
-  task: TaskNode,
-  belief: BeliefNode,
-  goal: GoalNode
+    concept: ConceptNode,
+    task: TaskNode,
+    belief: BeliefNode,
+    goal: GoalNode
 };
 
 const GraphUI = () => {
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-  const [selectedNode, setSelectedNode] = useState(null);
-  const concepts = useUiStore(state => state.concepts);
-  const tasks = useUiStore(state => state.tasks);
-  const beliefs = useUiStore(state => state.beliefs);
-  const goals = useUiStore(state => state.goals);
+    const [nodes, setNodes, onNodesChange] = useNodesState([]);
+    const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+    const [selectedNode, setSelectedNode] = useState(null);
+    const concepts = useUiStore(state => state.concepts);
+    const tasks = useUiStore(state => state.tasks);
+    const beliefs = useUiStore(state => state.beliefs);
+    const goals = useUiStore(state => state.goals);
 
-  // Generate nodes and edges from system data
-  const {nodes: generatedNodes, edges: generatedEdges} = useMemo(() => {
-    const nodeList = [];
-    const edgeList = [];
-    const nodeIdSet = new Set();
+    // Generate nodes and edges from system data
+    const {nodes: generatedNodes, edges: generatedEdges} = useMemo(() => {
+        const nodeList = [];
+        const edgeList = [];
+        const nodeIdSet = new Set();
 
-    // Add concepts as nodes
-    concepts.forEach((concept, index) => {
-      const id = `concept-${concept.term}`;
-      nodeIdSet.add(id);
+        // Add concepts as nodes
+        concepts.forEach((concept, index) => {
+            const id = `concept-${concept.term}`;
+            nodeIdSet.add(id);
 
-      nodeList.push({
-        id,
-        type: 'concept',
-        position: {x: index * 150, y: 0},
-        data: {
-          label: concept.term,
-          priority: concept.priority,
-          taskCount: concept.taskCount,
-          isSelected: selectedNode === id
-        }
-      });
-    });
-
-    // Add tasks as nodes
-    tasks.forEach((task, index) => {
-      const id = `task-${task.id || index}`;
-      nodeIdSet.add(id);
-
-      nodeList.push({
-        id,
-        type: 'task',
-        position: {x: (index % 5) * 200, y: 150 + Math.floor(index / 5) * 150},
-        data: {
-          label: task.term,
-          type: task.type,
-          isSelected: selectedNode === id
-        }
-      });
-    });
-
-    // Add beliefs as nodes
-    beliefs.forEach((belief, index) => {
-      const id = `belief-${belief.id || index}`;
-      nodeIdSet.add(id);
-
-      nodeList.push({
-        id,
-        type: 'belief',
-        position: {x: (index % 4) * 220, y: 400 + Math.floor(index / 4) * 150},
-        data: {
-          label: belief.term,
-          frequency: belief.truth?.frequency,
-          isSelected: selectedNode === id
-        }
-      });
-    });
-
-    // Add goals as nodes
-    goals.forEach((goal, index) => {
-      const id = `goal-${goal.id || index}`;
-      nodeIdSet.add(id);
-
-      nodeList.push({
-        id,
-        type: 'goal',
-        position: {x: (index % 4) * 220, y: 650 + Math.floor(index / 4) * 150},
-        data: {
-          label: goal.term,
-          desire: goal.truth?.desire,
-          isSelected: selectedNode === id
-        }
-      });
-    });
-
-    // Create edges between related items
-    // Connect tasks to their concepts
-    tasks.forEach(task => {
-      const taskId = `task-${task.id}`;
-      if (task.term && nodeIdSet.has(taskId)) {
-        // Simple heuristic to find related concept
-        const relatedConcept = concepts.find(c => task.term.includes(c.term));
-        if (relatedConcept) {
-          const conceptId = `concept-${relatedConcept.term}`;
-          if (nodeIdSet.has(conceptId)) {
-            edgeList.push({
-              id: `edge-${taskId}-${conceptId}`,
-              source: taskId,
-              target: conceptId,
-              markerEnd: {type: MarkerType.ArrowClosed},
-              style: {stroke: '#007bff', strokeWidth: 2}
+            nodeList.push({
+                id,
+                type: 'concept',
+                position: {x: index * 150, y: 0},
+                data: {
+                    label: concept.term,
+                    priority: concept.priority,
+                    taskCount: concept.taskCount,
+                    isSelected: selectedNode === id
+                }
             });
-          }
-        }
-      }
-    });
+        });
 
-    // Connect beliefs to their concepts
-    beliefs.forEach(belief => {
-      const beliefId = `belief-${belief.id}`;
-      if (belief.term && nodeIdSet.has(beliefId)) {
-        const relatedConcept = concepts.find(c => belief.term.includes(c.term));
-        if (relatedConcept) {
-          const conceptId = `concept-${relatedConcept.term}`;
-          if (nodeIdSet.has(conceptId)) {
-            edgeList.push({
-              id: `edge-${beliefId}-${conceptId}`,
-              source: beliefId,
-              target: conceptId,
-              markerEnd: {type: MarkerType.ArrowClosed},
-              style: {stroke: '#28a745', strokeWidth: 2}
+        // Add tasks as nodes
+        tasks.forEach((task, index) => {
+            const id = `task-${task.id || index}`;
+            nodeIdSet.add(id);
+
+            nodeList.push({
+                id,
+                type: 'task',
+                position: {x: (index % 5) * 200, y: 150 + Math.floor(index / 5) * 150},
+                data: {
+                    label: task.term,
+                    type: task.type,
+                    isSelected: selectedNode === id
+                }
             });
-          }
-        }
-      }
-    });
+        });
 
-    // Connect goals to their concepts
-    goals.forEach(goal => {
-      const goalId = `goal-${goal.id}`;
-      if (goal.term && nodeIdSet.has(goalId)) {
-        const relatedConcept = concepts.find(c => goal.term.includes(c.term));
-        if (relatedConcept) {
-          const conceptId = `concept-${relatedConcept.term}`;
-          if (nodeIdSet.has(conceptId)) {
-            edgeList.push({
-              id: `edge-${goalId}-${conceptId}`,
-              source: goalId,
-              target: conceptId,
-              markerEnd: {type: MarkerType.ArrowClosed},
-              style: {stroke: '#dc3545', strokeWidth: 2}
+        // Add beliefs as nodes
+        beliefs.forEach((belief, index) => {
+            const id = `belief-${belief.id || index}`;
+            nodeIdSet.add(id);
+
+            nodeList.push({
+                id,
+                type: 'belief',
+                position: {x: (index % 4) * 220, y: 400 + Math.floor(index / 4) * 150},
+                data: {
+                    label: belief.term,
+                    frequency: belief.truth?.frequency,
+                    isSelected: selectedNode === id
+                }
             });
-          }
-        }
-      }
-    });
+        });
 
-    return {nodes: nodeList, edges: edgeList};
-  }, [concepts, tasks, beliefs, goals, selectedNode]);
+        // Add goals as nodes
+        goals.forEach((goal, index) => {
+            const id = `goal-${goal.id || index}`;
+            nodeIdSet.add(id);
 
-  // Update nodes and edges when data changes
-  useEffect(() => {
-    setNodes(generatedNodes);
-    setEdges(generatedEdges);
-  }, [generatedNodes, generatedEdges, setNodes, setEdges]);
+            nodeList.push({
+                id,
+                type: 'goal',
+                position: {x: (index % 4) * 220, y: 650 + Math.floor(index / 4) * 150},
+                data: {
+                    label: goal.term,
+                    desire: goal.truth?.desire,
+                    isSelected: selectedNode === id
+                }
+            });
+        });
 
-  const onConnect = useCallback((params) => setEdges((eds) => addEdge(params, eds)), [setEdges]);
+        // Create edges between related items
+        // Connect tasks to their concepts
+        tasks.forEach(task => {
+            const taskId = `task-${task.id}`;
+            if (task.term && nodeIdSet.has(taskId)) {
+                // Simple heuristic to find related concept
+                const relatedConcept = concepts.find(c => task.term.includes(c.term));
+                if (relatedConcept) {
+                    const conceptId = `concept-${relatedConcept.term}`;
+                    if (nodeIdSet.has(conceptId)) {
+                        edgeList.push({
+                            id: `edge-${taskId}-${conceptId}`,
+                            source: taskId,
+                            target: conceptId,
+                            markerEnd: {type: MarkerType.ArrowClosed},
+                            style: {stroke: '#007bff', strokeWidth: 2}
+                        });
+                    }
+                }
+            }
+        });
 
-  const onNodeClick = useCallback((event, node) => {
-    setSelectedNode(node.id);
-  }, []);
+        // Connect beliefs to their concepts
+        beliefs.forEach(belief => {
+            const beliefId = `belief-${belief.id}`;
+            if (belief.term && nodeIdSet.has(beliefId)) {
+                const relatedConcept = concepts.find(c => belief.term.includes(c.term));
+                if (relatedConcept) {
+                    const conceptId = `concept-${relatedConcept.term}`;
+                    if (nodeIdSet.has(conceptId)) {
+                        edgeList.push({
+                            id: `edge-${beliefId}-${conceptId}`,
+                            source: beliefId,
+                            target: conceptId,
+                            markerEnd: {type: MarkerType.ArrowClosed},
+                            style: {stroke: '#28a745', strokeWidth: 2}
+                        });
+                    }
+                }
+            }
+        });
 
-  // Context menu for temporary Concepts
-  const [contextMenu, setContextMenu] = useState(null);
+        // Connect goals to their concepts
+        goals.forEach(goal => {
+            const goalId = `goal-${goal.id}`;
+            if (goal.term && nodeIdSet.has(goalId)) {
+                const relatedConcept = concepts.find(c => goal.term.includes(c.term));
+                if (relatedConcept) {
+                    const conceptId = `concept-${relatedConcept.term}`;
+                    if (nodeIdSet.has(conceptId)) {
+                        edgeList.push({
+                            id: `edge-${goalId}-${conceptId}`,
+                            source: goalId,
+                            target: conceptId,
+                            markerEnd: {type: MarkerType.ArrowClosed},
+                            style: {stroke: '#dc3545', strokeWidth: 2}
+                        });
+                    }
+                }
+            }
+        });
 
-  const onNodeContextMenu = useCallback((event, node) => {
-    event.preventDefault();
-    setContextMenu({
-      x: event.clientX,
-      y: event.clientY,
-      node
-    });
-  }, []);
+        return {nodes: nodeList, edges: edgeList};
+    }, [concepts, tasks, beliefs, goals, selectedNode]);
 
-  const closeContextMenu = useCallback(() => {
-    setContextMenu(null);
-  }, []);
+    // Update nodes and edges when data changes
+    useEffect(() => {
+        setNodes(generatedNodes);
+        setEdges(generatedEdges);
+    }, [generatedNodes, generatedEdges, setNodes, setEdges]);
 
-  // Handle clicking outside context menu
-  useEffect(() => {
-    const handleClick = () => {
-      if (contextMenu) {
-        closeContextMenu();
-      }
-    };
+    const onConnect = useCallback((params) => setEdges((eds) => addEdge(params, eds)), [setEdges]);
 
-    document.addEventListener('click', handleClick);
-    return () => {
-      document.removeEventListener('click', handleClick);
-    };
-  }, [contextMenu, closeContextMenu]);
+    const onNodeClick = useCallback((event, node) => {
+        setSelectedNode(node.id);
+    }, []);
 
-  // Context menu element
-  const contextMenuElement = contextMenu ?
-    React.createElement('div', {
-      style: {
-        position: 'absolute',
-        top: contextMenu.y,
-        left: contextMenu.x,
-        backgroundColor: 'white',
-        border: '1px solid #ccc',
-        borderRadius: '4px',
-        padding: '8px',
-        zIndex: 1000,
-        boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
-      },
-      onClick: (e) => e.stopPropagation()
-    },
-    React.createElement('div', {style: {padding: '4px 8px', cursor: 'pointer'}}, 'Add Related Concept'),
-    React.createElement('div', {style: {padding: '4px 8px', cursor: 'pointer'}}, 'View Details'),
-    React.createElement('div', {style: {padding: '4px 8px', cursor: 'pointer'}}, 'Export Node')
-    ) : null;
+    // Context menu for temporary Concepts
+    const [contextMenu, setContextMenu] = useState(null);
 
-  // Selected node info panel
-  const selectedNodePanel = selectedNode ?
-    React.createElement('div', {
-      style: {
-        position: 'absolute',
-        bottom: '20px',
-        left: '20px',
-        backgroundColor: 'rgba(255, 255, 255, 0.9)',
-        border: '1px solid #ddd',
-        borderRadius: '4px',
-        padding: '10px',
-        maxWidth: '300px',
-        zIndex: 100
-      }
-    },
-    React.createElement('h4', null, 'Selected Item'),
-    React.createElement('p', null, `ID: ${selectedNode}`),
-    React.createElement('button', {onClick: () => setSelectedNode(null)}, 'Close')
-    ) : null;
+    const onNodeContextMenu = useCallback((event, node) => {
+        event.preventDefault();
+        setContextMenu({
+            x: event.clientX,
+            y: event.clientY,
+            node
+        });
+    }, []);
 
-  return React.createElement('div', {
-    style: {width: '100%', height: '100%', display: 'flex', flexDirection: 'column'},
-    onClick: closeContextMenu
-  },
-    // Full-width Narsese input section at the top
-    React.createElement('div', {
-      style: {
-        width: '100%',
-        backgroundColor: '#f8f9fa',
-        borderBottom: '1px solid #dee2e6',
-        padding: '10px',
-        zIndex: 1000
-      }
-    },
-      React.createElement(NarseseInput, {compact: false, title: "NAR Input & Control", showExamples: true, showHistory: true, showNotifications: true})
-    ),
-    // Main graph area taking the rest of the space
-    React.createElement('div', {
-      style: {flex: 1, position: 'relative', minHeight: '0'}
-    },
-      React.createElement(ReactFlow, {
-        nodes: nodes,
-        edges: edges,
-        onNodesChange: onNodesChange,
-        onEdgesChange: onEdgesChange,
-        onConnect: onConnect,
-        onNodeClick: onNodeClick,
-        onNodeContextMenu: onNodeContextMenu,
-        fitView: true,
-        attributionPosition: 'bottom-left',
-        nodeTypes: nodeTypes
-      },
-        React.createElement(Controls),
-        React.createElement(MiniMap),
-        React.createElement(Background, {variant: 'dots', gap: 12, size: 1})
-      ),
-      contextMenuElement,
-      selectedNodePanel
-    )
-  );
+    const closeContextMenu = useCallback(() => {
+        setContextMenu(null);
+    }, []);
+
+    // Handle clicking outside context menu
+    useEffect(() => {
+        const handleClick = () => {
+            if (contextMenu) {
+                closeContextMenu();
+            }
+        };
+
+        document.addEventListener('click', handleClick);
+        return () => {
+            document.removeEventListener('click', handleClick);
+        };
+    }, [contextMenu, closeContextMenu]);
+
+    // Context menu element
+    const contextMenuElement = contextMenu ?
+        React.createElement('div', {
+                style: {
+                    position: 'absolute',
+                    top: contextMenu.y,
+                    left: contextMenu.x,
+                    backgroundColor: 'white',
+                    border: '1px solid #ccc',
+                    borderRadius: '4px',
+                    padding: '8px',
+                    zIndex: 1000,
+                    boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
+                },
+                onClick: (e) => e.stopPropagation()
+            },
+            React.createElement('div', {style: {padding: '4px 8px', cursor: 'pointer'}}, 'Add Related Concept'),
+            React.createElement('div', {style: {padding: '4px 8px', cursor: 'pointer'}}, 'View Details'),
+            React.createElement('div', {style: {padding: '4px 8px', cursor: 'pointer'}}, 'Export Node')
+        ) : null;
+
+    // Selected node info panel
+    const selectedNodePanel = selectedNode ?
+        React.createElement('div', {
+                style: {
+                    position: 'absolute',
+                    bottom: '20px',
+                    left: '20px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    padding: '10px',
+                    maxWidth: '300px',
+                    zIndex: 100
+                }
+            },
+            React.createElement('h4', null, 'Selected Item'),
+            React.createElement('p', null, `ID: ${selectedNode}`),
+            React.createElement('button', {onClick: () => setSelectedNode(null)}, 'Close')
+        ) : null;
+
+    return React.createElement('div', {
+            style: {width: '100%', height: '100%', display: 'flex', flexDirection: 'column'},
+            onClick: closeContextMenu
+        },
+        // Full-width Narsese input section at the top
+        React.createElement('div', {
+                style: {
+                    width: '100%',
+                    backgroundColor: '#f8f9fa',
+                    borderBottom: '1px solid #dee2e6',
+                    padding: '10px',
+                    zIndex: 1000
+                }
+            },
+            React.createElement(NarseseInput, {
+                compact: false,
+                title: "NAR Input & Control",
+                showExamples: true,
+                showHistory: true,
+                showNotifications: true
+            })
+        ),
+        // Main graph area taking the rest of the space
+        React.createElement('div', {
+                style: {flex: 1, position: 'relative', minHeight: '0'}
+            },
+            React.createElement(ReactFlow, {
+                    nodes: nodes,
+                    edges: edges,
+                    onNodesChange: onNodesChange,
+                    onEdgesChange: onEdgesChange,
+                    onConnect: onConnect,
+                    onNodeClick: onNodeClick,
+                    onNodeContextMenu: onNodeContextMenu,
+                    fitView: true,
+                    attributionPosition: 'bottom-left',
+                    nodeTypes: nodeTypes
+                },
+                React.createElement(Controls),
+                React.createElement(MiniMap),
+                React.createElement(Background, {variant: 'dots', gap: 12, size: 1})
+            ),
+            contextMenuElement,
+            selectedNodePanel
+        )
+    );
 };
 
 export default GraphUI;

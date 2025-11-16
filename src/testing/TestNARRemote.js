@@ -130,18 +130,18 @@ export class TestNARRemote {
             if (this.serverProcess) {
                 // Remove all listeners to prevent hanging
                 this.serverProcess.removeAllListeners();
-                
+
                 // Try graceful shutdown first
                 const timeout = setTimeout(() => {
                     // Force kill if graceful shutdown takes too long
                     this.serverProcess.kill('SIGKILL');
                 }, 3000); // 3 second timeout for shutdown
-                
+
                 this.serverProcess.on('close', () => {
                     clearTimeout(timeout);
                     resolve();
                 });
-                
+
                 // Try sending exit command
                 if (this.client && this.client.readyState === WebSocket.OPEN) {
                     this.sendNarsese('*exit').then(() => {

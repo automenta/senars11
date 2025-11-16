@@ -53,39 +53,39 @@ const createBorder = (location, size, children) => ({type: 'border', location, s
  * Organized collection of available panels grouped by functionality
  */
 const PANELS = {
-  NAVIGATION: [
-    {name: 'Tasks', component: 'TaskPanel'},
-    {name: 'Concepts', component: 'ConceptPanel'},
-    {name: 'Demos', component: 'DemoPanel'},
-    {name: 'System', component: 'SystemStatusPanel'}
-  ],
+    NAVIGATION: [
+        {name: 'Tasks', component: 'TaskPanel'},
+        {name: 'Concepts', component: 'ConceptPanel'},
+        {name: 'Demos', component: 'DemoPanel'},
+        {name: 'System', component: 'SystemStatusPanel'}
+    ],
 
-  MONITORING: [
-    {name: 'Console', component: 'ConsolePanel'},
-    {name: 'Priorities', component: 'PriorityFluctuationPanel'},
-    {name: 'Priority Histogram', component: 'PriorityHistogram'},
-    {name: 'Relationships', component: 'ConceptRelationshipPanel'},
-    {name: 'Trace', component: 'ReasoningTracePanel'},
-    {name: 'Time Series', component: 'TimeSeriesPanel'},
-    {name: 'Meta-Cognition', component: 'MetaCognitionPanel'},
-    {name: 'Trace Inspector', component: 'TraceInspector'},
-    {name: 'Visualization', component: 'VisualizationPanel'}
-  ],
+    MONITORING: [
+        {name: 'Console', component: 'ConsolePanel'},
+        {name: 'Priorities', component: 'PriorityFluctuationPanel'},
+        {name: 'Priority Histogram', component: 'PriorityHistogram'},
+        {name: 'Relationships', component: 'ConceptRelationshipPanel'},
+        {name: 'Trace', component: 'ReasoningTracePanel'},
+        {name: 'Time Series', component: 'TimeSeriesPanel'},
+        {name: 'Meta-Cognition', component: 'MetaCognitionPanel'},
+        {name: 'Trace Inspector', component: 'TraceInspector'},
+        {name: 'Visualization', component: 'VisualizationPanel'}
+    ],
 
-  DASHBOARD: [
-    {name: 'Dashboard', component: 'DashboardPanel'},
-    {name: 'Main', component: 'MainPanel'},
-    {name: 'Task Monitor', component: 'TaskMonitorPanel'},
-    {name: 'Self Analysis', component: 'SelfAnalysisPanel'},
-    {name: 'Graph UI', component: 'GraphUI'},
-    {name: 'Cognitive IDE', component: 'CognitiveIDE'}
-  ],
+    DASHBOARD: [
+        {name: 'Dashboard', component: 'DashboardPanel'},
+        {name: 'Main', component: 'MainPanel'},
+        {name: 'Task Monitor', component: 'TaskMonitorPanel'},
+        {name: 'Self Analysis', component: 'SelfAnalysisPanel'},
+        {name: 'Graph UI', component: 'GraphUI'},
+        {name: 'Cognitive IDE', component: 'CognitiveIDE'}
+    ],
 
-  EXECUTION: [
-    {name: 'Cycles', component: 'CyclePanel'},
-    {name: 'Variables', component: 'VariablesPanel'},
-    {name: 'Input', component: 'InputInterfacePanel'}
-  ]
+    EXECUTION: [
+        {name: 'Cycles', component: 'CyclePanel'},
+        {name: 'Variables', component: 'VariablesPanel'},
+        {name: 'Input', component: 'InputInterfacePanel'}
+    ]
 };
 
 // ====== GLOBAL CONFIGURATION ======
@@ -94,11 +94,11 @@ const PANELS = {
  * Global layout configuration settings
  */
 const GLOBAL_CONFIG = {
-  tabEnableClose: true,
-  tabEnableFloat: true,
-  splitterSize: 6,
-  tabSetEnableDeleteWhenEmpty: true,
-  tabSetEnableDrop: true
+    tabEnableClose: true,
+    tabEnableFloat: true,
+    splitterSize: 6,
+    tabSetEnableDeleteWhenEmpty: true,
+    tabSetEnableDrop: true
 };
 
 // ====== LAYOUT BUILDERS ======
@@ -111,9 +111,9 @@ const GLOBAL_CONFIG = {
  * @returns {Object} Border layout configuration
  */
 const buildBorderArea = (location, size, panelGroup) =>
-  createBorder(location, size,
-    PANELS[panelGroup]?.map(panel => createTab(panel.name, panel.component)) || []
-  );
+    createBorder(location, size,
+        PANELS[panelGroup]?.map(panel => createTab(panel.name, panel.component)) || []
+    );
 
 /**
  * Build a main area containing panels from a specific group
@@ -123,11 +123,11 @@ const buildBorderArea = (location, size, panelGroup) =>
  * @returns {Object} Tab set configuration
  */
 const buildMainArea = (panelGroup, weight = 50, id = null) =>
-  createTabSet(
-    PANELS[panelGroup]?.map(panel => createTab(panel.name, panel.component)) || [],
-    weight,
-    id
-  );
+    createTabSet(
+        PANELS[panelGroup]?.map(panel => createTab(panel.name, panel.component)) || [],
+        weight,
+        id
+    );
 
 /**
  * Create a layout with the specified area arrangement
@@ -139,28 +139,28 @@ const createLayout = (areas) => createRow(areas);
 // ====== DEFAULT LAYOUT ======
 
 const defaultLayout = {
-  global: GLOBAL_CONFIG,
-  borders: [
-    buildBorderArea('left', 250, 'NAVIGATION'),
-    buildBorderArea('bottom', 250, 'MONITORING')
-  ],
-  layout: createLayout([
-    buildMainArea('DASHBOARD', 60, 'dashboard-area'),
-    buildMainArea('EXECUTION', 40, 'execution-area')
-  ])
+    global: GLOBAL_CONFIG,
+    borders: [
+        buildBorderArea('left', 250, 'NAVIGATION'),
+        buildBorderArea('bottom', 250, 'MONITORING')
+    ],
+    layout: createLayout([
+        buildMainArea('DASHBOARD', 60, 'dashboard-area'),
+        buildMainArea('EXECUTION', 40, 'execution-area')
+    ])
 };
 
 export default defaultLayout;
 
 export {
-  createTab,
-  createTabSet,
-  createRow,
-  createColumn,
-  createBorder,
-  createLayout,
-  PANELS,
-  GLOBAL_CONFIG,
-  buildBorderArea,
-  buildMainArea
+    createTab,
+    createTabSet,
+    createRow,
+    createColumn,
+    createBorder,
+    createLayout,
+    PANELS,
+    GLOBAL_CONFIG,
+    buildBorderArea,
+    buildMainArea
 };

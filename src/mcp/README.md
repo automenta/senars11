@@ -1,10 +1,13 @@
 # SeNARS MCP (Model Context Protocol) System
 
-Implementation of the Model Context Protocol for SeNARS (Semantic Non-Axiomatic Reasoning System) following the plan in `PLAN.mcp.md`.
+Implementation of the Model Context Protocol for SeNARS (Semantic Non-Axiomatic Reasoning System) following the plan in
+`PLAN.mcp.md`.
 
 ## Overview
 
-This module implements the Model Context Protocol (MCP) to enable SeNARS to both consume external services and expose its own capabilities as MCP tools. The system follows a dual-mode architecture that allows SeNARS to function as both an MCP client (consumer) and MCP server (provider).
+This module implements the Model Context Protocol (MCP) to enable SeNARS to both consume external services and expose
+its own capabilities as MCP tools. The system follows a dual-mode architecture that allows SeNARS to function as both an
+MCP client (consumer) and MCP server (provider).
 
 ## Architecture
 
@@ -20,16 +23,19 @@ The MCP system consists of several core components:
 ## Features
 
 ### Dual-Mode Operations
+
 - **Client Mode**: Discover and consume external MCP tools
 - **Server Mode**: Expose SeNARS capabilities as MCP tools
 - **Dual Mode**: Operate as both client and server simultaneously
 
 ### Supported SeNARS Tools
+
 - `reason`: SeNARS reasoning engine for logical inference
 - `memory-query`: Query SeNARS memory system
 - `execute-tool`: Execute SeNARS tools and engines
 
 ### Safety & Validation
+
 - Input sanitization and validation
 - Output validation and structure checking
 - PII detection and tokenization

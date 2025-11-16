@@ -112,7 +112,7 @@ export class LM extends BaseComponent {
                 // For streaming, we return a simulated async iterator as fallback
                 this.logInfo('Circuit breaker fallback for streaming - streaming unavailable');
                 return {
-                    async *[Symbol.asyncIterator]() {
+                    async* [Symbol.asyncIterator]() {
                         yield 'Streaming unavailable - using fallback response';
                     }
                 };

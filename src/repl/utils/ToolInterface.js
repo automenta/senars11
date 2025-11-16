@@ -7,26 +7,26 @@
  * Base interface for all tools
  */
 export class BaseTool {
-  /**
-   * Create a base tool
-   * @param {string} name - Name of the tool
-   * @param {string} description - Description of what the tool does
-   * @param {Object} schema - Zod schema for the tool's parameters
-   */
-  constructor(name, description, schema) {
-    this.name = name;
-    this.description = description;
-    this.schema = schema;
-  }
+    /**
+     * Create a base tool
+     * @param {string} name - Name of the tool
+     * @param {string} description - Description of what the tool does
+     * @param {Object} schema - Zod schema for the tool's parameters
+     */
+    constructor(name, description, schema) {
+        this.name = name;
+        this.description = description;
+        this.schema = schema;
+    }
 
-  /**
-   * Execute the tool with the provided arguments
-   * @param {Object} args - Arguments for the tool
-   * @returns {Promise<any>} Result of the tool execution
-   */
-  async execute(args) {
-    throw new Error('execute() method must be implemented by subclass');
-  }
+    /**
+     * Execute the tool with the provided arguments
+     * @param {Object} args - Arguments for the tool
+     * @returns {Promise<any>} Result of the tool execution
+     */
+    async execute(args) {
+        throw new Error('execute() method must be implemented by subclass');
+    }
 }
 
 /**
@@ -39,7 +39,7 @@ export class BaseTool {
 
 /**
  * Example of how to create a custom tool
- * 
+ *
  * class CustomTool extends BaseTool {
  *   constructor(nar = null) {
  *     super(
@@ -53,13 +53,13 @@ export class BaseTool {
  *     );
  *     this.nar = nar;
  *   }
- * 
+ *
  *   async execute(args) {
  *     // Implement the tool logic here
  *     return 'Result of the tool execution';
  *   }
  * }
- * 
+ *
  * // To register the tool:
  * const registry = new ToolRegistry();
  * registry.register('custom_tool', (nar) => new CustomTool(nar));
@@ -71,5 +71,5 @@ export class BaseTool {
  * @returns {Function} Factory function
  */
 export const createToolFactory = (ToolClass) => {
-  return (nar = null, options = {}) => new ToolClass(nar, options);
+    return (nar = null, options = {}) => new ToolClass(nar, options);
 };

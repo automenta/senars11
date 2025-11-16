@@ -26,18 +26,18 @@ const CMD_MAP = {'start': 'run', 'stop': 'stop', 'step': 'next'};
 export class ReplMessageHandler extends EventEmitter {
     constructor(engine) {
         super();
-        
+
         if (!engine || typeof engine.processInput !== 'function') {
             throw new Error('ReplMessageHandler requires a valid engine with processInput method');
         }
-        
+
         this.engine = engine;
         this.commandHandlers = new Map();
         this.messageHandlers = new Map();
         this.messageQueue = [];
         this.isProcessing = false;
         this.handlerCache = new Map(); // Cache for frequently used handlers
-        
+
         this._setupDefaultCommandHandlers();
         this._setupDefaultMessageHandlers();
     }
@@ -202,7 +202,7 @@ export class ReplMessageHandler extends EventEmitter {
         try {
             const cmd = message?.payload?.command;
             const args = message?.payload?.args ?? [];
-            
+
             if (!cmd) {
                 return {error: 'No command specified', type: MESSAGE_TYPES.ERROR};
             }
@@ -308,7 +308,7 @@ export class ReplMessageHandler extends EventEmitter {
     clearHandlerCache() {
         this.handlerCache.clear();
     }
-    
+
     /**
      * Validate a message object to ensure it meets basic requirements
      */
@@ -322,7 +322,7 @@ export class ReplMessageHandler extends EventEmitter {
         if (message.type && typeof message.type !== 'string') {
             throw new Error('Message type must be a string');
         }
-        
+
         return true;
     }
 }

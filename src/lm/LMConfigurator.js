@@ -47,12 +47,12 @@ export class LMConfigurator {
                 }
             }
         };
-        
+
         // Predefined small models for different categories
         this.predefinedModels = {
             'SmolLM': [
                 'HuggingFaceTB/SmolLM-135M-Instruct',
-                'HuggingFaceTB/SmolLM-360M-Instruct', 
+                'HuggingFaceTB/SmolLM-360M-Instruct',
                 'HuggingFaceTB/SmolLM-1.7B-Instruct'
             ],
             'Granite': [
@@ -69,7 +69,7 @@ export class LMConfigurator {
 
     async configure() {
         console.log('🚀 SeNARS Agent REPL - LM Configuration\n');
-        
+
         const config = await inquirer.prompt([
             {
                 type: 'list',
@@ -122,7 +122,7 @@ export class LMConfigurator {
             };
         } else {
             const providerInfo = this.defaultProviders[config.providerType];
-            
+
             // Set up specific configuration based on provider type
             switch (config.providerType) {
                 case 'ollama':
@@ -245,10 +245,10 @@ export class LMConfigurator {
         if (!providerInfo) {
             throw new Error(`Unsupported provider type: ${config.providerType}`);
         }
-        
+
         const ProviderClass = providerInfo.providerClass;
         const provider = new ProviderClass(providerConfig);
-        
+
         console.log('✅ Configuration completed successfully!\n');
         return {
             provider,
@@ -258,7 +258,7 @@ export class LMConfigurator {
 
     async quickSelect() {
         console.log('🚀 SeNARS Agent REPL - Quick LM Selection\n');
-        
+
         const providers = [
             {name: 'Ollama - llama2 (fast, local)', value: 'ollama-llama2'},
             {name: 'Ollama - mistral (balanced)', value: 'ollama-mistral'},
@@ -285,25 +285,25 @@ export class LMConfigurator {
                 modelName: model,
                 baseURL: 'http://localhost:11434'
             });
-            return { provider, config: { provider: 'ollama', modelName: model } };
+            return {provider, config: {provider: 'ollama', modelName: model}};
         } else if (selection.choice.startsWith('huggingface-')) {
             const modelPreset = selection.choice.split('-')[1];
             let modelName = 'sshleifer/distilbart-cnn-12-6'; // default
-            
+
             if (modelPreset === 'smollm') {
                 modelName = 'HuggingFaceTB/SmolLM-135M-Instruct';
             } else if (modelPreset === 'granite') {
                 modelName = 'ibm-granite/granite-3.0-2b-instruct';
             }
-            
+
             const provider = new HuggingFaceProvider({
                 modelName: modelName,
                 device: 'cpu'
             });
-            return { provider, config: { provider: 'huggingface', modelName } };
+            return {provider, config: {provider: 'huggingface', modelName}};
         } else if (selection.choice === 'dummy') {
             const provider = new DummyProvider();
-            return { provider, config: { id: 'dummy' } };
+            return {provider, config: {id: 'dummy'}};
         } else if (selection.choice === 'custom') {
             return await this.configure(); // Call full configuration
         }

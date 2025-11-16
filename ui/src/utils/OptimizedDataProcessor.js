@@ -5,50 +5,50 @@ import {createDataDisplayElement, createDataSummary, extractDisplayProperties} f
 import {createSearchableCollection, debounce, memoize, paginateData, safeTransformData} from './utilityFunctions';
 
 export const processDataWithFilters = (data, options = {}) => {
-  const {
-    filterType = 'all',
-    filterText = '',
-    sortKey = null,
-    sortOrder = 'asc',
-    typeField = 'type',
-    searchFields = ['description', 'term'],
-    customFilters = []
-  } = options;
+    const {
+        filterType = 'all',
+        filterText = '',
+        sortKey = null,
+        sortOrder = 'asc',
+        typeField = 'type',
+        searchFields = ['description', 'term'],
+        customFilters = []
+    } = options;
 
-  const typeFilter = createTypeFilter(typeField, filterType);
-  const textFilter = createTextFilter(searchFields, filterText);
-  const customFilter = createCustomFilters(customFilters);
+    const typeFilter = createTypeFilter(typeField, filterType);
+    const textFilter = createTextFilter(searchFields, filterText);
+    const customFilter = createCustomFilters(customFilters);
 
-  let result = data.filter(typeFilter).filter(textFilter).filter(customFilter);
+    let result = data.filter(typeFilter).filter(textFilter).filter(customFilter);
 
-  if (sortKey) {
-    result = sortByKey(result, sortKey, sortOrder);
-  }
+    if (sortKey) {
+        result = sortByKey(result, sortKey, sortOrder);
+    }
 
-  return result;
+    return result;
 };
 
 export const process = (data, pipeline) => {
-  if (typeof pipeline === 'function') {
-    return pipeline(data);
-  }
-  return data;
+    if (typeof pipeline === 'function') {
+        return pipeline(data);
+    }
+    return data;
 };
 
 export {
-  createTypeFilter,
-  createTextFilter,
-  createCustomFilters,
-  getNestedValue,
-  compareValues,
-  sortByKey,
-  groupRelatedItems,
-  extractDisplayProperties,
-  createDataDisplayElement,
-  createDataSummary,
-  safeTransformData,
-  paginateData,
-  debounce,
-  memoize,
-  createSearchableCollection
+    createTypeFilter,
+    createTextFilter,
+    createCustomFilters,
+    getNestedValue,
+    compareValues,
+    sortByKey,
+    groupRelatedItems,
+    extractDisplayProperties,
+    createDataDisplayElement,
+    createDataSummary,
+    safeTransformData,
+    paginateData,
+    debounce,
+    memoize,
+    createSearchableCollection
 };

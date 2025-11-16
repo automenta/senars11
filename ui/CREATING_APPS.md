@@ -4,26 +4,31 @@ This document explains how to create new applications using the common component
 
 ## Overview
 
-The UI system is built around a modular architecture that allows different application types to share common components, state management, and infrastructure while maintaining their own specific functionality.
+The UI system is built around a modular architecture that allows different application types to share common components,
+state management, and infrastructure while maintaining their own specific functionality.
 
 ## Architecture Components
 
 ### 1. AppShell
+
 - Provides common UI infrastructure (header, WebSocket status, etc.)
 - Wraps all application content
 - Handles common UI concerns
 
 ### 2. AppRegistry
+
 - Manages registration of different application types
 - Handles dynamic loading of applications
 - Provides centralized app management
 
 ### 3. Hooks
+
 - `useWebSocket`: Manages WebSocket connections and messaging
 - `useUiData`: Accesses shared UI store data
 - `useDataOperations`: Provides common data operation methods
 
 ### 4. AppLayout
+
 - Predefined layouts for different application types (dashboard, IDE, analysis, visualization, simple)
 - Uses flexlayout-react for panel management
 - Configurable based on app type
@@ -87,6 +92,7 @@ appRegistry.registerApp('myNewApp', {
 ### Step 3: Choose an App Layout
 
 Select an appropriate layout from the available options:
+
 - `dashboard`: For dashboard-style interfaces
 - `ide`: For development/IDE style layouts
 - `analysis`: For analysis-focused interfaces
@@ -96,6 +102,7 @@ Select an appropriate layout from the available options:
 ### Step 4: Use Common Components
 
 Use the common components available in `./components/GenericComponents.js`:
+
 - `Button`: Styled buttons with variants
 - `Card`: Card containers
 - `StatusBadge`: Status indicators

@@ -1,11 +1,10 @@
 #!/usr/bin/env node
 
-import { AgentReplOllama } from './AgentReplOllama.js'; // Our new implementation
+import {AgentReplOllama} from './AgentReplOllama.js'; // Our new implementation
 import inquirer from 'inquirer';
-import {LMConfigurator} from '../lm/LMConfigurator.js';
-import { parseReplArgs } from './utils/ReplArgsParser.js';
-import { DEFAULT_CONFIG } from './utils/ReplConstants.js';
-import { NAR } from '../nar/NAR.js';
+import {parseReplArgs} from './utils/ReplArgsParser.js';
+import {DEFAULT_CONFIG} from './utils/ReplConstants.js';
+import {NAR} from '../nar/NAR.js';
 
 class AgentRepl {
     constructor() {
@@ -31,7 +30,7 @@ class AgentRepl {
 
     async configureOllama() {
         if (this._isOllamaMode()) {
-            const { modelName, baseURL, temperature } = this._getOllamaConfig();
+            const {modelName, baseURL, temperature} = this._getOllamaConfig();
 
             console.log(`🔧 Using command-line Ollama configuration:`);
             console.log(`   Model: ${modelName}`);
@@ -90,9 +89,9 @@ class AgentRepl {
 
         // Create and initialize a real NAR instance
         const nar = new NAR({
-            tools: { enabled: true },
-            lm: { enabled: true },
-            debug: { pipeline: false }
+            tools: {enabled: true},
+            lm: {enabled: true},
+            debug: {pipeline: false}
         });
 
         try {
@@ -146,7 +145,7 @@ async function main() {
     try {
         await agentRepl.start();
     } catch (error) {
-        console.error('❌ Error starting Agent REPL:', { error: error.message, stack: error.stack });
+        console.error('❌ Error starting Agent REPL:', {error: error.message, stack: error.stack});
         process.exit(1);
     }
 }

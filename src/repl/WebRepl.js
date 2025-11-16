@@ -12,11 +12,11 @@ export class WebRepl {
     _setupEventListeners() {
         const engineEvents = [
             'engine.ready',
-            'narsese.processed', 
+            'narsese.processed',
             'narsese.error',
             'engine.quit',
             'nar.cycle.step',
-            'nar.cycle.running', 
+            'nar.cycle.running',
             'nar.cycle.stop',
             'engine.reset',
             'engine.save',
@@ -51,7 +51,7 @@ export class WebRepl {
             if (!message || typeof message !== 'object') {
                 throw new Error('Invalid message: expected object');
             }
-            
+
             const result = await this.messageHandler.processMessage(message);
             this._sendToClient(client, result);
         } catch (error) {
@@ -66,9 +66,9 @@ export class WebRepl {
     _broadcastToAllClients(message) {
         const clients = this.websocketServer?.clients;
         if (!clients) return;
-        
+
         const serializedMessage = JSON.stringify(message);
-        
+
         for (const client of clients) {
             if (client.readyState === client.OPEN) {
                 try {
@@ -97,13 +97,13 @@ export class WebRepl {
     registerWithWebSocketServer() {
         if (this.websocketServer) {
             this.websocketServer.attachReplMessageHandler(this.messageHandler);
-            
+
             const supportedTypes = this.messageHandler.getSupportedMessageTypes();
             const allMessageTypes = [
                 ...supportedTypes.messages,
-                'reason/step', 
-                'narseseInput', 
-                'command.execute', 
+                'reason/step',
+                'narseseInput',
+                'command.execute',
                 ...['start', 'stop', 'step'].map(cmd => `control/${cmd}`)
             ];
 

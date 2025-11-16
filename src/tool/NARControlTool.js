@@ -84,36 +84,36 @@ export class NARControlTool extends BaseTool {
         try {
             if (this.nar.input) {
                 const result = await this.nar.input(content);
-                
+
                 // Run a reasoning step to ensure processing
                 if (this.nar.step) {
                     await this.nar.step();
                 } else if (this.nar.cycle) {
                     await this.nar.cycle(1);
                 }
-                
+
                 return result;
             } else if (this.nar.addInput) {
                 const result = await this.nar.addInput(content);
-                
+
                 // Run a cycle to ensure the belief gets properly stored in memory
                 if (this.nar.step) {
                     await this.nar.step();
                 } else if (this.nar.cycle) {
                     await this.nar.cycle(1);
                 }
-                
+
                 return result;
             } else if (this.nar.execute) {
                 const result = await this.nar.execute(content);
-                
+
                 // Run a cycle to ensure the belief gets properly stored in memory
                 if (this.nar.step) {
                     await this.nar.step();
                 } else if (this.nar.cycle) {
                     await this.nar.cycle(1);
                 }
-                
+
                 return result;
             }
         } catch (error) {
@@ -127,36 +127,36 @@ export class NARControlTool extends BaseTool {
         try {
             if (this.nar.input) {
                 const result = await this.nar.input(content);
-                
+
                 // Run a reasoning step to ensure processing
                 if (this.nar.step) {
                     await this.nar.step();
                 } else if (this.nar.cycle) {
                     await this.nar.cycle(1);
                 }
-                
+
                 return result;
             } else if (this.nar.addInput) {
                 const result = await this.nar.addInput(content);
-                
+
                 // Run a cycle to ensure the goal gets properly stored in memory
                 if (this.nar.step) {
                     await this.nar.step();
                 } else if (this.nar.cycle) {
                     await this.nar.cycle(1);
                 }
-                
+
                 return result;
             } else if (this.nar.execute) {
                 const result = await this.nar.execute(content);
-                
+
                 // Run a cycle to ensure the goal gets properly stored in memory
                 if (this.nar.step) {
                     await this.nar.step();
                 } else if (this.nar.cycle) {
                     await this.nar.cycle(1);
                 }
-                
+
                 return result;
             }
         } catch (error) {
@@ -179,14 +179,14 @@ export class NARControlTool extends BaseTool {
                     }
                 }
                 await this.nar.addInput(questionContent);
-                
+
                 // Run a step to process the query
                 if (this.nar.step) {
                     await this.nar.step();
                 } else if (this.nar.cycle) {
                     await this.nar.cycle(1);
                 }
-                
+
                 // For now, return a success message since actual query results might need different handling
                 return `Query "${questionContent}" processed`;
             } else if (this.nar.execute) {

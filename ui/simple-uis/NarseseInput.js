@@ -1,7 +1,13 @@
-import React, {useState, useCallback} from 'react';
+import React, {useCallback, useState} from 'react';
 import useUiStore from '../src/stores/uiStore.js';
 
-const NarseseInput = ({ compact = false, title = 'Narsese Input Interface', showExamples = true, showHistory = true, showNotifications = true }) => {
+const NarseseInput = ({
+                          compact = false,
+                          title = 'Narsese Input Interface',
+                          showExamples = true,
+                          showHistory = true,
+                          showNotifications = true
+                      }) => {
     const [input, setInput] = useState('');
     const [history, setHistory] = useState([]);
     const wsService = useUiStore(state => state.wsService);
@@ -162,7 +168,10 @@ const NarseseInput = ({ compact = false, title = 'Narsese Input Interface', show
             'data-testid': 'narsese-input-container'
         },
         React.createElement('h1',
-            {'data-testid': 'narsese-input-title', style: {fontSize: compact ? '1.2em' : '1.5em', margin: '0 0 15px 0'}},
+            {
+                'data-testid': 'narsese-input-title',
+                style: {fontSize: compact ? '1.2em' : '1.5em', margin: '0 0 15px 0'}
+            },
             title
         ),
         React.createElement('form',

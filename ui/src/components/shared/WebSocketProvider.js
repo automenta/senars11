@@ -3,92 +3,92 @@
  * Following AGENTS.md: Modular, Abstract, Parameterized
  */
 
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import React, {createContext, useContext, useEffect, useMemo, useState} from 'react';
 import WebSocketService from '../../utils/websocket.js';
 
 const WebSocketContext = createContext();
 
-export const WebSocketProvider = ({ 
-  children, 
-  wsUrl = null, 
-  autoConnect = true,
-  onConnect = null,
-  onDisconnect = null,
-  onMessage = null,
-  ...props 
-}) => {
-  const [wsService, setWsService] = useState(null);
-  const [wsConnected, setWsConnected] = useState(false);
-  const [loading, setLoading] = useState(true);
+export const WebSocketProvider = ({
+                                      children,
+                                      wsUrl = null,
+                                      autoConnect = true,
+                                      onConnect = null,
+                                      onDisconnect = null,
+                                      onMessage = null,
+                                      ...props
+                                  }) => {
+    const [wsService, setWsService] = useState(null);
+    const [wsConnected, setWsConnected] = useState(false);
+    const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    // Determine WebSocket URL from environment or prop
-    const url = wsUrl || `ws://${import.meta.env.VITE_WS_HOST || 'localhost'}:${import.meta.env.VITE_WS_PORT || '8080'}${import.meta.env.VITE_WS_PATH || '/ws'}`;
-    
-    const service = new WebSocketService(url);
-    setWsService(service);
+    useEffect(() => {
+        // Determine WebSocket URL from environment or prop
+        const url = wsUrl || `ws://${import.meta.env.VITE_WS_HOST || 'localhost'}:${import.meta.env.VITE_WS_PORT || '8080'}${import.meta.env.VITE_WS_PATH || '/ws'}`;
 
-    if (autoConnect) {
-      service.connect();
-    }
+        const service = new WebSocketService(url);
+        setWsService(service);
 
-    // Set up connection listeners
-    const handleOpen = () => {
-      setWsConnected(true);
-      setLoading(false);
-      onConnect?.();
-    };
+        if (autoConnect) {
+            service.connect();
+        }
 
-    const handleClose = () => {
-      setWsConnected(false);
-      onDisconnect?.();
-    };
+        // Set up connection listeners
+        const handleOpen = () => {
+            setWsConnected(true);
+            setLoading(false);
+            onConnect?.();
+        };
 
-    const handleMessage = (message) => {
-      onMessage?.(message);
-    };
+        const handleClose = () => {
+            setWsConnected(false);
+            onDisconnect?.();
+        };
 
-    service.on('open', handleOpen);
-    service.on('close', handleClose);
-    service.on('message', handleMessage);
+        const handleMessage = (message) => {
+            onMessage?.(message);
+        };
 
-    // Store reference globally for easy access
-    window.wsService = service;
+        service.on('open', handleOpen);
+        service.on('close', handleClose);
+        service.on('message', handleMessage);
 
-    // Cleanup
-    return () => {
-      service.off('open', handleOpen);
-      service.off('close', handleClose);
-      service.off('message', handleMessage);
-      service.disconnect();
-      if (window.wsService === service) window.wsService = null;
-    };
-  }, [wsUrl, autoConnect, onConnect, onDisconnect, onMessage]);
+        // Store reference globally for easy access
+        window.wsService = service;
 
-  const value = useMemo(() => ({
-    wsService,
-    wsConnected,
-    loading,
-    sendMessage: (message) => wsService?.sendMessage(message),
-    registerHandler: (type, handler) => wsService?.registerHandler(type, handler),
-    unregisterHandler: (type, handler) => wsService?.unregisterHandler(type, handler),
-    subscribeTo: (type, handler) => {
-      wsService?.registerHandler(type, handler);
-      return () => wsService?.unregisterHandler(type, handler);
-    }
-  }), [wsService, wsConnected, loading]);
+        // Cleanup
+        return () => {
+            service.off('open', handleOpen);
+            service.off('close', handleClose);
+            service.off('message', handleMessage);
+            service.disconnect();
+            if (window.wsService === service) window.wsService = null;
+        };
+    }, [wsUrl, autoConnect, onConnect, onDisconnect, onMessage]);
 
-  return React.createElement(
-    WebSocketContext.Provider,
-    { value, ...props },
-    children
-  );
+    const value = useMemo(() => ({
+        wsService,
+        wsConnected,
+        loading,
+        sendMessage: (message) => wsService?.sendMessage(message),
+        registerHandler: (type, handler) => wsService?.registerHandler(type, handler),
+        unregisterHandler: (type, handler) => wsService?.unregisterHandler(type, handler),
+        subscribeTo: (type, handler) => {
+            wsService?.registerHandler(type, handler);
+            return () => wsService?.unregisterHandler(type, handler);
+        }
+    }), [wsService, wsConnected, loading]);
+
+    return React.createElement(
+        WebSocketContext.Provider,
+        {value, ...props},
+        children
+    );
 };
 
 export const useWebSocket = () => {
-  const context = useContext(WebSocketContext);
-  if (!context) {
-    throw new Error('useWebSocket must be used within a WebSocketProvider');
-  }
-  return context;
+    const context = useContext(WebSocketContext);
+    if (!context) {
+        throw new Error('useWebSocket must be used within a WebSocketProvider');
+    }
+    return context;
 };

@@ -2,7 +2,6 @@ import {WebSocketServer} from 'ws';
 import {EventEmitter} from 'events';
 import {ClientMessageHandlers} from './ClientMessageHandlers.js';
 import {DEFAULT_CLIENT_CAPABILITIES, NAR_EVENTS, WEBSOCKET_CONFIG} from '../config/constants.js';
-import {ReplMessageHandler} from '../repl/ReplMessageHandler.js';
 
 const DEFAULT_OPTIONS = Object.freeze({
     port: WEBSOCKET_CONFIG.defaultPort,
@@ -316,11 +315,11 @@ class WebSocketMonitor {
      * Check if a message should be routed to the ReplMessageHandler
      */
     _shouldRouteToReplHandler(message) {
-        return message.type === 'narseseInput' || 
-               message.type === 'reason/step' || 
-               message.type?.startsWith('control/') || 
-               message.type === 'command.execute' ||
-               message.type?.startsWith('/');
+        return message.type === 'narseseInput' ||
+            message.type === 'reason/step' ||
+            message.type?.startsWith('control/') ||
+            message.type === 'command.execute' ||
+            message.type?.startsWith('/');
     }
 
     /**

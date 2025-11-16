@@ -1,4 +1,4 @@
-const PUNCTUATION_MAP = { 'BELIEF': '.', 'GOAL': '!', 'QUESTION': '?' };
+const PUNCTUATION_MAP = {'BELIEF': '.', 'GOAL': '!', 'QUESTION': '?'};
 const DEFAULT_TRUTH = ' %1.000,0.900%';
 const DEFAULT_PRIORITY = '';
 const DEFAULT_TERM = 'Unknown';

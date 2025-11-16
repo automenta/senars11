@@ -45,7 +45,7 @@ export class ReplEngine extends EventEmitter {
 
         this.nar = new NAR(config.nar ?? {});
         this.inputManager = new Input();
-        this.sessionState = { history: [], lastResult: null, startTime: Date.now() };
+        this.sessionState = {history: [], lastResult: null, startTime: Date.now()};
         this.persistenceManager = new PersistenceManager({
             defaultPath: config.persistence?.defaultPath ?? './agent.json'
         });
@@ -193,11 +193,11 @@ export class ReplEngine extends EventEmitter {
 
         try {
             const result = await this.commandProcessor.executeCommand(cmd, ...args);
-            this.emit(`command.${cmd}`, { command: cmd, args, result });
+            this.emit(`command.${cmd}`, {command: cmd, args, result});
             return result;
         } catch (error) {
             const errorMsg = `❌ Error executing command: ${error.message}`;
-            this.emit('command.error', { command: cmd, args, error: error.message });
+            this.emit('command.error', {command: cmd, args, error: error.message});
             return errorMsg;
         }
     }

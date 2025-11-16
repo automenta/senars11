@@ -161,7 +161,7 @@ async function runAdvancedDemo() {
         console.log('• Color-coded indicators for different types of activities');
         console.log('• Interactive components for agent management and reasoning trace');
         console.log('• Metrics dashboard showing system performance');
-        
+
         await engine.shutdown();
 
     } catch (error) {

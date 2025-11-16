@@ -5,9 +5,9 @@
  * Runs all automated examples and demonstrations
  */
 
-import { spawn } from 'child_process';
+import {spawn} from 'child_process';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import {fileURLToPath} from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -17,7 +17,7 @@ function runDemo(scriptPath, description) {
         console.log(`\n🚀 Running: ${description}`);
         console.log(`   Script: ${scriptPath}`);
         console.log('─'.repeat(60));
-        
+
         const child = spawn('node', [scriptPath], {
             stdio: 'inherit',
             cwd: __dirname
@@ -52,7 +52,7 @@ async function runAllDemos() {
             description: 'Advanced Agent REPL with Ollama Integration'
         },
         {
-            path: './example-research-scenario.js', 
+            path: './example-research-scenario.js',
             description: 'AI Research Scenario with Hybrid Reasoning'
         },
         {
@@ -81,7 +81,7 @@ async function runAllDemos() {
 
     console.log('\n💡 To run individual demos, use:');
     console.log('   node example-agent-repl-ollama.js');
-    console.log('   node example-research-scenario.js'); 
+    console.log('   node example-research-scenario.js');
     console.log('   node example-fallback-mechanism.js');
     console.log('\n   Or run with Ollama: npm run repl:agent:ollama');
 }

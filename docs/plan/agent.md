@@ -5,255 +5,273 @@
 ---
 
 ## **Tier 0: Core Runtime (Required)**
+
 > *Always enabled. Foundation for all functionality.*
 
 - [x] **MCP Interface Layer (`src/mcp`)**
-  - Async, typed, event-rich bridge to SeNARS engine
-  - Tools: `input()`, `step()`, `query()`, `queryMemory()`, `getBelief()`, `expandWithLM()`
-  - Event bus: `on('inference'|'lm_call'|'focus_shift')`
-  - Dynamic tool registration: `registerTool(name, fn)`
+    - Async, typed, event-rich bridge to SeNARS engine
+    - Tools: `input()`, `step()`, `query()`, `queryMemory()`, `getBelief()`, `expandWithLM()`
+    - Event bus: `on('inference'|'lm_call'|'focus_shift')`
+    - Dynamic tool registration: `registerTool(name, fn)`
 
 - [x] **NAL Reasoning Engine**
-  - Non-axiomatic logic core with memory, cycle, and rule execution
-  - Narsese parser + truth value propagation
+    - Non-axiomatic logic core with memory, cycle, and rule execution
+    - Narsese parser + truth value propagation
 
 - [x] **LM Integration Layer (`LM.js`)**
-  - Bidirectional Narsese ↔ Natural Language translation
-  - Prompt templating, response parsing, confidence fusion
+    - Bidirectional Narsese ↔ Natural Language translation
+    - Prompt templating, response parsing, confidence fusion
 
 ---
 
 ## **Tier 1: Interface & Input (Choose 1+)**
+
 > *Requires Tier 0. Select primary interaction mode.*
 
 - [ ] **Interactive CLI (TUI)**
-  - Real-time `>` prompt with history, syntax highlighting
-  - Multi-line input, tab completion (commands, terms, tools)
-  - Hotkeys: `F1` help, `F5` step, `Ctrl+R` search
+    - Real-time `>` prompt with history, syntax highlighting
+    - Multi-line input, tab completion (commands, terms, tools)
+    - Hotkeys: `F1` help, `F5` step, `Ctrl+R` search
 
 - [ ] **WebSocket Server**
-  - Bidirectional streaming for remote clients
-  - Session multiplexing, auth via API key
+    - Bidirectional streaming for remote clients
+    - Session multiplexing, auth via API key
 
 - [ ] **REST API Server**
-  - `POST /execute`, `GET /session/{id}`
-  - JSON schema validation, rate limiting
+    - `POST /execute`, `GET /session/{id}`
+    - JSON schema validation, rate limiting
 
 - [ ] **Batch File Processor**
-  - Load `.nars`, `.txt`, `.json` (facts, goals, queries)
-  - Watch mode for live file updates
+    - Load `.nars`, `.txt`, `.json` (facts, goals, queries)
+    - Watch mode for live file updates
 
 - [ ] **Voice Input (MCP Audio Tool)**
-  - Speech-to-text → natural language → Narsese
-  - Requires MCP audio server
+    - Speech-to-text → natural language → Narsese
+    - Requires MCP audio server
 
 ---
 
 ## **Tier 2: Operating Modes (Choose 1+)**
+
 > *Requires Tier 1 interface. Modes can run in parallel.*
 
 ### **2.1 User-Controlled Modes**
+
 - [ ] **Interactive Mode**
-  - Direct Narsese + natural language input
-  - Immediate output per command
+    - Direct Narsese + natural language input
+    - Immediate output per command
 
 - [ ] **Goal-Driven Agent Mode**
-  - User sets goal → agent decomposes → plans → executes
-  - Uses MCP tools autonomously
+    - User sets goal → agent decomposes → plans → executes
+    - Uses MCP tools autonomously
 
 ### **2.2 Autonomous Modes** *(requires Agent Mode)*
+
 - [ ] **Fully Autonomous Mode**
-  - Self-directed with meta-goals (e.g., “maximize truth”)
-  - Periodic self-questioning
+    - Self-directed with meta-goals (e.g., “maximize truth”)
+    - Periodic self-questioning
 
 - [ ] **Exploratory Mode**
-  - Auto-generates questions to reduce uncertainty
-  - Prioritizes high-evidence-gap concepts
+    - Auto-generates questions to reduce uncertainty
+    - Prioritizes high-evidence-gap concepts
 
 ### **2.3 Multi-Agent Systems** *(requires Agent Mode + WebSocket or API)*
+
 - [ ] **Multi-Agent Debate Mode**
-  - 2+ agents with opposing goals
-  - MCP moderates, logs arguments, resolves via evidence
+    - 2+ agents with opposing goals
+    - MCP moderates, logs arguments, resolves via evidence
 
 - [ ] **Metacognitive Mode**
-  - Self-reflection on strategy, rule success, LM cost
-  - Triggers Tier 4 self-optimization
+    - Self-reflection on strategy, rule success, LM cost
+    - Triggers Tier 4 self-optimization
 
 ---
 
 ## **Tier 3: Command System**
+
 > *Requires Tier 1. Extends input parsing.*
 
 - [x] **Core Narsese Commands**
-  - `<A --> B>.`, `<goal>!`, `<query>?`
+    - `<A --> B>.`, `<goal>!`, `<query>?`
 
 - [ ] **Meta & Control Commands**
-  - `/step N`, `/trace on`, `/viz open`, `/pause`
+    - `/step N`, `/trace on`, `/viz open`, `/pause`
 
 - [ ] **Hybrid Reasoning Commands**
-  - `?explain <A --> B>`, `.lm "Why?"`, `verify_with_lm <term>`
+    - `?explain <A --> B>`, `.lm "Why?"`, `verify_with_lm <term>`
 
 - [ ] **Configuration Commands**
-  - `.config lm.provider=claude`, `.config rules=hybrid`
+    - `.config lm.provider=claude`, `.config rules=hybrid`
 
 - [ ] **Session Commands**
-  - `.save "demo"`, `.load "demo"`, `.export pdf`
+    - `.save "demo"`, `.load "demo"`, `.export pdf`
 
 ---
 
 ## **Tier 4: Observability & Visualization**
+
 > *Requires Tier 0. Optional UI layers.*
 
 ### **4.1 Text-Based Observability**
+
 - [ ] **Live Reasoning Trace**
-  - Step-by-step log: `[NAL]`, `[LM]`, `[Hybrid]`
-  - Confidence, timestamps, task IDs
+    - Step-by-step log: `[NAL]`, `[LM]`, `[Hybrid]`
+    - Confidence, timestamps, task IDs
 
 - [ ] **Interactive Trace Explorer**
-  - Click to expand derivations
-  - Filter by source, confidence, depth
+    - Click to expand derivations
+    - Filter by source, confidence, depth
 
 - [ ] **Memory Inspector**
-  - `concepts`, `beliefs`, `focus`, `memory_stats`
-  - ASCII concept graph
+    - `concepts`, `beliefs`, `focus`, `memory_stats`
+    - ASCII concept graph
 
 ### **4.2 TUI Dashboard** *(requires CLI interface)*
+
 - [ ] **Multi-Panel Layout**
-  - Input | Live Graph | Trace | Metrics
-  - Real-time updates via `blessed.js`
+    - Input | Live Graph | Trace | Metrics
+    - Real-time updates via `blessed.js`
 
 - [ ] **Progress & Status Bar**
-  - MCP status, LM provider, cycle count, memory
+    - MCP status, LM provider, cycle count, memory
 
 ### **4.3 Web UI (React + Vite)** *(requires WebSocket or API)*
+
 - [ ] **Force-Directed Concept Graph**
-  - Nodes = concepts, edges = inheritance/similarity
-  - Click to focus, drag to explore
+    - Nodes = concepts, edges = inheritance/similarity
+    - Click to focus, drag to explore
 
 - [ ] **Inference Timeline**
-  - Horizontal scroll of task lifecycle
+    - Horizontal scroll of task lifecycle
 
 - [ ] **Contribution Heatmap**
-  - % LM vs NAL per inference cluster
+    - % LM vs NAL per inference cluster
 
 - [ ] **Confidence Evolution Chart**
-  - Line graph of belief truth value over time
+    - Line graph of belief truth value over time
 
 - [ ] **Exportable Dashboard**
-  - PNG, SVG, interactive HTML
+    - PNG, SVG, interactive HTML
 
 ---
 
 ## **Tier 5: Metrics & Compound Intelligence**
+
 > *Requires Tier 4 observability.*
 
 - [ ] **Real-Time Metrics Panel**
-  - Belief count ↑↓, synergy score, inference depth
-  - Focus efficiency, hybrid agreement rate
+    - Belief count ↑↓, synergy score, inference depth
+    - Focus efficiency, hybrid agreement rate
 
 - [ ] **Self-Improvement Event Log**
-  - “LM provider switched: claude → gpt-4 (latency -42%)”
-  - “Rule priority boosted: induction (+0.15)”
+    - “LM provider switched: claude → gpt-4 (latency -42%)”
+    - “Rule priority boosted: induction (+0.15)”
 
 ---
 
 ## **Tier 6: Hybrid Reasoning Showcase**
+
 > *Requires Tier 0 + LM + observability.*
 
 - [ ] **Side-by-Side Rule Panel**
-  - LM suggestion vs NAL revision with diff
+    - LM suggestion vs NAL revision with diff
 
 - [ ] **Hallucination Correction Flow**
-  - LM claim → NAL conflict → correction → update
+    - LM claim → NAL conflict → correction → update
 
 - [ ] **Analogy Visualization**
-  - `<bird --> flyer>` → LM → `<bat --> flyer>?` → NAL induction
+    - `<bird --> flyer>` → LM → `<bat --> flyer>?` → NAL induction
 
 - [ ] **Confidence Fusion Indicator**
-  - `0.71 → 0.89 (LM validated)`
+    - `0.71 → 0.89 (LM validated)`
 
 ---
 
 ## **Tier 7: Session & State Management**
+
 > *Requires Tier 0.*
 
 - [ ] **Conversation Memory**
-  - Full context across turns
+    - Full context across turns
 
 - [ ] **Checkpoint & Restore**
-  - Save/rollback to cycle N
+    - Save/rollback to cycle N
 
 - [ ] **Session Branching**
-  - Fork to test “what-if” scenarios
+    - Fork to test “what-if” scenarios
 
 - [ ] **Persistent Storage**
-  - Auto-save to `.senars/sessions/`
+    - Auto-save to `.senars/sessions/`
 
 - [ ] **Export Session Report**
-  - Full trace + metrics + graph
+    - Full trace + metrics + graph
 
 ---
 
 ## **Tier 8: Self-Improvement Engine**
+
 > *Requires Metacognitive Mode + Metrics.*
 
 - [ ] **Performance Monitor**
-  - Rule success rate, LM latency/accuracy, memory pressure
+    - Rule success rate, LM latency/accuracy, memory pressure
 
 - [ ] **Auto LM Provider Switching**
-  - Promote best performer based on cost/speed/accuracy
+    - Promote best performer based on cost/speed/accuracy
 
 - [ ] **Dynamic Rule Priority**
-  - Boost high-yield inference paths
+    - Boost high-yield inference paths
 
 - [ ] **Concept Pruning**
-  - Forget low-activation, low-confidence beliefs
+    - Forget low-activation, low-confidence beliefs
 
 - [ ] **Insight Emission**
-  - `<self_optimization --> achieved>! {0.9, 0.95}`
+    - `<self_optimization --> achieved>! {0.9, 0.95}`
 
 ---
 
 ## **Tier 9: Educational & Demo Layer**
+
 > *Requires Tier 4+.*
 
 - [ ] **Interactive Tutorial Mode**
-  - Guided lessons: pure NAL → pure LM → hybrid
+    - Guided lessons: pure NAL → pure LM → hybrid
 
 - [ ] **Built-in Demo Scripts**
-  - LM bootstraps NAL
-  - NAL corrects LM
-  - Goal-driven discovery
+    - LM bootstraps NAL
+    - NAL corrects LM
+    - Goal-driven discovery
 
 - [ ] **Modality Toggle**
-  - Disable LM or NAL for comparison
+    - Disable LM or NAL for comparison
 
 - [ ] **Truth Value Editor**
-  - Manual override → observe ripple effects
+    - Manual override → observe ripple effects
 
 - [ ] **Hypothesis Testing Mode**
-  - Propose `<X --> Y>` → validate/reject with evidence
+    - Propose `<X --> Y>` → validate/reject with evidence
 
 ---
 
 ## **Tier 10: Extensibility & Plugins**
+
 > *Requires Tier 0.*
 
 - [ ] **Plugin API**
-  - `registerAgent()`, `registerTool()`, `registerVisualizer()`
+    - `registerAgent()`, `registerTool()`, `registerVisualizer()`
 
 - [ ] **Custom Agent Roles**
-  - Researcher, Critic, Planner, Debater
+    - Researcher, Critic, Planner, Debater
 
 - [ ] **Custom Visualizers**
-  - 3D UMAP, VR concept space, timeline slider
+    - 3D UMAP, VR concept space, timeline slider
 
 - [ ] **Rule Pack Importer**
-  - Load domain-specific NAL rule sets
+    - Load domain-specific NAL rule sets
 
 ---
 
 ## **Tier 11: Performance, Resilience & Testing**
+
 > *Requires Tier 0.*
 
 - [ ] **<50ms Local Cycle Latency**
@@ -261,68 +279,76 @@
 - [ ] **Graceful Error Handling** → suggestions, no crash
 - [ ] **Lazy-Loaded Traces**
 - [ ] **Multi-LM A/B Testing Mode**
-  - GPT-4 vs Claude vs Ollama
+    - GPT-4 vs Claude vs Ollama
 - [ ] **Structured Tool Output Parsing**
 
 ---
 
 ## **Tier 12: Accessibility & Export**
+
 > *Requires Tier 4+.*
 
 - [ ] **Screen Reader Compatible Output**
 - [ ] **High-Contrast Mode** (TUI + Web)
 - [ ] **Full Export Suite**
-  - JSON, PDF, HTML, Markdown, PNG
+    - JSON, PDF, HTML, Markdown, PNG
 - [ ] **Embeddable Trace Widgets**
 
 ---
 
 ## **Dependency Summary**
 
-| Tier | Depends On | Enables |
-|------|------------|---------|
-| 0 | — | All |
-| 1 | 0 | 2, 3 |
-| 2 | 1 | 8, 9 |
-| 3 | 1 | — |
-| 4 | 0 | 5, 6, 9, 12 |
-| 5 | 4 | 8 |
-| 6 | 0 + LM + 4 | — |
-| 7 | 0 | — |
-| 8 | 2 (Metacog) + 5 | — |
-| 9 | 4+ | — |
-| 10 | 0 | — |
-| 11 | 0 | — |
-| 12 | 4+ | — |
+| Tier | Depends On      | Enables     |
+|------|-----------------|-------------|
+| 0    | —               | All         |
+| 1    | 0               | 2, 3        |
+| 2    | 1               | 8, 9        |
+| 3    | 1               | —           |
+| 4    | 0               | 5, 6, 9, 12 |
+| 5    | 4               | 8           |
+| 6    | 0 + LM + 4      | —           |
+| 7    | 0               | —           |
+| 8    | 2 (Metacog) + 5 | —           |
+| 9    | 4+              | —           |
+| 10   | 0               | —           |
+| 11   | 0               | —           |
+| 12   | 4+              | —           |
 
 ---
 
-*Select from **Tier 1+** to build your custom REPL. All modules are hot-swappable, MCP-integrated, and production-grade.*
+*Select from **Tier 1+** to build your custom REPL. All modules are hot-swappable, MCP-integrated, and
+production-grade.*
 
 ----
 
 **Enhanced Prompt: Design a Production-Ready Agent REPL for SeNARS with MCP-Driven Hybrid Reasoning Showcase**
 
-Design a **high-performance, observable, and extensible Agent REPL** for **SeNARS** that serves as a **live demonstration platform** for its **compound hybrid intelligence** — specifically the **bidirectional synergy between Non-Axiomatic Logic (NAL) and Language Models (LM)** via the **MCP (Memory-Concept-Processor) interface layer** in `src/mcp`.
+Design a **high-performance, observable, and extensible Agent REPL** for **SeNARS** that serves as a **live
+demonstration platform** for its **compound hybrid intelligence** — specifically the **bidirectional synergy between
+Non-Axiomatic Logic (NAL) and Language Models (LM)** via the **MCP (Memory-Concept-Processor) interface layer** in
+`src/mcp`.
 
-The REPL must **transcend traditional TUI/CLI limitations** by evolving into a **multi-modal, agentic orchestration environment** that **actively showcases, measures, and visualizes** how symbolic and neural reasoning **compound each other** in real time — turning passive input/output into an **interactive laboratory for emergent intelligence**.
+The REPL must **transcend traditional TUI/CLI limitations** by evolving into a **multi-modal, agentic orchestration
+environment** that **actively showcases, measures, and visualizes** how symbolic and neural reasoning **compound each
+other** in real time — turning passive input/output into an **interactive laboratory for emergent intelligence**.
 
 ---
 
 ### Core Design Mandate
+
 > **"Make the invisible intelligence visible, the compound growth measurable, and the hybrid synergy controllable."**
 
 ---
 
 ## 1. **Architectural Vision: Agent REPL as Intelligence Microscope**
 
-| Layer | Purpose | Inspiration |
-|------|--------|------------|
-| **Input Layer** | Multi-channel ingestion (CLI, WebSocket, API, file, voice) | LangChain Agents, BabyAGI |
-| **Agent Orchestrator** | Autonomous task decomposition & tool routing | AutoGPT, MetaGPT |
-| **MCP Interface** | Standardized bridge to SeNARS core (`src/mcp`) | OpenAI Function Calling, LlamaIndex Tools |
-| **Hybrid Reasoning Core** | NAL + LM via `Cycle.js`, `LM.js`, `RuleEngine` | NARS + GPT-4 demos |
-| **Observation Layer** | Real-time trace, metrics, visualization | OpenNARS GUI, LangSmith |
+| Layer                     | Purpose                                                    | Inspiration                               |
+|---------------------------|------------------------------------------------------------|-------------------------------------------|
+| **Input Layer**           | Multi-channel ingestion (CLI, WebSocket, API, file, voice) | LangChain Agents, BabyAGI                 |
+| **Agent Orchestrator**    | Autonomous task decomposition & tool routing               | AutoGPT, MetaGPT                          |
+| **MCP Interface**         | Standardized bridge to SeNARS core (`src/mcp`)             | OpenAI Function Calling, LlamaIndex Tools |
+| **Hybrid Reasoning Core** | NAL + LM via `Cycle.js`, `LM.js`, `RuleEngine`             | NARS + GPT-4 demos                        |
+| **Observation Layer**     | Real-time trace, metrics, visualization                    | OpenNARS GUI, LangSmith                   |
 
 ---
 
@@ -358,26 +384,28 @@ interface MCP {
 
 ## 3. **Agent REPL Modes (Progressive Complexity)**
 
-| Mode | Behavior | Use Case |
-|------|--------|---------|
-| **1. Interactive REPL** | Classic `> ` prompt with Narsese + natural language | Education, debugging |
-| **2. Agent Mode** | User gives goal → agent decomposes → uses MCP tools | Decision support |
-| **3. Autonomous Mode** | Self-directed exploration with meta-goals | Research demos |
-| **4. Multi-Agent Debate** | 2+ agents with opposing goals, moderated by MCP | Conflict resolution |
+| Mode                      | Behavior                                            | Use Case             |
+|---------------------------|-----------------------------------------------------|----------------------|
+| **1. Interactive REPL**   | Classic `> ` prompt with Narsese + natural language | Education, debugging |
+| **2. Agent Mode**         | User gives goal → agent decomposes → uses MCP tools | Decision support     |
+| **3. Autonomous Mode**    | Self-directed exploration with meta-goals           | Research demos       |
+| **4. Multi-Agent Debate** | 2+ agents with opposing goals, moderated by MCP     | Conflict resolution  |
 
 ---
 
 ## 4. **Key Features (Inspired by Leading Agentic Systems)**
 
 ### A. **Tool-Equipped LLM Agent** *(like AutoGPT + LangChain)*
+
 - LLM (via `LM.js`) has access to **MCP tools** as function calls
 - Can:
-  - `input("<bird --> flyer>")`
-  - `queryMemory("flyer")`
-  - `step(3)`
-  - `expandWithLM("What else flies?")`
+    - `input("<bird --> flyer>")`
+    - `queryMemory("flyer")`
+    - `step(3)`
+    - `expandWithLM("What else flies?")`
 
 ### B. **Observable Reasoning Trace** *(like LangSmith + OpenNARS)*
+
 ```text
 [Step 1] Input: <bird --> flyer>.
 [Step 2] LM Expansion: "planes, bats, insects" → <plane --> flyer>, <bat --> flyer>
@@ -386,14 +414,16 @@ interface MCP {
 ```
 
 ### C. **Compound Intelligence Dashboard** *(real-time metrics)*
-| Metric | Value | Trend |
-|-------|-------|-------|
-| Belief Count | 1,284 | ↑ 12% |
-| LM-NAL Synergy Score | 0.78 | ↑ |
-| Avg. Inference Depth | 4.3 | ↑ |
-| Focus Efficiency | 92% | |
+
+| Metric               | Value | Trend |
+|----------------------|-------|-------|
+| Belief Count         | 1,284 | ↑ 12% |
+| LM-NAL Synergy Score | 0.78  | ↑     |
+| Avg. Inference Depth | 4.3   | ↑     |
+| Focus Efficiency     | 92%   |       |
 
 ### D. **Hybrid Rule Showcase Panel**
+
 ```text
 LM SUGGESTED: <drone --> flyer> {0.6, 0.4}
 NAL REVISED:  <drone --> flyer> {0.82, 0.71} ✓ (via revision with sensor data)
@@ -417,6 +447,7 @@ NAL REVISED:  <drone --> flyer> {0.82, 0.71} ✓ (via revision with sensor data)
 ## 6. **Interoperability Demos (Live Showcase Scripts)**
 
 ### Demo 1: **LM Bootstraps NAL**
+
 ```text
 User: "Teach me about quantum computing"
 LM → Generates 5 Narsese facts → input() → NAL builds inheritance hierarchy
@@ -425,6 +456,7 @@ LM → Generates 5 Narsese facts → input() → NAL builds inheritance hierarch
 ```
 
 ### Demo 2: **NAL Corrects LM Hallucination**
+
 ```text
 LM: "Schrödinger was a dog person"
 NAL: No belief <Schrödinger --> dog_owner>
@@ -432,6 +464,7 @@ NAL: No belief <Schrödinger --> dog_owner>
 ```
 
 ### Demo 3: **Goal-Driven Discovery**
+
 ```text
 !goal <prove_fermat_last_theorem>
 Agent uses LM to research → inputs axioms → NAL fails → LM finds Wiles proof → inputs summary
@@ -443,6 +476,7 @@ Agent uses LM to research → inputs axioms → NAL fails → LM finds Wiles pro
 ## 7. **UI/UX Requirements**
 
 ### A. **Dual-Pane TUI** *(like existing TUIRepl.js + enhanced)*
+
 ```
 ┌─ Input ──────────────────────┐ ┌─ Live Graph ─────────────────────┐
 │ > What birds fly south?       │ │  [bird]──→[migrator]             │
@@ -455,6 +489,7 @@ Agent uses LM to research → inputs axioms → NAL fails → LM finds Wiles pro
 ```
 
 ### B. **Web UI (React + Vite)** *(in `/ui`)*
+
 - Force-directed graph of concepts
 - Timeline of task promotions
 - LM vs NAL contribution heatmap
@@ -474,12 +509,12 @@ registerVisualizer("3D Concept Space", embedWithUMAP);
 
 ## 9. **Success Criteria**
 
-| Goal | Metric |
-|------|--------|
+| Goal                            | Metric                                    |
+|---------------------------------|-------------------------------------------|
 | **Observable Hybrid Reasoning** | 100% of inferences traceable to NAL or LM |
-| **Compound Growth** | Intelligence metrics ↑ with usage |
-| **User Empowerment** | Non-experts run complex demos in <2 min |
-| **Production Ready** | <50ms per cycle, crash-free, secure MCP |
+| **Compound Growth**             | Intelligence metrics ↑ with usage         |
+| **User Empowerment**            | Non-experts run complex demos in <2 min   |
+| **Production Ready**            | <50ms per cycle, crash-free, secure MCP   |
 
 ---
 
@@ -503,36 +538,46 @@ SeNARS Agent REPL v1.0 — Hybrid Intelligence Lab
 **This is not just a REPL — it is a window into compound intelligence.**  
 Make it **beautiful, fast, and profoundly educational**.
 
-
-**Enhanced Prompt: Design a Production-Ready Agentic REPL for SeNARS with MCP-Driven Hybrid Reasoning, Observable Compound Intelligence, and Self-Improving Interoperability**
+**Enhanced Prompt: Design a Production-Ready Agentic REPL for SeNARS with MCP-Driven Hybrid Reasoning, Observable
+Compound Intelligence, and Self-Improving Interoperability**
 
 ---
 
 ### **Objective**
-Design and implement a **next-generation agentic REPL (Read-Eval-Print Loop)** for **SeNARS** that serves as a **real-time, observable, self-improving hybrid reasoning sandbox**. The REPL must **leverage SeNARS’ MCP (Memory-Cycle-Processing) interfaces** (`src/mcp/*`) to orchestrate **bidirectional symbolic-neural reasoning**, demonstrate **compound intelligence emergence**, and showcase **interoperability between NAL (Non-Axiomatic Logic) and LM (Language Model)** modalities — all while being **production-grade, extensible, and educational**.
 
-The system must go **beyond traditional REPLs** (like Python’s `>>>` or OpenNARS TUI) by integrating **agentic autonomy**, **visual reasoning traces**, **self-optimizing workflows**, and **interactive metacognition**, inspired by leading agentic systems (e.g., **LangChain Agents**, **AutoGPT**, **BabyAGI**, **Microsoft Semantic Kernel**, **CrewAI**, **OpenAI Swarm**, **Google’s Agent Builder**, and **NVIDIA’s NeMo Agent REPL**).
+Design and implement a **next-generation agentic REPL (Read-Eval-Print Loop)** for **SeNARS** that serves as a *
+*real-time, observable, self-improving hybrid reasoning sandbox**. The REPL must **leverage SeNARS’ MCP (
+Memory-Cycle-Processing) interfaces** (`src/mcp/*`) to orchestrate **bidirectional symbolic-neural reasoning**,
+demonstrate **compound intelligence emergence**, and showcase **interoperability between NAL (Non-Axiomatic Logic) and
+LM (Language Model)** modalities — all while being **production-grade, extensible, and educational**.
+
+The system must go **beyond traditional REPLs** (like Python’s `>>>` or OpenNARS TUI) by integrating **agentic autonomy
+**, **visual reasoning traces**, **self-optimizing workflows**, and **interactive metacognition**, inspired by leading
+agentic systems (e.g., **LangChain Agents**, **AutoGPT**, **BabyAGI**, **Microsoft Semantic Kernel**, **CrewAI**, *
+*OpenAI Swarm**, **Google’s Agent Builder**, and **NVIDIA’s NeMo Agent REPL**).
 
 ---
 
 ### **Core Requirements**
 
 #### 1. **MCP-Centric Architecture**
+
 - **Entry Point**: `src/mcp/AgentREPL.js` — orchestrates the full MCP loop:
   ```js
   Memory → Cycle → Processing → Feedback → Memory
   ```
 - **MCP Interfaces**:
-  - `MemoryInterface`: `addTask`, `getConcept`, `queryBelief`, `consolidate`
-  - `CycleInterface`: `step()`, `run(cycles)`, `onCycleStart/End`
-  - `ProcessingInterface`: `applyRule(task, context)`, `invokeLM(prompt)`
-  - `FeedbackInterface`: `emit('output')`, `emit('insight')`, `emit('self-optimization')`
+    - `MemoryInterface`: `addTask`, `getConcept`, `queryBelief`, `consolidate`
+    - `CycleInterface`: `step()`, `run(cycles)`, `onCycleStart/End`
+    - `ProcessingInterface`: `applyRule(task, context)`, `invokeLM(prompt)`
+    - `FeedbackInterface`: `emit('output')`, `emit('insight')`, `emit('self-optimization')`
 - **Event-Driven Control Flow** via `EventBus`:
   ```js
   on('task_selected') → on('rule_applied') → on('belief_updated') → on('lm_enhanced')
   ```
 
 #### 2. **Agentic Autonomy with Goal-Driven Loops**
+
 - **Agent Modes**:
   | Mode | Behavior |
   |------|---------|
@@ -549,14 +594,15 @@ The system must go **beyond traditional REPLs** (like Python’s `>>>` or OpenNA
   → Drives task promotion and rule selection.
 
 #### 3. **Hybrid Reasoning Interoperability (NAL ↔ LM)**
+
 - **Bidirectional Translation Pipeline**:
   ```mermaid
   Narsese → AdvancedNarseseTranslator → Natural Language → LM → Response → NarseseTranslator → Task
   ```
 - **MCP-Triggered LM Calls**:
-  - **When**: Low-confidence belief, high-complexity term, or semantic gap
-  - **How**: `LMRuleFactory.createRule(task)` → `ModelSelector.select(task)`
-  - **Fallback**: Circuit breaker → pure NAL
+    - **When**: Low-confidence belief, high-complexity term, or semantic gap
+    - **How**: `LMRuleFactory.createRule(task)` → `ModelSelector.select(task)`
+    - **Fallback**: Circuit breaker → pure NAL
 
 - **Examples of Interoperability**:
   | Scenario | NAL | LM | Output |
@@ -566,12 +612,13 @@ The system must go **beyond traditional REPLs** (like Python’s `>>>` or OpenNA
   | Pattern Discovery | Sparse data | Embeddings | New `<X --> Y>` |
 
 #### 4. **Observable Compound Intelligence**
+
 - **Real-Time Visualization Dashboard** (WebSocket + React/Vite UI):
-  - **Reasoning Trace Graph**: Node = Task, Edge = Derivation (with Truth/Stamp)
-  - **Concept Activation Heatmap**: Priority × Frequency over time
-  - **Truth Value Evolution Chart**: Confidence growth per belief
-  - **LM Contribution Meter**: % of inferences from LM vs NAL
-  - **Self-Improvement Log**: “Detected pattern: induction bias → adjusted rule priority”
+    - **Reasoning Trace Graph**: Node = Task, Edge = Derivation (with Truth/Stamp)
+    - **Concept Activation Heatmap**: Priority × Frequency over time
+    - **Truth Value Evolution Chart**: Confidence growth per belief
+    - **LM Contribution Meter**: % of inferences from LM vs NAL
+    - **Self-Improvement Log**: “Detected pattern: induction bias → adjusted rule priority”
 
 - **Trace Annotations**:
   ```js
@@ -581,16 +628,17 @@ The system must go **beyond traditional REPLs** (like Python’s `>>>` or OpenNA
   ```
 
 #### 5. **Self-Improving Agent Behavior**
+
 - **Metacognitive Layer** (`src/mcp/MetaReasoner.js`):
-  - Monitors: rule success rate, LM cost/benefit, memory pressure
-  - Acts: adjusts `SystemConfig`, promotes rules, forgets low-value concepts
-  - Example:
-    ```js
-    if (lm_success_rate > 0.8 && cost_per_call < threshold) {
-      config.lm.defaultProvider = 'claude';
-      config.rules.lm.priority += 0.1;
-    }
-    ```
+    - Monitors: rule success rate, LM cost/benefit, memory pressure
+    - Acts: adjusts `SystemConfig`, promotes rules, forgets low-value concepts
+    - Example:
+      ```js
+      if (lm_success_rate > 0.8 && cost_per_call < threshold) {
+        config.lm.defaultProvider = 'claude';
+        config.rules.lm.priority += 0.1;
+      }
+      ```
 
 - **Insight Generation**:
   ```narsese
@@ -598,11 +646,12 @@ The system must go **beyond traditional REPLs** (like Python’s `>>>` or OpenNA
   ```
 
 #### 6. **REPL Interface Design (TUI + Web + API)**
-| Interface | Features |
-|---------|----------|
-| **TUI (`src/tui/AgentREPL.js`)** | Blessed.js, multi-panel, hotkeys, history, autocomplete |
-| **Web UI (`ui/`)** | Live graph, trace explorer, config panel, export session |
-| **API (`src/server/AgentREPLServer.js`)** | REST + WebSocket, session persistence |
+
+| Interface                                 | Features                                                 |
+|-------------------------------------------|----------------------------------------------------------|
+| **TUI (`src/tui/AgentREPL.js`)**          | Blessed.js, multi-panel, hotkeys, history, autocomplete  |
+| **Web UI (`ui/`)**                        | Live graph, trace explorer, config panel, export session |
+| **API (`src/server/AgentREPLServer.js`)** | REST + WebSocket, session persistence                    |
 
 - **Command Set**:
   ```bash
@@ -616,16 +665,18 @@ The system must go **beyond traditional REPLs** (like Python’s `>>>` or OpenNA
   ```
 
 #### 7. **Inspired by Leading Agentic REPLs**
-| System | Feature Adopted |
-|-------|------------------|
-| **LangChain Agents** | Tool calling, memory, structured output |
-| **AutoGPT / BabyAGI** | Task queues, prioritization, self-critique |
-| **Semantic Kernel** | Planner + Memory + Skills pattern |
-| **CrewAI** | Role-based agents (Reasoner, Critic, LM) |
-| **OpenAI Swarm** | Handoffs between agents |
-| **NVIDIA NeMo** | Multimodal REPL with trace visualization |
 
-→ **SeNARS Agent REPL** = **CrewAI-style roles** + **Semantic Kernel memory** + **LangChain tools** + **NAL reasoning core**
+| System                | Feature Adopted                            |
+|-----------------------|--------------------------------------------|
+| **LangChain Agents**  | Tool calling, memory, structured output    |
+| **AutoGPT / BabyAGI** | Task queues, prioritization, self-critique |
+| **Semantic Kernel**   | Planner + Memory + Skills pattern          |
+| **CrewAI**            | Role-based agents (Reasoner, Critic, LM)   |
+| **OpenAI Swarm**      | Handoffs between agents                    |
+| **NVIDIA NeMo**       | Multimodal REPL with trace visualization   |
+
+→ **SeNARS Agent REPL** = **CrewAI-style roles** + **Semantic Kernel memory** + **LangChain tools** + **NAL reasoning
+core**
 
 ---
 
@@ -640,18 +691,18 @@ The system must go **beyond traditional REPLs** (like Python’s `>>>` or OpenNA
    ```
 
 2. **Self-Improvement Demo**:
-   - Start with dummy LM → slow reasoning
-   - Detect pattern: “LM would help here”
-   - Auto-switch to HuggingFace → 3x faster convergence
-   - Output: “System self-upgraded LM provider”
+    - Start with dummy LM → slow reasoning
+    - Detect pattern: “LM would help here”
+    - Auto-switch to HuggingFace → 3x faster convergence
+    - Output: “System self-upgraded LM provider”
 
 3. **Educational Walkthrough**:
-   - User asks: “How did you conclude X?”
-   - REPL shows **full derivation chain** with NAL rules + LM prompts
+    - User asks: “How did you conclude X?”
+    - REPL shows **full derivation chain** with NAL rules + LM prompts
 
 4. **Knowledge Discovery**:
-   - Input 10 facts → system outputs 3 novel implications
-   - Graph shows **emergent cluster**
+    - Input 10 facts → system outputs 3 novel implications
+    - Graph shows **emergent cluster**
 
 ---
 
@@ -692,25 +743,29 @@ class AgentREPL extends BaseComponent {
 
 ### **Success Criteria**
 
-| Metric | Target |
-|-------|--------|
-| **Latency** | < 100ms per cycle in interactive mode |
-| **Interoperability** | ≥ 80% of complex queries use both NAL + LM |
-| **Observability** | 100% of derivations traceable in UI |
-| **Self-Improvement** | ≥ 1 auto-optimization per 100 cycles |
-| **Extensibility** | New rule/plugin in < 50 LOC |
-| **Robustness** | 0 crashes on invalid input; graceful LM failure |
+| Metric               | Target                                          |
+|----------------------|-------------------------------------------------|
+| **Latency**          | < 100ms per cycle in interactive mode           |
+| **Interoperability** | ≥ 80% of complex queries use both NAL + LM      |
+| **Observability**    | 100% of derivations traceable in UI             |
+| **Self-Improvement** | ≥ 1 auto-optimization per 100 cycles            |
+| **Extensibility**    | New rule/plugin in < 50 LOC                     |
+| **Robustness**       | 0 crashes on invalid input; graceful LM failure |
 
 ---
 
 ### **Final Vision**
-> **A living, breathing hybrid mind you can talk to, watch think, and help evolve — where every interaction makes the system smarter, and every inference is auditable, educational, and interoperable.**
 
-This REPL is not just a tool — it’s a **window into compound intelligence**, a **playground for agentic AI**, and a **foundation for self-evolving reasoning systems**.
+> **A living, breathing hybrid mind you can talk to, watch think, and help evolve — where every interaction makes the
+system smarter, and every inference is auditable, educational, and interoperable.**
+
+This REPL is not just a tool — it’s a **window into compound intelligence**, a **playground for agentic AI**, and a *
+*foundation for self-evolving reasoning systems**.
 
 ---
 
 **Deliverables**:
+
 1. `src/mcp/AgentREPL.js` — Core engine
 2. `src/tui/AgentREPL.js` — Interactive TUI
 3. `ui/agent-dashboard/` — Live visualization
@@ -722,69 +777,80 @@ This REPL is not just a tool — it’s a **window into compound intelligence**,
 # Enhanced Prompt: Design an Advanced Agent REPL for SeNARS Demonstrating Hybrid Neuro-Symbolic Reasoning
 
 ## Context & Objectives
-Design an interactive Agent REPL (Read-Eval-Print-Loop) interface for SeNARS that effectively demonstrates the system's hybrid neuro-symbolic reasoning capabilities. The REPL should leverage the MCP interfaces (`src/mcp`) and integrate with the language model subsystem to create an observable showcase of how symbolic NAL reasoning and neural LM capabilities complement each other.
+
+Design an interactive Agent REPL (Read-Eval-Print-Loop) interface for SeNARS that effectively demonstrates the system's
+hybrid neuro-symbolic reasoning capabilities. The REPL should leverage the MCP interfaces (`src/mcp`) and integrate with
+the language model subsystem to create an observable showcase of how symbolic NAL reasoning and neural LM capabilities
+complement each other.
 
 ## Core Requirements
 
 ### 1. Hybrid Reasoning Visualization
+
 - Display dual reasoning paths side-by-side: symbolic (NAL) reasoning traces alongside language model inferences
 - Visual indicators showing when and how the system switches between or combines reasoning modalities
 - Real-time visualization of how LM insights inform formal reasoning and vice versa
 - Truth value propagation visualization showing confidence levels across inference chains
 
 ### 2. Interface Design & UX
+
 - **Multi-panel layout** (inspired by systems like LangChain's playground and Open Interpreter):
-  - Input panel with syntax highlighting for Narsese
-  - Reasoning trace panel showing step-by-step inference process
-  - Knowledge visualization panel displaying relevant concepts and relationships
-  - Output panel with formatted results
+    - Input panel with syntax highlighting for Narsese
+    - Reasoning trace panel showing step-by-step inference process
+    - Knowledge visualization panel displaying relevant concepts and relationships
+    - Output panel with formatted results
 - **Interactive elements**:
-  - Clickable nodes in reasoning traces to expand/collapse details
-  - Hover tooltips showing truth values, timestamps, and derivation history
-  - Filter controls to focus on specific reasoning paths or evidence sources
+    - Clickable nodes in reasoning traces to expand/collapse details
+    - Hover tooltips showing truth values, timestamps, and derivation history
+    - Filter controls to focus on specific reasoning paths or evidence sources
 - **Command system** with intuitive shortcuts for common operations:
-  - `?explain` - Request LM explanation of last reasoning step
-  - `?belief <term>` - Query current beliefs about a concept
-  - `?trace <id>` - Display full derivation history of a conclusion
-  - `?mode [symbolic|neural|hybrid]` - Adjust reasoning strategy balance
+    - `?explain` - Request LM explanation of last reasoning step
+    - `?belief <term>` - Query current beliefs about a concept
+    - `?trace <id>` - Display full derivation history of a conclusion
+    - `?mode [symbolic|neural|hybrid]` - Adjust reasoning strategy balance
 
 ### 3. MCP Interface Integration
+
 - Utilize the MCP (Meta-Cognitive Processing) interfaces to:
-  - Monitor system metacognitive state during reasoning
-  - Expose confidence metrics and uncertainty indicators
-  - Display reasoning strategy selection rationale
-  - Show resource allocation between symbolic and neural processing
+    - Monitor system metacognitive state during reasoning
+    - Expose confidence metrics and uncertainty indicators
+    - Display reasoning strategy selection rationale
+    - Show resource allocation between symbolic and neural processing
 - Implement bidirectional communication channels between the REPL and MCP components:
-  - Allow user to provide feedback that influences future reasoning strategies
-  - Enable manual adjustment of reasoning parameters with visual feedback
+    - Allow user to provide feedback that influences future reasoning strategies
+    - Enable manual adjustment of reasoning parameters with visual feedback
 
 ### 4. Educational Capabilities
+
 - **Tutorial mode** that walks users through canonical examples demonstrating:
-  - Pure symbolic reasoning on well-defined problems
-  - Pure LM reasoning on ambiguous natural language tasks
-  - Hybrid reasoning scenarios where both systems complement each other
+    - Pure symbolic reasoning on well-defined problems
+    - Pure LM reasoning on ambiguous natural language tasks
+    - Hybrid reasoning scenarios where both systems complement each other
 - **Annotated examples** showing:
-  - Where NAL provides precision that LMs lack
-  - Where LMs provide contextual understanding that NAL lacks
-  - How the system resolves conflicts between reasoning modalities
+    - Where NAL provides precision that LMs lack
+    - Where LMs provide contextual understanding that NAL lacks
+    - How the system resolves conflicts between reasoning modalities
 - **Interactive exploration** allowing users to:
-  - Modify truth values and observe ripple effects through reasoning chains
-  - Temporarily disable one reasoning modality to compare results
-  - Inject new beliefs or goals to observe system adaptation
+    - Modify truth values and observe ripple effects through reasoning chains
+    - Temporarily disable one reasoning modality to compare results
+    - Inject new beliefs or goals to observe system adaptation
 
 ### 5. Advanced Features (inspired by systems like AutoGen and LangChain)
+
 - **Conversation memory** that maintains context across multiple interactions
 - **Tool integration** allowing the agent to call external APIs and incorporate results
 - **Reasoning checkpoints** that allow users to save and restore reasoning states
 - **Comparative analysis mode** showing how different LM providers or NAL rule sets affect outcomes
 - **Performance dashboard** showing metrics like:
-  - Time spent in symbolic vs. neural reasoning
-  - Confidence evolution across reasoning steps
-  - Memory utilization patterns
-  - Rule application frequencies
+    - Time spent in symbolic vs. neural reasoning
+    - Confidence evolution across reasoning steps
+    - Memory utilization patterns
+    - Rule application frequencies
 
 ### 6. Demonstration Scenarios
+
 Include built-in demonstration scenarios that showcase:
+
 - Knowledge discovery: Starting from sparse facts and discovering implicit relationships
 - Decision support: Weighing options with both logical constraints and contextual understanding
 - Commonsense reasoning: Solving problems requiring world knowledge and formal logic
@@ -792,6 +858,7 @@ Include built-in demonstration scenarios that showcase:
 - Failure recovery: Demonstrating how the system handles contradictory information or LM hallucinations
 
 ## Technical Considerations
+
 - Leverage the existing TUI framework (`src/tui/TUIRepl.js`) as a foundation but significantly extend capabilities
 - Ensure all core components follow the BaseComponent lifecycle pattern (initialize, start, stop, dispose)
 - Implement comprehensive error handling with graceful degradation when LM providers are unavailable
@@ -800,20 +867,24 @@ Include built-in demonstration scenarios that showcase:
 - Ensure all visualizations are exportable for documentation and sharing
 
 ## Success Criteria
+
 The REPL should allow users to clearly observe and understand:
+
 1. How symbolic reasoning provides precision, consistency, and explainability
 2. How language models provide contextual understanding and handle ambiguity
 3. How the system decides when to use each mode or combine them
 4. How evidence and confidence propagate through the reasoning process
 5. How the system's knowledge evolves through interaction
 
-This interface should serve both as an educational tool for understanding hybrid AI systems and as a practical interface for developing and debugging SeNARS reasoning chains.
+This interface should serve both as an educational tool for understanding hybrid AI systems and as a practical interface
+for developing and debugging SeNARS reasoning chains.
 
 # SeNARS Agent REPL: Enhanced Design Specification
 
 ## Executive Summary
 
-Design and implement an interactive Agent REPL for SeNARS that demonstrates the synergistic power of hybrid neuro-symbolic reasoning by seamlessly integrating:
+Design and implement an interactive Agent REPL for SeNARS that demonstrates the synergistic power of hybrid
+neuro-symbolic reasoning by seamlessly integrating:
 
 - **Symbolic reasoning** via SeNARS's Non-Axiomatic Logic (NAL) engine
 - **Neural reasoning** via Language Models through MCP (Model Context Protocol) interfaces
@@ -889,6 +960,7 @@ The REPL leverages SeNARS's existing MCP infrastructure (`src/mcp/`):
 ### 2.1 Core REPL Features (Inspired by iPython, nREPL, Jupyter)
 
 #### Command Processing
+
 - **Multi-line input support** with smart continuation detection
 - **Command history** with persistent storage and search (↑/↓, Ctrl+R)
 - **Tab completion** for commands, Narsese terms, and MCP tools
@@ -896,12 +968,14 @@ The REPL leverages SeNARS's existing MCP infrastructure (`src/mcp/`):
 - **Input validation** with helpful error messages and suggestions
 
 #### Session Management
+
 - **State persistence**: Save/load reasoning sessions with full context
 - **Session branching**: Fork sessions to explore alternative reasoning paths
 - **Checkpoint/restore**: Rollback to previous reasoning states
 - **Session metadata**: Track session goals, hypotheses, and discoveries
 
 #### Output Rendering
+
 - **Structured output**: Formatted beliefs, goals, questions, and answers
 - **Diff views**: Show changes in beliefs, memory state, and concept activation
 - **Progress indicators**: Real-time feedback during long-running operations
@@ -910,6 +984,7 @@ The REPL leverages SeNARS's existing MCP infrastructure (`src/mcp/`):
 ### 2.2 Hybrid Reasoning Demonstrations
 
 #### Intelligent Task Routing
+
 ```
 User Input → Task Analysis:
   - Detect task characteristics (factual, logical, creative, computational)
@@ -922,6 +997,7 @@ User Input → Task Analysis:
 #### Showcase Scenarios
 
 **Scenario 1: Knowledge Integration**
+
 ```
 # User provides structured knowledge via MCP filesystem
 > load_knowledge("./domain_facts.txt")
@@ -943,6 +1019,7 @@ User Input → Task Analysis:
 ```
 
 **Scenario 2: Logical Reasoning with Natural Language Grounding**
+
 ```
 > <bird --> animal>.
 > <robin --> bird>.
@@ -962,6 +1039,7 @@ User Input → Task Analysis:
 ```
 
 **Scenario 3: Creative Problem Solving**
+
 ```
 > goal_achieve "optimize warehouse layout"
 
@@ -989,6 +1067,7 @@ User Input → Task Analysis:
 ### 2.3 Observability & Visualization
 
 #### Reasoning Trace View
+
 ```
 ┌─ Reasoning Trace ────────────────────────────────────────┐
 │ Step 1: Input Processing                                 │
@@ -1012,6 +1091,7 @@ User Input → Task Analysis:
 ```
 
 #### Memory Inspector
+
 ```
 > inspect_memory
 
@@ -1033,6 +1113,7 @@ User Input → Task Analysis:
 ```
 
 #### Metrics Dashboard
+
 ```
 > show_metrics
 
@@ -1059,6 +1140,7 @@ Resource Usage:
 ### 2.4 Interactive Exploration Features
 
 #### Hypothesis Testing Mode
+
 ```
 > hypothesis_mode on
 > hypothesize "<dolphins --> fish>"
@@ -1079,6 +1161,7 @@ Would you like to explore why this confusion exists? (y/n)
 ```
 
 #### What-If Scenarios
+
 ```
 > scenario "remove belief <bird --> animal>"
 
@@ -1100,6 +1183,7 @@ Most affected reasoning chains:
 ```
 
 #### Learning from Feedback
+
 ```
 > <cat --> reptile>.
 [NAL] Stored belief with low initial confidence (0.15)
@@ -1121,6 +1205,7 @@ Most affected reasoning chains:
 ### 3.1 Command Categories
 
 #### Core Reasoning Commands
+
 ```bash
 # Input processing
 > <A --> B>.                    # Assert belief
@@ -1142,6 +1227,7 @@ Most affected reasoning chains:
 ```
 
 #### MCP Tool Integration
+
 ```bash
 # Tool discovery and usage
 > mcp_tools                     # List available tools
@@ -1156,6 +1242,7 @@ Most affected reasoning chains:
 ```
 
 #### Visualization Commands
+
 ```bash
 # Inspection and analysis
 > trace                         # Show recent reasoning
@@ -1171,6 +1258,7 @@ Most affected reasoning chains:
 ```
 
 #### System Configuration
+
 ```bash
 # Configuration
 > config show                   # Display settings
@@ -1188,6 +1276,7 @@ Most affected reasoning chains:
 ### 3.2 Special Modes
 
 #### Interactive Tutorial Mode
+
 ```bash
 > tutorial start
 
@@ -1208,6 +1297,7 @@ Lesson 1: Basic Reasoning
 ```
 
 #### Debug Mode
+
 ```bash
 > debug on
 
@@ -1388,26 +1478,31 @@ class REPLVisualizer {
 ### Inspiration from Leading Systems
 
 **Cursor / Aider (Code-Focused)**
+
 - ✅ **Adopt**: Clear command syntax, inline editing, diff views
 - ✅ **Adapt**: File integration (via MCP), session persistence
 - ❌ **Avoid**: Heavy IDE coupling (keep lightweight)
 
 **LangChain Expression Language REPL**
+
 - ✅ **Adopt**: Chain visualization, intermediate step inspection
 - ✅ **Adapt**: Show reasoning chains, tool call transparency
 - ❌ **Avoid**: Over-abstraction (stay close to NAL semantics)
 
 **AutoGPT / MetaGPT REPLs**
+
 - ✅ **Adopt**: Goal-oriented interaction, sub-task decomposition
 - ✅ **Adapt**: Goal tracking, progress indicators
 - ❌ **Avoid**: Hiding reasoning details (maximize transparency)
 
 **Jupyter Notebooks**
+
 - ✅ **Adopt**: Rich output formats, cell-based execution
 - ✅ **Adapt**: Checkpoint/restore, export capabilities
 - ❌ **Avoid**: Heavy web UI (terminal-first design)
 
 **Differences from Standard REPLs**
+
 1. **Dual reasoning modes**: Symbolic + neural, not just code execution
 2. **Observable intelligence**: See how AI thinks, not just results
 3. **Hybrid validation**: Cross-check answers across modalities
@@ -1418,6 +1513,7 @@ class REPLVisualizer {
 ## 6. Success Criteria
 
 ### 6.1 Functional Requirements
+
 - ✅ Execute Narsese statements with immediate feedback
 - ✅ Invoke MCP tools seamlessly from REPL commands
 - ✅ Display reasoning traces in human-readable format
@@ -1426,6 +1522,7 @@ class REPLVisualizer {
 - ✅ Export analysis reports in multiple formats
 
 ### 6.2 User Experience Requirements
+
 - ✅ Intuitive command syntax (learn in < 5 minutes)
 - ✅ Responsive interaction (< 100ms for local operations)
 - ✅ Clear error messages with suggestions
@@ -1433,12 +1530,14 @@ class REPLVisualizer {
 - ✅ Keyboard-driven workflow with mouse optional
 
 ### 6.3 Educational Requirements
+
 - ✅ Tutorial mode guides new users
 - ✅ Reasoning explanations in plain language
 - ✅ Concept visualizations aid understanding
 - ✅ Examples demonstrate hybrid reasoning value
 
 ### 6.4 Technical Requirements
+
 - ✅ Stable: Handle errors gracefully without crashes
 - ✅ Performant: Process 100+ commands/minute
 - ✅ Extensible: Easy to add new commands and visualizations
@@ -1449,30 +1548,35 @@ class REPLVisualizer {
 ## 7. Implementation Roadmap
 
 ### Phase 1: Foundation (MVP)
+
 - [ ] Basic REPL shell (readline, history, completion)
 - [ ] Narsese input processing
 - [ ] Core commands (beliefs, concepts, cycles)
 - [ ] Simple text output rendering
 
 ### Phase 2: MCP Integration
+
 - [ ] MCP client manager integration
 - [ ] Tool discovery and registration
 - [ ] Async tool invocation
 - [ ] Error handling and fallbacks
 
 ### Phase 3: Hybrid Reasoning
+
 - [ ] Reasoning orchestrator
 - [ ] Task routing logic
 - [ ] LM integration via MCP
 - [ ] Result merging and validation
 
 ### Phase 4: Visualization
+
 - [ ] Reasoning trace renderer
 - [ ] Memory graph visualization
 - [ ] Metrics dashboard
 - [ ] Export capabilities
 
 ### Phase 5: Polish & Documentation
+
 - [ ] Tutorial mode
 - [ ] Comprehensive help system
 - [ ] Example scenarios
@@ -1585,13 +1689,15 @@ This enhanced specification provides a comprehensive blueprint for building a Se
 4. **Serves multiple audiences**: researchers, developers, educators, learners
 5. **Maintains technical excellence** with robust, tested, extensible code
 
-The REPL embodies SeNARS's core philosophy: intelligence that is powerful, transparent, and continuously improving through use.
+The REPL embodies SeNARS's core philosophy: intelligence that is powerful, transparent, and continuously improving
+through use.
 
 ---
 
 ## Appendix: Key Technical References
 
 ### SeNARS Components Used
+
 - `src/nar/NAR.js` - Main reasoning engine
 - `src/memory/Memory.js` - Knowledge storage
 - `src/parser/` - Narsese parsing
@@ -1600,6 +1706,7 @@ The REPL embodies SeNARS's core philosophy: intelligence that is powerful, trans
 - `src/util/BaseComponent.js` - Component foundation
 
 ### External Dependencies
+
 - MCP SDK for tool integration
 - Blessed/Ink for terminal UI (choose one)
 - Commander.js for CLI parsing
@@ -1607,6 +1714,7 @@ The REPL embodies SeNARS's core philosophy: intelligence that is powerful, trans
 - Inquirer for interactive prompts
 
 ### Design Patterns Applied
+
 - Command Pattern (REPL commands)
 - Strategy Pattern (reasoning selection)
 - Observer Pattern (event-driven updates)
