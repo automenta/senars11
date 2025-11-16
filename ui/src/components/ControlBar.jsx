@@ -1,5 +1,4 @@
 import React from 'react';
-import PropTypes from 'prop-types';
 
 export const ControlBar = ({ onReset, onStep, onRun, onStop }) => {
   return (
@@ -10,11 +9,4 @@ export const ControlBar = ({ onReset, onStep, onRun, onStop }) => {
       <button onClick={onStop}>Stop</button>
     </div>
   );
-};
-
-ControlBar.propTypes = {
-  onReset: PropTypes.func.isRequired,
-  onStep: PropTypes.func.isRequired,
-  onRun: PropTypes.func.isRequired,
-  onStop: PropTypes.func.isRequired,
 };
