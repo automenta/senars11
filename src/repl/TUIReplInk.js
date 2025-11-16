@@ -61,7 +61,7 @@ const NarseseTUI = ({engine}) => {
 
         // Register all event listeners
         engine.on('log', handleLog);
-        engine.on('status', handleStatus);
+        //engine.on('status', handleStatus);
         engine.on('nar.cycle.step', handleCycleStep);
         engine.on('nar.cycle.running', handleCycleRunning);
         engine.on('nar.cycle.stop', handleCycleStop);
@@ -74,7 +74,7 @@ const NarseseTUI = ({engine}) => {
 
         return () => {
             engine.off('log', handleLog);
-            engine.off('status', handleStatus);
+            //engine.off('status', handleStatus);
             engine.off('nar.cycle.step', handleCycleStep);
             engine.off('nar.cycle.running', handleCycleRunning);
             engine.off('nar.cycle.stop', handleCycleStop);
