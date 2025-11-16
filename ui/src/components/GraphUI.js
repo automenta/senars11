@@ -4,6 +4,7 @@ import 'reactflow/dist/style.css';
 import useUiStore from '../stores/uiStore.js';
 import {getTaskColor} from '../utils/taskUtils.js';
 import {themeUtils} from '../utils/themeUtils.js';
+import NarseseInput from '../../simple-uis/NarseseInput.js';
 
 // Custom node components
 const ConceptNode = memo(({data}) => {
@@ -317,27 +318,44 @@ const GraphUI = () => {
     ) : null;
 
   return React.createElement('div', {
-    style: {width: '100%', height: '100%', position: 'relative'},
+    style: {width: '100%', height: '100%', display: 'flex', flexDirection: 'column'},
     onClick: closeContextMenu
   },
-  React.createElement(ReactFlow, {
-    nodes: nodes,
-    edges: edges,
-    onNodesChange: onNodesChange,
-    onEdgesChange: onEdgesChange,
-    onConnect: onConnect,
-    onNodeClick: onNodeClick,
-    onNodeContextMenu: onNodeContextMenu,
-    fitView: true,
-    attributionPosition: 'bottom-left',
-    nodeTypes: nodeTypes
-  },
-  React.createElement(Controls),
-  React.createElement(MiniMap),
-  React.createElement(Background, {variant: 'dots', gap: 12, size: 1})
-  ),
-  contextMenuElement,
-  selectedNodePanel
+    // Full-width Narsese input section at the top
+    React.createElement('div', {
+      style: {
+        width: '100%',
+        backgroundColor: '#f8f9fa',
+        borderBottom: '1px solid #dee2e6',
+        padding: '10px',
+        zIndex: 1000
+      }
+    },
+      React.createElement(NarseseInput, {compact: false, title: "NAR Input & Control", showExamples: true, showHistory: true, showNotifications: true})
+    ),
+    // Main graph area taking the rest of the space
+    React.createElement('div', {
+      style: {flex: 1, position: 'relative', minHeight: '0'}
+    },
+      React.createElement(ReactFlow, {
+        nodes: nodes,
+        edges: edges,
+        onNodesChange: onNodesChange,
+        onEdgesChange: onEdgesChange,
+        onConnect: onConnect,
+        onNodeClick: onNodeClick,
+        onNodeContextMenu: onNodeContextMenu,
+        fitView: true,
+        attributionPosition: 'bottom-left',
+        nodeTypes: nodeTypes
+      },
+        React.createElement(Controls),
+        React.createElement(MiniMap),
+        React.createElement(Background, {variant: 'dots', gap: 12, size: 1})
+      ),
+      contextMenuElement,
+      selectedNodePanel
+    )
   );
 };
 

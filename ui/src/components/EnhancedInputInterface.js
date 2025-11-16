@@ -189,7 +189,7 @@ const EnhancedInputInterface = memo(() => {
       'run': { type: 'control/start', payload: {} },
       'stop': { type: 'control/stop', payload: {} },
       'step': { type: 'control/step', payload: {} },
-      'reset': { type: '/reset', payload: {} },
+      'reset': { type: 'control/reset', payload: {} },
       'save': { type: '/save', payload: {} },
       'load': { type: '/load', payload: {} }
     };

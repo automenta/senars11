@@ -529,6 +529,19 @@ class WebSocketMonitor {
                 });
                 break;
 
+            case 'reset':
+                this._nar.reset();
+                this._sendToClient(client, {
+                    type: 'control/ack',
+                    payload: {command: 'reset', status: 'reset'}
+                });
+                // Also broadcast system reset event to notify UI components
+                this.broadcastEvent('system.memoryReset', {
+                    timestamp: Date.now(),
+                    message: 'NAR memory reset completed'
+                });
+                break;
+
             case 'exit':
                 this._sendToClient(client, {
                     type: 'control/ack',

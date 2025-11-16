@@ -5,6 +5,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { useUiData } from '../../hooks/useWebSocket.js';
 import { GenericSelectField } from '../GenericComponents.js';
+import NarseseInput from '../../../simple-uis/NarseseInput.js';
 
 // Import all renderer configurations
 import { ForceGraphRenderer } from './GraphRenderers/ForceGraphRenderer.js';
@@ -160,6 +161,18 @@ const AbstractGraphVisualizer = () => {
         backgroundColor: '#f8f9fa'
       }
     },
+    // Full-width Narsese input section at the top
+    React.createElement('div', {
+      style: {
+        width: '100%',
+        backgroundColor: '#e9ecef',
+        borderBottom: '1px solid #dee2e6',
+        padding: '10px',
+        zIndex: 100
+      }
+    },
+      React.createElement(NarseseInput, {compact: false, title: "NAR Input & Control", showExamples: true, showHistory: true, showNotifications: true})
+    ),
     ControlBar,
     React.createElement('div',
       {

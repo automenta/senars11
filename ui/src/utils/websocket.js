@@ -10,23 +10,44 @@ import {createHandlerRegistry} from './handlerRegistry';
 
 // WebSocket message routing configuration
 const MESSAGE_HANDLERS = {
-  demoControl: (wsService, data) => wsService.isTestEnvironment && wsService.handleDemoControl({type: data.type, payload: data.payload}),
+  demoControl: (wsService, data) => wsService.handleDemoControl({type: data.type, payload: data.payload}),
   systemCommand: (wsService, data) => wsService.handleSystemCommand({type: data.type, payload: data.payload}),
-  panelCommand: (wsService, data) => wsService.handlePanelCommand({type: data.type, payload: data.payload})
+  panelCommand: (wsService, data) => wsService.handlePanelCommand({type: data.type, payload: data.payload}),
+  // Added handler for control/reset and narseseInput commands
+  control: (wsService, data) => wsService.handleControlCommand({type: data.type, payload: data.payload}),
+  narseseInput: (wsService, data) => wsService.handleNarseseInput({type: data.type, payload: data.payload})
 };
 
-// Demo content configuration
-const DEMO_CONFIG = Object.freeze({
-  demoList: Object.freeze([
-    {id: 'basic-reasoning', name: 'Basic Reasoning Demo', description: 'A simple reasoning demonstration'},
-    {id: 'syllogistic', name: 'Syllogistic Reasoning', description: 'Classic syllogistic inference patterns'},
-    {id: 'complex-inference', name: 'Complex Inference', description: 'Advanced inference chaining'}
-  ]),
-  contentElements: Object.freeze({
-    subjects: Object.freeze(['cat', 'dog', 'bird', 'fish', 'horse', 'rabbit']),
-    predicates: Object.freeze(['animal', 'pet', 'mammal', 'water', 'farm']),
-    punctuation: Object.freeze(['.', '?', '!'])
-  })
+// Real demo sequences configuration
+const REAL_DEMOS = Object.freeze({
+  basic_reasoning: {
+    name: "Basic Reasoning",
+    description: "Fundamental NAL inference",
+    narseseSequence: [
+      '<robin --> bird>.',
+      '<bird --> animal>.',
+      '<robin --> animal>?'
+    ]
+  },
+  syllogistic: {
+    name: "Syllogistic Reasoning",
+    description: "Classic syllogistic inference",
+    narseseSequence: [
+      '<bird --> animal>.',
+      '<robin --> bird>.',
+      '<robin --> animal>.'
+    ]
+  },
+  inductive: {
+    name: "Inductive Reasoning",
+    description: "Inductive inference from observations",
+    narseseSequence: [
+      '<swan1 --> white>.',
+      '<swan2 --> white>.',
+      '<swan3 --> white>.',
+      '<swan --> white>?'
+    ]
+  }
 });
 
 class WebSocketService {
@@ -178,8 +199,6 @@ class WebSocketService {
     this.reconnectAttempts = 0;
     this.setupHeartbeat();
     this.processMessageQueue();
-
-    if (this.isTestEnvironment) this.simulateTestData();
   }
 
   _handleClose(event) {
@@ -367,9 +386,6 @@ class WebSocketService {
           // Check for any pending listeners waiting for this message type
           this._notifyListeners(processedData);
 
-          if (this.isTestEnvironment && processedData?.type === 'narseseInput') {
-            return this.handleNarseseInput({type: processedData.type, payload: processedData.payload});
-          }
           if (Math.random() < 0.1) {
             console.debug('Unknown message type:', processedData?.type, processedData);
           }
@@ -478,297 +494,47 @@ class WebSocketService {
     }
   }
 
-  simulateTestData() {
-    this.routeMessage({type: 'demoList', payload: DEMO_CONFIG.demoList});
+  // Real NAR event handling methods will be called when actual NAR events are received
+  // from the server, not through simulated test data
 
-    setTimeout(() => {
-      this.routeMessage({
-        type: 'conceptUpdate',
-        payload: {
-          concept: {
-            term: 'cat',
-            priority: 0.8,
-            occurrenceTime: Date.now(),
-            truth: {frequency: 0.9, confidence: 0.9}
-          },
-          changeType: 'added'
-        }
-      });
+  handleDemoControl(data) {
+    console.debug(`Forwarding demo control:`, data);
 
-      this.routeMessage({
-        type: 'conceptUpdate',
-        payload: {
-          concept: {
-            term: 'animal',
-            priority: 0.7,
-            occurrenceTime: Date.now(),
-            truth: {frequency: 0.8, confidence: 0.85}
-          },
-          changeType: 'added'
-        }
-      });
-    }, 100);
-
-    setTimeout(() => this.routeMessage({
-      type: 'taskUpdate',
-      payload: {
-        id: `task_${Date.now()}`,
-        content: '<cat --> animal>.',
-        priority: 0.85,
-        creationTime: Date.now(),
-        type: 'belief'
+    // Forward demo control commands to the real NAR server
+    // This allows the server-side DemoWrapper to handle real demos
+    if (this.state === ConnectionState.CONNECTED && this.ws?.readyState === WebSocket.OPEN) {
+      try {
+        const message = JSON.stringify({type: 'demoControl', payload: data.payload});
+        this.ws.send(message);
+        this.metrics.messagesSent++;
+      } catch (error) {
+        console.error('Error sending demo control message:', error);
+        this.queueMessage({type: 'demoControl', payload: data.payload});
       }
-    }), 200);
-
-    setTimeout(() => this.routeMessage({
-      type: 'reasoningStep',
-      payload: {
-        id: `step_${Date.now()}`,
-        timestamp: Date.now(),
-        input: '<cat --> animal>.',
-        output: '<animal <-- cat>?',
-        rule: 'deduction',
-        confidence: 0.8,
-        priority: 0.75
-      }
-    }), 300);
-
-    const interval = setInterval(() => {
-      if (this.state === ConnectionState.CONNECTED) {
-        this.routeMessage({
-          type: 'systemMetrics',
-          payload: {
-            wsConnected: true,
-            cpu: Math.random() * 30,
-            memory: Math.random() * 40,
-            activeTasks: Math.floor(Math.random() * 5),
-            reasoningSpeed: Math.floor(Math.random() * 100) + 50
-          }
-        });
-
-        if (Math.random() > 0.7) {
-          this.routeMessage({
-            type: 'taskUpdate',
-            payload: {
-              id: `task_${Date.now()}_${Math.random()}`,
-              content: `<${DEMO_CONFIG.contentElements.subjects[Math.floor(Math.random() * DEMO_CONFIG.contentElements.subjects.length)]} --> ${DEMO_CONFIG.contentElements.predicates[Math.floor(Math.random() * DEMO_CONFIG.contentElements.predicates.length)]}>${DEMO_CONFIG.contentElements.punctuation[Math.floor(Math.random() * DEMO_CONFIG.contentElements.punctuation.length)]}`,
-              priority: Math.random(),
-              creationTime: Date.now(),
-              type: DEMO_CONFIG.contentElements.punctuation[Math.floor(Math.random() * DEMO_CONFIG.contentElements.punctuation.length)] === '?' ? 'question' :
-                DEMO_CONFIG.contentElements.punctuation[Math.floor(Math.random() * DEMO_CONFIG.contentElements.punctuation.length)] === '!' ? 'goal' : 'belief'
-            }
-          });
-        }
-      } else {
-        clearInterval(interval);
-      }
-    }, 1500);
-  }
-
-  handleDemoControl({payload: {command, demoId}}) {
-    console.debug(`Handling demo control: ${command} for demo ${demoId}`);
-
-    const sendDemoState = (status, progress, currentStep) =>
-      this.routeMessage({
-        type: 'demoState',
-        payload: {demoId, status, progress, currentStep}
-      });
-
-    const sendConceptUpdate = (term, priority, taskCount = 0, beliefCount = 0, questionCount = 0) =>
-      this.routeMessage({
-        type: 'conceptUpdate',
-        payload: {
-          concept: {
-            term,
-            priority,
-            occurrenceTime: Date.now(),
-            taskCount,
-            beliefCount,
-            questionCount,
-            lastAccess: Date.now()
-          },
-          changeType: 'added'
-        }
-      });
-
-    const sendTaskUpdate = (id, content, priority, type) =>
-      this.routeMessage({
-        type: 'taskUpdate',
-        payload: {
-          task: {
-            id,
-            content,
-            priority,
-            creationTime: Date.now(),
-            type
-          },
-          changeType: 'input'
-        }
-      });
-
-    const getRandomElement = (arr) => arr[Math.floor(Math.random() * arr.length)];
-    const generateRandomContent = () =>
-      `<${getRandomElement(DEMO_CONFIG.contentElements.subjects)} --> ${getRandomElement(DEMO_CONFIG.contentElements.predicates)}>${getRandomElement(DEMO_CONFIG.contentElements.punctuation)}`;
-    const generateRandomTaskType = () => getRandomElement(['belief', 'question', 'goal']);
-
-    switch (command) {
-    case 'start':
-      setTimeout(() => sendDemoState('running', 0, 'Initializing'), 100);
-
-      setTimeout(() => {
-        sendConceptUpdate(`concept_${demoId}_A`, 0.85, 3, 2, 1);
-        sendConceptUpdate(`concept_${demoId}_B`, 0.72, 2, 1, 0);
-        sendConceptUpdate(`concept_${demoId}_C`, 0.91, 4, 3, 2);
-      }, 150);
-
-      setTimeout(() => {
-        const task1Type = generateRandomTaskType();
-        const task2Type = generateRandomTaskType();
-
-        sendTaskUpdate(
-          `task_${demoId}_1`,
-          generateRandomContent(),
-          0.78,
-          task1Type
-        );
-
-        // Also send belief or goal updates to separate collections
-        if (task1Type === 'belief') {
-          this.routeMessage({
-            type: 'beliefUpdate',
-            payload: {
-              id: `task_${demoId}_1`,
-              term: generateRandomContent(),
-              priority: 0.78,
-              creationTime: Date.now(),
-              type: task1Type,
-              truth: {frequency: Math.random(), confidence: Math.random()}
-            }
-          });
-        } else if (task1Type === 'goal') {
-          this.routeMessage({
-            type: 'goalUpdate',
-            payload: {
-              id: `task_${demoId}_1`,
-              term: generateRandomContent(),
-              priority: 0.78,
-              creationTime: Date.now(),
-              type: task1Type,
-              truth: {desire: Math.random(), confidence: Math.random()}
-            }
-          });
-        }
-
-        sendTaskUpdate(
-          `task_${demoId}_2`,
-          generateRandomContent(),
-          0.65,
-          task2Type
-        );
-
-        // Also send belief or goal updates to separate collections
-        if (task2Type === 'belief') {
-          this.routeMessage({
-            type: 'beliefUpdate',
-            payload: {
-              id: `task_${demoId}_2`,
-              term: generateRandomContent(),
-              priority: 0.65,
-              creationTime: Date.now(),
-              type: task2Type,
-              truth: {frequency: Math.random(), confidence: Math.random()}
-            }
-          });
-        } else if (task2Type === 'goal') {
-          this.routeMessage({
-            type: 'goalUpdate',
-            payload: {
-              id: `task_${demoId}_2`,
-              term: generateRandomContent(),
-              priority: 0.65,
-              creationTime: Date.now(),
-              type: task2Type,
-              truth: {desire: Math.random(), confidence: Math.random()}
-            }
-          });
-        }
-      }, 250);
-
-      setTimeout(() => sendDemoState('running', 25, 'Processing input'), 300);
-      setTimeout(() => sendConceptUpdate(`derived_${demoId}_X`, 0.68, 1, 1, 0), 400);
-      setTimeout(() => sendDemoState('running', 50, 'Running inference'), 600);
-      setTimeout(() => sendDemoState('running', 75, 'Generating output'), 900);
-      setTimeout(() => sendDemoState('completed', 100, 'Completed'), 1200);
-      break;
-
-    case 'stop':
-      sendDemoState('stopped', 0, '');
-      break;
-
-    case 'pause':
-      sendDemoState('paused', payload.progress || 50, '');
-      break;
-
-    case 'resume':
-      sendDemoState('running', payload.progress || 50, '');
-      break;
+    } else {
+      console.warn('WebSocket not connected, queuing demo control message');
+      this.queueMessage({type: 'demoControl', payload: data.payload});
     }
   }
 
   handleNarseseInput({payload: {input}}) {
     console.debug(`Handling narsese input: ${input}`);
 
-    setTimeout(() => {
-      this.routeMessage({
-        type: 'narseseInput',
-        payload: {
-          input,
-          success: true,
-          message: `Processed: ${input}`
-        }
-      });
-
-      const taskType = input.endsWith('?') ? 'question' : input.endsWith('!') ? 'goal' : 'belief';
-      const taskId = `task_${Date.now()}`;
-
-      this.routeMessage({
-        type: 'taskUpdate',
-        payload: {
-          id: taskId,
-          content: input,
-          priority: Math.random(),
-          creationTime: Date.now(),
-          type: taskType
-        }
-      });
-
-      // Also send belief or goal updates to separate collections
-      if (taskType === 'belief') {
-        this.routeMessage({
-          type: 'beliefUpdate',
-          payload: {
-            id: taskId,
-            term: input,
-            priority: Math.random(),
-            creationTime: Date.now(),
-            type: taskType,
-            truth: {frequency: Math.random(), confidence: Math.random()}
-          }
-        });
-      } else if (taskType === 'goal') {
-        this.routeMessage({
-          type: 'goalUpdate',
-          payload: {
-            id: taskId,
-            term: input,
-            priority: Math.random(),
-            creationTime: Date.now(),
-            type: taskType,
-            truth: {desire: Math.random(), confidence: Math.random()}
-          }
-        });
+    // Forward the narsese input to the real NAR server
+    // This allows the server-side NAR to process the actual input
+    if (this.state === ConnectionState.CONNECTED && this.ws?.readyState === WebSocket.OPEN) {
+      try {
+        const message = JSON.stringify({type: 'narseseInput', payload: {input}});
+        this.ws.send(message);
+        this.metrics.messagesSent++;
+      } catch (error) {
+        console.error('Error sending narsese input message:', error);
+        this.queueMessage({type: 'narseseInput', payload: {input}});
       }
-    }, 50);
+    } else {
+      console.warn('WebSocket not connected, queuing narsese input message');
+      this.queueMessage({type: 'narseseInput', payload: {input}});
+    }
   }
 
   handleSystemCommand(data) {
@@ -848,6 +614,17 @@ class WebSocketService {
   Object.entries(sampleDataGenerators).forEach(([type, generator]) => {
     sendSampleData(type, generator, sampleDataTransformers[type]);
   });
+  }
+
+  handleControlCommand({payload: {command, parameters}}) {
+    console.debug(`Handling control command: ${command}`, parameters);
+
+    // Send control command to real NAR
+    if (command === 'reset') {
+      this.sendMessage({type: 'control/reset', payload: parameters || {}});
+    } else {
+      this.sendMessage({type: `control/${command}`, payload: parameters || {}});
+    }
   }
 
   handlePanelCommand(data) {
@@ -930,16 +707,8 @@ class WebSocketService {
       return;
     }
 
-    if (this.isTestEnvironment) {
-      if (message.type === 'demoControl') {
-        this.handleDemoControl(message);
-      } else if (message.type === 'narseseInput') {
-        this.handleNarseseInput(message);
-      } else {
-        this.routeMessage(message);
-      }
-      return;
-    }
+    // Always send messages to the real NAR server, regardless of environment
+    // The server handles the logic appropriately
 
     if (this.state === ConnectionState.CONNECTED && this.ws?.readyState === WebSocket.OPEN) {
       try {

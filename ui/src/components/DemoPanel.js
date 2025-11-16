@@ -17,18 +17,7 @@ const DemoPanel = memo(() => {
       return;
     }
 
-    // When starting a demo, also trigger data generation for other panels
-    if (command === 'start') {
-      // Send a system command to ensure other panels have data during demo
-      wsService.sendMessage({
-        type: 'systemCommand',
-        payload: {
-          command: 'ensurePanelActivity',
-          panels: ['ConceptPanel', 'TaskPanel', 'PriorityHistogramPanel']
-        }
-      });
-    }
-
+    // Send demo control command to real NAR server for actual demo execution
     wsService.sendMessage({
       type: 'demoControl',
       payload: {command, demoId, parameters}
@@ -137,19 +126,16 @@ const DemoPanel = memo(() => {
       React.createElement('div', {style: {display: 'flex', gap: themeUtils.get('SPACING.XS'), flexShrink: 0}},
         React.createElement(Button, {
           onClick: () => {
-            // First ensure other panels are activated, then start demo
+            // Before starting, ensure NAR memory is reset for clean demo
             if (wsService) {
-              // Highlight relevant panels during demo
-              wsService.sendMessage({
-                type: 'panelCommand',
-                payload: {
-                  command: 'activateVisualization',
-                  panels: ['ConceptPanel', 'TaskPanel', 'PriorityHistogramPanel'],
-                  demoId: demo.id
-                }
-              });
+              wsService.sendMessage({type: 'control/reset', payload: {}});
+              // Wait a bit and then start the demo
+              setTimeout(() => {
+                sendDemoControl(demo.id, 'start');
+              }, 300);
+            } else {
+              sendDemoControl(demo.id, 'start');
             }
-            sendDemoControl(demo.id, 'start');
           },
           variant: getButtonVariant(state.state !== 'running', state.state === 'running'),
           disabled: state.state === 'running',
