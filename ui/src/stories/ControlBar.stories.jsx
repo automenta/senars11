@@ -1,5 +1,5 @@
 import React from 'react';
-import { ControlBar } from '../components/ControlBar';
+import ControlBar from '../components/ControlBar';
 
 export default {
   title: 'UI/ControlBar',

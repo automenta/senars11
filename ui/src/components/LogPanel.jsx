@@ -6,7 +6,7 @@ import { LogEntry } from './LogEntry';
  * A panel that displays a list of log entries.
  * @param {{ entries: string[]; }} props
  */
-export const LogPanel = ({ entries }) => {
+const LogPanel = ({ entries }) => {
   const scrollRef = useRef(null);
 
   useEffect(() => {
@@ -30,3 +30,5 @@ LogPanel.propTypes = {
    */
   entries: PropTypes.arrayOf(PropTypes.string).isRequired,
 };
+
+export default LogPanel;
