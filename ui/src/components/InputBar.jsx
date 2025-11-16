@@ -16,7 +16,13 @@ export const InputBar = ({ onInput }) => {
 
   return (
     <form onSubmit={handleSubmit} className="input-bar">
-      <input type="text" value={value} onChange={handleChange} />
+      <input
+        type="text"
+        value={value}
+        onChange={handleChange}
+        data-testid="narsese-input"
+        placeholder="Enter Narsese..."
+      />
       <button type="submit">Send</button>
     </form>
   );

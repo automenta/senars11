@@ -1,28 +1,30 @@
+/**
+ * @file The main layout component for the SeNARS UI.
+ * It assembles all the major UI panels and control bars into the final layout.
+ * This component receives fully composed panels as props to keep it purely structural.
+ */
 import React from 'react';
-import { LogPanel } from './LogPanel';
 import { InputBar } from './InputBar';
 import { ControlBar } from './ControlBar';
-import { ViewControls } from './ViewControls';
-import { GraphPanel } from './GraphPanel';
 
-export const AppLayout = () => {
+export const AppLayout = ({ viewControls, logPanel, graphPanel, onSendNarsese }) => {
   return (
     <div className="app-layout">
-      <div className="app-layout-header">
+      <header className="app-layout-header">
         <ControlBar />
-        <ViewControls />
-      </div>
-      <div className="app-layout-main">
+        {viewControls}
+      </header>
+      <main className="app-layout-main">
         <div className="app-layout-graph">
-          <GraphPanel nodes={[]} edges={[]} />
+          {graphPanel}
         </div>
         <div className="app-layout-log">
-          <LogPanel entries={[]} />
+          {logPanel}
         </div>
-      </div>
-      <div className="app-layout-footer">
-        <InputBar onInput={() => {}} />
-      </div>
+      </main>
+      <footer className="app-layout-footer">
+        <InputBar onInput={onSendNarsese} />
+      </footer>
     </div>
   );
 };
