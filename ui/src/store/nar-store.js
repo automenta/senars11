@@ -7,8 +7,16 @@ const useNarStore = create((set, get) => ({
     logEntries: [],
     lastSnapshotTime: 0,
     isSnapshotLoading: false,
+    liveUpdateEnabled: true,
+    isConnected: false,
 
     actions: {
+        toggleLiveUpdate: () => set(state => ({ liveUpdateEnabled: !state.liveUpdateEnabled })),
+
+        handleConnectionOpen: () => set({ isConnected: true }),
+
+        handleConnectionClose: () => set({ isConnected: false }),
+
         handleSnapshot: (snapshot) => {
             const { concepts, tasks } = snapshot;
             const newNodes = concepts.map(c => ({ id: c.id, label: c.term }));
@@ -58,5 +66,7 @@ const useNarStore = create((set, get) => ({
 
 narService.on('memorySnapshot', useNarStore.getState().actions.handleSnapshot);
 narService.on('event-batch', useNarStore.getState().actions.handleEventBatch);
+narService.on('open', useNarStore.getState().actions.handleConnectionOpen);
+narService.on('close', useNarStore.getState().actions.handleConnectionClose);
 
 export default useNarStore;
