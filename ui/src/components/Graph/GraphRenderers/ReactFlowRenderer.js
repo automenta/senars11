@@ -1,6 +1,6 @@
 /**
  * ReactFlow Renderer
- * ReactFlow-based graph visualization
+ * ReactFlow-based graph visualization - works on same concepts/tasks model as other renderers
  */
 import React, { useCallback, useMemo } from 'react';
 import ReactFlow, {
@@ -10,15 +10,13 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import { useUiData } from '../../../hooks/useWebSocket.js';
 import { NODE_TYPE_CONFIG } from '../../../utils/graph/graphConstants.js';
+import { createNodeFromObject } from '../../../utils/graph/nodeUtils.js';
 
-// Get color for node type - using shared constants
-const getNodeColor = (type) => NODE_TYPE_CONFIG[type]?.color ?? '#999';
-
-// Get node style based on type
+// Get ReactFlow style based on node type
 const getNodeStyle = (type) => ({
   width: 120,
   height: 60,
-  background: getNodeColor(type),
+  background: NODE_TYPE_CONFIG[type]?.color ?? '#999',
   color: 'white',
   fontSize: '12px',
   fontWeight: 'bold',
@@ -28,62 +26,8 @@ const getNodeStyle = (type) => ({
   textAlign: 'center'
 });
 
-// Determine task type from content
-const getTaskType = (task) => {
-  const content = task.term ?? task.content ?? task.id ?? '';
-  return task.type ??
-    (content.endsWith('?') ? 'question' :
-     content.endsWith('!') ? 'goal' :
-     content.endsWith('.') ? 'belief' : 'task');
-};
-
-
-// Get priority value from task (truth, budget, or priority)
-const getTaskPriorityValue = (task, taskType) => {
-  if (taskType === 'belief') {
-    return task.truth?.frequency ?? task.budget?.priority ?? task.priority ?? 0;
-  } else if (taskType === 'goal') {
-    return task.truth?.desire ?? task.budget?.priority ?? task.priority ?? 0;
-  } else {
-    return task.budget?.priority ?? task.priority ?? 0;
-  }
-};
-
-// Create task node
-const createTaskNode = (task, index) => {
-  const taskType = getTaskType(task);
-  const content = task.term ?? task.content ?? task.id ?? '';
-  const priorityValue = getTaskPriorityValue(task, taskType);
-
-  let label = `${content}`;
-  switch (taskType) {
-    case 'belief':
-      label += `\nFreq: ${priorityValue.toFixed(2)}`;
-      break;
-    case 'goal':
-      label += `\nDesire: ${priorityValue.toFixed(2)}`;
-      break;
-    case 'question':
-    default:
-      label += `\nPriority: ${priorityValue.toFixed(2)}`;
-      break;
-  }
-
-  return {
-    id: `task-${task.id}`,
-    type: 'default',
-    position: { x: 300 + (index % 6) * 120, y: 350 + Math.floor(index / 6) * 150 },
-    data: {
-      label,
-      type: taskType,
-      ...task
-    },
-    style: getNodeStyle(taskType)
-  };
-};
-
-// Create concept node
-const createConceptNode = (concept, index) => ({
+// Transform a concept to ReactFlow node format
+const conceptToReactFlowNode = (concept, index) => ({
   id: `concept-${concept.term}`,
   type: 'default',
   position: { x: 100 + (index % 5) * 150, y: 100 + Math.floor(index / 5) * 100 },
@@ -95,7 +39,37 @@ const createConceptNode = (concept, index) => ({
   style: getNodeStyle('concept')
 });
 
-// Create sample edges
+// Transform a task to ReactFlow node format
+const taskToReactFlowNode = (task, index) => {
+  // Use shared node creation utility to get consistent type detection
+  const node = createNodeFromObject(task, 'task');
+
+  // Format the label based on node type (consistent with other renderers)
+  let label = `${task.content ?? task.term ?? task.id}`;
+  if (node.type === 'belief' && task.truth) {
+    label += `\nFreq: ${task.truth.frequency?.toFixed(2) ?? node.priority?.toFixed(2)}`;
+  } else if (node.type === 'goal' && task.truth) {
+    label += `\nDesire: ${task.truth.desire?.toFixed(2) ?? node.priority?.toFixed(2)}`;
+  } else if (node.type === 'question') {
+    label += `\nPriority: ${node.priority?.toFixed(2)}`;
+  } else if (node.priority) {
+    label += `\nPriority: ${node.priority?.toFixed(2)}`;
+  }
+
+  return {
+    id: `task-${task.id}`,
+    type: 'default',
+    position: { x: 300 + (index % 6) * 120, y: 350 + Math.floor(index / 6) * 150 },
+    data: {
+      label,
+      type: node.type,  // Use the detected type from shared utility
+      ...task
+    },
+    style: getNodeStyle(node.type)
+  };
+};
+
+// Create sample edges for ReactFlow
 const createSampleEdges = (nodes) => {
   const edges = [];
   for (let i = 0; i < Math.min(5, nodes.length - 1); i++) {
@@ -127,7 +101,7 @@ export const ReactFlowRenderer = ({ filters, priorityRange }) => {
       concepts
         .filter(concept => concept.priority >= priorityRange.min && concept.priority <= priorityRange.max)
         .forEach((concept, index) => {
-          newNodes.push(createConceptNode(concept, index));
+          newNodes.push(conceptToReactFlowNode(concept, index));
         });
     }
 
@@ -138,7 +112,7 @@ export const ReactFlowRenderer = ({ filters, priorityRange }) => {
         return priority >= priorityRange.min && priority <= priorityRange.max;
       })
       .forEach((task, index) => {
-        newNodes.push(createTaskNode(task, index));
+        newNodes.push(taskToReactFlowNode(task, index));
       });
 
     const newEdges = newNodes.length > 1 ? createSampleEdges(newNodes) : [];
