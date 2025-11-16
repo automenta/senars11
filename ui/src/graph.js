@@ -1,11 +1,10 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { createRoot } from 'react-dom/client';
 import GraphVisualizer from './components/Graph/GraphVisualizer.js';
 import './App.css';
 import { initializeTheme } from './utils/theme.js';
 import BaseApp from './components/BaseApp.js';
 import { useWebSocket } from './hooks/useWebSocket.js';
-import { sendGraphInitialData } from './utils/graphInitialData.js';
 
 // Configuration constants
 const GRAPH_CONFIG = Object.freeze({
@@ -15,21 +14,12 @@ const GRAPH_CONFIG = Object.freeze({
   initialDataDelay: 100
 });
 
-// Component to handle initial data for Graph UI
+// Component to handle Graph UI without initial data (start with empty memory)
 const GraphWithInitialData = () => {
   const { wsService, wsConnected } = useWebSocket();
 
-  useEffect(() => {
-    // Send initial data regardless of WebSocket connection status
-    // This ensures the graph has data to display even without backend connection
-    // The sendGraphInitialData function works by routing messages directly to the store
-    if (wsService) {
-      // Small delay to ensure everything is set up
-      setTimeout(() => {
-        sendGraphInitialData(wsService);
-      }, GRAPH_CONFIG.initialDataDelay);
-    }
-  }, [wsService]); // Only run once when wsService is available
+  // No initial data is sent - start with empty memory and let user input define content
+  // The graph will update automatically when real NAR events occur
 
   return React.createElement(GraphVisualizer, null);
 };
