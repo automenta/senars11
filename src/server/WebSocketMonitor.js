@@ -21,6 +21,7 @@ class WebSocketMonitor {
         this.path = options.path ?? DEFAULT_OPTIONS.path;
         this.maxConnections = options.maxConnections ?? DEFAULT_OPTIONS.maxConnections;
         this.eventFilter = options.eventFilter ?? null;
+        this.batchInterval = options.batchInterval ?? 100;
 
         this.clients = new Set();
         this.eventEmitter = new EventEmitter();
@@ -36,6 +37,9 @@ class WebSocketMonitor {
         this.messageBufferSize = options.messageBufferSize ?? DEFAULT_OPTIONS.messageBufferSize;
 
         this.clientCapabilities = new Map();
+
+        this.eventBuffer = [];
+        this.batchTimer = null;
     }
 
     _initializeMetrics() {
@@ -122,6 +126,9 @@ class WebSocketMonitor {
             this.server.on('listening', () => {
                 console.log(`WebSocket monitoring server started on ws://${this.host}:${this.port}${this.path}`);
                 console.log(`Max connections: ${this.maxConnections}, Rate limit: ${this.maxMessagesPerWindow}/${this.rateLimitWindowMs}ms`);
+
+                this.batchTimer = setInterval(() => this.sendBatch(), this.batchInterval);
+
                 resolve();
             });
         });
@@ -144,6 +151,7 @@ class WebSocketMonitor {
 
     async stop() {
         return new Promise((resolve) => {
+            clearInterval(this.batchTimer);
             for (const client of this.clients) {
                 client.close(1001, 'Server shutting down');
             }
@@ -398,6 +406,10 @@ class WebSocketMonitor {
 
         this._nar = nar;
 
+        nar.on('event', (event) => {
+            this.eventBuffer.push(event);
+        });
+
         console.log('WebSocket monitor now listening to NAR events');
     }
 
@@ -513,6 +525,23 @@ class WebSocketMonitor {
 
     off(event, listener) {
         this.eventEmitter.off(event, listener);
+    }
+
+    sendBatch() {
+        if (this.eventBuffer.length === 0) {
+            return;
+        }
+
+        const batch = {
+            type: 'event-batch',
+            payload: this.eventBuffer,
+        };
+
+        for (const client of this.clients) {
+            this._sendToClient(client, batch);
+        }
+
+        this.eventBuffer = [];
     }
 }
 

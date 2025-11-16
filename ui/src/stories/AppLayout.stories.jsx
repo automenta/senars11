@@ -1,12 +1,17 @@
 import React from 'react';
-import { AppLayout } from '../components/AppLayout';
+import { ReactFlowProvider } from 'reactflow';
+import AppLayout from '../components/AppLayout';
 
 export default {
-  title: 'UI/AppLayout',
-  component: AppLayout,
+    title: 'UI/AppLayout',
+    component: AppLayout,
 };
 
-const Template = (args) => <AppLayout {...args} />;
+const Template = (args) => (
+    <ReactFlowProvider>
+        <AppLayout {...args} />
+    </ReactFlowProvider>
+);
 
 export const Default = Template.bind({});
 Default.args = {};

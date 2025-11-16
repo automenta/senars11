@@ -1,5 +1,5 @@
 import React from 'react';
-import { LogPanel } from '../components/LogPanel';
+import LogPanel from '../components/LogPanel';
 
 export default {
   title: 'UI/LogPanel',

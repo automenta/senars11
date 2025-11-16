@@ -1,5 +1,5 @@
 import React from 'react';
-import { GraphPanel } from '../components/GraphPanel';
+import GraphPanel from '../components/GraphPanel';
 
 export default {
   title: 'UI/GraphPanel',

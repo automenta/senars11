@@ -1,5 +1,5 @@
 import React from 'react';
-import { InputBar } from '../components/InputBar';
+import InputBar from '../components/InputBar';
 
 export default {
   title: 'UI/InputBar',

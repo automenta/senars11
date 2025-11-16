@@ -10,7 +10,7 @@ import PropTypes from 'prop-types';
  *   onStop?: () => void;
  * }} props
  */
-export const ControlBar = ({ onReset, onStep, onStart, onStop }) => {
+const ControlBar = ({ onReset, onStep, onStart, onStop }) => {
   return (
     <div className="control-bar">
       {onReset && <button onClick={onReset}>Reset</button>}
@@ -39,3 +39,5 @@ ControlBar.propTypes = {
    */
   onStop: PropTypes.func,
 };
+
+export default ControlBar;

@@ -1,14 +1,14 @@
 import React from 'react';
-import { ControlBar } from './ControlBar';
-import { GraphPanel } from './GraphPanel';
-import { InputBar } from './InputBar';
-import { LogPanel } from './LogPanel';
-import { ViewControls } from './ViewControls';
+import ControlBar from './ControlBar';
+import GraphPanel from './GraphPanel';
+import InputBar from './InputBar';
+import LogPanel from './LogPanel';
+import ViewControls from './ViewControls';
 
 /**
  * The main layout of the application.
  */
-export const AppLayout = () => {
+const AppLayout = () => {
   return (
     <div className="app-layout">
       <div className="main-content">
@@ -23,3 +23,5 @@ export const AppLayout = () => {
     </div>
   );
 };
+
+export default AppLayout;

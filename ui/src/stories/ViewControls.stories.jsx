@@ -1,12 +1,17 @@
 import React from 'react';
-import { ViewControls } from '../components/ViewControls';
+import { ReactFlowProvider } from 'reactflow';
+import ViewControls from '../components/ViewControls';
 
 export default {
   title: 'UI/ViewControls',
   component: ViewControls,
 };
 
-const Template = (args) => <ViewControls {...args} />;
+const Template = (args) => (
+    <ReactFlowProvider>
+        <ViewControls {...args} />
+    </ReactFlowProvider>
+);
 
 export const Default = Template.bind({});
 Default.args = {

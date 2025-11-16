@@ -1,45 +1,17 @@
-import React, { useState } from 'react';
-import PropTypes from 'prop-types';
+import React from 'react';
+import { useReactFlow } from 'reactflow';
+import useNarStore from '../store/nar-store';
 
-/**
- * A component with controls for the graph view.
- * @param {{
- *   onUpdate: (query: {
- *     concept: string;
- *     limit: number;
- *   }) => void;
- * }} props
- */
-export const ViewControls = ({ onUpdate }) => {
-  const [concept, setConcept] = useState('');
-  const [limit, setLimit] = useState(100);
+const ViewControls = () => {
+    const { fitView } = useReactFlow();
+    const { actions } = useNarStore();
 
-  const handleUpdate = () => {
-    onUpdate({ concept, limit });
-  };
-
-  return (
-    <div className="view-controls">
-      <input
-        type="text"
-        value={concept}
-        onChange={(e) => setConcept(e.target.value)}
-        placeholder="Concept"
-      />
-      <input
-        type="number"
-        value={limit}
-        onChange={(e) => setLimit(parseInt(e.target.value, 10))}
-        placeholder="Limit"
-      />
-      <button onClick={handleUpdate}>Update</button>
-    </div>
-  );
+    return (
+        <div className="view-controls">
+            <button onClick={() => actions.requestSnapshot()}>Refresh</button>
+            <button onClick={() => fitView()}>Fit to View</button>
+        </div>
+    );
 };
 
-ViewControls.propTypes = {
-  /**
-   * The function to call when the update button is clicked.
-   */
-  onUpdate: PropTypes.func.isRequired,
-};
+export default ViewControls;
