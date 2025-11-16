@@ -1,6 +1,6 @@
 // REPL app loader that renders the main App with REPL-specific configuration
 import React from 'react';
-import App from './App.js';
+import App from './App.jsx';
 
 // Check if specific REPL layout is requested via URL hash or search params
 const getReplLayout = () => {

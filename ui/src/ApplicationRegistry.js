@@ -14,7 +14,7 @@ const APPLICATION_CONFIG = {
         name: 'Cognitive IDE',
         description: 'Main IDE interface with flexible layout panels',
         icon: '🧠',
-        component: () => import('./App.js'),
+        component: () => import('./App.jsx'),
         routes: ['/ide'],
         defaultLayout: 'ide'
     },
@@ -32,7 +32,7 @@ const APPLICATION_CONFIG = {
         name: 'Graph UI',
         description: 'Visual representation of concepts and relationships',
         icon: '🌐',
-        component: () => import('./App.js'),
+        component: () => import('./App.jsx'),
         routes: ['/graph'],
         defaultLayout: 'graph'
     },
@@ -41,7 +41,7 @@ const APPLICATION_CONFIG = {
         name: 'Self Analysis',
         description: 'System introspection and monitoring tools',
         icon: '🔍',
-        component: () => import('./App.js'),
+        component: () => import('./App.jsx'),
         routes: ['/self-analysis'],
         defaultLayout: 'self-analysis'
     },
@@ -59,7 +59,7 @@ const APPLICATION_CONFIG = {
         name: 'Unified Interface',
         description: 'Comprehensive interface combining launcher, REPL, and IDE capabilities',
         icon: '🌐',
-        component: () => import('./App.js'), // Main docking framework interface
+        component: () => import('./App.jsx'), // Main docking framework interface
         routes: ['/'], // Main application route
         defaultLayout: 'merged'
     }

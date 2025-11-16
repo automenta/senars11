@@ -30,7 +30,7 @@ export {MERGED_LAYOUT_INFO} from './constants/layoutInfo.js';
 export {default as appRegistry} from './AppRegistry.js';
 
 // Core application components
-export {default as App} from './App.js';
+export {default as App} from './App.jsx';
 export {default as Launcher} from './Launcher.js';
 export {default as MergedLauncher} from './MergedLauncher.js';
 

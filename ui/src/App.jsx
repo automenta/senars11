@@ -38,7 +38,7 @@ function App({appId = 'ide', appConfig = {}}) {
     const layoutType = getLayoutType(appConfig, urlParams);
 
     // Memoize the layout component to prevent unnecessary re-renders
-    const layoutComponent = useMemo(() => {
+    const LayoutComponent = useMemo(() => {
         // Special handling for REPL-specific layouts
         if (appId === 'repl') {
             const replComponent = getReplComponent(layoutType, () => window.location.href = '/');
@@ -48,7 +48,30 @@ function App({appId = 'ide', appConfig = {}}) {
         }
 
         // Default: use AppLayout with specified layout type
-        return () => React.createElement(AppLayout, {layoutType});
+        return () => (
+            <>
+                {window.__TAURI__ && (
+                    <button
+                        onClick={() => window.__TAURI__.invoke('launch_engine')}
+                        style={{
+                            position: 'fixed',
+                            top: '10px',
+                            right: '10px',
+                            zIndex: 1000,
+                            padding: '8px 12px',
+                            backgroundColor: '#4f46e5',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        Launch Engine (Native)
+                    </button>
+                )}
+                <AppLayout layoutType={layoutType} />
+            </>
+        );
     }, [appId, layoutType]);
 
     // Memoize app configuration to prevent unnecessary object creation
@@ -62,11 +85,13 @@ function App({appId = 'ide', appConfig = {}}) {
         return {...DEFAULT_APP_CONFIG, ...appConfig};
     }, [appId, appConfig, layoutType]);
 
-    return React.createElement(BaseApp, {
-        appId,
-        appConfig: finalAppConfig,
-        layoutComponent
-    });
+    return (
+        <BaseApp
+            appId={appId}
+            appConfig={finalAppConfig}
+            layoutComponent={LayoutComponent}
+        />
+    );
 }
 
 export default App;

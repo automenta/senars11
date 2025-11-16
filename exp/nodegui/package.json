@@ -1,0 +1,32 @@
+{
+  "name": "senars-nodegui",
+  "version": "0.0.0",
+  "description": "A native desktop UI for SeNARS using NodeGUI",
+  "main": "dist/index.js",
+  "scripts": {
+    "start": "node dist/index.js",
+    "dev": "nodemon --exec babel-node src/index.tsx",
+    "build": "babel src --out-dir dist --extensions '.ts,.tsx'",
+    "pack:win": "npx @nodegui/packer --input ./dist --output ./output --target win32",
+    "pack:mac": "npx @nodegui/packer --input ./dist --output ./output --target darwin",
+    "pack:linux": "npx @nodegui/packer --input ./dist --output ./output --target linux"
+  },
+  "dependencies": {
+    "@nodegui/nodegui": "^0.66.0",
+    "@nodegui/react-nodegui": "^0.14.0",
+    "@types/node": "^22.0.0",
+    "ws": "^8.18.0",
+    "zustand": "^4.5.2",
+    "react": "^16.14.0"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.24.7",
+    "@babel/core": "^7.24.7",
+    "@babel/node": "^7.24.7",
+    "@babel/preset-env": "^7.24.7",
+    "@babel/preset-react": "^7.24.7",
+    "@babel/preset-typescript": "^7.24.7",
+    "nodemon": "^3.1.4",
+    "typescript": "^5.5.3"
+  }
+}
