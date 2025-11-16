@@ -29,7 +29,7 @@ const GraphWithInitialData = () => {
         sendGraphInitialData(wsService);
       }, GRAPH_CONFIG.initialDataDelay);
     }
-  }, [wsService, wsConnected]); // Include wsConnected to ensure trigger on connection status changes
+  }, [wsService]); // Only run once when wsService is available
 
   return React.createElement(GraphVisualizer, null);
 };
