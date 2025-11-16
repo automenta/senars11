@@ -10,6 +10,7 @@ import { GenericSelectField } from '../GenericComponents.js';
 import { ForceGraphRenderer } from './GraphRenderers/ForceGraphRenderer.js';
 import { ReactFlowRenderer } from './GraphRenderers/ReactFlowRenderer.js';
 import { JsonRenderer } from './GraphRenderers/JsonRenderer.js';
+import { SimpleListRenderer } from './GraphRenderers/SimpleListRenderer.js';
 
 // Define available renderers
 const RENDERERS = Object.freeze({
@@ -25,6 +26,12 @@ const RENDERERS = Object.freeze({
     component: ReactFlowRenderer,
     description: 'ReactFlow-based graph visualization'
   },
+  simple: {
+    id: 'simple',
+    name: 'Simple List',
+    component: SimpleListRenderer,
+    description: 'Simple list view of concepts and tasks'
+  },
   json: {
     id: 'json',
     name: 'JSON/Text',
@@ -33,57 +40,55 @@ const RENDERERS = Object.freeze({
   }
 });
 
-const DEFAULT_RENDERER = 'force';
+const DEFAULT_RENDERER = 'json';
+const DEFAULT_FILTERS = Object.freeze({
+  concepts: true
+});
+
+// Get renderer component by ID
+const getRendererComponent = (id) => RENDERERS[id]?.component || ForceGraphRenderer;
+
+// Get renderer options for select field
+const getRendererOptions = () => Object.values(RENDERERS).map(renderer => ({
+  value: renderer.id,
+  label: renderer.name
+}));
+
+// Create filter controls
+const FilterControls = ({ filters, onFilterChange }) => (
+  Object.entries(filters).map(([type, enabled]) =>
+    React.createElement('div',
+      { key: type, style: { display: 'flex', alignItems: 'center', marginBottom: '0.25rem' } },
+      React.createElement('input', {
+        type: 'checkbox',
+        id: `filter-${type}`,
+        checked: enabled,
+        onChange: (e) => onFilterChange(type, e.target.checked),
+        style: { marginRight: '0.5rem' }
+      }),
+      React.createElement('label', { htmlFor: `filter-${type}` },
+        `${type.charAt(0).toUpperCase() + type.slice(1)}${type === 'concepts' ? '' : 's'}`
+      )
+    )
+  )
+);
 
 const AbstractGraphVisualizer = () => {
   const [selectedRenderer, setSelectedRenderer] = useState(DEFAULT_RENDERER);
-  const [filters, setFilters] = useState({
-    concepts: true,
-    tasks: true,      // Show all tasks regardless of type (includes beliefs, questions, goals)
-    beliefs: true,    // Show belief-type tasks (ending with '.')
-    questions: true,  // Show question-type tasks (ending with '?')
-    goals: true       // Show goal-type tasks (ending with '!')
-  });
-
-  const [priorityRange, setPriorityRange] = useState({
-    min: 0,
-    max: 1
-  });
-
+  const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const [priorityRange, setPriorityRange] = useState({ min: 0, max: 1 });
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-  // Get data from store
-  const { tasks, concepts, beliefs, goals } = useUiData();
-
-  // Calculate node counts
-  const nodeCounts = useMemo(() => ({
-    concepts: concepts.length,
-    tasks: tasks.length,
-    beliefs: beliefs.length,
-    goals: goals.length
-  }), [concepts, tasks, beliefs, goals]);
+  // Get data from store - concepts and tasks (with types: belief, question, goal)
+  const { tasks, concepts } = useUiData();
 
   // Handle filter changes
   const handleFilterChange = useCallback((filterType, value) => {
-    setFilters(prev => ({
-      ...prev,
-      [filterType]: value
-    }));
-  }, []);
-
-  // Handle priority range changes
-  const handlePriorityChange = useCallback((range) => {
-    setPriorityRange(range);
+    setFilters(prev => ({ ...prev, [filterType]: value }));
   }, []);
 
   // Get current renderer component
-  const CurrentRenderer = RENDERERS[selectedRenderer]?.component || ForceGraphRenderer;
-
-  // Prepare renderer options for select field
-  const rendererOptions = Object.values(RENDERERS).map(renderer => ({
-    value: renderer.id,
-    label: renderer.name
-  }));
+  const CurrentRenderer = getRendererComponent(selectedRenderer);
 
   return React.createElement('div',
     {
@@ -125,7 +130,7 @@ const AbstractGraphVisualizer = () => {
             label: 'Renderer',
             value: selectedRenderer,
             onChange: setSelectedRenderer,
-            options: rendererOptions,
+            options: getRendererOptions(),
             style: { width: '100%' }
           })
         )
@@ -189,21 +194,10 @@ const AbstractGraphVisualizer = () => {
         ),
         React.createElement('div',
           { style: { padding: '0 10px 10px' } },
-          Object.entries(filters).map(([type, enabled]) =>
-            React.createElement('div',
-              { key: type, style: { display: 'flex', alignItems: 'center', marginBottom: '0.25rem' } },
-              React.createElement('input', {
-                type: 'checkbox',
-                id: `filter-${type}`,
-                checked: enabled,
-                onChange: (e) => handleFilterChange(type, e.target.checked),
-                style: { marginRight: '0.5rem' }
-              }),
-              React.createElement('label', { htmlFor: `filter-${type}` },
-                `${type.charAt(0).toUpperCase() + type.slice(1)}${type === 'concepts' ? '' : 's'}`
-              )
-            )
-          )
+          React.createElement(FilterControls, {
+            filters,
+            onFilterChange: handleFilterChange
+          })
         )
       ),
 

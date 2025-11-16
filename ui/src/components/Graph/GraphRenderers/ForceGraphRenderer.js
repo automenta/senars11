@@ -7,17 +7,17 @@ import ForceGraph2D from 'react-force-graph-2d';
 import { themeUtils } from '../../../utils/themeUtils.js';
 import { useUiData } from '../../../hooks/useWebSocket.js';
 
-// Node type colors
-const NODE_TYPE_COLORS = {
-  concept: '#007bff',  // Blue for concepts
-  task: '#28a745',     // Green for tasks
-  belief: '#fd7e14',   // Orange for beliefs
-  goal: '#dc3545',     // Red for goals
-  question: '#6f42c1'  // Purple for questions
-};
+// Node type configuration
+const NODE_CONFIG = Object.freeze({
+  concept: { color: '#007bff', label: 'Concept' },
+  task: { color: '#28a745', label: 'Task' },
+  belief: { color: '#fd7e14', label: 'Belief' },
+  goal: { color: '#dc3545', label: 'Goal' },
+  question: { color: '#6f42c1', label: 'Question' }
+});
 
 // Link type styles
-const LINK_TYPE_STYLES = {
+const LINK_TYPE_STYLES = Object.freeze({
   'task-concept-association': { color: '#007bff', width: 1, dash: null, type: 'solid' },
   'belief-concept-association': { color: '#fd7e14', width: 1, dash: null, type: 'solid' },
   'goal-concept-association': { color: '#dc3545', width: 1, dash: null, type: 'solid' },
@@ -31,19 +31,68 @@ const LINK_TYPE_STYLES = {
   association: { color: '#999', width: 1, dash: null, type: 'solid' },
   inference: { color: '#28a745', width: 2, dash: [5, 5], type: 'dashed' },
   similarity: { color: '#ffc107', width: 1.5, dash: [2, 2], type: 'dotted' }
-};
+});
 
 // Default node and link properties
 const DEFAULT_NODE_SIZE = 8;
 const MAX_NODE_SIZE = 24;
 
+// Determine task type from content
+const getTaskType = (task) => {
+  const content = task.content || task.term || task.id || '';
+  return task.type ||
+    (content.endsWith('?') ? 'question' :
+     content.endsWith('!') ? 'goal' :
+     content.endsWith('.') ? 'belief' : 'task');
+};
+
+
+// Create concept node
+const createConceptNode = (concept) => ({
+  id: `concept-${concept.term}`,
+  term: concept.term,
+  type: 'concept',
+  priority: concept.priority,
+  taskCount: concept.taskCount,
+  beliefCount: concept.beliefCount,
+  questionCount: concept.questionCount,
+  occurrenceTime: concept.occurrenceTime
+});
+
+// Create task node
+const createTaskNode = (task) => {
+  const taskType = getTaskType(task);
+  return {
+    id: `task-${task.id}`,
+    term: task.content || task.term || task.id,
+    type: taskType,
+    priority: task.priority,
+    creationTime: task.creationTime,
+    truth: task.truth,
+    ...task
+  };
+};
+
+// Create sample links between nodes
+const createSampleLinks = (nodes) => {
+  const links = [];
+  for (let i = 0; i < nodes.length - 1; i++) {
+    links.push({
+      source: nodes[i].id,
+      target: nodes[i + 1].id,
+      type: 'association'
+    });
+  }
+  return links;
+};
+
 export const ForceGraphRenderer = ({ filters, priorityRange }) => {
   const [selectedNode, setSelectedNode] = useState(null);
   const fgRef = useRef();
 
-  // Get data from store (consolidated - no separate beliefs/goals arrays)
+  // Get data from store
   const {
-    tasks, concepts, // Removed beliefs and goals since we're consolidating
+    tasks, concepts,
     wsConnected,
     addNotification
   } = useUiData();
@@ -51,94 +100,30 @@ export const ForceGraphRenderer = ({ filters, priorityRange }) => {
   // Transform store data to graph format based on filters
   const graphData = React.useMemo(() => {
     const nodes = [];
-    const links = [];
 
-    // Add filtered nodes
+    // Add filtered concepts
     if (filters.concepts) {
-      concepts.forEach(concept => {
-        if (concept.priority >= priorityRange.min && concept.priority <= priorityRange.max) {
-          nodes.push({
-            id: `concept-${concept.term}`,
-            term: concept.term,
-            type: 'concept',
-            priority: concept.priority,
-            taskCount: concept.taskCount,
-            beliefCount: concept.beliefCount,
-            questionCount: concept.questionCount,
-            occurrenceTime: concept.occurrenceTime
-          });
-        }
-      });
+      concepts
+        .filter(concept => concept.priority >= priorityRange.min && concept.priority <= priorityRange.max)
+        .forEach(concept => nodes.push(createConceptNode(concept)));
     }
 
-    // Consolidate all tasks (including beliefs, questions, goals) with filtering by punctuation/type
-    // Show tasks only if the main tasks filter is enabled
-    if (filters.tasks) {
-      tasks.forEach(task => {
-        if (task.priority >= priorityRange.min && task.priority <= priorityRange.max) {
-          // Determine task type based on punctuation or type field
-          let taskType = task.type || 'task';
-          const content = task.content || task.term || task.id || '';
-
-          // Determine type from punctuation if not provided
-          if (!task.type) {
-            if (content.endsWith('?')) {
-              taskType = 'question';
-            } else if (content.endsWith('!')) {
-              taskType = 'goal';
-            } else if (content.endsWith('.')) {
-              taskType = 'belief';
-            } else {
-              taskType = 'task';
-            }
-          }
-
-          // For the filters, we'll consider the task type based on punctuation
-          // Check if this task type should be shown based on filters
-          let shouldShow = false;
-          if (taskType === 'question' && filters.questions) {
-            shouldShow = true;
-          } else if (taskType === 'belief' && filters.beliefs) {
-            shouldShow = true;
-          } else if (taskType === 'goal' && filters.goals) {
-            shouldShow = true;
-          } else if (taskType === 'task') { // Regular tasks without specific punctuation
-            // We can show these if any of the other filters are active
-            shouldShow = filters.beliefs || filters.questions || filters.goals;
-          }
-
-          if (shouldShow) {
-            nodes.push({
-              id: `task-${task.id}`,
-              term: task.content || task.term || task.id,
-              type: taskType,
-              priority: task.priority,
-              creationTime: task.creationTime,
-              truth: task.truth,
-              ...task
-            });
-          }
-        }
+    // Add all tasks (using budget.priority if available, otherwise priority)
+    tasks
+      .filter(task => {
+        const priority = task.budget?.priority || task.priority || 0;
+        return priority >= priorityRange.min && priority <= priorityRange.max;
+      })
+      .forEach(task => {
+        nodes.push(createTaskNode(task));
       });
-    }
 
-    // Add some sample links (in a real implementation, these would come from the actual relationship data)
-    // For now, we'll create some basic associations between concepts and other nodes
-    nodes.forEach((node, index) => {
-      // Create some associations with other nodes
-      if (index < nodes.length - 1) {
-        links.push({
-          source: node.id,
-          target: nodes[index + 1].id,
-          type: 'association'
-        });
-      }
-    });
+    const links = createSampleLinks(nodes);
 
     return { nodes, links };
   }, [concepts, tasks, filters, priorityRange]);
 
-  const getColorForNodeType = useCallback((type) => NODE_TYPE_COLORS[type] ?? '#999', []);
+  const getColorForNodeType = useCallback((type) => NODE_CONFIG[type]?.color ?? '#999', []);
 
   const drawNode = useCallback((node, ctx, globalScale) => {
     const label = node.term ?? node.id;
@@ -180,95 +165,114 @@ export const ForceGraphRenderer = ({ filters, priorityRange }) => {
       ctx.stroke();
     }
 
-    // Draw belief-specific information (frequency and confidence)
-    if (node.type === 'belief' && node.truth) {
-      const frequency = node.truth.frequency;
-      const confidence = node.truth.confidence;
-
-      // Draw frequency indicator as inner circle
-      if (frequency != null) {
-        const freqRadius = radius * 0.6;
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, freqRadius, 0, 2 * Math.PI, false);
-        ctx.strokeStyle = `rgba(255, 0, 0, ${frequency})`; // Red for frequency
-        ctx.lineWidth = 1.5 / globalScale;
-        ctx.stroke();
-
-        // Add frequency text
-        ctx.font = `${fontSize * 0.8}px Sans-Serif`;
-        ctx.fillStyle = '#000';
-        ctx.fillText(`${frequency.toFixed(2)}`, node.x, node.y - fontSize * 0.5);
-      }
-
-      // Draw confidence indicator
-      if (confidence != null) {
-        // Draw confidence as a small bar at the bottom
-        const barWidth = 12 / globalScale;
-        const barHeight = 4 / globalScale;
-        const barX = node.x - barWidth / 2;
-        const barY = node.y + radius + 2 / globalScale;
-
-        // Background bar (gray)
-        ctx.fillStyle = 'rgba(200, 200, 200, 0.5)';
-        ctx.fillRect(barX, barY, barWidth, barHeight);
-
-        // Confidence bar (blue)
-        ctx.fillStyle = `rgba(0, 123, 255, ${confidence})`;
-        ctx.fillRect(barX, barY, barWidth * confidence, barHeight);
-      }
-    }
-
-    // Draw goal-specific information (desire and confidence)
-    if (node.type === 'goal' && node.truth) {
-      const desire = node.truth.desire;
-      const confidence = node.truth.confidence;
-
-      if (desire != null) {
-        // Draw desire as an outer ring around the goal node
-        const desireRadius = radius * 1.3;
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, desireRadius, 0, 2 * Math.PI, false);
-        ctx.strokeStyle = `rgba(255, 0, 0, ${Math.abs(desire)})`; // Red for positive, blue for negative
-        ctx.lineWidth = 2 / globalScale;
-        ctx.stroke();
-
-        // Add desire text
-        ctx.font = `${fontSize * 0.8}px Sans-Serif`;
-        ctx.fillStyle = '#000';
-        ctx.fillText(`${desire.toFixed(2)}`, node.x, node.y + fontSize * 1.8);
-      }
-
-      if (confidence != null) {
-        // Draw confidence as a small bar at the bottom
-        const barWidth = 12 / globalScale;
-        const barHeight = 4 / globalScale;
-        const barX = node.x - barWidth / 2;
-        const barY = node.y + radius + 6 / globalScale;
-
-        // Background bar (gray)
-        ctx.fillStyle = 'rgba(200, 200, 200, 0.5)';
-        ctx.fillRect(barX, barY, barWidth, barHeight);
-
-        // Confidence bar (red for goals)
-        ctx.fillStyle = `rgba(220, 53, 69, ${confidence})`;
-        ctx.fillRect(barX, barY, barWidth * confidence, barHeight);
-      }
-    }
-
-    // Draw question-specific information (priority indicators)
-    if (node.type === 'question' && node.priority != null) {
-      // Draw question priority as a pulsing border effect
-      const pulseOffset = (Date.now() % 1000) / 1000; // 0 to 1 over 1 second
-      const pulseValue = Math.sin(pulseOffset * Math.PI * 2) * 0.5 + 0.5; // 0 to 1
-      const pulseRadius = radius * (1.1 + 0.2 * pulseValue); // Pulsing radius
-
-      ctx.beginPath();
-      ctx.arc(node.x, node.y, pulseRadius, 0, 2 * Math.PI, false);
-      ctx.strokeStyle = `rgba(111, 66, 193, ${0.3 + 0.7 * pulseValue})`; // Purple for questions
-      ctx.lineWidth = 1 / globalScale;
-      ctx.stroke();
+    // Draw node-specific information based on type
+    switch (node.type) {
+      case 'belief':
+        drawBeliefInfo(ctx, node, radius, fontSize, globalScale);
+        break;
+      case 'goal':
+        drawGoalInfo(ctx, node, radius, fontSize, globalScale);
+        break;
+      case 'question':
+        drawQuestionInfo(ctx, node, radius, fontSize, globalScale);
+        break;
     }
   }, [selectedNode, getColorForNodeType]);
+
+  // Helper function to draw belief-specific information (frequency and confidence)
+  const drawBeliefInfo = (ctx, node, radius, fontSize, globalScale) => {
+    if (!node.truth) return;
+
+    const frequency = node.truth.frequency;
+    const confidence = node.truth.confidence;
+
+    // Draw frequency indicator as inner circle
+    if (frequency != null) {
+      const freqRadius = radius * 0.6;
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, freqRadius, 0, 2 * Math.PI, false);
+      ctx.strokeStyle = `rgba(255, 0, 0, ${frequency})`; // Red for frequency
+      ctx.lineWidth = 1.5 / globalScale;
+      ctx.stroke();
+
+      // Add frequency text
+      ctx.font = `${fontSize * 0.8}px Sans-Serif`;
+      ctx.fillStyle = '#000';
+      ctx.fillText(`${frequency.toFixed(2)}`, node.x, node.y - fontSize * 0.5);
+    }
+
+    // Draw confidence indicator
+    if (confidence != null) {
+      // Draw confidence as a small bar at the bottom
+      const barWidth = 12 / globalScale;
+      const barHeight = 4 / globalScale;
+      const barX = node.x - barWidth / 2;
+      const barY = node.y + radius + 2 / globalScale;
+
+      // Background bar (gray)
+      ctx.fillStyle = 'rgba(200, 200, 200, 0.5)';
+      ctx.fillRect(barX, barY, barWidth, barHeight);
+
+      // Confidence bar (blue)
+      ctx.fillStyle = `rgba(0, 123, 255, ${confidence})`;
+      ctx.fillRect(barX, barY, barWidth * confidence, barHeight);
+    }
+  };
+
+  // Helper function to draw goal-specific information (desire and confidence)
+  const drawGoalInfo = (ctx, node, radius, fontSize, globalScale) => {
+    if (!node.truth) return;
+
+    const desire = node.truth.desire;
+    const confidence = node.truth.confidence;
+
+    if (desire != null) {
+      // Draw desire as an outer ring around the goal node
+      const desireRadius = radius * 1.3;
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, desireRadius, 0, 2 * Math.PI, false);
+      ctx.strokeStyle = `rgba(255, 0, 0, ${Math.abs(desire)})`; // Red for positive, blue for negative
+      ctx.lineWidth = 2 / globalScale;
+      ctx.stroke();
+
+      // Add desire text
+      ctx.font = `${fontSize * 0.8}px Sans-Serif`;
+      ctx.fillStyle = '#000';
+      ctx.fillText(`${desire.toFixed(2)}`, node.x, node.y + fontSize * 1.8);
+    }
+
+    if (confidence != null) {
+      // Draw confidence as a small bar at the bottom
+      const barWidth = 12 / globalScale;
+      const barHeight = 4 / globalScale;
+      const barX = node.x - barWidth / 2;
+      const barY = node.y + radius + 6 / globalScale;
+
+      // Background bar (gray)
+      ctx.fillStyle = 'rgba(200, 200, 200, 0.5)';
+      ctx.fillRect(barX, barY, barWidth, barHeight);
+
+      // Confidence bar (red for goals)
+      ctx.fillStyle = `rgba(220, 53, 69, ${confidence})`;
+      ctx.fillRect(barX, barY, barWidth * confidence, barHeight);
+    }
+  };
+
+  // Helper function to draw question-specific information (priority indicators)
+  const drawQuestionInfo = (ctx, node, radius, fontSize, globalScale) => {
+    if (node.priority == null) return;
+
+    // Draw question priority as a pulsing border effect
+    const pulseOffset = (Date.now() % 1000) / 1000; // 0 to 1 over 1 second
+    const pulseValue = Math.sin(pulseOffset * Math.PI * 2) * 0.5 + 0.5; // 0 to 1
+    const pulseRadius = radius * (1.1 + 0.2 * pulseValue); // Pulsing radius
+
+    ctx.beginPath();
+    ctx.arc(node.x, node.y, pulseRadius, 0, 2 * Math.PI, false);
+    ctx.strokeStyle = `rgba(111, 66, 193, ${0.3 + 0.7 * pulseValue})`; // Purple for questions
+    ctx.lineWidth = 1 / globalScale;
+    ctx.stroke();
+  };
 
   const drawLink = useCallback((link, ctx, globalScale) => {
     ctx.beginPath();

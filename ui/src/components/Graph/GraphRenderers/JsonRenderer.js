@@ -23,44 +23,42 @@ export const JsonRenderer = ({ filters, priorityRange }) => {
     }
 
     // Consolidate task filtering based on punctuation/type
-    // Show tasks only if the main tasks filter is enabled
-    if (filters.tasks) {
-      result.tasks = tasks.filter(task => {
-        if (task.priority < priorityRange.min || task.priority > priorityRange.max) {
-          return false;
-        }
-
-        // Determine task type based on punctuation or type field
-        let taskType = task.type || 'task';
-        const content = task.term || task.content || task.id || '';
-
-        if (!task.type) {
-          if (content.endsWith('?')) {
-            taskType = 'question';
-          } else if (content.endsWith('!')) {
-            taskType = 'goal';
-          } else if (content.endsWith('.')) {
-            taskType = 'belief';
-          } else {
-            taskType = 'task';
-          }
-        }
-
-        // Check if this task type should be included based on filters
-        if (taskType === 'question' && filters.questions) {
-          return true;
-        } else if (taskType === 'belief' && filters.beliefs) {
-          return true;
-        } else if (taskType === 'goal' && filters.goals) {
-          return true;
-        } else if (taskType === 'task') {
-          // Include if any filter is active
-          return filters.beliefs || filters.questions || filters.goals;
-        }
-
+    // Show tasks based on their specific type filters (no main tasks filter anymore)
+    result.tasks = tasks.filter(task => {
+      if (task.priority < priorityRange.min || task.priority > priorityRange.max) {
         return false;
-      });
-    }
+      }
+
+      // Determine task type based on punctuation or type field
+      let taskType = task.type || 'task';
+      const content = task.term || task.content || task.id || '';
+
+      if (!task.type) {
+        if (content.endsWith('?')) {
+          taskType = 'question';
+        } else if (content.endsWith('!')) {
+          taskType = 'goal';
+        } else if (content.endsWith('.')) {
+          taskType = 'belief';
+        } else {
+          taskType = 'task';
+        }
+      }
+
+      // Check if this task type should be included based on filters
+      if (taskType === 'question' && filters.questions) {
+        return true;
+      } else if (taskType === 'belief' && filters.beliefs) {
+        return true;
+      } else if (taskType === 'goal' && filters.goals) {
+        return true;
+      } else if (taskType === 'task') {
+        // Include if any filter is active
+        return filters.beliefs || filters.questions || filters.goals;
+      }
+
+      return false;
+    });
 
     result.systemMetrics = systemMetrics;
     result.wsConnected = wsConnected;
