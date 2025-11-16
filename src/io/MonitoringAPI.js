@@ -3,21 +3,6 @@ import {WebSocketServer} from 'ws';
 
 const DEFAULT_OPTIONS = Object.freeze({port: 8080, host: 'localhost'});
 
-const EVENT_HANDLERS = Object.freeze({
-    'cycle.completed': (api, data) => {
-        api.metrics.cycleCount++;
-        api._broadcastEvent('cycle.completed', {cycle: api.metrics.cycleCount, data, timestamp: Date.now()});
-    },
-    'task.input': (api, data) => {
-        api.metrics.taskCount++;
-        api._broadcastEvent('task.input', {...data, timestamp: Date.now()});
-    },
-    'task.added': (api, data) => api._broadcastEvent('task.added', {...data, timestamp: Date.now()}),
-    'system.started': (api, data) => api._broadcastEvent('system.started', {...data, timestamp: Date.now()}),
-    'system.stopped': (api, data) => api._broadcastEvent('system.stopped', {...data, timestamp: Date.now()}),
-    'system.reset': (api, data) => api._broadcastEvent('system.reset', {...data, timestamp: Date.now()})
-});
-
 export class MonitoringAPI {
     constructor(nar, options = {}) {
         this.nar = nar;
@@ -32,13 +17,6 @@ export class MonitoringAPI {
             startTime: Date.now()
         };
 
-        this._setupEventListeners();
-    }
-
-    _setupEventListeners() {
-        Object.entries(EVENT_HANDLERS).forEach(([event, handler]) => {
-            this.nar.on(event, (data) => handler(this, data));
-        });
     }
 
     async start() {
@@ -85,11 +63,6 @@ export class MonitoringAPI {
             timestamp: Date.now()
         };
         this._sendToClient(ws, initialState);
-    }
-
-    _broadcastEvent(eventType, data) {
-        const message = {type: eventType, data, timestamp: Date.now()};
-        this._sendToAllClients(message);
     }
 
     _sendToClient(client, message) {

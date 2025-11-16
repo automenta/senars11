@@ -63,8 +63,6 @@ const UI_DATA_SELECTORS = Object.freeze({
     reasoningSteps: state => state.reasoningSteps,
     systemMetrics: state => state.systemMetrics,
     demos: state => state.demos,
-    beliefs: state => state.beliefs,
-    goals: state => state.goals,
     cycles: state => state.cycles,
     reasoningState: state => state.reasoningState,
     corrections: state => state.corrections,
@@ -88,8 +86,6 @@ export const useUiData = () => {
     const reasoningSteps = useUiStore(UI_DATA_SELECTORS.reasoningSteps);
     const systemMetrics = useUiStore(UI_DATA_SELECTORS.systemMetrics);
     const demos = useUiStore(UI_DATA_SELECTORS.demos);
-    const beliefs = useUiStore(UI_DATA_SELECTORS.beliefs);
-    const goals = useUiStore(UI_DATA_SELECTORS.goals);
     const cycles = useUiStore(UI_DATA_SELECTORS.cycles);
     const reasoningState = useUiStore(UI_DATA_SELECTORS.reasoningState);
     const corrections = useUiStore(UI_DATA_SELECTORS.corrections);
@@ -111,8 +107,6 @@ export const useUiData = () => {
         reasoningSteps,
         systemMetrics,
         demos,
-        beliefs,
-        goals,
         cycles,
         reasoningState,
         corrections,
@@ -144,16 +138,6 @@ const DATA_OPERATIONS = Object.freeze({
         addStep: state => state.addReasoningStep,
         clearSteps: state => state.clearReasoningSteps
     },
-    belief: {
-        add: state => state.addBelief,
-        update: state => state.updateBelief,
-        remove: state => state.removeBelief
-    },
-    goal: {
-        add: state => state.addGoal,
-        update: state => state.updateGoal,
-        remove: state => state.removeGoal
-    },
     notification: {
         add: state => state.addNotification,
         remove: state => state.removeNotification,
@@ -177,16 +161,6 @@ export const useDataOperations = () => {
     const reasoningAddStep = useUiStore(state => state.addReasoningStep);
     const reasoningClearSteps = useUiStore(state => state.clearReasoningSteps);
 
-    // Belief operations
-    const beliefAdd = useUiStore(state => state.addBelief);
-    const beliefUpdate = useUiStore(state => state.updateBelief);
-    const beliefRemove = useUiStore(state => state.removeBelief);
-
-    // Goal operations
-    const goalAdd = useUiStore(state => state.addGoal);
-    const goalUpdate = useUiStore(state => state.updateGoal);
-    const goalRemove = useUiStore(state => state.removeGoal);
-
     // Notification operations
     const notificationAdd = useUiStore(state => state.addNotification);
     const notificationRemove = useUiStore(state => state.removeNotification);
@@ -201,12 +175,6 @@ export const useDataOperations = () => {
         conceptRemove,
         reasoningAddStep,
         reasoningClearSteps,
-        beliefAdd,
-        beliefUpdate,
-        beliefRemove,
-        goalAdd,
-        goalUpdate,
-        goalRemove,
         notificationAdd,
         notificationRemove,
         notificationClear

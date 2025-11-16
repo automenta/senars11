@@ -1,4 +1,4 @@
-import React, {useCallback, useState} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import useUiStore from '../src/stores/uiStore.js';
 
 const NarseseInput = ({
@@ -13,6 +13,12 @@ const NarseseInput = ({
     const wsService = useUiStore(state => state.wsService);
     const notifications = useUiStore(state => state.notifications);
 
+    useEffect(() => {
+        if (wsService) {
+            wsService.sendMessage({type: 'control/refresh'});
+        }
+    }, [wsService]);
+
     const handleSubmit = e => {
         e.preventDefault();
         if (!input.trim() || !wsService) return;
@@ -24,6 +30,7 @@ const NarseseInput = ({
                 input: input.trim(),
             },
         });
+        wsService.sendMessage({type: 'control/refresh'});
 
         // Add to local history
         const newEntry = {
@@ -55,6 +62,7 @@ const NarseseInput = ({
                 type: 'control/reset',
                 payload: {}
             });
+            wsService.sendMessage({type: 'control/refresh'});
 
             useUiStore.getState().addNotification({
                 type: 'info',

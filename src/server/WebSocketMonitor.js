@@ -1,7 +1,7 @@
 import {WebSocketServer} from 'ws';
 import {EventEmitter} from 'events';
 import {ClientMessageHandlers} from './ClientMessageHandlers.js';
-import {DEFAULT_CLIENT_CAPABILITIES, NAR_EVENTS, WEBSOCKET_CONFIG} from '../config/constants.js';
+import {DEFAULT_CLIENT_CAPABILITIES, WEBSOCKET_CONFIG} from '../config/constants.js';
 
 const DEFAULT_OPTIONS = Object.freeze({
     port: WEBSOCKET_CONFIG.defaultPort,
@@ -30,11 +30,6 @@ class WebSocketMonitor {
         this.messageHandlers = new ClientMessageHandlers(this);
 
         this.metrics = this._initializeMetrics();
-
-        this.broadcastRateLimiter = {
-            lastBroadcastTime: new Map(),
-            minInterval: options.minBroadcastInterval ?? DEFAULT_OPTIONS.minBroadcastInterval
-        };
         this.clientRateLimiters = new Map();
         this.rateLimitWindowMs = options.rateLimitWindowMs ?? DEFAULT_OPTIONS.rateLimitWindowMs;
         this.maxMessagesPerWindow = options.maxMessagesPerWindow ?? DEFAULT_OPTIONS.maxMessagesPerWindow;
@@ -169,10 +164,6 @@ class WebSocketMonitor {
         });
     }
 
-    broadcastEvent(eventType, data, options = {}) {
-        this._broadcastMessage({type: 'event', eventType, data, timestamp: Date.now(), ...options}, eventType);
-    }
-
     _sendToClient(client, message) {
         try {
             if (client && typeof client.send === 'function' && client.readyState === client.OPEN) {
@@ -240,10 +231,6 @@ class WebSocketMonitor {
             this.clientMessageHandlers = new Map();
         }
         this.clientMessageHandlers.set(messageType, handler);
-    }
-
-    broadcastCustomEvent(eventType, data, options = {}) {
-        this._broadcastMessage({type: eventType, data, timestamp: Date.now(), ...options}, eventType);
     }
 
     _handleClientMessage(client, data) {
@@ -411,84 +398,7 @@ class WebSocketMonitor {
 
         this._nar = nar;
 
-        NAR_EVENTS.forEach(eventName => {
-            nar.on(eventName, (data, metadata) => {
-                this.broadcastEvent(eventName, {
-                    data,
-                    metadata: metadata || {},
-                    timestamp: Date.now()
-                });
-            });
-        });
-
         console.log('WebSocket monitor now listening to NAR events');
-    }
-
-    _broadcastMessage(message, eventType) {
-        try {
-            if (!this._shouldBroadcast(message, eventType)) return;
-            if (this.clients.size === 0) return;
-
-            const jsonMessage = JSON.stringify(message);
-            let sentCount = 0;
-
-            for (const client of this.clients) {
-                if (this._shouldSendToClient(client, message, eventType) && client.readyState === client.OPEN) {
-                    sentCount += this._sendToClientSafe(client, jsonMessage, message.type);
-                }
-            }
-
-            this.metrics.messagesSent += sentCount;
-        } catch (error) {
-            console.error(`Error broadcasting ${message.type}:`, error);
-            this.metrics.errorCount++;
-        }
-    }
-
-    _shouldBroadcast(message, eventType) {
-        const now = Date.now();
-        const lastBroadcast = this.broadcastRateLimiter.lastBroadcastTime.get(eventType) ?? 0;
-        if (now - lastBroadcast < this.broadcastRateLimiter.minInterval) {
-            return false;
-        }
-        this.broadcastRateLimiter.lastBroadcastTime.set(eventType, now);
-
-        if (this.eventFilter && typeof this.eventFilter === 'function') {
-            if (!this.eventFilter(eventType, message.data)) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    _shouldSendToClient(client, message, eventType) {
-        return message.type === 'event' ||
-            !client.subscriptions ||
-            client.subscriptions.has('all') ||
-            client.subscriptions.has(eventType);
-    }
-
-    _sendToClientSafe(client, jsonMessage, messageType) {
-        try {
-            client.send(jsonMessage, {binary: false, compress: true}, (error) => {
-                if (error) this._handleClientSendError(client, messageType, error);
-            });
-            return 1;
-        } catch (sendError) {
-            this._handleClientSendError(client, messageType, sendError);
-            return 0;
-        }
-    }
-
-    _handleClientSendError(client, messageType, error) {
-        console.error(`Error sending ${messageType} to client:`, error);
-        this.clients.delete(client);
-        try {
-            client.close(1011, 'Sending error');
-        } catch (e) {
-            // If client is already closed, just ignore
-        }
     }
 
     _handleControlMessage(client, message) {
@@ -534,10 +444,17 @@ class WebSocketMonitor {
                     type: 'control/ack',
                     payload: {command: 'reset', status: 'reset'}
                 });
-                // Also broadcast system reset event to notify UI components
-                this.broadcastEvent('system.memoryReset', {
-                    timestamp: Date.now(),
-                    message: 'NAR memory reset completed'
+                break;
+
+            case 'refresh':
+                const concepts = Array.from(this._nar.memory.concepts.values());
+                const tasks = Array.from(this._nar.memory.tasks.values());
+                this._sendToClient(client, {
+                    type: 'memorySnapshot',
+                    payload: {
+                        concepts,
+                        tasks,
+                    }
                 });
                 break;
 

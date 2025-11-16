@@ -33,8 +33,6 @@ const INITIAL_STATE = Object.freeze({
     reasoningSteps: [],
     tasks: [],
     concepts: [],
-    beliefs: [],
-    goals: [],
     cycles: [],
     systemMetrics: null,
     demos: [],
@@ -85,8 +83,6 @@ const createSelectors = (useStore) => {
         // Data collection selectors
         getTasks: () => useStore.getState().tasks,
         getConcepts: () => useStore.getState().concepts,
-        getBeliefs: () => useStore.getState().beliefs,
-        getGoals: () => useStore.getState().goals,
         getReasoningSteps: () => useStore.getState().reasoningSteps,
         getCycles: () => useStore.getState().cycles,
         getCycleCount: () => useStore.getState().cycles.length,
@@ -159,25 +155,11 @@ const createActions = (set, get) => {
         removeConcept: (term) => set(COLLECTION_MANAGERS.concepts.remove(term, 'term')),
         clearConcepts: () => set(COLLECTION_MANAGERS.concepts.clear()),
 
-        // Belief operations - direct array manipulation for performance
-        addBelief: (belief) => set(state => ({beliefs: [...state.beliefs, belief]})),
-        updateBelief: (id, updates) => set(state => ({
-            beliefs: state.beliefs.map(belief => belief.id === id ? {...belief, ...updates} : belief)
-        })),
-        removeBelief: (id) => set(state => ({
-            beliefs: state.beliefs.filter(belief => belief.id !== id)
-        })),
-        clearBeliefs: createSimpleSetter('beliefs'),
-
-        // Goal operations - direct array manipulation
-        addGoal: (goal) => set(state => ({goals: [...state.goals, goal]})),
-        updateGoal: (id, updates) => set(state => ({
-            goals: state.goals.map(goal => goal.id === id ? {...goal, ...updates} : goal)
-        })),
-        removeGoal: (id) => set(state => ({
-            goals: state.goals.filter(goal => goal.id !== id)
-        })),
-        clearGoals: createSimpleSetter('goals'),
+        // Memory snapshot operations
+        setMemorySnapshot: (snapshot) => set({
+            concepts: snapshot.concepts || [],
+            tasks: snapshot.tasks || [],
+        }),
 
         // Cycle operations - with size limit
         addCycle: (cycle) => set(COLLECTION_MANAGERS.cycles.addLimited(cycle, 50, 'id')),

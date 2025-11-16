@@ -100,29 +100,11 @@ export class DemoWrapper {
             await handler();
         } catch (error) {
             console.error('Error handling demo control:', error);
-            // Notify client about the error
-            if (this.webSocketMonitor && data && data.payload) {
-                this.webSocketMonitor.broadcastCustomEvent('demoError', {
-                    demoId: data.payload.demoId,
-                    error: error.message,
-                    timestamp: Date.now(),
-                    stack: error.stack
-                });
-            }
         }
     }
 
     async _handleUnknownCommand(demoId, command) {
         console.warn(`Unknown demo command: ${command}`);
-        // Optionally notify the client about the unknown command
-        if (this.webSocketMonitor) {
-            this.webSocketMonitor.broadcastCustomEvent('demoError', {
-                demoId,
-                error: `Unknown command: ${command}`,
-                command,
-                timestamp: Date.now()
-            });
-        }
     }
 
     async startDemo(demoId, parameters = {}) {
@@ -278,84 +260,15 @@ export class DemoWrapper {
     }
 
     async sendDemoState(demoId, state) {
-        if (this.webSocketMonitor) {
-            this.webSocketMonitor.broadcastEvent('demoState', {
-                type: 'demoState',
-                payload: {
-                    demoId,
-                    ...state,
-                    timestamp: Date.now()
-                }
-            });
-        }
     }
 
     async sendDemoStep(demoId, step, description, data = {}) {
-        if (this.webSocketMonitor) {
-            // Update the demo state with current step and progress
-            const demoState = this.demoStateManager.getDemoState(demoId);
-            if (demoState) {
-                // Estimate progress based on step number (assuming ~5-6 steps per demo)
-                const estimatedTotalSteps = 6;
-                const progress = Math.min(100, Math.round((step / estimatedTotalSteps) * 100));
-
-                this.demoStateManager.updateDemoState(demoId, {
-                    currentStep: step,
-                    description,
-                    progress,
-                    lastStepTime: Date.now()
-                });
-            }
-
-            this.webSocketMonitor.broadcastEvent('demoStep', {
-                type: 'demoStep',
-                payload: {
-                    demoId,
-                    step,
-                    description,
-                    data,
-                    progress: this.demoStateManager.getDemoState(demoId)?.progress || 0,
-                    timestamp: Date.now()
-                }
-            });
-        }
     }
 
     async sendDemoMetrics(demoId, metrics) {
-        if (this.webSocketMonitor) {
-            try {
-                this.webSocketMonitor.broadcastEvent('demoMetrics', {
-                    type: 'demoMetrics',
-                    payload: {
-                        demoId,
-                        systemMetrics: {
-                            ...metrics,
-                            timestamp: Date.now()
-                        }
-                    }
-                });
-            } catch (error) {
-                console.error('Error sending demo metrics:', error);
-            }
-        }
     }
 
     async sendDemoList() {
-        if (this.webSocketMonitor) {
-            // Send the demo list as an event
-            this.webSocketMonitor.broadcastEvent('demoList', {
-                type: 'demoList',
-                payload: {
-                    demos: this.getAvailableDemos()
-                }
-            });
-
-            // Also send individual demo status updates for currently running demos
-            const allDemoStates = this.demoStateManager.getAllDemoStates();
-            for (const [demoId, state] of Object.entries(allDemoStates)) {
-                this.sendDemoState(demoId, state);
-            }
-        }
     }
 
     // Demo implementations

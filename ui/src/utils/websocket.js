@@ -8,16 +8,6 @@ import {createMessageProcessor, messageProcessorUtils} from './messageProcessor'
 import {ConnectionState, DEFAULT_OPTIONS} from './wsConstants';
 import {createHandlerRegistry} from './handlerRegistry';
 
-// WebSocket message routing configuration
-const MESSAGE_HANDLERS = {
-    demoControl: (wsService, data) => wsService.handleDemoControl({type: data.type, payload: data.payload}),
-    systemCommand: (wsService, data) => wsService.handleSystemCommand({type: data.type, payload: data.payload}),
-    panelCommand: (wsService, data) => wsService.handlePanelCommand({type: data.type, payload: data.payload}),
-    // Added handler for control/reset and narseseInput commands
-    control: (wsService, data) => wsService.handleControlCommand({type: data.type, payload: data.payload}),
-    narseseInput: (wsService, data) => wsService.handleNarseseInput({type: data.type, payload: data.payload})
-};
-
 // Real demo sequences configuration
 const REAL_DEMOS = Object.freeze({
     basic_reasoning: {
@@ -382,92 +372,7 @@ class WebSocketService {
             return;
         }
 
-        const handler = MESSAGE_HANDLERS[type];
-        if (handler) return handler(this, data);
-
-        try {
-            const result = await this.messageProcessor.process(data, {wsService: this});
-
-            if (result?.success) {
-                const processedData = result.data;
-                const handlerProcessed = this.handlerRegistry.process(processedData);
-
-                if (!handlerProcessed) {
-                    // Update UI store with received data even if no specific handler exists
-                    this._updateUiStore(processedData);
-
-                    // Check for any pending listeners waiting for this message type
-                    this._notifyListeners(processedData);
-
-                    if (Math.random() < 0.1) {
-                        console.debug('Unknown message type:', processedData?.type, processedData);
-                    }
-                }
-            } else {
-                const errorMessage = result?.error ?? 'Unknown processing error';
-                console.error('Message processing failed:', errorMessage, data);
-                this._addNotification({
-                    type: 'error',
-                    title: 'Message processing failed',
-                    message: errorMessage
-                });
-            }
-        } catch (error) {
-            console.error('Error in message processing pipeline:', error, 'for message:', data);
-            this._addNotification({
-                type: 'error',
-                title: 'Message processing error',
-                message: error?.message ?? 'Unknown error in message processing'
-            });
-        }
-    }
-
-    /**
-     * Add a listener for specific message types
-     */
-    addListener(messageType, callback) {
-        if (!this.listeners) {
-            this.listeners = new Map();
-        }
-
-        if (!this.listeners.has(messageType)) {
-            this.listeners.set(messageType, []);
-        }
-
-        this.listeners.get(messageType).push(callback);
-        return () => this.removeListener(messageType, callback); // Return unsubscribe function
-    }
-
-    /**
-     * Remove a listener for a specific message type
-     */
-    removeListener(messageType, callback) {
-        if (this.listeners && this.listeners.has(messageType)) {
-            const listeners = this.listeners.get(messageType);
-            const index = listeners.indexOf(callback);
-            if (index > -1) {
-                listeners.splice(index, 1);
-            }
-        }
-    }
-
-    /**
-     * Notify all listeners waiting for a specific message type
-     */
-    _notifyListeners(data) {
-        if (this.listeners && data?.type) {
-            const listeners = this.listeners.get(data.type);
-            if (listeners) {
-                // Call all listeners for this message type
-                listeners.forEach(callback => {
-                    try {
-                        callback(data);
-                    } catch (error) {
-                        console.error(`Error in listener for ${data.type}:`, error);
-                    }
-                });
-            }
-        }
+        this._updateUiStore(data);
     }
 
     _updateUiStore(data) {
@@ -479,18 +384,8 @@ class WebSocketService {
         const payload = data.payload;
 
         switch (data.type) {
-            case 'taskUpdate':
-                const task = payload?.task;
-                store.addTask(task ? task : payload);
-                break;
-            case 'conceptUpdate':
-                payload?.concept && store.addConcept(payload.concept);
-                break;
-            case 'beliefUpdate':
-                payload && store.addBelief(payload);
-                break;
-            case 'goalUpdate':
-                payload && store.addGoal(payload);
+            case 'memorySnapshot':
+                store.setMemorySnapshot(payload);
                 break;
             case 'reasoningStep':
                 payload && store.addReasoningStep(payload);

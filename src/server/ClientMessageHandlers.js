@@ -257,13 +257,6 @@ export class ClientMessageHandlers {
         // Optionally broadcast this log to other connected clients or store for debugging
         if (message.level === 'error' || message.level === 'warn') {
             // Broadcast error/warning logs to all clients for debugging purposes
-            this.monitor.broadcastEvent('clientLog', {
-                level: message.level,
-                clientId: client.clientId,
-                data: message.data,
-                timestamp: message.timestamp,
-                meta: message.meta
-            });
         }
     }
 
