@@ -3,6 +3,7 @@ import {EventEmitter} from 'events';
 import {ClientMessageHandlers} from './ClientMessageHandlers.js';
 import {DEFAULT_CLIENT_CAPABILITIES, NAR_EVENTS, WEBSOCKET_CONFIG} from '../config/constants.js';
 import {ReplMessageHandler} from '../repl/ReplMessageHandler.js';
+import { YjsStateManager } from './YjsStateManager.js';
 
 const DEFAULT_OPTIONS = Object.freeze({
     port: WEBSOCKET_CONFIG.defaultPort,
@@ -42,6 +43,12 @@ class WebSocketMonitor {
         this.messageBufferSize = options.messageBufferSize ?? DEFAULT_OPTIONS.messageBufferSize;
 
         this.clientCapabilities = new Map();
+
+        // Initialize YjsStateManager for CRDT-based state synchronization
+        this.yjsStateManager = new YjsStateManager({
+            websocketPort: options.yjsPort || 1234,
+            documentId: options.yjsDocumentId || 'senars-document'
+        });
     }
 
     _initializeMetrics() {
@@ -64,10 +71,28 @@ class WebSocketMonitor {
                 port: this.port,
                 host: this.host,
                 path: this.path,
-                maxPayload: WEBSOCKET_CONFIG.maxPayload
+                maxPayload: WEBSOCKET_CONFIG.maxPayload,
+                // Add support for Yjs subprotocol
+                handleProtocols: (protocols, request) => {
+                    if (protocols.has('yjs')) {
+                        return 'yjs';
+                    }
+                    // For regular connections, return undefined to use default protocol
+                    return false;
+                }
             });
 
             this.server.on('connection', (ws, request) => {
+                // Check if this is a Yjs sync connection by looking at the protocol
+                const isYjsConnection = request.headers['sec-websocket-protocol'] === 'yjs';
+
+                if (isYjsConnection) {
+                    // Let the YjsDocServer handle this connection
+                    // The YjsDocServer integration should take over from here
+                    return;
+                }
+
+                // Handle as a regular connection
                 if (this.clients.size >= this.maxConnections) {
                     ws.close(1013, 'Server busy, too many connections');
                     return;
@@ -125,9 +150,13 @@ class WebSocketMonitor {
                 reject(error);
             });
 
-            this.server.on('listening', () => {
+            this.server.on('listening', async () => {
                 console.log(`WebSocket monitoring server started on ws://${this.host}:${this.port}${this.path}`);
                 console.log(`Max connections: ${this.maxConnections}, Rate limit: ${this.maxMessagesPerWindow}/${this.rateLimitWindowMs}ms`);
+
+                // Y.js server is already started by YjsStateManager constructor
+                console.log(`Y.js synchronization server available at ws://localhost:${this.yjsStateManager.port}/${this.yjsStateManager.documentId}`);
+
                 resolve();
             });
         });
@@ -157,6 +186,11 @@ class WebSocketMonitor {
             this.clients.clear();
             this.clientRateLimiters.clear();
             this.clientCapabilities.clear();
+
+            // Destroy YjsStateManager to clean up resources
+            if (this.yjsStateManager) {
+                this.yjsStateManager.destroy();
+            }
 
             if (this.server) {
                 this.server.close(() => {
@@ -405,13 +439,17 @@ class WebSocketMonitor {
         this._sendToClient(client, {type: 'error', message, error});
     }
 
-    listenToNAR(nar) {
+    async listenToNAR(nar) {
         if (!nar || !nar.on) {
             throw new Error('NAR instance must have an on() method');
         }
 
         this._nar = nar;
 
+        // Initialize YjsStateManager to listen to NAR events
+        await this.yjsStateManager.listenToNAR(nar);
+
+        // Also broadcast individual events for backward compatibility if needed
         NAR_EVENTS.forEach(eventName => {
             nar.on(eventName, (data, metadata) => {
                 this.broadcastEvent(eventName, {
@@ -422,7 +460,7 @@ class WebSocketMonitor {
             });
         });
 
-        console.log('WebSocket monitor now listening to NAR events');
+        console.log('WebSocket monitor now listening to NAR events and synchronizing via Yjs');
     }
 
     _broadcastMessage(message, eventType) {

@@ -113,6 +113,10 @@ const createActions = (set, get) => {
     setWsConnected: createSimpleSetter('wsConnected'),
     setWsService: createSimpleSetter('wsService'),
 
+    // Y.js synchronization management - prevent conflicts with Y.js updates
+    // When Y.js is active, these functions should be used carefully
+    setYjsService: createSimpleSetter('yjsService'),
+
     // Layout management
     setLayout: createSimpleSetter('layout'),
     saveLayout: (name, layout) => set(OBJECT_MANAGERS.savedLayouts.set(name, layout)),

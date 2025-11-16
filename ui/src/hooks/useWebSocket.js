@@ -6,6 +6,7 @@ export const useWebSocket = () => {
   const wsService = useUiStore(state => state.wsService);
   const wsConnected = useUiStore(state => state.wsConnected);
   const setWsConnected = useUiStore(state => state.setWsConnected);
+  const yjsService = useUiStore(state => state.yjsService);
 
   // Send a message through the WebSocket with error handling
   const sendMessage = useCallback((message) => {
@@ -47,6 +48,7 @@ export const useWebSocket = () => {
 
   return {
     wsService,
+    yjsService,
     wsConnected,
     sendMessage,
     registerHandler,

@@ -7,6 +7,7 @@ import {getStore} from './messageHandlers';
 import {createMessageProcessor, messageProcessorUtils} from './messageProcessor';
 import {ConnectionState, DEFAULT_OPTIONS} from './wsConstants';
 import {createHandlerRegistry} from './handlerRegistry';
+import YjsSyncClient from './YjsSyncClient.js';
 
 // WebSocket message routing configuration
 const MESSAGE_HANDLERS = {
@@ -103,7 +104,20 @@ class WebSocketService {
             (window.navigator?.webdriver || import.meta.env?.VITE_TEST_MODE === 'true');
 
     this.handlerRegistry = createHandlerRegistry();
-    
+
+    // Initialize YjsSyncClient for CRDT-based synchronization
+    this.yjsSyncClient = new YjsSyncClient({
+      serverUrl: options.yjsServerUrl || 'localhost',
+      websocketPort: options.yjsPort || 1234,  // Yjs server port
+      documentId: options.yjsDocumentId || 'senars-document'
+    });
+
+    // Update the store with the Yjs service reference
+    const store = getStore();
+    if (store && typeof store.setYjsService === 'function') {
+      store.setYjsService(this.yjsSyncClient);
+    }
+
     // Initialize fallback data store for when WebSocket is unavailable
     this.fallbackDataStore = {
       tasks: [],
@@ -699,6 +713,13 @@ class WebSocketService {
     }
     this.state = ConnectionState.DISCONNECTED;
     this.clearHeartbeat();
+
+    // Do NOT disconnect from Yjs synchronization when main WebSocket disconnects
+    // Yjs synchronization should continue independently to maintain collaborative state
+    // Only destroy Yjs client when the entire service is being completely destroyed
+    // if (this.yjsSyncClient) {
+    //   this.yjsSyncClient.destroy();
+    // }
   }
 
   sendMessage(message) {
