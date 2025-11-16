@@ -1,0 +1,25 @@
+# Dependencies
+/node_modules
+
+# Vite
+/dist
+/.vite/
+.env.local
+.env.*.local
+
+# Testing
+/coverage
+/playwright-report/
+/test-results/
+
+# IDEs
+.vscode/
+.idea/
+
+# OS-generated files
+.DS_Store
+*.swo
+*~
+
+*storybook.log
+storybook-static
