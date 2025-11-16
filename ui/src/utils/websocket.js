@@ -16,18 +16,18 @@ const MESSAGE_HANDLERS = {
 };
 
 // Demo content configuration
-const DEMO_CONFIG = {
-  demoList: [
+const DEMO_CONFIG = Object.freeze({
+  demoList: Object.freeze([
     {id: 'basic-reasoning', name: 'Basic Reasoning Demo', description: 'A simple reasoning demonstration'},
     {id: 'syllogistic', name: 'Syllogistic Reasoning', description: 'Classic syllogistic inference patterns'},
     {id: 'complex-inference', name: 'Complex Inference', description: 'Advanced inference chaining'}
-  ],
-  contentElements: {
-    subjects: ['cat', 'dog', 'bird', 'fish', 'horse', 'rabbit'],
-    predicates: ['animal', 'pet', 'mammal', 'water', 'farm'],
-    punctuation: ['.', '?', '!']
-  }
-};
+  ]),
+  contentElements: Object.freeze({
+    subjects: Object.freeze(['cat', 'dog', 'bird', 'fish', 'horse', 'rabbit']),
+    predicates: Object.freeze(['animal', 'pet', 'mammal', 'water', 'farm']),
+    punctuation: Object.freeze(['.', '?', '!'])
+  })
+});
 
 class WebSocketService {
   constructor(url, options = {}) {
@@ -356,7 +356,7 @@ class WebSocketService {
     try {
       const result = await this.messageProcessor.process(data, {wsService: this});
 
-      if (result.success) {
+      if (result?.success) {
         const processedData = result.data;
         const handlerProcessed = this.handlerRegistry.process(processedData);
 
@@ -367,19 +367,20 @@ class WebSocketService {
           // Check for any pending listeners waiting for this message type
           this._notifyListeners(processedData);
 
-          if (this.isTestEnvironment && processedData.type === 'narseseInput') {
+          if (this.isTestEnvironment && processedData?.type === 'narseseInput') {
             return this.handleNarseseInput({type: processedData.type, payload: processedData.payload});
           }
           if (Math.random() < 0.1) {
-            console.debug('Unknown message type:', processedData.type, processedData);
+            console.debug('Unknown message type:', processedData?.type, processedData);
           }
         }
       } else {
-        console.error('Message processing failed:', result.error, data);
+        const errorMessage = result?.error ?? 'Unknown processing error';
+        console.error('Message processing failed:', errorMessage, data);
         this._addNotification({
           type: 'error',
           title: 'Message processing failed',
-          message: result.error
+          message: errorMessage
         });
       }
     } catch (error) {
@@ -443,46 +444,30 @@ class WebSocketService {
   _updateUiStore(data) {
     // Update the UI store with received data to maintain state
     // Add null check to prevent errors
-    if (!data || !data.type) {
-      return;
-    }
+    if (!data?.type) return;
 
     const store = getStore();
+    const payload = data.payload;
 
     switch (data.type) {
       case 'taskUpdate':
-        if (data.payload.task) {
-          // Add just the task object, not the entire payload
-          store.addTask(data.payload.task);
-        } else {
-          // Fallback for cases where task is directly in payload
-          store.addTask(data.payload);
-        }
+        const task = payload?.task;
+        store.addTask(task ? task : payload);
         break;
       case 'conceptUpdate':
-        if (data.payload.concept) {
-          store.addConcept(data.payload.concept);
-        }
+        payload?.concept && store.addConcept(payload.concept);
         break;
       case 'beliefUpdate':
-        if (data.payload) {
-          store.addBelief(data.payload);
-        }
+        payload && store.addBelief(payload);
         break;
       case 'goalUpdate':
-        if (data.payload) {
-          store.addGoal(data.payload);
-        }
+        payload && store.addGoal(payload);
         break;
       case 'reasoningStep':
-        if (data.payload) {
-          store.addReasoningStep(data.payload);
-        }
+        payload && store.addReasoningStep(payload);
         break;
       case 'systemMetrics':
-        if (data.payload) {
-          store.setSystemMetrics(data.payload);
-        }
+        payload && store.setSystemMetrics(payload);
         break;
       case 'connection_info':
         store.setWsConnected(true);

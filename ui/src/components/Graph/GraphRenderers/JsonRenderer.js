@@ -4,6 +4,7 @@
  */
 import React from 'react';
 import { useUiData } from '../../../hooks/useWebSocket.js';
+import { detectTaskType } from '../../../utils/graph/nodeUtils.js';
 
 export const JsonRenderer = ({ filters, priorityRange }) => {
   const {
@@ -29,21 +30,7 @@ export const JsonRenderer = ({ filters, priorityRange }) => {
         return false;
       }
 
-      // Determine task type based on punctuation or type field
-      let taskType = task.type ?? 'task';
-      const content = task.term ?? task.content ?? task.id ?? '';
-
-      if (!task.type) {
-        if (content.endsWith('?')) {
-          taskType = 'question';
-        } else if (content.endsWith('!')) {
-          taskType = 'goal';
-        } else if (content.endsWith('.')) {
-          taskType = 'belief';
-        } else {
-          taskType = 'task';
-        }
-      }
+      const taskType = detectTaskType(task);
 
       // Check if this task type should be included based on filters
       if (taskType === 'question' && filters.questions) {

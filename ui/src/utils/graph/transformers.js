@@ -6,7 +6,7 @@ import { DEFAULT_PRIORITY, DEFAULT_TERM } from './graphConstants.js';
 
 // Helper function to generate node ID
 const generateNodeId = (prefix, id, fallback) =>
-  `${prefix}-${id ?? fallback ?? Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+  `${prefix}-${id ?? fallback ?? Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
 
 // Helper function to get creation timestamp
 const getCreationTime = (item, timeField = 'creationTime', fallbackField = 'occurrenceTime') =>
@@ -83,81 +83,46 @@ export const transformNarEventToNode = (event) => {
 
 // Create links between nodes based on relationships
 export const createRelationshipLinks = (nodes) => {
-  const conceptNodes = nodes.filter(n => n.type === 'concept');
-  const taskNodes = nodes.filter(n => n.type === 'task');
-  const beliefNodes = nodes.filter(n => n.type === 'belief');
-  const goalNodes = nodes.filter(n => n.type === 'goal');
-  const questionNodes = nodes.filter(n => n.type === 'question');
+  const nodeMap = {
+    concept: nodes.filter(n => n.type === 'concept'),
+    task: nodes.filter(n => n.type === 'task'),
+    belief: nodes.filter(n => n.type === 'belief'),
+    goal: nodes.filter(n => n.type === 'goal'),
+    question: nodes.filter(n => n.type === 'question')
+  };
+
+  const createLink = (type, source, target, directional = true) => ({
+    id: `${type}-${source.id}-${target.id}`,
+    source: source.id,
+    target: target.id,
+    type,
+    directional
+  });
 
   const links = [];
 
-  // Relationship: task → concept association
-  taskNodes.forEach(task => {
-    conceptNodes.forEach(concept => {
-      if (task.term && concept.term &&
-          (task.term.includes(concept.term) || concept.term.includes(task.term))) {
-        links.push({
-          id: `task-concept-${task.id}-${concept.id}`,
-          source: task.id,
-          target: concept.id,
-          type: 'task-concept-association',
-          directional: true
-        });
-      }
-    });
-  });
+  // Relationship: [sourceType] → concept associations
+  const conceptRelationships = [
+    { type: 'task', linkType: 'task-concept-association' },
+    { type: 'belief', linkType: 'belief-concept-association' },
+    { type: 'goal', linkType: 'goal-concept-association' },
+    { type: 'question', linkType: 'question-concept-association' }
+  ];
 
-  // Relationship: belief → concept association
-  beliefNodes.forEach(belief => {
-    conceptNodes.forEach(concept => {
-      if (belief.term && concept.term &&
-          (belief.term.includes(concept.term) || concept.term.includes(belief.term))) {
-        links.push({
-          id: `belief-concept-${belief.id}-${concept.id}`,
-          source: belief.id,
-          target: concept.id,
-          type: 'belief-concept-association',
-          directional: true
-        });
-      }
-    });
-  });
-
-  // Relationship: goal → concept association
-  goalNodes.forEach(goal => {
-    conceptNodes.forEach(concept => {
-      if (goal.term && concept.term &&
-          (goal.term.includes(concept.term) || concept.term.includes(goal.term))) {
-        links.push({
-          id: `goal-concept-${goal.id}-${concept.id}`,
-          source: goal.id,
-          target: concept.id,
-          type: 'goal-concept-association',
-          directional: true
-        });
-      }
-    });
-  });
-
-  // Relationship: question → concept association
-  questionNodes.forEach(question => {
-    conceptNodes.forEach(concept => {
-      if (question.term && concept.term &&
-          (question.term.includes(concept.term) || concept.term.includes(question.term))) {
-        links.push({
-          id: `question-concept-${question.id}-${concept.id}`,
-          source: question.id,
-          target: concept.id,
-          type: 'question-concept-association',
-          directional: true
-        });
-      }
+  conceptRelationships.forEach(({ type, linkType }) => {
+    nodeMap[type].forEach(item => {
+      nodeMap.concept.forEach(concept => {
+        if (item.term && concept.term &&
+            (item.term.includes(concept.term) || concept.term.includes(item.term))) {
+          links.push(createLink(linkType, item, concept));
+        }
+      });
     });
   });
 
   // Relationship: concept embedding (similarity-based)
-  conceptNodes.forEach((concept1, i) => {
-    conceptNodes.slice(i + 1).forEach(concept2 => {
+  nodeMap.concept.forEach((concept1, i) => {
+    nodeMap.concept.slice(i + 1).forEach(concept2 => {
       if (concept1.term && concept2.term) {
         // Check if concepts are similar (simple substring check for now, could be enhanced with semantic similarity)
         const isSimilar = concept1.term.includes(concept2.term) ||
@@ -178,16 +143,16 @@ export const createRelationshipLinks = (nodes) => {
   });
 
   // Relationship: concept subterm hierarchies
-  conceptNodes.forEach((concept1, i) => {
-    conceptNodes.slice(i + 1).forEach(concept2 => {
+  nodeMap.concept.forEach((concept1, i) => {
+    nodeMap.concept.slice(i + 1).forEach(concept2 => {
       if (concept1.term && concept2.term) {
         // Check for subterm relationships
-        if (concept1.term.includes(`<${concept2.term}>`) ||
-            concept2.term.includes(`<${concept1.term}>`)) {
+        const sourceFirst = concept1.term.includes(`<${concept2.term}>`);
+        if (sourceFirst || concept2.term.includes(`<${concept1.term}>`)) {
           links.push({
             id: `concept-subterm-${concept1.id}-${concept2.id}`,
-            source: concept1.term.includes(`<${concept2.term}>`) ? concept2.id : concept1.id,
-            target: concept1.term.includes(`<${concept2.term}>`) ? concept1.id : concept2.id,
+            source: sourceFirst ? concept2.id : concept1.id,
+            target: sourceFirst ? concept1.id : concept2.id,
             type: 'concept-subterm',
             directional: true
           });
@@ -197,26 +162,20 @@ export const createRelationshipLinks = (nodes) => {
   });
 
   // Relationship: task inference chains (tasks that are causally related)
-  taskNodes.forEach(task1 => {
-    taskNodes.forEach(task2 => {
+  nodeMap.task.forEach(task1 => {
+    nodeMap.task.forEach(task2 => {
       if (task1.id !== task2.id && task1.term && task2.term) {
         // Check for inference relationships (simple heuristic)
         if (task1.term.includes(task2.term) || task2.term.includes(task1.term)) {
-          links.push({
-            id: `task-inference-${task1.id}-${task2.id}`,
-            source: task1.id,
-            target: task2.id,
-            type: 'task-inference',
-            directional: true
-          });
+          links.push(createLink('task-inference', task1, task2));
         }
       }
     });
   });
 
   // Relationship: belief → belief similarity
-  beliefNodes.forEach((belief1, i) => {
-    beliefNodes.slice(i + 1).forEach(belief2 => {
+  nodeMap.belief.forEach((belief1, i) => {
+    nodeMap.belief.slice(i + 1).forEach(belief2 => {
       if (belief1.term && belief2.term &&
           (belief1.term.includes(belief2.term) || belief2.term.includes(belief1.term))) {
         links.push({
@@ -231,8 +190,8 @@ export const createRelationshipLinks = (nodes) => {
   });
 
   // Relationship: goal → goal similarity
-  goalNodes.forEach((goal1, i) => {
-    goalNodes.slice(i + 1).forEach(goal2 => {
+  nodeMap.goal.forEach((goal1, i) => {
+    nodeMap.goal.slice(i + 1).forEach(goal2 => {
       if (goal1.term && goal2.term &&
           (goal1.term.includes(goal2.term) || goal2.term.includes(goal1.term))) {
         links.push({
@@ -247,17 +206,11 @@ export const createRelationshipLinks = (nodes) => {
   });
 
   // Relationship: question → belief when belief answers the question
-  questionNodes.forEach(question => {
-    beliefNodes.forEach(belief => {
+  nodeMap.question.forEach(question => {
+    nodeMap.belief.forEach(belief => {
       if (question.term && belief.term &&
           (question.term.includes(belief.term) || belief.term.includes(question.term))) {
-        links.push({
-          id: `question-answer-${question.id}-${belief.id}`,
-          source: question.id,
-          target: belief.id,
-          type: 'question-answer',
-          directional: true
-        });
+        links.push(createLink('question-answer', question, belief));
       }
     });
   });
@@ -333,4 +286,42 @@ export const calculateGraphStatistics = (graphData) => {
       ? nodes.reduce((sum, node) => sum + (node.priority ?? DEFAULT_PRIORITY), 0) / nodeCount
       : 0
   };
+};
+
+// Format node label with detailed information based on node type
+export const formatNodeLabel = (node) => {
+  let label = `${node.term ?? node.id}`;
+
+  if (node.type === 'belief' && node.truth) {
+    label += `\nFreq: ${(node.truth.frequency ?? 0).toFixed(2)}, Conf: ${(node.truth.confidence ?? 0).toFixed(2)}`;
+  } else if (node.type === 'goal' && node.truth) {
+    label += `\nDesire: ${(node.truth.desire ?? 0).toFixed(2)}, Conf: ${(node.truth.confidence ?? 0).toFixed(2)}`;
+  } else if (node.type === 'question' && node.priority) {
+    label += `\nPriority: ${node.priority.toFixed(2)}`;
+  } else if (node.priority) {
+    label += ` (Priority: ${node.priority.toFixed(2)})`;
+  }
+
+  return label;
+};
+
+// Format link label with human-readable description based on link type
+export const formatLinkLabel = (link) => {
+  const linkType = link.type ?? 'association';
+  const typeLabels = {
+    'task-concept-association': 'Task-Concept',
+    'belief-concept-association': 'Belief-Concept',
+    'goal-concept-association': 'Goal-Concept',
+    'question-concept-association': 'Question-Concept',
+    'concept-embedding': 'Embedding',
+    'concept-subterm': 'Subterm',
+    'task-inference': 'Inference',
+    'belief-similarity': 'Belief Sim',
+    'goal-similarity': 'Goal Sim',
+    'question-answer': 'Answer',
+    association: 'Association',
+    inference: 'Inference',
+    similarity: 'Similarity'
+  };
+  return typeLabels[linkType] ?? linkType;
 };

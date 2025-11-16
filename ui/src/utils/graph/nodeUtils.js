@@ -39,7 +39,7 @@ export const createNodeFromObject = (item, nodeType) => {
 };
 
 // Helper function to detect task type from content
-const detectTaskType = (task) => {
+export const detectTaskType = (task) => {
   if (task.type) return task.type.toLowerCase();
 
   const content = task.content || task.term || '';

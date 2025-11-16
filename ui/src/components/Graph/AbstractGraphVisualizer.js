@@ -11,48 +11,18 @@ import { ForceGraphRenderer } from './GraphRenderers/ForceGraphRenderer.js';
 import { ReactFlowRenderer } from './GraphRenderers/ReactFlowRenderer.js';
 import { JsonRenderer } from './GraphRenderers/JsonRenderer.js';
 import { SimpleListRenderer } from './GraphRenderers/SimpleListRenderer.js';
+import { getRendererOptions, DEFAULT_RENDERER, DEFAULT_FILTERS } from './graphConstants.js';
 
-// Define available renderers
-const RENDERERS = Object.freeze({
-  force: {
-    id: 'force',
-    name: 'Force-Directed',
-    component: ForceGraphRenderer,
-    description: 'Interactive force-directed graph visualization'
-  },
-  reactflow: {
-    id: 'reactflow',
-    name: 'ReactFlow',
-    component: ReactFlowRenderer,
-    description: 'ReactFlow-based graph visualization'
-  },
-  simple: {
-    id: 'simple',
-    name: 'Simple List',
-    component: SimpleListRenderer,
-    description: 'Simple list view of concepts and tasks'
-  },
-  json: {
-    id: 'json',
-    name: 'JSON/Text',
-    component: JsonRenderer,
-    description: 'Raw JSON data representation for debugging'
-  }
-});
-
-const DEFAULT_RENDERER = 'json';
-const DEFAULT_FILTERS = Object.freeze({
-  concepts: true
-});
+// Define renderer components mapping
+const RENDERER_COMPONENTS = {
+  force: ForceGraphRenderer,
+  reactflow: ReactFlowRenderer,
+  simple: SimpleListRenderer,
+  json: JsonRenderer
+};
 
 // Get renderer component by ID
-const getRendererComponent = (id) => RENDERERS[id]?.component || ForceGraphRenderer;
-
-// Get renderer options for select field
-const getRendererOptions = () => Object.values(RENDERERS).map(renderer => ({
-  value: renderer.id,
-  label: renderer.name
-}));
+const getRendererComponent = (id) => RENDERER_COMPONENTS[id] || ForceGraphRenderer;
 
 // Create filter controls
 const FilterControls = ({ filters, onFilterChange }) => (
