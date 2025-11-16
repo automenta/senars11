@@ -95,6 +95,7 @@
     "y-webrtc": "^10.3.0",
     "y-websocket": "^3.0.0",
     "yjs": "^13.6.27",
+    "yjs-client": "file:./yjs-client",
     "zod": "^3.25.76"
   },
   "devDependencies": {
@@ -107,6 +108,7 @@
     "jest": "^30.2.0",
     "peggy": "^5.0.6",
     "playwright-chromium": "^1.56.1",
-    "vitest": "^4.0.8"
+    "vitest": "^4.0.8",
+    "zustand": "^5.0.8"
   }
 }

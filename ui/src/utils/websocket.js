@@ -106,9 +106,12 @@ class WebSocketService {
     this.handlerRegistry = createHandlerRegistry();
 
     // Initialize YjsSyncClient for CRDT-based synchronization
+    const yjsHost = options.yjsServerUrl || window.location.hostname || 'localhost';
+    const yjsPort = options.yjsPort || import.meta.env.VITE_YJS_WEBSOCKET_PORT || 1234;
+
     this.yjsSyncClient = new YjsSyncClient({
-      serverUrl: options.yjsServerUrl || 'localhost',
-      websocketPort: options.yjsPort || 1234,  // Yjs server port
+      serverUrl: yjsHost,
+      websocketPort: yjsPort,
       documentId: options.yjsDocumentId || 'senars-document'
     });
 

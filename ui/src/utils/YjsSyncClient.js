@@ -11,8 +11,7 @@ class YjsSyncClient {
     this.options = {
       websocketPort: options.websocketPort || 8080, // Same port as main WebSocket now
       documentId: options.documentId || 'senars-document',
-      serverUrl: /*options.serverUrl ||*/ '192.168.2.172', //TODO use page URL
-      websocketPath: options.websocketPath || '/ws' // Use the same path as main WebSocket
+      serverUrl: options.serverUrl || window.location.hostname || 'localhost',
     };
 
     // Create Y.Doc for synchronization

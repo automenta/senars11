@@ -21,6 +21,7 @@ export default defineConfig(({mode}) => {
         },
         server: {
             host: true, // Allow external connections for --host flag
+            port: 5173,
             open: '/', // Open the merged launcher by default
         },
         build: {

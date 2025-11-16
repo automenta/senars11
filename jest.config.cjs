@@ -8,6 +8,9 @@ module.exports = {
     transform: {
         '^.+\\.js$': 'babel-jest',
     },
+    moduleNameMapper: {
+        '^yjs-client$': '<rootDir>/ui/src/utils/YjsSyncClient.js',
+    },
     collectCoverageFrom: [
         'src/**/*.js',
         '!src/**/*.test.js',
