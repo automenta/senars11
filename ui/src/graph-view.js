@@ -16,9 +16,27 @@ export function init(container) {
 
     const styleConfig = GraphLayout.getNodeStyleOptions();
 
-    return cytoscape({
+    const cy = cytoscape({
         container: graphDiv,
         style: styleConfig.style,
         layout: GraphLayout.getLayoutOptions()
     });
+
+    window.cy = cy; // Expose for testing
+
+    const detailsPanel = document.getElementById('details-panel');
+
+    cy.on('tap', 'node', (evt) => {
+        const node = evt.target;
+        detailsPanel.innerHTML = `<pre>${JSON.stringify(node.data(), null, 2)}</pre>`;
+        detailsPanel.style.display = 'block';
+    });
+
+    cy.on('tap', (evt) => {
+        if (evt.target === cy) {
+            detailsPanel.style.display = 'none';
+        }
+    });
+
+    return cy;
 }

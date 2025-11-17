@@ -178,6 +178,9 @@ export default class GraphController {
                 },
                 'belief.added': (data) => {
                     this.createTaskNode(data, 'belief');
+                },
+                'goal.added': (data) => {
+                    this.createTaskNode(data, 'goal');
                 }
             };
 

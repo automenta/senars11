@@ -28,8 +28,13 @@ export default class StatusBarView {
 
         const statusInfo = this._getStatusInfo(state.connectionStatus);
         const liveUpdateText = state.isLiveUpdateEnabled ? 'ON' : 'PAUSED';
+        let displayText = `${statusInfo.text} | Live Updates: ${liveUpdateText}`;
 
-        this.statusBarElement.textContent = `${statusInfo.text} | Live Updates: ${liveUpdateText}`;
+        if (state.connectionStatus === 'error' && state.error) {
+            displayText = `Error: ${state.error}`;
+        }
+
+        this.statusBarElement.textContent = displayText;
         this.statusBarElement.className = statusInfo.class;
     }
 
