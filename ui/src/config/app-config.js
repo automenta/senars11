@@ -31,12 +31,14 @@ const AppConfig = {
             processed_task: 'ellipse',
             question: 'pentagon',
             derivation: 'hexagon',
-            reasoning_step: 'star'
+            reasoning_step: 'star',
+            goal: 'pentagon'
         },
         nodeColors: {
             concept: '#3399FF',
             task: '#FF6B6B',
             belief: '#6BCF7F',
+            goal: '#9B59B6',
             input_task: '#FFD93D',
             processed_task: '#A0A0A0',
             question: '#9B59B6',

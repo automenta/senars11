@@ -2,7 +2,7 @@ import AppConfig from './config/app-config.js';
 import Logger from './utils/logger.js';
 
 class WebSocketService {
-    constructor(url = null) {
+    constructor(url = null, store = null) {
         // Use provided URL, or get dynamic URL
         this.url = url || this._getWebSocketUrl();
         this.ws = null;
@@ -12,6 +12,7 @@ class WebSocketService {
         this.eventListeners = new Map();
         this.isReconnecting = false;
         this.shouldReconnect = true;
+        this.store = store;
     }
 
     _getWebSocketUrl() {
@@ -43,6 +44,9 @@ class WebSocketService {
                     'onclose': (event) => {
                         Logger.info('WebSocket closed', { code: event.code, reason: event.reason });
                         this._emit('close', event);
+                        if (this.store) {
+                            this.store.dispatch({ type: 'SET_ERROR', payload: `WebSocket closed: ${event.reason}` });
+                        }
                         if (this.shouldReconnect && event.code !== 1000) {
                             this._scheduleReconnect();
                         }
@@ -50,6 +54,9 @@ class WebSocketService {
                     'onerror': (error) => {
                         Logger.error('WebSocket error', { error, url: this.url });
                         this._emit('error', error);
+                        if (this.store) {
+                            this.store.dispatch({ type: 'SET_ERROR', payload: 'WebSocket connection error.' });
+                        }
                         reject(error);
                     },
                     'onmessage': (event) => {
