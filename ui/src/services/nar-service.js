@@ -1,6 +1,6 @@
 import ReconnectingWebSocket from 'reconnecting-websocket';
 
-const WEBSOCKET_URL = `ws://${window.location.host}/ws`;
+const WEBSOCKET_URL = `ws://${import.meta.env.VITE_WS_HOST}:${import.meta.env.VITE_WS_PORT}/ws`;
 
 class NarService {
     constructor() {
