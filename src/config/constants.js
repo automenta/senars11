@@ -54,7 +54,7 @@ export const SYSTEM = Object.freeze({
     VERSION: '10.0.0',
     NAME: 'SeNARS',
     DEFAULT_PORT: 8080,
-    DEFAULT_HOST: 'localhost',
+    DEFAULT_HOST: '0.0.0.0',
     MAX_ERROR_RATE: 0.1,
     RECOVERY_ATTEMPTS: 3,
     GRACEFUL_DEGRADATION_THRESHOLD: 0.2
@@ -62,7 +62,7 @@ export const SYSTEM = Object.freeze({
 
 export const WEBSOCKET_CONFIG = Object.freeze({
     defaultPort: 8080,
-    defaultHost: 'localhost',
+    defaultHost: '0.0.0.0',
     defaultPath: '/ws',
     maxConnections: 50,
     minBroadcastInterval: 1,

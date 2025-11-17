@@ -1,8 +1,9 @@
 import { WEBSOCKET_URL, RECONNECT_DELAY } from './config.js';
 
 class WebSocketService {
-    constructor(url = WEBSOCKET_URL) {
-        this.url = url;
+    constructor(url = null) {
+        // Use provided URL, or get dynamic URL
+        this.url = url || this._getWebSocketUrl();
         this.ws = null;
         this.reconnectAttempts = 0;
         this.maxReconnectAttempts = 10;
@@ -10,6 +11,15 @@ class WebSocketService {
         this.eventListeners = new Map();
         this.isReconnecting = false;
         this.shouldReconnect = true;
+    }
+
+    _getWebSocketUrl() {
+        // Try to use the page's current hostname instead of hardcoded localhost
+        if (typeof window !== 'undefined' && window.location && window.location.hostname) {
+            return `ws://${window.location.hostname}:8080/ws`;
+        }
+        // Fallback to config value if in non-browser environment
+        return WEBSOCKET_URL;
     }
 
     connect() {

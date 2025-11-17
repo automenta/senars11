@@ -51,7 +51,7 @@ const DEFAULT_CONFIG = Object.freeze({
     },
     webSocket: {
         port: parseInt(process.env.WS_PORT) || 8080,
-        host: process.env.WS_HOST || 'localhost',
+        host: process.env.WS_HOST || '0.0.0.0',
         maxConnections: 20
     },
     ui: {
