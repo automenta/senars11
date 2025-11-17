@@ -1,10 +1,15 @@
 import React from 'react';
 import { render } from '@testing-library/react';
 import { describe, it } from 'vitest';
-import { AppLayout } from '../components/AppLayout';
+import { ReactFlowProvider } from 'reactflow';
+import AppLayout from './AppLayout';
 
 describe('AppLayout', () => {
   it('renders without crashing', () => {
-    render(<AppLayout />);
+    render(
+      <ReactFlowProvider>
+        <AppLayout />
+      </ReactFlowProvider>
+    );
   });
 });
