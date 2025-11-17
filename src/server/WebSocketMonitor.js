@@ -36,6 +36,9 @@ class WebSocketMonitor {
         this.messageBufferSize = options.messageBufferSize ?? DEFAULT_OPTIONS.messageBufferSize;
 
         this.clientCapabilities = new Map();
+
+        // Add event buffer for batching
+        this.eventBuffer = [];
     }
 
     _initializeMetrics() {
@@ -122,6 +125,22 @@ class WebSocketMonitor {
             this.server.on('listening', () => {
                 console.log(`WebSocket monitoring server started on ws://${this.host}:${this.port}${this.path}`);
                 console.log(`Max connections: ${this.maxConnections}, Rate limit: ${this.maxMessagesPerWindow}/${this.rateLimitWindowMs}ms`);
+
+                // Start batching interval to send accumulated events
+                setInterval(() => {
+                    if (this.eventBuffer.length > 0) {
+                        const batch = [...this.eventBuffer]; // Create a copy of the buffer
+                        this.eventBuffer = []; // Clear the buffer
+
+                        // Broadcast the batch to all connected clients
+                        this._broadcastToSubscribedClients({
+                            type: 'eventBatch',
+                            data: batch,
+                            timestamp: Date.now()
+                        });
+                    }
+                }, 150); // Send batched events every 150ms as specified in the plan
+
                 resolve();
             });
         });
@@ -392,13 +411,48 @@ class WebSocketMonitor {
     }
 
     listenToNAR(nar) {
-        if (!nar || !nar.on) {
-            throw new Error('NAR instance must have an on() method');
+        if (!nar || !nar._eventBus || typeof nar._eventBus.on !== 'function') {
+            throw new Error('NAR instance must have an eventBus with on() method');
         }
 
         this._nar = nar;
 
-        console.log('WebSocket monitor now listening to NAR events');
+        // Subscribe to all NAR events and push them to the event buffer instead of sending immediately
+        for (const eventType of ['task.input', 'task.processed', 'cycle.start', 'cycle.complete', 'task.added', 'belief.added', 'question.answered', 'system.started', 'system.stopped', 'system.reset', 'system.loaded', 'reasoning.step', 'concept.created', 'task.completed', 'reasoning.derivation']) {
+            nar._eventBus.on(eventType, (data, options = {}) => {
+                // Filter events if an eventFilter is configured
+                if (this.eventFilter && typeof this.eventFilter === 'function') {
+                    if (!this.eventFilter(eventType, data)) {
+                        return; // Skip this event if it doesn't pass the filter
+                    }
+                }
+
+                // Add event to buffer instead of sending immediately
+                this.eventBuffer.push({
+                    type: eventType,
+                    data: data,
+                    timestamp: Date.now(),
+                    traceId: options.traceId
+                });
+            });
+        }
+
+        console.log('WebSocket monitor now listening to NAR events and buffering for batching');
+    }
+
+    _broadcastToSubscribedClients(message) {
+        // Send message to all clients that are subscribed to the event type
+        for (const client of this.clients) {
+            // Check if the client is subscribed to 'all' or to specific event types
+            const isSubscribed = !client.subscriptions || client.subscriptions.has('all') ||
+                                (message.type.startsWith('eventBatch') ? client.subscriptions.has('all') :
+                                 client.subscriptions.has(message.type) || client.subscriptions.has(message.type.split('/')[0]));
+
+            if (isSubscribed && client.readyState === client.OPEN) {
+                this._sendToClient(client, message);
+                this.metrics.messagesSent++;
+            }
+        }
     }
 
     _handleControlMessage(client, message) {
