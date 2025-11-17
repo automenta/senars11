@@ -79,27 +79,25 @@ class StateStore {
                 return { ...s, logEntries: newLogEntries };
             },
             'PROCESS_EVENT_BATCH': (s, payload) => {
+                // This action is now handled by the EventProcessor which dispatches
+                // individual actions directly, so we don't need to process batches here.
+                // Instead, just update log entries if needed.
                 if (s.loadingSnapshot) {
                     return { ...s, eventQueue: [...s.eventQueue, payload] };
                 }
 
-                const { events } = payload;
                 let updatedLogEntries = [...s.logEntries];
-                let updatedNodes = new Map(s.graph.nodes);
-                let updatedEdges = new Map(s.graph.edges);
 
-                for (const event of events) {
-                    const innerEvents = event.type === 'eventBatch' ? event.data : [event];
-                    for (const innerEvent of innerEvents) {
-                        // Add to logs
-                        updatedLogEntries = [{
-                            timestamp: innerEvent.timestamp ?? Date.now(),
-                            content: JSON.stringify(innerEvent),
-                            type: 'in'
-                        }, ...updatedLogEntries];
-
-                        // Update graph
-                        updatedNodes = this._updateGraphFromEvent(updatedNodes, updatedEdges, innerEvent);
+                if (payload.events) {
+                    for (const event of payload.events) {
+                        const innerEvents = event.type === 'eventBatch' ? event.data : [event];
+                        for (const innerEvent of innerEvents) {
+                            updatedLogEntries = [{
+                                timestamp: innerEvent.timestamp ?? Date.now(),
+                                content: JSON.stringify(innerEvent),
+                                type: 'in'
+                            }, ...updatedLogEntries];
+                        }
                     }
                 }
 
@@ -107,11 +105,7 @@ class StateStore {
                     updatedLogEntries = updatedLogEntries.slice(0, MAX_LOG_ENTRIES);
                 }
 
-                return {
-                    ...s,
-                    logEntries: updatedLogEntries,
-                    graph: { nodes: updatedNodes, edges: updatedEdges }
-                };
+                return { ...s, logEntries: updatedLogEntries };
             },
             'SET_GRAPH_SNAPSHOT': (s, payload) => ({
                 ...s,
@@ -170,41 +164,13 @@ class StateStore {
     }
 
     _updateGraphFromEvent(nodes, edges, event) {
-        const eventHandlers = {
-            'concept.created': (data) => {
-                const id = data.term?.toString() ?? `concept_${Date.now()}`;
-                if (!nodes.has(id)) {
-                    nodes.set(id, {
-                        id,
-                        label: data.term?.toString() ?? 'Unknown Concept',
-                        type: 'concept',
-                        data
-                    });
-                }
-            },
-            'task.added': (data) => {
-                this._addTaskNode(nodes, data, 'task');
-            },
-            'belief.added': (data) => {
-                this._addTaskNode(nodes, data, 'belief');
-            }
-        };
-
-        const handler = eventHandlers[event.type];
-        if (handler) handler(event.data);
+        // This method is now deprecated, handled by EventProcessor
         return nodes;
     }
 
     _addTaskNode(nodes, data, type) {
-        const id = data.task?.id ?? data.id ?? `task_${Date.now()}`;
-        if (!nodes.has(id)) {
-            nodes.set(id, {
-                id,
-                label: data.task?.toString() ?? data.toString() ?? 'Unknown Task',
-                type,
-                data
-            });
-        }
+        // This method is now deprecated, handled by EventProcessor
+        return nodes;
     }
 }
 

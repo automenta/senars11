@@ -1,4 +1,4 @@
-// Export default WebSocket URL - this can still be used as fallback
+// Export default values for backward compatibility
 export const WEBSOCKET_URL = 'ws://localhost:8080/ws';
 export const RECONNECT_DELAY = 3000; // 3 seconds
 export const MAX_LOG_ENTRIES = 1000;

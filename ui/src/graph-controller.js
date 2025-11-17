@@ -1,3 +1,5 @@
+import Logger from './utils/logger.js';
+
 /**
  * GraphController - Coordinates between the GraphView (Cytoscape instance), StateStore, and WebSocketService
  */
@@ -8,6 +10,7 @@ export default class GraphController {
         this.service = service;
         this.unsubscribe = null;
         this.isUpdatingGraph = false;
+        this.nodeCache = new Set(); // Keep track of nodes for duplicate checking
         this.init();
     }
 
@@ -22,144 +25,219 @@ export default class GraphController {
             return;
         }
 
-        this.cy.batch(() => {
-            const actionHandlers = {
-                'ADD_NODE': (payload) => this.addNode(payload),
-                'UPDATE_NODE': (payload) => this.updateNode(payload),
-                'REMOVE_NODE': (payload) => this.removeNode(payload),
-                'ADD_EDGE': (payload) => this.addEdge(payload),
-                'UPDATE_EDGE': (payload) => this.updateEdge(payload),
-                'REMOVE_EDGE': (payload) => this.removeEdge(payload),
-                'SET_GRAPH_SNAPSHOT': (payload) => this.setGraphSnapshot(payload),
-                'CLEAR_GRAPH': () => this.clearGraph(),
-                'PROCESS_EVENT_BATCH': (payload) => this.processEventBatch(payload)
-            };
+        try {
+            this.cy.batch(() => {
+                const actionHandlers = {
+                    'ADD_NODE': (payload) => this.addNode(payload),
+                    'UPDATE_NODE': (payload) => this.updateNode(payload),
+                    'REMOVE_NODE': (payload) => this.removeNode(payload),
+                    'ADD_EDGE': (payload) => this.addEdge(payload),
+                    'UPDATE_EDGE': (payload) => this.updateEdge(payload),
+                    'REMOVE_EDGE': (payload) => this.removeEdge(payload),
+                    'SET_GRAPH_SNAPSHOT': (payload) => this.setGraphSnapshot(payload),
+                    'CLEAR_GRAPH': () => this.clearGraph(),
+                    'PROCESS_EVENT_BATCH': (payload) => this.processEventBatch(payload)
+                };
 
-            const handler = actionHandlers[action.type];
-            if (handler) handler(action.payload);
-        });
+                const handler = actionHandlers[action.type];
+                if (handler) handler(action.payload);
+            });
+        } catch (error) {
+            Logger.error('Error in GraphController handleStoreChange', { error: error.message, action });
+        }
     }
 
     addNode(nodeData) {
-        if (!this.cy.getElementById(nodeData.id)) {
-            this.cy.add(this.createElement('nodes', nodeData));
+        try {
+            if (!this.cy.getElementById(nodeData.id)) {
+                this.cy.add(this.createElement('nodes', nodeData));
+                this.nodeCache.add(nodeData.id);
+            }
+        } catch (error) {
+            Logger.error('Error adding node to graph', { error: error.message, nodeData });
         }
     }
 
     updateNode(nodeData) {
-        const node = this.cy.getElementById(nodeData.id);
-        if (node) {
-            node.data({ ...node.data(), ...nodeData });
+        try {
+            const node = this.cy.getElementById(nodeData.id);
+            if (node) {
+                node.data({ ...node.data(), ...nodeData });
+            }
+        } catch (error) {
+            Logger.error('Error updating node in graph', { error: error.message, nodeData });
         }
     }
 
     removeNode(nodeData) {
-        const node = this.cy.getElementById(nodeData.id);
-        if (node) node.remove();
+        try {
+            const node = this.cy.getElementById(nodeData.id);
+            if (node) {
+                node.remove();
+                this.nodeCache.delete(nodeData.id);
+            }
+        } catch (error) {
+            Logger.error('Error removing node from graph', { error: error.message, nodeData });
+        }
     }
 
     addEdge(edgeData) {
-        if (!this.cy.getElementById(edgeData.id)) {
-            this.cy.add(this.createElement('edges', edgeData));
+        try {
+            if (!this.cy.getElementById(edgeData.id)) {
+                this.cy.add(this.createElement('edges', edgeData));
+            }
+        } catch (error) {
+            Logger.error('Error adding edge to graph', { error: error.message, edgeData });
         }
     }
 
     updateEdge(edgeData) {
-        const edge = this.cy.getElementById(edgeData.id);
-        if (edge) {
-            edge.data({ ...edge.data(), ...edgeData });
+        try {
+            const edge = this.cy.getElementById(edgeData.id);
+            if (edge) {
+                edge.data({ ...edge.data(), ...edgeData });
+            }
+        } catch (error) {
+            Logger.error('Error updating edge in graph', { error: error.message, edgeData });
         }
     }
 
     removeEdge(edgeData) {
-        const edge = this.cy.getElementById(edgeData.id);
-        if (edge) edge.remove();
+        try {
+            const edge = this.cy.getElementById(edgeData.id);
+            if (edge) edge.remove();
+        } catch (error) {
+            Logger.error('Error removing edge from graph', { error: error.message, edgeData });
+        }
     }
 
     setGraphSnapshot(snapshot) {
-        this.clearGraph();
+        try {
+            this.clearGraph();
+            this.nodeCache.clear();
 
-        if (snapshot.nodes?.length) {
-            this.cy.add(snapshot.nodes.map(node => this.createElement('nodes', node)));
-        }
+            if (Array.isArray(snapshot.nodes) && snapshot.nodes.length) {
+                snapshot.nodes.forEach(node => this.addNode(node));
+            }
 
-        if (snapshot.edges?.length) {
-            this.cy.add(snapshot.edges.map(edge => this.createElement('edges', edge)));
+            if (Array.isArray(snapshot.edges) && snapshot.edges.length) {
+                snapshot.edges.forEach(edge => this.addEdge(edge));
+            }
+
+            // Refresh layout after adding all nodes
+            this.cy.layout({ name: 'cose', animate: false, fit: true }).run();
+        } catch (error) {
+            Logger.error('Error setting graph snapshot', { error: error.message, snapshot });
         }
     }
 
     createElement(group, data) {
-        return { group, data, id: data.id };
+        return { group, data: { ...data, id: data.id }, id: data.id };
     }
 
     clearGraph() {
-        this.cy.elements().remove();
+        try {
+            this.cy.elements().remove();
+            this.nodeCache.clear();
+        } catch (error) {
+            Logger.error('Error clearing graph', { error: error.message });
+        }
     }
 
     processEventBatch(eventBatch) {
-        const { events } = eventBatch;
-        for (const event of events) {
-            const innerEvents = event.type === 'eventBatch' ? event.data : [event];
-            innerEvents.forEach(this.processSingleEvent.bind(this));
+        // This method is now handled primarily by EventProcessor, but kept for compatibility
+        try {
+            const { events } = eventBatch;
+            for (const event of events) {
+                const innerEvents = event.type === 'eventBatch' ? event.data : [event];
+                innerEvents.forEach(event => {
+                    // Process individual events as needed
+                    this.processSingleEvent(event);
+                });
+            }
+        } catch (error) {
+            Logger.error('Error processing event batch', { error: error.message, eventBatch });
         }
     }
 
     processSingleEvent(event) {
-        const eventHandlers = {
-            'concept.created': (data) => {
-                const id = data.term?.toString() ?? `concept_${Date.now()}`;
-                this.addNode({
-                    id,
-                    label: data.term?.toString() ?? 'Unknown Concept',
-                    type: 'concept',
-                    data
-                });
-            },
-            'task.added': (data) => {
-                this.createTaskNode(data, 'task');
-            },
-            'belief.added': (data) => {
-                this.createTaskNode(data, 'belief');
-            }
-        };
+        // This method is now handled primarily by EventProcessor, but kept for compatibility
+        try {
+            const eventHandlers = {
+                'concept.created': (data) => {
+                    const id = data.term?.toString() ?? `concept_${Date.now()}`;
+                    this.addNode({
+                        id,
+                        label: data.term?.toString() ?? 'Unknown Concept',
+                        type: 'concept',
+                        data
+                    });
+                },
+                'task.added': (data) => {
+                    this.createTaskNode(data, 'task');
+                },
+                'belief.added': (data) => {
+                    this.createTaskNode(data, 'belief');
+                }
+            };
 
-        const handler = eventHandlers[event.type];
-        if (handler) handler(event.data);
+            const handler = eventHandlers[event.type];
+            if (handler) handler(event.data);
+        } catch (error) {
+            Logger.error('Error processing single event', { error: error.message, event });
+        }
     }
 
     createTaskNode(data, type) {
-        const id = data.task?.id ?? data.id ?? `task_${Date.now()}`;
-        this.addNode({
-            id,
-            label: data.task?.toString() ?? data.toString() ?? 'Unknown Task',
-            type,
-            data
-        });
+        try {
+            const id = data.task?.id ?? data.id ?? `task_${Date.now()}`;
+            this.addNode({
+                id,
+                label: data.task?.toString() ?? data.toString() ?? 'Unknown Task',
+                type,
+                data
+            });
+        } catch (error) {
+            Logger.error('Error creating task node', { error: error.message, data, type });
+        }
     }
 
     requestRefresh() {
-        this.store.dispatch({ type: 'SET_LOADING_SNAPSHOT', payload: true });
-        this.service.sendMessage('control/refresh', {});
+        try {
+            this.store.dispatch({ type: 'SET_LOADING_SNAPSHOT', payload: true });
+            this.service.sendMessage('control/refresh', {});
+        } catch (error) {
+            Logger.error('Error requesting graph refresh', { error: error.message });
+        }
     }
 
     handleRefreshResponse(payload) {
-        this.store.dispatch({
-            type: 'SET_GRAPH_SNAPSHOT',
-            payload: {
-                nodes: payload.concepts.map(concept => ({
-                    id: concept.term?.toString() ?? `concept_${Date.now()}`,
-                    label: concept.term?.toString() ?? 'Unknown Concept',
-                    type: 'concept',
-                    ...concept
-                })),
-                edges: []
-            }
-        });
+        try {
+            this.store.dispatch({
+                type: 'SET_GRAPH_SNAPSHOT',
+                payload: {
+                    nodes: payload.concepts?.map(concept => ({
+                        id: concept.term?.toString() || `concept_${Date.now()}`,
+                        label: concept.term?.toString() || 'Unknown Concept',
+                        type: 'concept',
+                        data: concept
+                    })) || [],
+                    edges: []
+                }
+            });
 
-        this.store.dispatch({ type: 'SET_LOADING_SNAPSHOT', payload: false });
+            this.store.dispatch({ type: 'SET_LOADING_SNAPSHOT', payload: false });
+        } catch (error) {
+            Logger.error('Error handling refresh response', { error: error.message, payload });
+        }
     }
 
     destroy() {
-        this.unsubscribe?.();
+        try {
+            this.unsubscribe?.();
+            this.nodeCache.clear();
+        } catch (error) {
+            Logger.error('Error destroying GraphController', { error: error.message });
+        }
     }
 }

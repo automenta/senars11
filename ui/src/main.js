@@ -5,38 +5,21 @@ import { init as initGraphView } from './graph-view.js';
 import REPLController from './repl-controller.js';
 import GraphController from './graph-controller.js';
 import StatusBarView from './status-bar-view.js';
+import EventProcessor from './event-processor.js';
 
 console.log('SeNARS UI Initialized');
 
 // Initialize core services
 const store = new StateStore();
 const service = new WebSocketService();
+const eventProcessor = new EventProcessor(store);
 
 // Initialize REPL components
+let replController = null;
 const replContainer = document.getElementById('repl-container');
 if (replContainer) {
     const replView = initReplView(replContainer, () => {});
-    const replController = new REPLController(replView, store, service);
-
-    // WebSocket event handlers
-    const eventHandlers = {
-        'open': () => store.dispatch({ type: 'SET_CONNECTION_STATUS', payload: 'connected' }),
-        'close': () => store.dispatch({ type: 'SET_CONNECTION_STATUS', payload: 'disconnected' }),
-        'error': (error) => {
-            store.dispatch({ type: 'SET_CONNECTION_STATUS', payload: 'error' });
-            console.error('WebSocket error:', error);
-        },
-        'message': handleMessage
-    };
-
-    Object.entries(eventHandlers).forEach(([event, handler]) => {
-        service.subscribe(event, handler);
-    });
-
-    service.connect().catch(error => {
-        console.error('Failed to connect to WebSocket:', error);
-        store.dispatch({ type: 'SET_CONNECTION_STATUS', payload: 'error' });
-    });
+    replController = new REPLController(replView, store, service);
 } else {
     console.error('REPL container not found');
 }
@@ -46,6 +29,34 @@ const graphContainer = document.getElementById('cy-container');
 const graphController = graphContainer ?
     new GraphController(initGraphView(graphContainer), store, service) :
     null;
+
+// WebSocket event handlers
+const eventHandlers = {
+    'open': () => store.dispatch({ type: 'SET_CONNECTION_STATUS', payload: 'connected' }),
+    'close': () => store.dispatch({ type: 'SET_CONNECTION_STATUS', payload: 'disconnected' }),
+    'error': (error) => {
+        store.dispatch({ type: 'SET_CONNECTION_STATUS', payload: 'error' });
+        console.error('WebSocket error:', error);
+    },
+    'message': (message) => {
+        // Process the message with the event processor
+        eventProcessor.process(message);
+
+        // Handle the message in the REPL controller if it exists
+        if (replController) {
+            replController.handleIncomingMessage(message);
+        }
+    }
+};
+
+Object.entries(eventHandlers).forEach(([event, handler]) => {
+    service.subscribe(event, handler);
+});
+
+service.connect().catch(error => {
+    console.error('Failed to connect to WebSocket:', error);
+    store.dispatch({ type: 'SET_CONNECTION_STATUS', payload: 'error' });
+});
 
 // Set up refresh button
 const refreshBtn = document.getElementById('refresh-btn');
@@ -69,33 +80,3 @@ if (toggleLiveBtn) {
 
 // Initialize status bar view
 new StatusBarView(store);
-
-// Handle incoming messages
-function handleMessage(message) {
-    store.dispatch({
-        type: 'ADD_LOG_ENTRY',
-        payload: {
-            content: JSON.stringify(message),
-            type: 'in'
-        }
-    });
-
-    // Handle the message in the REPL controller
-    replController.handleIncomingMessage(message);
-
-    // Handle refresh response
-    if (message.type === 'memorySnapshot') {
-        store.dispatch({
-            type: 'SET_GRAPH_SNAPSHOT',
-            payload: {
-                nodes: message.payload.concepts.map(concept => ({
-                    id: concept.term?.toString() ?? `concept_${Date.now()}`,
-                    label: concept.term?.toString() ?? 'Unknown Concept',
-                    type: 'concept',
-                    ...concept
-                })),
-                edges: [] // For now, no edges from snapshot
-            }
-        });
-    }
-}
