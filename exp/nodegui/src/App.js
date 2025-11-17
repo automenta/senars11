@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Window,
   View,
@@ -9,7 +9,11 @@ import {
 } from '@nodegui/react-nodegui';
 import { GraphPanel } from './GraphPanel.js';
 import { useStore } from './store.js';
-import { requestSnapshot, sendNARCommand } from './nar-service.js';
+import {
+  requestSnapshot,
+  sendNARCommand,
+  getConnectionStatus
+} from './nar-service.js';
 
 const containerStyle = {
   flex: 1,
@@ -39,6 +43,19 @@ const logEntryStyle = {
 export function App() {
   const { live, toggleLive, log } = useStore();
   const [command, setCommand] = useState('');
+  const [connectionStatus, setConnectionStatus] = useState('initializing');
+
+  // Update connection status periodically
+  useEffect(() => {
+    const updateStatus = () => {
+      const status = getConnectionStatus();
+      setConnectionStatus(status.initialized ? 'Ready (Direct NAR)' : 'Initializing...');
+    };
+
+    updateStatus();  // Call immediately
+    const interval = setInterval(updateStatus, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleRefreshClick = () => {
     requestSnapshot();
@@ -50,7 +67,7 @@ export function App() {
 
   const handleCommandSubmit = () => {
     if (command.trim() !== '') {
-      // Send the command to the SeNARS engine using the service
+      // Send the command to the embedded NAR
       const success = sendNARCommand(command.trim());
       if (success) {
         setCommand(''); // Clear command only if sent successfully
@@ -87,6 +104,10 @@ export function App() {
             text: live ? 'Live: ON' : 'Live: OFF',
             on: { clicked: handleLiveToggle },
             style: { marginLeft: 8 }
+          }),
+          React.createElement(Text, {
+            text: `Status: ${connectionStatus}`,
+            style: { marginLeft: 8, alignSelf: 'center', color: '#9cdcfe' }
           })
         ),
         React.createElement(View, { style: { flexDirection: 'row' } },
@@ -126,6 +147,12 @@ export function App() {
                 } else if (entry.type === 'status') {
                   prefix = 'STS: ';
                   color = '#9cdcfe'; // Blue for status
+                } else if (entry.type === 'response') {
+                  prefix = 'RSP: ';
+                  color = '#d7ba7d'; // Yellow for responses
+                } else if (entry.type === 'task') {
+                  prefix = 'TK: ';
+                  color = '#ce9178'; // Orange for tasks
                 } else {
                   prefix = 'MSG: ';
                 }
