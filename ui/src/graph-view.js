@@ -1,42 +1,24 @@
-import GraphLayout from './config/graph-layout.js';
+import RendererManager from './renderers/renderer-manager.js';
+import BatchedCytoscapeRenderer from './renderers/batched-cytoscape-renderer.js';
+import DirectCytoscapeRenderer from './renderers/direct-cytoscape-renderer.js';
+import ListRenderer from './renderers/list-renderer.js';
 
 /**
- * GraphView - Initializes and manages the Cytoscape.js graph visualization
+ * GraphView - Initializes and manages the graph visualization with flexible rendering
  */
-export function init(container) {
-    const graphDiv = document.createElement('div');
-    Object.assign(graphDiv, { id: 'cy-graph' });
-    Object.assign(graphDiv.style, {
-        width: '100%',
-        height: '100%',
-        border: '1px solid #ccc'
-    });
+export function init(container, options = {}) {
+    // Create renderer manager
+    const rendererManager = new RendererManager();
+    rendererManager.init(container);
 
-    container.appendChild(graphDiv);
+    // Initialize with default renderer (configurable via options)
+    const rendererType = options.rendererType || 'batched-cytoscape';
+    const renderer = rendererManager.switchRenderer(rendererType);
 
-    const styleConfig = GraphLayout.getNodeStyleOptions();
-
-    const cy = cytoscape({
-        container: graphDiv,
-        style: styleConfig.style,
-        layout: GraphLayout.getLayoutOptions()
-    });
-
-    window.cy = cy; // Expose for testing
-
-    const detailsPanel = document.getElementById('details-panel');
-
-    cy.on('tap', 'node', (evt) => {
-        const node = evt.target;
-        detailsPanel.innerHTML = `<pre>${JSON.stringify(node.data(), null, 2)}</pre>`;
-        detailsPanel.style.display = 'block';
-    });
-
-    cy.on('tap', (evt) => {
-        if (evt.target === cy) {
-            detailsPanel.style.display = 'none';
-        }
-    });
-
-    return cy;
+    return {
+        rendererManager,
+        renderer,
+        // Expose methods that existing code might expect
+        cy: rendererType.includes('cytoscape') ? window.cy : null
+    };
 }

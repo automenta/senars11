@@ -30,9 +30,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize graph components
     const graphContainer = document.getElementById('cy-container');
-    const graphController = graphContainer ?
-        new GraphController(initGraphView(graphContainer), store, service) :
-        null;
+    let graphController = null;
+    if (graphContainer) {
+        const graphView = initGraphView(graphContainer, { rendererType: 'batched-cytoscape' });
+        graphController = new GraphController(graphView, store, service);
+    }
 
     // WebSocket event handlers
     const eventHandlers = {
@@ -107,7 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let i = 0;
             const interval = setInterval(() => {
                 if (i < demoScript.length) {
-                    service.sendMessage('narseseInput', { narsese: demoScript[i] });
+                    service.sendMessage('narseseInput', { input: demoScript[i] });
                     i++;
                 } else {
                     clearInterval(interval);

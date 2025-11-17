@@ -44,6 +44,7 @@ body {
     flex: 1;
     gap: 20px;
     min-height: 0;
+    overflow: hidden; /* Prevent any overflow from child containers */
 }
 
 #repl-container {
@@ -51,12 +52,18 @@ body {
     border: 1px solid #ccc;
     display: flex;
     flex-direction: column;
+    min-height: 0; /* Ensure it respects flex constraints */
+    overflow: hidden; /* Prevent overflow */
+    position: relative; /* Ensure proper positioning context */
 }
 
 #cy-container {
     flex: 1;
     border: 1px solid #ccc;
     min-height: 0;
+    min-width: 0; /* Ensure it respects flex constraints */
+    overflow: hidden; /* Prevent cytoscape from causing overflow */
+    position: relative; /* Ensure proper positioning context */
 }
 
 #controls {
@@ -111,6 +118,12 @@ input:focus {
 #cy-graph {
     width: 100%;
     height: 100%;
+    overflow: hidden; /* Ensure cytoscape container doesn't overflow */
+    position: absolute; /* Use absolute positioning to prevent size issues */
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
 }
 
 #details-panel {

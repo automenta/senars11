@@ -1,16 +1,19 @@
 import Logger from './utils/logger.js';
 
 /**
- * GraphController - Coordinates between the GraphView (Cytoscape instance), StateStore, and WebSocketService
+ * GraphController - Coordinates between the GraphView (renderer), StateStore, and WebSocketService
  */
 export default class GraphController {
-    constructor(cy, store, service) {
-        this.cy = cy;
+    constructor(graphView, store, service) {
+        this.graphView = graphView;
+        this.rendererManager = graphView.rendererManager;
+        this.renderer = graphView.renderer;
         this.store = store;
         this.service = service;
         this.unsubscribe = null;
         this.isUpdatingGraph = false;
         this.nodeCache = new Set(); // Keep track of nodes for duplicate checking
+        this.fitTimeout = null; // For debounced fitting
         this.init();
     }
 
@@ -26,22 +29,20 @@ export default class GraphController {
         }
 
         try {
-            this.cy.batch(() => {
-                const actionHandlers = {
-                    'ADD_NODE': (payload) => this.addNode(payload),
-                    'UPDATE_NODE': (payload) => this.updateNode(payload),
-                    'REMOVE_NODE': (payload) => this.removeNode(payload),
-                    'ADD_EDGE': (payload) => this.addEdge(payload),
-                    'UPDATE_EDGE': (payload) => this.updateEdge(payload),
-                    'REMOVE_EDGE': (payload) => this.removeEdge(payload),
-                    'SET_GRAPH_SNAPSHOT': (payload) => this.setGraphSnapshot(payload),
-                    'CLEAR_GRAPH': () => this.clearGraph(),
-                    'PROCESS_EVENT_BATCH': (payload) => this.processEventBatch(payload)
-                };
+            const actionHandlers = {
+                'ADD_NODE': (payload) => this.addNode(payload),
+                'UPDATE_NODE': (payload) => this.updateNode(payload),
+                'REMOVE_NODE': (payload) => this.removeNode(payload),
+                'ADD_EDGE': (payload) => this.addEdge(payload),
+                'UPDATE_EDGE': (payload) => this.updateEdge(payload),
+                'REMOVE_EDGE': (payload) => this.removeEdge(payload),
+                'SET_GRAPH_SNAPSHOT': (payload) => this.setGraphSnapshot(payload),
+                'CLEAR_GRAPH': () => this.clearGraph(),
+                'PROCESS_EVENT_BATCH': (payload) => this.processEventBatch(payload)
+            };
 
-                const handler = actionHandlers[action.type];
-                if (handler) handler(action.payload);
-            });
+            const handler = actionHandlers[action.type];
+            if (handler) handler(action.payload);
         } catch (error) {
             Logger.error('Error in GraphController handleStoreChange', { error: error.message, action });
         }
@@ -49,10 +50,8 @@ export default class GraphController {
 
     addNode(nodeData) {
         try {
-            if (!this.cy.getElementById(nodeData.id)) {
-                this.cy.add(this.createElement('nodes', nodeData));
-                this.nodeCache.add(nodeData.id);
-            }
+            this.rendererManager.callRendererMethod('addNode', nodeData);
+            this.nodeCache.add(nodeData.id);
         } catch (error) {
             Logger.error('Error adding node to graph', { error: error.message, nodeData });
         }
@@ -60,10 +59,7 @@ export default class GraphController {
 
     updateNode(nodeData) {
         try {
-            const node = this.cy.getElementById(nodeData.id);
-            if (node) {
-                node.data({ ...node.data(), ...nodeData });
-            }
+            this.rendererManager.callRendererMethod('updateNode', nodeData);
         } catch (error) {
             Logger.error('Error updating node in graph', { error: error.message, nodeData });
         }
@@ -71,11 +67,8 @@ export default class GraphController {
 
     removeNode(nodeData) {
         try {
-            const node = this.cy.getElementById(nodeData.id);
-            if (node) {
-                node.remove();
-                this.nodeCache.delete(nodeData.id);
-            }
+            this.rendererManager.callRendererMethod('removeNode', nodeData);
+            this.nodeCache.delete(nodeData.id);
         } catch (error) {
             Logger.error('Error removing node from graph', { error: error.message, nodeData });
         }
@@ -83,9 +76,7 @@ export default class GraphController {
 
     addEdge(edgeData) {
         try {
-            if (!this.cy.getElementById(edgeData.id)) {
-                this.cy.add(this.createElement('edges', edgeData));
-            }
+            this.rendererManager.callRendererMethod('addEdge', edgeData);
         } catch (error) {
             Logger.error('Error adding edge to graph', { error: error.message, edgeData });
         }
@@ -93,10 +84,7 @@ export default class GraphController {
 
     updateEdge(edgeData) {
         try {
-            const edge = this.cy.getElementById(edgeData.id);
-            if (edge) {
-                edge.data({ ...edge.data(), ...edgeData });
-            }
+            this.rendererManager.callRendererMethod('updateEdge', edgeData);
         } catch (error) {
             Logger.error('Error updating edge in graph', { error: error.message, edgeData });
         }
@@ -104,8 +92,7 @@ export default class GraphController {
 
     removeEdge(edgeData) {
         try {
-            const edge = this.cy.getElementById(edgeData.id);
-            if (edge) edge.remove();
+            this.rendererManager.callRendererMethod('removeEdge', edgeData);
         } catch (error) {
             Logger.error('Error removing edge from graph', { error: error.message, edgeData });
         }
@@ -125,19 +112,15 @@ export default class GraphController {
             }
 
             // Refresh layout after adding all nodes
-            this.cy.layout({ name: 'cose', animate: false, fit: true }).run();
+            this.rendererManager.callRendererMethod('fit');
         } catch (error) {
             Logger.error('Error setting graph snapshot', { error: error.message, snapshot });
         }
     }
 
-    createElement(group, data) {
-        return { group, data: { ...data, id: data.id }, id: data.id };
-    }
-
     clearGraph() {
         try {
-            this.cy.elements().remove();
+            this.rendererManager.callRendererMethod('clear');
             this.nodeCache.clear();
         } catch (error) {
             Logger.error('Error clearing graph', { error: error.message });
@@ -239,6 +222,12 @@ export default class GraphController {
         try {
             this.unsubscribe?.();
             this.nodeCache.clear();
+            // Clear any pending fit timeout
+            if (this.fitTimeout) {
+                clearTimeout(this.fitTimeout);
+                this.fitTimeout = null;
+            }
+            this.rendererManager?.destroy();
         } catch (error) {
             Logger.error('Error destroying GraphController', { error: error.message });
         }

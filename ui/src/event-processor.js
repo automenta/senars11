@@ -188,15 +188,29 @@ class EventProcessor {
 
     _handleUnknownEvent(message) {
         try {
-            // Only log specific message types, not all unknown events
-            if (['error', 'log', 'connection'].includes(message.type)) {
+            // Log specific message types that are meant to be displayed
+            const displayTypes = ['error', 'log', 'connection', 'task.added', 'concept.created', 'belief.added', 'question.answered', 'reasoning.derivation', 'reasoning.step', 'task.processed', 'task.input'];
+
+            if (displayTypes.includes(message.type)) {
+                // For error messages, extract the error content appropriately
+                let content;
+                if (message.type === 'error') {
+                    content = message.payload?.error || message.data?.error || message.payload?.message || message.data?.message || JSON.stringify(message);
+                } else {
+                    content = message.payload?.message || JSON.stringify(message);
+                }
+
                 this.store.dispatch({
                     type: 'ADD_LOG_ENTRY',
                     payload: {
-                        content: message.payload?.message || JSON.stringify(message),
+                        content: content,
                         type: 'in'
                     }
                 });
+            } else {
+                // For debugging, also log other message types that might be coming from the backend
+                // but only for debugging purposes, not all the time to avoid spam
+                Logger.debug('Unknown event type received', { type: message.type, data: message });
             }
         } catch (error) {
             Logger.error('Error handling unknown event', { error: error.message, message });

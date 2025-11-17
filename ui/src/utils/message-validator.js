@@ -99,8 +99,12 @@ class MessageValidator {
     }
 
     static _validateError(message) {
-        if (!message.payload?.message && !message.data?.message) {
-            return { valid: false, error: 'Error message requires a message in payload or data' };
+        // Error messages can have the error message in 'payload.error', 'data.error', or 'payload.message', 'data.message'
+        if (!message.payload?.message &&
+            !message.data?.message &&
+            !message.payload?.error &&
+            !message.data?.error) {
+            return { valid: false, error: 'Error message requires a message or error in payload or data' };
         }
         return { valid: true, message };
     }
