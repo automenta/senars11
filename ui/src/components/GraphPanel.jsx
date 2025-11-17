@@ -1,17 +1,22 @@
 import React from 'react';
 import ReactFlow from 'reactflow';
-import useNarStore from '../store/nar-store';
+import PropTypes from 'prop-types';
 
-const GraphPanel = () => {
-    const { graphNodes, graphEdges } = useNarStore();
-
+const GraphPanel = ({ nodes, edges }) => {
     return (
-        <ReactFlow
-            nodes={graphNodes}
-            edges={graphEdges}
-        >
-        </ReactFlow>
+        <div className="graph-panel" style={{ height: '500px' }}>
+            <ReactFlow
+                nodes={nodes}
+                edges={edges}
+            >
+            </ReactFlow>
+        </div>
     );
+};
+
+GraphPanel.propTypes = {
+    nodes: PropTypes.array.isRequired,
+    edges: PropTypes.array.isRequired,
 };
 
 export default GraphPanel;

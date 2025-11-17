@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
-import { LogPanel } from '../components/LogPanel';
+import LogPanel from './LogPanel';
 
 describe('LogPanel', () => {
   it('renders a list of log entries', () => {

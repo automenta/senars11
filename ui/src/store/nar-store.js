@@ -21,11 +21,11 @@ const useNarStore = create((set, get) => ({
             const { concepts, tasks } = snapshot;
             const newNodes = concepts.map(c => ({ id: c.id, label: c.term }));
             const newEdges = tasks
-                .filter(t => t.term.type === 'Implication')
+                .filter(t => t.term.operator === '==>')
                 .map(t => ({
                     id: t.id,
-                    source: t.term.predicate,
-                    target: t.term.subject,
+                    source: t.term.components[0].id,
+                    target: t.term.components[1].id,
                 }));
 
             set({
@@ -37,16 +37,34 @@ const useNarStore = create((set, get) => ({
         },
 
         handleEventBatch: (events) => {
-            const { lastSnapshotTime } = get();
+            const { lastSnapshotTime, liveUpdateEnabled } = get();
+            if (!liveUpdateEnabled) return;
+
             const newLogEntries = get().logEntries.slice();
+            const newNodes = [...get().graphNodes];
+            const newEdges = [...get().graphEdges];
 
             for (const event of events) {
                 if (event.timestamp > lastSnapshotTime) {
                     newLogEntries.push(event);
+
+                    if (event.type === 'concept:created') {
+                        newNodes.push({ id: event.payload.id, label: event.payload.term });
+                    } else if (event.type === 'task:added' && event.payload.term.operator === '==>') {
+                        newEdges.push({
+                            id: event.payload.id,
+                            source: event.payload.term.components[0].id,
+                            target: event.payload.term.components[1].id,
+                        });
+                    }
                 }
             }
 
-            set({ logEntries: newLogEntries });
+            set({
+                logEntries: newLogEntries,
+                graphNodes: newNodes,
+                graphEdges: newEdges,
+            });
             get().actions.pruneLog();
         },
 

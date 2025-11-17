@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import { ControlBar } from '../components/ControlBar';
+import ControlBar from './ControlBar';
 
 describe('ControlBar', () => {
   it('calls the correct functions when buttons are clicked', () => {

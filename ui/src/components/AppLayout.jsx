@@ -10,20 +10,20 @@ import useNarStore from '../store/nar-store';
  * The main layout of the application.
  */
 const AppLayout = () => {
-  const { isConnected, isSnapshotLoading, logEntries } = useNarStore();
+  const { isConnected, isSnapshotLoading, logEntries, graphNodes, graphEdges } = useNarStore();
 
   return (
     <div className="app-layout">
       {!isConnected && <div className="disconnect-banner">Disconnected</div>}
       {isSnapshotLoading && <div className="loading-indicator">Loading...</div>}
       <div className="main-content">
-        <GraphPanel />
+        <GraphPanel nodes={graphNodes} edges={graphEdges} />
         <LogPanel entries={logEntries} />
       </div>
       <div className="sidebar">
         <ControlBar />
-        <ViewControls onUpdate={() => {}} />
-        <InputBar onSend={() => {}} />
+        <ViewControls />
+        <InputBar />
       </div>
     </div>
   );
