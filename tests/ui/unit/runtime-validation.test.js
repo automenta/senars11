@@ -35,8 +35,8 @@ class WebUIRuntimeValidator {
     async startNARServer() {
         // Create temporary server script
         const serverScript = `
-import {NAR} from '../../../src/nar/NAR.js';
-import {WebSocketMonitor} from '../../../src/server/WebSocketMonitor.js';
+import {NAR} from '../../../../src/nar/NAR.js';
+import {WebSocketMonitor} from '../../../../src/server/WebSocketMonitor.js';
 
 async function startServer() {
   const nar = new NAR();
@@ -58,7 +58,7 @@ startServer().catch(console.error);
         return new Promise((resolve, reject) => {
             this.serverProcess = spawn('node', [tempScriptPath], {
                 stdio: 'pipe',
-                cwd: join(__dirname, '../..'), // Updated path to account for ui/tests location
+                cwd: join(__dirname, '../../..'), // Updated path to account for tests/ui/unit location
                 env: {...process.env, WS_PORT: this.narPort.toString(), NODE_ENV: 'test'},
             });
 

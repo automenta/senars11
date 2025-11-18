@@ -2,8 +2,8 @@
  * Unit tests for StateStore using centralized test utilities
  */
 
-import StateStore from '../src/state-store.js';
-import configManager from '../src/config/config-manager.js';
+import StateStore from '../../../ui/src/state-store.js';
+import configManager from '../../../ui/src/config/config-manager.js';
 import {
     assert,
     assertTrue,

@@ -4,7 +4,7 @@
  */
 
 // Import test utilities
-import WebSocketService from '../src/websocket-service.js';
+import WebSocketService from '../../../ui/src/websocket-service.js';
 import {
     assert,
     assertTrue,

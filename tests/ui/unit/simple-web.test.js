@@ -3,7 +3,7 @@
  * @description Simple test to verify the TestNARWeb class works end-to-end
  */
 
-import {TestNARWeb} from '../../src/testing/TestNARWeb.js';
+import {TestNARWeb} from '../../../src/testing/TestNARWeb.js';
 
 // Convert to Jest-style test
 describe('Simple Web Test', () => {
