@@ -1,30 +1,26 @@
 /**
  * @file test-complex-inference-chains.js
  * @description Test complex inference chains with multiple premises
- * 
- * This test validates that the NAR can handle complex inference chains 
+ *
+ * This test validates that the NAR can handle complex inference chains
  * involving multiple premises and generate expected conclusions.
  */
 
-import { spawn } from 'child_process';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
 import { setTimeout } from 'timers/promises';
-import puppeteer from 'puppeteer';
 import { TestConfig } from './test-config.js';
+import { BaseUITest, TestError } from './test-utils.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-class ComplexInferenceChainsTest {
+class ComplexInferenceChainsTest extends BaseUITest {
     constructor(config = TestConfig.serverConfigs.normal) {
-        this.config = config;
-        this.narProcess = null;
-        this.uiProcess = null;
-        this.browser = null;
-        this.page = null;
-        this.testResults = {
-            setup: false,
+        super(config, { headless: true });
+        this.testResults.inferenceChains = [];
+        this.testResults.expectedInferences = [];
+    }
+
+    initTestResults() {
+        return {
+            setup: { nar: false, ui: false, connection: false },
+            operations: [],
             inferenceChains: [],
             expectedInferences: [],
             errors: []
@@ -247,20 +243,16 @@ class ComplexInferenceChainsTest {
         console.log('✅ WebSocket connection established');
     }
 
-    async setupDeductionChain() {
-        console.log('\n🔍 Setting up deduction chain: If A then B, If B then C, Therefore If A then C');
+    async testBasicInferenceChains() {
+        console.log('\n🔍 Testing basic inference chains: If A then B, If B then C, Therefore If A then C');
 
         // Premise 1: If bird then animal
         const premise1 = '<bird --> animal>. %1.00;0.90%';
-        await this.page.type('#repl-input', premise1);
-        await this.page.keyboard.press('Enter');
-        await setTimeout(500);
+        await this.executeCommand(premise1, 500);
 
-        // Premise 2: If robin then bird  
+        // Premise 2: If robin then bird
         const premise2 = '<robin --> bird>. %1.00;0.90%';
-        await this.page.type('#repl-input', premise2);
-        await this.page.keyboard.press('Enter');
-        await setTimeout(500);
+        await this.executeCommand(premise2, 500);
 
         // Expected conclusion: If robin then animal (through transitive inference)
         const expected = '<robin --> animal>.';
@@ -270,12 +262,7 @@ class ComplexInferenceChainsTest {
         console.log(`   Expected: ${expected} (through transitive deduction)`);
 
         // Run reasoning cycles to allow inference
-        for (let i = 0; i < 5; i++) {
-            await this.page.type('#repl-input', '*step');
-            await this.page.keyboard.press('Enter');
-            await setTimeout(800);
-            console.log(`   Reasoning step ${i+1}/5 completed`);
-        }
+        await this.runReasoningSteps(5, 800);
 
         this.testResults.expectedInferences.push({
             type: 'deduction_chain',
@@ -287,20 +274,16 @@ class ComplexInferenceChainsTest {
         return { premise1, premise2, expected };
     }
 
-    async setupInductionChain() {
-        console.log('\n🔍 Setting up induction chain: A resembles B, B resembles C, Therefore A resembles C');
+    async testMultiPremiseInferences() {
+        console.log('\n🔍 Testing multi-premise inferences: Common properties lead to similarity');
 
         // Premise 1: robin has property singing
         const premise1 = '<robin --> [singing]>. %0.90;0.80%';
-        await this.page.type('#repl-input', premise1);
-        await this.page.keyboard.press('Enter');
-        await setTimeout(500);
+        await this.executeCommand(premise1, 500);
 
         // Premise 2: nightingale has property singing
         const premise2 = '<nightingale --> [singing]>. %0.95;0.75%';
-        await this.page.type('#repl-input', premise2);
-        await this.page.keyboard.press('Enter');
-        await setTimeout(500);
+        await this.executeCommand(premise2, 500);
 
         // Expected induction: robin resembles nightingale (or similar concept formation)
         const expected = '<robin <-> nightingale>.';
@@ -310,12 +293,7 @@ class ComplexInferenceChainsTest {
         console.log(`   Expected: ${expected} (through similarity induction)`);
 
         // Run reasoning cycles
-        for (let i = 0; i < 5; i++) {
-            await this.page.type('#repl-input', '*step');
-            await this.page.keyboard.press('Enter');
-            await setTimeout(800);
-            console.log(`   Reasoning step ${i+1}/5 completed`);
-        }
+        await this.runReasoningSteps(5, 800);
 
         this.testResults.expectedInferences.push({
             type: 'induction_chain',
@@ -327,26 +305,20 @@ class ComplexInferenceChainsTest {
         return { premise1, premise2, expected };
     }
 
-    async setupTemporalChain() {
-        console.log('\n🔍 Setting up temporal chain: A happens, then B happens, infer temporal relation');
+    async testNestedInferences() {
+        console.log('\n🔍 Testing nested inferences with temporal relations');
 
         // Premise 1: robin seeks happens
         const premise1 = '<(robin * [seeking]) --> event>. %1.00;0.90%';
-        await this.page.type('#repl-input', premise1);
-        await this.page.keyboard.press('Enter');
-        await setTimeout(500);
+        await this.executeCommand(premise1, 500);
 
         // Premise 2: robin eats happens next
         const premise2 = '<(robin * [eating]) --> event>. %1.00;0.90%';
-        await this.page.type('#repl-input', premise2);
-        await this.page.keyboard.press('Enter');
-        await setTimeout(500);
+        await this.executeCommand(premise2, 500);
 
         // Premise 3: temporal sequence
         const premise3 = '<(robin * [seeking]) =/> (robin * [eating])>. %1.00;0.85%';
-        await this.page.type('#repl-input', premise3);
-        await this.page.keyboard.press('Enter');
-        await setTimeout(500);
+        await this.executeCommand(premise3, 500);
 
         // Expected: predictive inference about future behavior
         const expected = '<(robin * [seeking]) =/> (robin * [eating])>?';
@@ -357,12 +329,7 @@ class ComplexInferenceChainsTest {
         console.log(`   Expected: ${expected} (temporal prediction)`);
 
         // Run reasoning cycles
-        for (let i = 0; i < 8; i++) {
-            await this.page.type('#repl-input', '*step');
-            await this.page.keyboard.press('Enter');
-            await setTimeout(800);
-            console.log(`   Reasoning step ${i+1}/8 completed`);
-        }
+        await this.runReasoningSteps(8, 800);
 
         this.testResults.expectedInferences.push({
             type: 'temporal_chain',
@@ -374,10 +341,10 @@ class ComplexInferenceChainsTest {
         return { premise1, premise2, premise3, expected };
     }
 
-    async setupMultiStepInference() {
-        console.log('\n🔍 Setting up multi-step inference chain');
+    async testContradictionHandling() {
+        console.log('\n🔍 Testing contradiction handling and resolution');
 
-        // Complex chain: birds fly, robins are birds, therefore robins fly, and if robins fly they are seen, therefore robins are seen
+        // Add some potentially contradictory premises to test how the system handles them
         const premises = [
             '<bird --> [flying]>. %1.00;0.85%',  // Birds fly
             '<robin --> bird>. %1.00;0.90%',     // Robins are birds
@@ -385,9 +352,7 @@ class ComplexInferenceChainsTest {
         ];
 
         for (const premise of premises) {
-            await this.page.type('#repl-input', premise);
-            await this.page.keyboard.press('Enter');
-            await setTimeout(500);
+            await this.executeCommand(premise, 500);
             console.log(`   Added premise: ${premise}`);
         }
 
@@ -397,14 +362,7 @@ class ComplexInferenceChainsTest {
         console.log(`   Expected: ${expected} (through multi-step deduction)`);
 
         // Run more reasoning cycles for complex inference
-        for (let i = 0; i < 10; i++) {
-            await this.page.type('#repl-input', '*step');
-            await this.page.keyboard.press('Enter');
-            await setTimeout(600);
-            if ((i + 1) % 3 === 0) {
-                console.log(`   Complex reasoning step ${i+1}/10 completed`);
-            }
-        }
+        await this.runReasoningSteps(10, 600);
 
         this.testResults.expectedInferences.push({
             type: 'multi_step_chain',
@@ -479,10 +437,10 @@ class ComplexInferenceChainsTest {
             await this.navigateAndConnect();
 
             // Test various types of complex inference chains
-            await this.setupDeductionChain();
-            await this.setupInductionChain();
-            await this.setupTemporalChain();
-            await this.setupMultiStepInference();
+            await this.testBasicInferenceChains();
+            await this.testMultiPremiseInferences();
+            await this.testNestedInferences();
+            await this.testContradictionHandling();
 
             // Verify that inferences were generated
             await this.verifyInferences();
@@ -593,14 +551,14 @@ class ComplexInferenceChainsTest {
         try {
             success = await this.runCompleteTest();
         } finally {
-            const reportSuccess = await this.generateTestReport();
+            const reportSuccess = this.generateTestReport();
             await this.tearDown();
 
             // Return the more comprehensive result
             const finalSuccess = success && reportSuccess;
             console.log(`\n🏁 Final Test Outcome: ${finalSuccess ? 'SUCCESS' : 'FAILURE'}`);
 
-            return finalSuccess;
+            process.exit(finalSuccess ? 0 : 1);
         }
     }
 }

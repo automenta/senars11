@@ -6,24 +6,18 @@
  * and ensures robust error handling and verification.
  */
 
-import { spawn } from 'child_process';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
 import { setTimeout } from 'timers/promises';
-import puppeteer from 'puppeteer';
+import { TestConfig } from '../test-config.js';
+import { BaseUITest, TestError } from '../test-utils.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+class ComprehensiveIntegrationTest extends BaseUITest {
+    constructor(config = TestConfig.serverConfigs.normal) {
+        super(config, { headless: true, timeout: 30000 });
+        this.testResults.operations = [];
+    }
 
-class ComprehensiveIntegrationTest {
-    constructor() {
-        this.narProcess = null;
-        this.uiProcess = null;
-        this.browser = null;
-        this.page = null;
-        this.testPort = 8090; // Use a different port to avoid conflicts
-        this.uiPort = 5177;   // Use a different UI port
-        this.testResults = {
+    initTestResults() {
+        return {
             setup: { nar: false, ui: false, connection: false },
             operations: [],
             errors: []
@@ -493,27 +487,19 @@ class ComprehensiveIntegrationTest {
 
     async runCompleteTest() {
         console.log('🚀 Starting comprehensive SeNARS integration test...\n');
-        
+
         try {
-            // Start backend server
-            await this.startBackendServer();
-            
-            // Start UI server
-            await this.startUIServer();
-            
-            // Start browser for testing
+            // Start NAR server (using base class)
+            await this.startNARServer({ port: this.config.port, narOptions: this.config.narOptions });
+
+            // Start UI server (using base class)
+            await this.startUIServer({ uiPort: this.config.uiPort });
+
+            // Start browser for testing (using base class)
             await this.startBrowser();
-            
-            // Navigate to the UI
-            await this.page.goto(`http://localhost:${this.uiPort}`, {
-                waitUntil: 'networkidle0',
-                timeout: 30000
-            });
-            
-            console.log('✅ UI loaded successfully');
-            
-            // Verify WebSocket connection
-            await this.verifyWebSocketConnection();
+
+            // Navigate to the UI and connect (using base class)
+            await this.navigateAndConnect();
             
             // Run comprehensive tests
             await this.testBasicNarseseInput();
@@ -610,17 +596,17 @@ class ComprehensiveIntegrationTest {
 
     async run() {
         let success = false;
-        
+
         try {
             success = await this.runCompleteTest();
         } finally {
-            const reportSuccess = await this.generateTestReport();
+            const reportSuccess = this.generateTestReport();
             await this.tearDown();
-            
+
             // Return the more comprehensive result
             const finalSuccess = success && reportSuccess;
             console.log(`\n🏁 Final Test Outcome: ${finalSuccess ? 'SUCCESS' : 'FAILURE'}`);
-            
+
             // Exit with appropriate code
             process.exit(finalSuccess ? 0 : 1);
         }

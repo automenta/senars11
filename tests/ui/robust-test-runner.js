@@ -56,7 +56,7 @@ class RobustTestRunner {
             // Close all active browsers
             for (const browser of this.activeBrowsers) {
                 try {
-                    if (browser && !browser.isConnected()) {
+                    if (browser && typeof browser.close === 'function') {
                         browser.close().catch(() => {});
                     }
                 } catch (e) {
@@ -260,7 +260,7 @@ class RobustTestRunner {
 
         // Wait for server to be ready
         await this.waitForProcessReady(proc, `http://localhost:${config.uiPort}`);
-        
+
         console.log('✅ Robust UI server started and tracked for cleanup');
         return proc;
     }
