@@ -1,11 +1,12 @@
-import BaseRenderer from './base-renderer.js';
+import EnhancedBaseRenderer from './enhanced-base-renderer.js';
 import cytoscape from 'cytoscape';
 import GraphLayout from '../config/graph-layout.js';
+import { selectElement, debounce } from '../utils/common.js';
 
 /**
  * BatchedCytoscapeRenderer - A renderer that batches operations for performance
  */
-export default class BatchedCytoscapeRenderer extends BaseRenderer {
+export default class BatchedCytoscapeRenderer extends EnhancedBaseRenderer {
   constructor() {
     super();
     this.cy = null;
@@ -14,26 +15,26 @@ export default class BatchedCytoscapeRenderer extends BaseRenderer {
     this.fitTimeout = null;
     this.isBatching = false;
     this.batchedOperations = [];
+    this.graphDiv = null;
+    this.detailsPanel = null;
   }
 
-  init(container) {
-    this.container = container;
-    
+  _initRenderer() {
     // Create the graph container element
-    const graphDiv = document.createElement('div');
-    Object.assign(graphDiv, { id: 'cy-graph' });
-    Object.assign(graphDiv.style, {
+    this.graphDiv = document.createElement('div');
+    Object.assign(this.graphDiv, { id: 'cy-graph' });
+    Object.assign(this.graphDiv.style, {
       width: '100%',
       height: '100%',
-      border: '1px solid #ccc'
+      border: '1px solid var(--border-color, #ccc)'
     });
 
-    container.appendChild(graphDiv);
+    this.container.appendChild(this.graphDiv);
 
     const styleConfig = GraphLayout.getNodeStyleOptions();
 
     this.cy = cytoscape({
-      container: graphDiv,
+      container: this.graphDiv,
       style: styleConfig.style,
       layout: GraphLayout.getLayoutOptions()
     });
@@ -42,25 +43,39 @@ export default class BatchedCytoscapeRenderer extends BaseRenderer {
     window.cy = this.cy;
 
     // Add event listeners for interactivity
-    const detailsPanel = document.getElementById('details-panel') || 
-                         document.querySelector('#details-panel') ||
-                         this._createDetailsPanel();
-    
-    if (detailsPanel) {
+    this._setupDetailsPanel();
+  }
+
+  _setupDetailsPanel() {
+    this.detailsPanel = selectElement('#details-panel') ?? this._createDetailsPanel();
+
+    if (this.detailsPanel) {
+      // Debounced function to prevent excessive fitting
+      this._debouncedFit = debounce(() => {
+        try {
+          this.cy.layout({
+            name: 'cose',
+            animate: false,
+            fit: true,
+            padding: 30
+          }).run();
+        } catch (error) {
+          console.error('Error running layout/fit', { error: error.message });
+        }
+      }, 100);
+
       this.cy.on('tap', 'node', (evt) => {
         const node = evt.target;
-        detailsPanel.innerHTML = `<pre>${JSON.stringify(node.data(), null, 2)}</pre>`;
-        detailsPanel.style.display = 'block';
+        this.detailsPanel.innerHTML = `<pre>${JSON.stringify(node.data(), null, 2)}</pre>`;
+        this.detailsPanel.style.display = 'block';
       });
 
       this.cy.on('tap', (evt) => {
         if (evt.target === this.cy) {
-          detailsPanel.style.display = 'none';
+          this.detailsPanel.style.display = 'none';
         }
       });
     }
-
-    return this.cy;
   }
 
   _createDetailsPanel() {
@@ -73,7 +88,7 @@ export default class BatchedCytoscapeRenderer extends BaseRenderer {
       right: 10px;
       background: rgba(255, 255, 255, 0.9);
       padding: 10px;
-      border: 1px solid #ccc;
+      border: 1px solid var(--border-color, #ccc);
       border-radius: 5px;
       display: none;
       max-width: 300px;
@@ -104,12 +119,12 @@ export default class BatchedCytoscapeRenderer extends BaseRenderer {
     this.cy.batch(() => {
       this.batchedOperations.forEach(op => this._executeOperation(op));
     });
-    
+
     this.batchedOperations = [];
     this.isBatching = false;
-    
+
     // After batch operations, run layout and fit
-    this.fit();
+    this._fit();
   }
 
   startBatch() {
@@ -120,7 +135,7 @@ export default class BatchedCytoscapeRenderer extends BaseRenderer {
     this._executeBatch();
   }
 
-  addNode(nodeData) {
+  _addNode(nodeData) {
     this._batchOperation(() => {
       try {
         if (!this.cy.getElementById(nodeData.id)) {
@@ -137,7 +152,7 @@ export default class BatchedCytoscapeRenderer extends BaseRenderer {
     });
   }
 
-  updateNode(nodeData) {
+  _updateNode(nodeData) {
     this._batchOperation(() => {
       try {
         const node = this.cy.getElementById(nodeData.id);
@@ -150,7 +165,7 @@ export default class BatchedCytoscapeRenderer extends BaseRenderer {
     });
   }
 
-  removeNode(nodeData) {
+  _removeNode(nodeData) {
     this._batchOperation(() => {
       try {
         const node = this.cy.getElementById(nodeData.id);
@@ -164,7 +179,7 @@ export default class BatchedCytoscapeRenderer extends BaseRenderer {
     });
   }
 
-  addEdge(edgeData) {
+  _addEdge(edgeData) {
     this._batchOperation(() => {
       try {
         if (!this.cy.getElementById(edgeData.id)) {
@@ -178,7 +193,7 @@ export default class BatchedCytoscapeRenderer extends BaseRenderer {
     });
   }
 
-  updateEdge(edgeData) {
+  _updateEdge(edgeData) {
     this._batchOperation(() => {
       try {
         const edge = this.cy.getElementById(edgeData.id);
@@ -191,7 +206,7 @@ export default class BatchedCytoscapeRenderer extends BaseRenderer {
     });
   }
 
-  removeEdge(edgeData) {
+  _removeEdge(edgeData) {
     this._batchOperation(() => {
       try {
         const edge = this.cy.getElementById(edgeData.id);
@@ -202,29 +217,29 @@ export default class BatchedCytoscapeRenderer extends BaseRenderer {
     });
   }
 
-  setGraphSnapshot(snapshot) {
+  _setGraphSnapshot(snapshot) {
     this._batchOperation(() => {
       try {
-        this.clear();
+        this._clear();
         this.nodeCache.clear();
 
-        if (Array.isArray(snapshot.nodes) && snapshot.nodes.length) {
-          snapshot.nodes.forEach(node => this.addNode(node));
+        if (Array.isArray(snapshot.nodes) && snapshot.nodes.length > 0) {
+          snapshot.nodes.forEach(node => this._addNode(node));
         }
 
-        if (Array.isArray(snapshot.edges) && snapshot.edges.length) {
-          snapshot.edges.forEach(edge => this.addEdge(edge));
+        if (Array.isArray(snapshot.edges) && snapshot.edges.length > 0) {
+          snapshot.edges.forEach(edge => this._addEdge(edge));
         }
 
         // Refresh layout after adding all nodes
-        this.fit();
+        this._fit();
       } catch (error) {
         console.error('Error setting graph snapshot', { error: error.message, snapshot });
       }
     });
   }
 
-  clear() {
+  _clear() {
     this._batchOperation(() => {
       try {
         this.cy.elements().remove();
@@ -235,7 +250,7 @@ export default class BatchedCytoscapeRenderer extends BaseRenderer {
     });
   }
 
-  fit() {
+  _fit() {
     this._batchOperation(() => {
       try {
         // Run the COSE layout and fit to make nodes visible
@@ -253,32 +268,14 @@ export default class BatchedCytoscapeRenderer extends BaseRenderer {
 
   // Debounced fit function to avoid excessive fitting
   _requestFit() {
-    if (this.fitTimeout) {
-      clearTimeout(this.fitTimeout);
-    }
-
-    // Set a timeout to fit the graph after a short delay
-    // This prevents excessive fitting when multiple nodes are added rapidly
-    this.fitTimeout = setTimeout(() => {
-      try {
-        // Run the COSE layout and fit to make nodes visible
-        this.cy.layout({
-          name: 'cose',
-          animate: false,
-          fit: true,
-          padding: 30
-        }).run();
-      } catch (error) {
-        console.error('Error running layout/fit', { error: error.message });
-      }
-    }, 100); // 100ms delay to batch multiple operations
+    this._debouncedFit?.();
   }
 
   createElement(group, data) {
     return { group, data: { ...data, id: data.id } };
   }
 
-  destroy() {
+  _destroy() {
     try {
       this.nodeCache.clear();
       // Clear any pending fit timeout
@@ -290,8 +287,25 @@ export default class BatchedCytoscapeRenderer extends BaseRenderer {
         this.cy.destroy();
         this.cy = null;
       }
+      // Remove graph container from DOM if it exists
+      if (this.graphDiv && this.graphDiv.parentNode) {
+        this.graphDiv.parentNode.removeChild(this.graphDiv);
+      }
+      this.graphDiv = null;
     } catch (error) {
       console.error('Error destroying Cytoscape renderer', { error: error.message });
     }
+  }
+
+  /**
+   * Export the current graph data as JSON
+   */
+  _exportData() {
+    if (!this.cy) return null;
+
+    const nodes = this.cy.nodes().map(node => node.data());
+    const edges = this.cy.edges().map(edge => edge.data());
+
+    return { nodes, edges };
   }
 }

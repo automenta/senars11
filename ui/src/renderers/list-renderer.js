@@ -1,9 +1,9 @@
-import BaseRenderer from './base-renderer.js';
+import EnhancedBaseRenderer from './enhanced-base-renderer.js';
 
 /**
  * ListRenderer - A renderer that displays nodes and edges as lists
  */
-export default class ListRenderer extends BaseRenderer {
+export default class ListRenderer extends EnhancedBaseRenderer {
   constructor() {
     super();
     this.container = null;
@@ -11,21 +11,20 @@ export default class ListRenderer extends BaseRenderer {
     this.edges = new Map();
     this.nodesListElement = null;
     this.edgesListElement = null;
+    this.listContainer = null;
   }
 
-  init(container) {
-    this.container = container;
-
+  _initRenderer() {
     // Create container for the list view
-    const listContainer = document.createElement('div');
-    listContainer.id = 'list-container';
-    listContainer.style.cssText = `
+    this.listContainer = document.createElement('div');
+    this.listContainer.id = 'list-container';
+    this.listContainer.style.cssText = `
       width: 100%;
       height: 100%;
       overflow: auto;
       padding: 10px;
-      background-color: #f9f9f9;
-      border: 1px solid #ccc;
+      background-color: var(--bg-secondary, #f9f9f9);
+      border: 1px solid var(--border-color, #ccc);
     `;
 
     // Create sections for nodes and edges
@@ -40,61 +39,59 @@ export default class ListRenderer extends BaseRenderer {
     this.edgesListElement = document.createElement('div');
     edgesSection.appendChild(this.edgesListElement);
 
-    listContainer.appendChild(nodesSection);
-    listContainer.appendChild(edgesSection);
+    this.listContainer.appendChild(nodesSection);
+    this.listContainer.appendChild(edgesSection);
 
-    container.appendChild(listContainer);
-
-    return this;
+    this.container.appendChild(this.listContainer);
   }
 
-  addNode(nodeData) {
+  _addNode(nodeData) {
     this.nodes.set(nodeData.id, nodeData);
     this._updateNodesList();
   }
 
-  updateNode(nodeData) {
+  _updateNode(nodeData) {
     if (this.nodes.has(nodeData.id)) {
       this.nodes.set(nodeData.id, { ...this.nodes.get(nodeData.id), ...nodeData });
       this._updateNodesList();
     }
   }
 
-  removeNode(nodeData) {
+  _removeNode(nodeData) {
     this.nodes.delete(nodeData.id);
     this._updateNodesList();
   }
 
-  addEdge(edgeData) {
+  _addEdge(edgeData) {
     this.edges.set(edgeData.id, edgeData);
     this._updateEdgesList();
   }
 
-  updateEdge(edgeData) {
+  _updateEdge(edgeData) {
     if (this.edges.has(edgeData.id)) {
       this.edges.set(edgeData.id, { ...this.edges.get(edgeData.id), ...edgeData });
       this._updateEdgesList();
     }
   }
 
-  removeEdge(edgeData) {
+  _removeEdge(edgeData) {
     this.edges.delete(edgeData.id);
     this._updateEdgesList();
   }
 
-  setGraphSnapshot(snapshot) {
-    this.clear();
-    
+  _setGraphSnapshot(snapshot) {
+    this._clear();
+
     if (Array.isArray(snapshot.nodes)) {
-      snapshot.nodes.forEach(node => this.addNode(node));
+      snapshot.nodes.forEach(node => this._addNode(node));
     }
 
     if (Array.isArray(snapshot.edges)) {
-      snapshot.edges.forEach(edge => this.addEdge(edge));
+      snapshot.edges.forEach(edge => this._addEdge(edge));
     }
   }
 
-  clear() {
+  _clear() {
     this.nodes.clear();
     this.edges.clear();
     this._updateNodesList();
@@ -105,20 +102,20 @@ export default class ListRenderer extends BaseRenderer {
     if (!this.nodesListElement) return;
 
     this.nodesListElement.innerHTML = '';
-    
+
     for (const [id, node] of this.nodes) {
       const nodeElement = document.createElement('div');
       nodeElement.style.cssText = `
         padding: 5px;
         margin: 2px 0;
-        background-color: #e9ecef;
+        background-color: var(--bg-secondary, #e9ecef);
         border-radius: 3px;
-        border-left: 3px solid #007bff;
+        border-left: 3px solid var(--accent-color, #007bff);
       `;
       nodeElement.innerHTML = `
-        <strong>${node.label || id}</strong> 
-        <span style="font-size: 0.8em; color: #6c757d;">(${node.type || 'unknown'})</span>
-        <div style="font-size: 0.8em; margin-top: 3px;">ID: ${id}</div>
+        <strong>${node.label || id}</strong>
+        <span style="font-size: 0.8em; color: var(--text-secondary, #6c757d);">(${node.type || 'unknown'})</span>
+        <div style="font-size: 0.8em; margin-top: 3px; color: var(--text-secondary, #6c757d);">ID: ${id}</div>
       `;
       this.nodesListElement.appendChild(nodeElement);
     }
@@ -128,26 +125,43 @@ export default class ListRenderer extends BaseRenderer {
     if (!this.edgesListElement) return;
 
     this.edgesListElement.innerHTML = '';
-    
+
     for (const [id, edge] of this.edges) {
       const edgeElement = document.createElement('div');
       edgeElement.style.cssText = `
         padding: 5px;
         margin: 2px 0;
-        background-color: #f8f9fa;
+        background-color: var(--bg-secondary, #f8f9fa);
         border-radius: 3px;
-        border-left: 3px solid #28a745;
+        border-left: 3px solid var(--success-color, #28a745);
       `;
       edgeElement.innerHTML = `
         <strong>${edge.source}</strong> → <strong>${edge.target}</strong>
-        <div style="font-size: 0.8em; margin-top: 3px;">ID: ${id}</div>
+        <div style="font-size: 0.8em; margin-top: 3px; color: var(--text-secondary, #6c757d);">ID: ${id}</div>
       `;
       this.edgesListElement.appendChild(edgeElement);
     }
   }
 
-  destroy() {
+  _destroy() {
     this.nodes.clear();
     this.edges.clear();
+    // Remove the list container from DOM if it exists
+    if (this.listContainer && this.listContainer.parentNode) {
+      this.listContainer.parentNode.removeChild(this.listContainer);
+    }
+    this.listContainer = null;
+    this.nodesListElement = null;
+    this.edgesListElement = null;
+  }
+
+  /**
+   * Export the current data as JSON
+   */
+  _exportData() {
+    return {
+      nodes: Array.from(this.nodes.values()),
+      edges: Array.from(this.edges.values())
+    };
   }
 }

@@ -1,81 +1,42 @@
 /**
- * Unit tests for WebSocketService
+ * Unit tests for WebSocketService using centralized test utilities
  * These tests mock the WebSocket API to simulate server behavior
  */
 
-// Mock WebSocket for Node.js environment
-class MockWebSocket {
-    constructor(url) {
-        this.url = url;
-        this.readyState = 1; // OPEN - Start immediately in OPEN state for tests
-        this.OPEN = 1;
-        this.CONNECTING = 0;
-        this.CLOSED = 3;
-    }
-
-    send(data) {
-        if (this.readyState !== this.OPEN) {
-            throw new Error('WebSocket is not open');
-        }
-        if (this.onsend) this.onsend(data);
-    }
-
-    close(code, reason) {
-        this.readyState = this.CLOSED;
-        if (this.onclose) this.onclose({ code, reason });
-    }
-
-    onmessage(event) {
-        // Default implementation - does nothing
-    }
-}
+// Import test utilities
+import WebSocketService from '../src/websocket-service.js';
+import {
+    assert,
+    assertTrue,
+    assertFalse,
+    assertEquals,
+    assertThrows,
+    runTest,
+    runAsyncTest,
+    MockWebSocket,
+    generateMockNode,
+    generateMockEdge,
+    generateMockSnapshot
+} from './test-utils.js';
 
 // Override global WebSocket for testing
 global.WebSocket = MockWebSocket;
 
-// Import the service
-import WebSocketService from '../src/websocket-service.js';
-
-const PASSED = '✅';
-const FAILED = '❌';
-const TEST_SUMMARY = '🎉';
-const TEST_WARNING = '⚠️';
-
-function runTest(description, testFn) {
-    try {
-        testFn();
-        console.log(`${PASSED} PASS: ${description}`);
-        return true;
-    } catch (error) {
-        console.error(`${FAILED} FAIL: ${description}`);
-        console.error(`   Error: ${error.message}`);
-        return false;
-    }
-}
-
-function assert(condition, message) {
-    if (!condition) throw new Error(message || 'Assertion failed');
-}
-
 async function testWebSocketService() {
-    console.log('Starting WebSocketService unit tests...\n');
-
-    let passed = 0;
-    let total = 0;
-
     const tests = [
         {
             desc: 'Constructor creates instance properly',
             fn: () => {
                 const service = new WebSocketService();
-                assert(service !== null, 'Service should be created');
-                assert(typeof service.connect === 'function', 'Should have connect method');
-                assert(typeof service.disconnect === 'function', 'Should have disconnect method');
-                assert(typeof service.sendMessage === 'function', 'Should have sendMessage method');
+                assertTrue(service !== null, 'Service should be created');
+                assertTrue(typeof service.connect === 'function', 'Should have connect method');
+                assertTrue(typeof service.disconnect === 'function', 'Should have disconnect method');
+                assertTrue(typeof service.sendMessage === 'function', 'Should have sendMessage method');
             }
         },
         {
             desc: 'Connection establishes successfully',
+            async: true,
             fn: async () => {
                 const service = new WebSocketService('ws://localhost:8080/ws');
 
@@ -87,14 +48,15 @@ async function testWebSocketService() {
                 await service.connect();
                 await new Promise(resolve => setTimeout(resolve, 50));
 
-                assert(connected, 'Should emit open event when connected');
-                assert(service.isConnected(), 'Should report connected state');
+                assertTrue(connected, 'Should emit open event when connected');
+                assertTrue(service.isConnected(), 'Should report connected state');
 
                 service.disconnect();
             }
         },
         {
             desc: 'sendMessage works when connected',
+            async: true,
             fn: async () => {
                 const service = new WebSocketService();
 
@@ -110,16 +72,17 @@ async function testWebSocketService() {
 
                 const result = service.sendMessage('testType', { test: 'data' });
 
-                assert(result === true, 'Should return true when message sent successfully');
-                assert(sentMessage !== null, 'Message should be sent');
+                assertTrue(result === true, 'Should return true when message sent successfully');
+                assertTrue(sentMessage !== null, 'Message should be sent');
 
                 const parsed = JSON.parse(sentMessage);
-                assert(parsed.type === 'testType', 'Message type should be preserved');
-                assert(parsed.payload.test === 'data', 'Message payload should be preserved');
+                assertEquals(parsed.type, 'testType', 'Message type should be preserved');
+                assertEquals(parsed.payload.test, 'data', 'Message payload should be preserved');
             }
         },
         {
             desc: 'sendCommand method works',
+            async: true,
             fn: async () => {
                 const service = new WebSocketService();
 
@@ -133,12 +96,12 @@ async function testWebSocketService() {
 
                 const result = service.sendCommand('<a --> b>.');
 
-                assert(result === true, 'Command should be sent successfully');
-                assert(sentMessage !== null, 'Command should be sent');
+                assertTrue(result === true, 'Command should be sent successfully');
+                assertTrue(sentMessage !== null, 'Command should be sent');
 
                 const parsed = JSON.parse(sentMessage);
-                assert(parsed.type === 'narseseInput', 'Command should use narseseInput type');
-                assert(parsed.payload.input === '<a --> b>.', 'Command should be in payload');
+                assertEquals(parsed.type, 'narseseInput', 'Command should use narseseInput type');
+                assertEquals(parsed.payload.input, '<a --> b>.', 'Command should be in payload');
             }
         },
         {
@@ -156,8 +119,8 @@ async function testWebSocketService() {
 
                 service._emit('testEvent', { test: 'data' });
 
-                assert(eventReceived, 'Event should be received by subscriber');
-                assert(eventData.test === 'data', 'Event data should be passed correctly');
+                assertTrue(eventReceived, 'Event should be received by subscriber');
+                assertEquals(eventData.test, 'data', 'Event data should be passed correctly');
             }
         },
         {
@@ -183,7 +146,7 @@ async function testWebSocketService() {
                     service._emit('error', { type: 'PARSE_ERROR', message: parseError.message, raw: invalidJsonData });
                 }
 
-                assert(errorReceived, 'Should emit error for malformed JSON');
+                assertTrue(errorReceived, 'Should emit error for malformed JSON');
             }
         },
         {
@@ -191,34 +154,40 @@ async function testWebSocketService() {
             fn: () => {
                 const service = new WebSocketService();
 
-                assert(!service.isConnected(), 'Should not be connected initially');
-                assert(!service.isConnecting(), 'Should not be connecting initially');
+                assertFalse(service.isConnected(), 'Should not be connected initially');
+                assertFalse(service.isConnecting(), 'Should not be connecting initially');
 
                 service.ws = new MockWebSocket();
                 service.ws.readyState = service.ws.OPEN; // Use MockWebSocket's OPEN constant
-                assert(service.isConnected(), 'Should report connected when WebSocket is open');
+                assertTrue(service.isConnected(), 'Should report connected when WebSocket is open');
 
                 service.ws.readyState = 0; // CONNECTING
-                assert(service.isConnecting(), 'Should report connecting when WebSocket is connecting');
+                assertTrue(service.isConnecting(), 'Should report connecting when WebSocket is connecting');
             }
         }
     ];
 
+    // Run each test individually since we need to handle async ones
+    console.log('Starting WebSocketService unit tests...\n');
+
+    let passed = 0;
+    let total = 0;
+
     for (const test of tests) {
         total++;
-        passed += runTest(test.desc, test.fn);
-        // Wait for any async operations to complete
-        if (test.fn.constructor.name === 'AsyncFunction') {
-            await new Promise(resolve => setTimeout(resolve, 10));
-        }
+        const result = test.async
+            ? await runAsyncTest(test.desc, test.fn)
+            : runTest(test.desc, test.fn);
+
+        if (result) passed++;
     }
 
     console.log(`\nTests completed: ${passed}/${total} passed`);
 
     if (passed === total) {
-        console.log(`${TEST_SUMMARY} All tests passed!`);
+        console.log('🎉 All tests passed!');
     } else {
-        console.log(`${TEST_WARNING} Some tests failed`);
+        console.log(`⚠️  Some tests failed`);
         process.exitCode = 1;
     }
 }

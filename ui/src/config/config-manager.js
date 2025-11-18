@@ -135,35 +135,35 @@ class ConfigManager {
     getWebSocketPort() {
         return this.config.websocket.defaultPort;
     }
-    
+
     getWebSocketHost() {
         return this.config.websocket.defaultHost;
     }
-    
+
     getWebSocketPath() {
         return this.config.websocket.defaultPath;
     }
-    
+
     getReconnectDelay() {
         return this.config.websocket.reconnectDelay;
     }
-    
+
     getMaxReconnectAttempts() {
         return this.config.websocket.maxReconnectAttempts;
     }
-    
+
     getMaxLogEntries() {
         return this.config.ui.maxLogEntries;
     }
-    
+
     getBatchProcessingInterval() {
         return this.config.ui.batchProcessingInterval;
     }
-    
+
     getMaxGraphNodes() {
         return this.config.ui.maxGraphNodes;
     }
-    
+
     getMaxGraphEdges() {
         return this.config.ui.maxGraphEdges;
     }

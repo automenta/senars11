@@ -72,10 +72,11 @@ body {
     gap: 10px;
 }
 
+/* Button styles */
 button {
     padding: 8px 16px;
     cursor: pointer;
-    background-color: #007bff;
+    background-color: var(--accent-color, #007bff);
     color: white;
     border: none;
     border-radius: 4px;
@@ -88,6 +89,136 @@ button:hover {
 
 button:active {
     background-color: #004085;
+}
+
+/* Form components */
+.form-input, input {
+    width: 100%;
+    padding: 8px;
+    box-sizing: border-box;
+    border: 1px solid var(--border-color, #ccc);
+    border-radius: 4px;
+    background-color: var(--bg-primary, #ffffff);
+    color: var(--text-primary, #333333);
+}
+
+.form-input:focus, input:focus {
+    outline: none;
+    border-color: var(--accent-color, #007bff);
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.form-select, select {
+    width: 100%;
+    padding: 8px;
+    box-sizing: border-box;
+    border: 1px solid var(--border-color, #ccc);
+    border-radius: 4px;
+    background-color: var(--bg-primary, #ffffff);
+    color: var(--text-primary, #333333);
+}
+
+.form-select:focus, select:focus {
+    outline: none;
+    border-color: var(--accent-color, #007bff);
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+/* Form group */
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: var(--text-primary, #333333);
+}
+
+.form-help-text {
+    display: block;
+    margin-top: 5px;
+    font-size: 0.875em;
+    color: var(--text-secondary, #666666);
+}
+
+.form-error-message {
+    display: block;
+    margin-top: 5px;
+    font-size: 0.875em;
+    color: var(--error-color, #dc3545);
+}
+
+.form-group-error {
+    border: 1px solid var(--error-color, #dc3545);
+    border-radius: 4px;
+    padding: 5px;
+}
+
+/* Button variants */
+.btn {
+    padding: 8px 16px;
+    cursor: pointer;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    transition: background-color 0.2s;
+}
+
+.btn-primary {
+    background-color: var(--accent-color, #007bff);
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #545b62;
+}
+
+.btn-success {
+    background-color: var(--success-color, #28a745);
+    color: white;
+}
+
+.btn-success:hover {
+    background-color: #1e7e34;
+}
+
+.btn-danger {
+    background-color: var(--error-color, #dc3545);
+    color: white;
+}
+
+.btn-danger:hover {
+    background-color: #c82333;
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.toolbar {
+    display: flex;
+    gap: 10px;
+    padding: 10px 0;
+    flex-wrap: wrap;
+}
+
+.toolbar .btn {
+    margin-bottom: 5px;
 }
 
 pre {

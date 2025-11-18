@@ -1,37 +1,20 @@
 /**
- * Unit tests for StateStore
+ * Unit tests for StateStore using centralized test utilities
  */
 
 import StateStore from '../src/state-store.js';
-import { MAX_LOG_ENTRIES } from '../src/config.js';
-
-const PASSED = '✅';
-const FAILED = '❌';
-const TEST_SUMMARY = '🎉';
-const TEST_WARNING = '⚠️';
-
-function runTest(description, testFn) {
-    try {
-        testFn();
-        console.log(`${PASSED} PASS: ${description}`);
-        return true;
-    } catch (error) {
-        console.error(`${FAILED} FAIL: ${description}`);
-        console.error(`   Error: ${error.message}`);
-        return false;
-    }
-}
-
-function assert(condition, message) {
-    if (!condition) throw new Error(message || 'Assertion failed');
-}
+import configManager from '../src/config/config-manager.js';
+import {
+    assert,
+    assertTrue,
+    assertFalse,
+    assertEquals,
+    assertDeepEqual,
+    runTest,
+    runTestSuite
+} from './test-utils.js';
 
 function testStateStore() {
-    console.log('Starting StateStore unit tests...\n');
-
-    let passed = 0;
-    let total = 0;
-
     const tests = [
         {
             desc: 'Constructor initializes state properly',
@@ -39,11 +22,11 @@ function testStateStore() {
                 const store = new StateStore();
                 const state = store.getState();
 
-                assert(state.connectionStatus === 'disconnected', 'Initial connection status should be disconnected');
-                assert(state.isLiveUpdateEnabled === true, 'Initial live update should be enabled');
-                assert(Array.isArray(state.logEntries), 'Log entries should be an array');
-                assert(state.graph.nodes instanceof Map, 'Graph nodes should be a Map');
-                assert(state.graph.edges instanceof Map, 'Graph edges should be a Map');
+                assertEquals(state.connectionStatus, 'disconnected', 'Initial connection status should be disconnected');
+                assertTrue(state.isLiveUpdateEnabled, 'Initial live update should be enabled');
+                assertTrue(Array.isArray(state.logEntries), 'Log entries should be an array');
+                assertTrue(state.graph.nodes instanceof Map, 'Graph nodes should be a Map');
+                assertTrue(state.graph.edges instanceof Map, 'Graph edges should be a Map');
             }
         },
         {
@@ -58,8 +41,8 @@ function testStateStore() {
 
                 store.dispatch({ type: 'SET_CONNECTION_STATUS', payload: 'connected' });
 
-                assert(receivedState !== null, 'Subscriber should receive state updates');
-                assert(receivedState.connectionStatus === 'connected', 'Subscriber should receive updated state');
+                assertTrue(receivedState !== null, 'Subscriber should receive state updates');
+                assertEquals(receivedState.connectionStatus, 'connected', 'Subscriber should receive updated state');
 
                 unsubscribe();
             }
@@ -70,10 +53,10 @@ function testStateStore() {
                 const store = new StateStore();
 
                 store.dispatch({ type: 'SET_CONNECTION_STATUS', payload: 'connecting' });
-                assert(store.getState().connectionStatus === 'connecting', 'Connection status should update to connecting');
+                assertEquals(store.getState().connectionStatus, 'connecting', 'Connection status should update to connecting');
 
                 store.dispatch({ type: 'SET_CONNECTION_STATUS', payload: 'connected' });
-                assert(store.getState().connectionStatus === 'connected', 'Connection status should update to connected');
+                assertEquals(store.getState().connectionStatus, 'connected', 'Connection status should update to connected');
             }
         },
         {
@@ -82,18 +65,19 @@ function testStateStore() {
                 const store = new StateStore();
 
                 store.dispatch({ type: 'SET_LIVE_UPDATE_ENABLED', payload: false });
-                assert(store.getState().isLiveUpdateEnabled === false, 'Live update should be disabled');
+                assertFalse(store.getState().isLiveUpdateEnabled, 'Live update should be disabled');
 
                 store.dispatch({ type: 'SET_LIVE_UPDATE_ENABLED', payload: true });
-                assert(store.getState().isLiveUpdateEnabled === true, 'Live update should be enabled');
+                assertTrue(store.getState().isLiveUpdateEnabled, 'Live update should be enabled');
             }
         },
         {
             desc: 'ADD_LOG_ENTRY action with proper limiting',
             fn: () => {
                 const store = new StateStore();
+                const maxLogEntries = configManager.getMaxLogEntries();
 
-                for (let i = 0; i < MAX_LOG_ENTRIES + 5; i++) {
+                for (let i = 0; i < maxLogEntries + 5; i++) {
                     store.dispatch({
                         type: 'ADD_LOG_ENTRY',
                         payload: {
@@ -104,8 +88,8 @@ function testStateStore() {
                 }
 
                 const logEntries = store.getState().logEntries;
-                assert(logEntries.length <= MAX_LOG_ENTRIES, `Log entries should be limited to ${MAX_LOG_ENTRIES}`);
-                assert(logEntries[0].content === `Log entry ${MAX_LOG_ENTRIES + 4}`, 'Latest entry should be first');
+                assertTrue(logEntries.length <= maxLogEntries, `Log entries should be limited to ${maxLogEntries}`);
+                assertEquals(logEntries[0].content, `Log entry ${maxLogEntries + 4}`, 'Latest entry should be first');
             }
         },
         {
@@ -121,8 +105,8 @@ function testStateStore() {
                 });
 
                 let nodes = store.getState().graph.nodes;
-                assert(nodes.has(nodeId), 'Node should be added to the graph');
-                assert(nodes.get(nodeId).label === 'Test Node', 'Node should have correct label');
+                assertTrue(nodes.has(nodeId), 'Node should be added to the graph');
+                assertEquals(nodes.get(nodeId).label, 'Test Node', 'Node should have correct label');
 
                 // Update the node
                 store.dispatch({
@@ -131,7 +115,7 @@ function testStateStore() {
                 });
 
                 nodes = store.getState().graph.nodes;
-                assert(nodes.get(nodeId).label === 'Updated Node', 'Node should be updated');
+                assertEquals(nodes.get(nodeId).label, 'Updated Node', 'Node should be updated');
 
                 // Remove the node
                 store.dispatch({
@@ -140,7 +124,7 @@ function testStateStore() {
                 });
 
                 nodes = store.getState().graph.nodes;
-                assert(!nodes.has(nodeId), 'Node should be removed from the graph');
+                assertFalse(nodes.has(nodeId), 'Node should be removed from the graph');
             }
         },
         {
@@ -156,8 +140,8 @@ function testStateStore() {
                 });
 
                 let edges = store.getState().graph.edges;
-                assert(edges.has(edgeId), 'Edge should be added to the graph');
-                assert(edges.get(edgeId).source === 'node1', 'Edge should have correct source');
+                assertTrue(edges.has(edgeId), 'Edge should be added to the graph');
+                assertEquals(edges.get(edgeId).source, 'node1', 'Edge should have correct source');
 
                 // Update the edge
                 store.dispatch({
@@ -166,7 +150,7 @@ function testStateStore() {
                 });
 
                 edges = store.getState().graph.edges;
-                assert(edges.get(edgeId).source === 'node3', 'Edge should be updated');
+                assertEquals(edges.get(edgeId).source, 'node3', 'Edge should be updated');
 
                 // Remove the edge
                 store.dispatch({
@@ -175,7 +159,7 @@ function testStateStore() {
                 });
 
                 edges = store.getState().graph.edges;
-                assert(!edges.has(edgeId), 'Edge should be removed from the graph');
+                assertFalse(edges.has(edgeId), 'Edge should be removed from the graph');
             }
         },
         {
@@ -199,11 +183,11 @@ function testStateStore() {
                 });
 
                 const state = store.getState();
-                assert(state.graph.nodes.size === 2, 'Graph should have 2 nodes from snapshot');
-                assert(state.graph.edges.size === 1, 'Graph should have 1 edge from snapshot');
-                assert(state.graph.nodes.has('test_node1'), 'Graph should contain test_node1');
-                assert(state.graph.nodes.has('test_node2'), 'Graph should contain test_node2');
-                assert(state.graph.edges.has('test_edge1'), 'Graph should contain test_edge1');
+                assertEquals(state.graph.nodes.size, 2, 'Graph should have 2 nodes from snapshot');
+                assertEquals(state.graph.edges.size, 1, 'Graph should have 1 edge from snapshot');
+                assertTrue(state.graph.nodes.has('test_node1'), 'Graph should contain test_node1');
+                assertTrue(state.graph.nodes.has('test_node2'), 'Graph should contain test_node2');
+                assertTrue(state.graph.edges.has('test_edge1'), 'Graph should contain test_edge1');
             }
         },
         {
@@ -230,31 +214,19 @@ function testStateStore() {
                 });
 
                 const state = store.getState();
-                assert(state.logEntries.length === 2, 'Should have 2 log entries from events');
+                assertEquals(state.logEntries.length, 2, 'Should have 2 log entries from events');
 
                 const nodes = state.graph.nodes;
                 const foundNodes = Array.from(nodes.values()).some(node =>
                     node.label === 'test_concept' || node.label === 'test_task'
                 );
 
-                assert(foundNodes, 'State should update graph based on events');
+                assertTrue(foundNodes, 'State should update graph based on events');
             }
         }
     ];
 
-    tests.forEach(test => {
-        total++;
-        passed += runTest(test.desc, test.fn);
-    });
-
-    console.log(`\nTests completed: ${passed}/${total} passed`);
-
-    if (passed === total) {
-        console.log(`${TEST_SUMMARY} All tests passed!`);
-    } else {
-        console.log(`${TEST_WARNING} Some tests failed`);
-        process.exitCode = 1;
-    }
+    return runTestSuite('StateStore', tests);
 }
 
 // Run the tests

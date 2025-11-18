@@ -2,11 +2,12 @@ import configManager from './config/config-manager.js';
 import Logger from './utils/logger.js';
 import errorHandler from './utils/error-handler.js';
 import MessageFormatter from './utils/message-formatter.js';
+import { memoryManager } from './utils/memory-manager.js';
 
 class WebSocketService {
     constructor(url = null, store = null) {
         // Use provided URL, or get dynamic URL
-        this.url = url || this._getWebSocketUrl();
+        this.url = url ?? this._getWebSocketUrl();
         this.ws = null;
         this.reconnectAttempts = 0;
         this.maxReconnectAttempts = configManager.getMaxReconnectAttempts();
@@ -15,11 +16,14 @@ class WebSocketService {
         this.isReconnecting = false;
         this.shouldReconnect = true;
         this.store = store;
+
+        // Add timer tracking for memory management
+        this._scheduledReconnectTimer = null;
     }
 
     _getWebSocketUrl() {
         // Try to use the page's current hostname instead of hardcoded localhost
-        if (typeof window !== 'undefined' && window.location && window.location.hostname) {
+        if (typeof window !== 'undefined' && window.location?.hostname) {
             return `ws://${window.location.hostname}:${configManager.getWebSocketPort()}${configManager.getWebSocketConfig().defaultPath}`;
         }
         // Fallback to config value if in non-browser environment
@@ -27,57 +31,14 @@ class WebSocketService {
     }
 
     connect() {
-        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+        if (this.ws?.readyState === WebSocket.OPEN) {
             return Promise.resolve();
         }
 
         return new Promise((resolve, reject) => {
             try {
                 this.ws = new WebSocket(this.url);
-
-                const eventHandlers = {
-                    'onopen': () => {
-                        Logger.info('WebSocket connected', { url: this.url });
-                        this.reconnectAttempts = 0;
-                        this.isReconnecting = false;
-                        this._emit('open');
-                        resolve();
-                    },
-                    'onclose': (event) => {
-                        Logger.info('WebSocket closed', { code: event.code, reason: event.reason });
-                        this._emit('close', event);
-                        if (this.store) {
-                            this.store.dispatch({ type: 'SET_ERROR', payload: `WebSocket closed: ${event.reason}` });
-                        }
-                        if (this.shouldReconnect && event.code !== 1000) {
-                            this._scheduleReconnect();
-                        }
-                    },
-                    'onerror': (error) => {
-                        errorHandler.handleError(error, { url: this.url, context: 'WebSocket connection' });
-                        this._emit('error', error);
-                        if (this.store) {
-                            this.store.dispatch({ type: 'SET_ERROR', payload: 'WebSocket connection error.' });
-                        }
-                        reject(error);
-                    },
-                    'onmessage': (event) => {
-                        try {
-                            const data = MessageFormatter.formatIncomingMessage(event.data);
-                            this._emit('message', data);
-                        } catch (parseError) {
-                            errorHandler.handleError(parseError, {
-                                raw: event.data,
-                                context: 'WebSocket message parsing'
-                            });
-                            this._emit('error', { type: 'PARSE_ERROR', message: parseError.message, raw: event.data });
-                        }
-                    }
-                };
-
-                Object.entries(eventHandlers).forEach(([event, handler]) => {
-                    this.ws[event] = handler;
-                });
+                this._setupEventHandlers(resolve, reject);
             } catch (error) {
                 errorHandler.handleError(error, { url: this.url, context: 'WebSocket creation' });
                 reject(error);
@@ -85,9 +46,81 @@ class WebSocketService {
         });
     }
 
+    _setupEventHandlers(resolve, reject) {
+        // Define event handlers with structured approach
+        const eventHandlers = {
+            'onopen': () => {
+                Logger.info('WebSocket connected', { url: this.url });
+                this.reconnectAttempts = 0;
+                this.isReconnecting = false;
+                this._emit('open');
+                resolve();
+            },
+            'onclose': (event) => {
+                Logger.info('WebSocket closed', { code: event.code, reason: event.reason });
+                this._emit('close', event);
+                this._handleWebSocketClose(event);
+            },
+            'onerror': (error) => {
+                errorHandler.handleError(error, { url: this.url, context: 'WebSocket connection' });
+                this._emit('error', error);
+                this._handleWebSocketError(error);
+                reject(error);
+            },
+            'onmessage': (event) => {
+                this._handleWebSocketMessage(event);
+            }
+        };
+
+        // Assign handlers to websocket instance
+        Object.entries(eventHandlers).forEach(([event, handler]) => {
+            this.ws[event] = handler;
+        });
+    }
+
+    _handleWebSocketClose(event) {
+        if (this.store) {
+            this.store.dispatch({ type: 'SET_ERROR', payload: `WebSocket closed: ${event.reason}` });
+        }
+        if (this.shouldReconnect && event.code !== 1000) {
+            this._scheduleReconnect();
+        }
+    }
+
+    _handleWebSocketError(error) {
+        if (this.store) {
+            this.store.dispatch({ type: 'SET_ERROR', payload: 'WebSocket connection error.' });
+        }
+    }
+
+    _handleWebSocketMessage(event) {
+        try {
+            const data = MessageFormatter.formatIncomingMessage(event.data);
+            this._emit('message', data);
+        } catch (parseError) {
+            errorHandler.handleError(parseError, {
+                raw: event.data,
+                context: 'WebSocket message parsing'
+            });
+            this._emit('error', {
+                type: 'PARSE_ERROR',
+                message: parseError.message,
+                raw: event.data
+            });
+        }
+    }
+
     disconnect() {
         this.shouldReconnect = false;
-        this.ws?.close(1000, 'Client requested disconnect');
+
+        // Close WebSocket connection
+        if (this.ws) {
+            this.ws.close(1000, 'Client requested disconnect');
+            this.ws = null;
+        }
+
+        // Clear any scheduled reconnect timer
+        this._clearScheduledReconnectTimer();
     }
 
     reconnect() {
@@ -98,39 +131,61 @@ class WebSocketService {
 
     _scheduleReconnect() {
         if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-            errorHandler.handleError(new Error('Max reconnection attempts reached'), {
-                attempts: this.reconnectAttempts,
-                maxAttempts: this.maxReconnectAttempts,
-                context: 'WebSocket reconnection'
-            });
-            this._emit('error', { type: 'MAX_RECONNECT_ATTEMPTS' });
+            this._handleMaxReconnectAttempts();
             return;
         }
 
         this.isReconnecting = true;
         this.reconnectAttempts++;
+        const delay = this._calculateReconnectDelay();
 
-        const delay = Math.min(this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1), 30000);
-
-        Logger.info(`Scheduling reconnection`, {
+        Logger.info('Scheduling reconnection', {
             attempt: this.reconnectAttempts,
             maxAttempts: this.maxReconnectAttempts,
             delayMs: delay
         });
 
-        setTimeout(() => {
-            if (this.shouldReconnect) {
-                Logger.info('Attempting to reconnect');
-                this.connect().catch(error => {
-                    errorHandler.handleError(error, { context: 'WebSocket reconnection' });
-                    this._scheduleReconnect();
-                });
-            }
-        }, delay);
+        this._clearScheduledReconnectTimer();
+
+        this._scheduledReconnectTimer = memoryManager.registerTimer(
+            setTimeout(() => this._attemptReconnect(), delay)
+        );
+    }
+
+    _handleMaxReconnectAttempts() {
+        errorHandler.handleError(new Error('Max reconnection attempts reached'), {
+            attempts: this.reconnectAttempts,
+            maxAttempts: this.maxReconnectAttempts,
+            context: 'WebSocket reconnection'
+        });
+        this._emit('error', { type: 'MAX_RECONNECT_ATTEMPTS' });
+    }
+
+    _calculateReconnectDelay() {
+        return Math.min(this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1), 30000);
+    }
+
+    _clearScheduledReconnectTimer() {
+        if (this._scheduledReconnectTimer) {
+            clearTimeout(this._scheduledReconnectTimer);
+            this._scheduledReconnectTimer = null;
+        }
+    }
+
+    _attemptReconnect() {
+        if (this.shouldReconnect) {
+            Logger.info('Attempting to reconnect');
+            this.connect().catch(error => {
+                errorHandler.handleError(error, { context: 'WebSocket reconnection' });
+                this._scheduleReconnect();
+            });
+        }
+        // Remove the timer reference after it executes
+        this._scheduledReconnectTimer = null;
     }
 
     sendMessage(type, payload) {
-        if (!this.ws || this.ws.readyState !== this.ws.OPEN) {
+        if (!this._isConnected()) {
             Logger.error('WebSocket not connected, cannot send message', {
                 readyState: this.ws?.readyState,
                 type
@@ -144,20 +199,24 @@ class WebSocketService {
             this._emit('outgoingMessage', message);
             return true;
         } catch (error) {
-            errorHandler.handleError(error, {
-                type,
-                payload,
-                context: 'sendMessage'
-            });
-            this._emit('error', { type: 'SEND_ERROR', message: error.message });
+            this._handleSendMessageError(error, type, payload);
             return false;
         }
+    }
+
+    _handleSendMessageError(error, type, payload) {
+        errorHandler.handleError(error, {
+            type,
+            payload,
+            context: 'sendMessage'
+        });
+        this._emit('error', { type: 'SEND_ERROR', message: error.message });
     }
 
     sendCommand(command) {
         try {
             const message = MessageFormatter.createCommandMessage(command);
-            if (!this.ws || this.ws.readyState !== this.ws.OPEN) {
+            if (!this._isConnected()) {
                 Logger.error('WebSocket not connected, cannot send command', {
                     readyState: this.ws?.readyState,
                     command
@@ -169,13 +228,17 @@ class WebSocketService {
             this._emit('outgoingMessage', message);
             return true;
         } catch (error) {
-            errorHandler.handleError(error, {
-                command,
-                context: 'sendCommand'
-            });
-            this._emit('error', { type: 'SEND_ERROR', message: error.message });
+            this._handleSendCommandError(error, command);
             return false;
         }
+    }
+
+    _handleSendCommandError(error, command) {
+        errorHandler.handleError(error, {
+            command,
+            context: 'sendCommand'
+        });
+        this._emit('error', { type: 'SEND_ERROR', message: error.message });
     }
 
     subscribe(eventType, callback) {
@@ -207,8 +270,12 @@ class WebSocketService {
         });
     }
 
-    isConnected() {
+    _isConnected() {
         return this.ws && this.ws.readyState === this.ws.OPEN;
+    }
+
+    isConnected() {
+        return this._isConnected();
     }
 
     isConnecting() {
@@ -217,6 +284,17 @@ class WebSocketService {
 
     isReconnecting() {
         return this.isReconnecting;
+    }
+
+    /**
+     * Complete cleanup of the WebSocket service and all associated resources
+     */
+    cleanup() {
+        // Disconnect the WebSocket
+        this.disconnect();
+
+        // Clear all event listeners
+        this.eventListeners.clear();
     }
 }
 

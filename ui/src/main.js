@@ -9,113 +9,212 @@ import StatusBarView from './status-bar-view.js';
 import EventProcessor from './event-processor.js';
 import { demos } from './demo.js';
 import { SET_CONNECTION_STATUS, SET_LIVE_UPDATE_ENABLED } from './constants/actions.js';
+import { Dropdown, Button, FormGroup } from './utils/form-components.js';
+import { selectElement, createElement } from './utils/common.js';
 
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('SeNARS UI Initialized');
-
-    // Initialize core services
-    const store = new StateStore();
-    const service = new WebSocketService(null, store);
-    window.service = service; // Expose for verification
-    const eventProcessor = new EventProcessor(store);
-
-    // Initialize REPL components
-    let replController = null;
-    const replContainer = document.getElementById('repl-container');
-    if (replContainer) {
-        const replView = initReplView(replContainer, () => {});
-        replController = new REPLController(replView, store, service);
-    } else {
-        console.error('REPL container not found');
+// Application initialization
+class AppInitializer {
+    constructor() {
+        this.store = null;
+        this.service = null;
+        this.eventProcessor = null;
+        this.replController = null;
+        this.graphController = null;
     }
 
-    // Initialize graph components
-    const graphContainer = document.getElementById('cy-container');
-    let graphController = null;
-    if (graphContainer) {
-        const graphView = initGraphView(graphContainer, { rendererType: 'batched-cytoscape' });
-        graphController = new GraphController(graphView, store, service);
+    async initialize() {
+        console.log('SeNARS UI Initialized');
+
+        this.initializeCoreServices();
+        await this.setupWebSocketConnection();
+        this.initializeComponents();
+        this.setupEventHandlers();
+        this.setupUIControls();
     }
 
-    // WebSocket event handlers
-    const eventHandlers = {
-        'open': () => store.dispatch({ type: SET_CONNECTION_STATUS, payload: 'connected' }),
-        'close': () => store.dispatch({ type: SET_CONNECTION_STATUS, payload: 'disconnected' }),
-        'error': (error) => {
-            store.dispatch({ type: SET_CONNECTION_STATUS, payload: 'error' });
-            console.error('WebSocket error:', error);
-        },
-        'message': (message) => {
-            // Process the message with the event processor
-            eventProcessor.process(message);
+    initializeCoreServices() {
+        this.store = new StateStore();
+        this.service = new WebSocketService(null, this.store);
+        window.service = this.service; // Expose for verification
+        this.eventProcessor = new EventProcessor(this.store);
+    }
 
-            // Handle the message in the REPL controller if it exists
-            if (replController) {
-                replController.handleIncomingMessage(message);
-            }
+    async setupWebSocketConnection() {
+        try {
+            await this.service.connect();
+        } catch (error) {
+            console.error('Failed to connect to WebSocket:', error);
+            this.store.dispatch({ type: SET_CONNECTION_STATUS, payload: 'error' });
         }
-    };
+    }
 
-    Object.entries(eventHandlers).forEach(([event, handler]) => {
-        service.subscribe(event, handler);
-    });
+    initializeComponents() {
+        this.initializeReplComponent();
+        this.initializeGraphComponent();
+        this.initializeStatusBarView();
+    }
 
-    service.connect().catch(error => {
-        console.error('Failed to connect to WebSocket:', error);
-        store.dispatch({ type: SET_CONNECTION_STATUS, payload: 'error' });
-    });
+    initializeReplComponent() {
+        const replContainer = selectElement('#repl-container');
+        if (replContainer) {
+            const replView = initReplView(replContainer, () => {});
+            this.replController = new REPLController(replView, this.store, this.service);
+        } else {
+            console.error('REPL container not found');
+        }
+    }
 
-    // Set up refresh button
-    const refreshBtn = document.getElementById('refresh-btn');
-    refreshBtn?.addEventListener('click', () => {
-        graphController ? graphController.requestRefresh() :
-            console.error('Graph controller not initialized');
-    });
+    initializeGraphComponent() {
+        const graphContainer = selectElement('#cy-container');
+        if (graphContainer) {
+            const graphView = initGraphView(graphContainer, { rendererType: 'batched-cytoscape' });
+            this.graphController = new GraphController(graphView, this.store, this.service);
+        }
+    }
 
-    // Set up live updates toggle
-    const toggleLiveBtn = document.getElementById('toggle-live-btn');
-    if (toggleLiveBtn) {
-        let liveUpdatesEnabled = true;
-        toggleLiveBtn.textContent = 'Pause Live Updates';
+    initializeStatusBarView() {
+        new StatusBarView(this.store);
+    }
 
-        toggleLiveBtn.addEventListener('click', () => {
-            liveUpdatesEnabled = !liveUpdatesEnabled;
-            store.dispatch({ type: SET_LIVE_UPDATE_ENABLED, payload: liveUpdatesEnabled });
-            toggleLiveBtn.textContent = liveUpdatesEnabled ? 'Pause Live Updates' : 'Resume Live Updates';
+    setupEventHandlers() {
+        const eventHandlers = this.createWebSocketEventHandlers();
+
+        for (const [event, handler] of Object.entries(eventHandlers)) {
+            this.service.subscribe(event, handler);
+        }
+    }
+
+    createWebSocketEventHandlers() {
+        return {
+            'open': () => this.store.dispatch({ type: SET_CONNECTION_STATUS, payload: 'connected' }),
+            'close': () => this.store.dispatch({ type: SET_CONNECTION_STATUS, payload: 'disconnected' }),
+            'error': (error) => {
+                this.store.dispatch({ type: SET_CONNECTION_STATUS, payload: 'error' });
+                console.error('WebSocket error:', error);
+            },
+            'message': (message) => {
+                // Process the message with the event processor
+                this.eventProcessor.process(message);
+
+                // Handle the message in the REPL controller if it exists
+                this.replController?.handleIncomingMessage?.(message);
+            }
+        };
+    }
+
+    setupUIControls() {
+        this.setupRefreshButton();
+        this.setupLiveUpdatesToggle();
+        this.setupDemoControls();
+    }
+
+    setupRefreshButton() {
+        const refreshBtn = selectElement('#refresh-btn');
+        refreshBtn?.addEventListener('click', () => {
+            this.graphController
+                ? this.graphController.requestRefresh()
+                : console.error('Graph controller not initialized');
         });
     }
 
-    // Initialize status bar view
-    new StatusBarView(store);
+    setupLiveUpdatesToggle() {
+        const toggleLiveBtn = selectElement('#toggle-live-btn');
+        if (toggleLiveBtn) {
+            let liveUpdatesEnabled = true;
+            toggleLiveBtn.textContent = 'Pause Live Updates';
 
-    // Set up demo controls
-    const demoSelect = document.getElementById('demo-select');
-    const demoBtn = document.getElementById('run-demo-btn');
+            toggleLiveBtn.addEventListener('click', () => {
+                liveUpdatesEnabled = !liveUpdatesEnabled;
+                this.store.dispatch({ type: SET_LIVE_UPDATE_ENABLED, payload: liveUpdatesEnabled });
+                toggleLiveBtn.textContent = liveUpdatesEnabled ? 'Pause Live Updates' : 'Resume Live Updates';
+            });
+        }
+    }
 
-    if (demoSelect && demoBtn) {
-        Object.keys(demos).forEach(name => {
-            const option = document.createElement('option');
-            option.value = name;
-            option.textContent = name;
-            demoSelect.appendChild(option);
+    setupDemoControls() {
+        const demoContainer = selectElement('#demo-controls') ?? selectElement('.demo-controls');
+
+        if (demoContainer) {
+            this.createModernDemoControls(demoContainer);
+        } else {
+            this.createLegacyDemoControls();
+        }
+    }
+
+    createModernDemoControls(container) {
+        // Create dropdown for demo selection
+        const demoDropdown = new Dropdown({
+            name: 'demo-select',
+            options: Object.keys(demos).map(name => ({ value: name, text: name })),
+            className: 'demo-select'
         });
 
-        demoBtn.addEventListener('click', () => {
-            const selectedDemo = demoSelect.value;
-            const demoScript = demos[selectedDemo];
-            if (!demoScript) return;
+        // Create run demo button
+        const runDemoBtn = new Button({
+            text: 'Run Demo',
+            variant: 'primary',
+            className: 'run-demo-btn'
+        });
 
-            service.sendMessage('control/reset', {});
+        // Create form group for demo controls
+        const demoFormGroup = new FormGroup({
+            label: 'Select Demo',
+            input: demoDropdown,
+            className: 'demo-form-group'
+        });
 
-            let i = 0;
-            const interval = setInterval(() => {
-                if (i < demoScript.length) {
-                    service.sendMessage('narseseInput', { input: demoScript[i] });
-                    i++;
-                } else {
-                    clearInterval(interval);
-                }
-            }, 1000);
+        // Add elements to container
+        container.appendChild(demoFormGroup.element);
+        container.appendChild(runDemoBtn.element);
+
+        // Add event listener to run demo button
+        runDemoBtn.element.addEventListener('click', () => {
+            this.runSelectedDemo(demoDropdown.getValue());
         });
     }
+
+    createLegacyDemoControls() {
+        const demoSelect = selectElement('#demo-select');
+        const demoBtn = selectElement('#run-demo-btn');
+
+        if (demoSelect && demoBtn) {
+            // Populate demo selection dropdown
+            Object.keys(demos).forEach(name => {
+                const option = createElement('option', {
+                    value: name,
+                    textContent: name
+                });
+                demoSelect.appendChild(option);
+            });
+
+            demoBtn.addEventListener('click', () => {
+                this.runSelectedDemo(demoSelect.value);
+            });
+        }
+    }
+
+    runSelectedDemo(selectedDemo) {
+        const demoScript = demos[selectedDemo];
+        if (!demoScript) return;
+
+        this.service.sendMessage('control/reset', {});
+
+        let i = 0;
+        const interval = setInterval(() => {
+            if (i < demoScript.length) {
+                this.service.sendMessage('narseseInput', { input: demoScript[i] });
+                i++;
+            } else {
+                clearInterval(interval);
+            }
+        }, 1000);
+    }
+}
+
+// Initialize the application when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    const app = new AppInitializer();
+    app.initialize().catch(error => {
+        console.error('Failed to initialize application:', error);
+    });
 });

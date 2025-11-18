@@ -26,17 +26,17 @@ export function selectElement(selector, parent = document) {
  */
 export function createElement(tagName, attributes = {}, styles = {}) {
   const element = document.createElement(tagName);
-  
-  // Set attributes
+
+  // Set attributes using destructuring and optional chaining
   Object.entries(attributes).forEach(([key, value]) => {
     element[key] = value;
   });
-  
-  // Apply styles
+
+  // Apply styles using destructuring
   Object.entries(styles).forEach(([key, value]) => {
     element.style[key] = value;
   });
-  
+
   return element;
 }
 
@@ -83,8 +83,8 @@ export function formatLogMessage(type, content) {
     info: '[INFO]',
     error: '[ERROR]'
   };
-  
-  const prefix = prefixes[type] || '[LOG]';
+
+  const prefix = prefixes[type] ?? '[LOG]';
   return `${prefix} ${content}`;
 }
 
@@ -142,20 +142,20 @@ export function isPlainObject(value) {
  */
 export function deepMerge(...sources) {
   const result = {};
-  
+
   for (const source of sources) {
     if (!source || !isPlainObject(source)) continue;
-    
+
     for (const key in source) {
       if (Object.prototype.hasOwnProperty.call(source, key)) {
         if (isPlainObject(source[key])) {
-          result[key] = deepMerge(result[key] || {}, source[key]);
+          result[key] = deepMerge(result[key] ?? {}, source[key]);
         } else {
           result[key] = source[key];
         }
       }
     }
   }
-  
+
   return result;
 }
