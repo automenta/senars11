@@ -3,7 +3,7 @@
  * @description End-to-end integration test for the SeNARS web UI
  */
 
-import {TestNARWeb} from './src/testing/TestNARWeb.js';
+import {TestNARWeb} from '../../src/testing/TestNARWeb.js';
 
 async function runWebIntegrationTest() {
     console.log('Starting SeNARS Web UI integration test...');

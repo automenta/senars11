@@ -35,8 +35,8 @@ class ComprehensiveIntegrationTest {
 
         // Create the backend server as a child process
         this.narProcess = spawn('node', ['-e', `
-            import {NAR} from './src/nar/NAR.js';
-            import {WebSocketMonitor} from './src/server/WebSocketMonitor.js';
+            import {NAR} from '../../src/nar/NAR.js';
+            import {WebSocketMonitor} from '../../src/server/WebSocketMonitor.js';
             
             async function startServer() {
                 console.log('=== NAR BACKEND INITIALIZATION ===');
@@ -138,12 +138,12 @@ class ComprehensiveIntegrationTest {
         try {
             const { execSync } = await import('child_process');
             console.log('📦 Ensuring UI dependencies are installed...');
-            execSync('npm ci', { cwd: join(__dirname, 'ui'), stdio: 'pipe' });
+            execSync('npm ci', { cwd: join(__dirname, '../../ui'), stdio: 'pipe' });
         } catch (e) {
             // If npm ci fails, try npm install
             try {
                 const { execSync } = await import('child_process');
-                execSync('npm install', { cwd: join(__dirname, 'ui'), stdio: 'pipe' });
+                execSync('npm install', { cwd: join(__dirname, '../../ui'), stdio: 'pipe' });
             } catch (e2) {
                 console.log('⚠️  Dependency installation issues, continuing anyway...');
             }
@@ -151,7 +151,7 @@ class ComprehensiveIntegrationTest {
 
         // Start the UI server using vite
         this.uiProcess = spawn('npx', ['vite', 'dev', '--port', this.uiPort.toString(), '--host'], {
-            cwd: join(__dirname, 'ui'),
+            cwd: join(__dirname, '../../ui'),
             stdio: ['pipe', 'pipe', 'pipe'],
             env: {
                 ...process.env,
@@ -198,7 +198,7 @@ class ComprehensiveIntegrationTest {
         console.log('🚀 Launching browser with comprehensive debugging...');
         
         this.browser = await puppeteer.launch({
-            headless: false, // Set to true for CI environments
+            headless: true, // Set to true for CI environments and headless systems
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',

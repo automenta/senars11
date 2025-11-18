@@ -3,8 +3,8 @@
  * @description Demonstration of the TestNARWeb implementation without execution
  */
 
-import {TestNARWeb} from './src/testing/TestNARWeb.js';
-import {RemoteTaskMatch} from './src/testing/TaskMatch.js';
+import {TestNARWeb} from '../../src/testing/TestNARWeb.js';
+import {RemoteTaskMatch} from '../../src/testing/TaskMatch.js';
 
 async function runDemonstration() {
     console.log('🧪 SeNARS Web UI Test Framework - Implementation Demonstration\n');

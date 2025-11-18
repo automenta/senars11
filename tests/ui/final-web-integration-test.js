@@ -3,8 +3,8 @@
  * @description Final comprehensive test demonstrating the full end-to-end functionality
  */
 
-import {TestNARWeb} from './src/testing/TestNARWeb.js';
-import {RemoteTaskMatch} from './src/testing/TaskMatch.js';
+import {TestNARWeb} from '../../src/testing/TestNARWeb.js';
+import {RemoteTaskMatch} from '../../src/testing/TaskMatch.js';
 
 async function runFinalIntegrationTest() {
     console.log('🧪 Final SeNARS Web UI Integration Test\n');

@@ -134,13 +134,100 @@ export class TestNARWeb {
 
     async setup() {
         await this.startServer();
+        await this.startUIServer(); // Start UI server before launching browser
         await this.launchBrowser();
         await this.openWebUI();
+    }
+
+    async startUIServer() {
+        const { spawn } = await import('child_process');
+        const { join, dirname } = await import('path');
+        const { fileURLToPath } = await import('url');
+        const __filename = fileURLToPath(import.meta.url);
+        const __dirname = dirname(__filename);
+
+        // Use a different port for the UI server to avoid conflicts
+        this.uiPort = 3000 + Math.floor(Math.random() * 1000); // Random port in 3000+ range
+
+        // Start the UI server using vite
+        this.uiServerProcess = spawn('npx', ['vite', 'dev', '--port', this.uiPort.toString(), '--host'], {
+            cwd: join(__dirname, '../../../ui'), // Navigate to ui directory from src/testing/
+            stdio: ['pipe', 'pipe', 'pipe'],
+            env: {
+                ...process.env,
+                VITE_WS_HOST: 'localhost',
+                VITE_WS_PORT: this.port.toString(), // Use the NAR WebSocket port
+                VITE_WS_PATH: '/ws',
+                NODE_ENV: 'development'
+            }
+        });
+
+        // Wait for UI server to be ready
+        return new Promise((resolve, reject) => {
+            let output = '';
+            const timeout = 30000; // 30 second timeout
+            const startTime = Date.now();
+
+            this.uiServerProcess.stdout.on('data', (data) => {
+                const str = data.toString();
+                output += str;
+                if (str.includes(`http://localhost:${this.uiPort}`) ||
+                    str.includes(`Local:   http://localhost:${this.uiPort}`)) {
+                    resolve();
+                }
+            });
+
+            this.uiServerProcess.stderr.on('data', (data) => {
+                const str = data.toString();
+                if (!str.includes('ExperimentalWarning')) { // Filter experimental warnings
+                    console.error(`[UI-ERROR] ${str.trim()}`);
+                }
+            });
+
+            const checkReady = setInterval(() => {
+                if (Date.now() - startTime > timeout) {
+                    clearInterval(checkReady);
+                    reject(new Error(`UI server failed to start within ${timeout}ms`));
+                }
+            }, 100);
+
+            // Also check the output periodically
+            const outputCheck = setInterval(() => {
+                if (output.includes(`http://localhost:${this.uiPort}`) ||
+                    output.includes(`Local:   http://localhost:${this.uiPort}`)) {
+                    clearInterval(outputCheck);
+                    clearInterval(checkReady);
+                    resolve();
+                }
+            }, 200);
+        });
+    }
+
+    async stopUIServer() {
+        return new Promise((resolve) => {
+            if (this.uiServerProcess) {
+                this.uiServerProcess.removeAllListeners();
+
+                const timeout = setTimeout(() => {
+                    this.uiServerProcess.kill('SIGKILL');
+                }, 3000);
+
+                this.uiServerProcess.on('close', () => {
+                    clearTimeout(timeout);
+                    resolve();
+                });
+
+                this.uiServerProcess.kill('SIGTERM');
+            } else {
+                resolve();
+            }
+        });
     }
 
     async teardown() {
         await this.closeBrowser();
         await this.stopServer();
+        await this.stopUIServer(); // Clean up UI server too
     }
 
     startServer() {
@@ -230,11 +317,11 @@ startServer().catch(console.error);
 
     async openWebUI() {
         // Determine if the UI exists in the ui directory
-        const uiPath = join(__dirname, '../../ui');
+        const uiPath = join(__dirname, '../../../ui');
         try {
             await fs.access(uiPath);
-            // The UI should already be served on port 3000 from the earlier phase
-            await this.page.goto(`http://localhost:3000`); // Default serve port from earlier setup
+            // Use the dynamically assigned UI port
+            await this.page.goto(`http://localhost:${this.uiPort}`); // Use the dynamically assigned port
 
             // Wait a bit for the page to load and establish WebSocket connection
             await this.page.waitForNetworkIdle();

@@ -3,7 +3,7 @@
  * @description Comprehensive end-to-end test for SeNARS web UI
  */
 
-import {TestNARWeb} from './src/testing/TestNARWeb.js';
+import {TestNARWeb} from '../../src/testing/TestNARWeb.js';
 
 async function runComprehensiveWebTest() {
     console.log('🧪 Starting comprehensive SeNARS Web UI test...\n');
