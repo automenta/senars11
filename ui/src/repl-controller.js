@@ -1,4 +1,7 @@
 import Logger from './utils/logger.js';
+import {
+  ADD_LOG_ENTRY, SET_CONNECTION_STATUS, ADD_NODE, ADD_EDGE
+} from './constants/actions.js';
 
 /**
  * REPLController - Coordinates between the REPLView, StateStore, and WebSocketService
@@ -27,8 +30,8 @@ export default class REPLController {
     handleStoreChange(state, action) {
         try {
             const actionHandlers = {
-                'ADD_LOG_ENTRY': () => this.viewAPI.addOutput(`[LOG] ${action.payload.content}`),
-                'SET_CONNECTION_STATUS': () => this.viewAPI.addOutput(`[STATUS] Connection: ${state.connectionStatus}`)
+                [ADD_LOG_ENTRY]: () => this.viewAPI.addOutput(`[LOG] ${action.payload.content}`),
+                [SET_CONNECTION_STATUS]: () => this.viewAPI.addOutput(`[STATUS] Connection: ${state.connectionStatus}`)
             };
 
             const handler = actionHandlers[action.type];
@@ -51,7 +54,7 @@ export default class REPLController {
 
                 if (success) {
                     this.store.dispatch({
-                        type: 'ADD_LOG_ENTRY',
+                        type: ADD_LOG_ENTRY,
                         payload: { content: `SENT: ${command}`, type: 'out' }
                     });
                 } else {
@@ -89,7 +92,7 @@ export default class REPLController {
 
             // Also log to store
             this.store.dispatch({
-                type: 'ADD_LOG_ENTRY',
+                type: ADD_LOG_ENTRY,
                 payload: { content: `DEBUG: Found ${taskNodes.length} tasks in graph state`, type: 'debug' }
             });
         } else if (command === '/concepts') {
@@ -115,7 +118,7 @@ export default class REPLController {
 
             // Also log to store
             this.store.dispatch({
-                type: 'ADD_LOG_ENTRY',
+                type: ADD_LOG_ENTRY,
                 payload: { content: `DEBUG: Found ${conceptNodes.length} concepts in graph state`, type: 'debug' }
             });
         } else if (command === '/nodes') {
@@ -147,7 +150,7 @@ export default class REPLController {
 
             // Also log to store
             this.store.dispatch({
-                type: 'ADD_LOG_ENTRY',
+                type: ADD_LOG_ENTRY,
                 payload: { content: `DEBUG: Found ${nodes.length} total nodes in graph state`, type: 'debug' }
             });
         } else if (command === '/state') {
@@ -184,7 +187,7 @@ export default class REPLController {
 
             // Also log to store
             this.store.dispatch({
-                type: 'ADD_LOG_ENTRY',
+                type: ADD_LOG_ENTRY,
                 payload: { content: `DEBUG: State - ${state.connectionStatus}, StateStore: ${state.graph.nodes.size}/${state.graph.edges.size}, Cytoscape: ${window.cy ? window.cy.nodes().length + '/' + window.cy.edges().length : 'N/A'}`, type: 'debug' }
             });
         } else if (command === '/refresh' || command === '/reload') {
@@ -193,7 +196,7 @@ export default class REPLController {
             this.service.sendMessage('control/refresh', {});
 
             this.store.dispatch({
-                type: 'ADD_LOG_ENTRY',
+                type: ADD_LOG_ENTRY,
                 payload: { content: 'DEBUG: Requested graph refresh', type: 'debug' }
             });
         } else if (command === '/cy-stats' || command === '/cy-info') {
@@ -280,14 +283,14 @@ export default class REPLController {
             // Dispatch actions to add nodes to the state
             dummyNodes.forEach(node => {
                 this.store.dispatch({
-                    type: 'ADD_NODE',
+                    type: ADD_NODE,
                     payload: node
                 });
             });
 
             dummyEdges.forEach(edge => {
                 this.store.dispatch({
-                    type: 'ADD_EDGE',
+                    type: ADD_EDGE,
                     payload: edge
                 });
             });
@@ -296,7 +299,7 @@ export default class REPLController {
             this.viewAPI.addOutput(`[DEBUG] Check the visualization to see if they appear`);
 
             this.store.dispatch({
-                type: 'ADD_LOG_ENTRY',
+                type: ADD_LOG_ENTRY,
                 payload: { content: `DEBUG: Added ${dummyNodes.length} nodes and ${dummyEdges.length} edges for visualization testing`, type: 'debug' }
             });
 
@@ -312,7 +315,7 @@ export default class REPLController {
             if (message.type === 'connection' || message.type === 'error') {
                 const content = message.data?.message || message.payload?.message || JSON.stringify(message);
                 this.store.dispatch({
-                    type: 'ADD_LOG_ENTRY',
+                    type: ADD_LOG_ENTRY,
                     payload: { content: `INFO: ${content}`, type: 'in' }
                 });
 
@@ -320,7 +323,7 @@ export default class REPLController {
             } else if (message.type === 'control/ack') {
                 const content = `Command ack: ${message.payload?.command} - ${message.payload?.status}`;
                 this.store.dispatch({
-                    type: 'ADD_LOG_ENTRY',
+                    type: ADD_LOG_ENTRY,
                     payload: { content, type: 'in' }
                 });
 
@@ -339,7 +342,7 @@ export default class REPLController {
                                   JSON.stringify(message);
 
                     this.store.dispatch({
-                        type: 'ADD_LOG_ENTRY',
+                        type: ADD_LOG_ENTRY,
                         payload: { content: `VISUAL: ${message.type} - ${content}`, type: 'in' }
                     });
 

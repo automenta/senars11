@@ -6,7 +6,7 @@ import { ADD_NODE, ADD_LOG_ENTRY } from './constants/actions.js';
 
 /**
  * EventProcessor - Centralized module for processing NARS events and dispatching UI actions
- * Refactored to reduce duplication with shared utility methods
+ * Refactored version to reduce duplication
  */
 class EventProcessor {
     constructor(store) {

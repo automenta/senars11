@@ -1,5 +1,7 @@
-import AppConfig from './config/app-config.js';
+import configManager from './config/config-manager.js';
 import Logger from './utils/logger.js';
+import errorHandler from './utils/error-handler.js';
+import MessageFormatter from './utils/message-formatter.js';
 
 class WebSocketService {
     constructor(url = null, store = null) {
@@ -7,8 +9,8 @@ class WebSocketService {
         this.url = url || this._getWebSocketUrl();
         this.ws = null;
         this.reconnectAttempts = 0;
-        this.maxReconnectAttempts = AppConfig.websocket.maxReconnectAttempts;
-        this.reconnectDelay = AppConfig.websocket.reconnectDelay;
+        this.maxReconnectAttempts = configManager.getMaxReconnectAttempts();
+        this.reconnectDelay = configManager.getReconnectDelay();
         this.eventListeners = new Map();
         this.isReconnecting = false;
         this.shouldReconnect = true;
@@ -18,10 +20,10 @@ class WebSocketService {
     _getWebSocketUrl() {
         // Try to use the page's current hostname instead of hardcoded localhost
         if (typeof window !== 'undefined' && window.location && window.location.hostname) {
-            return `ws://${window.location.hostname}:${AppConfig.websocket.defaultPort}${AppConfig.websocket.defaultPath}`;
+            return `ws://${window.location.hostname}:${configManager.getWebSocketPort()}${configManager.getWebSocketConfig().defaultPath}`;
         }
         // Fallback to config value if in non-browser environment
-        return `ws://${AppConfig.websocket.defaultHost}:${AppConfig.websocket.defaultPort}${AppConfig.websocket.defaultPath}`;
+        return `ws://${configManager.getWebSocketConfig().defaultHost}:${configManager.getWebSocketPort()}${configManager.getWebSocketConfig().defaultPath}`;
     }
 
     connect() {
@@ -52,7 +54,7 @@ class WebSocketService {
                         }
                     },
                     'onerror': (error) => {
-                        Logger.error('WebSocket error', { error, url: this.url });
+                        errorHandler.handleError(error, { url: this.url, context: 'WebSocket connection' });
                         this._emit('error', error);
                         if (this.store) {
                             this.store.dispatch({ type: 'SET_ERROR', payload: 'WebSocket connection error.' });
@@ -61,12 +63,12 @@ class WebSocketService {
                     },
                     'onmessage': (event) => {
                         try {
-                            const data = JSON.parse(event.data);
+                            const data = MessageFormatter.formatIncomingMessage(event.data);
                             this._emit('message', data);
                         } catch (parseError) {
-                            Logger.error('Error parsing WebSocket message', {
-                                error: parseError.message,
-                                raw: event.data
+                            errorHandler.handleError(parseError, {
+                                raw: event.data,
+                                context: 'WebSocket message parsing'
                             });
                             this._emit('error', { type: 'PARSE_ERROR', message: parseError.message, raw: event.data });
                         }
@@ -77,7 +79,7 @@ class WebSocketService {
                     this.ws[event] = handler;
                 });
             } catch (error) {
-                Logger.error('Error creating WebSocket connection', { error, url: this.url });
+                errorHandler.handleError(error, { url: this.url, context: 'WebSocket creation' });
                 reject(error);
             }
         });
@@ -96,9 +98,10 @@ class WebSocketService {
 
     _scheduleReconnect() {
         if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-            Logger.error('Max reconnection attempts reached', {
+            errorHandler.handleError(new Error('Max reconnection attempts reached'), {
                 attempts: this.reconnectAttempts,
-                maxAttempts: this.maxReconnectAttempts
+                maxAttempts: this.maxReconnectAttempts,
+                context: 'WebSocket reconnection'
             });
             this._emit('error', { type: 'MAX_RECONNECT_ATTEMPTS' });
             return;
@@ -119,7 +122,7 @@ class WebSocketService {
             if (this.shouldReconnect) {
                 Logger.info('Attempting to reconnect');
                 this.connect().catch(error => {
-                    Logger.error('Reconnection failed', { error });
+                    errorHandler.handleError(error, { context: 'WebSocket reconnection' });
                     this._scheduleReconnect();
                 });
             }
@@ -136,19 +139,43 @@ class WebSocketService {
         }
 
         try {
-            const message = { type, payload, timestamp: Date.now() };
+            const message = MessageFormatter.formatOutgoingMessage(type, payload);
             this.ws.send(JSON.stringify(message));
             this._emit('outgoingMessage', message);
             return true;
         } catch (error) {
-            Logger.error('Error sending WebSocket message', { error: error.message, type });
+            errorHandler.handleError(error, {
+                type,
+                payload,
+                context: 'sendMessage'
+            });
             this._emit('error', { type: 'SEND_ERROR', message: error.message });
             return false;
         }
     }
 
     sendCommand(command) {
-        return this.sendMessage('narseseInput', { input: command });
+        try {
+            const message = MessageFormatter.createCommandMessage(command);
+            if (!this.ws || this.ws.readyState !== this.ws.OPEN) {
+                Logger.error('WebSocket not connected, cannot send command', {
+                    readyState: this.ws?.readyState,
+                    command
+                });
+                return false;
+            }
+
+            this.ws.send(JSON.stringify(message));
+            this._emit('outgoingMessage', message);
+            return true;
+        } catch (error) {
+            errorHandler.handleError(error, {
+                command,
+                context: 'sendCommand'
+            });
+            this._emit('error', { type: 'SEND_ERROR', message: error.message });
+            return false;
+        }
     }
 
     subscribe(eventType, callback) {
@@ -172,7 +199,10 @@ class WebSocketService {
             try {
                 callback(data);
             } catch (error) {
-                Logger.error(`Error in ${eventType} listener`, { error: error.message });
+                errorHandler.handleError(error, {
+                    eventType,
+                    context: 'WebSocket event listener'
+                });
             }
         });
     }

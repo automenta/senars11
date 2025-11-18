@@ -1,11 +1,11 @@
-import AppConfig from './app-config.js';
+import configManager from './config-manager.js';
 
 /**
  * GraphLayout - Centralized graph visualization configuration
  */
 class GraphLayout {
     static getLayoutOptions() {
-        return AppConfig.graph.layout;
+        return configManager.getGraphLayout();
     }
 
     static getNodeStyleOptions() {
@@ -37,12 +37,15 @@ class GraphLayout {
 
     static _getNodeTypeStyles() {
         const styles = [];
-        for (const [type, color] of Object.entries(AppConfig.graph.nodeColors)) {
+        const nodeColors = configManager.getNodeColors();
+        const nodeShapes = configManager.getNodeShapes();
+
+        for (const [type, color] of Object.entries(nodeColors)) {
             styles.push({
                 selector: `node[type="${type}"]`,
                 style: {
                     'background-color': color,
-                    shape: AppConfig.graph.nodeShapes[type] || 'ellipse'
+                    shape: nodeShapes[type] || 'ellipse'
                 }
             });
         }

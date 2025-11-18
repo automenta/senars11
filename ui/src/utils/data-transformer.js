@@ -1,9 +1,58 @@
 /**
  * DataTransformer - Converts and normalizes data structures for consistent handling
+ * Updated to use EnhancedDataTransformer
  */
+import EnhancedDataTransformer from './enhanced-data-transformer.js';
+import { validationService } from './validation-service.js';
+import errorHandler from './error-handler.js';
+
 class DataTransformer {
     // Transform NARS event data for UI consumption
     static transformEventData(eventType, rawData) {
+        try {
+            // Map event types to transformation types
+            const transformationType = this._getTransformationType(eventType);
+
+            // Transform the data using the enhanced transformer
+            const result = EnhancedDataTransformer.safeTransform(rawData, {
+                type: transformationType
+            });
+
+            if (result.success) {
+                return result.data;
+            } else {
+                // Fallback to original behavior if transformation fails
+                return this._fallbackTransform(eventType, rawData);
+            }
+        } catch (error) {
+            errorHandler.handleError(error, {
+                eventType,
+                rawData,
+                context: 'DataTransformer.transformEventData'
+            });
+            // Return raw data if transformation fails completely
+            return rawData;
+        }
+    }
+
+    static _getTransformationType(eventType) {
+        const typeMap = {
+            'concept.created': 'concept',
+            'task.added': 'task',
+            'task.processed': 'task',
+            'task.input': 'task',
+            'belief.added': 'belief',
+            'question.answered': 'question',
+            'reasoning.derivation': 'derivation',
+            'reasoning.step': 'derivation',
+            'memorySnapshot': 'memorySnapshot',
+            'eventBatch': 'eventBatch'
+        };
+        return typeMap[eventType] || 'generic';
+    }
+
+    static _fallbackTransform(eventType, rawData) {
+        // Fallback transformation if the enhanced transformer fails
         switch (eventType) {
             case 'concept.created':
                 return this._transformConceptData(rawData);
@@ -79,7 +128,7 @@ class DataTransformer {
     }
 
     static _transformMemorySnapshot(data) {
-        const concepts = Array.isArray(data.concepts) 
+        const concepts = Array.isArray(data.concepts)
             ? data.concepts.map(c => this._transformConceptData(c))
             : [];
 
@@ -92,8 +141,7 @@ class DataTransformer {
 
     // Normalize different data formats from NARS events
     static normalizeNodeData(type, data) {
-        const normalized = { ...data };
-        normalized.type = type;
+        const normalized = EnhancedDataTransformer._normalizeStandard({ ...data, type });
         normalized.id = normalized.id || this._generateId(type, data);
         normalized.label = normalized.label || this._generateLabel(type, data);
         return normalized;
@@ -116,36 +164,12 @@ class DataTransformer {
 
     // Convert flat data to hierarchical structure if needed
     static toHierarchical(data) {
-        if (Array.isArray(data)) {
-            return {
-                nodes: data.filter(item => !item.source && !item.target),
-                edges: data.filter(item => item.source && item.target)
-            };
-        }
-        return data;
+        return EnhancedDataTransformer.normalizeToFormat(data, 'hierarchical');
     }
 
     // Flatten nested data structures for easier processing
     static flatten(data) {
-        if (!data || typeof data !== 'object') {
-            return data;
-        }
-
-        const flattened = {};
-        this._flattenRecursive(data, flattened, '');
-        return flattened;
-    }
-
-    static _flattenRecursive(obj, target, prefix) {
-        for (const [key, value] of Object.entries(obj)) {
-            const newKey = prefix ? `${prefix}.${key}` : key;
-
-            if (value && typeof value === 'object' && !Array.isArray(value)) {
-                this._flattenRecursive(value, target, newKey);
-            } else {
-                target[newKey] = value;
-            }
-        }
+        return EnhancedDataTransformer.normalizeToFormat(data, 'flat');
     }
 }
 

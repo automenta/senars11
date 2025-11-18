@@ -8,6 +8,7 @@ import GraphController from './graph-controller.js';
 import StatusBarView from './status-bar-view.js';
 import EventProcessor from './event-processor.js';
 import { demos } from './demo.js';
+import { SET_CONNECTION_STATUS, SET_LIVE_UPDATE_ENABLED } from './constants/actions.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log('SeNARS UI Initialized');
@@ -38,10 +39,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // WebSocket event handlers
     const eventHandlers = {
-        'open': () => store.dispatch({ type: 'SET_CONNECTION_STATUS', payload: 'connected' }),
-        'close': () => store.dispatch({ type: 'SET_CONNECTION_STATUS', payload: 'disconnected' }),
+        'open': () => store.dispatch({ type: SET_CONNECTION_STATUS, payload: 'connected' }),
+        'close': () => store.dispatch({ type: SET_CONNECTION_STATUS, payload: 'disconnected' }),
         'error': (error) => {
-            store.dispatch({ type: 'SET_CONNECTION_STATUS', payload: 'error' });
+            store.dispatch({ type: SET_CONNECTION_STATUS, payload: 'error' });
             console.error('WebSocket error:', error);
         },
         'message': (message) => {
@@ -61,7 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     service.connect().catch(error => {
         console.error('Failed to connect to WebSocket:', error);
-        store.dispatch({ type: 'SET_CONNECTION_STATUS', payload: 'error' });
+        store.dispatch({ type: SET_CONNECTION_STATUS, payload: 'error' });
     });
 
     // Set up refresh button
@@ -79,7 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         toggleLiveBtn.addEventListener('click', () => {
             liveUpdatesEnabled = !liveUpdatesEnabled;
-            store.dispatch({ type: 'SET_LIVE_UPDATE_ENABLED', payload: liveUpdatesEnabled });
+            store.dispatch({ type: SET_LIVE_UPDATE_ENABLED, payload: liveUpdatesEnabled });
             toggleLiveBtn.textContent = liveUpdatesEnabled ? 'Pause Live Updates' : 'Resume Live Updates';
         });
     }

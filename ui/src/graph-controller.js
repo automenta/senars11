@@ -1,4 +1,8 @@
 import Logger from './utils/logger.js';
+import {
+  ADD_NODE, UPDATE_NODE, REMOVE_NODE, ADD_EDGE, UPDATE_EDGE, REMOVE_EDGE,
+  SET_GRAPH_SNAPSHOT, CLEAR_GRAPH, PROCESS_EVENT_BATCH, SET_LOADING_SNAPSHOT
+} from './constants/actions.js';
 
 /**
  * GraphController - Coordinates between the GraphView (renderer), StateStore, and WebSocketService
@@ -30,15 +34,15 @@ export default class GraphController {
 
         try {
             const actionHandlers = {
-                'ADD_NODE': (payload) => this.addNode(payload),
-                'UPDATE_NODE': (payload) => this.updateNode(payload),
-                'REMOVE_NODE': (payload) => this.removeNode(payload),
-                'ADD_EDGE': (payload) => this.addEdge(payload),
-                'UPDATE_EDGE': (payload) => this.updateEdge(payload),
-                'REMOVE_EDGE': (payload) => this.removeEdge(payload),
-                'SET_GRAPH_SNAPSHOT': (payload) => this.setGraphSnapshot(payload),
-                'CLEAR_GRAPH': () => this.clearGraph(),
-                'PROCESS_EVENT_BATCH': (payload) => this.processEventBatch(payload)
+                [ADD_NODE]: (payload) => this.addNode(payload),
+                [UPDATE_NODE]: (payload) => this.updateNode(payload),
+                [REMOVE_NODE]: (payload) => this.removeNode(payload),
+                [ADD_EDGE]: (payload) => this.addEdge(payload),
+                [UPDATE_EDGE]: (payload) => this.updateEdge(payload),
+                [REMOVE_EDGE]: (payload) => this.removeEdge(payload),
+                [SET_GRAPH_SNAPSHOT]: (payload) => this.setGraphSnapshot(payload),
+                [CLEAR_GRAPH]: () => this.clearGraph(),
+                [PROCESS_EVENT_BATCH]: (payload) => this.processEventBatch(payload)
             };
 
             const handler = actionHandlers[action.type];
@@ -190,7 +194,7 @@ export default class GraphController {
 
     requestRefresh() {
         try {
-            this.store.dispatch({ type: 'SET_LOADING_SNAPSHOT', payload: true });
+            this.store.dispatch({ type: SET_LOADING_SNAPSHOT, payload: true });
             this.service.sendMessage('control/refresh', {});
         } catch (error) {
             Logger.error('Error requesting graph refresh', { error: error.message });
@@ -200,7 +204,7 @@ export default class GraphController {
     handleRefreshResponse(payload) {
         try {
             this.store.dispatch({
-                type: 'SET_GRAPH_SNAPSHOT',
+                type: SET_GRAPH_SNAPSHOT,
                 payload: {
                     nodes: payload.concepts?.map(concept => ({
                         id: concept.term?.toString() || `concept_${Date.now()}`,
@@ -212,7 +216,7 @@ export default class GraphController {
                 }
             });
 
-            this.store.dispatch({ type: 'SET_LOADING_SNAPSHOT', payload: false });
+            this.store.dispatch({ type: SET_LOADING_SNAPSHOT, payload: false });
         } catch (error) {
             Logger.error('Error handling refresh response', { error: error.message, payload });
         }

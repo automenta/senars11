@@ -1,6 +1,6 @@
 import Logger from '../utils/logger.js';
 import { eventBus } from '../utils/event-bus.js';
-import AppConfig from '../config/app-config.js';
+import configManager from '../config/config-manager.js';
 
 /**
  * StateService - Advanced state management with persistence and synchronization
@@ -12,7 +12,7 @@ class StateService {
         this.middleware = [];
         this.persistKeys = options.persistKeys || [];
         this.storageKey = options.storageKey || 'senars-ui-state';
-        this.syncInterval = options.syncInterval || AppConfig.ui.uiUpdateInterval;
+        this.syncInterval = options.syncInterval || configManager.getUIConfig().uiUpdateInterval;
         this.isHydrated = false;
         this.pendingActions = [];
         this.batching = false;
@@ -387,7 +387,7 @@ class StateService {
 const stateService = new StateService({
     persistKeys: ['ui', 'graph', 'connectionStatus', 'logEntries'],
     storageKey: 'senars-ui-state',
-    syncInterval: AppConfig.ui.uiUpdateInterval
+    syncInterval: configManager.getUIConfig().uiUpdateInterval
 });
 
 export { StateService, stateService };

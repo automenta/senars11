@@ -1,4 +1,4 @@
-import AppConfig from '../config/app-config.js';
+import configManager from '../config/config-manager.js';
 
 /**
  * NodeFactory - Creates consistent node objects for the graph visualization
@@ -53,9 +53,12 @@ class NodeFactory {
     }
 
     static _getStyleForType(type) {
+        const nodeShapes = configManager.getNodeShapes();
+        const nodeColors = configManager.getNodeColors();
+
         return {
-            shape: AppConfig.graph.nodeShapes[type] || 'ellipse',
-            color: AppConfig.graph.nodeColors[type] || '#3399FF'
+            shape: nodeShapes[type] || 'ellipse',
+            color: nodeColors[type] || '#3399FF'
         };
     }
 

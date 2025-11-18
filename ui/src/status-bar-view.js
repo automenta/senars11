@@ -1,10 +1,12 @@
 /**
  * StatusBarView - Manages the status bar UI element
  */
+import { selectElement } from './utils/common.js';
+
 export default class StatusBarView {
     constructor(store) {
         this.store = store;
-        this.statusBarElement = document.getElementById('status-bar');
+        this.statusBarElement = selectElement('#status-bar');
         this.unsubscribe = null;
 
         if (!this.statusBarElement) {
