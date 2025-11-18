@@ -59,17 +59,19 @@ export class BrowserError extends TestError {
 export class BaseUITest {
   constructor(config, uiConfig = {}) {
     this.config = config;
-    this.uiConfig = { 
+    this.uiConfig = {
       headless: false,
       timeout: 30000,
       retryAttempts: 2,
-      ...uiConfig 
+      ...uiConfig
     };
     this.narProcess = null;
     this.uiProcess = null;
     this.browser = null;
     this.page = null;
     this.testResults = this.initTestResults();
+    // Element cache to reduce DOM queries
+    this._elementCache = new Map();
   }
 
   /**
@@ -349,7 +351,10 @@ export class BaseUITest {
    */
   async executeCommand(command, waitTime = 1000) {
     try {
-      await this.page.type('#repl-input', command);
+      // Use a more specific selector to reduce search time and provide fallbacks
+      const inputSelector = '#repl-input, .repl-input, [data-testid="repl-input"]';
+      await this.page.waitForSelector(inputSelector, { timeout: 5000 });
+      await this.page.type(inputSelector.split(',')[0].trim(), command);
       await this.page.keyboard.press('Enter');
       await setTimeout(waitTime);
       return true;
@@ -472,6 +477,108 @@ export class BaseUITest {
                finalSuccess ? 'info' : 'error');
       
       return finalSuccess;
+    }
+
+    /**
+     * Wait for specific text to appear in the UI output
+     * @param {string} expectedText - The text to wait for
+     * @param {number} timeout - Timeout in milliseconds
+     * @returns {Promise<boolean>} True if text appears
+     */
+    async waitForOutput(expectedText, timeout = 10000) {
+      try {
+        // Use optimized selectors with caching
+        const outputSelector = '#repl-output, .repl-output, [data-testid="repl-output"], pre';
+        await this.page.waitForSelector(outputSelector, { timeout: 2000 });
+
+        await this.page.waitForFunction(
+          (expected) => {
+            const output = document.querySelector('#repl-output') ||
+                          document.querySelector('.repl-output') ||
+                          document.querySelector('[data-testid="repl-output"]') ||
+                          document.querySelector('pre');
+            return output ? output.textContent.includes(expected) : false;
+          },
+          { timeout, polling: 500 }, // Poll every 500ms instead of continuously
+          expectedText
+        );
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
+    /**
+     * Extract concepts from the UI visualization
+     * @returns {Promise<Array>} Array of concept representations
+     */
+    async extractUIConcepts() {
+      return await this.page.evaluate(() => {
+        const conceptElements = document.querySelectorAll('.concept, [class*="concept"], .node, [id*="concept"]');
+        return Array.from(conceptElements).map(el => ({
+          id: el.id,
+          className: el.className,
+          textContent: el.textContent ? el.textContent.trim() : '',
+          isVisible: !el.hidden && el.offsetParent !== null
+        }));
+      });
+    }
+
+    /**
+     * Get current REPL output content
+     * @returns {Promise<string>} The REPL output text
+     */
+    async getReplOutput() {
+      return await this.page.evaluate(() => {
+        const selectors = ['#repl-output', '.repl-output', '[data-testid="repl-output"]', 'pre'];
+        let output = null;
+
+        for (const selector of selectors) {
+          output = document.querySelector(selector);
+          if (output) break;
+        }
+
+        return output ? output.textContent : '';
+      });
+    }
+
+    /**
+     * Find an element with caching to improve performance
+     * @param {string} selector - The CSS selector to find
+     * @param {boolean} useCache - Whether to use caching
+     * @returns {Promise<Object>} Element information or null
+     */
+    async findElement(selector, useCache = true) {
+      if (useCache && this._elementCache.has(selector)) {
+        const cached = this._elementCache.get(selector);
+        // Verify element still exists in DOM
+        const stillExists = await this.page.evaluate(sel => !!document.querySelector(sel), selector);
+        if (stillExists) {
+          return cached;
+        } else {
+          this._elementCache.delete(selector); // Remove stale cache
+        }
+      }
+
+      const elementInfo = await this.page.evaluate(sel => {
+        const element = document.querySelector(sel);
+        if (!element) return null;
+
+        return {
+          exists: true,
+          tagName: element.tagName,
+          id: element.id,
+          className: element.className,
+          textContent: element.textContent?.substring(0, 1000) || '', // Limit text length
+          isVisible: !!(element.offsetParent !== null || element.getClientRects().length > 0)
+        };
+      }, selector);
+
+      if (useCache && elementInfo) {
+        this._elementCache.set(selector, elementInfo);
+      }
+
+      return elementInfo;
     }
   }
 }

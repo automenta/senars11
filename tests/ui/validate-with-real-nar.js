@@ -3,22 +3,23 @@
  * Instead of using mocks, this connects to a real running NAR instance
  */
 
-import { spawn } from 'child_process';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
 import { setTimeout } from 'timers/promises';
-import puppeteer from 'puppeteer';
+import { TestConfig } from './test-config.js';
+import { BaseUITest, TestError } from './test-utils.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-class RealNARValidator {
-    constructor() {
-        this.narProcess = null;
-        this.browser = null;
-        this.page = null;
+class RealNARValidator extends BaseUITest {
+    constructor(config = TestConfig.serverConfigs.normal) {
+        super(config, { headless: true });
         this.testPort = 8087;
         this.uiPort = 5176;
+    }
+
+    initTestResults() {
+        return {
+            setup: { nar: false, ui: false, connection: false },
+            operations: [],
+            errors: []
+        };
     }
 
     async setupNARServer() {

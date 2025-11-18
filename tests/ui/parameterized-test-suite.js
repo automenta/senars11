@@ -7,16 +7,10 @@
  * to avoid redundant code.
  */
 
-import { spawn } from 'child_process';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
 import { setTimeout } from 'timers/promises';
 import { TestConfig } from './test-config.js';
-import { ExtendedIntegrationTest } from './extended-integration-test.js';
+import { ExtendedIntegrationTest } from './integration/extended-integration-test.js';
 import { BufferingBatchingTest } from './test-buffering-batching.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 class ParameterizedTestSuite {
     constructor() {
@@ -202,18 +196,18 @@ class ParameterizedTestSuite {
 
     async run() {
         let success = false;
-        
+
         try {
             success = await this.runAllConfigurations();
         } catch (error) {
             console.error('❌ Parameterized test suite failed:', error.message);
             this.results.errors.push(`Suite Error: ${error.message}`);
         } finally {
-            const reportSuccess = await this.generateParameterizedReport();
-            
+            const reportSuccess = this.generateParameterizedReport();
+
             const finalSuccess = success && reportSuccess;
             console.log(`\n🏁 Final Parameterized Suite Outcome: ${finalSuccess ? 'SUCCESS' : 'FAILURE'}`);
-            
+
             // Exit with appropriate code
             process.exit(finalSuccess ? 0 : 1);
         }

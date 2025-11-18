@@ -1,30 +1,26 @@
 /**
  * @file test-buffering-batching.js
  * @description Test buffering/batching mechanisms with small capacities
- * 
+ *
  * This test specifically validates the system's behavior under constrained memory conditions
  * to ensure robust operation regardless of buffer capacity settings.
  */
 
-import { spawn } from 'child_process';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
 import { setTimeout } from 'timers/promises';
-import puppeteer from 'puppeteer';
 import { TestConfig } from './test-config.js';
+import { BaseUITest, TestError } from './test-utils.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-class BufferingBatchingTest {
+class BufferingBatchingTest extends BaseUITest {
     constructor(config = TestConfig.serverConfigs.smallBuffer) {
-        this.config = config;
-        this.narProcess = null;
-        this.uiProcess = null;
-        this.browser = null;
-        this.page = null;
-        this.testResults = {
-            setup: false,
+        super(config, { headless: true });
+        this.testResults.bufferingTests = [];
+        this.testResults.batchingTests = [];
+    }
+
+    initTestResults() {
+        return {
+            setup: { nar: false, ui: false, connection: false },
+            operations: [],
             bufferingTests: [],
             batchingTests: [],
             errors: []
@@ -500,14 +496,14 @@ class BufferingBatchingTest {
         try {
             success = await this.runCompleteTest();
         } finally {
-            const reportSuccess = await this.generateTestReport();
+            const reportSuccess = this.generateTestReport();
             await this.tearDown();
 
             // Return the more comprehensive result
             const finalSuccess = success && reportSuccess;
             console.log(`\n🏁 Final Test Outcome: ${finalSuccess ? 'SUCCESS' : 'FAILURE'}`);
 
-            return finalSuccess;
+            process.exit(finalSuccess ? 0 : 1);
         }
     }
 }

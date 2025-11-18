@@ -6,23 +6,21 @@
  * the complete round-trip flow: UI input → WebSocket → NAR → WebSocket → UI visualization
  */
 
-import { spawn, execSync } from 'child_process';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
 import { setTimeout } from 'timers/promises';
-import puppeteer from 'puppeteer';
+import { TestConfig } from '../test-config.js';
+import { BaseUITest, TestError } from '../test-utils.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+class IntegrationTestRunner extends BaseUITest {
+    constructor(config = TestConfig.serverConfigs.normal) {
+        super(config, { headless: true });
+    }
 
-class IntegrationTestRunner {
-    constructor() {
-        this.narProcess = null;
-        this.uiProcess = null;
-        this.browser = null;
-        this.page = null;
-        this.testPort = 8085; // Use a different port to avoid conflicts
-        this.uiPort = 5174;   // Use a different UI port
+    initTestResults() {
+        return {
+            setup: { nar: false, ui: false, connection: false },
+            operations: [],
+            errors: []
+        };
     }
 
     async startBackendServer() {
@@ -284,28 +282,48 @@ class IntegrationTestRunner {
         console.log('✅ Test environment cleaned up');
     }
 
-    async run() {
+    async runCompleteTest() {
+        console.log('🚀 Starting SeNARS complete integration test...\n');
+
         try {
-            console.log('🚀 Starting SeNARS complete integration test...\n');
-            
-            // Start backend server
-            await this.startBackendServer();
-            
-            // Start UI server
+            // Start NAR server using base class method
+            await this.startNARServer();
+
+            // Start UI server using base class method
             await this.startUIServer();
-            
-            // Start browser for testing
+
+            // Start browser for testing using base class method
             await this.startBrowser();
-            
+
+            // Navigate to UI and connect using base class method
+            await this.navigateAndConnect();
+
             // Run the actual integration test
             await this.runIntegrationTest();
-            
+
+            return true;
         } catch (error) {
             console.error('\n❌ Integration test failed:', error.message);
             console.error(error.stack);
-            process.exit(1);
+            this.testResults.errors.push(error);
+            return false;
+        }
+    }
+
+    async run() {
+        let success = false;
+
+        try {
+            success = await this.runCompleteTest();
         } finally {
+            const reportSuccess = this.generateTestReport();
             await this.tearDown();
+
+            // Return the more comprehensive result
+            const finalSuccess = success && reportSuccess;
+            console.log(`\n🏁 Final Test Outcome: ${finalSuccess ? 'SUCCESS' : 'FAILURE'}`);
+
+            process.exit(finalSuccess ? 0 : 1);
         }
     }
 }
