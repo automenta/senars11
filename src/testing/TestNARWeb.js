@@ -3,11 +3,11 @@
  * @description Test framework for NAR functionality using Web UI pathway with Puppeteer
  */
 
-import {spawn} from 'child_process';
 import {fileURLToPath} from 'url';
 import {dirname, join} from 'path';
 import {promises as fs} from 'fs';
 import {RemoteTaskMatch} from './TaskMatch.js';
+import {ProcessManager} from './ProcessManager.js';
 
 // Try to import Puppeteer, but make it optional
 let puppeteer;
@@ -26,9 +26,11 @@ export class TestNARWeb {
     constructor() {
         this.operations = [];
         this.serverProcess = null;
+        this.uiServerProcess = null;
         this.browser = null;
         this.page = null;
         this.port = 8082 + Math.floor(Math.random() * 100); // Different port than TestNARRemote
+        this.uiPort = 3000 + Math.floor(Math.random() * 1000); // Random port in 3000+ range
         this.isHeadless = process.env.CI === 'true' || process.env.HEADLESS !== 'false';
     }
 
@@ -73,7 +75,7 @@ export class TestNARWeb {
         await this.setup();
 
         try {
-            const {inputs, runs, uiExpects} = this._categorizeOperations();
+            const {inputs, runs} = this._categorizeOperations();
 
             // Set up event listeners for WebSocket messages
             await this.setupEventListeners();
@@ -96,25 +98,15 @@ export class TestNARWeb {
     }
 
     _categorizeOperations() {
-        const inputs = [];
-        const runs = [];
-        const uiExpects = [];
+        const ops = {input: [], run: [], expectUI: []};
 
         for (const op of this.operations) {
-            switch (op.type) {
-                case 'input':
-                    inputs.push(op);
-                    break;
-                case 'run':
-                    runs.push(op);
-                    break;
-                case 'expectUI':
-                    uiExpects.push(op);
-                    break;
+            if (ops[op.type] !== undefined) {
+                ops[op.type].push(op);
             }
         }
 
-        return {inputs, runs, uiExpects};
+        return ops;
     }
 
     async _executeInputOperations(inputs) {
@@ -140,100 +132,31 @@ export class TestNARWeb {
     }
 
     async startUIServer() {
-        const { spawn } = await import('child_process');
-        const { join, dirname } = await import('path');
-        const { fileURLToPath } = await import('url');
-        const __filename = fileURLToPath(import.meta.url);
-        const __dirname = dirname(__filename);
-
-        // Use a different port for the UI server to avoid conflicts
-        this.uiPort = 3000 + Math.floor(Math.random() * 1000); // Random port in 3000+ range
-
-        // Start the UI server using vite
-        this.uiServerProcess = spawn('npx', ['vite', 'dev', '--port', this.uiPort.toString(), '--host'], {
-            cwd: join(__dirname, '../../../ui'), // Navigate to ui directory from src/testing/
-            stdio: ['pipe', 'pipe', 'pipe'],
+        this.uiServerProcess = await ProcessManager.startProcess({
+            command: 'npx',
+            args: ['vite', 'dev', '--port', this.uiPort.toString(), '--host'],
+            cwd: join(__dirname, '../../../ui'),
             env: {
                 ...process.env,
                 VITE_WS_HOST: 'localhost',
                 VITE_WS_PORT: this.port.toString(), // Use the NAR WebSocket port
                 VITE_WS_PATH: '/ws',
                 NODE_ENV: 'development'
-            }
-        });
-
-        // Wait for UI server to be ready
-        return new Promise((resolve, reject) => {
-            let output = '';
-            const timeout = 30000; // 30 second timeout
-            const startTime = Date.now();
-
-            this.uiServerProcess.stdout.on('data', (data) => {
+            },
+            readyCondition: (str) =>
+                str.includes(`http://localhost:${this.uiPort}`) ||
+                str.includes(`Local:   http://localhost:${this.uiPort}`),
+            stderrHandler: (data) => {
                 const str = data.toString();
-                output += str;
-                if (str.includes(`http://localhost:${this.uiPort}`) ||
-                    str.includes(`Local:   http://localhost:${this.uiPort}`)) {
-                    resolve();
-                }
-            });
-
-            this.uiServerProcess.stderr.on('data', (data) => {
-                const str = data.toString();
-                if (!str.includes('ExperimentalWarning')) { // Filter experimental warnings
+                if (!str.includes('ExperimentalWarning')) {
                     console.error(`[UI-ERROR] ${str.trim()}`);
                 }
-            });
-
-            const checkReady = setInterval(() => {
-                if (Date.now() - startTime > timeout) {
-                    clearInterval(checkReady);
-                    reject(new Error(`UI server failed to start within ${timeout}ms`));
-                }
-            }, 100);
-
-            // Also check the output periodically
-            const outputCheck = setInterval(() => {
-                if (output.includes(`http://localhost:${this.uiPort}`) ||
-                    output.includes(`Local:   http://localhost:${this.uiPort}`)) {
-                    clearInterval(outputCheck);
-                    clearInterval(checkReady);
-                    resolve();
-                }
-            }, 200);
-        });
-    }
-
-    async stopUIServer() {
-        return new Promise((resolve) => {
-            if (this.uiServerProcess) {
-                this.uiServerProcess.removeAllListeners();
-
-                const timeout = setTimeout(() => {
-                    this.uiServerProcess.kill('SIGKILL');
-                }, 3000);
-
-                this.uiServerProcess.on('close', () => {
-                    clearTimeout(timeout);
-                    resolve();
-                });
-
-                this.uiServerProcess.kill('SIGTERM');
-            } else {
-                resolve();
             }
         });
     }
 
-    async teardown() {
-        await this.closeBrowser();
-        await this.stopServer();
-        await this.stopUIServer(); // Clean up UI server too
-    }
-
-    startServer() {
-        return new Promise((resolve, reject) => {
-            // Create a temporary server script to start with custom port
-            const serverScript = `
+    async startServer() {
+        const serverScript = `
 import {NAR} from '../nar/NAR.js';
 import {WebSocketMonitor} from '../server/WebSocketMonitor.js';
 
@@ -249,61 +172,36 @@ async function startServer() {
 }
 
 startServer().catch(console.error);
-            `;
+        `;
 
-            const tempScriptPath = join(__dirname, `temp-server-${this.port}.js`);
-            fs.writeFile(tempScriptPath, serverScript)
-                .then(() => {
-                    this.serverProcess = spawn('node', [tempScriptPath], {
-                        stdio: 'pipe',
-                        cwd: join(__dirname, '../../'),
-                        env: {...process.env, WS_PORT: this.port.toString(), NODE_ENV: 'test'},
-                    });
+        const tempScriptPath = await ProcessManager.createTempScript(serverScript, __dirname, `temp-server-${this.port}`);
 
-                    this.serverProcess.stdout.on('data', (data) => {
-                        if (data.toString().includes('WebSocket monitoring server started')) {
-                            // Clean up temp file after server starts
-                            setTimeout(() => {
-                                fs.unlink(tempScriptPath).catch(() => {});
-                            }, 1000);
-                            resolve();
-                        }
-                    });
-
-                    this.serverProcess.stderr.on('data', (data) => {
-                        console.error(`Server stderr: ${data}`);
-                        if (data.toString().includes('EADDRINUSE')) {
-                            reject(new Error(`Port ${this.port} is already in use`));
-                        }
-                    });
-                })
-                .catch(reject);
+        this.serverProcess = await ProcessManager.startProcess({
+            command: 'node',
+            args: [tempScriptPath],
+            cwd: join(__dirname, '../../'),
+            env: {...process.env, WS_PORT: this.port.toString(), NODE_ENV: 'test'},
+            readyCondition: (str) => str.includes('WebSocket monitoring server started'),
+            stdoutHandler: () => {
+                // Clean up temp file after server starts
+                setTimeout(() => ProcessManager.cleanupTempFile(tempScriptPath), 1000);
+            },
+            stderrHandler: (data) => {
+                const str = data.toString();
+                console.error(`Server stderr: ${str}`);
+                if (str.includes('EADDRINUSE')) {
+                    throw new Error(`Port ${this.port} is already in use`);
+                }
+            }
         });
     }
 
-    stopServer() {
-        return new Promise((resolve) => {
-            if (this.serverProcess) {
-                // Remove all listeners to prevent hanging
-                this.serverProcess.removeAllListeners();
-
-                // Try graceful shutdown first
-                const timeout = setTimeout(() => {
-                    // Force kill if graceful shutdown takes too long
-                    this.serverProcess.kill('SIGKILL');
-                }, 3000); // 3 second timeout for shutdown
-
-                this.serverProcess.on('close', () => {
-                    clearTimeout(timeout);
-                    resolve();
-                });
-
-                // Try sending exit command via WebSocket if possible
-                this.serverProcess.kill('SIGTERM');
-            } else {
-                resolve();
-            }
-        });
+    async teardown() {
+        await this.closeBrowser();
+        await Promise.all([
+            ProcessManager.stopProcess(this.serverProcess),
+            ProcessManager.stopProcess(this.uiServerProcess)
+        ]);
     }
 
     async launchBrowser() {
@@ -410,46 +308,15 @@ startServer().catch(console.error);
 
             while (Date.now() - startTime < timeout) {
                 // Get all WebSocket messages from the page
-                const messages = await this.page.evaluate(() => {
-                    return window.narWebSocketMessages || [];
-                });
+                const messages = await this.page.evaluate(() => window.narWebSocketMessages || []);
 
                 // Check if any message matches the expectation
-                let foundMatch = false;
-                for (const message of messages) {
-                    if (message.type && (message.type === 'event' || message.type.includes('task') || message.type.includes('reasoning'))) {
-                        // Extract task data from different possible formats
-                        let taskData = message.data?.data?.task ||
-                                     message.data?.task ||
-                                     message.data ||
-                                     message.payload?.task ||
-                                     message.payload;
+                const foundMatch = messages.some(message =>
+                    this._checkMessageForExpectation(message, exp.matcher.termFilter, exp.shouldExist)
+                );
 
-                        if (taskData) {
-                            // For this check, we'll need to do a simpler string-based match
-                            // since we can't call the async matches method from the page context
-                            const taskStr = JSON.stringify(taskData);
-                            const termFilter = exp.matcher.termFilter;
-
-                            if (taskStr.includes(termFilter)) {
-                                if (exp.shouldExist) {
-                                    foundMatch = true;
-                                    break;
-                                } else {
-                                    // If we're looking for "not exists" and found it, that's failure
-                                    throw new Error(`Unexpected task found: ${termFilter}`);
-                                }
-                            }
-                        }
-                    }
-                }
-
-                if (exp.shouldExist && foundMatch) {
-                    // Expectation satisfied
-                    break;
-                } else if (!exp.shouldExist && !foundMatch) {
-                    // For "not exists" case, if we don't find the task after checking, that's good
-                    break;
+                if (foundMatch === exp.shouldExist) {
+                    break; // Expectation satisfied
                 }
 
                 // Wait a bit before checking again
@@ -458,31 +325,55 @@ startServer().catch(console.error);
 
             // If we get here and didn't find a match for "should exist" case, it's an error
             if (exp.shouldExist) {
-                const messages = await this.page.evaluate(() => {
-                    return window.narWebSocketMessages || [];
-                });
+                const messages = await this.page.evaluate(() => window.narWebSocketMessages || []);
+                const hasExpectedMessage = messages.some(msg => JSON.stringify(msg).includes(exp.matcher.termFilter));
 
-                if (!messages.some(msg => JSON.stringify(msg).includes(exp.matcher.termFilter))) {
-                    throw new Error(`Expected task not found: ${exp.matcher.termFilter} after ${15000}ms`);
+                if (!hasExpectedMessage) {
+                    throw new Error(`Expected task not found: ${exp.matcher.termFilter} after ${timeout}ms`);
                 }
             }
         }
     }
 
+    _checkMessageForExpectation(message, termFilter, shouldExist) {
+        if (message.type && (message.type === 'event' || message.type.includes('task') || message.type.includes('reasoning'))) {
+            // Extract task data from different possible formats
+            const taskData = message.data?.data?.task ||
+                           message.data?.task ||
+                           message.data ||
+                           message.payload?.task ||
+                           message.payload;
+
+            if (taskData) {
+                // For this check, we'll need to do a simpler string-based match
+                // since we can't call the async matches method from the page context
+                const taskStr = JSON.stringify(taskData);
+
+                if (taskStr.includes(termFilter)) {
+                    return shouldExist; // Found what we're looking for
+                } else if (!shouldExist) {
+                    // If we're looking for "not exists" and didn't find it, that's success
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     async waitForUIExpectations(uiExpectations) {
         for (const exp of uiExpectations) {
-            if (this.page) {
-                if (exp.shouldExist) {
-                    await this.page.waitForFunction(({content}) => {
-                        return document.body.textContent.includes(content);
-                    }, {content: exp.content}, {timeout: 5000});
-                } else {
-                    // For "not contains", we need to check after a short delay
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                    const pageContent = await this.page.textContent('body');
-                    if (pageContent.includes(exp.content)) {
-                        throw new Error(`UI unexpectedly contains: ${exp.content}`);
-                    }
+            if (!this.page) continue;
+
+            if (exp.shouldExist) {
+                await this.page.waitForFunction(({content}) =>
+                    document.body.textContent.includes(content),
+                {content: exp.content}, {timeout: 5000});
+            } else {
+                // For "not contains", we need to check after a short delay
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                const pageContent = await this.page.textContent('body');
+                if (pageContent.includes(exp.content)) {
+                    throw new Error(`UI unexpectedly contains: ${exp.content}`);
                 }
             }
         }
