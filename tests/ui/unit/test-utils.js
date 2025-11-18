@@ -21,7 +21,19 @@ export const assertEquals = (actual, expected, message = `Expected ${actual} to 
 };
 
 export const assertDeepEqual = (actual, expected, message = 'Objects are not deeply equal') => {
-    assert(JSON.stringify(actual) === JSON.stringify(expected), message);
+    const areEqual = (a, b) => {
+        if (a === b) return true;
+        if (a == null || b == null) return a === b;
+        if (typeof a !== 'object' || typeof b !== 'object') return a === b;
+        if (Array.isArray(a) !== Array.isArray(b)) return false;
+
+        const keysA = Object.keys(a);
+        const keysB = Object.keys(b);
+        if (keysA.length !== keysB.length) return false;
+
+        return keysA.every(key => areEqual(a[key], b[key]));
+    };
+    assert(areEqual(actual, expected), message);
 };
 
 export const assertThrows = (fn, expectedError, message = 'Function did not throw an error') => {
@@ -67,16 +79,9 @@ export const generateMockEdge = (nodeIds = [], overrides = {}) => {
 };
 
 export const generateMockSnapshot = (nodeCount = 5, edgeCount = 3, overrides = {}) => {
-    const nodes = [];
-    const edges = [];
-
-    for (let i = 0; i < nodeCount; i++) {
-        nodes.push(generateMockNode());
-    }
-
-    for (let i = 0; i < edgeCount; i++) {
-        edges.push(generateMockEdge(nodes.map(n => n.id)));
-    }
+    const nodes = Array.from({ length: nodeCount }, () => generateMockNode());
+    const nodeIds = nodes.map(n => n.id);
+    const edges = Array.from({ length: edgeCount }, () => generateMockEdge(nodeIds));
 
     return {
         nodes,
@@ -98,7 +103,7 @@ class MockWebSocketClass {
         setTimeout(() => {
             if (this.readyState !== this.CLOSED) {
                 this.readyState = this.OPEN;
-                if (this.onopen) this.onopen({ type: 'open' });
+                this.onopen?.({ type: 'open' });
             }
         }, 10);
     }
@@ -107,21 +112,19 @@ class MockWebSocketClass {
         if (this.readyState !== this.OPEN) {
             throw new Error('WebSocket is not open');
         }
-        if (this.onsend) this.onsend(data);
+        this.onsend?.(data);
     }
 
     close(code = 1000, reason = '') {
         if (this.readyState !== this.CLOSED) {
             this.readyState = this.CLOSED;
-            if (this.onclose) this.onclose({ code, reason, type: 'close' });
+            this.onclose?.({ code, reason, type: 'close' });
         }
     }
 
     // Method to simulate receiving a message
     simulateMessage(data) {
-        if (this.onmessage) {
-            this.onmessage({ data, type: 'message' });
-        }
+        this.onmessage?.({ data, type: 'message' });
     }
 }
 
@@ -169,29 +172,28 @@ export const runAsyncTest = async (description, testFn) => {
 export const runTestSuite = (suiteName, tests) => {
     console.log(`\nRunning test suite: ${suiteName}\n`);
 
-    let passed = 0;
-    let total = tests.length;
-
-    tests.forEach(test => {
-        const result = test.async 
+    const results = tests.map(test =>
+        test.async
             ? runAsyncTest(test.desc, test.fn)
-            : runTest(test.desc, test.fn);
-        
-        if (result) passed++;
-    });
+            : runTest(test.desc, test.fn)
+    );
+
+    const passed = results.filter(Boolean).length;
+    const total = tests.length;
+    const failed = total - passed;
 
     console.log(`\nTest suite completed: ${passed}/${total} passed`);
 
     if (passed === total) {
         console.log('🎉 All tests in suite passed!');
     } else {
-        console.log(`⚠️  ${total - passed} tests failed in suite`);
+        console.log(`⚠️  ${failed} tests failed in suite`);
         if (process && process.exitCode === undefined) {
-            process.exitCode = total - passed > 0 ? 1 : 0;
+            process.exitCode = failed > 0 ? 1 : 0;
         }
     }
 
-    return { passed, total, failed: total - passed };
+    return { passed, total, failed };
 };
 
 // Setup and teardown helpers

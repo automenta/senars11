@@ -3,6 +3,21 @@
  * Defines different test scenarios and parameters for various testing modes
  */
 
+// Base configuration templates
+const BASE_NAR_OPTIONS = {
+    lm: { enabled: false },
+    reasoningAboutReasoning: { enabled: false }
+};
+
+const BASE_MEMORY_CONFIG = {
+    conceptBag: { capacity: 1000 },
+    taskBag: { capacity: 1000 }
+};
+
+const BASE_CYCLE_CONFIG = {
+    maxTasksPerCycle: 10
+};
+
 export const TestConfig = {
     // Different server configurations for testing
     serverConfigs: {
@@ -11,13 +26,12 @@ export const TestConfig = {
             port: 8080,
             uiPort: 5173,
             narOptions: {
-                lm: { enabled: false },
+                ...BASE_NAR_OPTIONS,
                 memory: {
-                    conceptBag: { capacity: 1000 },
-                    taskBag: { capacity: 1000 }
+                    ...BASE_MEMORY_CONFIG
                 },
                 cycle: {
-                    maxTasksPerCycle: 10
+                    ...BASE_CYCLE_CONFIG
                 }
             }
         },
@@ -27,7 +41,7 @@ export const TestConfig = {
             port: 8081,
             uiPort: 5174,
             narOptions: {
-                lm: { enabled: false },
+                ...BASE_NAR_OPTIONS,
                 memory: {
                     conceptBag: { capacity: 5 },  // Small capacity to test buffering
                     taskBag: { capacity: 5 }      // Small capacity to test batching
@@ -43,7 +57,7 @@ export const TestConfig = {
             port: 8082,
             uiPort: 5175,
             narOptions: {
-                lm: { enabled: false },
+                ...BASE_NAR_OPTIONS,
                 memory: {
                     conceptBag: { capacity: 5000 },
                     taskBag: { capacity: 5000 }
@@ -84,7 +98,7 @@ export const TestConfig = {
             command: '*step',
             description: 'Single reasoning step execution'
         },
-        continuousMode: {
+        continuous: {
             command: '*run',
             description: 'Continuous reasoning execution'
         }

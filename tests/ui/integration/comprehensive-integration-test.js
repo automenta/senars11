@@ -6,270 +6,21 @@
  * and ensures robust error handling and verification.
  */
 
+import { spawn } from 'child_process';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import { setTimeout } from 'timers/promises';
+import puppeteer from 'puppeteer';
 import { TestConfig } from '../test-config.js';
 import { BaseUITest, TestError } from '../test-utils.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 class ComprehensiveIntegrationTest extends BaseUITest {
     constructor(config = TestConfig.serverConfigs.normal) {
         super(config, { headless: true, timeout: 30000 });
         this.testResults.operations = [];
-    }
-
-    initTestResults() {
-        return {
-            setup: { nar: false, ui: false, connection: false },
-            operations: [],
-            errors: []
-        };
-    }
-
-    async startBackendServer() {
-        console.log(`🚀 Starting comprehensive NAR backend server on port ${this.testPort}...`);
-
-        // Create the backend server as a child process
-        this.narProcess = spawn('node', ['-e', `
-            import {NAR} from '../../src/nar/NAR.js';
-            import {WebSocketMonitor} from '../../src/server/WebSocketMonitor.js';
-            
-            async function startServer() {
-                console.log('=== NAR BACKEND INITIALIZATION ===');
-                
-                // Create NAR with specific config for testing
-                const nar = new NAR({
-                    lm: {enabled: false},
-                    reasoningAboutReasoning: {enabled: true},
-                    memory: {
-                        conceptBag: {capacity: 1000},
-                        taskBag: {capacity: 1000}
-                    },
-                    cycle: {
-                        maxTasksPerCycle: 10
-                    }
-                });
-                
-                try {
-                    await nar.initialize();
-                    console.log('✅ NAR initialized successfully');
-                    
-                    // Create and start WebSocket monitor
-                    const monitor = new WebSocketMonitor({
-                        port: ${this.testPort},
-                        host: 'localhost',
-                        path: '/ws',
-                        maxConnections: 10
-                    });
-                    
-                    await monitor.start();
-                    console.log('✅ WebSocket monitor started successfully');
-                    
-                    // Connect NAR to monitor
-                    nar.connectToWebSocketMonitor(monitor);
-                    console.log('✅ NAR connected to WebSocket monitor');
-                    
-                    // Verify connection by subscribing to some events
-                    nar.on('task.input', (data) => {
-                        console.log('NAR_EVENT: task.input', data?.task?.term?.toString?.() || 'unknown');
-                    });
-                    
-                    nar.on('task.processed', (data) => {
-                        console.log('NAR_EVENT: task.processed', data?.task?.term?.toString?.() || 'unknown');
-                    });
-                    
-                    console.log('=== NAR BACKEND READY ===');
-                    console.log('Listening on ws://localhost:${this.testPort}/ws');
-                    
-                } catch (error) {
-                    console.error('❌ NAR initialization error:', error);
-                    process.exit(1);
-                }
-            }
-            
-            startServer().catch(err => {
-                console.error('❌ Critical error in NAR server:', err);
-                process.exit(1);
-            });
-        `], {
-            cwd: __dirname,
-            stdio: ['pipe', 'pipe', 'pipe'],
-            env: { ...process.env, NODE_NO_WARNINGS: '1' }
-        });
-
-        // Capture output to detect when server is ready
-        let output = '';
-        this.narProcess.stdout.on('data', (data) => {
-            const str = data.toString();
-            output += str;
-            // Don't log everything to keep output clean, but log key events
-            if (str.includes('NAR BACKEND READY') || str.includes('Listening on')) {
-                console.log(`[NAR] ${str.trim()}`);
-            }
-        });
-
-        this.narProcess.stderr.on('data', (data) => {
-            const errorStr = data.toString();
-            console.error(`[NAR-ERROR] ${errorStr.trim()}`);
-            this.testResults.errors.push(`NAR Error: ${errorStr}`);
-        });
-
-        // Wait for the server to be ready
-        const startTime = Date.now();
-        while (!output.includes('NAR BACKEND READY')) {
-            if (Date.now() - startTime > 15000) { // 15 second timeout
-                throw new Error('NAR server failed to start within 15 seconds');
-            }
-            await setTimeout(100);
-        }
-        
-        this.testResults.setup.nar = true;
-        console.log('✅ NAR backend server is ready and fully functional!');
-    }
-
-    async startUIServer() {
-        console.log(`🚀 Starting comprehensive UI server on port ${this.uiPort}...`);
-
-        // Install dependencies in UI directory if needed
-        try {
-            const { execSync } = await import('child_process');
-            console.log('📦 Ensuring UI dependencies are installed...');
-            execSync('npm ci', { cwd: join(__dirname, '../../ui'), stdio: 'pipe' });
-        } catch (e) {
-            // If npm ci fails, try npm install
-            try {
-                const { execSync } = await import('child_process');
-                execSync('npm install', { cwd: join(__dirname, '../../ui'), stdio: 'pipe' });
-            } catch (e2) {
-                console.log('⚠️  Dependency installation issues, continuing anyway...');
-            }
-        }
-
-        // Start the UI server using vite
-        this.uiProcess = spawn('npx', ['vite', 'dev', '--port', this.uiPort.toString(), '--host'], {
-            cwd: join(__dirname, '../../ui'),
-            stdio: ['pipe', 'pipe', 'pipe'],
-            env: {
-                ...process.env,
-                VITE_WS_HOST: 'localhost',
-                VITE_WS_PORT: this.testPort.toString(),
-                VITE_WS_PATH: '/ws',
-                NODE_ENV: 'development'
-            }
-        });
-
-        // Capture UI server output
-        let uiOutput = '';
-        this.uiProcess.stdout.on('data', (data) => {
-            const str = data.toString();
-            uiOutput += str;
-            if (str.includes(`http://localhost:${this.uiPort}`)) {
-                console.log(`[UI] Server ready at: http://localhost:${this.uiPort}`);
-            }
-        });
-
-        this.uiProcess.stderr.on('data', (data) => {
-            const errorStr = data.toString();
-            if (!errorStr.includes('ExperimentalWarning')) { // Filter experimental warnings
-                console.error(`[UI-ERROR] ${errorStr.trim()}`);
-                this.testResults.errors.push(`UI Error: ${errorStr}`);
-            }
-        });
-
-        // Wait for UI server to be ready
-        const startTime = Date.now();
-        while (!uiOutput.includes(`http://localhost:${this.uiPort}`) && 
-               !uiOutput.includes(`Local:   http://localhost:${this.uiPort}`)) {
-            if (Date.now() - startTime > 20000) { // 20 second timeout
-                throw new Error('UI server failed to start within 20 seconds');
-            }
-            await setTimeout(100);
-        }
-        
-        this.testResults.setup.ui = true;
-        console.log('✅ UI server is ready and accepting connections!');
-    }
-
-    async startBrowser() {
-        console.log('🚀 Launching browser with comprehensive debugging...');
-        
-        this.browser = await puppeteer.launch({
-            headless: true, // Set to true for CI environments and headless systems
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-web-security',
-                '--disable-features=VizDisplayCompositor',
-                '--disable-background-timer-throttling',
-                '--disable-renderer-backgrounding'
-            ]
-        });
-        
-        this.page = await this.browser.newPage();
-        
-        // Set up comprehensive console logging
-        this.page.on('console', msg => {
-            const text = msg.text();
-            if (text.includes('error') || text.includes('Error') || text.includes('ERROR') || 
-                msg.type() === 'error' || msg.type() === 'warning') {
-                console.log(`Browser ${msg.type()}: ${text}`);
-                if (msg.type() === 'error') {
-                    this.testResults.errors.push(`Browser Error: ${text}`);
-                }
-            }
-        });
-        
-        // Set up page error logging
-        this.page.on('pageerror', error => {
-            console.error('Browser page error:', error.message);
-            this.testResults.errors.push(`Page Error: ${error.message}`);
-        });
-        
-        // Set up response logging to catch failures
-        this.page.on('response', response => {
-            if (response.status() >= 400) {
-                console.error(`HTTP ${response.status()} Error: ${response.url()}`);
-                this.testResults.errors.push(`HTTP Error ${response.status()}: ${response.url()}`);
-            }
-        });
-        
-        // Set up request logging for WebSocket connections
-        this.page.on('request', request => {
-            if (request.url().includes('ws://') || request.url().includes('websocket')) {
-                console.log(`WebSocket Request: ${request.url()}`);
-            }
-        });
-        
-        this.page.on('requestfailed', request => {
-            if (request.failure()) {
-                console.error(`Request failed: ${request.url()} - ${request.failure().errorText}`);
-                this.testResults.errors.push(`Request Failed: ${request.url()} - ${request.failure().errorText}`);
-            }
-        });
-        
-        console.log('✅ Browser launched with comprehensive debugging');
-    }
-
-    async verifyWebSocketConnection() {
-        console.log('\n📡 Verifying WebSocket connection...');
-        
-        // Wait for WebSocket connection to be established
-        await this.page.waitForFunction(() => {
-            // Look for connection status indicators in the UI
-            const statusBar = document.querySelector('#status-bar');
-            const hasConnectedStatus = statusBar && (
-                statusBar.textContent.toLowerCase().includes('connected') ||
-                statusBar.classList.contains('status-connected') ||
-                statusBar.textContent.includes('Connected')
-            );
-            
-            // Also check for WebSocket connection in the page itself
-            const hasWebSocket = window.service && window.service.isConnected && window.service.isConnected();
-            
-            return hasConnectedStatus || hasWebSocket;
-        }, { timeout: 20000 }); // Longer timeout for connection establishment
-        
-        console.log('✅ WebSocket connection established successfully');
-        this.testResults.setup.connection = true;
     }
 
     async testBasicNarseseInput() {
@@ -489,39 +240,31 @@ class ComprehensiveIntegrationTest extends BaseUITest {
         console.log('🚀 Starting comprehensive SeNARS integration test...\n');
 
         try {
-            // Start NAR server (using base class)
+            // Use inherited methods from BaseUITest
             await this.startNARServer({ port: this.config.port, narOptions: this.config.narOptions });
-
-            // Start UI server (using base class)
             await this.startUIServer({ uiPort: this.config.uiPort });
-
-            // Start browser for testing (using base class)
             await this.startBrowser();
-
-            // Navigate to the UI and connect (using base class)
             await this.navigateAndConnect();
-            
+
             // Run comprehensive tests
             await this.testBasicNarseseInput();
             await this.testReasoningOperations();
             await this.testGraphVisualization();
             await this.testErrorHandling();
-            
+
             // Final verification - send a complete round-trip test
             console.log('\n🏁 Final verification test...');
             const finalTest = '<final_verification --> complete>.';
-            await this.page.type('#repl-input', finalTest);
-            await this.page.keyboard.press('Enter');
-            await setTimeout(1500);
-            
+            await this.executeCommand(finalTest, 1500); // Use inherited method
+
             console.log('✅ Final verification completed');
-            
+
             return true;
-            
+
         } catch (error) {
             console.error(`\n❌ Comprehensive test failed: ${error.message}`);
             console.error(error.stack);
-            this.testResults.errors.push(`Critical Test Error: ${error.message}`);
+            this.testResults.errors.push(error);
             return false;
         }
     }
