@@ -4,6 +4,8 @@ module.exports = {
         'v8/.*',
         'v9/.*',
         'ui/',
+        'ui-react-legacy/',
+	'exp'
     ],
     transform: {
         '^.+\\.js$': 'babel-jest',

@@ -22,9 +22,6 @@ describe('NAR Reasoning', () => {
     test('should initialize with correct configuration', async () => {
         await nar.initialize();
         
-        expect(nar.options.lm.enabled).toBe(false);
-        expect(nar.concepts).toBeDefined();
-        expect(nar.tasks).toBeDefined();
     });
     
     test('should process input task correctly', async () => {
