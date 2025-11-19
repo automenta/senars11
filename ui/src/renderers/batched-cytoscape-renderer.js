@@ -66,7 +66,66 @@ export default class BatchedCytoscapeRenderer extends EnhancedBaseRenderer {
 
       this.cy.on('tap', 'node', (evt) => {
         const node = evt.target;
-        this.detailsPanel.innerHTML = `<pre>${JSON.stringify(node.data(), null, 2)}</pre>`;
+        const nodeData = node.data();
+
+        // Format the node details nicely
+        let detailsHtml = '<h4>Node Details</h4>';
+        detailsHtml += `<p><strong>ID:</strong> ${nodeData.id}</p>`;
+        detailsHtml += `<p><strong>Label:</strong> ${nodeData.label || 'N/A'}</p>`;
+        detailsHtml += `<p><strong>Type:</strong> ${nodeData.type || 'N/A'}</p>`;
+
+        if (nodeData.term) {
+            detailsHtml += `<p><strong>Term:</strong> ${nodeData.term.toString ? nodeData.term.toString() : JSON.stringify(nodeData.term)}</p>`;
+        }
+
+        if (nodeData.truth) {
+            detailsHtml += `<p><strong>Truth:</strong> ${JSON.stringify(nodeData.truth)}</p>`;
+        }
+
+        if (nodeData.budget) {
+            detailsHtml += `<p><strong>Budget:</strong> ${JSON.stringify(nodeData.budget)}</p>`;
+        }
+
+        if (nodeData.stamp) {
+            detailsHtml += `<p><strong>Stamp:</strong> ${JSON.stringify(nodeData.stamp)}</p>`;
+        }
+
+        if (nodeData.data) {
+            detailsHtml += `<p><strong>Extra Data:</strong> ${JSON.stringify(nodeData.data)}</p>`;
+        }
+
+        this.detailsPanel.innerHTML = detailsHtml;
+        this.detailsPanel.style.display = 'block';
+      });
+
+      this.cy.on('tap', 'edge', (evt) => {
+        const edge = evt.target;
+        const edgeData = edge.data();
+
+        // Format the edge details nicely
+        let detailsHtml = '<h4>Edge Details</h4>';
+        detailsHtml += `<p><strong>ID:</strong> ${edgeData.id}</p>`;
+        detailsHtml += `<p><strong>Source:</strong> ${edgeData.source}</p>`;
+        detailsHtml += `<p><strong>Target:</strong> ${edgeData.target}</p>`;
+        detailsHtml += `<p><strong>Type:</strong> ${edgeData.type || 'N/A'}</p>`;
+
+        if (edgeData.label) {
+            detailsHtml += `<p><strong>Label:</strong> ${edgeData.label}</p>`;
+        }
+
+        if (edgeData.relation) {
+            detailsHtml += `<p><strong>Relation:</strong> ${edgeData.relation}</p>`;
+        }
+
+        if (edgeData.truth) {
+            detailsHtml += `<p><strong>Truth:</strong> ${JSON.stringify(edgeData.truth)}</p>`;
+        }
+
+        if (edgeData.data) {
+            detailsHtml += `<p><strong>Extra Data:</strong> ${JSON.stringify(edgeData.data)}</p>`;
+        }
+
+        this.detailsPanel.innerHTML = detailsHtml;
         this.detailsPanel.style.display = 'block';
       });
 

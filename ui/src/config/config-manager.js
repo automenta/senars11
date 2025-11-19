@@ -14,7 +14,7 @@ class ConfigManager {
             // WebSocket settings
             websocket: {
                 defaultPort: 8080,
-                defaultHost: '0.0.0.0',
+                defaultHost: 'localhost',  // Use localhost as default for client-side connections
                 defaultPath: '/ws',
                 reconnectDelay: 3000,
                 maxReconnectAttempts: 10,

@@ -12,6 +12,9 @@ export default class REPLController {
         this.store = store;
         this.service = service;
         this.unsubscribe = null;
+        this.sessionInputCount = 0;
+        this.sessionOutputCount = 0;
+        this.commandHistory = [];
         this.init();
     }
 
@@ -30,8 +33,23 @@ export default class REPLController {
     handleStoreChange(state, action) {
         try {
             const actionHandlers = {
-                [ADD_LOG_ENTRY]: () => this.viewAPI.addOutput(`[LOG] ${action.payload.content}`),
-                [SET_CONNECTION_STATUS]: () => this.viewAPI.addOutput(`[STATUS] Connection: ${state.connectionStatus}`)
+                [ADD_LOG_ENTRY]: () => {
+                    const content = `[LOG] ${action.payload.content}`;
+                    // Choose CSS class based on log type
+                    let cssClass = 'console-info';
+                    if (action.payload.type === 'error') {
+                        cssClass = 'console-error';
+                    } else if (action.payload.type === 'out') {
+                        cssClass = 'console-sent';
+                    } else if (action.payload.type === 'in') {
+                        cssClass = 'console-received';
+                    }
+                    this.viewAPI.addOutput(content, cssClass);
+                },
+                [SET_CONNECTION_STATUS]: () => {
+                    // Only show status changes if they're different from the previous status
+                    this.viewAPI.addOutput(`[STATUS] Connection: ${state.connectionStatus}`, 'console-info');
+                }
             };
 
             const handler = actionHandlers[action.type];
@@ -45,6 +63,13 @@ export default class REPLController {
         try {
             this.viewAPI.addToHistory(command);
 
+            // Add to internal command history
+            this.commandHistory.push({
+                command: command,
+                timestamp: new Date(),
+                status: 'sent'
+            });
+
             // Handle special debug commands
             if (command.trim().startsWith('/')) {
                 this._handleDebugCommand(command.trim());
@@ -53,16 +78,32 @@ export default class REPLController {
                 const success = this.service.sendCommand(command);
 
                 if (success) {
+                    this.sessionInputCount++; // Increment input counter
                     this.store.dispatch({
                         type: ADD_LOG_ENTRY,
                         payload: { content: `SENT: ${command}`, type: 'out' }
                     });
+                    // Add to console output with sent message styling
+                    this.viewAPI.addOutput(`[SENT] ${command}`, 'console-sent');
+                    this._updateSessionStats();
                 } else {
-                    this.viewAPI.addOutput(`[ERROR] Failed to send command: ${command}`);
+                    this.viewAPI.addOutput(`[ERROR] Failed to send command: ${command}`, 'console-error');
+                    // Update history status
+                    if (this.commandHistory.length > 0) {
+                        this.commandHistory[this.commandHistory.length - 1].status = 'error';
+                    }
                 }
             }
         } catch (error) {
             Logger.error('Error handling command', { error: error.message, command });
+        }
+    }
+
+    _updateSessionStats() {
+        // Update the session stats in the UI
+        const sessionStatsElement = document.getElementById('session-stats');
+        if (sessionStatsElement) {
+            sessionStatsElement.textContent = `Session: ${this.sessionInputCount} inputs, ${this.sessionOutputCount} outputs`;
         }
     }
 
@@ -205,12 +246,40 @@ export default class REPLController {
         } else if (command === '/debug-visualize' || command === '/debug-graph') {
             // Add dummy nodes and edges for visualization testing
             this._addDummyVisualization();
+        } else if (command === '/history') {
+            if (this.commandHistory.length === 0) {
+                this.viewAPI.addOutput(`[DEBUG] No commands in history.`);
+            } else {
+                this.viewAPI.addOutput(`[DEBUG] Command History (${this.commandHistory.length} commands):`);
+                // Show last 10 commands
+                const start = Math.max(0, this.commandHistory.length - 10);
+                for (let i = start; i < this.commandHistory.length; i++) {
+                    const entry = this.commandHistory[i];
+                    const status = entry.status === 'error' ? '❌' : '✅';
+                    this.viewAPI.addOutput(`  ${status} [${i + 1}] ${entry.command} (${entry.timestamp.toLocaleTimeString()})`);
+                }
+            }
+        } else if (command === '/clear-history') {
+            this.commandHistory = [];
+            this.viewAPI.addOutput(`[DEBUG] Command history cleared.`);
+        } else if (command === '/stats') {
+            this.viewAPI.addOutput(`[DEBUG] Session Statistics:`);
+            this.viewAPI.addOutput(`  Inputs sent: ${this.sessionInputCount}`);
+            this.viewAPI.addOutput(`  Outputs received: ${this.sessionOutputCount}`);
+            this.viewAPI.addOutput(`  Command history entries: ${this.commandHistory.length}`);
+            this.viewAPI.addOutput(`  Connection status: ${this.store.getState().connectionStatus}`);
+            this.viewAPI.addOutput(`  Live updates: ${this.store.getState().isLiveUpdateEnabled ? 'ON' : 'OFF'}`);
+            this.viewAPI.addOutput(`  Graph nodes: ${this.store.getState().graph.nodes.size}`);
+            this.viewAPI.addOutput(`  Graph edges: ${this.store.getState().graph.edges.size}`);
         } else if (command === '/help') {
             this.viewAPI.addOutput(`[DEBUG] Available debug commands:`);
             this.viewAPI.addOutput(`  /tasks - Show tasks in graph state`);
             this.viewAPI.addOutput(`  /concepts - Show concepts in graph state`);
             this.viewAPI.addOutput(`  /nodes - Show all nodes in graph state`);
             this.viewAPI.addOutput(`  /state - Show current state summary`);
+            this.viewAPI.addOutput(`  /history - Show command history`);
+            this.viewAPI.addOutput(`  /clear-history - Clear command history`);
+            this.viewAPI.addOutput(`  /stats - Show session statistics`);
             this.viewAPI.addOutput(`  /refresh or /reload - Request graph refresh`);
             this.viewAPI.addOutput(`  /cy-stats or /cy-info - Show direct Cytoscape stats`);
             this.viewAPI.addOutput(`  /debug-visualize or /debug-graph - Add dummy nodes/edges for testing`);
@@ -319,7 +388,9 @@ export default class REPLController {
                     payload: { content: `INFO: ${content}`, type: 'in' }
                 });
 
-                this.viewAPI.addOutput(`[INFO] ${content}`);
+                this.viewAPI.addOutput(`[INFO] ${content}`, 'console-info');
+                this.sessionOutputCount++;  // Increment output counter
+                this._updateSessionStats();
             } else if (message.type === 'control/ack') {
                 const content = `Command ack: ${message.payload?.command} - ${message.payload?.status}`;
                 this.store.dispatch({
@@ -327,7 +398,30 @@ export default class REPLController {
                     payload: { content, type: 'in' }
                 });
 
-                this.viewAPI.addOutput(`[CMD] ${content}`);
+                this.viewAPI.addOutput(`[CMD] ${content}`, 'console-info');
+                this.sessionOutputCount++;  // Increment output counter
+                this._updateSessionStats();
+            } else if (message.type === 'narsese.result') {
+                // Handle Narsese results with appropriate formatting
+                const content = message.payload?.result || message.data?.result || JSON.stringify(message.payload);
+                this.store.dispatch({
+                    type: ADD_LOG_ENTRY,
+                    payload: { content: `RESULT: ${content}`, type: 'in' }
+                });
+
+                this.viewAPI.addOutput(`[RESULT] ${content}`, 'console-success');
+                this.sessionOutputCount++;  // Increment output counter
+                this._updateSessionStats();
+            } else if (message.type === 'error' || message.type.includes('error')) {
+                const content = message.payload?.message || message.data?.message || JSON.stringify(message);
+                this.store.dispatch({
+                    type: ADD_LOG_ENTRY,
+                    payload: { content: `ERROR: ${content}`, type: 'error' }
+                });
+
+                this.viewAPI.addOutput(`[ERROR] ${content}`, 'console-error');
+                this.sessionOutputCount++;  // Increment output counter
+                this._updateSessionStats();
             } else {
                 // For visualization-related messages, show them to provide feedback to user
                 const visualizationTypes = ['task.added', 'concept.created', 'belief.added',
@@ -346,13 +440,26 @@ export default class REPLController {
                         payload: { content: `VISUAL: ${message.type} - ${content}`, type: 'in' }
                     });
 
-                    this.viewAPI.addOutput(`[VIS] ${message.type} - ${content}`);
+                    this.viewAPI.addOutput(`[VIS] ${message.type} - ${content}`, 'console-debug');
+                    this.sessionOutputCount++;  // Increment output counter
+                    this._updateSessionStats();
+                } else {
+                    // For other message types that aren't visualization related, log them as debug info
+                    if (message.type && !message.type.startsWith('internal.')) {
+                        const content = JSON.stringify(message.payload || message.data || message);
+                        this.viewAPI.addOutput(`[MSG] ${message.type}: ${content}`, 'console-debug');
+                        this.sessionOutputCount++;  // Increment output counter
+                        this._updateSessionStats();
+                    }
                 }
             }
             // Other message types are processed internally by the event processor for graph updates
             // but don't display the raw JSON in the REPL view
         } catch (error) {
             Logger.error('Error handling incoming message', { error: error.message, message });
+            this.viewAPI.addOutput(`[ERROR] Failed to process message: ${error.message}`, 'console-error');
+            this.sessionOutputCount++;  // Increment output counter
+            this._updateSessionStats();
         }
     }
 

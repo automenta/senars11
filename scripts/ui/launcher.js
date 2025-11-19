@@ -127,10 +127,8 @@ async function startWebSocketServer(config = DEFAULT_CONFIG) {
     console.log(`Starting WebSocket server on ${config.webSocket.host}:${config.webSocket.port}...`);
 
     const {ReplEngine} = await import('../../src/repl/ReplEngine.js');
-    const nar = new NAR(config.nar);
-    await nar.initialize();
 
-    // Create a ReplEngine to provide the processInput method required by WebRepl
+    // Create a ReplEngine which manages its own NAR instance
     const replEngine = new ReplEngine(config);
     await replEngine.initialize();
 
@@ -164,7 +162,7 @@ async function startWebSocketServer(config = DEFAULT_CONFIG) {
 
     // Initialize DemoWrapper to provide remote control and introspection
     const demoWrapper = new DemoWrapper();
-    await demoWrapper.initialize(nar, monitor);
+    await demoWrapper.initialize(replEngine.nar, monitor);
 
     // Send list of available demos to connected UIs
     await demoWrapper.sendDemoList();

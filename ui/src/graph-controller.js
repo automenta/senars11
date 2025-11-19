@@ -157,6 +157,7 @@ export default class GraphController {
                         id,
                         label: data.term?.toString() ?? 'Unknown Concept',
                         type: 'concept',
+                        term: data.term,
                         data
                     });
                 },
@@ -168,6 +169,48 @@ export default class GraphController {
                 },
                 'goal.added': (data) => {
                     this.createTaskNode(data, 'goal');
+                },
+                'question.added': (data) => {
+                    this.createTaskNode(data, 'question');
+                },
+                'task.processed': (data) => {
+                    // Update the task node to reflect it has been processed
+                    const id = data.task?.id ?? data.id ?? `task_${Date.now()}`;
+                    this.updateNode({
+                        id,
+                        type: 'processed_task',
+                        label: data.task?.toString() ?? 'Processed Task'
+                    });
+                },
+                'reasoning.derivation': (data) => {
+                    // Handle reasoning derivation events
+                    const sourceId = `derivation_source_${Date.now()}`;
+                    const targetId = `derivation_target_${Date.now()}`;
+
+                    // Add source and target nodes for the derivation
+                    this.addNode({
+                        id: sourceId,
+                        label: 'Derivation Source',
+                        type: 'reasoning_step',
+                        data
+                    });
+
+                    this.addNode({
+                        id: targetId,
+                        label: 'Derived Conclusion',
+                        type: 'reasoning_step',
+                        data
+                    });
+
+                    // Add an edge to represent the derivation
+                    this.addEdge({
+                        id: `edge_${sourceId}_${targetId}`,
+                        source: sourceId,
+                        target: targetId,
+                        type: 'derivation',
+                        label: 'derivation',
+                        data
+                    });
                 }
             };
 

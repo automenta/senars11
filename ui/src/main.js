@@ -20,6 +20,37 @@ class AppInitializer {
         this.eventProcessor = null;
         this.replController = null;
         this.graphController = null;
+        this.addNotificationStyles();
+    }
+
+    addNotificationStyles() {
+        // Add CSS animations for notifications
+        if (!document.querySelector('#notification-styles')) {
+            const style = document.createElement('style');
+            style.id = 'notification-styles';
+            style.textContent = `
+                @keyframes slideIn {
+                    from {
+                        transform: translateX(100%);
+                        opacity: 0;
+                    }
+                    to {
+                        transform: translateX(0);
+                        opacity: 1;
+                    }
+                }
+
+                @keyframes fadeOut {
+                    from {
+                        opacity: 1;
+                    }
+                    to {
+                        opacity: 0;
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+        }
     }
 
     async initialize() {
@@ -49,9 +80,13 @@ class AppInitializer {
     }
 
     initializeComponents() {
+        // Initialize services and store first
+        this.initializeStatusBarView();  // This must happen after service is created
         this.initializeReplComponent();
         this.initializeGraphComponent();
-        this.initializeStatusBarView();
+
+        // Set up additional UI controls after components are initialized
+        this.setupAdditionalControls();
     }
 
     initializeReplComponent() {
@@ -73,7 +108,12 @@ class AppInitializer {
     }
 
     initializeStatusBarView() {
-        new StatusBarView(this.store);
+        this.statusBarView = new StatusBarView(this.store);
+        // Connect the WebSocket service to the status bar view for message count updates
+        // Ensure service exists before setting the status bar view
+        if (this.service) {
+            this.service.setStatusBarView(this.statusBarView);
+        }
     }
 
     setupEventHandlers() {
@@ -86,10 +126,18 @@ class AppInitializer {
 
     createWebSocketEventHandlers() {
         return {
-            'open': () => this.store.dispatch({ type: SET_CONNECTION_STATUS, payload: 'connected' }),
-            'close': () => this.store.dispatch({ type: SET_CONNECTION_STATUS, payload: 'disconnected' }),
+            'open': () => {
+                this.store.dispatch({ type: SET_CONNECTION_STATUS, payload: 'connected' });
+                this.showNotification('Connected to SeNARS server', 'success');
+            },
+            'close': () => {
+                this.store.dispatch({ type: SET_CONNECTION_STATUS, payload: 'disconnected' });
+                this.showNotification('Disconnected from server', 'warning');
+            },
             'error': (error) => {
                 this.store.dispatch({ type: SET_CONNECTION_STATUS, payload: 'error' });
+                const errorMessage = error?.message || error?.data || 'WebSocket connection error';
+                this.showNotification(`Connection Error: ${errorMessage}`, 'error');
                 console.error('WebSocket error:', error);
             },
             'message': (message) => {
@@ -102,10 +150,121 @@ class AppInitializer {
         };
     }
 
+    showNotification(message, type = 'info') {
+        // Create a notification element
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+
+        // Style the notification
+        const bgColor = {
+            'success': '#d4edda',
+            'error': '#f8d7da',
+            'warning': '#fff3cd',
+            'info': '#d1ecf1'
+        }[type] || '#d1ecf1';
+
+        const textColor = {
+            'success': '#155724',
+            'error': '#721c24',
+            'warning': '#856404',
+            'info': '#0c5460'
+        }[type] || '#0c5460';
+
+        notification.style.cssText = `
+            background-color: ${bgColor};
+            color: ${textColor};
+            border: 1px solid;
+            border-radius: 4px;
+            padding: 10px 15px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            animation: slideIn 0.3s ease-out;
+            max-width: 100%;
+            word-wrap: break-word;
+        `;
+
+        notification.textContent = message;
+
+        // Add to notification container
+        const container = document.getElementById('notification-container');
+        if (container) {
+            container.appendChild(notification);
+
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.style.animation = 'fadeOut 0.5s ease-out';
+                    setTimeout(() => {
+                        if (notification.parentNode) {
+                            notification.parentNode.removeChild(notification);
+                        }
+                    }, 500);
+                }
+            }, 5000);
+        }
+    }
+
     setupUIControls() {
         this.setupRefreshButton();
         this.setupLiveUpdatesToggle();
         this.setupDemoControls();
+    }
+
+    setupAdditionalControls() {
+        this.setupClearConsoleButton();
+        this.setupQuickCommands();
+        this.setupExecuteQuickButton();
+        this.setupNotificationSystem();
+    }
+
+    setupNotificationSystem() {
+        // Create notification container if it doesn't exist
+        let notificationContainer = document.getElementById('notification-container');
+        if (!notificationContainer) {
+            notificationContainer = document.createElement('div');
+            notificationContainer.id = 'notification-container';
+            notificationContainer.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                z-index: 10000;
+                max-width: 400px;
+            `;
+            document.body.appendChild(notificationContainer);
+        }
+    }
+
+    setupClearConsoleButton() {
+        const clearConsoleBtn = selectElement('#clear-console-btn');
+        if (clearConsoleBtn) {
+            clearConsoleBtn.addEventListener('click', () => {
+                const consoleOutput = selectElement('#console-output');
+                if (consoleOutput) {
+                    consoleOutput.innerHTML = '<div class="console-output-line console-info">Console cleared. Ready to receive commands</div>';
+                }
+            });
+        }
+    }
+
+    setupQuickCommands() {
+        // Quick command selection is handled by the execute button
+    }
+
+    setupExecuteQuickButton() {
+        const executeQuickBtn = selectElement('#execute-quick-btn');
+        const quickCommandSelect = selectElement('#quick-command-select');
+
+        if (executeQuickBtn && quickCommandSelect) {
+            executeQuickBtn.addEventListener('click', () => {
+                if (quickCommandSelect.value) {
+                    const replInput = selectElement('#repl-input');
+                    if (replInput) {
+                        replInput.value = quickCommandSelect.value;
+                        replInput.focus();
+                    }
+                }
+            });
+        }
     }
 
     setupRefreshButton() {

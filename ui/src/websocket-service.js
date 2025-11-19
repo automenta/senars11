@@ -16,6 +16,11 @@ class WebSocketService {
         this.isReconnecting = false;
         this.shouldReconnect = true;
         this.store = store;
+        this.sentMessageCount = 0;
+        this.receivedMessageCount = 0;
+        this.statusBarView = null;
+        this.recentMessages = [];  // Track recent messages for debugging
+        this.maxRecentMessages = 50;  // Limit to prevent memory buildup
 
         // Add timer tracking for memory management
         this._scheduledReconnectTimer = null;
@@ -89,13 +94,67 @@ class WebSocketService {
 
     _handleWebSocketError(error) {
         if (this.store) {
-            this.store.dispatch({ type: 'SET_ERROR', payload: 'WebSocket connection error.' });
+            // Provide more detailed error information
+            const errorMessage = this._getDetailedErrorMessage(error);
+            this.store.dispatch({
+                type: 'SET_ERROR',
+                payload: errorMessage
+            });
+        }
+    }
+
+    /**
+     * Generate detailed error messages based on error type
+     * @param {Error} error - The error object
+     * @returns {string} Detailed error message
+     */
+    _getDetailedErrorMessage(error) {
+        // Create a detailed error message based on different error types
+        if (error.code) {
+            switch (error.code) {
+                case 'ECONNREFUSED':
+                    return 'Connection refused - server may be down or unreachable. Check if the backend server is running.';
+                case 'ENOTFOUND':
+                    return 'Host not found - check network connection and server address.';
+                case 'ECONNRESET':
+                    return 'Connection was reset by the server. The server may have closed the connection.';
+                default:
+                    return `WebSocket connection error: ${error.message || error.code || 'Unknown error'}`;
+            }
+        } else if (error.type === 'PARSE_ERROR') {
+            return `Message parsing error: Invalid message format received from server: ${error.raw || 'Unknown format'}`;
+        } else {
+            return `WebSocket connection error: ${error.message || 'Unknown error occurred'}`;
         }
     }
 
     _handleWebSocketMessage(event) {
         try {
+            this.receivedMessageCount++; // Increment received message count
             const data = MessageFormatter.formatIncomingMessage(event.data);
+
+            // Log the received message for debugging (in non-production)
+            if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') {
+                console.debug('Received WebSocket message:', data);
+            }
+
+            // Store recent messages for debugging
+            this.recentMessages.push({
+                timestamp: new Date(),
+                message: data,
+                direction: 'in'
+            });
+
+            // Keep only the most recent messages
+            if (this.recentMessages.length > this.maxRecentMessages) {
+                this.recentMessages = this.recentMessages.slice(-this.maxRecentMessages);
+            }
+
+            // Update status bar if available
+            if (this.statusBarView) {
+                this.statusBarView.updateMessageCounts(this.sentMessageCount, this.receivedMessageCount);
+            }
+
             this._emit('message', data);
         } catch (parseError) {
             errorHandler.handleError(parseError, {
@@ -153,12 +212,26 @@ class WebSocketService {
     }
 
     _handleMaxReconnectAttempts() {
-        errorHandler.handleError(new Error('Max reconnection attempts reached'), {
+        const error = new Error(`Max reconnection attempts (${this.maxReconnectAttempts}) reached. Connection permanently lost.`);
+        errorHandler.handleError(error, {
             attempts: this.reconnectAttempts,
             maxAttempts: this.maxReconnectAttempts,
             context: 'WebSocket reconnection'
         });
-        this._emit('error', { type: 'MAX_RECONNECT_ATTEMPTS' });
+
+        if (this.store) {
+            this.store.dispatch({
+                type: 'SET_ERROR',
+                payload: `Max reconnection attempts (${this.maxReconnectAttempts}) reached. Please check server status and try reconnecting manually.`
+            });
+        }
+
+        this._emit('error', {
+            type: 'MAX_RECONNECT_ATTEMPTS',
+            message: error.message,
+            attempts: this.reconnectAttempts,
+            maxAttempts: this.maxReconnectAttempts
+        });
     }
 
     _calculateReconnectDelay() {
@@ -196,7 +269,26 @@ class WebSocketService {
         try {
             const message = MessageFormatter.formatOutgoingMessage(type, payload);
             this.ws.send(JSON.stringify(message));
+            this.sentMessageCount++;
             this._emit('outgoingMessage', message);
+
+            // Store sent message for debugging
+            this.recentMessages.push({
+                timestamp: new Date(),
+                message: message,
+                direction: 'out'
+            });
+
+            // Keep only the most recent messages
+            if (this.recentMessages.length > this.maxRecentMessages) {
+                this.recentMessages = this.recentMessages.slice(-this.maxRecentMessages);
+            }
+
+            // Update status bar if available
+            if (this.statusBarView) {
+                this.statusBarView.updateMessageCounts(this.sentMessageCount, this.receivedMessageCount);
+            }
+
             return true;
         } catch (error) {
             this._handleSendMessageError(error, type, payload);
@@ -284,6 +376,17 @@ class WebSocketService {
 
     isReconnecting() {
         return this.isReconnecting;
+    }
+
+    /**
+     * Set reference to status bar view for updating message counts
+     */
+    setStatusBarView(statusBarView) {
+        this.statusBarView = statusBarView;
+        // Update the status bar with current counts
+        if (statusBarView) {
+            statusBarView.updateMessageCounts(this.sentMessageCount, this.receivedMessageCount);
+        }
     }
 
     /**

@@ -265,8 +265,134 @@ input:focus {
     display: none; /* Hidden by default */
 }
 
-@media (max-width: 768px) {
+/* Enhanced responsiveness for different screen sizes */
+@media (max-width: 1200px) {
     #main-container {
         flex-direction: column;
     }
+
+    #repl-container, #cy-container {
+        min-height: 300px; /* Ensure minimum height for usability on smaller screens */
+        min-width: auto;
+    }
+}
+
+@media (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+
+    #main-container {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    #repl-container, #cy-container {
+        min-height: 250px;
+    }
+
+    #controls {
+        flex-wrap: wrap;
+    }
+
+    button, select {
+        min-height: 40px; /* Ensure buttons are touch-friendly */
+        min-width: auto;
+    }
+
+    #status-bar {
+        font-size: 14px;
+        padding: 8px;
+    }
+}
+
+@media (max-width: 480px) {
+    body {
+        padding: 5px;
+    }
+
+    #status-bar {
+        font-size: 12px;
+        padding: 6px;
+    }
+
+    #controls {
+        flex-direction: column;
+    }
+
+    button {
+        width: 100%;
+        margin-bottom: 5px;
+    }
+
+    #repl-container, #cy-container {
+        min-height: 200px;
+    }
+
+    input, .form-input {
+        padding: 10px;  /* Larger touch targets */
+        min-height: 44px;  /* Touch-friendly height */
+    }
+}
+
+/* Responsive typography */
+@media (max-width: 480px) {
+    body {
+        font-size: 14px;
+    }
+
+    pre {
+        font-size: 12px;
+        padding: 5px;
+    }
+
+    button {
+        font-size: 14px;
+        padding: 10px 15px;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    #status-bar.status-connected {
+        background-color: #d4edda;
+        color: #000;
+        border-color: #000;
+    }
+
+    #status-bar.status-disconnected,
+    #status-bar.status-error {
+        background-color: #f8d7da;
+        color: #000;
+        border-color: #000;
+    }
+
+    #status-bar.status-connecting {
+        background-color: #fff3cd;
+        color: #000;
+        border-color: #000;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* Ensure accessibility for keyboard navigation */
+button:focus,
+input:focus,
+select:focus {
+    outline: 2px solid #0056b3;
+    outline-offset: 2px;
+}
+
+/* Better focus indicators for accessibility */
+*[tabindex]:focus {
+    outline: 2px solid #0056b3;
+    outline-offset: 2px;
 }
