@@ -1,11 +1,7 @@
 export default {
-  testEnvironment: 'node',
+  testEnvironment: 'jsdom',
   testPathIgnorePatterns: ['/node_modules/'],
   setupFilesAfterEnv: [],
-  transform: {},
-  moduleNameMapper: {
-    '^./utils/(.*)$': '<rootDir>/tests/utils/$1',
-    '^(\\.{1,2}/.*)\\.js$': '$1',
-  },
-  coveragePathIgnorePatterns: ['/node_modules/']
+  coveragePathIgnorePatterns: ['/node_modules/'],
+  transform: {}
 };
