@@ -2,40 +2,49 @@
  * UIElements module to initialize and store DOM element references
  */
 export class UIElements {
-  constructor() {
-    this.elements = this._initializeElements();
+  constructor(elementIds = null) {
+    this.elements = this._initializeElements(elementIds);
   }
 
   /**
    * Initialize all DOM elements
    */
-  _initializeElements() {
-    return {
-      statusIndicator: document.getElementById('status-indicator'),
-      connectionStatus: document.getElementById('connection-status'),
-      messageCount: document.getElementById('message-count'),
-      logsContainer: document.getElementById('logs-container'),
-      commandInput: document.getElementById('command-input'),
-      sendButton: document.getElementById('send-button'),
-      quickCommands: document.getElementById('quick-commands'),
-      execQuick: document.getElementById('exec-quick'),
-      showHistory: document.getElementById('show-history'),
-      clearLogs: document.getElementById('clear-logs'),
-      refreshGraph: document.getElementById('refresh-graph'),
-      toggleLive: document.getElementById('toggle-live'),
-      demoSelect: document.getElementById('demo-select'),
-      runDemo: document.getElementById('run-demo'),
-      graphDetails: document.getElementById('graph-details'),
-      graphContainer: document.getElementById('graph-container'),
-      notificationContainer: document.getElementById('notification-container')
+  _initializeElements(elementIds = null) {
+    // Default element IDs if none provided
+    const defaultIds = {
+      statusIndicator: 'status-indicator',
+      connectionStatus: 'connection-status',
+      messageCount: 'message-count',
+      logsContainer: 'logs-container',
+      commandInput: 'command-input',
+      sendButton: 'send-button',
+      quickCommands: 'quick-commands',
+      execQuick: 'exec-quick',
+      showHistory: 'show-history',
+      clearLogs: 'clear-logs',
+      refreshGraph: 'refresh-graph',
+      toggleLive: 'toggle-live',
+      demoSelect: 'demo-select',
+      runDemo: 'run-demo',
+      graphDetails: 'graph-details',
+      graphContainer: 'graph-container',
+      notificationContainer: 'notification-container'
     };
+
+    const ids = elementIds || defaultIds;
+
+    // Use reduce to create elements map efficiently
+    return Object.entries(ids).reduce((acc, [key, id]) => {
+      acc[key] = document.getElementById(id);
+      return acc;
+    }, {});
   }
 
   /**
    * Get a specific element by key
    */
   get(key) {
-    return this.elements[key] || null;
+    return this.elements[key] ?? null;
   }
 
   /**
@@ -48,12 +57,22 @@ export class UIElements {
   /**
    * Check if all required elements are present
    */
-  isValid() {
-    const requiredElements = [
+  isValid(requiredKeys = null) {
+    const requiredElements = requiredKeys ?? [
       'statusIndicator', 'connectionStatus', 'messageCount', 'logsContainer',
       'commandInput', 'sendButton', 'graphContainer'
     ];
-    
+
     return requiredElements.every(key => this.elements[key] !== null);
+  }
+
+  /**
+   * Bulk get multiple elements by keys
+   */
+  getMultiple(keys) {
+    return keys.reduce((acc, key) => {
+      acc[key] = this.get(key);
+      return acc;
+    }, {});
   }
 }
