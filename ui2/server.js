@@ -1,20 +1,22 @@
-import { WebSocketServer } from 'ws';
 import http from 'http';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { ReplEngine } from '../src/repl/ReplEngine.js';
-import { WebSocketMonitor } from '../src/server/WebSocketMonitor.js';
-import { WebRepl } from '../src/repl/WebRepl.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Configuration
-const HTTP_PORT = 8080;
-const WS_PORT = 8081;
+// Configuration - get from environment or use defaults
+const HTTP_PORT = process.env.PORT ? parseInt(process.env.PORT) : (process.env.HTTP_PORT ? parseInt(process.env.HTTP_PORT) : 8080);
+const BACKEND_WS_HOST = process.env.BACKEND_WS_HOST || process.env.WS_HOST || 'localhost';
+const BACKEND_WS_PORT = process.env.BACKEND_WS_PORT ? parseInt(process.env.BACKEND_WS_PORT) : (process.env.WS_PORT ? parseInt(process.env.WS_PORT) : 8081);
 
-// Create HTTP server to serve static files
+console.log(`UI2 Server configuration:`);
+console.log(`  UI HTTP Port: ${HTTP_PORT}`);
+console.log(`  Backend WS Host: ${BACKEND_WS_HOST}`);
+console.log(`  Backend WS Port: ${BACKEND_WS_PORT}`);
+
+// Create HTTP server to serve static files, with template replacement for index.html
 const server = http.createServer((req, res) => {
     let filePath = req.url;
 
@@ -30,7 +32,7 @@ const server = http.createServer((req, res) => {
 
     const fullPath = path.join(__dirname, filePath);
 
-    fs.readFile(fullPath, (err, content) => {
+    fs.readFile(fullPath, 'utf8', (err, content) => {
         if (err) {
             if (err.code === 'ENOENT') {
                 res.writeHead(404);
@@ -40,6 +42,13 @@ const server = http.createServer((req, res) => {
                 res.end('Server error');
             }
         } else {
+            // For HTML files, do template replacement to inject WebSocket port
+            if (fullPath.endsWith('.html')) {
+                content = content
+                    .replace(/\{\{WEBSOCKET_PORT}}/g, BACKEND_WS_PORT.toString())
+                    .replace(/\{\{WEBSOCKET_HOST}}/g, BACKEND_WS_HOST);
+            }
+
             // Set content type based on file extension
             let contentType = 'text/html';
             if (fullPath.endsWith('.js')) {
@@ -56,59 +65,9 @@ const server = http.createServer((req, res) => {
     });
 });
 
-async function startBackend() {
-    console.log(`Starting SeNARS Backend...`);
-
-    const config = {
-        nar: {
-            lm: { enabled: false },
-            reasoningAboutReasoning: { enabled: true }
-        },
-        webSocket: {
-            port: WS_PORT,
-            host: '0.0.0.0',
-            maxConnections: 20
-        }
-    };
-
-    // Initialize ReplEngine
-    const replEngine = new ReplEngine(config);
-    await replEngine.initialize();
-
-    // Initialize WebSocketMonitor
-    const monitor = new WebSocketMonitor(config.webSocket);
-    await monitor.start();
-    replEngine.nar.connectToWebSocketMonitor(monitor);
-
-    // Initialize WebRepl
-    const webRepl = new WebRepl(replEngine, monitor);
-    webRepl.registerWithWebSocketServer();
-
-    // Register NAR instance handler
-    monitor.registerClientMessageHandler('requestNAR', async (message, client, monitorInstance) => {
-        const narInfo = {
-            cycleCount: replEngine.nar.cycleCount,
-            isRunning: replEngine.nar.isRunning,
-            config: replEngine.nar.config.toJSON(),
-            stats: webRepl.getStats ? webRepl.getStats() : replEngine.getStats(),
-            reasoningState: replEngine.nar.getReasoningState ? replEngine.nar.getReasoningState() : null
-        };
-
-        monitorInstance._sendToClient(client, {
-            type: 'narInstance',
-            payload: narInfo
-        });
-    });
-
-    // Start NAR
-    replEngine.nar.start();
-    console.log(`SeNARS Backend started. WebSocket on port ${WS_PORT}`);
-}
-
-// Start servers
+// Start server
 server.listen(HTTP_PORT, () => {
-    console.log(`UI Server running at http://localhost:${HTTP_PORT}`);
-    startBackend().catch(err => {
-        console.error('Failed to start backend:', err);
-    });
+    console.log(`UI2 Server running at http://localhost:${HTTP_PORT}`);
+    console.log(`UI will connect to backend WebSocket at ws://${BACKEND_WS_HOST}:${BACKEND_WS_PORT}`);
+    console.log('Open your browser at the URL above to use SeNARS UI2.');
 });

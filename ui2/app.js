@@ -56,10 +56,9 @@ class SeNARSUI {
             this.showCommandHistory();
         });
 
-        // Clear logs
+        // Clear logs - now uses the debug command functionality
         this.elements.clearLogs.addEventListener('click', () => {
-            this.elements.logsContainer.innerHTML = '';
-            this.addLogEntry('Cleared logs', 'info', '🧹');
+            this.handleDebugCommand('/clear');
         });
 
         // Graph controls
@@ -155,11 +154,9 @@ class SeNARSUI {
 
     connectWebSocket() {
         try {
-            // Use the same host as the page, default to localhost:8080
+            const wsConfig = this.getWebSocketConfig();
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const host = window.location.hostname || 'localhost';
-            const port = '8081'; // Connect to the backend WebSocket port
-            const wsUrl = `${protocol}//${host}:${port}/ws`;
+            const wsUrl = `${protocol}//${wsConfig.host}:${wsConfig.port}`;
 
             this.ws = new WebSocket(wsUrl);
 
@@ -204,6 +201,22 @@ class SeNARSUI {
         }
     }
 
+    getWebSocketConfig() {
+        // Get WebSocket configuration from the injected global variable
+        if (typeof window.WEBSOCKET_CONFIG !== 'undefined') {
+            return {
+                host: window.WEBSOCKET_CONFIG.host || window.location.hostname || 'localhost',
+                port: window.WEBSOCKET_CONFIG.port || '8081'
+            };
+        }
+
+        // Fallback to default configuration
+        return {
+            host: window.location.hostname || 'localhost',
+            port: '8081'
+        };
+    }
+
     updateStatus() {
         const statusText = this.connectionStatus.charAt(0).toUpperCase() + this.connectionStatus.slice(1);
         this.elements.connectionStatus.textContent = statusText;
@@ -214,8 +227,14 @@ class SeNARSUI {
     }
 
     sendCommand() {
-        const command = this.elements.commandInput.value.trim();
+        let command = this.elements.commandInput.value.trim();
         if (!command) return;
+
+        // Handle debug commands locally if they start with /
+        if (command.startsWith('/')) {
+            this.handleDebugCommand(command);
+            return;
+        }
 
         // Add to history
         this.commandHistory.push({
@@ -232,6 +251,82 @@ class SeNARSUI {
             this.sendMessage('narseseInput', { input: command });
         } else {
             this.addLogEntry(`Cannot send: Not connected`, 'error', '❌');
+        }
+
+        // Clear input
+        this.elements.commandInput.value = '';
+    }
+
+    handleDebugCommand(command) {
+        // Add to history
+        this.commandHistory.push({
+            command: command,
+            timestamp: new Date(),
+            status: 'sent'
+        });
+
+        // Add to log
+        this.addLogEntry(`> ${command}`, 'input', '⌨️');
+
+        switch(command.toLowerCase()) {
+            case '/help':
+                this.addLogEntry('Available debug commands:', 'info', '💡');
+                this.addLogEntry('/help - Show this help', 'info', 'ℹ️');
+                this.addLogEntry('/state - Show connection and state info', 'info', 'ℹ️');
+                this.addLogEntry('/nodes - List all nodes in graph', 'info', 'ℹ️');
+                this.addLogEntry('/tasks - Show task nodes', 'info', 'ℹ️');
+                this.addLogEntry('/concepts - Show concept nodes', 'info', 'ℹ️');
+                this.addLogEntry('/refresh - Request graph refresh', 'info', 'ℹ️');
+                this.addLogEntry('/clear - Clear log messages', 'info', 'ℹ️');
+                break;
+            case '/state':
+                this.addLogEntry(`Connection: ${this.connectionStatus}`, 'info', '📡');
+                this.addLogEntry(`Message Count: ${this.messageCounter - 1}`, 'info', '📊');
+                this.addLogEntry(`Command History: ${this.commandHistory.length} commands`, 'info', '📜');
+                break;
+            case '/nodes':
+                if (this.cy) {
+                    const nodeCount = this.cy.nodes().length;
+                    this.addLogEntry(`Graph has ${nodeCount} nodes`, 'info', '🌐');
+                    this.cy.nodes().forEach(node => {
+                        this.addLogEntry(`Node: ${node.data('label')} (ID: ${node.id()})`, 'info', '📍');
+                    });
+                } else {
+                    this.addLogEntry('Graph not initialized', 'error', '❌');
+                }
+                break;
+            case '/tasks':
+                if (this.cy) {
+                    const taskNodes = this.cy.nodes('[type = "task"]');
+                    this.addLogEntry(`Found ${taskNodes.length} task nodes`, 'info', '📋');
+                    taskNodes.forEach(node => {
+                        this.addLogEntry(`Task: ${node.data('label')}`, 'task', '📋');
+                    });
+                } else {
+                    this.addLogEntry('Graph not initialized', 'error', '❌');
+                }
+                break;
+            case '/concepts':
+                if (this.cy) {
+                    const conceptNodes = this.cy.nodes('[type = "concept"]');
+                    this.addLogEntry(`Found ${conceptNodes.length} concept nodes`, 'info', '🧠');
+                    conceptNodes.forEach(node => {
+                        this.addLogEntry(`Concept: ${node.data('label')}`, 'concept', '🧠');
+                    });
+                } else {
+                    this.addLogEntry('Graph not initialized', 'error', '❌');
+                }
+                break;
+            case '/refresh':
+                this.sendMessage('control/refresh', {});
+                this.addLogEntry('Graph refresh requested', 'info', '🔄');
+                break;
+            case '/clear':
+                this.elements.logsContainer.innerHTML = '';
+                this.addLogEntry('Cleared logs', 'info', '🧹');
+                break;
+            default:
+                this.addLogEntry(`Unknown debug command: ${command}. Type /help for available commands.`, 'warning', '⚠️');
         }
 
         // Clear input

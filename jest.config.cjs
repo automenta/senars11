@@ -7,12 +7,18 @@ module.exports = {
         'ui-react-legacy/',
 	'exp'
     ],
+    modulePathIgnorePatterns: [
+        '<rootDir>/ui/',
+        '<rootDir>/ui-react-legacy/'
+    ],
     transform: {
         '^.+\\.js$': 'babel-jest',
     },
     collectCoverageFrom: [
         'src/**/*.js',
         '!src/**/*.test.js',
+        'ui2/**/*.js',
+        '!ui2/**/*.test.js'
     ],
     coverageThreshold: {
         global: {
