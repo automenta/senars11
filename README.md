@@ -816,14 +816,7 @@ knowledge while goals drive exploration toward desired outcomes.
 
 ### Core Technical Challenges
 
-**Term Normalization and Equality:**
 
-- The Term implementation requires refinement to achieve full immutability - some computed properties need proper
-  freezing
-- The equality method `equals()` needs implementation of canonical normalization for commutative and associative
-  operators
-- Without proper normalization, logically equivalent terms (e.g., `(&, A, B)` vs `(&, B, A)`) may be treated as
-  different objects
 
 **Performance Optimization:**
 
