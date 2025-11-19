@@ -4,9 +4,10 @@ import { Config } from '../config/Config.js';
  * CommandProcessor handles command sending and history management
  */
 export class CommandProcessor {
-  constructor(webSocketManager, logger) {
+  constructor(webSocketManager, logger, graphManager = null) {
     this.webSocketManager = webSocketManager;
     this.logger = logger;
+    this.graphManager = graphManager;
     this.history = [];
     this.maxHistorySize = Config.getConstants().MAX_HISTORY_SIZE;
   }
@@ -47,31 +48,26 @@ export class CommandProcessor {
   _processDebugCommand(command) {
     const cmd = command.toLowerCase();
 
-    switch(cmd) {
-      case '/help':
-        this._showHelp();
-        break;
-      case '/state':
-        this._showState();
-        break;
-      case '/nodes':
-        this._listNodes();
-        break;
-      case '/tasks':
-        this._listTasks();
-        break;
-      case '/concepts':
-        this._listConcepts();
-        break;
-      case '/refresh':
+    // Define command handlers in a lookup table
+    const debugCommands = {
+      '/help': () => this._showHelp(),
+      '/state': () => this._showState(),
+      '/nodes': () => this._listNodes(),
+      '/tasks': () => this._listTasks(),
+      '/concepts': () => this._listConcepts(),
+      '/refresh': () => {
         this.webSocketManager.sendMessage('control/refresh', {});
         this.logger.log('Graph refresh requested', 'info', '🔄');
-        break;
-      case '/clear':
-        this.logger.clearLogs();
-        break;
-      default:
-        this.logger.log(`Unknown debug command: ${command}. Type /help for available commands.`, 'warning', '⚠️');
+      },
+      '/clear': () => this.logger.clearLogs()
+    };
+
+    // Execute the command or show unknown command message
+    const handler = debugCommands[cmd];
+    if (handler) {
+      handler();
+    } else {
+      this.logger.log(`Unknown debug command: ${command}. Type /help for available commands.`, 'warning', '⚠️');
     }
   }
 
@@ -100,16 +96,16 @@ export class CommandProcessor {
   /**
    * List all nodes
    */
-  _listNodes(graphManager) {
-    if (!graphManager || !graphManager.cy) {
+  _listNodes() {
+    if (!this.graphManager || !this.graphManager.cy) {
       this.logger.log('Graph not initialized', 'error', '❌');
       return;
     }
 
-    const nodeCount = graphManager.getNodeCount();
+    const nodeCount = this.graphManager.getNodeCount();
     this.logger.log(`Graph has ${nodeCount} nodes`, 'info', '🌐');
-    
-    const allNodes = graphManager.cy.nodes();
+
+    const allNodes = this.graphManager.cy.nodes();
     allNodes.forEach(node => {
       this.logger.log(`Node: ${node.data('label')} (ID: ${node.id()})`, 'info', '📍');
     });
@@ -118,15 +114,15 @@ export class CommandProcessor {
   /**
    * List task nodes
    */
-  _listTasks(graphManager) {
-    if (!graphManager || !graphManager.cy) {
+  _listTasks() {
+    if (!this.graphManager || !this.graphManager.cy) {
       this.logger.log('Graph not initialized', 'error', '❌');
       return;
     }
 
-    const taskNodes = graphManager.getTaskNodes();
+    const taskNodes = this.graphManager.getTaskNodes();
     this.logger.log(`Found ${taskNodes?.length || 0} task nodes`, 'info', '📋');
-    
+
     taskNodes?.forEach(node => {
       this.logger.log(`Task: ${node.data('label')}`, 'task', '📋');
     });
@@ -135,15 +131,15 @@ export class CommandProcessor {
   /**
    * List concept nodes
    */
-  _listConcepts(graphManager) {
-    if (!graphManager || !graphManager.cy) {
+  _listConcepts() {
+    if (!this.graphManager || !this.graphManager.cy) {
       this.logger.log('Graph not initialized', 'error', '❌');
       return;
     }
 
-    const conceptNodes = graphManager.getConceptNodes();
+    const conceptNodes = this.graphManager.getConceptNodes();
     this.logger.log(`Found ${conceptNodes?.length || 0} concept nodes`, 'info', '🧠');
-    
+
     conceptNodes?.forEach(node => {
       this.logger.log(`Concept: ${node.data('label')}`, 'concept', '🧠');
     });

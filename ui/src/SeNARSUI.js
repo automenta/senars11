@@ -17,13 +17,13 @@ export class SeNARSUI {
     this.logger = new Logger();
     this.webSocketManager = new WebSocketManager();
     this.graphManager = new GraphManager(this.uiElements.getAll());
-    this.commandProcessor = new CommandProcessor(this.webSocketManager, this.logger);
+    this.commandProcessor = new CommandProcessor(this.webSocketManager, this.logger, this.graphManager);
     this.demoManager = new DemoManager(this.commandProcessor, this.logger);
     this.uiEventHandlers = new UIEventHandlers(
-      this.uiElements, 
-      this.commandProcessor, 
-      this.demoManager, 
-      this.graphManager, 
+      this.uiElements,
+      this.commandProcessor,
+      this.demoManager,
+      this.graphManager,
       this.webSocketManager
     );
     
@@ -79,96 +79,150 @@ export class SeNARSUI {
       this.uiElements.get('messageCount').textContent = currentCount + 1;
     }
 
-    // Determine message type and format accordingly
-    let content, type, icon;
-
-    switch (message.type) {
-      case 'narsese.result':
-        if (message.payload?.result && message.payload.result.startsWith('✅')) {
-          content = message.payload.result;
-          type = 'success';
-          icon = '✅';
-        } else if (message.payload?.result && message.payload.result.startsWith('❌')) {
-          content = message.payload.result;
-          type = 'error';
-          icon = '❌';
-        } else if (message.payload?.success === true) {
-          content = message.payload.result || message.payload.message || 'Command processed';
-          type = 'success';
-          icon = '✅';
-        } else {
-          content = message.payload?.result || message.payload?.message || 'Command processed';
-          type = 'info';
-          icon = '✅';
-        }
-        break;
-      case 'narsese.error':
-        content = message.payload?.error || message.payload?.message || 'Narsese processing error';
-        type = 'error';
-        icon = '❌';
-        break;
-      case 'task.added':
-      case 'task.input':
-        content = message.payload?.task || message.payload?.input || JSON.stringify(message.payload);
-        type = 'task';
-        icon = '📥';
-        break;
-      case 'concept.created':
-      case 'concept.updated':
-      case 'concept.added':
-        content = message.payload?.concept || message.payload?.term || JSON.stringify(message.payload);
-        type = 'concept';
-        icon = '🧠';
-        break;
-      case 'question.answered':
-        content = message.payload?.answer || message.payload?.question || JSON.stringify(message.payload);
-        type = 'info';
-        icon = '❓';
-        break;
-      case 'reasoning.derivation':
-      case 'reasoning.step':
-        content = message.payload?.derivation || message.payload?.step || JSON.stringify(message.payload);
-        type = 'info';
-        icon = '🔍';
-        break;
-      case 'error':
-      case 'error.message':
-        content = message.payload?.message || message.payload?.error || JSON.stringify(message.payload);
-        type = 'error';
-        icon = '🚨';
-        break;
-      case 'connection':
-        content = message.payload?.message || message.data?.message || 'Connected to server';
-        type = 'info';
-        icon = '🌐';
-        break;
-      case 'memorySnapshot':
-        this.graphManager.updateFromSnapshot(message.payload);
-        content = `Memory snapshot received: ${message.payload?.concepts?.length || 0} concepts`;
-        type = 'info';
-        icon = '📊';
-        break;
-      case 'info':
-      case 'log':
-        content = message.payload?.message || JSON.stringify(message.payload);
-        type = 'info';
-        icon = 'ℹ️';
-        break;
-      case 'control.result':
-        content = message.payload?.result || message.payload?.message || 'Control command executed';
-        type = 'info';
-        icon = '⚙️';
-        break;
-      default:
-        content = `${message.type}: ${JSON.stringify(message.payload || message.data || message)}`;
-        type = 'info';
-        icon = '📝';
-    }
+    // Process message with appropriate handler
+    const { content, type, icon } = this._getMessageInfo(message);
 
     this.logger.addLogEntry(content, type, icon);
 
     // Update graph for relevant events
     this.graphManager.updateFromMessage(message);
+  }
+
+  /**
+   * Get message content, type, and icon based on message type
+   */
+  _getMessageInfo(message) {
+    // Define message handlers in a lookup table for better organization
+    const messageHandlers = {
+      'narsese.result': (msg) => {
+        const payload = msg.payload || {};
+        if (payload.result && payload.result.startsWith('✅')) {
+          return { content: payload.result, type: 'success', icon: '✅' };
+        } else if (payload.result && payload.result.startsWith('❌')) {
+          return { content: payload.result, type: 'error', icon: '❌' };
+        } else if (payload.success === true) {
+          return {
+            content: payload.result || payload.message || 'Command processed',
+            type: 'success',
+            icon: '✅'
+          };
+        } else {
+          return {
+            content: payload.result || payload.message || 'Command processed',
+            type: 'info',
+            icon: '✅'
+          };
+        }
+      },
+      'narsese.error': (msg) => ({
+        content: msg.payload?.error || msg.payload?.message || 'Narsese processing error',
+        type: 'error',
+        icon: '❌'
+      }),
+      'task.added': (msg) => this._createTaskMessage(msg),
+      'task.input': (msg) => this._createTaskMessage(msg),
+      'concept.created': (msg) => this._createConceptMessage(msg),
+      'concept.updated': (msg) => this._createConceptMessage(msg),
+      'concept.added': (msg) => this._createConceptMessage(msg),
+      'question.answered': (msg) => ({
+        content: msg.payload?.answer || msg.payload?.question || JSON.stringify(msg.payload),
+        type: 'info',
+        icon: '❓'
+      }),
+      'reasoning.derivation': (msg) => ({
+        content: msg.payload?.derivation || msg.payload?.step || JSON.stringify(msg.payload),
+        type: 'info',
+        icon: '🔍'
+      }),
+      'reasoning.step': (msg) => ({
+        content: msg.payload?.derivation || msg.payload?.step || JSON.stringify(msg.payload),
+        type: 'info',
+        icon: '🔍'
+      }),
+      'error': (msg) => this._createErrorMessage(msg),
+      'error.message': (msg) => this._createErrorMessage(msg),
+      'connection': (msg) => ({
+        content: msg.payload?.message || msg.data?.message || 'Connected to server',
+        type: 'info',
+        icon: '🌐'
+      }),
+      'memorySnapshot': (msg) => {
+        this.graphManager.updateFromSnapshot(msg.payload);
+        return {
+          content: `Memory snapshot received: ${msg.payload?.concepts?.length || 0} concepts`,
+          type: 'info',
+          icon: '📊'
+        };
+      },
+      'info': (msg) => ({
+        content: msg.payload?.message || JSON.stringify(msg.payload),
+        type: 'info',
+        icon: 'ℹ️'
+      }),
+      'log': (msg) => ({
+        content: msg.payload?.message || JSON.stringify(msg.payload),
+        type: 'info',
+        icon: 'ℹ️'
+      }),
+      'control.result': (msg) => ({
+        content: msg.payload?.result || msg.payload?.message || 'Control command executed',
+        type: 'info',
+        icon: '⚙️'
+      })
+    };
+
+    // Get handler for message type or use default
+    const handler = messageHandlers[message.type] || this._createDefaultMessage;
+
+    if (typeof handler === 'function') {
+      return handler(message);
+    } else {
+      return this._createDefaultMessage(message);
+    }
+  }
+
+  /**
+   * Create a task-related message
+   */
+  _createTaskMessage(message) {
+    return {
+      content: message.payload?.task || message.payload?.input || JSON.stringify(message.payload),
+      type: 'task',
+      icon: '📥'
+    };
+  }
+
+  /**
+   * Create a concept-related message
+   */
+  _createConceptMessage(message) {
+    return {
+      content: message.payload?.concept || message.payload?.term || JSON.stringify(message.payload),
+      type: 'concept',
+      icon: '🧠'
+    };
+  }
+
+  /**
+   * Create an error message
+   */
+  _createErrorMessage(message) {
+    return {
+      content: message.payload?.message || message.payload?.error || JSON.stringify(message.payload),
+      type: 'error',
+      icon: '🚨'
+    };
+  }
+
+  /**
+   * Create a default message for unknown types
+   */
+  _createDefaultMessage(message) {
+    return {
+      content: `${message.type}: ${JSON.stringify(message.payload || message.data || message)}`,
+      type: 'info',
+      icon: '📝'
+    };
   }
 
   /**

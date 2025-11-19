@@ -57,11 +57,11 @@ export class GraphManager {
   /**
    * Add a node to the graph
    */
-  addNode(nodeData) {
+  addNode(nodeData, runLayout = true) {
     if (!this.cy) return false;
 
     const nodeId = nodeData.id || `concept_${Date.now()}`;
-    
+
     // Don't add duplicate nodes
     if (this.cy.getElementById(nodeId).length) {
       return false;
@@ -73,23 +73,26 @@ export class GraphManager {
         id: nodeId,
         label: nodeData.label || nodeData.term || nodeData.id,
         type: nodeData.nodeType || nodeData.type || 'concept',
-        weight: nodeData.weight || (nodeData.truth?.confidence ? nodeData.truth.confidence * 100 : 50)
+        weight: nodeData.weight || (nodeData.truth?.confidence ? nodeData.truth.confidence * 100 : Config.getConstants().DEFAULT_NODE_WEIGHT)
       }
     };
 
     this.cy.add(newNode);
-    this._runLayout();
+
+    if (runLayout) {
+      this._runLayout();
+    }
     return true;
   }
 
   /**
    * Add an edge to the graph
    */
-  addEdge(edgeData) {
+  addEdge(edgeData, runLayout = true) {
     if (!this.cy) return false;
 
     const edgeId = edgeData.id || `edge_${Date.now()}_${edgeData.source}_${edgeData.target}`;
-    
+
     // Don't add duplicate edges
     if (this.cy.getElementById(edgeId).length) {
       return false;
@@ -107,7 +110,10 @@ export class GraphManager {
     };
 
     this.cy.add(newEdge);
-    this._runLayout();
+
+    if (runLayout) {
+      this._runLayout();
+    }
     return true;
   }
 
@@ -120,19 +126,16 @@ export class GraphManager {
     // Clear existing elements
     this.cy.elements().remove();
 
-    // Add nodes from concepts
-    const nodes = [];
-    payload.concepts?.forEach((concept, index) => {
-      nodes.push({
-        group: 'nodes',
-        data: {
-          id: concept.id || `concept_${index}`,
-          label: concept.term || `Concept ${index}`,
-          type: concept.type || 'concept',
-          weight: concept.truth?.confidence ? concept.truth.confidence * 100 : 50
-        }
-      });
-    });
+    // Add nodes from concepts in batch
+    const nodes = payload.concepts?.map((concept, index) => ({
+      group: 'nodes',
+      data: {
+        id: concept.id || `concept_${index}`,
+        label: concept.term || `Concept ${index}`,
+        type: concept.type || 'concept',
+        weight: concept.truth?.confidence ? concept.truth.confidence * 100 : 50
+      }
+    })) || [];
 
     // Add nodes to graph if any exist
     if (nodes.length > 0) {
@@ -153,7 +156,7 @@ export class GraphManager {
       case 'concept.created':
       case 'concept.added':
         if (message.payload) {
-          this.addNode(message.payload);
+          this.addNode(message.payload, false); // Don't run layout immediately
         }
         break;
       case 'task.added':
@@ -162,7 +165,7 @@ export class GraphManager {
           this.addNode({
             ...message.payload,
             nodeType: 'task'
-          });
+          }, false); // Don't run layout immediately
         }
         break;
       case 'question.answered':
@@ -170,14 +173,19 @@ export class GraphManager {
           this.addNode({
             label: message.payload.answer || message.payload.question || 'Answer',
             nodeType: 'question',
-            weight: 40
-          });
+            weight: Config.getConstants().QUESTION_NODE_WEIGHT
+          }, false); // Don't run layout immediately
         }
         break;
       case 'memorySnapshot':
         this.updateFromSnapshot(message.payload);
-        break;
+        return; // Snapshot updates already run layout
       // Add other message types as needed
+    }
+
+    // Only run layout once after processing the message, if we added nodes/edges
+    if (['concept.created', 'concept.added', 'task.added', 'task.input', 'question.answered'].includes(message.type)) {
+      this._runLayout();
     }
   }
 

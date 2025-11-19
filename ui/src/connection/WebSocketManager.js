@@ -9,7 +9,7 @@ export class WebSocketManager {
     this.ws = null;
     this.connectionStatus = 'disconnected';
     this.reconnectAttempts = 0;
-    this.maxReconnectAttempts = 10;
+    this.maxReconnectAttempts = Config.getConstants().MAX_RECONNECT_ATTEMPTS;
     this.reconnectDelay = Config.getConstants().RECONNECT_DELAY;
     this.messageHandlers = new Map();
     this.logger = new Logger();
@@ -123,14 +123,35 @@ export class WebSocketManager {
       const events = message.data || [];
       this.logger.log(`Received batch of ${events.length} events`, 'debug', '📦');
 
-      events.forEach(event => {
-        // Normalize event structure to match what handleMessage expects
-        this._handleMessage({
-          type: event.type,
-          payload: event.data,
-          timestamp: event.timestamp
-        });
-      });
+      // Process events in batch to improve performance with many messages
+      const batchLimit = Config.getConstants().MESSAGE_BATCH_SIZE;
+      for (let i = 0; i < events.length; i += batchLimit) {
+        const batch = events.slice(i, i + batchLimit);
+
+        // Use requestAnimationFrame to avoid blocking the UI thread with too many messages
+        if (typeof window !== 'undefined' && window.requestAnimationFrame) {
+          window.requestAnimationFrame(() => {
+            batch.forEach(event => {
+              // Normalize event structure to match what handleMessage expects
+              this._handleMessage({
+                type: event.type,
+                payload: event.data,
+                timestamp: event.timestamp
+              });
+            });
+          });
+        } else {
+          // Fallback for environments without requestAnimationFrame
+          batch.forEach(event => {
+            // Normalize event structure to match what handleMessage expects
+            this._handleMessage({
+              type: event.type,
+              payload: event.data,
+              timestamp: event.timestamp
+            });
+          });
+        }
+      }
       return;
     }
 
