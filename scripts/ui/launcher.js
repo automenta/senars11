@@ -179,33 +179,33 @@ async function startWebSocketServer(config = DEFAULT_CONFIG) {
 }
 
 /**
- * Start the UI2 server as a child process
+ * Start the UI server as a child process
  */
-function startUI2Server(config = DEFAULT_CONFIG) {
-    console.log(`Starting UI2 server on port ${config.ui.port}...`);
+function startUIServer(config = DEFAULT_CONFIG) {
+    console.log(`Starting UI server on port ${config.ui.port}...`);
 
-    // Set up environment variables for the UI2 server
+    // Set up environment variables for the UI server
     const env = {
         ...process.env,
         HTTP_PORT: config.ui.port.toString(),
         WS_PORT: config.webSocket.port.toString()
     };
 
-    // Run the UI2 server as a child process
+    // Run the UI server as a child process
     const serverProcess = spawn('node', ['server.js'], {
-        cwd: join(__dirname, '../../ui2'),
-        stdio: 'inherit', // This allows the UI2 server to control the terminal properly
+        cwd: join(__dirname, '../../ui'),
+        stdio: 'inherit', // This allows the UI server to control the terminal properly
         env: env
     });
 
     serverProcess.on('error', (err) => {
-        console.error('Error starting UI2 server:', err.message);
+        console.error('Error starting UI server:', err.message);
         process.exit(1);
     });
 
     serverProcess.on('close', (code) => {
-        console.log(`UI2 server exited with code ${code}`);
-        console.log('UI2 server closed. Press Ctrl+C to shut down the WebSocket server as well.');
+        console.log(`UI server exited with code ${code}`);
+        console.log('UI server closed. Press Ctrl+C to shut down the WebSocket server as well.');
     });
 
     return serverProcess;
@@ -292,11 +292,11 @@ async function main() {
             monitor: webSocketServer.monitor
         });
 
-        // Start UI2 server
-        const ui2Server = startUI2Server(config);
+        // Start UI server
+        const uiServer = startUIServer(config);
 
         // Store the websocket server info for shutdown
-        webSocketServer.ui2Server = ui2Server;
+        webSocketServer.uiServer = uiServer;
 
         console.log('Both servers are running. Press Ctrl+C to stop.');
     } catch (error) {
