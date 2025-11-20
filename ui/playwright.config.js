@@ -2,7 +2,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
-  testDir: './tests',
+  testDir: './tests/e2e', // Point to the new consolidated directory
   /* Run tests in files in parallel */
   fullyParallel: true,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
@@ -31,6 +31,7 @@ export default defineConfig({
   ],
 
   // Start the UI and mock backend servers before running tests and stop them after all tests
+  // This serves the default "mocked" environment used by most tests (e.g. verification.spec.js)
   webServer: {
     command: 'node test-server.js',
     url: 'http://localhost:8080',

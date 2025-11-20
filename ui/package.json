@@ -10,14 +10,11 @@
     "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "test:unit": "NODE_OPTIONS=--experimental-vm-modules jest tests/unit/",
     "test:integration": "NODE_OPTIONS=--experimental-vm-modules jest tests/integration/",
-    "test:e2e": "playwright test",
-    "test:debug": "playwright test tests/debug/",
-    "test:graph": "playwright test tests/graph/",
-    "test:server": "playwright test tests/server/",
-    "test:advanced": "playwright test tests/advanced/",
-    "test:production": "playwright test tests/production/",
-    "test:verification": "playwright test tests/verification/",
-    "test:puppeteer-to-playwright": "echo 'Note: Puppeteer tests have been converted to Playwright'"
+    "test:e2e": "CI=true playwright test --reporter=list",
+    "test:debug": "CI=true playwright test tests/e2e/debug.spec.js --reporter=list",
+    "test:graph": "CI=true playwright test tests/e2e/graph.spec.js --reporter=list",
+    "test:production": "CI=true playwright test tests/e2e/production.spec.js --reporter=list",
+    "test:verification": "CI=true playwright test tests/e2e/verification.spec.js --reporter=list"
   },
   "dependencies": {
     "ws": "^8.14.2"

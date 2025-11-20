@@ -6,6 +6,9 @@ import { GraphConfig } from './GraphConfig.js';
  * Main Configuration module for SeNARS UI that combines all specific configuration modules
  */
 export class Config {
+  // Expose ELEMENT_IDS directly as a static property
+  static ELEMENT_IDS = UIConfig.ELEMENT_IDS;
+
   static getWebSocketConfig() {
     // Get WebSocket configuration from the injected global variable
     const wsConfig = window.WEBSOCKET_CONFIG;

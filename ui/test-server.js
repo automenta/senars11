@@ -1,31 +1,15 @@
 // Test server for Playwright
-import { WebSocketServer } from 'ws';
 import { spawn } from 'child_process';
 import { setTimeout } from 'timers/promises';
 
 // Start the mock backend server
-const mockBackend = spawn('node', ['-e', `
-  import { WebSocketServer } from 'ws';
-
-  const wss = new WebSocketServer({ port: 8081 });
-
-  wss.on('connection', (ws) => {
-    console.log('Mock backend: client connected');
-    ws.on('message', (message) => {
-      const parsed = JSON.parse(message.toString());
-
-      // For debug commands, just acknowledge receipt
-      ws.send(JSON.stringify({
-        type: 'info',
-        payload: { message: 'Acknowledged: ' + parsed.type }
-      }));
-    });
-  });
-  
-  console.log('Mock backend server listening on ws://localhost:8081');
-`], {
+// Using a separate file avoids shell escaping issues
+const mockBackend = spawn('node', ['mock-backend.js'], {
   stdio: 'inherit',
-  shell: true
+  env: {
+    ...process.env,
+    WS_PORT: '8081'
+  }
 });
 
 // Wait for mock backend to start

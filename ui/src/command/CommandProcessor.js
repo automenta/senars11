@@ -127,4 +127,15 @@ export class CommandProcessor {
   executeToggleLive() {
     this.executeControlCommand('control/toggleLive', {});
   }
+
+  /**
+   * Validate that GraphManager is available
+   */
+  _validateGraphManager() {
+    if (!this.graphManager) {
+      this.logger.log('Graph manager not initialized', 'error', '❌');
+      return false;
+    }
+    return true;
+  }
 }
