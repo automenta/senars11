@@ -1,6 +1,6 @@
 export default {
   testEnvironment: 'jsdom',
-  resolver: './jest-resolver.cjs',
+  // resolver: './jest-resolver.cjs',
   testPathIgnorePatterns: [
     '/node_modules/',
     '/tests/advanced/',

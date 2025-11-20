@@ -4,7 +4,7 @@
  */
 
 // Import the Logger class using ES modules
-import { Logger } from '../../src/logging/Logger.js';
+import { Logger } from '../../../src/logging/Logger.js';
 
 describe('Logger', () => {
   let logger;
@@ -29,7 +29,7 @@ describe('Logger', () => {
     expect(logEntries).toHaveLength(1);
 
     const logEntry = logEntries[0];
-    expect(logEntry).toHaveClass('type-info');
+    expect(logEntry.classList.contains('type-info')).toBe(true);
   });
 
   test('should set UI elements correctly', () => {

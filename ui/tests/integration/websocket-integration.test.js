@@ -1,111 +1,157 @@
 /**
  * @file websocket-integration.test.js
- * @description Unit tests for WebSocket communication logic (refactored for testability)
+ * @description Integration tests for WebSocketManager interacting with mocked WebSocket and Config.
  */
 
-// Test WebSocket communication logic without creating actual network resources
-describe('WebSocket Communication Logic Tests', () => {
-    let mockWebSocket;
+import { jest } from '@jest/globals';
+import { WebSocketManager } from '../../src/connection/WebSocketManager.js';
 
-    // Mock WebSocket functionality for testing
+describe('WebSocketManager Integration', () => {
+    let wsManager;
+    let originalWebSocket;
+    let mockWsInstance;
+    let originalWindow;
+
+    beforeAll(() => {
+        originalWebSocket = global.WebSocket;
+        originalWindow = global.window;
+    });
+
+    afterAll(() => {
+        global.WebSocket = originalWebSocket;
+        global.window = originalWindow;
+    });
+
     beforeEach(() => {
-        // Create a simple mock for WebSocket
-        mockWebSocket = {
-            readyState: 1, // OPEN
-            OPEN: 1,
+        // Mock Window and Config
+        global.window = Object.create(originalWindow);
+        Object.defineProperty(global.window, 'location', {
+            value: { hostname: 'localhost', protocol: 'http:' },
+            writable: true
+        });
+        // Ensure WEBSOCKET_CONFIG is undefined so it falls back to defaults or uses window location
+        global.window.WEBSOCKET_CONFIG = undefined;
+        global.window.requestAnimationFrame = (cb) => cb();
+
+        // Mock WebSocket Class
+        mockWsInstance = {
             send: jest.fn(),
             close: jest.fn(),
+            readyState: 1, // OPEN
+            // Event handlers will be assigned by WebSocketManager
             onopen: null,
-            onmessage: null,
+            onclose: null,
             onerror: null,
-            onclose: null
+            onmessage: null
         };
+
+        global.WebSocket = jest.fn(() => mockWsInstance);
+        global.WebSocket.OPEN = 1;
+        global.WebSocket.CLOSED = 3;
+
+        wsManager = new WebSocketManager();
     });
 
-    test('WebSocket communication works end-to-end (refactored)', () => {
-        // Test the core logic without creating real network resources
-        // Verify that the mock is correctly set up
-        expect(mockWebSocket.send).toBeDefined();
-        expect(mockWebSocket.readyState).toBe(1);
-
-        // Simulate the communication logic
-        const testMessage = {
-            type: 'narseseInput',
-            payload: { input: '<bird --> flyer>.' }
-        };
-
-        // Simulate sending a message
-        mockWebSocket.send(JSON.stringify(testMessage));
-
-        // Verify the message was sent
-        expect(mockWebSocket.send).toHaveBeenCalledWith(JSON.stringify(testMessage));
+    afterEach(() => {
+        jest.clearAllMocks();
     });
 
-    test('WebSocket connection handles errors (refactored)', () => {
-        // Test error handling logic in isolation
-        let errorOccurred = false;
-        
-        // Simulate the error handling
-        mockWebSocket.onerror = () => {
-            errorOccurred = true;
-        };
-        
-        // Simulate an error event
-        if (mockWebSocket.onerror) {
-            mockWebSocket.onerror({ message: 'Connection failed' });
+    test('should connect and set status to connected on open', () => {
+        wsManager.connect();
+
+        expect(global.WebSocket).toHaveBeenCalled();
+        expect(wsManager.ws).toBeDefined();
+
+        // Simulate onopen
+        if (wsManager.ws.onopen) {
+            wsManager.ws.onopen();
         }
-        
-        expect(errorOccurred).toBe(true);
+
+        expect(wsManager.getConnectionStatus()).toBe('connected');
     });
 
-    test('WebSocket handles batch events (refactored)', () => {
-        // Test batch event processing in isolation
+    test('should handle incoming messages and dispatch to subscribers', () => {
+        wsManager.connect();
+        // Simulate open
+        wsManager.ws.onopen();
+
+        const mockHandler = jest.fn();
+        wsManager.subscribe('narsese.result', mockHandler);
+
+        const testPayload = { result: 'test' };
+        const message = {
+            type: 'narsese.result',
+            data: testPayload
+        };
+
+        // Simulate onmessage
+        // Note: WebSocketManager expects event.data to be a JSON string
+        const event = { data: JSON.stringify(message) };
+        wsManager.ws.onmessage(event);
+
+        // The handler should be called with the parsed message
+        // WebSocketManager._handleMessage passes the whole message object to handlers
+        expect(mockHandler).toHaveBeenCalledWith(expect.objectContaining({
+            type: 'narsese.result',
+            data: testPayload
+        }));
+    });
+
+    test('should handle batch messages', () => {
+        wsManager.connect();
+        wsManager.ws.onopen();
+
+        const mockHandler = jest.fn();
+        wsManager.subscribe('concept.created', mockHandler);
+
         const batchMessage = {
             type: 'eventBatch',
             data: [
-                { type: 'task.added', data: { task: '<bird --> flyer>.' } },
-                { type: 'concept.created', data: { concept: 'bird' } },
-                { type: 'reasoning.step', data: { step: 'Inference applied' } }
+                { type: 'concept.created', data: { concept: 'A' } },
+                { type: 'concept.created', data: { concept: 'B' } }
             ]
         };
-        
-        // Verify the structure of batch message
-        expect(batchMessage.type).toBe('eventBatch');
-        expect(Array.isArray(batchMessage.data)).toBe(true);
-        expect(batchMessage.data.length).toBe(3);
-        
-        // Verify each event in the batch
-        batchMessage.data.forEach(event => {
-            expect(event).toHaveProperty('type');
-            expect(event).toHaveProperty('data');
-        });
+
+        const event = { data: JSON.stringify(batchMessage) };
+        wsManager.ws.onmessage(event);
+
+        expect(mockHandler).toHaveBeenCalledTimes(2);
+        expect(mockHandler).toHaveBeenCalledWith(expect.objectContaining({
+             payload: { concept: 'A' }
+        }));
+        expect(mockHandler).toHaveBeenCalledWith(expect.objectContaining({
+             payload: { concept: 'B' }
+        }));
     });
 
-    test('WebSocket message types are handled correctly', () => {
-        // Test various message types that the UI should handle
-        const messageTypes = [
-            { type: 'narsese.result', payload: { result: '✅ Success' } },
-            { type: 'narsese.error', payload: { error: '❌ Error' } },
-            { type: 'task.added', payload: { task: '<bird --> flyer>.' } },
-            { type: 'concept.created', payload: { concept: 'bird' } },
-            { type: 'question.answered', payload: { answer: 'Yes' } },
-            { type: 'memorySnapshot', payload: { concepts: [{ id: 'test', term: 'bird' }] } }
-        ];
+    test('should handle connection errors', () => {
+        wsManager.connect();
+        
+        // Simulate onerror
+        wsManager.ws.onerror({ message: 'Connection failed' });
 
-        for (const msg of messageTypes) {
-            // Test that each message type has the expected structure
-            expect(msg).toHaveProperty('type');
-            expect(msg).toHaveProperty('payload');
-            expect(typeof msg.type).toBe('string');
-            expect(typeof msg.payload).toBe('object');
-        }
+        expect(wsManager.getConnectionStatus()).toBe('error');
+    });
 
-        // Verify they would be processed differently by the UI logic
-        expect(messageTypes[0].type).toBe('narsese.result');
-        expect(messageTypes[1].type).toBe('narsese.error');
-        expect(messageTypes[2].type).toBe('task.added');
-        expect(messageTypes[3].type).toBe('concept.created');
-        expect(messageTypes[4].type).toBe('question.answered');
-        expect(messageTypes[5].type).toBe('memorySnapshot');
+    test('should attempt to reconnect on close', () => {
+        jest.useFakeTimers();
+        wsManager.connect();
+        wsManager.ws.onopen(); // Start connected
+
+        // Spy on connect to see if it's called again
+        const connectSpy = jest.spyOn(wsManager, 'connect');
+
+        // Simulate close
+        wsManager.ws.onclose();
+
+        expect(wsManager.getConnectionStatus()).toBe('disconnected');
+
+        // Fast forward time to trigger reconnect
+        // WebSocketConfig.RECONNECT_DELAY is 3000ms
+        jest.advanceTimersByTime(4000);
+
+        expect(connectSpy).toHaveBeenCalledTimes(1);
+
+        jest.useRealTimers();
     });
 });

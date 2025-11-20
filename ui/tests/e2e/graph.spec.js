@@ -14,7 +14,8 @@ test.describe('Graph Visualization', () => {
     await narPage.expectLog('new_concept');
   });
 
-  test('Live toggle functionality works', async ({ page }) => {
+  test('Live toggle functionality works', async ({ narPage, page }) => {
+    // Ensure navigation via narPage fixture
     const toggleBtn = page.locator('#toggle-live');
     await expect(toggleBtn).toHaveText('Pause Live');
     await toggleBtn.click();
