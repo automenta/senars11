@@ -85,14 +85,17 @@ export class SeNARSUI {
             // Process message with appropriate handler
             const {content, type, icon} = this.messageHandler.processMessage(message);
 
+            // Add log entry and update graph simultaneously
             this.logger.addLogEntry(content, type, icon);
-
-            // Update graph for relevant events
             this.graphManager.updateFromMessage(message);
         } catch (error) {
-            const errorMsg = `Error handling message of type ${message?.type || 'unknown'}: ${error.message}`;
+            const errorMsg = `Error handling message of type ${message?.type ?? 'unknown'}: ${error.message}`;
             this.logger.log(errorMsg, 'error', '❌');
-            console.error('Full error details:', error, message);
+
+            // Only log to console in development mode to avoid spam
+            if (process?.env?.NODE_ENV !== 'production') {
+                console.error('Full error details:', error, message);
+            }
         }
     }
 
@@ -102,7 +105,7 @@ export class SeNARSUI {
     _updateMessageCount() {
         const messageCountElement = this.uiElements.get('messageCount');
         if (messageCountElement) {
-            const currentCount = parseInt(messageCountElement.textContent) || 0;
+            const currentCount = parseInt(messageCountElement.textContent) ?? 0;
             messageCountElement.textContent = currentCount + 1;
         }
     }
@@ -113,15 +116,13 @@ export class SeNARSUI {
     _updateStatus(status) {
         const connectionStatusElement = this.uiElements.get('connectionStatus');
         if (connectionStatusElement) {
-            const statusText = capitalizeFirst(status);
-            connectionStatusElement.textContent = statusText;
+            connectionStatusElement.textContent = capitalizeFirst(status);
         }
 
         // Update indicator class
         const indicator = this.uiElements.get('statusIndicator');
         if (indicator) {
-            indicator.className = 'status-indicator';
-            indicator.classList.add(`status-${status}`);
+            indicator.className = `status-indicator status-${status}`;
         }
     }
 }

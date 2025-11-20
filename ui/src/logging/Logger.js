@@ -45,10 +45,7 @@ export class Logger {
         const timestamp = new Date().toLocaleTimeString();
 
         // Create log entry elements with helper function
-        const logEntry = document.createElement('div');
-        logEntry.className = `log-entry type-${type}`;
-
-        // Create elements directly without intermediate object to reduce object creation
+        const logEntry = this._createLogElement('div', `log-entry type-${type}`);
         const iconElement = this._createLogElement('span', 'log-entry-icon', effectiveIcon);
         const contentElement = this._createLogElement('div', 'log-entry-content', content);
         const timeElement = this._createLogElement('span', 'log-entry-time', timestamp, `time-${this.messageCounter}`);
@@ -60,28 +57,32 @@ export class Logger {
         // Add to container if available
         const container = this.uiElements?.logsContainer;
         if (container) {
-            // Store the previous scroll position and max scroll height to detect if user was at bottom
-            const previousScrollTop = container.scrollTop;
-            const previousScrollHeight = container.scrollHeight;
-            const isScrolledToBottom = Math.abs(previousScrollHeight - (previousScrollTop + container.clientHeight)) < 1;
+            const { scrollTop, scrollHeight, clientHeight } = container;
+            const isScrolledToBottom = Math.abs(scrollHeight - (scrollTop + clientHeight)) < 1;
 
             container.appendChild(logEntry);
 
             // Auto-scroll to bottom - only do this if user was already at the bottom to avoid jarring UX
             if (isScrolledToBottom) {
-                // Use requestAnimationFrame to ensure DOM is updated before scrolling
-                if (typeof window !== 'undefined' && window.requestAnimationFrame) {
-                    window.requestAnimationFrame(() => {
-                        container.scrollTop = container.scrollHeight;
-                    });
-                } else {
-                    container.scrollTop = container.scrollHeight;
-                }
+                this._autoScrollToBottom(container);
             }
         }
 
         this.messageCounter++;
         return logEntry;
+    }
+
+    /**
+     * Auto-scroll container to bottom
+     */
+    _autoScrollToBottom(container) {
+        if (typeof window !== 'undefined' && window.requestAnimationFrame) {
+            window.requestAnimationFrame(() => {
+                container.scrollTop = container.scrollHeight;
+            });
+        } else {
+            container.scrollTop = container.scrollHeight;
+        }
     }
 
     /**

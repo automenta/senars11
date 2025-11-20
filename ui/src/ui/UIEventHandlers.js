@@ -18,10 +18,8 @@ export class UIEventHandlers {
         // Define event configuration using a declarative approach
         const eventConfig = this._getEventConfigurations();
 
-        // Apply all event configurations
-        eventConfig.forEach(config => {
-            this._attachEventHandler(config);
-        });
+        // Apply all event configurations efficiently
+        eventConfig.forEach(config => this._attachEventHandler(config));
     }
 
     /**

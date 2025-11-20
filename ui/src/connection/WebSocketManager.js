@@ -132,27 +132,7 @@ export class WebSocketManager {
             const batchLimit = Config.getConstants().MESSAGE_BATCH_SIZE;
             for (let i = 0; i < events.length; i += batchLimit) {
                 const batch = events.slice(i, i + batchLimit);
-
-                // Use requestAnimationFrame to avoid blocking the UI thread with too many messages
-                const processBatch = () => {
-                    // Pre-allocate normalized message objects to reduce creation in loop
-                    for (let j = 0; j < batch.length; j++) {
-                        const event = batch[j];
-                        // Reuse existing _handleMessage method for individual events
-                        this._handleMessage({
-                            type: event.type,
-                            payload: event.data,
-                            timestamp: event.timestamp
-                        });
-                    }
-                };
-
-                if (typeof window !== 'undefined' && window.requestAnimationFrame) {
-                    window.requestAnimationFrame(processBatch);
-                } else {
-                    // Fallback for environments without requestAnimationFrame
-                    processBatch();
-                }
+                this._processBatch(batch);
             }
             return;
         }
@@ -163,18 +143,51 @@ export class WebSocketManager {
         }
 
         // Notify all handlers for this message type and general handlers
-        // Use a more efficient approach by avoiding creating handlerTypes array repeatedly
         const specificHandlers = this.messageHandlers.get(message.type) || [];
         const generalHandlers = this.messageHandlers.get('*') || [];
 
-        // Process specific handlers first
-        for (let i = 0; i < specificHandlers.length; i++) {
-            this._tryHandleMessage(specificHandlers[i], message, message.type);
-        }
+        // Process specific handlers first, then general handlers
+        [...specificHandlers, ...generalHandlers].forEach((handler, index) => {
+            const handlerType = index < specificHandlers.length ? message.type : '*';
+            this._tryHandleMessage(handler, message, handlerType);
+        });
+    }
 
-        // Then process general handlers
-        for (let i = 0; i < generalHandlers.length; i++) {
-            this._tryHandleMessage(generalHandlers[i], message, '*');
+    /**
+     * Process a batch of events
+     */
+    _processBatch(batch) {
+        const processBatch = () => {
+            for (const event of batch) {
+                // Reuse existing _handleMessage method for individual events
+                this._handleMessage({
+                    type: event.type,
+                    payload: event.data,
+                    timestamp: event.timestamp
+                });
+            }
+        };
+
+        if (typeof window !== 'undefined' && window.requestAnimationFrame) {
+            window.requestAnimationFrame(processBatch);
+        } else {
+            // Fallback for environments without requestAnimationFrame
+            processBatch();
+        }
+    }
+
+    /**
+     * Safely execute a handler function with error context
+     */
+    _tryExecuteHandler(handler, arg, handlerType, message = null) {
+        try {
+            handler(arg);
+        } catch (error) {
+            const detailedMsg = message
+                ? `Error in ${handlerType}: ${error.message}. Message details: ${JSON.stringify(message, null, 2)}`
+                : `Error in ${handlerType}: ${error.message}`;
+            this.logger.log(detailedMsg, 'error', '🚨');
+            console.error(`WebSocketManager ${handlerType} error:`, error);
         }
     }
 
@@ -182,14 +195,8 @@ export class WebSocketManager {
      * Safely execute a message handler with error handling
      */
     _tryHandleMessage(handler, message, handlerType) {
-        try {
-            handler(message);
-        } catch (error) {
-            const context = handlerType === '*' ? 'general' : `message handler for ${message.type}`;
-            const errorMsg = `Error in ${context}: ${error.message}`;
-            const detailedErrorMsg = `${errorMsg}. Message details: ${JSON.stringify(message, null, 2)}`;
-            this.logger.log(detailedErrorMsg, 'error', '🚨');
-        }
+        const context = handlerType === '*' ? 'general' : `message handler for ${message.type}`;
+        this._tryExecuteHandler(handler, message, context, message);
     }
 
     /**
@@ -200,20 +207,6 @@ export class WebSocketManager {
         statusHandlers.forEach(handler => {
             this._tryExecuteHandler(handler, status, 'status handler');
         });
-    }
-
-    /**
-     * Safely execute a handler function with error context
-     */
-    _tryExecuteHandler(handler, arg, handlerType) {
-        try {
-            handler(arg);
-        } catch (error) {
-            const errorMsg = `Error in ${handlerType}: ${error.message}`;
-            this.logger.log(errorMsg, 'error', '🚨');
-            // Optionally re-throw or handle specific error types here
-            console.error(`WebSocketManager ${handlerType} error:`, error);
-        }
     }
 
     /**

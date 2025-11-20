@@ -67,14 +67,21 @@ export class CommandRegistry {
      * Default command handlers
      */
     _showHelp(context) {
-        context.logger.log('Available debug commands:', 'info', '💡');
-        context.logger.log('/help - Show this help', 'info', 'ℹ️');
-        context.logger.log('/state - Show connection and state info', 'info', 'ℹ️');
-        context.logger.log('/nodes - List all nodes in graph', 'info', 'ℹ️');
-        context.logger.log('/tasks - Show task nodes', 'info', 'ℹ️');
-        context.logger.log('/concepts - Show concept nodes', 'info', 'ℹ️');
-        context.logger.log('/refresh - Request graph refresh', 'info', 'ℹ️');
-        context.logger.log('/clear - Clear log messages', 'info', 'ℹ️');
+        const helpMessages = [
+            'Available debug commands:',
+            '/help - Show this help',
+            '/state - Show connection and state info',
+            '/nodes - List all nodes in graph',
+            '/tasks - Show task nodes',
+            '/concepts - Show concept nodes',
+            '/refresh - Request graph refresh',
+            '/clear - Clear log messages'
+        ];
+
+        helpMessages.forEach(msg =>
+            context.logger.log(msg, 'info', msg.includes('Available') ? '💡' : 'ℹ️')
+        );
+
         return true;
     }
 
@@ -86,22 +93,22 @@ export class CommandRegistry {
     }
 
     _listNodes(context) {
-        const {commandProcessor, graphManager, logger} = context;
+        const { commandProcessor, graphManager, logger } = context;
         if (!commandProcessor._validateGraphManager()) return false;
 
         const nodeCount = graphManager.getNodeCount();
         logger.log(`Graph has ${nodeCount} nodes`, 'info', '🌐');
 
         const allNodes = graphManager.cy.nodes();
-        allNodes.forEach(node => {
+        for (const node of allNodes) {  // Using for...of for better performance
             try {
-                const label = node.data('label') || 'unnamed';
-                const id = node.id() || 'no-id';
+                const label = node.data('label') ?? 'unnamed';
+                const id = node.id() ?? 'no-id';
                 logger.log(`Node: ${label} (ID: ${id})`, 'info', '📍');
             } catch (error) {
                 logger.log(`Error getting node data: ${error.message}`, 'error', '❌');
             }
-        });
+        }
         return true;
     }
 

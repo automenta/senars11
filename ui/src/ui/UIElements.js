@@ -53,9 +53,6 @@ export class UIElements {
      * Bulk get multiple elements by keys
      */
     getMultiple(keys) {
-        return keys.reduce((acc, key) => {
-            acc[key] = this.get(key);
-            return acc;
-        }, {});
+        return Object.fromEntries(keys.map(key => [key, this.get(key)]));
     }
 }

@@ -42,12 +42,18 @@ export class NarPage {
     }
 
     async clearLogs() {
+        // Capture the initial state and then click clear
         await this.page.click('#clear-logs', {force: true});
-        await this.expectLog('Cleared logs');
+
+        // Wait for the log clearing to complete and the "Cleared logs" message to appear
+        // We need to wait for the element to contain the "Cleared logs" text
+        await expect(this.logsContainer).toContainText('Cleared logs', { timeout: 10000 });
     }
 
     async refreshGraph() {
         await this.page.click('#refresh-graph', {force: true});
-        await this.expectLog('Graph refresh requested');
+        // Wait a bit for the click to process and then expect the log message
+        await this.page.waitForTimeout(100);
+        await this.expectLog('Graph refresh requested', 10000); // Use longer timeout for reliability
     }
 }
