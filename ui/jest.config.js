@@ -1,5 +1,6 @@
 export default {
   testEnvironment: 'jsdom',
+  resolver: './jest-resolver.cjs',
   testPathIgnorePatterns: [
     '/node_modules/',
     '/tests/advanced/',
@@ -12,7 +13,7 @@ export default {
     '/tests/websocket/'
   ],
   setupFilesAfterEnv: [],
-  setupFiles: ['<rootDir>/tests/setup.js'],
+  // setupFiles: ['<rootDir>/tests/setup.js'],
   coveragePathIgnorePatterns: [
     '/node_modules/',
     '/tests/advanced/',
@@ -25,12 +26,7 @@ export default {
     '/tests/websocket/'
   ],
   transform: {
-    '^.+\\.(js|jsx|mjs)$': ['babel-jest', {
-      presets: ['@babel/preset-env'],
-      targets: {
-        node: 'current'
-      }
-    }]
+    '^.+\\.(js|jsx|mjs)$': 'babel-jest'
   },
   moduleFileExtensions: ['js', 'jsx', 'json', 'mjs', 'cjs']
 };
