@@ -23,12 +23,13 @@ let sharedBrowser = null;
 export async function getSharedBrowser() {
     if (!sharedBrowser) {
         sharedBrowser = await puppeteer.launch({
-            headless: true,
+            headless: 'new',  // Use the new headless mode to avoid deprecation warnings
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
                 '--disable-dev-shm-usage',
-                '--disable-web-security'
+                '--disable-web-security',
+                '--disable-features=VizDisplayCompositor'
             ]
         });
     }

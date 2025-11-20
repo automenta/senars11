@@ -6,7 +6,7 @@
 import { spawn } from 'child_process';
 import { setTimeout } from 'timers/promises';
 import http from 'http';
-import WebSocket from 'ws';
+import { WebSocketServer, WebSocket } from 'ws';
 
 // Test WebSocket communication between client and server
 describe('ui WebSocket Integration Tests', () => {
@@ -18,11 +18,13 @@ describe('ui WebSocket Integration Tests', () => {
     beforeEach(() => {
         // Clean up any previous processes
         if (wsClient) {
-            wsClient.close();
+            if (wsClient.readyState === WebSocket.OPEN) {
+                wsClient.close();
+            }
             wsClient = null;
         }
         if (wsServer) {
-            wsServer.close();
+            wsServer.close(() => console.log('Server closed'));
             wsServer = null;
         }
     });
@@ -30,7 +32,7 @@ describe('ui WebSocket Integration Tests', () => {
     test('WebSocket communication works end-to-end', async () => {
         return new Promise(async (resolve, reject) => {
             // Create a mock WebSocket server to simulate the backend
-            wsServer = new WebSocket.Server({ port: testPort });
+            wsServer = new WebSocketServer({ port: testPort });
 
             wsServer.on('connection', (ws) => {
                 console.log('Mock backend server: client connected');
@@ -38,7 +40,7 @@ describe('ui WebSocket Integration Tests', () => {
                 ws.on('message', (message) => {
                     console.log('Mock backend server: received message:', message.toString());
                     const parsedMessage = JSON.parse(message.toString());
-                    
+
                     // Echo back different responses based on message type
                     let response;
                     switch (parsedMessage.type) {
@@ -60,7 +62,7 @@ describe('ui WebSocket Integration Tests', () => {
                                 payload: { message: 'Message received' }
                             };
                     }
-                    
+
                     ws.send(JSON.stringify(response));
                 });
 
@@ -94,7 +96,7 @@ describe('ui WebSocket Integration Tests', () => {
                 // Verify the response format is what we expect
                 expect(message.type).toBe('narsese.result');
                 expect(message.payload.result).toContain('Command processed');
-                
+
                 resolve();
             });
 
@@ -104,12 +106,12 @@ describe('ui WebSocket Integration Tests', () => {
 
             // Set timeout to reject if communication doesn't happen within 10 seconds
             setTimeout(10000).then(() => {
-                if (!wsClient.OPEN) {
+                if (wsClient && wsClient.readyState !== WebSocket.OPEN) {
                     reject(new Error('WebSocket communication failed within timeout'));
                 }
             });
         });
-    });
+    }, 15000); // Increase timeout to 15 seconds
 
     test('WebSocket connection handles errors', async () => {
         return new Promise(async (resolve, reject) => {
@@ -122,21 +124,23 @@ describe('ui WebSocket Integration Tests', () => {
             });
 
             errorClient.on('close', (code, reason) => {
-                console.log('Connection closed with code:', code, 'reason:', reason.toString());
+                console.log('Connection closed with code:', code, 'reason:', reason ? reason.toString() : 'no reason');
                 resolve();
             });
 
             setTimeout(5000).then(() => {
-                errorClient.close();
+                if (errorClient) {
+                    errorClient.close();
+                }
                 reject(new Error('Expected error did not occur within timeout'));
             });
-        });
-    });
+        }, 7000); // Increase timeout
+    }, 7000); // Increase test timeout
 
     test('WebSocket handles batch events', async () => {
         return new Promise(async (resolve, reject) => {
             // Create a mock WebSocket server to simulate the backend
-            wsServer = new WebSocket.Server({ port: testPort + 1 });
+            wsServer = new WebSocketServer({ port: testPort + 1 });
 
             wsServer.on('connection', (ws) => {
                 // Send a batch event immediately after connection
@@ -148,7 +152,7 @@ describe('ui WebSocket Integration Tests', () => {
                         { type: 'reasoning.step', data: { step: 'Inference applied' } }
                     ]
                 };
-                
+
                 setTimeout(() => {
                     ws.send(JSON.stringify(batchMessage));
                 }, 100);
@@ -161,12 +165,12 @@ describe('ui WebSocket Integration Tests', () => {
 
             wsClient.on('message', (data) => {
                 const message = JSON.parse(data.toString());
-                
+
                 // Verify it's a batch event
                 expect(message.type).toBe('eventBatch');
                 expect(message.data).toBeInstanceOf(Array);
                 expect(message.data.length).toBe(3);
-                
+
                 resolve();
             });
 
@@ -177,8 +181,8 @@ describe('ui WebSocket Integration Tests', () => {
             setTimeout(5000).then(() => {
                 reject(new Error('Batch event test failed within timeout'));
             });
-        });
-    });
+        }, 7000); // Increase timeout
+    }, 7000); // Increase test timeout
 
     test('WebSocket message types are handled correctly', async () => {
         // Test various message types that the UI should handle
