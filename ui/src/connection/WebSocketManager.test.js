@@ -3,24 +3,21 @@
  * These tests demonstrate the proper structure for unit testing
  */
 
-// Mock dependencies
-const mockConfig = {
-  getConstants: () => ({
-    MAX_RECONNECT_ATTEMPTS: 3,
-    RECONNECT_DELAY: 100,
-    MESSAGE_BATCH_SIZE: 10
-  }),
-  getWebSocketUrl: () => 'ws://localhost:8081'
-};
-
-const mockLogger = {
-  log: jest.fn()
-};
-
-// Import the actual class to test
-// import { WebSocketManager } from '../src/connection/WebSocketManager.js';
-
 describe('WebSocketManager', () => {
+  // Mock dependencies
+  const mockConfig = {
+    getConstants: () => ({
+      MAX_RECONNECT_ATTEMPTS: 3,
+      RECONNECT_DELAY: 100,
+      MESSAGE_BATCH_SIZE: 10
+    }),
+    getWebSocketUrl: () => 'ws://localhost:8081'
+  };
+
+  const mockLogger = {
+    log: jest.fn()
+  };
+
   let wsManager;
   let realWebSocket;
 
@@ -47,7 +44,7 @@ describe('WebSocketManager', () => {
         close: jest.fn()
       };
     });
-    
+
     // Create WebSocketManager instance
     // wsManager = new WebSocketManager();
   });
@@ -71,18 +68,18 @@ describe('WebSocketManager', () => {
     // Add message handler and test message processing
     const mockHandler = jest.fn();
     // wsManager.subscribe('test', mockHandler);
-    
+
     // Simulate receiving a message
     // const message = { type: 'test', payload: { data: 'test' } };
     // wsManager._handleMessage(message);
-    
+
     // expect(mockHandler).toHaveBeenCalledWith(message);
   });
 
   test('should send messages correctly when connected', () => {
     // wsManager.ws = { readyState: WebSocket.OPEN, send: jest.fn() };
     // const result = wsManager.sendMessage('test', { data: 'test' });
-    
+
     // expect(result).toBe(true);
     // expect(wsManager.ws.send).toHaveBeenCalledWith('{"type":"test","payload":{"data":"test"}}');
   });
@@ -90,9 +87,7 @@ describe('WebSocketManager', () => {
   test('should not send messages when disconnected', () => {
     // wsManager.ws = { readyState: WebSocket.CLOSED, send: jest.fn() };
     // const result = wsManager.sendMessage('test', { data: 'test' });
-    
+
     // expect(result).toBe(false);
   });
 });
-
-export default WebSocketManager;

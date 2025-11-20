@@ -1,38 +1,38 @@
 /**
- * @file test-e2e.js
- * @description End-to-end tests for ui UI features using Puppeteer
+ * @file e2e.test.js
+ * @description End-to-end tests for UI features using Playwright
  */
 
-import puppeteer from 'puppeteer';
+import { test, expect } from '@playwright/test';
 import { spawn } from 'child_process';
 import { setTimeout } from 'timers/promises';
 
 // End-to-end tests for UI
-describe('ui End-to-End Tests', () => {
-    let browser = null;
-    let page = null;
+// Note: These tests are configured in playwright.config.js and run with `npx playwright test`
+
+test.describe('UI End-to-End Tests', () => {
     let serverProcess = null;
     let mockBackendProcess = null;
 
     const uiPort = 8094;
     const wsPort = 8095;
 
-    beforeAll(async () => {
+    test.beforeAll(async () => {
         // Start a mock backend server to simulate the NARS backend
         mockBackendProcess = spawn('node', ['-e', `
             import { WebSocketServer } from 'ws';
-            
+
             const wss = new WebSocketServer({ port: ${wsPort} });
-            
+
             console.log('Mock backend server listening on ws://localhost:${wsPort}');
-            
+
             wss.on('connection', (ws) => {
                 console.log('Mock backend: client connected');
-                
+
                 ws.on('message', (message) => {
                     console.log('Mock backend: received:', message.toString());
                     const parsed = JSON.parse(message.toString());
-                    
+
                     // Respond to different message types like a real backend would
                     let response;
                     switch (parsed.type) {
@@ -54,10 +54,10 @@ describe('ui End-to-End Tests', () => {
                                 payload: { message: 'Received: ' + parsed.type }
                             };
                     }
-                    
+
                     ws.send(JSON.stringify(response));
                 });
-                
+
                 // Send periodic updates like a real backend might
                 const interval = setInterval(() => {
                     ws.send(JSON.stringify({
@@ -65,7 +65,7 @@ describe('ui End-to-End Tests', () => {
                         payload: { message: 'Periodic update ' + Date.now() }
                     }));
                 }, 5000);
-                
+
                 ws.on('close', () => {
                     clearInterval(interval);
                     console.log('Mock backend: client disconnected');
@@ -94,7 +94,7 @@ describe('ui End-to-End Tests', () => {
         await setTimeout(2000);
     });
 
-    afterAll(async () => {
+    test.afterAll(async () => {
         // Clean up processes
         if (mockBackendProcess) {
             mockBackendProcess.kill();
@@ -102,170 +102,195 @@ describe('ui End-to-End Tests', () => {
         if (serverProcess) {
             serverProcess.kill();
         }
-        if (browser) {
-            await browser.close();
-        }
     });
 
-    beforeEach(async () => {
-        // Launch browser for each test
-        browser = await puppeteer.launch({
-            headless: true, // Set to false if you want to see the browser
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-web-security'
-            ]
-        });
-        
-        page = await browser.newPage();
-        
+    test('UI loads and connects to WebSocket', async ({ page }) => {
         // Navigate to the UI
         await page.goto(`http://localhost:${uiPort}`, {
-            waitUntil: 'networkidle0',
+            waitUntil: 'networkidle',
             timeout: 10000
         });
-        
+
         // Wait for WebSocket connection to be established
         await page.waitForFunction(() => {
             const statusElement = document.querySelector('#connection-status');
             return statusElement && statusElement.textContent.toLowerCase().includes('connected');
         }, { timeout: 10000 });
-    });
 
-    afterEach(async () => {
-        if (browser) {
-            await browser.close();
-        }
-    });
-
-    test('UI loads and connects to WebSocket', async () => {
         // Verify the UI loaded properly
-        const title = await page.title();
-        expect(title).toBe('SeNARS UI');
-        
+        await expect(page).toHaveTitle('SeNARS UI');
+
         // Verify connection status shows as connected
-        const connectionStatus = await page.$eval('#connection-status', el => el.textContent);
+        const connectionStatus = await page.locator('#connection-status').textContent();
         expect(connectionStatus.toLowerCase()).toContain('connected');
-        
+
         // Verify status indicator has the correct class
-        const statusClass = await page.$eval('#status-indicator', el => el.className);
-        expect(statusClass).toContain('status-connected');
+        await expect(page.locator('#status-indicator')).toHaveClass(/status-connected/);
     });
 
-    test('Command input functionality', async () => {
+    test('Command input functionality', async ({ page }) => {
+        // Navigate to the UI
+        await page.goto(`http://localhost:${uiPort}`, {
+            waitUntil: 'networkidle',
+            timeout: 10000
+        });
+
+        // Wait for connection
+        await page.waitForFunction(() => {
+            const statusElement = document.querySelector('#connection-status');
+            return statusElement && statusElement.textContent.toLowerCase().includes('connected');
+        }, { timeout: 10000 });
+
         // Test entering and sending a command
-        await page.type('#command-input', '<bird --> flyer>.');
+        await page.fill('#command-input', '<bird --> flyer>.');
         await page.click('#send-button');
-        
+
         // Check that the command appears in the logs
-        await page.waitForFunction(() => {
-            const logs = document.querySelector('#logs-container');
-            return logs && logs.textContent.includes('<bird --> flyer>.');
-        }, { timeout: 5000 });
-        
-        // Verify the command was sent by checking for the input marker
-        const logsContent = await page.$eval('#logs-container', el => el.textContent);
-        expect(logsContent).toContain('> <bird --> flyer>.');
+        await expect(page.locator('#logs-container')).toContainText('> <bird --> flyer>.');
     });
 
-    test('Quick commands functionality', async () => {
-        // Select a quick command from the dropdown
-        await page.select('#quick-commands', '<cat --> animal> .');
+    test('Quick commands functionality', async ({ page }) => {
+        // Navigate to the UI
+        await page.goto(`http://localhost:${uiPort}`, {
+            waitUntil: 'networkidle',
+            timeout: 10000
+        });
+
+        // Wait for connection
+        await page.waitForFunction(() => {
+            const statusElement = document.querySelector('#connection-status');
+            return statusElement && statusElement.textContent.toLowerCase().includes('connected');
+        }, { timeout: 10000 });
+
+        // Select a quick command from the dropdown and execute
+        await page.locator('#quick-commands').selectOption('<cat --> animal> .');
         await page.click('#exec-quick');
-        
+
         // Verify the quick command was executed
-        await page.waitForFunction(() => {
-            const logs = document.querySelector('#logs-container');
-            return logs && logs.textContent.includes('<cat --> animal>');
-        }, { timeout: 5000 });
+        await expect(page.locator('#logs-container')).toContainText('<cat --> animal>');
     });
 
-    test('Debug commands work', async () => {
+    test('Debug commands work', async ({ page }) => {
+        // Navigate to the UI
+        await page.goto(`http://localhost:${uiPort}`, {
+            waitUntil: 'networkidle',
+            timeout: 10000
+        });
+
+        // Wait for connection
+        await page.waitForFunction(() => {
+            const statusElement = document.querySelector('#connection-status');
+            return statusElement && statusElement.textContent.toLowerCase().includes('connected');
+        }, { timeout: 10000 });
+
         // Test the /help command
-        await page.type('#command-input', '/help');
+        await page.fill('#command-input', '/help');
         await page.click('#send-button');
-        
+
         // Verify help text appears in logs
-        await page.waitForFunction(() => {
-            const logs = document.querySelector('#logs-container');
-            return logs && logs.textContent.includes('Available debug commands:');
-        }, { timeout: 5000 });
-        
+        await expect(page.locator('#logs-container')).toContainText('Available debug commands:');
+
         // Test /state command
-        await page.type('#command-input', '/state');
+        await page.fill('#command-input', '/state');
         await page.click('#send-button');
-        
-        await page.waitForFunction(() => {
-            const logs = document.querySelector('#logs-container');
-            return logs && logs.textContent.includes('Connection:');
-        }, { timeout: 5000 });
+
+        await expect(page.locator('#logs-container')).toContainText('Connection:');
     });
 
-    test('Graph controls functionality', async () => {
+    test('Graph controls functionality', async ({ page }) => {
+        // Navigate to the UI
+        await page.goto(`http://localhost:${uiPort}`, {
+            waitUntil: 'networkidle',
+            timeout: 10000
+        });
+
+        // Wait for connection
+        await page.waitForFunction(() => {
+            const statusElement = document.querySelector('#connection-status');
+            return statusElement && statusElement.textContent.toLowerCase().includes('connected');
+        }, { timeout: 10000 });
+
         // Test refresh graph button
-        const initialCount = await page.$eval('#message-count', el => parseInt(el.textContent));
-        
         await page.click('#refresh-graph');
-        
+
         // Check that a message was sent
-        await page.waitForFunction(() => {
-            const logs = document.querySelector('#logs-container');
-            return logs && logs.textContent.includes('Graph refresh requested');
-        }, { timeout: 5000 });
+        await expect(page.locator('#logs-container')).toContainText('Graph refresh requested');
     });
 
-    test('Demo functionality', async () => {
+    test('Demo functionality', async ({ page }) => {
+        // Navigate to the UI
+        await page.goto(`http://localhost:${uiPort}`, {
+            waitUntil: 'networkidle',
+            timeout: 10000
+        });
+
+        // Wait for connection
+        await page.waitForFunction(() => {
+            const statusElement = document.querySelector('#connection-status');
+            return statusElement && statusElement.textContent.toLowerCase().includes('connected');
+        }, { timeout: 10000 });
+
         // Select and run a demo
-        await page.select('#demo-select', 'inheritance');
+        await page.locator('#demo-select').selectOption('inheritance');
         await page.click('#run-demo');
-        
+
         // Check that demo commands start appearing in logs
-        await page.waitForFunction(() => {
-            const logs = document.querySelector('#logs-container');
-            return logs && logs.textContent.includes('Running inheritance demo');
-        }, { timeout: 5000 });
+        await expect(page.locator('#logs-container')).toContainText('Running inheritance demo');
     });
 
-    test('Clear logs functionality', async () => {
-        // Add some content to logs first
-        await page.type('#command-input', '<test --> command>.');
-        await page.click('#send-button');
-        
-        // Wait for the log to appear
+    test('Clear logs functionality', async ({ page }) => {
+        // Navigate to the UI
+        await page.goto(`http://localhost:${uiPort}`, {
+            waitUntil: 'networkidle',
+            timeout: 10000
+        });
+
+        // Wait for connection
         await page.waitForFunction(() => {
-            const logs = document.querySelector('#logs-container');
-            return logs && logs.textContent.includes('> <test --> command>.');
-        }, { timeout: 5000 });
-        
+            const statusElement = document.querySelector('#connection-status');
+            return statusElement && statusElement.textContent.toLowerCase().includes('connected');
+        }, { timeout: 10000 });
+
+        // Add some content to logs first
+        await page.fill('#command-input', '<test --> command>.');
+        await page.click('#send-button');
+
+        // Wait for the log to appear
+        await expect(page.locator('#logs-container')).toContainText('> <test --> command>.');
+
         // Then clear the logs
         await page.click('#clear-logs');
-        
+
         // Check for the clear message
-        await page.waitForFunction(() => {
-            const logs = document.querySelector('#logs-container');
-            return logs && logs.textContent.includes('Cleared logs');
-        }, { timeout: 5000 });
+        await expect(page.locator('#logs-container')).toContainText('Cleared logs');
     });
 
-    test('History functionality', async () => {
+    test('History functionality', async ({ page }) => {
+        // Navigate to the UI
+        await page.goto(`http://localhost:${uiPort}`, {
+            waitUntil: 'networkidle',
+            timeout: 10000
+        });
+
+        // Wait for connection
+        await page.waitForFunction(() => {
+            const statusElement = document.querySelector('#connection-status');
+            return statusElement && statusElement.textContent.toLowerCase().includes('connected');
+        }, { timeout: 10000 });
+
         // Execute a few commands first
-        await page.type('#command-input', '<first --> command>.');
+        await page.fill('#command-input', '<first --> command>.');
         await page.click('#send-button');
         await setTimeout(500);
-        
-        await page.type('#command-input', '<second --> command>.');
+
+        await page.fill('#command-input', '<second --> command>.');
         await page.click('#send-button');
         await setTimeout(500);
-        
+
         // Click history button
         await page.click('#show-history');
-        
+
         // Verify history appears in logs
-        await page.waitForFunction(() => {
-            const logs = document.querySelector('#logs-container');
-            return logs && logs.textContent.includes('Command History');
-        }, { timeout: 5000 });
+        await expect(page.locator('#logs-container')).toContainText('Command History');
     });
 });

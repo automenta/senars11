@@ -41,7 +41,7 @@ export class Logger {
    * Add a log entry to the container
    */
   addLogEntry(content, type = 'info', icon = null) {
-    const effectiveIcon = icon ?? this.icons[type] ?? this.icons[UI_CONSTANTS.LOG_TYPES.INFO.toLowerCase()];
+    const effectiveIcon = icon ?? this.icons[type] ?? this.icons[UI_CONSTANTS.LOG_TYPES.INFO];
     const timestamp = new Date().toLocaleTimeString();
 
     // Create log entry elements with helper function
