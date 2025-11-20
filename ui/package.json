@@ -14,18 +14,23 @@
     "test:debug": "CI=true playwright test tests/e2e/debug.spec.js --reporter=list",
     "test:graph": "CI=true playwright test tests/e2e/graph.spec.js --reporter=list",
     "test:production": "CI=true playwright test tests/e2e/production.spec.js --reporter=list",
-    "test:verification": "CI=true playwright test tests/e2e/verification.spec.js --reporter=list"
+    "test:verification": "CI=true playwright test tests/e2e/verification.spec.js --reporter=list",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
   },
   "dependencies": {
-    "ws": "^8.14.2"
+    "ws": "^8.18.3"
   },
   "devDependencies": {
     "@babel/preset-env": "^7.28.5",
     "@playwright/test": "^1.56.1",
+    "@storybook/addon-docs": "^10.0.8",
+    "@storybook/html-vite": "^10.0.8",
     "babel-jest": "^29.7.0",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
-    "nodemon": "^3.0.1"
+    "nodemon": "^3.0.1",
+    "storybook": "^10.0.8"
   },
   "keywords": [
     "senars",

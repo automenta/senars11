@@ -133,8 +133,19 @@ export class Logger {
      */
     clearLogs() {
         if (this.uiElements?.logsContainer) {
-            this.uiElements.logsContainer.innerHTML = '';
+            try {
+                this.uiElements.logsContainer.innerHTML = '';
+                // Double check clean up with while loop (robustness)
+                while (this.uiElements.logsContainer.firstChild) {
+                    this.uiElements.logsContainer.removeChild(this.uiElements.logsContainer.firstChild);
+                }
+            } catch (e) {
+                console.error('[Logger] Error clearing logs:', e);
+            }
+
             this.log('Cleared logs', 'info', '🧹');
+        } else {
+            console.error('[Logger] Cannot clear logs: logsContainer not found');
         }
     }
 }

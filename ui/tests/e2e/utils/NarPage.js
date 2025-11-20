@@ -42,12 +42,18 @@ export class NarPage {
     }
 
     async clearLogs() {
-        // Capture the initial state and then click clear
-        await this.page.click('#clear-logs', {force: true});
+        // Use command instead of button to ensure we test the command processor logic
+        await this.sendCommand('/clear');
 
         // Wait for the log clearing to complete and the "Cleared logs" message to appear
         // We need to wait for the element to contain the "Cleared logs" text
         await expect(this.logsContainer).toContainText('Cleared logs', { timeout: 10000 });
+    }
+
+    async sendCommand(command) {
+        await this.commandInput.fill(''); // Clear first
+        await this.commandInput.fill(command);
+        await this.sendButton.click();
     }
 
     async refreshGraph() {

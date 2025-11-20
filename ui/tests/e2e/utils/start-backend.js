@@ -2,7 +2,7 @@ import {NAR} from '../../../../src/nar/NAR.js';
 import {WebSocketMonitor} from '../../../../src/server/WebSocketMonitor.js';
 
 const wsPort = process.env.WS_PORT ? parseInt(process.env.WS_PORT) : 8090;
-const wsHost = process.env.WS_HOST || 'localhost';
+const wsHost = process.env.WS_HOST || '127.0.0.1';
 
 console.log(`Starting Real NAR Backend on ${wsHost}:${wsPort}`);
 

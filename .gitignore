@@ -25,3 +25,6 @@ ui/test-results/
 ui/test-results.json
 coverage
 performance-results
+
+*storybook.log
+storybook-static

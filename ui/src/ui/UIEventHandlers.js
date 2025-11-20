@@ -80,6 +80,7 @@ export class UIEventHandlers {
         try {
             const commandInput = this.uiElements.get('commandInput');
             if (!commandInput) {
+                console.error('[UIEventHandlers] Command input element not found');
                 this.commandProcessor.logger.log('Command input element not found', 'error', '❌');
                 return;
             }
