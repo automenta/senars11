@@ -31,13 +31,12 @@ export class UIElements {
       notificationContainer: 'notification-container'
     };
 
-    const ids = elementIds || defaultIds;
+    const ids = elementIds ?? defaultIds;
 
-    // Use reduce to create elements map efficiently
-    return Object.entries(ids).reduce((acc, [key, id]) => {
-      acc[key] = document.getElementById(id);
-      return acc;
-    }, {});
+    // Use Object.fromEntries and map for cleaner transformation
+    return Object.fromEntries(
+      Object.entries(ids).map(([key, id]) => [key, document.getElementById(id)])
+    );
   }
 
   /**

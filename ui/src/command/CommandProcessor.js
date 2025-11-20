@@ -16,25 +16,24 @@ export class CommandProcessor {
    * Process and send a command
    */
   processCommand(command, isDebug = false) {
-    if (!command?.trim()) return false;
-
-    command = command.trim();
+    const trimmedCommand = command?.trim();
+    if (!trimmedCommand) return false;
 
     // Add to history
-    this._addToHistory(command);
+    this._addToHistory(trimmedCommand);
 
     // Log the command
-    this.logger.log(`> ${command}`, 'input', '⌨️');
+    this.logger.log(`> ${trimmedCommand}`, 'input', '⌨️');
 
     // Handle debug commands locally if they start with /
-    if (command.startsWith('/')) {
-      this._processDebugCommand(command);
+    if (trimmedCommand.startsWith('/')) {
+      this._processDebugCommand(trimmedCommand);
       return true;
     }
 
     // Send via WebSocket
     if (this.webSocketManager.isConnected()) {
-      this.webSocketManager.sendMessage('narseseInput', { input: command });
+      this.webSocketManager.sendMessage('narseseInput', { input: trimmedCommand });
       return true;
     } else {
       this.logger.log(`Cannot send: Not connected`, 'error', '❌');
@@ -55,20 +54,23 @@ export class CommandProcessor {
       '/nodes': () => this._listNodes(),
       '/tasks': () => this._listTasks(),
       '/concepts': () => this._listConcepts(),
-      '/refresh': () => {
-        this.webSocketManager.sendMessage('control/refresh', {});
-        this.logger.log('Graph refresh requested', 'info', '🔄');
-      },
+      '/refresh': () => this._requestRefresh(),
       '/clear': () => this.logger.clearLogs()
     };
 
     // Execute the command or show unknown command message
     const handler = debugCommands[cmd];
-    if (handler) {
-      handler();
-    } else {
-      this.logger.log(`Unknown debug command: ${command}. Type /help for available commands.`, 'warning', '⚠️');
-    }
+    handler
+      ? handler()
+      : this.logger.log(`Unknown debug command: ${command}. Type /help for available commands.`, 'warning', '⚠️');
+  }
+
+  /**
+   * Helper method for refreshing graph
+   */
+  _requestRefresh() {
+    this.webSocketManager.sendMessage('control/refresh', {});
+    this.logger.log('Graph refresh requested', 'info', '🔄');
   }
 
   /**
@@ -97,17 +99,20 @@ export class CommandProcessor {
    * List all nodes
    */
   _listNodes() {
-    if (!this.graphManager || !this.graphManager.cy) {
-      this.logger.log('Graph not initialized', 'error', '❌');
-      return;
-    }
+    if (!this._validateGraphManager()) return;
 
     const nodeCount = this.graphManager.getNodeCount();
     this.logger.log(`Graph has ${nodeCount} nodes`, 'info', '🌐');
 
     const allNodes = this.graphManager.cy.nodes();
     allNodes.forEach(node => {
-      this.logger.log(`Node: ${node.data('label')} (ID: ${node.id()})`, 'info', '📍');
+      try {
+        const label = node.data('label') || 'unnamed';
+        const id = node.id() || 'no-id';
+        this.logger.log(`Node: ${label} (ID: ${id})`, 'info', '📍');
+      } catch (error) {
+        this.logger.log(`Error getting node data: ${error.message}`, 'error', '❌');
+      }
     });
   }
 
@@ -115,34 +120,57 @@ export class CommandProcessor {
    * List task nodes
    */
   _listTasks() {
-    if (!this.graphManager || !this.graphManager.cy) {
-      this.logger.log('Graph not initialized', 'error', '❌');
-      return;
+    if (!this._validateGraphManager()) return;
+
+    try {
+      const taskNodes = this.graphManager.getTaskNodes();
+      this.logger.log(`Found ${taskNodes?.length || 0} task nodes`, 'info', '📋');
+
+      taskNodes?.forEach(node => {
+        try {
+          const label = node.data('label') || 'unnamed task';
+          this.logger.log(`Task: ${label}`, 'task', '📋');
+        } catch (error) {
+          this.logger.log(`Error getting task node data: ${error.message}`, 'error', '❌');
+        }
+      });
+    } catch (error) {
+      this.logger.log(`Error listing task nodes: ${error.message}`, 'error', '❌');
     }
-
-    const taskNodes = this.graphManager.getTaskNodes();
-    this.logger.log(`Found ${taskNodes?.length || 0} task nodes`, 'info', '📋');
-
-    taskNodes?.forEach(node => {
-      this.logger.log(`Task: ${node.data('label')}`, 'task', '📋');
-    });
   }
 
   /**
    * List concept nodes
    */
   _listConcepts() {
+    if (!this._validateGraphManager()) return;
+
+    try {
+      const conceptNodes = this.graphManager.getConceptNodes();
+      this.logger.log(`Found ${conceptNodes?.length || 0} concept nodes`, 'info', '🧠');
+
+      conceptNodes?.forEach(node => {
+        try {
+          const label = node.data('label') || 'unnamed concept';
+          this.logger.log(`Concept: ${label}`, 'concept', '🧠');
+        } catch (error) {
+          this.logger.log(`Error getting concept node data: ${error.message}`, 'error', '❌');
+        }
+      });
+    } catch (error) {
+      this.logger.log(`Error listing concept nodes: ${error.message}`, 'error', '❌');
+    }
+  }
+
+  /**
+   * Validate that graph manager and cy are available
+   */
+  _validateGraphManager() {
     if (!this.graphManager || !this.graphManager.cy) {
       this.logger.log('Graph not initialized', 'error', '❌');
-      return;
+      return false;
     }
-
-    const conceptNodes = this.graphManager.getConceptNodes();
-    this.logger.log(`Found ${conceptNodes?.length || 0} concept nodes`, 'info', '🧠');
-
-    conceptNodes?.forEach(node => {
-      this.logger.log(`Concept: ${node.data('label')}`, 'concept', '🧠');
-    });
+    return true;
   }
 
   /**

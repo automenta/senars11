@@ -39,40 +39,54 @@ export class Logger {
    * Add a log entry to the container
    */
   addLogEntry(content, type = 'info', icon = null) {
-    if (!icon) {
-      icon = this.icons[type] || this.icons.info;
-    }
+    const effectiveIcon = icon ?? this.icons[type] ?? this.icons.info;
+    const timestamp = new Date().toLocaleTimeString();
 
-    // Create log entry elements
+    // Create log entry elements with helper function
     const logEntry = document.createElement('div');
     logEntry.className = `log-entry type-${type}`;
 
-    const iconSpan = document.createElement('span');
-    iconSpan.className = 'log-entry-icon';
-    iconSpan.textContent = icon;
+    // Create elements directly without intermediate object to reduce object creation
+    const iconElement = this._createLogElement('span', 'log-entry-icon', effectiveIcon);
+    const contentElement = this._createLogElement('div', 'log-entry-content', content);
+    const timeElement = this._createLogElement('span', 'log-entry-time', timestamp, `time-${this.messageCounter}`);
 
-    const contentDiv = document.createElement('div');
-    contentDiv.className = 'log-entry-content';
-    contentDiv.textContent = content;
-
-    const timeSpan = document.createElement('span');
-    timeSpan.className = 'log-entry-time';
-    timeSpan.textContent = new Date().toLocaleTimeString();
-    timeSpan.id = `time-${this.messageCounter}`;
-
-    logEntry.appendChild(iconSpan);
-    logEntry.appendChild(contentDiv);
-    logEntry.appendChild(timeSpan);
+    logEntry.appendChild(iconElement);
+    logEntry.appendChild(contentElement);
+    logEntry.appendChild(timeElement);
 
     // Add to container if available
     if (this.uiElements?.logsContainer) {
       this.uiElements.logsContainer.appendChild(logEntry);
-      // Auto-scroll to bottom
-      this.uiElements.logsContainer.scrollTop = this.uiElements.logsContainer.scrollHeight;
+      // Auto-scroll to bottom - only do this if we're near the bottom to avoid jarring UX
+      const container = this.uiElements.logsContainer;
+      const isNearBottom = container.scrollHeight - container.scrollTop <= container.clientHeight + 1;
+
+      if (isNearBottom) {
+        // Use requestAnimationFrame to ensure DOM is updated before scrolling
+        if (typeof window !== 'undefined' && window.requestAnimationFrame) {
+          window.requestAnimationFrame(() => {
+            container.scrollTop = container.scrollHeight;
+          });
+        } else {
+          container.scrollTop = container.scrollHeight;
+        }
+      }
     }
 
     this.messageCounter++;
     return logEntry;
+  }
+
+  /**
+   * Helper function to create log entry elements
+   */
+  _createLogElement(tag, className, textContent, id = null) {
+    const element = document.createElement(tag);
+    element.className = className;
+    element.textContent = textContent;
+    if (id) element.id = id;
+    return element;
   }
 
   /**

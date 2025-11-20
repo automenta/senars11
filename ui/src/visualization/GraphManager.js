@@ -67,13 +67,14 @@ export class GraphManager {
       return false;
     }
 
+    // Create node data object efficiently
     const newNode = {
       group: 'nodes',
       data: {
         id: nodeId,
         label: nodeData.label || nodeData.term || nodeData.id,
         type: nodeData.nodeType || nodeData.type || 'concept',
-        weight: nodeData.weight || (nodeData.truth?.confidence ? nodeData.truth.confidence * 100 : Config.getConstants().DEFAULT_NODE_WEIGHT)
+        weight: this._getNodeWeight(nodeData)
       }
     };
 
@@ -83,6 +84,14 @@ export class GraphManager {
       this._runLayout();
     }
     return true;
+  }
+
+  /**
+   * Calculate node weight based on input data
+   */
+  _getNodeWeight(nodeData) {
+    const truth = nodeData.truth;
+    return nodeData.weight || (truth?.confidence ? truth.confidence * 100 : Config.getConstants().DEFAULT_NODE_WEIGHT);
   }
 
   /**
@@ -152,41 +161,56 @@ export class GraphManager {
   updateFromMessage(message) {
     if (!this.cy) return;
 
-    switch (message.type) {
-      case 'concept.created':
-      case 'concept.added':
-        if (message.payload) {
-          this.addNode(message.payload, false); // Don't run layout immediately
-        }
-        break;
-      case 'task.added':
-      case 'task.input':
-        if (message.payload) {
-          this.addNode({
-            ...message.payload,
-            nodeType: 'task'
-          }, false); // Don't run layout immediately
-        }
-        break;
-      case 'question.answered':
-        if (message.payload) {
-          this.addNode({
-            label: message.payload.answer || message.payload.question || 'Answer',
-            nodeType: 'question',
-            weight: Config.getConstants().QUESTION_NODE_WEIGHT
-          }, false); // Don't run layout immediately
-        }
-        break;
-      case 'memorySnapshot':
+    const messageUpdates = {
+      'concept.created': () => this._addNodeWithPayload(message.payload, false),
+      'concept.added': () => this._addNodeWithPayload(message.payload, false),
+      'task.added': () => this._addNodeWithPayload({ ...message.payload, nodeType: 'task' }, false),
+      'task.input': () => this._addNodeWithPayload({ ...message.payload, nodeType: 'task' }, false),
+      'question.answered': () => this._addQuestionNode(message.payload),
+      'memorySnapshot': () => {
         this.updateFromSnapshot(message.payload);
         return; // Snapshot updates already run layout
-      // Add other message types as needed
-    }
+      }
+    };
 
-    // Only run layout once after processing the message, if we added nodes/edges
-    if (['concept.created', 'concept.added', 'task.added', 'task.input', 'question.answered'].includes(message.type)) {
-      this._runLayout();
+    const updateFn = messageUpdates[message.type];
+    if (updateFn) {
+      updateFn();
+
+      // Only run layout once after processing the message, if we added nodes/edges
+      if (this._shouldRunLayoutAfterMessage(message.type)) {
+        this._runLayout();
+      }
     }
+  }
+
+  /**
+   * Helper method to add a node with payload
+   */
+  _addNodeWithPayload(payload, runLayout = true) {
+    if (payload) {
+      this.addNode(payload, runLayout);
+    }
+  }
+
+  /**
+   * Helper method to add a question node
+   */
+  _addQuestionNode(payload) {
+    if (payload) {
+      this.addNode({
+        label: payload.answer || payload.question || 'Answer',
+        nodeType: 'question',
+        weight: Config.getConstants().QUESTION_NODE_WEIGHT
+      }, false); // Don't run layout immediately
+    }
+  }
+
+  /**
+   * Determine if layout should run after a specific message type
+   */
+  _shouldRunLayoutAfterMessage(messageType) {
+    return ['concept.created', 'concept.added', 'task.added', 'task.input', 'question.answered'].includes(messageType);
   }
 
   /**

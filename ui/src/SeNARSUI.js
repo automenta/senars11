@@ -49,26 +49,31 @@ class MessageHandler {
   }
 
   /**
+   * Generic message formatter with icon mapping
+   */
+  _formatMessage(payload, defaultContent, type, icon) {
+    return {
+      content: payload?.result || payload?.message || payload?.answer || payload?.question ||
+               payload?.derivation || payload?.step || payload?.task || payload?.input ||
+               payload?.concept || payload?.term || defaultContent,
+      type,
+      icon
+    };
+  }
+
+  /**
    * Handle narsese result messages
    */
   _handleNarseseResult(msg) {
     const payload = msg.payload || {};
-    if (payload.result && payload.result.startsWith('✅')) {
+    if (payload.result?.startsWith('✅')) {
       return { content: payload.result, type: 'success', icon: '✅' };
-    } else if (payload.result && payload.result.startsWith('❌')) {
+    } else if (payload.result?.startsWith('❌')) {
       return { content: payload.result, type: 'error', icon: '❌' };
     } else if (payload.success === true) {
-      return {
-        content: payload.result || payload.message || 'Command processed',
-        type: 'success',
-        icon: '✅'
-      };
+      return this._formatMessage(payload, 'Command processed', 'success', '✅');
     } else {
-      return {
-        content: payload.result || payload.message || 'Command processed',
-        type: 'info',
-        icon: '✅'
-      };
+      return this._formatMessage(payload, 'Command processed', 'info', '✅');
     }
   }
 
@@ -76,55 +81,36 @@ class MessageHandler {
    * Handle narsese error messages
    */
   _handleNarseseError(msg) {
-    return {
-      content: msg.payload?.error || msg.payload?.message || 'Narsese processing error',
-      type: 'error',
-      icon: '❌'
-    };
+    return this._formatMessage(msg.payload, 'Narsese processing error', 'error', '❌');
   }
 
   /**
    * Handle question answered messages
    */
   _handleQuestionAnswered(msg) {
-    return {
-      content: msg.payload?.answer || msg.payload?.question || JSON.stringify(msg.payload),
-      type: 'info',
-      icon: '❓'
-    };
+    return this._formatMessage(msg.payload, JSON.stringify(msg.payload), 'info', '❓');
   }
 
   /**
    * Handle reasoning derivation messages
    */
   _handleReasoningDerivation(msg) {
-    return {
-      content: msg.payload?.derivation || msg.payload?.step || JSON.stringify(msg.payload),
-      type: 'info',
-      icon: '🔍'
-    };
+    return this._formatMessage(msg.payload, JSON.stringify(msg.payload), 'info', '🔍');
   }
 
   /**
    * Handle reasoning step messages
    */
   _handleReasoningStep(msg) {
-    return {
-      content: msg.payload?.derivation || msg.payload?.step || JSON.stringify(msg.payload),
-      type: 'info',
-      icon: '🔍'
-    };
+    return this._formatMessage(msg.payload, JSON.stringify(msg.payload), 'info', '🔍');
   }
 
   /**
    * Handle connection messages
    */
   _handleConnection(msg) {
-    return {
-      content: msg.payload?.message || msg.data?.message || 'Connected to server',
-      type: 'info',
-      icon: '🌐'
-    };
+    const messageContent = msg.payload?.message || msg.data?.message || 'Connected to server';
+    return { content: messageContent, type: 'info', icon: '🌐' };
   }
 
   /**
@@ -140,77 +126,54 @@ class MessageHandler {
   }
 
   /**
-   * Handle info messages
+   * Handle info and log messages similarly
    */
   _handleInfo(msg) {
-    return {
-      content: msg.payload?.message || JSON.stringify(msg.payload),
-      type: 'info',
-      icon: 'ℹ️'
-    };
+    return this._formatMessage(msg.payload, JSON.stringify(msg.payload), 'info', 'ℹ️');
   }
 
   /**
-   * Handle log messages
+   * Handle log messages using the same logic as info
    */
   _handleLog(msg) {
-    return {
-      content: msg.payload?.message || JSON.stringify(msg.payload),
-      type: 'info',
-      icon: 'ℹ️'
-    };
+    return this._formatMessage(msg.payload, JSON.stringify(msg.payload), 'info', 'ℹ️');
   }
 
   /**
    * Handle control result messages
    */
   _handleControlResult(msg) {
-    return {
-      content: msg.payload?.result || msg.payload?.message || 'Control command executed',
-      type: 'info',
-      icon: '⚙️'
-    };
+    return this._formatMessage(msg.payload, 'Control command executed', 'info', '⚙️');
   }
 
   /**
    * Create a task-related message
    */
   _createTaskMessage(message) {
-    return {
-      content: message.payload?.task || message.payload?.input || JSON.stringify(message.payload),
-      type: 'task',
-      icon: '📥'
-    };
+    return this._formatMessage(message.payload, JSON.stringify(message.payload), 'task', '📥');
   }
 
   /**
    * Create a concept-related message
    */
   _createConceptMessage(message) {
-    return {
-      content: message.payload?.concept || message.payload?.term || JSON.stringify(message.payload),
-      type: 'concept',
-      icon: '🧠'
-    };
+    return this._formatMessage(message.payload, JSON.stringify(message.payload), 'concept', '🧠');
   }
 
   /**
    * Create an error message
    */
   _createErrorMessage(message) {
-    return {
-      content: message.payload?.message || message.payload?.error || JSON.stringify(message.payload),
-      type: 'error',
-      icon: '🚨'
-    };
+    return this._formatMessage(message.payload, JSON.stringify(message.payload), 'error', '🚨');
   }
 
   /**
    * Create a default message for unknown types
    */
   _createDefaultMessage(message) {
+    const content = message.payload || message.data || message;
     return {
-      content: `${message.type}: ${JSON.stringify(message.payload || message.data || message)}`,
+      content: `${message.type}: ${JSON.stringify(content)}`,
       type: 'info',
       icon: '📝'
     };
@@ -289,11 +252,7 @@ export class SeNARSUI {
   _handleMessage(message) {
     try {
       // Update message count display
-      const messageCountElement = this.uiElements.get('messageCount');
-      if (messageCountElement) {
-        const currentCount = parseInt(messageCountElement.textContent) || 0;
-        messageCountElement.textContent = currentCount + 1;
-      }
+      this._updateMessageCount();
 
       // Process message with appropriate handler
       const { content, type, icon } = this.messageHandler.processMessage(message);
@@ -303,7 +262,19 @@ export class SeNARSUI {
       // Update graph for relevant events
       this.graphManager.updateFromMessage(message);
     } catch (error) {
-      console.error('Error handling message:', error, message);
+      this.logger.log(`Error handling message: ${error.message}`, 'error', '❌');
+      console.error('Full error details:', error, message);
+    }
+  }
+
+  /**
+   * Update the message count display
+   */
+  _updateMessageCount() {
+    const messageCountElement = this.uiElements.get('messageCount');
+    if (messageCountElement) {
+      const currentCount = parseInt(messageCountElement.textContent) || 0;
+      messageCountElement.textContent = currentCount + 1;
     }
   }
 

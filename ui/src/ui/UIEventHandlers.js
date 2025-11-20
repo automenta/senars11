@@ -16,7 +16,19 @@ export class UIEventHandlers {
    */
   setupEventListeners() {
     // Define event configuration using a declarative approach
-    const eventConfig = [
+    const eventConfig = this._getEventConfigurations();
+
+    // Apply all event configurations
+    eventConfig.forEach(config => {
+      this._attachEventHandler(config);
+    });
+  }
+
+  /**
+   * Get event configurations for all UI elements
+   */
+  _getEventConfigurations() {
+    return [
       // Command input events
       { element: 'sendButton', event: 'click', handler: () => this._handleCommandSubmit() },
       { element: 'commandInput', event: 'keypress', handler: (e) => this._handleCommandKeyPress(e) },
@@ -37,11 +49,6 @@ export class UIEventHandlers {
       // Demo events
       { element: 'runDemo', event: 'click', handler: () => this._handleRunDemo() }
     ];
-
-    // Apply all event configurations
-    eventConfig.forEach(config => {
-      this._attachEventHandler(config);
-    });
   }
 
   /**
@@ -73,13 +80,19 @@ export class UIEventHandlers {
    */
   _handleCommandSubmit() {
     try {
-      const command = this.uiElements.get('commandInput')?.value?.trim();
+      const commandInput = this.uiElements.get('commandInput');
+      if (!commandInput) {
+        this.commandProcessor.logger.log('Command input element not found', 'error', '❌');
+        return;
+      }
+
+      const command = commandInput.value?.trim();
       if (command) {
         this.commandProcessor.processCommand(command);
-        this.uiElements.get('commandInput').value = '';
+        commandInput.value = '';
       }
     } catch (error) {
-      console.error('Error processing command:', error);
+      this.commandProcessor.logger.log(`Error processing command: ${error.message}`, 'error', '❌');
     }
   }
 
@@ -97,13 +110,25 @@ export class UIEventHandlers {
    */
   _handleQuickCommand() {
     try {
-      const quickCommand = this.uiElements.get('quickCommands')?.value?.trim();
+      const quickCommandsInput = this.uiElements.get('quickCommands');
+      if (!quickCommandsInput) {
+        this.commandProcessor.logger.log('Quick commands element not found', 'error', '❌');
+        return;
+      }
+
+      const commandInput = this.uiElements.get('commandInput');
+      if (!commandInput) {
+        this.commandProcessor.logger.log('Command input element not found', 'error', '❌');
+        return;
+      }
+
+      const quickCommand = quickCommandsInput.value?.trim();
       if (quickCommand) {
-        this.uiElements.get('commandInput').value = quickCommand;
+        commandInput.value = quickCommand;
         this.commandProcessor.processCommand(quickCommand);
       }
     } catch (error) {
-      console.error('Error executing quick command:', error);
+      this.commandProcessor.logger.log(`Error executing quick command: ${error.message}`, 'error', '❌');
     }
   }
 
@@ -116,10 +141,13 @@ export class UIEventHandlers {
       // Toggle button text
       const button = this.uiElements.get('toggleLive');
       if (button) {
-        button.textContent = button.textContent === 'Pause Live' ? 'Resume Live' : 'Pause Live';
+        const currentText = button.textContent;
+        button.textContent = currentText === 'Pause Live' ? 'Resume Live' : 'Pause Live';
+      } else {
+        this.commandProcessor.logger.log('Toggle live button not found', 'error', '❌');
       }
     } catch (error) {
-      console.error('Error toggling live mode:', error);
+      this.commandProcessor.logger.log(`Error toggling live mode: ${error.message}`, 'error', '❌');
     }
   }
 
@@ -128,12 +156,18 @@ export class UIEventHandlers {
    */
   _handleRunDemo() {
     try {
-      const demoName = this.uiElements.get('demoSelect')?.value;
+      const demoSelect = this.uiElements.get('demoSelect');
+      if (!demoSelect) {
+        this.commandProcessor.logger.log('Demo select element not found', 'error', '❌');
+        return;
+      }
+
+      const demoName = demoSelect.value;
       if (demoName) {
         this.demoManager.runDemo(demoName);
       }
     } catch (error) {
-      console.error('Error running demo:', error);
+      this.commandProcessor.logger.log(`Error running demo: ${error.message}`, 'error', '❌');
     }
   }
 
