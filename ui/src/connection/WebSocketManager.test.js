@@ -3,6 +3,19 @@
  * These tests demonstrate the proper structure for unit testing
  */
 
+// Set up jest mock functions if not available
+global.jest = global.jest || {
+  fn: () => ({
+    mockImplementation: () => global.jest.fn(),
+    mockReturnValue: () => global.jest.fn(),
+    mockResolvedValue: () => global.jest.fn(),
+    calledWith: () => global.jest.fn(),
+    clearAllMocks: () => {}
+  }),
+  clearAllMocks: () => {},
+  spyOn: () => global.jest.fn()
+};
+
 describe('WebSocketManager', () => {
   // Mock dependencies
   const mockConfig = {
