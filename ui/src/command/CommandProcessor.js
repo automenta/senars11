@@ -1,4 +1,5 @@
 import { Config } from '../config/Config.js';
+import { CommandRegistry } from './CommandRegistry.js';
 
 /**
  * CommandProcessor handles command sending and history management
@@ -10,10 +11,16 @@ export class CommandProcessor {
     this.graphManager = graphManager;
     this.history = [];
     this.maxHistorySize = Config.getConstants().MAX_HISTORY_SIZE;
+
+    // Initialize command registry for extensible command processing
+    this.commandRegistry = new CommandRegistry();
   }
 
   /**
-   * Process and send a command
+   * Process and send a command to the backend
+   * @param {string} command - The command string to process
+   * @param {boolean} [isDebug=false] - Whether this is a debug command (currently unused)
+   * @returns {boolean} - True if command was processed successfully, false otherwise
    */
   processCommand(command, isDebug = false) {
     const trimmedCommand = command?.trim();
@@ -42,135 +49,36 @@ export class CommandProcessor {
   }
 
   /**
-   * Process a debug command
+   * Process a debug command using the command registry
    */
   _processDebugCommand(command) {
     const cmd = command.toLowerCase();
 
-    // Define command handlers in a lookup table
-    const debugCommands = {
-      '/help': () => this._showHelp(),
-      '/state': () => this._showState(),
-      '/nodes': () => this._listNodes(),
-      '/tasks': () => this._listTasks(),
-      '/concepts': () => this._listConcepts(),
-      '/refresh': () => this._requestRefresh(),
-      '/clear': () => this.logger.clearLogs()
+    // Create context object for command handlers
+    const context = {
+      webSocketManager: this.webSocketManager,
+      logger: this.logger,
+      graphManager: this.graphManager,
+      commandProcessor: this
     };
 
-    // Execute the command or show unknown command message
-    const handler = debugCommands[cmd];
-    handler
-      ? handler()
-      : this.logger.log(`Unknown debug command: ${command}. Type /help for available commands.`, 'warning', '⚠️');
+    // Execute the command through the registry
+    this.commandRegistry.executeCommand(cmd, context);
   }
 
   /**
-   * Helper method for refreshing graph
+   * Register a new command with the command registry
    */
-  _requestRefresh() {
-    this.webSocketManager.sendMessage('control/refresh', {});
-    this.logger.log('Graph refresh requested', 'info', '🔄');
+  registerCommand(command, handler) {
+    this.commandRegistry.registerCommand(command, handler);
+    return this;
   }
 
   /**
-   * Show help information
+   * Unregister a command from the command registry
    */
-  _showHelp() {
-    this.logger.log('Available debug commands:', 'info', '💡');
-    this.logger.log('/help - Show this help', 'info', 'ℹ️');
-    this.logger.log('/state - Show connection and state info', 'info', 'ℹ️');
-    this.logger.log('/nodes - List all nodes in graph', 'info', 'ℹ️');
-    this.logger.log('/tasks - Show task nodes', 'info', 'ℹ️');
-    this.logger.log('/concepts - Show concept nodes', 'info', 'ℹ️');
-    this.logger.log('/refresh - Request graph refresh', 'info', 'ℹ️');
-    this.logger.log('/clear - Clear log messages', 'info', 'ℹ️');
-  }
-
-  /**
-   * Show state information
-   */
-  _showState() {
-    this.logger.log(`Connection: ${this.webSocketManager.getConnectionStatus()}`, 'info', '📡');
-    this.logger.log(`Command History: ${this.history.length} commands`, 'info', '📜');
-  }
-
-  /**
-   * List all nodes
-   */
-  _listNodes() {
-    if (!this._validateGraphManager()) return;
-
-    const nodeCount = this.graphManager.getNodeCount();
-    this.logger.log(`Graph has ${nodeCount} nodes`, 'info', '🌐');
-
-    const allNodes = this.graphManager.cy.nodes();
-    allNodes.forEach(node => {
-      try {
-        const label = node.data('label') || 'unnamed';
-        const id = node.id() || 'no-id';
-        this.logger.log(`Node: ${label} (ID: ${id})`, 'info', '📍');
-      } catch (error) {
-        this.logger.log(`Error getting node data: ${error.message}`, 'error', '❌');
-      }
-    });
-  }
-
-  /**
-   * List task nodes
-   */
-  _listTasks() {
-    if (!this._validateGraphManager()) return;
-
-    try {
-      const taskNodes = this.graphManager.getTaskNodes();
-      this.logger.log(`Found ${taskNodes?.length || 0} task nodes`, 'info', '📋');
-
-      taskNodes?.forEach(node => {
-        try {
-          const label = node.data('label') || 'unnamed task';
-          this.logger.log(`Task: ${label}`, 'task', '📋');
-        } catch (error) {
-          this.logger.log(`Error getting task node data: ${error.message}`, 'error', '❌');
-        }
-      });
-    } catch (error) {
-      this.logger.log(`Error listing task nodes: ${error.message}`, 'error', '❌');
-    }
-  }
-
-  /**
-   * List concept nodes
-   */
-  _listConcepts() {
-    if (!this._validateGraphManager()) return;
-
-    try {
-      const conceptNodes = this.graphManager.getConceptNodes();
-      this.logger.log(`Found ${conceptNodes?.length || 0} concept nodes`, 'info', '🧠');
-
-      conceptNodes?.forEach(node => {
-        try {
-          const label = node.data('label') || 'unnamed concept';
-          this.logger.log(`Concept: ${label}`, 'concept', '🧠');
-        } catch (error) {
-          this.logger.log(`Error getting concept node data: ${error.message}`, 'error', '❌');
-        }
-      });
-    } catch (error) {
-      this.logger.log(`Error listing concept nodes: ${error.message}`, 'error', '❌');
-    }
-  }
-
-  /**
-   * Validate that graph manager and cy are available
-   */
-  _validateGraphManager() {
-    if (!this.graphManager || !this.graphManager.cy) {
-      this.logger.log('Graph not initialized', 'error', '❌');
-      return false;
-    }
-    return true;
+  unregisterCommand(command) {
+    return this.commandRegistry.unregisterCommand(command);
   }
 
   /**

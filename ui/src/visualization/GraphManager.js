@@ -1,4 +1,5 @@
 import { Config } from '../config/Config.js';
+import { GraphOperationError } from '../errors/CustomErrors.js';
 
 /**
  * GraphManager handles the Cytoscape instance and graph operations
@@ -11,22 +12,33 @@ export class GraphManager {
       nodes: new Map(),
       edges: new Map()
     };
+
+    // Debouncing for layout updates to improve performance
+    this.layoutTimeout = null;
+    this.pendingLayout = false;
+    this.layoutDebounceTime = 300; // milliseconds
   }
 
   /**
    * Initialize the Cytoscape instance
    */
   initialize() {
+    // Guard clause: Check if UI elements are available
     if (!this.uiElements?.graphContainer) {
       console.error('Graph container element not found');
       return false;
     }
 
-    this.cy = cytoscape({
-      container: this.uiElements.graphContainer,
-      style: Config.getGraphStyle(),
-      layout: Config.getGraphLayout()
-    });
+    try {
+      this.cy = cytoscape({
+        container: this.uiElements.graphContainer,
+        style: Config.getGraphStyle(),
+        layout: Config.getGraphLayout()
+      });
+    } catch (error) {
+      console.error('Failed to initialize Cytoscape:', error);
+      return false;
+    }
 
     // Add click event for graph details
     this.cy.on('tap', 'node', (event) => {
@@ -56,11 +68,21 @@ export class GraphManager {
 
   /**
    * Add a node to the graph
+   * @param {Object} nodeData - Data for the node to be added
+   * @param {string|number} [nodeData.id] - Unique identifier for the node
+   * @param {string} [nodeData.label] - Display label for the node
+   * @param {string} [nodeData.term] - Alternative term for the node
+   * @param {string} [nodeData.type] - Type of the node (concept, task, etc.)
+   * @param {string} [nodeData.nodeType] - Alternative property for node type
+   * @param {Object} [nodeData.truth] - Truth value data for the node
+   * @param {boolean} [runLayout=true] - Whether to run layout after adding the node
+   * @returns {boolean} - True if node was successfully added, false otherwise
    */
   addNode(nodeData, runLayout = true) {
     if (!this.cy) return false;
 
-    const nodeId = nodeData.id || `concept_${Date.now()}`;
+    const { id, label, term, type: nodeType, nodeType: nodeTypeOverride } = nodeData;
+    const nodeId = id || `concept_${Date.now()}`;
 
     // Don't add duplicate nodes
     if (this.cy.getElementById(nodeId).length) {
@@ -72,8 +94,8 @@ export class GraphManager {
       group: 'nodes',
       data: {
         id: nodeId,
-        label: nodeData.label || nodeData.term || nodeData.id,
-        type: nodeData.nodeType || nodeData.type || 'concept',
+        label: label || term || id,
+        type: nodeTypeOverride || nodeType || 'concept',
         weight: this._getNodeWeight(nodeData)
       }
     };
@@ -81,7 +103,7 @@ export class GraphManager {
     this.cy.add(newNode);
 
     if (runLayout) {
-      this._runLayout();
+      this._scheduleLayout();
     }
     return true;
   }
@@ -100,7 +122,8 @@ export class GraphManager {
   addEdge(edgeData, runLayout = true) {
     if (!this.cy) return false;
 
-    const edgeId = edgeData.id || `edge_${Date.now()}_${edgeData.source}_${edgeData.target}`;
+    const { id, source, target, label, type: edgeType, edgeType: edgeTypeOverride } = edgeData;
+    const edgeId = id || `edge_${Date.now()}_${source}_${target}`;
 
     // Don't add duplicate edges
     if (this.cy.getElementById(edgeId).length) {
@@ -111,17 +134,17 @@ export class GraphManager {
       group: 'edges',
       data: {
         id: edgeId,
-        source: edgeData.source,
-        target: edgeData.target,
-        label: edgeData.label || 'Relationship',
-        type: edgeData.edgeType || edgeData.type || 'relationship'
+        source,
+        target,
+        label: label || 'Relationship',
+        type: edgeTypeOverride || edgeType || 'relationship'
       }
     };
 
     this.cy.add(newEdge);
 
     if (runLayout) {
-      this._runLayout();
+      this._scheduleLayout();
     }
     return true;
   }
@@ -152,7 +175,7 @@ export class GraphManager {
     }
 
     // Layout the graph
-    this._runLayout();
+    this._scheduleLayout();
   }
 
   /**
@@ -179,7 +202,7 @@ export class GraphManager {
 
       // Only run layout once after processing the message, if we added nodes/edges
       if (this._shouldRunLayoutAfterMessage(message.type)) {
-        this._runLayout();
+        this._scheduleLayout();
       }
     }
   }
@@ -198,8 +221,9 @@ export class GraphManager {
    */
   _addQuestionNode(payload) {
     if (payload) {
+      const { answer, question } = payload;
       this.addNode({
-        label: payload.answer || payload.question || 'Answer',
+        label: answer || question || 'Answer',
         nodeType: 'question',
         weight: Config.getConstants().QUESTION_NODE_WEIGHT
       }, false); // Don't run layout immediately
@@ -214,7 +238,28 @@ export class GraphManager {
   }
 
   /**
-   * Run the graph layout
+   * Schedule a graph layout run with debouncing to improve performance
+   * This prevents excessive layout calculations when multiple graph changes occur rapidly
+   */
+  _scheduleLayout() {
+    this.pendingLayout = true;
+
+    // Clear existing timeout to debounce
+    if (this.layoutTimeout) {
+      clearTimeout(this.layoutTimeout);
+    }
+
+    // Schedule layout to run after debounce time
+    this.layoutTimeout = setTimeout(() => {
+      if (this.pendingLayout && this.cy) {
+        this.cy.layout(Config.getGraphLayout()).run();
+        this.pendingLayout = false;
+      }
+    }, this.layoutDebounceTime);
+  }
+
+  /**
+   * Run the graph layout immediately (without debouncing)
    */
   _runLayout() {
     if (this.cy) {
@@ -288,6 +333,20 @@ export class GraphManager {
   clear() {
     if (this.cy) {
       this.cy.elements().remove();
+    }
+  }
+
+  /**
+   * Destroy the graph manager and clean up resources
+   */
+  destroy() {
+    if (this.layoutTimeout) {
+      clearTimeout(this.layoutTimeout);
+      this.layoutTimeout = null;
+    }
+    if (this.cy) {
+      this.cy.destroy();
+      this.cy = null;
     }
   }
 }

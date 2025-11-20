@@ -1,3 +1,5 @@
+import { UI_CONSTANTS } from '../utils/Constants.js';
+
 /**
  * Logger module to handle all log message formatting and display
  */
@@ -6,25 +8,25 @@ export class Logger {
     this.uiElements = uiElements;
     this.messageCounter = 1;
     this.icons = {
-      success: '✅',
-      error: '❌',
-      warning: '⚠️',
-      info: 'ℹ️',
-      debug: '🔍',
-      input: '⌨️',
-      task: '📥',
-      concept: '🧠',
-      question: '❓',
-      reasoning: '🔍',
-      connection: '🌐',
-      snapshot: '📊',
-      control: '⚙️',
-      notification: '🔔',
-      command: '📜',
-      demo: '🎬',
-      refresh: '🔄',
-      clear: '🧹',
-      eventBatch: '📦'
+      success: UI_CONSTANTS.LOG_ICONS.SUCCESS,
+      error: UI_CONSTANTS.LOG_ICONS.ERROR,
+      warning: UI_CONSTANTS.LOG_ICONS.WARNING,
+      info: UI_CONSTANTS.LOG_ICONS.INFO,
+      debug: UI_CONSTANTS.LOG_ICONS.DEBUG,
+      input: UI_CONSTANTS.LOG_ICONS.INPUT,
+      task: UI_CONSTANTS.LOG_ICONS.TASK,
+      concept: UI_CONSTANTS.LOG_ICONS.CONCEPT,
+      question: UI_CONSTANTS.LOG_ICONS.QUESTION,
+      reasoning: UI_CONSTANTS.LOG_ICONS.REASONING,
+      connection: UI_CONSTANTS.LOG_ICONS.CONNECTION,
+      snapshot: UI_CONSTANTS.LOG_ICONS.SNAPSHOT,
+      control: UI_CONSTANTS.LOG_ICONS.CONTROL,
+      notification: UI_CONSTANTS.LOG_ICONS.NOTIFICATION,
+      command: UI_CONSTANTS.LOG_ICONS.COMMAND,
+      demo: UI_CONSTANTS.LOG_ICONS.DEMO,
+      refresh: UI_CONSTANTS.LOG_ICONS.REFRESH,
+      clear: UI_CONSTANTS.LOG_ICONS.CLEAR,
+      eventBatch: UI_CONSTANTS.LOG_ICONS.EVENT_BATCH
     };
   }
 
@@ -39,7 +41,7 @@ export class Logger {
    * Add a log entry to the container
    */
   addLogEntry(content, type = 'info', icon = null) {
-    const effectiveIcon = icon ?? this.icons[type] ?? this.icons.info;
+    const effectiveIcon = icon ?? this.icons[type] ?? this.icons[UI_CONSTANTS.LOG_TYPES.INFO.toLowerCase()];
     const timestamp = new Date().toLocaleTimeString();
 
     // Create log entry elements with helper function
@@ -56,13 +58,17 @@ export class Logger {
     logEntry.appendChild(timeElement);
 
     // Add to container if available
-    if (this.uiElements?.logsContainer) {
-      this.uiElements.logsContainer.appendChild(logEntry);
-      // Auto-scroll to bottom - only do this if we're near the bottom to avoid jarring UX
-      const container = this.uiElements.logsContainer;
-      const isNearBottom = container.scrollHeight - container.scrollTop <= container.clientHeight + 1;
+    const container = this.uiElements?.logsContainer;
+    if (container) {
+      // Store the previous scroll position and max scroll height to detect if user was at bottom
+      const previousScrollTop = container.scrollTop;
+      const previousScrollHeight = container.scrollHeight;
+      const isScrolledToBottom = Math.abs(previousScrollHeight - (previousScrollTop + container.clientHeight)) < 1;
 
-      if (isNearBottom) {
+      container.appendChild(logEntry);
+
+      // Auto-scroll to bottom - only do this if user was already at the bottom to avoid jarring UX
+      if (isScrolledToBottom) {
         // Use requestAnimationFrame to ensure DOM is updated before scrolling
         if (typeof window !== 'undefined' && window.requestAnimationFrame) {
           window.requestAnimationFrame(() => {

@@ -1,5 +1,6 @@
 import { Config } from '../config/Config.js';
 import { Logger } from '../logging/Logger.js';
+import { WebSocketConnectionError } from '../errors/CustomErrors.js';
 
 /**
  * WebSocketManager handles all WebSocket connections and reconnection logic
@@ -61,7 +62,11 @@ export class WebSocketManager {
     } catch (error) {
       this.connectionStatus = 'error';
       this.logger.log('Failed to create WebSocket', 'error', '🚨');
-      throw error;
+      if (error instanceof WebSocketConnectionError) {
+        throw error;
+      } else {
+        throw new WebSocketConnectionError(error.message, 'WEBSOCKET_CREATION_FAILED');
+      }
     }
   }
 
@@ -133,6 +138,7 @@ export class WebSocketManager {
           // Pre-allocate normalized message objects to reduce creation in loop
           for (let j = 0; j < batch.length; j++) {
             const event = batch[j];
+            // Reuse existing _handleMessage method for individual events
             this._handleMessage({
               type: event.type,
               payload: event.data,
@@ -157,13 +163,18 @@ export class WebSocketManager {
     }
 
     // Notify all handlers for this message type and general handlers
-    const handlerTypes = [message.type, '*'];
-    for (let i = 0; i < handlerTypes.length; i++) {
-      const handlerType = handlerTypes[i];
-      const handlers = this.messageHandlers.get(handlerType) || [];
-      for (let j = 0; j < handlers.length; j++) {
-        this._tryHandleMessage(handlers[j], message, handlerType);
-      }
+    // Use a more efficient approach by avoiding creating handlerTypes array repeatedly
+    const specificHandlers = this.messageHandlers.get(message.type) || [];
+    const generalHandlers = this.messageHandlers.get('*') || [];
+
+    // Process specific handlers first
+    for (let i = 0; i < specificHandlers.length; i++) {
+      this._tryHandleMessage(specificHandlers[i], message, message.type);
+    }
+
+    // Then process general handlers
+    for (let i = 0; i < generalHandlers.length; i++) {
+      this._tryHandleMessage(generalHandlers[i], message, '*');
     }
   }
 
@@ -174,8 +185,10 @@ export class WebSocketManager {
     try {
       handler(message);
     } catch (error) {
-      const errorMsg = `Error in ${handlerType === '*' ? 'general' : `message handler for ${message.type}`}: ${error.message}`;
-      this.logger.log(errorMsg, 'error', '🚨');
+      const context = handlerType === '*' ? 'general' : `message handler for ${message.type}`;
+      const errorMsg = `Error in ${context}: ${error.message}`;
+      const detailedErrorMsg = `${errorMsg}. Message details: ${JSON.stringify(message, null, 2)}`;
+      this.logger.log(detailedErrorMsg, 'error', '🚨');
     }
   }
 
