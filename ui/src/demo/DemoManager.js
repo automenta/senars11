@@ -9,9 +9,17 @@ export class DemoManager {
     this.logger = logger;
     this.demoDelay = Config.getConstants().DEMO_DELAY;
     this.isRunning = false;
-    
+
     // Define demo sequences
-    this.demos = {
+    this.demos = this._initializeDemos();
+    this.descriptions = this._initializeDescriptions();
+  }
+
+  /**
+   * Initialize demo sequences
+   */
+  _initializeDemos() {
+    return {
       inheritance: [
         '<{cat} --> animal>.',
         '<{lion} --> cat>.',
@@ -32,9 +40,52 @@ export class DemoManager {
   }
 
   /**
+   * Initialize demo descriptions
+   */
+  _initializeDescriptions() {
+    return {
+      inheritance: 'Demonstrates inheritance relationships in NARS',
+      similarity: 'Shows similarity-based reasoning',
+      temporal: 'Explores temporal inference capabilities'
+    };
+  }
+
+  /**
    * Run a specific demo
    */
-  runDemo(demoName) {
+  async runDemo(demoName) {
+    if (!this._validateDemo(demoName)) return false;
+
+    this.isRunning = true;
+    const commands = this.demos[demoName];
+
+    this.logger.log(`Running ${demoName} demo`, 'info', '🎬');
+
+    // Execute commands sequentially with delay using async/await pattern
+    try {
+      for (let i = 0; i < commands.length; i++) {
+        const cmd = commands[i];
+        this.commandProcessor.processCommand(cmd);
+
+        // Wait for the delay before executing the next command
+        await this._delay(this.demoDelay);
+      }
+    } catch (error) {
+      this.logger.log(`Error running demo: ${error.message}`, 'error', '❌');
+    } finally {
+      // Reset running status after completion
+      setTimeout(() => {
+        this.isRunning = false;
+      }, this.demoDelay);
+    }
+
+    return true;
+  }
+
+  /**
+   * Validate demo parameters before running
+   */
+  _validateDemo(demoName) {
     if (!demoName) {
       this.logger.log('Please select a demo', 'warning', '⚠️');
       return false;
@@ -50,26 +101,14 @@ export class DemoManager {
       return false;
     }
 
-    this.isRunning = true;
-    const commands = this.demos[demoName];
-    
-    this.logger.log(`Running ${demoName} demo`, 'info', '🎬');
-
-    // Execute commands sequentially with delay
-    commands.forEach((cmd, i) => {
-      setTimeout(() => {
-        this.commandProcessor.processCommand(cmd);
-        
-        // Mark demo as finished after the last command
-        if (i === commands.length - 1) {
-          setTimeout(() => {
-            this.isRunning = false;
-          }, this.demoDelay);
-        }
-      }, i * this.demoDelay);
-    });
-
     return true;
+  }
+
+  /**
+   * Delay helper function for async execution
+   */
+  _delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   /**
@@ -83,12 +122,6 @@ export class DemoManager {
    * Get demo description
    */
   getDemoDescription(demoName) {
-    const descriptions = {
-      inheritance: 'Demonstrates inheritance relationships in NARS',
-      similarity: 'Shows similarity-based reasoning',
-      temporal: 'Explores temporal inference capabilities'
-    };
-    
-    return descriptions[demoName] || 'Demo description not available';
+    return this.descriptions[demoName] || 'Demo description not available';
   }
 }

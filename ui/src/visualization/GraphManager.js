@@ -226,23 +226,39 @@ export class GraphManager {
    * Update the graph details panel
    */
   _updateGraphDetails(details) {
-    if (!this.uiElements?.graphDetails) return;
+    const graphDetailsElement = this.uiElements?.graphDetails;
+    if (!graphDetailsElement) return;
 
-    if (details.type === 'node') {
-      this.uiElements.graphDetails.innerHTML = `
-        <strong>Node:</strong> ${details.label}<br>
-        <strong>ID:</strong> ${details.id}<br>
-        <strong>Type:</strong> ${details.nodeType}<br>
-        <strong>Weight:</strong> ${details.weight}
-      `;
-    } else if (details.type === 'edge') {
-      this.uiElements.graphDetails.innerHTML = `
-        <strong>Edge:</strong> ${details.label}<br>
-        <strong>Source:</strong> ${details.source}<br>
-        <strong>Target:</strong> ${details.target}<br>
-        <strong>Type:</strong> ${details.edgeType}
-      `;
-    }
+    // Create content based on type to avoid duplicate code
+    const content = details.type === 'node'
+      ? this._createNodeDetailsContent(details)
+      : this._createEdgeDetailsContent(details);
+
+    graphDetailsElement.innerHTML = content;
+  }
+
+  /**
+   * Create content for node details
+   */
+  _createNodeDetailsContent(details) {
+    return `
+      <strong>Node:</strong> ${details.label}<br>
+      <strong>ID:</strong> ${details.id}<br>
+      <strong>Type:</strong> ${details.nodeType}<br>
+      <strong>Weight:</strong> ${details.weight}
+    `;
+  }
+
+  /**
+   * Create content for edge details
+   */
+  _createEdgeDetailsContent(details) {
+    return `
+      <strong>Edge:</strong> ${details.label}<br>
+      <strong>Source:</strong> ${details.source}<br>
+      <strong>Target:</strong> ${details.target}<br>
+      <strong>Type:</strong> ${details.edgeType}
+    `;
   }
 
   /**

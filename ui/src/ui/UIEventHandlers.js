@@ -1,3 +1,5 @@
+import { Config } from '../config/Config.js';
+
 /**
  * UIEventHandlers module to handle all UI events and connect UI to business logic
  */
@@ -61,7 +63,7 @@ export class UIEventHandlers {
       // Store reference for potential cleanup
       this._eventHandlers.set(`${element}-${event}`, { element: elementRef, event, handler });
     } else {
-      console.warn(`UI element not found: ${element}`);
+      this.commandProcessor.logger.log(`UI element not found: ${element}`, 'warning', '⚠️');
     }
   }
 

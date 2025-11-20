@@ -1,3 +1,5 @@
+import { Config } from '../config/Config.js';
+
 /**
  * UIElements module to initialize and store DOM element references
  */
@@ -10,26 +12,8 @@ export class UIElements {
    * Initialize all DOM elements
    */
   _initializeElements(elementIds = null) {
-    // Default element IDs if none provided
-    const defaultIds = {
-      statusIndicator: 'status-indicator',
-      connectionStatus: 'connection-status',
-      messageCount: 'message-count',
-      logsContainer: 'logs-container',
-      commandInput: 'command-input',
-      sendButton: 'send-button',
-      quickCommands: 'quick-commands',
-      execQuick: 'exec-quick',
-      showHistory: 'show-history',
-      clearLogs: 'clear-logs',
-      refreshGraph: 'refresh-graph',
-      toggleLive: 'toggle-live',
-      demoSelect: 'demo-select',
-      runDemo: 'run-demo',
-      graphDetails: 'graph-details',
-      graphContainer: 'graph-container',
-      notificationContainer: 'notification-container'
-    };
+    // Use constants from Config module for default element IDs
+    const defaultIds = Config.ELEMENT_IDS;
 
     const ids = elementIds ?? defaultIds;
 
