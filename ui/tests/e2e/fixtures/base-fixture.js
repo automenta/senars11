@@ -1,8 +1,5 @@
-
-import { test as base, expect } from '@playwright/test';
-import { NarPage } from '../utils/NarPage.js';
-import { spawn } from 'child_process';
-import { setTimeout } from 'timers/promises';
+import {expect, test as base} from '@playwright/test';
+import {NarPage} from '../utils/NarPage.js';
 
 // Fixture to manage the backend (Mock or Real)
 // Currently, we rely on the global webServer for the UI.
@@ -14,12 +11,12 @@ import { setTimeout } from 'timers/promises';
 // For "Production" tests, we need to spawn the real backend.
 
 export const test = base.extend({
-  narPage: async ({ page }, use) => {
-    const narPage = new NarPage(page);
-    await narPage.goto();
-    await narPage.waitForConnection();
-    await use(narPage);
-  },
+    narPage: async ({page}, use) => {
+        const narPage = new NarPage(page);
+        await narPage.goto();
+        await narPage.waitForConnection();
+        await use(narPage);
+    },
 });
 
-export { expect };
+export {expect};

@@ -3,30 +3,30 @@
  * @description Utility for managing external processes with consistent lifecycle
  */
 
-import { spawn } from 'child_process';
-import { promises as fs } from 'fs';
-import { join } from 'path';
+import {spawn} from 'child_process';
+import {promises as fs} from 'fs';
+import {join} from 'path';
 
 export class ProcessManager {
     static async startProcess({
-        command,
-        args,
-        cwd,
-        env = process.env,
-        timeout = 30000,
-        readyCondition,
-        stdoutHandler,
-        stderrHandler = (data) => {
-            const str = data.toString();
-            if (!str.includes('ExperimentalWarning')) {
-                console.error(`[PROCESS-ERROR] ${str.trim()}`);
-            }
-        }
-    }) {
+                                  command,
+                                  args,
+                                  cwd,
+                                  env = process.env,
+                                  timeout = 30000,
+                                  readyCondition,
+                                  stdoutHandler,
+                                  stderrHandler = (data) => {
+                                      const str = data.toString();
+                                      if (!str.includes('ExperimentalWarning')) {
+                                          console.error(`[PROCESS-ERROR] ${str.trim()}`);
+                                      }
+                                  }
+                              }) {
         const processHandle = spawn(command, args, {
             cwd,
             stdio: ['pipe', 'pipe', 'pipe'],
-            env: { ...env }
+            env: {...env}
         });
 
         return new Promise((resolve, reject) => {
@@ -36,11 +36,11 @@ export class ProcessManager {
             processHandle.stdout.on('data', (data) => {
                 const str = data.toString();
                 output += str;
-                
+
                 if (stdoutHandler) {
                     stdoutHandler(data, processHandle);
                 }
-                
+
                 if (readyCondition && readyCondition(str, output)) {
                     resolve(processHandle);
                 }
@@ -60,7 +60,7 @@ export class ProcessManager {
                     clearTimeout(timeoutId);
                     resolve(processHandle);
                 }
-                
+
                 if (Date.now() - startTime > timeout) {
                     clearInterval(intervalId);
                     clearTimeout(timeoutId);

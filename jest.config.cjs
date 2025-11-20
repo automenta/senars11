@@ -5,8 +5,8 @@ module.exports = {
         'v9/.*',
         'ui/',
         'ui-react-legacy/',
-	'ui-vanilla-legacy/',
-	'exp'
+        'ui-vanilla-legacy/',
+        'exp'
     ],
     modulePathIgnorePatterns: [
         '<rootDir>/ui/',

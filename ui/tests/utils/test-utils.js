@@ -4,8 +4,6 @@
  * This file contains generic test utility functions that can be used across different test scenarios
  */
 
-import { setTimeout } from 'timers/promises';
-
 // Default test configuration
 export const DEFAULT_TEST_CONFIG = Object.freeze({
     uiPort: 8200,
@@ -25,7 +23,7 @@ export async function waitForLogText(page, expectedText, timeout = 10000) {
             const logs = document.querySelector('#logs-container');
             return logs?.textContent.includes(text) ?? false;
         },
-        { timeout },
+        {timeout},
         expectedText
     );
 }

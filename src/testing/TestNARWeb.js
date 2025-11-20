@@ -247,7 +247,7 @@ startServer().catch(console.error);
             window.narWebSocketMessages = [];
             window.narWebSocketIsConnected = false;
 
-            window.narWebSocket.onopen = function(event) {
+            window.narWebSocket.onopen = function (event) {
                 console.log('Connected to NAR WebSocket');
                 window.narWebSocketIsConnected = true;
 
@@ -258,7 +258,7 @@ startServer().catch(console.error);
                 }));
             };
 
-            window.narWebSocket.onmessage = function(event) {
+            window.narWebSocket.onmessage = function (event) {
                 try {
                     const message = JSON.parse(event.data);
                     window.narWebSocketMessages.push(message);
@@ -273,11 +273,11 @@ startServer().catch(console.error);
                 }
             };
 
-            window.narWebSocket.onerror = function(error) {
+            window.narWebSocket.onerror = function (error) {
                 console.error('WebSocket error:', error);
             };
 
-            window.narWebSocket.onclose = function(event) {
+            window.narWebSocket.onclose = function (event) {
                 console.log('WebSocket connection closed:', event.code, event.reason);
                 window.narWebSocketIsConnected = false;
             };
@@ -287,7 +287,7 @@ startServer().catch(console.error);
     async sendInputToUI(inputStr) {
         if (this.page) {
             // Wait for the REPL input field to be available
-            await this.page.waitForSelector('#repl-input', { timeout: 5000 });
+            await this.page.waitForSelector('#repl-input', {timeout: 5000});
 
             // Fill the input field with the Narsese string
             await this.page.type('#repl-input', inputStr);
@@ -339,10 +339,10 @@ startServer().catch(console.error);
         if (message.type && (message.type === 'event' || message.type.includes('task') || message.type.includes('reasoning'))) {
             // Extract task data from different possible formats
             const taskData = message.data?.data?.task ||
-                           message.data?.task ||
-                           message.data ||
-                           message.payload?.task ||
-                           message.payload;
+                message.data?.task ||
+                message.data ||
+                message.payload?.task ||
+                message.payload;
 
             if (taskData) {
                 // For this check, we'll need to do a simpler string-based match
@@ -366,8 +366,8 @@ startServer().catch(console.error);
 
             if (exp.shouldExist) {
                 await this.page.waitForFunction(({content}) =>
-                    document.body.textContent.includes(content),
-                {content: exp.content}, {timeout: 5000});
+                        document.body.textContent.includes(content),
+                    {content: exp.content}, {timeout: 5000});
             } else {
                 // For "not contains", we need to check after a short delay
                 await new Promise(resolve => setTimeout(resolve, 1000));

@@ -11,42 +11,42 @@ export const TestConfig = {
             port: 8080,
             uiPort: 5173,
             narOptions: {
-                lm: { enabled: false },
+                lm: {enabled: false},
                 memory: {
-                    conceptBag: { capacity: 1000 },
-                    taskBag: { capacity: 1000 }
+                    conceptBag: {capacity: 1000},
+                    taskBag: {capacity: 1000}
                 },
                 cycle: {
                     maxTasksPerCycle: 10
                 }
             }
         },
-        
+
         // Configuration for testing buffering/batching mechanisms with small capacities
         smallBuffer: {
             port: 8081,
             uiPort: 5174,
             narOptions: {
-                lm: { enabled: false },
+                lm: {enabled: false},
                 memory: {
-                    conceptBag: { capacity: 5 },  // Small capacity to test buffering
-                    taskBag: { capacity: 5 }      // Small capacity to test batching
+                    conceptBag: {capacity: 5},  // Small capacity to test buffering
+                    taskBag: {capacity: 5}      // Small capacity to test batching
                 },
                 cycle: {
                     maxTasksPerCycle: 2          // Small batch size
                 }
             }
         },
-        
+
         // Configuration for performance testing
         performance: {
             port: 8082,
             uiPort: 5175,
             narOptions: {
-                lm: { enabled: false },
+                lm: {enabled: false},
                 memory: {
-                    conceptBag: { capacity: 5000 },
-                    taskBag: { capacity: 5000 }
+                    conceptBag: {capacity: 5000},
+                    taskBag: {capacity: 5000}
                 },
                 cycle: {
                     maxTasksPerCycle: 50
@@ -54,7 +54,7 @@ export const TestConfig = {
             }
         }
     },
-    
+
     // UI configurations for different test scenarios
     uiConfigs: {
         normal: {
@@ -68,7 +68,7 @@ export const TestConfig = {
             retryAttempts: 3
         }
     },
-    
+
     // Common test parameters
     testParams: {
         defaultWaitTime: 1000,
@@ -77,7 +77,7 @@ export const TestConfig = {
         maxRetries: 3,
         batchSize: 5
     },
-    
+
     // NAR reasoning modes for testing
     reasoningModes: {
         stepMode: {

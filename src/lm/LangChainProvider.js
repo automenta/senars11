@@ -7,12 +7,10 @@ import {ToolNode} from '@langchain/langgraph/prebuilt';
 import {DynamicTool} from '@langchain/core/tools';
 import {
     ConfigurationError,
-    InitializationError,
     ConnectionError as ProviderConnectionError,
+    InitializationError,
     ModelNotFoundError as ProviderModelNotFoundError,
-    TimeoutError,
-    ToolExecutionError,
-    ValidationError
+    TimeoutError
 } from './ProviderError.js';
 
 export class LangChainProvider extends BaseProvider {
@@ -128,7 +126,7 @@ export class LangChainProvider extends BaseProvider {
             throw initError;
         }
 
-        return { modelWithTools, tools, hasTools };
+        return {modelWithTools, tools, hasTools};
     }
 
     _createAgentNode(modelWithTools) {
@@ -148,7 +146,7 @@ export class LangChainProvider extends BaseProvider {
     }
 
     _initAgent() {
-        const { modelWithTools, tools, hasTools } = this._initModelAndTools();
+        const {modelWithTools, tools, hasTools} = this._initModelAndTools();
         const agentNode = this._createAgentNode(modelWithTools);
         const toolNode = hasTools ? new ToolNode(tools) : null;
 
@@ -227,7 +225,7 @@ export class LangChainProvider extends BaseProvider {
                 try {
                     const stream = this.agent.stream(
                         {messages: [new HumanMessage(prompt)]},
-                        { streamMode: 'values' }
+                        {streamMode: 'values'}
                     );
 
                     for await (const chunk of stream) {

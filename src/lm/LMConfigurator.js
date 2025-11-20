@@ -56,7 +56,7 @@ export class LMConfigurator {
     async configure() {
         console.log('🚀 SeNARS Agent REPL - LM Configuration\n');
 
-        const { inquirer } = await import('inquirer');
+        const {inquirer} = await import('inquirer');
         const config = await inquirer.prompt([
             {
                 type: 'list',
@@ -86,7 +86,7 @@ export class LMConfigurator {
     }
 
     async _configureCustomProvider() {
-        const { inquirer } = await import('inquirer');
+        const {inquirer} = await import('inquirer');
         const customConfig = await inquirer.prompt([
             {
                 type: 'input',
@@ -152,7 +152,7 @@ export class LMConfigurator {
             {name: 'Custom configuration', value: 'custom'}
         ];
 
-        const { inquirer } = await import('inquirer');
+        const {inquirer} = await import('inquirer');
         const selection = await inquirer.prompt([
             {
                 type: 'list',

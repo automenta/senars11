@@ -3,14 +3,14 @@
  * @description Shared test utilities and helper functions for consistent test setup
  */
 
-import { TestSetupError, TestTeardownError } from './test-errors.js';
+import {TestSetupError, TestTeardownError} from './test-errors.js';
 
 /**
  * Creates a test instance with specified configuration
  * @param {Object} config - Test configuration object
  * @returns {Object} Test instance with merged configuration
  */
-export const createTestInstance = (config = {}) => ({ config: { ...config } });
+export const createTestInstance = (config = {}) => ({config: {...config}});
 
 /**
  * Waits for a specified duration (useful in tests)
@@ -38,13 +38,13 @@ export const getIsolatedPort = () => Math.floor(Math.random() * 1000) + 8000;
  * @returns {Promise<boolean>} Whether cleanup was successful
  */
 export const safeCleanup = async (cleanupFn, operationName = 'cleanup') => {
-  try {
-    await cleanupFn?.();
-    return true;
-  } catch (error) {
-    console.warn(`Cleanup warning [${operationName}]:`, error?.message ?? error);
-    return false;
-  }
+    try {
+        await cleanupFn?.();
+        return true;
+    } catch (error) {
+        console.warn(`Cleanup warning [${operationName}]:`, error?.message ?? error);
+        return false;
+    }
 };
 
 /**
@@ -52,9 +52,9 @@ export const safeCleanup = async (cleanupFn, operationName = 'cleanup') => {
  * @returns {Object} Environment validation result
  */
 export const validateTestEnvironment = () => ({
-  isValid: process.env.NODE_ENV === 'test',
-  environment: process.env.NODE_ENV,
-  timestamp: Date.now()
+    isValid: process.env.NODE_ENV === 'test',
+    environment: process.env.NODE_ENV,
+    timestamp: Date.now()
 });
 
 /**
@@ -64,10 +64,10 @@ export const validateTestEnvironment = () => ({
  * @returns {Object} Truth instance
  */
 export const createTruth = (frequency, confidence) => ({
-  frequency,
-  confidence,
-  f: frequency,
-  c: confidence
+    frequency,
+    confidence,
+    f: frequency,
+    c: confidence
 });
 
 /**
@@ -77,12 +77,12 @@ export const createTruth = (frequency, confidence) => ({
  * @param {number} expectedConf - Expected confidence
  */
 export const expectTruth = (truth, expectedFreq, expectedConf) => {
-  expect(truth).toMatchObject({
-    frequency: expectedFreq,
-    confidence: expectedConf,
-    ...(truth.f !== undefined && { f: expectedFreq }),
-    ...(truth.c !== undefined && { c: expectedConf })
-  });
+    expect(truth).toMatchObject({
+        frequency: expectedFreq,
+        confidence: expectedConf,
+        ...(truth.f !== undefined && {f: expectedFreq}),
+        ...(truth.c !== undefined && {c: expectedConf})
+    });
 };
 
 /**
@@ -93,8 +93,8 @@ export const expectTruth = (truth, expectedFreq, expectedConf) => {
  * @param {Function} truthClass - Truth class reference
  */
 export const expectTruthOperation = (result, expectedFreq, expectedConf, truthClass) => {
-  expect(result).toBeInstanceOf(truthClass);
-  expect(result).toMatchObject({ frequency: expectedFreq, confidence: expectedConf });
+    expect(result).toBeInstanceOf(truthClass);
+    expect(result).toMatchObject({frequency: expectedFreq, confidence: expectedConf});
 };
 
 /**
@@ -111,12 +111,12 @@ export const batchProcess = async (items, operation) => Promise.all(items.map(op
  * @returns {Object} Test NAR instance
  */
 export const createTestNAR = (config = {}) => {
-  try {
-    // This would require async import in real use, but for now return a template
-    return { config: { ...config } };
-  } catch (error) {
-    throw new TestSetupError(`Failed to create test NAR instance: ${error.message}`, { config });
-  }
+    try {
+        // This would require async import in real use, but for now return a template
+        return {config: {...config}};
+    } catch (error) {
+        throw new TestSetupError(`Failed to create test NAR instance: ${error.message}`, {config});
+    }
 };
 
 /**
@@ -126,7 +126,7 @@ export const createTestNAR = (config = {}) => {
  * @param {string} context - Context for error messages
  */
 export const validateTestResult = (result, validator, context = 'test') => {
-  if (!validator(result)) {
-    throw new TestTeardownError(`Validation failed for ${context}`, { result, validator: validator.toString() });
-  }
+    if (!validator(result)) {
+        throw new TestTeardownError(`Validation failed for ${context}`, {result, validator: validator.toString()});
+    }
 };

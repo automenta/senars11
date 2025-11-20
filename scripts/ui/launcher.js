@@ -10,7 +10,6 @@ import {fileURLToPath} from 'url';
 import {dirname, join} from 'path';
 import {parseArgs as parseCliArgs, showUsageAndExit} from '../utils/script-utils.js';
 import {WebSocketMonitor} from '../../src/server/WebSocketMonitor.js';
-import {NAR} from '../../src/nar/NAR.js';
 import {DemoWrapper} from '../../src/demo/DemoWrapper.js';
 
 const __filename = fileURLToPath(import.meta.url);

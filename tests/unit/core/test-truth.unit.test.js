@@ -7,8 +7,8 @@
 // (none in this file)
 
 // Local imports
-import { TRUTH } from '../../../src/config/constants.js';
-import { Truth } from '../../../src/Truth.js';
+import {TRUTH} from '../../../src/config/constants.js';
+import {Truth} from '../../../src/Truth.js';
 
 // Test helper imports
 // (none in this file - would be added if we used test helpers)
@@ -28,15 +28,15 @@ describe('Truth Class - Unit Tests with Real Objects', () => {
         const [frequency, confidence] = [0.8, 0.9];
         const truth = new Truth(frequency, confidence);
 
-        expect(truth).toMatchObject({ frequency, confidence, f: frequency, c: confidence });
+        expect(truth).toMatchObject({frequency, confidence, f: frequency, c: confidence});
     });
 
     test('should clamp frequency and confidence values to valid range [0, 1]', () => {
         // Test with values outside the valid range
         const [truthLow, truthHigh] = [new Truth(-0.5, -0.2), new Truth(1.5, 1.8)];
 
-        expect(truthLow).toMatchObject({ frequency: 0, confidence: 0 });
-        expect(truthHigh).toMatchObject({ frequency: 1, confidence: 1 });
+        expect(truthLow).toMatchObject({frequency: 0, confidence: 0});
+        expect(truthHigh).toMatchObject({frequency: 1, confidence: 1});
     });
 
     test('should handle NaN values by using default values', () => {
@@ -55,7 +55,7 @@ describe('Truth Class - Unit Tests with Real Objects', () => {
         expect(Object.isFrozen(truth)).toBe(true);
 
         // Store original values
-        const { frequency: originalFrequency, confidence: originalConfidence } = truth;
+        const {frequency: originalFrequency, confidence: originalConfidence} = truth;
 
         // Attempt to modify the object in strict mode context
         expect(() => {
@@ -64,8 +64,8 @@ describe('Truth Class - Unit Tests with Real Objects', () => {
         }).toThrow();
 
         // Values should remain unchanged
-        expect({ frequency: truth.frequency, confidence: truth.confidence })
-            .toMatchObject({ frequency: originalFrequency, confidence: originalConfidence });
+        expect({frequency: truth.frequency, confidence: truth.confidence})
+            .toMatchObject({frequency: originalFrequency, confidence: originalConfidence});
     });
 
     test('should correctly use deduction operation with real Truth objects', () => {
@@ -74,7 +74,7 @@ describe('Truth Class - Unit Tests with Real Objects', () => {
         const [expectedFreq, expectedConf] = [0.8 * 0.7, 0.9 * 0.6]; // 0.56, 0.54
 
         expect(result).toBeInstanceOf(Truth);
-        expect(result).toMatchObject({ frequency: expectedFreq, confidence: expectedConf });
+        expect(result).toMatchObject({frequency: expectedFreq, confidence: expectedConf});
     });
 
     test('should correctly use induction operation with real Truth objects', () => {
@@ -82,7 +82,7 @@ describe('Truth Class - Unit Tests with Real Objects', () => {
         const result = Truth.induction(truth1, truth2);
 
         expect(result).toBeInstanceOf(Truth);
-        expect(result).toMatchObject({ frequency: 0.7, confidence: 0.9 * 0.6 });
+        expect(result).toMatchObject({frequency: 0.7, confidence: 0.9 * 0.6});
     });
 
     test('should handle null/undefined inputs gracefully in operations', () => {

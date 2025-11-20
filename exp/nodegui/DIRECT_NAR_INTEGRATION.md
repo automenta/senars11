@@ -2,7 +2,8 @@
 
 ## Overview
 
-The NodeGUI implementation embeds the NAR (Non-Axiomatic Reasoner) engine directly within the desktop application, eliminating the need for WebSocket communication. This approach provides:
+The NodeGUI implementation embeds the NAR (Non-Axiomatic Reasoner) engine directly within the desktop application,
+eliminating the need for WebSocket communication. This approach provides:
 
 - **Lower latency**: Direct method calls instead of network communication
 - **Better reliability**: No dependency on external processes or network connections
@@ -69,14 +70,15 @@ To complete the direct NAR integration:
 
 1. Import the actual NAR engine from the project's `src/` directory
 2. Ensure the NAR engine provides:
-   - `input(command)` - Process a NARS command
-   - `getSnapshot()` - Retrieve current state for visualization
-   - `reset()` - Reset the engine state (optional)
-   - Event system for real-time updates (optional)
+    - `input(command)` - Process a NARS command
+    - `getSnapshot()` - Retrieve current state for visualization
+    - `reset()` - Reset the engine state (optional)
+    - Event system for real-time updates (optional)
 
 ## Current State
 
 The current implementation in `nar-service.js` provides:
+
 - Validation utilities for all data
 - Error handling and logging
 - Placeholder for actual NAR integration

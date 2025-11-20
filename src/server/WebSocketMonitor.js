@@ -445,8 +445,8 @@ class WebSocketMonitor {
         for (const client of this.clients) {
             // Check if the client is subscribed to 'all' or to specific event types
             const isSubscribed = !client.subscriptions || client.subscriptions.has('all') ||
-                                (message.type.startsWith('eventBatch') ? client.subscriptions.has('all') :
-                                 client.subscriptions.has(message.type) || client.subscriptions.has(message.type.split('/')[0]));
+                (message.type.startsWith('eventBatch') ? client.subscriptions.has('all') :
+                    client.subscriptions.has(message.type) || client.subscriptions.has(message.type.split('/')[0]));
 
             if (isSubscribed && client.readyState === client.OPEN) {
                 this._sendToClient(client, message);

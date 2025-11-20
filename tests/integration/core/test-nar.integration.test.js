@@ -7,15 +7,15 @@
 // (none in this file)
 
 // Local imports
-import { Truth } from '../../../src/Truth.js';
-import { NAR } from '../../../src/nar/NAR.js';
+import {Truth} from '../../../src/Truth.js';
+import {NAR} from '../../../src/nar/NAR.js';
 
 // Test helper imports
 // (none in this file - would be added if we used test helpers)
 
 // Default test configuration that passes validation
 const DEFAULT_NAR_CONFIG = {
-    debug: { enabled: false },
+    debug: {enabled: false},
     cycle: {
         delay: 1,
         maxTasksPerCycle: 5,

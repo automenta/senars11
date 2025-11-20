@@ -5,10 +5,8 @@
  * This file defines and runs the complete test suite for all critical functionality
  */
 
-import { spawn } from 'child_process';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-import { setTimeout } from 'timers/promises';
+import {fileURLToPath} from 'url';
+import {dirname} from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -59,7 +57,7 @@ class SeNARSTestSuite {
                 critical: false
             }
         ];
-        
+
         this.results = [];
         this.criticalFailures = 0;
     }
@@ -190,7 +188,7 @@ if (import.meta.url === \`file://\${process.argv[1]}\`) {
 
 export { testWebSocketConnection };
 `;
-        
+
         await this.createTestFile('./test-websocket-connection.js', testContent);
     }
 
@@ -332,7 +330,7 @@ if (import.meta.url === \`file://\${process.argv[1]}\`) {
 
 export { testNarseseInput };
 `;
-        
+
         await this.createTestFile('./test-narsese-input.js', testContent);
     }
 
@@ -475,7 +473,7 @@ if (import.meta.url === \`file://\${process.argv[1]}\`) {
 
 export { testReasoningOps };
 `;
-        
+
         await this.createTestFile('./test-reasoning-ops.js', testContent);
     }
 
@@ -635,7 +633,7 @@ if (import.meta.url === \`file://\${process.argv[1]}\`) {
 
 export { testGraphVisualization };
 `;
-        
+
         await this.createTestFile('./test-graph-visualization.js', testContent);
     }
 
@@ -797,7 +795,7 @@ if (import.meta.url === \`file://\${process.argv[1]}\`) {
 
 export { testErrorHandling };
 `;
-        
+
         await this.createTestFile('./test-error-handling.js', testContent);
     }
 
@@ -957,7 +955,7 @@ if (import.meta.url === \`file://\${process.argv[1]}\`) {
 
 export { testPerformance };
 `;
-        
+
         await this.createTestFile('./test-performance.js', testContent);
     }
 
@@ -968,7 +966,7 @@ export { testPerformance };
 
     async setupTestSuite() {
         console.log('🔧 Setting up complete test suite...');
-        
+
         // Create all test files
         await this.createWebSocketConnectionTest();
         await this.createNarseseInputTest();
@@ -976,7 +974,7 @@ export { testPerformance };
         await this.createGraphVisualizationTest();
         await this.createErrorHandlingTest();
         await this.createPerformanceTest();
-        
+
         console.log('✅ All test files created');
     }
 

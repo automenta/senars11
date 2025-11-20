@@ -51,7 +51,7 @@ class BaseConfigurator {
     }
 
     async getConfiguration(questions) {
-        const { inquirer } = await import('inquirer');
+        const {inquirer} = await import('inquirer');
         return await inquirer.prompt(questions);
     }
 }

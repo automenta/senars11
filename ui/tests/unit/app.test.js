@@ -5,46 +5,46 @@
 
 // Create a simple mock function that supports Jest's toHaveBeenCalled matcher
 const createMockFn = () => {
-  const fn = (...args) => {
-    fn.mock.calls.push(args);
-    return fn.mock.returnValue;
-  };
-  fn.mock = { calls: [], returnValue: undefined };
-  fn.mockReturnValue = (value) => {
-    fn.mock.returnValue = value;
+    const fn = (...args) => {
+        fn.mock.calls.push(args);
+        return fn.mock.returnValue;
+    };
+    fn.mock = {calls: [], returnValue: undefined};
+    fn.mockReturnValue = (value) => {
+        fn.mock.returnValue = value;
+        return fn;
+    };
+    fn.mockImplementation = (impl) => {
+        fn.impl = impl;
+        return fn;
+    };
+    fn.mockClear = () => {
+        fn.mock.calls = [];
+        return fn;
+    };
+    fn._isMockFunction = true;
     return fn;
-  };
-  fn.mockImplementation = (impl) => {
-    fn.impl = impl;
-    return fn;
-  };
-  fn.mockClear = () => {
-    fn.mock.calls = [];
-    return fn;
-  };
-  fn._isMockFunction = true;
-  return fn;
 };
 
 // Mock DOM elements and WebSocket for testing app.js
 const mockElements = {
-    'status-indicator': { className: '', classList: { add: createMockFn(), remove: createMockFn() } },
-    'connection-status': { textContent: '' },
-    'message-count': { textContent: '' },
-    'logs-container': { innerHTML: '', appendChild: createMockFn(), scrollTop: 0 },
-    'command-input': { value: '', textContent: '' },
-    'send-button': { addEventListener: createMockFn() },
-    'quick-commands': { value: '', addEventListener: createMockFn() },
-    'exec-quick': { addEventListener: createMockFn() },
-    'show-history': { addEventListener: createMockFn() },
-    'clear-logs': { addEventListener: createMockFn() },
-    'refresh-graph': { addEventListener: createMockFn() },
-    'toggle-live': { addEventListener: createMockFn(), textContent: 'Pause Live' },
-    'demo-select': { value: '', addEventListener: createMockFn() },
-    'run-demo': { addEventListener: createMockFn() },
-    'graph-details': { innerHTML: '' },
-    'graph-container': { addEventListener: createMockFn() },
-    'notification-container': { appendChild: createMockFn() }
+    'status-indicator': {className: '', classList: {add: createMockFn(), remove: createMockFn()}},
+    'connection-status': {textContent: ''},
+    'message-count': {textContent: ''},
+    'logs-container': {innerHTML: '', appendChild: createMockFn(), scrollTop: 0},
+    'command-input': {value: '', textContent: ''},
+    'send-button': {addEventListener: createMockFn()},
+    'quick-commands': {value: '', addEventListener: createMockFn()},
+    'exec-quick': {addEventListener: createMockFn()},
+    'show-history': {addEventListener: createMockFn()},
+    'clear-logs': {addEventListener: createMockFn()},
+    'refresh-graph': {addEventListener: createMockFn()},
+    'toggle-live': {addEventListener: createMockFn(), textContent: 'Pause Live'},
+    'demo-select': {value: '', addEventListener: createMockFn()},
+    'run-demo': {addEventListener: createMockFn()},
+    'graph-details': {innerHTML: ''},
+    'graph-container': {addEventListener: createMockFn()},
+    'notification-container': {appendChild: createMockFn()}
 };
 
 // Mock DOM methods
@@ -57,25 +57,24 @@ global.document = {
 global.document.getElementById = (id) => mockElements[id] || null;
 
 global.window = {
-    location: { protocol: 'http:', hostname: 'localhost' },
+    location: {protocol: 'http:', hostname: 'localhost'},
     addEventListener: createMockFn()
 };
 
 // Mock WebSocket
 global.WebSocket = class MockWebSocket {
+    send = createMockFn();
+    close = createMockFn();
+    onopen = null;
+    onclose = null;
+    onerror = null;
+    onmessage = null;
+
     constructor(url) {
         this.url = url;
         this.readyState = 1; // OPEN
         this.OPEN = 1;
     }
-    
-    send = createMockFn();
-    close = createMockFn();
-    
-    onopen = null;
-    onclose = null;
-    onerror = null;
-    onmessage = null;
 };
 
 // Mock cytoscape
@@ -100,7 +99,7 @@ describe('ui App.js Unit Tests', () => {
             host: 'localhost',
             port: '8081'
         };
-        
+
         // Reset mock elements
         Object.keys(mockElements).forEach(key => {
             if (typeof mockElements[key] === 'object' && mockElements[key] !== null) {
@@ -122,7 +121,7 @@ describe('ui App.js Unit Tests', () => {
             host: 'test-host',
             port: '8082'
         };
-        
+
         const getWebSocketConfig = () => {
             if (typeof global.WEBSOCKET_CONFIG !== 'undefined') {
                 return {
@@ -135,7 +134,7 @@ describe('ui App.js Unit Tests', () => {
                 port: '8081'
             };
         };
-        
+
         const config = getWebSocketConfig();
         expect(config.host).toBe('test-host');
         expect(config.port).toBe('8082');
@@ -143,7 +142,7 @@ describe('ui App.js Unit Tests', () => {
 
     test('Command history functionality works', () => {
         const commandHistory = [];
-        
+
         const addToHistory = (command) => {
             commandHistory.push({
                 command: command,
@@ -151,7 +150,7 @@ describe('ui App.js Unit Tests', () => {
                 status: 'sent'
             });
         };
-        
+
         addToHistory('test command');
         expect(commandHistory.length).toBe(1);
         expect(commandHistory[0].command).toBe('test command');
@@ -160,15 +159,15 @@ describe('ui App.js Unit Tests', () => {
 
     test('Debug command processing works', () => {
         const logEntries = [];
-        
+
         const addLogEntry = (content, type = 'info', icon = '📝') => {
-            logEntries.push({ content, type, icon });
+            logEntries.push({content, type, icon});
         };
-        
+
         const handleDebugCommand = (command) => {
             addLogEntry(`> ${command}`, 'input', '⌨️');
-            
-            switch(command.toLowerCase()) {
+
+            switch (command.toLowerCase()) {
                 case '/help':
                     addLogEntry('Available debug commands:', 'info', '💡');
                     return true;
@@ -184,16 +183,16 @@ describe('ui App.js Unit Tests', () => {
                     return false;
             }
         };
-        
+
         // Test /help command
         handleDebugCommand('/help');
         expect(logEntries.length).toBe(2); // Input command + help message
         expect(logEntries[1].content).toBe('Available debug commands:');
-        
+
         // Test /unknown command
         handleDebugCommand('/unknown');
         expect(logEntries[logEntries.length - 1].content).toContain('Unknown debug command:');
-        
+
         // Test /clear command
         handleDebugCommand('/clear');
         expect(logEntries.length).toBe(1); // Only the "Cleared logs" message remains
@@ -201,14 +200,14 @@ describe('ui App.js Unit Tests', () => {
 
     test('Message handling functionality', () => {
         const logEntries = [];
-        
+
         const addLogEntry = (content, type = 'info', icon = '📝') => {
-            logEntries.push({ content, type, icon });
+            logEntries.push({content, type, icon});
         };
-        
+
         const handleMessage = (message) => {
             let content, type, icon;
-            
+
             // Determine message type and format accordingly
             switch (message.type) {
                 case 'narsese.result':
@@ -241,24 +240,24 @@ describe('ui App.js Unit Tests', () => {
                     type = 'info';
                     icon = '📝';
             }
-            
+
             addLogEntry(content, type, icon);
         };
-        
+
         // Test different message types
-        handleMessage({ type: 'narsese.result', payload: { result: '✅ Success' } });
+        handleMessage({type: 'narsese.result', payload: {result: '✅ Success'}});
         expect(logEntries[0].type).toBe('success');
         expect(logEntries[0].content).toBe('✅ Success');
-        
-        handleMessage({ type: 'narsese.error', payload: { error: 'Something went wrong' } });
+
+        handleMessage({type: 'narsese.error', payload: {error: 'Something went wrong'}});
         expect(logEntries[1].type).toBe('error');
         expect(logEntries[1].content).toBe('Something went wrong');
-        
-        handleMessage({ type: 'task.added', payload: { task: '<bird --> flyer>.' } });
+
+        handleMessage({type: 'task.added', payload: {task: '<bird --> flyer>.'}});
         expect(logEntries[2].type).toBe('task');
         expect(logEntries[2].content).toBe('<bird --> flyer>.');
-        
-        handleMessage({ type: 'concept.created', payload: { concept: 'bird' } });
+
+        handleMessage({type: 'concept.created', payload: {concept: 'bird'}});
         expect(logEntries[3].type).toBe('concept');
         expect(logEntries[3].content).toBe('bird');
     });
@@ -268,7 +267,7 @@ describe('ui App.js Unit Tests', () => {
         const mockCy = {
             getElementById: createMockFn().mockReturnValue({}),
             add: createMockFn(),
-            layout: () => ({ run: createMockFn() })
+            layout: () => ({run: createMockFn()})
         };
 
         const updateGraph = (message, cy) => {
@@ -290,7 +289,7 @@ describe('ui App.js Unit Tests', () => {
                         }
                     }]);
 
-                    cy.layout({ name: 'cose' }).run();
+                    cy.layout({name: 'cose'}).run();
                 }
             }
         };
@@ -298,7 +297,7 @@ describe('ui App.js Unit Tests', () => {
         // Test graph update with concept creation
         const mockMessage = {
             type: 'concept.created',
-            payload: { id: 'test_concept', term: 'bird', type: 'concept' }
+            payload: {id: 'test_concept', term: 'bird', type: 'concept'}
         };
 
         // Just ensure the function can be called without errors
@@ -320,19 +319,19 @@ describe('ui App.js Unit Tests', () => {
                     '<bat <-> flyer>?'
                 ]
             };
-            
+
             return demos[demoName] || [];
         };
-        
+
         // Test different demo names
         const inheritanceCommands = runDemo('inheritance');
         expect(inheritanceCommands.length).toBe(4);
         expect(inheritanceCommands[0]).toBe('<{cat} --> animal>.');
-        
+
         const similarityCommands = runDemo('similarity');
         expect(similarityCommands.length).toBe(3);
         expect(similarityCommands[0]).toBe('<(bird & flyer) <-> (bat & flyer)>.');
-        
+
         // Test invalid demo name
         const invalidCommands = runDemo('invalid');
         expect(invalidCommands.length).toBe(0);
@@ -340,22 +339,22 @@ describe('ui App.js Unit Tests', () => {
 
     test('Status update functionality', () => {
         const statusElements = {
-            connectionStatus: { textContent: '' },
-            statusIndicator: { className: '', classList: { add: createMockFn(), remove: createMockFn() } }
+            connectionStatus: {textContent: ''},
+            statusIndicator: {className: '', classList: {add: createMockFn(), remove: createMockFn()}}
         };
-        
+
         const updateStatus = (connectionStatus) => {
             const statusText = connectionStatus.charAt(0).toUpperCase() + connectionStatus.slice(1);
             statusElements.connectionStatus.textContent = statusText;
-            
+
             // Update indicator class
             statusElements.statusIndicator.className = 'status-indicator';
             statusElements.statusIndicator.classList.add(`status-${connectionStatus}`);
         };
-        
+
         updateStatus('connected');
         expect(statusElements.connectionStatus.textContent).toBe('Connected');
-        
+
         updateStatus('disconnected');
         expect(statusElements.connectionStatus.textContent).toBe('Disconnected');
     });

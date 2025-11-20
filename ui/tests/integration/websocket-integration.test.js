@@ -3,8 +3,8 @@
  * @description Integration tests for WebSocketManager interacting with mocked WebSocket and Config.
  */
 
-import { jest } from '@jest/globals';
-import { WebSocketManager } from '../../src/connection/WebSocketManager.js';
+import {jest} from '@jest/globals';
+import {WebSocketManager} from '../../src/connection/WebSocketManager.js';
 
 describe('WebSocketManager Integration', () => {
     let wsManager;
@@ -26,7 +26,7 @@ describe('WebSocketManager Integration', () => {
         // Mock Window and Config
         global.window = Object.create(originalWindow);
         Object.defineProperty(global.window, 'location', {
-            value: { hostname: 'localhost', protocol: 'http:' },
+            value: {hostname: 'localhost', protocol: 'http:'},
             writable: true
         });
         // Ensure WEBSOCKET_CONFIG is undefined so it falls back to defaults or uses window location
@@ -78,7 +78,7 @@ describe('WebSocketManager Integration', () => {
         const mockHandler = jest.fn();
         wsManager.subscribe('narsese.result', mockHandler);
 
-        const testPayload = { result: 'test' };
+        const testPayload = {result: 'test'};
         const message = {
             type: 'narsese.result',
             data: testPayload
@@ -86,7 +86,7 @@ describe('WebSocketManager Integration', () => {
 
         // Simulate onmessage
         // Note: WebSocketManager expects event.data to be a JSON string
-        const event = { data: JSON.stringify(message) };
+        const event = {data: JSON.stringify(message)};
         wsManager.ws.onmessage(event);
 
         // The handler should be called with the parsed message
@@ -107,28 +107,28 @@ describe('WebSocketManager Integration', () => {
         const batchMessage = {
             type: 'eventBatch',
             data: [
-                { type: 'concept.created', data: { concept: 'A' } },
-                { type: 'concept.created', data: { concept: 'B' } }
+                {type: 'concept.created', data: {concept: 'A'}},
+                {type: 'concept.created', data: {concept: 'B'}}
             ]
         };
 
-        const event = { data: JSON.stringify(batchMessage) };
+        const event = {data: JSON.stringify(batchMessage)};
         wsManager.ws.onmessage(event);
 
         expect(mockHandler).toHaveBeenCalledTimes(2);
         expect(mockHandler).toHaveBeenCalledWith(expect.objectContaining({
-             payload: { concept: 'A' }
+            payload: {concept: 'A'}
         }));
         expect(mockHandler).toHaveBeenCalledWith(expect.objectContaining({
-             payload: { concept: 'B' }
+            payload: {concept: 'B'}
         }));
     });
 
     test('should handle connection errors', () => {
         wsManager.connect();
-        
+
         // Simulate onerror
-        wsManager.ws.onerror({ message: 'Connection failed' });
+        wsManager.ws.onerror({message: 'Connection failed'});
 
         expect(wsManager.getConnectionStatus()).toBe('error');
     });

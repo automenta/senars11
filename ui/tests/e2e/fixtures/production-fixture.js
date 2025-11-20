@@ -1,8 +1,7 @@
-import { test as base, expect } from '@playwright/test';
-import { NarPage } from '../utils/NarPage.js';
-import { spawn } from 'child_process';
-import { setTimeout } from 'timers/promises';
-import path from 'path';
+import {expect, test as base} from '@playwright/test';
+import {NarPage} from '../utils/NarPage.js';
+import {spawn} from 'child_process';
+import {setTimeout} from 'timers/promises';
 import net from 'net';
 
 // Helper to wait for port
@@ -36,70 +35,70 @@ async function waitForPort(port, timeout = 20000) {
 }
 
 export const test = base.extend({
-  realBackend: async ({ }, use) => {
-    console.log('🚀 Starting Real NAR backend...');
-    const wsPort = 8201;
-    const httpPort = 8202;
+    realBackend: async ({}, use) => {
+        console.log('🚀 Starting Real NAR backend...');
+        const wsPort = 8201;
+        const httpPort = 8202;
 
-    // Use the new utility script
-    const narProcess = spawn('node', ['tests/e2e/utils/start-backend.js'], {
-        cwd: process.cwd(), // ui/
-        stdio: ['ignore', 'pipe', 'pipe'],
-        env: {
-            ...process.env,
-            WS_PORT: wsPort.toString(),
-            HTTP_PORT: httpPort.toString()
+        // Use the new utility script
+        const narProcess = spawn('node', ['tests/e2e/utils/start-backend.js'], {
+            cwd: process.cwd(), // ui/
+            stdio: ['ignore', 'pipe', 'pipe'],
+            env: {
+                ...process.env,
+                WS_PORT: wsPort.toString(),
+                HTTP_PORT: httpPort.toString()
+            }
+        });
+
+        narProcess.stdout.on('data', (d) => console.log(`[NAR]: ${d}`));
+        narProcess.stderr.on('data', (d) => console.error(`[NAR ERR]: ${d}`));
+
+        try {
+            await waitForPort(wsPort, 20000);
+        } catch (e) {
+            console.error('Backend failed to start');
+            narProcess.kill();
+            throw e;
         }
-    });
 
-    narProcess.stdout.on('data', (d) => console.log(`[NAR]: ${d}`));
-    narProcess.stderr.on('data', (d) => console.error(`[NAR ERR]: ${d}`));
+        await use({wsPort, httpPort});
 
-    try {
-        await waitForPort(wsPort, 20000);
-    } catch (e) {
-        console.error('Backend failed to start');
         narProcess.kill();
-        throw e;
-    }
+    },
 
-    await use({ wsPort, httpPort });
+    productionPage: async ({page, realBackend}, use) => {
+        const uiPort = 8200;
 
-    narProcess.kill();
-  },
+        const uiProcess = spawn('node', ['server.js'], {
+            cwd: process.cwd(), // ui/
+            stdio: ['ignore', 'pipe', 'pipe'],
+            env: {
+                ...process.env,
+                HTTP_PORT: uiPort.toString(),
+                WS_PORT: realBackend.wsPort.toString()
+            }
+        });
 
-  productionPage: async ({ page, realBackend }, use) => {
-    const uiPort = 8200;
+        uiProcess.stdout.on('data', (d) => console.log(`[UI]: ${d}`));
+        uiProcess.stderr.on('data', (d) => console.error(`[UI ERR]: ${d}`));
 
-    const uiProcess = spawn('node', ['server.js'], {
-        cwd: process.cwd(), // ui/
-        stdio: ['ignore', 'pipe', 'pipe'],
-        env: {
-            ...process.env,
-            HTTP_PORT: uiPort.toString(),
-            WS_PORT: realBackend.wsPort.toString()
+        try {
+            await waitForPort(uiPort, 20000);
+        } catch (e) {
+            console.error('UI Server failed to start');
+            uiProcess.kill();
+            throw e;
         }
-    });
 
-    uiProcess.stdout.on('data', (d) => console.log(`[UI]: ${d}`));
-    uiProcess.stderr.on('data', (d) => console.error(`[UI ERR]: ${d}`));
+        const narPage = new NarPage(page);
+        await page.goto(`http://localhost:${uiPort}`);
+        await narPage.waitForConnection();
 
-    try {
-        await waitForPort(uiPort, 20000);
-    } catch (e) {
-        console.error('UI Server failed to start');
+        await use(narPage);
+
         uiProcess.kill();
-        throw e;
     }
-
-    const narPage = new NarPage(page);
-    await page.goto(`http://localhost:${uiPort}`);
-    await narPage.waitForConnection();
-
-    await use(narPage);
-
-    uiProcess.kill();
-  }
 });
 
-export { expect };
+export {expect};

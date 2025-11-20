@@ -1,13 +1,13 @@
-const { test: base, expect } = require('@playwright/test');
-const { spawn } = require('child_process');
-const { setTimeout } = require('timers/promises');
+const {test: base, expect} = require('@playwright/test');
+const {spawn} = require('child_process');
+const {setTimeout} = require('timers/promises');
 
 // Define test fixtures
 const test = base.extend({
-  // Start the UI server before running tests
-  server: async ({ }, use) => {
-    // Start a mock backend server
-    const mockBackend = spawn('node', ['-e', `
+    // Start the UI server before running tests
+    server: async ({}, use) => {
+        // Start a mock backend server
+        const mockBackend = spawn('node', ['-e', `
       import { WebSocketServer } from 'ws';
 
       const wss = new WebSocketServer({ port: 8081 });
@@ -24,34 +24,34 @@ const test = base.extend({
         });
       });
     `], {
-      stdio: 'pipe',
-      shell: true
-    });
+            stdio: 'pipe',
+            shell: true
+        });
 
-    // Wait for mock backend to start
-    await setTimeout(2000);
+        // Wait for mock backend to start
+        await setTimeout(2000);
 
-    // Start the UI server
-    const server = spawn('node', ['server.js'], {
-      cwd: './',
-      stdio: 'pipe',
-      env: {
-        ...process.env,
-        HTTP_PORT: '8080',
-        WS_PORT: '8081'
-      }
-    });
+        // Start the UI server
+        const server = spawn('node', ['server.js'], {
+            cwd: './',
+            stdio: 'pipe',
+            env: {
+                ...process.env,
+                HTTP_PORT: '8080',
+                WS_PORT: '8081'
+            }
+        });
 
-    // Wait for UI server to start
-    await setTimeout(2000);
+        // Wait for UI server to start
+        await setTimeout(2000);
 
-    // Use the server
-    await use({ mockBackend, server });
+        // Use the server
+        await use({mockBackend, server});
 
-    // Cleanup after tests
-    mockBackend.kill();
-    server.kill();
-  }
+        // Cleanup after tests
+        mockBackend.kill();
+        server.kill();
+    }
 });
 
-module.exports = { test, expect };
+module.exports = {test, expect};

@@ -10,7 +10,7 @@ export class ProviderError extends Error {
         this.code = code;
         this.originalError = originalError;
         this.timestamp = new Date().toISOString();
-        
+
         if (Error.captureStackTrace) {
             Error.captureStackTrace(this, this.constructor);
         }

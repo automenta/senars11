@@ -1,11 +1,12 @@
 # **SeNARS Desktop UI Experiments: Actionable Prototype Plan**
 
-> **Objective**: Develop **two minimal, self-contained prototypes** in parallel within the monorepo to evaluate **webview-based** and **native widget-based** desktop UIs.  
-> Both connect to the local SeNARS engine via WebSocket and implement **core functionality**:  
-> - Snapshot-based graph view  
-> - Live update toggle  
-> - Log panel  
-> - Input bar  
+> **Objective**: Develop **two minimal, self-contained prototypes** in parallel within the monorepo to evaluate *
+*webview-based** and **native widget-based** desktop UIs.  
+> Both connect to the local SeNARS engine via WebSocket and implement **core functionality**:
+> - Snapshot-based graph view
+> - Live update toggle
+> - Log panel
+> - Input bar
 
 ---
 
@@ -26,16 +27,17 @@ senars-monorepo/
 
 ## Shared Prerequisites
 
-1. **Engine runs locally** at `ws://127.0.0.1:8080`  
-2. **Web UI (`ui/`)** is functional and serves as reference  
-3. **Node.js ≥ 20**, **npm ≥ 10**, **Rust** (for Tauri), **CMake** (for NodeGUI) installed  
-4. **Git** for branching and isolation  
+1. **Engine runs locally** at `ws://127.0.0.1:8080`
+2. **Web UI (`ui/`)** is functional and serves as reference
+3. **Node.js ≥ 20**, **npm ≥ 10**, **Rust** (for Tauri), **CMake** (for NodeGUI) installed
+4. **Git** for branching and isolation
 
 ---
 
 ## EXPERIMENT A: `exp/tauri/` – Webview (Tauri 2)
 
 ### Goal
+
 Reuse **100% of `ui/` codebase** in a native desktop binary using system webview.
 
 ### Steps
@@ -108,18 +110,19 @@ Reuse **100% of `ui/` codebase** in a native desktop binary using system webview
    ```
 
 7. **Verification Checklist**
-   - [ ] App launches with SeNARS UI  
-   - [ ] WebSocket connects to `ws://127.0.0.1:8080`  
-   - [ ] "Refresh View" loads snapshot  
-   - [ ] "Live Update" toggle works  
-   - [ ] Graph renders ≥ 100 nodes  
-   - [ ] No console errors  
+    - [ ] App launches with SeNARS UI
+    - [ ] WebSocket connects to `ws://127.0.0.1:8080`
+    - [ ] "Refresh View" loads snapshot
+    - [ ] "Live Update" toggle works
+    - [ ] Graph renders ≥ 100 nodes
+    - [ ] No console errors
 
 ---
 
 ## EXPERIMENT B: `exp/nodegui/` – Native Widgets (React-NodeGUI)
 
 ### Goal
+
 Build a **minimal native UI** using Qt6 widgets and canvas, **without webview**, for maximum performance.
 
 ### Steps
@@ -241,35 +244,35 @@ Build a **minimal native UI** using Qt6 widgets and canvas, **without webview**,
    ```
 
 8. **Verification Checklist**
-   - [ ] Native window opens  
-   - [ ] WebSocket connects  
-   - [ ] "Refresh" loads graph  
-   - [ ] Live toggle pauses updates  
-   - [ ] Canvas renders nodes/edges  
-   - [ ] No webview, no browser engine  
+    - [ ] Native window opens
+    - [ ] WebSocket connects
+    - [ ] "Refresh" loads graph
+    - [ ] Live toggle pauses updates
+    - [ ] Canvas renders nodes/edges
+    - [ ] No webview, no browser engine
 
 ---
 
 ## Final Deliverables
 
-| Path | Output |
-|------|--------|
-| `exp/tauri/` | `senars-tauri.exe`, `.dmg`, `.AppImage` |
-| `exp/nodegui/` | `senars-nodegui.exe` |
+| Path            | Output                                           |
+|-----------------|--------------------------------------------------|
+| `exp/tauri/`    | `senars-tauri.exe`, `.dmg`, `.AppImage`          |
+| `exp/nodegui/`  | `senars-nodegui.exe`                             |
 | `comparison.md` | Bundle size, cold start, FPS, memory, code reuse |
 
 ---
 
 ## Success Criteria (Both Prototypes)
 
-| Feature | Required |
-|-------|----------|
-| Connect to `ws://127.0.0.1:8080` | Yes |
-| Render ≥ 100 nodes + edges | Yes |
-| "Live Update" toggle | Yes |
-| Input command → log entry | Yes |
-| No crashes on launch | Yes |
-| Runs offline (after engine start) | Yes |
+| Feature                           | Required |
+|-----------------------------------|----------|
+| Connect to `ws://127.0.0.1:8080`  | Yes      |
+| Render ≥ 100 nodes + edges        | Yes      |
+| "Live Update" toggle              | Yes      |
+| Input command → log entry         | Yes      |
+| No crashes on launch              | Yes      |
+| Runs offline (after engine start) | Yes      |
 
 ---
 

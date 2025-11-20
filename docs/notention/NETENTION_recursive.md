@@ -1117,8 +1117,9 @@ This API defines how external applications (like the UI) can interact with Neten
     * This is where the "anticipatory" aspect comes in.
     * After the initial plan is created, the agent can analyze the plan steps and use the LLM to *infer* dependencies
       between them.
-      * Prompt:  "Analyze this plan: \[plan]. Are there any implicit dependencies between the steps? Return a JSON array
-      of dependencies, where each dependency is an object: `{ dependentStep: number, dependsOnStep: number}`".
+        * Prompt:  "Analyze this plan: \[plan]. Are there any implicit dependencies between the steps? Return a JSON
+          array
+          of dependencies, where each dependency is an object: `{ dependentStep: number, dependsOnStep: number}`".
     * Add edges to the plan's graph representation based on the inferred dependencies.
 
 5. **Plan Storage:**

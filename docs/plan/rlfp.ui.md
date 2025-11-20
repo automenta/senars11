@@ -2,11 +2,16 @@
 
 ## 1. Executive Summary
 
-This specification defines the **Control Plane Architecture** for SeNARS, transforming the system from a passive reasoner into an observable, steerable, and trainable platform.
+This specification defines the **Control Plane Architecture** for SeNARS, transforming the system from a passive
+reasoner into an observable, steerable, and trainable platform.
 
-To enable **Reinforcement Learning from Preferences (RLFP)**, we decouple the reasoning engine from the observation layer. We introduce a **Session-Based Architecture** where the immutable Long-Term Memory (LTM) is shared, but the mutable Short-Term Memory (Focus/Attention) can be **forked** instantly. This allows for efficient A/B testing of reasoning trajectories, "time travel" debugging, and high-speed automated training.
+To enable **Reinforcement Learning from Preferences (RLFP)**, we decouple the reasoning engine from the observation
+layer. We introduce a **Session-Based Architecture** where the immutable Long-Term Memory (LTM) is shared, but the
+mutable Short-Term Memory (Focus/Attention) can be **forked** instantly. This allows for efficient A/B testing of
+reasoning trajectories, "time travel" debugging, and high-speed automated training.
 
-The UI is redefined not merely as a visualization tool, but as a **Training Cockpit** that interfaces with the core via a standardized **Control Surface API**.
+The UI is redefined not merely as a visualization tool, but as a **Training Cockpit** that interfaces with the core via
+a standardized **Control Surface API**.
 
 ---
 
@@ -42,24 +47,28 @@ graph TD
 ```
 
 ### 2.1 The `Focus` Class as Session Container
+
 The `Focus` class is refactored to contain **all** mutable state required for a reasoning session:
-1.  **Attention Buffer:** The priority queue of tasks waiting for processing.
-2.  **Activation Map:** Transient activation levels for Concepts (distinct from LTM storage).
-3.  **Goal Stack:** The hierarchy of active goals and sub-goals.
-4.  **Policy Context:** The specific weights and heuristics active for this session.
+
+1. **Attention Buffer:** The priority queue of tasks waiting for processing.
+2. **Activation Map:** Transient activation levels for Concepts (distinct from LTM storage).
+3. **Goal Stack:** The hierarchy of active goals and sub-goals.
+4. **Policy Context:** The specific weights and heuristics active for this session.
 
 **Forking Mechanism:**
 `control.fork(sessionId)` creates a **Shallow Copy** of the `Focus` instance.
-*   **Terms/Tasks:** Shared by reference (Immutable).
-*   **Priority Queues:** Cloned (Mutable).
-*   **Policy:** Cloned (Mutable).
-*   **Cost:** O(N) where N is the size of the Focus buffer (very fast).
+
+* **Terms/Tasks:** Shared by reference (Immutable).
+* **Priority Queues:** Cloned (Mutable).
+* **Policy:** Cloned (Mutable).
+* **Cost:** O(N) where N is the size of the Focus buffer (very fast).
 
 ---
 
 ## 3. The Control Surface (`src/control/`)
 
-The **Control Surface** is the single source of truth for interacting with the NAR. It mediates between the Engine, the UI, and the Test Runner.
+The **Control Surface** is the single source of truth for interacting with the NAR. It mediates between the Engine, the
+UI, and the Test Runner.
 
 ### 3.1 `ReasonerControlSurface` API
 
@@ -104,9 +113,11 @@ interface ReasonerControlSurface extends BaseComponent {
 
 ## 4. The View Abstraction Layer (`src/view/`)
 
-To support both a React UI and a Headless Test Runner, we abstract the internal state into a standardized **View Model**.
+To support both a React UI and a Headless Test Runner, we abstract the internal state into a standardized **View Model
+**.
 
 ### 4.1 `ReasoningFrame`
+
 A complete, serializable snapshot of a single moment in a reasoning trajectory.
 
 ```typescript
@@ -140,24 +151,29 @@ type ReasoningFrame = {
 ```
 
 ### 4.2 `ViewStateAdapter`
+
 This component subscribes to the `EventBus` and the `ControlSurface`. It handles:
-*   **Throttling:** Emitting frames at 60fps (or on-demand) to prevent UI flooding.
-*   **Diffing:** Sending only deltas (changed priorities) to reduce bandwidth.
-*   **Serialization:** Converting circular references and internal IDs into safe JSON.
+
+* **Throttling:** Emitting frames at 60fps (or on-demand) to prevent UI flooding.
+* **Diffing:** Sending only deltas (changed priorities) to reduce bandwidth.
+* **Serialization:** Converting circular references and internal IDs into safe JSON.
 
 ---
 
 ## 5. The Policy Arbiter (`src/reasoning/PolicyArbiter.js`)
 
-This is the integration point where "How to Think" is decided. It sits inside the `Cycle` and consults the `Focus` (Session) configuration to make decisions.
+This is the integration point where "How to Think" is decided. It sits inside the `Cycle` and consults the `Focus` (
+Session) configuration to make decisions.
 
 **Decision Flow:**
-1.  **Cycle** reaches a decision point (e.g., "Which Rule?").
-2.  **Cycle** calls `PolicyArbiter.resolve(context)`.
-3.  **PolicyArbiter** checks the Session Mode:
-    *   **Mode: HEURISTIC (Default):** Returns result of standard NAL math.
-    *   **Mode: RL_INFERENCE:** Queries the loaded `RLFPLearner` model for a probability distribution.
-    *   **Mode: INTERACTIVE:** Pauses the `ControlSurface`, emits a `pendingDecision` frame, and waits for `injectDecision()`.
+
+1. **Cycle** reaches a decision point (e.g., "Which Rule?").
+2. **Cycle** calls `PolicyArbiter.resolve(context)`.
+3. **PolicyArbiter** checks the Session Mode:
+    * **Mode: HEURISTIC (Default):** Returns result of standard NAL math.
+    * **Mode: RL_INFERENCE:** Queries the loaded `RLFPLearner` model for a probability distribution.
+    * **Mode: INTERACTIVE:** Pauses the `ControlSurface`, emits a `pendingDecision` frame, and waits for
+      `injectDecision()`.
 
 ---
 
@@ -166,27 +182,31 @@ This is the integration point where "How to Think" is decided. It sits inside th
 The UI is a React application designed for **Comparative Feedback**.
 
 ### 6.1 The "Split-Brain" Comparator
+
 A specialized view for RLFP data collection.
 
-*   **Left Panel (Session A):** Displays the reasoning trajectory of the Baseline Policy.
-*   **Right Panel (Session B):** Displays the reasoning trajectory of the Experimental Policy.
-*   **Center Controls:**
-    *   **Sync Scrubber:** A timeline slider that moves both sessions forward/backward in lockstep.
-    *   **Divergence Marker:** Visual indicator of exactly where the two sessions made different choices.
-    *   **Feedback Buttons:** `< Prefer Left`, `Equal`, `Prefer Right >`.
+* **Left Panel (Session A):** Displays the reasoning trajectory of the Baseline Policy.
+* **Right Panel (Session B):** Displays the reasoning trajectory of the Experimental Policy.
+* **Center Controls:**
+    * **Sync Scrubber:** A timeline slider that moves both sessions forward/backward in lockstep.
+    * **Divergence Marker:** Visual indicator of exactly where the two sessions made different choices.
+    * **Feedback Buttons:** `< Prefer Left`, `Equal`, `Prefer Right >`.
 
 ### 6.2 The "Intervention" Overlay
+
 When a session is in `INTERACTIVE` mode:
-1.  The UI grays out.
-2.  The specific decision options (e.g., 3 candidate Tasks) highlight.
-3.  The user clicks a Task.
-4.  **Data Capture:** The system records `(Frame, UserSelection)` as a "Gold Standard" training example.
+
+1. The UI grays out.
+2. The specific decision options (e.g., 3 candidate Tasks) highlight.
+3. The user clicks a Task.
+4. **Data Capture:** The system records `(Frame, UserSelection)` as a "Gold Standard" training example.
 
 ---
 
 ## 7. Automated Training Strategy (`src/testing/rlfp/`)
 
-We use the `ControlSurface` to run **Headless Training Loops**. This enables massive scale data generation without human clicking.
+We use the `ControlSurface` to run **Headless Training Loops**. This enables massive scale data generation without human
+clicking.
 
 ### 7.1 `HeadlessTeacher` Component
 
@@ -239,31 +259,36 @@ class HeadlessTeacher {
 ## 8. Implementation Roadmap
 
 ### Phase 1: The Foundation (Refactoring Focus)
-1.  Refactor `Focus.js` to include `clone()` method (Shallow copy of buffers).
-2.  Refactor `NAR.js` to accept a `Focus` instance in its constructor or via `setFocus()`.
-3.  Implement `ReasonerControlSurface` with basic `fork` and `step`.
+
+1. Refactor `Focus.js` to include `clone()` method (Shallow copy of buffers).
+2. Refactor `NAR.js` to accept a `Focus` instance in its constructor or via `setFocus()`.
+3. Implement `ReasonerControlSurface` with basic `fork` and `step`.
 
 ### Phase 2: The View Layer
-1.  Define the `ReasoningFrame` TypeScript schema.
-2.  Implement `ViewStateAdapter` to serialize internal state.
-3.  Create a WebSocket server in `io/` that streams Frames.
+
+1. Define the `ReasoningFrame` TypeScript schema.
+2. Implement `ViewStateAdapter` to serialize internal state.
+3. Create a WebSocket server in `io/` that streams Frames.
 
 ### Phase 3: The Policy Arbiter
-1.  Inject `PolicyArbiter` hooks into `Cycle.js` and `RuleEngine.js`.
-2.  Implement `INTERACTIVE` mode (Pause-and-Wait logic).
+
+1. Inject `PolicyArbiter` hooks into `Cycle.js` and `RuleEngine.js`.
+2. Implement `INTERACTIVE` mode (Pause-and-Wait logic).
 
 ### Phase 4: The UI & Automation
-1.  Build the React "Split-Brain" component.
-2.  Implement `HeadlessTeacher` and a basic `MetricOracle` (e.g., prefer shorter paths).
+
+1. Build the React "Split-Brain" component.
+2. Implement `HeadlessTeacher` and a basic `MetricOracle` (e.g., prefer shorter paths).
 
 ## 9. Feature Completeness Checklist
 
-*   **Mutable State Isolation:** ✅ Handled via `Focus` class forking.
-*   **Time Travel:** ✅ Achieved via `fork` (branching) and `snapshot` (serialization).
-*   **Intervention:** ✅ `PolicyArbiter` supports `INTERACTIVE` mode.
-*   **Headless Support:** ✅ `ControlSurface` is API-first, UI-agnostic.
-*   **RL Integration:** ✅ `ReasoningFrame` provides the Observation (O), `injectDecision` provides the Action (A).
-*   **Performance:** ✅ Shared LTM prevents memory explosion; View Layer throttles updates.
+* **Mutable State Isolation:** ✅ Handled via `Focus` class forking.
+* **Time Travel:** ✅ Achieved via `fork` (branching) and `snapshot` (serialization).
+* **Intervention:** ✅ `PolicyArbiter` supports `INTERACTIVE` mode.
+* **Headless Support:** ✅ `ControlSurface` is API-first, UI-agnostic.
+* **RL Integration:** ✅ `ReasoningFrame` provides the Observation (O), `injectDecision` provides the Action (A).
+* **Performance:** ✅ Shared LTM prevents memory explosion; View Layer throttles updates.
 
-This specification provides a robust, flexible foundation for teaching SeNARS. It transforms the system from a "Black Box" into a "Glass Box" that can be observed, paused, rewound, and steered by both humans and algorithms.
+This specification provides a robust, flexible foundation for teaching SeNARS. It transforms the system from a "Black
+Box" into a "Glass Box" that can be observed, paused, rewound, and steered by both humans and algorithms.
 

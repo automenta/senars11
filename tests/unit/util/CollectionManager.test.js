@@ -1,4 +1,8 @@
-import {batchUpdate, createCollectionManager, createObjectManager} from '../../../ui-react-legacy/src/utils/CollectionManager.js';
+import {
+    batchUpdate,
+    createCollectionManager,
+    createObjectManager
+} from '../../../ui-react-legacy/src/utils/CollectionManager.js';
 
 describe('CollectionManager', () => {
     describe('createCollectionManager', () => {

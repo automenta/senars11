@@ -5,11 +5,13 @@ This directory contains two parallel experiments for creating a desktop UI for S
 ## Experiments
 
 ### A. Tauri (`tauri/`)
+
 - **Approach**: Webview-based desktop app reusing existing web UI code
 - **Technology**: Tauri 2, Rust backend, React frontend
 - **Features**: 100% code reuse from web UI, native process control
 
 ### B. NodeGUI (`nodegui/`)
+
 - **Approach**: Native Qt widgets using React bindings
 - **Technology**: NodeGUI, React, native rendering
 - **Features**: Native performance, smaller bundle size, no webview dependencies
@@ -25,6 +27,7 @@ exp/
 ## Running Experiments
 
 ### Tauri
+
 ```bash
 cd exp/tauri
 npm run tauri dev    # Development mode
@@ -32,6 +35,7 @@ npm run tauri build  # Build release
 ```
 
 ### NodeGUI
+
 ```bash
 cd exp/nodegui
 npm run dev          # Development mode
