@@ -31,12 +31,17 @@ const server = http.createServer((req, res) => {
     }
 
     let fullPath;
-    if (filePath.startsWith('/src/')) {
-        // Serve shared code from the parent src directory
+    // Check if file exists in local UI directory first (e.g. ui/src/...)
+    const localPath = path.join(__dirname, filePath);
+
+    if (fs.existsSync(localPath) && fs.statSync(localPath).isFile()) {
+        fullPath = localPath;
+    } else if (filePath.startsWith('/src/')) {
+        // Fallback to shared code from the parent src directory
         // filePath includes /src/, so we join with parent of ui/ which is root
         fullPath = path.join(__dirname, '..', filePath);
     } else {
-        fullPath = path.join(__dirname, filePath);
+        fullPath = localPath;
     }
 
     fs.readFile(fullPath, 'utf8', (err, content) => {

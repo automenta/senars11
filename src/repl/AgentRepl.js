@@ -72,13 +72,11 @@ class AgentRepl {
     }
 
     _getOllamaConfig() {
-        if (!this.args.model) {
-            console.error(`❌ Error: No model specified. Please provide a model using --model parameter.`);
-            console.error(`   Example: npm run repl:agent:ollama -- --model ${DEFAULT_CONFIG.OLLAMA.modelName}`);
-            process.exit(1);
-        }
+        // Use default model if not specified
+        const modelName = this.args.model || DEFAULT_CONFIG.OLLAMA.modelName;
+
         return {
-            modelName: this.args.model,
+            modelName: modelName,
             baseURL: this.args.baseUrl || DEFAULT_CONFIG.OLLAMA.baseUrl,
             temperature: this.args.temperature || DEFAULT_CONFIG.OLLAMA.temperature
         };

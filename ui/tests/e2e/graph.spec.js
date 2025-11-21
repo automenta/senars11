@@ -17,7 +17,16 @@ test.describe('Graph Visualization', () => {
     test('Live toggle functionality works', async ({narPage, page}) => {
         // Ensure navigation via narPage fixture
         const toggleBtn = page.locator('#toggle-live');
+        // Initial state is the icon/label
+        await expect(toggleBtn).toContainText('Live');
+
+        // Click to toggle state
+        await toggleBtn.click();
+
+        // After first click, it should normalize to one of the states.
+        // Based on UIEventHandlers, "📡 Live" -> "Pause Live"
         await expect(toggleBtn).toHaveText('Pause Live');
+
         await toggleBtn.click();
         await expect(toggleBtn).toHaveText('Resume Live');
     });

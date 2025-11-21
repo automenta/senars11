@@ -32,6 +32,22 @@ async function start() {
         await demoWrapper.initialize(replEngine.nar, monitor);
 
         console.log('NAR Backend Ready');
+
+        // Handle graceful shutdown
+        const shutdown = async () => {
+            console.log('Stopping NAR Backend...');
+            try {
+                if (monitor) await monitor.stop();
+                if (replEngine) await replEngine.shutdown();
+            } catch (err) {
+                console.error('Error during shutdown:', err);
+            }
+            process.exit(0);
+        };
+
+        process.on('SIGINT', shutdown);
+        process.on('SIGTERM', shutdown);
+
     } catch (error) {
         console.error('Failed to start NAR backend:', error);
         process.exit(1);

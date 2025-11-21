@@ -4,6 +4,17 @@ import {spawn} from 'child_process';
 import {setTimeout} from 'timers/promises';
 import net from 'net';
 
+// Helper to find a free port
+async function getFreePort() {
+    return new Promise(resolve => {
+        const srv = net.createServer();
+        srv.listen(0, () => {
+            const port = srv.address().port;
+            srv.close(() => resolve(port));
+        });
+    });
+}
+
 // Helper to wait for port
 async function waitForPort(port, timeout = 20000) {
     const startTime = Date.now();
@@ -37,8 +48,9 @@ async function waitForPort(port, timeout = 20000) {
 export const test = base.extend({
     realBackend: async ({}, use) => {
         console.log('🚀 Starting Real NAR backend...');
-        const wsPort = 8201;
-        const httpPort = 8202;
+        // Dynamically assign ports to allow parallel execution
+        const wsPort = await getFreePort();
+        const httpPort = await getFreePort(); // Not strictly used by start-backend but passed
 
         // Use the new utility script
         const narProcess = spawn('node', ['tests/e2e/utils/start-backend.js'], {
@@ -68,7 +80,7 @@ export const test = base.extend({
     },
 
     productionPage: async ({page, realBackend}, use) => {
-        const uiPort = 8200;
+        const uiPort = await getFreePort();
 
         const uiProcess = spawn('node', ['server.js'], {
             cwd: process.cwd(), // ui/
