@@ -24,12 +24,15 @@ const LOG_TYPES = {
     warning: {color: 'yellow', symbol: '⚠️'},
     success: {color: 'green', symbol: '✅'},
     debug: {color: 'blue', symbol: '🔬'},
-    default: {color: 'white', symbol: 'ℹ️'}
+    info: {color: 'white', symbol: 'ℹ️'},
+    agent: {color: 'cyan', symbol: '🤖'},
+    tool: {color: 'magenta', symbol: '🔧'},
+    result: {color: 'gray', symbol: '📎'},
 };
 
 // Format log entry with color coding
 const formatLogEntry = (log) => {
-    const {color, symbol} = LOG_TYPES[log.type] ?? LOG_TYPES.default;
+    const {color, symbol} = LOG_TYPES[log.type] ?? LOG_TYPES.info;
     const timestamp = new Date(log.timestamp).toLocaleTimeString();
 
     return React.createElement(
@@ -77,11 +80,24 @@ const useCommandHistory = () => {
 };
 
 // Handle slash commands
-const handleSlashCommand = async (engine, command, addLog) => {
+const handleSlashCommand = async (engine, command, addLog, mode, setMode) => {
     const [cmd, ...args] = command.slice(1).split(' ');
     const cmdLower = cmd.toLowerCase();
 
     switch (cmdLower) {
+        case 'mode':
+            if (args.length > 0) {
+                const newMode = args[0].toLowerCase();
+                if (['agent', 'narsese'].includes(newMode)) {
+                    setMode(newMode);
+                    addLog(`🔄 Switched to ${newMode.toUpperCase()} mode`, 'success');
+                } else {
+                    addLog('❌ Invalid mode. Use "agent" or "narsese".', 'error');
+                }
+            } else {
+                addLog(`ℹ️ Current mode: ${mode.toUpperCase()}`, 'info');
+            }
+            return;
         case 'exit':
         case 'quit':
         case 'q':
@@ -129,7 +145,9 @@ export const AgentInkTUI = ({engine}) => {
         type: 'info'
     }]);
     const [inputValue, setInputValue] = useState('');
-    const [status, setStatus] = useState({isRunning: false, cycle: 0, mode: 'idle', agentCount: 0});
+    const [status, setStatus] = useState({isRunning: false, cycle: 0});
+    const [mode, setMode] = useState('agent'); // 'agent' or 'narsese'
+
     const streamingResponseRef = useRef(null);
     const streamControllerRef = useRef(null);
 
@@ -148,8 +166,11 @@ export const AgentInkTUI = ({engine}) => {
                 return prevLogs; // Don't add duplicate
             }
 
+            // If we're streaming, we don't want to remove the streaming log yet,
+            // but we can append others.
+
             return [
-                ...prevLogs.filter(log => log.id !== streamingResponseRef.current), // Remove current streaming log if adding a new one
+                ...prevLogs,
                 {id: uuidv4(), message, timestamp: Date.now(), type}
             ].slice(-50); // Keep max 50 logs in memory for performance
         });
@@ -162,11 +183,10 @@ export const AgentInkTUI = ({engine}) => {
         const handleStatus = (newStatus) => setStatus(prev => ({...prev, ...newStatus}));
         const handleCycleStep = (data) => setStatus(prev => ({
             ...prev,
-            cycle: data.cycleAfter ?? data.cycle ?? 0,
-            mode: 'stepped'
+            cycle: data.cycleAfter ?? data.cycle ?? 0
         }));
-        const handleCycleRunning = () => setStatus(prev => ({...prev, isRunning: true, mode: 'running'}));
-        const handleCycleStop = () => setStatus(prev => ({...prev, isRunning: false, mode: 'idle'}));
+        const handleCycleRunning = () => setStatus(prev => ({...prev, isRunning: true}));
+        const handleCycleStop = () => setStatus(prev => ({...prev, isRunning: false}));
 
         const handleTaskFocused = (data) => {
             const task = data.task;
@@ -178,7 +198,7 @@ export const AgentInkTUI = ({engine}) => {
 
         // Agent-specific event handlers
         const handleGenericAgentEvent = (prefix, data) =>
-            addLog(`${prefix}: ${data.action ?? data.decision ?? data.description} ${data.details ? `- ${data.details}` : ''}`, 'info');
+            addLog(`${prefix}: ${data.action ?? data.decision ?? data.description} ${data.details ? `- ${data.details}` : ''}`, 'agent');
 
         const handlers = {
             'log': handleLog,
@@ -200,8 +220,9 @@ export const AgentInkTUI = ({engine}) => {
         // Initial logs
         addLog('✅ Agent connected to engine', 'success');
         setTimeout(() => {
-            addLog('🤖 Welcome to SeNARS Agent REPL!', 'info');
-            addLog('Try: "agent create myagent", "goal learn quantum physics", "think about AI"', 'info');
+            addLog('🤖 Welcome to SeNARS Unified REPL!', 'info');
+            addLog('Type /help for commands. Toggle modes with /mode or Ctrl+M.', 'info');
+            addLog(`Current mode: ${mode.toUpperCase()}`, 'info');
         }, 100);
 
         // Return cleanup function
@@ -211,13 +232,14 @@ export const AgentInkTUI = ({engine}) => {
     };
 
     // Setup event listeners with useEffect
-    useEffect(setupEventListeners, [engine, addLog]);
+    useEffect(setupEventListeners, [engine, addLog]); // Mode isn't a dependency here, handled in state
 
     // Reasoner control functions
     const handleRunCommand = async () => executeAndLog(engine, engine.executeCommand('go'), 'Run', addLog);
     const handleStepCommand = async () => {
         try {
             const result = await engine._next();
+            // Brief pause to allow events to propagate
             await new Promise(resolve => setTimeout(resolve, 50));
 
             const beliefs = engine.nar.getBeliefs?.() ?? [];
@@ -236,6 +258,13 @@ export const AgentInkTUI = ({engine}) => {
         }
     };
     const handleStopCommand = async () => executeAndLog(engine, engine._stop(), 'Stop', addLog);
+
+    // Toggle Mode
+    const toggleMode = () => {
+        const newMode = mode === 'agent' ? 'narsese' : 'agent';
+        setMode(newMode);
+        addLog(`🔄 Switched to ${newMode.toUpperCase()} mode`, 'success');
+    };
 
     // Handle keyboard shortcuts
     useInput((input, key) => {
@@ -265,6 +294,9 @@ export const AgentInkTUI = ({engine}) => {
                 case 'c':
                     addLog('👋 Agent TUI terminated', 'info');
                     return process.exit(0);
+                case 'm':
+                    toggleMode();
+                    return;
             }
         }
 
@@ -277,134 +309,93 @@ export const AgentInkTUI = ({engine}) => {
     const handleSubmit = async () => {
         const command = inputValue.trim();
         if (!command) {
+            // Empty input -> single step
             await handleStepCommand(engine, addLog);
             setInputValue('');
             return;
         }
 
         addToHistory(command);
-        setInputValue(''); // Clear input immediately so user can type again
+        setInputValue(''); // Clear input immediately
 
-        // Log that the command is being processed
+        // Log input
         addLog(`> ${command}`, 'info');
 
-        // Process command in the background to prevent blocking the UI
-        // Using a promise wrapper to avoid potential duplicate submissions
+        // Process command
         (async () => {
             try {
                 if (command.startsWith('/')) {
-                    await handleSlashCommand(engine, command, addLog);
+                    await handleSlashCommand(engine, command, addLog, mode, setMode);
                 } else {
-                    // Use streaming for LM responses to provide real-time feedback
-                    const responseLogId = uuidv4();
-                    streamingResponseRef.current = responseLogId; // Track the streaming response
-                    addLog('🔄 LM response streaming...', 'info');
+                    // Route based on mode
+                    if (mode === 'narsese') {
+                        // Direct Narsese execution
+                         const result = await engine.processNarsese(command);
+                         // Narsese processing might return string or nothing (logging via events)
+                         if (result) {
+                             addLog(result, 'success');
+                         }
+                    } else {
+                        // Agent Mode: Use streaming LM execution
+                        const responseLogId = uuidv4();
+                        streamingResponseRef.current = responseLogId;
+                        addLog('🔄 LM thinking...', 'agent');
 
-                    // Create an AbortController for this streaming request
-                    const abortController = new AbortController();
-                    streamControllerRef.current = abortController;
+                        const abortController = new AbortController();
+                        streamControllerRef.current = abortController;
 
-                    // Set a timeout for the LM call to prevent indefinite hanging
-                    const timeoutPromise = new Promise((_, reject) => {
-                        setTimeout(() => reject(new Error('Request timeout after 120 seconds')), 120000);
-                    });
+                        const timeoutPromise = new Promise((_, reject) => {
+                            setTimeout(() => reject(new Error('Request timeout after 120 seconds')), 120000);
+                        });
 
-                    // Create a promise that handles the streaming response
-                    const streamPromise = (async () => {
-                        let fullResponse = '';
+                        const streamPromise = (async () => {
+                            let fullResponse = '';
 
-                        // Check if agentLM has streaming capability
-                        if (engine.agentLM && typeof engine.agentLM.streamText === 'function') {
+                            // Add streaming placeholder log
+                            setLogs(prevLogs => [
+                                ...prevLogs,
+                                {
+                                    id: responseLogId,
+                                    message: '...',
+                                    timestamp: Date.now(),
+                                    type: 'agent'
+                                }
+                            ].slice(-50));
+
                             try {
-                                // Get the stream iterator - use the engine's configuration if available
-                                const promptTemplate = engine.inputProcessingConfig?.lmPromptTemplate ||
-                                    'As an intelligent reasoning system, please respond to this query: "{{input}}". If this is a request that should interact with the NARS system, please use appropriate tools.';
-                                const prompt = promptTemplate.replace('{{input}}', command);
+                                for await (const chunk of engine.streamExecution(command)) {
+                                    if (abortController.signal.aborted) break;
 
-                                const streamIterator = await engine.agentLM.streamText(
-                                    prompt,
-                                    {
-                                        temperature: engine.inputProcessingConfig?.lmTemperature || 0.7,
-                                        signal: abortController.signal  // Pass the abort signal
-                                    }
-                                );
-
-                                // Add initial streaming entry to logs
-                                setLogs(prevLogs => [
-                                    ...prevLogs.slice(-49),
-                                    {
-                                        id: responseLogId,
-                                        message: '🔄 LM response streaming...',
-                                        timestamp: Date.now(),
-                                        type: 'info'
-                                    }
-                                ]);
-
-                                // Stream the response - get all chunks and update the log immediately
-                                for await (const chunk of streamIterator) {
-                                    // Check if the stream was aborted
-                                    if (abortController.signal.aborted) {
-                                        addLog('🛑 LM streaming was interrupted', 'info');
-                                        break;
-                                    }
-
-                                    fullResponse += chunk;
-                                    // Update the specific streaming log with the current response
-                                    setLogs(prevLogs => {
-                                        return prevLogs.map(log =>
+                                    if (chunk.type === 'agent_response') {
+                                        fullResponse += chunk.content;
+                                        // Update the specific log entry
+                                        setLogs(prevLogs => prevLogs.map(log =>
                                             log.id === responseLogId
-                                                ? {...log, message: `🤖: ${fullResponse}`, type: 'success'}
-                                                : log
-                                        ).slice(-50);
-                                    });
-                                }
-                            } catch (streamError) {
-                                // Check if it's an abort error
-                                if (streamError.name === 'AbortError' || streamError.message.includes('abort')) {
-                                    addLog('🛑 LM streaming was interrupted by user', 'info');
-                                    return; // Exit early if aborted
-                                }
-
-                                // If streaming fails, update the log with error
-                                setLogs(prevLogs => {
-                                    return prevLogs.map(log =>
-                                        log.id === responseLogId
-                                            ? {
-                                                ...log,
-                                                message: `❌ Streaming error: ${streamError.message}`,
-                                                type: 'error'
-                                            }
+                                            ? {...log, message: `🤖 ${fullResponse}`, type: 'agent'}
                                             : log
-                                    ).slice(-50);
-                                });
-
-                                // Then fallback to regular generateText
-                                const response = await engine.processInput(command);
-                                if (response && typeof response === 'string') {
-                                    addLog(`🤖 Response: ${response}`, response.includes('❌') ? 'error' : 'success');
+                                        ));
+                                    } else if (chunk.type === 'tool_call') {
+                                        addLog(`🔧 Tool Call: ${chunk.name} (${JSON.stringify(chunk.args)})`, 'tool');
+                                    } else if (chunk.type === 'tool_result') {
+                                        addLog(`📎 Result: ${chunk.content}`, 'result');
+                                    } else if (chunk.type === 'error') {
+                                        addLog(chunk.content, 'error');
+                                    }
+                                }
+                            } catch (err) {
+                                if (!abortController.signal.aborted) {
+                                     addLog(`❌ Streaming error: ${err.message}`, 'error');
                                 }
                             }
-                        } else {
-                            // Fallback to original approach if streaming not available
-                            const response = await engine.processInput(command);
-                            if (response && typeof response === 'string') {
-                                addLog(`🤖 Response: ${response}`, response.includes('❌') ? 'error' : 'success');
-                            }
-                        }
-                    })();
+                        })();
 
-                    // Race the streaming against timeout
-                    await Promise.race([
-                        streamPromise,
-                        timeoutPromise
-                    ]);
-
-                    // Reset the streaming ref after completion
-                    streamingResponseRef.current = null;
+                        await Promise.race([streamPromise, timeoutPromise]);
+                        streamingResponseRef.current = null;
+                    }
                 }
             } catch (error) {
                 if (error.message.includes('timeout')) {
-                    addLog('⏰ Request timed out - LM may be slow or unavailable', 'error');
+                    addLog('⏰ Request timed out', 'error');
                 } else {
                     addLog(handleError(error, 'Command processing'), 'error');
                 }
@@ -412,15 +403,27 @@ export const AgentInkTUI = ({engine}) => {
         })();
     };
 
-    // Render UI components
+    // UI Layout
     return React.createElement(
         Box,
         {flexDirection: 'column', width: '100%', height: '100%'},
+        // Header / Mode Indicator
+        React.createElement(
+            Box,
+            {
+                paddingX: 1,
+                backgroundColor: mode === 'agent' ? 'blue' : 'green',
+                width: '100%',
+            },
+            React.createElement(Text, {color: 'white', bold: true},
+                `SeNARS REPL [${mode.toUpperCase()}]`
+            )
+        ),
         // Log Viewer
         React.createElement(
             Box,
             {flexDirection: 'column', flexGrow: 1, padding: 1, maxHeight: '100%'},
-            React.createElement(Text, {bold: true, color: 'cyan'}, `Agent Log (${logs.length})`),
+            React.createElement(Text, {bold: true, color: 'cyan'}, `Logs (${logs.length})`),
             React.createElement(
                 Box,
                 {flexDirection: 'column', flexGrow: 1, marginTop: 1, marginBottom: 1},
@@ -430,18 +433,18 @@ export const AgentInkTUI = ({engine}) => {
         // Input Box
         React.createElement(
             Box,
-            {borderStyle: 'round', width: '100%'},
+            {borderStyle: 'round', width: '100%', borderColor: mode === 'agent' ? 'blue' : 'green'},
             React.createElement(
                 Box,
                 {flexDirection: 'row', alignItems: 'center'},
-                React.createElement(Text, {color: 'green', bold: true}, '> '),
+                React.createElement(Text, {color: mode === 'agent' ? 'blue' : 'green', bold: true}, `${mode}> `),
                 React.createElement(
                     TextInput,
                     {
                         value: inputValue,
                         onChange: setInputValue,
                         onSubmit: handleSubmit,
-                        placeholder: 'Enter command, Narsese input, or agent instruction...',
+                        placeholder: mode === 'agent' ? 'Enter instruction for Agent...' : 'Enter Narsese (e.g. <a --> b>.)...',
                     }
                 )
             )
@@ -451,7 +454,7 @@ export const AgentInkTUI = ({engine}) => {
             Box,
             {
                 paddingX: 1,
-                backgroundColor: 'blue',
+                backgroundColor: 'gray',
                 width: '100%',
                 flexDirection: 'row',
                 justifyContent: 'space-between'
@@ -459,18 +462,13 @@ export const AgentInkTUI = ({engine}) => {
             React.createElement(
                 Box,
                 {flexDirection: 'row'},
-                React.createElement(Text, {color: 'white', bold: true}, `${status.isRunning ? '🚀' : '⏸️ '} `),
-                React.createElement(Text, {color: 'white'}, `Cycle: ${status.cycle} | `),
-                React.createElement(Text, {color: 'white'}, `Mode: ${status.mode} | `),
-                React.createElement(Text, {color: 'white'}, `Raw Mode: ${isRawModeSupported ? 'Yes' : 'No'}`)
+                React.createElement(Text, {color: 'white', bold: true}, `${status.isRunning ? '🚀 RUNNING' : '⏸️ PAUSED'} `),
+                React.createElement(Text, {color: 'white'}, `| Cycle: ${status.cycle} `)
             ),
             React.createElement(
                 Box,
                 {flexDirection: 'row'},
-                React.createElement(Text, {color: 'yellow'}, 'Ctrl+H-Help | '),
-                React.createElement(Text, {color: 'yellow'}, '↑↓ History | '),
-                React.createElement(Text, {color: 'yellow'}, 'Ctrl+R/P | '),
-                React.createElement(Text, {color: 'yellow'}, 'Ctrl+C Exit')
+                React.createElement(Text, {color: 'yellow'}, 'Ctrl+M: Mode | Ctrl+C: Exit')
             )
         )
     );

@@ -6,7 +6,7 @@ import {Input} from '../Agent.js';
 import {PersistenceManager} from '../io/PersistenceManager.js';
 
 import {CommandProcessor} from './utils/CommandProcessor.js';
-import {FormattingUtils} from '../util/FormattingUtils.js';
+import {FormattingUtils} from './utils/FormattingUtils.js';
 
 const SPECIAL_COMMANDS = {
     'next': 'n',
@@ -43,7 +43,24 @@ export class ReplEngine extends EventEmitter {
     constructor(config = {}) {
         super();
 
-        this.nar = new NAR(config.nar ?? {});
+        // Check if 'nar' is passed directly in config (not ideal but common pattern being refactored)
+        // or if we should create a new one.
+        // The fix for stack overflow is to NOT pass the NAR instance into deep-cloning config structures.
+
+        let narConfig = {};
+        let existingNar = null;
+
+        if (config.nar instanceof NAR) {
+            existingNar = config.nar;
+            // Don't keep the NAR instance in the config object we might use elsewhere
+            // Create a clean config object without the NAR instance
+            const { nar, ...restConfig } = config;
+            config = restConfig;
+        } else {
+            narConfig = config.nar ?? {};
+        }
+
+        this.nar = existingNar || new NAR(narConfig);
         this.inputManager = new Input();
         this.sessionState = {history: [], lastResult: null, startTime: Date.now()};
         this.persistenceManager = new PersistenceManager({
@@ -67,7 +84,12 @@ export class ReplEngine extends EventEmitter {
 
     async initialize() {
         try {
-            await this.nar.initialize();
+            // Only initialize NAR if it hasn't been initialized yet
+            // We can check a property or just call it (idempotency depends on NAR implementation)
+            // Assuming NAR.initialize() is safe to call multiple times or checks internal state
+            if (this.nar.initialize) {
+                await this.nar.initialize();
+            }
 
             // Register event handlers once during initialization
             this._registerEventHandlers();

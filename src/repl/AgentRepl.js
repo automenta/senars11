@@ -1,89 +1,104 @@
 #!/usr/bin/env node
 
-import {AgentReplOllama} from './AgentReplOllama.js'; // Our new implementation
+import React from 'react';
+import {render} from 'ink';
 import inquirer from 'inquirer';
 import {parseReplArgs} from './utils/ReplArgsParser.js';
 import {DEFAULT_CONFIG} from './utils/ReplConstants.js';
 import {NAR} from '../nar/NAR.js';
+import {AgentReplEngine} from './AgentReplEngine.js';
+import {AgentInkTUI} from './components/AgentInkTUI.js';
+import {ChatOllama} from "@langchain/ollama";
 
 class AgentRepl {
     constructor() {
-        this.agentRepl = null;
+        this.engine = null;
         this.config = {};
         this.args = parseReplArgs();
+        this.inkInstance = null;
     }
 
     async start() {
-        console.log('🤖 SeNARS Agent REPL with LangGraph & Ollama - Hybrid Intelligence Lab\n');
-        console.log('Initializing Agent REPL with Ollama configuration...\n');
+        console.log('🤖 SeNARS Unified Agent REPL - Hybrid Intelligence Lab\n');
 
-        // Configure Ollama settings
-        await this.configureOllama();
+        // Configure Ollama/LM settings
+        await this.configureLM();
 
-        // Start the new Agent REPL implementation
-        await this.startNewRepl();
+        // Start the REPL
+        await this.startRepl();
     }
 
     _isOllamaMode() {
-        return this.args.ollama || this.args.model !== undefined || this.args.modelName !== undefined; // If a model is specified, use Ollama mode
+        // If any specific args are provided, assume we skip interactive setup if possible,
+        // or at least pre-fill.
+        return this.args.ollama || this.args.model !== undefined || this.args.modelName !== undefined;
     }
 
-    async configureOllama() {
+    async configureLM() {
         if (this._isOllamaMode()) {
             const {modelName, baseURL, temperature} = this._getOllamaConfig();
 
-            console.log(`🔧 Using command-line Ollama configuration:`);
-            console.log(`   Model: ${modelName}`);
-            console.log(`   Base URL: ${baseURL}`);
-            console.log(`   Temperature: ${temperature || 0}`);
+            this.config.lm = {
+                provider: 'ollama',
+                modelName: modelName,
+                baseUrl: baseURL,
+                temperature: temperature || 0
+            };
 
-            this.config.modelName = modelName;
-            this.config.baseUrl = baseURL;
-            this.config.temperature = temperature || 0;
+            console.log(`🔧 Using command-line Ollama configuration: ${modelName}`);
         } else {
             // Interactive configuration
-            const configOptions = await inquirer.prompt([
-                {
-                    type: 'input',
-                    name: 'modelName',
-                    message: 'Enter Ollama model name:',
-                    default: DEFAULT_CONFIG.OLLAMA.modelName
-                },
-                {
-                    type: 'input',
-                    name: 'baseUrl',
-                    message: 'Enter Ollama base URL:',
-                    default: DEFAULT_CONFIG.OLLAMA.baseUrl
-                },
-                {
-                    type: 'number',
-                    name: 'temperature',
-                    message: 'Enter temperature (0-1):',
-                    default: DEFAULT_CONFIG.OLLAMA.temperature
-                }
-            ]);
+            try {
+                const configOptions = await inquirer.prompt([
+                    {
+                        type: 'input',
+                        name: 'modelName',
+                        message: 'Enter Ollama model name:',
+                        default: DEFAULT_CONFIG.OLLAMA.modelName
+                    },
+                    {
+                        type: 'input',
+                        name: 'baseUrl',
+                        message: 'Enter Ollama base URL:',
+                        default: DEFAULT_CONFIG.OLLAMA.baseUrl
+                    },
+                    {
+                        type: 'number',
+                        name: 'temperature',
+                        message: 'Enter temperature (0-1):',
+                        default: DEFAULT_CONFIG.OLLAMA.temperature
+                    }
+                ]);
 
-            this.config.modelName = configOptions.modelName;
-            this.config.baseUrl = configOptions.baseUrl;
-            this.config.temperature = configOptions.temperature;
+                this.config.lm = {
+                    provider: 'ollama',
+                    modelName: configOptions.modelName,
+                    baseUrl: configOptions.baseUrl,
+                    temperature: configOptions.temperature
+                };
+            } catch (error) {
+                // Fallback if inquirer fails (e.g. non-interactive)
+                console.log('⚠️ Interactive prompt failed, using default config.');
+                this.config.lm = {
+                    provider: 'ollama',
+                    modelName: DEFAULT_CONFIG.OLLAMA.modelName,
+                    baseUrl: DEFAULT_CONFIG.OLLAMA.baseUrl,
+                    temperature: DEFAULT_CONFIG.OLLAMA.temperature
+                };
+            }
         }
-
-        console.log(`\n✅ Using Ollama model: ${this.config.modelName}\n`);
     }
 
     _getOllamaConfig() {
-        // Use default model if not specified
-        const modelName = this.args.model || DEFAULT_CONFIG.OLLAMA.modelName;
-
         return {
-            modelName: modelName,
+            modelName: this.args.model || this.args.modelName || DEFAULT_CONFIG.OLLAMA.modelName,
             baseURL: this.args.baseUrl || DEFAULT_CONFIG.OLLAMA.baseUrl,
             temperature: this.args.temperature || DEFAULT_CONFIG.OLLAMA.temperature
         };
     }
 
-    async startNewRepl() {
-        console.log('🚀 Starting new Agent REPL with LangGraph & streaming support...\n');
+    async startRepl() {
+        console.log('🚀 Starting REPL engine...\n');
 
         // Create and initialize a real NAR instance
         const nar = new NAR({
@@ -94,43 +109,73 @@ class AgentRepl {
 
         try {
             await nar.initialize();
-            console.log('✅ NAR system initialized successfully');
+            console.log('✅ NAR system initialized');
         } catch (error) {
             console.error('⚠️  Warning: Failed to initialize NAR system:', error.message);
-            console.log('⚠️  Continuing with mock NAR for testing purposes...');
         }
 
-        // Create and initialize the new AgentReplOllama instance with the real NAR
-        this.agentRepl = new AgentReplOllama({
-            modelName: this.config.modelName,
-            baseUrl: this.config.baseUrl,
-            temperature: this.config.temperature,
-            nar: nar
+        // Initialize AgentReplEngine
+        // We need to setup the LM provider structure that AgentReplEngine expects
+        // AgentReplEngine uses this.agentLM (LM class) which has a ProviderRegistry.
+
+        // We'll create the provider instance here.
+        const ollamaProvider = new ChatOllama({
+            model: this.config.lm.modelName,
+            baseUrl: this.config.lm.baseUrl,
+            temperature: this.config.lm.temperature,
         });
 
-        await this.agentRepl.start();
+        // Add a 'name' property which might be expected by some logging
+        ollamaProvider.name = 'ollama';
+
+        this.engine = new AgentReplEngine({
+            nar: nar, // Pass existing NAR instance
+            lm: {
+                // LM Config passed to LM constructor
+            },
+            inputProcessing: {
+                lmTemperature: this.config.lm.temperature
+            }
+        });
+
+        // Initialize engine first
+        await this.engine.initialize();
+
+        // Register the provider with the engine's LM component
+        this.engine.registerLMProvider('ollama', ollamaProvider);
+
+        // Bind tools to the provider if it supports it
+        // AgentReplEngine's _registerNARTools adds tools to the provider's .tools array
+        // We need to ensure the provider instance we passed is the one being used.
+        // Since we passed 'ollamaProvider' and registered it, we should be good.
+
+        // However, ChatOllama doesn't automatically bind tools from a .tools property.
+        // We might need to do that binding dynamically in streamExecution or here.
+        // For now, let's attach the tools array so _registerNARTools can populate it.
+        ollamaProvider.tools = [];
+
+        console.log('✅ Engine ready. Rendering UI...');
+
+        // Render the Ink UI
+        this.inkInstance = render(React.createElement(AgentInkTUI, {engine: this.engine}));
     }
 
     async shutdown() {
-        if (this.agentRepl && this.agentRepl.shutdown) {
-            await this.agentRepl.shutdown();
+        if (this.inkInstance) {
+            this.inkInstance.unmount();
         }
-        console.log('\n👋 Agent REPL session ended. Goodbye!');
+        if (this.engine) {
+            await this.engine.shutdown();
+        }
+        console.log('\n👋 Agent REPL session ended.');
     }
 }
 
 // Handle graceful shutdown
 process.on('SIGINT', async () => {
-    console.log('\n🔄 Received SIGINT, shutting down gracefully...');
     const agentRepl = global.agentReplInstance;
     if (agentRepl) {
-        try {
-            await agentRepl.shutdown();
-        } catch (error) {
-            console.error('Error during shutdown:', error);
-        }
-    } else {
-        console.log("👋 Agent REPL session ended. Goodbye!");
+        await agentRepl.shutdown();
     }
     process.exit(0);
 });
@@ -138,7 +183,7 @@ process.on('SIGINT', async () => {
 // Start the agent REPL
 async function main() {
     const agentRepl = new AgentRepl();
-    global.agentReplInstance = agentRepl; // For graceful shutdown
+    global.agentReplInstance = agentRepl;
 
     try {
         await agentRepl.start();

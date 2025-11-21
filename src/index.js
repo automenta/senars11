@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-import {TUIReplInk as Repl} from './repl/TUIReplInk.js';
 import {WebSocketMonitor} from './server/WebSocketMonitor.js';
 import {NAR} from './nar/NAR.js';
+import {AgentReplEngine} from './repl/AgentReplEngine.js';
 
 const DEFAULT_CONFIG = Object.freeze({
     nar: {
@@ -20,30 +20,41 @@ const DEFAULT_CONFIG = Object.freeze({
 
 async function main() {
     console.log('SeNARS starting...');
-    const nar = new NAR(DEFAULT_CONFIG.nar);
-    await nar.initialize();
+
+    // Note: AgentReplEngine expects config without the NAR instance merged in
+    const repl = new AgentReplEngine(DEFAULT_CONFIG);
+
+    // Initialize the engine (which initializes NAR)
+    await repl.initialize();
 
     const monitor = new WebSocketMonitor(DEFAULT_CONFIG.webSocket);
     await monitor.start();
-    nar.connectToWebSocketMonitor(monitor);
+    repl.nar.connectToWebSocketMonitor(monitor);
 
-    const repl = new Repl(DEFAULT_CONFIG);
-    repl.nar = nar;
     setupGracefulShutdown(repl, monitor);
-    await repl.start();
+
+    // The AgentReplEngine doesn't have a start() method that blocks like the TUI
+    // It's primarily an API-driven engine.
+    // If this entry point is meant to be a server/daemon, we just keep running.
+    console.log('Server running. Press Ctrl+C to stop.');
+
+    // Keep process alive
+    return new Promise(() => {});
 }
 
 const setupGracefulShutdown = (repl, monitor) => {
     process.on('SIGINT', async () => {
         console.log('\nShutting down gracefully...');
         try {
-            const state = repl.nar.serialize();
-            await repl.persistenceManager.saveToDefault(state);
-            console.log('Current state saved to agent.json');
+            if (repl.nar && repl.nar.serialize) {
+                const state = repl.nar.serialize();
+                await repl.persistenceManager.saveToDefault(state);
+                console.log('Current state saved to agent.json');
+            }
         } catch (saveError) {
             console.error('Error saving state on shutdown:', saveError?.message || saveError);
         }
-        await monitor.stop();
+        if (monitor) await monitor.stop();
         process.exit(0);
     });
 
@@ -58,10 +69,12 @@ const setupGracefulShutdown = (repl, monitor) => {
     });
 };
 
-import.meta.url === `file://${process.argv[1]}` && main().catch(error => {
-    console.error('Failed to start SeNARS:', error);
-    process.exit(1);
-});
+if (import.meta.url === `file://${process.argv[1]}`) {
+    main().catch(error => {
+        console.error('Failed to start SeNARS:', error);
+        process.exit(1);
+    });
+}
 
 export {main as startServer};
 export * from './module.js';

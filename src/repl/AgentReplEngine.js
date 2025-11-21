@@ -1,8 +1,8 @@
 import {ReplEngine} from './ReplEngine.js';
 import {LM} from '../lm/LM.js';
-
 import {NARControlTool} from '../tool/NARControlTool.js';
 import {handleError, logError} from '../util/ErrorHandler.js';
+import {HumanMessage, ToolMessage} from "@langchain/core/messages";
 import {
     AgentCommandRegistry,
     AgentCreateCommand,
@@ -187,21 +187,17 @@ export class AgentReplEngine extends ReplEngine {
         }
 
         try {
-            // Add timeout wrapper for safety
-            const timeoutPromise = new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('LM generation timed out after 30 seconds')), 30000)
-            );
-
-            const generatePromise = this.agentLM.generateText(
-                trimmedInput,
-                {
-                    temperature: this.inputProcessingConfig.lmTemperature,
-                    timeout: 30000  // Add timeout to the call
+            // Use streaming execution and accumulate result
+            let fullResponse = "";
+            for await (const chunk of this.streamExecution(trimmedInput)) {
+                if (chunk.type === "agent_response") {
+                    fullResponse += chunk.content; // In a real UI we might want to show partial updates
+                } else if (chunk.type === "tool_result") {
+                    // Tool results might be interesting to log but not part of the final text response
                 }
-            );
+            }
+            return fullResponse || "No response generated.";
 
-            const response = await Promise.race([generatePromise, timeoutPromise]);
-            return `🤖: ${response}`;
         } catch (lmError) {
             logError(lmError, 'LM processing');
 
@@ -249,23 +245,165 @@ export class AgentReplEngine extends ReplEngine {
         await super.shutdown();
     }
 
-    // New method to support streaming responses from LM
+    // Streaming execution function - direct approach without LangGraph
+    async* streamExecution(input) {
+        const providerId = this.agentLM.providers.defaultProviderId;
+        const provider = this.agentLM._getProvider(providerId);
+
+        if (!provider) {
+            const errorMsg = "Agent not initialized or provider missing. Call initialize() first.";
+            console.error(errorMsg);
+            yield {type: "agent_response", content: `❌ ${errorMsg}`};
+            return;
+        }
+
+        // We need to access the raw model for tool binding if possible,
+        // or assume the provider handles tools if we pass them.
+        // However, standard LM.js interface uses `streamText`.
+        // We need to check if the provider exposes a LangChain-compatible model
+        // or if we can use the provider directly.
+
+        // Best effort: check if the provider has a `model` property (like AgentReplOllama uses)
+        // or if `streamText` returns chunks with tool calls.
+        // If the provider IS the LangChain wrapper, we might need to call `stream` on it.
+
+        let model = provider.model || provider;
+
+        // Create initial messages
+        const messages = [new HumanMessage(input)];
+        let toolCalls = [];
+
+        // === First pass: Stream assistant response and detect tool calls ===
+        try {
+            // If the model supports .stream() (LangChain standard), use it
+            let stream;
+            if (typeof model.stream === 'function') {
+                 stream = await model.stream(messages);
+            } else if (typeof provider.streamText === 'function') {
+                 // Fallback to provider's streamText if it doesn't expose the raw model
+                 // This path might not support tools natively unless streamText does
+                 stream = await provider.streamText(input, {
+                     temperature: this.inputProcessingConfig.lmTemperature
+                 });
+            } else {
+                 throw new Error("Model does not support streaming");
+            }
+
+            let assistantContent = "";
+
+            for await (const chunk of stream) {
+                // Handle LangChain chunk format
+                if (typeof chunk === 'object') {
+                    if (chunk.content) {
+                        assistantContent += chunk.content;
+                        yield {type: "agent_response", content: chunk.content};
+                    }
+                    if (chunk.tool_calls?.length > 0) {
+                        toolCalls = chunk.tool_calls;
+                    }
+                } else if (typeof chunk === 'string') {
+                    // Simple string stream
+                    assistantContent += chunk;
+                    yield {type: "agent_response", content: chunk};
+                }
+            }
+
+            // If there are no tool calls, we're done
+            if (!toolCalls || toolCalls.length === 0) {
+                return;
+            }
+
+            // === Execute each tool call and stream results ===
+            for (const tc of toolCalls) {
+                yield* this._executeToolCall(tc, input, assistantContent, toolCalls, provider);
+            }
+
+        } catch (error) {
+            const errorMsg = `❌ Streaming error: ${error.message}`;
+            // Only log error if it's not a simple Narsese fallback scenario
+            if (!this.inputProcessingConfig.enableNarseseFallback || !this._isPotentialNarsese(input)) {
+                 console.error('Streaming execution error:', {error, input});
+            }
+            yield {type: "error", content: errorMsg};
+            throw error; // Re-throw to allow fallback logic in processInput
+        }
+    }
+
+    // Helper method to execute a single tool call with its follow-up response
+    async* _executeToolCall(toolCall, originalInput, assistantContent, allToolCalls, provider) {
+        const {name, args, id} = toolCall;
+
+        // Yield the tool call notification
+        yield {type: "tool_call", name, args};
+
+        // Execute the tool
+        const toolResult = await this._executeTool(name, args, provider);
+        yield {type: "tool_result", content: toolResult};
+
+        // Create messages for final response with tool results
+        const messagesWithResults = [
+            new HumanMessage(originalInput),
+            {role: "assistant", content: assistantContent, tool_calls: allToolCalls},
+            new ToolMessage({content: toolResult, tool_call_id: id, name})
+        ];
+
+        // === Stream final response with tool result in context ===
+        try {
+            let model = provider.model || provider;
+            if (typeof model.stream === 'function') {
+                const finalStream = await model.stream(messagesWithResults);
+                let finalContent = "";
+                for await (const chunk of finalStream) {
+                    if (chunk.content) {
+                        finalContent += chunk.content;
+                        yield {type: "agent_response", content: chunk.content};
+                    }
+                }
+            }
+        } catch (error) {
+            const errorResponse = `Error generating final response: ${error.message}`;
+            console.error('Error in final response generation:', error);
+            yield {type: "agent_response", content: errorResponse};
+        }
+    }
+
+    // Helper method to execute a tool and return result or error message
+    async _executeTool(name, args, provider) {
+        // Find the tool in the provider's registered tools
+        // The provider is expected to have a `tools` array
+        const tools = provider.tools || [];
+        const tool = tools.find(t => t.name === name);
+
+        if (!tool) {
+            const errorMsg = `Error: Tool ${name} not found`;
+            console.error(errorMsg);
+            return errorMsg;
+        }
+
+        try {
+            return await tool.invoke(args);
+        } catch (error) {
+            const errorMsg = `Error executing ${name}: ${error.message}`;
+            console.error(errorMsg, {error, toolName: name, args});
+            return errorMsg;
+        }
+    }
+
+    // Keep legacy method for compatibility but route to new logic
     async processInputStreaming(input, onChunk) {
         const trimmedInput = input.trim();
+
+        // Handle commands and empty input
         if (!trimmedInput) {
             const result = await this.executeCommand('next');
             if (onChunk) onChunk(result);
             return result;
         }
-
-        this.sessionState.history.push(trimmedInput);
-
         if (trimmedInput.startsWith('/')) {
             const result = await this.executeCommand(...trimmedInput.slice(1).split(' '));
             if (onChunk) onChunk(result);
             return result;
         }
-
         const [firstPart, ...rest] = trimmedInput.split(' ');
         if (this.commandRegistry.get(firstPart)) {
             const result = await this.commandRegistry.execute(firstPart, this, ...rest);
@@ -274,77 +412,36 @@ export class AgentReplEngine extends ReplEngine {
         }
 
         try {
-            // Check if the LM supports streaming
-            if (typeof this.agentLM.streamText === 'function') {
-                // Add timeout wrapper for safety
-                const timeoutPromise = new Promise((_, reject) =>
-                    setTimeout(() => reject(new Error('LM streaming timed out after 60 seconds')), 60000)
-                );
-
-                const streamPromise = (async () => {
-                    const streamIterator = await this.agentLM.streamText(
-                        trimmedInput,
-                        {
-                            temperature: this.inputProcessingConfig.lmTemperature,
-                            timeout: 60000  // Add timeout option to the call
-                        }
-                    );
-
-                    let fullResponse = '';
-                    for await (const chunk of streamIterator) {
-                        fullResponse += chunk;
-                        if (onChunk) onChunk(`🤖: ${chunk}`);
-                    }
-
-                    return `🤖: ${fullResponse}`;
-                })();
-
-                // Race the streaming operation with timeout
-                const result = await Promise.race([streamPromise, timeoutPromise]);
-                return result;
-            } else {
-                // Fallback to regular generateText if streaming not available
-                // Add timeout wrapper for safety
-                const timeoutPromise = new Promise((_, reject) =>
-                    setTimeout(() => reject(new Error('LM generation timed out after 30 seconds')), 30000)
-                );
-
-                const generatePromise = this.agentLM.generateText(
-                    trimmedInput,
-                    {
-                        temperature: this.inputProcessingConfig.lmTemperature,
-                        timeout: 30000  // Add timeout to the call
-                    }
-                );
-
-                const response = await Promise.race([generatePromise, timeoutPromise]);
-                if (onChunk) onChunk(`🤖: ${response}`);
-                return `🤖: ${response}`;
-            }
-        } catch (lmError) {
-            logError(lmError, 'LM processing');
-
-            // Only attempt Narsese fallback if enabled in config
-            if (this.inputProcessingConfig.enableNarseseFallback) {
-                // Only check Narsese syntax if enabled in config, otherwise always try Narsese fallback
+             let fullResponse = "";
+             for await (const chunk of this.streamExecution(trimmedInput)) {
+                 if (chunk.type === 'agent_response') {
+                     const content = chunk.content;
+                     fullResponse += content;
+                     if (onChunk) onChunk(`🤖: ${content}`);
+                 } else if (chunk.type === 'tool_call') {
+                     if (onChunk) onChunk(`\n[Calling tool: ${chunk.name}...]\n`);
+                 } else if (chunk.type === 'tool_result') {
+                     if (onChunk) onChunk(`\n[Tool result: ${chunk.content}]\n`);
+                 }
+             }
+             return fullResponse;
+        } catch (error) {
+            // Fallback logic similar to original processInput
+             if (this.inputProcessingConfig.enableNarseseFallback) {
                 const shouldTryNarsese = !this.inputProcessingConfig.checkNarseseSyntax || this._isPotentialNarsese(trimmedInput);
-
                 if (shouldTryNarsese) {
                     try {
                         const result = await this.processNarsese(trimmedInput);
                         if (onChunk) onChunk(result);
                         return result;
                     } catch (narseseError) {
-                        logError(narseseError, 'Narsese processing');
-                        const errorMsg = `💭 Agent processed: Input "${trimmedInput}" may not be valid Narsese. LM Error: ${lmError.message}`;
+                        const errorMsg = `💭 Agent processed: Input "${trimmedInput}" may not be valid Narsese. LM Error: ${error.message}`;
                         if (onChunk) onChunk(errorMsg);
                         return errorMsg;
                     }
                 }
             }
-
-            // For non-Narsese-like inputs or when fallback is disabled, just report the LM error
-            const errorMsg = handleError(lmError, 'Agent processing');
+            const errorMsg = handleError(error, 'Agent processing');
             if (onChunk) onChunk(errorMsg);
             return errorMsg;
         }
