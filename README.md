@@ -325,7 +325,7 @@ The `Term` class represents knowledge in the system and is designed to be immuta
     - `hashCode()`: Provides a unique hash code for use in collections like Maps and Sets.
 - **Factory Construction (`TermFactory`):**
     - All `Term` instances are created via `TermFactory.create(termExpression)`.
-    - The factory parses Narsese expressions (like `<A --> B>`) into structured objects.
+    - The factory parses Narsese expressions (like `(A --> B)`) into structured objects.
     - **Normalization:** Automatically normalizes equivalent terms (e.g., `(&, A, B)` and `(&, B, A)` become the same).
     - **Caching:** Reuses identical terms to save memory and speed up comparisons.
 - **Properties:**
@@ -412,14 +412,14 @@ The system distinguishes between beliefs (what the system knows) and goals (what
 
 - **Purpose**: Store knowledge about the environment
 - **Truth Values**: Frequency (how often something is true) and confidence (how reliable the knowledge is)
-- **Example**: `<bird --> animal>{0.9, 0.8}.` (The system believes birds are animals 90% of the time with 80%
+- **Example**: `(bird --> animal){0.9, 0.8}.` (The system believes birds are animals 90% of the time with 80%
   confidence)
 
 **Goal Tasks (!)** represent what the system aims to achieve:
 
 - **Purpose**: Define objectives or desired outcomes
 - **Truth Values**: Desire (how much the goal is wanted) and confidence (how likely it is to be achievable)
-- **Example**: `<task_completed --> desirable>!{0.8, 0.9}.` (The system wants tasks completed with 80% desire intensity
+- **Example**: `(task_completed --> desirable)!{0.8, 0.9}.` (The system wants tasks completed with 80% desire intensity
   and 90% confidence)
 
 This design enables reinforcement learning where:
@@ -653,7 +653,7 @@ The Rule Engine applies logical rules to generate new knowledge:
 
 Converts between human-readable Narsese language and internal system representations:
 
-- **Narsese Processing**: Parse input like `<bird --> animal>{0.9, 0.8}.` into internal structures
+- **Narsese Processing**: Parse input like `(bird --> animal){0.9, 0.8}.` into internal structures
 - **Truth Value Parsing**: Extract frequency and confidence values from `{f,c}` format
 - **Punctuation Support**: Handle different task types using punctuation (. for beliefs, ! for goals, ? for questions)
 - **Complex Terms**: Parse nested structures with various logical operators like `(&, A, B)` for conjunction
@@ -876,38 +876,7 @@ Implement NAL-specific truth value calculations:
 
 ### Testing API
 
-The system provides a fluent API for easy test creation:
-
-```javascript
-import {createReasoner} from '../support/fluentReasonerAPI';
-
-describe('NAR System Deductions', () => {
-    let nar;
-
-    beforeEach(() => {
-        nar = createReasoner();
-    });
-
-    test('should deduce a simple conclusion from two premises', async () => {
-        nar.input('<A --> B>.');
-        nar.input('<B --> C>.');
-
-        await nar.cycles(5); // Run for a few cycles to allow inference
-
-        nar.expectBelief('<A --> C>.').toHaveTruth({frequency: 1.0, confidence: 0.9});
-    });
-
-    test('should answer a question based on existing beliefs', async () => {
-        nar.input('<dog --> animal>.');
-        nar.input('<cat --> animal>.');
-
-        await nar.cycles(10);
-
-        const answer = await nar.query('<dog --> ?x>.');
-        expect(answer).toBeInferred('<dog --> animal>.');
-    });
-});
-```
+The system provides a fluent API for easy test creation.
 
 ---
 
