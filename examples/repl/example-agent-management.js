@@ -5,7 +5,7 @@
  * Showcases comprehensive agent lifecycle management and capabilities
  */
 
-import {AgentReplEngine} from '../../src/repl/AgentReplEngine.js';
+import {SessionEngine} from '../../src/session/SessionEngine.js';
 import {DummyProvider} from '../../src/lm/DummyProvider.js';
 
 async function runAgentManagementDemo() {
@@ -18,7 +18,7 @@ async function runAgentManagementDemo() {
             responseTemplate: `Agent management response for: "{prompt}". Demonstrating sophisticated agent capabilities and management.`
         });
 
-        const engine = new AgentReplEngine({
+        const engine = new SessionEngine({
             nar: {},
             lm: {provider: dummyProvider}
         });

@@ -5,7 +5,7 @@
  * Demonstrates sophisticated reasoning chains involving both systems
  */
 
-import {AgentReplEngine} from '../../src/repl/AgentReplEngine.js';
+import {SessionEngine} from '../../src/session/SessionEngine.js';
 import {DummyProvider} from '../../src/lm/DummyProvider.js';
 
 async function runComplexReasoningDemo() {
@@ -18,7 +18,7 @@ async function runComplexReasoningDemo() {
             responseTemplate: `Complex reasoning chain response: "{prompt}". Integrating logical inference with contextual understanding in a multi-step reasoning process.`
         });
 
-        const engine = new AgentReplEngine({
+        const engine = new SessionEngine({
             nar: {},
             lm: {provider: dummyProvider}
         });

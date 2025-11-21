@@ -7,13 +7,13 @@ console.log(`Starting Real NAR Backend on ${wsHost}:${wsPort}`);
 
 async function start() {
     try {
-        // Use AgentReplEngine to support agent features
-        const {AgentReplEngine} = await import('../../../../src/repl/AgentReplEngine.js');
-        const {WebRepl} = await import('../../../../src/repl/WebRepl.js');
+        // Use SessionEngine to support agent features
+        const {SessionEngine} = await import('../../../../src/session/SessionEngine.js');
+        const {SessionServerAdapter} = await import('../../../../src/server/SessionServerAdapter.js');
         const {DemoWrapper} = await import('../../../../src/demo/DemoWrapper.js');
 
         // Initialize engine (LM disabled for consistent testing, but Agent structure is present)
-        const replEngine = new AgentReplEngine({
+        const replEngine = new SessionEngine({
             nar: {lm: {enabled: false}}
         });
         await replEngine.initialize();
@@ -21,11 +21,11 @@ async function start() {
         // Initialize WebSocket Monitor
         const monitor = new WebSocketMonitor({port: wsPort, host: wsHost, path: '/'});
         await monitor.start();
-        replEngine.nar.connectToWebSocketMonitor(monitor);
+        // replEngine.nar.connectToWebSocketMonitor(monitor); // Removed as per new architecture
 
-        // Initialize WebRepl (bridges Engine <-> WS)
-        const webRepl = new WebRepl(replEngine, monitor);
-        webRepl.registerWithWebSocketServer();
+        // Initialize SessionServerAdapter (bridges Engine <-> WS)
+        const serverAdapter = new SessionServerAdapter(replEngine, monitor);
+        serverAdapter.registerWithWebSocketServer();
 
         // Initialize Demo System
         const demoWrapper = new DemoWrapper();

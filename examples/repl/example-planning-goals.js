@@ -5,7 +5,7 @@
  * Demonstrates sophisticated planning and goal achievement using hybrid intelligence
  */
 
-import {AgentReplEngine} from '../../src/repl/AgentReplEngine.js';
+import {SessionEngine} from '../../src/session/SessionEngine.js';
 import {DummyProvider} from '../../src/lm/DummyProvider.js';
 
 async function runPlanningAndGoalsDemo() {
@@ -18,7 +18,7 @@ async function runPlanningAndGoalsDemo() {
             responseTemplate: `Planning and goal achievement response for: "{prompt}". Demonstrating strategic planning and goal-oriented behavior using hybrid intelligence.`
         });
 
-        const engine = new AgentReplEngine({
+        const engine = new SessionEngine({
             nar: {},
             lm: {provider: dummyProvider}
         });

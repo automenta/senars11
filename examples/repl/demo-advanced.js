@@ -5,8 +5,8 @@
  * Shows the colorful visualization output that would appear in the terminal UI
  */
 
-import {AgentReplEngine} from './src/repl/AgentReplEngine.js';
-import {DummyProvider} from './src/lm/DummyProvider.js';
+import {SessionEngine} from '../../src/session/SessionEngine.js';
+import {DummyProvider} from '../../src/lm/DummyProvider.js';
 
 async function runAdvancedDemo() {
     console.log('🎨 ADVANCED SeNARS Agent REPL DEMONSTRATION');
@@ -18,7 +18,7 @@ async function runAdvancedDemo() {
             responseTemplate: 'Demo response for: {prompt}'
         });
 
-        const engine = new AgentReplEngine({
+        const engine = new SessionEngine({
             nar: {},
             lm: {}
         });

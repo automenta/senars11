@@ -145,18 +145,12 @@ async function startWebSocketServer(config = DEFAULT_CONFIG) {
     // Remove direct connection from NAR to Monitor
     // replEngine.nar.connectToWebSocketMonitor(monitor); <-- Removed as per refactor
 
-    // Import and initialize WebRepl for handling all UIs with comprehensive message support
-    const {WebRepl} = await import('../../src/repl/WebRepl.js');
-    const webRepl = new WebRepl(replEngine, monitor);
+    // Import and initialize SessionServerAdapter (formerly WebRepl)
+    const {SessionServerAdapter} = await import('../../src/server/SessionServerAdapter.js');
+    const serverAdapter = new SessionServerAdapter(replEngine, monitor);
 
-    // Register WebRepl with the WebSocket server to provide comprehensive message support
-    webRepl.registerWithWebSocketServer();
-
-    // Setup Event Bridging:
-    // WebRepl listens to Engine events -> calls Monitor.bufferEvent
-    // This preserves the batching optimization of WebSocketMonitor without it knowing about NAR
-    _bridgeEngineEventsToMonitor(replEngine, monitor, webRepl);
-
+    // Register adapter with the WebSocket server to provide comprehensive message support
+    serverAdapter.registerWithWebSocketServer();
 
     // Register a handler for NAR instance requests from the UI
     monitor.registerClientMessageHandler('requestNAR', async (message, client, monitorInstance) => {
@@ -165,7 +159,7 @@ async function startWebSocketServer(config = DEFAULT_CONFIG) {
             cycleCount: replEngine.nar.cycleCount,
             isRunning: replEngine.nar.isRunning,
             config: replEngine.nar.config.toJSON(),
-            stats: webRepl.getStats ? webRepl.getStats() : replEngine.getStats(),
+            stats: serverAdapter.getStats ? serverAdapter.getStats() : replEngine.getStats(),
             reasoningState: replEngine.nar.getReasoningState ? replEngine.nar.getReasoningState() : null
         };
 
@@ -193,33 +187,6 @@ async function startWebSocketServer(config = DEFAULT_CONFIG) {
     console.log('WebSocket server started successfully');
 
     return {nar: replEngine.nar, replEngine, monitor, demoWrapper};
-}
-
-/**
- * Bridge events from the Engine to the Monitor's buffer
- */
-function _bridgeEngineEventsToMonitor(engine, monitor, webRepl) {
-    const events = [
-        'task.input', 'task.processed', 'cycle.start', 'cycle.complete',
-        'task.added', 'belief.added', 'question.answered',
-        'system.started', 'system.stopped', 'system.reset', 'system.loaded',
-        'reasoning.step', 'concept.created', 'task.completed', 'reasoning.derivation'
-    ];
-
-    // We access the raw NAR event bus for these granular events
-    // The ReplEngine emits some high level events, but NAR emits the granular ones
-    if (engine.nar && engine.nar._eventBus) {
-        events.forEach(eventType => {
-            engine.nar._eventBus.on(eventType, (data, options = {}) => {
-                monitor.bufferEvent(eventType, data, options);
-            });
-        });
-    }
-
-    // Also listen to Engine events (like 'log')
-    engine.on('log', (data) => {
-        monitor.bufferEvent('log', data);
-    });
 }
 
 /**

@@ -5,7 +5,7 @@
  * Shows how the Agent REPL works with various inputs and visualizations
  */
 
-import {AgentReplEngine} from './src/repl/AgentReplEngine.js';
+import {SessionEngine} from './src/session/SessionEngine.js';
 import {DummyProvider} from './src/lm/DummyProvider.js';
 
 async function runAgentDemo() {
@@ -18,7 +18,7 @@ async function runAgentDemo() {
             responseTemplate: 'Processed: {prompt}. This is a demo response showing the Agent REPL functionality.'
         });
 
-        const engine = new AgentReplEngine({
+        const engine = new SessionEngine({
             nar: {},
             lm: {}
         });

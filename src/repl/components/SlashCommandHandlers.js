@@ -62,8 +62,10 @@ export const handleToolsCommand = (engine, addLog) => {
             const defaultProviderId = engine.agentLM.providers.defaultProviderId;
             if (defaultProviderId) {
                 const provider = engine.agentLM.providers.get(defaultProviderId);
-                if (provider && Array.isArray(provider.tools) && provider.tools.length > 0) {
-                    const narTools = provider.tools.filter(tool =>
+                if (provider && (Array.isArray(provider.tools) || typeof provider.getAvailableTools === 'function')) {
+                    const tools = typeof provider.getAvailableTools === 'function' ? provider.getAvailableTools() : provider.tools;
+
+                    const narTools = tools.filter(tool =>
                         tool.name === 'nar_control' || tool.constructor.name === 'NARControlTool'
                     );
                     if (narTools.length > 0) {

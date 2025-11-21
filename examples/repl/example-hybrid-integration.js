@@ -5,7 +5,7 @@
  * Demonstrates how the agent interacts with the NARS system using both systems' capabilities
  */
 
-import {AgentReplEngine} from '../../src/repl/AgentReplEngine.js';
+import {SessionEngine} from '../../src/session/SessionEngine.js';
 import {DummyProvider} from '../../src/lm/DummyProvider.js';
 
 async function runHybridIntegrationDemo() {
@@ -18,7 +18,7 @@ async function runHybridIntegrationDemo() {
             responseTemplate: `Hybrid reasoning response incorporating both contextual understanding and logical inference. Query: "{prompt}"`
         });
 
-        const engine = new AgentReplEngine({
+        const engine = new SessionEngine({
             nar: {},
             lm: {provider: dummyProvider}
         });

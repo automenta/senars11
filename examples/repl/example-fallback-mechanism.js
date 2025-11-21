@@ -5,7 +5,7 @@
  * Demonstrates how the system properly routes input between LM and NARS
  */
 
-import {AgentReplEngine} from '../../src/repl/AgentReplEngine.js';
+import {SessionEngine} from '../../src/session/SessionEngine.js';
 import {LangChainProvider} from '../../src/lm/LangChainProvider.js';
 
 async function runFallbackDemo() {
@@ -24,7 +24,7 @@ async function runFallbackDemo() {
             maxTokens: 300
         });
 
-        const engine = new AgentReplEngine({
+        const engine = new SessionEngine({
             nar: nar,
             lm: {
                 provider: ollamaProvider

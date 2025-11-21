@@ -1,6 +1,6 @@
-import {ReplMessageHandler} from './ReplMessageHandler.js';
+import {ReplMessageHandler} from '../repl/ReplMessageHandler.js';
 
-export class WebRepl {
+export class SessionServerAdapter {
     constructor(engine, websocketServer) {
         this.engine = engine;
         this.websocketServer = websocketServer;
@@ -10,38 +10,65 @@ export class WebRepl {
     }
 
     _setupEventListeners() {
-        const engineEvents = [
-            'engine.ready',
-            'narsese.processed',
-            'narsese.error',
-            'engine.quit',
-            'nar.cycle.step',
-            'nar.cycle.running',
-            'nar.cycle.stop',
-            'engine.reset',
-            'engine.save',
-            'engine.load',
-            'nar.trace.enable',
-            'nar.trace.restore',
-            'command.error'
+        // Forward all events from the unified session stream to clients
+        // We now trust the SessionEngine to bridge NAR events
+
+        const forwardedEvents = [
+            // Session/Engine Lifecycle
+            'engine.ready', 'engine.quit', 'engine.reset',
+            'engine.save', 'engine.load', 'engine.shutdown',
+
+            // Execution
+            'narsese.processed', 'narsese.error', 'command.error',
+            'nar.cycle.step', 'nar.cycle.running', 'nar.cycle.stop',
+
+            // Core NAR events (bridged by SessionEngine)
+            'task.input', 'task.processed', 'cycle.start', 'cycle.complete',
+            'task.added', 'belief.added', 'question.answered',
+            'system.started', 'system.stopped', 'system.reset', 'system.loaded',
+            'reasoning.step', 'concept.created', 'task.completed', 'reasoning.derivation',
+
+            // Logs
+            'log'
         ];
 
-        engineEvents.forEach(event => {
-            this.engine.on(event, (data) => {
-                this._broadcastToAllClients({
-                    type: event,
-                    payload: data
-                });
+        forwardedEvents.forEach(event => {
+            this.engine.on(event, (data, options) => {
+                // Some events pass multiple args, we bundle them or just take payload
+                // Using 'bufferEvent' style interaction if available on monitor,
+                // or broadcasting directly.
+                // Since we're an adapter, we should respect the monitor's buffering if we can,
+                // but here we are broadcasting directly.
+
+                // Ideally, we should use the monitor's bufferEvent if this is about efficient transport.
+                // The previous WebRepl logic broadcasted directly.
+                // The launcher logic buffered.
+
+                // If the websocketServer IS the monitor (which it usually is in the current setup),
+                // we can try to use its buffer method.
+
+                if (this.websocketServer && typeof this.websocketServer.bufferEvent === 'function') {
+                    this.websocketServer.bufferEvent(event, data, options);
+                } else {
+                    this._broadcastToAllClients({
+                        type: event,
+                        payload: data
+                    });
+                }
             });
         });
 
         const commandEvents = ['help', 'status', 'memory', 'trace', 'reset', 'save', 'load', 'demo'];
         commandEvents.forEach(cmd => {
             this.engine.on(`command.${cmd}`, (data) => {
-                this._broadcastToAllClients({
-                    type: 'command.output',
-                    payload: {command: cmd, result: data.result}
-                });
+                if (this.websocketServer && typeof this.websocketServer.bufferEvent === 'function') {
+                    this.websocketServer.bufferEvent('command.output', {command: cmd, result: data.result});
+                } else {
+                    this._broadcastToAllClients({
+                        type: 'command.output',
+                        payload: {command: cmd, result: data.result}
+                    });
+                }
             });
         });
     }

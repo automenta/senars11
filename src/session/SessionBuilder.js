@@ -1,11 +1,11 @@
 import {NAR} from '../nar/NAR.js';
-import {AgentReplEngine} from '../repl/AgentReplEngine.js';
+import {SessionEngine} from './SessionEngine.js';
 import {ChatOllama} from "@langchain/ollama";
 
 /**
  * SessionBuilder
  *
- * Responsible for constructing a complete "Session" (NAR + AgentReplEngine + LM + Tools).
+ * Responsible for constructing a complete "Session" (NAR + SessionEngine + LM + Tools).
  * Standardizes the initialization process across TUI, Web UI, and other interfaces.
  */
 export class SessionBuilder {
@@ -18,7 +18,7 @@ export class SessionBuilder {
     }
 
     /**
-     * Build and return a fully initialized AgentReplEngine
+     * Build and return a fully initialized SessionEngine
      */
     async build() {
         console.log('🏗️  Building SeNARS Session...');
@@ -60,8 +60,8 @@ export class SessionBuilder {
             console.warn('⚠️  LM enabled but no supported provider configured. Agent capabilities may be limited.');
         }
 
-        // 3. Create AgentReplEngine (The Session Engine)
-        const engine = new AgentReplEngine({
+        // 3. Create SessionEngine
+        const engine = new SessionEngine({
             nar: nar,
             lm: this.lmConfig,
             inputProcessing: this.inputProcessingConfig,

@@ -1,4 +1,4 @@
-import {ReplEngine} from './ReplEngine.js';
+import {ReplEngine} from '../repl/ReplEngine.js';
 import {LM} from '../lm/LM.js';
 import {NARControlTool} from '../tool/NARControlTool.js';
 import {handleError, logError} from '../util/ErrorHandler.js';
@@ -12,9 +12,9 @@ import {
     ProvidersCommand,
     ReasonCommand,
     ThinkCommand
-} from './commands/AgentCommands.js';
+} from '../repl/commands/AgentCommands.js';
 
-export class AgentReplEngine extends ReplEngine {
+export class SessionEngine extends ReplEngine {
     constructor(config = {}) {
         super(config);
 
@@ -32,6 +32,12 @@ export class AgentReplEngine extends ReplEngine {
             // Temperature for LM calls
             lmTemperature: config.inputProcessing?.lmTemperature ?? 0.7
         };
+    }
+
+    // Expose the raw event bus for internal components that need it,
+    // but prefer using the unified event stream for external consumers.
+    get eventBus() {
+        return this.nar._eventBus;
     }
 
     _initializeCommandRegistry() {
@@ -63,6 +69,7 @@ export class AgentReplEngine extends ReplEngine {
 
         this._syncLMProviders();
         this._registerAgentEventHandlers();
+        this._setupUnifiedEventStream();
 
         // Register NAR control tools with the LM provider
         this._registerNARTools();
@@ -128,6 +135,27 @@ export class AgentReplEngine extends ReplEngine {
         events.forEach(event => {
             this.nar.on?.(event, (data) => this.emit(event, data));
         });
+    }
+
+    /**
+     * Bridges internal NAR events to the SessionEngine's public event emitter.
+     * This creates a single "firehose" of events for the UI/Clients to consume.
+     */
+    _setupUnifiedEventStream() {
+        const coreEvents = [
+            'task.input', 'task.processed', 'cycle.start', 'cycle.complete',
+            'task.added', 'belief.added', 'question.answered',
+            'system.started', 'system.stopped', 'system.reset', 'system.loaded',
+            'reasoning.step', 'concept.created', 'task.completed', 'reasoning.derivation'
+        ];
+
+        if (this.nar && this.nar._eventBus) {
+            coreEvents.forEach(eventType => {
+                this.nar._eventBus.on(eventType, (data, options = {}) => {
+                    this.emit(eventType, data, options);
+                });
+            });
+        }
     }
 
     addAgentCommands() {
@@ -251,6 +279,22 @@ export class AgentReplEngine extends ReplEngine {
         const provider = this.agentLM._getProvider(providerId);
 
         if (!provider) {
+            // Try Narsese fallback first if enabled, because this might be a direct Narsese input
+            // and no agent is configured (common in tests or core-only mode)
+            if (this.inputProcessingConfig.enableNarseseFallback && this._isPotentialNarsese(input)) {
+                try {
+                    const result = await this.processNarsese(input);
+                    yield {type: "agent_response", content: result || "Input processed"};
+                    return;
+                } catch (narseseError) {
+                    // If Narsese fails, then report the missing provider error
+                    const errorMsg = "Agent not initialized or provider missing. Call initialize() first.";
+                    console.error(errorMsg);
+                    yield {type: "agent_response", content: `❌ ${errorMsg}`};
+                    return;
+                }
+            }
+
             const errorMsg = "Agent not initialized or provider missing. Call initialize() first.";
             console.error(errorMsg);
             yield {type: "agent_response", content: `❌ ${errorMsg}`};

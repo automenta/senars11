@@ -5,7 +5,7 @@
  * Demonstrates complex problem solving using both symbolic and neural reasoning
  */
 
-import {AgentReplEngine} from '../../src/repl/AgentReplEngine.js';
+import {SessionEngine} from '../../src/session/SessionEngine.js';
 import {DummyProvider} from '../../src/lm/DummyProvider.js';
 
 async function runMultiStepProblemSolvingDemo() {
@@ -18,7 +18,7 @@ async function runMultiStepProblemSolvingDemo() {
             responseTemplate: `Multi-step problem solving response: "{prompt}". Integrating symbolic reasoning with neural processing for comprehensive problem resolution.`
         });
 
-        const engine = new AgentReplEngine({
+        const engine = new SessionEngine({
             nar: {},
             lm: {provider: dummyProvider}
         });

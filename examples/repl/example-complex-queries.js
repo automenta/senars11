@@ -5,7 +5,7 @@
  * Demonstrates complex queries processed through the Language Model
  */
 
-import {AgentReplEngine} from '../../src/repl/AgentReplEngine.js';
+import {SessionEngine} from '../../src/session/SessionEngine.js';
 import {DummyProvider} from '../../src/lm/DummyProvider.js';
 
 async function runComplexQueriesDemo() {
@@ -19,7 +19,7 @@ async function runComplexQueriesDemo() {
             responseTemplate: `This is a simulated response to: "{prompt}". In a real Ollama setup, this would connect to an LLM for complex reasoning, analysis, and contextual understanding.`
         });
 
-        const engine = new AgentReplEngine({
+        const engine = new SessionEngine({
             nar: {},
             lm: {provider: dummyProvider}
         });

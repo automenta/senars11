@@ -5,7 +5,7 @@
  * Simulates a complex AI research scenario with hybrid reasoning
  */
 
-import {AgentReplEngine} from '../../src/repl/AgentReplEngine.js';
+import {SessionEngine} from '../../src/session/SessionEngine.js';
 import {LangChainProvider} from '../../src/lm/LangChainProvider.js';
 
 async function runResearchScenarioDemo() {
@@ -26,7 +26,7 @@ async function runResearchScenarioDemo() {
             maxTokens: 800
         });
 
-        const engine = new AgentReplEngine({
+        const engine = new SessionEngine({
             nar: nar,
             lm: {
                 provider: ollamaProvider

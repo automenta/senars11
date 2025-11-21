@@ -5,7 +5,7 @@
  * Demonstrates hybrid intelligence with LM and NARS integration
  */
 
-import {AgentReplEngine} from '../../src/repl/AgentReplEngine.js';
+import {SessionEngine} from '../../src/session/SessionEngine.js';
 import {LangChainProvider} from '../../src/lm/LangChainProvider.js';
 
 async function runAdvancedAgentDemo() {
@@ -29,7 +29,7 @@ async function runAdvancedAgentDemo() {
         });
 
         // Initialize engine with real NARS and Ollama provider
-        const engine = new AgentReplEngine({
+        const engine = new SessionEngine({
             nar: nar,
             lm: {
                 provider: ollamaProvider

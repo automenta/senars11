@@ -2,7 +2,7 @@
 
 import {WebSocketMonitor} from './server/WebSocketMonitor.js';
 import {NAR} from './nar/NAR.js';
-import {AgentReplEngine} from './repl/AgentReplEngine.js';
+import {SessionEngine} from './session/SessionEngine.js';
 
 const DEFAULT_CONFIG = Object.freeze({
     nar: {
@@ -21,8 +21,8 @@ const DEFAULT_CONFIG = Object.freeze({
 async function main() {
     console.log('SeNARS starting...');
 
-    // Note: AgentReplEngine expects config without the NAR instance merged in
-    const repl = new AgentReplEngine(DEFAULT_CONFIG);
+    // Note: SessionEngine expects config without the NAR instance merged in
+    const repl = new SessionEngine(DEFAULT_CONFIG);
 
     // Initialize the engine (which initializes NAR)
     await repl.initialize();
@@ -33,7 +33,7 @@ async function main() {
 
     setupGracefulShutdown(repl, monitor);
 
-    // The AgentReplEngine doesn't have a start() method that blocks like the TUI
+    // The SessionEngine doesn't have a start() method that blocks like the TUI
     // It's primarily an API-driven engine.
     // If this entry point is meant to be a server/daemon, we just keep running.
     console.log('Server running. Press Ctrl+C to stop.');
