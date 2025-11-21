@@ -28,6 +28,13 @@ export class DemosManager {
                 description: 'Demonstrates inductive reasoning',
                 handler: this.runInductiveDemo.bind(this),
                 stepDelay: 2000
+            },
+            {
+                id: 'rlfp_focus',
+                name: 'RLFP: Focus Management',
+                description: 'Shows how distraction affects reasoning',
+                handler: this.runRLFPFocusDemo.bind(this),
+                stepDelay: 1500
             }
         ];
     }
@@ -76,6 +83,25 @@ export class DemosManager {
             {description: 'Inductive reasoning demo completed'}
         ];
         await this._executeDemoSteps(nar, sendDemoStep, waitIfNotPaused, 'inductive', steps, params);
+    }
+
+    async runRLFPFocusDemo(nar, sendDemoStep, waitIfNotPaused, params = {}) {
+        // This demo simulates a scenario where we want to compare "Focused" vs "Distracted" reasoning.
+        // Ideally this runs on two sessions, but here we run it sequentially or just one path
+        // and explain that RLFP would prefer the "focused" one.
+
+        const steps = [
+            {description: 'Initializing RLFP Focus Demo (The "Penguin Problem")'},
+            {description: 'Task: Answer "Is a penguin a bird that can fly?"', input: '<penguin --> (&, bird, [flying])>?'},
+            {description: 'Relevant Belief: Penguins are birds.', input: '<penguin --> bird>.'},
+            {description: 'Relevant Belief: Birds usually fly.', input: '<bird --> [flying]>.'},
+            {description: 'Relevant Belief: Penguins cannot fly.', input: '<penguin --> [flying]>{0.0, 0.9}.'},
+            {description: 'Distraction: Adding irrelevant info about sparrows.', input: '<sparrow --> bird>.'},
+            {description: 'Distraction: Adding irrelevant info about airplanes.', input: '<airplane --> [flying]>.'},
+            {description: 'Observation: Does the system prioritize the penguin query or get distracted?'},
+            {description: 'RLFP Goal: Learn to prefer trajectories that ignore sparrow/airplane when answering about penguins.'}
+        ];
+        await this._executeDemoSteps(nar, sendDemoStep, waitIfNotPaused, 'rlfp_focus', steps, params);
     }
 
     async _executeDemoSteps(nar, sendDemoStep, waitIfNotPaused, demoId, steps, params = {}) {

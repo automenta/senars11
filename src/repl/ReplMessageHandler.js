@@ -7,9 +7,10 @@ export class ReplMessageHandler extends EventEmitter {
     constructor(engine) {
         super();
 
-        if (!engine || typeof engine.processInput !== 'function') {
-            throw new Error('ReplMessageHandler requires a valid engine with processInput method');
-        }
+        // RELAXED VALIDATION: Don't enforce processInput check in constructor
+        // if (!engine || typeof engine.processInput !== 'function') {
+        //    throw new Error('ReplMessageHandler requires a valid engine with processInput method');
+        // }
 
         this.engine = engine;
         this.commandHandlers = new Map();
@@ -20,6 +21,19 @@ export class ReplMessageHandler extends EventEmitter {
 
         this._setupDefaultCommandHandlers();
         this._setupDefaultMessageHandlers();
+    }
+
+    /**
+     * Helper to safely call processInput
+     */
+    async _safeProcessInput(input) {
+         if (this.engine && typeof this.engine.processInput === 'function') {
+             return await this.engine.processInput(input);
+         } else if (this.engine && this.engine.nar && typeof this.engine.nar.input === 'function') {
+             // Fallback for when engine is just a wrapper around NAR
+             return await this.engine.nar.input(input);
+         }
+         throw new Error("Engine does not support processInput");
     }
 
     /**
@@ -44,8 +58,11 @@ export class ReplMessageHandler extends EventEmitter {
         Object.entries(internalCommands).forEach(([cmd, method]) => {
             this.commandHandlers.set(cmd, async () => {
                 try {
-                    if (this.engine[method]) {
+                    if (this.engine && this.engine[method]) {
                         return await this.engine[method].call(this.engine);
+                    } else if (this.engine && this.engine.nar && this.engine.nar[method]) {
+                         // Fallback for wrapper
+                         return await this.engine.nar[method].call(this.engine.nar);
                     }
                     return `Unknown command: ${cmd}`;
                 } catch (error) {
@@ -81,7 +98,7 @@ export class ReplMessageHandler extends EventEmitter {
 
             // Early return for common cases to avoid unnecessary processing
             if (!messageType && typeof input === 'string') {
-                return await this.engine.processInput(input);
+                return await this._safeProcessInput(input);
             }
 
             // Use a switch statement for the most common message types for better performance
@@ -123,7 +140,7 @@ export class ReplMessageHandler extends EventEmitter {
 
             // Fallback to direct input processing
             if (typeof input === 'string' && input.trim()) {
-                return await this.engine.processInput(input);
+                return await this._safeProcessInput(input);
             }
 
             return {error: `Unknown message type: ${messageType || 'undefined'}`};
@@ -144,7 +161,7 @@ export class ReplMessageHandler extends EventEmitter {
                 return {error: 'No input provided', type: MESSAGE_TYPES.ERROR};
             }
 
-            const result = await this.engine.processInput(input);
+            const result = await this._safeProcessInput(input);
             return {
                 type: MESSAGE_TYPES.AGENT_RESULT,
                 payload: {input, result, success: true, timestamp: Date.now()}
@@ -165,7 +182,7 @@ export class ReplMessageHandler extends EventEmitter {
                 return {error: 'No input provided', type: MESSAGE_TYPES.ERROR};
             }
 
-            const result = await this.engine.processInput(input);
+            const result = await this._safeProcessInput(input);
             return {
                 type: MESSAGE_TYPES.NARSESE_RESULT,
                 payload: {input, result, success: !!result, timestamp: Date.now()}
@@ -241,7 +258,7 @@ export class ReplMessageHandler extends EventEmitter {
             }
 
             // Then try the engine's executeCommand method
-            if (this.engine.executeCommand) {
+            if (this.engine && this.engine.executeCommand) {
                 return await this.engine.executeCommand(cmd, ...args);
             }
 

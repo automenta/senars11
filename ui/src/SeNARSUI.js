@@ -8,6 +8,8 @@ import {UIEventHandlers} from './ui/UIEventHandlers.js';
 import {MessageHandler} from './message-handlers/MessageHandler.js';
 import {capitalizeFirst} from './utils/Helpers.js';
 import {ControlPanel} from './ui/ControlPanel.js';
+import {SessionSelector} from './ui/SessionSelector.js';
+import {TrajectoryViewer} from './ui/TrajectoryViewer.js';
 
 /**
  * Main SeNARS UI Application class - orchestrator that combines all modules
@@ -31,6 +33,27 @@ export class SeNARSUI {
             this.webSocketManager,
             this.controlPanel
         );
+
+        // Initialize Session Components
+        // Find or create container for sessions
+        let sidebar = document.querySelector('.left-sidebar');
+        if (!sidebar) {
+             sidebar = document.createElement('div');
+             sidebar.className = 'left-sidebar';
+             document.body.prepend(sidebar); // Fallback placement
+        }
+        const sessionContainer = document.createElement('div');
+        sessionContainer.id = 'session-container';
+        sidebar.prepend(sessionContainer); // Put it at top of sidebar
+
+        this.sessionSelector = new SessionSelector('session-container', this.webSocketManager);
+
+        // Initialize Trajectory Viewer (maybe in main area or bottom)
+        const mainContent = document.querySelector('.main-content') || document.body;
+        const trajContainer = document.createElement('div');
+        trajContainer.id = 'trajectory-viewer';
+        mainContent.appendChild(trajContainer);
+        this.trajectoryViewer = new TrajectoryViewer('trajectory-viewer', this.webSocketManager);
 
         // Initialize message handler
         this.messageHandler = new MessageHandler(this.graphManager);

@@ -10,6 +10,42 @@ export class WebRepl {
     }
 
     _setupEventListeners() {
+        // Check if engine supports 'on'
+        if (!this.engine || typeof this.engine.on !== 'function') {
+            // If engine doesn't support on, we skip event listeners or use nar if available
+            if (this.engine && this.engine.nar && typeof this.engine.nar.on === 'function') {
+                 // Use the underlying NAR for events
+                 const nar = this.engine.nar;
+                 const engineEvents = [
+                    'engine.ready',
+                    'narsese.processed',
+                    'narsese.error',
+                    'engine.quit',
+                    'nar.cycle.step',
+                    'nar.cycle.running',
+                    'nar.cycle.stop',
+                    'engine.reset',
+                    'engine.save',
+                    'engine.load',
+                    'nar.trace.enable',
+                    'nar.trace.restore',
+                    'command.error'
+                ];
+
+                engineEvents.forEach(event => {
+                    nar.on(event, (data) => {
+                        this._broadcastToAllClients({
+                            type: event,
+                            payload: data
+                        });
+                    });
+                });
+                return;
+            }
+            console.warn("WebRepl: Engine does not support event subscription, skipping event listeners setup.");
+            return;
+        }
+
         const engineEvents = [
             'engine.ready',
             'narsese.processed',

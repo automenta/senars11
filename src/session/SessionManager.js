@@ -1,183 +1,167 @@
-/**
- * Session management for SeNARS to provide isolated reasoning contexts
- */
+import {NAR} from '../nar/NAR.js';
+import {ConfigValidator} from '../config/Config.js';
 
-export class SessionManager {
-    constructor() {
-        this.sessions = new Map();
-        this.currentSessionId = null;
+/**
+ * Wrapper for a NAR instance within a session.
+ */
+class Session {
+    constructor(id, nar, config, trajectoryLogger = null) {
+        this.id = id;
+        this.nar = nar;
+        this.config = config;
+        this.trajectoryLogger = trajectoryLogger;
+        this.createdAt = Date.now();
+        this.lastActiveAt = Date.now();
+        this.clients = new Set(); // Connected WebSocket clients
     }
 
     /**
-     * Create a new reasoning session
+     * Updates the last active timestamp.
+     */
+    touch() {
+        this.lastActiveAt = Date.now();
+    }
+
+    /**
+     * Adds a client to this session.
+     * @param {Object} client - The WebSocket client object.
+     */
+    addClient(client) {
+        this.clients.add(client);
+    }
+
+    /**
+     * Removes a client from this session.
+     * @param {Object} client - The WebSocket client object.
+     */
+    removeClient(client) {
+        this.clients.delete(client);
+    }
+
+    /**
+     * Serialize session metadata (not the full NAR state, unless requested).
+     */
+    toJSON() {
+        return {
+            id: this.id,
+            createdAt: this.createdAt,
+            lastActiveAt: this.lastActiveAt,
+            clientCount: this.clients.size,
+            narStats: this.nar.getStats() // Basic stats
+        };
+    }
+}
+
+/**
+ * Manages multiple NAR sessions.
+ */
+export class SessionManager {
+    constructor(config = {}) {
+        this.sessions = new Map();
+        this.defaultConfig = config;
+    }
+
+    /**
+     * Creates a new session with a new NAR instance.
+     * @param {string} [sessionId] - Optional custom session ID. If not provided, one is generated.
+     * @param {Object} [config] - Configuration for the new NAR instance.
+     * @returns {Promise<Session>} The created session.
      */
     async createSession(sessionId = null, config = {}) {
-        if (!sessionId) {
-            sessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+        const id = sessionId || `session-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+        if (this.sessions.has(id)) {
+            throw new Error(`Session with ID ${id} already exists.`);
         }
 
-        // Import SeNARS NAR (NARS Reasoner Engine) to create a new instance
-        const {NAR} = await import('../nar/NAR.js');
-        const nar = new NAR(config);
+        const mergedConfig = ConfigValidator.mergeWithDefaults({...this.defaultConfig, ...config});
+        const nar = new NAR(mergedConfig);
 
-        this.sessions.set(sessionId, {
-            id: sessionId,
-            nar: nar,
-            createdAt: new Date(),
-            lastAccessed: new Date(),
-            config: config,
-            metadata: {}
-        });
+        // Initialize the NAR instance
+        await nar.initialize();
 
-        this.currentSessionId = sessionId;
-        return sessionId;
+        // TODO: Initialize TrajectoryLogger here once implemented
+        const trajectoryLogger = null;
+
+        const session = new Session(id, nar, mergedConfig, trajectoryLogger);
+        this.sessions.set(id, session);
+
+        console.log(`[SessionManager] Created session: ${id}`);
+        return session;
     }
 
     /**
-     * Get a session by ID
+     * Retrieves a session by ID.
+     * @param {string} sessionId
+     * @returns {Session|undefined}
      */
     getSession(sessionId) {
         const session = this.sessions.get(sessionId);
         if (session) {
-            session.lastAccessed = new Date();
+            session.touch();
         }
         return session;
     }
 
     /**
-     * Switch to a different session
+     * Deletes a session and cleans up its resources.
+     * @param {string} sessionId
+     * @returns {Promise<boolean>} True if deleted, false if not found.
      */
-    switchSession(sessionId) {
-        if (!this.sessions.has(sessionId)) {
-            throw new Error(`Session ${sessionId} does not exist`);
-        }
-        this.currentSessionId = sessionId;
-        return this.getSession(sessionId);
+    async deleteSession(sessionId) {
+        const session = this.sessions.get(sessionId);
+        if (!session) return false;
+
+        // Clean up NAR
+        await session.nar.dispose();
+
+        // Notify clients? (Optional, clients might just get disconnected)
+
+        this.sessions.delete(sessionId);
+        console.log(`[SessionManager] Deleted session: ${sessionId}`);
+        return true;
     }
 
     /**
-     * Get the current active session
-     */
-    getCurrentSession() {
-        return this.sessions.get(this.currentSessionId);
-    }
-
-    /**
-     * Execute an operation in a specific session context
-     */
-    async executeInSession(sessionId, operation) {
-        const originalSessionId = this.currentSessionId;
-        try {
-            this.currentSessionId = sessionId;
-            const session = this.getSession(sessionId);
-            return await operation(session);
-        } finally {
-            this.currentSessionId = originalSessionId;
-        }
-    }
-
-    /**
-     * Save session state
-     */
-    saveSession(sessionId) {
-        const session = this.getSession(sessionId);
-        if (!session) {
-            throw new Error(`Session ${sessionId} does not exist`);
-        }
-
-        // Get the memory state from the NAR if available
-        let memoryState = null;
-        if (session.nar?.memory && typeof session.nar.memory.exportState === 'function') {
-            memoryState = session.nar.memory.exportState();
-        }
-
-        return {
-            id: session.id,
-            config: session.config,
-            createdAt: session.createdAt,
-            lastAccessed: session.lastAccessed,
-            memoryState: memoryState,
-            metadata: session.metadata
-        };
-    }
-
-    /**
-     * Load session state
-     */
-    async loadSession(sessionId, state) {
-        if (this.sessions.has(sessionId)) {
-            throw new Error(`Session ${sessionId} already exists`);
-        }
-
-        // Create a new NAR instance with the original config
-        const {NAR} = await import('../nar/NAR.js');
-        const nar = new NAR(state.config);
-
-        // If we have memory state, try to restore it
-        if (state.memoryState && nar.memory && typeof nar.memory.importState === 'function') {
-            nar.memory.importState(state.memoryState);
-        }
-
-        this.sessions.set(sessionId, {
-            id: state.id,
-            nar: nar,
-            createdAt: state.createdAt || new Date(),
-            lastAccessed: state.lastAccessed || new Date(),
-            config: state.config,
-            metadata: state.metadata || {}
-        });
-
-        return this.sessions.get(sessionId);
-    }
-
-    /**
-     * List all sessions
+     * Lists all active sessions.
+     * @returns {Array<Object>} Array of session metadata.
      */
     listSessions() {
-        return Array.from(this.sessions.entries()).map(([id, session]) => ({
-            id: session.id,
-            createdAt: session.createdAt,
-            lastAccessed: session.lastAccessed,
-            isActive: session.id === this.currentSessionId
-        }));
+        return Array.from(this.sessions.values()).map(s => s.toJSON());
     }
 
     /**
-     * Remove a session
+     * Forks an existing session (creates a copy).
+     * This is useful for A/B testing from a common state.
+     * @param {string} sourceSessionId
+     * @param {string} [newSessionId]
+     * @returns {Promise<Session>} The new forked session.
      */
-    removeSession(sessionId) {
-        if (this.sessions.has(sessionId)) {
-            const session = this.sessions.get(sessionId);
-            // Optionally clean up the NAR instance
-            if (session.nar && typeof session.nar.dispose === 'function') {
-                session.nar.dispose();
-            }
-            this.sessions.delete(sessionId);
-
-            if (this.currentSessionId === sessionId) {
-                this.currentSessionId = this.sessions.size > 0
-                    ? this.sessions.keys().next().value
-                    : null;
-            }
-
-            return true;
+    async forkSession(sourceSessionId, newSessionId = null) {
+        const sourceSession = this.sessions.get(sourceSessionId);
+        if (!sourceSession) {
+            throw new Error(`Source session ${sourceSessionId} not found.`);
         }
-        return false;
+
+        // Serialize the source state
+        const state = sourceSession.nar.serialize();
+
+        // Create new session
+        const newSession = await this.createSession(newSessionId, sourceSession.config);
+
+        // Load state into new session
+        await newSession.nar.deserialize(state);
+
+        console.log(`[SessionManager] Forked session ${sourceSessionId} to ${newSession.id}`);
+        return newSession;
     }
 
     /**
-     * Clear all sessions
+     * Cleans up all sessions.
      */
-    clearAllSessions() {
-        for (const [id, session] of this.sessions) {
-            if (session.nar && typeof session.nar.dispose === 'function') {
-                session.nar.dispose();
-            }
+    async destroyAll() {
+        for (const id of this.sessions.keys()) {
+            await this.deleteSession(id);
         }
-        this.sessions.clear();
-        this.currentSessionId = null;
     }
 }
-
-// Export a default instance for convenience
-export default new SessionManager();

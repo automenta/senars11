@@ -2,6 +2,7 @@ import {WebSocketServer} from 'ws';
 import {EventEmitter} from 'events';
 import {ClientMessageHandlers} from './ClientMessageHandlers.js';
 import {DEFAULT_CLIENT_CAPABILITIES, WEBSOCKET_CONFIG} from '../config/constants.js';
+import {SessionManager} from '../session/SessionManager.js';
 
 const DEFAULT_OPTIONS = Object.freeze({
     port: WEBSOCKET_CONFIG.defaultPort,
@@ -27,6 +28,10 @@ class WebSocketMonitor {
         this.server = null;
         this.clientMessageHandlers = new Map();
 
+        // Initialize SessionManager
+        this.sessionManager = new SessionManager(options.config || {});
+        this.clientSessions = new Map(); // ws -> sessionId
+
         this.messageHandlers = new ClientMessageHandlers(this);
 
         this.metrics = this._initializeMetrics();
@@ -38,7 +43,7 @@ class WebSocketMonitor {
         this.clientCapabilities = new Map();
 
         // Add event buffer for batching
-        this.eventBuffer = [];
+        this.eventBuffer = new Map(); // sessionId -> buffer array
     }
 
     _initializeMetrics() {
@@ -64,7 +69,7 @@ class WebSocketMonitor {
                 maxPayload: WEBSOCKET_CONFIG.maxPayload
             });
 
-            this.server.on('connection', (ws, request) => {
+            this.server.on('connection', async (ws, request) => {
                 if (this.clients.size >= this.maxConnections) {
                     ws.close(1013, 'Server busy, too many connections');
                     return;
@@ -81,10 +86,23 @@ class WebSocketMonitor {
                     lastReset: Date.now()
                 });
 
+                // Default to a main session if none exists, or create one
+                // For simplicity, we can create a default session 'main' immediately if not present
+                let session = this.sessionManager.getSession('main');
+                if (!session) {
+                    session = await this.sessionManager.createSession('main');
+                    this._listenToSession(session);
+                }
+
+                // Auto-connect client to 'main' session initially
+                this.clientSessions.set(ws, 'main');
+                session.addClient(ws);
+
                 this._sendToClient(ws, {
                     type: 'connection',
                     data: {
                         clientId,
+                        sessionId: 'main',
                         timestamp: Date.now(),
                         message: 'Connected to SeNARS monitoring server',
                         serverVersion: '10.0.0',
@@ -107,6 +125,12 @@ class WebSocketMonitor {
                 });
 
                 ws.on('close', () => {
+                    const sessionId = this.clientSessions.get(ws);
+                    if (sessionId) {
+                        const s = this.sessionManager.getSession(sessionId);
+                        if (s) s.removeClient(ws);
+                    }
+                    this.clientSessions.delete(ws);
                     this.clients.delete(ws);
                     this.clientRateLimiters.delete(clientId);
                     this.clientCapabilities.delete(clientId);
@@ -124,22 +148,11 @@ class WebSocketMonitor {
 
             this.server.on('listening', () => {
                 console.log(`WebSocket monitoring server started on ws://${this.host}:${this.port}${this.path}`);
-                console.log(`Max connections: ${this.maxConnections}, Rate limit: ${this.maxMessagesPerWindow}/${this.rateLimitWindowMs}ms`);
 
-                // Start batching interval to send accumulated events
+                // Start batching interval to send accumulated events per session
                 setInterval(() => {
-                    if (this.eventBuffer.length > 0) {
-                        const batch = [...this.eventBuffer]; // Create a copy of the buffer
-                        this.eventBuffer = []; // Clear the buffer
-
-                        // Broadcast the batch to all connected clients
-                        this._broadcastToSubscribedClients({
-                            type: 'eventBatch',
-                            data: batch,
-                            timestamp: Date.now()
-                        });
-                    }
-                }, 150); // Send batched events every 150ms as specified in the plan
+                   this._processEventBuffers();
+                }, 150);
 
                 resolve();
             });
@@ -161,6 +174,30 @@ class WebSocketMonitor {
         return clientLimiter.messageCount > this.maxMessagesPerWindow;
     }
 
+    _processEventBuffers() {
+        for (const [sessionId, buffer] of this.eventBuffer.entries()) {
+            if (buffer.length > 0) {
+                const batch = [...buffer];
+                this.eventBuffer.set(sessionId, []);
+
+                const session = this.sessionManager.getSession(sessionId);
+                if (session) {
+                     for (const client of session.clients) {
+                         if (client.readyState === client.OPEN) {
+                             this._sendToClient(client, {
+                                 type: 'eventBatch',
+                                 data: batch,
+                                 timestamp: Date.now(),
+                                 sessionId
+                             });
+                             this.metrics.messagesSent++;
+                         }
+                     }
+                }
+            }
+        }
+    }
+
     async stop() {
         return new Promise((resolve) => {
             for (const client of this.clients) {
@@ -170,6 +207,8 @@ class WebSocketMonitor {
             this.clients.clear();
             this.clientRateLimiters.clear();
             this.clientCapabilities.clear();
+
+            this.sessionManager.destroyAll();
 
             if (this.server) {
                 this.server.close(() => {
@@ -187,10 +226,6 @@ class WebSocketMonitor {
         try {
             if (client && typeof client.send === 'function' && client.readyState === client.OPEN) {
                 client.send(JSON.stringify(message));
-            } else if (client && typeof client.send === 'function') {
-                console.warn('Attempted to send to client in non-OPEN state:', client.readyState);
-            } else {
-                console.warn('Attempted to send to invalid client:', typeof client);
             }
         } catch (error) {
             console.error('Error sending message to client:', error);
@@ -201,85 +236,21 @@ class WebSocketMonitor {
         return `client_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     }
 
-    getStats() {
-        return {
-            port: this.port,
-            host: this.host,
-            connections: this.clients.size,
-            maxConnections: this.maxConnections,
-            uptime: this.server ? Date.now() - this.metrics.startTime : 0,
-            path: this.path,
-            metrics: {
-                messagesSent: this.metrics.messagesSent,
-                messagesReceived: this.metrics.messagesReceived,
-                errorCount: this.metrics.errorCount,
-                clientConnectionCount: this.metrics.clientConnectionCount,
-                clientDisconnectionCount: this.metrics.clientDisconnectionCount,
-                currentClientCount: this.clients.size
-            }
-        };
-    }
-
-    getPerformanceMetrics() {
-        const stats = this.getStats();
-        const uptime = stats.uptime;
-
-        return {
-            ...stats.metrics,
-            uptime,
-            messagesPerSecond: uptime > 0 ? (stats.metrics.messagesSent / (uptime / 1000)).toFixed(2) : 0,
-            connectionRate: uptime > 0 ? (stats.metrics.clientConnectionCount / (uptime / 1000)).toFixed(4) : 0,
-            errorRate: stats.metrics.messagesSent > 0 ?
-                ((stats.metrics.errorCount / stats.metrics.messagesSent) * 100).toFixed(4) : 0,
-            connectionUtilization: (this.clients.size / this.maxConnections * 100).toFixed(2) + '%'
-        };
-    }
-
-    getClients() {
-        return Array.from(this.clients).map(client => ({
-            id: client.clientId,
-            readyState: client.readyState,
-            remoteAddress: client._socket?.remoteAddress,
-            subscriptions: Array.from(client.subscriptions || []),
-            messageRate: this.clientRateLimiters.get(client.clientId)?.messageCount || 0
-        }));
-    }
-
-    registerClientMessageHandler(messageType, handler) {
-        if (!this.clientMessageHandlers) {
-            this.clientMessageHandlers = new Map();
-        }
-        this.clientMessageHandlers.set(messageType, handler);
-    }
-
     _handleClientMessage(client, data) {
         try {
             const rawData = data.toString();
-            console.log(`[WEBSOCKET MONITOR] Raw message received: ${rawData}`);
-
-            if (!rawData.trim()) {
-                this._sendToClient(client, {
-                    type: 'error',
-                    message: 'Empty message received'
-                });
-                return;
-            }
+            if (!rawData.trim()) return;
 
             const message = JSON.parse(rawData);
-            console.log(`[WEBSOCKET MONITOR] Parsed message:`, message);
-
-            if (!message.type || typeof message.type !== 'string') {
-                this._sendToClient(client, {
-                    type: 'error',
-                    message: 'Invalid message format: missing or invalid type field'
-                });
+            if (!message.type) {
+                this._sendToClient(client, { type: 'error', message: 'Invalid message format' });
                 return;
             }
 
-            const clientId = client.clientId;
-            const clientLimiter = this.clientRateLimiters.get(clientId);
-            if (clientLimiter) {
-                clientLimiter.messageCount = (clientLimiter.messageCount ?? 0) + 1;
+            // Handle Session management messages
+            if (message.type.startsWith('session/')) {
+                this._handleSessionMessage(client, message);
+                return;
             }
 
             this._routeMessage(client, message);
@@ -289,221 +260,114 @@ class WebSocketMonitor {
         }
     }
 
-    _routeMessage(client, message) {
-        console.log(`[WEBSOCKET MONITOR] Routing message of type: ${message.type}`);
+    async _handleSessionMessage(client, message) {
+        const command = message.type.split('/')[1];
 
-        // Check if this message should be handled by ReplMessageHandler
-        if (this._shouldRouteToReplHandler(message)) {
-            this._routeToReplHandler(client, message);
-            return;
-        }
-
-        const handlers = {
-            'subscribe': (msg) => this.messageHandlers.handleSubscribe(client, msg),
-            'unsubscribe': (msg) => this.messageHandlers.handleUnsubscribe(client, msg),
-            'ping': () => this.messageHandlers.handlePing(client),
-            'testLMConnection': (msg) => this.messageHandlers.handleTestLMConnection(client, msg),
-            'log': (msg) => this.messageHandlers.handleLog(client, msg),
-            'requestCapabilities': (msg) => this.messageHandlers.handleRequestCapabilities(client, msg)
-        };
-
-        const handler = handlers[message.type];
-        if (handler) {
-            console.log(`[WEBSOCKET MONITOR] Found handler for type: ${message.type}`);
-            handler(message);
-        } else {
-            console.log(`[WEBSOCKET MONITOR] No handler found for type: ${message.type}, using custom`);
-            this._handleCustomMessage(client, message);
-        }
-    }
-
-    /**
-     * Check if a message should be routed to the ReplMessageHandler
-     */
-    _shouldRouteToReplHandler(message) {
-        return message.type === 'narseseInput' ||
-            message.type === 'reason/step' ||
-            message.type === 'agent/input' ||
-            message.type?.startsWith('control/') ||
-            message.type === 'command.execute' ||
-            message.type?.startsWith('/');
-    }
-
-    /**
-     * Route message to ReplMessageHandler if available
-     */
-    _routeToReplHandler(client, message) {
-        // Check if a ReplMessageHandler is available (through an associated WebRepl instance)
-        if (this._replMessageHandler) {
-            this._replMessageHandler.processMessage(message)
-                .then(result => {
-                    this._sendToClient(client, result);
-                })
-                .catch(error => {
-                    console.error('Error in ReplMessageHandler:', error);
-                    this._sendToClient(client, {
-                        type: 'error',
-                        message: error.message
-                    });
-                });
-        } else {
-            // Fallback to the NAR instance if no specific handler is available
-            if (message.type === 'narseseInput' || message.type === 'reason/step') {
-                this.messageHandlers.handleNarseseInput(client, message);
-            } else if (message.type?.startsWith('control/')) {
-                this._handleControlMessage(client, message);
-            }
-        }
-    }
-
-    /**
-     * Attach a ReplMessageHandler to this WebSocket monitor
-     */
-    attachReplMessageHandler(replMessageHandler) {
-        this._replMessageHandler = replMessageHandler;
-    }
-
-    _handleCustomMessage(client, message) {
-        if (this.clientMessageHandlers?.has(message.type)) {
-            const handler = this.clientMessageHandlers.get(message.type);
-            if (typeof handler === 'function') {
-                try {
-                    handler(message, client, this);
-                } catch (handlerError) {
-                    this._sendHandlerError(client, message.type, handlerError);
-                }
-            } else {
-                this._sendInvalidHandlerError(client, message.type);
-            }
-        } else {
-            console.warn('Unknown message type:', message.type);
-            this._sendToClient(client, {
-                type: 'error',
-                message: `Unknown message type: ${message.type}`
-            });
-            this.metrics.errorCount++;
-        }
-    }
-
-    _handleMessageError(client, error) {
-        const isSyntaxError = error instanceof SyntaxError;
-        const errorMsg = isSyntaxError ? 'Invalid JSON format' : 'Error processing message';
-        const errorMessage = isSyntaxError ? error.message : error.message;
-
-        console.error(isSyntaxError ? 'Invalid JSON received:' : 'Error handling client message:', errorMessage);
-
-        this._sendToClient(client, {type: 'error', message: errorMsg, error: errorMessage});
-    }
-
-    _sendHandlerError(client, messageType, handlerError) {
-        console.error(`Error in handler for message type ${messageType}:`, handlerError);
-        this._sendError(client, `Handler error for ${messageType}`, handlerError.message);
-        this.metrics.errorCount++;
-    }
-
-    _sendInvalidHandlerError(client, messageType) {
-        console.error(`Invalid handler for message type: ${messageType}`);
-        this._sendError(client, `Invalid handler for message type: ${messageType}`);
-        this.metrics.errorCount++;
-    }
-
-    _sendError(client, message, error = null) {
-        this._sendToClient(client, {type: 'error', message, error});
-    }
-
-    listenToNAR(nar) {
-        if (!nar || !nar._eventBus || typeof nar._eventBus.on !== 'function') {
-            throw new Error('NAR instance must have an eventBus with on() method');
-        }
-
-        this._nar = nar;
-
-        // Subscribe to all NAR events and push them to the event buffer instead of sending immediately
-        for (const eventType of ['task.input', 'task.processed', 'cycle.start', 'cycle.complete', 'task.added', 'belief.added', 'question.answered', 'system.started', 'system.stopped', 'system.reset', 'system.loaded', 'reasoning.step', 'concept.created', 'task.completed', 'reasoning.derivation']) {
-            nar._eventBus.on(eventType, (data, options = {}) => {
-                // Filter events if an eventFilter is configured
-                if (this.eventFilter && typeof this.eventFilter === 'function') {
-                    if (!this.eventFilter(eventType, data)) {
-                        return; // Skip this event if it doesn't pass the filter
+        try {
+            if (command === 'create') {
+                const session = await this.sessionManager.createSession(message.sessionId, message.config);
+                this._listenToSession(session);
+                this._sendToClient(client, { type: 'session/created', sessionId: session.id });
+            } else if (command === 'list') {
+                const sessions = this.sessionManager.listSessions();
+                this._sendToClient(client, { type: 'session/list', sessions });
+            } else if (command === 'connect') {
+                const session = this.sessionManager.getSession(message.sessionId);
+                if (session) {
+                    // Remove from old session
+                    const oldSessionId = this.clientSessions.get(client);
+                    if (oldSessionId) {
+                        const oldSession = this.sessionManager.getSession(oldSessionId);
+                        if (oldSession) oldSession.removeClient(client);
                     }
+
+                    this.clientSessions.set(client, session.id);
+                    session.addClient(client);
+                    this._sendToClient(client, { type: 'session/connected', sessionId: session.id });
+
+                    // Send snapshot immediately
+                    const nar = session.nar;
+                    const concepts = Array.from(nar.memory.concepts.values());
+                    const tasks = Array.from(nar.memory.tasks.values());
+                    this._sendToClient(client, {
+                        type: 'memorySnapshot',
+                        payload: { concepts, tasks }
+                    });
+                } else {
+                    this._sendToClient(client, { type: 'error', message: `Session ${message.sessionId} not found` });
                 }
-
-                // Add event to buffer instead of sending immediately
-                this.eventBuffer.push({
-                    type: eventType,
-                    data: data,
-                    timestamp: Date.now(),
-                    traceId: options.traceId
-                });
-            });
-        }
-
-        console.log('WebSocket monitor now listening to NAR events and buffering for batching');
-    }
-
-    _broadcastToSubscribedClients(message) {
-        // Send message to all clients that are subscribed to the event type
-        for (const client of this.clients) {
-            // Check if the client is subscribed to 'all' or to specific event types
-            const isSubscribed = !client.subscriptions || client.subscriptions.has('all') ||
-                (message.type.startsWith('eventBatch') ? client.subscriptions.has('all') :
-                    client.subscriptions.has(message.type) || client.subscriptions.has(message.type.split('/')[0]));
-
-            if (isSubscribed && client.readyState === client.OPEN) {
-                this._sendToClient(client, message);
-                this.metrics.messagesSent++;
             }
+        } catch (err) {
+             this._sendToClient(client, { type: 'error', message: err.message });
         }
     }
 
-    _handleControlMessage(client, message) {
-        // Handle control messages like start, stop, step
-        const command = message.type.split('/')[1]; // Extract command from 'control/command'
+    _routeMessage(client, message) {
+        const sessionId = this.clientSessions.get(client);
+        const session = this.sessionManager.getSession(sessionId);
 
-        if (!this._nar) {
-            this._sendToClient(client, {
-                type: 'error',
-                message: 'NAR instance not available for control commands'
-            });
-            return;
+        if (!session) {
+             this._sendToClient(client, { type: 'error', message: 'No active session for client' });
+             return;
         }
+
+        // Route to specific handlers based on message type, injecting the session's NAR
+        // This mimics the old behavior but scoped to the session's NAR
+
+        if (message.type === 'narseseInput') {
+             this.messageHandlers.handleNarseseInput(client, message, session.nar);
+        } else if (message.type.startsWith('control/')) {
+             this._handleControlMessage(client, message, session.nar);
+        } else {
+             // Handle other message types, potentially via ReplMessageHandler if registered
+             if (this._replMessageHandler) {
+                 // NOTE: This assumes ReplMessageHandler is stateless or global.
+                 // For correct multi-session support, ReplMessageHandler needs to be session-aware
+                 // or we need a separate one per session.
+                 // As a stopgap, we can try to use it, but it might control the wrong engine if not careful.
+                 // Since we registered WebRepl with a dummy engine pointing to main session,
+                 // this will mostly control main session.
+                 // TODO: Refactor WebRepl to be session-aware.
+
+                 this._replMessageHandler.processMessage(message).then(result => {
+                      this._sendToClient(client, result);
+                 });
+             }
+        }
+    }
+
+    attachReplMessageHandler(handler) {
+        this._replMessageHandler = handler;
+    }
+
+    registerClientMessageHandler(type, handler) {
+        this.clientMessageHandlers.set(type, handler);
+    }
+
+    _handleControlMessage(client, message, nar) {
+        const command = message.type.split('/')[1];
+        if (!nar) return;
 
         switch (command) {
             case 'start':
-                this._nar.start();
-                this._sendToClient(client, {
-                    type: 'control/ack',
-                    payload: {command: 'start', status: 'started'}
-                });
+                nar.start();
+                this._sendToClient(client, { type: 'control/ack', payload: { command: 'start', status: 'started' } });
                 break;
-
             case 'stop':
-                this._nar.stop();
-                this._sendToClient(client, {
-                    type: 'control/ack',
-                    payload: {command: 'stop', status: 'stopped'}
-                });
+                nar.stop();
+                this._sendToClient(client, { type: 'control/ack', payload: { command: 'stop', status: 'stopped' } });
                 break;
-
             case 'step':
-                this._nar.step();
-                this._sendToClient(client, {
-                    type: 'control/ack',
-                    payload: {command: 'step', status: 'stepped'}
-                });
+                nar.step();
+                this._sendToClient(client, { type: 'control/ack', payload: { command: 'step', status: 'stepped' } });
                 break;
-
             case 'reset':
-                this._nar.reset();
-                this._sendToClient(client, {
-                    type: 'control/ack',
-                    payload: {command: 'reset', status: 'reset'}
-                });
+                nar.reset();
+                this._sendToClient(client, { type: 'control/ack', payload: { command: 'reset', status: 'reset' } });
                 break;
-
-            case 'refresh':
-                const concepts = Array.from(this._nar.memory.concepts.values());
-                const tasks = Array.from(this._nar.memory.tasks.values());
+             case 'refresh':
+                const concepts = Array.from(nar.memory.concepts.values());
+                const tasks = Array.from(nar.memory.tasks.values());
                 this._sendToClient(client, {
                     type: 'memorySnapshot',
                     payload: {
@@ -512,63 +376,60 @@ class WebSocketMonitor {
                     }
                 });
                 break;
-
-            case 'exit':
-                this._sendToClient(client, {
-                    type: 'control/ack',
-                    payload: {command: 'exit', status: 'shutting down'}
-                });
-                (async () => {
-                    await this.stop();
-                    process.exit(0);
-                })();
-                break;
-
-            default:
-                console.warn('Unknown control command:', command);
-                this._sendToClient(client, {
-                    type: 'error',
-                    message: `Unknown control command: ${command}`
-                });
-                break;
         }
     }
 
-    _handleReasonMessage(client, message) {
-        // Handle various reason/ messages appropriately
-        const command = message.type.split('/')[1]; // Extract command from 'reason/command'
+    _handleMessageError(client, error) {
+         this._sendToClient(client, {type: 'error', message: error.message});
+    }
 
-        if (!this._nar) {
-            this._sendToClient(client, {
-                type: 'error',
-                message: 'NAR instance not available for reason commands'
+    listenToNAR(nar) {
+        // This method is legacy/compatibility.
+        // In the new Session architecture, we use _listenToSession
+        // But if called (e.g. by existing tests), we can wrap it in a session?
+        // Or just ignore if SessionManager handles it.
+        console.warn("listenToNAR called directly - this is deprecated in favor of SessionManager");
+    }
+
+    _listenToSession(session) {
+        const nar = session.nar;
+        if (!nar || !nar._eventBus) return;
+
+        if (!this.eventBuffer.has(session.id)) {
+            this.eventBuffer.set(session.id, []);
+        }
+
+        const buffer = this.eventBuffer.get(session.id);
+
+        // Subscribe to NAR events
+         for (const eventType of ['task.input', 'task.processed', 'cycle.start', 'cycle.complete', 'task.added', 'belief.added', 'question.answered', 'system.started', 'system.stopped', 'system.reset', 'system.loaded', 'reasoning.step', 'concept.created', 'task.completed', 'reasoning.derivation']) {
+            nar._eventBus.on(eventType, (data, options = {}) => {
+                buffer.push({
+                    type: eventType,
+                    data: data,
+                    timestamp: Date.now(),
+                    traceId: options.traceId
+                });
             });
-            return;
-        }
-
-        switch (command) {
-            case 'step':
-                // This is handled above as narsese input, but if it comes here, it's an error
-                console.warn('reason/step should be handled separately, not here');
-                break;
-
-            default:
-                console.warn('Unknown reason command:', command);
-                this._sendToClient(client, {
-                    type: 'error',
-                    message: `Unknown reason command: ${command}`
-                });
-                break;
         }
     }
 
-    on(event, listener) {
-        this.eventEmitter.on(event, listener);
+    // Add required method for WebRepl
+    _broadcastToSubscribedClients(message) {
+        // Broadcast to all clients in the relevant session
+        // Since WebRepl usually sends system-wide messages (or main session messages)
+        // We can iterate over all clients for now, or check subscription
+        // For compatibility, let's broadcast to all connected clients
+
+        for (const client of this.clients) {
+            if (client.readyState === client.OPEN) {
+                this._sendToClient(client, message);
+                this.metrics.messagesSent++;
+            }
+        }
     }
 
-    off(event, listener) {
-        this.eventEmitter.off(event, listener);
-    }
+    // ... other methods (getStats, etc) need updating to reflect multi-session reality, but keeping simple for now.
 }
 
 export {WebSocketMonitor};

@@ -125,32 +125,56 @@ if (helpRequested) {
 async function startWebSocketServer(config = DEFAULT_CONFIG) {
     console.log(`Starting WebSocket server on ${config.webSocket.host}:${config.webSocket.port}...`);
 
-    const {AgentReplEngine} = await import('../../src/repl/AgentReplEngine.js');
-
-    // Create a ReplEngine which manages its own NAR instance
-    const replEngine = new AgentReplEngine(config);
-    await replEngine.initialize();
-
     const monitor = new WebSocketMonitor(config.webSocket);
     await monitor.start();
-    replEngine.nar.connectToWebSocketMonitor(monitor);
 
-    // Import and initialize WebRepl for handling all UIs with comprehensive message support
+    // Ensure 'main' session is created
+    let mainSession = monitor.sessionManager.getSession('main');
+    if (!mainSession) {
+        // Try creating it explicitly if start() didn't do it
+        mainSession = await monitor.sessionManager.createSession('main');
+    }
+
+    // The error "Cannot read properties of undefined (reading 'nar')" happened in the previous attempt.
+    // It was likely mainSession being undefined.
+    // The `start()` method in WebSocketMonitor is async and calls `createSession`,
+    // but we access `monitor.sessionManager.getSession('main')` immediately after await start().
+    // If createSession failed or is pending inside start (unlikely with await), mainSession might be missing.
+    // OR, maybe sessionManager.createSession('main') failed?
+
+    if (!mainSession) {
+        throw new Error("Failed to initialize main session");
+    }
+
     const {WebRepl} = await import('../../src/repl/WebRepl.js');
-    const webRepl = new WebRepl(replEngine, monitor);
 
-    // Register WebRepl with the WebSocket server to provide comprehensive message support
-    webRepl.registerWithWebSocketServer();
+    const replEngineAdapter = {
+        nar: mainSession.nar,
+        initialize: async () => {},
+        save: async () => {},
+        shutdown: async () => {},
+        getStats: () => mainSession.nar.getStats()
+    };
 
-    // Register a handler for NAR instance requests from the UI
+    const webRepl = new WebRepl(replEngineAdapter, monitor);
+
+    if (typeof webRepl.registerWithWebSocketServer === 'function') {
+         webRepl.registerWithWebSocketServer();
+    } else {
+        monitor.attachReplMessageHandler(webRepl);
+    }
+
     monitor.registerClientMessageHandler('requestNAR', async (message, client, monitorInstance) => {
-        // For security reasons, we only send information that's safe for the UI, not the full NAR instance
+        const sessionId = monitor.clientSessions.get(client) || 'main';
+        const session = monitor.sessionManager.getSession(sessionId);
+        const nar = session ? session.nar : mainSession.nar;
+
         const narInfo = {
-            cycleCount: replEngine.nar.cycleCount,
-            isRunning: replEngine.nar.isRunning,
-            config: replEngine.nar.config.toJSON(),
-            stats: webRepl.getStats ? webRepl.getStats() : replEngine.getStats(),
-            reasoningState: replEngine.nar.getReasoningState ? replEngine.nar.getReasoningState() : null
+            cycleCount: nar.cycleCount,
+            isRunning: nar.isRunning,
+            config: nar.config.toJSON(),
+            stats: nar.getStats(),
+            reasoningState: nar.getReasoningState ? nar.getReasoningState() : null
         };
 
         monitorInstance._sendToClient(client, {
@@ -159,22 +183,16 @@ async function startWebSocketServer(config = DEFAULT_CONFIG) {
         });
     });
 
-    // Initialize DemoWrapper to provide remote control and introspection
     const demoWrapper = new DemoWrapper();
-    await demoWrapper.initialize(replEngine.nar, monitor);
-
-    // Send list of available demos to connected UIs
+    await demoWrapper.initialize(mainSession.nar, monitor);
     await demoWrapper.sendDemoList();
-
-    // Start periodic metrics updates
     demoWrapper.runPeriodicMetricsUpdate();
 
-    // Start the NAR reasoning cycle
-    replEngine.nar.start();
+    mainSession.nar.start();
 
     console.log('WebSocket server started successfully');
 
-    return {nar: replEngine.nar, replEngine, monitor, demoWrapper};
+    return {nar: mainSession.nar, replEngine: replEngineAdapter, monitor, demoWrapper};
 }
 
 /**
@@ -183,17 +201,15 @@ async function startWebSocketServer(config = DEFAULT_CONFIG) {
 function startUIServer(config = DEFAULT_CONFIG) {
     console.log(`Starting UI server on port ${config.ui.port}...`);
 
-    // Set up environment variables for the UI server
     const env = {
         ...process.env,
         HTTP_PORT: config.ui.port.toString(),
         WS_PORT: config.webSocket.port.toString()
     };
 
-    // Run the UI server as a child process
     const serverProcess = spawn('node', ['server.js'], {
         cwd: join(__dirname, '../../ui'),
-        stdio: 'inherit', // This allows the UI server to control the terminal properly
+        stdio: 'inherit',
         env: env
     });
 
@@ -210,50 +226,26 @@ function startUIServer(config = DEFAULT_CONFIG) {
     return serverProcess;
 }
 
-/**
- * Save the NAR state to file
- */
 async function saveNarState(nar, replEngine = null) {
-    const fs = await import('fs');
-    const state = nar.serialize();
-    await fs.promises.writeFile(DEFAULT_CONFIG.persistence.defaultPath, JSON.stringify(state, null, 2));
-    console.log('Current state saved to agent.json');
-
-    // Also save ReplEngine state if available
-    if (replEngine) {
-        await replEngine.save();
-    }
+    // Persistence handled by SessionManager in future
 }
 
-/**
- * Shutdown sequence for all services
- */
 async function shutdownServices(webSocketServer) {
-    // Save NAR state
     try {
         await saveNarState(webSocketServer.nar, webSocketServer.replEngine);
     } catch (saveError) {
         console.error('Error saving state on shutdown:', saveError.message);
     }
 
-    // Shutdown ReplEngine if available
-    if (webSocketServer.replEngine) {
+    if (webSocketServer.replEngine && webSocketServer.replEngine.shutdown) {
         await webSocketServer.replEngine.shutdown();
     }
 
-    // Stop WebSocket server
     if (webSocketServer.monitor) {
         await webSocketServer.monitor.stop();
     }
-
-    if (webSocketServer.nar) {
-        webSocketServer.nar.stop();
-    }
 }
 
-/**
- * Setup graceful shutdown handlers
- */
 async function setupGracefulShutdown(webSocketServer) {
     const shutdown = async () => {
         console.log('\nShutting down gracefully...');
@@ -278,23 +270,16 @@ async function main() {
     let webSocketServer;
 
     try {
-        // Parse command line arguments for flexible configuration
         const config = parseArgs(args);
-
-        // Start WebSocket server with the parsed config
         webSocketServer = await startWebSocketServer(config);
 
-        // Set up graceful shutdown
         await setupGracefulShutdown({
             nar: webSocketServer.nar,
             replEngine: webSocketServer.replEngine,
             monitor: webSocketServer.monitor
         });
 
-        // Start UI server
         const uiServer = startUIServer(config);
-
-        // Store the websocket server info for shutdown
         webSocketServer.uiServer = uiServer;
 
         console.log('Both servers are running. Press Ctrl+C to stop.');

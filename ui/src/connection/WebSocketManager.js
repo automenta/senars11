@@ -4,6 +4,7 @@ import {WebSocketConnectionError} from '../errors/CustomErrors.js';
 
 /**
  * WebSocketManager handles all WebSocket connections and reconnection logic
+ * Now with Session Management support.
  */
 export class WebSocketManager {
     constructor() {
@@ -14,6 +15,7 @@ export class WebSocketManager {
         this.reconnectDelay = Config.getConstants().RECONNECT_DELAY;
         this.messageHandlers = new Map();
         this.logger = new Logger();
+        this.sessionId = null; // Current Session ID
     }
 
     /**
@@ -29,12 +31,16 @@ export class WebSocketManager {
                 this.reconnectAttempts = 0;
                 this.logger.log('Connected to SeNARS server', 'success', '🌐');
                 this._notifyStatusChange('connected');
+
+                // On successful connection, ask to list sessions or create one if none active
+                // For now, we rely on server greeting or manually requesting
             };
 
             this.ws.onclose = () => {
                 this.connectionStatus = 'disconnected';
                 this.logger.log('Disconnected from server', 'warning', '🔌');
                 this._notifyStatusChange('disconnected');
+                this.sessionId = null;
 
                 // Attempt to reconnect after delay, unless we've reached the max attempts
                 if (this.reconnectAttempts < this.maxReconnectAttempts) {
@@ -71,12 +77,46 @@ export class WebSocketManager {
     }
 
     /**
+     * Create a new session on the server
+     */
+    createSession(id = null, config = {}) {
+        this.sendMessage('session/create', { sessionId: id, config });
+    }
+
+    /**
+     * Connect to an existing session
+     */
+    connectToSession(sessionId) {
+        this.sendMessage('session/connect', { sessionId });
+    }
+
+    /**
+     * List available sessions
+     */
+    listSessions() {
+        this.sendMessage('session/list', {});
+    }
+
+    /**
      * Send a message through the WebSocket
      */
     sendMessage(type, payload) {
         if (this.isConnected()) {
             const message = {type, payload};
-            this.ws.send(JSON.stringify(message));
+            // If it's a session command, it has slightly different structure in server (type='session/create')
+            // But here we just pass it as type.
+            // If payload is separate, wrap it?
+            // My server impl expects `type: 'session/create', sessionId: ...`
+            // So we need to spread payload if type is session/*
+
+            if (type.startsWith('session/')) {
+                // Allow payload to merge into top level for session commands as per server impl
+                const sessionMsg = { type, ...payload };
+                this.ws.send(JSON.stringify(sessionMsg));
+            } else {
+                this.ws.send(JSON.stringify(message));
+            }
+
             return true;
         }
         return false;
@@ -135,6 +175,18 @@ export class WebSocketManager {
                 this._processBatch(batch);
             }
             return;
+        }
+
+        // Handle Session Handshakes
+        if (message.type === 'session/created' || message.type === 'session/connected') {
+            this.sessionId = message.sessionId;
+            this.logger.log(`Active Session: ${this.sessionId}`, 'success', '🔑');
+            this._notifyStatusChange('session_active');
+        }
+
+        if (message.type === 'connection' && message.data && message.data.sessionId) {
+             this.sessionId = message.data.sessionId;
+             this.logger.log(`Active Session: ${this.sessionId}`, 'success', '🔑');
         }
 
         // Filter out noisy events
