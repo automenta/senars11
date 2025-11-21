@@ -1,5 +1,6 @@
 import {mergeConfig, processDerivation, sleep} from './utils/common.js';
 import {logError, ReasonerError} from './utils/error.js';
+import {Queue} from '../util/Queue.js';
 
 /**
  * RuleProcessor consumes premise pairs and processes them through rules.
@@ -17,8 +18,7 @@ export class RuleProcessor {
             termFactory: null
         }, config);
 
-        this.asyncResultsQueue = [];
-        this.asyncResultsQueueStart = 0;
+        this.asyncResultsQueue = new Queue(100);
 
         this.syncRuleExecutions = 0;
         this.asyncRuleExecutions = 0;
@@ -103,30 +103,19 @@ export class RuleProcessor {
     async* _yieldAsyncResults() {
         while (this._getAsyncResultsCount() > 0) {
             await this._checkAndApplyBackpressure();
-            yield this._dequeueAsyncResult();
+            const result = this.asyncResultsQueue.dequeue();
+            if (result !== undefined) {
+                yield result;
+            }
         }
     }
 
     _getAsyncResultsCount() {
-        return this.asyncResultsQueue.length - this.asyncResultsQueueStart;
-    }
-
-    _dequeueAsyncResult() {
-        if (this.asyncResultsQueueStart >= this.asyncResultsQueue.length) {
-            if (this.asyncResultsQueue.length > 100) {
-                this.asyncResultsQueue = this.asyncResultsQueue.slice(this.asyncResultsQueueStart);
-                this.asyncResultsQueueStart = 0;
-            }
-            return undefined;
-        }
-
-        const result = this.asyncResultsQueue[this.asyncResultsQueueStart];
-        this.asyncResultsQueueStart++;
-        return result;
+        return this.asyncResultsQueue.size;
     }
 
     _enqueueAsyncResult(result) {
-        this.asyncResultsQueue.push(result);
+        this.asyncResultsQueue.enqueue(result);
     }
 
     _isSynchronousRule(rule) {

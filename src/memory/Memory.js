@@ -6,6 +6,7 @@ import {BaseComponent} from '../util/BaseComponent.js';
 import {clamp} from '../util/common.js';
 import {MemoryValidator} from '../util/MemoryValidator.js';
 import {IntrospectionEvents} from '../util/IntrospectionEvents.js';
+import {Statistics} from '../util/Statistics.js';
 
 export class Memory extends BaseComponent {
     static SCORING_WEIGHTS = Object.freeze({activation: 0.5, useCount: 0.3, taskCount: 0.2});
@@ -228,99 +229,32 @@ export class Memory extends BaseComponent {
     }
 
     getMostActiveConcepts(limit = 10, scoringType = 'standard') {
-        return scoringType === 'composite'
-            ? this._getMostActiveConceptsByCompositeScoring(limit)
-            : this._getMostActiveConceptsByStandardScoring(limit);
-    }
-
-    _getMostActiveConceptsByStandardScoring(limit) {
-        return this._getMostActiveConceptsByScoring(
-            limit,
-            Memory.SCORING_WEIGHTS,
-            Memory.NORMALIZATION_LIMITS,
-            'standard'
-        );
-    }
-
-    _getMostActiveConceptsByCompositeScoring(limit = 10, options = {}) {
-        const defaultWeights = {
+        const options = scoringType === 'composite' ? {
             activationWeight: 0.3,
             useCountWeight: 0.2,
             taskCountWeight: 0.2,
             qualityWeight: 0.15,
             complexityWeight: 0.15,
             diversityWeight: 0.1
-        };
+        } : Memory.SCORING_WEIGHTS;
 
         return this._getMostActiveConceptsByScoring(
             limit,
-            {...defaultWeights, ...options},
-            {useCount: 100, taskCount: 50},
-            'composite',
-            options
+            options,
+            Memory.NORMALIZATION_LIMITS,
+            scoringType
         );
     }
 
     _getMostActiveConceptsByScoring(limit, weights, limits, type, options = {}) {
         const concepts = this.getAllConcepts();
         const scoredConcepts = concepts.map(concept => {
-            const score = this[`_calculate${type.charAt(0).toUpperCase() + type.slice(1)}Score`](concept, weights, limits, options);
+            const score = this._calculateDetailedConceptScore(concept, {...weights, ...options}).compositeScore;
             return {concept, score};
         });
 
         scoredConcepts.sort((a, b) => b.score - a.score);
         return scoredConcepts.slice(0, limit).map(sc => sc.concept);
-    }
-
-    _calculateStandardScore(concept, weights, limits) {
-        const {activation: activationWeight, useCount: useCountWeight, taskCount: taskCountWeight} = weights;
-        const {useCount: useLimit, taskCount: taskLimit} = limits;
-
-        const normalizedUseCount = clamp(concept.useCount / useLimit, 0, 1);
-        const normalizedTaskCount = clamp(concept.totalTasks / taskLimit, 0, 1);
-        const score = concept.activation * activationWeight +
-            normalizedUseCount * useCountWeight +
-            normalizedTaskCount * taskCountWeight;
-
-        return score;
-    }
-
-    _calculateCompositeScore(concept, weights, limits, options) {
-        const {
-            cognitiveDiversity = null,
-            termFactory = null
-        } = options;
-
-        const {useCount: useLimit, taskCount: taskLimit} = limits;
-        const {
-            activationWeight, useCountWeight, taskCountWeight,
-            qualityWeight, complexityWeight, diversityWeight
-        } = weights;
-
-        const normalizedUseCount = clamp(concept.useCount / useLimit, 0, 1);
-        const normalizedTaskCount = clamp(concept.totalTasks / taskLimit, 0, 1);
-        const activationScore = concept.activation;
-        const qualityScore = concept.quality || 0;
-        const complexityScore = this._calculateConceptComplexityScore(concept, termFactory);
-        const diversityScore = cognitiveDiversity
-            ? this._calculateConceptDiversityScore(concept, cognitiveDiversity)
-            : 0;
-        const recencyScore = this._calculateRecencyScore(concept.lastAccessed) * 0.05;
-
-        return (activationScore * activationWeight) +
-            (normalizedUseCount * useCountWeight) +
-            (normalizedTaskCount * taskCountWeight) +
-            (qualityScore * qualityWeight) +
-            (complexityScore * complexityWeight) +
-            (diversityScore * diversityWeight) +
-            recencyScore;
-    }
-
-    _calculateRecencyScore(lastAccessed) {
-        const now = Date.now();
-        const timeDiff = now - lastAccessed;
-        // Recency score decreases with time (more recent = higher score)
-        return Math.exp(-timeDiff / (24 * 60 * 60 * 1000)); // Decay over 24 hours
     }
 
     _calculateConceptComplexityScore(concept, termFactory = null) {
@@ -379,24 +313,33 @@ export class Memory extends BaseComponent {
 
     _calculateDetailedConceptScore(concept, options = {}) {
         const {
-            activationWeight = 0.3, useCountWeight = 0.2, taskCountWeight = 0.2,
-            qualityWeight = 0.15, complexityWeight = 0.15, diversityWeight = 0.1,
-            termFactory = null
+            activationWeight = 0.5, useCountWeight = 0.3, taskCountWeight = 0.2, // standard defaults
+            qualityWeight = 0, complexityWeight = 0, diversityWeight = 0,
+            termFactory = null,
+            cognitiveDiversity = null
         } = options;
 
         const activationScore = concept.activation;
-        const normalizedUseCount = clamp(concept.useCount / 100, 0, 1);
-        const normalizedTaskCount = clamp(concept.totalTasks / 50, 0, 1);
-        const qualityScore = concept.quality || 0;
-        const complexityScore = termFactory
+        const normalizedUseCount = clamp(concept.useCount / Memory.NORMALIZATION_LIMITS.useCount, 0, 1);
+        const normalizedTaskCount = clamp(concept.totalTasks / Memory.NORMALIZATION_LIMITS.taskCount, 0, 1);
+
+        // Extended metrics (only used if weights > 0)
+        const qualityScore = qualityWeight > 0 ? (concept.quality || 0) : 0;
+        const complexityScore = complexityWeight > 0 ? (termFactory
             ? Math.min(1, termFactory.getComplexity(concept.term) / 10)
-            : this._calculateConceptComplexityScore(concept);
+            : this._calculateConceptComplexityScore(concept)) : 0;
+        const diversityScore = diversityWeight > 0 ? (cognitiveDiversity ? this._calculateConceptDiversityScore(concept, cognitiveDiversity) : 0) : 0;
+
+        // Recency score logic from original composite scorer (only if complexity weight is present, implying composite mode)
+        const recencyScore = complexityWeight > 0 ? this._calculateRecencyScore(concept.lastAccessed) * 0.05 : 0;
 
         const compositeScore = (activationScore * activationWeight) +
             (normalizedUseCount * useCountWeight) +
             (normalizedTaskCount * taskCountWeight) +
             (qualityScore * qualityWeight) +
-            (complexityScore * complexityWeight);
+            (complexityScore * complexityWeight) +
+            (diversityScore * diversityWeight) +
+            recencyScore;
 
         return {
             compositeScore,
@@ -405,8 +348,15 @@ export class Memory extends BaseComponent {
             taskCountScore: normalizedTaskCount,
             qualityScore,
             complexityScore,
-            diversityScore: 0
+            diversityScore
         };
+    }
+
+    _calculateRecencyScore(lastAccessed) {
+        const now = Date.now();
+        const timeDiff = now - lastAccessed;
+        // Recency score decreases with time (more recent = higher score)
+        return Math.exp(-timeDiff / (24 * 60 * 60 * 1000)); // Decay over 24 hours
     }
 
     removeConcept(term) {
@@ -491,32 +441,13 @@ export class Memory extends BaseComponent {
         const qualities = conceptStats.map(s => s.quality);
 
         return {
-            averageActivation: this._calculateAverage(activations),
-            averageQuality: this._calculateAverage(qualities),
-            activationStd: this._calculateStandardDeviation(activations),
-            qualityStd: this._calculateStandardDeviation(qualities),
-            activationMedian: this._calculateMedian(activations),
-            qualityMedian: this._calculateMedian(qualities)
+            averageActivation: Statistics.mean(activations),
+            averageQuality: Statistics.mean(qualities),
+            activationStd: Statistics.stdDev(activations),
+            qualityStd: Statistics.stdDev(qualities),
+            activationMedian: Statistics.median(activations),
+            qualityMedian: Statistics.median(qualities)
         };
-    }
-
-    _calculateAverage(values) {
-        return values.reduce((sum, val) => sum + val, 0) / values.length;
-    }
-
-    _calculateStandardDeviation(values) {
-        const avg = this._calculateAverage(values);
-        const variance = values.reduce((sum, val) => sum + Math.pow(val - avg, 2), 0) / values.length;
-        return Math.sqrt(variance);
-    }
-
-    _calculateMedian(values) {
-        const sorted = [...values].sort((a, b) => a - b);
-        const mid = Math.floor(sorted.length / 2);
-
-        return sorted.length % 2 === 0
-            ? (sorted[mid - 1] + sorted[mid]) / 2
-            : sorted[mid];
     }
 
     getHealthMetrics() {

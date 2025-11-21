@@ -2,8 +2,6 @@ import {NARBuilder} from './NARBuilder.js';
 import {TermFactory} from '../term/TermFactory.js';
 import {Memory} from '../memory/Memory.js';
 import {TaskManager} from '../task/TaskManager.js';
-import {Cycle} from './Cycle.js';
-import {OptimizedCycle} from './OptimizedCycle.js';
 import {NarseseParser} from '../parser/NarseseParser.js';
 import {PRIORITY} from '../config/constants.js';
 import {BaseComponent} from '../util/BaseComponent.js';
@@ -32,11 +30,8 @@ export class NAR extends BaseComponent {
         super(config, 'NAR');
         this._config = NARBuilder.from(config);
         this._componentManager = new ComponentManager({}, this._eventBus, this);
-        this._useStreamReasoner = true; // Always use stream reasoner
         this._initComponents(config);
         this._isRunning = false;
-        this._cycleInterval = null;
-        this._useOptimizedCycle = config.performance?.useOptimizedCycle !== false;
         this._startTime = Date.now();
         this._registerComponents();
 
@@ -63,7 +58,7 @@ export class NAR extends BaseComponent {
     }
 
     get cycleCount() {
-        return this._cycle.cycleCount;
+        return this._streamReasoner?.metrics?.totalDerivations || 0;
     }
 
     get lm() {
@@ -137,23 +132,6 @@ export class NAR extends BaseComponent {
 
         // Initialize stream reasoner components
         this._ruleEngine = null; // No old rule engine needed
-
-        const cycleConfig = {
-            memory: this._memory,
-            focus: this._focus,
-            ruleEngine: this._ruleEngine,
-            taskManager: this._taskManager,
-            evaluator: this._evaluator,
-            config: this._config.get('cycle'),
-            reasoningStrategy: null,  // Not used in stream mode
-            termFactory: this._termFactory,
-            nar: this,
-            ...this._config.get('performance.cycle')
-        };
-
-        this._cycle = this._useOptimizedCycle
-            ? new OptimizedCycle(cycleConfig)
-            : new Cycle(cycleConfig);
 
         this._initOptionalComponents(config);
     }
@@ -234,14 +212,6 @@ export class NAR extends BaseComponent {
                 this._componentManager.registerComponent('explanationService', this._explanationService, ['toolIntegration']);
             }
         }
-
-        // For cycle dependencies, only include ruleEngine if it exists
-        const cycleDependencies = ['memory', 'focus', 'taskManager'];
-        if (this._ruleEngine) {
-            cycleDependencies.push('ruleEngine');
-        }
-
-        this._componentManager.registerComponent('cycle', this._cycle, cycleDependencies);
     }
 
     async _setupDefaultRules() {
@@ -382,7 +352,7 @@ export class NAR extends BaseComponent {
         this._isRunning = true;
         this._processPendingTasks(options.traceId);
 
-        // Start the stream-based reasoner instead of the cycle-based one
+        // Start the stream-based reasoner
         this._streamReasoner.start();
 
         // Optionally, set up a monitoring process for stream reasoner metrics
@@ -418,17 +388,12 @@ export class NAR extends BaseComponent {
 
         this._isRunning = false;
 
-        if (this._useStreamReasoner) {
-            // Stop the stream-based reasoner
-            if (this._streamReasoner) {
-                this._streamReasoner.stop();
-            }
-            // Clear stream monitoring interval
-            this._streamMonitoringInterval && clearInterval(this._streamMonitoringInterval) && (this._streamMonitoringInterval = null);
-        } else {
-            // Stop the traditional cycle-based reasoner
-            this._cycleInterval && clearInterval(this._cycleInterval) && (this._cycleInterval = null);
+        // Stop the stream-based reasoner
+        if (this._streamReasoner) {
+            this._streamReasoner.stop();
         }
+        // Clear stream monitoring interval
+        this._streamMonitoringInterval && clearInterval(this._streamMonitoringInterval) && (this._streamMonitoringInterval = null);
 
         this._stopComponentsAsync();
 
@@ -513,9 +478,8 @@ export class NAR extends BaseComponent {
             config: this._config.toJSON(),
             memory: this._memory.serialize ? this._memory.serialize() : null,
             taskManager: this._taskManager.serialize ? this._taskManager.serialize() : null,
-            cycle: this._cycle.serialize ? this._cycle.serialize() : null,
             focus: this._focus.serialize ? this._focus.serialize() : null,
-            cycleCount: this._cycle.cycleCount,
+            cycleCount: this.cycleCount,
             isRunning: this._isRunning,
             timestamp: Date.now(),
             version: '10.0.0'
@@ -576,14 +540,6 @@ export class NAR extends BaseComponent {
                 await this._focus.deserialize(state.focus);
             }
 
-            if (state.cycle && this._cycle.deserialize) {
-                await this._cycle.deserialize(state.cycle);
-            }
-
-            if (state.cycleCount !== undefined) {
-                this._cycle.cycleCount = state.cycleCount;
-            }
-
             if (state.isRunning !== undefined) {
                 this._isRunning = state.isRunning;
             }
@@ -627,7 +583,6 @@ export class NAR extends BaseComponent {
         this.stop();
         this._memory.clear();
         this._taskManager.clearPendingTasks();
-        this._cycle.reset();
         this._eventBus.emit('system.reset', {timestamp: Date.now()}, {traceId: options.traceId});
         this.logInfo('NAR reset completed');
     }
@@ -643,7 +598,7 @@ export class NAR extends BaseComponent {
     getStats() {
         const baseStats = {
             isRunning: this._isRunning,
-            cycleCount: this._streamReasoner?.getMetrics?.()?.totalDerivations || 0,
+            cycleCount: this._streamReasoner?.metrics?.totalDerivations || 0,
             memoryStats: this._memory.getDetailedStats(),
             taskManagerStats: this._taskManager.getTaskStats?.() ?? this._taskManager.stats,
             config: this._config.toJSON(),
