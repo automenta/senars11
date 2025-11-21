@@ -1,27 +1,5 @@
 import {EventEmitter} from 'events';
-
-const MESSAGE_TYPES = {
-    ENGINE_READY: 'engine.ready',
-    NARSESE_PROCESSED: 'narsese.processed',
-    NARSESE_ERROR: 'narsese.error',
-    ENGINE_QUIT: 'engine.quit',
-    NAR_CYCLE_STEP: 'nar.cycle.step',
-    NAR_CYCLE_RUNNING: 'nar.cycle.running',
-    NAR_CYCLE_STOP: 'nar.cycle.stop',
-    ENGINE_RESET: 'engine.reset',
-    ENGINE_SAVE: 'engine.save',
-    ENGINE_LOAD: 'engine.load',
-    NAR_TRACE_ENABLE: 'nar.trace.enable',
-    NAR_TRACE_RESTORE: 'nar.trace.restore',
-    COMMAND_ERROR: 'command.error',
-    NARSESE_RESULT: 'narsese.result',
-    CONTROL_RESULT: 'control.result',
-    COMMAND_RESULT: 'command.result',
-    ERROR: 'error',
-    COMMAND_OUTPUT: 'command.output',
-    AGENT_INPUT: 'agent/input',
-    AGENT_RESULT: 'agent/result'
-};
+import {MESSAGE_TYPES} from '../util/MessageTypes.js';
 
 const CMD_MAP = {'start': 'run', 'stop': 'stop', 'step': 'next'};
 

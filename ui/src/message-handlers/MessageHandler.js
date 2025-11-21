@@ -2,6 +2,7 @@ import {NarseseMessageHandler} from './NarseseMessageHandler.js';
 import {TaskConceptMessageHandler} from './TaskConceptMessageHandler.js';
 import {QuestionReasoningMessageHandler} from './QuestionReasoningMessageHandler.js';
 import {SystemMessageHandler} from './SystemMessageHandler.js';
+import {MESSAGE_TYPES} from '/src/util/MessageTypes.js';
 
 /**
  * Main Message Handler class to process different message types
@@ -21,23 +22,23 @@ export class MessageHandler {
      */
     _initializeHandlers() {
         return {
-            'narsese.result': (msg) => this.narseseHandler.handleNarseseResult(msg),
-            'narsese.error': (msg) => this.narseseHandler.handleNarseseError(msg),
-            'task.added': (msg) => this.taskConceptHandler.handleTaskMessage(msg),
-            'task.input': (msg) => this.taskConceptHandler.handleTaskMessage(msg),
-            'concept.created': (msg) => this.taskConceptHandler.handleConceptMessage(msg),
-            'concept.updated': (msg) => this.taskConceptHandler.handleConceptMessage(msg),
-            'concept.added': (msg) => this.taskConceptHandler.handleConceptMessage(msg),
-            'question.answered': (msg) => this.questionReasoningHandler.handleQuestionAnswered(msg),
-            'reasoning.derivation': (msg) => this.questionReasoningHandler.handleReasoningDerivation(msg),
-            'reasoning.step': (msg) => this.questionReasoningHandler.handleReasoningStep(msg),
-            'error': (msg) => this.systemHandler.handleErrorMessage(msg),
-            'error.message': (msg) => this.systemHandler.handleErrorMessage(msg),
-            'connection': (msg) => this.systemHandler.handleConnection(msg),
-            'memorySnapshot': (msg) => this.systemHandler.handleMemorySnapshot(this.graphManager, msg),
-            'info': (msg) => this.systemHandler.handleInfo(msg),
-            'log': (msg) => this.systemHandler.handleLog(msg),
-            'control.result': (msg) => this.systemHandler.handleControlResult(msg)
+            [MESSAGE_TYPES.NARSESE_RESULT]: (msg) => this.narseseHandler.handleNarseseResult(msg),
+            [MESSAGE_TYPES.NARSESE_ERROR]: (msg) => this.narseseHandler.handleNarseseError(msg),
+            [MESSAGE_TYPES.TASK_ADDED]: (msg) => this.taskConceptHandler.handleTaskMessage(msg),
+            [MESSAGE_TYPES.TASK_INPUT]: (msg) => this.taskConceptHandler.handleTaskMessage(msg),
+            [MESSAGE_TYPES.CONCEPT_CREATED]: (msg) => this.taskConceptHandler.handleConceptMessage(msg),
+            [MESSAGE_TYPES.CONCEPT_UPDATED]: (msg) => this.taskConceptHandler.handleConceptMessage(msg),
+            [MESSAGE_TYPES.CONCEPT_ADDED]: (msg) => this.taskConceptHandler.handleConceptMessage(msg),
+            [MESSAGE_TYPES.QUESTION_ANSWERED]: (msg) => this.questionReasoningHandler.handleQuestionAnswered(msg),
+            [MESSAGE_TYPES.REASONING_DERIVATION]: (msg) => this.questionReasoningHandler.handleReasoningDerivation(msg),
+            [MESSAGE_TYPES.REASONING_STEP]: (msg) => this.questionReasoningHandler.handleReasoningStep(msg),
+            [MESSAGE_TYPES.ERROR]: (msg) => this.systemHandler.handleErrorMessage(msg),
+            [MESSAGE_TYPES.ERROR_MESSAGE]: (msg) => this.systemHandler.handleErrorMessage(msg),
+            [MESSAGE_TYPES.CONNECTION]: (msg) => this.systemHandler.handleConnection(msg),
+            [MESSAGE_TYPES.MEMORY_SNAPSHOT]: (msg) => this.systemHandler.handleMemorySnapshot(this.graphManager, msg),
+            [MESSAGE_TYPES.INFO]: (msg) => this.systemHandler.handleInfo(msg),
+            [MESSAGE_TYPES.LOG]: (msg) => this.systemHandler.handleLog(msg),
+            [MESSAGE_TYPES.CONTROL_RESULT]: (msg) => this.systemHandler.handleControlResult(msg)
         };
     }
 

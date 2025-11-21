@@ -58,10 +58,12 @@ export const LogViewer = ({logs = []}) => {
         }
 
         const timestamp = showTimestamp ? `[${new Date(log.timestamp || Date.now()).toLocaleTimeString()}] ` : '';
+        // Ensure key is unique string
+        const key = log.id ? String(log.id) : `log-${index}`;
 
         return React.createElement(
             Text,
-            {key: log.id || `log-${index}`, color},
+            {key, color},
             `${timestamp}${symbol} ${log.message}`
         );
     };
@@ -76,14 +78,18 @@ export const LogViewer = ({logs = []}) => {
             React.createElement(
                 Box,
                 {flexDirection: 'row'},
-                React.createElement(Text, {color: filter === 'all' ? 'yellow' : 'gray'}, '[A]'),
-                React.createElement(Text, {marginLeft: 1, color: filter === 'error' ? 'red' : 'gray'}, '[E]'),
-                React.createElement(Text, {marginLeft: 1, color: filter === 'warn' ? 'yellow' : 'gray'}, '[W]'),
-                React.createElement(Text, {marginLeft: 1, color: filter === 'info' ? 'cyan' : 'gray'}, '[I]'),
-                React.createElement(Text, {marginLeft: 1, color: filter === 'debug' ? 'blue' : 'gray'}, '[D]')
+                React.createElement(Text, {key: 'filter-all', color: filter === 'all' ? 'yellow' : 'gray'}, '[A]'),
+                React.createElement(Text, {key: 'filter-error', marginLeft: 1, color: filter === 'error' ? 'red' : 'gray'}, '[E]'),
+                React.createElement(Text, {key: 'filter-warn', marginLeft: 1, color: filter === 'warn' ? 'yellow' : 'gray'}, '[W]'),
+                React.createElement(Text, {key: 'filter-info', marginLeft: 1, color: filter === 'info' ? 'cyan' : 'gray'}, '[I]'),
+                React.createElement(Text, {key: 'filter-debug', marginLeft: 1, color: filter === 'debug' ? 'blue' : 'gray'}, '[D]')
             )
         ),
-        ...filteredLogs.map((log, index) => formatLogEntry(log, index)),
+        React.createElement(
+            Box,
+            {flexDirection: 'column'},
+             filteredLogs.map((log, index) => formatLogEntry(log, index))
+        ),
         React.createElement(
             Box,
             {marginTop: 1, flexDirection: 'row', justifyContent: 'space-between'},

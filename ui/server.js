@@ -30,14 +30,23 @@ const server = http.createServer((req, res) => {
         filePath += '.html';
     }
 
-    const fullPath = path.join(__dirname, filePath);
+    let fullPath;
+    if (filePath.startsWith('/src/')) {
+        // Serve shared code from the parent src directory
+        // filePath includes /src/, so we join with parent of ui/ which is root
+        fullPath = path.join(__dirname, '..', filePath);
+    } else {
+        fullPath = path.join(__dirname, filePath);
+    }
 
     fs.readFile(fullPath, 'utf8', (err, content) => {
         if (err) {
             if (err.code === 'ENOENT') {
+                console.log(`404: ${fullPath}`);
                 res.writeHead(404);
                 res.end('File not found');
             } else {
+                console.error(`500: ${err.message}`);
                 res.writeHead(500);
                 res.end('Server error');
             }

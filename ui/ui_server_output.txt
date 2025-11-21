@@ -1,0 +1,16 @@
+
+> senars-ui@1.0.0 dev
+> nodemon server.js
+
+[33m[nodemon] 3.1.11[39m
+[33m[nodemon] to restart at any time, enter `rs`[39m
+[33m[nodemon] watching path(s): *.*[39m
+[33m[nodemon] watching extensions: js,mjs,cjs,json[39m
+[32m[nodemon] starting `node server.js`[39m
+UI Server configuration:
+  UI HTTP Port: 8080
+  Backend WS Host: localhost
+  Backend WS Port: 8081
+UI Server running at http://localhost:8080
+UI will connect to backend WebSocket at ws://localhost:8081
+Open your browser at the URL above to use SeNARS UI.
