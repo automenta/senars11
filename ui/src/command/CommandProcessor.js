@@ -20,9 +20,10 @@ export class CommandProcessor {
      * Process and send a command to the backend
      * @param {string} command - The command string to process
      * @param {boolean} [isDebug=false] - Whether this is a debug command (currently unused)
+     * @param {string} [mode='narsese'] - Input mode ('narsese' or 'agent')
      * @returns {boolean} - True if command was processed successfully, false otherwise
      */
-    processCommand(command, isDebug = false) {
+    processCommand(command, isDebug = false, mode = 'narsese') {
         const trimmedCommand = command?.trim();
         if (!trimmedCommand) return false;
 
@@ -40,7 +41,11 @@ export class CommandProcessor {
 
         // Send via WebSocket
         if (this.webSocketManager.isConnected()) {
-            this.webSocketManager.sendMessage('narseseInput', {input: trimmedCommand});
+            if (mode === 'agent') {
+                this.webSocketManager.sendMessage('agent/input', {input: trimmedCommand});
+            } else {
+                this.webSocketManager.sendMessage('narseseInput', {input: trimmedCommand});
+            }
             return true;
         } else {
             this.logger.log(`Cannot send: Not connected`, 'error', '❌');
@@ -52,7 +57,8 @@ export class CommandProcessor {
      * Process a debug command using the command registry
      */
     _processDebugCommand(command) {
-        const cmd = command.toLowerCase();
+        const parts = command.split(' ');
+        const cmd = parts[0].toLowerCase();
 
         // Create context object for command handlers
         const context = {
@@ -62,8 +68,25 @@ export class CommandProcessor {
             commandProcessor: this
         };
 
-        // Execute the command through the registry
-        this.commandRegistry.executeCommand(cmd, context);
+        // Check if it's a local command
+        if (this.commandRegistry.commands.has(cmd)) {
+            // Execute the command through the registry
+            this.commandRegistry.executeCommand(cmd, context);
+        } else {
+            // Forward to backend if not local
+            const commandName = cmd.substring(1);
+            const args = parts.slice(1);
+
+            if (this.webSocketManager.isConnected()) {
+                this.webSocketManager.sendMessage('command.execute', {
+                    command: commandName,
+                    args: args
+                });
+                // Don't log here, wait for server response
+            } else {
+                this.logger.log(`Cannot forward command: Not connected`, 'error', '❌');
+            }
+        }
     }
 
     /**

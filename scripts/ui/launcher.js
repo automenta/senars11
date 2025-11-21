@@ -125,10 +125,10 @@ if (helpRequested) {
 async function startWebSocketServer(config = DEFAULT_CONFIG) {
     console.log(`Starting WebSocket server on ${config.webSocket.host}:${config.webSocket.port}...`);
 
-    const {ReplEngine} = await import('../../src/repl/ReplEngine.js');
+    const {AgentReplEngine} = await import('../../src/repl/AgentReplEngine.js');
 
     // Create a ReplEngine which manages its own NAR instance
-    const replEngine = new ReplEngine(config);
+    const replEngine = new AgentReplEngine(config);
     await replEngine.initialize();
 
     const monitor = new WebSocketMonitor(config.webSocket);

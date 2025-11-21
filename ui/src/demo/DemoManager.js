@@ -1,127 +1,108 @@
 import {Config} from '../config/Config.js';
 
 /**
- * DemoManager handles demo sequences and execution
+ * DemoManager handles demo sequences and execution via backend integration
  */
 export class DemoManager {
-    constructor(commandProcessor, logger) {
+    constructor(uiElements, commandProcessor, logger) {
+        this.uiElements = uiElements;
         this.commandProcessor = commandProcessor;
         this.logger = logger;
-        this.demoDelay = Config.getConstants().DEMO_DELAY;
-        this.isRunning = false;
-
-        // Define demo sequences
-        this.demos = this._initializeDemos();
-        this.descriptions = this._initializeDescriptions();
+        this.demos = new Map();
     }
 
     /**
-     * Initialize demo sequences
+     * Initialize and request available demos
      */
-    _initializeDemos() {
-        return {
-            inheritance: [
-                '<{cat} --> animal>.',
-                '<{lion} --> cat>.',
-                '<lion --> animal>?',
-                '5'
-            ],
-            similarity: [
-                '<(bird & flyer) <-> (bat & flyer)>.',
-                '<bird <-> flyer>?',
-                '<bat <-> flyer>?'
-            ],
-            temporal: [
-                '<(sky & dark) =/> (rain & likely)>.',
-                '<(clouds & gathering) =/> (sky & dark)>.',
-                '<clouds & gathering> ?'
-            ]
-        };
+    initialize() {
+        // Request demo list from backend
+        this.requestDemoList();
     }
 
     /**
-     * Initialize demo descriptions
+     * Request the list of demos from the backend
      */
-    _initializeDescriptions() {
-        return {
-            inheritance: 'Demonstrates inheritance relationships in NARS',
-            similarity: 'Shows similarity-based reasoning',
-            temporal: 'Explores temporal inference capabilities'
-        };
+    requestDemoList() {
+        this.commandProcessor.executeControlCommand('demoControl', {
+            command: 'list',
+            demoId: 'system' // Dummy ID required by validator
+        });
     }
 
     /**
-     * Run a specific demo
+     * Handle received demo list
      */
-    async runDemo(demoName) {
-        if (!this._validateDemo(demoName)) return false;
+    handleDemoList(payload) {
+        // Payload is array of demo objects
+        this.demos.clear();
+        const select = this.uiElements.get('demoSelect');
+        if (!select) return;
 
-        this.isRunning = true;
-        const commands = this.demos[demoName];
-
-        this.logger.log(`Running ${demoName} demo`, 'info', '🎬');
-
-        // Execute commands sequentially with delay using async/await pattern
-        try {
-            for (let i = 0; i < commands.length; i++) {
-                const cmd = commands[i];
-                this.commandProcessor.processCommand(cmd);
-
-                // Wait for the delay before executing the next command
-                await this._delay(this.demoDelay);
-            }
-        } catch (error) {
-            this.logger.log(`Error running demo: ${error.message}`, 'error', '❌');
-        } finally {
-            // Reset running status after completion
-            setTimeout(() => {
-                this.isRunning = false;
-            }, this.demoDelay);
+        // Clear existing options (keep first default option)
+        while (select.options.length > 1) {
+            select.remove(1);
         }
 
-        return true;
+        if (Array.isArray(payload)) {
+            payload.forEach(demo => {
+                this.demos.set(demo.id, demo);
+                const option = document.createElement('option');
+                option.value = demo.id;
+                option.textContent = demo.name;
+                option.title = demo.description || '';
+                select.appendChild(option);
+            });
+
+            // Only log if we actually loaded something, to avoid noise on re-connect
+            if (payload.length > 0) {
+                // Log silently or as debug to avoid spam on refresh
+                console.debug(`Loaded ${payload.length} demos`);
+            }
+        }
     }
 
     /**
-     * Validate demo parameters before running
+     * Run a specific demo by ID
      */
-    _validateDemo(demoName) {
-        if (!demoName) {
+    runDemo(demoId) {
+        if (!demoId) {
             this.logger.log('Please select a demo', 'warning', '⚠️');
             return false;
         }
 
-        if (this.isRunning) {
-            this.logger.log('Demo already running', 'warning', '⚠️');
-            return false;
-        }
-
-        if (!this.demos[demoName]) {
-            this.logger.log(`Unknown demo: ${demoName}`, 'error', '❌');
-            return false;
-        }
-
+        this.commandProcessor.executeControlCommand('demoControl', {
+            command: 'start',
+            demoId: demoId
+        });
+        this.logger.log(`Requested demo start: ${demoId}`, 'info', '🚀');
         return true;
     }
 
     /**
-     * Delay helper function for async execution
+     * Handle demo step updates
      */
-    _delay(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
+    handleDemoStep(payload) {
+        // {demoId, step, description, data}
+        if (payload && payload.description) {
+            this.logger.log(`Demo Step ${payload.step || '?'}: ${payload.description}`, 'info', '👣');
+        }
     }
 
     /**
-     * Get available demo names
+     * Handle demo state updates
      */
-    getDemoNames() {
-        return Object.keys(this.demos);
-    }
+    handleDemoState(payload) {
+        // {demoId, state, ...}
+        if (!payload) return;
 
-    /**
-     * Get demo description
-     */
-    getDemoDescription(demoName) {
-        return this.descriptions[demoName] || 'Demo description not available';
+        if (payload.state === 'completed') {
+            this.logger.log(`Demo completed successfully`, 'success', '🏁');
+        } else if (payload.state === 'error') {
+            this.logger.log(`Demo error: ${payload.error || 'Unknown error'}`, 'error', '❌');
+        } else if (payload.state === 'running') {
+            this.logger.log(`Demo started...`, 'info', '▶️');
+        } else if (payload.state === 'stopped') {
+            this.logger.log(`Demo stopped`, 'warning', '⏹️');
+        }
     }
 }

@@ -18,7 +18,9 @@ const MESSAGE_TYPES = {
     CONTROL_RESULT: 'control.result',
     COMMAND_RESULT: 'command.result',
     ERROR: 'error',
-    COMMAND_OUTPUT: 'command.output'
+    COMMAND_OUTPUT: 'command.output',
+    AGENT_INPUT: 'agent/input',
+    AGENT_RESULT: 'agent/result'
 };
 
 const CMD_MAP = {'start': 'run', 'stop': 'stop', 'step': 'next'};
@@ -56,7 +58,9 @@ export class ReplMessageHandler extends EventEmitter {
             'st': '_stop',
             'quit': 'shutdown',
             'q': 'shutdown',
-            'exit': 'shutdown'
+            'exit': 'shutdown',
+            'save': 'save',
+            'load': 'load'
         };
 
         Object.entries(internalCommands).forEach(([cmd, method]) => {
@@ -85,6 +89,7 @@ export class ReplMessageHandler extends EventEmitter {
         this.messageHandlers.set('control/start', this._handleControlCommand.bind(this));
         this.messageHandlers.set('control/stop', this._handleControlCommand.bind(this));
         this.messageHandlers.set('control/step', this._handleControlCommand.bind(this));
+        this.messageHandlers.set('agent/input', this._handleAgentInput.bind(this));
     }
 
     async processMessage(message) {
@@ -108,8 +113,8 @@ export class ReplMessageHandler extends EventEmitter {
                     return await this._handleNarseseInput(message);
                 case 'command.execute':
                     return await this._handleCommandExecute(message);
-                case 'reason/step':
-                    return await this._handleReasonStep(message);
+                case 'agent/input':
+                    return await this._handleAgentInput(message);
             }
 
             // Handle control commands
@@ -147,6 +152,27 @@ export class ReplMessageHandler extends EventEmitter {
         } catch (error) {
             console.error('Error processing message:', error);
             this.emit('message.error', {message, error: error.message});
+            return {error: error.message, type: MESSAGE_TYPES.ERROR};
+        }
+    }
+
+    /**
+     * Handle agent input messages
+     */
+    async _handleAgentInput(message) {
+        try {
+            const input = message?.payload?.text ?? message?.payload?.input ?? message?.payload;
+            if (typeof input !== 'string' || !input.trim()) {
+                return {error: 'No input provided', type: MESSAGE_TYPES.ERROR};
+            }
+
+            const result = await this.engine.processInput(input);
+            return {
+                type: MESSAGE_TYPES.AGENT_RESULT,
+                payload: {input, result, success: true, timestamp: Date.now()}
+            };
+        } catch (error) {
+            console.error('Error in agent input handler:', error);
             return {error: error.message, type: MESSAGE_TYPES.ERROR};
         }
     }

@@ -47,7 +47,8 @@ export class GraphManager {
                 label: node.data('label'),
                 id: node.id(),
                 nodeType: node.data('type') || 'unknown',
-                weight: node.data('weight') || 0
+                weight: node.data('weight') || 0,
+                fullData: node.data('fullData')
             });
         });
 
@@ -95,7 +96,8 @@ export class GraphManager {
                 id: nodeId,
                 label: label || term || id,
                 type: nodeTypeOverride || nodeType || 'concept',
-                weight: this._getNodeWeight(nodeData)
+                weight: this._getNodeWeight(nodeData),
+                fullData: nodeData
             }
         };
 
@@ -164,7 +166,8 @@ export class GraphManager {
                 id: concept.id || `concept_${index}`,
                 label: concept.term || `Concept ${index}`,
                 type: concept.type || 'concept',
-                weight: concept.truth?.confidence ? concept.truth.confidence * 100 : 50
+                weight: concept.truth?.confidence ? concept.truth.confidence * 100 : 50,
+                fullData: concept
             }
         })) || [];
 
@@ -282,15 +285,41 @@ export class GraphManager {
     }
 
     /**
+     * Set visibility of task nodes
+     */
+    setTaskVisibility(visible) {
+        if (!this.cy) return;
+        const tasks = this.cy.nodes('[type = "task"]');
+        if (visible) {
+            tasks.style('display', 'element');
+        } else {
+            tasks.style('display', 'none');
+        }
+    }
+
+    /**
      * Create content for node details
      */
     _createNodeDetailsContent(details) {
-        return `
-      <strong>Node:</strong> ${details.label}<br>
-      <strong>ID:</strong> ${details.id}<br>
-      <strong>Type:</strong> ${details.nodeType}<br>
-      <strong>Weight:</strong> ${details.weight}
-    `;
+        const data = details.fullData || {};
+        let html = `
+            <div style="margin-bottom:4px"><strong>Type:</strong> ${details.nodeType}</div>
+            <div style="margin-bottom:4px"><strong>Term:</strong> <span style="color:#4ec9b0; font-family:monospace">${details.label}</span></div>
+        `;
+
+        if (data.truth) {
+            const freq = typeof data.truth.frequency === 'number' ? data.truth.frequency.toFixed(2) : '0.00';
+            const conf = typeof data.truth.confidence === 'number' ? data.truth.confidence.toFixed(2) : '0.00';
+            html += `<div style="margin-bottom:4px"><strong>Truth:</strong> <span style="color:#ce9178; font-family:monospace">{${freq}, ${conf}}</span></div>`;
+        }
+
+        if (data.budget) {
+            const pri = typeof data.budget.priority === 'number' ? data.budget.priority.toFixed(2) : '0.00';
+            html += `<div style="margin-bottom:4px"><strong>Priority:</strong> ${pri}</div>`;
+        }
+
+        html += `<div style="margin-top:4px; font-size:0.8em; color:#666">ID: ${details.id}</div>`;
+        return html;
     }
 
     /**

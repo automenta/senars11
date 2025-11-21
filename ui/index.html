@@ -8,7 +8,15 @@
 <body>
 <div class="app-container">
     <div class="log-panel">
-        <div class="panel-header">Log Messages</div>
+        <div class="panel-header">
+            <span>SeNARS Control</span>
+            <div class="control-toolbar">
+                <button id="btn-start" class="icon-btn" title="Run Continuous">▶</button>
+                <button id="btn-stop" class="icon-btn" title="Stop">⏹</button>
+                <button id="btn-step" class="icon-btn" title="Single Step">⏯</button>
+                <button id="btn-reset" class="icon-btn" title="Reset System">🔄</button>
+            </div>
+        </div>
 
         <div class="status-bar">
             <div class="status-item">
@@ -16,7 +24,9 @@
                 <span id="connection-status">Disconnected</span>
             </div>
             <div class="status-item">
-                <span id="message-count">0</span> messages
+                <span id="cycle-count" class="cycle-badge">Cycle: 0</span>
+                <span class="divider">|</span>
+                <span id="message-count">0</span> msgs
             </div>
         </div>
 
@@ -29,6 +39,10 @@
         </div>
 
         <div class="input-section">
+            <div class="input-mode-toggle">
+                <label class="mode-option"><input type="radio" name="input-mode" id="mode-narsese" value="narsese" checked> Narsese</label>
+                <label class="mode-option"><input type="radio" name="input-mode" id="mode-agent" value="agent"> Agent</label>
+            </div>
             <div class="input-group">
                 <input autocomplete="off" id="command-input" placeholder="Enter Narsese command..." type="text">
                 <button id="send-button">Send</button>
@@ -56,15 +70,20 @@
     <div class="graph-panel">
         <div class="cytoscape-container" id="graph-container"></div>
         <div class="graph-controls">
-            <button id="refresh-graph">Refresh Graph</button>
-            <button id="toggle-live">Pause Live</button>
+            <button id="refresh-graph" title="Refresh Graph">🔄 Graph</button>
+            <button id="toggle-live" title="Toggle Live Updates">📡 Live</button>
+            <div class="separator"></div>
+            <button id="btn-save" title="Save State">💾 Save</button>
+            <button id="btn-load" title="Load State">📂 Load</button>
+            <div class="separator"></div>
+            <label class="checkbox-control" title="Show/Hide Tasks">
+                <input type="checkbox" id="show-tasks-toggle" checked> Tasks
+            </label>
+            <div class="separator"></div>
             <select id="demo-select">
-                <option value="">Demos...</option>
-                <option value="inheritance">Inheritance Demo</option>
-                <option value="similarity">Similarity Demo</option>
-                <option value="temporal">Temporal Demo</option>
+                <option value="">Select Demo...</option>
             </select>
-            <button id="run-demo">Run</button>
+            <button id="run-demo">Run Demo</button>
         </div>
         <div class="graph-details-panel" id="graph-details">
             Click on nodes or edges to see details

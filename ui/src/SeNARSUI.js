@@ -7,6 +7,7 @@ import {DemoManager} from './demo/DemoManager.js';
 import {UIEventHandlers} from './ui/UIEventHandlers.js';
 import {MessageHandler} from './message-handlers/MessageHandler.js';
 import {capitalizeFirst} from './utils/Helpers.js';
+import {ControlPanel} from './ui/ControlPanel.js';
 
 /**
  * Main SeNARS UI Application class - orchestrator that combines all modules
@@ -20,13 +21,15 @@ export class SeNARSUI {
         this.webSocketManager = new WebSocketManager();
         this.graphManager = new GraphManager(this.uiElements.getAll());
         this.commandProcessor = new CommandProcessor(this.webSocketManager, this.logger, this.graphManager);
-        this.demoManager = new DemoManager(this.commandProcessor, this.logger);
+        this.controlPanel = new ControlPanel(this.uiElements, this.commandProcessor, this.logger);
+        this.demoManager = new DemoManager(this.uiElements, this.commandProcessor, this.logger);
         this.uiEventHandlers = new UIEventHandlers(
             this.uiElements,
             this.commandProcessor,
             this.demoManager,
             this.graphManager,
-            this.webSocketManager
+            this.webSocketManager,
+            this.controlPanel
         );
 
         // Initialize message handler
@@ -55,6 +58,13 @@ export class SeNARSUI {
         // Connect to WebSocket
         this.webSocketManager.connect();
 
+        // Initialize Demo Manager (fetches demos)
+        this.webSocketManager.subscribe('connection.status', (status) => {
+            if (status === 'connected') {
+                this.demoManager.initialize();
+            }
+        });
+
         // Add initial log entry
         this.logger.addLogEntry('SeNARS UI2 - Ready', 'info', '🚀');
     }
@@ -82,6 +92,14 @@ export class SeNARSUI {
             // Update message count display
             this._updateMessageCount();
 
+            // Update system state (cycle count, etc.)
+            this._updateSystemState(message);
+
+            // Handle specialized messages that shouldn't go through the generic logger
+            if (this._handleSpecializedMessages(message)) {
+                return;
+            }
+
             // Process message with appropriate handler
             const {content, type, icon} = this.messageHandler.processMessage(message);
 
@@ -96,6 +114,44 @@ export class SeNARSUI {
             if (process?.env?.NODE_ENV !== 'production') {
                 console.error('Full error details:', error, message);
             }
+        }
+    }
+
+    /**
+     * Handle specialized messages (demos, agent results)
+     * Returns true if message was handled and should stop processing
+     */
+    _handleSpecializedMessages(message) {
+        if (message.type === 'demoList') {
+            this.demoManager.handleDemoList(message.payload);
+            return true;
+        }
+        if (message.type === 'demoStep') {
+            this.demoManager.handleDemoStep(message.payload);
+            return true;
+        }
+        if (message.type === 'demoState') {
+            this.demoManager.handleDemoState(message.payload);
+            return true;
+        }
+        if (message.type === 'agent/result') {
+            // Log agent result specifically
+            const payload = message.payload;
+            const result = typeof payload.result === 'string' ? payload.result : JSON.stringify(payload.result);
+            this.logger.addLogEntry(result, 'info', '🤖');
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Update system state based on message
+     */
+    _updateSystemState(message) {
+        if (message.type === 'nar.cycle.step' && message.payload?.cycle) {
+            this.controlPanel.updateCycleCount(message.payload.cycle);
+        } else if (message.type === 'narInstance' && message.payload?.cycleCount) {
+            this.controlPanel.updateCycleCount(message.payload.cycleCount);
         }
     }
 

@@ -323,6 +323,7 @@ class WebSocketMonitor {
     _shouldRouteToReplHandler(message) {
         return message.type === 'narseseInput' ||
             message.type === 'reason/step' ||
+            message.type === 'agent/input' ||
             message.type?.startsWith('control/') ||
             message.type === 'command.execute' ||
             message.type?.startsWith('/');

@@ -2,12 +2,13 @@
  * UIEventHandlers module to handle all UI events and connect UI to business logic
  */
 export class UIEventHandlers {
-    constructor(uiElements, commandProcessor, demoManager, graphManager, webSocketManager) {
+    constructor(uiElements, commandProcessor, demoManager, graphManager, webSocketManager, controlPanel = null) {
         this.uiElements = uiElements;
         this.commandProcessor = commandProcessor;
         this.demoManager = demoManager;
         this.graphManager = graphManager;
         this.webSocketManager = webSocketManager;
+        this.controlPanel = controlPanel;
         this._eventHandlers = new Map();
     }
 
@@ -45,7 +46,10 @@ export class UIEventHandlers {
             {element: 'toggleLive', event: 'click', handler: () => this._handleToggleLive()},
 
             // Demo events
-            {element: 'runDemo', event: 'click', handler: () => this._handleRunDemo()}
+            {element: 'runDemo', event: 'click', handler: () => this._handleRunDemo()},
+
+            // Visualization controls
+            {element: 'showTasksToggle', event: 'change', handler: (e) => this.graphManager.setTaskVisibility(e.target.checked)}
         ];
     }
 
@@ -87,7 +91,8 @@ export class UIEventHandlers {
 
             const command = commandInput.value?.trim();
             if (command) {
-                this.commandProcessor.processCommand(command);
+                const mode = this.controlPanel ? this.controlPanel.getInputMode() : 'narsese';
+                this.commandProcessor.processCommand(command, false, mode);
                 commandInput.value = '';
             }
         } catch (error) {
@@ -124,7 +129,8 @@ export class UIEventHandlers {
             const quickCommand = quickCommandsInput.value?.trim();
             if (quickCommand) {
                 commandInput.value = quickCommand;
-                this.commandProcessor.processCommand(quickCommand);
+                // Quick commands are usually Narsese or system commands, so default to 'narsese'
+                this.commandProcessor.processCommand(quickCommand, false, 'narsese');
             }
         } catch (error) {
             this.commandProcessor.logger.log(`Error executing quick command: ${error.message}`, 'error', '❌');

@@ -23,6 +23,19 @@ export const UIConfig = {
         runDemo: 'run-demo',
         graphDetails: 'graph-details',
         graphContainer: 'graph-container',
-        notificationContainer: 'notification-container'
+        notificationContainer: 'notification-container',
+        // New Control Panel IDs
+        btnStart: 'btn-start',
+        btnStop: 'btn-stop',
+        btnStep: 'btn-step',
+        btnReset: 'btn-reset',
+        cycleCount: 'cycle-count',
+        inputModeNarsese: 'mode-narsese',
+        inputModeAgent: 'mode-agent',
+        // Settings
+        btnSave: 'btn-save',
+        btnLoad: 'btn-load',
+        lmProviderSelect: 'lm-provider-select',
+        showTasksToggle: 'show-tasks-toggle'
     }
 };

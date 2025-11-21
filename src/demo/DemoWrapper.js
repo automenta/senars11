@@ -94,6 +94,7 @@ export class DemoWrapper {
                 'resume': () => this.resumeDemo(demoId),
                 'step': () => this.stepDemo(demoId, parameters),
                 'configure': () => this.configureDemo(demoId, parameters),
+                'list': () => this.sendDemoList()
             };
 
             const handler = commandMap[command] || (() => this._handleUnknownCommand(demoId, command));
@@ -260,15 +261,39 @@ export class DemoWrapper {
     }
 
     async sendDemoState(demoId, state) {
+        if (this.webSocketMonitor) {
+            this.webSocketMonitor._broadcastToSubscribedClients({
+                type: 'demoState',
+                payload: {demoId, ...state}
+            });
+        }
     }
 
     async sendDemoStep(demoId, step, description, data = {}) {
+        if (this.webSocketMonitor) {
+            this.webSocketMonitor._broadcastToSubscribedClients({
+                type: 'demoStep',
+                payload: {demoId, step, description, data}
+            });
+        }
     }
 
     async sendDemoMetrics(demoId, metrics) {
+        if (this.webSocketMonitor) {
+            this.webSocketMonitor._broadcastToSubscribedClients({
+                type: 'demoMetrics',
+                payload: {demoId, metrics}
+            });
+        }
     }
 
     async sendDemoList() {
+        if (this.webSocketMonitor) {
+            this.webSocketMonitor._broadcastToSubscribedClients({
+                type: 'demoList',
+                payload: this.getAvailableDemos()
+            });
+        }
     }
 
     // Demo implementations
