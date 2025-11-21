@@ -39,6 +39,7 @@ class WebSocketMonitor {
 
         // Add event buffer for batching
         this.eventBuffer = [];
+        this._replMessageHandler = null;
     }
 
     _initializeMetrics() {
@@ -124,7 +125,6 @@ class WebSocketMonitor {
 
             this.server.on('listening', () => {
                 console.log(`WebSocket monitoring server started on ws://${this.host}:${this.port}${this.path}`);
-                console.log(`Max connections: ${this.maxConnections}, Rate limit: ${this.maxMessagesPerWindow}/${this.rateLimitWindowMs}ms`);
 
                 // Start batching interval to send accumulated events
                 setInterval(() => {
@@ -139,7 +139,7 @@ class WebSocketMonitor {
                             timestamp: Date.now()
                         });
                     }
-                }, 150); // Send batched events every 150ms as specified in the plan
+                }, 150);
 
                 resolve();
             });
@@ -220,31 +220,6 @@ class WebSocketMonitor {
         };
     }
 
-    getPerformanceMetrics() {
-        const stats = this.getStats();
-        const uptime = stats.uptime;
-
-        return {
-            ...stats.metrics,
-            uptime,
-            messagesPerSecond: uptime > 0 ? (stats.metrics.messagesSent / (uptime / 1000)).toFixed(2) : 0,
-            connectionRate: uptime > 0 ? (stats.metrics.clientConnectionCount / (uptime / 1000)).toFixed(4) : 0,
-            errorRate: stats.metrics.messagesSent > 0 ?
-                ((stats.metrics.errorCount / stats.metrics.messagesSent) * 100).toFixed(4) : 0,
-            connectionUtilization: (this.clients.size / this.maxConnections * 100).toFixed(2) + '%'
-        };
-    }
-
-    getClients() {
-        return Array.from(this.clients).map(client => ({
-            id: client.clientId,
-            readyState: client.readyState,
-            remoteAddress: client._socket?.remoteAddress,
-            subscriptions: Array.from(client.subscriptions || []),
-            messageRate: this.clientRateLimiters.get(client.clientId)?.messageCount || 0
-        }));
-    }
-
     registerClientMessageHandler(messageType, handler) {
         if (!this.clientMessageHandlers) {
             this.clientMessageHandlers = new Map();
@@ -255,7 +230,6 @@ class WebSocketMonitor {
     _handleClientMessage(client, data) {
         try {
             const rawData = data.toString();
-            console.log(`[WEBSOCKET MONITOR] Raw message received: ${rawData}`);
 
             if (!rawData.trim()) {
                 this._sendToClient(client, {
@@ -266,7 +240,6 @@ class WebSocketMonitor {
             }
 
             const message = JSON.parse(rawData);
-            console.log(`[WEBSOCKET MONITOR] Parsed message:`, message);
 
             if (!message.type || typeof message.type !== 'string') {
                 this._sendToClient(client, {
@@ -290,14 +263,20 @@ class WebSocketMonitor {
     }
 
     _routeMessage(client, message) {
-        console.log(`[WEBSOCKET MONITOR] Routing message of type: ${message.type}`);
+        // Delegate everything to registered handlers or the attached ReplMessageHandler
 
-        // Check if this message should be handled by ReplMessageHandler
-        if (this._shouldRouteToReplHandler(message)) {
-            this._routeToReplHandler(client, message);
+        // First check custom handlers (e.g. legacy mappings)
+        if (this.clientMessageHandlers.has(message.type)) {
+            const handler = this.clientMessageHandlers.get(message.type);
+            try {
+                handler(message, client, this);
+            } catch (handlerError) {
+                this._sendHandlerError(client, message.type, handlerError);
+            }
             return;
         }
 
+        // Then check standard internal handlers
         const handlers = {
             'subscribe': (msg) => this.messageHandlers.handleSubscribe(client, msg),
             'unsubscribe': (msg) => this.messageHandlers.handleUnsubscribe(client, msg),
@@ -307,52 +286,33 @@ class WebSocketMonitor {
             'requestCapabilities': (msg) => this.messageHandlers.handleRequestCapabilities(client, msg)
         };
 
-        const handler = handlers[message.type];
-        if (handler) {
-            console.log(`[WEBSOCKET MONITOR] Found handler for type: ${message.type}`);
-            handler(message);
-        } else {
-            console.log(`[WEBSOCKET MONITOR] No handler found for type: ${message.type}, using custom`);
-            this._handleCustomMessage(client, message);
+        if (handlers[message.type]) {
+            handlers[message.type](message);
+            return;
         }
-    }
 
-    /**
-     * Check if a message should be routed to the ReplMessageHandler
-     */
-    _shouldRouteToReplHandler(message) {
-        return message.type === 'narseseInput' ||
-            message.type === 'reason/step' ||
-            message.type === 'agent/input' ||
-            message.type?.startsWith('control/') ||
-            message.type === 'command.execute' ||
-            message.type?.startsWith('/');
-    }
-
-    /**
-     * Route message to ReplMessageHandler if available
-     */
-    _routeToReplHandler(client, message) {
-        // Check if a ReplMessageHandler is available (through an associated WebRepl instance)
+        // If we have a ReplMessageHandler, try to let it handle unknown types
+        // This handles narseseInput, control/*, etc.
         if (this._replMessageHandler) {
             this._replMessageHandler.processMessage(message)
                 .then(result => {
-                    this._sendToClient(client, result);
+                     // Don't send if result is void/undefined (some handlers might send directly)
+                     if (result) this._sendToClient(client, result);
                 })
                 .catch(error => {
-                    console.error('Error in ReplMessageHandler:', error);
-                    this._sendToClient(client, {
+                    console.error('Error in ReplMessageHandler routing:', error);
+                     this._sendToClient(client, {
                         type: 'error',
                         message: error.message
                     });
                 });
         } else {
-            // Fallback to the NAR instance if no specific handler is available
-            if (message.type === 'narseseInput' || message.type === 'reason/step') {
-                this.messageHandlers.handleNarseseInput(client, message);
-            } else if (message.type?.startsWith('control/')) {
-                this._handleControlMessage(client, message);
-            }
+            console.warn(`[WEBSOCKET MONITOR] No handler found for type: ${message.type}`);
+            this._sendToClient(client, {
+                type: 'error',
+                message: `Unknown message type: ${message.type}`
+            });
+            this.metrics.errorCount++;
         }
     }
 
@@ -361,28 +321,6 @@ class WebSocketMonitor {
      */
     attachReplMessageHandler(replMessageHandler) {
         this._replMessageHandler = replMessageHandler;
-    }
-
-    _handleCustomMessage(client, message) {
-        if (this.clientMessageHandlers?.has(message.type)) {
-            const handler = this.clientMessageHandlers.get(message.type);
-            if (typeof handler === 'function') {
-                try {
-                    handler(message, client, this);
-                } catch (handlerError) {
-                    this._sendHandlerError(client, message.type, handlerError);
-                }
-            } else {
-                this._sendInvalidHandlerError(client, message.type);
-            }
-        } else {
-            console.warn('Unknown message type:', message.type);
-            this._sendToClient(client, {
-                type: 'error',
-                message: `Unknown message type: ${message.type}`
-            });
-            this.metrics.errorCount++;
-        }
     }
 
     _handleMessageError(client, error) {
@@ -401,44 +339,29 @@ class WebSocketMonitor {
         this.metrics.errorCount++;
     }
 
-    _sendInvalidHandlerError(client, messageType) {
-        console.error(`Invalid handler for message type: ${messageType}`);
-        this._sendError(client, `Invalid handler for message type: ${messageType}`);
-        this.metrics.errorCount++;
-    }
-
     _sendError(client, message, error = null) {
         this._sendToClient(client, {type: 'error', message, error});
     }
 
-    listenToNAR(nar) {
-        if (!nar || !nar._eventBus || typeof nar._eventBus.on !== 'function') {
-            throw new Error('NAR instance must have an eventBus with on() method');
+    /**
+     * Public API for buffering events for broadcast.
+     * Allows external components (like WebRepl) to utilize the batching mechanism
+     * without this class needing to know about NAR internals.
+     */
+    bufferEvent(eventType, data, options = {}) {
+        // Filter events if an eventFilter is configured
+        if (this.eventFilter && typeof this.eventFilter === 'function') {
+            if (!this.eventFilter(eventType, data)) {
+                return; // Skip this event if it doesn't pass the filter
+            }
         }
 
-        this._nar = nar;
-
-        // Subscribe to all NAR events and push them to the event buffer instead of sending immediately
-        for (const eventType of ['task.input', 'task.processed', 'cycle.start', 'cycle.complete', 'task.added', 'belief.added', 'question.answered', 'system.started', 'system.stopped', 'system.reset', 'system.loaded', 'reasoning.step', 'concept.created', 'task.completed', 'reasoning.derivation']) {
-            nar._eventBus.on(eventType, (data, options = {}) => {
-                // Filter events if an eventFilter is configured
-                if (this.eventFilter && typeof this.eventFilter === 'function') {
-                    if (!this.eventFilter(eventType, data)) {
-                        return; // Skip this event if it doesn't pass the filter
-                    }
-                }
-
-                // Add event to buffer instead of sending immediately
-                this.eventBuffer.push({
-                    type: eventType,
-                    data: data,
-                    timestamp: Date.now(),
-                    traceId: options.traceId
-                });
-            });
-        }
-
-        console.log('WebSocket monitor now listening to NAR events and buffering for batching');
+        this.eventBuffer.push({
+            type: eventType,
+            data: data,
+            timestamp: Date.now(),
+            traceId: options.traceId
+        });
     }
 
     _broadcastToSubscribedClients(message) {
@@ -453,112 +376,6 @@ class WebSocketMonitor {
                 this._sendToClient(client, message);
                 this.metrics.messagesSent++;
             }
-        }
-    }
-
-    _handleControlMessage(client, message) {
-        // Handle control messages like start, stop, step
-        const command = message.type.split('/')[1]; // Extract command from 'control/command'
-
-        if (!this._nar) {
-            this._sendToClient(client, {
-                type: 'error',
-                message: 'NAR instance not available for control commands'
-            });
-            return;
-        }
-
-        switch (command) {
-            case 'start':
-                this._nar.start();
-                this._sendToClient(client, {
-                    type: 'control/ack',
-                    payload: {command: 'start', status: 'started'}
-                });
-                break;
-
-            case 'stop':
-                this._nar.stop();
-                this._sendToClient(client, {
-                    type: 'control/ack',
-                    payload: {command: 'stop', status: 'stopped'}
-                });
-                break;
-
-            case 'step':
-                this._nar.step();
-                this._sendToClient(client, {
-                    type: 'control/ack',
-                    payload: {command: 'step', status: 'stepped'}
-                });
-                break;
-
-            case 'reset':
-                this._nar.reset();
-                this._sendToClient(client, {
-                    type: 'control/ack',
-                    payload: {command: 'reset', status: 'reset'}
-                });
-                break;
-
-            case 'refresh':
-                const concepts = Array.from(this._nar.memory.concepts.values());
-                const tasks = Array.from(this._nar.memory.tasks.values());
-                this._sendToClient(client, {
-                    type: 'memorySnapshot',
-                    payload: {
-                        concepts,
-                        tasks,
-                    }
-                });
-                break;
-
-            case 'exit':
-                this._sendToClient(client, {
-                    type: 'control/ack',
-                    payload: {command: 'exit', status: 'shutting down'}
-                });
-                (async () => {
-                    await this.stop();
-                    process.exit(0);
-                })();
-                break;
-
-            default:
-                console.warn('Unknown control command:', command);
-                this._sendToClient(client, {
-                    type: 'error',
-                    message: `Unknown control command: ${command}`
-                });
-                break;
-        }
-    }
-
-    _handleReasonMessage(client, message) {
-        // Handle various reason/ messages appropriately
-        const command = message.type.split('/')[1]; // Extract command from 'reason/command'
-
-        if (!this._nar) {
-            this._sendToClient(client, {
-                type: 'error',
-                message: 'NAR instance not available for reason commands'
-            });
-            return;
-        }
-
-        switch (command) {
-            case 'step':
-                // This is handled above as narsese input, but if it comes here, it's an error
-                console.warn('reason/step should be handled separately, not here');
-                break;
-
-            default:
-                console.warn('Unknown reason command:', command);
-                this._sendToClient(client, {
-                    type: 'error',
-                    message: `Unknown reason command: ${command}`
-                });
-                break;
         }
     }
 

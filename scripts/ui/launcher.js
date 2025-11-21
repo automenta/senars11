@@ -11,6 +11,7 @@ import {dirname, join} from 'path';
 import {parseArgs as parseCliArgs, showUsageAndExit} from '../utils/script-utils.js';
 import {WebSocketMonitor} from '../../src/server/WebSocketMonitor.js';
 import {DemoWrapper} from '../../src/demo/DemoWrapper.js';
+import {SessionBuilder} from '../../src/session/SessionBuilder.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -125,15 +126,24 @@ if (helpRequested) {
 async function startWebSocketServer(config = DEFAULT_CONFIG) {
     console.log(`Starting WebSocket server on ${config.webSocket.host}:${config.webSocket.port}...`);
 
-    const {AgentReplEngine} = await import('../../src/repl/AgentReplEngine.js');
+    // Use SessionBuilder to create the engine
+    const builder = new SessionBuilder({
+        nar: config.nar,
+        persistence: config.persistence,
+        // Add default LM config if not present, though typically disabled in this launcher context unless args say otherwise
+        lm: {
+             enabled: false, // Default to false for web launcher unless extended
+             ...config.lm
+        }
+    });
 
-    // Create a ReplEngine which manages its own NAR instance
-    const replEngine = new AgentReplEngine(config);
-    await replEngine.initialize();
+    const replEngine = await builder.build();
 
     const monitor = new WebSocketMonitor(config.webSocket);
     await monitor.start();
-    replEngine.nar.connectToWebSocketMonitor(monitor);
+
+    // Remove direct connection from NAR to Monitor
+    // replEngine.nar.connectToWebSocketMonitor(monitor); <-- Removed as per refactor
 
     // Import and initialize WebRepl for handling all UIs with comprehensive message support
     const {WebRepl} = await import('../../src/repl/WebRepl.js');
@@ -141,6 +151,12 @@ async function startWebSocketServer(config = DEFAULT_CONFIG) {
 
     // Register WebRepl with the WebSocket server to provide comprehensive message support
     webRepl.registerWithWebSocketServer();
+
+    // Setup Event Bridging:
+    // WebRepl listens to Engine events -> calls Monitor.bufferEvent
+    // This preserves the batching optimization of WebSocketMonitor without it knowing about NAR
+    _bridgeEngineEventsToMonitor(replEngine, monitor, webRepl);
+
 
     // Register a handler for NAR instance requests from the UI
     monitor.registerClientMessageHandler('requestNAR', async (message, client, monitorInstance) => {
@@ -161,6 +177,8 @@ async function startWebSocketServer(config = DEFAULT_CONFIG) {
 
     // Initialize DemoWrapper to provide remote control and introspection
     const demoWrapper = new DemoWrapper();
+    // DemoWrapper might need access to the monitor to broadcast things?
+    // Or does it use the engine?
     await demoWrapper.initialize(replEngine.nar, monitor);
 
     // Send list of available demos to connected UIs
@@ -175,6 +193,33 @@ async function startWebSocketServer(config = DEFAULT_CONFIG) {
     console.log('WebSocket server started successfully');
 
     return {nar: replEngine.nar, replEngine, monitor, demoWrapper};
+}
+
+/**
+ * Bridge events from the Engine to the Monitor's buffer
+ */
+function _bridgeEngineEventsToMonitor(engine, monitor, webRepl) {
+    const events = [
+        'task.input', 'task.processed', 'cycle.start', 'cycle.complete',
+        'task.added', 'belief.added', 'question.answered',
+        'system.started', 'system.stopped', 'system.reset', 'system.loaded',
+        'reasoning.step', 'concept.created', 'task.completed', 'reasoning.derivation'
+    ];
+
+    // We access the raw NAR event bus for these granular events
+    // The ReplEngine emits some high level events, but NAR emits the granular ones
+    if (engine.nar && engine.nar._eventBus) {
+        events.forEach(eventType => {
+            engine.nar._eventBus.on(eventType, (data, options = {}) => {
+                monitor.bufferEvent(eventType, data, options);
+            });
+        });
+    }
+
+    // Also listen to Engine events (like 'log')
+    engine.on('log', (data) => {
+        monitor.bufferEvent('log', data);
+    });
 }
 
 /**

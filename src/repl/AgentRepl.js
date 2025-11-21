@@ -5,10 +5,8 @@ import {render} from 'ink';
 import inquirer from 'inquirer';
 import {parseReplArgs} from './utils/ReplArgsParser.js';
 import {DEFAULT_CONFIG} from './utils/ReplConstants.js';
-import {NAR} from '../nar/NAR.js';
-import {AgentReplEngine} from './AgentReplEngine.js';
+import {SessionBuilder} from '../session/SessionBuilder.js';
 import {AgentInkTUI} from './components/AgentInkTUI.js';
-import {ChatOllama} from "@langchain/ollama";
 
 class AgentRepl {
     constructor() {
@@ -42,7 +40,8 @@ class AgentRepl {
                 provider: 'ollama',
                 modelName: modelName,
                 baseUrl: baseURL,
-                temperature: temperature || 0
+                temperature: temperature || 0,
+                enabled: true
             };
 
             console.log(`🔧 Using command-line Ollama configuration: ${modelName}`);
@@ -74,7 +73,8 @@ class AgentRepl {
                     provider: 'ollama',
                     modelName: configOptions.modelName,
                     baseUrl: configOptions.baseUrl,
-                    temperature: configOptions.temperature
+                    temperature: configOptions.temperature,
+                    enabled: true
                 };
             } catch (error) {
                 // Fallback if inquirer fails (e.g. non-interactive)
@@ -83,7 +83,8 @@ class AgentRepl {
                     provider: 'ollama',
                     modelName: DEFAULT_CONFIG.OLLAMA.modelName,
                     baseUrl: DEFAULT_CONFIG.OLLAMA.baseUrl,
-                    temperature: DEFAULT_CONFIG.OLLAMA.temperature
+                    temperature: DEFAULT_CONFIG.OLLAMA.temperature,
+                    enabled: true
                 };
             }
         }
@@ -100,59 +101,20 @@ class AgentRepl {
     async startRepl() {
         console.log('🚀 Starting REPL engine...\n');
 
-        // Create and initialize a real NAR instance
-        const nar = new NAR({
-            tools: {enabled: true},
-            lm: {enabled: true},
-            debug: {pipeline: false}
-        });
-
-        try {
-            await nar.initialize();
-            console.log('✅ NAR system initialized');
-        } catch (error) {
-            console.error('⚠️  Warning: Failed to initialize NAR system:', error.message);
-        }
-
-        // Initialize AgentReplEngine
-        // We need to setup the LM provider structure that AgentReplEngine expects
-        // AgentReplEngine uses this.agentLM (LM class) which has a ProviderRegistry.
-
-        // We'll create the provider instance here.
-        const ollamaProvider = new ChatOllama({
-            model: this.config.lm.modelName,
-            baseUrl: this.config.lm.baseUrl,
-            temperature: this.config.lm.temperature,
-        });
-
-        // Add a 'name' property which might be expected by some logging
-        ollamaProvider.name = 'ollama';
-
-        this.engine = new AgentReplEngine({
-            nar: nar, // Pass existing NAR instance
-            lm: {
-                // LM Config passed to LM constructor
+        // Build session using SessionBuilder
+        const builder = new SessionBuilder({
+            nar: {
+                tools: {enabled: true},
+                lm: {enabled: true},
+                debug: {pipeline: false}
             },
+            lm: this.config.lm,
             inputProcessing: {
                 lmTemperature: this.config.lm.temperature
             }
         });
 
-        // Initialize engine first
-        await this.engine.initialize();
-
-        // Register the provider with the engine's LM component
-        this.engine.registerLMProvider('ollama', ollamaProvider);
-
-        // Bind tools to the provider if it supports it
-        // AgentReplEngine's _registerNARTools adds tools to the provider's .tools array
-        // We need to ensure the provider instance we passed is the one being used.
-        // Since we passed 'ollamaProvider' and registered it, we should be good.
-
-        // However, ChatOllama doesn't automatically bind tools from a .tools property.
-        // We might need to do that binding dynamically in streamExecution or here.
-        // For now, let's attach the tools array so _registerNARTools can populate it.
-        ollamaProvider.tools = [];
+        this.engine = await builder.build();
 
         console.log('✅ Engine ready. Rendering UI...');
 

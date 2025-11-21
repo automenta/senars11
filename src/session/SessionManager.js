@@ -1,6 +1,7 @@
 /**
  * Session management for SeNARS to provide isolated reasoning contexts
  */
+import {SessionBuilder} from './SessionBuilder.js';
 
 export class SessionManager {
     constructor() {
@@ -16,13 +17,14 @@ export class SessionManager {
             sessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
         }
 
-        // Import SeNARS NAR (NARS Reasoner Engine) to create a new instance
-        const {NAR} = await import('../nar/NAR.js');
-        const nar = new NAR(config);
+        // Use SessionBuilder to create the engine (Session)
+        const builder = new SessionBuilder(config);
+        const engine = await builder.build();
 
         this.sessions.set(sessionId, {
             id: sessionId,
-            nar: nar,
+            engine: engine, // We now store the Engine (ReplEngine/AgentReplEngine), not just NAR
+            nar: engine.nar, // Convenience reference to NAR
             createdAt: new Date(),
             lastAccessed: new Date(),
             config: config,
@@ -85,7 +87,14 @@ export class SessionManager {
             throw new Error(`Session ${sessionId} does not exist`);
         }
 
-        // Get the memory state from the NAR if available
+        // Delegate to engine's persistence if available
+        if (session.engine && typeof session.engine.saveSessionState === 'function') {
+             // This is async in ReplEngine, but this method signature seems sync.
+             // For now, we will fallback to NAR state export if we need sync.
+             // Ideally this method should be async.
+        }
+
+        // Fallback to getting NAR memory state
         let memoryState = null;
         if (session.nar?.memory && typeof session.nar.memory.exportState === 'function') {
             memoryState = session.nar.memory.exportState();
@@ -109,25 +118,19 @@ export class SessionManager {
             throw new Error(`Session ${sessionId} already exists`);
         }
 
-        // Create a new NAR instance with the original config
-        const {NAR} = await import('../nar/NAR.js');
-        const nar = new NAR(state.config);
+        // Rebuild the session using the saved config
+        await this.createSession(sessionId, state.config);
+        const session = this.getSession(sessionId);
 
-        // If we have memory state, try to restore it
-        if (state.memoryState && nar.memory && typeof nar.memory.importState === 'function') {
-            nar.memory.importState(state.memoryState);
+        // Restore memory state
+        if (state.memoryState && session.nar.memory && typeof session.nar.memory.importState === 'function') {
+            session.nar.memory.importState(state.memoryState);
         }
 
-        this.sessions.set(sessionId, {
-            id: state.id,
-            nar: nar,
-            createdAt: state.createdAt || new Date(),
-            lastAccessed: state.lastAccessed || new Date(),
-            config: state.config,
-            metadata: state.metadata || {}
-        });
+        session.metadata = state.metadata || {};
+        session.createdAt = state.createdAt ? new Date(state.createdAt) : session.createdAt;
 
-        return this.sessions.get(sessionId);
+        return session;
     }
 
     /**
@@ -148,10 +151,14 @@ export class SessionManager {
     removeSession(sessionId) {
         if (this.sessions.has(sessionId)) {
             const session = this.sessions.get(sessionId);
-            // Optionally clean up the NAR instance
-            if (session.nar && typeof session.nar.dispose === 'function') {
+
+            // Shutdown engine if possible
+            if (session.engine && typeof session.engine.shutdown === 'function') {
+                session.engine.shutdown();
+            } else if (session.nar && typeof session.nar.dispose === 'function') {
                 session.nar.dispose();
             }
+
             this.sessions.delete(sessionId);
 
             if (this.currentSessionId === sessionId) {
@@ -170,7 +177,9 @@ export class SessionManager {
      */
     clearAllSessions() {
         for (const [id, session] of this.sessions) {
-            if (session.nar && typeof session.nar.dispose === 'function') {
+             if (session.engine && typeof session.engine.shutdown === 'function') {
+                session.engine.shutdown();
+            } else if (session.nar && typeof session.nar.dispose === 'function') {
                 session.nar.dispose();
             }
         }
