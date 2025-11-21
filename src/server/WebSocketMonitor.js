@@ -1,7 +1,7 @@
 import {WebSocketServer} from 'ws';
 import {EventEmitter} from 'events';
 import {ClientMessageHandlers} from './ClientMessageHandlers.js';
-import {DEFAULT_CLIENT_CAPABILITIES, NAR_EVENTS, WEBSOCKET_CONFIG} from '../config/constants.js';
+import {DEFAULT_CLIENT_CAPABILITIES, WEBSOCKET_CONFIG} from '../config/constants.js';
 
 const DEFAULT_OPTIONS = Object.freeze({
     port: WEBSOCKET_CONFIG.defaultPort,
@@ -30,17 +30,15 @@ class WebSocketMonitor {
         this.messageHandlers = new ClientMessageHandlers(this);
 
         this.metrics = this._initializeMetrics();
-
-        this.broadcastRateLimiter = {
-            lastBroadcastTime: new Map(),
-            minInterval: options.minBroadcastInterval ?? DEFAULT_OPTIONS.minBroadcastInterval
-        };
         this.clientRateLimiters = new Map();
         this.rateLimitWindowMs = options.rateLimitWindowMs ?? DEFAULT_OPTIONS.rateLimitWindowMs;
         this.maxMessagesPerWindow = options.maxMessagesPerWindow ?? DEFAULT_OPTIONS.maxMessagesPerWindow;
         this.messageBufferSize = options.messageBufferSize ?? DEFAULT_OPTIONS.messageBufferSize;
 
         this.clientCapabilities = new Map();
+
+        // Add event buffer for batching
+        this.eventBuffer = [];
     }
 
     _initializeMetrics() {
@@ -127,6 +125,22 @@ class WebSocketMonitor {
             this.server.on('listening', () => {
                 console.log(`WebSocket monitoring server started on ws://${this.host}:${this.port}${this.path}`);
                 console.log(`Max connections: ${this.maxConnections}, Rate limit: ${this.maxMessagesPerWindow}/${this.rateLimitWindowMs}ms`);
+
+                // Start batching interval to send accumulated events
+                setInterval(() => {
+                    if (this.eventBuffer.length > 0) {
+                        const batch = [...this.eventBuffer]; // Create a copy of the buffer
+                        this.eventBuffer = []; // Clear the buffer
+
+                        // Broadcast the batch to all connected clients
+                        this._broadcastToSubscribedClients({
+                            type: 'eventBatch',
+                            data: batch,
+                            timestamp: Date.now()
+                        });
+                    }
+                }, 150); // Send batched events every 150ms as specified in the plan
+
                 resolve();
             });
         });
@@ -167,10 +181,6 @@ class WebSocketMonitor {
                 resolve();
             }
         });
-    }
-
-    broadcastEvent(eventType, data, options = {}) {
-        this._broadcastMessage({type: 'event', eventType, data, timestamp: Date.now(), ...options}, eventType);
     }
 
     _sendToClient(client, message) {
@@ -240,10 +250,6 @@ class WebSocketMonitor {
             this.clientMessageHandlers = new Map();
         }
         this.clientMessageHandlers.set(messageType, handler);
-    }
-
-    broadcastCustomEvent(eventType, data, options = {}) {
-        this._broadcastMessage({type: eventType, data, timestamp: Date.now(), ...options}, eventType);
     }
 
     _handleClientMessage(client, data) {
@@ -405,89 +411,47 @@ class WebSocketMonitor {
     }
 
     listenToNAR(nar) {
-        if (!nar || !nar.on) {
-            throw new Error('NAR instance must have an on() method');
+        if (!nar || !nar._eventBus || typeof nar._eventBus.on !== 'function') {
+            throw new Error('NAR instance must have an eventBus with on() method');
         }
 
         this._nar = nar;
 
-        NAR_EVENTS.forEach(eventName => {
-            nar.on(eventName, (data, metadata) => {
-                this.broadcastEvent(eventName, {
-                    data,
-                    metadata: metadata || {},
-                    timestamp: Date.now()
+        // Subscribe to all NAR events and push them to the event buffer instead of sending immediately
+        for (const eventType of ['task.input', 'task.processed', 'cycle.start', 'cycle.complete', 'task.added', 'belief.added', 'question.answered', 'system.started', 'system.stopped', 'system.reset', 'system.loaded', 'reasoning.step', 'concept.created', 'task.completed', 'reasoning.derivation']) {
+            nar._eventBus.on(eventType, (data, options = {}) => {
+                // Filter events if an eventFilter is configured
+                if (this.eventFilter && typeof this.eventFilter === 'function') {
+                    if (!this.eventFilter(eventType, data)) {
+                        return; // Skip this event if it doesn't pass the filter
+                    }
+                }
+
+                // Add event to buffer instead of sending immediately
+                this.eventBuffer.push({
+                    type: eventType,
+                    data: data,
+                    timestamp: Date.now(),
+                    traceId: options.traceId
                 });
             });
-        });
+        }
 
-        console.log('WebSocket monitor now listening to NAR events');
+        console.log('WebSocket monitor now listening to NAR events and buffering for batching');
     }
 
-    _broadcastMessage(message, eventType) {
-        try {
-            if (!this._shouldBroadcast(message, eventType)) return;
-            if (this.clients.size === 0) return;
+    _broadcastToSubscribedClients(message) {
+        // Send message to all clients that are subscribed to the event type
+        for (const client of this.clients) {
+            // Check if the client is subscribed to 'all' or to specific event types
+            const isSubscribed = !client.subscriptions || client.subscriptions.has('all') ||
+                                (message.type.startsWith('eventBatch') ? client.subscriptions.has('all') :
+                                 client.subscriptions.has(message.type) || client.subscriptions.has(message.type.split('/')[0]));
 
-            const jsonMessage = JSON.stringify(message);
-            let sentCount = 0;
-
-            for (const client of this.clients) {
-                if (this._shouldSendToClient(client, message, eventType) && client.readyState === client.OPEN) {
-                    sentCount += this._sendToClientSafe(client, jsonMessage, message.type);
-                }
+            if (isSubscribed && client.readyState === client.OPEN) {
+                this._sendToClient(client, message);
+                this.metrics.messagesSent++;
             }
-
-            this.metrics.messagesSent += sentCount;
-        } catch (error) {
-            console.error(`Error broadcasting ${message.type}:`, error);
-            this.metrics.errorCount++;
-        }
-    }
-
-    _shouldBroadcast(message, eventType) {
-        const now = Date.now();
-        const lastBroadcast = this.broadcastRateLimiter.lastBroadcastTime.get(eventType) ?? 0;
-        if (now - lastBroadcast < this.broadcastRateLimiter.minInterval) {
-            return false;
-        }
-        this.broadcastRateLimiter.lastBroadcastTime.set(eventType, now);
-
-        if (this.eventFilter && typeof this.eventFilter === 'function') {
-            if (!this.eventFilter(eventType, message.data)) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    _shouldSendToClient(client, message, eventType) {
-        return message.type === 'event' ||
-            !client.subscriptions ||
-            client.subscriptions.has('all') ||
-            client.subscriptions.has(eventType);
-    }
-
-    _sendToClientSafe(client, jsonMessage, messageType) {
-        try {
-            client.send(jsonMessage, {binary: false, compress: true}, (error) => {
-                if (error) this._handleClientSendError(client, messageType, error);
-            });
-            return 1;
-        } catch (sendError) {
-            this._handleClientSendError(client, messageType, sendError);
-            return 0;
-        }
-    }
-
-    _handleClientSendError(client, messageType, error) {
-        console.error(`Error sending ${messageType} to client:`, error);
-        this.clients.delete(client);
-        try {
-            client.close(1011, 'Sending error');
-        } catch (e) {
-            // If client is already closed, just ignore
         }
     }
 
@@ -534,10 +498,17 @@ class WebSocketMonitor {
                     type: 'control/ack',
                     payload: {command: 'reset', status: 'reset'}
                 });
-                // Also broadcast system reset event to notify UI components
-                this.broadcastEvent('system.memoryReset', {
-                    timestamp: Date.now(),
-                    message: 'NAR memory reset completed'
+                break;
+
+            case 'refresh':
+                const concepts = Array.from(this._nar.memory.concepts.values());
+                const tasks = Array.from(this._nar.memory.tasks.values());
+                this._sendToClient(client, {
+                    type: 'memorySnapshot',
+                    payload: {
+                        concepts,
+                        tasks,
+                    }
                 });
                 break;
 

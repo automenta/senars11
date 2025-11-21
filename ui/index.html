@@ -1,13 +1,21 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8"/>
-    <link href="/vite.svg" rel="icon" type="image/svg+xml"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>SeNARS Web UI Launcher</title>
+    <meta charset="UTF-8">
+    <title>SeNARS UI</title>
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-<div id="root"></div>
-<script src="/src/main.js" type="module"></script>
+    <div id="status-bar">Connecting...</div>
+    <div id="main-container">
+        <div id="repl-container"></div>
+        <div id="cy-container"></div>
+    </div>
+    <div id="controls">
+        <button id="refresh-btn">Refresh Graph</button>
+        <button id="toggle-live-btn">Pause Live Updates</button>
+    </div>
+    <script src="https://unpkg.com/cytoscape/dist/cytoscape.min.js"></script>
+    <script type="module" src="src/main.js"></script>
 </body>
 </html>
