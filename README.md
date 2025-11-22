@@ -914,15 +914,17 @@ The system provides a fluent API for easy test creation.
 - **Event-Driven Architecture**: Comprehensive event system with middleware support, error handling, and performance
   tracking
 
-## Cognitive Architecture: The "Superstructure" Pattern
+## NAR: Cognitive Agent
 
-We are transitioning from **Model-Centric** AI (making the LLM bigger/smarter) to **System-Centric** AI (building a cognitive architecture *around* the model). The SeNARS Stream Reasoner embodies this transition by treating the Language Model as a substrate for processing context, while the "Superstructure" provides the agency.
+A NAR is a 'Non-Axiomatic Reasoner' instance.
 
-**The SeNARS Solution**: The `Focus` and `Bag` systems act as a **Dynamic Context Manager**. The "Superstructure" decides *what* goes into the LM's context window based on goals and urgency.
+We are transitioning from **Model-Centric** AI (making the LLM bigger/smarter) to **System-Centric** AI (building a cognitive architecture *around* the model). The SeNARS Stream Reasoner embodies this transition by treating the Language Model as a substrate for processing context, while the NAR provides the agency.
+
+**The SeNARS Solution**: The `Focus` and `Bag` systems act as a **Dynamic Context Manager**. The NAR decides *what* goes into the LM's context window based on goals and urgency.
 
 ### The "Operating System" Analogy
 
-Think of the LM as the **CPU/ALU** (Arithmetic Logic Unit). It is incredibly fast at processing symbols and pattern matching, but it has no state. The "Superstructure" acts as the **Kernel**:
+Think of the LM as the **CPU/ALU** (Arithmetic Logic Unit). It is incredibly fast at processing symbols and pattern matching, but it has no state. The NAR acts as the **Kernel**:
 - **Scheduler**: The `Reasoner` pipeline determines which process gets CPU (LM) time
 - **File System**: The `Memory` and `Term` structures provide persistent storage of state
 - **Permissions/Security**: The `Truth` values and `Stamps` determine what information is trusted
@@ -931,13 +933,13 @@ Think of the LM as the **CPU/ALU** (Arithmetic Logic Unit). It is incredibly fas
 
 LMs are fluid. If you ask an LM the same question twice with slightly different settings, you get different answers. This is fatal for an autonomous agent.
 
-**The Superstructure's Job**: It provides the **Anchor**. If SeNARS holds a belief `<fire --> hot> {1.0, 0.9}`, it doesn't matter if the LM hallucinates that fire is cold in a poetic context. The Superstructure enforces consistency.
+**The NAR's Job**: It provides the **Anchor**. If SeNARS holds a belief `<fire --> hot> {1.0, 0.9}`, it doesn't matter if the LM hallucinates that fire is cold in a poetic context. The NAR enforces consistency.
 
 ### The "Goal" Vector
 
 LMs are reactive. They only complete the pattern you give them. They have no intrinsic drive.
 
-**The Superstructure's Job**: It holds the **Intention**. By separating Beliefs (`.`) from Goals (`!`), the architecture allows the system to have a "nagging" drive. The LM might get distracted by a tangent, but the SeNARS `Task` with high priority remains in the system, forcing the system to return to the objective.
+**The NAR's Job**: It holds the **Intention**. By separating Beliefs (`.`) from Goals (`!`), the architecture allows the system to have a "nagging" drive. The LM might get distracted by a tangent, but the SeNARS `Task` with high priority remains in the system, forcing the system to return to the objective.
 
 ## Current Capabilities vs. Future Roadmap
 
