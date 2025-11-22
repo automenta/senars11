@@ -28,6 +28,7 @@ const baseConfig = {
         },
     },
     testTimeout: 60000,
+    forceExit: true,
 };
 
 export default baseConfig;
