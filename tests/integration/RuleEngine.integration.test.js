@@ -10,7 +10,7 @@ describe('RuleEngine Integration Tests', () => {
         // The new architecture always uses stream rule executor
         expect(nar._streamRuleExecutor.getRuleCount()).toBeGreaterThan(0);
 
-        nar.stop();
+        await nar.dispose();
     });
 
     it('should perform basic modus ponens inference', async () => {
@@ -56,6 +56,6 @@ describe('RuleEngine Integration Tests', () => {
             expect(yTasks.length).toBeGreaterThan(0);
         }
 
-        nar.stop();
+        await nar.dispose();
     });
 });

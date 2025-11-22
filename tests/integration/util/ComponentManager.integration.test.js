@@ -19,5 +19,7 @@ describe('ComponentManager Integration', () => {
         const focusComponent = nar.componentManager.getComponent('focus');
         expect(focusComponent).toBeDefined();
         expect(focusComponent.isInitialized !== undefined).toBe(true); // Check that component was loaded
+
+        await nar.dispose();
     });
 });

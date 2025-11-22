@@ -10,10 +10,10 @@ describe('TermLayer Integration', () => {
         termFactory = new TermFactory();
     });
 
-    afterEach(() => {
+    afterEach(async () => {
         // Clean up NAR instance
         if (nar && typeof nar.dispose === 'function') {
-            nar.dispose();
+            await nar.dispose();
         }
     });
 

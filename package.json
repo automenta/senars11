@@ -25,7 +25,6 @@
     "test:e2e": "cd ui && npm run test:e2e",
     "test:debug": "NODE_NO_WARNINGS=1 NODE_OPTIONS=--experimental-vm-modules npx jest --detectOpenHandles tests/reason/Metacognition.integration.test.js",
     "test:property": "NODE_NO_WARNINGS=1 NODE_OPTIONS=--experimental-vm-modules npx jest tests/nal/propertyBasedTests.test.js",
-    "test:automated": "node scripts/utils/test-framework.js",
     "test:ui-screenshots": "cd ui && npm run test:screenshots",
     "config:compare": "node scripts/utils/config-comparison.js",
     "data:export": "node scripts/utils/data-management.js --export",

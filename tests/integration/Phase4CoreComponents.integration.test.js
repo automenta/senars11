@@ -83,12 +83,14 @@ describe('Phase 4 Core Components Integration', () => {
         expect(focus.getCurrentFocus()).toBe('default');
     });
 
-    test('NAR should integrate with Focus component properly', () => {
+    test('NAR should integrate with Focus component properly', async () => {
         const nar = new NAR();
 
         expect(nar).toBeDefined();
         expect(nar._focus).toBeDefined();
         expect(nar._focus).toBeInstanceOf(Focus);
+
+        await nar.dispose();
     });
 
     test('TermFactory should handle validation and compound terms correctly', () => {

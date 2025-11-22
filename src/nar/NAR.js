@@ -388,6 +388,11 @@ export class NAR extends BaseComponent {
         // Clear stream monitoring interval
         this._streamMonitoringInterval && clearInterval(this._streamMonitoringInterval) && (this._streamMonitoringInterval = null);
 
+        // Ensure metrics monitor is stopped
+        if (this._metricsMonitor && typeof this._metricsMonitor.shutdown === 'function') {
+            this._metricsMonitor.shutdown();
+        }
+
         this._stopComponentsAsync();
 
         this._eventBus.emit('system.stopped', {timestamp: Date.now()}, {traceId: options.traceId});
@@ -459,6 +464,11 @@ export class NAR extends BaseComponent {
         // Clean up stream reasoner if it exists
         if (this._streamReasoner) {
             await this._streamReasoner.cleanup();
+        }
+
+        // Ensure metrics monitor is stopped
+        if (this._metricsMonitor && typeof this._metricsMonitor.shutdown === 'function') {
+            this._metricsMonitor.shutdown();
         }
 
         const success = await this._componentManager.disposeAll();

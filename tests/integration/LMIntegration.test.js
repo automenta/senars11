@@ -6,8 +6,17 @@ import {HuggingFaceProvider} from '../../src/lm/HuggingFaceProvider.js';
 import {AdvancedNarseseTranslator} from '../../src/lm/AdvancedNarseseTranslator.js';
 
 describe('LM Integration Tests', () => {
+    let nar;
+
+    afterEach(async () => {
+        if (nar && typeof nar.dispose === 'function') {
+            await nar.dispose();
+        }
+        nar = null;
+    });
+
     test('should register and use DummyProvider', () => {
-        const nar = new NAR({lm: {enabled: true}});
+        nar = new NAR({lm: {enabled: true}});
         const provider = new DummyProvider({id: 'test-dummy', latency: 0});
 
         expect(() => {
@@ -89,12 +98,12 @@ describe('LM Integration Tests', () => {
     });
 
     test('should work with NAR system for symbolic-mode only with DummyLM', () => {
-        const narWithDummy = new NAR({lm: {enabled: true}});
+        nar = new NAR({lm: {enabled: true}});
         const dummyProvider = new DummyProvider();
-        narWithDummy.registerLMProvider('dummy', dummyProvider);
+        nar.registerLMProvider('dummy', dummyProvider);
 
-        expect(narWithDummy.lm).toBeDefined();
-        expect(narWithDummy.lm.providers.get('dummy')).toBeDefined();
+        expect(nar.lm).toBeDefined();
+        expect(nar.lm.providers.get('dummy')).toBeDefined();
     });
 
     test('should handle quality scoring for translations', async () => {
@@ -118,9 +127,5 @@ describe('LM Integration Tests', () => {
             const corrected = translator.applyErrorCorrection(result);
             expect(corrected).toBeDefined();
         }).not.toThrow();
-    });
-
-    afterEach(() => {
-        // Clean up any running NAR instances if needed
     });
 });

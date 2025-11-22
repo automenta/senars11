@@ -2,12 +2,21 @@ import {NAR} from '../../../src/nar/NAR.js';
 import {DummyProvider} from '../../../src/lm/DummyProvider.js';
 
 describe('LM Integration Tests', () => {
+    let nar;
+
+    afterEach(async () => {
+        if (nar && typeof nar.dispose === 'function') {
+            await nar.dispose();
+        }
+        nar = null;
+    });
+
     test('NAR should initialize with LM when enabled in config', () => {
         const config = {
             lm: {enabled: true}
         };
 
-        const nar = new NAR(config);
+        nar = new NAR(config);
 
         expect(nar.lm).toBeDefined();
         expect(typeof nar.registerLMProvider).toBe('function');
@@ -21,7 +30,7 @@ describe('LM Integration Tests', () => {
             lm: {enabled: false}
         };
 
-        const nar = new NAR(config);
+        nar = new NAR(config);
 
         expect(nar.lm).toBeNull();
     });
@@ -31,7 +40,7 @@ describe('LM Integration Tests', () => {
             lm: {enabled: true}
         };
 
-        const nar = new NAR(config);
+        nar = new NAR(config);
         const provider = new DummyProvider({id: 'test-provider', responseTemplate: 'Response: {prompt}'});
 
         nar.registerLMProvider('test-provider', provider);
@@ -45,7 +54,7 @@ describe('LM Integration Tests', () => {
             lm: {enabled: true}
         };
 
-        const nar = new NAR(config);
+        nar = new NAR(config);
         const provider = new DummyProvider({id: 'test-provider'});
         nar.registerLMProvider('test-provider', provider);
 
@@ -63,7 +72,7 @@ describe('LM Integration Tests', () => {
             lm: {enabled: true}
         };
 
-        const nar = new NAR(config);
+        nar = new NAR(config);
         const provider = new DummyProvider({id: 'test-provider'});
         nar.registerLMProvider('test-provider', provider);
 
@@ -77,7 +86,7 @@ describe('LM Integration Tests', () => {
             lm: {enabled: false}
         };
 
-        const nar = new NAR(config);
+        nar = new NAR(config);
 
         const stats = nar.getStats();
         expect(stats.lmStats).toBeUndefined();

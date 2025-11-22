@@ -21,8 +21,8 @@ describe('NAR Integration Tests', () => {
                     await nar.input(input);
                     return [...nar.getBeliefs(), ...nar.getGoals(), ...nar.getQuestions()];
                 },
-                destroy: () => {
-                    if (nar.isRunning) nar.stop();
+                destroy: async () => {
+                    await nar.dispose();
                 }
             };
         },
