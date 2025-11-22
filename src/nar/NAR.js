@@ -411,13 +411,19 @@ export class NAR extends BaseComponent {
         try {
             await this._processPendingTasks(options.traceId);
 
-            const results = await this._streamReasoner.step();
+            // Pass options (including timeout) to stream reasoner step if needed
+            // Use a reasonable default timeout for step execution
+            const stepTimeout = options.timeout ?? 5000;
+            const results = await this._streamReasoner.step(stepTimeout);
 
             // Process all derivations through the same Input/Memory/Focus/Event process
             for (const result of results) {
                 if (result) {
+                    // IMPORTANT: This adds the derived task to Memory and Focus
                     const added = await this._inputTask(result, {traceId: options.traceId});
 
+                    // Only emit derivation event if it was successfully added (or even if duplicate?)
+                    // Emitting it always ensures visibility of reasoning effort
                     this._eventBus.emit('reasoning.derivation', {
                         derivedTask: result,
                         source: 'streamReasoner.step.method',

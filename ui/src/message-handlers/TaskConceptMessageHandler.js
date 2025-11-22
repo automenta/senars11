@@ -1,5 +1,5 @@
 import {BaseMessageHandler} from './BaseMessageHandler.js';
-import {FormattingUtils} from '/src/util/FormattingUtils.js';
+import * as FormattingUtils from '/src/util/Format.js';
 
 /**
  * Handler for task and concept related messages

@@ -1,4 +1,4 @@
-import {DisplayUtils} from '../../../util/DisplayUtils.js';
+import * as DisplayUtils from '../../../util/DisplayUtils.js';
 import { formatNumber, formatPercentage, formatFileSize, truncateText } from '../../../util/Format.js';
 import path from 'path';
 

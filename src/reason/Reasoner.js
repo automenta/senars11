@@ -203,8 +203,9 @@ export class Reasoner {
     }
 
     _processDerivation(result) {
-        // Return the derivation for centralized processing by the NAR
-        // Don't emit events or add to task manager here to maintain uniform flow
+        // If derivation filtering is needed, it should happen here or in RuleProcessor
+        // For now, we assume RuleProcessor has already filtered invalid derivations
+        // via processDerivation utility
         return result;
     }
 

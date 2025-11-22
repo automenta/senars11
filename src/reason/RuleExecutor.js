@@ -1,4 +1,4 @@
-import {mergeConfig} from './utils/common.js';
+import {mergeConfig} from '../util/common.js';
 import {logError} from './utils/error.js';
 
 /**

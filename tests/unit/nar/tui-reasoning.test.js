@@ -1,5 +1,5 @@
 import {NAR} from '../../../src/nar/NAR.js';
-import {FormattingUtils} from '../../../src/util/FormattingUtils.js';
+import * as FormattingUtils from '../../../src/util/Format.js';
 
 describe('TUIRepl NAR Reasoning with Duplicate Suppression', () => {
     let nar;

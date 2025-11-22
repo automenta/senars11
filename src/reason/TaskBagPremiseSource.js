@@ -1,6 +1,6 @@
 import {PremiseSource} from './PremiseSource.js';
 import {randomWeightedSelect} from './utils/randomWeightedSelect.js';
-import {mergeConfig, sleep} from './utils/common.js';
+import {mergeConfig, sleep} from '../util/common.js';
 import {logError, ReasonerError} from './utils/error.js';
 
 /**
@@ -21,7 +21,7 @@ export class TaskBagPremiseSource extends PremiseSource {
             targetTime: null,  // Default to current time when used
             weights: {},
             dynamic: false
-        }, samplingObjectives);
+        }, samplingObjectives || {});
 
         super(memory, defaults);
 
@@ -41,7 +41,7 @@ export class TaskBagPremiseSource extends PremiseSource {
         };
 
         // Override with any explicit weights provided
-        this.weights = mergeConfig(initialWeights, defaults.weights);
+        this.weights = mergeConfig(initialWeights, defaults.weights || {});
 
         // Performance tracking for dynamic adaptation
         this.performanceStats = {

@@ -1,4 +1,4 @@
-import {mergeConfig, processDerivation, sleep} from './utils/common.js';
+import {mergeConfig, processDerivation, sleep} from '../util/common.js';
 import {logError, ReasonerError} from './utils/error.js';
 import {Queue} from '../util/Queue.js';
 
@@ -16,7 +16,7 @@ export class RuleProcessor {
             maxChecks: 100,
             asyncWaitInterval: 10,
             termFactory: null
-        }, config);
+        }, config || {});
 
         this.asyncResultsQueue = new Queue(100);
 

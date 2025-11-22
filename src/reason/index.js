@@ -24,7 +24,7 @@ export {ResolutionStrategy} from './strategy/ResolutionStrategy.js';
 export {PrologStrategy} from './strategy/PrologStrategy.js';
 
 // Export utility functions
-export * from './utils/common.js';
+export * from '../util/common.js';
 export * from './utils/error.js';
 export * from './utils/async.js';
 export * from './utils/advanced.js';
