@@ -388,6 +388,9 @@ export class NAR extends BaseComponent {
         // Clear stream monitoring interval
         this._streamMonitoringInterval && clearInterval(this._streamMonitoringInterval) && (this._streamMonitoringInterval = null);
 
+        // Ensure reasoning state interval is cleared
+        this.disconnectFromWebSocketMonitor();
+
         // Ensure metrics monitor is stopped
         if (this._metricsMonitor && typeof this._metricsMonitor.shutdown === 'function') {
             this._metricsMonitor.shutdown();

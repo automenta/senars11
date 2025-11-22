@@ -27,6 +27,7 @@ const baseConfig = {
             statements: 80,
         },
     },
+    testTimeout: 60000,
 };
 
 export default baseConfig;

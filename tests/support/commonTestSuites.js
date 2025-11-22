@@ -215,9 +215,9 @@ export const narTestSetup = (config = {}) => {
         nar = new NAR(defaultConfig);
     });
 
-    afterEach(() => {
-        if (nar && nar.isRunning) {
-            nar.stop();
+    afterEach(async () => {
+        if (nar) {
+            await nar.dispose();
         }
     });
 

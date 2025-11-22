@@ -97,105 +97,107 @@ export class TestNAR {
         };
 
         this.nar = new NAR(config);
-        await this.nar.initialize(); // Initialize the NAR to ensure components are set up
 
-        // Process operations first
-        const expectations = [];
+        try {
+            await this.nar.initialize(); // Initialize the NAR to ensure components are set up
 
-        for (const op of this.operations) {
-            switch (op.type) {
-                case 'input':
-                    try {
-                        // Format input with truth values: "term. %freq;conf%"
-                        const inputStr = `${op.termStr}. %${op.freq};${op.conf}%`;
-                        await this.nar.input(inputStr);
-                    } catch (error) {
-                        this.logger?.warn(`Input failed: ${op.termStr}`, error);
-                    }
-                    break;
+            // Process operations first
+            const expectations = [];
 
-                case 'run':
-                    // For stream reasoner, run iterative steps with enhanced processing
-                    for (let i = 0; i < op.cycles; i++) {
-                        await this.nar.step();
-                    }
-                    break;
+            for (const op of this.operations) {
+                switch (op.type) {
+                    case 'input':
+                        try {
+                            // Format input with truth values: "term. %freq;conf%"
+                            const inputStr = `${op.termStr}. %${op.freq};${op.conf}%`;
+                            await this.nar.input(inputStr);
+                        } catch (error) {
+                            this.logger?.warn(`Input failed: ${op.termStr}`, error);
+                        }
+                        break;
 
-                case 'expect':
-                    expectations.push(op);
-                    break;
-            }
-        }
+                    case 'run':
+                        // For stream reasoner, run iterative steps with enhanced processing
+                        for (let i = 0; i < op.cycles; i++) {
+                            await this.nar.step();
+                        }
+                        break;
 
-        // Run additional reasoning cycles after all inputs to allow for inference
-        // Execute multiple steps to make sure processing happens
-        if (this.nar.streamReasoner) {
-            for (let i = 0; i < 50; i++) {  // Run additional steps to allow for derivations
-                await this.nar.step();
-            }
-        }
-
-        // Collect tasks emitted by the system
-        let collectedTasks = [];
-
-        // Get tasks from memory and focus
-        if (this.nar.memory) {
-            collectedTasks = this.nar.memory.getAllConcepts().flatMap(c => c.getAllTasks());
-        }
-
-        // Also check focus for tasks that might not be in memory yet
-        if (this.nar._focus) {
-            const focusTasks = this.nar._focus.getTasks(1000);
-            collectedTasks = [...collectedTasks, ...focusTasks];
-        }
-
-        // Get all tasks from memory and focus to catch derived results
-        let allTasks = [...collectedTasks]; // Start with collected tasks
-
-        // Also get tasks from memory and focus to ensure nothing is missed
-        if (this.nar.memory) {
-            const memoryTasks = this.nar.memory.getAllConcepts().flatMap(c => c.getAllTasks());
-            allTasks = [...allTasks, ...memoryTasks];
-        }
-
-        // Also check focus for tasks that might not be in memory yet
-        if (this.nar._focus) {
-            const focusTasks = this.nar._focus.getTasks(1000);
-            allTasks = [...allTasks, ...focusTasks];
-        }
-
-        // Remove duplicates based on term and stamp
-        const uniqueTasks = [];
-        const seen = new Set();
-
-        for (const task of allTasks) {
-            const key = task.term?.toString() + (task.stamp?.id || '');
-            if (!seen.has(key)) {
-                seen.add(key);
-                uniqueTasks.push(task);
-            }
-        }
-
-        allTasks = uniqueTasks;
-
-        // Validate expectations
-        for (const exp of expectations) {
-            const {matcher, shouldExist} = exp;
-
-            let found = false;
-            for (const task of allTasks) {
-                if (await matcher.matches(task)) {
-                    found = true;
-                    break;
+                    case 'expect':
+                        expectations.push(op);
+                        break;
                 }
             }
 
-            if ((shouldExist && !found) || (!shouldExist && found)) {
-                const taskList = allTasks.length
-                    ? allTasks.map(t => `  - ${t.toString()}`).join('\n')
-                    : '  (None)';
+            // Run additional reasoning cycles after all inputs to allow for inference
+            // Execute multiple steps to make sure processing happens
+            if (this.nar.streamReasoner) {
+                for (let i = 0; i < 50; i++) {  // Run additional steps to allow for derivations
+                    await this.nar.step();
+                }
+            }
 
-                throw new Error(`
+            // Collect tasks emitted by the system
+            let collectedTasks = [];
+
+            // Get tasks from memory and focus
+            if (this.nar.memory) {
+                collectedTasks = this.nar.memory.getAllConcepts().flatMap(c => c.getAllTasks());
+            }
+
+            // Also check focus for tasks that might not be in memory yet
+            if (this.nar._focus) {
+                const focusTasks = this.nar._focus.getTasks(1000);
+                collectedTasks = [...collectedTasks, ...focusTasks];
+            }
+
+            // Get all tasks from memory and focus to catch derived results
+            let allTasks = [...collectedTasks]; // Start with collected tasks
+
+            // Also get tasks from memory and focus to ensure nothing is missed
+            if (this.nar.memory) {
+                const memoryTasks = this.nar.memory.getAllConcepts().flatMap(c => c.getAllTasks());
+                allTasks = [...allTasks, ...memoryTasks];
+            }
+
+            // Also check focus for tasks that might not be in memory yet
+            if (this.nar._focus) {
+                const focusTasks = this.nar._focus.getTasks(1000);
+                allTasks = [...allTasks, ...focusTasks];
+            }
+
+            // Remove duplicates based on term and stamp
+            const uniqueTasks = [];
+            const seen = new Set();
+
+            for (const task of allTasks) {
+                const key = task.term?.toString() + (task.stamp?.id || '');
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    uniqueTasks.push(task);
+                }
+            }
+
+            allTasks = uniqueTasks;
+
+            // Validate expectations
+            for (const exp of expectations) {
+                const {matcher, shouldExist} = exp;
+
+                let found = false;
+                for (const task of allTasks) {
+                    if (await matcher.matches(task)) {
+                        found = true;
+                        break;
+                    }
+                }
+
+                if ((shouldExist && !found) || (!shouldExist && found)) {
+                    const taskList = allTasks.length
+                        ? allTasks.map(t => `  - ${t.toString()}`).join('\n')
+                        : '  (None)';
+
+                    throw new Error(`
           ==================== TEST FAILED ====================
           Expectation: ${shouldExist ? 'FIND' : 'NOT FIND'} a task matching criteria.
           Criteria: Term="${matcher.termFilter}", MinFreq="${matcher.minFreq}", MinConf="${matcher.minConf}"
@@ -204,16 +206,17 @@ export class TestNAR {
 ${taskList}
           ---------------------------------------------------
         `);
+                }
             }
-        }
-
-        // Properly dispose of the NAR to avoid Jest teardown issues
-        if (this.nar) {
-            try {
-                await this.nar.dispose();
-            } catch (disposeError) {
-                // Log disposal errors but don't fail the test
-                console.warn('Warning during NAR disposal:', disposeError.message);
+        } finally {
+            // Properly dispose of the NAR to avoid Jest teardown issues
+            if (this.nar) {
+                try {
+                    await this.nar.dispose();
+                } catch (disposeError) {
+                    // Log disposal errors but don't fail the test
+                    console.warn('Warning during NAR disposal:', disposeError.message);
+                }
             }
         }
 
