@@ -393,6 +393,11 @@ export class NAR extends BaseComponent {
             this._metricsMonitor.shutdown();
         }
 
+        // Ensure reasoning about reasoning is stopped
+        if (this._reasoningAboutReasoning && typeof this._reasoningAboutReasoning.shutdown === 'function') {
+            this._reasoningAboutReasoning.shutdown();
+        }
+
         this._stopComponentsAsync();
 
         this._eventBus.emit('system.stopped', {timestamp: Date.now()}, {traceId: options.traceId});
@@ -469,6 +474,11 @@ export class NAR extends BaseComponent {
         // Ensure metrics monitor is stopped
         if (this._metricsMonitor && typeof this._metricsMonitor.shutdown === 'function') {
             this._metricsMonitor.shutdown();
+        }
+
+        // Ensure reasoning about reasoning is stopped
+        if (this._reasoningAboutReasoning && typeof this._reasoningAboutReasoning.shutdown === 'function') {
+            this._reasoningAboutReasoning.shutdown();
         }
 
         const success = await this._componentManager.disposeAll();

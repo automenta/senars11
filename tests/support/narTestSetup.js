@@ -29,9 +29,9 @@ export class StandardNARTestSetup {
     /**
      * Teardown function to be used in afterEach
      */
-    teardown() {
-        if (this.nar && this.nar.isRunning) {
-            this.nar.stop();
+    async teardown() {
+        if (this.nar) {
+            await this.nar.dispose();
         }
     }
 
@@ -64,8 +64,8 @@ export const createStandardNARTestSetup = (config = {}) => {
         await testSetup.setup();
     });
 
-    afterEach(() => {
-        testSetup.teardown();
+    afterEach(async () => {
+        await testSetup.teardown();
     });
 
     return testSetup;
