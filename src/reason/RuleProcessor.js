@@ -1,4 +1,5 @@
-import {mergeConfig, processDerivation, sleep} from '../util/common.js';
+import {mergeConfig, sleep} from '../util/common.js';
+import {processDerivation} from './ReasoningUtils.js';
 import {logError, ReasonerError} from './utils/error.js';
 import {Queue} from '../util/Queue.js';
 

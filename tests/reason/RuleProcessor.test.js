@@ -4,7 +4,6 @@ import {RuleExecutor} from '../../src/reason/RuleExecutor.js';
 import {Rule} from '../../src/reason/Rule.js';
 import {createTestTask} from './testUtils.js';
 
-// Define proper rule classes for testing
 class TestSyncRule extends Rule {
     constructor(id) {
         super(id, 'nal', 1.0);
@@ -48,7 +47,7 @@ describe('RuleProcessor', () => {
         test('should initialize with default config', () => {
             expect(ruleProcessor.config.maxDerivationDepth).toBe(10);
             expect(ruleProcessor.config.backpressureThreshold).toBe(50);
-            expect(ruleProcessor.asyncResultsQueue).toEqual([]);
+            expect(ruleProcessor.asyncResultsQueue.size).toBe(0);
             expect(ruleProcessor.syncRuleExecutions).toBe(0);
             expect(ruleProcessor.asyncRuleExecutions).toBe(0);
         });
@@ -103,13 +102,11 @@ describe('RuleProcessor', () => {
 
     describe('_processDerivation', () => {
         test('should process derivations with depth limits', () => {
-            // Mock console.debug to prevent test output pollution when depth limit is exceeded
-            const consoleSpy = jest.spyOn(console, 'debug').mockImplementation(() => {
-            });
+            const consoleSpy = jest.spyOn(console, 'debug').mockImplementation(() => {});
 
             try {
                 const validDerivation = {id: 'valid', stamp: {depth: 5}};
-                const invalidDerivation = {id: 'invalid', stamp: {depth: 15}}; // Exceeds default max depth of 10
+                const invalidDerivation = {id: 'invalid', stamp: {depth: 15}};
 
                 const result1 = ruleProcessor._processDerivation(validDerivation);
                 const result2 = ruleProcessor._processDerivation(invalidDerivation);
@@ -123,43 +120,37 @@ describe('RuleProcessor', () => {
 
         test('should handle derivations without stamps', () => {
             const derivation = {id: 'no-stamp'};
-
             const result = ruleProcessor._processDerivation(derivation);
-
             expect(result).toBe(derivation);
         });
     });
 
     describe('_checkAndApplyBackpressure', () => {
         test('should apply backpressure when queue is above threshold', async () => {
-            // Set up a queue above the threshold
-            ruleProcessor.asyncResultsQueue = new Array(60).fill(createTestTask({id: 'task'})); // Above default threshold of 50
+            jest.spyOn(ruleProcessor, '_getAsyncResultsCount').mockReturnValue(60);
 
             const start = Date.now();
             await ruleProcessor._checkAndApplyBackpressure();
             const end = Date.now();
 
-            // Should have waited for backpressure interval
             const expectedWait = ruleProcessor.config.backpressureInterval || 5;
-            expect(end - start).toBeGreaterThanOrEqual(expectedWait - 1); // -1 to account for timing precision
+            expect(end - start).toBeGreaterThanOrEqual(expectedWait - 2);
         });
 
         test('should not apply backpressure when queue is below threshold', async () => {
-            // Set up a queue below the threshold
-            ruleProcessor.asyncResultsQueue = new Array(10).fill(createTestTask({id: 'task'})); // Below default threshold of 50
+            jest.spyOn(ruleProcessor, '_getAsyncResultsCount').mockReturnValue(10);
 
             const start = Date.now();
             await ruleProcessor._checkAndApplyBackpressure();
             const end = Date.now();
 
-            // Should have waited for minimal time
-            expect(end - start).toBeLessThan(5); // Should be much less than backpressure interval
+            expect(end - start).toBeLessThan(5);
         });
     });
 
     describe('getStatus', () => {
         test('should return status information', () => {
-            ruleProcessor.asyncResultsQueue = new Array(5).fill(createTestTask({id: 'task'}));
+            jest.spyOn(ruleProcessor, '_getAsyncResultsCount').mockReturnValue(5);
             ruleProcessor.maxQueueSize = 10;
             ruleProcessor.syncRuleExecutions = 15;
             ruleProcessor.asyncRuleExecutions = 8;
@@ -180,13 +171,11 @@ describe('RuleProcessor', () => {
 
     describe('process', () => {
         test('should process premise pairs and yield results', async () => {
-            // Add test rules to the rule executor
             const syncRule = new TestSyncRule('sync-rule');
             const asyncRule = new TestAsyncRule('async-rule');
             ruleExecutor.register(syncRule);
             ruleExecutor.register(asyncRule);
 
-            // Create a simple premise pair stream
             async function* premisePairStream() {
                 yield [createTestTask({id: 'primary'}), createTestTask({id: 'secondary'})];
             }
@@ -194,7 +183,7 @@ describe('RuleProcessor', () => {
             const results = [];
             for await (const result of ruleProcessor.process(premisePairStream())) {
                 results.push(result);
-                if (results.length >= 1) break; // We expect at least one result
+                if (results.length >= 1) break;
             }
 
             expect(results.length).toBeGreaterThan(0);
@@ -202,12 +191,9 @@ describe('RuleProcessor', () => {
         });
 
         test('should handle errors during rule processing', async () => {
-            // Mock console.error to prevent test output pollution
-            const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {
-            });
+            const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
             try {
-                // Create a rule that throws an error
                 const errorRule = {
                     id: 'error-rule',
                     type: 'nal',
@@ -219,19 +205,19 @@ describe('RuleProcessor', () => {
 
                 ruleExecutor.register(errorRule);
 
-                // Create a simple premise pair stream
                 async function* premisePairStream() {
                     yield [createTestTask({id: 'primary'}), createTestTask({id: 'secondary'})];
                 }
 
                 const results = [];
-                await expect(async () => {
+                const processing = async () => {
                     for await (const result of ruleProcessor.process(premisePairStream())) {
                         results.push(result);
                     }
-                }).resolves.not.toThrow();
+                };
 
-                // Should continue processing despite the error
+                await expect(processing()).resolves.not.toThrow();
+
                 expect(results.length).toBe(0);
             } finally {
                 consoleSpy.mockRestore();

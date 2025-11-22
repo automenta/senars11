@@ -1,10 +1,7 @@
-import { formatNumberFixed } from './Format.js';
-
 export const clamp = (val, min, max) => Math.max(min, Math.min(max, val));
 export const normalize = (val, max) => Math.min(val / max, 1);
 export const isBetween = (val, min, max) => val >= min && val <= max;
 
-// Reverted to original signature for compatibility
 export const safeExecute = (fn, ...args) => {
     try {
         return fn(...args);
@@ -13,7 +10,6 @@ export const safeExecute = (fn, ...args) => {
     }
 };
 
-// New version with default value support
 export const safeExecuteWithDefault = (fn, defaultValue, ...args) => {
     try {
         return typeof fn === 'function' ? fn(...args) : defaultValue;
@@ -32,24 +28,8 @@ export const deepFreeze = obj => {
     return freeze(obj);
 };
 
-export const clampAndFreeze = (obj, min = 0, max = 1) =>
-    typeof obj === 'number' ? freeze(clamp(obj, min, max)) :
-        freeze(Object.fromEntries(Object.entries(obj).map(([k, v]) =>
-            [k, typeof v === 'number' ? clamp(v, min, max) : v])));
-
-// Original shallow mergeConfig
-export const shallowMergeConfig = (base, ...overrides) =>
-    freeze(Object.assign({}, base, ...overrides));
-
-/**
- * Merge configuration objects with defaults
- * Supports both (defaults, overrides) and (defaults, ...overrides) patterns.
- * Uses deep merge for nested objects.
- */
 export const mergeConfig = (defaults, ...overrides) => {
-    // Handle case where defaults is undefined/null
     if (!defaults) {
-        // If multiple overrides, merge them sequentially
         if (overrides.length > 0) {
             return overrides.reduce((acc, curr) => mergeConfig(acc, curr), {});
         }
@@ -108,7 +88,7 @@ export const getNestedProperty = (obj, path, defaultValue = undefined) => {
 
     return current !== undefined ? current : defaultValue;
 };
-// Alias for backward compatibility
+
 export const safeGet = getNestedProperty;
 
 export const setNestedProperty = (obj, path, value) => {
@@ -142,8 +122,6 @@ export const deepClone = (obj) => {
     }
     return obj;
 };
-
-export const formatNumber = (num, decimals = 2) => formatNumberFixed(num, decimals);
 
 export const safeAsync = async (asyncFn, defaultValue = null) => {
     try {
@@ -182,26 +160,4 @@ export const withTimeout = async (promise, ms, message = 'Operation timed out') 
         promise,
         timeout(ms, message)
     ]);
-};
-
-export const processDerivation = (result, maxDerivationDepth) => {
-    if (!result?.stamp) {
-        // console.log('DEBUG: processDerivation - no stamp');
-        return result;
-    }
-
-    try {
-        const derivationDepth = result.stamp.depth ?? 0;
-
-        if (derivationDepth > maxDerivationDepth) {
-            // console.log(`DEBUG: processDerivation - depth exceeded: ${derivationDepth} > ${maxDerivationDepth}`);
-            console.debug(`Discarding derivation - exceeds max depth (${derivationDepth} > ${maxDerivationDepth})`);
-            return null;
-        }
-        // console.log(`DEBUG: processDerivation - accepted depth ${derivationDepth}`);
-        return result;
-    } catch (error) {
-        console.debug('Error processing derivation:', error.message);
-        return null;
-    }
 };

@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import {FileAnalyzer} from '../../../util/FileAnalyzer.js';
+import {collectTestFiles, isExcludedPath} from '../../../util/FileUtils.js';
 import {BaseAnalyzer} from './BaseAnalyzer.js';
 
 export class FeatureSpecificationAnalyzer extends BaseAnalyzer {
@@ -167,7 +167,7 @@ export class FeatureSpecificationAnalyzer extends BaseAnalyzer {
     }
 
     async _mapFeaturesToTests() {
-        const testFiles = FileAnalyzer.collectTestFiles();
+        const testFiles = collectTestFiles();
         const connections = [];
 
         for (const testFile of testFiles) {
@@ -221,7 +221,7 @@ export class FeatureSpecificationAnalyzer extends BaseAnalyzer {
                 const relativePath = path.relative('.', fullPath);
 
                 // Skip excluded files using global exclusion
-                if (FileUtils.isExcludedPath(relativePath)) {
+                if (isExcludedPath(relativePath)) {
                     this.log(`Excluding file from feature mapping: ${relativePath}`, 'warn');
                     continue;
                 }

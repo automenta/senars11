@@ -1,6 +1,8 @@
 /**
  * The main Reasoner class that manages the continuous reasoning pipeline.
  */
+import {processDerivation} from './ReasoningUtils.js';
+
 export class Reasoner {
     /**
      * @param {PremiseSource} premiseSource - The source of premises
@@ -92,17 +94,7 @@ export class Reasoner {
 
         try {
             const startTime = Date.now();
-            const focusTasks = this.premiseSource.focusComponent?.getTasks(1000) ?? []; // Get all tasks for fair sampling
-
-            /*
-            console.log(`[STEP] Processing ${focusTasks.length} tasks in focus`);
-            for (let i = 0; i < focusTasks.length; i++) {
-                const termName = focusTasks[i].term?._name || focusTasks[i].term || 'unknown';
-                const priority = focusTasks[i].budget?.priority || 0;
-                console.log(`[STEP] Task ${i}: ${termName} (priority: ${priority})`);
-            }
-            */
-
+            const focusTasks = this.premiseSource.focusComponent?.getTasks(1000) ?? [];
 
             // Create a set to track processed premise pairs to avoid duplicates
             const processedPairs = new Set();
@@ -114,31 +106,22 @@ export class Reasoner {
                     const primaryPremise = focusTasks[i];
                     const secondaryPremise = focusTasks[j];
 
-                    // Create a unique identifier for this premise pair to prevent duplicates
-                    // Sort terms to ensure same pair with different order is treated as one
                     const primaryTermId = primaryPremise.term?._id || primaryPremise.term?._name || primaryPremise.term || 'unknown';
                     const secondaryTermId = secondaryPremise.term?._id || secondaryPremise.term?._name || secondaryPremise.term || 'unknown';
 
-                    // Create sorted pair ID to avoid duplicate processing
                     const pairId = primaryTermId < secondaryTermId
                         ? `${primaryTermId}-${secondaryTermId}`
                         : `${secondaryTermId}-${primaryTermId}`;
 
                     if (processedPairs.has(pairId)) {
-                        continue; // Skip if this pair has already been processed
+                        continue;
                     }
 
                     processedPairs.add(pairId);
 
-                    const primaryTerm = primaryPremise.term?._name || primaryPremise.term || 'unknown';
-                    const secondaryTerm = secondaryPremise.term?._name || secondaryPremise.term || 'unknown';
-                    //console.log(`[STEP] Premise pair: [${primaryTerm}] + [${secondaryTerm}]`);
-
                     try {
                         const candidateRules = this.ruleProcessor.ruleExecutor.getCandidateRules(primaryPremise, secondaryPremise);
 
-                        // Process pairing (primary -> secondary)
-                        // The rules themselves handle both directions internally via their canApply method
                         const forwardResults = await this._processRuleBatch(
                             candidateRules,
                             primaryPremise,
@@ -148,7 +131,7 @@ export class Reasoner {
                         );
                         results.push(...forwardResults.filter(Boolean));
 
-                        if (Date.now() - startTime > timeoutMs) continue; // Don't break on result count, continue for fair sampling
+                        if (Date.now() - startTime > timeoutMs) continue;
                     } catch (error) {
                         console.debug('Error processing premise pair:', error.message);
                     }
@@ -160,7 +143,6 @@ export class Reasoner {
             console.debug('Error in step method:', error.message);
         }
 
-        //console.log(`[STEP] Generated ${results.length} results`);
         return results;
     }
 
@@ -179,7 +161,7 @@ export class Reasoner {
                 const ruleResults = this.ruleProcessor.ruleExecutor.executeRule(rule, primaryPremise, secondaryPremise, ruleContext);
 
                 for (const result of ruleResults) {
-                    const processedResult = this._processDerivation(result);
+                    const processedResult = processDerivation(result, this.config.maxDerivationDepth);
                     if (processedResult) results.push(processedResult);
                 }
             }
@@ -202,13 +184,6 @@ export class Reasoner {
         return (rule.type ?? '').toLowerCase().includes('nal');
     }
 
-    _processDerivation(result) {
-        // If derivation filtering is needed, it should happen here or in RuleProcessor
-        // For now, we assume RuleProcessor has already filtered invalid derivations
-        // via processDerivation utility
-        return result;
-    }
-
     async _cpuThrottle() {
         if (this.config.cpuThrottleInterval > 0) {
             return new Promise(resolve => setTimeout(resolve, this.config.cpuThrottleInterval));
@@ -221,7 +196,7 @@ export class Reasoner {
                 if (!this.isRunning) break;
 
                 const startTime = Date.now();
-                this._processDerivation(derivation);
+                // Derivation is already processed by RuleProcessor stream
                 this._updateMetrics(startTime);
 
                 if (this.metrics.totalDerivations % 50 === 0) {
@@ -309,12 +284,6 @@ export class Reasoner {
 
         const baseBackpressureInterval = this.config.backpressureInterval ?? 10;
         this.config.backpressureInterval = Math.max(1, baseBackpressureInterval / adjustmentFactor);
-    }
-
-    _processDerivation(derivation) {
-        // Return the derivation for centralized processing by the NAR
-        // Don't emit events or add to task manager here to maintain uniform flow
-        return derivation;
     }
 
     getMetrics() {

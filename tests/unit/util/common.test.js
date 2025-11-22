@@ -2,7 +2,6 @@ import {jest} from '@jest/globals';
 import {
     safeGet,
     deepClone,
-    formatNumber,
     safeAsync
 } from '../../../src/util/common.js';
 
@@ -51,17 +50,6 @@ describe('Common Utils', () => {
             const clone = deepClone(date);
             expect(clone).toEqual(date);
             expect(clone).not.toBe(date);
-        });
-    });
-
-    describe('formatNumber', () => {
-        test('formats number to decimals', () => {
-            expect(formatNumber(1.2345, 2)).toBe('1.23');
-        });
-
-        test('handles non-numbers', () => {
-            expect(formatNumber(null)).toBe('0');
-            expect(formatNumber('abc')).toBe('abc');
         });
     });
 

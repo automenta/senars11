@@ -1,8 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 import * as dfd from 'danfojs';
-import {CoverageUtils} from '../../../util/CoverageUtils.js';
-import {FileUtils} from '../../../util/FileUtils.js';
+import {findCoverageFile, generateCoverage, analyzeCoverage} from '../../../util/Coverage.js';
+import {readJSONFile} from '../../../util/FileUtils.js';
 import {BaseAnalyzer} from './BaseAnalyzer.js';
 
 const TOP_N = 20;
@@ -12,17 +12,17 @@ export class CoverageAnalyzer extends BaseAnalyzer {
         this.log('Collecting Coverage Data...');
 
         // First, try to find existing coverage data
-        let coverageFile = CoverageUtils.findCoverageFile();
+        let coverageFile = findCoverageFile();
 
         if (!coverageFile) {
             this.log('No existing coverage data found, generating...');
-            const generated = await CoverageUtils.generateCoverage();
+            const generated = await generateCoverage();
             if (!generated) {
                 this.log('❌ Failed to generate coverage data', 'error');
                 return {available: false, error: 'Could not generate coverage data'};
             }
 
-            coverageFile = CoverageUtils.findCoverageFile();
+            coverageFile = findCoverageFile();
             if (!coverageFile) {
                 this.log('❌ Coverage file not found after generation', 'error');
                 return {available: false, error: 'Coverage file not found after generation'};
@@ -36,7 +36,7 @@ export class CoverageAnalyzer extends BaseAnalyzer {
             return {available: false, error: 'Coverage summary file not found'};
         }
 
-        const coverageSummary = FileUtils.readJSONFile(summaryPath);
+        const coverageSummary = readJSONFile(summaryPath);
         if (!coverageSummary || !coverageSummary.total) {
             this.log('❌ Invalid coverage summary format', 'error');
             return {available: false, error: 'Invalid coverage summary format'};
@@ -62,7 +62,7 @@ export class CoverageAnalyzer extends BaseAnalyzer {
             }
         };
 
-        coverageStats.fileAnalysis = FileUtils.analyzeCoverageByFile(this.verbose);
+        coverageStats.fileAnalysis = analyzeCoverage(this.verbose);
 
         // Additional detailed analysis
         coverageStats.detailedAnalysis = this._analyzeDetailedCoverage();
@@ -80,7 +80,7 @@ export class CoverageAnalyzer extends BaseAnalyzer {
             };
         }
 
-        const coverageData = FileUtils.readJSONFile(finalCoveragePath);
+        const coverageData = readJSONFile(finalCoveragePath);
         if (!coverageData) {
             return {
                 lowCoverageFiles: [],

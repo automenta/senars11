@@ -2,8 +2,8 @@ import {spawnSync} from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import * as dfd from 'danfojs';
-import {FileAnalyzer, TestUtils} from '../../../util/FileAnalyzer.js';
-import {FileUtils} from '../../../util/FileUtils.js';
+import {collectTestFiles, isExcludedPath} from '../../../util/FileUtils.js';
+import {runTestsAndGetCoverage} from '../../../util/Testing.js';
 import {BaseAnalyzer} from './BaseAnalyzer.js';
 
 const TOP_N = 20;
@@ -14,7 +14,7 @@ export class TestAnalyzer extends BaseAnalyzer {
 
         return await this.safeAnalyze(async () => {
             // Try to run tests with coverage
-            const testResult = await TestUtils.runTestsAndGetCoverage();
+            const testResult = await runTestsAndGetCoverage();
 
             if (testResult && (testResult.status === 0 || testResult.status === 1)) {
                 const output = testResult.stdout || testResult.stderr;
@@ -61,7 +61,7 @@ export class TestAnalyzer extends BaseAnalyzer {
             testDuration: parsedResult.endTime ? (parsedResult.endTime - parsedResult.startTime) : 'unknown',
             individualTestResults,
             slowestTests: this.getSlowestTests(individualTestResults),
-            testFiles: FileAnalyzer.collectTestFiles(),
+            testFiles: collectTestFiles(),
             failureAnalysis: this._analyzeFailures(individualTestResults),
             coverageAnalysis
         };
@@ -283,11 +283,6 @@ export class TestAnalyzer extends BaseAnalyzer {
             }));
     }
 
-    /**
-     * Get detailed analysis of failing test contributors with causal analysis
-     * @param {Array} individualTestResults - Array of individual test results
-     * @returns {Array} Detailed analysis of failing test contributors
-     */
     getDetailedFailingTestContributors(individualTestResults) {
         if (!this.testToSourceFilesMap || this.testToSourceFilesMap.size === 0) return [];
 
@@ -460,11 +455,6 @@ export class TestAnalyzer extends BaseAnalyzer {
             }));
     }
 
-    /**
-     * Get detailed analysis of passing test supporters with performance metrics
-     * @param {Array} individualTestResults - Array of individual test results
-     * @returns {Array} Detailed analysis of passing test supporters
-     */
     getDetailedPassingTestSupporters(individualTestResults) {
         if (!this.testToSourceFilesMap || this.testToSourceFilesMap.size === 0) return [];
 
@@ -522,11 +512,6 @@ export class TestAnalyzer extends BaseAnalyzer {
             }));
     }
 
-    /**
-     * Enhance test results with coverage data to track which source files are associated with each test
-     * @param {Array} individualTestResults - Array of individual test results
-     * @returns {Array} Enhanced test results with coverage data
-     */
     async enhanceWithCoverageData(individualTestResults) {
         this.log('Enhancing test results with detailed coverage data...');
         const testToSourceFilesMap = new Map();
@@ -558,7 +543,7 @@ export class TestAnalyzer extends BaseAnalyzer {
                         const coveredFiles = Object.keys(result.coverageMap);
                         const sourceFiles = coveredFiles
                             .map(f => path.relative(process.cwd(), f))
-                            .filter(f => f.startsWith('src' + path.sep) && !FileUtils.isExcludedPath(f));
+                            .filter(f => f.startsWith('src' + path.sep) && !isExcludedPath(f));
 
                         const testsInFile = individualTestResults.filter(t => t.suite === testFile);
                         for (const test of testsInFile) {
@@ -594,7 +579,6 @@ export class TestAnalyzer extends BaseAnalyzer {
     }
 
     async _runFallbackTest() {
-        // Try to run the direct jest command first (similar to what the main method does)
         const jestResult = spawnSync('npx', ['jest', '--json'], {
             cwd: process.cwd(),
             timeout: 180000,
@@ -607,7 +591,7 @@ export class TestAnalyzer extends BaseAnalyzer {
             }
         });
 
-        if (jestResult.status === 0 || jestResult.status === 1) { // 1 might mean tests ran but had failures
+        if (jestResult.status === 0 || jestResult.status === 1) {
             const output = jestResult.stdout;
             if (output) {
                 try {
@@ -622,7 +606,6 @@ export class TestAnalyzer extends BaseAnalyzer {
             }
         }
 
-        // If the direct jest command didn't work, try npm test but clean the output
         const altTestResult = spawnSync('npm', ['test', '--silent', '--', '--json'], {
             cwd: process.cwd(),
             timeout: 120000,
@@ -643,8 +626,6 @@ export class TestAnalyzer extends BaseAnalyzer {
             }
 
             try {
-                // Try to extract JSON from mixed output by finding the JSON part
-                // Look for the opening brace and match the closing brace
                 const jsonMatch = output.match(/\{[\s\S]*\}/);
                 if (jsonMatch) {
                     const jsonStr = jsonMatch[0];
@@ -654,7 +635,6 @@ export class TestAnalyzer extends BaseAnalyzer {
                         return this._buildTestResult(altTestResult, fallbackParsed, individualTestResults);
                     }
                 } else {
-                    // If we can't find JSON in the output, try parsing the whole thing (fallback)
                     const fallbackParsed = JSON.parse(output.trim());
                     if (fallbackParsed.testResults) {
                         const individualTestResults = this.extractIndividualTestResults(fallbackParsed.testResults);
@@ -663,7 +643,6 @@ export class TestAnalyzer extends BaseAnalyzer {
                 }
             } catch (parseError) {
                 this.log('❌ Fallback test result parsing failed:', 'error', {error: parseError.message});
-                // Log the actual output for debugging purposes
                 this.log('🔍 Actual output that failed to parse:', 'debug', {output: output.substring(0, 200) + '...'});
             }
         }
@@ -679,7 +658,7 @@ export class TestAnalyzer extends BaseAnalyzer {
             failedTests: 0,
             skippedTests: 0,
             testSuites: 0,
-            testFiles: FileAnalyzer.collectTestFiles(),
+            testFiles: collectTestFiles(),
             error: errorMsg
         };
     }
@@ -699,7 +678,6 @@ export class TestAnalyzer extends BaseAnalyzer {
 
         for (const testSuite of testResultsArray) {
             const suiteName = testSuite.name || testSuite.testFilePath;
-            // Determine the directory from suite name
             const testDirectory = testSuite.testFilePath ? path.dirname(testSuite.testFilePath) : (suiteName ? path.dirname(suiteName) : '');
 
             if (testSuite.assertionResults) {
@@ -709,7 +687,7 @@ export class TestAnalyzer extends BaseAnalyzer {
                         status: testResult.status,
                         duration: testResult.duration || 0,
                         suite: suiteName,
-                        directory: testDirectory,  // Add directory information
+                        directory: testDirectory,
                         ancestorTitles: testResult.ancestorTitles || [],
                         failureMessages: testResult.failureMessages || [],
                         location: testResult.location || null,
@@ -728,10 +706,8 @@ export class TestAnalyzer extends BaseAnalyzer {
         if (!individualTestResults || individualTestResults.length === 0) return [];
 
         try {
-            // Use danfojs for test analysis
             const testDf = new dfd.DataFrame(individualTestResults);
 
-            // Filter tests with duration > 0
             const durationValues = testDf['duration'].values;
             const validIndices = [];
             for (let i = 0; i < durationValues.length; i++) {
@@ -741,13 +717,9 @@ export class TestAnalyzer extends BaseAnalyzer {
             }
 
             if (validIndices.length > 0) {
-                // Create array of valid tests with indices for danfojs operations
                 const validTests = validIndices.map(i => individualTestResults[i]);
-
-                // Sort by duration manually since danfojs doesn't have direct sort
                 const sortedValidTests = [...validTests].sort((a, b) => b.duration - a.duration);
 
-                // Get top N slowest tests
                 const slowestTests = sortedValidTests.slice(0, TOP_N).map(test => ({
                     name: test.name,
                     duration: test.duration,
@@ -756,7 +728,6 @@ export class TestAnalyzer extends BaseAnalyzer {
                     status: test.status
                 }));
 
-                // Group by directory and sort within each group
                 const testsByDirectory = {};
                 for (const test of validTests) {
                     if (!testsByDirectory[test.directory]) {
@@ -765,7 +736,6 @@ export class TestAnalyzer extends BaseAnalyzer {
                     testsByDirectory[test.directory].push(test);
                 }
 
-                // Sort each directory's tests by duration and take top 3
                 for (const [dir, tests] of Object.entries(testsByDirectory)) {
                     testsByDirectory[dir] = tests.sort((a, b) => b.duration - a.duration).slice(0, 3)
                         .map(test => ({
@@ -784,17 +754,15 @@ export class TestAnalyzer extends BaseAnalyzer {
             }
 
             return {
-                all: slowestTests,
-                byDirectory: testsByDirectory
+                all: [],
+                byDirectory: {}
             };
         } catch (error) {
             this.log(`⚠️ Error processing tests with danfojs: ${error.message}`, 'warn');
-            // Fallback to original implementation
             const sortedTests = [...individualTestResults]
                 .filter(test => test.duration && test.duration > 0)
                 .sort((a, b) => b.duration - a.duration);
 
-            // Calculate slowest tests by directory
             const testsByDirectory = {};
             for (const test of individualTestResults) {
                 if (test.duration > 0) {
@@ -808,7 +776,7 @@ export class TestAnalyzer extends BaseAnalyzer {
             const slowestTestsByDir = {};
             for (const [dir, tests] of Object.entries(testsByDirectory)) {
                 const sortedDirTests = tests.sort((a, b) => b.duration - a.duration);
-                slowestTestsByDir[dir] = sortedDirTests.slice(0, 3); // Top 3 slowest per directory
+                slowestTestsByDir[dir] = sortedDirTests.slice(0, 3);
             }
 
             return {
