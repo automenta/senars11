@@ -1,16 +1,11 @@
 module.exports = {
     testEnvironment: 'node',
     testPathIgnorePatterns: [
-        'v8/.*',
-        'v9/.*',
         'ui/',
-        'ui-react-legacy/',
-        'ui-vanilla-legacy/',
         'exp'
     ],
     modulePathIgnorePatterns: [
-        '<rootDir>/ui/',
-        '<rootDir>/ui-react-legacy/'
+        '<rootDir>/ui/'
     ],
     transform: {
         '^.+\\.js$': 'babel-jest',

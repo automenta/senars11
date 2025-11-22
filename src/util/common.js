@@ -35,3 +35,44 @@ export const kebabCase = str => str.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerC
 
 export const unique = arr => [...new Set(arr)];
 export const isEmpty = arr => !arr || arr.length === 0;
+
+export const safeGet = (obj, path, defaultValue = undefined) => {
+    if (!obj || typeof obj !== 'object') return defaultValue;
+    const keys = path.split('.');
+    let current = obj;
+    for (const key of keys) {
+        if (current == null || typeof current !== 'object') return defaultValue;
+        current = current[key];
+    }
+    return current !== undefined ? current : defaultValue;
+};
+
+export const deepClone = (obj) => {
+    if (obj === null || typeof obj !== 'object') return obj;
+    if (obj instanceof Date) return new Date(obj.getTime());
+    if (obj instanceof Array) return obj.map(item => deepClone(item));
+    if (typeof obj === 'object') {
+        const cloned = {};
+        for (const key in obj) {
+            if (Object.prototype.hasOwnProperty.call(obj, key)) {
+                cloned[key] = deepClone(obj[key]);
+            }
+        }
+        return cloned;
+    }
+    return obj;
+};
+
+export const formatNumber = (num, decimals = 2) => {
+    if (typeof num !== 'number') return num?.toString() || '0';
+    return num.toFixed(decimals);
+};
+
+export const safeAsync = async (asyncFn, defaultValue = null) => {
+    try {
+        return await asyncFn();
+    } catch (error) {
+        console.error('Error in safeAsync:', error.message);
+        return defaultValue;
+    }
+};
