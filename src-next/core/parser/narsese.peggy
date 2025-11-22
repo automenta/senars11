@@ -62,10 +62,10 @@ ParenthesizedStatement
     }
 
 Operator
-  = op:("-->" / "<->" / "==>" / "<=>" / "=/>" / "=|" / "=/=" / "=" / "&&" / "||" / "&," / "|," / "-->," / "<->," / "==>," / "<=>,") { return op.endsWith(',') ? op.slice(0, -1) : op; }
+  = op:("-->" / "<->" / "==>" / "<=>" / "=/>" / "=|" / "=/=" / "^" / "=" / "&&" / "||" / "&," / "|," / "-->," / "<->," / "==>," / "<=>,") { return op.endsWith(',') ? op.slice(0, -1) : op; }
 
 InfixOperator
-  = op:("-->" / "<->" / "==>" / "<=>" / "=/>" / "=|" / "=/=" / "=" / "&&" / "||") { return op; }
+  = op:("-->" / "<->" / "==>" / "<=>" / "=/>" / "=|" / "=/=" / "^" / "=" / "&&" / "||") { return op; }
 
 Set
   = "{" _ components:TermList? _ "}" { return options.termFactory.create({ operator: '{}', components: components || [] }); }

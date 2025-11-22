@@ -7,6 +7,7 @@ export class AnalogyRule extends Rule {
     constructor() { super('Analogy'); }
 
     apply(task, belief, {termFactory}) {
+        if (!belief) return [];
         if (task.type !== TaskType.BELIEF || belief.type !== TaskType.BELIEF) return [];
         const t1 = task.term, t2 = belief.term;
 

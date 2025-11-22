@@ -83,12 +83,12 @@ export class TermFactory {
     }
 
     _buildName(op, comps) {
-        const names = comps.map(c => c.name).join(', ');
         // Simplified naming scheme - Narsese compliant
-        if (['-->', '<->', '==>', '<=>', '=', '=/>', '=|', '=/='].includes(op)) {
-            return `(${names.split(', ').join(' ' + op + ' ')})`; // (A --> B)
+        if (['-->', '<->', '==>', '<=>', '=', '=/>', '=|', '=/=', '^'].includes(op)) {
+            return `(${comps.map(c => c.name).join(' ' + op + ' ')})`; // (A --> B)
         }
         // Prefix for sets and others
+        const names = comps.map(c => c.name).join(', ');
         if (op === '{}') return `{${names}}`;
         if (op === '[]') return `[${names}]`;
         if (op === ',') return `(${names})`;

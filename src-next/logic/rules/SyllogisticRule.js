@@ -7,6 +7,7 @@ export class SyllogisticRule extends Rule {
     constructor() { super('Syllogistic'); }
 
     apply(task, belief, {termFactory}) {
+        if (!belief) return [];
         if (task.type !== TaskType.BELIEF || belief.type !== TaskType.BELIEF) return [];
         const t1 = task.term, t2 = belief.term;
         if (t1.operator !== '-->' || t2.operator !== '-->') return [];

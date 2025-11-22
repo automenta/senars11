@@ -9,6 +9,9 @@ import {Strategy} from './Strategy.js';
 import {RuleProcessor} from './RuleProcessor.js';
 import {SyllogisticRule} from '../logic/rules/SyllogisticRule.js';
 import {AnalogyRule} from '../logic/rules/AnalogyRule.js';
+import {ExecutionRule} from '../logic/rules/ExecutionRule.js';
+import {OperationRegistry} from './OperationRegistry.js';
+import {StandardOps} from './StandardOps.js';
 
 export class Reasoner {
     constructor(config = {}) {
@@ -16,6 +19,11 @@ export class Reasoner {
         this.eventBus = new EventBus();
         this.termFactory = new TermFactory();
         this.config = config;
+
+        this.operationRegistry = new OperationRegistry();
+        Object.entries(StandardOps).forEach(([name, handler]) => {
+            this.operationRegistry.register(name, handler);
+        });
 
         // Stream Components
         this.source = new PremiseSource(this.memory);
@@ -25,6 +33,7 @@ export class Reasoner {
         // Register Rules
         this.processor.register(new SyllogisticRule());
         this.processor.register(new AnalogyRule());
+        this.processor.register(new ExecutionRule());
 
         this.inputBuffer = [];
     }
@@ -51,14 +60,28 @@ export class Reasoner {
     step() {
         // 1. Premise Selection (Stream Source)
         const task = this.source.getTask();
-        if (!task) return; // Nothing to do
+        if (!task) return;
 
-        const context = {termFactory: this.termFactory};
+        const context = {
+            termFactory: this.termFactory,
+            operationRegistry: this.operationRegistry
+        };
 
-        // 2. Strategy (Select Beliefs)
+        // 2. Single-Premise Processing (Structural, Execution)
+        const immediateResults = this.processor.process(task, null, context);
+        for (const derived of immediateResults) {
+            this.eventBus.emit('derivation', {
+                task: derived,
+                parent1: task,
+                parent2: null
+            });
+            this.memory.addResult(derived);
+        }
+
+        // 3. Strategy (Select Beliefs for Multi-Premise)
         const beliefs = this.strategy.selectPremises(task);
 
-        // 3. Rule Processing
+        // 4. Rule Processing
         for (const belief of beliefs) {
             const derivedTasks = this.processor.process(task, belief, context);
 
