@@ -39,13 +39,42 @@ export class FileUtils {
         try {
             const content = fs.readFileSync(filePath, 'utf8');
             if (!content.trim()) {
-                console.log(`⚠️ Empty content when parsing JSON from: ${filePath}`);
                 return null;
             }
             return JSON.parse(content);
         } catch (error) {
-            console.log(`❌ Error parsing JSON from ${filePath}:`, error.message);
             return null;
+        }
+    }
+
+    static collectFiles(searchPaths = ['.'], filterFn = () => true) {
+        const files = [];
+        for (const searchPath of searchPaths) {
+            if (fs.existsSync(searchPath)) {
+                this._collectFilesRecursively(searchPath, files, filterFn);
+            }
+        }
+        return files;
+    }
+
+    static _collectFilesRecursively(dir, files, filterFn) {
+        if (!fs.existsSync(dir)) return;
+
+        const items = fs.readdirSync(dir, {withFileTypes: true});
+
+        for (const item of items) {
+            const fullPath = path.join(dir, item.name);
+
+            if (item.isDirectory()) {
+                if (!this.isExcludedPath(path.relative('.', fullPath))) {
+                     this._collectFilesRecursively(fullPath, files, filterFn);
+                }
+            } else if (item.isFile() && filterFn(item.name, fullPath)) {
+                const relPath = path.relative('.', fullPath);
+                if (!this.isExcludedPath(relPath)) {
+                    files.push(relPath);
+                }
+            }
         }
     }
 
@@ -59,12 +88,12 @@ export class FileUtils {
             try {
                 const fileContent = fs.readFileSync(coverageDetailPath, 'utf8');
                 if (!fileContent.trim()) {
-                    console.log('❌ Coverage file is empty');
+                    if (verbose) console.log('❌ Coverage file is empty');
                     return [];
                 }
                 coverageDetail = JSON.parse(fileContent);
             } catch (parseError) {
-                console.log('❌ Error parsing coverage-final.json:', parseError.message);
+                if (verbose) console.log('❌ Error parsing coverage-final.json:', parseError.message);
                 return [];
             }
 
@@ -75,12 +104,13 @@ export class FileUtils {
                         continue; // Skip invalid file paths
                     }
 
+                    let resolvedPath = filePath;
                     if (filePath.startsWith('./')) {
-                        filePath = path.resolve(filePath);
+                        resolvedPath = path.resolve(filePath);
                     }
 
                     // Skip excluded files
-                    const relativePath = path.relative(process.cwd(), filePath);
+                    const relativePath = path.relative(process.cwd(), resolvedPath);
                     if (this.isExcludedPath(relativePath)) {
                         continue;
                     }
@@ -107,15 +137,15 @@ export class FileUtils {
 
                     let fileSize = 0;
                     try {
-                        if (fs.existsSync(filePath)) {
-                            fileSize = fs.statSync(filePath).size;
+                        if (fs.existsSync(resolvedPath)) {
+                            fileSize = fs.statSync(resolvedPath).size;
                         }
                     } catch (e) {
                         // If we can't get file size, continue with 0
                     }
 
                     files.push({
-                        filePath: path.relative(process.cwd(), filePath),
+                        filePath: relativePath,
                         lineCoverage: parseFloat(lineCoverage.toFixed(2)),
                         statements: statementCount,
                         covered: coveredStatements,
@@ -141,7 +171,7 @@ export class FileUtils {
 
             return files.slice(0, TOP_N);
         } catch (error) {
-            console.log('❌ Error in analyzeCoverageByFile:', error.message);
+            if (verbose) console.log('❌ Error in analyzeCoverageByFile:', error.message);
             return [];
         }
     }

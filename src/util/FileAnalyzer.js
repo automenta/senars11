@@ -1,6 +1,5 @@
 import {spawnSync} from 'child_process';
-import fs from 'fs';
-import path from 'path';
+import { FileUtils } from './FileUtils.js';
 
 export class TestUtils {
     static async runTestsAndGetCoverage() {
@@ -23,8 +22,7 @@ export class TestUtils {
 
 export class FileAnalyzer {
     static collectTestFiles() {
-        const testFiles = [];
-        const searchPaths = ['./tests', './test', './src'];
+         const searchPaths = ['./tests', './test', './src'];
 
         const isTestFile = (fileName) => {
             return fileName.endsWith('.test.js') ||
@@ -33,29 +31,6 @@ export class FileAnalyzer {
                 fileName.includes('_spec.js');
         };
 
-        for (const searchPath of searchPaths) {
-            if (fs.existsSync(searchPath)) {
-                this._collectTestFilesRecursively(searchPath, testFiles, isTestFile);
-            }
-        }
-
-        return testFiles;
-    }
-
-    static _collectTestFilesRecursively(dir, testFiles, isTestFile) {
-        if (!fs.existsSync(dir)) return;
-
-        const items = fs.readdirSync(dir, {withFileTypes: true});
-
-        for (const item of items) {
-            const fullPath = path.join(dir, item.name);
-
-            if (item.isDirectory()) {
-                this._collectTestFilesRecursively(fullPath, testFiles, isTestFile);
-            } else if (item.isFile() && isTestFile(item.name)) {
-                const relPath = path.relative('.', fullPath);
-                testFiles.push(relPath);
-            }
-        }
+        return FileUtils.collectFiles(searchPaths, isTestFile);
     }
 }

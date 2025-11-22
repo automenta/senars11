@@ -1,4 +1,5 @@
 import {PERFORMANCE} from '../config/constants.js';
+import {Statistics} from './Statistics.js';
 
 export class SystemMetrics {
     constructor() {
@@ -27,7 +28,7 @@ export class SystemMetrics {
         }
 
         if (this.cycleTimes.length > 0) {
-            this.metrics.averageCycleTime = this.cycleTimes.reduce((sum, time) => sum + time, 0) / this.cycleTimes.length;
+            this.metrics.averageCycleTime = Statistics.mean(this.cycleTimes);
         }
         this.metrics.totalProcessingTime += cycleTime;
     }
@@ -70,22 +71,15 @@ export class SystemMetrics {
         let cycleTimePercentiles = {p25: 0, p75: 0, p95: 0};
 
         if (this.cycleTimes.length > 0) {
-            const sorted = [...this.cycleTimes].sort((a, b) => a - b);
-            const n = sorted.length;
+            cycleTimeMedian = Statistics.median(this.cycleTimes);
+            cycleTimeStd = Statistics.stdDev(this.cycleTimes);
+            cycleTimeVariance = Math.pow(cycleTimeStd, 2);
 
-            cycleTimeMedian = n % 2 === 0
-                ? (sorted[n / 2 - 1] + sorted[n / 2]) / 2
-                : sorted[Math.floor(n / 2)];
-
-            const mean = this.metrics.averageCycleTime;
-            const varianceSum = this.cycleTimes.reduce((sum, time) => sum + Math.pow(time - mean, 2), 0);
-            cycleTimeVariance = varianceSum / n;
-            cycleTimeStd = Math.sqrt(cycleTimeVariance);
-
+            const quantiles = Statistics.quantiles(this.cycleTimes, [0.25, 0.75, 0.95]);
             cycleTimePercentiles = {
-                p25: sorted[Math.floor(0.25 * n)],
-                p75: sorted[Math.floor(0.75 * n)],
-                p95: sorted[Math.floor(0.95 * n)]
+                p25: quantiles.p25,
+                p75: quantiles.p75,
+                p95: quantiles.p95
             };
         }
 
@@ -122,9 +116,8 @@ export class SystemMetrics {
             };
         }
 
-        const mean = this.cycleTimes.reduce((sum, time) => sum + time, 0) / this.cycleTimes.length;
-        const varianceSum = this.cycleTimes.reduce((sum, time) => sum + Math.pow(time - mean, 2), 0);
-        const std = Math.sqrt(varianceSum / this.cycleTimes.length);
+        const mean = Statistics.mean(this.cycleTimes);
+        const std = Statistics.stdDev(this.cycleTimes);
 
         const outliers = this.cycleTimes.filter(value =>
             Math.abs(value - mean) > 2 * std
@@ -132,9 +125,9 @@ export class SystemMetrics {
 
         const recentCount = Math.max(1, Math.floor(this.cycleTimes.length * 0.1));
         const recentSlice = this.cycleTimes.slice(-recentCount);
-        const recentAvg = recentSlice.reduce((sum, val) => sum + val, 0) / recentSlice.length;
+        const recentAvg = Statistics.mean(recentSlice);
         const earlySlice = this.cycleTimes.slice(0, recentCount);
-        const earlyAvg = earlySlice.reduce((sum, val) => sum + val, 0) / earlySlice.length;
+        const earlyAvg = Statistics.mean(earlySlice);
 
         let trend = 'stable';
         if (recentAvg > earlyAvg * 1.1) trend = 'degrading';

@@ -1,3 +1,5 @@
+import { formatNumberFixed } from './Format.js';
+
 export class Metrics {
     static create() {
         return {
@@ -58,7 +60,7 @@ export class Metrics {
     }
 
     static round(value, decimals = 2) {
-        return Number(value.toFixed(decimals));
+        return Number(formatNumberFixed(value, decimals));
     }
 
     static format(stats) {

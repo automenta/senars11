@@ -49,6 +49,11 @@ export class Statistics {
     static quantile(values, q) {
         if (!values || values.length === 0) return 0;
         const sorted = [...values].sort((a, b) => a - b);
+        return this._quantileSorted(sorted, q);
+    }
+
+    static _quantileSorted(sorted, q) {
+        if (!sorted || sorted.length === 0) return 0;
         const pos = (sorted.length - 1) * q;
         const base = Math.floor(pos);
         const rest = pos - base;
@@ -76,7 +81,7 @@ export class Statistics {
 
         const sorted = [...values].sort((a, b) => a - b);
         return quantiles.reduce((acc, q) => {
-            acc[`p${q * 100}`] = this.quantile(sorted, q); // Use sorted array optimization if we were to refactor quantile to accept it
+            acc[`p${q * 100}`] = this._quantileSorted(sorted, q);
             return acc;
         }, {});
     }
