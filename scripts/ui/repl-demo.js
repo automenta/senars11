@@ -98,13 +98,17 @@ class TaskManager {
      * Add a task to tracking if it's new and not an original input
      */
     addTask(taskData) {
+        if (!taskData) {
+            return false;
+        }
+        
         const term = taskData.term?._name || taskData.term || 'unknown';
         
         // Format the task with truth values
         let formattedTask = term;
         const truth = taskData.truth;
-        if (truth && truth.frequency !== undefined && truth.confidence !== undefined) {
-            formattedTask += ` %${truth.frequency.toFixed(1)};${truth.confidence.toFixed(1)}%`;
+        if (truth && typeof truth.frequency !== 'undefined' && typeof truth.confidence !== 'undefined') {
+            formattedTask += ` %${parseFloat(truth.frequency).toFixed(1)};${parseFloat(truth.confidence).toFixed(1)}%`;
         }
         
         // Use the same term for comparison as we use for storage
@@ -160,8 +164,8 @@ class WebSocketManager {
                     
                     // Process task.added events (beliefs only)
                     if (message.type === 'event' && message.eventType === 'task.added') {
-                        const taskData = message.data?.data?.task;
-                        if (taskData && taskData.type === 'BELIEF') {
+                        const taskData = message.data?.data?.task || message.data?.task;
+                        if (taskData && (taskData.type === 'BELIEF' || taskData.type === 'GOAL')) {
                             this.taskManager.addTask(taskData);
                         }
                     }
@@ -175,8 +179,12 @@ class WebSocketManager {
                         // For demo purposes, we just acknowledge it
                     }
                     // Handle direct output messages that the REPL might receive
-                    else if (message.type === 'output' || message.type === 'reason/output') {
+                    else if (message.type === 'output' || message.type === 'reason/output' || message.type === 'task.added' || message.type === 'task.processed') {
                         // These are direct output messages from the system
+                        // Process them if needed
+                        if (message.type === 'task.added' && message.data) {
+                            this.taskManager.addTask(message.data);
+                        }
                     }
                 } catch (e) {
                     // Ignore non-JSON messages or parsing errors
@@ -200,14 +208,21 @@ class WebSocketManager {
      * Send a message through the WebSocket
      */
     sendMessage(sessionId, type, payload) {
-        if (!this.isReady || this.ws.readyState !== WebSocket.OPEN) {
-            return Promise.reject(new Error('WebSocket is not ready'));
-        }
-        
-        const message = { sessionId, type, payload };
-        this.ws.send(JSON.stringify(message));
-        
-        return Promise.resolve();
+        return new Promise((resolve, reject) => {
+            if (!this.isReady || this.ws.readyState !== WebSocket.OPEN) {
+                reject(new Error('WebSocket is not ready'));
+                return;
+            }
+            
+            const message = { sessionId, type, payload };
+            try {
+                this.ws.send(JSON.stringify(message));
+                resolve();
+            } catch (error) {
+                console.error('Error sending message:', error);
+                reject(error);
+            }
+        });
     }
     
     /**
@@ -385,7 +400,11 @@ class SeNARSDemoRunner {
         
         // Send all inputs
         for (let i = 0; i < demoInputs.length; i++) {
-            await this.webSocketManager.sendMessage('demo', 'reason/step', { text: demoInputs[i] });
+            try {
+                await this.webSocketManager.sendMessage('demo', 'reason/step', { text: demoInputs[i] });
+            } catch (error) {
+                console.error(`Failed to send input ${i+1}:`, error.message);
+            }
             await wait(100); // Minimal wait between inputs
         }
         
@@ -394,7 +413,11 @@ class SeNARSDemoRunner {
         
         // Run the configured number of reasoning cycles
         for (let step = 0; step < this.config.stepsToRun; step++) {
-            await this.webSocketManager.sendMessage('demo', 'control/step', {});
+            try {
+                await this.webSocketManager.sendMessage('demo', 'control/step', {});
+            } catch (error) {
+                console.error(`Failed to run reasoning step ${step+1}:`, error.message);
+            }
             // No output during processing to keep display clean
         }
         

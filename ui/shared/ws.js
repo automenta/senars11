@@ -35,20 +35,39 @@ export default class WebSocketClient {
    * Establish WebSocket connection with reconnection logic
    */
   connect() {
-    this.websocket = new WebSocket(this.url);
-    
-    this.websocket.onopen = (event) => {
-      this.reconnectAttempts = 0;
-      this.onopen?.(event);
-    };
-    
-    this.websocket.onclose = (event) => {
-      this.onclose?.(event);
-      if (this.shouldReconnect(event)) this.reconnect();
-    };
-    
-    this.websocket.onerror = (error) => this.onerror?.(error);
-    this.websocket.onmessage = (event) => this.onmessage?.(event);
+    try {
+      this.websocket = new WebSocket(this.url);
+      
+      this.websocket.onopen = (event) => {
+        console.log(`WebSocket connected to ${this.url}`);
+        this.reconnectAttempts = 0;
+        this.onopen?.(event);
+      };
+      
+      this.websocket.onclose = (event) => {
+        console.log(`WebSocket disconnected from ${this.url}`, event);
+        this.onclose?.(event);
+        if (this.shouldReconnect(event)) this.reconnect();
+      };
+      
+      this.websocket.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        this.onerror?.(error);
+      };
+      
+      this.websocket.onmessage = (event) => {
+        try {
+          this.onmessage?.(event);
+        } catch (error) {
+          console.error('Error processing WebSocket message:', error);
+        }
+      };
+    } catch (error) {
+      console.error('Failed to create WebSocket connection:', error);
+      if (this.shouldReconnect({ wasClean: false })) {
+        setTimeout(() => this.reconnect(), this.calculateReconnectDelay());
+      }
+    }
   }
   
   /**
