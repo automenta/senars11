@@ -6,14 +6,9 @@ describe('RuleEngine Integration Tests', () => {
         const nar = new NAR();
         await nar.initialize();
 
-        // For the new stream reasoner, check the stream rule executor
-        if (nar._useStreamReasoner && nar._streamRuleExecutor) {
-            // Verify rules were registered successfully in the new rule executor
-            expect(nar._streamRuleExecutor.getRuleCount()).toBeGreaterThan(0);
-        } else {
-            // For backward compatibility, check the old rule engine
-            expect(nar._ruleEngine.rules.length).toBeGreaterThan(0);
-        }
+        // Verify rules were registered successfully in the stream rule executor
+        // The new architecture always uses stream rule executor
+        expect(nar._streamRuleExecutor.getRuleCount()).toBeGreaterThan(0);
 
         nar.stop();
     });
