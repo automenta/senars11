@@ -106,6 +106,13 @@ const DEFAULT_CONFIG = deepFreeze({
     termFactory: {
         maxCacheSize: 5000
     },
+    reasoning: {
+        maxDerivationDepth: 10,
+        cpuThrottleInterval: 0,
+        streamSamplingObjectives: {priority: true},
+        streamStrategy: {},
+        streamRuleExecutor: {}
+    },
     metacognition: {
         analyzers: ['PerformanceAnalyzer'],
         selfOptimization: {

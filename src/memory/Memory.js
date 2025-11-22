@@ -145,55 +145,48 @@ export class Memory extends BaseComponent {
     }
 
     _applyConceptForgetting() {
-        const policy = this[`_apply${this._config.forgetPolicy.charAt(0).toUpperCase() + this._config.forgetPolicy.slice(1)}Forgetting`];
-        if (policy) policy.call(this);
+        const strategies = {
+            priority: () => this._forgetByCriteria(c => c.activation || 0.1, (a, b) => a < b),
+            lru: () => this._forgetByCriteria(c => c.lastAccessed, (a, b) => a < b),
+            fifo: () => {
+                const first = this._concepts.keys().next().value;
+                if (first) {
+                    this.removeConcept(first);
+                    this._stats.conceptsForgotten++;
+                }
+            }
+        };
+
+        const strategy = strategies[this._config.forgetPolicy] || strategies.priority;
+        strategy();
     }
 
-    _applyPriorityBasedForgetting() {
-        const lowestPriorityConcept = this._findConceptByCriteria((_, concept) => concept.activation || 0.1, (a, b) => a < b);
-        if (lowestPriorityConcept) {
-            this._removeConceptInternal(lowestPriorityConcept.term);
-            this._stats.conceptsForgotten++;
-        }
-    }
-
-    _applyLRUBasedForgetting() {
-        const oldestConcept = this._findConceptByCriteria(concept => concept.lastAccessed, (a, b) => a < b);
-        if (oldestConcept) {
-            this._removeConceptInternal(oldestConcept.term);
-            this._stats.conceptsForgotten++;
-        }
-    }
-
-    _applyFIFOBasedForgetting() {
-        const firstEntry = this._concepts.entries().next().value;
-        if (firstEntry) {
-            const [term, concept] = firstEntry;
-            this._removeConceptInternal(term);
-            this._stats.conceptsForgotten++;
-        }
-    }
-
-    _findConceptByCriteria(valueFn, comparisonFn) {
-        let targetConcept = null;
-        let targetValue = comparisonFn(0, Infinity) === 0 ? Infinity : -Infinity;
+    _forgetByCriteria(metricFn, compareFn) {
+        let targetTerm = null;
+        let targetVal = null;
 
         for (const [term, concept] of this._concepts) {
-            const value = valueFn(term, concept);
-            if (comparisonFn(value, targetValue)) {
-                targetValue = value;
-                targetConcept = {term, concept};
+            const val = metricFn(concept);
+            if (targetVal === null || compareFn(val, targetVal)) {
+                targetVal = val;
+                targetTerm = term;
             }
         }
 
-        return targetConcept;
+        if (targetTerm) {
+            this.removeConcept(targetTerm);
+            this._stats.conceptsForgotten++;
+        }
     }
 
-    _removeConceptInternal(term) {
+    removeConcept(term) {
         const concept = this._concepts.get(term);
         if (!concept) return false;
 
-        this._focusConcepts.delete(concept) && this._updateFocusConceptsCount();
+        if (this._focusConcepts.has(concept)) {
+             this._focusConcepts.delete(concept);
+             this._updateFocusConceptsCount();
+        }
         this._concepts.delete(term);
         this._index.removeConcept(concept);
         this._stats.totalConcepts--;
@@ -357,19 +350,6 @@ export class Memory extends BaseComponent {
         const timeDiff = now - lastAccessed;
         // Recency score decreases with time (more recent = higher score)
         return Math.exp(-timeDiff / (24 * 60 * 60 * 1000)); // Decay over 24 hours
-    }
-
-    removeConcept(term) {
-        const concept = this.getConcept(term);
-        if (!concept) return false;
-
-        this._focusConcepts.delete(concept) && this._updateFocusConceptsCount();
-        this._concepts.delete(term);
-        this._index.removeConcept(concept);
-        this._stats.totalConcepts--;
-        this._stats.totalTasks -= concept.totalTasks;
-
-        return true;
     }
 
     consolidate(currentTime = Date.now()) {

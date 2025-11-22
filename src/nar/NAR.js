@@ -1,4 +1,4 @@
-import {NARBuilder} from './NARBuilder.js';
+import {ConfigManager} from '../config/ConfigManager.js';
 import {TermFactory} from '../term/TermFactory.js';
 import {Memory} from '../memory/Memory.js';
 import {TaskManager} from '../task/TaskManager.js';
@@ -28,25 +28,25 @@ import {
 export class NAR extends BaseComponent {
     constructor(config = {}) {
         super(config, 'NAR');
-        this._config = NARBuilder.from(config);
+        this._configManager = new ConfigManager(config);
         this._componentManager = new ComponentManager({}, this._eventBus, this);
-        this._initComponents(config);
+        this._initComponents();
         this._isRunning = false;
         this._startTime = Date.now();
         this._registerComponents();
 
         // Add debug mode for tracking pipeline
-        this._debugMode = config.debug?.pipeline || false;
+        this._debugMode = this.config.debug?.pipeline || false;
 
         this._initStreamReasoner();
 
-        if (this._config.get('components')) {
-            this._componentManager.loadComponentsFromConfig(this._config.get('components'));
+        if (this.config.components) {
+            this._componentManager.loadComponentsFromConfig(this.config.components);
         }
     }
 
     get config() {
-        return this._config;
+        return this._configManager.toJSON();
     }
 
     get memory() {
@@ -120,23 +120,25 @@ export class NAR extends BaseComponent {
         return success;
     }
 
-    _initComponents(config) {
+    _initComponents() {
+        const config = this.config;
         const lmEnabled = config.lm?.enabled === true;
-        this._termFactory = new TermFactory(this._config.termFactory, this._eventBus);
-        this._memory = new Memory(this._config.memory);
+        this._termFactory = new TermFactory(config.termFactory, this._eventBus);
+        this._memory = new Memory(config.memory);
         this._parser = new NarseseParser(this._termFactory);
-        this._focus = new Focus(this._config.focus);
-        this._taskManager = new TaskManager(this._memory, this._focus, this._config.taskManager);
+        this._focus = new Focus(config.focus);
+        this._taskManager = new TaskManager(this._memory, this._focus, config.taskManager);
         this._evaluator = new EvaluationEngine(null, this._termFactory);
         this._lm = lmEnabled ? new LM() : null;
 
         // Initialize stream reasoner components
         this._ruleEngine = null; // No old rule engine needed
 
-        this._initOptionalComponents(config);
+        this._initOptionalComponents();
     }
 
-    _initOptionalComponents(config) {
+    _initOptionalComponents() {
+        const config = this.config;
         this._toolIntegration = config.tools?.enabled !== false ? new ToolIntegration(config.tools || {}) : null;
         if (this._toolIntegration) {
             this._toolIntegration.connectToReasoningCore(this);
@@ -150,22 +152,24 @@ export class NAR extends BaseComponent {
     }
 
     _initStreamReasoner() {
+        const reasoningConfig = this.config.reasoning || {};
+
         // Create premise source using the new reasoner's approach
-        this._streamPremiseSource = new TaskBagPremiseSource(this._focus, this._config.get('reasoning.streamSamplingObjectives') || {priority: true});
+        this._streamPremiseSource = new TaskBagPremiseSource(this._focus, reasoningConfig.streamSamplingObjectives || {priority: true});
 
         // Create strategy
         this._streamStrategy = new Strategy({
-            ...this._config.get('reasoning.streamStrategy'),
+            ...reasoningConfig.streamStrategy,
             focus: this._focus,
             memory: this._memory
         });
 
         // Create rule executor
-        this._streamRuleExecutor = new StreamRuleExecutor(this._config.get('reasoning.streamRuleExecutor') || {});
+        this._streamRuleExecutor = new StreamRuleExecutor(reasoningConfig.streamRuleExecutor || {});
 
         // Create rule processor
         this._streamRuleProcessor = new StreamRuleProcessor(this._streamRuleExecutor, {
-            maxDerivationDepth: this._config.get('reasoning.maxDerivationDepth') || 10,
+            maxDerivationDepth: reasoningConfig.maxDerivationDepth || 10,
             termFactory: this._termFactory
         });
 
@@ -175,8 +179,8 @@ export class NAR extends BaseComponent {
             this._streamStrategy,
             this._streamRuleProcessor,
             {
-                maxDerivationDepth: this._config.get('reasoning.maxDerivationDepth') || 10,
-                cpuThrottleInterval: this._config.get('reasoning.cpuThrottleInterval') || 0
+                maxDerivationDepth: reasoningConfig.maxDerivationDepth || 10,
+                cpuThrottleInterval: reasoningConfig.cpuThrottleInterval || 0
             },
             this  // Pass the NAR instance as parent for derivation feedback
         );
@@ -243,61 +247,21 @@ export class NAR extends BaseComponent {
         this._streamRuleExecutor.register(newModusPonensRule);
 
         // Register metacognition rules if enabled
-        if (this._config.get('metacognition.selfOptimization.enabled')) {
+        if (this.config.metacognition?.selfOptimization?.enabled) {
             for (const RuleClass of MetacognitionRules) {
                 const rule = new RuleClass();
                 this._streamRuleExecutor.register(rule);
             }
         }
-
-        // TODO: Add other new rules as they are implemented
-        // For example:
-        // const { DeductionRule } = await import('../reason/rules/nal/DeductionRule.js');
-        // this._streamRuleExecutor.register(new DeductionRule());
     }
 
     async input(narseseString, options = {}) {
         try {
-            //console.log(`[NAR INPUT] Received raw input: "${narseseString}"`);
             const parsed = this._parser.parse(narseseString);
             if (!parsed?.term) throw new Error('Invalid parse result');
 
             const task = this._createTask(parsed);
-
-            // Check if a task with the same semantic properties is already in memory
-            const existingConcept = this._memory.getConcept(task.term);
-            if (existingConcept) {
-                // Check if an equal task already exists in the appropriate storage
-                const storage = existingConcept._getStorage(task.type);
-                for (const [existingTask] of storage._items) {
-                    if (task.equals(existingTask)) {
-                        return false; // Task already exists in memory, return false
-                    }
-                }
-            }
-
-            const added = this._taskManager.addTask(task);
-
-            if (added) {
-                this._eventBus.emit('task.input', {
-                    task,
-                    source: 'user',
-                    originalInput: narseseString,
-                    parsed
-                }, {traceId: options.traceId});
-
-                // For stream reasoner: explicitly add to focus so the stream can access it
-                if (this._focus) {
-                    const addedToFocus = this._focus.addTaskToFocus(task);
-                    if (addedToFocus) {
-                        this._eventBus.emit('task.focus', task, {traceId: options.traceId});
-                    }
-                }
-
-                await this._processPendingTasks(options.traceId);
-            }
-
-            return added;
+            return await this._processNewTask(task, 'user', narseseString, parsed, options);
         } catch (error) {
             this._eventBus.emit('input.error', {
                 error: error.message,
@@ -305,6 +269,35 @@ export class NAR extends BaseComponent {
             }, {traceId: options.traceId});
             throw error;
         }
+    }
+
+    async _processNewTask(task, source, originalInput, parsed, options = {}) {
+        // Check if a semantically equivalent task already exists in memory
+        if (this._isTaskDuplicate(task)) {
+            return false;
+        }
+
+        const added = this._taskManager.addTask(task);
+
+        if (added) {
+            this._eventBus.emit('task.input', {
+                task,
+                source,
+                originalInput,
+                parsed
+            }, {traceId: options.traceId});
+
+            if (this._focus) {
+                const addedToFocus = this._focus.addTaskToFocus(task);
+                if (addedToFocus) {
+                    this._eventBus.emit('task.focus', task, {traceId: options.traceId});
+                }
+            }
+
+            await this._processPendingTasks(options.traceId);
+        }
+
+        return added;
     }
 
     _createTask(parsed) {
@@ -475,7 +468,7 @@ export class NAR extends BaseComponent {
 
     serialize() {
         return {
-            config: this._config.toJSON(),
+            config: this.config,
             memory: this._memory.serialize ? this._memory.serialize() : null,
             taskManager: this._taskManager.serialize ? this._taskManager.serialize() : null,
             focus: this._focus.serialize ? this._focus.serialize() : null,
@@ -525,7 +518,7 @@ export class NAR extends BaseComponent {
             }
 
             if (state.config) {
-                this._config = NARBuilder.from(state.config);
+                this._configManager = new ConfigManager(state.config);
             }
 
             if (state.memory && this._memory.deserialize) {
@@ -545,7 +538,7 @@ export class NAR extends BaseComponent {
             }
 
             await this._componentManager.disposeAll();
-            this._initComponents(this._config.toJSON());
+            this._initComponents();
             await this._componentManager.initializeAll();
             await this._setupDefaultRules();
 
@@ -601,7 +594,7 @@ export class NAR extends BaseComponent {
             cycleCount: this._streamReasoner?.metrics?.totalDerivations || 0,
             memoryStats: this._memory.getDetailedStats(),
             taskManagerStats: this._taskManager.getTaskStats?.() ?? this._taskManager.stats,
-            config: this._config.toJSON(),
+            config: this.config,
             lmStats: this._lm?.getMetrics?.()
         };
 
@@ -842,33 +835,7 @@ export class NAR extends BaseComponent {
     // Input/Memory/Focus/Event process as the main input method
     async _inputTask(task, options = {}) {
         try {
-            // Check if a semantically equivalent task already exists in memory
-            if (this._isTaskDuplicate(task)) {
-                return false; // Task already exists, return false
-            }
-
-            const added = this._taskManager.addTask(task);
-
-            if (added) {
-                this._eventBus.emit('task.input', {
-                    task,
-                    source: 'derived',
-                    originalInput: null,
-                    parsed: null
-                }, {traceId: options.traceId});
-
-                // Add to focus and emit focus event if successful
-                if (this._focus) {
-                    const addedToFocus = this._focus.addTaskToFocus(task);
-                    if (addedToFocus) {
-                        this._eventBus.emit('task.focus', task, {traceId: options.traceId});
-                    }
-                }
-
-                await this._processPendingTasks(options.traceId);
-            }
-
-            return added;
+            return await this._processNewTask(task, 'derived', null, null, options);
         } catch (error) {
             this._eventBus.emit('input.error', {
                 error: error.message,
