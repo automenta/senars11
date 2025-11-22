@@ -6,7 +6,7 @@ import {Input} from '../Agent.js';
 import {PersistenceManager} from '../io/PersistenceManager.js';
 
 import {CommandProcessor} from './utils/CommandProcessor.js';
-import {FormattingUtils} from './utils/FormattingUtils.js';
+import {FormattingUtils} from './utils/index.js';
 
 const SPECIAL_COMMANDS = {
     'next': 'n',

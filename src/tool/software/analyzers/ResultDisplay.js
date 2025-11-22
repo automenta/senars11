@@ -1,4 +1,4 @@
-import {DisplayUtils} from '../../../tui/DisplayUtils.js';
+import {DisplayUtils} from '../../../util/DisplayUtils.js';
 import path from 'path';
 
 export class ResultDisplay {

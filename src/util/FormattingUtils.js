@@ -41,6 +41,11 @@ export class FormattingUtils {
         return PUNCTUATION_MAP[type?.toUpperCase()] ?? '.';
     }
 
+    static formatConcept(concept) {
+        if (!concept) return 'undefined concept';
+        return concept.term ? concept.term.toString() : concept.toString();
+    }
+
     static encodeShortId(input) {
         if (!input) return 'N/A';
 
