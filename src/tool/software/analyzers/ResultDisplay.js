@@ -1,4 +1,5 @@
 import {DisplayUtils} from '../../../util/DisplayUtils.js';
+import { formatNumber, formatPercentage, formatFileSize, truncateText } from '../../../util/Format.js';
 import path from 'path';
 
 export class ResultDisplay {
@@ -23,16 +24,16 @@ export class ResultDisplay {
 
         if (results.project && !results.project.error) {
             console.log(`  📦 ${results.project.name} v${results.project.version}`);
-            console.log(`     Dependencies: ${DisplayUtils.formatNumber(results.project.dependencies)} regular, ${DisplayUtils.formatNumber(results.project.devDependencies)} dev`);
+            console.log(`     Dependencies: ${formatNumber(results.project.dependencies)} regular, ${formatNumber(results.project.devDependencies)} dev`);
         }
 
         if (results.tests && !results.tests.error) {
             const passRate = Math.round((results.tests.passedTests / Math.max(results.tests.totalTests, 1)) * 100);
             const statusEmoji = passRate >= 95 ? '✅' : passRate >= 80 ? '⚠️' : '❌';
-            console.log(`  🧪 Tests: ${DisplayUtils.formatNumber(results.tests.passedTests)}/${DisplayUtils.formatNumber(results.tests.totalTests)} (${DisplayUtils.formatPercentage(passRate / 100)}) ${statusEmoji}`);
+            console.log(`  🧪 Tests: ${formatNumber(results.tests.passedTests)}/${formatNumber(results.tests.totalTests)} (${formatPercentage(passRate / 100)}) ${statusEmoji}`);
 
             if (results.tests.failedTests > 0) {
-                console.log(`     ⚠️  ${DisplayUtils.formatNumber(results.tests.failedTests)} failed tests need attention`);
+                console.log(`     ⚠️  ${formatNumber(results.tests.failedTests)} failed tests need attention`);
             }
             if (results.tests.failedTests === 0 && results.tests.passedTests > 0) {
                 console.log(`     ✅ All tests passing - good stability`);
@@ -41,7 +42,7 @@ export class ResultDisplay {
 
         if (results.coverage && !results.coverage.error && results.coverage.available !== false) {
             const coverageStatus = results.coverage.lines >= 80 ? '✅' : results.coverage.lines >= 50 ? '⚠️' : '❌';
-            console.log(`  📊 Coverage: ${DisplayUtils.formatPercentage(results.coverage.lines / 100)} lines ${coverageStatus}`);
+            console.log(`  📊 Coverage: ${formatPercentage(results.coverage.lines / 100)} lines ${coverageStatus}`);
 
             if (results.coverage.lines < 80) {
                 console.log(`     ⚠️  Consider adding more tests for better coverage`);
@@ -51,8 +52,8 @@ export class ResultDisplay {
         }
 
         if (results.static && !results.static.error) {
-            console.log(`  📁 Code: ${DisplayUtils.formatNumber(results.static.jsFiles)} files, ~${DisplayUtils.formatNumber(results.static.totalLines)} lines`);
-            console.log(`     Avg: ${results.static.avgLinesPerFile}/file, ${DisplayUtils.formatNumber(results.static.directories)} dirs`);
+            console.log(`  📁 Code: ${formatNumber(results.static.jsFiles)} files, ~${formatNumber(results.static.totalLines)} lines`);
+            console.log(`     Avg: ${results.static.avgLinesPerFile}/file, ${formatNumber(results.static.directories)} dirs`);
 
             // Add insights about code health
             if (results.static.avgLinesPerFile > 300) {
@@ -63,12 +64,12 @@ export class ResultDisplay {
 
             // Identify potentially risky areas
             if (results.static.largestFile && results.static.largestFile.lines > 1000) {
-                console.log(`     ⚠️  Largest file: ${results.static.largestFile.path} (${DisplayUtils.formatNumber(results.static.largestFile.lines)} lines) - potential refactoring target`);
+                console.log(`     ⚠️  Largest file: ${results.static.largestFile.path} (${formatNumber(results.static.largestFile.lines)} lines) - potential refactoring target`);
             }
 
             if (results.static.largestDirectories && results.static.largestDirectories.length > 0) {
                 const largestDir = results.static.largestDirectories[0];
-                console.log(`     🏗️  Largest directory: ${largestDir.path} (${DisplayUtils.formatNumber(largestDir.lines)} lines) - major code area`);
+                console.log(`     🏗️  Largest directory: ${largestDir.path} (${formatNumber(largestDir.lines)} lines) - major code area`);
             }
 
             if (results.static.avgComplexity && results.static.avgComplexity > 20) {
@@ -80,7 +81,7 @@ export class ResultDisplay {
 
         if (results.requirements && !results.requirements.error) {
             const complianceStatus = results.requirements.complianceScore >= 90 ? '✅' : results.requirements.complianceScore >= 70 ? '⚠️' : '❌';
-            console.log(`  📋 README: ${DisplayUtils.formatPercentage(results.requirements.complianceScore / 100)} compliance ${complianceStatus}`);
+            console.log(`  📋 README: ${formatPercentage(results.requirements.complianceScore / 100)} compliance ${complianceStatus}`);
 
             if (results.requirements.complianceScore < 80) {
                 console.log(`     ⚠️  Consider improving documentation coverage`);
@@ -104,12 +105,12 @@ export class ResultDisplay {
         // Test insights
         if (results.tests && !results.tests.error) {
             if (results.tests.failedTests > 0) {
-                insights.push(`Fix ${DisplayUtils.formatNumber(results.tests.failedTests)} failing tests to ensure stability`);
-                risks.push(`${DisplayUtils.formatNumber(results.tests.failedTests)} failing tests indicate potential instability`);
+                insights.push(`Fix ${formatNumber(results.tests.failedTests)} failing tests to ensure stability`);
+                risks.push(`${formatNumber(results.tests.failedTests)} failing tests indicate potential instability`);
             }
             if (results.coverage && results.coverage.lines < 80) {
-                insights.push(`Improve test coverage (${DisplayUtils.formatPercentage(results.coverage.lines / 100)} < 80%) to catch potential issues`);
-                risks.push(`Low test coverage (${DisplayUtils.formatPercentage(results.coverage.lines / 100)}) increases bug risk`);
+                insights.push(`Improve test coverage (${formatPercentage(results.coverage.lines / 100)} < 80%) to catch potential issues`);
+                risks.push(`Low test coverage (${formatPercentage(results.coverage.lines / 100)}) increases bug risk`);
             }
         }
 
@@ -117,21 +118,21 @@ export class ResultDisplay {
         if (results.static && !results.static.error) {
             if (results.static.avgLinesPerFile > 300) {
                 insights.push(`Refactor large files (avg > 300 lines) to improve maintainability`);
-                risks.push(`High avg file size (${DisplayUtils.formatNumber(results.static.avgLinesPerFile)}) may complicate maintenance`);
+                risks.push(`High avg file size (${formatNumber(results.static.avgLinesPerFile)}) may complicate maintenance`);
             }
             if (results.static.avgComplexity > 20) {
                 insights.push(`Simplify complex code (avg complexity > 20) to reduce bugs`);
                 risks.push(`High avg complexity (${results.static.avgComplexity.toFixed(2)}) increases bug risk`);
             }
             if (results.static.largestFile && results.static.largestFile.lines > 1000) {
-                insights.push(`Split ${results.static.largestFile.path} (${DisplayUtils.formatNumber(results.static.largestFile.lines)} lines) into smaller modules`);
+                insights.push(`Split ${results.static.largestFile.path} (${formatNumber(results.static.largestFile.lines)} lines) into smaller modules`);
                 risks.push(`Very large file (${results.static.largestFile.path}) is a maintenance risk`);
             }
 
             // Risk metrics insights
             if (results.static.riskMetrics) {
                 if (results.static.riskMetrics.highRiskFiles.length > 0) {
-                    risks.push(`${DisplayUtils.formatNumber(results.static.riskMetrics.highRiskFiles.length)} high-risk files need attention`);
+                    risks.push(`${formatNumber(results.static.riskMetrics.highRiskFiles.length)} high-risk files need attention`);
                     recommendations.push(`Focus on refactoring high-risk files: ${results.static.riskMetrics.highRiskFiles.slice(0, 3).map(f => path.basename(f.path)).join(', ')}`);
                 }
 
@@ -145,7 +146,7 @@ export class ResultDisplay {
         if (results.static && results.static.largestDirectories && results.static.largestDirectories.length > 0) {
             const largestDir = results.static.largestDirectories[0];
             if (largestDir.lines > 5000) {
-                insights.push(`Consider splitting ${largestDir.path} (${DisplayUtils.formatNumber(largestDir.lines)} lines) for better organization`);
+                insights.push(`Consider splitting ${largestDir.path} (${formatNumber(largestDir.lines)} lines) for better organization`);
                 risks.push(`Large directory (${largestDir.path}) may benefit from modularization`);
             }
         }
@@ -154,15 +155,15 @@ export class ResultDisplay {
         if (results.coverage && results.coverage.detailedAnalysis && results.coverage.detailedAnalysis.lowCoverageFiles) {
             const lowCoverageCount = results.coverage.detailedAnalysis.lowCoverageFiles.filter(f => f.coverage < 30).length;
             if (lowCoverageCount > 0) {
-                insights.push(`Focus on testing ${DisplayUtils.formatNumber(lowCoverageCount)} critically low-coverage files (<30%)`);
-                risks.push(`${DisplayUtils.formatNumber(lowCoverageCount)} low-coverage files pose quality risks`);
+                insights.push(`Focus on testing ${formatNumber(lowCoverageCount)} critically low-coverage files (<30%)`);
+                risks.push(`${formatNumber(lowCoverageCount)} low-coverage files pose quality risks`);
             }
         }
 
         // Technical debt insights
         if (results.technicaldebt && !results.technicaldebt.error && results.technicaldebt.highRiskFiles) {
             if (results.technicaldebt.highRiskFiles.length > 0) {
-                insights.push(`Address technical debt in ${DisplayUtils.formatNumber(results.technicaldebt.highRiskFiles.length)} high-debt files`);
+                insights.push(`Address technical debt in ${formatNumber(results.technicaldebt.highRiskFiles.length)} high-debt files`);
                 risks.push(`High technical debt (${results.technicaldebt.totalDebtScore.toFixed(1)} score) slows development`);
                 recommendations.push(`Target top debt files: ${results.technicaldebt.highRiskFiles.slice(0, 3).map(f => path.basename(f.path)).join(', ')}`);
             }
@@ -171,12 +172,12 @@ export class ResultDisplay {
         // Architecture insights
         if (results.architecture && !results.architecture.error) {
             if (results.architecture.cyclicDependencies.length > 0) {
-                risks.push(`${DisplayUtils.formatNumber(results.architecture.cyclicDependencies.length)} cyclic dependencies detected`);
+                risks.push(`${formatNumber(results.architecture.cyclicDependencies.length)} cyclic dependencies detected`);
                 recommendations.push(`Resolve cyclic dependencies to improve modularity`);
             }
 
             if (results.architecture.apiEntryPoints.length > 0) {
-                planningIndicators.push(`Identified ${DisplayUtils.formatNumber(results.architecture.apiEntryPoints.length)} main entry points`);
+                planningIndicators.push(`Identified ${formatNumber(results.architecture.apiEntryPoints.length)} main entry points`);
             }
         }
 
@@ -587,7 +588,7 @@ export class ResultDisplay {
                 if (results.static.largestSizeDirectories && results.static.largestSizeDirectories.length > 0) {
                     console.log(`    Largest directories by size:`);
                     results.static.largestSizeDirectories.slice(0, 5).forEach(dir => {
-                        const size = DisplayUtils.formatFileSize(dir.size);
+                        const size = formatFileSize(dir.size);
                         console.log(`      - ${dir.path}: ${size} (${dir.files} files)`);
                     });
                 }
@@ -667,7 +668,7 @@ export class ResultDisplay {
         if (results.technicaldebt && !results.technicaldebt.error) {
             console.log('\n💳 TECHNICAL DEBT:');
             const debtMetrics = {
-                totalDebtScore: DisplayUtils.formatNumber(results.technicaldebt.totalDebtScore.toFixed(1)),
+                totalDebtScore: formatNumber(results.technicaldebt.totalDebtScore.toFixed(1)),
                 avgDebtPerFile: results.technicaldebt.avgDebtScore ? results.technicaldebt.avgDebtScore.toFixed(2) : 'N/A',
                 highRiskFiles: results.technicaldebt.highRiskFiles ? results.technicaldebt.highRiskFiles.length : 0,
                 refactoringTargets: results.technicaldebt.refactoringTargets ? results.technicaldebt.refactoringTargets.length : 0
@@ -676,7 +677,7 @@ export class ResultDisplay {
 
             if (results.technicaldebt.highRiskFiles && results.technicaldebt.highRiskFiles.length > 0) {
                 results.technicaldebt.highRiskFiles.slice(0, 3).forEach(file => {
-                    console.log(`    - ${path.basename(file.path)}: ${DisplayUtils.formatNumber(file.debtScore.toFixed(1))} debt score`);
+                    console.log(`    - ${path.basename(file.path)}: ${formatNumber(file.debtScore.toFixed(1))} debt score`);
                 });
             }
         } else {
@@ -737,10 +738,10 @@ export class ResultDisplay {
                 const headers = ['No.', 'Test Name', 'Duration', 'Status', 'Suite'];
                 const rows = slowestTests.slice(0, 20).map((test, idx) => [
                     String(idx + 1),
-                    DisplayUtils.truncateText(test.name, 46),
+                    truncateText(test.name, 46),
                     `${test.duration}ms`,
                     test.status,
-                    DisplayUtils.truncateText(test.suite, 37)
+                    truncateText(test.suite, 37)
                 ]);
 
                 console.log(DisplayUtils.createTable(headers, rows));
@@ -760,9 +761,9 @@ export class ResultDisplay {
             const headers = ['No.', 'File Path', 'Lines', 'Size'];
             const rows = staticData.largestFiles.slice(0, 20).map((file, idx) => [
                 String(idx + 1),
-                DisplayUtils.truncateText(file.path, 40),
+                truncateText(file.path, 40),
                 String(file.lines),
-                DisplayUtils.formatFileSize(file.size)
+                formatFileSize(file.size)
             ]);
 
             console.log(DisplayUtils.createTable(headers, rows));
@@ -779,12 +780,12 @@ export class ResultDisplay {
             const headers = ['No.', 'File Path', 'Lines', 'Covered', 'Uncover', 'Size', '%'];
             const rows = coverage.fileAnalysis.slice(0, 20).map((file, idx) => [
                 String(idx + 1),
-                DisplayUtils.truncateText(file.filePath, 32),
+                truncateText(file.filePath, 32),
                 String(file.statements),
                 String(file.covered),
                 String(file.uncovered),
-                DisplayUtils.formatFileSize(file.size),
-                DisplayUtils.formatPercentage(file.lineCoverage / 100, 1)
+                formatFileSize(file.size),
+                formatPercentage(file.lineCoverage / 100, 1)
             ]);
 
             console.log(DisplayUtils.createTable(headers, rows));
@@ -801,10 +802,10 @@ export class ResultDisplay {
             const headers = ['No.', 'Directory', 'Files', 'Stmts', '%'];
             const rows = coverage.detailedAnalysis.directoriesSorted.slice(0, 20).map((dir, idx) => [
                 String(idx + 1),
-                DisplayUtils.truncateText(dir.directory, 32),
+                truncateText(dir.directory, 32),
                 String(dir.files),
                 String(dir.statements),
-                DisplayUtils.formatPercentage(dir.coveragePercent / 100, 1)
+                formatPercentage(dir.coveragePercent / 100, 1)
             ]);
 
             console.log(DisplayUtils.createTable(headers, rows));
@@ -821,7 +822,7 @@ export class ResultDisplay {
             const headers = ['No.', 'Directory', 'Lines', 'Files', 'JS Files'];
             const rows = staticData.largestDirectories.slice(0, 20).map((dir, idx) => [
                 String(idx + 1),
-                DisplayUtils.truncateText(dir.path, 32),
+                truncateText(dir.path, 32),
                 String(dir.lines),
                 String(dir.files),
                 String(dir.jsFiles)
@@ -841,7 +842,7 @@ export class ResultDisplay {
             const headers = ['No.', 'Directory', 'Files', 'Lines', 'JS Files'];
             const rows = staticData.largestFileCountDirectories.slice(0, 20).map((dir, idx) => [
                 String(idx + 1),
-                DisplayUtils.truncateText(dir.path, 32),
+                truncateText(dir.path, 32),
                 String(dir.files),
                 String(dir.lines),
                 String(dir.jsFiles)
@@ -861,7 +862,7 @@ export class ResultDisplay {
             const headers = ['No.', 'Directory', 'Complexity', 'Files', 'JS Files'];
             const rows = staticData.complexityByDirectory.slice(0, 20).map((dir, idx) => [
                 String(idx + 1),
-                DisplayUtils.truncateText(dir.path, 32),
+                truncateText(dir.path, 32),
                 String(dir.complexity),
                 String(dir.files),
                 String(dir.jsFiles)

@@ -60,54 +60,6 @@ export class DisplayUtils {
     }
 
     /**
-     * Truncates text to specified length, adding ellipsis if truncated
-     * @param {string} text - Text to truncate
-     * @param {number} maxLength - Maximum length
-     * @param {string} ellipsis - Ellipsis to add (default: '...')
-     * @returns {string} Truncated text
-     */
-    static truncateText(text, maxLength, ellipsis = '...') {
-        return truncateText(text, maxLength, ellipsis);
-    }
-
-    /**
-     * Formats a number with thousand separators
-     * @param {number} num - Number to format
-     * @returns {string} Formatted number
-     */
-    static formatNumber(num) {
-        return formatNumber(num);
-    }
-
-    /**
-     * Formats a percentage with specified decimal places
-     * @param {number} value - Percentage value (0-100 or 0-1)
-     * @param {number} decimals - Number of decimal places (default: 1)
-     * @returns {string} Formatted percentage
-     */
-    static formatPercentage(value, decimals = 1) {
-        return formatPercentage(value, decimals);
-    }
-
-    /**
-     * Formats file size in human readable format
-     * @param {number} size - Size in bytes
-     * @returns {string} Human readable size
-     */
-    static formatFileSize(size) {
-        return formatFileSize(size);
-    }
-
-    /**
-     * Formats duration in milliseconds to human readable format
-     * @param {number} duration - Duration in milliseconds
-     * @returns {string} Human readable duration
-     */
-    static formatDuration(duration) {
-        return formatDuration(duration);
-    }
-
-    /**
      * Creates a progress bar string
      * @param {number} progress - Progress value (0-1)
      * @param {number} width - Width of the progress bar (default: 20)
@@ -154,8 +106,8 @@ export class DisplayUtils {
     static _formatValue(value) {
         if (value === null || value === undefined) return 'null';
         if (typeof value === 'number') {
-            if (value > 1000) return this.formatNumber(value);
-            if (value <= 1 && value >= 0) return this.formatPercentage(value);
+            if (value > 1000) return formatNumber(value);
+            if (value <= 1 && value >= 0) return formatPercentage(value);
             return String(value);
         }
         if (typeof value === 'boolean') return value ? 'Yes' : 'No';

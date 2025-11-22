@@ -1,3 +1,5 @@
+import { formatNumberFixed } from './Format.js';
+
 export const clamp = (val, min, max) => Math.max(min, Math.min(max, val));
 export const normalize = (val, max) => Math.min(val / max, 1);
 export const isBetween = (val, min, max) => val >= min && val <= max;
@@ -63,10 +65,7 @@ export const deepClone = (obj) => {
     return obj;
 };
 
-export const formatNumber = (num, decimals = 2) => {
-    if (typeof num !== 'number') return num?.toString() || '0';
-    return num.toFixed(decimals);
-};
+export const formatNumber = (num, decimals = 2) => formatNumberFixed(num, decimals);
 
 export const safeAsync = async (asyncFn, defaultValue = null) => {
     try {

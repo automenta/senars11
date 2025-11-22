@@ -129,12 +129,4 @@ export class FormattingUtils {
     static formatBeliefOccurrence(stamp) {
         return stamp ? ` | Occ:${stamp}` : null;
     }
-
-    static formatNumber(num) {
-        return formatNumberCompact(num);
-    }
-
-    static formatFileSize(sizeInBytes) {
-        return formatFileSize(sizeInBytes);
-    }
 }
