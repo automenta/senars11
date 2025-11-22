@@ -3,6 +3,14 @@
  * Provides common formatting and display functionality shared between different UI components
  */
 
+import {
+    formatNumber,
+    formatPercentage,
+    formatFileSize,
+    formatDuration,
+    truncateText
+} from './Format.js';
+
 export class DisplayUtils {
     /**
      * Creates a formatted table with specified headers and data
@@ -59,10 +67,7 @@ export class DisplayUtils {
      * @returns {string} Truncated text
      */
     static truncateText(text, maxLength, ellipsis = '...') {
-        if (!text) return '';
-        const str = String(text);
-        if (str.length <= maxLength) return str;
-        return str.substring(0, maxLength - ellipsis.length) + ellipsis;
+        return truncateText(text, maxLength, ellipsis);
     }
 
     /**
@@ -71,8 +76,7 @@ export class DisplayUtils {
      * @returns {string} Formatted number
      */
     static formatNumber(num) {
-        if (typeof num !== 'number') return String(num);
-        return num.toLocaleString();
+        return formatNumber(num);
     }
 
     /**
@@ -82,10 +86,7 @@ export class DisplayUtils {
      * @returns {string} Formatted percentage
      */
     static formatPercentage(value, decimals = 1) {
-        if (typeof value !== 'number') return String(value);
-        // If value is between 0 and 1, multiply by 100
-        const percent = value <= 1 ? value * 100 : value;
-        return percent.toFixed(decimals) + '%';
+        return formatPercentage(value, decimals);
     }
 
     /**
@@ -94,11 +95,7 @@ export class DisplayUtils {
      * @returns {string} Human readable size
      */
     static formatFileSize(size) {
-        if (typeof size !== 'number') return String(size);
-        if (size < 1024) return size + ' B';
-        if (size < 1024 * 1024) return (size / 1024).toFixed(1) + ' KB';
-        if (size < 1024 * 1024 * 1024) return (size / (1024 * 1024)).toFixed(1) + ' MB';
-        return (size / (1024 * 1024 * 1024)).toFixed(1) + ' GB';
+        return formatFileSize(size);
     }
 
     /**
@@ -107,10 +104,7 @@ export class DisplayUtils {
      * @returns {string} Human readable duration
      */
     static formatDuration(duration) {
-        if (typeof duration !== 'number') return String(duration);
-        if (duration < 1000) return duration + 'ms';
-        if (duration < 60000) return (duration / 1000).toFixed(2) + 's';
-        return (duration / 60000).toFixed(2) + 'min';
+        return formatDuration(duration);
     }
 
     /**

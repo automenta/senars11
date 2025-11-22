@@ -1,6 +1,6 @@
-import {AnalysisError, AnalyzerError, ConfigurationError, ValidationError} from '../../src/util/AnalyzerErrors.js';
+import {AnalysisError, AnalyzerError, ConfigurationError, ValidationError} from '../../src/util/Errors.js';
 
-describe('AnalyzerErrors', () => {
+describe('AnalyzerErrors (consolidated in Errors.js)', () => {
     describe('AnalyzerError', () => {
         test('should create an error with correct properties', () => {
             const originalError = new Error('Original error');

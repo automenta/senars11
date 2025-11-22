@@ -14,7 +14,7 @@ import {TestCoverageAnalysisTool} from './TestCoverageAnalysisTool.js';
 import {MultiAnalysisTool} from './MultiAnalysisTool.js';
 import {ResultDisplay} from './analyzers/ResultDisplay.js';
 import {SoftwareAnalyzerConfig} from './analyzers/SoftwareAnalyzerConfig.js';
-import {AnalyzerError, ConfigurationError} from '../../util/AnalyzerErrors.js';
+import {AnalyzerError, ConfigurationError} from '../../util/Errors.js';
 
 /**
  * Tool-based implementation of SeNARS Self Analyzer

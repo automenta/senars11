@@ -6,7 +6,10 @@ import {
     ConnectionError,
     ModelNotFoundError,
     ParseError,
-    ConfigurationError
+    ConfigurationError,
+    AnalyzerError,
+    AnalysisError,
+    ValidationError
 } from './Errors.js';
 
 // Re-export for compatibility
@@ -15,7 +18,10 @@ export {
     ConnectionError,
     ModelNotFoundError,
     ParseError,
-    ConfigurationError
+    ConfigurationError,
+    AnalyzerError,
+    AnalysisError,
+    ValidationError
 };
 
 // Standard error handler with consistent formatting
@@ -29,6 +35,8 @@ export const handleError = (error, context = '', fallbackMessage = 'An error occ
         return `❌ Parse Error: ${error.message}`;
     } else if (error instanceof ConfigurationError) {
         return `❌ Configuration Error: ${error.message}`;
+    } else if (error instanceof ValidationError) {
+        return `❌ Validation Error: ${error.message} ${error.field ? `(Field: ${error.field})` : ''}`;
     }
 
     // Check for specific error patterns

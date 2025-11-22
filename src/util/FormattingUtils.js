@@ -1,9 +1,16 @@
+import {
+    formatNumberCompact,
+    formatNumberFixed,
+    formatPercentage,
+    formatFileSize,
+    truncateText
+} from './Format.js';
+
 const PUNCTUATION_MAP = {'BELIEF': '.', 'GOAL': '!', 'QUESTION': '?'};
 const DEFAULT_TRUTH = ' %1.000,0.900%';
 const DEFAULT_PRIORITY = '';
 const DEFAULT_TERM = 'Unknown';
 const DEFAULT_TASK_TYPE = 'TASK';
-const ID_CHARS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
 
 export class FormattingUtils {
     static formatTask(task) {
@@ -124,14 +131,10 @@ export class FormattingUtils {
     }
 
     static formatNumber(num) {
-        return num >= 1000000 ? (num / 1000000).toFixed(1) + 'M' :
-            num >= 1000 ? (num / 1000).toFixed(1) + 'K' :
-                num.toString();
+        return formatNumberCompact(num);
     }
 
     static formatFileSize(sizeInBytes) {
-        return sizeInBytes >= 1000000 ? (sizeInBytes / 1000000).toFixed(2) + ' MB' :
-            sizeInBytes >= 1000 ? (sizeInBytes / 1000).toFixed(2) + ' KB' :
-                sizeInBytes + ' bytes';
+        return formatFileSize(sizeInBytes);
     }
 }
