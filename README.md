@@ -418,9 +418,8 @@ The system distinguishes between beliefs (what the system knows) and goals (what
 **Goal Tasks (!)** represent what the system aims to achieve:
 
 - **Purpose**: Define objectives or desired outcomes
-- **Truth Values**: Desire (how much the goal is wanted) and confidence (how likely it is to be achievable)
-- **Example**: `(task_completed --> desirable)!{0.8, 0.9}.` (The system wants tasks completed with 80% desire intensity
-  and 90% confidence)
+- **Truth Values**: Frequency (desired frequency) and confidence (how likely it is to be achievable)
+- **Example**: `(task_completed --> desirable)!{0.8, 0.9}.` (The system wants the task to be 80% completed with 90% confidence)
 
 This design enables reinforcement learning where:
 
@@ -919,10 +918,6 @@ The system provides a fluent API for easy test creation.
 
 We are transitioning from **Model-Centric** AI (making the LLM bigger/smarter) to **System-Centric** AI (building a cognitive architecture *around* the model). The SeNARS Stream Reasoner embodies this transition by treating the Language Model as a substrate for processing context, while the "Superstructure" provides the agency.
 
-### The "Context Window" is a Trap
-
-The current industry obsession with 1M+ token context windows is a brute-force dead end. A massive context window is just a massive short-term buffer with no hierarchy, prioritization, or persistence.
-
 **The SeNARS Solution**: The `Focus` and `Bag` systems act as a **Dynamic Context Manager**. The "Superstructure" decides *what* goes into the LM's context window based on goals and urgency.
 
 ### The "Operating System" Analogy
@@ -963,14 +958,11 @@ LMs are reactive. They only complete the pattern you give them. They have no int
 The SeNARS architecture naturally supports general-purpose reinforcement learning through its foundational Belief-Goal
 distinction:
 
-- **World Model Learning**: Belief tasks with frequency-confidence truth semantics form predictive models of environment
-  dynamics
-- **Reward Structure Definition**: Goal tasks with desire-confidence truth semantics define reward functions for policy
-  learning
+- **World Model Learning**: Belief tasks with frequency-confidence truth semantics form predictive models of environment dynamics
+- **Reward Structure Definition**: Goal tasks define reward functions for policy learning
 - **Exploration-Exploitation Balance**: Truth value revision mechanisms naturally implement the fundamental RL tradeoff
 - **Policy Learning**: Task processing adapts action selection based on predicted outcomes and desired goals
-- **Continuous Adaptation**: The system learns through experience by updating beliefs from environmental feedback while
-  pursuing goals
+- **Continuous Adaptation**: The system learns through experience by updating beliefs from environmental feedback while pursuing goals
 - **Transfer Learning**: Knowledge gained in one domain transfers to related domains through structural similarity
 
 This enables SeNARS to function as a general-purpose reinforcement learning system where:
