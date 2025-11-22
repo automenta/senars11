@@ -1,0 +1,5 @@
+body { display: flex; margin: 0; height: 100vh; font-family: sans-serif; }
+#sidebar { width: 300px; display: flex; flex-direction: column; border-right: 1px solid #ccc; padding: 10px; }
+#log { flex: 1; overflow-y: auto; font-family: monospace; font-size: 12px; white-space: pre-wrap; margin-bottom: 10px; border: 1px solid #eee; padding: 5px;}
+#input { padding: 10px; border: 1px solid #ccc; }
+#cy { flex: 1; background: #f0f0f0; }

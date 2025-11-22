@@ -44,6 +44,7 @@
     "dev:regression": "node scripts/utils/automated-dev-workflow.js --regression-tests",
     "build": "npm run build:parser",
     "build:parser": "npx peggy --format es -o src/parser/peggy-parser.js src/parser/narsese.peggy",
+    "build:parser:next": "npx peggy --format es -o src-next/core/parser/narsese.js src-next/core/parser/narsese.peggy",
     "benchmark": "node src/testing/runBenchmarks.js",
     "slides:dev": "slidev slides.md",
     "slides:pdf": "slidev export slides.md"
