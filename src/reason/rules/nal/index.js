@@ -7,10 +7,12 @@
 export {NALRule} from './NALRule.js';
 
 // NAL inference rules
-export {SyllogisticRule} from './SyllogisticRule.js';
-export {ImplicationSyllogisticRule} from './ImplicationSyllogisticRule.js';
+export {
+    SyllogisticRule,
+    InheritanceSyllogisticRule,
+    ImplicationSyllogisticRule
+} from './SyllogisticRule.js';
 export {ModusPonensRule} from './ModusPonensRule.js';
 
 // Metacognition rules
 export {MetacognitionRules, AdjustCacheSizeRule} from './MetacognitionRules.js';
-

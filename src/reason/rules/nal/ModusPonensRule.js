@@ -1,7 +1,5 @@
-import {Rule} from '../../Rule.js';
+import {NALRule} from './NALRule.js';
 import {Truth} from '../../../Truth.js';
-import {Task} from '../../../task/Task.js';
-import {Stamp} from '../../../Stamp.js';
 import {logError} from '../../utils/error.js';
 
 /**
@@ -11,7 +9,7 @@ import {logError} from '../../utils/error.js';
  * Premise 2: P {f2, c2}
  * Conclusion: Q {F_ded}
  */
-export class ModusPonensRule extends Rule {
+export class ModusPonensRule extends NALRule {
     constructor(config = {}) {
         super('nal-modusponens', 'nal', 1.0, config);
     }
@@ -82,7 +80,7 @@ export class ModusPonensRule extends Rule {
             }
 
             // Extract components: implication is (P ==> Q), antecedent is P
-            const P = implicationPremise.term.components[0];  // Antecedent
+            // const P = implicationPremise.term.components[0];  // Antecedent
             const Q = implicationPremise.term.components[1];  // Consequent
             const implicationTruth = implicationPremise.truth;
             const antecedentTruth = antecedentPremise.truth;
@@ -95,34 +93,14 @@ export class ModusPonensRule extends Rule {
                 implicationTruth.c * antecedentTruth.c * implicationTruth.f  // c_imp * c_ant * f_imp
             );
 
-            // Create new stamp combining both premise stamps
-            const newStamp = Stamp.derive([primaryPremise.stamp, secondaryPremise.stamp]);
+            // Use base class to create the task with proper stamp and budget
+            const derivedTask = super.createDerivedTask(
+                Q,
+                newTruth,
+                [primaryPremise, secondaryPremise]
+            );
 
-            // Calculate priority (simplified)
-            const priority = (primaryPremise.budget?.priority ?? 0.5) *
-                (secondaryPremise.budget?.priority ?? 0.5) *
-                this.priority;
-
-            // Create derived task
-            const derivedTask = new Task({
-                term: Q,  // The consequent (Q) becomes the new term
-                punctuation: '.',  // Belief
-                truth: newTruth,
-                stamp: newStamp,
-                budget: {
-                    priority: priority,
-                    durability: Math.min(
-                        primaryPremise.budget?.durability ?? 0.5,
-                        secondaryPremise.budget?.durability ?? 0.5
-                    ),
-                    quality: Math.min(
-                        primaryPremise.budget?.quality ?? 0.5,
-                        secondaryPremise.budget?.quality ?? 0.5
-                    )
-                }
-            });
-
-            return [derivedTask];
+            return derivedTask ? [derivedTask] : [];
         } catch (error) {
             logError(error, {
                 ruleId: this.id,

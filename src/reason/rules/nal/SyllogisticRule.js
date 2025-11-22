@@ -4,13 +4,11 @@
  * Derives (S --> P) or (S ==> P) from (S --> M) and (M --> P) or (S ==> M) and (M ==> P)
  */
 
-import {Rule} from '../../Rule.js';
+import {NALRule} from './NALRule.js';
 import {Truth} from '../../../Truth.js';
-import {Task} from '../../../task/Task.js';
-import {Stamp} from '../../../Stamp.js';
 import {Term, TermType} from '../../../term/Term.js';
 
-export class SyllogisticRule extends Rule {
+export class SyllogisticRule extends NALRule {
     /**
      * Constructor for abstract class - should be called by subclasses
      * @param {string} id - Rule identifier
@@ -107,34 +105,16 @@ export class SyllogisticRule extends Rule {
         const conclusionName = `(${operator}, ${subject.name || 'subject'}, ${predicate.name || 'predicate'})`;
         const conclusionTerm = new Term(TermType.COMPOUND, conclusionName, [subject, predicate], operator);
 
-        // Create new stamp combining both premise stamps
-        const newStamp = Stamp.derive([primaryPremise.stamp, secondaryPremise.stamp]);
+        // Use base class to create the task with proper stamp and budget
+        const task = super.createDerivedTask(
+            conclusionTerm,
+            derivedTruth,
+            [primaryPremise, secondaryPremise],
+            null, // context not used for stamp/budget currently
+            '.'   // Punctuation is Belief
+        );
 
-        // Calculate priority (simplified)
-        const priority = (primaryPremise.budget?.priority || 0.5) *
-            (secondaryPremise.budget?.priority || 0.5) *
-            this.priority;
-
-        // Create derived task
-        const derivedTask = new Task({
-            term: conclusionTerm,
-            punctuation: '.',  // Belief
-            truth: derivedTruth,
-            stamp: newStamp,
-            budget: {
-                priority: priority,
-                durability: Math.min(
-                    primaryPremise.budget?.durability ?? 0.5,
-                    secondaryPremise.budget?.durability ?? 0.5
-                ),
-                quality: Math.min(
-                    primaryPremise.budget?.quality ?? 0.5,
-                    secondaryPremise.budget?.quality ?? 0.5
-                )
-            }
-        });
-
-        return [derivedTask];
+        return task ? [task] : [];
     }
 }
 
@@ -145,7 +125,7 @@ export class InheritanceSyllogisticRule extends SyllogisticRule {
     }
 }
 
-export class ImplicationSyllogisticRuleNew extends SyllogisticRule {
+export class ImplicationSyllogisticRule extends SyllogisticRule {
     constructor(config = {}) {
         super('nal-implication-syllogistic', '==>', 1.0, config);
     }
