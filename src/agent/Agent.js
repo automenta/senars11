@@ -1,9 +1,10 @@
+import {HumanMessage, ToolMessage} from "@langchain/core/messages";
 import {NAR} from '../nar/NAR.js';
 import {Input} from '../task/Input.js';
 import {PersistenceManager} from '../io/PersistenceManager.js';
 import {CommandProcessor} from '../repl/utils/CommandProcessor.js';
 import {handleError, logError} from '../util/ErrorHandler.js';
-import {HumanMessage, ToolMessage} from "@langchain/core/messages";
+import {FormattingUtils} from '../repl/utils/index.js';
 import {
     AgentCommandRegistry,
     AgentCreateCommand,
@@ -14,7 +15,6 @@ import {
     LMCommand,
     ProvidersCommand
 } from '../repl/commands/AgentCommands.js';
-import {FormattingUtils} from '../repl/utils/index.js';
 
 const AGENT_EVENTS = {
     ENGINE_READY: 'engine.ready',
@@ -40,10 +40,8 @@ const AGENT_EVENTS = {
 
 export class Agent extends NAR {
     constructor(config = {}) {
-        // Initialize NAR
         super(config);
 
-        // Agent-specific state
         this.id = config.id || `agent_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         this.inputQueue = new Input();
         this.sessionState = {history: [], lastResult: null, startTime: Date.now()};
@@ -51,28 +49,20 @@ export class Agent extends NAR {
         this.runInterval = null;
         this.traceEnabled = false;
 
-        // Configuration
         this.inputProcessingConfig = {
             enableNarseseFallback: config.inputProcessing?.enableNarseseFallback ?? true,
             checkNarseseSyntax: config.inputProcessing?.checkNarseseSyntax ?? true,
             lmTemperature: config.inputProcessing?.lmTemperature ?? 0.7
         };
 
-        // Persistence
         this.persistenceManager = new PersistenceManager({
             defaultPath: config.persistence?.defaultPath ?? './agent.json'
         });
 
-        // Command Processor
         this.commandProcessor = new CommandProcessor(this, this.persistenceManager, this.sessionState);
-
-        // Agent Command Registry
         this.commandRegistry = this._initializeCommandRegistry();
-
-        // LM Provider alias (NAR has _lm)
         this._currentToolCalls = [];
 
-        // UI State (from ReplEngine)
         this.uiState = {
             taskGrouping: null,
             taskSelection: [],
@@ -85,104 +75,68 @@ export class Agent extends NAR {
         return this.lm;
     }
 
-    // Compatibility for consumers expecting 'emit'
     emit(event, ...args) {
-        if (this._eventBus) {
-            this._eventBus.emit(event, ...args);
-        }
+        this._eventBus?.emit(event, ...args);
     }
 
     async initialize() {
         await super.initialize();
-
-        // Initialize command registry or other agent-specifics
         this._registerEventHandlers();
-
-        // If there are default tools or providers setup in config, ensure they are ready
-        // NAR.initialize() handles _lm and _toolIntegration initialization
-
         this.emit(AGENT_EVENTS.ENGINE_READY, {success: true, message: 'Agent initialized successfully'});
         return true;
     }
 
     _initializeCommandRegistry() {
         const registry = new AgentCommandRegistry();
-        // Register default agent commands
-        // Note: Some commands might need adaptation if they expect 'engine.agents' map
-        // We will address this by updating AgentCommands.js or providing shims if needed.
-        const commands = [
-            // new AgentCreateCommand(), // Temporarily disabled or needs adaptation for single-agent context
+        [
+            new AgentCreateCommand(),
             new GoalCommand(),
             new PlanCommand(),
             new ThinkCommand(),
             new ReasonCommand(),
             new LMCommand(),
             new ProvidersCommand()
-        ];
-
-        commands.forEach(cmd => registry.register(cmd));
+        ].forEach(cmd => registry.register(cmd));
         return registry;
     }
 
     _registerEventHandlers() {
-        // Proxy internal NAR events to Agent events if needed
-        // Since Agent IS NAR, listeners on Agent already hear NAR events.
-        // But ReplEngine emitted specific events like NARSESE_PROCESSED.
-        // We will emit them manually in processNarsese.
-
-        this._focusHandler = (task) => {
-             const formattedTask = this.formatTaskForDisplay(task);
-             this.emit('log', `🎯 FOCUSED: ${formattedTask}`);
-        };
-        this.on('task.focus', this._focusHandler);
+        this.on('task.focus', (task) => {
+            this.emit('log', `🎯 FOCUSED: ${this.formatTaskForDisplay(task)}`);
+        });
     }
 
-    // Input Processing (Unified from ReplEngine and SessionEngine)
     async processInput(input) {
-        const trimmedInput = input.trim();
-        if (!trimmedInput) return await this.executeCommand('next');
+        const trimmed = input.trim();
+        if (!trimmed) return this.executeCommand('next');
 
-        this.sessionState.history.push(trimmedInput);
+        this.sessionState.history.push(trimmed);
+        if (trimmed.startsWith('/')) return this.executeCommand(...trimmed.slice(1).split(' '));
 
-        if (trimmedInput.startsWith('/')) {
-            return await this.executeCommand(...trimmedInput.slice(1).split(' '));
-        }
+        const [cmd, ...args] = trimmed.split(' ');
+        if (this.commandRegistry.get(cmd)) return this.commandRegistry.execute(cmd, this, ...args);
 
-        const [firstPart, ...rest] = trimmedInput.split(' ');
-        if (this.commandRegistry.get(firstPart)) {
-            return await this.commandRegistry.execute(firstPart, this, ...rest);
-        }
-
-        // Default: Process as Agent Input (LM or Narsese)
-        return await this._processAgentInput(trimmedInput);
+        return this._processAgentInput(trimmed);
     }
 
     async executeCommand(cmd, ...args) {
-         // Handle special short commands
-         const SPECIAL_COMMANDS = {
-            'next': 'n', 'n': 'n',
-            'run': 'go', 'go': 'go',
-            'stop': 'st', 'st': 'st',
-            'quit': 'exit', 'q': 'exit', 'exit': 'exit'
+        const ALIASES = {
+            'next': 'n', 'run': 'go', 'stop': 'st', 'quit': 'exit', 'q': 'exit'
+        };
+        const command = ALIASES[cmd] ?? cmd;
+
+        const builtins = {
+            'n': () => this._next(),
+            'go': () => this._run(),
+            'st': () => this._stop(),
+            'exit': () => { this.emit(AGENT_EVENTS.ENGINE_QUIT); return '👋 Goodbye!'; }
         };
 
-        const cmdType = SPECIAL_COMMANDS[cmd] ?? cmd;
+        if (builtins[command]) return builtins[command]();
 
-        if (cmdType === 'n') return await this._next();
-        if (cmdType === 'go') return await this._run();
-        if (cmdType === 'st') return await this._stop();
-        if (cmdType === 'exit') {
-            this.emit(AGENT_EVENTS.ENGINE_QUIT);
-            return '👋 Goodbye!';
-        }
-
-        // Check Agent Registry first
-        if (this.commandRegistry.get(cmd)) {
-             return await this.commandRegistry.execute(cmd, this, ...args);
-        }
-
-        // Fallback to General Command Processor
-        return await this._executeGeneralCommand(cmd, ...args);
+        return this.commandRegistry.get(command)
+            ? this.commandRegistry.execute(command, this, ...args)
+            : this._executeGeneralCommand(command, ...args);
     }
 
     async _executeGeneralCommand(cmd, ...args) {
@@ -191,35 +145,28 @@ export class Agent extends NAR {
             this.emit(`command.${cmd}`, {command: cmd, args, result});
             return result;
         } catch (error) {
-            const errorMsg = `❌ Error executing command: ${error.message}`;
             this.emit(AGENT_EVENTS.COMMAND_ERROR, {command: cmd, args, error: error.message});
-            return errorMsg;
+            return `❌ Error executing command: ${error.message}`;
         }
     }
 
     async _processAgentInput(input) {
         try {
-            // Attempt LM stream accumulation
             return await this._accumulateStreamResponse(input);
-        } catch (lmError) {
-            logError(lmError, 'LM processing');
-            return await this._handleProcessingError(input, lmError);
+        } catch (error) {
+            logError(error, 'LM processing');
+            return this._handleProcessingError(input, error);
         }
     }
 
     async _accumulateStreamResponse(input) {
-        if (!this.lm) {
-            // If no LM, fallback to Narsese immediately
-             return await this.processNarsese(input);
-        }
+        if (!this.lm) return this.processNarsese(input);
 
-        let fullResponse = "";
+        let response = "";
         for await (const chunk of this.streamExecution(input)) {
-            if (chunk.type === "agent_response") {
-                fullResponse += chunk.content;
-            }
+            if (chunk.type === "agent_response") response += chunk.content;
         }
-        return fullResponse || "No response generated.";
+        return response || "No response generated.";
     }
 
     async _handleProcessingError(input, lmError) {
@@ -233,12 +180,10 @@ export class Agent extends NAR {
                 return `💭 Agent processed: Input "${input}" may not be valid Narsese. LM Error: ${lmError.message}`;
             }
         }
-
         return handleError(lmError, 'Agent processing');
     }
 
     async processNarsese(input) {
-        // Add to input queue for record keeping / priority management
         const taskId = this.inputQueue.addTask(input, 0.5, {
             type: 'user_input',
             source: 'narsese',
@@ -247,30 +192,20 @@ export class Agent extends NAR {
 
         try {
             const startTime = Date.now();
-            const result = await this.input(input); // Call NAR.input()
+            const result = await this.input(input);
             const duration = Date.now() - startTime;
 
             if (result !== false && result !== null) {
                 this.inputQueue.updatePriorityById(taskId, 0.8);
                 this.emit(AGENT_EVENTS.NARSESE_PROCESSED, {
-                    input,
-                    result,
-                    duration,
-                    taskId,
-                    beliefs: this.getBeliefs?.() ?? []
+                    input, result, duration, taskId, beliefs: this.getBeliefs?.() ?? []
                 });
                 return `✅ Input processed successfully (${duration}ms)`;
-            } else {
-                 // Handle failure (e.g. duplicate)
-                 // Note: NAR.input returns false for duplicates sometimes?
-                 // Wait, NAR.js _processNewTask returns 'added' boolean.
-
-                 // If duplicate, it returns false.
-                 const task = this.inputQueue.getTaskById(taskId);
-                 if(task) task.metadata.status = 'duplicate/failed';
-
-                 return '❌ Failed to process input (possibly duplicate or invalid)';
             }
+
+            const task = this.inputQueue.getTaskById(taskId);
+            if (task) task.metadata.status = 'duplicate/failed';
+            return '❌ Failed to process input (possibly duplicate or invalid)';
         } catch (error) {
             this._handleNarseseError(input, error, taskId);
             return `❌ Error: ${error.message}`;
@@ -288,39 +223,30 @@ export class Agent extends NAR {
     }
 
     _isPotentialNarsese(input) {
-        const narsesePatterns = [
-            /<[\w\s\-'"()[\]]*\s*-->\s*[\w\s\-'"()[\]]*>/,  // <A --> B>
-            /<[\w\s\-'"()[\]]*\s*\^[\w\s\-'"()[\]]*>/,       // <A ^op B>
-            /[<].*[>].*[!]/,                                  // Goal: <...>!
-            /<.*\?.*>/,                                       // Query: <...?>
-            /%[\d.]*;[\d.]*%/,                                // Truth values: %f;c%
-            /<.*\^.*>.*[!.]/,                                 // With op and goal/question
+        const patterns = [
+            /<[\w\s\-'"()[\]]*\s*-->\s*[\w\s\-'"()[\]]*>/,
+            /<[\w\s\-'"()[\]]*\s*\^[\w\s\-'"()[\]]*>/,
+            /[<].*[>].*[!]/,
+            /<.*\?.*>/,
+            /%[\d.]*;[\d.]*%/,
+            /<.*\^.*>.*[!.]/
         ];
-        return narsesePatterns.some(pattern => pattern.test(input));
+        return patterns.some(p => p.test(input));
     }
 
-    // Stream Execution (from SessionEngine)
     async* streamExecution(input) {
-        if (!this.lm) {
-             yield* this._handleMissingProvider(input);
-             return;
-        }
-
-        const provider = this._getProvider();
-        if (!provider) {
+        if (!this.lm || !this._getProvider()) {
             yield* this._handleMissingProvider(input);
             return;
         }
 
-        const messages = [new HumanMessage(input)];
+        const provider = this._getProvider();
         this._currentToolCalls = [];
 
         try {
-            const assistantContent = yield* this._streamAssistantResponse(messages, provider);
-
-            const toolCalls = this._currentToolCalls;
-            if (toolCalls?.length > 0) {
-                yield* this._executeAllToolCalls(toolCalls, input, assistantContent, provider);
+            const assistantContent = yield* this._streamAssistantResponse([new HumanMessage(input)], provider);
+            if (this._currentToolCalls.length > 0) {
+                yield* this._executeAllToolCalls(this._currentToolCalls, input, assistantContent, provider);
             }
         } catch (error) {
             yield* this._handleStreamingError(error, input);
@@ -329,9 +255,7 @@ export class Agent extends NAR {
     }
 
     _getProvider() {
-        if (!this.lm) return null;
-        const providerId = this.lm.providers.defaultProviderId;
-        return this.lm._getProvider(providerId);
+        return this.lm?._getProvider(this.lm.providers.defaultProviderId);
     }
 
     async* _handleMissingProvider(input) {
@@ -340,20 +264,18 @@ export class Agent extends NAR {
                 const result = await this.processNarsese(input);
                 yield {type: "agent_response", content: result || "Input processed"};
                 return;
-            } catch (narseseError) {
-                const errorMsg = "Agent initialized but Narsese processing failed.";
-                yield {type: "agent_response", content: `❌ ${errorMsg}`};
+            } catch (error) {
+                yield {type: "agent_response", content: "❌ Agent initialized but Narsese processing failed."};
                 return;
             }
         }
-        yield {type: "agent_response", content: `❌ No LM provider available and input not recognized as Narsese.`};
+        yield {type: "agent_response", content: "❌ No LM provider available and input not recognized as Narsese."};
     }
 
     async* _streamAssistantResponse(messages, provider) {
         let model = provider.model || provider;
         let stream;
 
-        // Check streaming capability
         if (typeof model.stream === 'function') {
             stream = await model.stream(messages);
         } else if (typeof provider.streamText === 'function') {
@@ -361,24 +283,22 @@ export class Agent extends NAR {
                 temperature: this.inputProcessingConfig.lmTemperature
             });
         } else {
-            // Fallback for non-streaming?
-             const response = await provider.invoke(messages[0].content);
-             yield {type: "agent_response", content: response};
-             return response;
+            const response = await provider.invoke(messages[0].content);
+            yield {type: "agent_response", content: response};
+            return response;
         }
 
         let assistantContent = "";
         for await (const chunk of stream) {
-            if (typeof chunk === 'object' && chunk.content) {
-                assistantContent += chunk.content;
-                yield {type: "agent_response", content: chunk.content};
-                chunk.tool_calls?.length > 0 && this._collectToolCalls(chunk.tool_calls);
-            } else if (typeof chunk === 'string') {
-                assistantContent += chunk;
-                yield {type: "agent_response", content: chunk};
+            const content = typeof chunk === 'object' ? chunk.content : chunk;
+            if (content) {
+                assistantContent += content;
+                yield {type: "agent_response", content};
+            }
+            if (typeof chunk === 'object' && chunk.tool_calls?.length > 0) {
+                this._collectToolCalls(chunk.tool_calls);
             }
         }
-
         return assistantContent;
     }
 
@@ -388,59 +308,32 @@ export class Agent extends NAR {
 
     async* _executeAllToolCalls(toolCalls, originalInput, assistantContent, provider) {
         for (const tc of toolCalls) {
-            yield* this._executeToolCall(tc, originalInput, assistantContent, toolCalls, provider);
-        }
-    }
+            yield {type: "tool_call", name: tc.name, args: tc.args};
+            const result = await this._executeTool(tc.name, tc.args, provider);
+            yield {type: "tool_result", content: result};
 
-    async* _handleStreamingError(error, input) {
-        const errorMsg = `❌ Streaming error: ${error.message}`;
-        if (!this.inputProcessingConfig.enableNarseseFallback || !this._isPotentialNarsese(input)) {
-            console.error('Streaming execution error:', {error, input});
-        }
-        yield {type: "error", content: errorMsg};
-    }
+            const messages = [
+                new HumanMessage(originalInput),
+                {role: "assistant", content: assistantContent, tool_calls: toolCalls},
+                new ToolMessage({content: result, tool_call_id: tc.id, name: tc.name})
+            ];
 
-    async* _executeToolCall(toolCall, originalInput, assistantContent, allToolCalls, provider) {
-        const {name, args, id} = toolCall;
-
-        yield {type: "tool_call", name, args};
-
-        const toolResult = await this._executeTool(name, args, provider);
-        yield {type: "tool_result", content: toolResult};
-
-        // Recursion or follow-up with LM not fully implemented here to keep simple,
-        // but basics are here. SessionEngine had logic for final response generation.
-        // We'll skip complex tool chains for this refactor unless needed.
-        // Actually, let's include the final generation.
-
-        const messagesWithResults = [
-            new HumanMessage(originalInput),
-            {role: "assistant", content: assistantContent, tool_calls: allToolCalls},
-            new ToolMessage({content: toolResult, tool_call_id: id, name})
-        ];
-
-         try {
-            let model = provider.model || provider;
-            if (typeof model.stream === 'function') {
-                const finalStream = await model.stream(messagesWithResults);
-                for await (const chunk of finalStream) {
-                    if (chunk.content) {
-                        yield {type: "agent_response", content: chunk.content};
+            try {
+                const model = provider.model || provider;
+                if (typeof model.stream === 'function') {
+                    for await (const chunk of await model.stream(messages)) {
+                        if (chunk.content) yield {type: "agent_response", content: chunk.content};
                     }
                 }
+            } catch (error) {
+                yield {type: "agent_response", content: `Error generating final response: ${error.message}`};
             }
-        } catch (error) {
-            yield {type: "agent_response", content: `Error generating final response: ${error.message}`};
         }
     }
 
     async _executeTool(name, args, provider) {
-        const tools = provider.tools || [];
-        const tool = tools.find(t => t.name === name);
-
-        if (!tool) {
-            return `Error: Tool ${name} not found`;
-        }
+        const tool = (provider.tools || []).find(t => t.name === name);
+        if (!tool) return `Error: Tool ${name} not found`;
 
         try {
             return await tool.invoke(args);
@@ -449,71 +342,66 @@ export class Agent extends NAR {
         }
     }
 
-    async processInputStreaming(input, onChunk) {
-        const trimmedInput = input.trim();
+    async* _handleStreamingError(error, input) {
+        if (!this.inputProcessingConfig.enableNarseseFallback || !this._isPotentialNarsese(input)) {
+            console.error('Streaming execution error:', {error, input});
+        }
+        yield {type: "error", content: `❌ Streaming error: ${error.message}`};
+    }
 
-        if (!trimmedInput) {
-            const result = await this.executeCommand('next');
-            onChunk?.(result);
-            return result;
+    async processInputStreaming(input, onChunk) {
+        const trimmed = input.trim();
+        if (!trimmed) {
+            const res = await this.executeCommand('next');
+            onChunk?.(res);
+            return res;
         }
-        if (trimmedInput.startsWith('/')) {
-            const result = await this.executeCommand(...trimmedInput.slice(1).split(' '));
-            onChunk?.(result);
-            return result;
-        }
-        const [firstPart, ...rest] = trimmedInput.split(' ');
-        if (this.commandRegistry.get(firstPart)) {
-            const result = await this.commandRegistry.execute(firstPart, this, ...rest);
-            onChunk?.(result);
-            return result;
+
+        if (trimmed.startsWith('/') || this.commandRegistry.get(trimmed.split(' ')[0])) {
+            const res = await this.processInput(input); // processInput handles commands
+            onChunk?.(res);
+            return res;
         }
 
         try {
-             let fullResponse = "";
-             for await (const chunk of this.streamExecution(trimmedInput)) {
-                 if (chunk.type === 'agent_response') {
-                     fullResponse += chunk.content;
-                     onChunk?.(`🤖: ${chunk.content}`);
-                 } else if (chunk.type === 'tool_call') {
-                     onChunk?.(`\n[Calling tool: ${chunk.name}...]\n`);
-                 } else if (chunk.type === 'tool_result') {
-                     onChunk?.(`\n[Tool result: ${chunk.content}]\n`);
-                 }
-             }
-             return fullResponse;
-        } catch (error) {
-             if (this.inputProcessingConfig.enableNarseseFallback) {
-                const shouldTryNarsese = !this.inputProcessingConfig.checkNarseseSyntax || this._isPotentialNarsese(trimmedInput);
-                if (shouldTryNarsese) {
-                    try {
-                        const result = await this.processNarsese(trimmedInput);
-                        onChunk?.(result);
-                        return result;
-                    } catch (narseseError) {
-                        const errorMsg = `💭 Agent processed: Input "${trimmedInput}" may not be valid Narsese. LM Error: ${error.message}`;
-                        onChunk?.(errorMsg);
-                        return errorMsg;
-                    }
+            let fullResponse = "";
+            for await (const chunk of this.streamExecution(trimmed)) {
+                if (chunk.type === 'agent_response') {
+                    fullResponse += chunk.content;
+                    onChunk?.(`🤖: ${chunk.content}`);
+                } else if (chunk.type === 'tool_call') {
+                    onChunk?.(`\n[Calling tool: ${chunk.name}...]\n`);
+                } else if (chunk.type === 'tool_result') {
+                    onChunk?.(`\n[Tool result: ${chunk.content}]\n`);
                 }
             }
-            const errorMsg = handleError(error, 'Agent processing');
-            onChunk?.(errorMsg);
-            return errorMsg;
+            return fullResponse;
+        } catch (error) {
+             if (this.inputProcessingConfig.enableNarseseFallback && this._isPotentialNarsese(trimmed)) {
+                 try {
+                     const res = await this.processNarsese(trimmed);
+                     onChunk?.(res);
+                     return res;
+                 } catch (e) {
+                     const msg = `💭 Agent processed: Input "${trimmed}" may not be valid Narsese. LM Error: ${error.message}`;
+                     onChunk?.(msg);
+                     return msg;
+                 }
+             }
+             const msg = handleError(error, 'Agent processing');
+             onChunk?.(msg);
+             return msg;
         }
     }
 
-    // Run Loop (from ReplEngine)
     async _next() {
         try {
             await this.step();
-            const output = `⏭️  Single cycle executed. Cycle: ${this.cycleCount}`;
             this.emit(AGENT_EVENTS.NAR_CYCLE_STEP, {cycle: this.cycleCount});
-            return output;
+            return `⏭️  Single cycle executed. Cycle: ${this.cycleCount}`;
         } catch (error) {
-            const errorMsg = `❌ Error executing single cycle: ${error.message}`;
             this.emit(AGENT_EVENTS.NAR_ERROR, {error: error.message});
-            return errorMsg;
+            return `❌ Error executing single cycle: ${error.message}`;
         }
     }
 
@@ -528,7 +416,6 @@ export class Agent extends NAR {
             this.emit(AGENT_EVENTS.NAR_TRACE_ENABLE, {reason: 'run session'});
         }
 
-        // Autonomous loop
         this.runInterval = setInterval(() => {
             this._autonomousStep().catch(error => {
                 console.error(`❌ Error during run: ${error.message}`);
@@ -541,18 +428,7 @@ export class Agent extends NAR {
     }
 
     async _autonomousStep() {
-        // 1. Process pending tasks from input queue if any
-        await this.processPendingInputTasks();
-        // 2. Step the NAR reasoner
         await this.step();
-    }
-
-    async processPendingInputTasks() {
-        // Logic to move tasks from inputQueue to NAR if needed
-        // For now, processNarsese already inputs to NAR.
-        // If we want asynchronous inputs, we would pull from inputQueue here.
-        // But Input queue is currently just a log/priority list.
-        // We'll leave this as a hook.
     }
 
     _stop() {
@@ -569,19 +445,6 @@ export class Agent extends NAR {
         return '🛑 Run stopped.';
     }
 
-    // State Management
-    getStats() {
-        return super.getStats();
-    }
-
-    getBeliefs(queryTerm = null) {
-        return super.getBeliefs(queryTerm);
-    }
-
-    getHistory() {
-        return [...this.sessionState.history];
-    }
-
     reset(options = {}) {
         super.reset(options);
         this.sessionState.history = [];
@@ -590,16 +453,8 @@ export class Agent extends NAR {
         return '🔄 Agent reset successfully.';
     }
 
-    // Save/Load
-    async save() {
-         return await this.commandProcessor._save();
-    }
-
-    async load() {
-        return await this.commandProcessor._load();
-    }
-
-    formatTaskForDisplay(task) {
-        return FormattingUtils.formatTask(task);
-    }
+    async save() { return this.commandProcessor._save(); }
+    async load() { return this.commandProcessor._load(); }
+    getHistory() { return [...this.sessionState.history]; }
+    formatTaskForDisplay(task) { return FormattingUtils.formatTask(task); }
 }

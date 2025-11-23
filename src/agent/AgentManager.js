@@ -9,56 +9,37 @@ export class AgentManager {
         this.currentAgentId = null;
     }
 
-    /**
-     * Create a new agent
-     */
     async createAgent(agentId = null, config = {}) {
-        if (!agentId) {
-            agentId = `agent_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
-        }
+        const id = agentId || `agent_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+        const agent = await new AgentBuilder(config).build();
+        agent.id = id;
 
-        // Use AgentBuilder to create the agent
-        const builder = new AgentBuilder(config);
-        const agent = await builder.build();
-
-        // Ensure ID matches
-        agent.id = agentId;
-
-        this.agents.set(agentId, {
-            id: agentId,
-            agent: agent, // The Agent instance
+        this.agents.set(id, {
+            id,
+            agent,
             createdAt: new Date(),
             lastAccessed: new Date(),
-            config: config,
+            config,
             metadata: {}
         });
 
-        this.currentAgentId = agentId;
-        return agentId;
+        this.currentAgentId = id;
+        return id;
     }
 
-    /**
-     * Get an agent by ID
-     */
     getAgent(agentId) {
-        const agentEntry = this.agents.get(agentId);
-        if (agentEntry) {
-            agentEntry.lastAccessed = new Date();
-            return agentEntry.agent;
+        const entry = this.agents.get(agentId);
+        if (entry) {
+            entry.lastAccessed = new Date();
+            return entry.agent;
         }
         return null;
     }
 
-    /**
-     * Get the full agent entry (with metadata)
-     */
     getAgentEntry(agentId) {
         return this.agents.get(agentId);
     }
 
-    /**
-     * Switch to a different agent (set as current)
-     */
     switchAgent(agentId) {
         if (!this.agents.has(agentId)) {
             throw new Error(`Agent ${agentId} does not exist`);
@@ -67,90 +48,55 @@ export class AgentManager {
         return this.getAgent(agentId);
     }
 
-    /**
-     * Get the current active agent
-     */
     getCurrentAgent() {
-        if (!this.currentAgentId) return null;
-        return this.getAgent(this.currentAgentId);
+        return this.currentAgentId ? this.getAgent(this.currentAgentId) : null;
     }
 
-    /**
-     * Execute an operation in a specific agent context
-     */
     async executeInAgentContext(agentId, operation) {
         const originalAgentId = this.currentAgentId;
         try {
             this.currentAgentId = agentId;
-            const agent = this.getAgent(agentId);
-            return await operation(agent);
+            return await operation(this.getAgent(agentId));
         } finally {
             this.currentAgentId = originalAgentId;
         }
     }
 
-    /**
-     * Save agent state
-     */
     async saveAgent(agentId) {
-        const agentEntry = this.agents.get(agentId);
-        if (!agentEntry) {
-            throw new Error(`Agent ${agentId} does not exist`);
-        }
+        const entry = this.agents.get(agentId);
+        if (!entry) throw new Error(`Agent ${agentId} does not exist`);
 
-        const agent = agentEntry.agent;
-        // Serialize agent state
-        let agentState = null;
-        if (agent && typeof agent.serialize === 'function') {
-            agentState = agent.serialize();
-        }
-
-        // Also save history etc if available
-        const history = agent.getHistory ? agent.getHistory() : [];
+        const {agent} = entry;
+        const agentState = agent?.serialize?.() ?? null;
+        const history = agent?.getHistory?.() ?? [];
 
         return {
-            id: agentEntry.id,
-            config: agentEntry.config,
-            createdAt: agentEntry.createdAt,
-            lastAccessed: agentEntry.lastAccessed,
-            agentState: agentState,
-            history: history,
-            metadata: agentEntry.metadata
+            id: entry.id,
+            config: entry.config,
+            createdAt: entry.createdAt,
+            lastAccessed: entry.lastAccessed,
+            agentState,
+            history,
+            metadata: entry.metadata
         };
     }
 
-    /**
-     * Load agent state
-     */
     async loadAgent(agentId, state) {
-        if (this.agents.has(agentId)) {
-            throw new Error(`Agent ${agentId} already exists`);
-        }
+        if (this.agents.has(agentId)) throw new Error(`Agent ${agentId} already exists`);
 
-        // Rebuild the agent using the saved config
         await this.createAgent(agentId, state.config);
         const agent = this.getAgent(agentId);
 
-        // Restore agent state
-        if (state.agentState && agent && typeof agent.deserialize === 'function') {
-            await agent.deserialize(state.agentState);
-        }
+        if (state.agentState && agent?.deserialize) await agent.deserialize(state.agentState);
+        if (state.history && agent?.sessionState) agent.sessionState.history = [...state.history];
 
-        // Restore history if needed
-        if (state.history && agent.sessionState) {
-            agent.sessionState.history = [...state.history];
-        }
-
-        const agentEntry = this.getAgentEntry(agentId);
-        agentEntry.metadata = state.metadata || {};
-        agentEntry.createdAt = state.createdAt ? new Date(state.createdAt) : agentEntry.createdAt;
+        const entry = this.getAgentEntry(agentId);
+        entry.metadata = state.metadata || {};
+        if (state.createdAt) entry.createdAt = new Date(state.createdAt);
 
         return agent;
     }
 
-    /**
-     * List all agents
-     */
     listAgents() {
         return Array.from(this.agents.entries()).map(([id, entry]) => ({
             id: entry.id,
@@ -160,49 +106,29 @@ export class AgentManager {
         }));
     }
 
-    /**
-     * Remove an agent
-     */
     async removeAgent(agentId) {
-        if (this.agents.has(agentId)) {
-            const entry = this.agents.get(agentId);
-            const agent = entry.agent;
+        if (!this.agents.has(agentId)) return false;
 
-            // Shutdown agent if possible
-            if (agent && typeof agent.stop === 'function') {
-                agent.stop(); // Stop run loop
-            }
-            if (agent && typeof agent.dispose === 'function') {
-                await agent.dispose();
-            }
+        const {agent} = this.agents.get(agentId);
+        agent?.stop?.();
+        if (agent?.dispose) await agent.dispose();
 
-            this.agents.delete(agentId);
+        this.agents.delete(agentId);
 
-            if (this.currentAgentId === agentId) {
-                this.currentAgentId = this.agents.size > 0
-                    ? this.agents.keys().next().value
-                    : null;
-            }
-
-            return true;
+        if (this.currentAgentId === agentId) {
+            this.currentAgentId = this.agents.size > 0 ? this.agents.keys().next().value : null;
         }
-        return false;
+
+        return true;
     }
 
-    /**
-     * Clear all agents
-     */
     async clearAllAgents() {
-        for (const [id, entry] of this.agents) {
-             const agent = entry.agent;
-             if (agent && typeof agent.dispose === 'function') {
-                await agent.dispose();
-            }
+        for (const {agent} of this.agents.values()) {
+            if (agent?.dispose) await agent.dispose();
         }
         this.agents.clear();
         this.currentAgentId = null;
     }
 }
 
-// Export a default instance for convenience
 export default new AgentManager();

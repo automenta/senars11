@@ -3,8 +3,21 @@ import {Agent} from '../src/agent/Agent.js';
 import {NAR} from '../src/nar/NAR.js';
 
 describe('AgentBuilder', () => {
+    let agent;
+
+    afterEach(async () => {
+        if (agent) {
+            if (typeof agent.dispose === 'function') {
+                await agent.dispose();
+            } else if (typeof agent.stop === 'function') {
+                agent.stop();
+            }
+            agent = null;
+        }
+    });
+
     test('should create an agent with default configuration', async () => {
-        const agent = await new AgentBuilder().build();
+        agent = await new AgentBuilder().build();
 
         expect(agent).toBeInstanceOf(Agent);
         expect(agent).toBeInstanceOf(NAR);
@@ -13,7 +26,7 @@ describe('AgentBuilder', () => {
     });
 
     test('should create an agent with metrics enabled', async () => {
-        const agent = await new AgentBuilder()
+        agent = await new AgentBuilder()
             .withMetrics(true)
             .build();
 
@@ -21,7 +34,7 @@ describe('AgentBuilder', () => {
     });
 
     test('should create an agent with embeddings enabled', async () => {
-        const agent = await new AgentBuilder()
+        agent = await new AgentBuilder()
             .withEmbeddings({enabled: true, model: 'test-model'})
             .build();
 
@@ -29,7 +42,7 @@ describe('AgentBuilder', () => {
     });
 
     test('should create an agent with LM enabled', async () => {
-        const agent = await new AgentBuilder()
+        agent = await new AgentBuilder()
             .withLM(true)
             .build();
 
@@ -37,7 +50,7 @@ describe('AgentBuilder', () => {
     });
 
     test('should create an agent with tools enabled', async () => {
-        const agent = await new AgentBuilder()
+        agent = await new AgentBuilder()
             .withTools(true)
             .build();
 
@@ -45,7 +58,7 @@ describe('AgentBuilder', () => {
     });
 
     test('should create an agent with functors configured', async () => {
-        const agent = await new AgentBuilder()
+        agent = await new AgentBuilder()
             .withFunctors(['core-arithmetic'])
             .build();
 
@@ -55,7 +68,7 @@ describe('AgentBuilder', () => {
     });
 
     test('should create an agent with configuration object', async () => {
-        const agent = await new AgentBuilder()
+        agent = await new AgentBuilder()
             .withConfig({
                 subsystems: {
                     metrics: true,
@@ -77,7 +90,7 @@ describe('AgentBuilder', () => {
     });
 
     test('should allow selective subsystem disabling', async () => {
-        const agent = await new AgentBuilder()
+        agent = await new AgentBuilder()
             .withConfig({
                 subsystems: {
                     metrics: false,
