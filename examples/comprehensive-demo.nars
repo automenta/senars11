@@ -1,0 +1,63 @@
+// title: Comprehensive REPL Capabilities Demo
+
+*50
+
+// Start with basic concepts
+<cat --> animal>.
+<dog --> animal>.
+<animal --> living>.
+
+// Demonstrate various command types
+/verbose on
+
+// Show different information views
+/beliefs
+/goals
+/concepts
+/tasks
+
+// Show configuration
+/config
+
+// Profile system performance
+/profile 1000
+
+// Create concept relationships visualization
+/graph animal
+
+// Search for specific terms
+/search concepts animal
+/search beliefs living
+
+// Save current state
+/save comprehensive-state.json
+
+// Set up event watching
+/watch beliefs animal
+
+// Add more facts to trigger the watch
+<bird --> animal>.
+<fish --> animal>.
+
+// Use batch operations
+/batch "<mammal --> warm-blooded>." "<cat --> mammal>." "<dog --> mammal>."
+
+// Use timers for delayed execution
+/timer 1500 "<reptile --> cold-blooded>."
+
+// Step to process all changes
+/step 10
+
+// Show comprehensive statistics
+/stats
+
+// Show priority queue
+/priority 15
+
+// Demonstrate LM integration
+/think "How do mammals differ from other animal classes?"
+/reason "What can we infer about warm-blooded animals?"
+
+// Final summary
+/beliefs
+/verbose off

@@ -197,9 +197,17 @@ export class Agent extends NAR {
         return '🔄 Agent reset successfully.';
     }
 
-    async save() {
+    async save(filepath = null) {
         const state = this.serialize();
+        if (filepath) {
+            return await this.persistenceManager.saveToPath(state, filepath);
+        }
         return await this.persistenceManager.saveToDefault(state);
+    }
+
+    setVolume(n) {
+        this.volume = n;
+        this.emit('agent.volume', {volume: n});
     }
 
     async load(filepath = null) {

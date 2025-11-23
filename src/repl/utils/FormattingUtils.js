@@ -1,6 +1,7 @@
 /**
  * Formatting utilities for enhanced REPL output
  */
+import {FormattingUtils as BasicFormattingUtils} from '../../util/FormattingUtils.js';
 
 // Default color codes
 const COLORS = {
@@ -51,7 +52,7 @@ const COLORS = {
     }
 };
 
-export class FormattingUtils {
+export class FormattingUtils extends BasicFormattingUtils {
     static colorize(text, color) {
         if (process.env.NODE_DISABLE_COLORS === '1') return text;
         return `${COLORS[color] || COLORS.fg[color] || ''}${text}${COLORS.reset}`;
@@ -185,7 +186,7 @@ export class FormattingUtils {
             
             return [
                 c.term?.toString?.() ?? c.term ?? 'Unknown',
-                believes,
+                beliefs,
                 goals,
                 questions,
                 c.activation?.toFixed(3) ?? '0.000'

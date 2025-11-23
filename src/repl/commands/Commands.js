@@ -2,82 +2,15 @@
  * Standardized Command Interface and Implementations
  */
 
-import {handleError} from '../../util/ErrorHandler.js';
-import {fileURLToPath} from 'url';
-import {dirname, resolve, join, basename} from 'path';
-import {promises as fs} from 'fs';
+import {AgentCommand, AgentCommandRegistry, createBanner, EXAMPLES_DIR} from './CommandBase.js';
 import {FormattingUtils} from '../utils/index.js';
+import {resolve, join, basename} from 'path';
+import {promises as fs} from 'fs';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const EXAMPLES_DIR = resolve(__dirname, '../../../examples');
-
-// Helper to generate banner
-const createBanner = (title) => {
-    const width = 60;
-    const border = '═'.repeat(width);
-    const padding = Math.max(0, Math.floor((width - title.length) / 2));
-    const paddedTitle = ' '.repeat(padding) + title + ' '.repeat(width - title.length - padding);
-    return `\n${border}\n${paddedTitle}\n${border}\n`;
-};
-
-// Base class for all commands
-export class AgentCommand {
-    constructor(name, description, usage) {
-        this.name = name;
-        this.description = description;
-        this.usage = usage;
-    }
-
-    async execute(agent, ...args) {
-        try {
-            return await this._executeImpl(agent, ...args);
-        } catch (error) {
-            return handleError(error, `${this.name} command`, `❌ Error executing ${this.name} command`);
-        }
-    }
-
-    async _executeImpl(agent, ...args) {
-        throw new Error(`_executeImpl not implemented for command: ${this.name}`);
-    }
-}
-
-// Registry
-export class AgentCommandRegistry {
-    constructor() {
-        this.commands = new Map();
-    }
-
-    register(command) {
-        if (!(command instanceof AgentCommand)) {
-            throw new Error('Command must be an instance of AgentCommand');
-        }
-        this.commands.set(command.name, command);
-    }
-
-    get(name) {
-        return this.commands.get(name);
-    }
-
-    getAll() {
-        return Array.from(this.commands.values());
-    }
-
-    async execute(name, agent, ...args) {
-        const command = this.get(name);
-        if (!command) {
-            return `❌ Unknown command: ${name}`;
-        }
-        return await command.execute(agent, ...args);
-    }
-
-    getHelp() {
-        const commands = this.getAll();
-        if (commands.length === 0) return 'No commands registered.';
-        return commands.map(cmd =>
-            `  ${cmd.name.padEnd(12)} - ${cmd.description}`
-        ).join('\n');
-    }
-}
+// Re-export base classes
+export {AgentCommand, AgentCommandRegistry};
+// Re-export new commands
+export * from './AdditionalCommands.js';
 
 // --- Agent Commands ---
 
@@ -289,9 +222,10 @@ export class RestartCommand extends ResetCommand {
 }
 
 export class SaveCommand extends AgentCommand {
-    constructor() { super('save', 'Save state to file', 'save'); }
-    async _executeImpl(agent) {
-        const result = await agent.save();
+    constructor() { super('save', 'Save state to file', 'save [filepath]'); }
+    async _executeImpl(agent, ...args) {
+        const filepath = args[0];
+        const result = await agent.save(filepath);
         return `💾 Saved to ${result.identifier} (${result.size} bytes)`;
     }
 }
@@ -364,7 +298,15 @@ export class RunCommand extends AgentCommand {
             for (const line of lines) {
                 const trimmed = line.trim();
                 if (!trimmed || trimmed.startsWith('//') || trimmed.startsWith('#')) continue;
-                if (trimmed.startsWith('*')) continue; // Ignore legacy control
+
+                if (trimmed.startsWith('*')) {
+                    const val = parseInt(trimmed.slice(1));
+                    if (!isNaN(val) && typeof agent.setVolume === 'function') {
+                        agent.setVolume(val);
+                        if (agent.echo) output.push(`> Volume set to ${val}`);
+                    }
+                    continue;
+                }
 
                 if (agent.echo) {
                      output.push(`> ${trimmed}`);
@@ -451,20 +393,17 @@ export class CycleCommand extends AgentCommand {
 export class ConceptsCommand extends AgentCommand {
     constructor() { super('concepts', 'List concepts', 'concepts [term]'); }
     async _executeImpl(agent, ...args) {
-        const concepts = agent.getConceptPriorities();
+        // Use getConcepts() to get full Concept objects for formatConcepts
+        const concepts = agent.getConcepts ? agent.getConcepts() : [];
         if (concepts.length === 0) return 'No concepts.';
 
         if (args.length > 0) {
              const term = args[0];
-             const concept = concepts.find(c => c.term === term);
-             if (!concept) return `Concept '${term}' not found.`;
-             return `Concept: ${term}\nPriority: ${concept.priority.toFixed(3)}\nActivation: ${concept.activation.toFixed(3)}\nQuality: ${concept.quality.toFixed(3)}\nTasks: ${concept.totalTasks}`;
+             // formatConcepts handles filtering if second arg is provided
+             return `📚 ${FormattingUtils.formatConcepts(concepts, term)}`;
         }
 
-        const list = concepts.slice(0, 20).map(c =>
-            `${c.term.padEnd(30)} P:${c.priority.toFixed(3)} A:${c.activation.toFixed(3)} Tasks:${c.totalTasks}`
-        ).join('\n');
-        return `Concepts:\n${list}${concepts.length > 20 ? `\n... and ${concepts.length - 20} more` : ''}`;
+        return `📚 Concepts:\n${FormattingUtils.formatConcepts(concepts)}`;
     }
 }
 
@@ -476,18 +415,11 @@ export class TasksCommand extends AgentCommand {
         // 1. Get tasks from Input Queue
         if (agent.inputQueue && agent.inputQueue.getAllTasks) {
             tasks.push(...agent.inputQueue.getAllTasks().map(item => {
-                // InputQueue stores {task: Task, ...}
-                const task = item.task;
-                // We add a temporary property for display source, carefully not to mutate original if it matters
-                // but formatTask probably won't show it. We'll prepend it in output.
-                return {task, source: 'Input'};
+                return {task: item.task, source: 'Input'};
             }));
         }
 
         // 2. Get tasks from Focus Buffer
-        // agent.focus or agent.componentManager.getComponent('focus')
-        // Agent extends NAR, so it has this._focus, but maybe not public getter 'focus'.
-        // We'll try dynamic access or component manager.
         let focus = agent.focus;
         if (!focus && agent.componentManager) {
             focus = agent.componentManager.getComponent('focus');
@@ -505,7 +437,7 @@ export class TasksCommand extends AgentCommand {
 
         if (tasks.length === 0) return 'No tasks found.';
 
-        // Deduplicate based on task string representation
+        // Deduplicate
         const uniqueTasks = new Map();
         tasks.forEach(item => {
              const t = item.task;
@@ -513,13 +445,21 @@ export class TasksCommand extends AgentCommand {
              if (!uniqueTasks.has(key)) uniqueTasks.set(key, item);
         });
 
-        const sortedTasks = Array.from(uniqueTasks.values()).slice(0, 30); // Limit output
+        const sortedTasks = Array.from(uniqueTasks.values()).slice(0, 30);
 
-        const list = sortedTasks.map(item =>
-            `[${item.source}] ${FormattingUtils.formatTask(item.task)}`
-        ).join('\n');
+        // Use table formatting
+        const tableData = sortedTasks.map(item => [
+            item.source,
+            item.task.term?.toString() ?? 'Unknown',
+            item.task.type,
+            FormattingUtils.formatPriority(item.task.budget?.priority),
+            FormattingUtils.formatTruth(item.task.truth)
+        ]);
 
-        return `Tasks (Top ${sortedTasks.length}):\n${list}`;
+        const headers = ['Source', 'Term', 'Type', 'Priority', 'Truth'];
+        const table = FormattingUtils.formatTable(tableData, headers);
+
+        return `📝 Tasks (Top ${sortedTasks.length}):\n${table}`;
     }
 }
 
@@ -534,8 +474,17 @@ export class BeliefsCommand extends AgentCommand {
     constructor() { super('beliefs', 'List beliefs', 'beliefs'); }
     async _executeImpl(agent) {
         const beliefs = agent.getBeliefs();
-        const list = beliefs.slice(0, 20).map(t => FormattingUtils.formatTask(t)).join('\n');
-        return `Beliefs:\n${list}`;
+        if (beliefs.length === 0) return 'No beliefs.';
+        return `💡 Beliefs:\n${FormattingUtils.formatBeliefs(beliefs)}`;
+    }
+}
+
+export class GoalsCommand extends AgentCommand {
+    constructor() { super('goals', 'List goals', 'goals'); }
+    async _executeImpl(agent) {
+        const goals = agent.getGoals ? agent.getGoals() : [];
+        if (goals.length === 0) return 'No goals.';
+        return `🎯 Goals:\n${FormattingUtils.formatGoals(goals)}`;
     }
 }
 
@@ -543,8 +492,14 @@ export class QuestionsCommand extends AgentCommand {
     constructor() { super('questions', 'List questions', 'questions'); }
     async _executeImpl(agent) {
         const questions = agent.getQuestions();
-        const list = questions.slice(0, 20).map(t => FormattingUtils.formatTask(t)).join('\n');
-        return `Questions:\n${list}`;
+        if (questions.length === 0) return 'No questions.';
+
+        const tableData = questions.slice(0, 20).map((q, i) => [
+            i + 1,
+            q.term?.toString?.() ?? q.term ?? 'Unknown'
+        ]);
+        const headers = ['No.', 'Term'];
+        return `❓ Questions:\n${FormattingUtils.formatTable(tableData, headers)}`;
     }
 }
 
