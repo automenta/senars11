@@ -34,60 +34,71 @@ class AgentRepl {
 
     async configureLM() {
         if (this._isOllamaMode()) {
-            const {modelName, baseURL, temperature} = this._getOllamaConfig();
+            this._configureLMFromArgs();
+        } else {
+            await this._configureLMInteractively();
+        }
+    }
+
+    _configureLMFromArgs() {
+        const {modelName, baseURL, temperature} = this._getOllamaConfig();
+
+        this.config.lm = {
+            provider: 'ollama',
+            modelName: modelName,
+            baseUrl: baseURL,
+            temperature: temperature || 0,
+            enabled: true
+        };
+
+        console.log(`🔧 Using command-line Ollama configuration: ${modelName}`);
+    }
+
+    async _configureLMInteractively() {
+        try {
+            const configOptions = await inquirer.prompt([
+                {
+                    type: 'input',
+                    name: 'modelName',
+                    message: 'Enter Ollama model name:',
+                    default: DEFAULT_CONFIG.OLLAMA.modelName
+                },
+                {
+                    type: 'input',
+                    name: 'baseUrl',
+                    message: 'Enter Ollama base URL:',
+                    default: DEFAULT_CONFIG.OLLAMA.baseUrl
+                },
+                {
+                    type: 'number',
+                    name: 'temperature',
+                    message: 'Enter temperature (0-1):',
+                    default: DEFAULT_CONFIG.OLLAMA.temperature
+                }
+            ]);
 
             this.config.lm = {
                 provider: 'ollama',
-                modelName: modelName,
-                baseUrl: baseURL,
-                temperature: temperature || 0,
+                modelName: configOptions.modelName,
+                baseUrl: configOptions.baseUrl,
+                temperature: configOptions.temperature,
                 enabled: true
             };
-
-            console.log(`🔧 Using command-line Ollama configuration: ${modelName}`);
-        } else {
-            // Interactive configuration
-            try {
-                const configOptions = await inquirer.prompt([
-                    {
-                        type: 'input',
-                        name: 'modelName',
-                        message: 'Enter Ollama model name:',
-                        default: DEFAULT_CONFIG.OLLAMA.modelName
-                    },
-                    {
-                        type: 'input',
-                        name: 'baseUrl',
-                        message: 'Enter Ollama base URL:',
-                        default: DEFAULT_CONFIG.OLLAMA.baseUrl
-                    },
-                    {
-                        type: 'number',
-                        name: 'temperature',
-                        message: 'Enter temperature (0-1):',
-                        default: DEFAULT_CONFIG.OLLAMA.temperature
-                    }
-                ]);
-
-                this.config.lm = {
-                    provider: 'ollama',
-                    modelName: configOptions.modelName,
-                    baseUrl: configOptions.baseUrl,
-                    temperature: configOptions.temperature,
-                    enabled: true
-                };
-            } catch (error) {
-                // Fallback if inquirer fails (e.g. non-interactive)
-                console.log('⚠️ Interactive prompt failed, using default config.');
-                this.config.lm = {
-                    provider: 'ollama',
-                    modelName: DEFAULT_CONFIG.OLLAMA.modelName,
-                    baseUrl: DEFAULT_CONFIG.OLLAMA.baseUrl,
-                    temperature: DEFAULT_CONFIG.OLLAMA.temperature,
-                    enabled: true
-                };
-            }
+        } catch (error) {
+            // Fallback if inquirer fails (e.g. non-interactive)
+            console.log('⚠️ Interactive prompt failed, using default config.');
+            this._configureLMFromDefaults();
         }
+    }
+
+    _configureLMFromDefaults() {
+        this.config.lm = {
+            provider: 'ollama',
+            modelName: DEFAULT_CONFIG.OLLAMA.modelName,
+            baseUrl: DEFAULT_CONFIG.OLLAMA.baseUrl,
+            temperature: DEFAULT_CONFIG.OLLAMA.temperature,
+            enabled: true
+        };
     }
 
     _getOllamaConfig() {
@@ -101,7 +112,15 @@ class AgentRepl {
     async startRepl() {
         console.log('🚀 Starting REPL engine...\n');
 
-        // Build session using SessionBuilder
+        this.engine = await this._buildSessionEngine();
+
+        console.log('✅ Engine ready. Rendering UI...');
+
+        // Render the Ink UI
+        this.inkInstance = render(React.createElement(AgentInkTUI, {engine: this.engine}));
+    }
+
+    async _buildSessionEngine() {
         const builder = new SessionBuilder({
             nar: {
                 tools: {enabled: true},
@@ -114,12 +133,7 @@ class AgentRepl {
             }
         });
 
-        this.engine = await builder.build();
-
-        console.log('✅ Engine ready. Rendering UI...');
-
-        // Render the Ink UI
-        this.inkInstance = render(React.createElement(AgentInkTUI, {engine: this.engine}));
+        return await builder.build();
     }
 
     async shutdown() {

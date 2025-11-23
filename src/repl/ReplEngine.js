@@ -135,19 +135,16 @@ export class ReplEngine extends EventEmitter {
     }
 
     async processNarsese(input) {
+        const taskId = this.inputManager.addTask(input, 0.5, {
+            type: 'user_input',
+            source: 'narsese',
+            timestamp: Date.now()
+        });
+
         try {
-            const taskId = this.inputManager.addTask(input, 0.5, {
-                type: 'user_input',
-                source: 'narsese',
-                timestamp: Date.now()
-            });
-
-            const startTime = Date.now();
-            const inputResult = await this.nar.input(input);
-            const duration = Date.now() - startTime;
-
-            if (inputResult !== false && inputResult !== null) {
-                this._handleSuccessfulNarsese(input, inputResult, duration, taskId);
+            const {result, duration} = await this._executeNarseseInput(input);
+            if (result !== false && result !== null) {
+                this._handleSuccessfulNarsese(input, result, duration, taskId);
                 return `✅ Input processed successfully (${duration}ms)`;
             } else {
                 this._handleFailedNarsese(input, taskId);
@@ -158,6 +155,13 @@ export class ReplEngine extends EventEmitter {
             this._handleNarseseError(input, error);
             return `❌ Error: ${error.message}`;
         }
+    }
+
+    async _executeNarseseInput(input) {
+        const startTime = Date.now();
+        const result = await this.nar.input(input);
+        const duration = Date.now() - startTime;
+        return {result, duration};
     }
 
     _handleSuccessfulNarsese(input, result, duration, taskId) {
@@ -202,17 +206,18 @@ export class ReplEngine extends EventEmitter {
         const cmdType = SPECIAL_COMMANDS[cmd] ?? cmd;
 
         switch (cmdType) {
-            case 'n':
-                return await this._next();
-            case 'go':
-                return await this._run();
-            case 'st':
-                return await this._stop();
+            case 'n': return await this._next();
+            case 'go': return await this._run();
+            case 'st': return await this._stop();
             case 'exit':
                 this.emit('engine.quit');
                 return '👋 Goodbye!';
         }
 
+        return await this._executeGeneralCommand(cmd, ...args);
+    }
+
+    async _executeGeneralCommand(cmd, ...args) {
         try {
             const result = await this.commandProcessor.executeCommand(cmd, ...args);
             this.emit(`command.${cmd}`, {command: cmd, args, result});
@@ -310,33 +315,52 @@ export class ReplEngine extends EventEmitter {
             const state = this.nar.serialize?.();
             if (!state) return 'Serialization not supported by NAR instance.';
 
-            const result = await this.persistenceManager.saveToDefault(state);
+            const result = await this._saveStateToDefault(state);
             this.emit(EVENTS.ENGINE_SAVE, {filePath: result.filePath, size: result.size});
-            return `💾 NAR state saved successfully to ${result.filePath} (${Math.round(result.size / 1024)} KB)`;
+            return this._formatSaveResult(result);
         } catch (error) {
             this.emit(EVENTS.ENGINE_ERROR, {error: error.message});
             return `❌ Error saving NAR state: ${error.message}`;
         }
     }
 
+    async _saveStateToDefault(state) {
+        return await this.persistenceManager.saveToDefault(state);
+    }
+
+    _formatSaveResult(result) {
+        return `💾 NAR state saved successfully to ${result.filePath} (${Math.round(result.size / 1024)} KB)`;
+    }
+
     async load() {
         try {
-            const exists = await this.persistenceManager.exists();
-            if (!exists) return `📁 Save file does not exist: ${this.persistenceManager.defaultPath}`;
+            if (!await this._saveFileExists()) {
+                return `📁 Save file does not exist: ${this.persistenceManager.defaultPath}`;
+            }
 
-            const state = await this.persistenceManager.loadFromDefault();
+            const state = await this._loadStateFromDefault();
             const success = await this.nar.deserialize?.(state);
 
-            if (success) {
-                this.emit(EVENTS.ENGINE_LOAD, {filePath: this.persistenceManager.defaultPath});
-                return `💾 NAR state loaded successfully from ${this.persistenceManager.defaultPath}`;
-            } else {
-                return '❌ Failed to load NAR state - deserialization error';
-            }
+            return success
+                ? this._formatLoadSuccess()
+                : '❌ Failed to load NAR state - deserialization error';
         } catch (error) {
             this.emit(EVENTS.ENGINE_ERROR, {error: error.message});
             return `❌ Error loading NAR state: ${error.message}`;
         }
+    }
+
+    async _saveFileExists() {
+        return await this.persistenceManager.exists();
+    }
+
+    async _loadStateFromDefault() {
+        return await this.persistenceManager.loadFromDefault();
+    }
+
+    _formatLoadSuccess() {
+        this.emit(EVENTS.ENGINE_LOAD, {filePath: this.persistenceManager.defaultPath});
+        return `💾 NAR state loaded successfully from ${this.persistenceManager.defaultPath}`;
     }
 
     // Session state management methods

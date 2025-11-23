@@ -23,60 +23,62 @@ export class SessionBuilder {
     async build() {
         console.log('🏗️  Building SeNARS Session...');
 
-        // 1. Create NAR instance
+        const nar = await this._createAndInitializeNAR();
+        const lmProvider = this._createLMProvider();
+        const engine = await this._createAndInitializeEngine(nar);
+
+        if (lmProvider) {
+            engine.registerLMProvider('ollama', lmProvider);
+        }
+
+        console.log('✅ Session Engine ready.');
+        return engine;
+    }
+
+    async _createAndInitializeNAR() {
         const nar = new NAR({
             tools: {enabled: true},
             lm: {enabled: true},
             ...this.narConfig
         });
 
-        // Initialize NAR
         if (nar.initialize) {
-             try {
+            try {
                 await nar.initialize();
                 console.log('✅ NAR system initialized');
             } catch (error) {
                 console.error('⚠️  Warning: Failed to initialize NAR system:', error.message);
             }
         }
+        return nar;
+    }
 
-        // 2. Create LM Provider
-        // Currently supports Ollama as the primary built-in provider
-        let lmProvider = null;
-
-        // Check if we have valid LM config
+    _createLMProvider() {
         if (this.lmConfig.provider === 'ollama') {
             console.log(`🔧 Configuring Ollama: ${this.lmConfig.modelName}`);
-            lmProvider = new ChatOllama({
+            const lmProvider = new ChatOllama({
                 model: this.lmConfig.modelName,
                 baseUrl: this.lmConfig.baseUrl,
                 temperature: this.lmConfig.temperature,
             });
-            // Add identifier for the engine
             lmProvider.name = 'ollama';
-            // Attach tools array for later population
             lmProvider.tools = [];
+            return lmProvider;
         } else if (this.lmConfig.enabled) {
             console.warn('⚠️  LM enabled but no supported provider configured. Agent capabilities may be limited.');
         }
+        return null;
+    }
 
-        // 3. Create SessionEngine
+    async _createAndInitializeEngine(nar) {
         const engine = new SessionEngine({
-            nar: nar,
+            nar,
             lm: this.lmConfig,
             inputProcessing: this.inputProcessingConfig,
             persistence: this.persistenceConfig
         });
 
-        // 4. Initialize Engine
         await engine.initialize();
-
-        // 5. Register LM Provider with Engine
-        if (lmProvider) {
-            engine.registerLMProvider('ollama', lmProvider);
-        }
-
-        console.log('✅ Session Engine ready.');
         return engine;
     }
 }

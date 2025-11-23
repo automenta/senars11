@@ -66,54 +66,48 @@ function parseArgs(args) {
     let config = {...DEFAULT_CONFIG};
 
     for (let i = 0; i < args.length; i++) {
-        if (args[i] === '--ws-port' && args[i + 1]) {
-            config = {
-                ...config,
-                webSocket: {
-                    ...config.webSocket,
-                    port: parseInt(args[i + 1])
+        switch (args[i]) {
+            case '--ws-port':
+                if (args[i + 1]) {
+                    config = updateConfig(config, 'webSocket', 'port', parseInt(args[i + 1]));
+                    i++;
                 }
-            };
-            i++; // Skip next argument since it's the value
-        } else if (args[i] === '--port' && args[i + 1]) {
-            config = {
-                ...config,
-                ui: {
-                    ...config.ui,
-                    port: parseInt(args[i + 1])
+                break;
+            case '--port':
+                if (args[i + 1]) {
+                    config = updateConfig(config, 'ui', 'port', parseInt(args[i + 1]));
+                    i++;
                 }
-            };
-            i++; // Skip next argument since it's the value
-        } else if (args[i] === '--host' && args[i + 1]) {
-            config = {
-                ...config,
-                webSocket: {
-                    ...config.webSocket,
-                    host: args[i + 1]
+                break;
+            case '--host':
+                if (args[i + 1]) {
+                    config = updateConfig(config, 'webSocket', 'host', args[i + 1]);
+                    i++;
                 }
-            };
-            i++; // Skip next argument since it's the value
-        } else if (args[i] === '--graph-ui') {
-            config = {
-                ...config,
-                ui: {
-                    ...config.ui,
-                    layout: 'graph'
+                break;
+            case '--graph-ui':
+                config = updateConfig(config, 'ui', 'layout', 'graph');
+                break;
+            case '--layout':
+                if (args[i + 1]) {
+                    config = updateConfig(config, 'ui', 'layout', args[i + 1]);
+                    i++;
                 }
-            };
-        } else if (args[i] === '--layout' && args[i + 1]) {
-            config = {
-                ...config,
-                ui: {
-                    ...config.ui,
-                    layout: args[i + 1]
-                }
-            };
-            i++; // Skip next argument since it's the value
+                break;
         }
     }
 
     return config;
+}
+
+function updateConfig(config, section, key, value) {
+    return {
+        ...config,
+        [section]: {
+            ...config[section],
+            [key]: value
+        }
+    };
 }
 
 if (helpRequested) {
@@ -127,6 +121,17 @@ async function startWebSocketServer(config = DEFAULT_CONFIG) {
     console.log(`Starting WebSocket server on ${config.webSocket.host}:${config.webSocket.port}...`);
 
     // Use SessionBuilder to create the engine
+    const replEngine = await _createReplEngine(config);
+    const monitor = await _initializeWebSocketMonitor(config.webSocket);
+    const serverAdapter = await _setupSessionServerAdapter(replEngine, monitor);
+    const demoWrapper = await _setupDemoWrapper(replEngine.nar, monitor);
+
+    console.log('WebSocket server started successfully');
+
+    return {nar: replEngine.nar, replEngine, monitor, demoWrapper};
+}
+
+async function _createReplEngine(config) {
     const builder = new SessionBuilder({
         nar: config.nar,
         persistence: config.persistence,
@@ -137,14 +142,16 @@ async function startWebSocketServer(config = DEFAULT_CONFIG) {
         }
     });
 
-    const replEngine = await builder.build();
+    return await builder.build();
+}
 
-    const monitor = new WebSocketMonitor(config.webSocket);
+async function _initializeWebSocketMonitor(webSocketConfig) {
+    const monitor = new WebSocketMonitor(webSocketConfig);
     await monitor.start();
+    return monitor;
+}
 
-    // Remove direct connection from NAR to Monitor
-    // replEngine.nar.connectToWebSocketMonitor(monitor); <-- Removed as per refactor
-
+async function _setupSessionServerAdapter(replEngine, monitor) {
     // Import and initialize SessionServerAdapter (formerly WebRepl)
     const {SessionServerAdapter} = await import('../../src/server/SessionServerAdapter.js');
     const serverAdapter = new SessionServerAdapter(replEngine, monitor);
@@ -169,11 +176,13 @@ async function startWebSocketServer(config = DEFAULT_CONFIG) {
         });
     });
 
+    return serverAdapter;
+}
+
+async function _setupDemoWrapper(nar, monitor) {
     // Initialize DemoWrapper to provide remote control and introspection
     const demoWrapper = new DemoWrapper();
-    // DemoWrapper might need access to the monitor to broadcast things?
-    // Or does it use the engine?
-    await demoWrapper.initialize(replEngine.nar, monitor);
+    await demoWrapper.initialize(nar, monitor);
 
     // Send list of available demos to connected UIs
     await demoWrapper.sendDemoList();
@@ -182,11 +191,9 @@ async function startWebSocketServer(config = DEFAULT_CONFIG) {
     demoWrapper.runPeriodicMetricsUpdate();
 
     // Start the NAR reasoning cycle
-    replEngine.nar.start();
+    nar.start();
 
-    console.log('WebSocket server started successfully');
-
-    return {nar: replEngine.nar, replEngine, monitor, demoWrapper};
+    return demoWrapper;
 }
 
 /**
@@ -226,14 +233,21 @@ function startUIServer(config = DEFAULT_CONFIG) {
  * Save the NAR state to file
  */
 async function saveNarState(nar, replEngine = null) {
-    const fs = await import('fs');
-    const state = nar.serialize();
-    await fs.promises.writeFile(DEFAULT_CONFIG.persistence.defaultPath, JSON.stringify(state, null, 2));
-    console.log('Current state saved to agent.json');
+    try {
+        const fs = await import('fs');
+        const state = nar.serialize();
+        if (state) {
+            await fs.promises.writeFile(DEFAULT_CONFIG.persistence.defaultPath, JSON.stringify(state, null, 2));
+            console.log('Current state saved to agent.json');
+        }
 
-    // Also save ReplEngine state if available
-    if (replEngine) {
-        await replEngine.save();
+        // Also save ReplEngine state if available
+        if (replEngine) {
+            await replEngine.save();
+        }
+    } catch (error) {
+        console.error('Error saving state:', error.message);
+        throw error;
     }
 }
 
@@ -241,25 +255,47 @@ async function saveNarState(nar, replEngine = null) {
  * Shutdown sequence for all services
  */
 async function shutdownServices(webSocketServer) {
+    const errors = [];
+
     // Save NAR state
     try {
         await saveNarState(webSocketServer.nar, webSocketServer.replEngine);
     } catch (saveError) {
         console.error('Error saving state on shutdown:', saveError.message);
+        errors.push(saveError);
     }
 
     // Shutdown ReplEngine if available
-    if (webSocketServer.replEngine) {
-        await webSocketServer.replEngine.shutdown();
+    try {
+        if (webSocketServer.replEngine) {
+            await webSocketServer.replEngine.shutdown();
+        }
+    } catch (engineError) {
+        console.error('Error shutting down ReplEngine:', engineError.message);
+        errors.push(engineError);
     }
 
     // Stop WebSocket server
-    if (webSocketServer.monitor) {
-        await webSocketServer.monitor.stop();
+    try {
+        if (webSocketServer.monitor) {
+            await webSocketServer.monitor.stop();
+        }
+    } catch (monitorError) {
+        console.error('Error stopping WebSocket monitor:', monitorError.message);
+        errors.push(monitorError);
     }
 
-    if (webSocketServer.nar) {
-        webSocketServer.nar.stop();
+    try {
+        if (webSocketServer.nar) {
+            webSocketServer.nar.stop();
+        }
+    } catch (narError) {
+        console.error('Error stopping NAR:', narError.message);
+        errors.push(narError);
+    }
+
+    if (errors.length > 0) {
+        throw new Error(`Shutdown completed with ${errors.length} errors`);
     }
 }
 
@@ -311,7 +347,7 @@ async function main() {
 
         console.log('Both servers are running. Press Ctrl+C to stop.');
     } catch (error) {
-        console.error('Failed to start servers:', error.message);
+        console.error('Failed to start servers:', error);
         process.exit(1);
     }
 }

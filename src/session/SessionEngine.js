@@ -214,40 +214,50 @@ export class SessionEngine extends ReplEngine {
             return await this.commandRegistry.execute(firstPart, this, ...rest);
         }
 
+        return await this._processAgentInput(trimmedInput);
+    }
+
+    async _processAgentInput(input) {
         try {
             // Use streaming execution and accumulate result
-            let fullResponse = "";
-            for await (const chunk of this.streamExecution(trimmedInput)) {
-                if (chunk.type === "agent_response") {
-                    fullResponse += chunk.content; // In a real UI we might want to show partial updates
-                } else if (chunk.type === "tool_result") {
-                    // Tool results might be interesting to log but not part of the final text response
-                }
-            }
-            return fullResponse || "No response generated.";
-
+            return await this._accumulateStreamResponse(input);
         } catch (lmError) {
             logError(lmError, 'LM processing');
+            return await this._handleProcessingError(input, lmError);
+        }
+    }
 
-            // Only attempt Narsese fallback if enabled in config
-            if (this.inputProcessingConfig.enableNarseseFallback) {
-                // Only check Narsese syntax if enabled in config, otherwise always try Narsese fallback
-                const shouldTryNarsese = !this.inputProcessingConfig.checkNarseseSyntax || this._isPotentialNarsese(trimmedInput);
+    async _accumulateStreamResponse(input) {
+        let fullResponse = "";
+        for await (const chunk of this.streamExecution(input)) {
+            if (chunk.type === "agent_response") {
+                fullResponse += chunk.content; // In a real UI we might want to show partial updates
+            } else if (chunk.type === "tool_result") {
+                // Tool results might be interesting to log but not part of the final text response
+            }
+        }
+        return fullResponse || "No response generated.";
+    }
 
-                if (shouldTryNarsese) {
-                    try {
-                        return await this.processNarsese(trimmedInput);
-                    } catch (narseseError) {
-                        logError(narseseError, 'Narsese processing');
-                        // Return a more user-friendly error
-                        return `💭 Agent processed: Input "${trimmedInput}" may not be valid Narsese. LM Error: ${lmError.message}`;
-                    }
+    async _handleProcessingError(input, lmError) {
+        // Only attempt Narsese fallback if enabled in config
+        if (this.inputProcessingConfig.enableNarseseFallback) {
+            // Only check Narsese syntax if enabled in config, otherwise always try Narsese fallback
+            const shouldTryNarsese = !this.inputProcessingConfig.checkNarseseSyntax || this._isPotentialNarsese(input);
+
+            if (shouldTryNarsese) {
+                try {
+                    return await this.processNarsese(input);
+                } catch (narseseError) {
+                    logError(narseseError, 'Narsese processing');
+                    // Return a more user-friendly error
+                    return `💭 Agent processed: Input "${input}" may not be valid Narsese. LM Error: ${lmError.message}`;
                 }
             }
-
-            // For non-Narsese-like inputs or when fallback is disabled, just report the LM error
-            return handleError(lmError, 'Agent processing');
         }
+
+        // For non-Narsese-like inputs or when fallback is disabled, just report the LM error
+        return handleError(lmError, 'Agent processing');
     }
 
     // Determine if input looks like potential Narsese syntax
@@ -275,102 +285,121 @@ export class SessionEngine extends ReplEngine {
 
     // Streaming execution function - direct approach without LangGraph
     async* streamExecution(input) {
-        const providerId = this.agentLM.providers.defaultProviderId;
-        const provider = this.agentLM._getProvider(providerId);
+        const provider = this._getProvider();
 
         if (!provider) {
-            // Try Narsese fallback first if enabled, because this might be a direct Narsese input
-            // and no agent is configured (common in tests or core-only mode)
-            if (this.inputProcessingConfig.enableNarseseFallback && this._isPotentialNarsese(input)) {
-                try {
-                    const result = await this.processNarsese(input);
-                    yield {type: "agent_response", content: result || "Input processed"};
-                    return;
-                } catch (narseseError) {
-                    // If Narsese fails, then report the missing provider error
-                    const errorMsg = "Agent not initialized or provider missing. Call initialize() first.";
-                    console.error(errorMsg);
-                    yield {type: "agent_response", content: `❌ ${errorMsg}`};
-                    return;
-                }
-            }
-
-            const errorMsg = "Agent not initialized or provider missing. Call initialize() first.";
-            console.error(errorMsg);
-            yield {type: "agent_response", content: `❌ ${errorMsg}`};
-            return;
+            return yield* this._handleMissingProvider(input);
         }
-
-        // We need to access the raw model for tool binding if possible,
-        // or assume the provider handles tools if we pass them.
-        // However, standard LM.js interface uses `streamText`.
-        // We need to check if the provider exposes a LangChain-compatible model
-        // or if we can use the provider directly.
-
-        // Best effort: check if the provider has a `model` property (like AgentReplOllama uses)
-        // or if `streamText` returns chunks with tool calls.
-        // If the provider IS the LangChain wrapper, we might need to call `stream` on it.
-
-        let model = provider.model || provider;
 
         // Create initial messages
         const messages = [new HumanMessage(input)];
-        let toolCalls = [];
+        this._resetToolCalls(); // Reset tool calls before streaming
 
-        // === First pass: Stream assistant response and detect tool calls ===
         try {
-            // If the model supports .stream() (LangChain standard), use it
-            let stream;
-            if (typeof model.stream === 'function') {
-                 stream = await model.stream(messages);
-            } else if (typeof provider.streamText === 'function') {
-                 // Fallback to provider's streamText if it doesn't expose the raw model
-                 // This path might not support tools natively unless streamText does
-                 stream = await provider.streamText(input, {
-                     temperature: this.inputProcessingConfig.lmTemperature
-                 });
-            } else {
-                 throw new Error("Model does not support streaming");
+            const assistantContent = yield* this._streamAssistantResponse(messages, provider);
+
+            // If there are tool calls, execute them
+            const toolCalls = this._currentToolCalls;
+            if (toolCalls && toolCalls.length > 0) {
+                yield* this._executeAllToolCalls(toolCalls, input, assistantContent, provider);
             }
-
-            let assistantContent = "";
-
-            for await (const chunk of stream) {
-                // Handle LangChain chunk format
-                if (typeof chunk === 'object') {
-                    if (chunk.content) {
-                        assistantContent += chunk.content;
-                        yield {type: "agent_response", content: chunk.content};
-                    }
-                    if (chunk.tool_calls?.length > 0) {
-                        toolCalls = chunk.tool_calls;
-                    }
-                } else if (typeof chunk === 'string') {
-                    // Simple string stream
-                    assistantContent += chunk;
-                    yield {type: "agent_response", content: chunk};
-                }
-            }
-
-            // If there are no tool calls, we're done
-            if (!toolCalls || toolCalls.length === 0) {
-                return;
-            }
-
-            // === Execute each tool call and stream results ===
-            for (const tc of toolCalls) {
-                yield* this._executeToolCall(tc, input, assistantContent, toolCalls, provider);
-            }
-
         } catch (error) {
-            const errorMsg = `❌ Streaming error: ${error.message}`;
-            // Only log error if it's not a simple Narsese fallback scenario
-            if (!this.inputProcessingConfig.enableNarseseFallback || !this._isPotentialNarsese(input)) {
-                 console.error('Streaming execution error:', {error, input});
-            }
-            yield {type: "error", content: errorMsg};
+            yield* this._handleStreamingError(error, input);
             throw error; // Re-throw to allow fallback logic in processInput
         }
+    }
+
+    _getProvider() {
+        const providerId = this.agentLM.providers.defaultProviderId;
+        return this.agentLM._getProvider(providerId);
+    }
+
+    async* _handleMissingProvider(input) {
+        // Try Narsese fallback first if enabled, because this might be a direct Narsese input
+        // and no agent is configured (common in tests or core-only mode)
+        if (this.inputProcessingConfig.enableNarseseFallback && this._isPotentialNarsese(input)) {
+            try {
+                const result = await this.processNarsese(input);
+                yield {type: "agent_response", content: result || "Input processed"};
+                return;
+            } catch (narseseError) {
+                // If Narsese fails, then report the missing provider error
+                const errorMsg = "Agent not initialized or provider missing. Call initialize() first.";
+                console.error(errorMsg);
+                yield {type: "agent_response", content: `❌ ${errorMsg}`};
+                return;
+            }
+        }
+
+        const errorMsg = "Agent not initialized or provider missing. Call initialize() first.";
+        console.error(errorMsg);
+        yield {type: "agent_response", content: `❌ ${errorMsg}`};
+        return;
+    }
+
+    async* _streamAssistantResponse(messages, provider) {
+        let model = provider.model || provider;
+
+        // If the model supports .stream() (LangChain standard), use it
+        let stream;
+        if (typeof model.stream === 'function') {
+            stream = await model.stream(messages);
+        } else if (typeof provider.streamText === 'function') {
+            // Fallback to provider's streamText if it doesn't expose the raw model
+            // This path might not support tools natively unless streamText does
+            stream = await provider.streamText(messages[0].content, {
+                temperature: this.inputProcessingConfig.lmTemperature
+            });
+        } else {
+            throw new Error("Model does not support streaming");
+        }
+
+        let assistantContent = "";
+        for await (const chunk of stream) {
+            // Handle LangChain chunk format
+            if (typeof chunk === 'object') {
+                if (chunk.content) {
+                    assistantContent += chunk.content;
+                    yield {type: "agent_response", content: chunk.content};
+                }
+                if (chunk.tool_calls?.length > 0) {
+                    this._collectToolCalls(chunk.tool_calls);
+                }
+            } else if (typeof chunk === 'string') {
+                // Simple string stream
+                assistantContent += chunk;
+                yield {type: "agent_response", content: chunk};
+            }
+        }
+
+        return assistantContent;
+    }
+
+    _resetToolCalls() {
+        this.__currentToolCalls = [];
+    }
+
+    _collectToolCalls(calls) {
+        this.__currentToolCalls = this.__currentToolCalls.concat(calls);
+    }
+
+    get _currentToolCalls() {
+        return this.__currentToolCalls || [];
+    }
+
+    async* _executeAllToolCalls(toolCalls, originalInput, assistantContent, provider) {
+        for (const tc of toolCalls) {
+            yield* this._executeToolCall(tc, originalInput, assistantContent, toolCalls, provider);
+        }
+    }
+
+    async* _handleStreamingError(error, input) {
+        const errorMsg = `❌ Streaming error: ${error.message}`;
+        // Only log error if it's not a simple Narsese fallback scenario
+        if (!this.inputProcessingConfig.enableNarseseFallback || !this._isPotentialNarsese(input)) {
+            console.error('Streaming execution error:', {error, input});
+        }
+        yield {type: "error", content: errorMsg};
     }
 
     // Helper method to execute a single tool call with its follow-up response
