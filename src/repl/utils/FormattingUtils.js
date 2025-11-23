@@ -70,17 +70,17 @@ export class FormattingUtils extends BasicFormattingUtils {
         }
         
         // Calculate max width for each column
-        data.forEach(row => {
+        for (const row of data) {
             for (let i = 0; i < Math.max(headers ? headers.length : 0, row.length); i++) {
                 const cell = String(row[i] || '');
                 columnWidths[i] = Math.max(columnWidths[i] || 0, cell.length);
             }
-        });
+        }
         
         // Ensure minimum width
-        columnWidths.forEach((_, i) => {
+        for (let i = 0; i < columnWidths.length; i++) {
             columnWidths[i] = Math.max(columnWidths[i], 6); // Minimum width of 6
-        });
+        }
         
         // Create table
         let table = '';
@@ -100,12 +100,12 @@ export class FormattingUtils extends BasicFormattingUtils {
         }
         
         // Data rows
-        data.forEach(row => {
+        for (const row of data) {
             const dataRow = row.map((cell, i) => 
                 String(cell || '').padEnd(columnWidths[i])
             ).join('  ');
             table += dataRow + '\n';
-        });
+        }
         
         return table.trim();
     }

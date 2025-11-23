@@ -75,7 +75,7 @@ describe('REPL Commands', () => {
 
     test('BatchCommand should execute multiple', async () => {
         const result = await registry.execute('batch', agent, '/verbose on', '/config');
-        expect(result).toContain('Verbose mode enabled');
+        expect(result).toContain('Verbose mode: ON');
         expect(result).toContain('Configuration');
     });
 

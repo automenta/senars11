@@ -7,7 +7,7 @@ export class ReplMessageHandler extends EventEmitter {
     constructor(engine) {
         super();
 
-        if (!engine || typeof engine.processInput !== 'function') {
+        if (!engine?.processInput) {
             throw new Error('ReplMessageHandler requires a valid engine with processInput method');
         }
 
@@ -18,7 +18,6 @@ export class ReplMessageHandler extends EventEmitter {
         this.engine.commandRegistry = this.registry;
 
         this.messageHandlers = new Map();
-        this.handlerCache = new Map();
 
         this._setupCommands();
         this._setupDefaultMessageHandlers();
@@ -41,74 +40,53 @@ export class ReplMessageHandler extends EventEmitter {
     }
 
     _setupDefaultMessageHandlers() {
-        this.messageHandlers.set('reason/step', this._handleReasonStep.bind(this));
-        this.messageHandlers.set('narseseInput', this._handleNarseseInput.bind(this));
+        this.messageHandlers.set('reason/step', this._handleGenericInput.bind(this, MESSAGE_TYPES.NARSESE_RESULT));
+        this.messageHandlers.set('narseseInput', this._handleGenericInput.bind(this, MESSAGE_TYPES.NARSESE_RESULT));
+        this.messageHandlers.set('agent/input', this._handleGenericInput.bind(this, MESSAGE_TYPES.AGENT_RESULT));
         this.messageHandlers.set('command.execute', this._handleCommandExecute.bind(this));
-        this.messageHandlers.set('control/start', this._handleControlCommand.bind(this));
-        this.messageHandlers.set('control/stop', this._handleControlCommand.bind(this));
-        this.messageHandlers.set('control/step', this._handleControlCommand.bind(this));
-        this.messageHandlers.set('agent/input', this._handleAgentInput.bind(this));
+
+        const controlHandler = this._handleControlCommand.bind(this);
+        ['control/start', 'control/stop', 'control/step'].forEach(type =>
+            this.messageHandlers.set(type, controlHandler)
+        );
+    }
+
+    _extractInput(message) {
+        return message?.payload?.text ?? message?.payload?.input ?? message?.payload ?? message;
     }
 
     async processMessage(message) {
-        if (!message || typeof message !== 'object') {
-            return {error: 'Invalid message: expected object'};
-        }
+        if (!message || typeof message !== 'object') return {error: 'Invalid message: expected object'};
 
         try {
-            const input = message?.payload?.text ?? message?.payload?.input ?? message?.payload ?? message;
-            const messageType = message?.type;
+            const input = this._extractInput(message);
+            const { type: messageType } = message;
 
-            // Early return for common cases
-            if (!messageType && typeof input === 'string') {
-                return await this.engine.processInput(input);
+            if (!messageType && typeof input === 'string') return await this.engine.processInput(input);
+
+            // 1. Specific handlers from map
+            if (this.messageHandlers.has(messageType)) {
+                return await this.messageHandlers.get(messageType)(message);
             }
 
-            switch (messageType) {
-                case 'narseseInput':
-                case 'reason/step':
-                    return await this._handleNarseseInput(message);
-                case 'command.execute':
-                    return await this._handleCommandExecute(message);
-                case 'agent/input':
-                    return await this._handleAgentInput(message);
-            }
+            // 2. Control commands prefix
+            if (messageType?.startsWith('control/')) return await this._handleControlCommand(message);
 
-            // Handle control commands
-            if (messageType?.startsWith('control/')) {
-                return await this._handleControlCommand(message);
-            }
-
-            // Handle direct commands
+            // 3. Direct commands prefix
             if (messageType?.startsWith('/')) {
                 const [cmd, ...args] = messageType.slice(1).split(' ');
                 return await this._handleCommand(cmd, ...args);
             }
 
-            // Try cached handler
-            if (messageType) {
-                if (this.handlerCache.has(messageType)) {
-                    return await this.handlerCache.get(messageType)(message);
-                }
-
-                const handler = this.messageHandlers.get(messageType);
-                if (handler) {
-                    this.handlerCache.set(messageType, handler);
-                    return await handler(message);
-                }
-
-                // Check if it's a command in registry?
-                if (this.registry.has(messageType)) {
-                     return await this._handleCommand(messageType);
-                }
+            // 4. Registry commands
+            if (messageType && this.registry.has(messageType)) {
+                return await this._handleCommand(messageType);
             }
 
-            // Fallback to direct input
-            if (typeof input === 'string' && input.trim()) {
-                return await this.engine.processInput(input);
-            }
+            // 5. Fallback
+            if (typeof input === 'string' && input.trim()) return await this.engine.processInput(input);
 
-            return {error: `Unknown message type: ${messageType || 'undefined'}`};
+            return {error: `Unknown message type: ${messageType ?? 'undefined'}`};
         } catch (error) {
             console.error('Error processing message:', error);
             this.emit('message.error', {message, error: error.message});
@@ -116,38 +94,20 @@ export class ReplMessageHandler extends EventEmitter {
         }
     }
 
-    async _handleAgentInput(message) {
+    async _handleGenericInput(resultType, message) {
         try {
-            const input = message?.payload?.text ?? message?.payload?.input ?? message?.payload;
+            const input = this._extractInput(message);
             if (typeof input !== 'string' || !input.trim()) {
                 return {error: 'No input provided', type: MESSAGE_TYPES.ERROR};
             }
 
             const result = await this.engine.processInput(input);
             return {
-                type: MESSAGE_TYPES.AGENT_RESULT,
-                payload: {input, result, success: true, timestamp: Date.now()}
-            };
-        } catch (error) {
-            console.error('Error in agent input handler:', error);
-            return {error: error.message, type: MESSAGE_TYPES.ERROR};
-        }
-    }
-
-    async _handleNarseseInput(message) {
-        try {
-            const input = message?.payload?.text ?? message?.payload?.input ?? message?.payload ?? message;
-            if (typeof input !== 'string' || !input.trim()) {
-                return {error: 'No input provided', type: MESSAGE_TYPES.ERROR};
-            }
-
-            const result = await this.engine.processInput(input);
-            return {
-                type: MESSAGE_TYPES.NARSESE_RESULT,
+                type: resultType,
                 payload: {input, result, success: !!result, timestamp: Date.now()}
             };
         } catch (error) {
-            console.error('Error in narsese input handler:', error);
+            console.error(`Error in ${resultType} handler:`, error);
             return {error: error.message, type: MESSAGE_TYPES.ERROR};
         }
     }
@@ -192,10 +152,6 @@ export class ReplMessageHandler extends EventEmitter {
         }
     }
 
-    async _handleReasonStep(message) {
-        return await this._handleNarseseInput(message);
-    }
-
     async _handleCommand(cmd, ...args) {
         try {
             // Check registry
@@ -238,7 +194,4 @@ export class ReplMessageHandler extends EventEmitter {
         };
     }
 
-    clearHandlerCache() {
-        this.handlerCache.clear();
-    }
 }

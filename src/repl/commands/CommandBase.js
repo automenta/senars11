@@ -18,6 +18,14 @@ export const createBanner = (title) => {
     return `\n${border}\n${paddedTitle}\n${border}\n`;
 };
 
+// Helper for toggle commands
+export const toggleProperty = (agent, prop, arg, label) => {
+    if (arg === 'on') agent[prop] = true;
+    else if (arg === 'off') agent[prop] = false;
+    else agent[prop] = !agent[prop];
+    return `${label}: ${agent[prop] ? 'ON' : 'OFF'}`;
+};
+
 // Base class for all commands
 export class AgentCommand {
     constructor(name, description, usage, aliases = []) {

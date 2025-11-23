@@ -20,7 +20,7 @@ export class ReplEngine {
             type: 'narseseInput',
             payload: { input }
         });
-        return result?.payload?.result || result;
+        return result?.payload?.result ?? result;
     }
 
     async processInput(input) {
@@ -30,22 +30,19 @@ export class ReplEngine {
     async executeCommand(command, ...args) {
         if (!this.agent) throw new Error("Engine not initialized");
 
-        let cmdStr = command;
-        if (!cmdStr.startsWith('/')) cmdStr = '/' + cmdStr;
-        if (args.length > 0) cmdStr += ' ' + args.join(' ');
+        const cmdStr = command.startsWith('/') ? command : `/${command}`;
+        const fullCmd = args.length > 0 ? `${cmdStr} ${args.join(' ')}` : cmdStr;
 
-        const result = await this.messageHandler.processMessage({ type: cmdStr });
-        return result?.payload?.result || result;
+        const result = await this.messageHandler.processMessage({ type: fullCmd });
+        return result?.payload?.result ?? result;
     }
 
     getStats() {
-        if (!this.agent) return {};
-        return this.agent.getStats();
+        return this.agent?.getStats() ?? {};
     }
 
     getBeliefs() {
-        if (!this.agent) return [];
-        return this.agent.getBeliefs();
+        return this.agent?.getBeliefs() ?? [];
     }
 
     async shutdown() {

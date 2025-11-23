@@ -1,4 +1,4 @@
-import {AgentCommand, createBanner} from './CommandBase.js';
+import {AgentCommand, createBanner, toggleProperty} from './CommandBase.js';
 import {FormattingUtils} from '../utils/index.js';
 import fs from 'fs';
 
@@ -40,15 +40,7 @@ export class ConfigCommand extends AgentCommand {
 export class VerboseCommand extends AgentCommand {
     constructor() { super('verbose', 'Toggle verbose output', 'verbose [on|off]'); }
     async _executeImpl(agent, ...args) {
-        if (args[0] === 'on') {
-            agent.verbose = true;
-            return '✅ Verbose mode enabled.';
-        } else if (args[0] === 'off') {
-            agent.verbose = false;
-            return '✅ Verbose mode disabled.';
-        }
-        agent.verbose = !agent.verbose;
-        return `Verbose mode: ${agent.verbose ? 'ON' : 'OFF'}`;
+        return toggleProperty(agent, 'verbose', args[0], 'Verbose mode');
     }
 }
 
@@ -62,12 +54,9 @@ export class GraphCommand extends AgentCommand {
              if (concepts.length > 50) return '❌ Too many concepts to visualize all. Specify a term.';
              // Simple adjacency list
              let output = '🕸️ Concept Graph:\n';
-             concepts.forEach(c => {
+             for (const c of concepts) {
                  output += `  ${c.term.toString()}\n`;
-                 // If concept has links exposed, show them. Assuming c.termLinks or similar?
-                 // Common NAR implementation has term links.
-                 // We'll just show term hierarchy or related if available.
-             });
+             }
              return output;
         }
 
@@ -77,9 +66,9 @@ export class GraphCommand extends AgentCommand {
         let output = `🕸️ Neighborhood of ${concept.term.toString()}:\n`;
         // Try to access links/tasks
         const beliefs = concept.getBeliefs ? concept.getBeliefs() : [];
-        beliefs.forEach(b => {
+        for (const b of beliefs) {
              output += `  --> ${b.toString()}\n`;
-        });
+        }
         return output;
     }
 }

@@ -27,7 +27,7 @@ describe('ReplMessageHandler - Additional Commands', () => {
 
     test('verbose command works', async () => {
         const result = await handler.processMessage({type: '/verbose on'});
-        expect(result).toContain('Verbose mode enabled');
+        expect(result).toContain('Verbose mode: ON');
         expect(mockEngine.verbose).toBe(true);
     });
 

@@ -2,7 +2,7 @@
  * Standardized Command Interface and Implementations
  */
 
-import {AgentCommand, AgentCommandRegistry, createBanner, EXAMPLES_DIR} from './CommandBase.js';
+import {AgentCommand, AgentCommandRegistry, createBanner, toggleProperty, EXAMPLES_DIR} from './CommandBase.js';
 import {FormattingUtils} from '../utils/index.js';
 import {resolve, join, basename} from 'path';
 import {promises as fs} from 'fs';
@@ -65,43 +65,61 @@ export class GoalCommand extends AgentCommand {
     }
 }
 
-export class PlanCommand extends AgentCommand {
-    constructor() { super('plan', 'Generate a plan using LM', 'plan <description>'); }
+class BaseLMCommand extends AgentCommand {
+    constructor(name, desc, usage, { promptPrefix = '', temperature = 0.7, resultLabel = 'Result' } = {}) {
+        super(name, desc, usage);
+        this.promptPrefix = promptPrefix;
+        this.temperature = temperature;
+        this.resultLabel = resultLabel;
+    }
+
     async _executeImpl(agent, ...args) {
-        if (args.length < 1) return 'Usage: plan <description>';
+        if (args.length < 1) return `Usage: ${this.usage}`;
         if (!agent.lm) return '❌ No Language Model enabled.';
-        const response = await agent.lm.generateText(`Generate a step-by-step plan to achieve: "${args.join(' ')}"`, {temperature: 0.7});
-        return `📋 Generated Plan:\n${response}`;
+
+        const input = args.join(' ');
+        const prompt = this.promptPrefix ? `${this.promptPrefix}: "${input}"` : input;
+        const response = await agent.lm.generateText(prompt, {temperature: this.temperature});
+
+        return `${this.resultLabel}:\n${response}`;
     }
 }
 
-export class ThinkCommand extends AgentCommand {
-    constructor() { super('think', 'Have agent think about a topic', 'think <topic>'); }
-    async _executeImpl(agent, ...args) {
-        if (args.length < 1) return 'Usage: think <topic>';
-        if (!agent.lm) return '❌ No Language Model enabled.';
-        const response = await agent.lm.generateText(`Reflect on: "${args.join(' ')}"`, {temperature: 0.8});
-        return `💭 Reflection:\n${response}`;
+export class PlanCommand extends BaseLMCommand {
+    constructor() {
+        super('plan', 'Generate a plan using LM', 'plan <description>', {
+            promptPrefix: 'Generate a step-by-step plan to achieve',
+            temperature: 0.7,
+            resultLabel: '📋 Generated Plan'
+        });
     }
 }
 
-export class ReasonCommand extends AgentCommand {
-    constructor() { super('reason', 'Perform reasoning using LM', 'reason <statement>'); }
-    async _executeImpl(agent, ...args) {
-        if (args.length < 1) return 'Usage: reason <statement>';
-        if (!agent.lm) return '❌ No Language Model enabled.';
-        const response = await agent.lm.generateText(`Reason about: "${args.join(' ')}"`, {temperature: 0.3});
-        return `🧠 Reasoning Result:\n${response}`;
+export class ThinkCommand extends BaseLMCommand {
+    constructor() {
+        super('think', 'Have agent think about a topic', 'think <topic>', {
+            promptPrefix: 'Reflect on',
+            temperature: 0.8,
+            resultLabel: '💭 Reflection'
+        });
     }
 }
 
-export class LMCommand extends AgentCommand {
-    constructor() { super('lm', 'Direct LM communication', 'lm <prompt>'); }
-    async _executeImpl(agent, ...args) {
-        if (args.length < 1) return 'Usage: lm <prompt>';
-        if (!agent.lm) return '❌ No Language Model enabled.';
-        const response = await agent.lm.generateText(args.join(' '), {temperature: 0.7});
-        return `🤖 LM Response:\n${response}`;
+export class ReasonCommand extends BaseLMCommand {
+    constructor() {
+        super('reason', 'Perform reasoning using LM', 'reason <statement>', {
+            promptPrefix: 'Reason about',
+            temperature: 0.3,
+            resultLabel: '🧠 Reasoning Result'
+        });
+    }
+}
+
+export class LMCommand extends BaseLMCommand {
+    constructor() {
+        super('lm', 'Direct LM communication', 'lm <prompt>', {
+            resultLabel: '🤖 LM Response'
+        });
     }
 }
 
@@ -202,11 +220,7 @@ export class MemoryCommand extends AgentCommand {
 export class TraceCommand extends AgentCommand {
     constructor() { super('trace', 'Toggle derivation trace', 'trace [on|off]'); }
     async _executeImpl(agent, ...args) {
-        if (args[0] === 'on') agent.traceEnabled = true;
-        else if (args[0] === 'off') agent.traceEnabled = false;
-        else agent.traceEnabled = !agent.traceEnabled;
-
-        return `🔍 Trace: ${agent.traceEnabled ? 'ON' : 'OFF'}`;
+        return toggleProperty(agent, 'traceEnabled', args[0], '🔍 Trace');
     }
 }
 
@@ -339,20 +353,14 @@ export class RunCommand extends AgentCommand {
 export class EchoCommand extends AgentCommand {
     constructor() { super('echo', 'Toggle command echo', 'echo [on|off]'); }
     async _executeImpl(agent, ...args) {
-        if (args[0] === 'on') agent.echo = true;
-        else if (args[0] === 'off') agent.echo = false;
-        else agent.echo = !agent.echo;
-        return `Echo: ${agent.echo ? 'ON' : 'OFF'}`;
+        return toggleProperty(agent, 'echo', args[0], 'Echo');
     }
 }
 
 export class QuietCommand extends AgentCommand {
     constructor() { super('quiet', 'Toggle quiet mode', 'quiet [on|off]'); }
     async _executeImpl(agent, ...args) {
-        if (args[0] === 'on') agent.quiet = true;
-        else if (args[0] === 'off') agent.quiet = false;
-        else agent.quiet = !agent.quiet;
-        return `Quiet Mode: ${agent.quiet ? 'ON' : 'OFF'}`;
+        return toggleProperty(agent, 'quiet', args[0], 'Quiet Mode');
     }
 }
 
@@ -446,11 +454,10 @@ export class TasksCommand extends AgentCommand {
 
         // Deduplicate
         const uniqueTasks = new Map();
-        tasks.forEach(item => {
-             const t = item.task;
-             const key = FormattingUtils.formatTask(t);
+        for (const item of tasks) {
+             const key = FormattingUtils.formatTask(item.task);
              if (!uniqueTasks.has(key)) uniqueTasks.set(key, item);
-        });
+        }
 
         const sortedTasks = Array.from(uniqueTasks.values()).slice(0, 30);
 

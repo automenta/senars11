@@ -2,7 +2,7 @@ import {ReplMessageHandler} from './ReplMessageHandler.js';
 
 export class ReplCommonInterface {
     constructor(engine) {
-        if (!engine || typeof engine.processInput !== 'function') {
+        if (!engine?.processInput) {
             throw new Error('ReplCommonInterface requires a valid engine with processInput method');
         }
 
@@ -11,48 +11,24 @@ export class ReplCommonInterface {
     }
 
     async processInput(input) {
-        try {
-            const message = {
-                type: 'narseseInput',
-                payload: {input}
-            };
-
-            const result = await this.messageHandler.processMessage(message);
-            return result;
-        } catch (error) {
-            console.error('Error in processInput:', error);
-            return {error: error.message};
-        }
+        return this.messageHandler.processMessage({
+            type: 'narseseInput',
+            payload: {input}
+        });
     }
 
     async executeCommand(command, ...args) {
-        try {
-            const message = {
-                type: 'command.execute',
-                payload: {command, args}
-            };
-
-            const result = await this.messageHandler.processMessage(message);
-            return result;
-        } catch (error) {
-            console.error('Error in executeCommand:', error);
-            return {error: error.message};
-        }
+        return this.messageHandler.processMessage({
+            type: 'command.execute',
+            payload: {command, args}
+        });
     }
 
     async executeControlCommand(command) {
-        try {
-            const message = {
-                type: `control/${command}`,
-                payload: {}
-            };
-
-            const result = await this.messageHandler.processMessage(message);
-            return result;
-        } catch (error) {
-            console.error('Error in executeControlCommand:', error);
-            return {error: error.message};
-        }
+        return this.messageHandler.processMessage({
+            type: `control/${command}`,
+            payload: {}
+        });
     }
 
     getEngine() {
