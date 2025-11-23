@@ -56,7 +56,7 @@ export class EventBus {
         if (!this._enabled) return;
 
         this._stats.eventsEmitted++;
-        const traceId = options.traceId || TraceId.generate();
+        const traceId = options.traceId ?? TraceId.generate();
         let processedData = {...data, eventName, traceId};
 
         // Process middleware in parallel where possible
@@ -94,10 +94,14 @@ export class EventBus {
             }
         }
 
-        // Default error logging
+        // Default error logging if no custom handlers
         if (errorHandlers.length === 0) {
             console.error(`EventBus error in ${type}:`, error, context);
         }
+    }
+
+    hasErrorHandlers() {
+        return this._errorHandlers.size > 0;
     }
 
     getStats() {

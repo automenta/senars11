@@ -34,25 +34,26 @@ export class TermFactory extends BaseComponent {
         const name = this._buildCanonicalName(operator, normalizedComponents);
 
         // Check if term is already cached
-        let term = this._cache.get(name);
+        const cachedTerm = this._cache.get(name);
         const currentTime = Date.now();
 
-        if (term) {
+        if (cachedTerm) {
             this._cacheHits++;
             this._emitIntrospectionEvent(IntrospectionEvents.TERM_CACHE_HIT, {termName: name});
             // Update access time for LRU
             this._accessTime.set(name, currentTime);
-        } else {
-            this._cacheMisses++;
-            this._emitIntrospectionEvent(IntrospectionEvents.TERM_CACHE_MISS, {termName: name});
-            term = this._createAndCache(operator, normalizedComponents, name);
-
-            // Update access time for the new term
-            this._accessTime.set(name, currentTime);
-
-            // Evict entries using LRU if cache is too large
-            this._evictLRUEntries();
+            return cachedTerm;
         }
+
+        this._cacheMisses++;
+        this._emitIntrospectionEvent(IntrospectionEvents.TERM_CACHE_MISS, {termName: name});
+        const term = this._createAndCache(operator, normalizedComponents, name);
+
+        // Update access time for the new term
+        this._accessTime.set(name, currentTime);
+
+        // Evict entries using LRU if cache is too large
+        this._evictLRUEntries();
 
         // Calculate and cache complexity metrics
         this._calculateComplexityMetrics(term, normalizedComponents);
@@ -364,25 +365,22 @@ export class TermFactory extends BaseComponent {
      * @private
      */
     _evictLRUEntries() {
-        while (this._cache.size > this._maxCacheSize) {
-            // Find the oldest accessed term to evict
-            let oldestKey = null;
-            let oldestTime = Infinity;
+        // If cache is under size limit, no eviction needed
+        if (this._cache.size <= this._maxCacheSize) return;
 
-            for (const [key, accessTime] of this._accessTime.entries()) {
-                if (accessTime < oldestTime) {
-                    oldestTime = accessTime;
-                    oldestKey = key;
-                }
-            }
+        // Calculate number of entries to remove
+        const entriesToRemove = this._cache.size - this._maxCacheSize;
 
-            // Remove the oldest entry if found
-            if (oldestKey) {
-                this._cache.delete(oldestKey);
-                this._accessTime.delete(oldestKey);
-                this._complexityCache.delete(oldestKey); // Also remove from complexity cache
-                this._cognitiveDiversity.unregisterTerm(oldestKey); // Unregister from cognitive diversity
-            }
+        // Get oldest entries by access time and remove them
+        const sortedEntries = Array.from(this._accessTime.entries())
+            .sort((a, b) => a[1] - b[1]) // Sort by access time, oldest first
+            .slice(0, entriesToRemove);   // Take only the number we need to remove
+
+        for (const [key] of sortedEntries) {
+            this._cache.delete(key);
+            this._accessTime.delete(key);
+            this._complexityCache.delete(key);
+            this._cognitiveDiversity.unregisterTerm(key);
         }
     }
 
@@ -390,13 +388,8 @@ export class TermFactory extends BaseComponent {
      * Get the computational complexity of a term
      */
     getComplexity(term) {
-        if (typeof term === 'string') {
-            return this._complexityCache.get(term) || 1;
-        }
-        if (term && term.name) {
-            return this._complexityCache.get(term.name) || 1;
-        }
-        return 1;
+        const key = typeof term === 'string' ? term : (term?.name);
+        return this._complexityCache.get(key) ?? 1;
     }
 
     /**

@@ -133,7 +133,7 @@ export class Bag {
             this._removeItemByPolicy();
         }
 
-        const priority = item.budget?.priority || 0;
+        const priority = item.budget?.priority ?? 0;
         this._addItemToStorage(item, priority);
 
         return true;
@@ -179,8 +179,10 @@ export class Bag {
     getAveragePriority() {
         if (this.size === 0) return 0;
 
-        const priorities = [...this._items.values()];
-        const sum = priorities.reduce((acc, priority) => acc + priority, 0);
+        let sum = 0;
+        for (const priority of this._items.values()) {
+            sum += priority;
+        }
         return sum / this.size;
     }
 

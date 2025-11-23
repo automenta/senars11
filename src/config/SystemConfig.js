@@ -98,8 +98,9 @@ export class SystemConfig {
     _deepMerge(target, source) {
         const result = {...target};
         for (const [key, value] of Object.entries(source)) {
-            if (value && typeof value === 'object' && !Array.isArray(value) &&
-                result[key] && typeof result[key] === 'object') {
+            const isObject = (obj) => obj && typeof obj === 'object' && !Array.isArray(obj);
+
+            if (isObject(value) && isObject(result[key])) {
                 result[key] = this._deepMerge(result[key], value);
             } else {
                 result[key] = value;
@@ -109,10 +110,11 @@ export class SystemConfig {
     }
 
     get(path) {
-        const pathParts = path.split('.');
+        const pathParts = path?.split('.') ?? [];
         let current = this._config;
+
         for (const part of pathParts) {
-            if (current === null || current === undefined) return undefined;
+            if (current == null) return undefined;
             current = current[part];
         }
         return current;
@@ -121,7 +123,9 @@ export class SystemConfig {
     set(path, value) {
         if (this._frozen) throw new Error('Configuration is frozen and cannot be modified');
 
-        const pathParts = path.split('.');
+        const pathParts = path?.split('.') ?? [];
+        if (pathParts.length === 0) return this;
+
         const lastKey = pathParts.pop();
         let current = this._config;
 
