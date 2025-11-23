@@ -1,5 +1,5 @@
 import {NAR} from '../nar/NAR.js';
-import {SystemConfig} from '../nar/SystemConfig.js';
+import {SystemConfig} from '../config/SystemConfig.js';
 
 const DEFAULT_CONFIG = {
     memory: {capacity: 100},

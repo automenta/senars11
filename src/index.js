@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import {WebSocketMonitor} from './server/WebSocketMonitor.js';
-import {Agent} from './agent/Agent.js';
+import {App} from './app/App.js';
 
 const DEFAULT_CONFIG = Object.freeze({
     nar: {
@@ -20,11 +20,9 @@ const DEFAULT_CONFIG = Object.freeze({
 async function main() {
     console.log('SeNARS starting...');
 
-    // Create the Agent (which extends NAR)
-    const agent = new Agent(DEFAULT_CONFIG);
-
-    // Initialize the agent
-    await agent.initialize();
+    const app = new App(DEFAULT_CONFIG);
+    // Create and start the agent (which extends NAR)
+    const agent = await app.start({ startAgent: true, setupSignals: false });
 
     const monitor = new WebSocketMonitor(DEFAULT_CONFIG.webSocket);
     await monitor.start();
@@ -32,7 +30,7 @@ async function main() {
     // Connect monitor to the agent (which is a NAR)
     agent.connectToWebSocketMonitor(monitor);
 
-    setupGracefulShutdown(agent, monitor);
+    setupGracefulShutdown(app, monitor);
 
     // The Agent doesn't have a start() method that blocks like the TUI
     // It's primarily an API-driven engine.
@@ -43,19 +41,11 @@ async function main() {
     return new Promise(() => {});
 }
 
-const setupGracefulShutdown = (agent, monitor) => {
+const setupGracefulShutdown = (app, monitor) => {
     process.on('SIGINT', async () => {
         console.log('\nShutting down gracefully...');
         try {
-            if (agent && agent.save) {
-                await agent.save(); // Agent has save() method
-                console.log('Current state saved to agent.json');
-            } else if (agent && agent.serialize) {
-                // Fallback
-                 const state = agent.serialize();
-                 // We don't have persistenceManager access easily here unless exposed
-                 // But Agent.js has save() which uses persistenceManager.
-            }
+            await app.shutdown();
         } catch (saveError) {
             console.error('Error saving state on shutdown:', saveError?.message || saveError);
         }

@@ -1,7 +1,7 @@
 import {NAR} from './nar/NAR.js';
 import {Agent} from './agent/Agent.js';
 import {Input} from './task/Input.js';
-import {AgentManager} from './agent/AgentManager.js';
+import {App} from './app/App.js';
 import {AgentBuilder} from './agent/AgentBuilder.js';
 import {EvaluationEngine} from './reason/EvaluationEngine.js';
 import {PrologParser} from './parser/PrologParser.js';
@@ -11,7 +11,7 @@ export {
     NAR,
     Agent,
     Input,
-    AgentManager,
+    App,
     AgentBuilder,
     EvaluationEngine,
     PrologParser,
@@ -22,7 +22,7 @@ export default {
     NAR,
     Agent,
     Input,
-    AgentManager,
+    App,
     AgentBuilder,
     EvaluationEngine,
     PrologParser,

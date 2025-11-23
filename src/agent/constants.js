@@ -1,0 +1,21 @@
+export const AGENT_EVENTS = {
+    ENGINE_READY: 'engine.ready',
+    ENGINE_ERROR: 'engine.error',
+    NARSESE_PROCESSED: 'narsese.processed',
+    NARSESE_ERROR: 'narsese.error',
+    ENGINE_QUIT: 'engine.quit',
+    NAR_CYCLE_STEP: 'nar.cycle.step',
+    NAR_CYCLE_START: 'nar.cycle.start',
+    NAR_CYCLE_RUNNING: 'nar.cycle.running',
+    NAR_CYCLE_STOP: 'nar.cycle.stop',
+    NAR_TRACE_ENABLE: 'nar.trace.enable',
+    NAR_TRACE_RESTORE: 'nar.trace.restore',
+    NAR_ERROR: 'nar.error',
+    COMMAND_ERROR: 'command.error',
+    ENGINE_RESET: 'engine.reset',
+    ENGINE_SAVE: 'engine.save',
+    ENGINE_LOAD: 'engine.load',
+    ENGINE_SHUTDOWN: 'engine.shutdown',
+    AGENT_ACTION: 'agent.action',
+    AGENT_DECISION: 'agent.decision'
+};

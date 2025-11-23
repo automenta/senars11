@@ -3,6 +3,11 @@ import {NarPage} from '../utils/NarPage.js';
 import {spawn} from 'child_process';
 import {setTimeout} from 'timers/promises';
 import net from 'net';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Helper to find a free port
 async function getFreePort() {
@@ -47,69 +52,56 @@ async function waitForPort(port, timeout = 20000) {
 
 export const test = base.extend({
     realBackend: async ({}, use) => {
-        console.log('🚀 Starting Real NAR backend...');
-        // Dynamically assign ports to allow parallel execution
-        const wsPort = await getFreePort();
-        const httpPort = await getFreePort(); // Not strictly used by start-backend but passed
+        console.log('🚀 Starting SeNARS via launcher.js...');
 
-        // Use the new utility script
-        const narProcess = spawn('node', ['tests/e2e/utils/start-backend.js'], {
-            cwd: process.cwd(), // ui/
+        const wsPort = await getFreePort();
+        const uiPort = await getFreePort();
+
+        const rootDir = path.resolve(__dirname, '../../../../');
+        const launcherPath = path.resolve(rootDir, 'scripts/ui/launcher.js');
+
+        const narProcess = spawn('node', [
+            launcherPath,
+            '--prod',
+            '--ws-port', wsPort.toString(),
+            '--port', uiPort.toString()
+        ], {
+            cwd: rootDir,
             stdio: ['ignore', 'pipe', 'pipe'],
-            env: {
-                ...process.env,
-                WS_PORT: wsPort.toString(),
-                HTTP_PORT: httpPort.toString()
-            }
+            env: { ...process.env }
         });
 
-        narProcess.stdout.on('data', (d) => console.log(`[NAR]: ${d}`));
-        narProcess.stderr.on('data', (d) => console.error(`[NAR ERR]: ${d}`));
+        narProcess.stdout.on('data', (d) => console.log(`[LAUNCHER]: ${d}`));
+        narProcess.stderr.on('data', (d) => console.error(`[LAUNCHER ERR]: ${d}`));
 
         try {
-            await waitForPort(wsPort, 20000);
+            await Promise.all([
+                waitForPort(wsPort, 20000),
+                waitForPort(uiPort, 20000)
+            ]);
         } catch (e) {
-            console.error('Backend failed to start');
+            console.error('Backend/UI failed to start');
             narProcess.kill();
             throw e;
         }
 
-        await use({wsPort, httpPort});
+        await use({wsPort, uiPort});
 
-        narProcess.kill();
+        // Graceful shutdown
+        narProcess.kill('SIGINT');
+        await setTimeout(2000);
+
+        if (!narProcess.killed) narProcess.kill('SIGKILL');
     },
 
     productionPage: async ({page, realBackend}, use) => {
-        const uiPort = await getFreePort();
-
-        const uiProcess = spawn('node', ['server.js'], {
-            cwd: process.cwd(), // ui/
-            stdio: ['ignore', 'pipe', 'pipe'],
-            env: {
-                ...process.env,
-                HTTP_PORT: uiPort.toString(),
-                WS_PORT: realBackend.wsPort.toString()
-            }
-        });
-
-        uiProcess.stdout.on('data', (d) => console.log(`[UI]: ${d}`));
-        uiProcess.stderr.on('data', (d) => console.error(`[UI ERR]: ${d}`));
-
-        try {
-            await waitForPort(uiPort, 20000);
-        } catch (e) {
-            console.error('UI Server failed to start');
-            uiProcess.kill();
-            throw e;
-        }
+        const { uiPort } = realBackend;
 
         const narPage = new NarPage(page);
         await page.goto(`http://localhost:${uiPort}`);
         await narPage.waitForConnection();
 
         await use(narPage);
-
-        uiProcess.kill();
     }
 });
 
