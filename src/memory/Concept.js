@@ -1,6 +1,7 @@
 import {Bag} from './Bag.js';
 import {clamp} from '../util/common.js';
 import {BaseComponent} from '../util/BaseComponent.js';
+import {Task} from '../task/Task.js';
 
 const TASK_TYPES = Object.freeze({BELIEF: 'BELIEF', GOAL: 'GOAL', QUESTION: 'QUESTION'});
 const CAPACITY_DISTRIBUTION = Object.freeze({BELIEF: 0.6, GOAL: 0.3, QUESTION: 0.1});
@@ -135,13 +136,9 @@ export class Concept extends BaseComponent {
 
     getTask(taskId) {
         const allBags = [this._beliefs, this._goals, this._questions];
-
         for (const bag of allBags) {
-            for (const task of bag.getItemsInPriorityOrder()) {
-                if (task.stamp.id === taskId) {
-                    return task;
-                }
-            }
+            const task = bag.find(t => t.stamp.id === taskId);
+            if (task) return task;
         }
         return null;
     }
@@ -268,7 +265,7 @@ export class Concept extends BaseComponent {
 
             for (const {dataKey, bagKey} of deserializationMap) {
                 if (data[dataKey] && this[bagKey].deserialize) {
-                    await this[bagKey].deserialize(data[dataKey]);
+                    await this[bagKey].deserialize(data[dataKey], Task.fromJSON);
                 }
             }
 

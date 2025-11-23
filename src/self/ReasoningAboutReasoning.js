@@ -249,7 +249,7 @@ export class ReasoningAboutReasoning {
         return {
             memorySize: this.nar?.memory?.getConceptCount?.() || 0,
             taskCount: this.nar?.taskManager?.getPendingTaskCount?.() || 0,
-            activeRules: this.nar?.streamReasoner?._streamRuleExecutor?.getRegisteredRuleCount?.() || 0,
+            activeRules: this.nar?.streamReasoner?.ruleProcessor?.ruleExecutor?.getRegisteredRuleCount?.() || 0,
             systemLoad: this.nar?.getSystemLoad?.() || 0,
             activeComponents: this._getActiveComponents(),
             timestamp: Date.now()

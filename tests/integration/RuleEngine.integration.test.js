@@ -8,7 +8,7 @@ describe('RuleEngine Integration Tests', () => {
 
         // Verify rules were registered successfully in the stream rule executor
         // The new architecture always uses stream rule executor
-        expect(nar._streamRuleExecutor.getRuleCount()).toBeGreaterThan(0);
+        expect(nar.streamReasoner.ruleProcessor.ruleExecutor.getRuleCount()).toBeGreaterThan(0);
 
         await nar.dispose();
     });

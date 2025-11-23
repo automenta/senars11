@@ -17,13 +17,7 @@ import {MetricsMonitor} from '../reason/MetricsMonitor.js';
 import {EmbeddingLayer} from '../lm/EmbeddingLayer.js';
 import {TermLayer} from '../memory/TermLayer.js';
 import {ReasoningAboutReasoning} from '../self/ReasoningAboutReasoning.js';
-import {
-    Reasoner as StreamReasoner,
-    RuleExecutor as StreamRuleExecutor,
-    RuleProcessor as StreamRuleProcessor,
-    Strategy,
-    TaskBagPremiseSource
-} from '../reason/index.js';
+import {ReasonerFactory} from '../reason/index.js';
 
 export class NAR extends BaseComponent {
     constructor(config = {}) {
@@ -152,38 +146,7 @@ export class NAR extends BaseComponent {
     }
 
     _initStreamReasoner() {
-        const reasoningConfig = this.config.reasoning || {};
-
-        // Create premise source using the new reasoner's approach
-        this._streamPremiseSource = new TaskBagPremiseSource(this._focus, reasoningConfig.streamSamplingObjectives || {priority: true});
-
-        // Create strategy
-        this._streamStrategy = new Strategy({
-            ...reasoningConfig.streamStrategy,
-            focus: this._focus,
-            memory: this._memory
-        });
-
-        // Create rule executor
-        this._streamRuleExecutor = new StreamRuleExecutor(reasoningConfig.streamRuleExecutor || {});
-
-        // Create rule processor
-        this._streamRuleProcessor = new StreamRuleProcessor(this._streamRuleExecutor, {
-            maxDerivationDepth: reasoningConfig.maxDerivationDepth || 10,
-            termFactory: this._termFactory
-        });
-
-        // Create the main stream reasoner
-        this._streamReasoner = new StreamReasoner(
-            this._streamPremiseSource,
-            this._streamStrategy,
-            this._streamRuleProcessor,
-            {
-                maxDerivationDepth: reasoningConfig.maxDerivationDepth || 10,
-                cpuThrottleInterval: reasoningConfig.cpuThrottleInterval || 0
-            },
-            this  // Pass the NAR instance as parent for derivation feedback
-        );
+        this._streamReasoner = ReasonerFactory.create(this);
     }
 
     _registerComponents() {
@@ -228,31 +191,8 @@ export class NAR extends BaseComponent {
     }
 
     async _registerRulesWithStreamReasoner() {
-        if (!this._streamRuleExecutor) return;
-
-        // Import and register new stream reasoner rules from the refactored structure
-        const {
-            InheritanceSyllogisticRule,
-            ImplicationSyllogisticRule
-        } = await import('../reason/rules/nal/SyllogisticRule.js');
-        const {ModusPonensRule} = await import('../reason/rules/nal/ModusPonensRule.js');
-        const {MetacognitionRules} = await import('../reason/rules/nal/MetacognitionRules.js');
-
-        const newInheritanceSyllogisticRule = new InheritanceSyllogisticRule();
-        const newImplicationSyllogisticRule = new ImplicationSyllogisticRule();
-        const newModusPonensRule = new ModusPonensRule();
-
-        this._streamRuleExecutor.register(newInheritanceSyllogisticRule);
-        this._streamRuleExecutor.register(newImplicationSyllogisticRule);
-        this._streamRuleExecutor.register(newModusPonensRule);
-
-        // Register metacognition rules if enabled
-        if (this.config.metacognition?.selfOptimization?.enabled) {
-            for (const RuleClass of MetacognitionRules) {
-                const rule = new RuleClass();
-                this._streamRuleExecutor.register(rule);
-            }
-        }
+        if (!this._streamReasoner) return;
+        await ReasonerFactory.registerDefaultRules(this._streamReasoner, this.config);
     }
 
     async input(narseseString, options = {}) {

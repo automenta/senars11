@@ -158,6 +158,13 @@ export class Bag {
         return this._items.has(item);
     }
 
+    find(predicate) {
+        for (const item of this._items.keys()) {
+            if (predicate(item)) return item;
+        }
+        return null;
+    }
+
     peek() {
         if (this.size === 0) return null;
 
@@ -228,7 +235,7 @@ export class Bag {
         };
     }
 
-    async deserialize(data) {
+    async deserialize(data, itemDeserializer = null) {
         try {
             if (!data) {
                 throw new Error('Invalid bag data for deserialization');
@@ -243,16 +250,30 @@ export class Bag {
             if (data.items) {
                 for (const {item: itemData, priority} of data.items) {
                     if (itemData) {
-                        const placeholderItem = {
-                            budget: {priority: priority},
-                            serialize: function () {
-                                return itemData;
-                            },
-                            toString: function () {
-                                return JSON.stringify(itemData);
+                        let item = null;
+                        if (itemDeserializer) {
+                            try {
+                                item = await itemDeserializer(itemData);
+                            } catch (e) {
+                                console.warn('Failed to deserialize item in Bag:', e);
                             }
-                        };
-                        this.add(placeholderItem);
+                        }
+
+                        if (!item) {
+                            item = {
+                                budget: {priority: priority},
+                                serialize: function () {
+                                    return itemData;
+                                },
+                                toString: function () {
+                                    return JSON.stringify(itemData);
+                                }
+                            };
+                        }
+
+                        // We use the internal method to force the exact priority from serialization
+                        // instead of recalculating it from the item's budget
+                        this._addItemToStorage(item, priority);
                     }
                 }
             }
