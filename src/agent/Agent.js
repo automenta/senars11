@@ -1,7 +1,6 @@
 import {NAR} from '../nar/NAR.js';
 import {Input} from '../task/Input.js';
 import {PersistenceManager} from '../io/PersistenceManager.js';
-import {CommandProcessor} from '../repl/utils/CommandProcessor.js';
 import {FormattingUtils} from '../repl/utils/index.js';
 import {
     AgentCommandRegistry,
@@ -11,8 +10,17 @@ import {
     PlanCommand,
     ProvidersCommand,
     ReasonCommand,
-    ThinkCommand
-} from '../repl/commands/AgentCommands.js';
+    ThinkCommand,
+    ToolsCommand,
+    HelpCommand,
+    StatusCommand,
+    MemoryCommand,
+    TraceCommand,
+    ResetCommand,
+    SaveCommand,
+    LoadCommand,
+    DemoCommand
+} from '../repl/commands/Commands.js';
 import {AGENT_EVENTS} from './constants.js';
 import {InputProcessor} from './InputProcessor.js';
 import {AgentStreamer} from './AgentStreamer.js';
@@ -38,7 +46,6 @@ export class Agent extends NAR {
             defaultPath: config.persistence?.defaultPath ?? './agent.json'
         });
 
-        this.commandProcessor = new CommandProcessor(this, this.persistenceManager, this.sessionState);
         this.commandRegistry = this._initializeCommandRegistry();
 
         this.uiState = {
@@ -77,7 +84,16 @@ export class Agent extends NAR {
             new ThinkCommand(),
             new ReasonCommand(),
             new LMCommand(),
-            new ProvidersCommand()
+            new ProvidersCommand(),
+            new ToolsCommand(),
+            new HelpCommand(),
+            new StatusCommand(),
+            new MemoryCommand(),
+            new TraceCommand(),
+            new ResetCommand(),
+            new SaveCommand(),
+            new LoadCommand(),
+            new DemoCommand()
         ].forEach(cmd => registry.register(cmd));
         return registry;
     }
@@ -110,20 +126,13 @@ export class Agent extends NAR {
 
         if (builtins[command]) return builtins[command]();
 
-        return this.commandRegistry.get(command)
-            ? this.commandRegistry.execute(command, this, ...args)
-            : this._executeGeneralCommand(command, ...args);
-    }
-
-    async _executeGeneralCommand(cmd, ...args) {
-        try {
-            const result = await this.commandProcessor.executeCommand(cmd, ...args);
-            this.emit(`command.${cmd}`, {command: cmd, args, result});
+        if (this.commandRegistry.get(command)) {
+            const result = await this.commandRegistry.execute(command, this, ...args);
+            this.emit(`command.${command}`, {command, args, result});
             return result;
-        } catch (error) {
-            this.emit(AGENT_EVENTS.COMMAND_ERROR, {command: cmd, args, error: error.message});
-            return `❌ Error executing command: ${error.message}`;
         }
+
+        return `❌ Unknown command: ${command}`;
     }
 
     // Delegate methods for backward compatibility and API
@@ -199,11 +208,19 @@ export class Agent extends NAR {
     }
 
     async save() {
-        return this.commandProcessor._save();
+        const state = this.serialize();
+        return await this.persistenceManager.saveToDefault(state);
     }
 
-    async load() {
-        return this.commandProcessor._load();
+    async load(filepath = null) {
+        let state;
+        if (filepath) {
+             state = await this.persistenceManager.loadFromPath(filepath);
+        } else {
+             state = await this.persistenceManager.loadFromDefault();
+        }
+        if (!state) return false;
+        return await this.deserialize(state);
     }
 
     getHistory() {

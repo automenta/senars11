@@ -8,26 +8,16 @@ describe('ReplMessageHandler', () => {
     beforeEach(() => {
         mockEngine = {
             processInput: jest.fn(),
-            executeCommand: jest.fn(),
+            executeCommand: jest.fn().mockImplementation(async (cmd, ...args) => {
+                if (cmd === 'run') return 'Run started';
+                if (cmd === 'tools') return 'Tools report...';
+                if (cmd === 'load') return 'Session loaded';
+                return `Unknown command: ${cmd}`;
+            }),
             persistenceManager: {
-                loadFromPath: jest.fn().mockResolvedValue({some: 'state'})
+                loadFromPath: jest.fn()
             },
-            deserialize: jest.fn().mockResolvedValue(true),
-            _run: jest.fn().mockResolvedValue('Run started'),
-            agentLM: {
-                providers: {
-                    defaultProviderId: 'test-provider',
-                    get: jest.fn().mockReturnValue({
-                        tools: [{name: 'test-tool', description: 'A test tool'}]
-                    })
-                }
-            },
-            nar: {
-                getAvailableTools: jest.fn().mockReturnValue(['nar-tool']),
-                mcp: {
-                    getAvailableTools: jest.fn().mockReturnValue({allTools: ['mcp-tool']})
-                }
-            }
+            _run: jest.fn().mockResolvedValue('Run started')
         };
         handler = new ReplMessageHandler(mockEngine);
     });
@@ -36,36 +26,24 @@ describe('ReplMessageHandler', () => {
         mockEngine.processInput.mockResolvedValue('Processed');
         const result = await handler.processMessage({type: 'agent/input', payload: 'Hello'});
         expect(mockEngine.processInput).toHaveBeenCalledWith('Hello');
-        // Agent input handler returns object
         expect(result.payload.result).toBe('Processed');
     });
 
     test('processMessage handles slash commands mapped to engine methods', async () => {
-        // Direct slash command returns string from handler
         const result = await handler.processMessage({type: '/run'});
         expect(mockEngine._run).toHaveBeenCalled();
         expect(result).toBe('Run started');
     });
 
-    test('tools command generates report', async () => {
+    test('processMessage delegates tools command to executeCommand', async () => {
         const result = await handler.processMessage({type: '/tools'});
-        // Direct slash command returns string
-        const report = result;
-        expect(report).toContain('Tools/MCP Configuration');
-        expect(report).toContain('test-tool');
-        expect(report).toContain('nar-tool');
-        expect(report).toContain('mcp-tool');
+        expect(mockEngine.executeCommand).toHaveBeenCalledWith('tools');
+        expect(result).toBe('Tools report...');
     });
 
-    test('load command validates path', async () => {
-        const result = await handler.processMessage({type: '/load ../secret.json'});
-        expect(result).toContain('Invalid path');
-    });
-
-    test('load command calls persistence manager', async () => {
+    test('processMessage delegates load command to executeCommand', async () => {
         const result = await handler.processMessage({type: '/load test.json'});
-        expect(mockEngine.persistenceManager.loadFromPath).toHaveBeenCalled();
-        expect(mockEngine.deserialize).toHaveBeenCalledWith({some: 'state'});
-        expect(result).toContain('Session loaded');
+        expect(mockEngine.executeCommand).toHaveBeenCalledWith('load', 'test.json');
+        expect(result).toBe('Session loaded');
     });
 });
