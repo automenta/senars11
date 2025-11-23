@@ -13,6 +13,14 @@ export class Queue {
     }
 
     /**
+     * Get the number of items in the queue.
+     * @returns {number} The number of items
+     */
+    get size() {
+        return this._items.length - this._offset;
+    }
+
+    /**
      * Add an item to the end of the queue.
      * @param {*} item - The item to add
      */
@@ -55,14 +63,6 @@ export class Queue {
      */
     isEmpty() {
         return this._offset >= this._items.length;
-    }
-
-    /**
-     * Get the number of items in the queue.
-     * @returns {number} The number of items
-     */
-    get size() {
-        return this._items.length - this._offset;
     }
 
     /**

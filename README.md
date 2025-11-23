@@ -1,11 +1,14 @@
 # SeNARS (Semantic Non-axiomatic Reasoning System)
 
 A hybrid neuro-symbolic reasoning system that combines Non-Axiomatic Logic (NAL) with Language Models (LM) to create an
-observable platform for exploring advanced AI concepts. The system implements a continuous, stream-based dataflow architecture for processing streams of premises into conclusions.
+observable platform for exploring advanced AI concepts. The system implements a continuous, stream-based dataflow
+architecture for processing streams of premises into conclusions.
 
 **System Definition:**
 
-- **Stream Reasoner**: A continuous, stream-based dataflow architecture that transforms streams of premises into streams of conclusions. It utilizes a non-blocking pipeline (`PremiseSource` → `Strategy` → `RuleProcessor`) to handle synchronous NAL logic and asynchronous Language Model calls simultaneously.
+- **Stream Reasoner**: A continuous, stream-based dataflow architecture that transforms streams of premises into streams
+  of conclusions. It utilizes a non-blocking pipeline (`PremiseSource` → `Strategy` → `RuleProcessor`) to handle
+  synchronous NAL logic and asynchronous Language Model calls simultaneously.
 - **Non-Axiomatic Logic (NAL)**: A logic system that does not rely on fixed axioms but adapts based on experience and
   evidence
 - **Observable Platform**: A system that provides real-time visibility into its reasoning processes, enabling analysis
@@ -15,7 +18,8 @@ observable platform for exploring advanced AI concepts. The system implements a 
 
 ## Key Architectural Patterns
 
-The SeNARS architecture is built around several fundamental patterns that enable effective reasoning and adaptability through dynamic sampling strategies and configurable reasoning approaches:
+The SeNARS architecture is built around several fundamental patterns that enable effective reasoning and adaptability
+through dynamic sampling strategies and configurable reasoning approaches:
 
 ### 1. Immutable Data Foundation
 
@@ -33,9 +37,11 @@ The SeNARS architecture is built around several fundamental patterns that enable
 
 ### 3. Pipeline-Based Architecture
 
-- **Stream-Based Processing**: Continuous pipeline architecture (`PremiseSource` → `Strategy` → `RuleProcessor`) for processing streams of premises into conclusions
+- **Stream-Based Processing**: Continuous pipeline architecture (`PremiseSource` → `Strategy` → `RuleProcessor`) for
+  processing streams of premises into conclusions
 - **Non-Blocking Execution**: Asynchronous processing to prevent blocking the main event loop
-- **Resource Awareness**: Built-in throttling, backpressure handling, and derivation depth limits to manage computational resources
+- **Resource Awareness**: Built-in throttling, backpressure handling, and derivation depth limits to manage
+  computational resources
 
 ### 4. Dual Memory Architecture
 
@@ -61,16 +67,20 @@ The SeNARS architecture is built around several fundamental patterns that enable
 
 - **Synchronous Processing**: NAL (Non-Axiomatic Logic) rules execute synchronously for rapid inference
 - **Asynchronous Processing**: LM (Language Model) rules execute asynchronously to prevent blocking the main event loop
-- **Non-Blocking Pipeline**: Asynchronous LM rules are dispatched without blocking and results are emitted when available
+- **Non-Blocking Pipeline**: Asynchronous LM rules are dispatched without blocking and results are emitted when
+  available
 - **Unified Output Stream**: Results from both sync and async rules are merged into a unified output stream
 
 ---
 
 ## Resource Awareness
 
-- **CPU Throttling**: Configurable CPU throttle interval to prevent blocking the event loop, adjustable based on system load
-- **Backpressure Handling**: Advanced detection when output consumers slow down with adaptive processing rate adjustments
-- **Derivation Depth Limits**: Configurable maximum derivation depth to keep the derivation graph finite, tasks exceeding the limit are discarded to comply with AIKR (Assumption of Insufficient Knowledge and Resources)
+- **CPU Throttling**: Configurable CPU throttle interval to prevent blocking the event loop, adjustable based on system
+  load
+- **Backpressure Handling**: Advanced detection when output consumers slow down with adaptive processing rate
+  adjustments
+- **Derivation Depth Limits**: Configurable maximum derivation depth to keep the derivation graph finite, tasks
+  exceeding the limit are discarded to comply with AIKR (Assumption of Insufficient Knowledge and Resources)
 - **Consumer Feedback**: Mechanisms to adjust processing based on downstream capacity
 
 ---
@@ -296,19 +306,32 @@ The main `Reasoner` class manages the continuous reasoning pipeline:
 
 The system consists of several interconnected components:
 
-- **NAR (NARS Reasoner Engine)**: The main entry point and orchestrator that manages the reasoning cycle and coordinates all system components
-- **PremiseSource**: Generates a continuous stream of `Task`s, drawing from `Memory` based on tunable sampling objectives (e.g., `TaskBagPremiseSource`)
-- **Strategy**: Creates premise pairs by finding suitable secondary premises for reasoning approaches (BagStrategy, PrologStrategy, ExhaustiveStrategy, etc.)
-- **RuleExecutor**: Indexes all registered rules for fast retrieval and performs symbolic guard analysis to optimize rule execution
-- **RuleProcessor**: Consumes premise pairs and executes rules in a non-blocking fashion, handling both synchronous NAL and asynchronous LM rules
-- **Reasoner**: Manages the continuous reasoning pipeline with `start()`, `stop()`, `step()` methods and implements resource constraints
-- **Memory**: Manages concepts, tasks, and knowledge representation; implements both long-term and short-term (focus) memory systems
-- **Focus Manager**: Handles attention focus sets (short-term memory) that prioritize tasks for immediate processing based on attention mechanisms
-- **Term**: Core immutable data structure for representing knowledge elements with structural properties that support reasoning
-- **Task**: Represents units of work or information processed by the system; encapsulates a Term with associated truth values, stamps, and processing priorities
-- **Reasoning Engine**: Applies NAL and LM rules to generate inferences, conclusions, and new knowledge from existing information
-- **Parser**: Handles Narsese syntax parsing and generation; converts between human-readable Narsese notation and internal Term representations
-- **LM (Language Model Integration)**: Provides language model capabilities that complement formal symbolic reasoning with neural pattern recognition
+- **NAR (NARS Reasoner Engine)**: The main entry point and orchestrator that manages the reasoning cycle and coordinates
+  all system components
+- **PremiseSource**: Generates a continuous stream of `Task`s, drawing from `Memory` based on tunable sampling
+  objectives (e.g., `TaskBagPremiseSource`)
+- **Strategy**: Creates premise pairs by finding suitable secondary premises for reasoning approaches (BagStrategy,
+  PrologStrategy, ExhaustiveStrategy, etc.)
+- **RuleExecutor**: Indexes all registered rules for fast retrieval and performs symbolic guard analysis to optimize
+  rule execution
+- **RuleProcessor**: Consumes premise pairs and executes rules in a non-blocking fashion, handling both synchronous NAL
+  and asynchronous LM rules
+- **Reasoner**: Manages the continuous reasoning pipeline with `start()`, `stop()`, `step()` methods and implements
+  resource constraints
+- **Memory**: Manages concepts, tasks, and knowledge representation; implements both long-term and short-term (focus)
+  memory systems
+- **Focus Manager**: Handles attention focus sets (short-term memory) that prioritize tasks for immediate processing
+  based on attention mechanisms
+- **Term**: Core immutable data structure for representing knowledge elements with structural properties that support
+  reasoning
+- **Task**: Represents units of work or information processed by the system; encapsulates a Term with associated truth
+  values, stamps, and processing priorities
+- **Reasoning Engine**: Applies NAL and LM rules to generate inferences, conclusions, and new knowledge from existing
+  information
+- **Parser**: Handles Narsese syntax parsing and generation; converts between human-readable Narsese notation and
+  internal Term representations
+- **LM (Language Model Integration)**: Provides language model capabilities that complement formal symbolic reasoning
+  with neural pattern recognition
 
 ### Core Data Structures
 
@@ -419,7 +442,8 @@ The system distinguishes between beliefs (what the system knows) and goals (what
 
 - **Purpose**: Define objectives or desired outcomes
 - **Truth Values**: Frequency (desired frequency) and confidence (how likely it is to be achievable)
-- **Example**: `(task_completed --> desirable)!{0.8, 0.9}.` (The system wants the task to be 80% completed with 90% confidence)
+- **Example**: `(task_completed --> desirable)!{0.8, 0.9}.` (The system wants the task to be 80% completed with 90%
+  confidence)
 
 This design enables reinforcement learning where:
 
@@ -491,7 +515,7 @@ The `NAR` class serves as the central orchestrator and public API for the entire
 **Stream Reasoner Usage Examples:**
 
 ```javascript
-const premiseSource = new TaskBagPremiseSource(memory, { priority: true });
+const premiseSource = new TaskBagPremiseSource(memory, {priority: true});
 const strategy = new BagStrategy();
 const ruleExecutor = new RuleExecutor();
 const ruleProcessor = new RuleProcessor(ruleExecutor);
@@ -517,11 +541,14 @@ reasoner.start();
 The Stream Reasoner system exposes several key parameters for fine-tuning system behavior:
 
 **Reasoner Parameters:**
-- `cpuThrottleInterval`: Interval in milliseconds between reasoning steps to prevent blocking the event loop (default: 1ms)
+
+- `cpuThrottleInterval`: Interval in milliseconds between reasoning steps to prevent blocking the event loop (default:
+  1ms)
 - `maxDerivationDepth`: Maximum derivation depth to keep the derivation graph finite (default: 10)
 - `resourceLimits`: Resource management constraints for computational resources
 
 **PremiseSource Sampling Objectives:**
+
 - `priority`: Sample tasks based on their priority value (default: true)
 - `recency`: Favor tasks that are closest to a target time (default: false)
 - `punctuation`: Focus on Goals (`!`) or Questions (`?`) (default: false)
@@ -560,11 +587,13 @@ const advancedPremiseSource = new TaskBagPremiseSource(memory, {
 SeNARS supports multiple reasoning strategies with distinct truth value semantics:
 
 **NAL (Non-Axiomatic Logic) Strategy**:
+
 - Uses probabilistic truth values `{frequency, confidence}` for beliefs
 - Implements inheritance, similarity, conjunction, and other NAL operators
 - Provides default reasoning with frequency-confidence semantics for uncertainty management
 
 **Prolog Strategy**:
+
 - Implements backward-chaining resolution for goal-driven queries
 - Uses unification with variable binding for logical inference
 - Bridges formal logical unification with the system's knowledge base for goal-oriented problem solving
@@ -918,40 +947,54 @@ The system provides a fluent API for easy test creation.
 
 A NAR is a 'Non-Axiomatic Reasoner' instance.
 
-We are transitioning from **Model-Centric** AI (making the LLM bigger/smarter) to **System-Centric** AI (building a cognitive architecture *around* the model). The SeNARS Stream Reasoner embodies this transition by treating the Language Model as a substrate for processing context, while the NAR provides the agency.
+We are transitioning from **Model-Centric** AI (making the LLM bigger/smarter) to **System-Centric** AI (building a
+cognitive architecture *around* the model). The SeNARS Stream Reasoner embodies this transition by treating the Language
+Model as a substrate for processing context, while the NAR provides the agency.
 
-**The SeNARS Solution**: The `Focus` and `Bag` systems act as a **Dynamic Context Manager**. The NAR decides *what* goes into the LM's context window based on goals and urgency.
+**The SeNARS Solution**: The `Focus` and `Bag` systems act as a **Dynamic Context Manager**. The NAR decides *what* goes
+into the LM's context window based on goals and urgency.
 
 ### The "Operating System" Analogy
 
-Think of the LM as the **CPU/ALU** (Arithmetic Logic Unit). It is incredibly fast at processing symbols and pattern matching, but it has no state. The NAR acts as the **Kernel**:
+Think of the LM as the **CPU/ALU** (Arithmetic Logic Unit). It is incredibly fast at processing symbols and pattern
+matching, but it has no state. The NAR acts as the **Kernel**:
+
 - **Scheduler**: The `Reasoner` pipeline determines which process gets CPU (LM) time
 - **File System**: The `Memory` and `Term` structures provide persistent storage of state
 - **Permissions/Security**: The `Truth` values and `Stamps` determine what information is trusted
 
 ### Epistemic Stability (The Anchor)
 
-LMs are fluid. If you ask an LM the same question twice with slightly different settings, you get different answers. This is fatal for an autonomous agent.
+LMs are fluid. If you ask an LM the same question twice with slightly different settings, you get different answers.
+This is fatal for an autonomous agent.
 
-**The NAR's Job**: It provides the **Anchor**. If SeNARS holds a belief `<fire --> hot> {1.0, 0.9}`, it doesn't matter if the LM hallucinates that fire is cold in a poetic context. The NAR enforces consistency.
+**The NAR's Job**: It provides the **Anchor**. If SeNARS holds a belief `<fire --> hot> {1.0, 0.9}`, it doesn't matter
+if the LM hallucinates that fire is cold in a poetic context. The NAR enforces consistency.
 
 ### The "Goal" Vector
 
 LMs are reactive. They only complete the pattern you give them. They have no intrinsic drive.
 
-**The NAR's Job**: It holds the **Intention**. By separating Beliefs (`.`) from Goals (`!`), the architecture allows the system to have a "nagging" drive. The LM might get distracted by a tangent, but the SeNARS `Task` with high priority remains in the system, forcing the system to return to the objective.
+**The NAR's Job**: It holds the **Intention**. By separating Beliefs (`.`) from Goals (`!`), the architecture allows the
+system to have a "nagging" drive. The LM might get distracted by a tangent, but the SeNARS `Task` with high priority
+remains in the system, forcing the system to return to the objective.
 
 ## Current Capabilities vs. Future Roadmap
 
 ### Current Features (Available Now)
 
-- **Stream Reasoning Pipeline**: Continuous, non-blocking pipeline architecture (`PremiseSource` → `Strategy` → `RuleProcessor`) for processing streams of premises into conclusions
-- **Hybrid Logic Processing**: Integration of NAL (Non-Axiomatic Logic) with Language Model capabilities, with synchronous NAL and asynchronous LM processing
-- **Resource Management**: CPU throttling, backpressure handling, and derivation depth limits to manage computational resources
+- **Stream Reasoning Pipeline**: Continuous, non-blocking pipeline architecture (`PremiseSource` → `Strategy` →
+  `RuleProcessor`) for processing streams of premises into conclusions
+- **Hybrid Logic Processing**: Integration of NAL (Non-Axiomatic Logic) with Language Model capabilities, with
+  synchronous NAL and asynchronous LM processing
+- **Resource Management**: CPU throttling, backpressure handling, and derivation depth limits to manage computational
+  resources
 - **Dynamic Sampling**: Configurable sampling objectives (priority, recency, punctuation, novelty) for task selection
 - **Extensible Architecture**: Pluggable components supporting different reasoning strategies (Bag, Prolog, Exhaustive)
-- **Robust Data Foundation**: Immutable data structures (Terms, Tasks, Truth, Stamps) with canonical representation and functional processing
-- **Event-Based Communication**: Components communicate through a centralized EventBus for loose coupling with built-in metrics
+- **Robust Data Foundation**: Immutable data structures (Terms, Tasks, Truth, Stamps) with canonical representation and
+  functional processing
+- **Event-Based Communication**: Components communicate through a centralized EventBus for loose coupling with built-in
+  metrics
 
 ---
 
@@ -960,11 +1003,13 @@ LMs are reactive. They only complete the pattern you give them. They have no int
 The SeNARS architecture naturally supports general-purpose reinforcement learning through its foundational Belief-Goal
 distinction:
 
-- **World Model Learning**: Belief tasks with frequency-confidence truth semantics form predictive models of environment dynamics
+- **World Model Learning**: Belief tasks with frequency-confidence truth semantics form predictive models of environment
+  dynamics
 - **Reward Structure Definition**: Goal tasks define reward functions for policy learning
 - **Exploration-Exploitation Balance**: Truth value revision mechanisms naturally implement the fundamental RL tradeoff
 - **Policy Learning**: Task processing adapts action selection based on predicted outcomes and desired goals
-- **Continuous Adaptation**: The system learns through experience by updating beliefs from environmental feedback while pursuing goals
+- **Continuous Adaptation**: The system learns through experience by updating beliefs from environmental feedback while
+  pursuing goals
 - **Transfer Learning**: Knowledge gained in one domain transfers to related domains through structural similarity
 
 This enables SeNARS to function as a general-purpose reinforcement learning system where:
@@ -1213,8 +1258,10 @@ The specification serves as both:
 
 ### System Characteristics
 
-The SeNARS system demonstrates how reasoning capabilities can emerge from structural properties and improve with use. This system demonstrates that artificial reasoning systems can be
-both powerful and transparent, showing how architectural design leads to enhanced reasoning through systematic improvement.
+The SeNARS system demonstrates how reasoning capabilities can emerge from structural properties and improve with use.
+This system demonstrates that artificial reasoning systems can be
+both powerful and transparent, showing how architectural design leads to enhanced reasoning through systematic
+improvement.
 
 ---
 

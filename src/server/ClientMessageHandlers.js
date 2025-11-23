@@ -46,13 +46,13 @@ export class ClientMessageHandlers {
         // Since the plan is to make WebSocketMonitor dumb, we should try to route this.
 
         if (this.monitor._replMessageHandler && this.monitor._replMessageHandler.handleTestLMConnection) {
-             this.monitor._replMessageHandler.handleTestLMConnection(client, message)
+            this.monitor._replMessageHandler.handleTestLMConnection(client, message)
                 .then(result => this._sendToClient(client, result));
-             return;
+            return;
         }
 
         // Fallback: Return error as we shouldn't have logic here
-         this._sendToClient(client, {
+        this._sendToClient(client, {
             type: 'testLMConnection',
             success: false,
             message: 'LM Connection testing not available in dumb transport mode'

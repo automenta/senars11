@@ -1,5 +1,4 @@
 import {Agent} from './Agent.js';
-import {SystemConfig} from '../config/SystemConfig.js';
 import {PluginManager} from '../util/Plugin.js';
 import {ChatOllama} from "@langchain/ollama";
 
@@ -134,10 +133,10 @@ export class AgentBuilder {
 
         const lmProvider = this._createLMProvider();
         if (lmProvider && agent.lm) {
-             agent.lm.registerProvider('ollama', lmProvider);
-             if (!agent.lm.providers.defaultProviderId) {
-                 agent.lm.providers.setDefault('ollama');
-             }
+            agent.lm.registerProvider('ollama', lmProvider);
+            if (!agent.lm.providers.defaultProviderId) {
+                agent.lm.providers.setDefault('ollama');
+            }
         }
 
         return agent;
@@ -160,8 +159,8 @@ export class AgentBuilder {
                 ...(typeof subsystems.tools === 'object' ? subsystems.tools : {})
             },
             embeddingLayer: {
-                 enabled: !!subsystems.embeddingLayer,
-                 ...(typeof subsystems.embeddingLayer === 'object' ? subsystems.embeddingLayer : {})
+                enabled: !!subsystems.embeddingLayer,
+                ...(typeof subsystems.embeddingLayer === 'object' ? subsystems.embeddingLayer : {})
             },
             metricsMonitor: subsystems.metrics ? (typeof subsystems.metrics === 'object' ? subsystems.metrics : {}) : undefined
         };
@@ -204,7 +203,13 @@ export class AgentBuilder {
             {name: 'add', fn: (a, b) => a + b, commutative: true, associative: true, desc: 'Addition'},
             {name: 'subtract', fn: (a, b) => a - b, commutative: false, associative: false, desc: 'Subtraction'},
             {name: 'multiply', fn: (a, b) => a * b, commutative: true, associative: true, desc: 'Multiplication'},
-            {name: 'divide', fn: (a, b) => b !== 0 ? a / b : null, commutative: false, associative: false, desc: 'Division'}
+            {
+                name: 'divide',
+                fn: (a, b) => b !== 0 ? a / b : null,
+                commutative: false,
+                associative: false,
+                desc: 'Division'
+            }
         ].forEach(op => {
             if (!registry.has(op.name)) {
                 registry.registerFunctorDynamic(op.name, op.fn, {

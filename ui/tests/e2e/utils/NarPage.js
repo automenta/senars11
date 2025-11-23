@@ -47,7 +47,7 @@ export class NarPage {
 
         // Wait for the log clearing to complete and the "Cleared logs" message to appear
         // We need to wait for the element to contain the "Cleared logs" text
-        await expect(this.logsContainer).toContainText('Cleared logs', { timeout: 10000 });
+        await expect(this.logsContainer).toContainText('Cleared logs', {timeout: 10000});
     }
 
     async sendCommand(command) {

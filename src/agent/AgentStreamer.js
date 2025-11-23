@@ -160,20 +160,20 @@ export class AgentStreamer {
             }
             return fullResponse;
         } catch (error) {
-             if (this.agent.inputProcessingConfig.enableNarseseFallback && this.agent.inputProcessor._isPotentialNarsese(trimmed)) {
-                 try {
-                     const res = await this.agent.inputProcessor.processNarsese(trimmed);
-                     onChunk?.(res);
-                     return res;
-                 } catch (e) {
-                     const msg = `💭 Agent processed: Input "${trimmed}" may not be valid Narsese. LM Error: ${error.message}`;
-                     onChunk?.(msg);
-                     return msg;
-                 }
-             }
-             const msg = handleError(error, 'Agent processing');
-             onChunk?.(msg);
-             return msg;
+            if (this.agent.inputProcessingConfig.enableNarseseFallback && this.agent.inputProcessor._isPotentialNarsese(trimmed)) {
+                try {
+                    const res = await this.agent.inputProcessor.processNarsese(trimmed);
+                    onChunk?.(res);
+                    return res;
+                } catch (e) {
+                    const msg = `💭 Agent processed: Input "${trimmed}" may not be valid Narsese. LM Error: ${error.message}`;
+                    onChunk?.(msg);
+                    return msg;
+                }
+            }
+            const msg = handleError(error, 'Agent processing');
+            onChunk?.(msg);
+            return msg;
         }
     }
 }

@@ -7,11 +7,11 @@ import {
     AgentCommandRegistry,
     AgentCreateCommand,
     GoalCommand,
-    PlanCommand,
-    ThinkCommand,
-    ReasonCommand,
     LMCommand,
-    ProvidersCommand
+    PlanCommand,
+    ProvidersCommand,
+    ReasonCommand,
+    ThinkCommand
 } from '../repl/commands/AgentCommands.js';
 import {AGENT_EVENTS} from './constants.js';
 import {InputProcessor} from './InputProcessor.js';
@@ -102,7 +102,10 @@ export class Agent extends NAR {
             'n': () => this._next(),
             'go': () => this._run(),
             'st': () => this._stop(),
-            'exit': () => { this.emit(AGENT_EVENTS.ENGINE_QUIT); return '👋 Goodbye!'; }
+            'exit': () => {
+                this.emit(AGENT_EVENTS.ENGINE_QUIT);
+                return '👋 Goodbye!';
+            }
         };
 
         if (builtins[command]) return builtins[command]();
@@ -195,8 +198,19 @@ export class Agent extends NAR {
         return '🔄 Agent reset successfully.';
     }
 
-    async save() { return this.commandProcessor._save(); }
-    async load() { return this.commandProcessor._load(); }
-    getHistory() { return [...this.sessionState.history]; }
-    formatTaskForDisplay(task) { return FormattingUtils.formatTask(task); }
+    async save() {
+        return this.commandProcessor._save();
+    }
+
+    async load() {
+        return this.commandProcessor._load();
+    }
+
+    getHistory() {
+        return [...this.sessionState.history];
+    }
+
+    formatTaskForDisplay(task) {
+        return FormattingUtils.formatTask(task);
+    }
 }

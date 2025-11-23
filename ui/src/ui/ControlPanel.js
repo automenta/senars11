@@ -1,5 +1,3 @@
-import {Config} from '../config/Config.js';
-
 export class ControlPanel {
     constructor(uiElements, commandProcessor, logger) {
         this.uiElements = uiElements;

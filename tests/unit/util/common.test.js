@@ -1,10 +1,5 @@
 import {jest} from '@jest/globals';
-import {
-    safeGet,
-    deepClone,
-    formatNumber,
-    safeAsync
-} from '../../../src/util/common.js';
+import {deepClone, formatNumber, safeAsync, safeGet} from '../../../src/util/common.js';
 
 describe('Common Utils', () => {
     describe('safeGet', () => {
@@ -72,8 +67,11 @@ describe('Common Utils', () => {
         });
 
         test('catches error and returns default', async () => {
-            const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-            const result = await safeAsync(async () => { throw new Error('fail'); }, 'default');
+            const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {
+            });
+            const result = await safeAsync(async () => {
+                throw new Error('fail');
+            }, 'default');
             expect(result).toBe('default');
             consoleSpy.mockRestore();
         });

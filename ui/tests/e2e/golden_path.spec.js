@@ -1,7 +1,7 @@
 import {expect, test} from './fixtures/production-fixture.js';
 
 test.describe('Golden Path Verification', () => {
-    test.describe.configure({ mode: 'serial' });
+    test.describe.configure({mode: 'serial'});
 
     test('Full Control Loop', async ({productionPage}) => {
         // 1. Verify Connection
@@ -11,7 +11,7 @@ test.describe('Golden Path Verification', () => {
         console.log('Testing Start button...');
         await productionPage.page.click('#btn-start');
         // Wait for cycle count to increase (regex matches Cycle: 1, Cycle: 10, etc.)
-        await expect(productionPage.page.locator('#cycle-count')).toHaveText(/Cycle: \d+/, { timeout: 10000 });
+        await expect(productionPage.page.locator('#cycle-count')).toHaveText(/Cycle: \d+/, {timeout: 10000});
 
         console.log('Testing Stop button...');
         await productionPage.page.click('#btn-stop');
@@ -26,21 +26,21 @@ test.describe('Golden Path Verification', () => {
 
         // Verify agent response (or error) is logged. Agent logs use '🤖' icon.
         // We expect SOME response, even an error from LM.
-        await expect(productionPage.page.locator('.logs-container')).toContainText(/🤖|Error|Agent/, { timeout: 35000 });
+        await expect(productionPage.page.locator('.logs-container')).toContainText(/🤖|Error|Agent/, {timeout: 35000});
 
         // 4. Test Demos
         console.log('Testing Demos...');
         // Wait for demo list to populate (at least one demo + default option)
         // We sent 'list' on connection, so it should be there.
         const demoSelect = productionPage.page.locator('#demo-select');
-        await expect(demoSelect.locator('option')).not.toHaveCount(1, { timeout: 10000 }); // More than just default
+        await expect(demoSelect.locator('option')).not.toHaveCount(1, {timeout: 10000}); // More than just default
 
         // Select the first available demo (inheritance)
-        await demoSelect.selectOption({ index: 1 });
+        await demoSelect.selectOption({index: 1});
         await productionPage.page.click('#run-demo');
 
         // Verify demo start log
-        await expect(productionPage.page.locator('.logs-container')).toContainText(/Requested demo start/, { timeout: 5000 });
+        await expect(productionPage.page.locator('.logs-container')).toContainText(/Requested demo start/, {timeout: 5000});
 
         // 5. Test Visualization Filtering
         console.log('Testing Graph Controls...');
@@ -53,6 +53,6 @@ test.describe('Golden Path Verification', () => {
         // 6. Test Graph Nodes via debug command
         await productionPage.page.check('#mode-narsese'); // Switch back to narsese for debug command (though /commands work in agent mode too usually)
         await productionPage.sendCommand('/nodes');
-        await expect(productionPage.page.locator('.logs-container')).toContainText(/Graph has/, { timeout: 5000 });
+        await expect(productionPage.page.locator('.logs-container')).toContainText(/Graph has/, {timeout: 5000});
     });
 });

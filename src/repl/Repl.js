@@ -3,9 +3,9 @@
 import React from 'react';
 import {render} from 'ink';
 import inquirer from 'inquirer';
-import { Config, DEFAULT_CONFIG } from '../app/Config.js';
-import { App } from '../app/App.js';
-import { AgentInkTUI } from './components/AgentInkTUI.js';
+import {Config, DEFAULT_CONFIG} from '../app/Config.js';
+import {App} from '../app/App.js';
+import {AgentInkTUI} from './components/AgentInkTUI.js';
 
 class Repl {
     constructor() {
@@ -18,7 +18,7 @@ class Repl {
         console.log('🤖 SeNARS Unified Agent REPL - Hybrid Intelligence Lab\n');
 
         if (!this.config.lm.enabled && !this.config.demo) {
-             await this._configureLMInteractively();
+            await this._configureLMInteractively();
         }
 
         await this.startRepl();
@@ -63,7 +63,7 @@ class Repl {
         console.log('🚀 Starting REPL engine...\n');
 
         // Initialize app/agent
-        const agent = await this.app.start({ startAgent: false });
+        const agent = await this.app.start({startAgent: false});
 
         console.log('✅ Engine ready. Rendering UI...');
 

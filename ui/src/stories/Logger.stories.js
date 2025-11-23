@@ -1,5 +1,4 @@
 import {Logger} from '../logging/Logger.js';
-import {UI_CONSTANTS} from '../utils/Constants.js';
 
 export default {
     title: 'Components/Logger',

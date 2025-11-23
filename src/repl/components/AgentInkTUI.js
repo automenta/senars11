@@ -330,11 +330,11 @@ export const AgentInkTUI = ({engine}) => {
                     // Route based on mode
                     if (mode === 'narsese') {
                         // Direct Narsese execution
-                         const result = await engine.processNarsese(command);
-                         // Narsese processing might return string or nothing (logging via events)
-                         if (result) {
-                             addLog(result, 'success');
-                         }
+                        const result = await engine.processNarsese(command);
+                        // Narsese processing might return string or nothing (logging via events)
+                        if (result) {
+                            addLog(result, 'success');
+                        }
                     } else {
                         // Agent Mode: Use streaming LM execution
                         const responseLogId = uuidv4();
@@ -371,8 +371,8 @@ export const AgentInkTUI = ({engine}) => {
                                         // Update the specific log entry
                                         setLogs(prevLogs => prevLogs.map(log =>
                                             log.id === responseLogId
-                                            ? {...log, message: `🤖 ${fullResponse}`, type: 'agent'}
-                                            : log
+                                                ? {...log, message: `🤖 ${fullResponse}`, type: 'agent'}
+                                                : log
                                         ));
                                     } else if (chunk.type === 'tool_call') {
                                         addLog(`🔧 Tool Call: ${chunk.name} (${JSON.stringify(chunk.args)})`, 'tool');
@@ -384,7 +384,7 @@ export const AgentInkTUI = ({engine}) => {
                                 }
                             } catch (err) {
                                 if (!abortController.signal.aborted) {
-                                     addLog(`❌ Streaming error: ${err.message}`, 'error');
+                                    addLog(`❌ Streaming error: ${err.message}`, 'error');
                                 }
                             }
                         })();
@@ -462,7 +462,10 @@ export const AgentInkTUI = ({engine}) => {
             React.createElement(
                 Box,
                 {flexDirection: 'row'},
-                React.createElement(Text, {color: 'white', bold: true}, `${status.isRunning ? '🚀 RUNNING' : '⏸️ PAUSED'} `),
+                React.createElement(Text, {
+                    color: 'white',
+                    bold: true
+                }, `${status.isRunning ? '🚀 RUNNING' : '⏸️ PAUSED'} `),
                 React.createElement(Text, {color: 'white'}, `| Cycle: ${status.cycle} `)
             ),
             React.createElement(

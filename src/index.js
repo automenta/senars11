@@ -22,7 +22,7 @@ async function main() {
 
     const app = new App(DEFAULT_CONFIG);
     // Create and start the agent (which extends NAR)
-    const agent = await app.start({ startAgent: true, setupSignals: false });
+    const agent = await app.start({startAgent: true, setupSignals: false});
 
     const monitor = new WebSocketMonitor(DEFAULT_CONFIG.webSocket);
     await monitor.start();
@@ -38,7 +38,8 @@ async function main() {
     console.log('Server running. Press Ctrl+C to stop.');
 
     // Keep process alive
-    return new Promise(() => {});
+    return new Promise(() => {
+    });
 }
 
 const setupGracefulShutdown = (app, monitor) => {

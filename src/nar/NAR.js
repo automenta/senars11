@@ -26,6 +26,66 @@ export class NAR extends BaseComponent {
         this._debugMode = this.config.debug?.pipeline || false;
     }
 
+    get config() {
+        return this._configManager.toJSON();
+    }
+
+    get memory() {
+        return this._memory;
+    }
+
+    get isRunning() {
+        return this._isRunning;
+    }
+
+    get cycleCount() {
+        return this._streamReasoner?.metrics?.totalDerivations || 0;
+    }
+
+    get lm() {
+        return this._lm;
+    }
+
+    get tools() {
+        return this._toolIntegration;
+    }
+
+    get explanationService() {
+        return this._explanationService;
+    }
+
+    get componentManager() {
+        return this._componentManager;
+    }
+
+    get metricsMonitor() {
+        return this._metricsMonitor;
+    }
+
+    get evaluator() {
+        return this._evaluator;
+    }
+
+    get ruleEngine() {
+        return this._ruleEngine;
+    }
+
+    get embeddingLayer() {
+        return this._embeddingLayer;
+    }
+
+    get termLayer() {
+        return this._termLayer;
+    }
+
+    get reasoningAboutReasoning() {
+        return this._reasoningAboutReasoning;
+    }
+
+    get streamReasoner() {
+        return this._streamReasoner;
+    }
+
     _initializeCoreComponents(config) {
         this._configManager = new ConfigManager(config);
         this._componentManager = new ComponentManager({}, this._eventBus, this);
@@ -39,25 +99,6 @@ export class NAR extends BaseComponent {
             this._componentManager.loadComponentsFromConfig(this.config.components);
         }
     }
-
-    get config() {
-        return this._configManager.toJSON();
-    }
-
-    get memory() { return this._memory; }
-    get isRunning() { return this._isRunning; }
-    get cycleCount() { return this._streamReasoner?.metrics?.totalDerivations || 0; }
-    get lm() { return this._lm; }
-    get tools() { return this._toolIntegration; }
-    get explanationService() { return this._explanationService; }
-    get componentManager() { return this._componentManager; }
-    get metricsMonitor() { return this._metricsMonitor; }
-    get evaluator() { return this._evaluator; }
-    get ruleEngine() { return this._ruleEngine; }
-    get embeddingLayer() { return this._embeddingLayer; }
-    get termLayer() { return this._termLayer; }
-    get reasoningAboutReasoning() { return this._reasoningAboutReasoning; }
-    get streamReasoner() { return this._streamReasoner; }
 
     async initialize() {
         const success = await this._componentManager.initializeAll();

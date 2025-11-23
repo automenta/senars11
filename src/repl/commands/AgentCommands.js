@@ -85,7 +85,7 @@ export class AgentCreateCommand extends AgentCommand {
         // So we limit this command to 'status'.
 
         if (!action || action === 'status') {
-             return this._getAgentStatus(agent);
+            return this._getAgentStatus(agent);
         }
 
         return `Action '${action}' not supported in single-agent view. Use 'agent status'.`;

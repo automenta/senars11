@@ -296,12 +296,12 @@ class WebSocketMonitor {
         if (this._replMessageHandler) {
             this._replMessageHandler.processMessage(message)
                 .then(result => {
-                     // Don't send if result is void/undefined (some handlers might send directly)
-                     if (result) this._sendToClient(client, result);
+                    // Don't send if result is void/undefined (some handlers might send directly)
+                    if (result) this._sendToClient(client, result);
                 })
                 .catch(error => {
                     console.error('Error in ReplMessageHandler routing:', error);
-                     this._sendToClient(client, {
+                    this._sendToClient(client, {
                         type: 'error',
                         message: error.message
                     });

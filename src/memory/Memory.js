@@ -3,15 +3,12 @@ import {MemoryIndex} from './MemoryIndex.js';
 import {MemoryConsolidation} from './MemoryConsolidation.js';
 import {Bag} from './Bag.js';
 import {BaseComponent} from '../util/BaseComponent.js';
-import {clamp} from '../util/common.js';
 import {MemoryValidator} from '../util/MemoryValidator.js';
 import {IntrospectionEvents} from '../util/IntrospectionEvents.js';
 import {Statistics} from '../util/Statistics.js';
 import {MemoryScorer} from './MemoryScorer.js';
 
 export class Memory extends BaseComponent {
-    static get SCORING_WEIGHTS() { return MemoryScorer.SCORING_WEIGHTS; }
-    static get NORMALIZATION_LIMITS() { return MemoryScorer.NORMALIZATION_LIMITS; }
     static CONSOLIDATION_THRESHOLDS = Object.freeze({
         activationThreshold: 0.1,
         minTasksThreshold: 5,
@@ -68,6 +65,14 @@ export class Memory extends BaseComponent {
         this._cyclesSinceConsolidation = 0;
         this._resourceTracker = new Map();
         this._lastConsolidationTime = Date.now();
+    }
+
+    static get SCORING_WEIGHTS() {
+        return MemoryScorer.SCORING_WEIGHTS;
+    }
+
+    static get NORMALIZATION_LIMITS() {
+        return MemoryScorer.NORMALIZATION_LIMITS;
     }
 
     get config() {
@@ -185,8 +190,8 @@ export class Memory extends BaseComponent {
         if (!concept) return false;
 
         if (this._focusConcepts.has(concept)) {
-             this._focusConcepts.delete(concept);
-             this._updateFocusConceptsCount();
+            this._focusConcepts.delete(concept);
+            this._updateFocusConceptsCount();
         }
         this._concepts.delete(term);
         this._index.removeConcept(concept);

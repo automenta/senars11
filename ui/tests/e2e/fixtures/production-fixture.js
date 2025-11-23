@@ -4,7 +4,7 @@ import {spawn} from 'child_process';
 import {setTimeout} from 'timers/promises';
 import net from 'net';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import {fileURLToPath} from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -68,7 +68,7 @@ export const test = base.extend({
         ], {
             cwd: rootDir,
             stdio: ['ignore', 'pipe', 'pipe'],
-            env: { ...process.env }
+            env: {...process.env}
         });
 
         narProcess.stdout.on('data', (d) => console.log(`[LAUNCHER]: ${d}`));
@@ -95,7 +95,7 @@ export const test = base.extend({
     },
 
     productionPage: async ({page, realBackend}, use) => {
-        const { uiPort } = realBackend;
+        const {uiPort} = realBackend;
 
         const narPage = new NarPage(page);
         await page.goto(`http://localhost:${uiPort}`);

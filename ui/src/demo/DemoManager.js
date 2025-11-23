@@ -1,5 +1,3 @@
-import {Config} from '../config/Config.js';
-
 /**
  * DemoManager handles demo sequences and execution via backend integration
  */

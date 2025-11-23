@@ -93,7 +93,7 @@ export class CommandRegistry {
     }
 
     _listNodes(context) {
-        const { commandProcessor, graphManager, logger } = context;
+        const {commandProcessor, graphManager, logger} = context;
         if (!commandProcessor._validateGraphManager()) return false;
 
         const nodeCount = graphManager.getNodeCount();

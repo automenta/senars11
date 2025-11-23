@@ -47,7 +47,7 @@ describe('Logger', () => {
     });
 
     test('should set UI elements correctly', () => {
-        const newUIElements = { logsContainer: document.createElement('div') };
+        const newUIElements = {logsContainer: document.createElement('div')};
         logger.setUIElements(newUIElements);
 
         expect(logger.uiElements).toBe(newUIElements);

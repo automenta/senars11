@@ -1,4 +1,4 @@
-import { AgentBuilder } from '../agent/AgentBuilder.js';
+import {AgentBuilder} from '../agent/AgentBuilder.js';
 import EventEmitter from 'events';
 
 export class App extends EventEmitter {
@@ -7,6 +7,13 @@ export class App extends EventEmitter {
         this.config = config || {};
         this.agents = new Map();
         this.activeAgentId = null;
+    }
+
+    /**
+     * Gets the current active agent.
+     */
+    get agent() {
+        return this.activeAgentId ? this.agents.get(this.activeAgentId)?.agent : null;
     }
 
     /**
@@ -88,13 +95,6 @@ export class App extends EventEmitter {
     }
 
     /**
-     * Gets the current active agent.
-     */
-    get agent() {
-        return this.activeAgentId ? this.agents.get(this.activeAgentId)?.agent : null;
-    }
-
-    /**
      * Lists all agents.
      */
     listAgents() {
@@ -137,12 +137,12 @@ export class App extends EventEmitter {
      * @param {boolean} [options.setupSignals=false] - Setup SIGINT/SIGTERM handlers
      */
     async start(options = {}) {
-        const { startAgent = true, setupSignals = false } = options;
+        const {startAgent = true, setupSignals = false} = options;
 
         if (!this.agent) await this.initialize();
 
         if (startAgent && this.agent && this.agent.start) {
-             this.agent.start();
+            this.agent.start();
         }
 
         if (setupSignals) {

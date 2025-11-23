@@ -1,13 +1,13 @@
-import { createButton } from './Button';
+import {createButton} from './Button';
 import './header.css';
 
-export const createHeader = ({ user, onLogout, onLogin, onCreateAccount }) => {
-  const header = document.createElement('header');
+export const createHeader = ({user, onLogout, onLogin, onCreateAccount}) => {
+    const header = document.createElement('header');
 
-  const wrapper = document.createElement('div');
-  wrapper.className = 'storybook-header';
+    const wrapper = document.createElement('div');
+    wrapper.className = 'storybook-header';
 
-  const logo = `<div>
+    const logo = `<div>
     <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
       <g fill="none" fillRule="evenodd">
         <path
@@ -22,26 +22,26 @@ export const createHeader = ({ user, onLogout, onLogin, onCreateAccount }) => {
     <h1>Acme</h1>
   </div>`;
 
-  wrapper.insertAdjacentHTML('afterbegin', logo);
+    wrapper.insertAdjacentHTML('afterbegin', logo);
 
-  const account = document.createElement('div');
-  if (user) {
-    const welcomeMessage = `<span class="welcome">Welcome, <b>${user.name}</b>!</span>`;
-    account.innerHTML = welcomeMessage;
-    account.appendChild(createButton({ size: 'small', label: 'Log out', onClick: onLogout }));
-  } else {
-    account.appendChild(createButton({ size: 'small', label: 'Log in', onClick: onLogin }));
-    account.appendChild(
-      createButton({
-        size: 'small',
-        label: 'Sign up',
-        onClick: onCreateAccount,
-        primary: true,
-      })
-    );
-  }
-  wrapper.appendChild(account);
-  header.appendChild(wrapper);
+    const account = document.createElement('div');
+    if (user) {
+        const welcomeMessage = `<span class="welcome">Welcome, <b>${user.name}</b>!</span>`;
+        account.innerHTML = welcomeMessage;
+        account.appendChild(createButton({size: 'small', label: 'Log out', onClick: onLogout}));
+    } else {
+        account.appendChild(createButton({size: 'small', label: 'Log in', onClick: onLogin}));
+        account.appendChild(
+            createButton({
+                size: 'small',
+                label: 'Sign up',
+                onClick: onCreateAccount,
+                primary: true,
+            })
+        );
+    }
+    wrapper.appendChild(account);
+    header.appendChild(wrapper);
 
-  return header;
+    return header;
 };

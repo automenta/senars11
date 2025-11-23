@@ -57,7 +57,7 @@ export class Logger {
         // Add to container if available
         const container = this.uiElements?.logsContainer;
         if (container) {
-            const { scrollTop, scrollHeight, clientHeight } = container;
+            const {scrollTop, scrollHeight, clientHeight} = container;
             const isScrolledToBottom = Math.abs(scrollHeight - (scrollTop + clientHeight)) < 1;
 
             container.appendChild(logEntry);

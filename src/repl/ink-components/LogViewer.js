@@ -79,16 +79,32 @@ export const LogViewer = ({logs = []}) => {
                 Box,
                 {flexDirection: 'row'},
                 React.createElement(Text, {key: 'filter-all', color: filter === 'all' ? 'yellow' : 'gray'}, '[A]'),
-                React.createElement(Text, {key: 'filter-error', marginLeft: 1, color: filter === 'error' ? 'red' : 'gray'}, '[E]'),
-                React.createElement(Text, {key: 'filter-warn', marginLeft: 1, color: filter === 'warn' ? 'yellow' : 'gray'}, '[W]'),
-                React.createElement(Text, {key: 'filter-info', marginLeft: 1, color: filter === 'info' ? 'cyan' : 'gray'}, '[I]'),
-                React.createElement(Text, {key: 'filter-debug', marginLeft: 1, color: filter === 'debug' ? 'blue' : 'gray'}, '[D]')
+                React.createElement(Text, {
+                    key: 'filter-error',
+                    marginLeft: 1,
+                    color: filter === 'error' ? 'red' : 'gray'
+                }, '[E]'),
+                React.createElement(Text, {
+                    key: 'filter-warn',
+                    marginLeft: 1,
+                    color: filter === 'warn' ? 'yellow' : 'gray'
+                }, '[W]'),
+                React.createElement(Text, {
+                    key: 'filter-info',
+                    marginLeft: 1,
+                    color: filter === 'info' ? 'cyan' : 'gray'
+                }, '[I]'),
+                React.createElement(Text, {
+                    key: 'filter-debug',
+                    marginLeft: 1,
+                    color: filter === 'debug' ? 'blue' : 'gray'
+                }, '[D]')
             )
         ),
         React.createElement(
             Box,
             {flexDirection: 'column'},
-             filteredLogs.map((log, index) => formatLogEntry(log, index))
+            filteredLogs.map((log, index) => formatLogEntry(log, index))
         ),
         React.createElement(
             Box,
