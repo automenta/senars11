@@ -195,7 +195,8 @@ export class AgentBuilder {
             'core-arithmetic': () => this._registerArithmeticFunctors(registry),
             'set-operations': () => this._registerSetOperationFunctors(registry),
         };
-        collections[collectionName]?.();
+        const collection = collections[collectionName];
+        if (collection) collection();
     }
 
     _registerArithmeticFunctors(registry) {
@@ -256,7 +257,9 @@ export class AgentBuilder {
         };
 
         if (Array.isArray(pluginConfig)) {
-            pluginConfig.forEach(p => p && register(p, p.id));
+            pluginConfig
+                .filter(Boolean)
+                .forEach(p => register(p, p.id));
         } else if (typeof pluginConfig === 'object') {
             Object.entries(pluginConfig)
                 .filter(([, c]) => c && c.enabled !== false)

@@ -137,9 +137,7 @@ export class Memory extends BaseComponent {
     }
 
     getConcept(term) {
-        if (!term) {
-            return null;
-        }
+        if (!term) return null;
 
         const concept = this._concepts.get(term) || this._findConceptByEquality(term);
 
@@ -152,7 +150,7 @@ export class Memory extends BaseComponent {
 
     _applyConceptForgetting() {
         const strategies = {
-            priority: () => this._forgetByCriteria(c => c.activation || 0.1, (a, b) => a < b),
+            priority: () => this._forgetByCriteria(c => c.activation ?? 0.1, (a, b) => a < b),
             lru: () => this._forgetByCriteria(c => c.lastAccessed, (a, b) => a < b),
             fifo: () => {
                 const first = this._concepts.keys().next().value;
@@ -217,14 +215,12 @@ export class Memory extends BaseComponent {
     }
 
     _conceptMatchesCriteria(concept, criteria) {
-        const checks = [
+        return [
             () => criteria.minActivation === undefined || concept.activation >= criteria.minActivation,
             () => criteria.minTasks === undefined || concept.totalTasks >= criteria.minTasks,
             () => !criteria.taskType || concept.getTasksByType(criteria.taskType).length > 0,
             () => criteria.onlyFocus !== true || this._focusConcepts.has(concept)
-        ];
-
-        return checks.every(check => check());
+        ].every(check => check());
     }
 
     getMostActiveConcepts(limit = 10, scoringType = 'standard') {
@@ -256,18 +252,15 @@ export class Memory extends BaseComponent {
         return scoredConcepts.slice(0, limit).map(sc => sc.concept);
     }
 
-    getConceptsByCompositeScoring(criteria = {}) {
-        const {limit = 10, minScore = 0, scoringOptions = {}, sortBy = 'composite'} = criteria;
-
+    getConceptsByCompositeScoring({limit = 10, minScore = 0, scoringOptions = {}, sortBy = 'composite'} = {}) {
         const concepts = this.getAllConcepts();
-        const scoredConcepts = concepts
+
+        return concepts
             .map(concept => ({concept, score: MemoryScorer.calculateDetailedConceptScore(concept, scoringOptions)}))
-            .filter(item => item.score.compositeScore >= minScore);
-
-        const sorter = MemoryScorer.getSorterFunction(sortBy);
-        scoredConcepts.sort((a, b) => sorter(a, b));
-
-        return scoredConcepts.slice(0, limit).map(item => item.concept);
+            .filter(item => item.score.compositeScore >= minScore)
+            .sort((a, b) => MemoryScorer.getSorterFunction(sortBy)(a, b))
+            .slice(0, limit)
+            .map(item => item.concept);
     }
 
     consolidate(currentTime = Date.now()) {
@@ -293,7 +286,10 @@ export class Memory extends BaseComponent {
         const concept = this._concepts.get(term);
         if (concept) {
             concept.boostActivation(boostAmount);
-            !this._focusConcepts.has(concept) && this._focusConcepts.add(concept) && this._updateFocusConceptsCount();
+            if (!this._focusConcepts.has(concept)) {
+                this._focusConcepts.add(concept);
+                this._updateFocusConceptsCount();
+            }
         }
     }
 
@@ -413,9 +409,7 @@ export class Memory extends BaseComponent {
             5
         );
 
-        for (let i = 0; i < conceptsToForget; i++) {
-            this._applyConceptForgetting();
-        }
+        Array.from({length: conceptsToForget}, () => this._applyConceptForgetting());
     }
 
     getMemoryPressureStats() {

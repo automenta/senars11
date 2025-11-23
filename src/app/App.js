@@ -2,53 +2,33 @@ import {AgentBuilder} from '../agent/AgentBuilder.js';
 import EventEmitter from 'events';
 
 export class App extends EventEmitter {
-    constructor(config) {
+    constructor(config = {}) {
         super();
-        this.config = config || {};
+        this.config = config;
         this.agents = new Map();
         this.activeAgentId = null;
     }
 
-    /**
-     * Gets the current active agent.
-     */
     get agent() {
-        return this.activeAgentId ? this.agents.get(this.activeAgentId)?.agent : null;
+        return this.agents.get(this.activeAgentId)?.agent || null;
     }
 
-    /**
-     * Initializes the default agent using the App config.
-     * @returns {Promise<Agent>}
-     */
     async initialize() {
         if (this.agent) return this.agent;
-        // Use 'default' ID and this.config
         return this.createAgent('default', this.config);
     }
 
-    /**
-     * Creates a new agent.
-     * @param {string} [agentId]
-     * @param {Object} [config]
-     * @returns {Promise<Agent>}
-     */
     async createAgent(agentId = null, config = {}) {
         const id = agentId || `agent_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
-
-        // Merge provided config with App config defaults where appropriate
-        // If config is empty, we use this.config (for the default agent case)
         const effectiveConfig = Object.keys(config).length > 0 ? config : this.config;
 
-        const builder = new AgentBuilder({
+        const agent = await new AgentBuilder({
             nar: effectiveConfig.nar,
             persistence: effectiveConfig.persistence,
             lm: effectiveConfig.lm,
-            inputProcessing: {
-                lmTemperature: effectiveConfig.lm?.temperature
-            }
-        });
+            inputProcessing: {lmTemperature: effectiveConfig.lm?.temperature}
+        }).build();
 
-        const agent = await builder.build();
         agent.id = id;
 
         this.agents.set(id, {
@@ -59,7 +39,6 @@ export class App extends EventEmitter {
             config: effectiveConfig
         });
 
-        // If this is the first agent, make it active
         if (!this.activeAgentId) {
             this.activeAgentId = id;
         }
@@ -67,11 +46,6 @@ export class App extends EventEmitter {
         return agent;
     }
 
-    /**
-     * Gets an agent by ID.
-     * @param {string} agentId
-     * @returns {Agent|null}
-     */
     getAgent(agentId) {
         const entry = this.agents.get(agentId);
         if (entry) {
@@ -81,11 +55,6 @@ export class App extends EventEmitter {
         return null;
     }
 
-    /**
-     * Switches the active agent.
-     * @param {string} agentId
-     * @returns {Agent}
-     */
     switchAgent(agentId) {
         if (!this.agents.has(agentId)) {
             throw new Error(`Agent ${agentId} does not exist`);
@@ -94,9 +63,6 @@ export class App extends EventEmitter {
         return this.getAgent(agentId);
     }
 
-    /**
-     * Lists all agents.
-     */
     listAgents() {
         return Array.from(this.agents.entries()).map(([id, entry]) => ({
             id: entry.id,
@@ -106,19 +72,15 @@ export class App extends EventEmitter {
         }));
     }
 
-    /**
-     * Removes an agent.
-     * @param {string} agentId
-     */
     async removeAgent(agentId) {
         if (!this.agents.has(agentId)) return false;
 
         const {agent} = this.agents.get(agentId);
         try {
-            if (agent.stop) agent.stop();
-            if (agent.dispose) await agent.dispose();
-        } catch (e) {
-            console.error(`Error removing agent ${agentId}:`, e);
+            if (typeof agent.stop === 'function') agent.stop();
+            if (typeof agent.dispose === 'function') await agent.dispose();
+        } catch (error) {
+            console.error(`Error removing agent ${agentId}:`, error);
         }
 
         this.agents.delete(agentId);
@@ -130,18 +92,12 @@ export class App extends EventEmitter {
         return true;
     }
 
-    /**
-     * Starts the active agent and optionally sets up signal handlers.
-     * @param {Object} options
-     * @param {boolean} [options.startAgent=true] - Start the reasoning loop
-     * @param {boolean} [options.setupSignals=false] - Setup SIGINT/SIGTERM handlers
-     */
     async start(options = {}) {
         const {startAgent = true, setupSignals = false} = options;
 
         if (!this.agent) await this.initialize();
 
-        if (startAgent && this.agent && this.agent.start) {
+        if (startAgent && this.agent && typeof this.agent.start === 'function') {
             this.agent.start();
         }
 
@@ -153,9 +109,6 @@ export class App extends EventEmitter {
         return this.agent;
     }
 
-    /**
-     * Gracefully shuts down all agents.
-     */
     async shutdown() {
         console.log('\nShutting down application...');
 
@@ -163,32 +116,36 @@ export class App extends EventEmitter {
             const agent = entry.agent;
             if (agent) {
                 console.log(`Stopping agent ${id}...`);
-                try {
-                    if (agent.save) {
-                        await agent.save();
-                    }
-                } catch (error) {
-                    console.error(`Error saving agent ${id}:`, error.message);
-                }
-
-                try {
-                    if (agent.shutdown) {
-                        await agent.shutdown();
-                    } else if (agent.stop) {
-                        agent.stop();
-                    }
-                } catch (error) {
-                    console.error(`Error stopping agent ${id}:`, error.message);
-                }
+                await this._saveAgent(agent, id);
+                await this._stopAgent(agent, id);
             }
         }
 
         this.emit('stopped');
     }
 
-    /**
-     * Registers default signal handlers to shutdown the app and exit.
-     */
+    async _saveAgent(agent, agentId) {
+        try {
+            if (typeof agent.save === 'function') {
+                await agent.save();
+            }
+        } catch (error) {
+            console.error(`Error saving agent ${agentId}:`, error.message);
+        }
+    }
+
+    async _stopAgent(agent, agentId) {
+        try {
+            if (typeof agent.shutdown === 'function') {
+                await agent.shutdown();
+            } else if (typeof agent.stop === 'function') {
+                agent.stop();
+            }
+        } catch (error) {
+            console.error(`Error stopping agent ${agentId}:`, error.message);
+        }
+    }
+
     setupGracefulShutdown() {
         const handleSignal = async () => {
             await this.shutdown();
