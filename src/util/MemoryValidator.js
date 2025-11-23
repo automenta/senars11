@@ -14,9 +14,30 @@ export class MemoryValidator {
     calculateChecksum(obj) {
         if (!this.isEnabled || !this.options.enableChecksums) return null;
 
-        const str = JSON.stringify(obj, Object.keys(obj).sort());
-        let hash = 0;
+        let str;
+        try {
+            if (obj && typeof obj.serialize === 'function') {
+                str = JSON.stringify(obj.serialize());
+            } else {
+                // Simple circular reference protection
+                const seen = new WeakSet();
+                str = JSON.stringify(obj, (key, value) => {
+                    if (typeof value === 'object' && value !== null) {
+                        if (seen.has(value)) {
+                            return '[Circular]';
+                        }
+                        seen.add(value);
+                    }
+                    return value;
+                });
+            }
+        } catch (e) {
+            return null;
+        }
 
+        if (!str) return null;
+
+        let hash = 0;
         for (let i = 0; i < str.length; i++) {
             const char = str.charCodeAt(i);
             hash = ((hash << 5) - hash) + char;

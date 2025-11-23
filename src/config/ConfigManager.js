@@ -4,7 +4,7 @@
  */
 
 import {validateConfigWithDefaults} from '../config/ConfigValidator.js';
-import {deepFreeze} from '../util/common.js';
+import {deepFreeze, deepClone} from '../util/common.js';
 
 // Default configuration values
 const DEFAULT_CONFIG = deepFreeze({
@@ -187,7 +187,7 @@ class ConfigManager {
 
     set(path, value) {
         const pathParts = path.split('.');
-        const newConfig = this._deepClone(this._config);
+        const newConfig = deepClone(this._config);
         let current = newConfig;
 
         for (let i = 0; i < pathParts.length - 1; i++) {
@@ -215,19 +215,6 @@ class ConfigManager {
         return {...this._config};
     }
 
-    _deepClone(obj) {
-        if (obj === null || typeof obj !== 'object') return obj;
-        if (obj instanceof Date) return new Date(obj.getTime());
-        if (Array.isArray(obj)) return obj.map(item => this._deepClone(item));
-
-        const cloned = {};
-        for (const key in obj) {
-            if (obj.hasOwnProperty(key)) {
-                cloned[key] = this._deepClone(obj[key]);
-            }
-        }
-        return cloned;
-    }
 }
 
 // Singleton instance for global config management

@@ -1,6 +1,6 @@
 import {Task} from './Task.js';
 import {Truth} from '../Truth.js';
-import {collectTasksFromAllConcepts} from '../util/memory.js';
+import {collectTasksFromAllConcepts} from '../memory/MemoryUtils.js';
 import {BaseComponent} from '../util/BaseComponent.js';
 import {Statistics} from '../util/Statistics.js';
 

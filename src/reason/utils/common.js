@@ -18,26 +18,7 @@ export function safeExecute(fn, defaultValue, ...args) {
     }
 }
 
-/**
- * Create a deep clone of an object
- * @param {object} obj - Object to clone
- * @returns {object} Deep cloned object
- */
-export function deepClone(obj) {
-    if (obj === null || typeof obj !== 'object') return obj;
-    if (obj instanceof Date) return new Date(obj.getTime());
-    if (obj instanceof Array) return obj.map(item => deepClone(item));
-    if (typeof obj === 'object') {
-        const cloned = {};
-        for (const key in obj) {
-            if (Object.prototype.hasOwnProperty.call(obj, key)) {
-                cloned[key] = deepClone(obj[key]);
-            }
-        }
-        return cloned;
-    }
-    return obj;
-}
+export {deepClone} from '../../util/common.js';
 
 /**
  * Get nested property using dot notation

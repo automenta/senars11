@@ -55,3 +55,11 @@ export function hasInMapSet(map, key, item) {
 export function getMultipleFromMap(map, keys) {
     return keys.flatMap(key => map.get(key) ?? []);
 }
+
+/**
+ * Collect tasks from all concepts in memory, optionally filtered
+ */
+export function collectTasksFromAllConcepts(memory, filterFn = null) {
+    return memory.getAllConcepts()
+        .flatMap(concept => filterFn ? concept.getAllTasks().filter(filterFn) : concept.getAllTasks());
+}
