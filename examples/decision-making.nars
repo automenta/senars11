@@ -1,0 +1,15 @@
+// title: Decision Making & Motor Babbling
+
+*100
+/reset
+
+// Introduce knowledge
+(bird --> flyer).
+(robin --> bird).
+(robin --> [chirping]).
+
+// Create goal
+fly!
+
+// Let it decide and act
+/step 200ms

@@ -2,25 +2,7 @@ import {NAR} from '../nar/NAR.js';
 import {Input} from '../task/Input.js';
 import {PersistenceManager} from '../io/PersistenceManager.js';
 import {FormattingUtils} from '../repl/utils/index.js';
-import {
-    AgentCommandRegistry,
-    AgentCreateCommand,
-    GoalCommand,
-    LMCommand,
-    PlanCommand,
-    ProvidersCommand,
-    ReasonCommand,
-    ThinkCommand,
-    ToolsCommand,
-    HelpCommand,
-    StatusCommand,
-    MemoryCommand,
-    TraceCommand,
-    ResetCommand,
-    SaveCommand,
-    LoadCommand,
-    DemoCommand
-} from '../repl/commands/Commands.js';
+import * as Commands from '../repl/commands/Commands.js';
 import {AGENT_EVENTS} from './constants.js';
 import {InputProcessor} from './InputProcessor.js';
 import {AgentStreamer} from './AgentStreamer.js';
@@ -35,6 +17,8 @@ export class Agent extends NAR {
         this.isRunningLoop = false;
         this.runInterval = null;
         this.traceEnabled = false;
+        this.echo = false;
+        this.quiet = false;
 
         this.inputProcessingConfig = {
             enableNarseseFallback: config.inputProcessing?.enableNarseseFallback ?? true,
@@ -76,25 +60,19 @@ export class Agent extends NAR {
     }
 
     _initializeCommandRegistry() {
-        const registry = new AgentCommandRegistry();
-        [
-            new AgentCreateCommand(),
-            new GoalCommand(),
-            new PlanCommand(),
-            new ThinkCommand(),
-            new ReasonCommand(),
-            new LMCommand(),
-            new ProvidersCommand(),
-            new ToolsCommand(),
-            new HelpCommand(),
-            new StatusCommand(),
-            new MemoryCommand(),
-            new TraceCommand(),
-            new ResetCommand(),
-            new SaveCommand(),
-            new LoadCommand(),
-            new DemoCommand()
-        ].forEach(cmd => registry.register(cmd));
+        const registry = new Commands.AgentCommandRegistry();
+        // Register all command classes exported from Commands.js
+        Object.values(Commands).forEach(CmdClass => {
+            if (typeof CmdClass === 'function' &&
+                CmdClass.prototype instanceof Commands.AgentCommand &&
+                CmdClass !== Commands.AgentCommand) {
+                try {
+                    registry.register(new CmdClass());
+                } catch (e) {
+                    console.warn(`Failed to register command ${CmdClass.name}: ${e.message}`);
+                }
+            }
+        });
         return registry;
     }
 
@@ -110,7 +88,7 @@ export class Agent extends NAR {
 
     async executeCommand(cmd, ...args) {
         const ALIASES = {
-            'next': 'n', 'run': 'go', 'stop': 'st', 'quit': 'exit', 'q': 'exit'
+            'next': 'n', 'stop': 'st', 'quit': 'exit', 'q': 'exit'
         };
         const command = ALIASES[cmd] ?? cmd;
 
@@ -123,6 +101,11 @@ export class Agent extends NAR {
                 return '👋 Goodbye!';
             }
         };
+
+        // Prefer registry commands over builtins if strict match?
+        // But here builtins check comes first.
+        // 'go' is still builtin for continuous run without args.
+        // 'run' is now free to be handled by registry.
 
         if (builtins[command]) return builtins[command]();
 
@@ -160,14 +143,23 @@ export class Agent extends NAR {
     }
 
     async _run() {
-        if (this.isRunningLoop) return '⏸️  Already running. Use "/stop" to stop.';
+        return this.startAutoStep(10);
+    }
+
+    async startAutoStep(interval = 10) {
+        if (this.isRunningLoop) {
+             this._stopRun();
+        }
 
         this.isRunningLoop = true;
-        this.emit(AGENT_EVENTS.NAR_CYCLE_START, {reason: 'continuous run'});
+        this.emit(AGENT_EVENTS.NAR_CYCLE_START, {reason: 'auto-step'});
 
-        if (!this.traceEnabled) {
+        // If not in quiet mode, enable trace for visibility unless explicitly disabled?
+        // Spec says /quiet suppresses trace.
+        // If quiet is false, we generally want trace on for demo.
+        if (!this.quiet && !this.traceEnabled) {
             this.traceEnabled = true;
-            this.emit(AGENT_EVENTS.NAR_TRACE_ENABLE, {reason: 'run session'});
+            this.emit(AGENT_EVENTS.NAR_TRACE_ENABLE, {reason: 'auto-step session'});
         }
 
         this.runInterval = setInterval(() => {
@@ -175,10 +167,10 @@ export class Agent extends NAR {
                 console.error(`❌ Error during run: ${error.message}`);
                 this._stopRun();
             });
-        }, 10);
+        }, interval);
 
-        this.emit(AGENT_EVENTS.NAR_CYCLE_RUNNING, {interval: 10});
-        return '🏃 Running continuously... Use "/stop" to stop.';
+        this.emit(AGENT_EVENTS.NAR_CYCLE_RUNNING, {interval});
+        return `🏃 Auto-stepping every ${interval}ms... Use "/stop" or input to stop.`;
     }
 
     async _autonomousStep() {

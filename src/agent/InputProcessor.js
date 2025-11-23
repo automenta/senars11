@@ -10,6 +10,17 @@ export class InputProcessor {
         const trimmed = input.trim();
         if (!trimmed) return this.agent.executeCommand('next');
 
+        // Ignore comments
+        if (trimmed.startsWith('//') || trimmed.startsWith('#')) return '';
+
+        // Ignore legacy volume/control commands starting with *
+        if (trimmed.startsWith('*')) return '';
+
+        // Stop auto-step on any input (per spec)
+        if (this.agent.isRunningLoop) {
+            this.agent._stopRun();
+        }
+
         this.agent.sessionState.history.push(trimmed);
         if (trimmed.startsWith('/')) return this.agent.executeCommand(...trimmed.slice(1).split(' '));
 
