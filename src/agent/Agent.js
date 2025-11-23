@@ -77,9 +77,7 @@ export class Agent extends NAR {
     }
 
     _registerEventHandlers() {
-        this.on('task.focus', (task) => {
-            this.emit('log', `🎯 FOCUSED: ${this.formatTaskForDisplay(task)}`);
-        });
+        // No longer automatically emit log events for task.focus - UI handles task.focus directly
     }
 
     async processInput(input) {

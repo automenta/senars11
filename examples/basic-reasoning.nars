@@ -1,0 +1,17 @@
+// title: Basic Reasoning Example
+
+*50
+
+// Basic syllogistic reasoning
+(<a --> b> && <b --> c>) => <a --> c>.
+<a --> b>.
+<b --> c>.
+
+// Wait for derivations
+/step 10
+
+// Show results
+/beliefs
+
+// Show system stats
+/stats

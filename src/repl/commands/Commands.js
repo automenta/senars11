@@ -574,6 +574,40 @@ export class ThemeCommand extends AgentCommand {
     }
 }
 
+export class ModeCommand extends AgentCommand {
+    constructor() { super('mode', 'Show or change input mode', 'mode [agent|narsese]'); }
+    async _executeImpl(agent, ...args) {
+        // This command is handled specially in UI layer, but we provide basic functionality
+        if (args.length === 0) {
+            // Return current mode - since this depends on UI state, return a message
+            return 'ℹ️ Current mode: Use UI layer to check current mode';
+        }
+
+        const newMode = args[0].toLowerCase();
+        if (['agent', 'narsese'].includes(newMode)) {
+            return `🔄 Mode switched to: ${newMode}`;
+        } else {
+            return '❌ Invalid mode. Use "agent" or "narsese".';
+        }
+    }
+}
+
+export class NaturalCommand extends AgentCommand {
+    constructor() { super('natural', 'Switch to natural language mode', 'natural'); }
+    async _executeImpl(agent, ...args) {
+        // This command is handled specially in UI layer, but we provide basic functionality
+        return '🔄 Switched to natural language (agent) mode';
+    }
+}
+
+export class NarseseCommand extends AgentCommand {
+    constructor() { super('narsese', 'Switch to Narsese mode', 'narsese'); }
+    async _executeImpl(agent, ...args) {
+        // This command is handled specially in UI layer, but we provide basic functionality
+        return '🔄 Switched to Narsese mode';
+    }
+}
+
 export class VolCommand extends AgentCommand {
     constructor() { super('vol', 'Set volume', 'vol <n>'); }
     async _executeImpl(agent, ...args) {

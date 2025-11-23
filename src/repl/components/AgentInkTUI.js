@@ -76,6 +76,8 @@ export const AgentInkTUI = ({engine}) => {
         timestamp: Date.now(),
         type: 'info'
     }]);
+    // Track recent log messages for deduplication
+    const recentLogTracker = useRef(new Set());
     const [inputValue, setInputValue] = useState('');
     const [status, setStatus] = useState({isRunning: false, cycle: 0});
     const [mode, setMode] = useState('agent'); // 'agent' or 'narsese'
@@ -111,7 +113,61 @@ export const AgentInkTUI = ({engine}) => {
     // Event listener registration
     const setupEventListeners = () => {
         // Generic event handlers with consistent error handling
-        const handleLog = (message) => addLog(message, 'info');
+        const handleLog = (message) => {
+            // If message is a string, use it directly
+            if (typeof message === 'string') {
+                addLog(message, 'info');
+            }
+            // If it's an object, try to extract meaningful content
+            else if (typeof message === 'object') {
+                // Check if it's an event object with message content
+                if (message.message) {
+                    // It's an event object with a message property
+                    addLog(message.message, 'info');
+                } else if (message.content) {
+                    // It's an event object with a content property
+                    addLog(message.content, 'info');
+                } else if (message.task) {
+                    // It might be a task-focused event
+                    try {
+                        const formattedTask = FormattingUtils.formatTask(message.task);
+                        addLog(formattedTask, 'info');
+                    } catch (e) {
+                        addLog(JSON.stringify(message), 'info');
+                    }
+                } else if (message.hasOwnProperty('0') && typeof message[0] === 'string') {
+                    // It might be a string represented as an indexed object (e.g., {"0":"H","1":"i","2":"!"})
+                    // But it could also contain event metadata, so we need to be careful
+                    try {
+                        // Get all numeric keys in order to reconstruct the string
+                        const numericKeys = Object.keys(message)
+                            .filter(key => /^\d+$/.test(key))
+                            .sort((a, b) => parseInt(a) - parseInt(b));
+
+                        if (numericKeys.length > 0) {
+                            // Reconstruct the string from indexed values
+                            const stringParts = numericKeys.map(key => message[key]);
+                            const reconstructedString = stringParts.join('');
+
+                            // Only use the reconstructed string if it's not just metadata
+                            addLog(reconstructedString, 'info');
+                        } else {
+                            // No numeric keys found, stringify the object
+                            addLog(JSON.stringify(message), 'info');
+                        }
+                    } catch (e) {
+                        addLog(JSON.stringify(message), 'info');
+                    }
+                } else {
+                    // Default to stringifying the whole object
+                    addLog(JSON.stringify(message), 'info');
+                }
+            }
+            // For other types (number, boolean, etc.), convert to string
+            else {
+                addLog(String(message), 'info');
+            }
+        };
         const handleStatus = (newStatus) => setStatus(prev => ({...prev, ...newStatus}));
         const handleCycleStep = (data) => setStatus(prev => ({
             ...prev,
@@ -121,16 +177,30 @@ export const AgentInkTUI = ({engine}) => {
         const handleCycleStop = () => setStatus(prev => ({...prev, isRunning: false}));
 
         const handleTaskFocused = (data) => {
-            const task = data.task;
-            if (task) {
-                const formattedTask = FormattingUtils.formatTask(task);
-                addLog(`📝 FOCUSED: ${formattedTask}`, 'info');
+            if (typeof data === 'object') {
+                // Check if data is the task itself (common case) or contains a task property
+                const task = data.task || data;  // If data has a task prop, use it, otherwise data itself might be the task
+                if (task && typeof task === 'object') {
+                    try {
+                        const formattedTask = FormattingUtils.formatTask(task);
+                        addLog(`📝 FOCUSED: ${formattedTask}`, 'info');
+                    } catch (e) {
+                        // If formatting fails, try to show a basic representation
+                        addLog(`📝 FOCUSED: ${JSON.stringify(task)}`, 'info');
+                    }
+                } else {
+                    addLog(`📝 FOCUSED: ${JSON.stringify(data)}`, 'info');
+                }
+            } else if (typeof data === 'string') {
+                addLog(`📝 FOCUSED: ${data}`, 'info');
+            } else {
+                addLog(`📝 FOCUSED: ${JSON.stringify(data)}`, 'info');
             }
         };
 
         // Agent-specific event handlers
         const handleGenericAgentEvent = (prefix, data) =>
-            addLog(`${prefix}: ${data.action ?? data.decision ?? data.description} ${data.details ? `- ${data.details}` : ''}`, 'agent');
+            addLog(`${prefix}: ${typeof data === 'object' ? (data.action ?? data.decision ?? data.description ?? JSON.stringify(data)) : String(data)} ${typeof data === 'object' && data.details ? `- ${data.details}` : ''}`, 'agent');
 
         const handlers = {
             'log': handleLog,
@@ -139,8 +209,8 @@ export const AgentInkTUI = ({engine}) => {
             'nar.cycle.running': handleCycleRunning,
             'nar.cycle.stop': handleCycleStop,
             'task.focus': handleTaskFocused,
-            'narsese.error': (data) => addLog(`❌ Error: ${data.error}`, 'error'),
-            'command.error': (data) => addLog(`❌ Command Error: ${data.error}`, 'error'),
+            'narsese.error': (data) => addLog(`❌ Error: ${typeof data === 'object' && data.error ? data.error : (typeof data === 'string' ? data : JSON.stringify(data))}`, 'error'),
+            'command.error': (data) => addLog(`❌ Command Error: ${typeof data === 'object' && data.error ? data.error : (typeof data === 'string' ? data : JSON.stringify(data))}`, 'error'),
             'agent.action': (data) => handleGenericAgentEvent('🤖 AGENT ACTION', data),
             'agent.decision': (data) => handleGenericAgentEvent('🧠 AGENT DECISION', data),
             'hybrid.reasoning': (data) => handleGenericAgentEvent('🔗 HYBRID REASONING', data)
@@ -152,7 +222,7 @@ export const AgentInkTUI = ({engine}) => {
         // Initial logs
         setTimeout(() => {
             addLog('🤖 Welcome to SeNARS Unified REPL!', 'info');
-            addLog('Type /help for commands. Toggle modes with /mode or Ctrl+M.', 'info');
+            addLog('Type /help for commands. Toggle modes with /natural, /narsese, or Ctrl+M.', 'info');
             addLog(`Current mode: ${mode.toUpperCase()}`, 'info');
         }, 100);
 
@@ -168,13 +238,41 @@ export const AgentInkTUI = ({engine}) => {
     // Reasoner control functions using Message Handler
     const handleRunCommand = async () => {
          const res = await messageHandler.processMessage({type: 'control/start'});
-         if (res.payload?.result) addLog(res.payload.result, 'success');
+         if (res.payload?.result) {
+             const result = res.payload.result;
+             if (typeof result === 'string') {
+                 addLog(result, 'success');
+             } else {
+                 try {
+                     addLog(JSON.stringify(result), 'success');
+                 } catch (e) {
+                     if (result && typeof result === 'object' && Object.keys(result).length > 0) {
+                         addLog(`[Object with ${Object.keys(result).length} keys]`, 'success');
+                     } else {
+                         addLog(`[Object data]`, 'success');
+                     }
+                 }
+             }
+         }
     };
 
     const handleStepCommand = async () => {
          const res = await messageHandler.processMessage({type: 'control/step'});
          if (res.payload?.result) {
-             // Add log if needed, but engine events usually handle it
+             const result = res.payload.result;
+             if (typeof result === 'string') {
+                 addLog(result, 'success');
+             } else {
+                 try {
+                     addLog(JSON.stringify(result), 'success');
+                 } catch (e) {
+                     if (result && typeof result === 'object' && Object.keys(result).length > 0) {
+                         addLog(`[Object with ${Object.keys(result).length} keys]`, 'success');
+                     } else {
+                         addLog(`[Object data]`, 'success');
+                     }
+                 }
+             }
          }
 
          // Manual belief check logic from previous version can be kept if desired,
@@ -184,7 +282,22 @@ export const AgentInkTUI = ({engine}) => {
 
     const handleStopCommand = async () => {
          const res = await messageHandler.processMessage({type: 'control/stop'});
-         if (res.payload?.result) addLog(res.payload.result, 'success');
+         if (res.payload?.result) {
+             const result = res.payload.result;
+             if (typeof result === 'string') {
+                 addLog(result, 'success');
+             } else {
+                 try {
+                     addLog(JSON.stringify(result), 'success');
+                 } catch (e) {
+                     if (result && typeof result === 'object' && Object.keys(result).length > 0) {
+                         addLog(`[Object with ${Object.keys(result).length} keys]`, 'success');
+                     } else {
+                         addLog(`[Object data]`, 'success');
+                     }
+                 }
+             }
+         }
     };
 
     const handleHelpCommand = async () => {
@@ -196,6 +309,44 @@ export const AgentInkTUI = ({engine}) => {
          const res = await messageHandler.processMessage({type: '/help'});
          if (typeof res === 'string') {
              res.split('\n').forEach(line => addLog(line, 'info'));
+         } else {
+             // Fallback help text with mode commands included
+             const helpText = [
+                 '🤖 Available commands:',
+                 '  /help            - Show this help message',
+                 '  /natural         - Switch to natural language (agent) mode',
+                 '  /narsese         - Switch to Narsese mode',
+                 '  /mode [agent|narsese] - Show or change input mode (deprecated, use /natural or /narsese)',
+                 '  /stats           - Show system statistics',
+                 '  /beliefs         - List current beliefs',
+                 '  /goals           - List current goals',
+                 '  /questions       - List active questions',
+                 '  /tasks           - List current tasks',
+                 '  /concepts        - List concepts',
+                 '  /trace [on|off]  - Toggle derivation trace',
+                 '  /step [n]        - Execute n inference cycles',
+                 '  /cycle           - Show current cycle number',
+                 '  /reset           - Reset the system',
+                 '  /demo [name]     - List or run demo files',
+                 '  /run <path>      - Execute a .nars file',
+                 '  /save            - Save state to file',
+                 '  /load <path>     - Load state from file',
+                 '  /quiet [on|off]  - Toggle quiet mode',
+                 '  /echo [on|off]   - Toggle command echo',
+                 '  /history [n]     - Show last n inputs',
+                 '  /last            - Re-execute the last non-slash command',
+                 '  /vol <n>         - Set volume level',
+                 '  /theme [name]    - Switch terminal color theme',
+                 '  /goal <narsese>  - Manage goals',
+                 '  /plan <desc>     - Generate a plan using LM',
+                 '  /think <topic>   - Have agent think about a topic',
+                 '  /reason <stmt>   - Perform reasoning using LM',
+                 '  /lm <prompt>     - Direct LM communication',
+                 '  /providers       - Manage LM providers',
+                 '  /tools           - Show Tools/MCP configuration',
+                 '  /agent [status]  - Manage agent status'
+             ];
+             helpText.forEach(line => addLog(line, 'info'));
          }
     };
 
@@ -281,9 +432,17 @@ export const AgentInkTUI = ({engine}) => {
                 if (command.startsWith('/')) {
                     const [cmdName, ...args] = command.slice(1).split(' ');
 
-                    // Special handling for /mode since it affects UI state
+                    // Special handling for mode-related commands since they affect UI state
                     if (cmdName === 'mode') {
                         handleModeCommand(args);
+                        return;
+                    } else if (cmdName === 'natural') {
+                        setMode('agent');
+                        addLog(`🔄 Switched to natural language (agent) mode`, 'success');
+                        return;
+                    } else if (cmdName === 'narsese') {
+                        setMode('narsese');
+                        addLog(`🔄 Switched to Narsese mode`, 'success');
                         return;
                     }
 
@@ -295,7 +454,16 @@ export const AgentInkTUI = ({engine}) => {
                              // Split lines if long
                              output.split('\n').forEach(line => addLog(line, 'success'));
                          } else {
-                             addLog(JSON.stringify(output), 'success');
+                             try {
+                                 addLog(JSON.stringify(output), 'success');
+                             } catch (e) {
+                                 // Check if output is a plain object with keys
+                                 if (output && typeof output === 'object' && Object.keys(output).length > 0) {
+                                     addLog(`[Object with ${Object.keys(output).length} keys]`, 'success');
+                                 } else {
+                                     addLog(`[Object data]`, 'success');
+                                 }
+                             }
                          }
                     } else if (res.error) {
                         addLog(`❌ ${res.error}`, 'error');
@@ -304,7 +472,22 @@ export const AgentInkTUI = ({engine}) => {
                     // Route based on mode
                     if (mode === 'narsese') {
                         const res = await messageHandler.processMessage({type: 'narseseInput', payload: command});
-                        if (res.payload?.result) addLog(res.payload.result, 'success');
+                        if (res.payload?.result) {
+                            const result = res.payload.result;
+                            if (typeof result === 'string') {
+                                addLog(result, 'success');
+                            } else {
+                                try {
+                                    addLog(JSON.stringify(result), 'success');
+                                } catch (e) {
+                                    if (result && typeof result === 'object' && Object.keys(result).length > 0) {
+                                        addLog(`[Object with ${Object.keys(result).length} keys]`, 'success');
+                                    } else {
+                                        addLog(`[Object data]`, 'success');
+                                    }
+                                }
+                            }
+                        }
                         if (res.error) addLog(res.error, 'error');
                     } else {
                         // Agent Mode: Use streaming LM execution

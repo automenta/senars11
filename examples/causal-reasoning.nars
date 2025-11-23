@@ -1,0 +1,18 @@
+// title: Causal Reasoning Example
+
+*75
+
+// Define causal relationships
+(&|,a,b) =/> c.
+a.
+b.
+
+// Let's see what happens
+/step 5
+
+// Show goals and questions
+/goals
+/questions
+
+// Continue execution
+/step 10
