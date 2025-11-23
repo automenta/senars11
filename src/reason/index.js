@@ -6,7 +6,7 @@ export {RuleExecutor} from './RuleExecutor.js';
 export {RuleProcessor} from './RuleProcessor.js';
 export {Strategy} from './Strategy.js';
 export {Reasoner} from './Reasoner.js';
-export {ReasonerFactory} from './ReasonerFactory.js';
+export {ReasonerBuilder} from './ReasonerBuilder.js';
 export {Rule} from './Rule.js';
 export {LMRule} from './LMRule.js';
 export {EvaluationEngine} from './EvaluationEngine.js';

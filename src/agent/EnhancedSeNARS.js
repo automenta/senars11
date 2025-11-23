@@ -1,9 +1,9 @@
 /**
  * Apply MCR concepts to enhance SeNARS
- * This module integrates session management and ontology support into SeNARS
+ * This module integrates agent management and ontology support into SeNARS
  */
 
-import SessionManager from './SessionManager.js';
+import AgentManager from './AgentManager.js';
 import OntologyManager from './OntologyManager.js';
 
 /**
@@ -11,9 +11,9 @@ import OntologyManager from './OntologyManager.js';
  */
 export class EnhancedSeNARS {
     constructor() {
-        this.sessionManager = SessionManager;
+        this.agentManager = AgentManager;
         this.ontologyManager = OntologyManager;
-        this.activeSession = null;
+        this.activeAgent = null;
     }
 
     /**
@@ -47,28 +47,28 @@ export class EnhancedSeNARS {
     }
 
     /**
-     * Create a new reasoning session
+     * Create a new reasoning agent
      */
-    async createSession(sessionId = null, config = {}) {
-        const newSessionId = await this.sessionManager.createSession(sessionId, config);
-        this.activeSession = this.sessionManager.getSession(newSessionId);
-        return newSessionId;
+    async createAgent(agentId = null, config = {}) {
+        const newAgentId = await this.agentManager.createAgent(agentId, config);
+        this.activeAgent = this.agentManager.getAgent(newAgentId);
+        return newAgentId;
     }
 
     /**
-     * Switch to a different session
+     * Switch to a different agent
      */
-    switchSession(sessionId) {
-        const session = this.sessionManager.switchSession(sessionId);
-        this.activeSession = session;
-        return session;
+    switchAgent(agentId) {
+        const agent = this.agentManager.switchAgent(agentId);
+        this.activeAgent = agent;
+        return agent;
     }
 
     /**
-     * Get the current active session
+     * Get the current active agent
      */
-    getCurrentSession() {
-        return this.sessionManager.getCurrentSession();
+    getCurrentAgent() {
+        return this.agentManager.getCurrentAgent();
     }
 
     /**
@@ -79,11 +79,11 @@ export class EnhancedSeNARS {
     }
 
     /**
-     * Process input in the current session with ontology validation
+     * Process input in the current agent with ontology validation
      */
     async processInput(narseseInput) {
-        if (!this.activeSession) {
-            throw new Error('No active session. Create or switch to a session first.');
+        if (!this.activeAgent) {
+            throw new Error('No active agent. Create or switch to an agent first.');
         }
 
         // Validate the input against the ontology if validation is enabled
@@ -96,58 +96,60 @@ export class EnhancedSeNARS {
             }
         }
 
-        // Process the input using the current session's NAR
-        const nar = this.activeSession.nar;
-        await nar.input(narseseInput);
+        // Process the input using the current agent
+        const agent = this.activeAgent;
+        await agent.input(narseseInput);
 
-        return {success: true, sessionId: this.activeSession.id, input: narseseInput};
+        return {success: true, agentId: agent.id, input: narseseInput};
     }
 
     /**
-     * Query the current session
+     * Query the current agent
      */
     async query(question) {
-        if (!this.activeSession) {
-            throw new Error('No active session. Create or switch to a session first.');
+        if (!this.activeAgent) {
+            throw new Error('No active agent. Create or switch to an agent first.');
         }
 
-        const nar = this.activeSession.nar;
-        return await nar.query(question);
+        const agent = this.activeAgent;
+        return await agent.query(question);
     }
 
     /**
-     * Save the current session state
+     * Save the current agent state
      */
-    saveSession(sessionId = null) {
-        const id = sessionId || this.sessionManager.currentSessionId;
-        return this.sessionManager.saveSession(id);
+    saveAgent(agentId = null) {
+        const id = agentId || this.agentManager.currentAgentId;
+        return this.agentManager.saveAgent(id);
     }
 
     /**
-     * Load a saved session
+     * Load a saved agent
      */
-    async loadSession(sessionId, state) {
-        const session = await this.sessionManager.loadSession(sessionId, state);
-        this.activeSession = session;
-        return session;
+    async loadAgent(agentId, state) {
+        const agent = await this.agentManager.loadAgent(agentId, state);
+        this.activeAgent = agent;
+        return agent;
     }
 
     /**
-     * Get session statistics
+     * Get agent statistics
      */
-    getSessionStats(sessionId = null) {
-        const session = this.sessionManager.getSession(sessionId || this.sessionManager.currentSessionId);
-        if (!session || !session.nar || !session.nar.memory) {
+    getAgentStats(agentId = null) {
+        const agent = this.agentManager.getAgent(agentId || this.agentManager.currentAgentId);
+        if (!agent || !agent.memory) {
             return null;
         }
 
-        const memory = session.nar.memory;
+        const memory = agent.memory;
+        const entry = this.agentManager.getAgentEntry(agent.id);
+
         return {
-            sessionId: session.id,
+            agentId: agent.id,
             conceptsCount: memory.concepts ? memory.concepts.size : 0,
-            createdAt: session.createdAt,
-            lastAccessed: session.lastAccessed,
-            config: session.config
+            createdAt: entry ? entry.createdAt : null,
+            lastAccessed: entry ? entry.lastAccessed : null,
+            config: entry ? entry.config : {}
         };
     }
 

@@ -17,7 +17,7 @@ import {MetricsMonitor} from '../reason/MetricsMonitor.js';
 import {EmbeddingLayer} from '../lm/EmbeddingLayer.js';
 import {TermLayer} from '../memory/TermLayer.js';
 import {ReasoningAboutReasoning} from '../self/ReasoningAboutReasoning.js';
-import {ReasonerFactory} from '../reason/index.js';
+import {ReasonerBuilder} from '../reason/index.js';
 
 export class NAR extends BaseComponent {
     constructor(config = {}) {
@@ -109,7 +109,7 @@ export class NAR extends BaseComponent {
     }
 
     _initStreamReasoner() {
-        this._streamReasoner = ReasonerFactory.create(this);
+        this._streamReasoner = ReasonerBuilder.build(this);
     }
 
     _registerComponents() {
@@ -155,7 +155,7 @@ export class NAR extends BaseComponent {
 
     async _registerRulesWithStreamReasoner() {
         if (!this._streamReasoner) return;
-        await ReasonerFactory.registerDefaultRules(this._streamReasoner, this.config);
+        await ReasonerBuilder.registerDefaultRules(this._streamReasoner, this.config);
     }
 
     async input(narseseString, options = {}) {

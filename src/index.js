@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 
 import {WebSocketMonitor} from './server/WebSocketMonitor.js';
-import {NAR} from './nar/NAR.js';
-import {SessionEngine} from './session/SessionEngine.js';
+import {Agent} from './agent/Agent.js';
 
 const DEFAULT_CONFIG = Object.freeze({
     nar: {
@@ -21,19 +20,21 @@ const DEFAULT_CONFIG = Object.freeze({
 async function main() {
     console.log('SeNARS starting...');
 
-    // Note: SessionEngine expects config without the NAR instance merged in
-    const repl = new SessionEngine(DEFAULT_CONFIG);
+    // Create the Agent (which extends NAR)
+    const agent = new Agent(DEFAULT_CONFIG);
 
-    // Initialize the engine (which initializes NAR)
-    await repl.initialize();
+    // Initialize the agent
+    await agent.initialize();
 
     const monitor = new WebSocketMonitor(DEFAULT_CONFIG.webSocket);
     await monitor.start();
-    repl.nar.connectToWebSocketMonitor(monitor);
 
-    setupGracefulShutdown(repl, monitor);
+    // Connect monitor to the agent (which is a NAR)
+    agent.connectToWebSocketMonitor(monitor);
 
-    // The SessionEngine doesn't have a start() method that blocks like the TUI
+    setupGracefulShutdown(agent, monitor);
+
+    // The Agent doesn't have a start() method that blocks like the TUI
     // It's primarily an API-driven engine.
     // If this entry point is meant to be a server/daemon, we just keep running.
     console.log('Server running. Press Ctrl+C to stop.');
@@ -42,14 +43,18 @@ async function main() {
     return new Promise(() => {});
 }
 
-const setupGracefulShutdown = (repl, monitor) => {
+const setupGracefulShutdown = (agent, monitor) => {
     process.on('SIGINT', async () => {
         console.log('\nShutting down gracefully...');
         try {
-            if (repl.nar && repl.nar.serialize) {
-                const state = repl.nar.serialize();
-                await repl.persistenceManager.saveToDefault(state);
+            if (agent && agent.save) {
+                await agent.save(); // Agent has save() method
                 console.log('Current state saved to agent.json');
+            } else if (agent && agent.serialize) {
+                // Fallback
+                 const state = agent.serialize();
+                 // We don't have persistenceManager access easily here unless exposed
+                 // But Agent.js has save() which uses persistenceManager.
             }
         } catch (saveError) {
             console.error('Error saving state on shutdown:', saveError?.message || saveError);

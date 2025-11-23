@@ -1,10 +1,11 @@
-import {Agent} from '../Agent.js';
-import {NAR} from '../nar/NAR.js';
-import {SystemConfig} from './SystemConfig.js';
+import {Agent} from './Agent.js';
+import {SystemConfig} from '../config/SystemConfig.js';
 import {PluginManager} from '../util/Plugin.js';
+import {ChatOllama} from "@langchain/ollama";
 
 export class AgentBuilder {
-    constructor() {
+    constructor(initialConfig = {}) {
+        // Start with default config structure
         this.config = {
             subsystems: {
                 metrics: true,
@@ -12,42 +13,38 @@ export class AgentBuilder {
                 functors: ['core-arithmetic', 'set-operations'],
                 rules: ['syllogistic-core', 'temporal'],
                 tools: false,
-                lm: false
+                lm: false,
+                ...initialConfig.subsystems
             },
             memory: {
                 enableMemoryValidation: true,
-                memoryValidationInterval: 30000
+                memoryValidationInterval: 30000,
+                ...initialConfig.memory
+            },
+            nar: {
+                ...initialConfig.nar
             },
             lm: {
                 circuitBreaker: {
                     failureThreshold: 5,
                     timeout: 60000,
                     resetTimeout: 30000
-                }
-            }
+                },
+                ...initialConfig.lm
+            },
+            persistence: initialConfig.persistence || {},
+            inputProcessing: initialConfig.inputProcessing || {}
         };
         this.dependencies = new Map();
+
+        // Merge initial config fully
+        if (initialConfig) {
+             this.withConfig(initialConfig);
+        }
     }
 
     static createAgent(config = {}) {
-        const builder = new AgentBuilder();
-
-        if (config) {
-            if (config.metrics !== undefined) builder.withMetrics(config.metrics);
-            if (config.embeddingLayer !== undefined) builder.withEmbeddings(config.embeddingLayer);
-            if (config.functors !== undefined) builder.withFunctors(config.functors);
-            if (config.rules !== undefined) builder.withRules(config.rules);
-            if (config.tools !== undefined) builder.withTools(config.tools);
-            if (config.lm !== undefined) builder.withLM(config.lm);
-
-            if (config.plugins) {
-                builder.withConfig({subsystems: {...builder.config.subsystems, plugins: config.plugins}});
-            }
-
-            builder.withConfig(config);
-        }
-
-        return builder.build();
+        return new AgentBuilder(config).build();
     }
 
     static createBasicAgent() {
@@ -78,7 +75,13 @@ export class AgentBuilder {
     }
 
     withConfig(config) {
-        this.config = {...this.config, ...config};
+        // Deep merge logic simplified for this builder
+        if (config.subsystems) this.config.subsystems = {...this.config.subsystems, ...config.subsystems};
+        if (config.memory) this.config.memory = {...this.config.memory, ...config.memory};
+        if (config.nar) this.config.nar = {...this.config.nar, ...config.nar};
+        if (config.lm) this.config.lm = {...this.config.lm, ...config.lm};
+        if (config.persistence) this.config.persistence = {...this.config.persistence, ...config.persistence};
+        if (config.inputProcessing) this.config.inputProcessing = {...this.config.inputProcessing, ...config.inputProcessing};
         return this;
     }
 
@@ -117,22 +120,15 @@ export class AgentBuilder {
         return this;
     }
 
-    build() {
-        const systemConfig = SystemConfig.from(this._extractSystemConfig(this.config));
+    async build() {
+        const agentConfig = this._buildAgentConfig();
 
-        const narConfig = this._buildNARConfig();
-
-        const nar = new NAR(narConfig);
-
-        const agent = new Agent({
-            nar,
-            ...this.config.agent
-        });
+        const agent = new Agent(agentConfig);
 
         const pluginManager = new PluginManager({
-            nar,
-            agent,
-            eventBus: nar._eventBus || nar.eventBus
+            nar: agent,
+            agent: agent,
+            eventBus: agent._eventBus
         });
 
         if (this.config.subsystems.plugins) {
@@ -142,55 +138,67 @@ export class AgentBuilder {
         agent._pluginManager = pluginManager;
 
         if (this.config.subsystems.functors) {
-            const evaluator = nar._evaluator || nar.getEvaluator?.();
+            const evaluator = agent.evaluator;
             if (evaluator && typeof evaluator.getFunctorRegistry === 'function') {
                 this._registerFunctors(evaluator.getFunctorRegistry(), this.config.subsystems.functors);
             }
         }
 
-        if (this.config.subsystems.rules) {
-            const ruleEngine = nar._ruleEngine || nar.getRuleEngine?.();
-            if (ruleEngine) {
-                this._registerRules(ruleEngine, this.config.subsystems.rules);
-            }
-        }
+        await this._initializeSubsystems(agent);
 
-        this._initializeSubsystems(agent, nar);
+        const lmProvider = this._createLMProvider();
+        if (lmProvider && agent.lm) {
+             agent.lm.registerProvider('ollama', lmProvider);
+             if (!agent.lm.providers.defaultProviderId) {
+                 agent.lm.providers.setDefault('ollama');
+             }
+        }
 
         return agent;
     }
 
-    _buildNARConfig() {
-        const narConfig = {
+    _buildAgentConfig() {
+        const config = {
             ...this.config.nar,
-            lm: {enabled: !!this.config.subsystems.lm},
-            tools: {enabled: !!this.config.subsystems.tools}
+            memory: this.config.memory,
+            persistence: this.config.persistence,
+            inputProcessing: this.config.inputProcessing,
+            lm: {
+                enabled: !!this.config.subsystems.lm,
+                ...(typeof this.config.subsystems.lm === 'object' ? this.config.subsystems.lm : {}),
+                ...this.config.lm
+            },
+            tools: {
+                enabled: !!this.config.subsystems.tools,
+                ...(typeof this.config.subsystems.tools === 'object' ? this.config.subsystems.tools : {})
+            },
+            embeddingLayer: {
+                 enabled: !!this.config.subsystems.embeddingLayer,
+                 ...(typeof this.config.subsystems.embeddingLayer === 'object' ? this.config.subsystems.embeddingLayer : {})
+            }
         };
 
         if (this.config.subsystems.metrics) {
-            narConfig.metricsMonitor = typeof this.config.subsystems.metrics === 'object'
+            config.metricsMonitor = typeof this.config.subsystems.metrics === 'object'
                 ? this.config.subsystems.metrics
                 : {};
         }
 
-        if (this.config.subsystems.embeddingLayer) {
-            narConfig.embeddingLayer = typeof this.config.subsystems.embeddingLayer === 'object'
-                ? this.config.subsystems.embeddingLayer
-                : {enabled: true};
-        }
-
-        return narConfig;
+        return config;
     }
 
-    _extractSystemConfig(config) {
-        return {
-            system: config.system || {},
-            memory: config.memory || {},
-            cycle: config.cycle || {},
-            performance: config.performance || {},
-            logging: config.logging || {},
-            errorHandling: config.errorHandling || {}
-        };
+    _createLMProvider() {
+        if (this.config.lm.provider === 'ollama') {
+            const lmProvider = new ChatOllama({
+                model: this.config.lm.modelName,
+                baseUrl: this.config.lm.baseUrl,
+                temperature: this.config.lm.temperature,
+            });
+            lmProvider.name = 'ollama';
+            lmProvider.tools = [];
+            return lmProvider;
+        }
+        return null;
     }
 
     _registerFunctors(registry, functorConfig) {
@@ -212,8 +220,6 @@ export class AgentBuilder {
         const registerFn = collectionMap[collectionName];
         if (registerFn) {
             registerFn();
-        } else {
-            this.logger?.warn(`Unknown functor collection: ${collectionName}`);
         }
     }
 
@@ -288,46 +294,6 @@ export class AgentBuilder {
         });
     }
 
-    _registerRules(ruleEngine, ruleConfig) {
-        if (Array.isArray(ruleConfig)) {
-            ruleConfig.forEach(ruleSetName => {
-                this._registerRuleSet(ruleEngine, ruleSetName);
-            });
-        } else if (typeof ruleConfig === 'object') {
-            this._registerRuleSets(ruleEngine, ruleConfig);
-        }
-    }
-
-    _registerRuleSet(ruleEngine, ruleSetName) {
-        const ruleSetMap = {
-            'syllogistic-core': () => this._registerSyllogisticRules(ruleEngine),
-            'temporal': () => this._registerTemporalRules(ruleEngine),
-        };
-
-        const registerFn = ruleSetMap[ruleSetName];
-        if (registerFn) {
-            registerFn();
-        } else {
-            this.logger?.warn(`Unknown rule set: ${ruleSetName}`);
-        }
-    }
-
-    _registerRuleSets(ruleEngine, ruleSetsConfig) {
-        Object.entries(ruleSetsConfig)
-            .filter(([, enabled]) => enabled)
-            .forEach(([ruleSetName]) => this._registerRuleSet(ruleEngine, ruleSetName));
-    }
-
-    _registerSyllogisticRules(ruleEngine) {
-        // This would typically import and register actual syllogistic rules
-        // For now, we'll assume they're available in the system
-        // Implementation would go here based on existing rule imports
-    }
-
-    _registerTemporalRules(ruleEngine) {
-        // Implementation would go here based on existing temporal rule imports
-    }
-
     _registerPlugins(pluginManager, pluginConfig) {
         if (Array.isArray(pluginConfig)) {
             pluginConfig.forEach(pluginSpec => {
@@ -355,23 +321,24 @@ export class AgentBuilder {
         }
     }
 
-    _initializeSubsystems(agent, nar) {
+    async _initializeSubsystems(agent) {
         if (this.config.subsystems.tools) {
-            agent.getNAR().initializeTools().catch(() => {
-            });
+            // Tools init
+        }
+
+        if (agent.initialize) {
+             await agent.initialize();
         }
 
         if (agent._pluginManager) {
             agent._pluginManager.initializeAll().then(success => {
                 if (success) {
                     agent._pluginManager.startAll().catch(error => {
-                        this.logger?.error('Failed to start plugins:', error);
+                        console.error('Failed to start plugins:', error);
                     });
-                } else {
-                    this.logger?.error('Failed to initialize plugins');
                 }
             }).catch(error => {
-                this.logger?.error('Failed to initialize plugins:', error);
+                console.error('Failed to initialize plugins:', error);
             });
         }
     }

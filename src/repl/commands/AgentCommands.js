@@ -14,16 +14,16 @@ export class AgentCommand {
     }
 
     // Execute the command with standardized error handling
-    async execute(engine, ...args) {
+    async execute(agent, ...args) {
         try {
-            return await this._executeImpl(engine, ...args);
+            return await this._executeImpl(agent, ...args);
         } catch (error) {
             return handleError(error, `${this.name} command`, `❌ Error executing ${this.name} command`);
         }
     }
 
     // To be implemented by subclasses
-    async _executeImpl(engine, ...args) {
+    async _executeImpl(agent, ...args) {
         throw new Error(`_executeImpl not implemented for command: ${this.name}`);
     }
 
@@ -54,12 +54,12 @@ export class AgentCommandRegistry {
         return Array.from(this.commands.values());
     }
 
-    async execute(name, engine, ...args) {
+    async execute(name, agent, ...args) {
         const command = this.get(name);
         if (!command) {
             return `❌ Unknown command: ${name}`;
         }
-        return await command.execute(engine, ...args);
+        return await command.execute(agent, ...args);
     }
 
     getHelp() {
@@ -75,89 +75,38 @@ export class AgentCommandRegistry {
 // Specific command implementations
 export class AgentCreateCommand extends AgentCommand {
     constructor() {
-        super('agent', 'Create, list, or manage agents', 'agent [create|list|select|status] [args]');
+        super('agent', 'Manage agent status', 'agent [status]');
     }
 
-    async _executeImpl(engine, action, ...rest) {
-        if (!action) return this._listAgents(engine);
+    async _executeImpl(agent, action, ...rest) {
+        // In the new architecture, an Agent instance is self-contained.
+        // Commands to create/manage other agents should go through AgentManager,
+        // which is not directly exposed in the Agent's REPL.
+        // So we limit this command to 'status'.
 
-        switch (action) {
-            case 'create':
-                return this._createAgent(engine, rest);
-            case 'list':
-                return this._listAgents(engine);
-            case 'select':
-                return this._selectAgent(engine, rest);
-            case 'status':
-                return this._getAgentStatus(engine, rest);
-            default:
-                return `Unknown agent action: ${action}. Use 'agent create', 'agent list', 'agent select', or 'agent status'.`;
+        if (!action || action === 'status') {
+             return this._getAgentStatus(agent);
         }
+
+        return `Action '${action}' not supported in single-agent view. Use 'agent status'.`;
     }
 
-    async _createAgent(engine, args) {
-        const [name, type = 'default'] = args;
-        if (!name) return 'Usage: agent create <name> [type]';
-        if (engine.agents.has(name)) return `Agent '${name}' already exists.`;
-
-        const agent = {
-            id: name,
-            type,
-            created: Date.now(),
-            status: 'idle',
-            goals: [],
-            beliefs: [],
-            memory: []
+    async _getAgentStatus(agent) {
+        const status = {
+            id: agent.id,
+            isRunning: agent.isRunning,
+            cycleCount: agent.cycleCount,
+            beliefs: agent.getBeliefs ? agent.getBeliefs().length : 0,
+            goals: agent.getGoals ? agent.getGoals().length : 0,
+            inputQueueSize: agent.inputQueue ? agent.inputQueue.size() : 0
         };
 
-        engine.agents.set(name, agent);
-        engine.activeAgent = name;
-        return `✅ Agent '${name}' created and selected. Type: ${type}`;
-    }
-
-    async _listAgents(engine) {
-        if (engine.agents.size === 0) {
-            return 'No agents created yet. Use "agent create <name>" to create one.';
-        }
-
-        const agentsList = Array.from(engine.agents.entries())
-            .map(([name, agent]) => `  - ${name} (${agent.type}) - Status: ${agent.status}${engine.activeAgent === name ? ' [ACTIVE]' : ''}`)
-            .join('\n');
-
-        return `🤖 Available Agents:\n${agentsList}${engine.activeAgent ? `\nActive Agent: ${engine.activeAgent}` : ''}`;
-    }
-
-    async _selectAgent(engine, args) {
-        const [name] = args;
-        if (!name) return 'Usage: agent select <name>';
-        if (!engine.agents.has(name)) return `Agent '${name}' not found. Use 'agent list' to see available agents.`;
-
-        engine.activeAgent = name;
-        return `✅ Agent '${name}' selected as active.`;
-    }
-
-    async _getAgentStatus(engine, args) {
-        const name = args[0];
-        if (name) {
-            if (!engine.agents.has(name)) return `Agent '${name}' not found.`;
-            return this._formatAgentStatus(engine.agents.get(name), name);
-        }
-
-        if (!engine.activeAgent) {
-            return 'No active agent selected. Use "agent select <name>" or "agent create <name>".';
-        }
-
-        return this._formatAgentStatus(engine.agents.get(engine.activeAgent), engine.activeAgent);
-    }
-
-    _formatAgentStatus(agent, agentName) {
-        return `📊 Agent Status: ${agentName}
-  Type: ${agent.type}
-  Status: ${agent.status}
-  Created: ${new Date(agent.created).toLocaleString()}
-  Goals: ${agent.goals.length}
-  Beliefs: ${agent.beliefs.length}
-  Memory entries: ${agent.memory.length}`;
+        return `📊 Agent Status: ${agent.id}
+  Running: ${status.isRunning}
+  Cycles: ${status.cycleCount}
+  Beliefs: ${status.beliefs}
+  Goals: ${status.goals}
+  Input Queue: ${status.inputQueueSize}`;
     }
 }
 
@@ -166,33 +115,22 @@ export class GoalCommand extends AgentCommand {
         super('goal', 'Manage goals for the agent', 'goal [list|<goal_description>]');
     }
 
-    async _executeImpl(engine, ...args) {
+    async _executeImpl(agent, ...args) {
         if (args.length < 1) return 'Usage: goal <narsese_goal> or goal list';
-        if (args[0] === 'list') return this._listGoals(engine);
+        if (args[0] === 'list') return this._listGoals(agent);
 
         const narsese = args.join(' ');
-        const goalTask = `<${narsese}>!`;
+        // Ensure it's formatted as a goal if not already
+        const goalTask = narsese.trim().endsWith('!') ? narsese : `<${narsese}>!`;
 
-        await engine.nar.input(goalTask);
-        if (engine.activeAgent) {
-            const agent = engine.agents.get(engine.activeAgent);
-            agent?.goals.push({content: goalTask, timestamp: Date.now(), status: 'pending'});
-        }
-        return `🎯 Goal added: ${goalTask}`;
+        await agent.input(goalTask);
+
+        // We rely on NAR to store the goal.
+        return `🎯 Goal processed: ${goalTask}`;
     }
 
-    async _listGoals(engine) {
-        if (engine.activeAgent) {
-            const agent = engine.agents.get(engine.activeAgent);
-            if (agent?.goals.length > 0) {
-                const goalsList = agent.goals
-                    .map((goal, index) => `  ${index + 1}. ${goal.content} [${goal.status}] (${new Date(goal.timestamp).toLocaleTimeString()})`)
-                    .join('\n');
-                return `🎯 Goals for agent '${engine.activeAgent}':\n${goalsList}`;
-            }
-        }
-
-        const goals = engine.nar.getGoals?.() ?? [];
+    async _listGoals(agent) {
+        const goals = agent.getGoals ? agent.getGoals() : [];
         if (goals.length === 0) return 'No goals in the system.';
 
         const goalList = goals.slice(0, 10).map((goal, index) => `  ${index + 1}. ${goal}`).join('\n');
@@ -207,13 +145,14 @@ export class PlanCommand extends AgentCommand {
         super('plan', 'Generate a plan using the LM', 'plan <description>');
     }
 
-    async _executeImpl(engine, ...args) {
+    async _executeImpl(agent, ...args) {
         if (args.length < 1) return 'Usage: plan <describe what you want to plan>';
+        if (!agent.lm) return '❌ No Language Model enabled for this agent.';
 
         const query = args.join(' ');
         const prompt = `Generate a step-by-step plan to achieve: "${query}". Format as a sequence of actionable steps. Each step should be simple and executable.`;
 
-        const response = await engine.agentLM.generateText(prompt, {temperature: 0.7});
+        const response = await agent.lm.generateText(prompt, {temperature: 0.7});
         return `📋 Generated Plan:\n${response}`;
     }
 }
@@ -223,13 +162,14 @@ export class ThinkCommand extends AgentCommand {
         super('think', 'Have the agent think about a topic', 'think <topic>');
     }
 
-    async _executeImpl(engine, ...args) {
+    async _executeImpl(agent, ...args) {
         if (args.length < 1) return 'Usage: think <what you want the agent to think about>';
+        if (!agent.lm) return '❌ No Language Model enabled for this agent.';
 
         const topic = args.join(' ');
         const prompt = `As an intelligent reasoning system, reflect on: "${topic}". Consider different aspects, potential implications, and logical connections.`;
 
-        const response = await engine.agentLM.generateText(prompt, {temperature: 0.8});
+        const response = await agent.lm.generateText(prompt, {temperature: 0.8});
         return `💭 Reflection on "${topic}":\n${response}`;
     }
 }
@@ -239,13 +179,14 @@ export class ReasonCommand extends AgentCommand {
         super('reason', 'Perform reasoning using the LM', 'reason <statement>');
     }
 
-    async _executeImpl(engine, ...args) {
+    async _executeImpl(agent, ...args) {
         if (args.length < 1) return 'Usage: reason <what you want the agent to reason about>';
+        if (!agent.lm) return '❌ No Language Model enabled for this agent.';
 
         const topic = args.join(' ');
         const prompt = `Reason about: "${topic}". Provide logical analysis and potential conclusions.`;
 
-        const response = await engine.agentLM.generateText(prompt, {temperature: 0.3});
+        const response = await agent.lm.generateText(prompt, {temperature: 0.3});
         return `🧠 Reasoning Result:\n${response}`;
     }
 }
@@ -255,11 +196,12 @@ export class LMCommand extends AgentCommand {
         super('lm', 'Direct communication with the language model', 'lm <prompt>');
     }
 
-    async _executeImpl(engine, ...args) {
+    async _executeImpl(agent, ...args) {
         if (args.length < 1) return 'Usage: lm <prompt_for_language_model>';
+        if (!agent.lm) return '❌ No Language Model enabled for this agent.';
 
         const prompt = args.join(' ');
-        const response = await engine.agentLM.generateText(prompt, {temperature: 0.7});
+        const response = await agent.lm.generateText(prompt, {temperature: 0.7});
         return `🤖 LM Response:\n${response}`;
     }
 }
@@ -269,33 +211,35 @@ export class ProvidersCommand extends AgentCommand {
         super('providers', 'Manage language model providers', 'providers [list|select <provider_id>]');
     }
 
-    async _executeImpl(engine, ...args) {
+    async _executeImpl(agent, ...args) {
+        if (!agent.lm) return '❌ No Language Model enabled for this agent.';
+
         if (args.length === 0 || args[0] === 'list') {
-            return this._listProviders(engine);
+            return this._listProviders(agent);
         }
 
         if (args[0] === 'select' && args.length > 1) {
-            return this._selectProvider(engine, args[1]);
+            return this._selectProvider(agent, args[1]);
         }
 
         return 'Usage: providers [list|select <provider_id>]';
     }
 
-    _listProviders(engine) {
-        const providers = Array.from(engine.agentLM.providers.providers.keys());
+    _listProviders(agent) {
+        const providers = Array.from(agent.lm.providers.providers.keys());
         if (providers.length === 0) return 'No LM providers registered.';
 
         const providerList = providers
-            .map((providerId, index) => `  ${index + 1}. ${providerId}${engine.agentLM.providers.defaultProviderId === providerId ? ' [DEFAULT]' : ''}`)
+            .map((providerId, index) => `  ${index + 1}. ${providerId}${agent.lm.providers.defaultProviderId === providerId ? ' [DEFAULT]' : ''}`)
             .join('\n');
-        return `🔌 Registered LM Providers:\n${providerList}\nActive Provider: ${engine.agentLM.providers.defaultProviderId}`;
+        return `🔌 Registered LM Providers:\n${providerList}\nActive Provider: ${agent.lm.providers.defaultProviderId}`;
     }
 
-    _selectProvider(engine, providerId) {
-        if (!engine.agentLM.providers.has(providerId)) {
+    _selectProvider(agent, providerId) {
+        if (!agent.lm.providers.has(providerId)) {
             return `Provider '${providerId}' not found. Use 'providers list' to see available providers.`;
         }
-        engine.agentLM.providers.setDefault(providerId);
+        agent.lm.providers.setDefault(providerId);
         return `✅ Provider '${providerId}' selected as default.`;
     }
 }

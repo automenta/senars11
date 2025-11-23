@@ -4,8 +4,8 @@ import {RuleExecutor} from './RuleExecutor.js';
 import {RuleProcessor} from './RuleProcessor.js';
 import {Reasoner as StreamReasoner} from './Reasoner.js';
 
-export class ReasonerFactory {
-    static create(nar) {
+export class ReasonerBuilder {
+    static build(nar) {
         const config = nar.config;
         const reasoningConfig = config.reasoning || {};
 
