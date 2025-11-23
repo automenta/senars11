@@ -1,3 +1,4 @@
-export {SessionEngine as AgentReplEngine} from '../session/SessionEngine.js';
-export {ReplEngine} from './ReplEngine.js';
+export {Repl} from './Repl.js';
 export {ReplMessageHandler} from './ReplMessageHandler.js';
+export {ReplCommonInterface} from './ReplCommonInterface.js';
+export {ReplEngine} from './ReplEngine.js';

@@ -6,7 +6,7 @@ import {Config} from '../app/Config.js';
 import {App} from '../app/App.js';
 import {AgentInkTUI} from './components/AgentInkTUI.js';
 
-class Repl {
+export class Repl {
     constructor() {
         this.config = Config.parse();
         this.app = new App(this.config);

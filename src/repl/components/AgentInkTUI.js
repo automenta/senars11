@@ -344,7 +344,19 @@ export const AgentInkTUI = ({engine}) => {
                  '  /lm <prompt>     - Direct LM communication',
                  '  /providers       - Manage LM providers',
                  '  /tools           - Show Tools/MCP configuration',
-                 '  /agent [status]  - Manage agent status'
+                 '  /agent [status]  - Manage agent status',
+                 '  /config [key] [val] - Show or modify system configuration',
+                 '  /verbose [on|off] - Toggle verbose output',
+                 '  /graph [term]    - Visualize concept relationships',
+                 '  /priority [n]    - Show priority queue',
+                 '  /search <type> <query> - Search system data',
+                 '  /batch <cmds>    - Execute multiple commands',
+                 '  /timer <ms> <cmd> - Schedule command execution',
+                 '  /profile [ms]    - Profile system performance',
+                 '  /watch <type> <cond> - Watch for specific changes',
+                 '  /start           - Start continuous execution',
+                 '  /stop            - Stop continuous execution',
+                 '  /quit            - Exit the REPL'
              ];
              helpText.forEach(line => addLog(line, 'info'));
          }
