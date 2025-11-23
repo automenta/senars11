@@ -21,7 +21,7 @@ export class Config {
     static getWebSocketUrl() {
         const wsConfig = this.getWebSocketConfig();
         const protocol = WebSocketConfig.PROTOCOL_MAP[window.location.protocol] || 'ws:';
-        return `${protocol}//${wsConfig.host}:${wsConfig.port}`;
+        return `${protocol}//${wsConfig.host}:${wsConfig.port}/ws`;
     }
 
     static getGraphStyle() {
