@@ -41,7 +41,7 @@ async function startWebSocketServer(config) {
     console.log(`Starting WebSocket server on ${config.webSocket.host}:${config.webSocket.port}...`);
 
     const app = new App(config);
-    const replEngine = await app.initialize(); // This is the Agent/NAR
+    const replEngine = await app.start({ startAgent: false }); // This is the Agent/NAR
 
     const monitor = await _initializeWebSocketMonitor(config.webSocket);
     const serverAdapter = await _setupSessionServerAdapter(replEngine, monitor);
@@ -123,6 +123,14 @@ function startUIServer(config) {
 
 async function shutdownServices(webSocketServer) {
     const errors = [];
+
+    if (webSocketServer.uiServer) {
+        try {
+            webSocketServer.uiServer.kill();
+        } catch (e) {
+            console.error('Error stopping UI server:', e.message);
+        }
+    }
 
     try {
         if (webSocketServer.app) {

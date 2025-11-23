@@ -63,7 +63,7 @@ class Repl {
         console.log('🚀 Starting REPL engine...\n');
 
         // Initialize app/agent
-        const agent = await this.app.initialize();
+        const agent = await this.app.start({ startAgent: false });
 
         console.log('✅ Engine ready. Rendering UI...');
 
