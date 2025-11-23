@@ -1,7 +1,7 @@
 import {EventEmitter} from 'events';
 import {MESSAGE_TYPES} from '../util/MessageTypes.js';
-
-const CMD_MAP = {'start': 'run', 'stop': 'stop', 'step': 'next'};
+import {AgentCommandRegistry, FunctionCommand, AgentCommand} from './commands/CommandBase.js';
+import * as Commands from './commands/Commands.js';
 
 export class ReplMessageHandler extends EventEmitter {
     constructor(engine) {
@@ -12,41 +12,31 @@ export class ReplMessageHandler extends EventEmitter {
         }
 
         this.engine = engine;
-        this.commandHandlers = new Map();
+        this.registry = new AgentCommandRegistry();
+
+        // Attach registry to engine for HelpCommand and others
+        this.engine.commandRegistry = this.registry;
+
         this.messageHandlers = new Map();
         this.handlerCache = new Map();
 
-        this._setupDefaultCommandHandlers();
+        this._setupCommands();
         this._setupDefaultMessageHandlers();
     }
 
-    _setupDefaultCommandHandlers() {
-        // Map special commands to internal methods
-        const internalCommands = {
-            'n': '_next',
-            'next': '_next',
-            'run': '_run',
-            'go': '_run',
-            'stop': '_stop',
-            'st': '_stop',
-            'quit': 'shutdown',
-            'q': 'shutdown',
-            'exit': 'shutdown'
-        };
-
-        Object.entries(internalCommands).forEach(([cmd, method]) => {
-            this.commandHandlers.set(cmd, async () => {
+    _setupCommands() {
+        // Register all standard commands
+        Object.values(Commands).forEach(CmdClass => {
+            if (typeof CmdClass === 'function' &&
+                CmdClass.prototype instanceof AgentCommand &&
+                CmdClass !== AgentCommand &&
+                CmdClass !== FunctionCommand) {
                 try {
-                    if (this.engine[method]) {
-                        return await this.engine[method].call(this.engine);
-                    }
-                    return `Unknown command: ${cmd}`;
+                    this.registry.register(new CmdClass());
                 } catch (error) {
-                    const errorMsg = `❌ Error executing command '${cmd}': ${error.message}`;
-                    this.emit('command.error', {command: cmd, error: error.message});
-                    return errorMsg;
+                    console.warn(`Failed to register command ${CmdClass.name}: ${error.message}`);
                 }
-            });
+            }
         });
     }
 
@@ -69,12 +59,11 @@ export class ReplMessageHandler extends EventEmitter {
             const input = message?.payload?.text ?? message?.payload?.input ?? message?.payload ?? message;
             const messageType = message?.type;
 
-            // Early return for common cases to avoid unnecessary processing
+            // Early return for common cases
             if (!messageType && typeof input === 'string') {
                 return await this.engine.processInput(input);
             }
 
-            // Use a switch statement for the most common message types for better performance
             switch (messageType) {
                 case 'narseseInput':
                 case 'reason/step':
@@ -96,22 +85,25 @@ export class ReplMessageHandler extends EventEmitter {
                 return await this._handleCommand(cmd, ...args);
             }
 
-            // Try cached handler first
+            // Try cached handler
             if (messageType) {
                 if (this.handlerCache.has(messageType)) {
                     return await this.handlerCache.get(messageType)(message);
                 }
 
-                // Look up handler in registered handlers
                 const handler = this.messageHandlers.get(messageType);
                 if (handler) {
-                    // Cache the handler for future use
                     this.handlerCache.set(messageType, handler);
                     return await handler(message);
                 }
+
+                // Check if it's a command in registry?
+                if (this.registry.has(messageType)) {
+                     return await this._handleCommand(messageType);
+                }
             }
 
-            // Fallback to direct input processing
+            // Fallback to direct input
             if (typeof input === 'string' && input.trim()) {
                 return await this.engine.processInput(input);
             }
@@ -167,8 +159,7 @@ export class ReplMessageHandler extends EventEmitter {
                 return {error: 'No control command specified', type: MESSAGE_TYPES.ERROR};
             }
 
-            const mappedCommand = CMD_MAP[command] || command;
-            const result = await this._handleCommand(mappedCommand);
+            const result = await this._handleCommand(command);
 
             return {
                 type: MESSAGE_TYPES.CONTROL_RESULT,
@@ -207,11 +198,13 @@ export class ReplMessageHandler extends EventEmitter {
 
     async _handleCommand(cmd, ...args) {
         try {
-            if (this.commandHandlers.has(cmd)) {
-                return await this.commandHandlers.get(cmd)(...args);
+            // Check registry
+            if (this.registry.has(cmd)) {
+                return await this.registry.execute(cmd, this.engine, ...args);
             }
 
-            if (this.engine.executeCommand) {
+            // Fallback to engine.executeCommand if available
+            if (this.engine.executeCommand && typeof this.engine.executeCommand === 'function') {
                 return await this.engine.executeCommand(cmd, ...args);
             }
 
@@ -227,7 +220,8 @@ export class ReplMessageHandler extends EventEmitter {
     registerCommandHandler(name, handler) {
         if (typeof name !== 'string' || name.trim() === '') throw new Error('Command name must be a non-empty string');
         if (typeof handler !== 'function') throw new Error('Command handler must be a function');
-        this.commandHandlers.set(name, handler);
+
+        this.registry.register(new FunctionCommand(name, handler));
     }
 
     registerMessageHandler(type, handler) {
@@ -238,7 +232,7 @@ export class ReplMessageHandler extends EventEmitter {
 
     getSupportedMessageTypes() {
         return {
-            commands: Array.from(this.commandHandlers.keys()),
+            commands: this.registry.getAll().map(c => c.name),
             messages: Array.from(this.messageHandlers.keys()),
             types: MESSAGE_TYPES
         };

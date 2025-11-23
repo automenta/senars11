@@ -11,6 +11,7 @@ import {promises as fs} from 'fs';
 export {AgentCommand, AgentCommandRegistry};
 // Re-export new commands
 export * from './AdditionalCommands.js';
+export * from './ControlCommands.js';
 
 // --- Agent Commands ---
 
@@ -272,9 +273,15 @@ export class DemoCommand extends AgentCommand {
 }
 
 export class RunCommand extends AgentCommand {
-    constructor() { super('run', 'Execute .nars file', 'run <path>'); }
+    constructor() { super('run', 'Execute .nars file or start engine', 'run [path]'); }
     async _executeImpl(agent, ...args) {
-        if (args.length === 0) return 'Usage: run <path>';
+        if (args.length === 0) {
+            if (typeof agent._run === 'function') {
+                await agent._run();
+                return '🚀 Execution started.';
+            }
+            return 'Usage: run <path>';
+        }
 
         // Handle path resolution
         let filepath = args[0];
@@ -350,7 +357,7 @@ export class QuietCommand extends AgentCommand {
 }
 
 export class StepCommand extends AgentCommand {
-    constructor() { super('step', 'Step inference cycles', 'step [n|duration]'); }
+    constructor() { super('step', 'Step inference cycles', 'step [n|duration]', ['n', 'next']); }
     async _executeImpl(agent, ...args) {
         if (args.length === 0) {
             await agent.step();

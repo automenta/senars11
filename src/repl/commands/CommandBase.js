@@ -5,7 +5,6 @@
 import {handleError} from '../../util/ErrorHandler.js';
 import {fileURLToPath} from 'url';
 import {dirname, resolve} from 'path';
-import {FormattingUtils} from '../utils/index.js';
 
 export const __dirname = dirname(fileURLToPath(import.meta.url));
 export const EXAMPLES_DIR = resolve(__dirname, '../../../examples');
@@ -21,10 +20,11 @@ export const createBanner = (title) => {
 
 // Base class for all commands
 export class AgentCommand {
-    constructor(name, description, usage) {
+    constructor(name, description, usage, aliases = []) {
         this.name = name;
         this.description = description;
         this.usage = usage;
+        this.aliases = aliases;
     }
 
     async execute(agent, ...args) {
@@ -40,10 +40,23 @@ export class AgentCommand {
     }
 }
 
+// Command wrapper for function handlers
+export class FunctionCommand extends AgentCommand {
+    constructor(name, handler, description = 'Custom command', usage = name) {
+        super(name, description, usage);
+        this.handler = handler;
+    }
+
+    async _executeImpl(agent, ...args) {
+        return await this.handler(...args);
+    }
+}
+
 // Registry
 export class AgentCommandRegistry {
     constructor() {
         this.commands = new Map();
+        this.aliases = new Map();
     }
 
     register(command) {
@@ -51,10 +64,15 @@ export class AgentCommandRegistry {
             throw new Error('Command must be an instance of AgentCommand');
         }
         this.commands.set(command.name, command);
+        if (command.aliases && Array.isArray(command.aliases)) {
+            command.aliases.forEach(alias => this.aliases.set(alias, command.name));
+        }
     }
 
     get(name) {
-        return this.commands.get(name);
+        if (this.commands.has(name)) return this.commands.get(name);
+        if (this.aliases.has(name)) return this.commands.get(this.aliases.get(name));
+        return undefined;
     }
 
     getAll() {
@@ -64,16 +82,23 @@ export class AgentCommandRegistry {
     async execute(name, agent, ...args) {
         const command = this.get(name);
         if (!command) {
+            // Check if there is a fallback or return error
+            // Previously ReplMessageHandler returned "Unknown command"
             return `❌ Unknown command: ${name}`;
         }
         return await command.execute(agent, ...args);
     }
 
     getHelp() {
-        const commands = this.getAll();
+        const commands = this.getAll().sort((a, b) => a.name.localeCompare(b.name));
         if (commands.length === 0) return 'No commands registered.';
-        return commands.map(cmd =>
-            `  ${cmd.name.padEnd(12)} - ${cmd.description}`
-        ).join('\n');
+        return commands.map(cmd => {
+            const aliasStr = cmd.aliases && cmd.aliases.length > 0 ? ` (${cmd.aliases.join(', ')})` : '';
+            return `  ${cmd.name.padEnd(12)}${aliasStr} - ${cmd.description}`;
+        }).join('\n');
+    }
+
+    has(name) {
+        return this.commands.has(name) || this.aliases.has(name);
     }
 }

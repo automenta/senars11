@@ -9,15 +9,24 @@ describe('ReplMessageHandler', () => {
         mockEngine = {
             processInput: jest.fn(),
             executeCommand: jest.fn().mockImplementation(async (cmd, ...args) => {
-                if (cmd === 'run') return 'Run started';
-                if (cmd === 'tools') return 'Tools report...';
-                if (cmd === 'load') return 'Session loaded';
-                return `Unknown command: ${cmd}`;
+                 return `Fallback: ${cmd}`;
             }),
             persistenceManager: {
                 loadFromPath: jest.fn()
             },
-            _run: jest.fn().mockResolvedValue('Run started')
+            _run: jest.fn().mockResolvedValue('Run started'),
+            _stop: jest.fn(),
+            _stopRun: jest.fn(),
+            load: jest.fn().mockResolvedValue(true),
+            save: jest.fn().mockResolvedValue({identifier: 'test', size: 100}),
+            getStats: jest.fn().mockReturnValue({}),
+            getBeliefs: jest.fn().mockReturnValue([]),
+            getGoals: jest.fn().mockReturnValue([]),
+            // Mock properties accessed by commands
+            config: {},
+            getQuestions: jest.fn().mockReturnValue([]),
+            getHistory: jest.fn().mockReturnValue([]),
+            getConcepts: jest.fn().mockReturnValue([])
         };
         handler = new ReplMessageHandler(mockEngine);
     });
@@ -29,21 +38,28 @@ describe('ReplMessageHandler', () => {
         expect(result.payload.result).toBe('Processed');
     });
 
-    test('processMessage handles slash commands mapped to engine methods', async () => {
+    test('processMessage handles slash commands mapped to engine methods (run)', async () => {
         const result = await handler.processMessage({type: '/run'});
         expect(mockEngine._run).toHaveBeenCalled();
-        expect(result).toBe('Run started');
+        // StartCommand returns this message
+        expect(result).toContain('Execution started');
     });
 
-    test('processMessage delegates tools command to executeCommand', async () => {
+    test('processMessage handles tools command via Registry', async () => {
         const result = await handler.processMessage({type: '/tools'});
-        expect(mockEngine.executeCommand).toHaveBeenCalledWith('tools');
-        expect(result).toBe('Tools report...');
+        expect(mockEngine.executeCommand).not.toHaveBeenCalled();
+        expect(result).toContain('Tools/MCP Configuration');
     });
 
-    test('processMessage delegates load command to executeCommand', async () => {
+    test('processMessage handles load command via Registry', async () => {
         const result = await handler.processMessage({type: '/load test.json'});
-        expect(mockEngine.executeCommand).toHaveBeenCalledWith('load', 'test.json');
-        expect(result).toBe('Session loaded');
+        expect(mockEngine.load).toHaveBeenCalledWith('test.json');
+        expect(result).toContain('Loaded from test.json');
+    });
+
+    test('processMessage delegates unknown command to executeCommand', async () => {
+        const result = await handler.processMessage({type: '/unknowncmd'});
+        expect(mockEngine.executeCommand).toHaveBeenCalledWith('unknowncmd');
+        expect(result).toBe('Fallback: unknowncmd');
     });
 });
