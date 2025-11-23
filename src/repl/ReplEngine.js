@@ -43,17 +43,11 @@ export class ReplEngine extends EventEmitter {
     constructor(config = {}) {
         super();
 
-        // Check if 'nar' is passed directly in config (not ideal but common pattern being refactored)
-        // or if we should create a new one.
-        // The fix for stack overflow is to NOT pass the NAR instance into deep-cloning config structures.
-
         let narConfig = {};
         let existingNar = null;
 
         if (config.nar instanceof NAR) {
             existingNar = config.nar;
-            // Don't keep the NAR instance in the config object we might use elsewhere
-            // Create a clean config object without the NAR instance
             const { nar, ...restConfig } = config;
             config = restConfig;
         } else {
@@ -73,7 +67,6 @@ export class ReplEngine extends EventEmitter {
         this.originalTraceState = false;
         this.traceEnabled = false;
 
-        // Session persistence for UI states
         this.uiState = {
             taskGrouping: null,
             taskSelection: [],
@@ -84,14 +77,10 @@ export class ReplEngine extends EventEmitter {
 
     async initialize() {
         try {
-            // Only initialize NAR if it hasn't been initialized yet
-            // We can check a property or just call it (idempotency depends on NAR implementation)
-            // Assuming NAR.initialize() is safe to call multiple times or checks internal state
             if (this.nar.initialize) {
                 await this.nar.initialize();
             }
 
-            // Register event handlers once during initialization
             this._registerEventHandlers();
 
             this.emit(EVENTS.ENGINE_READY, {success: true, message: 'NAR initialized successfully'});
@@ -102,11 +91,8 @@ export class ReplEngine extends EventEmitter {
         }
     }
 
-    // Register event handlers for the lifetime of the engine
     _registerEventHandlers() {
-        // Listen for task.focus events to capture when tasks enter focus
         this._focusHandler = (task) => {
-            // Only print focused tasks
             const formattedTask = this.formatTaskForDisplay(task);
             this.emit('log', `🎯 FOCUSED: ${formattedTask}`);
         };
@@ -116,7 +102,6 @@ export class ReplEngine extends EventEmitter {
         }
     }
 
-    // Unregister event handlers when shutting down
     _unregisterEventHandlers() {
         if (this.nar.off && this._focusHandler) {
             this.nar.off('task.focus', this._focusHandler);
@@ -165,12 +150,12 @@ export class ReplEngine extends EventEmitter {
     }
 
     _handleSuccessfulNarsese(input, result, duration, taskId) {
-        this.inputManager.updatePriorityById(taskId, 0.8); // Increase priority after successful processing
+        this.inputManager.updatePriorityById(taskId, 0.8);
         this.emit(EVENTS.NARSESE_PROCESSED, {
             input,
             result,
             duration,
-            taskId, // Include the task ID in the event
+            taskId,
             beliefs: this.nar.getBeliefs?.() ?? []
         });
     }
@@ -180,15 +165,14 @@ export class ReplEngine extends EventEmitter {
         if (task) {
             task.metadata.error = true;
             task.metadata.errorTime = Date.now();
-            this.inputManager.updatePriorityById(taskId, 0.1); // Lower priority for failed tasks
+            this.inputManager.updatePriorityById(taskId, 0.1);
         } else
             this.emit(EVENTS.NARSESE_ERROR, {input, error: '❌ Failed to process input', taskId});
     }
 
     _handleNarseseError(input, error) {
-        // Find the task by looking at the most recently added task
         const allTasks = this.inputManager.getAllTasks();
-        const latestTask = allTasks.at(-1); // More concise way to get last element
+        const latestTask = allTasks.at(-1);
 
         if (latestTask?.task === input) {
             latestTask.metadata = {

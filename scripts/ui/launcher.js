@@ -1,10 +1,5 @@
 #!/usr/bin/env node
 
-/**
- * Consolidated Web UI Launcher
- * Provides a parameterized foundation for launching any data-driven UI with WebSocket connectivity
- */
-
 import {spawn} from 'child_process';
 import {fileURLToPath} from 'url';
 import {dirname, join} from 'path';
@@ -38,7 +33,6 @@ Examples:
   node scripts/ui/launcher.js --graph-ui
 `;
 
-// Parse arguments to support flexible server configuration
 const args = cliArgs;
 
 const DEFAULT_CONFIG = Object.freeze({
@@ -59,9 +53,6 @@ const DEFAULT_CONFIG = Object.freeze({
     }
 });
 
-/**
- * Parse command line arguments to support flexible configuration
- */
 function parseArgs(args) {
     let config = {...DEFAULT_CONFIG};
 
@@ -114,13 +105,9 @@ if (helpRequested) {
     showUsageAndExit(USAGE_MESSAGE);
 }
 
-/**
- * Initialize and start the WebSocket server
- */
 async function startWebSocketServer(config = DEFAULT_CONFIG) {
     console.log(`Starting WebSocket server on ${config.webSocket.host}:${config.webSocket.port}...`);
 
-    // Use SessionBuilder to create the engine
     const replEngine = await _createReplEngine(config);
     const monitor = await _initializeWebSocketMonitor(config.webSocket);
     const serverAdapter = await _setupSessionServerAdapter(replEngine, monitor);
@@ -135,9 +122,8 @@ async function _createReplEngine(config) {
     const builder = new SessionBuilder({
         nar: config.nar,
         persistence: config.persistence,
-        // Add default LM config if not present, though typically disabled in this launcher context unless args say otherwise
         lm: {
-             enabled: false, // Default to false for web launcher unless extended
+             enabled: false,
              ...config.lm
         }
     });
@@ -152,16 +138,12 @@ async function _initializeWebSocketMonitor(webSocketConfig) {
 }
 
 async function _setupSessionServerAdapter(replEngine, monitor) {
-    // Import and initialize SessionServerAdapter (formerly WebRepl)
     const {SessionServerAdapter} = await import('../../src/server/SessionServerAdapter.js');
     const serverAdapter = new SessionServerAdapter(replEngine, monitor);
 
-    // Register adapter with the WebSocket server to provide comprehensive message support
     serverAdapter.registerWithWebSocketServer();
 
-    // Register a handler for NAR instance requests from the UI
     monitor.registerClientMessageHandler('requestNAR', async (message, client, monitorInstance) => {
-        // For security reasons, we only send information that's safe for the UI, not the full NAR instance
         const narInfo = {
             cycleCount: replEngine.nar.cycleCount,
             isRunning: replEngine.nar.isRunning,
@@ -180,39 +162,28 @@ async function _setupSessionServerAdapter(replEngine, monitor) {
 }
 
 async function _setupDemoWrapper(nar, monitor) {
-    // Initialize DemoWrapper to provide remote control and introspection
     const demoWrapper = new DemoWrapper();
     await demoWrapper.initialize(nar, monitor);
 
-    // Send list of available demos to connected UIs
     await demoWrapper.sendDemoList();
-
-    // Start periodic metrics updates
     demoWrapper.runPeriodicMetricsUpdate();
-
-    // Start the NAR reasoning cycle
     nar.start();
 
     return demoWrapper;
 }
 
-/**
- * Start the UI server as a child process
- */
 function startUIServer(config = DEFAULT_CONFIG) {
     console.log(`Starting UI server on port ${config.ui.port}...`);
 
-    // Set up environment variables for the UI server
     const env = {
         ...process.env,
         HTTP_PORT: config.ui.port.toString(),
         WS_PORT: config.webSocket.port.toString()
     };
 
-    // Run the UI server as a child process
     const serverProcess = spawn('node', ['server.js'], {
         cwd: join(__dirname, '../../ui'),
-        stdio: 'inherit', // This allows the UI server to control the terminal properly
+        stdio: 'inherit',
         env: env
     });
 
@@ -229,9 +200,6 @@ function startUIServer(config = DEFAULT_CONFIG) {
     return serverProcess;
 }
 
-/**
- * Save the NAR state to file
- */
 async function saveNarState(nar, replEngine = null) {
     try {
         const fs = await import('fs');
@@ -241,7 +209,6 @@ async function saveNarState(nar, replEngine = null) {
             console.log('Current state saved to agent.json');
         }
 
-        // Also save ReplEngine state if available
         if (replEngine) {
             await replEngine.save();
         }
@@ -251,13 +218,9 @@ async function saveNarState(nar, replEngine = null) {
     }
 }
 
-/**
- * Shutdown sequence for all services
- */
 async function shutdownServices(webSocketServer) {
     const errors = [];
 
-    // Save NAR state
     try {
         await saveNarState(webSocketServer.nar, webSocketServer.replEngine);
     } catch (saveError) {
@@ -265,7 +228,6 @@ async function shutdownServices(webSocketServer) {
         errors.push(saveError);
     }
 
-    // Shutdown ReplEngine if available
     try {
         if (webSocketServer.replEngine) {
             await webSocketServer.replEngine.shutdown();
@@ -275,7 +237,6 @@ async function shutdownServices(webSocketServer) {
         errors.push(engineError);
     }
 
-    // Stop WebSocket server
     try {
         if (webSocketServer.monitor) {
             await webSocketServer.monitor.stop();
@@ -299,9 +260,6 @@ async function shutdownServices(webSocketServer) {
     }
 }
 
-/**
- * Setup graceful shutdown handlers
- */
 async function setupGracefulShutdown(webSocketServer) {
     const shutdown = async () => {
         console.log('\nShutting down gracefully...');
@@ -326,23 +284,18 @@ async function main() {
     let webSocketServer;
 
     try {
-        // Parse command line arguments for flexible configuration
         const config = parseArgs(args);
 
-        // Start WebSocket server with the parsed config
         webSocketServer = await startWebSocketServer(config);
 
-        // Set up graceful shutdown
         await setupGracefulShutdown({
             nar: webSocketServer.nar,
             replEngine: webSocketServer.replEngine,
             monitor: webSocketServer.monitor
         });
 
-        // Start UI server
         const uiServer = startUIServer(config);
 
-        // Store the websocket server info for shutdown
         webSocketServer.uiServer = uiServer;
 
         console.log('Both servers are running. Press Ctrl+C to stop.');

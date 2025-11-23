@@ -19,25 +19,18 @@ class AgentRepl {
     async start() {
         console.log('🤖 SeNARS Unified Agent REPL - Hybrid Intelligence Lab\n');
 
-        // Configure Ollama/LM settings
         await this.configureLM();
-
-        // Start the REPL
         await this.startRepl();
     }
 
     _isOllamaMode() {
-        // If any specific args are provided, assume we skip interactive setup if possible,
-        // or at least pre-fill.
         return this.args.ollama || this.args.model !== undefined || this.args.modelName !== undefined;
     }
 
     async configureLM() {
-        if (this._isOllamaMode()) {
-            this._configureLMFromArgs();
-        } else {
-            await this._configureLMInteractively();
-        }
+        this._isOllamaMode()
+            ? this._configureLMFromArgs()
+            : await this._configureLMInteractively();
     }
 
     _configureLMFromArgs() {
@@ -85,7 +78,6 @@ class AgentRepl {
                 enabled: true
             };
         } catch (error) {
-            // Fallback if inquirer fails (e.g. non-interactive)
             console.log('⚠️ Interactive prompt failed, using default config.');
             this._configureLMFromDefaults();
         }
@@ -116,7 +108,6 @@ class AgentRepl {
 
         console.log('✅ Engine ready. Rendering UI...');
 
-        // Render the Ink UI
         this.inkInstance = render(React.createElement(AgentInkTUI, {engine: this.engine}));
     }
 
@@ -137,9 +128,7 @@ class AgentRepl {
     }
 
     async shutdown() {
-        if (this.inkInstance) {
-            this.inkInstance.unmount();
-        }
+        this.inkInstance?.unmount();
         if (this.engine) {
             await this.engine.shutdown();
         }
@@ -147,7 +136,6 @@ class AgentRepl {
     }
 }
 
-// Handle graceful shutdown
 process.on('SIGINT', async () => {
     const agentRepl = global.agentReplInstance;
     if (agentRepl) {
@@ -156,7 +144,6 @@ process.on('SIGINT', async () => {
     process.exit(0);
 });
 
-// Start the agent REPL
 async function main() {
     const agentRepl = new AgentRepl();
     global.agentReplInstance = agentRepl;

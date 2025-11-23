@@ -2,12 +2,6 @@ import {NAR} from '../nar/NAR.js';
 import {SessionEngine} from './SessionEngine.js';
 import {ChatOllama} from "@langchain/ollama";
 
-/**
- * SessionBuilder
- *
- * Responsible for constructing a complete "Session" (NAR + SessionEngine + LM + Tools).
- * Standardizes the initialization process across TUI, Web UI, and other interfaces.
- */
 export class SessionBuilder {
     constructor(config = {}) {
         this.config = config;
@@ -17,9 +11,6 @@ export class SessionBuilder {
         this.inputProcessingConfig = config.inputProcessing || {};
     }
 
-    /**
-     * Build and return a fully initialized SessionEngine
-     */
     async build() {
         console.log('🏗️  Building SeNARS Session...');
 
