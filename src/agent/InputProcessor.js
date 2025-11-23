@@ -93,14 +93,31 @@ export class InputProcessor {
     }
 
     _isPotentialNarsese(input) {
+        // More robust detection including ( ) syntax and various copulas
         const patterns = [
-            /<[\w\s\-'"()[\]]*\s*-->\s*[\w\s\-'"()[\]]*>/,
-            /<[\w\s\-'"()[\]]*\s*\^[\w\s\-'"()[\]]*>/,
-            /[<].*[>].*[!]/,
-            /<.*\?.*>/,
-            /%[\d.]*;[\d.]*%/,
-            /<.*\^.*>.*[!.]/
+            // Statement with standard copulas and brackets/parens
+            // Looks for ( ... --> ... ) or < ... --> ... >
+            /[<(\[]\s*[\w\s\-'"()[\]]+\s*(?:-->|<->|==>|<=>|=\/>|=\|)\s*[\w\s\-'"()[\]]+\s*[>)\].!]/,
+
+            // Explicit Operation
+            /\^[\w\s\-]+/,
+
+            // Explicit goal/question/belief punctuation at end
+            /[>)]\s*[!?.]$/,
+
+            // Truth values
+            /%[\d.]*(?:;[\d.]*)?%/,
+
+            // Legacy patterns for safety
+            /<[\w\s\-'"()[\]]*\s*\^[\w\s\-'"()[\]]*>/
         ];
+
+        // Also check if it looks like a simple term followed by punctuation
+        // e.g. (bird --> flyer).
+        if (input.includes('-->') || input.includes('<->') || input.includes('==>')) {
+            return true;
+        }
+
         return patterns.some(p => p.test(input));
     }
 }
