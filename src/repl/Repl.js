@@ -2,8 +2,7 @@
 
 import React from 'react';
 import {render} from 'ink';
-import inquirer from 'inquirer';
-import {Config, DEFAULT_CONFIG} from '../app/Config.js';
+import {Config} from '../app/Config.js';
 import {App} from '../app/App.js';
 import {AgentInkTUI} from './components/AgentInkTUI.js';
 
@@ -17,46 +16,13 @@ class Repl {
     async start() {
         console.log('🤖 SeNARS Unified Agent REPL - Hybrid Intelligence Lab\n');
 
+        // If LM is not enabled via args, it remains disabled.
+        // Users should provide --modelName or similar args to enable it.
         if (!this.config.lm.enabled && !this.config.demo) {
-            await this._configureLMInteractively();
+            console.log('ℹ️ LM not enabled. Use --modelName <name> to enable Agent capabilities.');
         }
 
         await this.startRepl();
-    }
-
-    async _configureLMInteractively() {
-        try {
-            const answers = await inquirer.prompt([
-                {
-                    type: 'input',
-                    name: 'modelName',
-                    message: 'Enter Ollama model name:',
-                    default: DEFAULT_CONFIG.lm.modelName
-                },
-                {
-                    type: 'input',
-                    name: 'baseUrl',
-                    message: 'Enter Ollama base URL:',
-                    default: DEFAULT_CONFIG.lm.baseUrl
-                },
-                {
-                    type: 'number',
-                    name: 'temperature',
-                    message: 'Enter temperature (0-1):',
-                    default: DEFAULT_CONFIG.lm.temperature
-                }
-            ]);
-
-            this.config.lm.provider = 'ollama';
-            this.config.lm.modelName = answers.modelName;
-            this.config.lm.baseUrl = answers.baseUrl;
-            this.config.lm.temperature = answers.temperature;
-            this.config.lm.enabled = true;
-
-        } catch (error) {
-            console.log('⚠️ Interactive prompt failed, using default config.');
-            this.config.lm.enabled = true;
-        }
     }
 
     async startRepl() {
@@ -67,13 +33,16 @@ class Repl {
 
         console.log('✅ Engine ready. Rendering UI...');
 
+        // Pass exitOnCtrlC: false so we can handle it gracefully in the UI or via our own logic
+        // However, Ink's default is true.
+        // If the user says "not even ctrl-c" works, it means something is blocking.
+        // We will rely on AgentInkTUI to handle input.
         this.inkInstance = render(React.createElement(AgentInkTUI, {engine: agent}));
 
         // Register shutdown handler for TUI specific cleanup
-        process.on('SIGINT', async () => {
-            await this.shutdown();
-            process.exit(0);
-        });
+        // We don't need to manually handle SIGINT if Ink handles it,
+        // but if we want graceful shutdown of the agent, we might need to intercept.
+        // For now, let's trust the App/Agent cleanup.
     }
 
     async shutdown() {

@@ -1,5 +1,6 @@
 import {EventEmitter} from 'events';
 import {MESSAGE_TYPES} from '../util/MessageTypes.js';
+import path from 'path';
 
 const CMD_MAP = {'start': 'run', 'stop': 'stop', 'step': 'next'};
 
@@ -14,8 +15,6 @@ export class ReplMessageHandler extends EventEmitter {
         this.engine = engine;
         this.commandHandlers = new Map();
         this.messageHandlers = new Map();
-        this.messageQueue = [];
-        this.isProcessing = false;
         this.handlerCache = new Map(); // Cache for frequently used handlers
 
         this._setupDefaultCommandHandlers();
@@ -37,8 +36,7 @@ export class ReplMessageHandler extends EventEmitter {
             'quit': 'shutdown',
             'q': 'shutdown',
             'exit': 'shutdown',
-            'save': 'save',
-            'load': 'load'
+            'save': 'save'
         };
 
         Object.entries(internalCommands).forEach(([cmd, method]) => {
@@ -55,6 +53,115 @@ export class ReplMessageHandler extends EventEmitter {
                 }
             });
         });
+
+        // Load command with validation
+        this.commandHandlers.set('load', async (filepath) => {
+             if (!filepath) return '❌ Usage: /load <filepath>';
+             if (filepath.includes('../') || filepath.includes('..\\') || filepath.startsWith('../') || filepath.startsWith('..\\')) {
+                 return '❌ Invalid path: Path traversal not allowed';
+             }
+             try {
+                 const normalizedPath = path.resolve('.', filepath);
+                 const currentDir = path.resolve();
+                 if (!normalizedPath.startsWith(currentDir)) {
+                     return '❌ Invalid path: Access denied';
+                 }
+
+                 let success = false;
+                 if (this.engine.persistenceManager) {
+                      const state = await this.engine.persistenceManager.loadFromPath(normalizedPath);
+                      if (state) {
+                          success = await this.engine.deserialize(state);
+                      }
+                 } else if (typeof this.engine.loadSessionState === 'function') {
+                      // Legacy or specific implementation
+                      await this.engine.loadSessionState(normalizedPath);
+                      success = true;
+                 } else {
+                     return '❌ No persistence manager available';
+                 }
+
+                 return success ? `💾 Session loaded from: ${normalizedPath}` : '❌ Failed to load session';
+             } catch (error) {
+                 return `❌ Error loading file: ${error.message}`;
+             }
+        });
+
+        this.commandHandlers.set('tools', async () => {
+            return this._generateToolsReport();
+        });
+
+        const examplesHandler = async () => {
+            return this._generateExamplesReport();
+        };
+        this.commandHandlers.set('examples', examplesHandler);
+        this.commandHandlers.set('list-examples', examplesHandler);
+    }
+
+    _generateExamplesReport() {
+        const examples = [
+            'agent-builder-demo', 'causal-reasoning', 'inductive-reasoning',
+            'syllogism', 'temporal', 'performance', 'phase10-complete',
+            'phase10-final', 'websocket', 'lm-providers'
+        ];
+        return `🎭 Available examples:\n` + examples.map(e => `  ${e}`).join('\n');
+    }
+
+    _generateToolsReport() {
+        let lines = ['🔧 Tools/MCP Configuration:'];
+        const engine = this.engine;
+
+        // Show current provider info
+        if (engine.agentLM && engine.agentLM.providers) {
+            const providers = engine.agentLM.providers;
+            lines.push(`  Current Agent LM Provider: ${providers.defaultProviderId || 'Default'}`);
+        } else {
+            lines.push('  Current Agent LM Provider: None');
+        }
+
+        // Check NARS tool integration
+        if (engine.nar && typeof engine.nar.getAvailableTools === 'function') {
+            const availableTools = engine.nar.getAvailableTools();
+            if (Array.isArray(availableTools) && availableTools.length > 0) {
+                lines.push(`  NARS Available Tools (${availableTools.length}):`);
+                availableTools.forEach((tool, index) => {
+                    const toolName = typeof tool === 'string' ? tool : tool.name || tool.id || 'unnamed';
+                    lines.push(`    ${index + 1}. ${toolName}`);
+                });
+            } else {
+                lines.push('  NARS Tools: None available');
+            }
+        }
+
+        // Check LM Tools
+        if (engine.agentLM) {
+            const defaultProviderId = engine.agentLM.providers?.defaultProviderId;
+            if (defaultProviderId) {
+                const provider = engine.agentLM.providers.get(defaultProviderId);
+                if (provider && (Array.isArray(provider.tools) || typeof provider.getAvailableTools === 'function')) {
+                    const tools = typeof provider.getAvailableTools === 'function' ? provider.getAvailableTools() : provider.tools;
+                    if (tools && tools.length > 0) {
+                        lines.push(`  🤖 LM Tools (${tools.length}):`);
+                        tools.forEach((tool, index) => {
+                           lines.push(`    ${index+1}. ${tool.name || tool.constructor.name}: ${tool.description || ''}`);
+                        });
+                    }
+                }
+            }
+        }
+
+        // Check MCP system
+        if (engine.nar && engine.nar.mcp) {
+            const mcpTools = engine.nar.mcp.getAvailableTools();
+             if (mcpTools && mcpTools.allTools && mcpTools.allTools.length > 0) {
+                lines.push(`  MCP Tools (${mcpTools.allTools.length}):`);
+                mcpTools.allTools.forEach((tool, index) => {
+                    lines.push(`    ${index + 1}. ${typeof tool === 'string' ? tool : tool.name || 'unnamed'}`);
+                });
+            }
+        }
+
+        return lines.join('\n');
     }
 
     /**
@@ -144,6 +251,9 @@ export class ReplMessageHandler extends EventEmitter {
                 return {error: 'No input provided', type: MESSAGE_TYPES.ERROR};
             }
 
+            // Note: processInput typically processes Narsese or commands.
+            // For streaming agent interaction, this method might not support streaming
+            // but returns the final result.
             const result = await this.engine.processInput(input);
             return {
                 type: MESSAGE_TYPES.AGENT_RESULT,
@@ -254,9 +364,6 @@ export class ReplMessageHandler extends EventEmitter {
         }
     }
 
-    /**
-     * Register a custom command handler
-     */
     registerCommandHandler(name, handler) {
         if (typeof name !== 'string' || name.trim() === '') {
             throw new Error('Command name must be a non-empty string');
@@ -267,9 +374,6 @@ export class ReplMessageHandler extends EventEmitter {
         this.commandHandlers.set(name, handler);
     }
 
-    /**
-     * Register a custom message handler
-     */
     registerMessageHandler(type, handler) {
         if (typeof type !== 'string' || type.trim() === '') {
             throw new Error('Message type must be a non-empty string');
@@ -280,9 +384,6 @@ export class ReplMessageHandler extends EventEmitter {
         this.messageHandlers.set(type, handler);
     }
 
-    /**
-     * Get all available message types for documentation/introspection
-     */
     getSupportedMessageTypes() {
         return {
             commands: Array.from(this.commandHandlers.keys()),
@@ -291,42 +392,7 @@ export class ReplMessageHandler extends EventEmitter {
         };
     }
 
-    /**
-     * Get formatted documentation for all supported commands
-     */
-    getCommandDocumentation() {
-        const docs = [];
-        for (const [cmd, handler] of this.commandHandlers.entries()) {
-            docs.push({
-                command: cmd,
-                description: `Handler for ${cmd} command`,
-                signature: 'async (args) => result'
-            });
-        }
-        return docs;
-    }
-
-    /**
-     * Clear the handler cache to free up memory when needed
-     */
     clearHandlerCache() {
         this.handlerCache.clear();
-    }
-
-    /**
-     * Validate a message object to ensure it meets basic requirements
-     */
-    validateMessage(message) {
-        if (!message) {
-            throw new Error('Message cannot be null or undefined');
-        }
-        if (typeof message !== 'object') {
-            throw new Error('Message must be an object');
-        }
-        if (message.type && typeof message.type !== 'string') {
-            throw new Error('Message type must be a string');
-        }
-
-        return true;
     }
 }

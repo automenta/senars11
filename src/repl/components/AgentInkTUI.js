@@ -1,21 +1,10 @@
-import React, {useCallback, useEffect, useRef, useState} from 'react';
+import React, {useCallback, useEffect, useRef, useState, useMemo} from 'react';
 import {Box, Text, useInput, useStdin} from 'ink';
 import TextInput from 'ink-text-input';
 import {v4 as uuidv4} from 'uuid';
 import {FormattingUtils} from '../utils/index.js';
 import {handleError} from '../../../src/util/ErrorHandler.js';
-import {
-    executeAndLog,
-    handleExamplesCommand,
-    handleExitCommand,
-    handleHelpCommand,
-    handleLoadCommand,
-    handleNarsCommand,
-    handleRunCommand,
-    handleStepCommand,
-    handleStopCommand,
-    handleToolsCommand
-} from './SlashCommandHandlers.js';
+import {ReplMessageHandler} from '../ReplMessageHandler.js';
 
 // Define log types and their visual representation
 const LOG_TYPES = {
@@ -79,63 +68,6 @@ const useCommandHistory = () => {
     return {commandHistory, historyIndex, setHistoryIndex, addToHistory, navigateHistory};
 };
 
-// Handle slash commands
-const handleSlashCommand = async (engine, command, addLog, mode, setMode) => {
-    const [cmd, ...args] = command.slice(1).split(' ');
-    const cmdLower = cmd.toLowerCase();
-
-    switch (cmdLower) {
-        case 'mode':
-            if (args.length > 0) {
-                const newMode = args[0].toLowerCase();
-                if (['agent', 'narsese'].includes(newMode)) {
-                    setMode(newMode);
-                    addLog(`🔄 Switched to ${newMode.toUpperCase()} mode`, 'success');
-                } else {
-                    addLog('❌ Invalid mode. Use "agent" or "narsese".', 'error');
-                }
-            } else {
-                addLog(`ℹ️ Current mode: ${mode.toUpperCase()}`, 'info');
-            }
-            return;
-        case 'exit':
-        case 'quit':
-        case 'q':
-            return handleExitCommand(engine, addLog);
-
-        case 'list-examples':
-        case 'examples':
-        case 'demo':
-            return handleExamplesCommand(addLog);
-
-        case 'load':
-            if (args.length === 0) {
-                addLog('❌ Usage: /load <filepath>', 'error');
-                return;
-            }
-            return handleLoadCommand(engine, args, addLog);
-
-        case 'run':
-        case 'go':
-            return await handleRunCommand(engine, addLog);
-        case 'step':
-        case 'next':
-        case 'n':
-            return await handleStepCommand(engine, addLog);
-        case 'stop':
-        case 'st':
-            return await handleStopCommand(engine, addLog);
-        case 'tools':
-            return handleToolsCommand(engine, addLog);
-        case 'nars':
-            return handleNarsCommand(engine, args, addLog);
-        case 'help':
-            return handleHelpCommand(addLog);
-        default:
-            addLog(`❌ Unknown command: ${cmd}. Type /help for available commands.`, 'error');
-    }
-};
-
 // Agent-specific TUI component
 export const AgentInkTUI = ({engine}) => {
     const [logs, setLogs] = useState([{
@@ -154,6 +86,9 @@ export const AgentInkTUI = ({engine}) => {
     const {isRawModeSupported} = useStdin();
     const {navigateHistory, addToHistory} = useCommandHistory();
 
+    // Initialize Message Handler
+    const messageHandler = useMemo(() => new ReplMessageHandler(engine), [engine]);
+
     // Add log message with color coding, avoiding duplicates
     const addLog = useCallback((message, type = 'info') => {
         setLogs(prevLogs => {
@@ -165,9 +100,6 @@ export const AgentInkTUI = ({engine}) => {
             if (isDuplicate) {
                 return prevLogs; // Don't add duplicate
             }
-
-            // If we're streaming, we don't want to remove the streaming log yet,
-            // but we can append others.
 
             return [
                 ...prevLogs,
@@ -218,7 +150,6 @@ export const AgentInkTUI = ({engine}) => {
         Object.entries(handlers).forEach(([event, handler]) => engine.on(event, handler));
 
         // Initial logs
-        addLog('✅ Agent connected to engine', 'success');
         setTimeout(() => {
             addLog('🤖 Welcome to SeNARS Unified REPL!', 'info');
             addLog('Type /help for commands. Toggle modes with /mode or Ctrl+M.', 'info');
@@ -232,38 +163,61 @@ export const AgentInkTUI = ({engine}) => {
     };
 
     // Setup event listeners with useEffect
-    useEffect(setupEventListeners, [engine, addLog]); // Mode isn't a dependency here, handled in state
+    useEffect(setupEventListeners, [engine, addLog]);
 
-    // Reasoner control functions
-    const handleRunCommand = async () => executeAndLog(engine, engine.executeCommand('go'), 'Run', addLog);
-    const handleStepCommand = async () => {
-        try {
-            const result = await engine._next();
-            // Brief pause to allow events to propagate
-            await new Promise(resolve => setTimeout(resolve, 50));
-
-            const beliefs = engine.nar.getBeliefs?.() ?? [];
-            const recentBeliefs = beliefs.slice(-2);
-
-            if (recentBeliefs.length > 0) {
-                recentBeliefs.forEach(belief => {
-                    const term = belief.term?.toString?.() ?? 'Unknown';
-                    const truth = belief.truth ?
-                        `%${(belief.truth.frequency ?? 1.000).toFixed(3)},${(belief.truth.confidence ?? 0.900).toFixed(3)}%` : '';
-                    addLog(`_BELIEF_: ${term} ${truth}`, 'success');
-                });
-            }
-        } catch (error) {
-            addLog(`❌ Step error: ${error.message}`, 'error');
-        }
+    // Reasoner control functions using Message Handler
+    const handleRunCommand = async () => {
+         const res = await messageHandler.processMessage({type: 'control/start'});
+         if (res.payload?.result) addLog(res.payload.result, 'success');
     };
-    const handleStopCommand = async () => executeAndLog(engine, engine._stop(), 'Stop', addLog);
+
+    const handleStepCommand = async () => {
+         const res = await messageHandler.processMessage({type: 'control/step'});
+         if (res.payload?.result) {
+             // Add log if needed, but engine events usually handle it
+         }
+
+         // Manual belief check logic from previous version can be kept if desired,
+         // but relying on events is better.
+         // Just in case, we can query beliefs if needed.
+    };
+
+    const handleStopCommand = async () => {
+         const res = await messageHandler.processMessage({type: 'control/stop'});
+         if (res.payload?.result) addLog(res.payload.result, 'success');
+    };
+
+    const handleHelpCommand = async () => {
+         // Use a direct help text here or fetch from handler if implemented.
+         // SlashCommandHandlers had a static list.
+         // We can move it here or ask handler.
+         // For now, let's keep a simple help list locally or implement /help in handler.
+         // CommandProcessor has _help().
+         const res = await messageHandler.processMessage({type: '/help'});
+         if (typeof res === 'string') {
+             res.split('\n').forEach(line => addLog(line, 'info'));
+         }
+    };
 
     // Toggle Mode
     const toggleMode = () => {
         const newMode = mode === 'agent' ? 'narsese' : 'agent';
         setMode(newMode);
         addLog(`🔄 Switched to ${newMode.toUpperCase()} mode`, 'success');
+    };
+
+    const handleModeCommand = (args) => {
+        if (args.length > 0) {
+            const newMode = args[0].toLowerCase();
+            if (['agent', 'narsese'].includes(newMode)) {
+                setMode(newMode);
+                addLog(`🔄 Switched to ${newMode.toUpperCase()} mode`, 'success');
+            } else {
+                addLog('❌ Invalid mode. Use "agent" or "narsese".', 'error');
+            }
+        } else {
+            addLog(`ℹ️ Current mode: ${mode.toUpperCase()}`, 'info');
+        }
     };
 
     // Handle keyboard shortcuts
@@ -275,7 +229,6 @@ export const AgentInkTUI = ({engine}) => {
                 streamControllerRef.current = null;
                 addLog('🛑 LM streaming interrupted', 'info');
             }
-            // Don't add the escape character to the input
             return;
         }
 
@@ -289,10 +242,11 @@ export const AgentInkTUI = ({engine}) => {
                     handleStopCommand();
                     return;
                 case 'h':
-                    handleHelpCommand(addLog);
+                    handleHelpCommand();
                     return;
                 case 'c':
                     addLog('👋 Agent TUI terminated', 'info');
+                    try { engine.shutdown(); } catch(e) {}
                     return process.exit(0);
                 case 'm':
                     toggleMode();
@@ -300,7 +254,7 @@ export const AgentInkTUI = ({engine}) => {
             }
         }
 
-        // Command history navigation (Enter key handling is done by TextInput onSubmit)
+        // Command history navigation
         if (key.upArrow) navigateHistory('up', setInputValue);
         if (key.downArrow) navigateHistory('down', setInputValue);
     });
@@ -310,7 +264,7 @@ export const AgentInkTUI = ({engine}) => {
         const command = inputValue.trim();
         if (!command) {
             // Empty input -> single step
-            await handleStepCommand(engine, addLog);
+            await handleStepCommand();
             setInputValue('');
             return;
         }
@@ -325,18 +279,38 @@ export const AgentInkTUI = ({engine}) => {
         (async () => {
             try {
                 if (command.startsWith('/')) {
-                    await handleSlashCommand(engine, command, addLog, mode, setMode);
+                    const [cmdName, ...args] = command.slice(1).split(' ');
+
+                    // Special handling for /mode since it affects UI state
+                    if (cmdName === 'mode') {
+                        handleModeCommand(args);
+                        return;
+                    }
+
+                    const res = await messageHandler.processMessage({type: command});
+                    // Handle result
+                    const output = res.payload?.result ?? res;
+                    if (output) {
+                         if (typeof output === 'string') {
+                             // Split lines if long
+                             output.split('\n').forEach(line => addLog(line, 'success'));
+                         } else {
+                             addLog(JSON.stringify(output), 'success');
+                         }
+                    } else if (res.error) {
+                        addLog(`❌ ${res.error}`, 'error');
+                    }
                 } else {
                     // Route based on mode
                     if (mode === 'narsese') {
-                        // Direct Narsese execution
-                        const result = await engine.processNarsese(command);
-                        // Narsese processing might return string or nothing (logging via events)
-                        if (result) {
-                            addLog(result, 'success');
-                        }
+                        const res = await messageHandler.processMessage({type: 'narseseInput', payload: command});
+                        if (res.payload?.result) addLog(res.payload.result, 'success');
+                        if (res.error) addLog(res.error, 'error');
                     } else {
                         // Agent Mode: Use streaming LM execution
+                        // Since ReplMessageHandler doesn't stream, we use engine directly for this part
+                        // to preserve the nice UI.
+
                         const responseLogId = uuidv4();
                         streamingResponseRef.current = responseLogId;
                         addLog('🔄 LM thinking...', 'agent');
@@ -394,7 +368,7 @@ export const AgentInkTUI = ({engine}) => {
                     }
                 }
             } catch (error) {
-                if (error.message.includes('timeout')) {
+                if (error.message?.includes('timeout')) {
                     addLog('⏰ Request timed out', 'error');
                 } else {
                     addLog(handleError(error, 'Command processing'), 'error');
