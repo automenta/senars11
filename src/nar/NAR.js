@@ -22,16 +22,17 @@ import {ReasonerFactory} from '../reason/index.js';
 export class NAR extends BaseComponent {
     constructor(config = {}) {
         super(config, 'NAR');
+        this._initializeCoreComponents(config);
+        this._debugMode = this.config.debug?.pipeline || false;
+    }
+
+    _initializeCoreComponents(config) {
         this._configManager = new ConfigManager(config);
         this._componentManager = new ComponentManager({}, this._eventBus, this);
         this._initComponents();
         this._isRunning = false;
         this._startTime = Date.now();
         this._registerComponents();
-
-        // Add debug mode for tracking pipeline
-        this._debugMode = this.config.debug?.pipeline || false;
-
         this._initStreamReasoner();
 
         if (this.config.components) {
@@ -43,61 +44,20 @@ export class NAR extends BaseComponent {
         return this._configManager.toJSON();
     }
 
-    get memory() {
-        return this._memory;
-    }
-
-    get isRunning() {
-        return this._isRunning;
-    }
-
-    get cycleCount() {
-        return this._streamReasoner?.metrics?.totalDerivations || 0;
-    }
-
-    get lm() {
-        return this._lm;
-    }
-
-    get tools() {
-        return this._toolIntegration;
-    }
-
-    get explanationService() {
-        return this._explanationService;
-    }
-
-    get componentManager() {
-        return this._componentManager;
-    }
-
-    get metricsMonitor() {
-        return this._metricsMonitor;
-    }
-
-    get evaluator() {
-        return this._evaluator;
-    }
-
-    get ruleEngine() {
-        return this._ruleEngine;
-    }
-
-    get embeddingLayer() {
-        return this._embeddingLayer;
-    }
-
-    get termLayer() {
-        return this._termLayer;
-    }
-
-    get reasoningAboutReasoning() {
-        return this._reasoningAboutReasoning;
-    }
-
-    get streamReasoner() {
-        return this._streamReasoner;
-    }
+    get memory() { return this._memory; }
+    get isRunning() { return this._isRunning; }
+    get cycleCount() { return this._streamReasoner?.metrics?.totalDerivations || 0; }
+    get lm() { return this._lm; }
+    get tools() { return this._toolIntegration; }
+    get explanationService() { return this._explanationService; }
+    get componentManager() { return this._componentManager; }
+    get metricsMonitor() { return this._metricsMonitor; }
+    get evaluator() { return this._evaluator; }
+    get ruleEngine() { return this._ruleEngine; }
+    get embeddingLayer() { return this._embeddingLayer; }
+    get termLayer() { return this._termLayer; }
+    get reasoningAboutReasoning() { return this._reasoningAboutReasoning; }
+    get streamReasoner() { return this._streamReasoner; }
 
     async initialize() {
         const success = await this._componentManager.initializeAll();
@@ -115,8 +75,9 @@ export class NAR extends BaseComponent {
     }
 
     _initComponents() {
-        const config = this.config;
+        const {config} = this;
         const lmEnabled = config.lm?.enabled === true;
+
         this._termFactory = new TermFactory(config.termFactory, this._eventBus);
         this._memory = new Memory(config.memory);
         this._parser = new NarseseParser(this._termFactory);
@@ -132,12 +93,14 @@ export class NAR extends BaseComponent {
     }
 
     _initOptionalComponents() {
-        const config = this.config;
+        const {config} = this;
         this._toolIntegration = config.tools?.enabled !== false ? new ToolIntegration(config.tools || {}) : null;
+
         if (this._toolIntegration) {
             this._toolIntegration.connectToReasoningCore(this);
             this._explanationService = new ExplanationService({lm: this._lm || null, ...config.tools?.explanation});
         }
+
         this._metricsMonitor = new MetricsMonitor({eventBus: this._eventBus, nar: this, ...config.metricsMonitor});
         const embeddingConfig = config.embeddingLayer || {enabled: false};
         this._embeddingLayer = embeddingConfig.enabled ? new EmbeddingLayer(embeddingConfig) : null;
@@ -220,24 +183,28 @@ export class NAR extends BaseComponent {
         const added = this._taskManager.addTask(task);
 
         if (added) {
-            this._eventBus.emit('task.input', {
-                task,
-                source,
-                originalInput,
-                parsed
-            }, {traceId: options.traceId});
-
-            if (this._focus) {
-                const addedToFocus = this._focus.addTaskToFocus(task);
-                if (addedToFocus) {
-                    this._eventBus.emit('task.focus', task, {traceId: options.traceId});
-                }
-            }
-
-            await this._processPendingTasks(options.traceId);
+            await this._emitTaskEvents(task, source, originalInput, parsed, options);
         }
 
         return added;
+    }
+
+    async _emitTaskEvents(task, source, originalInput, parsed, options) {
+        this._eventBus.emit('task.input', {
+            task,
+            source,
+            originalInput,
+            parsed
+        }, {traceId: options.traceId});
+
+        if (this._focus) {
+            const addedToFocus = this._focus.addTaskToFocus(task);
+            if (addedToFocus) {
+                this._eventBus.emit('task.focus', task, {traceId: options.traceId});
+            }
+        }
+
+        await this._processPendingTasks(options.traceId);
     }
 
     _createTask(parsed) {
@@ -261,18 +228,14 @@ export class NAR extends BaseComponent {
             return null;
         }
 
-        return truthValue
-            ? new Truth(truthValue.frequency, truthValue.confidence)
-            : new Truth(1.0, 0.9);
+        return truthValue ? new Truth(truthValue.frequency, truthValue.confidence) : new Truth(1.0, 0.9);
     }
 
-    _getTaskTypeFromPunctuation(punctuation) {
-        return {
-            '.': 'BELIEF',
-            '!': 'GOAL',
-            '?': 'QUESTION'
-        }[punctuation] || 'BELIEF';
-    }
+    _getTaskTypeFromPunctuation = punctuation => ({
+        '.': 'BELIEF',
+        '!': 'GOAL',
+        '?': 'QUESTION'
+    })[punctuation] || 'BELIEF';
 
     start(options = {}) {
         if (this._isRunning) {
@@ -281,13 +244,22 @@ export class NAR extends BaseComponent {
         }
 
         this._startComponentsAsync();
-
         this._isRunning = true;
         this._processPendingTasks(options.traceId);
 
         // Start the stream-based reasoner
         this._streamReasoner.start();
 
+        // Set up monitoring process for stream reasoner metrics
+        this._setupStreamMonitoring(options);
+
+        this._eventBus.emit('system.started', {timestamp: Date.now()}, {traceId: options.traceId});
+        this._emitIntrospectionEvent('system:start', {timestamp: Date.now()});
+        this.logInfo(`NAR started successfully with stream-based reasoning`);
+        return true;
+    }
+
+    _setupStreamMonitoring(options) {
         // Optionally, set up a monitoring process for stream reasoner metrics
         this._streamMonitoringInterval = setInterval(() => {
             if (this._streamReasoner) {
@@ -295,11 +267,6 @@ export class NAR extends BaseComponent {
                 this._eventBus.emit('streamReasoner.metrics', metrics, {traceId: options.traceId});
             }
         }, 5000); // Report metrics every 5 seconds
-
-        this._eventBus.emit('system.started', {timestamp: Date.now()}, {traceId: options.traceId});
-        this._emitIntrospectionEvent('system:start', {timestamp: Date.now()});
-        this.logInfo(`NAR started successfully with stream-based reasoning`);
-        return true;
     }
 
     async _startComponentsAsync() {
@@ -322,24 +289,13 @@ export class NAR extends BaseComponent {
         this._isRunning = false;
 
         // Stop the stream-based reasoner
-        if (this._streamReasoner) {
-            this._streamReasoner.stop();
-        }
-        // Clear stream monitoring interval
-        this._streamMonitoringInterval && clearInterval(this._streamMonitoringInterval) && (this._streamMonitoringInterval = null);
+        this._stopStreamReasoner();
 
-        // Ensure reasoning state interval is cleared
-        this.disconnectFromWebSocketMonitor();
+        // Clean up monitoring intervals
+        this._cleanupMonitoring();
 
         // Ensure metrics monitor is stopped
-        if (this._metricsMonitor && typeof this._metricsMonitor.shutdown === 'function') {
-            this._metricsMonitor.shutdown();
-        }
-
-        // Ensure reasoning about reasoning is stopped
-        if (this._reasoningAboutReasoning && typeof this._reasoningAboutReasoning.shutdown === 'function') {
-            this._reasoningAboutReasoning.shutdown();
-        }
+        this._shutdownOptionalComponents();
 
         this._stopComponentsAsync();
 
@@ -347,6 +303,28 @@ export class NAR extends BaseComponent {
         this._emitIntrospectionEvent('system:stop', {timestamp: Date.now()});
         this.logInfo(`NAR stopped successfully (stream-based reasoning)`);
         return true;
+    }
+
+    _stopStreamReasoner() {
+        if (this._streamReasoner) {
+            this._streamReasoner.stop();
+        }
+    }
+
+    _cleanupMonitoring() {
+        // Clear stream monitoring interval
+        this._streamMonitoringInterval && clearInterval(this._streamMonitoringInterval) && (this._streamMonitoringInterval = null);
+        // Ensure reasoning state interval is cleared
+        this.disconnectFromWebSocketMonitor();
+    }
+
+    _shutdownOptionalComponents() {
+        if (this._metricsMonitor?.shutdown) {
+            this._metricsMonitor.shutdown();
+        }
+        if (this._reasoningAboutReasoning?.shutdown) {
+            this._reasoningAboutReasoning.shutdown();
+        }
     }
 
     async _stopComponentsAsync() {
@@ -367,17 +345,7 @@ export class NAR extends BaseComponent {
             const results = await this._streamReasoner.step();
 
             // Process all derivations through the same Input/Memory/Focus/Event process
-            for (const result of results) {
-                if (result) {
-                    const added = await this._inputTask(result, {traceId: options.traceId});
-
-                    this._eventBus.emit('reasoning.derivation', {
-                        derivedTask: result,
-                        source: 'streamReasoner.step.method',
-                        timestamp: Date.now()
-                    }, {traceId: options.traceId});
-                }
-            }
+            await this._processDerivations(results, options);
 
             this._eventBus.emit('streamReasoner.step', {
                 results,
@@ -388,6 +356,20 @@ export class NAR extends BaseComponent {
             this._eventBus.emit('streamReasoner.error', {error: error.message}, {traceId: options.traceId});
             this.logError('Error in reasoning step:', error);
             throw error;
+        }
+    }
+
+    async _processDerivations(results, options) {
+        for (const result of results) {
+            if (result) {
+                const added = await this._inputTask(result, {traceId: options.traceId});
+
+                this._eventBus.emit('reasoning.derivation', {
+                    derivedTask: result,
+                    source: 'streamReasoner.step.method',
+                    timestamp: Date.now()
+                }, {traceId: options.traceId});
+            }
         }
     }
 
@@ -771,14 +753,12 @@ export class NAR extends BaseComponent {
             service => service.assessToolResults(toolResults, this._createToolContext(context)));
     }
 
-    _createToolContext(context = {}) {
-        return {
-            nar: this,
-            memory: this._memory,
-            timestamp: Date.now(),
-            ...context
-        };
-    }
+    _createToolContext = (context = {}) => ({
+        nar: this,
+        memory: this._memory,
+        timestamp: Date.now(),
+        ...context
+    });
 
     // Check if a semantically equivalent task already exists in memory
     _isTaskDuplicate(task) {
@@ -794,7 +774,7 @@ export class NAR extends BaseComponent {
         return false;
     }
 
-    // Internal method to input an already-constructed Task object following the same 
+    // Internal method to input an already-constructed Task object following the same
     // Input/Memory/Focus/Event process as the main input method
     async _inputTask(task, options = {}) {
         try {

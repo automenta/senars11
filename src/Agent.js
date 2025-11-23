@@ -38,19 +38,17 @@ export class Input {
         if (!this._isValidIndex(index)) return false;
 
         const taskItem = this.tasks[index];
-        const oldPriority = taskItem.priority;
         taskItem.priority = newPriority;
 
-        if (mode === 'cascade') {
-            this._updateDerivedPriorities(taskItem.id, newPriority);
-        } else if (mode === 'custom') {
-            // Custom mode would allow specific derived task selection
-            // For now, implement as cascade but allow for future extension
-            this._updateDerivedPriorities(taskItem.id, newPriority);
-        }
-
+        this._handlePriorityUpdateMode(taskItem.id, newPriority, mode);
         this._sortTasks();
         return true;
+    }
+
+    _handlePriorityUpdateMode(taskId, newPriority, mode) {
+        if (mode === 'cascade' || mode === 'custom') {
+            this._updateDerivedPriorities(taskId, newPriority);
+        }
     }
 
     updatePriorityById(taskId, newPriority, mode = 'direct') {
@@ -286,8 +284,7 @@ export class Agent {
             const {task} = taskItem;
             try {
                 if (this._canAddTask(task)) {
-                    await this.nar.step();
-                    await this._processDerivedTasks();
+                    await this._processTaskWithReasoning();
                 }
                 this._removeProcessedTask(task);
             } catch (error) {
@@ -296,6 +293,11 @@ export class Agent {
         } else {
             await this._sleep(10);
         }
+    }
+
+    async _processTaskWithReasoning() {
+        await this.nar.step();
+        await this._processDerivedTasks();
     }
 
     _canAddTask(task) {
@@ -309,6 +311,7 @@ export class Agent {
     }
 
     async _processDerivedTasks() {
+        // For now, this is a no-op. Can be extended as needed.
     }
 
     _removeProcessedTask(task) {
@@ -336,39 +339,14 @@ export class Agent {
         };
     }
 
-    getNAR() {
-        return this.nar;
-    }
-
-    getEvaluator() {
-        return this.evaluator;
-    }
-
-    getInputTasks() {
-        return this.inputTasks;
-    }
-
-    getLM() {
-        return this.nar.lm ?? null;
-    }
-
-    getMetricsMonitor() {
-        return this.nar.metricsMonitor ?? null;
-    }
-
-    getEmbeddingLayer() {
-        return this.nar.embeddingLayer ?? null;
-    }
-
-    getTermLayer() {
-        return this.nar.termLayer ?? null;
-    }
-
-    getTools() {
-        return this.nar.tools ?? null;
-    }
-
-    getPluginManager() {
-        return this._pluginManager;
-    }
+    // Accessor methods for core components
+    getNAR() { return this.nar; }
+    getEvaluator() { return this.evaluator; }
+    getInputTasks() { return this.inputTasks; }
+    getLM() { return this.nar.lm ?? null; }
+    getMetricsMonitor() { return this.nar.metricsMonitor ?? null; }
+    getEmbeddingLayer() { return this.nar.embeddingLayer ?? null; }
+    getTermLayer() { return this.nar.termLayer ?? null; }
+    getTools() { return this.nar.tools ?? null; }
+    getPluginManager() { return this._pluginManager; }
 }
