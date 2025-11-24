@@ -1,22 +1,22 @@
 import {Logger} from '../util/Logger.js';
 import {EventBus} from '../util/EventBus.js';
 import {createEventPayload} from './IntrospectionEvents.js';
+import {ConfigurableComponent} from './ConfigurableComponent.js';
 
-export class BaseComponent {
+export class BaseComponent extends ConfigurableComponent {
     constructor(config = {}, name = 'BaseComponent', eventBus = null, validationSchema = null) {
-        this._config = config;
+        super(config, validationSchema);
         this._name = name;
         this._logger = Logger;  // Logger is a singleton instance
         this._eventBus = eventBus || new EventBus();
         this._metrics = new Map();
-        this._validationSchema = validationSchema;
         this._initialized = false;
         this._started = false;
         this._disposed = false;
         this._startTime = null;
 
         // Validate configuration if schema provided
-        this._validationSchema && this._validateConfig(config);
+        this._validationSchema && this.validateConfig(config);
 
         // Initialize common metrics
         this._initializeMetrics();
@@ -25,10 +25,6 @@ export class BaseComponent {
     // Getters
     get name() {
         return this._name;
-    }
-
-    get config() {
-        return this._config;
     }
 
     get logger() {
@@ -61,29 +57,6 @@ export class BaseComponent {
 
     get uptime() {
         return this._startTime ? Date.now() - this._startTime : 0;
-    }
-
-    // Configuration validation
-    _validateConfig(config) {
-        const schema = typeof this._validationSchema === 'function'
-            ? this._validationSchema()
-            : this._validationSchema;
-
-        const validationResult = schema.validate(config, {
-            stripUnknown: true,
-            allowUnknown: false,
-            convert: true
-        });
-
-        if (validationResult.error) {
-            throw new Error(`Configuration validation failed for ${this._name}: ${validationResult.error.message}`);
-        }
-
-        return validationResult.value;
-    }
-
-    validateConfig(config = this._config) {
-        return this._validationSchema ? this._validateConfig(config) : config;
     }
 
     // Lifecycle operation executor

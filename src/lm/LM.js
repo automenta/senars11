@@ -1,5 +1,4 @@
 import {BaseComponent} from '../util/BaseComponent.js';
-import {Metrics} from '../util/Metrics.js';
 import {ProviderRegistry} from './ProviderRegistry.js';
 import {ModelSelector} from './ModelSelector.js';
 import {NarseseTranslator} from './NarseseTranslator.js';
@@ -13,7 +12,6 @@ export class LM extends BaseComponent {
         this.modelSelector = new ModelSelector(this.providers);
         this.narseseTranslator = new NarseseTranslator();
         this.circuitBreaker = new CircuitBreaker(this._getCircuitBreakerConfig());
-        this.lmMetrics = new Metrics();
         this.activeWorkflows = new Map();
         this.lmStats = {
             totalCalls: 0,
@@ -29,10 +27,6 @@ export class LM extends BaseComponent {
         return {...this._config};
     }
 
-    get metrics() {
-        return this.lmMetrics;
-    }
-
     _getCircuitBreakerConfig() {
         const cbConfig = this.config.circuitBreaker || {};
         return {
@@ -43,10 +37,6 @@ export class LM extends BaseComponent {
     }
 
     async _initialize() {
-        if (this.lmMetrics.initialize) {
-            await this.lmMetrics.initialize(this.config.metrics || {});
-        }
-
         this.logInfo('LM component initialized', {
             config: Object.keys(this.config),
             providerCount: this.providers.size
