@@ -91,7 +91,18 @@ export class LM extends BaseComponent {
 
         const startTime = Date.now();
         try {
-            const result = await this._executeWithCircuitBreaker(provider, provider.generateText, prompt, options);
+            // Standardize generation method (support generateText, invoke, or generate)
+            const standardGenerate = async function(p, o) {
+                if (this.generateText) return this.generateText(p, o);
+                if (this.invoke) {
+                    const res = await this.invoke(p, o);
+                    return res.content || res;
+                }
+                if (this.generate) return this.generate(p, o);
+                throw new Error('Provider missing generation method');
+            };
+
+            const result = await this._executeWithCircuitBreaker(provider, standardGenerate, prompt, options);
             this._updateStats(prompt, result, providerId, startTime);
             return result;
         } catch (error) {
@@ -106,7 +117,14 @@ export class LM extends BaseComponent {
         if (!provider) throw new Error(`Provider "${providerId || this.providers.defaultProviderId}" not found.`);
 
         try {
-            return await this._executeWithCircuitBreaker(provider, provider.streamText, prompt, options);
+            // Standardize streaming method (support streamText or stream)
+            const standardStream = async function(p, o) {
+                if (this.streamText) return this.streamText(p, o);
+                if (this.stream) return this.stream(p, o);
+                throw new Error('Provider missing streaming method');
+            };
+
+            return await this._executeWithCircuitBreaker(provider, standardStream, prompt, options);
         } catch (error) {
             if (this._handleCircuitBreakerError(error, prompt)) {
                 // For streaming, we return a simulated async iterator as fallback

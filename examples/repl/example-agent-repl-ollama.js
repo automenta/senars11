@@ -5,8 +5,7 @@
  * Demonstrates hybrid intelligence with LM and NARS integration
  */
 
-import {SessionEngine} from '../../src/session/SessionEngine.js';
-import {LangChainProvider} from '../../src/lm/LangChainProvider.js';
+import {App} from '../../src/app/App.js';
 
 async function runAdvancedAgentDemo() {
     console.log('🤖🎨 SeNARS Advanced Agent REPL Demo with Ollama Integration\n');
@@ -16,152 +15,151 @@ async function runAdvancedAgentDemo() {
     console.log('└─────────────────────────────────────────────────────┘\n');
 
     try {
-        // Initialize the NARS system properly
-        const nar = {}; // Use empty object to avoid configuration circular reference issues
-
-        // Configure Ollama provider (you can change the model as needed)
-        const ollamaProvider = new LangChainProvider({
-            provider: 'ollama',
-            modelName: process.env.OLLAMA_MODEL,
-            baseURL: process.env.OLLAMA_URL || 'http://localhost:11434',
-            temperature: 0.7,
-            maxTokens: 500
-        });
-
-        // Initialize engine with real NARS and Ollama provider
-        const engine = new SessionEngine({
-            nar: nar,
+        // Initialize App with configuration for Ollama
+        const app = new App({
             lm: {
-                provider: ollamaProvider
+                enabled: true,
+                provider: 'ollama',
+                modelName: process.env.OLLAMA_MODEL || 'llama3',
+                baseUrl: process.env.OLLAMA_URL || 'http://localhost:11434',
+                temperature: 0.7
             }
         });
 
-        // Register the provider
-        engine.registerLMProvider('ollama', ollamaProvider);
-        engine.registerLMProvider('default', ollamaProvider);
-
-        // Add agent commands
-        engine.addAgentCommands();
-
-        await engine.initialize();
+        // Initialize default agent
+        console.log('Initializing default agent...');
+        await app.initialize();
         console.log('✅ Agent engine initialized with Ollama provider\n');
 
         // Run comprehensive demonstration scenarios
-        await runAgentManagementDemo(engine);
-        await runHybridReasoningDemo(engine, nar);
-        await runGoalPlanningDemo(engine);
-        await runComplexQueryDemo(engine);
+        await runAgentManagementDemo(app);
+
+        // Get the active agent for subsequent demos
+        const activeAgent = app.agent;
+        if (!activeAgent) throw new Error("No active agent found");
+
+        await runHybridReasoningDemo(activeAgent);
+        await runGoalPlanningDemo(activeAgent);
+        await runComplexQueryDemo(activeAgent);
 
         console.log('\n🎉 ADVANCED DEMO COMPLETE!');
         console.log('Hybrid intelligence capabilities successfully demonstrated!');
-        console.log('\n📊 PERFORMANCE METRICS:');
-        console.log(`   - Agent tasks processed: ${engine.agents.size}`);
-        console.log(`   - NARS cycles executed: ${nar.cycles || 0}`);
-        console.log(`   - LM calls made: ${engine.agentLM.lmStats.totalCalls}`);
-        console.log(`   - Total tokens processed: ${engine.agentLM.lmStats.totalTokens}`);
 
-        await engine.shutdown();
+        if (activeAgent.getStats) {
+            const stats = activeAgent.getStats();
+            console.log('\n📊 PERFORMANCE METRICS:');
+            console.log(`   - NARS cycles executed: ${stats.cycleCount || 0}`);
+            console.log(`   - Beliefs: ${activeAgent.getBeliefs().length}`);
+        }
+
+        await app.shutdown();
         console.log('\n👋 Engine shutdown completed');
 
     } catch (error) {
         console.error('❌ Advanced Demo Error:', error);
-        console.error('Stack:', error.stack);
+        if (error.stack) console.error(error.stack);
     }
 }
 
-async function runAgentManagementDemo(engine) {
+async function runAgentManagementDemo(app) {
     console.log('\n┌─ DEMONSTRATION: Agent Creation & Management ──────────┐');
 
     // Create a research agent
-    await runCommand(engine, 'agent create researcher');
+    console.log("Creating 'researcher' agent...");
+    await app.createAgent('researcher');
 
     // Create a planning agent
-    await runCommand(engine, 'agent create planner');
+    console.log("Creating 'planner' agent...");
+    await app.createAgent('planner');
 
     // List agents
-    await runCommand(engine, 'agent list');
+    console.log("Listing agents:");
+    const agents = app.listAgents();
+    agents.forEach(a => console.log(`  - ${a.id} ${a.isActive ? '[ACTIVE]' : ''}`));
 
     // Switch between agents
-    await runCommand(engine, 'agent select researcher');
-    await runCommand(engine, 'agent-status');
+    console.log("Switching to 'researcher'...");
+    app.switchAgent('researcher');
+    console.log(`Active agent is now: ${app.activeAgentId}`);
 
     console.log('└──────────────────────────────────────────────────────┘');
 }
 
-async function runHybridReasoningDemo(engine, nar) {
+async function runHybridReasoningDemo(agent) {
     console.log('\n┌─ DEMONSTRATION: Hybrid Reasoning (LM + NARS) ────────┐');
 
     // Add background knowledge to NARS
     console.log('\n📚 Adding background knowledge to NARS system...');
-    await engine.processNarsese('<bird --> animal>. %1.00;0.90%'); // Birds are animals with high confidence
-    await engine.processNarsese('<robin --> bird>. %1.00;0.90%'); // Robins are birds with high confidence
-    await engine.processNarsese('<swan --> bird>. %1.00;0.90%'); // Swans are birds with high confidence
-    await engine.processNarsese('<bird --> flyer>. %0.80;0.85%'); // Birds are flyers with some uncertainty
-    await engine.processNarsese('<swan --> white>. %0.95;0.80%'); // Swans are white with high frequency
+    await agent.processInput('<bird --> animal>. %1.00;0.90%'); // Birds are animals with high confidence
+    await agent.processInput('<robin --> bird>. %1.00;0.90%'); // Robins are birds with high confidence
+    await agent.processInput('<swan --> bird>. %1.00;0.90%'); // Swans are birds with high confidence
+    await agent.processInput('<bird --> flyer>. %0.80;0.85%'); // Birds are flyers with some uncertainty
+    await agent.processInput('<swan --> white>. %0.95;0.80%'); // Swans are white with high frequency
 
     console.log('\n🧠 Testing pure NARS inference...');
     // NARS should infer: <robin --> animal>. from the above
-    await engine.processNarsese('<robin --> ?x>?'); // Query what robins are
+    const res = await agent.processInput('<robin --> ?x>?'); // Query what robins are
+    console.log(`Result: ${res}`);
 
     console.log('\n🤔 Testing LM reasoning with NARS knowledge context...');
     // Now ask the LM to reason about this knowledge
-    await runCommand(engine, 'reason "What can you infer about robins based on NARS knowledge?"');
+    await runCommand(agent, 'reason', 'What can you infer about robins based on NARS knowledge?');
 
     console.log('\n💭 Demonstrating LM reflection on NARS reasoning...');
-    await runCommand(engine, 'think "How does the NARS system\'s inference about robins differ from typical neural network reasoning?"');
+    await runCommand(agent, 'think', 'How does the NARS system\'s inference about robins differ from typical neural network reasoning?');
 
     // Ask for synthesis of both systems
     console.log('\n🔗 Testing hybrid synthesis...');
-    await runCommand(engine, 'lm "Combine NARS inference that robins are animals with additional knowledge about robins to describe robin characteristics."');
+    await runCommand(agent, 'lm', 'Combine NARS inference that robins are animals with additional knowledge about robins to describe robin characteristics.');
 
     console.log('└──────────────────────────────────────────────────────┘');
 }
 
-async function runGoalPlanningDemo(engine) {
+async function runGoalPlanningDemo(agent) {
     console.log('\n┌─ DEMONSTRATION: Goal Setting & Planning ─────────────┐');
 
     // Set an agent goal
-    await runCommand(engine, 'goal "learn quantum physics"');
+    await runCommand(agent, 'goal', 'learn quantum physics');
 
     // Generate a plan to achieve the goal
-    await runCommand(engine, 'plan "How to learn quantum physics fundamentals in 3 months"');
+    await runCommand(agent, 'plan', 'How to learn quantum physics fundamentals in 3 months');
 
     // Set a more specific goal
-    await runCommand(engine, 'goal "<understand quantum entanglement --> important>. %1.00;0.80% !');
+    await runCommand(agent, 'goal', '<understand quantum entanglement --> important>. %1.00;0.80% !');
 
     // Query for goals
-    await runCommand(engine, 'goal list');
+    await runCommand(agent, 'goal', 'list');
 
     // Ask the LM to reason about goal prioritization
-    await runCommand(engine, 'reason "Between learning quantum physics and understanding quantum entanglement, which should be prioritized and why?"');
+    await runCommand(agent, 'reason', 'Between learning quantum physics and understanding quantum entanglement, which should be prioritized and why?');
 
     console.log('└──────────────────────────────────────────────────────┘');
 }
 
-async function runComplexQueryDemo(engine) {
+async function runComplexQueryDemo(agent) {
     console.log('\n┌─ DEMONSTRATION: Complex LM-NARS Integration ────────┐');
 
     // Complex reasoning that combines both systems
     console.log('\n🧩 Complex multi-step reasoning example...');
-    await runCommand(engine, 'think "How might quantum physics concepts like entanglement be represented in a NARS system?"');
+    await runCommand(agent, 'think', 'How might quantum physics concepts like entanglement be represented in a NARS system?');
 
     // Ask for practical applications
     console.log('\n💡 Practical application reasoning...');
-    await runCommand(engine, 'reason "If we know that quantum computers use entanglement and NARS can represent complex relationships, how might we combine these for AI?"');
+    await runCommand(agent, 'reason', 'If we know that quantum computers use entanglement and NARS can represent complex relationships, how might we combine these for AI?');
 
     // Planning with hybrid intelligence
     console.log('\n📋 Hybrid planning example...');
-    await runCommand(engine, 'plan "Design a research project that uses both NARS for symbolic reasoning and quantum computing principles"');
+    await runCommand(agent, 'plan', 'Design a research project that uses both NARS for symbolic reasoning and quantum computing principles');
 
     // Test the LM fallback mechanism with non-Narsese input
     console.log('\n🔄 Testing LM fallback mechanism...');
-    const fallbackTest = await engine.processInput('What is the weather like today?');
-    console.log(`   Fallback response: ${fallbackTest.substring(0, 60)}...`);
+    const fallbackTest = await agent.processInput('What is the weather like today?');
+    console.log(`   Fallback response: ${typeof fallbackTest === 'string' ? fallbackTest.substring(0, 60) : JSON.stringify(fallbackTest)}...`);
 
     // Test with actual Narsese that should go to NARS
     console.log('\n⚡ Testing Narsese detection and routing...');
     try {
-        await engine.processInput('<cat --> animal>. %1.00;0.90%');
+        await agent.processInput('<cat --> animal>. %1.00;0.90%');
         console.log('   ✓ Narsese properly routed to NARS system');
     } catch (e) {
         console.log('   ⚠ Narsese routing: ', e.message);
@@ -170,18 +168,14 @@ async function runComplexQueryDemo(engine) {
     console.log('└──────────────────────────────────────────────────────┘');
 }
 
-async function runCommand(engine, command) {
-    const parts = command.split(' ');
-    const cmd = parts[0];
-    const args = parts.slice(1);
-
+async function runCommand(agent, cmd, ...args) {
     try {
-        const result = await engine.executeCommand(cmd, ...args);
-        console.log(`💬 Command: /${command}`);
-        console.log(`✅ Result: ${result.substring(0, 100)}${result.length > 100 ? '...' : ''}\n`);
+        const result = await agent.executeCommand(cmd, ...args);
+        console.log(`💬 Command: /${cmd} ${args.join(' ')}`);
+        console.log(`✅ Result: ${typeof result === 'string' ? result.substring(0, 100) : JSON.stringify(result)}${result.length > 100 ? '...' : ''}\n`);
         return result;
     } catch (error) {
-        console.log(`💬 Command: /${command}`);
+        console.log(`💬 Command: /${cmd} ${args.join(' ')}`);
         console.log(`❌ Error: ${error.message}\n`);
         return null;
     }

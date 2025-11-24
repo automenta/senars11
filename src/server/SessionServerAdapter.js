@@ -1,20 +1,25 @@
 import {ReplMessageHandler} from '../repl/ReplMessageHandler.js';
 
 export class SessionServerAdapter {
-    constructor(engine, websocketServer) {
-        this.engine = engine;
+    /**
+     * Adapter to connect Agent/NAR instance with WebSocket Server
+     * @param {Agent|NAR} agent - The agent or NAR instance
+     * @param {WebSocketMonitor} websocketServer - The WebSocket monitor/server
+     */
+    constructor(agent, websocketServer) {
+        this.agent = agent;
         this.websocketServer = websocketServer;
         this.sessions = new Map();
-        this.messageHandler = new ReplMessageHandler(engine);
+        this.messageHandler = new ReplMessageHandler(agent);
         this._setupEventListeners();
     }
 
     _setupEventListeners() {
         // Forward all events from the unified session stream to clients
-        // We now trust the SessionEngine to bridge NAR events
+        // We now trust the Agent to bridge NAR events
 
         const forwardedEvents = [
-            // Session/Engine Lifecycle
+            // Agent/Engine Lifecycle
             'engine.ready', 'engine.quit', 'engine.reset',
             'engine.save', 'engine.load', 'engine.shutdown',
 
@@ -22,7 +27,7 @@ export class SessionServerAdapter {
             'narsese.processed', 'narsese.error', 'command.error',
             'nar.cycle.step', 'nar.cycle.running', 'nar.cycle.stop',
 
-            // Core NAR events (bridged by SessionEngine)
+            // Core NAR events (bridged by Agent)
             'task.input', 'task.processed', 'cycle.start', 'cycle.complete',
             'task.added', 'belief.added', 'question.answered',
             'system.started', 'system.stopped', 'system.reset', 'system.loaded',
@@ -33,19 +38,10 @@ export class SessionServerAdapter {
         ];
 
         forwardedEvents.forEach(event => {
-            this.engine.on(event, (data, options) => {
+            this.agent.on(event, (data, options) => {
                 // Some events pass multiple args, we bundle them or just take payload
                 // Using 'bufferEvent' style interaction if available on monitor,
                 // or broadcasting directly.
-                // Since we're an adapter, we should respect the monitor's buffering if we can,
-                // but here we are broadcasting directly.
-
-                // Ideally, we should use the monitor's bufferEvent if this is about efficient transport.
-                // The previous WebRepl logic broadcasted directly.
-                // The launcher logic buffered.
-
-                // If the websocketServer IS the monitor (which it usually is in the current setup),
-                // we can try to use its buffer method.
 
                 if (this.websocketServer && typeof this.websocketServer.bufferEvent === 'function') {
                     this.websocketServer.bufferEvent(event, data, options);
@@ -60,7 +56,7 @@ export class SessionServerAdapter {
 
         const commandEvents = ['help', 'status', 'memory', 'trace', 'reset', 'save', 'load', 'demo'];
         commandEvents.forEach(cmd => {
-            this.engine.on(`command.${cmd}`, (data) => {
+            this.agent.on(`command.${cmd}`, (data) => {
                 if (this.websocketServer && typeof this.websocketServer.bufferEvent === 'function') {
                     this.websocketServer.bufferEvent('command.output', {command: cmd, result: data.result});
                 } else {
@@ -142,14 +138,14 @@ export class SessionServerAdapter {
     }
 
     getStats() {
-        return this.engine.getStats();
+        return this.agent.getStats();
     }
 
     getBeliefs() {
-        return this.engine.getBeliefs();
+        return this.agent.getBeliefs();
     }
 
     getHistory() {
-        return this.engine.getHistory();
+        return this.agent.getHistory();
     }
 }

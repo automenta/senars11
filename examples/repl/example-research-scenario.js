@@ -5,8 +5,7 @@
  * Simulates a complex AI research scenario with hybrid reasoning
  */
 
-import {SessionEngine} from '../../src/session/SessionEngine.js';
-import {LangChainProvider} from '../../src/lm/LangChainProvider.js';
+import {App} from '../../src/app/App.js';
 
 async function runResearchScenarioDemo() {
     console.log('🔬🤖 SeNARS Research Agent Scenario Demo');
@@ -14,76 +13,70 @@ async function runResearchScenarioDemo() {
     console.log('Simulating a complex AI research scenario with hybrid reasoning\n');
 
     try {
-        // Initialize with real NARS system
-        const nar = {}; // Use empty object to avoid configuration circular reference issues
-
-        // Use Ollama provider for LM capabilities
-        const ollamaProvider = new LangChainProvider({
-            provider: 'ollama',
-            modelName: process.env.OLLAMA_MODEL,
-            baseURL: process.env.OLLAMA_URL || 'http://localhost:11434',
-            temperature: 0.7,
-            maxTokens: 800
-        });
-
-        const engine = new SessionEngine({
-            nar: nar,
+        const app = new App({
             lm: {
-                provider: ollamaProvider
+                enabled: true,
+                provider: 'ollama',
+                modelName: process.env.OLLAMA_MODEL || 'llama3',
+                baseUrl: process.env.OLLAMA_URL || 'http://localhost:11434',
+                temperature: 0.7
             }
         });
 
-        engine.registerLMProvider('ollama', ollamaProvider);
-        engine.addAgentCommands();
-        await engine.initialize();
+        await app.initialize();
 
         // Scenario: AI Research Project
         console.log('📍 SCENARIO: AI Research Project on Hybrid Intelligence');
         console.log('-'.repeat(50));
 
         // Create specialized agents
-        await createResearchTeam(engine);
+        await createResearchTeam(app);
+
+        const agent = app.agent;
 
         // Set up research context in NARS
-        await setupResearchContext(engine);
+        await setupResearchContext(agent);
 
         // Begin research process with hybrid reasoning
-        await conductResearch(engine);
+        await conductResearch(agent);
 
         // Demonstrate goal achievement tracking
-        await trackProgress(engine);
+        await trackProgress(agent);
 
         // Showcase learning and adaptation
-        await adaptiveReasoning(engine);
+        await adaptiveReasoning(agent);
 
         console.log('\n✅ RESEARCH SCENARIO COMPLETED SUCCESSFULLY!');
-        console.log('\n📊 Research Metrics:');
-        console.log(`   - Research cycles: ${nar.cycles || 0}`);
-        console.log(`   - LM interactions: ${engine.agentLM.lmStats.totalCalls}`);
-        console.log(`   - Knowledge concepts: ${countNarsKnowledge(nar)}`);
-        console.log(`   - Active agents: ${engine.agents.size}`);
 
-        await engine.shutdown();
+        if (agent.getStats) {
+            const stats = agent.getStats();
+            console.log('\n📊 Research Metrics:');
+            console.log(`   - Research cycles: ${stats.cycleCount || 0}`);
+            console.log(`   - Active agents: ${app.agents.size}`);
+        }
+
+        await app.shutdown();
 
     } catch (error) {
         console.error('❌ Research Scenario Error:', error);
-        console.error('Stack:', error.stack);
+        if (error.stack) console.error(error.stack);
     }
 }
 
-async function createResearchTeam(engine) {
+async function createResearchTeam(app) {
     console.log('\n👥 Creating Research Team...');
 
-    await runCommand(engine, 'agent create lead-researcher');
-    await runCommand(engine, 'agent create cognitive-modeler');
-    await runCommand(engine, 'agent create ml-engineer');
-    await runCommand(engine, 'agent select lead-researcher');
+    await app.createAgent('lead-researcher');
+    await app.createAgent('cognitive-modeler');
+    await app.createAgent('ml-engineer');
+    app.switchAgent('lead-researcher');
 
     console.log('   ✓ Research team created with specialized roles');
-    await runCommand(engine, 'agent list');
+    const agents = app.listAgents();
+    agents.forEach(a => console.log(`  - ${a.id} ${a.isActive ? '[ACTIVE]' : ''}`));
 }
 
-async function setupResearchContext(engine) {
+async function setupResearchContext(agent) {
     console.log('\n🧠 Setting up Research Context in NARS...');
 
     // Add foundational knowledge about AI systems
@@ -101,7 +94,7 @@ async function setupResearchContext(engine) {
 
     for (const fact of foundationalKnowledge) {
         try {
-            await engine.processNarsese(fact);
+            await agent.processInput(fact);
         } catch (e) {
             console.log(`   ⚠ Could not process: ${fact} (${e.message})`);
         }
@@ -110,100 +103,91 @@ async function setupResearchContext(engine) {
     console.log('   ✓ Foundational AI knowledge added to NARS');
 }
 
-async function conductResearch(engine) {
+async function conductResearch(agent) {
     console.log('\n🔍 Beginning Research Process...');
 
     // Define main research goal
-    await runCommand(engine, 'goal "develop hybrid AI system combining neural and symbolic reasoning"');
+    await runCommand(agent, 'goal', 'develop hybrid AI system combining neural and symbolic reasoning');
 
     // Generate research plan
     console.log('\n📋 Generating research plan...');
-    const plan = await runCommand(engine, 'plan "How to develop a hybrid AI system combining neural and symbolic reasoning"');
+    await runCommand(agent, 'plan', 'How to develop a hybrid AI system combining neural and symbolic reasoning');
 
     // Ask for specific reasoning
     console.log('\n🤔 Analyzing design decisions...');
-    await runCommand(engine, 'reason "What are the main challenges in combining neural networks with symbolic reasoning systems?"');
+    await runCommand(agent, 'reason', 'What are the main challenges in combining neural networks with symbolic reasoning systems?');
 
     // Get expert perspective
     console.log('\n💡 Seeking expert insights...');
-    await runCommand(engine, 'think "What would be the key breakthrough needed to make hybrid neural-symbolic systems practical?"');
+    await runCommand(agent, 'think', 'What would be the key breakthrough needed to make hybrid neural-symbolic systems practical?');
 
     // Query NARS for related knowledge
     console.log('\n🔍 Querying NARS knowledge...');
     try {
-        await engine.processNarsese('<hybrid-system --> ?property>?');
+        const res = await agent.processInput('<hybrid-system --> ?property>?');
+        console.log(`   Result: ${res}`);
     } catch (e) {
         console.log(`   ⚠ NARS query failed: ${e.message}`);
     }
 
     // Synthesize information from both systems
     console.log('\n🔗 Synthesizing hybrid insights...');
-    await runCommand(engine, 'lm "Based on the NARS knowledge and your understanding, what would be the architecture of a practical hybrid neural-symbolic system?"');
+    await runCommand(agent, 'lm', 'Based on the NARS knowledge and your understanding, what would be the architecture of a practical hybrid neural-symbolic system?');
 }
 
-async function trackProgress(engine) {
+async function trackProgress(agent) {
     console.log('\n📈 Tracking Research Progress...');
 
     // Add progress indicators to NARS
-    await engine.processNarsese('<research-phase-1 --> completed>. %0.60;0.70%');
-    await engine.processNarsese('<hybrid-architecture --> designed>. %0.40;0.65%');
-    await engine.processNarsese('<neural-integration --> in-progress>. %0.30;0.70%');
-    await engine.processNarsese('<symbolic-module --> implemented>. %0.80;0.85%');
+    await agent.processInput('<research-phase-1 --> completed>. %0.60;0.70%');
+    await agent.processInput('<hybrid-architecture --> designed>. %0.40;0.65%');
+    await agent.processInput('<neural-integration --> in-progress>. %0.30;0.70%');
+    await agent.processInput('<symbolic-module --> implemented>. %0.80;0.85%');
 
     // Check status
     console.log('\n📊 Current research status:');
-    await runCommand(engine, 'agent-status');
-    await runCommand(engine, 'goal list');
+    await runCommand(agent, 'agent', 'status');
+    await runCommand(agent, 'goal', 'list');
 
     // Analyze progress
     console.log('\n🎯 Analyzing progress...');
-    await runCommand(engine, 'reason "What is the current state of the hybrid AI research project and what are the next steps?"');
+    await runCommand(agent, 'reason', 'What is the current state of the hybrid AI research project and what are the next steps?');
 }
 
-async function adaptiveReasoning(engine) {
+async function adaptiveReasoning(agent) {
     console.log('\n🔄 Demonstrating Adaptive Reasoning...');
 
     // Simulate encountering a research challenge
     console.log('\n⚠️  Research challenge encountered: Symbolic reasoning is too slow');
 
     // Query for solutions
-    await runCommand(engine, 'think "How can we optimize symbolic reasoning speed without losing expressiveness?"');
+    await runCommand(agent, 'think', 'How can we optimize symbolic reasoning speed without losing expressiveness?');
 
     // Get planning advice
-    await runCommand(engine, 'plan "Approaches to optimize symbolic reasoning performance in hybrid systems"');
+    await runCommand(agent, 'plan', 'Approaches to optimize symbolic reasoning performance in hybrid systems');
 
     // Update knowledge based on new insights
-    await engine.processNarsese('<optimization-needed --> symbolic-reasoning-speed>. %1.00;0.80%');
-    await engine.processNarsese('<potential-solution --> indexing-optimization>. %0.70;0.75%');
-    await engine.processNarsese('<potential-solution --> parallel-processing>. %0.60;0.70%');
+    await agent.processInput('<optimization-needed --> symbolic-reasoning-speed>. %1.00;0.80%');
+    await agent.processInput('<potential-solution --> indexing-optimization>. %0.70;0.75%');
+    await agent.processInput('<potential-solution --> parallel-processing>. %0.60;0.70%');
 
     // Synthesize solution
-    await runCommand(engine, 'lm "Combine NARS knowledge about symbolic reasoning optimization with your expertise to propose the best approach"');
+    await runCommand(agent, 'lm', 'Combine NARS knowledge about symbolic reasoning optimization with your expertise to propose the best approach');
 
     // Update goals based on new understanding
-    await runCommand(engine, 'goal "optimize symbolic reasoning performance in hybrid system"');
+    await runCommand(agent, 'goal', 'optimize symbolic reasoning performance in hybrid system');
 
     console.log('\n✅ Adaptation completed - system adjusted to new challenge');
 }
 
-function countNarsKnowledge(nar) {
-    // This is a simplified approach - in a real implementation,
-    // we'd need to access the actual NARS memory structures
-    return typeof nar === 'object' && nar !== null ? (nar.memory?.size || 0) : 0;
-}
-
-async function runCommand(engine, command) {
-    const parts = command.split(' ');
-    const cmd = parts[0];
-    const args = parts.slice(1);
-
+async function runCommand(agent, cmd, ...args) {
     try {
-        const result = await engine.executeCommand(cmd, ...args);
-        console.log(`   Command: /${command}`);
-        console.log(`   Result: ${result.substring(0, 80)}${result.length > 80 ? '...' : ''}`);
+        const result = await agent.executeCommand(cmd, ...args);
+        console.log(`   Command: /${cmd} ${args.join(' ')}`);
+        console.log(`   Result: ${typeof result === 'string' ? result.substring(0, 80) : JSON.stringify(result)}${result.length > 80 ? '...' : ''}`);
         return result;
     } catch (error) {
-        console.log(`   Command: /${command}`);
+        console.log(`   Command: /${cmd} ${args.join(' ')}`);
         console.log(`   Error: ${error.message}`);
         return null;
     }
