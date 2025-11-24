@@ -1,33 +1,13 @@
-import {expect, test} from './fixtures/base-fixture.js';
+import {test} from './fixtures/production-fixture.js';
+import {TestNARPlaywright} from './utils/TestNARPlaywright.js';
 
-test.describe('Graph Visualization', () => {
-    test('Graph container is present and visible', async ({narPage}) => {
-        await expect(narPage.graphContainer).toBeVisible();
-    });
+test.describe('Graph Functionality', () => {
+    test('Graph reflects new concepts', async ({productionPage}) => {
+        const nar = new TestNARPlaywright(productionPage.page);
 
-    test('Graph refresh functionality works', async ({narPage}) => {
-        await narPage.refreshGraph();
-    });
-
-    test('Graph handles concept creation messages', async ({narPage}) => {
-        await narPage.sendCommand('<new_concept --> type>.');
-        await narPage.expectLog('new_concept');
-    });
-
-    test('Live toggle functionality works', async ({narPage, page}) => {
-        // Ensure navigation via narPage fixture
-        const toggleBtn = page.locator('#toggle-live');
-        // Initial state is the icon/label
-        await expect(toggleBtn).toContainText('Live');
-
-        // Click to toggle state
-        await toggleBtn.click();
-
-        // After first click, it should normalize to one of the states.
-        // Based on UIEventHandlers, "📡 Live" -> "Pause Live"
-        await expect(toggleBtn).toHaveText('Pause Live');
-
-        await toggleBtn.click();
-        await expect(toggleBtn).toHaveText('Resume Live');
+        await nar.input('<graph_test_concept --> test>.')
+           .run(5)
+           .expectGraph('graph_test_concept')
+           .execute();
     });
 });

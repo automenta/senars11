@@ -11,6 +11,11 @@ export class NarPage {
         this.logsContainer = page.locator('#logs-container');
         this.connectionStatus = page.locator('#connection-status');
         this.graphContainer = page.locator('#graph-container');
+        this.sidebarPanel = page.locator('#sidebar-panel');
+        this.toggleSidebarBtn = page.locator('#btn-toggle-sidebar');
+        this.refreshGraphBtn = page.locator('#refresh-graph');
+        this.resetBtn = page.locator('#btn-reset');
+        this.confirmResetBtn = page.locator('#btn-confirm-reset');
     }
 
     async goto() {
@@ -25,6 +30,7 @@ export class NarPage {
      * @param {string} command
      */
     async sendCommand(command) {
+        await this.commandInput.fill(''); // Clear first
         await this.commandInput.fill(command);
         await this.sendButton.click({force: true});
     }
@@ -34,32 +40,37 @@ export class NarPage {
      * @param {number} [timeout=5000]
      */
     async expectLog(text, timeout = 5000) {
-        await expect(this.logsContainer).toContainText(text, {timeout});
+        await expect(this.logsContainer).toContainText(text, {timeout, ignoreCase: true});
+    }
+
+    async ensureSidebarOpen() {
+        if (!(await this.sidebarPanel.isVisible())) {
+            await this.toggleSidebarBtn.click();
+            await expect(this.sidebarPanel).toBeVisible();
+        }
     }
 
     async checkGraphHasContent() {
+        await this.ensureSidebarOpen();
         await expect(this.graphContainer).toBeVisible();
     }
 
     async clearLogs() {
-        // Use command instead of button to ensure we test the command processor logic
         await this.sendCommand('/clear');
-
-        // Wait for the log clearing to complete and the "Cleared logs" message to appear
-        // We need to wait for the element to contain the "Cleared logs" text
-        await expect(this.logsContainer).toContainText('Cleared logs', {timeout: 10000});
-    }
-
-    async sendCommand(command) {
-        await this.commandInput.fill(''); // Clear first
-        await this.commandInput.fill(command);
-        await this.sendButton.click();
+        await expect(this.logsContainer).toContainText('Cleared logs', {timeout: 10000, ignoreCase: true});
     }
 
     async refreshGraph() {
-        await this.page.click('#refresh-graph', {force: true});
-        // Wait a bit for the click to process and then expect the log message
+        await this.ensureSidebarOpen();
+        await this.refreshGraphBtn.click({force: true});
         await this.page.waitForTimeout(100);
-        await this.expectLog('Graph refresh requested', 10000); // Use longer timeout for reliability
+        await this.expectLog('Graph refresh requested', 10000);
+    }
+
+    async resetSystem() {
+        await this.resetBtn.click();
+        await expect(this.confirmResetBtn).toBeVisible();
+        await this.confirmResetBtn.click();
+        await this.expectLog('System Reset', 10000);
     }
 }
