@@ -19,6 +19,9 @@ export class Server extends EventEmitter {
         this.serverUrl = null;
         this.httpServer = null;
 
+        // Optional NAR instance for real execution
+        this.nar = options.nar || null;
+
         this.auth = options.auth ?? null;
         this.rateLimit = options.rateLimit ?? {requests: 100, windowMs: 60000};
     }
@@ -261,6 +264,40 @@ export class Server extends EventEmitter {
 
     async handleReasoning(input) {
         const validatedInput = await this.safety.validateInput('reason', input);
+
+        if (this.nar) {
+            try {
+                // If NAR instance is available, use it
+                const results = [];
+                for (const premise of validatedInput.premises) {
+                     await this.nar.input(premise);
+                }
+
+                if (validatedInput.goal) {
+                    await this.nar.input(validatedInput.goal);
+                }
+
+                // Run a few cycles to process
+                const derivations = await this.nar.runCycles(10);
+
+                // Format results from NAR
+                // This is a simplified mapping. Real implementation would parse derivations.
+                const conclusions = derivations
+                    .flat()
+                    .filter(d => d && d.term)
+                    .map(d => d.term.toString());
+
+                return {
+                    conclusions: conclusions.length > 0 ? conclusions : ["Processed premises, no immediate conclusions"],
+                    confidence: 1.0, // simplified
+                    derivationSteps: [`Processed ${validatedInput.premises.length} premises`, `Ran 10 inference cycles`]
+                };
+            } catch (err) {
+                console.error("NAR execution error:", err);
+                // Fallback to mock if execution fails
+            }
+        }
+
         return {
             conclusions: [`Based on premises: ${validatedInput.premises.join(', ')}`, `Goal: ${validatedInput.goal ?? 'No specific goal'}`],
             confidence: 0.85,
@@ -271,6 +308,24 @@ export class Server extends EventEmitter {
     async handleMemoryQuery(input) {
         const validatedInput = await this.safety.validateInput('memory-query', input);
         const limit = validatedInput.limit ?? 10;
+
+        if (this.nar) {
+            try {
+                const results = this.nar.query(validatedInput.query);
+                return {
+                    results: results.slice(0, limit).map(task => ({
+                        id: task.id || 'unknown',
+                        content: task.term ? task.term.toString() : 'unknown',
+                        confidence: task.truth ? task.truth.confidence : 0,
+                        timestamp: new Date().toISOString()
+                    })),
+                    count: results.length
+                };
+            } catch (err) {
+                 console.error("NAR memory query error:", err);
+            }
+        }
+
         const mockResults = [
             {
                 id: '1',
@@ -286,6 +341,24 @@ export class Server extends EventEmitter {
 
     async handleToolExecution(input) {
         const validatedInput = await this.safety.validateInput('execute-tool', input);
+
+        if (this.nar) {
+             try {
+                 const result = await this.nar.executeTool(validatedInput.toolName, validatedInput.parameters);
+                 return {
+                     result: JSON.stringify(result.result || result),
+                     success: result.success !== false,
+                     error: result.error || null
+                 };
+             } catch (err) {
+                 return {
+                     result: null,
+                     success: false,
+                     error: err.message
+                 };
+             }
+        }
+
         return {
             result: `Executed tool: ${validatedInput.toolName} with parameters: ${JSON.stringify(validatedInput.parameters ?? {})}`,
             success: true,

@@ -62,10 +62,12 @@ export class ConfigPanel extends Component {
     saveAndApply() {
         // Harvest values from DOM
         const provider = document.getElementById('config-lm-provider')?.value;
+        const apiKey = document.getElementById('config-lm-api-key')?.value;
         const model = document.getElementById('config-lm-model')?.value;
         const temp = parseFloat(document.getElementById('config-lm-temp')?.value);
 
         this.config.lm.provider = provider;
+        if (apiKey) this.config.lm.apiKey = apiKey;
         this.config.lm.model = model;
         this.config.lm.temperature = temp;
 
@@ -91,6 +93,10 @@ export class ConfigPanel extends Component {
                         <option value="ollama" ${this.config.lm.provider === 'ollama' ? 'selected' : ''}>Ollama</option>
                         <option value="dummy" ${this.config.lm.provider === 'dummy' ? 'selected' : ''}>Dummy / Disabled</option>
                     </select>
+                </div>
+                <div class="form-group">
+                    <label>API Key</label>
+                    <input type="password" id="config-lm-api-key" value="${this.config.lm.apiKey || ''}" placeholder="Enter API Key...">
                 </div>
                 <div class="form-group">
                     <label>Model</label>

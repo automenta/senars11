@@ -143,6 +143,16 @@ export class SeNARSMCPSystem {
     }
 
     /**
+     * Register discovered tools with a NAR instance
+     */
+    async registerToolsWithNAR(nar) {
+        if (!this.manager) {
+            throw new Error('SeNARS MCP System not initialized');
+        }
+        return await this.manager.registerToolsWithNAR(nar);
+    }
+
+    /**
      * Get system status
      */
     getStatus() {

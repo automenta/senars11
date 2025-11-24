@@ -66,8 +66,11 @@ export class MCPManager extends EventEmitter {
     async setupServer(port, options = {}) {
         if (!this.isInitialized) await this.initialize();
 
+        // Pass the NAR instance from options to the server
+        const narInstance = this.options.nar || options.nar;
+
         const {Server: MCPServer} = await import('./Server.js');
-        this.server = new MCPServer({port, ...options, safety: this.safety});
+        this.server = new MCPServer({port, ...options, nar: narInstance, safety: this.safety});
         await this.server.start();
         this.emit('serverStarted', {port});
         return this.server;
@@ -126,6 +129,35 @@ export class MCPManager extends EventEmitter {
             serverTools,
             allTools: [...clientTools, ...serverTools]
         };
+    }
+
+    /**
+     * Register discovered MCP tools with a NAR instance so the Agent can use them.
+     */
+    async registerToolsWithNAR(nar) {
+        if (!nar || !nar.tools || !nar.tools.registry) {
+            console.warn('Cannot register MCP tools: NAR tool registry not available');
+            return false;
+        }
+
+        const { MCPProxyTool } = await import('./MCPProxyTool.js');
+
+        // Register client tools
+        if (this.client) {
+            for (const [name, toolInfo] of this.discoveredTools) {
+                // Check if tool already exists to avoid conflict
+                if (!nar.tools.registry.getTool(name)) {
+                     const proxyTool = new MCPProxyTool(this.client, name, toolInfo);
+                     nar.tools.registry.registerTool(name, proxyTool, {
+                         category: 'mcp',
+                         description: toolInfo.description
+                     });
+                     console.log(`Registered MCP tool '${name}' with NAR`);
+                }
+            }
+        }
+
+        return true;
     }
 
     /**
