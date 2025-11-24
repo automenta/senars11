@@ -8,8 +8,8 @@ import {useCommandHistory} from '../hooks/useCommandHistory.js';
 import {useAgentLogs} from '../hooks/useAgentLogs.js';
 import {LogEntry} from './LogEntry.js';
 
-// Agent-specific TUI component
-export const AgentInkTUI = ({engine}) => {
+// TUI component
+export const TUI = ({engine, app}) => {
     const {logs, status, addLog, setLogs, updateLog} = useAgentLogs(engine);
     const [inputValue, setInputValue] = useState('');
     const [mode, setMode] = useState('agent'); // 'agent' or 'narsese'
@@ -343,7 +343,8 @@ export const AgentInkTUI = ({engine}) => {
                     color: 'white',
                     bold: true
                 }, `${status.isRunning ? '🚀 RUNNING' : '⏸️ PAUSED'} `),
-                React.createElement(Text, {color: 'white'}, `| Cycle: ${status.cycle} `)
+                React.createElement(Text, {color: 'white'}, `| Cycle: ${status.cycle} `),
+                React.createElement(Text, {color: 'cyan'}, `| Agent: ${app?.activeAgentId || engine.id || 'default'} `)
             ),
             React.createElement(
                 Box,

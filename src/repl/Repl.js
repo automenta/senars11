@@ -4,7 +4,7 @@ import React from 'react';
 import {render} from 'ink';
 import {Config} from '../app/Config.js';
 import {App} from '../app/App.js';
-import {AgentInkTUI} from './components/AgentInkTUI.js';
+import {TUI} from './components/TUI.js';
 
 class Repl {
     constructor() {
@@ -36,8 +36,8 @@ class Repl {
         // Pass exitOnCtrlC: false so we can handle it gracefully in the UI or via our own logic
         // However, Ink's default is true.
         // If the user says "not even ctrl-c" works, it means something is blocking.
-        // We will rely on AgentInkTUI to handle input.
-        this.inkInstance = render(React.createElement(AgentInkTUI, {engine: agent}));
+        // We will rely on TUI to handle input.
+        this.inkInstance = render(React.createElement(TUI, {engine: agent, app: this.app}));
 
         // Register shutdown handler for TUI specific cleanup
         // We don't need to manually handle SIGINT if Ink handles it,
