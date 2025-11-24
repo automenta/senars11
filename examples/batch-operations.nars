@@ -1,0 +1,30 @@
+// title: Batch Operations Demo
+
+*50
+
+// Create a batch of related facts
+/batch "<cat --> mammal>." "<dog --> mammal>." "<whale --> mammal>." "<mammal --> warm-blooded>."
+
+// Show results
+/concepts mammal
+
+// Perform multiple operations in sequence
+/batch "/beliefs" "/stats" "/priority 5"
+
+// Set up a complex reasoning chain
+/batch "<a --> b>." "<b --> c>." "<c --> d>." "/step 5" "<d --> e>." "<e --> f>."
+
+// Search for specific patterns
+/search all mammal
+
+// Show derivations after batch processing
+/derivations 5
+
+// Export current state
+/export json batch-demo-state.json
+
+// Profile the system after batch operations
+/profile 3000
+
+// Show final statistics
+/stats

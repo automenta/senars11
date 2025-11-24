@@ -1,0 +1,44 @@
+// title: System Monitoring Demo
+
+*50
+
+// Set up some initial beliefs
+<cat --> animal>.
+<dog --> animal>.
+<animal --> living>.
+<living --> mortal>.
+
+// Show system configuration
+/config
+
+// Monitor system performance
+/profile 2000
+
+// Create a timer to add a new belief after 1 second
+/timer 1000 "<bird --> animal>."
+
+// Show priority queue
+/priority 5
+
+// Watch for new beliefs about animals
+/watch beliefs animal
+
+// Add more beliefs to trigger the watch
+<fish --> animal>.
+<rabbit --> animal>.
+
+// Show current beliefs
+/beliefs
+
+// Show concept relationships
+/graph animal
+
+// Export to different formats
+/export csv concepts.csv
+/export json state.json
+
+// Show detailed system stats
+/stats
+
+// Run for a while to see ongoing processing
+/step 10

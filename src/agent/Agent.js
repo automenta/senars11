@@ -3,6 +3,7 @@ import {Input} from '../task/Input.js';
 import {PersistenceManager} from '../io/PersistenceManager.js';
 import {FormattingUtils} from '../repl/utils/index.js';
 import * as Commands from '../repl/commands/Commands.js';
+import * as AdditionalCommands from '../repl/commands/AdditionalCommands.js';
 import {AGENT_EVENTS} from './constants.js';
 import {InputProcessor} from './InputProcessor.js';
 import {AgentStreamer} from './AgentStreamer.js';
@@ -70,6 +71,18 @@ export class Agent extends NAR {
                     registry.register(new CmdClass());
                 } catch (e) {
                     console.warn(`Failed to register command ${CmdClass.name}: ${e.message}`);
+                }
+            }
+        });
+        // Register all command classes exported from AdditionalCommands.js
+        Object.values(AdditionalCommands).forEach(CmdClass => {
+            if (typeof CmdClass === 'function' &&
+                CmdClass.prototype instanceof Commands.AgentCommand &&
+                CmdClass !== Commands.AgentCommand) {
+                try {
+                    registry.register(new CmdClass());
+                } catch (e) {
+                    console.warn(`Failed to register additional command ${CmdClass.name}: ${e.message}`);
                 }
             }
         });

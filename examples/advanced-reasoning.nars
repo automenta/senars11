@@ -1,0 +1,44 @@
+// title: Advanced Reasoning Demo
+
+*50
+
+// Complex reasoning example with multiple concepts
+<bird --> animal>.
+<bird --> flyer>.
+<animal --> living>.
+
+// Inductive inference
+<bird --> flyer>.
+<eagle --> bird>.
+// System should derive: <eagle --> flyer>
+
+// Abductive inference
+<grass --> green>.
+<grass --> wet>.
+// The system can make connections between properties
+
+// Show current beliefs
+/beliefs
+
+// Show concept relationships
+/concepts
+
+// Step for more processing
+/step 5
+
+// Run more complex reasoning
+<robin --> bird>.
+<robin --> flyer>.
+<bird --> animal>.
+
+// Check for derived relationships
+/search concepts flyer
+
+// Show priority queue
+/priority 10
+
+// Export current state
+/export json demo-state.json
+
+// Show system stats
+/stats
