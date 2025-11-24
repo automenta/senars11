@@ -1,4 +1,5 @@
 import {UI_CONSTANTS} from '../utils/Constants.js';
+import {LogViewer} from '../components/LogViewer.js';
 
 /**
  * Logger module to handle all log message formatting and display
@@ -6,6 +7,10 @@ import {UI_CONSTANTS} from '../utils/Constants.js';
 export class Logger {
     constructor(uiElements = null) {
         this.uiElements = uiElements;
+        this.logViewer = null;
+        if (uiElements?.logsContainer) {
+            this.logViewer = new LogViewer(uiElements.logsContainer);
+        }
         this.messageCounter = 1;
         this.icons = {
             success: UI_CONSTANTS.LOG_ICONS.SUCCESS,
@@ -35,65 +40,25 @@ export class Logger {
      */
     setUIElements(uiElements) {
         this.uiElements = uiElements;
+        if (uiElements?.logsContainer) {
+            this.logViewer = new LogViewer(uiElements.logsContainer);
+        }
     }
 
     /**
      * Add a log entry to the container
      */
     addLogEntry(content, type = 'info', icon = null) {
+        if (this.logViewer) {
+            return this.logViewer.addLog(content, type, icon);
+        }
+
+        // Fallback for when LogViewer is not initialized (e.g. tests or missing container)
         const effectiveIcon = icon ?? this.icons[type] ?? this.icons[UI_CONSTANTS.LOG_TYPES.INFO];
         const timestamp = new Date().toLocaleTimeString();
 
-        // Create log entry elements with helper function
-        const logEntry = this._createLogElement('div', `log-entry type-${type}`);
-        const iconElement = this._createLogElement('span', 'log-entry-icon', effectiveIcon);
-        const contentElement = this._createLogElement('div', 'log-entry-content', content);
-        const timeElement = this._createLogElement('span', 'log-entry-time', timestamp, `time-${this.messageCounter}`);
-
-        logEntry.appendChild(iconElement);
-        logEntry.appendChild(contentElement);
-        logEntry.appendChild(timeElement);
-
-        // Add to container if available
-        const container = this.uiElements?.logsContainer;
-        if (container) {
-            const {scrollTop, scrollHeight, clientHeight} = container;
-            const isScrolledToBottom = Math.abs(scrollHeight - (scrollTop + clientHeight)) < 1;
-
-            container.appendChild(logEntry);
-
-            // Auto-scroll to bottom - only do this if user was already at the bottom to avoid jarring UX
-            if (isScrolledToBottom) {
-                this._autoScrollToBottom(container);
-            }
-        }
-
-        this.messageCounter++;
-        return logEntry;
-    }
-
-    /**
-     * Auto-scroll container to bottom
-     */
-    _autoScrollToBottom(container) {
-        if (typeof window !== 'undefined' && window.requestAnimationFrame) {
-            window.requestAnimationFrame(() => {
-                container.scrollTop = container.scrollHeight;
-            });
-        } else {
-            container.scrollTop = container.scrollHeight;
-        }
-    }
-
-    /**
-     * Helper function to create log entry elements
-     */
-    _createLogElement(tag, className, textContent, id = null) {
-        const element = document.createElement(tag);
-        element.className = className;
-        element.textContent = textContent;
-        if (id) element.id = id;
-        return element;
+        console.log(`[${timestamp}] ${effectiveIcon} ${content}`);
+        return null;
     }
 
     /**
@@ -132,17 +97,16 @@ export class Logger {
      * Clear all log entries
      */
     clearLogs() {
-        if (this.uiElements?.logsContainer) {
+        if (this.logViewer) {
+            this.logViewer.clear();
+            this.log('Cleared logs', 'info', '🧹');
+        } else if (this.uiElements?.logsContainer) {
+            // Fallback
             try {
                 this.uiElements.logsContainer.innerHTML = '';
-                // Double check clean up with while loop (robustness)
-                while (this.uiElements.logsContainer.firstChild) {
-                    this.uiElements.logsContainer.removeChild(this.uiElements.logsContainer.firstChild);
-                }
             } catch (e) {
                 console.error('[Logger] Error clearing logs:', e);
             }
-
             this.log('Cleared logs', 'info', '🧹');
         } else {
             console.error('[Logger] Cannot clear logs: logsContainer not found');

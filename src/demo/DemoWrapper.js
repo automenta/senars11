@@ -33,6 +33,13 @@ export class DemoWrapper {
         this.nar = nar;
         this.webSocketMonitor = webSocketMonitor;
 
+        // Initialize demos manager to load file-based demos
+        await this.demosManager.initialize();
+
+        // Refresh registered demos
+        this.demos.clear();
+        this.registerBuiltinDemos();
+
         // Register demo control message handler
         if (webSocketMonitor) {
             webSocketMonitor.registerClientMessageHandler('demoControl', this.handleDemoControl.bind(this));
@@ -219,10 +226,18 @@ export class DemoWrapper {
             ),
         };
 
-        const handler = demoMap[demo.id] || (typeof demo.handler === 'function' ? () => demo.handler.call(this, parameters) : null);
+        if (demoMap[demo.id]) {
+            await demoMap[demo.id]();
+            return;
+        }
 
-        if (handler) {
-            await handler();
+        if (typeof demo.handler === 'function') {
+            await demo.handler(
+                this.nar,
+                this.sendDemoStep.bind(this),
+                this.waitIfNotPaused.bind(this),
+                parameters
+            );
         }
     }
 

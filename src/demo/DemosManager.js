@@ -1,9 +1,21 @@
 /**
  * DemosManager - handles the demo content and execution logic
  */
+import { FileSystemDemoSource } from './FileSystemDemoSource.js';
+
 export class DemosManager {
     constructor() {
+        this.fsSource = new FileSystemDemoSource();
+        this.fileDemos = new Map();
         this.demoConfigs = this._getBuiltinDemoConfigs();
+    }
+
+    async initialize() {
+        const fileDemos = await this.fsSource.getDemos();
+        this.fileDemos.clear();
+        for (const demo of fileDemos) {
+            this.fileDemos.set(demo.id, demo);
+        }
     }
 
     _getBuiltinDemoConfigs() {
@@ -33,13 +45,31 @@ export class DemosManager {
     }
 
     getAvailableDemos() {
-        return this.demoConfigs.map(config => ({
+        const builtins = this.demoConfigs.map(config => ({
             id: config.id,
             name: config.name,
             description: config.description,
             stepDelay: config.stepDelay,
             handler: config.handler
         }));
+
+        const fileDemos = Array.from(this.fileDemos.values()).map(demo => ({
+            id: demo.id,
+            name: demo.name,
+            description: demo.description,
+            stepDelay: 1000, // Default delay
+            handler: this.runFileDemo.bind(this, demo.id)
+        }));
+
+        return [...builtins, ...fileDemos];
+    }
+
+    async runFileDemo(demoId, nar, sendDemoStep, waitIfNotPaused, params = {}) {
+        const demo = this.fileDemos.get(demoId);
+        if (!demo) throw new Error(`Demo ${demoId} not found`);
+
+        const steps = await this.fsSource.loadDemoSteps(demo.path);
+        await this._executeDemoSteps(nar, sendDemoStep, waitIfNotPaused, demoId, steps, params);
     }
 
     async runBasicUsageDemo(nar, sendDemoStep, waitIfNotPaused, params = {}) {

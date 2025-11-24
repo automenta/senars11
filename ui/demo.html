@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SeNARS Demo Runner</title>
+    <link href="style.css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body class="demo-runner-body">
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <aside id="sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <h2>SeNARS Demos</h2>
+                <div class="search-box">
+                    <input type="text" id="search-input" placeholder="Search demos... (Ctrl+K)">
+                    <span class="shortcut-hint">⌘K</span>
+                </div>
+            </div>
+            <div id="demo-list" class="demo-list">
+                <div class="loading-state">Loading demos...</div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="demo-info">
+                    <h2 id="demo-title">Select a Demo</h2>
+                    <p id="demo-description">Choose a demo from the sidebar to begin.</p>
+                </div>
+                <div class="header-controls">
+                    <div class="status-badge" id="connection-status">Disconnected</div>
+                    <button id="btn-config" class="icon-btn" title="Configuration">⚙️</button>
+                </div>
+            </header>
+
+            <div class="console-wrapper">
+                <div id="console-container" class="console-output"></div>
+
+                <div class="console-input-area">
+                    <div class="input-wrapper">
+                        <span class="prompt">></span>
+                        <input type="text" id="command-input" placeholder="Enter command or Narsese..." autocomplete="off">
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Config Panel Overlay -->
+        <div id="config-overlay" class="config-overlay hidden">
+            <div class="config-panel">
+                <div class="config-header">
+                    <h3>Configuration</h3>
+                    <button id="btn-close-config" class="close-btn">×</button>
+                </div>
+                <div id="config-content" class="config-content">
+                    <!-- Config items injected here -->
+                </div>
+                <div class="config-footer">
+                    <button id="btn-save-config" class="primary-btn">Apply & Restart</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Inject WebSocket configuration from server
+        window.WEBSOCKET_CONFIG = {
+            port: '{{WEBSOCKET_PORT}}',
+            host: '{{WEBSOCKET_HOST}}'
+        };
+    </script>
+    <script src="src/demo-runner/index.js" type="module"></script>
+</body>
+</html>
