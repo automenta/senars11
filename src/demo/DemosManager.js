@@ -57,7 +57,9 @@ export class DemosManager {
         this.currentRunningDemoId = demoId;
 
         try {
-            if (demo.type === 'process') {
+            if (demo.handler && typeof demo.handler === 'function') {
+                await demo.handler(nar, sendDemoStep, waitIfNotPaused, params);
+            } else if (demo.type === 'process') {
                 await this.runProcessDemo(demo, sendDemoStep);
             } else {
                 const steps = await demo.source.loadDemoSteps(demo.path);

@@ -1,6 +1,8 @@
 import {DemosManager} from './DemosManager.js';
 import {DemoStateManager} from './DemoStateManager.js';
 import {DemoValidator} from './DemoValidator.js';
+import {TransformersJSProvider} from '../lm/TransformersJSProvider.js';
+import {DummyProvider} from '../lm/DummyProvider.js';
 
 /**
  * DemoWrapper - A system that wraps demos to provide remote control and introspection
@@ -103,7 +105,8 @@ export class DemoWrapper {
                 'configure': () => this.configureDemo(demoId, parameters),
                 'list': () => this.sendDemoList(),
                 'getSource': () => this.sendDemoSource(demoId),
-                'runCustom': () => this.runCustomDemo(parameters.code, parameters.type)
+                'runCustom': () => this.runCustomDemo(parameters.code, parameters.type),
+                'testLM': () => this.testLM(parameters)
             };
 
             const handler = commandMap[command] || (() => this._handleUnknownCommand(demoId, command));
@@ -118,6 +121,11 @@ export class DemoWrapper {
     }
 
     async startDemo(demoId, parameters = {}) {
+        // Configure LM if provided in parameters
+        if (parameters.lm && this.nar) {
+             await this._configureLM(parameters.lm);
+        }
+
         const demo = this.demos.get(demoId);
         if (!demo) {
             console.error(`Demo ${demoId} not found`);
@@ -326,6 +334,79 @@ export class DemoWrapper {
             } catch (e) {
                 console.error('Error sending demo source:', e);
             }
+        }
+    }
+
+    async _configureLM(lmConfig) {
+        try {
+            const provider = await this._createProvider(lmConfig);
+            if (provider && this.nar && typeof this.nar.registerLMProvider === 'function') {
+                this.nar.registerLMProvider('default', provider);
+                console.log(`LM Provider configured: ${lmConfig.provider}`);
+            }
+        } catch (error) {
+            console.error('Failed to configure LM:', error);
+        }
+    }
+
+    async testLM(config) {
+        try {
+            console.log('Testing LM with config:', config);
+            const provider = await this._createProvider(config);
+            if (!provider) throw new Error('Failed to create provider');
+
+            const prompt = "Hello, this is a test.";
+            const output = await provider.generateText(prompt, { maxTokens: 20 });
+
+            console.log('LM Test Output:', output);
+
+            if (this.webSocketMonitor) {
+                this.webSocketMonitor._broadcastToSubscribedClients({
+                    type: 'testLMResult',
+                    payload: { success: true, output: output }
+                });
+            }
+        } catch (error) {
+            console.error('LM Test Failed:', error);
+             if (this.webSocketMonitor) {
+                this.webSocketMonitor._broadcastToSubscribedClients({
+                    type: 'testLMResult',
+                    payload: { success: false, error: error.message }
+                });
+            }
+        }
+    }
+
+    async _createProvider(config) {
+        const { provider, model, apiKey, temperature } = config;
+
+        switch (provider) {
+            case 'transformers':
+                return new TransformersJSProvider({
+                    modelName: model,
+                    device: 'cpu',
+                    temperature: temperature
+                });
+            case 'ollama':
+            case 'openai':
+            case 'anthropic':
+                try {
+                    const {LangChainProvider} = await import('../lm/LangChainProvider.js');
+                    return new LangChainProvider({
+                        provider: provider,
+                        modelName: model,
+                        apiKey: apiKey,
+                        temperature: temperature
+                    });
+                } catch (e) {
+                     console.error(`Failed to load LangChainProvider for ${provider}:`, e);
+                     throw e;
+                }
+            case 'dummy':
+                return new DummyProvider();
+            default:
+                console.warn(`Unknown provider: ${provider}, using Dummy`);
+                return new DummyProvider();
         }
     }
 
