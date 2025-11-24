@@ -60,7 +60,8 @@ const server = http.createServer((req, res) => {
             if (fullPath.endsWith('.html')) {
                 content = content
                     .replace(/\{\{WEBSOCKET_PORT}}/g, BACKEND_WS_PORT.toString())
-                    .replace(/\{\{WEBSOCKET_HOST}}/g, BACKEND_WS_HOST);
+                    // Don't replace WEBSOCKET_HOST with hardcoded values, let it be undefined to use browser's hostname
+                    .replace(/\{\{WEBSOCKET_HOST}}/g, 'undefined');
             }
 
             // Set content type based on file extension

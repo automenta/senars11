@@ -94,7 +94,7 @@
     // Inject WebSocket configuration from server
     window.WEBSOCKET_CONFIG = {
         port: '{{WEBSOCKET_PORT}}',
-        host: '{{WEBSOCKET_HOST}}'
+        host: window.location.hostname || 'localhost'
     };
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.25.0/cytoscape.min.js"></script>

@@ -143,8 +143,17 @@ export class DemoRunnerApp {
         this.wsManager.subscribe('*', (msg) => {
              this.graphPanel.update(msg);
 
+             // Handle different reasoning-related message types
              if (msg.type === 'narsese.output') {
                  this.console.log(msg.payload, 'reasoning');
+             } else if (msg.type === 'reasoning.derivation' || msg.type === 'reasoning.step') {
+                 this.console.log(`[Reasoning] ${msg.payload ? JSON.stringify(msg.payload) : 'Processing...'}`, 'reasoning');
+             } else if (msg.type === 'task.added' || msg.type.includes('task')) {
+                 this.console.log(`[Task] ${msg.payload ? JSON.stringify(msg.payload) : 'Task processed'}`, 'task');
+             } else if (msg.type.includes('question') || msg.type.includes('answer')) {
+                 this.console.log(`[Question] ${msg.payload ? JSON.stringify(msg.payload) : 'Question processed'}`, 'question');
+             } else if (msg.type.includes('concept')) {
+                 this.console.log(`[Concept] ${msg.payload ? JSON.stringify(msg.payload) : 'Concept processed'}`, 'concept');
              }
         });
 
@@ -157,22 +166,26 @@ export class DemoRunnerApp {
     }
 
     runDemo(demoId) {
-        if (this.currentDemoId) {
+        // Stop current demo if one is running
+        if (this.currentDemoId && this.currentDemoId !== demoId) {
+            this.console.log(`Stopping previous demo: ${this.currentDemoId}`, 'info');
             this.client.stopDemo(this.currentDemoId);
         }
+
         this.graphPanel.reset();
         this.currentDemoId = demoId;
         this.controls.setDemoId(demoId);
 
         const config = this.configPanel.getConfig();
 
+        // Clear console and provide clear feedback about demo transition
         this.console.clear();
         this.console.log(`Starting demo: ${demoId}...`, 'info');
 
         this.client.startDemo(demoId, config);
         this.client.getDemoSource(demoId);
 
-        // Update URL
+        // Update URL to reflect current demo
         const url = new URL(window.location);
         url.searchParams.set('demo', demoId);
         window.history.pushState({}, '', url);
