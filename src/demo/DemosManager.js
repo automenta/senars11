@@ -1,13 +1,19 @@
 /**
  * DemosManager - handles the demo content and execution logic
  */
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
 import { FileSystemDemoSource } from './FileSystemDemoSource.js';
+import { ProcessDemoRunner } from './ProcessDemoRunner.js';
 
 export class DemosManager {
     constructor() {
         this.fsSource = new FileSystemDemoSource();
+        this.processRunner = new ProcessDemoRunner();
         this.fileDemos = new Map();
         this.demoConfigs = this._getBuiltinDemoConfigs();
+        this.currentRunningDemoId = null;
     }
 
     async initialize() {
@@ -50,7 +56,8 @@ export class DemosManager {
             name: config.name,
             description: config.description,
             stepDelay: config.stepDelay,
-            handler: config.handler
+            handler: config.handler,
+            type: 'builtin'
         }));
 
         const fileDemos = Array.from(this.fileDemos.values()).map(demo => ({
@@ -58,7 +65,8 @@ export class DemosManager {
             name: demo.name,
             description: demo.description,
             stepDelay: 1000, // Default delay
-            handler: this.runFileDemo.bind(this, demo.id)
+            handler: this.runFileDemo.bind(this, demo.id),
+            type: demo.type
         }));
 
         return [...builtins, ...fileDemos];
@@ -68,8 +76,57 @@ export class DemosManager {
         const demo = this.fileDemos.get(demoId);
         if (!demo) throw new Error(`Demo ${demoId} not found`);
 
-        const steps = await this.fsSource.loadDemoSteps(demo.path);
-        await this._executeDemoSteps(nar, sendDemoStep, waitIfNotPaused, demoId, steps, params);
+        this.currentRunningDemoId = demoId;
+
+        if (demo.type === 'process') {
+            await this.runProcessDemo(demo, sendDemoStep);
+        } else {
+            const steps = await this.fsSource.loadDemoSteps(demo.path);
+            await this._executeDemoSteps(nar, sendDemoStep, waitIfNotPaused, demoId, steps, params);
+        }
+
+        this.currentRunningDemoId = null;
+    }
+
+    async runProcessDemo(demo, sendDemoStep) {
+        return new Promise((resolve, reject) => {
+            this.processRunner.start(demo.path,
+                (text, type) => {
+                    // We use step=0 to indicate continuous output
+                    // We send data.input if it's input-like? No, just description/text.
+                    // But Frontend console uses 'description' as log message.
+                    sendDemoStep(demo.id, 0, text);
+                },
+                (code) => {
+                    if (code === 0 || code === null) resolve(); // null if killed
+                    else reject(new Error(`Process exited with code ${code}`));
+                }
+            );
+        });
+    }
+
+    async runCustomDemo(code, type, sendDemoStep, waitIfNotPaused, nar) {
+        this.currentRunningDemoId = 'custom';
+
+        if (type === 'process') {
+             const tempPath = path.join(os.tmpdir(), `senars_custom_${Date.now()}.js`);
+             await fs.promises.writeFile(tempPath, code);
+             try {
+                 await this.runProcessDemo({ path: tempPath, id: 'custom' }, sendDemoStep);
+             } finally {
+                 fs.unlink(tempPath, () => {});
+             }
+        } else {
+             const steps = this.fsSource.parseSteps(code);
+             await this._executeDemoSteps(nar, sendDemoStep, waitIfNotPaused, 'custom', steps);
+        }
+
+        this.currentRunningDemoId = null;
+    }
+
+    stopCurrentDemo() {
+        this.processRunner.stop();
+        this.currentRunningDemoId = null;
     }
 
     async runBasicUsageDemo(nar, sendDemoStep, waitIfNotPaused, params = {}) {
@@ -133,5 +190,13 @@ export class DemosManager {
             // This would need to be implemented by the caller
             // await sendDemoStep(demoId, step, `Error processing input: ${error.message}`);
         }
+    }
+
+    async getDemoSource(demoId) {
+        const demo = this.fileDemos.get(demoId);
+        if (demo) {
+            return await this.fsSource.getFileContent(demo.path);
+        }
+        return '// Source not available for builtin demo';
     }
 }

@@ -30,20 +30,45 @@
                     <h2 id="demo-title">Select a Demo</h2>
                     <p id="demo-description">Choose a demo from the sidebar to begin.</p>
                 </div>
+                <div class="view-controls">
+                    <button class="tab-btn active" data-target="console-view">Console</button>
+                    <button class="tab-btn" data-target="source-view">Source</button>
+                    <button class="tab-btn" data-target="graph-view">Graph</button>
+                </div>
                 <div class="header-controls">
                     <div class="status-badge" id="connection-status">Disconnected</div>
+                    <div class="playback-controls">
+                        <button id="btn-play" class="icon-btn hidden" title="Resume">▶</button>
+                        <button id="btn-pause" class="icon-btn hidden" title="Pause">⏸</button>
+                        <button id="btn-step" class="icon-btn hidden" title="Step">⏯</button>
+                    </div>
                     <button id="btn-config" class="icon-btn" title="Configuration">⚙️</button>
                 </div>
             </header>
 
-            <div class="console-wrapper">
-                <div id="console-container" class="console-output"></div>
+            <div class="main-view">
+                <div id="console-view" class="tab-content active">
+                    <div class="console-wrapper">
+                        <div id="console-container" class="console-output"></div>
 
-                <div class="console-input-area">
-                    <div class="input-wrapper">
-                        <span class="prompt">></span>
-                        <input type="text" id="command-input" placeholder="Enter command or Narsese..." autocomplete="off">
+                        <div class="console-input-area">
+                            <div class="input-wrapper">
+                                <span class="prompt">></span>
+                                <input type="text" id="command-input" placeholder="Enter command or Narsese..." autocomplete="off">
+                            </div>
+                        </div>
                     </div>
+                </div>
+                <div id="source-view" class="tab-content hidden">
+                    <div class="editor-container">
+                        <textarea id="source-editor" class="source-editor" spellcheck="false" placeholder="Select a demo to view source..."></textarea>
+                        <div class="editor-toolbar">
+                            <button id="btn-run-custom" class="primary-btn">Run Custom</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="graph-view" class="tab-content hidden">
+                    <div id="graph-container" class="cytoscape-container"></div>
                 </div>
             </div>
         </main>
@@ -65,6 +90,7 @@
         </div>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.25.0/cytoscape.min.js"></script>
     <script>
         // Inject WebSocket configuration from server
         window.WEBSOCKET_CONFIG = {

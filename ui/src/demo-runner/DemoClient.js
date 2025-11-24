@@ -24,4 +24,11 @@ export class DemoClient {
             demoId: demoId
         });
     }
+
+    getDemoSource(demoId) {
+        this.wsManager.sendMessage('demoControl', {
+            command: 'getSource',
+            demoId: demoId
+        });
+    }
 }

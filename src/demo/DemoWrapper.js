@@ -101,7 +101,9 @@ export class DemoWrapper {
                 'resume': () => this.resumeDemo(demoId),
                 'step': () => this.stepDemo(demoId, parameters),
                 'configure': () => this.configureDemo(demoId, parameters),
-                'list': () => this.sendDemoList()
+                'list': () => this.sendDemoList(),
+                'getSource': () => this.sendDemoSource(demoId),
+                'runCustom': () => this.runCustomDemo(parameters.code, parameters.type)
             };
 
             const handler = commandMap[command] || (() => this._handleUnknownCommand(demoId, command));
@@ -242,6 +244,9 @@ export class DemoWrapper {
     }
 
     async stopDemo(demoId) {
+        // Ensure any running process is stopped
+        this.demosManager.stopCurrentDemo();
+
         this.isRunning = false;
         this.isPaused = false;
         this.currentDemoId = null;
@@ -261,18 +266,45 @@ export class DemoWrapper {
 
     async resumeDemo(demoId) {
         this.isPaused = false;
+        this.singleStep = false;
         this.demoStateManager.updateDemoState(demoId, {state: 'running'});
         await this.sendDemoState(demoId, {state: 'running'});
     }
 
     async stepDemo(demoId, parameters = {}) {
-        // For demos that support stepping
-        console.log(`Step demo ${demoId} with parameters:`, parameters);
+        if (this.isPaused) {
+            this.singleStep = true;
+            console.log(`Stepping demo ${demoId}`);
+        }
     }
 
     async configureDemo(demoId, parameters) {
         // Update demo configuration
         console.log(`Configure demo ${demoId} with parameters:`, parameters);
+    }
+
+    async runCustomDemo(code, type) {
+         await this.stopDemo();
+
+         this.isRunning = true;
+         this.currentDemoId = 'custom';
+
+         await this.sendDemoState('custom', { state: 'running' });
+
+         try {
+             await this.demosManager.runCustomDemo(code, type,
+                 this.sendDemoStep.bind(this),
+                 this.waitIfNotPaused.bind(this),
+                 this.nar
+             );
+             await this.sendDemoState('custom', { state: 'completed' });
+         } catch (error) {
+             console.error('Error running custom demo:', error);
+             await this.sendDemoState('custom', { state: 'error', error: error.message });
+         } finally {
+             this.isRunning = false;
+             this.currentDemoId = null;
+         }
     }
 
     async sendDemoState(demoId, state) {
@@ -308,6 +340,20 @@ export class DemoWrapper {
                 type: 'demoList',
                 payload: this.getAvailableDemos()
             });
+        }
+    }
+
+    async sendDemoSource(demoId) {
+        if (this.webSocketMonitor) {
+            try {
+                const source = await this.demosManager.getDemoSource(demoId);
+                this.webSocketMonitor._broadcastToSubscribedClients({
+                    type: 'demoSource',
+                    payload: { demoId, source }
+                });
+            } catch (e) {
+                console.error('Error sending demo source:', e);
+            }
         }
     }
 
@@ -380,10 +426,18 @@ export class DemoWrapper {
         const checkInterval = 100;
         let waited = 0;
 
-        while (waited < delay && this.isRunning) {
-            const waitTime = this.isPaused ? 200 : checkInterval;
-            await new Promise(resolve => setTimeout(resolve, waitTime));
-            if (!this.isPaused) waited += checkInterval;
+        while ((waited < delay || this.isPaused) && this.isRunning) {
+            if (this.isPaused) {
+                if (this.singleStep) {
+                    this.singleStep = false;
+                    return;
+                }
+                await new Promise(resolve => setTimeout(resolve, 200));
+                continue;
+            }
+
+            await new Promise(resolve => setTimeout(resolve, checkInterval));
+            waited += checkInterval;
         }
 
         // Check if we're still running after the delay

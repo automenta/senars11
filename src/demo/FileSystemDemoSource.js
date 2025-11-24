@@ -24,14 +24,21 @@ export class FileSystemDemoSource {
             const files = await fs.promises.readdir(this.basePath);
             const demos = [];
             for (const file of files) {
-                if (file.endsWith('.nars')) {
-                    const content = await fs.promises.readFile(path.join(this.basePath, file), 'utf8');
+                if (file.endsWith('.nars') || file.endsWith('.js')) {
+                    const filePath = path.join(this.basePath, file);
+                    // Skip some common non-demo files if necessary, e.g. utils
+                    if (file.includes('util') || file.includes('test')) continue;
+
+                    const content = await fs.promises.readFile(filePath, 'utf8');
                     const info = this._parseInfo(content);
+                    const type = file.endsWith('.js') ? 'process' : 'narsese';
+
                     demos.push({
-                        id: file.replace('.nars', ''),
-                        name: info.title || file.replace('.nars', ''),
-                        description: info.description || 'No description',
-                        path: path.join(this.basePath, file)
+                        id: file.replace(/\.(nars|js)$/, ''),
+                        name: info.title || file,
+                        description: info.description || (type === 'process' ? 'JavaScript Demo' : 'Narsese Script'),
+                        path: filePath,
+                        type: type
                     });
                 }
             }
@@ -44,16 +51,25 @@ export class FileSystemDemoSource {
 
     _parseInfo(content) {
         // Look for metadata comments
-        const titleMatch = content.match(/^\/\/\s*title:\s*(.*)$/m);
-        const descriptionMatch = content.match(/^\/\/\s*description:\s*(.*)$/m);
+        // Supports // title: ... and * title: ... (for JSDoc style)
+        const titleMatch = content.match(/^(?:\/\/|\*)\s*title:\s*(.*)$/m);
+        const descriptionMatch = content.match(/^(?:\/\/|\*)\s*description:\s*(.*)$/m);
         return {
             title: titleMatch ? titleMatch[1].trim() : null,
             description: descriptionMatch ? descriptionMatch[1].trim() : null
         };
     }
 
+    async getFileContent(filePath) {
+        return await fs.promises.readFile(filePath, 'utf8');
+    }
+
     async loadDemoSteps(filePath) {
         const content = await fs.promises.readFile(filePath, 'utf8');
+        return this.parseSteps(content);
+    }
+
+    parseSteps(content) {
         const lines = content.split('\n');
         const steps = [];
         let currentComment = '';

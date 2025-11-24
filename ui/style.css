@@ -672,3 +672,74 @@ select {
 .primary-btn:hover {
     background: #0062a3;
 }
+
+.hidden { display: none !important; }
+.playback-controls { display: flex; gap: 4px; margin-right: 8px; }
+
+/* Tabs and Editor */
+.view-controls {
+    display: flex;
+    gap: 10px;
+}
+
+.tab-btn {
+    background: transparent;
+    border: none;
+    color: #888;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-weight: 600;
+    border-bottom: 2px solid transparent;
+}
+
+.tab-btn.active {
+    color: #fff;
+    border-bottom-color: #007acc;
+}
+
+.main-view {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.tab-content {
+    flex: 1;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.tab-content.active {
+    display: flex;
+}
+
+.editor-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: #1e1e1e;
+}
+
+.source-editor {
+    flex: 1;
+    background: #1e1e1e;
+    color: #d4d4d4;
+    border: none;
+    padding: 1rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+    resize: none;
+}
+
+.source-editor:focus {
+    outline: none;
+}
+
+.editor-toolbar {
+    padding: 1rem;
+    border-top: 1px solid #333;
+    background: #252526;
+    text-align: right;
+}
