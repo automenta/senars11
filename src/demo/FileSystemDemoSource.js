@@ -52,8 +52,8 @@ export class FileSystemDemoSource {
     _parseInfo(content) {
         // Look for metadata comments
         // Supports // title: ... and * title: ... (for JSDoc style)
-        const titleMatch = content.match(/^(?:\/\/|\*)\s*title:\s*(.*)$/m);
-        const descriptionMatch = content.match(/^(?:\/\/|\*)\s*description:\s*(.*)$/m);
+        const titleMatch = content.match(/^\s*(?:\/\/|\*)\s*title:\s*(.*)$/m);
+        const descriptionMatch = content.match(/^\s*(?:\/\/|\*)\s*description:\s*(.*)$/m);
         return {
             title: titleMatch ? titleMatch[1].trim() : null,
             description: descriptionMatch ? descriptionMatch[1].trim() : null

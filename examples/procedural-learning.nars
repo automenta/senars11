@@ -1,0 +1,28 @@
+// title: Procedural Learning
+// description: Demonstrates learning an operation sequence to achieve a goal
+
+// Initialize
+<op --> [executed]>!
+<goal --> [achieved]>!
+
+// Goal: make the robot open the door
+<door --> [open]>!
+
+// Context: The door is currently closed
+<door --> [closed]>.
+
+// Knowledge: If the door is closed and we push it, it becomes open
+<(&/, <door --> [closed]>, ^push) =/> <door --> [open]>>.
+
+// Let the system reason
+10
+
+// The system should generate the operation ^push
+// Execute it (simulated)
+^push. :|:
+
+// Confirm the result
+<door --> [open]>. :|:
+
+// Check if the goal is satisfied (should be)
+<door --> [open]>?

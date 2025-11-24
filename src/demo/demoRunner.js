@@ -29,6 +29,9 @@ async function main() {
     const demoWrapper = new DemoWrapper();
     await demoWrapper.initialize(nar, monitor);
 
+    // Start the WebSocket monitor
+    await monitor.start();
+
     // Send list of available demos
     await demoWrapper.sendDemoList();
 

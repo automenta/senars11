@@ -42,6 +42,10 @@ export const AgentInkTUI = ({engine}) => {
     const handleRunCommand = () => handleControlCommand('start');
     const handleStepCommand = () => handleControlCommand('step');
     const handleStopCommand = () => handleControlCommand('stop');
+    const handleClearCommand = () => {
+        setLogs([]);
+        addLog('🧹 Logs cleared', 'info');
+    };
 
     const handleHelpCommand = async () => {
          const res = await messageHandler.processMessage({type: '/help'});
@@ -52,6 +56,7 @@ export const AgentInkTUI = ({engine}) => {
              const helpText = [
                  '🤖 Available commands:',
                  '  /help            - Show this help message',
+                 '  /clear           - Clear the log display',
                  '  /natural         - Switch to natural language (agent) mode',
                  '  /narsese         - Switch to Narsese mode',
                  '  /mode [agent|narsese] - Show or change input mode',
@@ -165,6 +170,9 @@ export const AgentInkTUI = ({engine}) => {
                     } else if (cmdName === 'narsese') {
                         setMode('narsese');
                         addLog(`🔄 Switched to Narsese mode`, 'success');
+                        return;
+                    } else if (cmdName === 'clear') {
+                        handleClearCommand();
                         return;
                     }
 

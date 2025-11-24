@@ -1,6 +1,6 @@
 /**
- * NAL-only Reasoning Demonstration: Inductive Reasoning
- * Demonstrates inductive reasoning patterns in NAL
+ * title: Inductive Reasoning Demo
+ * description: Demonstrates inductive reasoning patterns in NAL
  */
 
 import {NAR} from '../src/nar/NAR.js';
