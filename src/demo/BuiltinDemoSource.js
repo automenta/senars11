@@ -1,4 +1,7 @@
+import { NeurosymbolicQADemo } from './NeurosymbolicQADemo.js';
+
 const DEMOS = {
+    [NeurosymbolicQADemo.id]: NeurosymbolicQADemo,
     basicUsage: {
         name: 'Basic Usage Demo',
         description: 'Demonstrates basic NARS operations',
@@ -48,7 +51,9 @@ export class BuiltinDemoSource {
             description: config.description,
             stepDelay: config.stepDelay,
             type: 'builtin',
-            path: id // Use ID as path for consistency
+            path: id, // Use ID as path for consistency
+            handler: config.handler,
+            parameters: config.parameters
         }));
     }
 
