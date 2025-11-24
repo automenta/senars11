@@ -292,7 +292,7 @@ const startWebSocketServer = async (demoData, processes) => {
     console.log(`🔌 Starting WebSocket server on port ${DEMO_CONFIG.WEBSOCKET_PORT}...`);
 
     createProcessWithLogging(
-        ['node', ['scripts/ui/run.js'], {
+        ['node', ['scripts/ui/launcher.js', '--no-ui', '--ws-port', DEMO_CONFIG.WEBSOCKET_PORT.toString()], {
             env: {
                 ...process.env,
                 WS_PORT: DEMO_CONFIG.WEBSOCKET_PORT,

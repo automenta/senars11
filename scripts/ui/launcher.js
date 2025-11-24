@@ -27,6 +27,7 @@ Options:
   --host <host>     Specify host (default: localhost)
   --graph-ui        Launch with Graph UI layout
   --layout <name>   Specify layout (default, self-analysis, graph)
+  --no-ui           Do not start the UI server (backend only)
 
 Examples:
   node scripts/ui/launcher.js --dev
@@ -181,15 +182,21 @@ async function main() {
     try {
         const config = Config.parse(args); // Config.parse takes raw args (slice(2))
 
+        // Check for --no-ui flag
+        const startUI = !args.includes('--no-ui');
+
         webSocketServer = await startWebSocketServer(config);
 
         await setupGracefulShutdown(webSocketServer);
 
-        const uiServer = startUIServer(config);
+        if (startUI) {
+            const uiServer = startUIServer(config);
+            webSocketServer.uiServer = uiServer;
+            console.log('Both servers are running. Press Ctrl+C to stop.');
+        } else {
+            console.log('WebSocket server is running (UI disabled). Press Ctrl+C to stop.');
+        }
 
-        webSocketServer.uiServer = uiServer;
-
-        console.log('Both servers are running. Press Ctrl+C to stop.');
     } catch (error) {
         console.error('Failed to start servers:', error);
         process.exit(1);
