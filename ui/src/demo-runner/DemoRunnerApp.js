@@ -40,6 +40,9 @@ export class DemoRunnerApp {
         const btnConfig = document.getElementById('btn-config');
         if (btnConfig) btnConfig.addEventListener('click', () => this.configPanel.show());
 
+        // Listen for test-lm request
+        document.addEventListener('test-lm', (e) => this._handleTestLM(e.detail));
+
         // Setup console input handler
         this.console.onInput((input) => {
              // Send as Narsese input
@@ -181,6 +184,11 @@ export class DemoRunnerApp {
     }
 
     _handleGeneralMessage(msg) {
+        if (msg.type === 'testLMResult') {
+            this.configPanel.showTestResult(msg.payload);
+            return;
+        }
+
         if (msg.type === 'demoMetrics') {
             this._updateMetrics(msg.payload);
             return;
@@ -206,6 +214,13 @@ export class DemoRunnerApp {
         if (content) {
             content.textContent = JSON.stringify(payload, null, 2);
         }
+    }
+
+    _handleTestLM(config) {
+        this.wsManager.sendMessage('demoControl', {
+            command: 'testLM',
+            parameters: config
+        });
     }
 
     runDemo(demoId) {
