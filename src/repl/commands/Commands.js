@@ -6,7 +6,7 @@ import {handleError} from '../../util/ErrorHandler.js';
 import {fileURLToPath} from 'url';
 import {dirname, resolve, join, basename} from 'path';
 import {promises as fs} from 'fs';
-import {FormattingUtils} from '../utils/index.js';
+import {FormattingUtils} from '../../util/FormattingUtils.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const EXAMPLES_DIR = resolve(__dirname, '../../../examples');

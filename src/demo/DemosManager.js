@@ -132,10 +132,10 @@ export class DemosManager {
     async runBasicUsageDemo(nar, sendDemoStep, waitIfNotPaused, params = {}) {
         const steps = [
             {description: 'Initializing basic usage demo'},
-            {description: 'Adding belief: <cat --> animal>.', input: 'cat --> animal.'},
-            {description: 'Adding belief: <dog --> animal>.', input: 'dog --> animal.'},
-            {description: 'Asking question: <cat --> animal>?', input: 'cat --> animal?'},
-            {description: 'Adding goal: <cat --> pet>!', input: 'cat --> pet!'},
+            {description: 'Adding belief: <cat --> animal>.', input: '<cat --> animal>.'},
+            {description: 'Adding belief: <dog --> animal>.', input: '<dog --> animal>.'},
+            {description: 'Asking question: <cat --> animal>?', input: '<cat --> animal>?'},
+            {description: 'Adding goal: <cat --> pet>!', input: '<cat --> pet>!'},
             {description: 'Demo completed'}
         ];
         await this._executeDemoSteps(nar, sendDemoStep, waitIfNotPaused, 'basicUsage', steps, params);
@@ -144,10 +144,10 @@ export class DemosManager {
     async runSyllogismDemo(nar, sendDemoStep, waitIfNotPaused, params = {}) {
         const steps = [
             {description: 'Initializing syllogistic reasoning demo'},
-            {description: 'Adding premise: <bird --> animal>.', input: 'bird --> animal.'},
-            {description: 'Adding premise: <robin --> bird>.', input: 'robin --> bird.'},
+            {description: 'Adding premise: <bird --> animal>.', input: '<bird --> animal>.'},
+            {description: 'Adding premise: <robin --> bird>.', input: '<robin --> bird>.'},
             {description: 'Deriving conclusion: <robin --> animal>'},
-            {description: 'Asking: <robin --> animal>?', input: 'robin --> animal?'},
+            {description: 'Asking: <robin --> animal>?', input: '<robin --> animal>?'},
             {description: 'Syllogistic reasoning demo completed'}
         ];
         await this._executeDemoSteps(nar, sendDemoStep, waitIfNotPaused, 'syllogism', steps, params);
@@ -156,10 +156,10 @@ export class DemosManager {
     async runInductiveDemo(nar, sendDemoStep, waitIfNotPaused, params = {}) {
         const steps = [
             {description: 'Initializing inductive reasoning demo'},
-            {description: 'Adding observations: <swan1 --> white>.', input: 'swan1 --> white.'},
-            {description: 'Adding observations: <swan2 --> white>.', input: 'swan2 --> white.'},
-            {description: 'Adding observations: <swan3 --> white>.', input: 'swan3 --> white.'},
-            {description: 'Inductive inference: <swan --> white>?', input: 'swan --> white?'},
+            {description: 'Adding observations: <swan1 --> white>.', input: '<swan1 --> white>.'},
+            {description: 'Adding observations: <swan2 --> white>.', input: '<swan2 --> white>.'},
+            {description: 'Adding observations: <swan3 --> white>.', input: '<swan3 --> white>.'},
+            {description: 'Inductive inference: <swan --> white>?', input: '<swan --> white>?'},
             {description: 'Inductive reasoning demo completed'}
         ];
         await this._executeDemoSteps(nar, sendDemoStep, waitIfNotPaused, 'inductive', steps, params);
@@ -172,7 +172,7 @@ export class DemosManager {
             await sendDemoStep(demoId, index + 1, step.description);
 
             if (step.input && nar) {
-                await this._executeInputSafely(nar, demoId, index + 1, step.input);
+                await this._executeInputSafely(nar, demoId, index + 1, step.input, sendDemoStep);
             }
 
             // Don't wait after the last step
@@ -182,13 +182,14 @@ export class DemosManager {
         }
     }
 
-    async _executeInputSafely(nar, demoId, step, input) {
+    async _executeInputSafely(nar, demoId, step, input, sendDemoStep) {
         try {
             await nar.input(input);
         } catch (error) {
             console.error(`Error processing input for step ${step}:`, error);
-            // This would need to be implemented by the caller
-            // await sendDemoStep(demoId, step, `Error processing input: ${error.message}`);
+            if (sendDemoStep) {
+                await sendDemoStep(demoId, step, `Error processing input: ${error.message}`);
+            }
         }
     }
 

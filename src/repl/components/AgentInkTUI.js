@@ -2,7 +2,7 @@ import React, {useCallback, useEffect, useRef, useState, useMemo} from 'react';
 import {Box, Text, useInput, useStdin} from 'ink';
 import TextInput from 'ink-text-input';
 import {v4 as uuidv4} from 'uuid';
-import {FormattingUtils} from '../utils/index.js';
+import {FormattingUtils} from '../../util/FormattingUtils.js';
 import {handleError} from '../../../src/util/ErrorHandler.js';
 import {ReplMessageHandler} from '../ReplMessageHandler.js';
 

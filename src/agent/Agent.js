@@ -1,7 +1,7 @@
 import {NAR} from '../nar/NAR.js';
 import {Input} from '../task/Input.js';
 import {PersistenceManager} from '../io/PersistenceManager.js';
-import {FormattingUtils} from '../repl/utils/index.js';
+import {FormattingUtils} from '../util/FormattingUtils.js';
 import * as Commands from '../repl/commands/Commands.js';
 import {AGENT_EVENTS} from './constants.js';
 import {InputProcessor} from './InputProcessor.js';

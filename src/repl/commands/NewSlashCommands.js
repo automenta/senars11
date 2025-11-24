@@ -6,7 +6,7 @@ import {AgentCommand} from './Commands.js';
 import fs from 'fs';
 import path from 'path';
 import {fileURLToPath} from 'url';
-import {FormattingUtils} from '../utils/FormattingUtils.js';
+import {ReplFormattingUtils} from '../utils/ReplFormattingUtils.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -373,11 +373,11 @@ export class ConceptsCommand extends AgentCommand {
             if (args.length === 0) {
                 // List all concepts
                 if (allConcepts.length === 0) return 'No concepts in the system.';
-                return `📚 Concepts (${allConcepts.length} total):\n${FormattingUtils.formatConcepts(allConcepts)}`;
+                return `📚 Concepts (${allConcepts.length} total):\n${ReplFormattingUtils.formatConcepts(allConcepts)}`;
             } else {
                 // Show details for specific term
                 const term = args[0];
-                return `🔍 Concepts containing "${term}":\n${FormattingUtils.formatConcepts(allConcepts, term)}`;
+                return `🔍 Concepts containing "${term}":\n${ReplFormattingUtils.formatConcepts(allConcepts, term)}`;
             }
         }
         return '❌ Concept access not available.';
@@ -411,7 +411,7 @@ export class TasksCommand extends AgentCommand {
                     t.truth?.confidence?.toFixed(3) ?? '-'
                 ]);
                 const headers = ['No.', 'Type', 'Term', 'Freq', 'Conf'];
-                const table = FormattingUtils.formatTable(tableData, headers);
+                const table = ReplFormattingUtils.formatTable(tableData, headers);
 
                 return allTasks.length > 20 ?
                     `📝 Tasks (first 20):\n${table}\n  ... and ${allTasks.length - 20} more` :
@@ -439,7 +439,7 @@ export class TasksCommand extends AgentCommand {
                     t.truth?.confidence?.toFixed(3) ?? '-'
                 ]);
                 const headers = ['No.', 'Type', 'Term', 'Freq', 'Conf'];
-                const table = FormattingUtils.formatTable(tableData, headers);
+                const table = ReplFormattingUtils.formatTable(tableData, headers);
 
                 return filteredTasks.length > 20 ?
                     `📝 Filtered Tasks (first 20 with "${term}"):\n${table}\n  ... and ${filteredTasks.length - 20} more` :
@@ -463,14 +463,14 @@ export class BeliefsCommand extends AgentCommand {
 
             if (beliefs.length === 0) return 'No focus beliefs in the system.';
 
-            return `💡 Focus Beliefs:\n${FormattingUtils.formatBeliefs(beliefs)}`;
+            return `💡 Focus Beliefs:\n${ReplFormattingUtils.formatBeliefs(beliefs)}`;
         }
         // Alternative: use task manager
         else if (agent.taskManager && typeof agent.taskManager.findTasksByType === 'function') {
             const beliefs = agent.taskManager.findTasksByType('BELIEF');
             if (beliefs.length === 0) return 'No beliefs in the system.';
 
-            return `💡 Beliefs:\n${FormattingUtils.formatBeliefs(beliefs)}`;
+            return `💡 Beliefs:\n${ReplFormattingUtils.formatBeliefs(beliefs)}`;
         }
         return '❌ Belief access not available.';
     }
@@ -489,14 +489,14 @@ export class GoalsCommand extends AgentCommand {
 
             if (goals.length === 0) return 'No focus goals in the system.';
 
-            return `🎯 Focus Goals:\n${FormattingUtils.formatGoals(goals)}`;
+            return `🎯 Focus Goals:\n${ReplFormattingUtils.formatGoals(goals)}`;
         }
         // Alternative: use task manager
         else if (agent.taskManager && typeof agent.taskManager.findTasksByType === 'function') {
             const goals = agent.taskManager.findTasksByType('GOAL');
             if (goals.length === 0) return 'No goals in the system.';
 
-            return `🎯 Goals:\n${FormattingUtils.formatGoals(goals)}`;
+            return `🎯 Goals:\n${ReplFormattingUtils.formatGoals(goals)}`;
         }
         return '❌ Goal access not available.';
     }
@@ -517,7 +517,7 @@ export class QuestionsCommand extends AgentCommand {
 
             const tableData = questions.map((q, i) => [i + 1, q.term?.toString?.() ?? q.term ?? 'Unknown']);
             const headers = ['No.', 'Term'];
-            const table = FormattingUtils.formatTable(tableData, headers);
+            const table = ReplFormattingUtils.formatTable(tableData, headers);
 
             return `❓ Focus Questions:\n${table}`;
         }
@@ -528,7 +528,7 @@ export class QuestionsCommand extends AgentCommand {
 
             const tableData = questions.slice(0, 20).map((q, i) => [i + 1, q.term?.toString?.() ?? q.term ?? 'Unknown']);
             const headers = ['No.', 'Term'];
-            const table = FormattingUtils.formatTable(tableData, headers);
+            const table = ReplFormattingUtils.formatTable(tableData, headers);
 
             return questions.length > 20 ?
                 `❓ Questions (first 20):\n${table}\n  ... and ${questions.length - 20} more` :
@@ -719,6 +719,6 @@ class NarsFileRunner {
     }
 
     _renderTitleBanner(title) {
-        console.log(`\n${FormattingUtils.formatBanner(title, {bgColor: 'blue'})}\n`);
+        console.log(`\n${ReplFormattingUtils.formatBanner(title, {bgColor: 'blue'})}\n`);
     }
 }

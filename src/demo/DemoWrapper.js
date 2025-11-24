@@ -205,34 +205,6 @@ export class DemoWrapper {
     }
 
     async _executeDemoHandler(demo, parameters) {
-        // The demo handler may be from the DemosManager which needs access to nar and other methods
-        // For demo-specific handlers, we call them with the necessary context
-        const demoMap = {
-            'basicUsage': () => this.demosManager.runBasicUsageDemo(
-                this.nar,
-                this.sendDemoStep.bind(this),
-                this.waitIfNotPaused.bind(this),
-                parameters
-            ),
-            'syllogism': () => this.demosManager.runSyllogismDemo(
-                this.nar,
-                this.sendDemoStep.bind(this),
-                this.waitIfNotPaused.bind(this),
-                parameters
-            ),
-            'inductive': () => this.demosManager.runInductiveDemo(
-                this.nar,
-                this.sendDemoStep.bind(this),
-                this.waitIfNotPaused.bind(this),
-                parameters
-            ),
-        };
-
-        if (demoMap[demo.id]) {
-            await demoMap[demo.id]();
-            return;
-        }
-
         if (typeof demo.handler === 'function') {
             await demo.handler(
                 this.nar,
@@ -354,71 +326,6 @@ export class DemoWrapper {
             } catch (e) {
                 console.error('Error sending demo source:', e);
             }
-        }
-    }
-
-    // Demo implementations
-    async runBasicUsageDemo(params = {}) {
-        const steps = [
-            {description: 'Initializing basic usage demo'},
-            {description: 'Adding belief: <cat --> animal>.', input: 'cat --> animal.'},
-            {description: 'Adding belief: <dog --> animal>.', input: 'dog --> animal.'},
-            {description: 'Asking question: <cat --> animal>?', input: 'cat --> animal?'},
-            {description: 'Adding goal: <cat --> pet>!', input: 'cat --> pet!'},
-            {description: 'Demo completed'}
-        ];
-        await this._executeDemoSteps('basicUsage', steps, params);
-    }
-
-    async runSyllogismDemo(params = {}) {
-        const steps = [
-            {description: 'Initializing syllogistic reasoning demo'},
-            {description: 'Adding premise: <bird --> animal>.', input: 'bird --> animal.'},
-            {description: 'Adding premise: <robin --> bird>.', input: 'robin --> bird.'},
-            {description: 'Deriving conclusion: <robin --> animal>'},
-            {description: 'Asking: <robin --> animal>?', input: 'robin --> animal?'},
-            {description: 'Syllogistic reasoning demo completed'}
-        ];
-        await this._executeDemoSteps('syllogism', steps, params);
-    }
-
-    async runInductiveDemo(params = {}) {
-        const steps = [
-            {description: 'Initializing inductive reasoning demo'},
-            {description: 'Adding observations: <swan1 --> white>.', input: 'swan1 --> white.'},
-            {description: 'Adding observations: <swan2 --> white>.', input: 'swan2 --> white.'},
-            {description: 'Adding observations: <swan3 --> white>.', input: 'swan3 --> white.'},
-            {description: 'Inductive inference: <swan --> white>?', input: 'swan --> white?'},
-            {description: 'Inductive reasoning demo completed'}
-        ];
-        await this._executeDemoSteps('inductive', steps, params);
-    }
-
-    async _executeDemoSteps(demoId, steps, params = {}) {
-        const stepDelay = params.stepDelay || 1000;
-        this.currentStep = 0;
-
-        for (const [index, step] of steps.entries()) {
-            this.currentStep++;
-            await this.sendDemoStep(demoId, this.currentStep, step.description);
-
-            if (step.input) {
-                await this._executeInputSafely(demoId, step.input);
-            }
-
-            // Don't wait after the last step
-            if (index < steps.length - 1) {
-                await this.waitIfNotPaused(stepDelay);
-            }
-        }
-    }
-
-    async _executeInputSafely(demoId, input) {
-        try {
-            await this.nar.input(input);
-        } catch (error) {
-            console.error(`Error processing input for step ${this.currentStep}:`, error);
-            await this.sendDemoStep(demoId, this.currentStep, `Error processing input: ${error.message}`);
         }
     }
 
