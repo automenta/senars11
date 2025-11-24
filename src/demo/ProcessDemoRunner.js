@@ -1,6 +1,9 @@
 import { spawn } from 'child_process';
 import path from 'path';
 
+// Regex to strip ANSI escape codes
+const ANSI_REGEX = /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g;
+
 export class ProcessDemoRunner {
     constructor() {
         this.process = null;
@@ -28,15 +31,15 @@ export class ProcessDemoRunner {
 
         this.process.stdout.on('data', (data) => {
             const text = data.toString();
-            // Try to parse lines if needed, but raw streaming is fine for now
-            // We might want to strip ANSI codes if the UI doesn't support them,
-            // but keeping them might be good if we add an ANSI parser to the UI.
-            // For now, let's just send text.
-            onOutput(text, 'info');
+            // Strip ANSI codes for clean UI output
+            const cleanText = text.replace(ANSI_REGEX, '');
+            onOutput(cleanText, 'info');
         });
 
         this.process.stderr.on('data', (data) => {
-            onOutput(data.toString(), 'error');
+            const text = data.toString();
+            const cleanText = text.replace(ANSI_REGEX, '');
+            onOutput(cleanText, 'error');
         });
 
         this.process.on('close', (code) => {
@@ -56,7 +59,6 @@ export class ProcessDemoRunner {
     stop() {
         if (this.process) {
             // Kill the process and its children (if any)
-            // On Windows this might need 'taskkill'
             this.process.kill();
             this.process = null;
         }
