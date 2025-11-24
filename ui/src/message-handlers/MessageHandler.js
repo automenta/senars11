@@ -23,6 +23,7 @@ export class MessageHandler {
     _initializeHandlers() {
         return {
             [MESSAGE_TYPES.NARSESE_RESULT]: (msg) => this.narseseHandler.handleNarseseResult(msg),
+            [MESSAGE_TYPES.NARSESE_PROCESSED]: (msg) => this.narseseHandler.handleNarseseProcessed(msg),
             [MESSAGE_TYPES.NARSESE_ERROR]: (msg) => this.narseseHandler.handleNarseseError(msg),
             [MESSAGE_TYPES.TASK_ADDED]: (msg) => this.taskConceptHandler.handleTaskMessage(msg),
             [MESSAGE_TYPES.TASK_INPUT]: (msg) => this.taskConceptHandler.handleTaskMessage(msg),

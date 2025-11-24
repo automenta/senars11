@@ -9,15 +9,32 @@ export class NarseseMessageHandler extends BaseMessageHandler {
      */
     handleNarseseResult(msg) {
         const payload = msg.payload || {};
-        if (payload.result?.startsWith('✅')) {
-            return {content: payload.result, type: 'success', icon: '✅'};
-        } else if (payload.result?.startsWith('❌')) {
-            return {content: payload.result, type: 'error', icon: '❌'};
-        } else if (payload.success === true) {
-            return this._formatMessage(payload, 'Command processed', 'success', '✅');
+        if (typeof payload.result === 'string') {
+            if (payload.result.startsWith('✅')) {
+                return {content: payload.result, type: 'success', icon: '✅'};
+            } else if (payload.result.startsWith('❌')) {
+                return {content: payload.result, type: 'error', icon: '❌'};
+            }
+        }
+
+        if (payload.success === true) {
+            return {content: 'Command processed successfully', type: 'success', icon: '✅'};
         } else {
             return this._formatMessage(payload, 'Command processed', 'info', '✅');
         }
+    }
+
+    /**
+     * Handle narsese processed messages
+     */
+    handleNarseseProcessed(msg) {
+        const payload = msg.payload || {};
+        const input = payload.input || '';
+        return {
+            content: `IN: ${input}`,
+            type: 'info',
+            icon: '✅'
+        };
     }
 
     /**
