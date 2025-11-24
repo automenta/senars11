@@ -44,7 +44,40 @@ export class LogViewer extends Component {
         // Create log entry elements
         const logEntry = this._createLogElement('div', `log-entry type-${type}`);
         const iconElement = this._createLogElement('span', 'log-entry-icon', effectiveIcon);
-        const contentElement = this._createLogElement('div', 'log-entry-content', content);
+
+        // Handle content display (JSON vs String)
+        let contentElement;
+        if (typeof content === 'object' && content !== null) {
+            contentElement = document.createElement('div');
+            contentElement.className = 'log-entry-content';
+
+            // Check if object is large (e.g., > 10 keys or deep nesting - heuristic)
+            const jsonString = JSON.stringify(content, null, 2);
+            if (jsonString.length > 200) {
+                const details = document.createElement('details');
+                const summary = document.createElement('summary');
+                summary.textContent = `Object (${Object.keys(content).length} keys)`;
+                summary.style.cursor = 'pointer';
+                summary.style.color = '#aaa';
+
+                const pre = document.createElement('pre');
+                pre.textContent = jsonString;
+                pre.style.marginTop = '5px';
+                pre.style.fontSize = '0.9em';
+
+                details.appendChild(summary);
+                details.appendChild(pre);
+                contentElement.appendChild(details);
+            } else {
+                const pre = document.createElement('pre');
+                pre.textContent = jsonString;
+                pre.style.margin = '0';
+                contentElement.appendChild(pre);
+            }
+        } else {
+            contentElement = this._createLogElement('div', 'log-entry-content', content);
+        }
+
         const timeElement = this._createLogElement('span', 'log-entry-time', timestamp, `time-${this.messageCounter}`);
 
         logEntry.appendChild(iconElement);

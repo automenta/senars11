@@ -10,7 +10,7 @@
 </head>
 <body class="demo-runner-body">
     <div class="app-layout">
-        <!-- Sidebar -->
+        <!-- Left Sidebar (Demos) -->
         <aside id="sidebar" class="sidebar">
             <div class="sidebar-header">
                 <h2>SeNARS Demos</h2>
@@ -32,45 +32,61 @@
                     <p id="demo-description">Choose a demo from the sidebar to begin.</p>
                 </div>
                 <div class="view-controls">
-                    <button class="tab-btn active" data-target="console-view">Console</button>
-                    <button class="tab-btn" data-target="source-view">Source</button>
-                    <button class="tab-btn" data-target="graph-view">Graph</button>
+                    <button class="icon-btn" id="btn-toggle-source" title="Source Code">📝</button>
+                    <button class="icon-btn" id="btn-toggle-graph" title="Graph View">📊</button>
+                    <button class="icon-btn" id="btn-toggle-metrics" title="Metrics">📈</button>
                 </div>
                 <div class="header-controls">
                     <div class="status-badge" id="connection-status">Disconnected</div>
                     <div class="playback-controls">
-                        <button id="btn-play" class="icon-btn hidden" title="Resume">▶</button>
-                        <button id="btn-pause" class="icon-btn hidden" title="Pause">⏸</button>
-                        <button id="btn-step" class="icon-btn hidden" title="Step">⏯</button>
+                        <button id="btn-play-pause" class="icon-btn" title="Run/Pause" disabled>▶</button>
+                        <button id="btn-step" class="icon-btn" title="Step" disabled>⏯</button>
+                        <button id="btn-reset" class="icon-btn" title="Reset">🔄</button>
                     </div>
                     <button id="btn-config" class="icon-btn" title="Configuration">⚙️</button>
                 </div>
             </header>
 
             <div class="main-view">
-                <div id="console-view" class="tab-content active">
-                    <div class="console-wrapper">
-                        <div id="console-container" class="console-output"></div>
+                <!-- Console View (Main) -->
+                <div id="console-view" class="console-wrapper">
+                    <div id="console-container" class="console-output"></div>
 
-                        <div class="console-input-area">
-                            <div class="input-wrapper">
-                                <span class="prompt">></span>
-                                <input type="text" id="command-input" placeholder="Enter command or Narsese..." autocomplete="off">
+                    <div class="console-input-area">
+                        <div class="input-wrapper">
+                            <span class="prompt">></span>
+                            <input type="text" id="command-input" placeholder="Enter command or Narsese..." autocomplete="off">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Sidebar (Source/Graph) -->
+                <aside id="right-sidebar" class="right-sidebar hidden">
+                    <div class="sidebar-header">
+                         <span id="right-sidebar-title">View</span>
+                         <button class="icon-btn" id="btn-close-right-sidebar" title="Close">×</button>
+                    </div>
+
+                    <div id="source-view" class="sidebar-content hidden">
+                        <div class="editor-container">
+                            <textarea id="source-editor" class="source-editor" spellcheck="false" placeholder="Select a demo to view source..."></textarea>
+                            <div class="editor-toolbar">
+                                <button id="btn-run-custom" class="primary-btn">Run Custom</button>
                             </div>
                         </div>
                     </div>
-                </div>
-                <div id="source-view" class="tab-content hidden">
-                    <div class="editor-container">
-                        <textarea id="source-editor" class="source-editor" spellcheck="false" placeholder="Select a demo to view source..."></textarea>
-                        <div class="editor-toolbar">
-                            <button id="btn-run-custom" class="primary-btn">Run Custom</button>
+
+                    <div id="graph-view" class="sidebar-content hidden">
+                        <div id="graph-container" class="cytoscape-container"></div>
+                    </div>
+
+                    <div id="metrics-view" class="sidebar-content hidden">
+                        <div class="metrics-panel" style="padding: 1rem;">
+                            <h3>Demo Metrics</h3>
+                            <pre id="metrics-content" style="font-size: 0.85rem; overflow: auto;"></pre>
                         </div>
                     </div>
-                </div>
-                <div id="graph-view" class="tab-content hidden">
-                    <div id="graph-container" class="cytoscape-container"></div>
-                </div>
+                </aside>
             </div>
         </main>
 
@@ -86,6 +102,18 @@
                 </div>
                 <div class="config-footer">
                     <button id="btn-save-config" class="primary-btn">Apply & Restart</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Confirmation Modal -->
+        <div id="confirmation-modal" class="modal hidden">
+            <div class="modal-content">
+                <h3>Confirm Reset</h3>
+                <p>Are you sure you want to reset the current demo? This cannot be undone.</p>
+                <div class="modal-buttons">
+                    <button id="btn-confirm-reset" class="primary-btn">Yes, Reset</button>
+                    <button id="btn-cancel-reset" class="secondary-btn">Cancel</button>
                 </div>
             </div>
         </div>

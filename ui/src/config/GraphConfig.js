@@ -23,10 +23,14 @@ export const GraphConfig = {
                 style: {
                     'background-color': NODE_COLOR,
                     'label': 'data(label)',
-                    'text-valign': 'center',
-                    'text-halign': 'center',
                     'color': '#ffffff',
+                    'text-valign': 'bottom',
+                    'text-halign': 'center',
+                    'text-margin-y': 5,
                     'font-size': '12px',
+                    'text-background-color': '#000000',
+                    'text-background-opacity': 0.5,
+                    'text-background-padding': 3,
                     'width': 'mapData(weight, 0, 100, 20, 80)',
                     'height': 'mapData(weight, 0, 100, 20, 80)'
                 }

@@ -20,45 +20,32 @@ export class DemoRunnerApp {
 
         this.currentDemoId = null;
         this.connectionStatus = document.getElementById('connection-status');
+
+        // Sidebar State
+        this.rightSidebar = document.getElementById('right-sidebar');
+        this.sourceView = document.getElementById('source-view');
+        this.graphView = document.getElementById('graph-view');
+        this.metricsView = document.getElementById('metrics-view');
+        this.sidebarTitle = document.getElementById('right-sidebar-title');
     }
 
     initialize() {
         this.setupWebSocket();
+        this._setupSidebarControls();
 
         const btnConfig = document.getElementById('btn-config');
         if (btnConfig) btnConfig.addEventListener('click', () => this.configPanel.show());
 
-        const btnSend = document.getElementById('send-button');
-        if (btnSend) {
-            btnSend.addEventListener('click', () => {
-                 const input = document.getElementById('command-input');
-                 if (input && input.value.trim()) {
-                     this.console.handleInput(input.value.trim());
-                     input.value = '';
-                 }
-            });
-        }
+        const btnSend = document.getElementById('send-button'); // Only if this exists?
+        // Actually console component handles input via 'command-input' ID.
+        // But if there is a separate send button, we should hook it up.
+        // demo.html doesn't have a send button, just input. Wait, main UI has it.
+        // demo.html has <input ...> inside .input-wrapper.
 
-        // Tab switching
-        document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-
-                btn.classList.add('active');
-                const target = btn.dataset.target;
-                const el = document.getElementById(target);
-                if (el) el.classList.add('active');
-
-                if (target === 'graph-view') {
-                    setTimeout(() => {
-                        if (this.graphPanel.graphManager && this.graphPanel.graphManager.cy) {
-                            this.graphPanel.graphManager.cy.resize();
-                            this.graphPanel.graphManager.cy.fit();
-                        }
-                    }, 100);
-                }
-            });
+        // Setup console input handler
+        this.console.onInput((input) => {
+             // Send as Narsese input
+             this.wsManager.sendMessage('narseseInput', { text: input });
         });
 
         this.sidebar.onSelect((demoId, demo) => {
@@ -69,11 +56,6 @@ export class DemoRunnerApp {
             this.runDemo(demoId);
         });
 
-        this.console.onInput((input) => {
-             // Send as Narsese input
-             this.wsManager.sendMessage('narseseInput', { text: input });
-        });
-
         // Connect
         this.wsManager.connect();
 
@@ -81,11 +63,80 @@ export class DemoRunnerApp {
         this.graphPanel.initialize();
     }
 
+    _setupSidebarControls() {
+        const btnToggleSource = document.getElementById('btn-toggle-source');
+        const btnToggleGraph = document.getElementById('btn-toggle-graph');
+        const btnToggleMetrics = document.getElementById('btn-toggle-metrics');
+        const btnCloseRightSidebar = document.getElementById('btn-close-right-sidebar');
+
+        if (btnToggleSource) {
+            btnToggleSource.addEventListener('click', () => this._openRightSidebar('source'));
+        }
+
+        if (btnToggleGraph) {
+            btnToggleGraph.addEventListener('click', () => this._openRightSidebar('graph'));
+        }
+
+        if (btnToggleMetrics) {
+            btnToggleMetrics.addEventListener('click', () => this._openRightSidebar('metrics'));
+        }
+
+        if (btnCloseRightSidebar) {
+            btnCloseRightSidebar.addEventListener('click', () => this._closeRightSidebar());
+        }
+    }
+
+    _openRightSidebar(view) {
+        if (!this.rightSidebar) return;
+
+        this.rightSidebar.classList.remove('hidden');
+
+        // Enable/Disable graph updates
+        if (this.graphPanel && this.graphPanel.graphManager) {
+            this.graphPanel.graphManager.setUpdatesEnabled(view === 'graph');
+        }
+
+        if (view === 'source') {
+            this.sourceView.classList.remove('hidden');
+            this.graphView.classList.add('hidden');
+            if (this.metricsView) this.metricsView.classList.add('hidden');
+            if (this.sidebarTitle) this.sidebarTitle.textContent = 'Source Code';
+        } else if (view === 'graph') {
+            this.sourceView.classList.add('hidden');
+            this.graphView.classList.remove('hidden');
+            if (this.metricsView) this.metricsView.classList.add('hidden');
+            if (this.sidebarTitle) this.sidebarTitle.textContent = 'Graph View';
+
+            // Resize graph
+            setTimeout(() => {
+                if (this.graphPanel.graphManager && this.graphPanel.graphManager.cy) {
+                    this.graphPanel.graphManager.cy.resize();
+                    this.graphPanel.graphManager.cy.fit();
+                }
+            }, 100);
+        } else if (view === 'metrics') {
+            this.sourceView.classList.add('hidden');
+            this.graphView.classList.add('hidden');
+            if (this.metricsView) this.metricsView.classList.remove('hidden');
+            if (this.sidebarTitle) this.sidebarTitle.textContent = 'Demo Metrics';
+        }
+    }
+
+    _closeRightSidebar() {
+        if (this.rightSidebar) {
+            this.rightSidebar.classList.add('hidden');
+
+            // Disable graph updates when sidebar is closed
+            if (this.graphPanel && this.graphPanel.graphManager) {
+                this.graphPanel.graphManager.setUpdatesEnabled(false);
+            }
+        }
+    }
+
     setupWebSocket() {
         this.wsManager.subscribe('connection.status', (status) => {
             if (this.connectionStatus) {
                 this.connectionStatus.textContent = status;
-                // Simple class mapping
                 this.connectionStatus.className = `status-badge status-${status}`;
             }
             if (status === 'connected') {
@@ -97,23 +148,14 @@ export class DemoRunnerApp {
             const demos = message.payload;
             this.sidebar.setDemos(demos);
 
-            // If we have a demo selected in query param, run it
             const urlParams = new URLSearchParams(window.location.search);
             const demoId = urlParams.get('demo');
             if (demoId && !this.currentDemoId) {
-                const demo = demos.find(d => d.id === demoId);
-                if (demo) {
-                     this.sidebar.renderList(demos); // Ensure rendered
-                     // Manually trigger selection or just run
-                     const demoItem = this.sidebar.listContainer.querySelector(`.demo-item`);
-                     // Better: verify demo exists and call runDemo
-                     this.runDemo(demoId);
-                }
+                this.runDemo(demoId);
             }
         });
 
         this.wsManager.subscribe('demoStep', (message) => {
-            // {demoId, step, description, data}
             const payload = message.payload;
             this.console.log(`[Step ${payload.step}] ${payload.description}`, 'info');
             if (payload.data && payload.data.input) {
@@ -122,7 +164,6 @@ export class DemoRunnerApp {
         });
 
         this.wsManager.subscribe('demoState', (message) => {
-            // {demoId, state, ...}
             const payload = message.payload;
             this.controls.updateState(payload.state);
 
@@ -141,19 +182,34 @@ export class DemoRunnerApp {
 
         // General output handler
         this.wsManager.subscribe('*', (msg) => {
+             // Handle demoMetrics specifically
+             if (msg.type === 'demoMetrics') {
+                 this._updateMetrics(msg.payload);
+                 // Also update status bar cycle count if available
+                 if (msg.payload?.metrics?.cyclesCompleted !== undefined) {
+                      // There's no global cycle count UI element in demo.html currently, but we can verify or add one.
+                      // Looking at demo.html, there isn't a dedicated cycle counter in the header,
+                      // but main UI has one.
+                      // For now, we will leave it as is, or consider adding it.
+                 }
+                 return;
+             }
+
              this.graphPanel.update(msg);
 
-             // Handle different reasoning-related message types
+             // Use MessageHandler logic via Console if possible, or manual here.
+             // For now, keeping manual but improving handling.
+
              if (msg.type === 'narsese.output') {
                  this.console.log(msg.payload, 'reasoning');
              } else if (msg.type === 'reasoning.derivation' || msg.type === 'reasoning.step') {
-                 this.console.log(`[Reasoning] ${msg.payload ? JSON.stringify(msg.payload) : 'Processing...'}`, 'reasoning');
+                 this.console.log(msg.payload || 'Processing...', 'reasoning');
              } else if (msg.type === 'task.added' || msg.type.includes('task')) {
-                 this.console.log(`[Task] ${msg.payload ? JSON.stringify(msg.payload) : 'Task processed'}`, 'task');
+                 this.console.log(msg.payload || 'Task processed', 'task');
              } else if (msg.type.includes('question') || msg.type.includes('answer')) {
-                 this.console.log(`[Question] ${msg.payload ? JSON.stringify(msg.payload) : 'Question processed'}`, 'question');
+                 this.console.log(msg.payload || 'Question processed', 'question');
              } else if (msg.type.includes('concept')) {
-                 this.console.log(`[Concept] ${msg.payload ? JSON.stringify(msg.payload) : 'Concept processed'}`, 'concept');
+                 this.console.log(msg.payload || 'Concept processed', 'concept');
              }
         });
 
@@ -165,8 +221,14 @@ export class DemoRunnerApp {
         });
     }
 
+    _updateMetrics(payload) {
+        const content = document.getElementById('metrics-content');
+        if (content) {
+            content.textContent = JSON.stringify(payload, null, 2);
+        }
+    }
+
     runDemo(demoId) {
-        // Stop current demo if one is running
         if (this.currentDemoId && this.currentDemoId !== demoId) {
             this.console.log(`Stopping previous demo: ${this.currentDemoId}`, 'info');
             this.client.stopDemo(this.currentDemoId);
@@ -178,14 +240,12 @@ export class DemoRunnerApp {
 
         const config = this.configPanel.getConfig();
 
-        // Clear console and provide clear feedback about demo transition
         this.console.clear();
         this.console.log(`Starting demo: ${demoId}...`, 'info');
 
         this.client.startDemo(demoId, config);
         this.client.getDemoSource(demoId);
 
-        // Update URL to reflect current demo
         const url = new URL(window.location);
         url.searchParams.set('demo', demoId);
         window.history.pushState({}, '', url);

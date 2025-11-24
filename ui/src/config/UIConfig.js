@@ -24,18 +24,30 @@ export const UIConfig = {
         graphDetails: 'graph-details',
         graphContainer: 'graph-container',
         notificationContainer: 'notification-container',
-        // New Control Panel IDs
-        btnStart: 'btn-start',
-        btnStop: 'btn-stop',
+
+        // Control Panel IDs
+        btnPlayPause: 'btn-play-pause',
         btnStep: 'btn-step',
         btnReset: 'btn-reset',
         cycleCount: 'cycle-count',
         inputModeNarsese: 'mode-narsese',
         inputModeAgent: 'mode-agent',
+
+        // Sidebar & Layout
+        btnToggleSidebar: 'btn-toggle-sidebar',
+        btnCloseSidebar: 'btn-close-sidebar',
+        sidebarPanel: 'sidebar-panel',
+        mainPanel: 'main-panel',
+
         // Settings
         btnSave: 'btn-save',
         btnLoad: 'btn-load',
         lmProviderSelect: 'lm-provider-select',
-        showTasksToggle: 'show-tasks-toggle'
+        showTasksToggle: 'show-tasks-toggle',
+
+        // Modals
+        confirmationModal: 'confirmation-modal',
+        btnConfirmReset: 'btn-confirm-reset',
+        btnCancelReset: 'btn-cancel-reset'
     }
 };

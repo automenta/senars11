@@ -134,6 +134,15 @@ export class SeNARSUI {
             this.demoManager.handleDemoState(message.payload);
             return true;
         }
+        if (message.type === 'demoMetrics') {
+            // Update cycle count from metrics
+            const metrics = message.payload?.metrics;
+            if (metrics && metrics.cyclesCompleted !== undefined) {
+                this.controlPanel.updateCycleCount(metrics.cyclesCompleted);
+            }
+            // Suppress from logs (return true to stop processing)
+            return true;
+        }
         if (message.type === 'agent/result') {
             // Log agent result specifically
             const payload = message.payload;

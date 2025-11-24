@@ -16,6 +16,19 @@ export class GraphManager {
         this.layoutTimeout = null;
         this.pendingLayout = false;
         this.layoutDebounceTime = 300; // milliseconds
+        this.updatesEnabled = false; // Disabled by default (since sidebar is hidden by default)
+    }
+
+    /**
+     * Set whether graph updates are enabled
+     */
+    setUpdatesEnabled(enabled) {
+        this.updatesEnabled = enabled;
+        if (enabled && this.cy) {
+            this.cy.resize();
+            this.cy.fit();
+            this._scheduleLayout();
+        }
     }
 
     /**
@@ -90,11 +103,18 @@ export class GraphManager {
         }
 
         // Create node data object efficiently
+        let displayLabel = label || term || id;
+        if (nodeData.truth) {
+            const freq = typeof nodeData.truth.frequency === 'number' ? nodeData.truth.frequency.toFixed(2) : '0.00';
+            const conf = typeof nodeData.truth.confidence === 'number' ? nodeData.truth.confidence.toFixed(2) : '0.00';
+            displayLabel += `\n{${freq}, ${conf}}`;
+        }
+
         const newNode = {
             group: 'nodes',
             data: {
                 id: nodeId,
-                label: label || term || id,
+                label: displayLabel,
                 type: nodeTypeOverride || nodeType || 'concept',
                 weight: this._getNodeWeight(nodeData),
                 fullData: nodeData
@@ -184,7 +204,7 @@ export class GraphManager {
      * Update graph based on incoming message
      */
     updateFromMessage(message) {
-        if (!this.cy) return;
+        if (!this.cy || !this.updatesEnabled) return;
 
         const messageUpdates = {
             'concept.created': () => this._addNodeWithPayload(message.payload, false),

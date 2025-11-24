@@ -7,14 +7,16 @@
 </head>
 <body>
 <div class="app-container">
-    <div class="log-panel">
+    <!-- REPL Panel (Main View) -->
+    <div class="log-panel" id="main-panel">
         <div class="panel-header">
             <span>SeNARS Control</span>
             <div class="control-toolbar">
-                <button class="icon-btn" id="btn-start" title="Run Continuous">▶</button>
-                <button class="icon-btn" id="btn-stop" title="Stop">⏹</button>
+                <button class="icon-btn" id="btn-play-pause" title="Play/Pause">▶</button>
                 <button class="icon-btn" id="btn-step" title="Single Step">⏯</button>
                 <button class="icon-btn" id="btn-reset" title="Reset System">🔄</button>
+                <div class="divider"></div>
+                <button class="icon-btn" id="btn-toggle-sidebar" title="Toggle Graph Sidebar">📊</button>
             </div>
         </div>
 
@@ -64,7 +66,12 @@
         </div>
     </div>
 
-    <div class="graph-panel">
+    <!-- Graph Panel (Sidebar) -->
+    <div class="graph-panel hidden" id="sidebar-panel">
+        <div class="panel-header">
+            <span>Graph View</span>
+            <button class="icon-btn" id="btn-close-sidebar" title="Close Sidebar">×</button>
+        </div>
         <div class="cytoscape-container" id="graph-container"></div>
         <div class="graph-controls">
             <button id="refresh-graph" title="Refresh Graph">🔄 Graph</button>
@@ -89,6 +96,18 @@
 </div>
 
 <div class="notification-container" id="notification-container"></div>
+
+<!-- Confirmation Modal -->
+<div id="confirmation-modal" class="modal hidden">
+    <div class="modal-content">
+        <h3>Confirm Reset</h3>
+        <p>Are you sure you want to reset the system? This cannot be undone.</p>
+        <div class="modal-buttons">
+            <button id="btn-confirm-reset" class="primary-btn">Yes, Reset</button>
+            <button id="btn-cancel-reset" class="secondary-btn">Cancel</button>
+        </div>
+    </div>
+</div>
 
 <script>
     // Inject WebSocket configuration from server
