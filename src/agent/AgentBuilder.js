@@ -175,6 +175,13 @@ export class AgentBuilder {
             });
             lmProvider.name = 'ollama';
             lmProvider.tools = [];
+
+            // Adapter for LM component
+            lmProvider.generateText = async (prompt, options) => {
+                const response = await lmProvider.invoke(prompt, options);
+                return response.content || response;
+            };
+
             return lmProvider;
         }
         return null;

@@ -2,7 +2,6 @@
  * Formatting utilities for enhanced REPL output
  */
 
-// Default color codes
 const COLORS = {
     reset: '\x1b[0m',
     bright: '\x1b[1m',
@@ -11,210 +10,112 @@ const COLORS = {
     blink: '\x1b[5m',
     reverse: '\x1b[7m',
     hidden: '\x1b[8m',
-    
     fg: {
-        black: '\x1b[30m',
-        red: '\x1b[31m',
-        green: '\x1b[32m',
-        yellow: '\x1b[33m',
-        blue: '\x1b[34m',
-        magenta: '\x1b[35m',
-        cyan: '\x1b[36m',
-        white: '\x1b[37m',
-        brightBlack: '\x1b[90m',
-        brightRed: '\x1b[91m',
-        brightGreen: '\x1b[92m',
-        brightYellow: '\x1b[93m',
-        brightBlue: '\x1b[94m',
-        brightMagenta: '\x1b[95m',
-        brightCyan: '\x1b[96m',
-        brightWhite: '\x1b[97m',
+        black: '\x1b[30m', red: '\x1b[31m', green: '\x1b[32m', yellow: '\x1b[33m',
+        blue: '\x1b[34m', magenta: '\x1b[35m', cyan: '\x1b[36m', white: '\x1b[37m',
+        brightBlack: '\x1b[90m', brightRed: '\x1b[91m', brightGreen: '\x1b[92m', brightYellow: '\x1b[93m',
+        brightBlue: '\x1b[94m', brightMagenta: '\x1b[95m', brightCyan: '\x1b[96m', brightWhite: '\x1b[97m',
     },
-    
     bg: {
-        black: '\x1b[40m',
-        red: '\x1b[41m',
-        green: '\x1b[42m',
-        yellow: '\x1b[43m',
-        blue: '\x1b[44m',
-        magenta: '\x1b[45m',
-        cyan: '\x1b[46m',
-        white: '\x1b[47m',
-        brightBlack: '\x1b[100m',
-        brightRed: '\x1b[101m',
-        brightGreen: '\x1b[102m',
-        brightYellow: '\x1b[103m',
-        brightBlue: '\x1b[104m',
-        brightMagenta: '\x1b[105m',
-        brightCyan: '\x1b[106m',
-        brightWhite: '\x1b[107m',
+        black: '\x1b[40m', red: '\x1b[41m', green: '\x1b[42m', yellow: '\x1b[43m',
+        blue: '\x1b[44m', magenta: '\x1b[45m', cyan: '\x1b[46m', white: '\x1b[47m',
+        brightBlack: '\x1b[100m', brightRed: '\x1b[101m', brightGreen: '\x1b[102m', brightYellow: '\x1b[103m',
+        brightBlue: '\x1b[104m', brightMagenta: '\x1b[105m', brightCyan: '\x1b[106m', brightWhite: '\x1b[107m',
     }
 };
 
 export class ReplFormattingUtils {
     static colorize(text, color) {
         if (process.env.NODE_DISABLE_COLORS === '1') return text;
-        return `${COLORS[color] || COLORS.fg[color] || ''}${text}${COLORS.reset}`;
+        const [cat, key] = color.split('.');
+        const code = key ? COLORS[cat]?.[key] : COLORS[color] || COLORS.fg[color];
+        return `${code || ''}${text}${COLORS.reset}`;
     }
-    
+
     static formatTable(data, headers) {
-        if (!data || data.length === 0) return 'No data to display';
-        
-        // Calculate column widths
-        const columnWidths = [];
-        if (headers) {
-            for (let i = 0; i < headers.length; i++) {
-                columnWidths[i] = headers[i].length;
-            }
-        }
-        
-        // Calculate max width for each column
+        if (!data?.length) return 'No data to display';
+
+        const columnWidths = (headers || []).map(h => h.length);
         data.forEach(row => {
-            for (let i = 0; i < Math.max(headers ? headers.length : 0, row.length); i++) {
-                const cell = String(row[i] || '');
-                columnWidths[i] = Math.max(columnWidths[i] || 0, cell.length);
-            }
+            row.forEach((cell, i) => {
+                const len = String(cell || '').length;
+                columnWidths[i] = Math.max(columnWidths[i] || 6, len);
+            });
         });
-        
-        // Ensure minimum width
-        columnWidths.forEach((_, i) => {
-            columnWidths[i] = Math.max(columnWidths[i], 6); // Minimum width of 6
-        });
-        
-        // Create table
-        let table = '';
-        
+
+        const pad = (str, width) => String(str || '').padEnd(width);
+        const rows = [];
+
         if (headers) {
-            // Header row
-            const headerRow = headers.map((header, i) => 
-                header.padEnd(columnWidths[i])
-            ).join('  ');
-            table += this.colorize(headerRow, 'bright') + '\n';
-            
-            // Separator
-            const separator = columnWidths.map(width => 
-                '-'.repeat(width)
-            ).join('  ');
-            table += separator + '\n';
+            rows.push(this.colorize(headers.map((h, i) => pad(h, columnWidths[i])).join('  '), 'bright'));
+            rows.push(columnWidths.map(w => '-'.repeat(w)).join('  '));
         }
-        
-        // Data rows
+
         data.forEach(row => {
-            const dataRow = row.map((cell, i) => 
-                String(cell || '').padEnd(columnWidths[i])
-            ).join('  ');
-            table += dataRow + '\n';
+            rows.push(row.map((c, i) => pad(c, columnWidths[i])).join('  '));
         });
-        
-        return table.trim();
+
+        return rows.join('\n');
     }
-    
-    static formatBanner(text, options = {}) {
-        const width = options.width || Math.max(text.length + 4, 50);
-        const topLine = '═'.repeat(width);
-        const bottomLine = '═'.repeat(width);
+
+    static formatBanner(text, { width, bgColor } = {}) {
+        width = width || Math.max(text.length + 4, 50);
+        const line = '═'.repeat(width);
+        const padding = ' '.repeat(Math.floor((width - text.length) / 2));
+        const center = padding + text;
         
-        // Calculate padding to center text
-        const padding = Math.floor((width - text.length) / 2);
-        const centeredText = ' '.repeat(padding) + text;
-        
-        let banner = this.colorize(topLine, 'bright') + '\n';
-        if (options.bgColor) {
-            banner += this.colorize(centeredText, `bg.${options.bgColor}`) + '\n';
-        } else {
-            banner += centeredText + '\n';
-        }
-        banner += this.colorize(bottomLine, 'bright');
-        
-        return banner;
+        const middle = bgColor ? this.colorize(center, `bg.${bgColor}`) : center;
+        return `${this.colorize(line, 'bright')}\n${middle}\n${this.colorize(line, 'bright')}`;
     }
-    
+
+    static _formatList(items, limit, headers, mapper) {
+        if (!items?.length) return 'No data to display';
+        const data = items.slice(0, limit).map(mapper);
+        let result = this.formatTable(data, headers);
+        if (items.length > limit) result += `\n  ... and ${items.length - limit} more`;
+        return result;
+    }
+
     static formatBeliefs(beliefs) {
-        if (!beliefs || beliefs.length === 0) return 'No beliefs to display';
-        
-        const tableData = beliefs.slice(0, 20).map(b => {
-            const term = b.term?.toString?.() ?? b.term ?? 'Unknown';
-            const freq = b.truth?.frequency?.toFixed(3) ?? '1.000';
-            const conf = b.truth?.confidence?.toFixed(3) ?? '0.900';
-            return [term, `${freq}`, `${conf}`];
-        });
-        
-        const headers = ['Term', 'Freq', 'Conf'];
-        let result = this.formatTable(tableData, headers);
-        
-        if (beliefs.length > 20) {
-            result += `\n  ... and ${beliefs.length - 20} more`;
-        }
-        
-        return result;
+        return this._formatList(beliefs, 20, ['Term', 'Freq', 'Conf'], b => [
+            b.term?.toString?.() ?? b.term ?? 'Unknown',
+            b.truth?.frequency?.toFixed(3) ?? '1.000',
+            b.truth?.confidence?.toFixed(3) ?? '0.900'
+        ]);
     }
-    
+
     static formatGoals(goals) {
-        if (!goals || goals.length === 0) return 'No goals to display';
-        
-        const tableData = goals.slice(0, 20).map(g => {
-            const term = g.term?.toString?.() ?? g.term ?? 'Unknown';
-            const freq = g.truth?.frequency?.toFixed(3) ?? '1.000';
-            const conf = g.truth?.confidence?.toFixed(3) ?? '0.900';
-            return [term, `${freq}`, `${conf}`];
-        });
-        
-        const headers = ['Term', 'Freq', 'Conf'];
-        let result = this.formatTable(tableData, headers);
-        
-        if (goals.length > 20) {
-            result += `\n  ... and ${goals.length - 20} more`;
-        }
-        
-        return result;
+        return this._formatList(goals, 20, ['Term', 'Freq', 'Conf'], g => [
+            g.term?.toString?.() ?? g.term ?? 'Unknown',
+            g.truth?.frequency?.toFixed(3) ?? '1.000',
+            g.truth?.confidence?.toFixed(3) ?? '0.900'
+        ]);
     }
-    
+
     static formatConcepts(concepts, term = null) {
-        if (!concepts || concepts.length === 0) return 'No concepts to display';
-        
-        const filteredConcepts = term 
+        const filtered = term
             ? concepts.filter(c => c.term?.toString?.().toLowerCase().includes(term.toLowerCase()))
             : concepts;
-        
-        if (filteredConcepts.length === 0) return `No concepts found containing: ${term}`;
-        
-        const tableData = filteredConcepts.slice(0, 20).map(c => {
-            const beliefs = c.getBeliefs ? c.getBeliefs().length : 0;
-            const goals = c.getGoals ? c.getGoals().length : 0;
-            const questions = c.getQuestions ? c.getQuestions().length : 0;
             
-            return [
-                c.term?.toString?.() ?? c.term ?? 'Unknown',
-                beliefs,
-                goals,
-                questions,
-                c.activation?.toFixed(3) ?? '0.000'
-            ];
-        });
+        if (!filtered.length) return term ? `No concepts found containing: ${term}` : 'No concepts to display';
         
-        const headers = ['Term', 'Beliefs', 'Goals', 'Questions', 'Activation'];
-        let result = this.formatTable(tableData, headers);
-        
-        if (filteredConcepts.length > 20) {
-            result += `\n  ... and ${filteredConcepts.length - 20} more`;
-        }
-        
-        return result;
+        return this._formatList(filtered, 20, ['Term', 'Beliefs', 'Goals', 'Questions', 'Activation'], c => [
+            c.term?.toString?.() ?? c.term ?? 'Unknown',
+            c.getBeliefs ? c.getBeliefs().length : 0,
+            c.getGoals ? c.getGoals().length : 0,
+            c.getQuestions ? c.getQuestions().length : 0,
+            c.activation?.toFixed(3) ?? '0.000'
+        ]);
     }
-    
+
     static stylizeOutput(output, type = 'info') {
-        switch (type) {
-            case 'answer':
-            case 'event':
-                return this.colorize(output, 'fg.brightCyan');
-            case 'derivation':
-                return this.colorize(output, 'fg.green'); // Could add gradient by novelty
-            case 'error':
-                return this.colorize(output, 'fg.red');
-            case 'banner':
-                return this.colorize(output, 'bg.blue') + this.colorize(' ', 'reset') + output;
-            default:
-                return output;
-        }
+        const styles = {
+            answer: 'fg.brightCyan',
+            event: 'fg.brightCyan',
+            derivation: 'fg.green',
+            error: 'fg.red'
+        };
+        if (type === 'banner') return this.colorize(output, 'bg.blue') + this.colorize(' ', 'reset') + output;
+        return styles[type] ? this.colorize(output, styles[type]) : output;
     }
 }

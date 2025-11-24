@@ -27,11 +27,7 @@ export class DemosManager {
 
     getAvailableDemos() {
         const builtins = this.demoConfigs.map(config => ({
-            id: config.id,
-            name: config.name,
-            description: config.description,
-            stepDelay: config.stepDelay,
-            handler: config.handler,
+            ...config,
             type: 'builtin'
         }));
 
@@ -39,8 +35,9 @@ export class DemosManager {
             id: demo.id,
             name: demo.name,
             description: demo.description,
-            stepDelay: 1000, // Default delay
-            handler: this.runFileDemo.bind(this, demo.id),
+            stepDelay: 1000,
+            handler: (nar, sendDemoStep, waitIfNotPaused, params) =>
+                this.runFileDemo(demo.id, nar, sendDemoStep, waitIfNotPaused, params),
             type: demo.type
         }));
 
@@ -53,24 +50,24 @@ export class DemosManager {
 
         this.currentRunningDemoId = demoId;
 
-        if (demo.type === 'process') {
-            await this.runProcessDemo(demo, sendDemoStep);
-        } else {
-            const steps = await this.fsSource.loadDemoSteps(demo.path);
-            await this._executeDemoSteps(nar, sendDemoStep, waitIfNotPaused, demoId, steps, params);
+        try {
+            if (demo.type === 'process') {
+                await this.runProcessDemo(demo, sendDemoStep);
+            } else {
+                const steps = await this.fsSource.loadDemoSteps(demo.path);
+                await this._executeDemoSteps(nar, sendDemoStep, waitIfNotPaused, demoId, steps, params);
+            }
+        } finally {
+            this.currentRunningDemoId = null;
         }
-
-        this.currentRunningDemoId = null;
     }
 
     async runProcessDemo(demo, sendDemoStep) {
         return new Promise((resolve, reject) => {
             this.processRunner.start(demo.path,
-                (text, type) => {
-                    sendDemoStep(demo.id, 0, text);
-                },
+                (text, type) => sendDemoStep(demo.id, 0, text),
                 (code) => {
-                    if (code === 0 || code === null) resolve(); // null if killed
+                    if (code === 0 || code === null) resolve();
                     else reject(new Error(`Process exited with code ${code}`));
                 }
             );
@@ -79,21 +76,22 @@ export class DemosManager {
 
     async runCustomDemo(code, type, sendDemoStep, waitIfNotPaused, nar) {
         this.currentRunningDemoId = 'custom';
-
-        if (type === 'process') {
-             const tempPath = path.join(os.tmpdir(), `senars_custom_${Date.now()}.js`);
-             await fs.promises.writeFile(tempPath, code);
-             try {
-                 await this.runProcessDemo({ path: tempPath, id: 'custom' }, sendDemoStep);
-             } finally {
-                 fs.unlink(tempPath, () => {});
-             }
-        } else {
-             const steps = this.fsSource.parseSteps(code);
-             await this._executeDemoSteps(nar, sendDemoStep, waitIfNotPaused, 'custom', steps);
+        try {
+            if (type === 'process') {
+                const tempPath = path.join(os.tmpdir(), `senars_custom_${Date.now()}.js`);
+                await fs.promises.writeFile(tempPath, code);
+                try {
+                    await this.runProcessDemo({ path: tempPath, id: 'custom' }, sendDemoStep);
+                } finally {
+                    await fs.promises.unlink(tempPath).catch(() => {});
+                }
+            } else {
+                const steps = this.fsSource.parseSteps(code);
+                await this._executeDemoSteps(nar, sendDemoStep, waitIfNotPaused, 'custom', steps);
+            }
+        } finally {
+            this.currentRunningDemoId = null;
         }
-
-        this.currentRunningDemoId = null;
     }
 
     stopCurrentDemo() {
@@ -131,9 +129,6 @@ export class DemosManager {
 
     async getDemoSource(demoId) {
         const demo = this.fileDemos.get(demoId);
-        if (demo) {
-            return await this.fsSource.getFileContent(demo.path);
-        }
-        return '// Source not available for builtin demo';
+        return demo ? await this.fsSource.getFileContent(demo.path) : '// Source not available for builtin demo';
     }
 }

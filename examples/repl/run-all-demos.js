@@ -49,8 +49,10 @@ async function runAllDemos() {
     const demos = [
         {
             path: './example-agent-repl-ollama.js',
-            description: 'Advanced Agent REPL with Ollama Integration'
-        },
+            description: 'Advanced Agent REPL with Ollama Integration (Requires Ollama)'
+        }
+        // TODO: Migrate other demos to use App/Agent class
+        /*
         {
             path: './example-research-scenario.js',
             description: 'AI Research Scenario with Hybrid Reasoning'
@@ -59,7 +61,12 @@ async function runAllDemos() {
             path: './example-fallback-mechanism.js',
             description: 'LM Fallback Mechanism Demonstration'
         }
+        */
     ];
+
+    if (demos.length === 0) {
+        console.log('⚠️  No runnable demos found. Demos need update for new architecture.');
+    }
 
     for (const demo of demos) {
         try {
@@ -70,20 +77,7 @@ async function runAllDemos() {
     }
 
     console.log('🏆 ALL DEMONSTRATIONS COMPLETED!');
-    console.log('\n📝 Summary of Demonstrations:');
-    console.log('   • Hybrid Intelligence (LM + NARS integration)');
-    console.log('   • Agent Creation & Management');
-    console.log('   • Goal Setting & Planning');
-    console.log('   • Complex Reasoning Chains');
-    console.log('   • Input Routing & Fallback Mechanisms');
-    console.log('   • Multi-step Problem Solving');
-    console.log('   • Real-time NARS-LM Interaction');
-
-    console.log('\n💡 To run individual demos, use:');
-    console.log('   node example-agent-repl-ollama.js');
-    console.log('   node example-research-scenario.js');
-    console.log('   node example-fallback-mechanism.js');
-    console.log('\n   Or run with Ollama: npm run repl:agent:ollama');
+    console.log('\n📝 Note: Some demos require Ollama to be running locally.');
 }
 
 // Run all demos
