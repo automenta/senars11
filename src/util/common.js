@@ -1,14 +1,11 @@
-export const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
-export const normalize = (value, max) => Math.min(value / max, 1);
-export const isBetween = (value, min, max) => value >= min && value <= max;
+/**
+ * Common utility functions.
+ * Consolidates functionality from various utility files.
+ */
 
-export const safeExecute = (fn, ...args) => {
-    try {
-        return fn(...args);
-    } catch {
-        return null;
-    }
-};
+export const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+
+export const normalize = (value, max) => Math.min(value / max, 1);
 
 export const freeze = Object.freeze;
 
@@ -24,39 +21,52 @@ export const deepFreeze = (obj) => {
     return freeze(obj);
 };
 
-export const clampAndFreeze = (obj, min = 0, max = 1) =>
-    typeof obj === 'number'
-        ? freeze(clamp(obj, min, max))
-        : freeze(Object.fromEntries(
-            Object.entries(obj).map(([key, value]) => [
-                key,
-                typeof value === 'number' ? clamp(value, min, max) : value
-            ])
-        ));
-
-export const mergeConfig = (base, ...overrides) => freeze({...base, ...Object.assign({}, ...overrides)});
-
 export const isNumber = value => typeof value === 'number' && !isNaN(value);
+
 export const round = (value, decimals = 2) => Number(Math.round(value + 'e' + decimals) + 'e-' + decimals);
 
 export const capitalize = str => str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
+
 export const kebabCase = str => str?.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase() ?? '';
 
 export const unique = arr => [...new Set(arr)];
-export const isEmpty = arr => !arr?.length;
 
-export const safeGet = (obj, path, defaultValue = undefined) => {
-    if (!obj || typeof obj !== 'object') return defaultValue;
+export const isEmpty = obj =>
+    obj == null ||
+    (typeof obj === 'object' && Object.keys(obj).length === 0) ||
+    (Array.isArray(obj) && obj.length === 0);
 
-    const keys = path?.split('.') ?? [];
+export const getNestedProperty = (obj, path, defaultValue = undefined) => {
+    if (!obj || typeof path !== 'string') return defaultValue;
+
+    const keys = path.split('.');
     let current = obj;
 
     for (const key of keys) {
-        if (current == null || typeof current !== 'object') return defaultValue;
+        if (current == null) return defaultValue;
         current = current[key];
     }
 
-    return current ?? defaultValue;
+    return current === undefined ? defaultValue : current;
+};
+
+// Alias for backward compatibility (renamed from safeGet)
+export const safeGet = getNestedProperty;
+
+export const setNestedProperty = (obj, path, value) => {
+    if (!obj || typeof path !== 'string') return;
+
+    const keys = path.split('.');
+    let current = obj;
+
+    for (let i = 0; i < keys.length - 1; i++) {
+        if (current[keys[i]] == null) {
+            current[keys[i]] = {};
+        }
+        current = current[keys[i]];
+    }
+
+    current[keys[keys.length - 1]] = value;
 };
 
 export const deepClone = (obj) => {
@@ -87,4 +97,68 @@ export const safeAsync = async (asyncFn, defaultValue = null) => {
         console.error('Error in safeAsync:', error?.message || error);
         return defaultValue;
     }
+};
+
+export const safeExecute = (fn, defaultValue = null, ...args) => {
+    try {
+        return typeof fn === 'function' ? fn(...args) : defaultValue;
+    } catch (error) {
+        console.error('Error in safeExecute:', error?.message || error);
+        return defaultValue;
+    }
+};
+
+export const sortByProperty = (items, prop, desc = false) => {
+    if (!Array.isArray(items) || items.length === 0) return [];
+    return [...items].sort((a, b) => {
+        const aVal = a[prop] ?? 0;
+        const bVal = b[prop] ?? 0;
+        return desc ? bVal - aVal : aVal - bVal;
+    });
+};
+
+export const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+export const timeout = (ms, message = 'Operation timed out') =>
+    new Promise((_, reject) => setTimeout(() => reject(new Error(message)), ms));
+
+export const withTimeout = (promise, ms, message) => Promise.race([promise, timeout(ms, message)]);
+
+export const generateId = (prefix = 'id') => `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+export const formatTimestamp = (timestamp = Date.now()) => new Date(timestamp).toISOString();
+
+export async function* asyncIteratorWithDelay(items, delay = 0) {
+    for (const item of items) {
+        if (delay > 0) await new Promise(resolve => setTimeout(resolve, delay));
+        yield item;
+    }
+}
+
+const isObject = (item) => (item && typeof item === 'object' && !Array.isArray(item));
+
+const deepMergeOne = (target, source) => {
+    if (!isObject(target) || !isObject(source)) {
+        return source === undefined ? target : source;
+    }
+
+    const output = {...target};
+    for (const key of Object.keys(source)) {
+        if (isObject(source[key]) && key in target) {
+            output[key] = deepMergeOne(target[key], source[key]);
+        } else {
+            output[key] = source[key];
+        }
+    }
+    return output;
+};
+
+export const mergeConfig = (defaults, ...overrides) => {
+    let result = deepClone(defaults);
+    for (const override of overrides) {
+         if (override) {
+             result = deepMergeOne(result, override);
+         }
+    }
+    return result;
 };

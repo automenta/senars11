@@ -18,6 +18,7 @@ import {EmbeddingLayer} from '../lm/EmbeddingLayer.js';
 import {TermLayer} from '../memory/TermLayer.js';
 import {ReasoningAboutReasoning} from '../self/ReasoningAboutReasoning.js';
 import {ReasonerBuilder} from '../reason/index.js';
+import {getNestedProperty} from '../util/common.js';
 
 export class NAR extends BaseComponent {
     constructor(config = {}) {
@@ -26,65 +27,25 @@ export class NAR extends BaseComponent {
         this._debugMode = this.config.debug?.pipeline || false;
     }
 
-    get config() {
-        return this._configManager.toJSON();
-    }
+    // --- Getters ---
 
-    get memory() {
-        return this._memory;
-    }
+    get config() { return this._configManager.toJSON(); }
+    get memory() { return this._memory; }
+    get isRunning() { return this._isRunning; }
+    get cycleCount() { return this._streamReasoner?.metrics?.totalDerivations || 0; }
+    get lm() { return this._lm; }
+    get tools() { return this._toolIntegration; }
+    get explanationService() { return this._explanationService; }
+    get componentManager() { return this._componentManager; }
+    get metricsMonitor() { return this._metricsMonitor; }
+    get evaluator() { return this._evaluator; }
+    get ruleEngine() { return this._ruleEngine; }
+    get embeddingLayer() { return this._embeddingLayer; }
+    get termLayer() { return this._termLayer; }
+    get reasoningAboutReasoning() { return this._reasoningAboutReasoning; }
+    get streamReasoner() { return this._streamReasoner; }
 
-    get isRunning() {
-        return this._isRunning;
-    }
-
-    get cycleCount() {
-        return this._streamReasoner?.metrics?.totalDerivations || 0;
-    }
-
-    get lm() {
-        return this._lm;
-    }
-
-    get tools() {
-        return this._toolIntegration;
-    }
-
-    get explanationService() {
-        return this._explanationService;
-    }
-
-    get componentManager() {
-        return this._componentManager;
-    }
-
-    get metricsMonitor() {
-        return this._metricsMonitor;
-    }
-
-    get evaluator() {
-        return this._evaluator;
-    }
-
-    get ruleEngine() {
-        return this._ruleEngine;
-    }
-
-    get embeddingLayer() {
-        return this._embeddingLayer;
-    }
-
-    get termLayer() {
-        return this._termLayer;
-    }
-
-    get reasoningAboutReasoning() {
-        return this._reasoningAboutReasoning;
-    }
-
-    get streamReasoner() {
-        return this._streamReasoner;
-    }
+    // --- Initialization ---
 
     _initializeCoreComponents(config) {
         this._configManager = new ConfigManager(config);
@@ -168,7 +129,6 @@ export class NAR extends BaseComponent {
         this._componentManager.registerComponent('focus', this._focus, ['memory']);
         this._componentManager.registerComponent('taskManager', this._taskManager, ['memory', 'focus']);
 
-        // Only register ruleEngine if it exists (for backward compatibility)
         if (this._ruleEngine) {
             this._componentManager.registerComponent('ruleEngine', this._ruleEngine);
         }
@@ -187,7 +147,6 @@ export class NAR extends BaseComponent {
 
     async _setupDefaultRules() {
         try {
-            // Register rules with stream reasoner (the primary reasoner)
             await this._registerRulesWithStreamReasoner();
         } catch (error) {
             this.logWarn('Error setting up default rules:', error);
@@ -198,6 +157,8 @@ export class NAR extends BaseComponent {
         if (!this._streamReasoner) return;
         await ReasonerBuilder.registerDefaultRules(this._streamReasoner, this.config);
     }
+
+    // --- Input & Task Processing ---
 
     async input(narseseString, options = {}) {
         try {
@@ -216,7 +177,6 @@ export class NAR extends BaseComponent {
     }
 
     async _processNewTask(task, source, originalInput, parsed, options = {}) {
-        // Check if a semantically equivalent task already exists in memory
         if (this._isTaskDuplicate(task)) {
             return false;
         }
@@ -238,11 +198,8 @@ export class NAR extends BaseComponent {
             parsed
         }, {traceId: options.traceId});
 
-        if (this._focus) {
-            const addedToFocus = this._focus.addTaskToFocus(task);
-            if (addedToFocus) {
-                this._eventBus.emit('task.focus', task, {traceId: options.traceId});
-            }
+        if (this._focus?.addTaskToFocus(task)) {
+            this._eventBus.emit('task.focus', task, {traceId: options.traceId});
         }
 
         await this._processPendingTasks(options.traceId);
@@ -272,11 +229,16 @@ export class NAR extends BaseComponent {
         return truthValue ? new Truth(truthValue.frequency, truthValue.confidence) : new Truth(1.0, 0.9);
     }
 
-    _getTaskTypeFromPunctuation = punctuation => ({
-        '.': 'BELIEF',
-        '!': 'GOAL',
-        '?': 'QUESTION'
-    })[punctuation] || 'BELIEF';
+    _getTaskTypeFromPunctuation(punctuation) {
+        switch (punctuation) {
+            case '.': return 'BELIEF';
+            case '!': return 'GOAL';
+            case '?': return 'QUESTION';
+            default: return 'BELIEF';
+        }
+    }
+
+    // --- Lifecycle Control ---
 
     start(options = {}) {
         if (this._isRunning) {
@@ -288,10 +250,7 @@ export class NAR extends BaseComponent {
         this._isRunning = true;
         this._processPendingTasks(options.traceId);
 
-        // Start the stream-based reasoner
         this._streamReasoner.start();
-
-        // Set up monitoring process for stream reasoner metrics
         this._setupStreamMonitoring(options);
 
         this._eventBus.emit('system.started', {timestamp: Date.now()}, {traceId: options.traceId});
@@ -301,13 +260,12 @@ export class NAR extends BaseComponent {
     }
 
     _setupStreamMonitoring(options) {
-        // Optionally, set up a monitoring process for stream reasoner metrics
         this._streamMonitoringInterval = setInterval(() => {
             if (this._streamReasoner) {
                 const metrics = this._streamReasoner.getMetrics();
                 this._eventBus.emit('streamReasoner.metrics', metrics, {traceId: options.traceId});
             }
-        }, 5000); // Report metrics every 5 seconds
+        }, 5000);
     }
 
     async _startComponentsAsync() {
@@ -328,16 +286,9 @@ export class NAR extends BaseComponent {
         }
 
         this._isRunning = false;
-
-        // Stop the stream-based reasoner
         this._stopStreamReasoner();
-
-        // Clean up monitoring intervals
         this._cleanupMonitoring();
-
-        // Ensure metrics monitor is stopped
         this._shutdownOptionalComponents();
-
         this._stopComponentsAsync();
 
         this._eventBus.emit('system.stopped', {timestamp: Date.now()}, {traceId: options.traceId});
@@ -353,19 +304,16 @@ export class NAR extends BaseComponent {
     }
 
     _cleanupMonitoring() {
-        // Clear stream monitoring interval
-        this._streamMonitoringInterval && clearInterval(this._streamMonitoringInterval) && (this._streamMonitoringInterval = null);
-        // Ensure reasoning state interval is cleared
+        if (this._streamMonitoringInterval) {
+             clearInterval(this._streamMonitoringInterval);
+             this._streamMonitoringInterval = null;
+        }
         this.disconnectFromWebSocketMonitor();
     }
 
     _shutdownOptionalComponents() {
-        if (this._metricsMonitor?.shutdown) {
-            this._metricsMonitor.shutdown();
-        }
-        if (this._reasoningAboutReasoning?.shutdown) {
-            this._reasoningAboutReasoning.shutdown();
-        }
+        this._metricsMonitor?.shutdown?.();
+        this._reasoningAboutReasoning?.shutdown?.();
     }
 
     async _stopComponentsAsync() {
@@ -384,8 +332,6 @@ export class NAR extends BaseComponent {
             await this._processPendingTasks(options.traceId);
 
             const results = await this._streamReasoner.step();
-
-            // Process all derivations through the same Input/Memory/Focus/Event process
             await this._processDerivations(results, options);
 
             this._eventBus.emit('streamReasoner.step', {
@@ -403,7 +349,7 @@ export class NAR extends BaseComponent {
     async _processDerivations(results, options) {
         for (const result of results) {
             if (result) {
-                const added = await this._inputTask(result, {traceId: options.traceId});
+                await this._inputTask(result, {traceId: options.traceId});
 
                 this._eventBus.emit('reasoning.derivation', {
                     derivedTask: result,
@@ -427,37 +373,27 @@ export class NAR extends BaseComponent {
     }
 
     async dispose() {
-        // Stop reasoner if it's running
         if (this._isRunning) {
             this.stop();
         }
 
-        // Clean up stream reasoner if it exists
-        if (this._streamReasoner) {
-            await this._streamReasoner.cleanup();
-        }
-
-        // Ensure metrics monitor is stopped
-        if (this._metricsMonitor && typeof this._metricsMonitor.shutdown === 'function') {
-            this._metricsMonitor.shutdown();
-        }
-
-        // Ensure reasoning about reasoning is stopped
-        if (this._reasoningAboutReasoning && typeof this._reasoningAboutReasoning.shutdown === 'function') {
-            this._reasoningAboutReasoning.shutdown();
-        }
+        await this._streamReasoner?.cleanup();
+        this._metricsMonitor?.shutdown?.();
+        this._reasoningAboutReasoning?.shutdown?.();
 
         const success = await this._componentManager.disposeAll();
         await super.dispose();
         return success;
     }
 
+    // --- Serialization & State ---
+
     serialize() {
         return {
             config: this.config,
-            memory: this._memory.serialize ? this._memory.serialize() : null,
-            taskManager: this._taskManager.serialize ? this._taskManager.serialize() : null,
-            focus: this._focus.serialize ? this._focus.serialize() : null,
+            memory: this._memory?.serialize?.() ?? null,
+            taskManager: this._taskManager?.serialize?.() ?? null,
+            focus: this._focus?.serialize?.() ?? null,
             cycleCount: this.cycleCount,
             isRunning: this._isRunning,
             timestamp: Date.now(),
@@ -466,35 +402,29 @@ export class NAR extends BaseComponent {
     }
 
     getConcepts() {
-        if (this._memory) {
-            return this._memory.getAllConcepts();
-        }
-        return [];
+        return this._memory?.getAllConcepts() ?? [];
     }
 
     getConceptByName(termString) {
-        if (this._memory) {
-            for (const concept of this._memory.getAllConcepts()) {
-                if (concept.term.toString() === termString) {
-                    return concept;
-                }
+        if (!this._memory) return null;
+        for (const concept of this._memory.getAllConcepts()) {
+            if (concept.term.toString() === termString) {
+                return concept;
             }
         }
         return null;
     }
 
     getConceptPriorities() {
-        if (this._memory) {
-            return this._memory.getAllConcepts().map(concept => ({
-                term: concept.term.toString(),
-                priority: concept.priority || concept.activation || 0,
-                activation: concept.activation || 0,
-                useCount: concept.useCount || 0,
-                quality: concept.quality || 0,
-                totalTasks: concept.totalTasks || 0
-            }));
-        }
-        return [];
+        if (!this._memory) return [];
+        return this._memory.getAllConcepts().map(concept => ({
+            term: concept.term.toString(),
+            priority: concept.priority || concept.activation || 0,
+            activation: concept.activation || 0,
+            useCount: concept.useCount || 0,
+            quality: concept.quality || 0,
+            totalTasks: concept.totalTasks || 0
+        }));
     }
 
     async deserialize(state) {
@@ -540,6 +470,8 @@ export class NAR extends BaseComponent {
             return false;
         }
     }
+
+    // --- Querying ---
 
     query(queryTerm) {
         return this._memory.getConcept(queryTerm)?.getTasksByType('BELIEF') || [];
@@ -589,6 +521,8 @@ export class NAR extends BaseComponent {
         return baseStats;
     }
 
+    // --- Helpers ---
+
     _withComponentCheck(component, message, operation) {
         if (!component) throw new Error(message);
         return operation(component);
@@ -598,13 +532,7 @@ export class NAR extends BaseComponent {
         if (!this._lm) throw new Error('Language Model is not enabled in this NAR instance');
     }
 
-    _ensureToolIntegration() {
-        if (!this._toolIntegration) throw new Error('Tool integration is not enabled');
-    }
-
-    _ensureExplanationService() {
-        if (!this._explanationService) throw new Error('Explanation service is not enabled');
-    }
+    // --- LM Operations ---
 
     registerLMProvider(id, provider) {
         this._ensureLMEnabled();
@@ -710,7 +638,6 @@ export class NAR extends BaseComponent {
             termFactory: this._termFactory
         };
 
-        // Use the evaluator that's available
         if (this._evaluator) {
             return await this._evaluator.solveEquation(
                 leftTerm,
@@ -743,17 +670,21 @@ export class NAR extends BaseComponent {
         return this._reasoningAboutReasoning?.getReasoningTrace() ?? [];
     }
 
+    // --- Tools ---
+
     async executeTool(toolId, params, context = {}) {
         const startTime = Date.now();
         try {
             const result = await this._withComponentCheck(this._toolIntegration, 'Tool integration is not enabled',
                 toolIntegration => toolIntegration.executeTool(toolId, params, this._createToolContext(context)));
             const duration = Date.now() - startTime;
-            duration > 1000 && this.logger.warn(`Slow tool execution: ${toolId} took ${duration}ms`, {
-                toolId,
-                duration,
-                paramsSize: JSON.stringify(params).length
-            });
+            if (duration > 1000) {
+                 this.logger.warn(`Slow tool execution: ${toolId} took ${duration}ms`, {
+                    toolId,
+                    duration,
+                    paramsSize: JSON.stringify(params).length
+                });
+            }
             return result;
         } catch (error) {
             this.logger.error(`Tool execution failed: ${toolId}`, {
@@ -801,22 +732,14 @@ export class NAR extends BaseComponent {
         ...context
     });
 
-    // Check if a semantically equivalent task already exists in memory
     _isTaskDuplicate(task) {
         const existingConcept = this._memory.getConcept(task.term);
         if (existingConcept) {
-            const storage = existingConcept._getStorage(task.type);
-            for (const [existingTask] of storage._items) {
-                if (task.equals(existingTask)) {
-                    return true;
-                }
-            }
+             return !!existingConcept.findTask(task.type, existingTask => task.equals(existingTask));
         }
         return false;
     }
 
-    // Internal method to input an already-constructed Task object following the same
-    // Input/Memory/Focus/Event process as the main input method
     async _inputTask(task, options = {}) {
         try {
             return await this._processNewTask(task, 'derived', null, null, options);
@@ -828,6 +751,4 @@ export class NAR extends BaseComponent {
             throw error;
         }
     }
-
-
 }

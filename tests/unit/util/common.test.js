@@ -1,8 +1,15 @@
 import {jest} from '@jest/globals';
-import {deepClone, formatNumber, safeAsync, safeGet} from '../../../src/util/common.js';
+import {
+    deepClone,
+    formatNumber,
+    safeAsync,
+    getNestedProperty,
+    sortByProperty,
+    mergeConfig
+} from '../../../src/util/common.js';
 
 describe('Common Utils', () => {
-    describe('safeGet', () => {
+    describe('getNestedProperty', () => {
         const obj = {
             a: {
                 b: {
@@ -12,15 +19,15 @@ describe('Common Utils', () => {
         };
 
         test('gets existing nested value', () => {
-            expect(safeGet(obj, 'a.b.c')).toBe(1);
+            expect(getNestedProperty(obj, 'a.b.c')).toBe(1);
         });
 
         test('returns default for non-existent path', () => {
-            expect(safeGet(obj, 'a.b.d', 'default')).toBe('default');
+            expect(getNestedProperty(obj, 'a.b.d', 'default')).toBe('default');
         });
 
         test('returns default for null parent', () => {
-            expect(safeGet(null, 'a.b', 'default')).toBe('default');
+            expect(getNestedProperty(null, 'a.b', 'default')).toBe('default');
         });
     });
 
@@ -74,6 +81,57 @@ describe('Common Utils', () => {
             }, 'default');
             expect(result).toBe('default');
             consoleSpy.mockRestore();
+        });
+    });
+
+    describe('sortByProperty', () => {
+        const items = [
+            { id: 1, val: 10 },
+            { id: 2, val: 5 },
+            { id: 3, val: 20 }
+        ];
+
+        test('sorts ascending', () => {
+            const sorted = sortByProperty(items, 'val');
+            expect(sorted[0].id).toBe(2);
+            expect(sorted[1].id).toBe(1);
+            expect(sorted[2].id).toBe(3);
+        });
+
+        test('sorts descending', () => {
+            const sorted = sortByProperty(items, 'val', true);
+            expect(sorted[0].id).toBe(3);
+            expect(sorted[1].id).toBe(1);
+            expect(sorted[2].id).toBe(2);
+        });
+
+        test('handles empty/null input', () => {
+            expect(sortByProperty(null, 'val')).toEqual([]);
+            expect(sortByProperty([], 'val')).toEqual([]);
+        });
+    });
+
+    describe('mergeConfig', () => {
+        test('deep merges objects', () => {
+            const defaults = { a: 1, b: { c: 2 } };
+            const overrides = { b: { d: 3 } };
+            const merged = mergeConfig(defaults, overrides);
+            expect(merged).toEqual({ a: 1, b: { c: 2, d: 3 } });
+        });
+
+        test('does not mutate defaults', () => {
+            const defaults = { a: 1, b: { c: 2 } };
+            const overrides = { b: { d: 3 } };
+            mergeConfig(defaults, overrides);
+            expect(defaults).toEqual({ a: 1, b: { c: 2 } });
+        });
+
+        test('handles multiple overrides', () => {
+            const defaults = { a: 1 };
+            const o1 = { b: 2 };
+            const o2 = { c: 3 };
+            const merged = mergeConfig(defaults, o1, o2);
+            expect(merged).toEqual({ a: 1, b: 2, c: 3 });
         });
     });
 });

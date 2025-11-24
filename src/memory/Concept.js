@@ -159,6 +159,10 @@ export class Concept extends BaseComponent {
         return this._getStorage(taskType).getItemsInPriorityOrder() || [];
     }
 
+    findTask(taskType, predicate) {
+        return this._getStorage(taskType).find(predicate);
+    }
+
     removeTask(task) {
         const removed = this._getStorage(task.type).remove(task);
         if (removed) {

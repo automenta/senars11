@@ -1,5 +1,4 @@
-import {clamp} from '../util/common.js';
-import {sortByProperty} from '../util/collections.js';
+import {clamp, sortByProperty} from '../util/common.js';
 import {BaseComponent} from '../util/BaseComponent.js';
 
 const DEFAULT_CONFIG = Object.freeze({
