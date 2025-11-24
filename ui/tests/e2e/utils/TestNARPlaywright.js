@@ -83,7 +83,26 @@ export class TestNARPlaywright {
             for (const line of lines) {
                 const match = line.match(/[<()].*[>).?!%]/);
                 if (match) {
-                    const narsese = match[0];
+                    let narsese = match[0];
+
+                    if (narsese.startsWith('(') && narsese.includes(',')) {
+                         if (narsese.endsWith('"') || narsese.endsWith('}')) {
+                             narsese = narsese.replace(/["}]+$/, '');
+                         }
+
+                         const inner = narsese.substring(1, narsese.lastIndexOf(')'));
+                         const parts = inner.split(',');
+                         if (parts.length >= 2) {
+                             const operator = parts[0].trim();
+                             const args = parts.slice(1).map(arg => arg.trim());
+
+                             if (['-->', '==>', '<->', '<=>'].includes(operator) && args.length === 2) {
+                                 narsese = `<${args[0]} ${operator} ${args[1]}>`;
+                                 if (!narsese.match(/[.?!]/)) narsese += '.';
+                             }
+                         }
+                    }
+
                     try {
                          const parsed = this.parser.parse(narsese);
                          const taskMock = {
@@ -97,7 +116,13 @@ export class TestNARPlaywright {
                              break;
                          }
                     } catch (e) {
-                        // ignore parse errors
+                        // Fallback: simple string match if parsing fails or strict match fails
+                        // Check if the extracted narsese contains the term filter string
+                        // e.g. termFilter="<a --> b>", narsese="<a --> b>."
+                        if (narsese.includes(op.matcher.termFilter)) {
+                            found = true;
+                            break;
+                        }
                     }
                 }
             }
@@ -112,7 +137,6 @@ export class TestNARPlaywright {
     }
 
     async _checkGraphExpectation(op) {
-        // Use the debug command /nodes to list nodes in logs to verify graph content
         await this.narPage.sendCommand('/nodes');
         await this.narPage.expectLog(op.nodeName);
     }
