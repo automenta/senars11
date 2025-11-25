@@ -7,13 +7,23 @@ export class TransformersJSProvider extends BaseProvider {
         this.task = config.task || 'text2text-generation';
         this.device = config.device || 'cpu'; // 'webgpu' if available, but defaults to cpu for safety
         this.pipeline = null;
+        this.tools = [];
     }
 
     async _initialize() {
         if (this.pipeline) return;
         try {
+            // Try multiple environment variables to suppress ONNX warnings
+            process.env.ORT_LOGGING_LEVEL = 'error';
+            process.env.ORT_LOG_LEVEL = 'error';
+
             const {pipeline} = await import('@xenova/transformers');
-            this.pipeline = await pipeline(this.task, this.modelName, {device: this.device});
+            this.pipeline = await pipeline(this.task, this.modelName, {
+                device: this.device,
+                session_options: {
+                    logSeverityLevel: 3 // 0: Verbose, 1: Info, 2: Warning, 3: Error, 4: Fatal
+                }
+            });
         } catch (error) {
             throw new Error(`TransformersJS initialization failed: ${error.message}`);
         }
@@ -32,6 +42,66 @@ export class TransformersJSProvider extends BaseProvider {
             return res?.generated_text || res?.text || JSON.stringify(output);
         } catch (error) {
             throw new Error(`TransformersJS generation failed: ${error.message}`);
+        }
+    }
+
+    async invoke(prompt, options = {}) {
+        return await this.generateText(prompt, options);
+    }
+
+    async *stream(messages, options = {}) {
+        await this._initialize();
+        const prompt = Array.isArray(messages) ? messages[messages.length - 1].content : messages;
+
+        const responseText = await this.generateText(prompt, options);
+
+        // Simple tool parsing simulation
+        // Example: "Tool: add(5, 3)"
+        const toolPattern = /Tool:\s*(\w+)\(([^)]*)\)/i;
+        const match = responseText.match(toolPattern);
+
+        if (match) {
+             const [fullMatch, toolName, argsStr] = match;
+
+             // Content before tool
+             if (match.index > 0) {
+                 yield { content: responseText.substring(0, match.index) };
+             }
+
+             // Parse args
+             let args = {};
+             try {
+                 if (argsStr.trim().startsWith('{')) {
+                     args = JSON.parse(argsStr);
+                 } else {
+                     const parts = argsStr.split(',').map(s => s.trim());
+                     if (parts.length >= 2) {
+                         // Simple heuristic for demo tools like add(a,b)
+                         args = { a: parts[0], b: parts[1] };
+                     } else {
+                         args = { input: parts[0] };
+                     }
+                 }
+             } catch (e) {
+                 args = { raw: argsStr };
+             }
+
+             yield {
+                 tool_calls: [{
+                     id: `call_${Date.now()}`,
+                     name: toolName,
+                     args: args,
+                     type: 'tool_call'
+                 }]
+             };
+
+             // Content after tool
+             if (match.index + fullMatch.length < responseText.length) {
+                 yield { content: responseText.substring(match.index + fullMatch.length) };
+             }
+
+        } else {
+            yield { content: responseText };
         }
     }
 }
