@@ -1,6 +1,7 @@
 import {Agent} from './Agent.js';
 import {PluginManager} from '../util/Plugin.js';
 import {ChatOllama} from "@langchain/ollama";
+import {TransformersJSModel} from '../lm/TransformersJSModel.js';
 
 export class AgentBuilder {
     constructor(initialConfig = {}) {
@@ -131,11 +132,12 @@ export class AgentBuilder {
 
         await this._initializeSubsystems(agent);
 
-        const lmProvider = this._createLMProvider();
+        const lmProvider = this._createLMProvider(agent);
         if (lmProvider && agent.lm) {
-            agent.lm.registerProvider('ollama', lmProvider);
+            const providerName = this.config.lm.provider || 'ollama';
+            agent.lm.registerProvider(providerName, lmProvider);
             if (!agent.lm.providers.defaultProviderId) {
-                agent.lm.providers.setDefault('ollama');
+                agent.lm.providers.setDefault(providerName);
             }
         }
 
@@ -166,15 +168,53 @@ export class AgentBuilder {
         };
     }
 
-    _createLMProvider() {
-        if (this.config.lm.provider === 'ollama') {
-            const lmProvider = new ChatOllama({
+    _createLMProvider(agent) {
+        const providerName = this.config.lm.provider || 'ollama';
+        let lmProvider = null;
+
+        if (providerName === 'ollama') {
+            lmProvider = new ChatOllama({
                 model: this.config.lm.modelName,
                 baseUrl: this.config.lm.baseUrl,
                 temperature: this.config.lm.temperature,
             });
             lmProvider.name = 'ollama';
-            lmProvider.tools = [];
+        } else if (providerName === 'transformers') {
+            lmProvider = new TransformersJSModel({
+                modelName: this.config.lm.modelName,
+                temperature: this.config.lm.temperature,
+            });
+            lmProvider.name = 'transformers';
+        }
+
+        if (lmProvider) {
+            // Populate tools from registry
+            if (agent && agent.tools && agent.tools.registry) {
+                 const registeredTools = agent.tools.registry.getDiscoveredTools() || [];
+                 const tools = registeredTools.map(tool => ({
+                     name: tool.id,
+                     description: tool.description,
+                     schema: tool.parameters || tool.schema,
+                     invoke: async (args) => {
+                         // Execute tool via tool engine
+                         const result = await agent.tools.executeTool(tool.id, args);
+                         if (result && typeof result.result !== 'undefined') {
+                             // Handle cases where result is wrapped
+                             return typeof result.result === 'string' ? result.result : JSON.stringify(result.result);
+                         }
+                         return JSON.stringify(result);
+                     }
+                 }));
+
+                 lmProvider.tools = tools;
+
+                 // Bind tools if model supports it
+                 if (typeof lmProvider.bindTools === 'function') {
+                     lmProvider.bindTools(tools);
+                 }
+            } else {
+                lmProvider.tools = [];
+            }
             return lmProvider;
         }
         return null;

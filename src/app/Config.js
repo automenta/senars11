@@ -47,6 +47,10 @@ export class Config {
                         config.lm.modelName = argv[++i];
                     }
                     break;
+                case '--provider':
+                    config.lm.provider = argv[++i];
+                    config.lm.enabled = true;
+                    break;
                 case '--model':
                 case '--modelName':
                     config.lm.modelName = argv[++i];
