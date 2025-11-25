@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // Suppress ONNX warnings globally
-process.env.ORT_LOG_LEVEL = '3';
+process.env.ORT_LOG_LEVEL = 'error';
 
 import { App } from '../src/app/App.js';
 import { Config } from '../src/app/Config.js';
@@ -53,7 +53,7 @@ async function main() {
     // 3. Initialize Agent
     const config = Config.parse([
         '--provider', 'transformers',
-        '--model', 'Xenova/LaMini-Flan-T5-783M',
+        '--model', 'Xenova/LaMini-Flan-T5-248M',
         '--temperature', '0'
     ]);
 
@@ -69,6 +69,7 @@ async function main() {
     } else {
         // console.warn("ℹ️ Tool registry not available, skipping MCP tool registration.");
     }
+
 
     // Force a sync of tools to the LM provider
     if (agent.lm) {
@@ -106,7 +107,7 @@ async function main() {
     // 5. Run Scenarios
     const inputs = [
         "Hello, who are you?",
-        "Use the calculator to add 100 and 200."
+        "You have a tool named 'calculator' that can perform arithmetic operations. Use it to add 100 and 200."
     ];
 
     for (const input of inputs) {
