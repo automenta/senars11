@@ -9,13 +9,10 @@ export class AgentStreamer {
     }
 
     async accumulateStreamResponse(input) {
-        if (!this.agent.lm) return this.agent.inputProcessor.processNarsese(input);
-
-        let response = "";
-        for await (const chunk of this.streamExecution(input)) {
-            if (chunk.type === "agent_response") response += chunk.content;
-        }
-        return response || "No response generated.";
+        return (await Array.fromAsync(this.streamExecution(input)))
+            .filter(chunk => chunk.type === "agent_response")
+            .map(chunk => chunk.content)
+            .join('') || "No response generated.";
     }
 
     async* streamExecution(input) {

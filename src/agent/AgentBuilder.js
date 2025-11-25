@@ -5,7 +5,16 @@ import {TransformersJSModel} from '../lm/TransformersJSModel.js';
 
 export class AgentBuilder {
     constructor(initialConfig = {}) {
-        this.config = {
+        this.config = this.constructor.getDefaultConfig();
+        this.dependencies = new Map();
+
+        if (initialConfig) {
+            this.withConfig(initialConfig);
+        }
+    }
+
+    static getDefaultConfig() {
+        return {
             subsystems: {
                 metrics: true,
                 embeddingLayer: false,
@@ -13,28 +22,22 @@ export class AgentBuilder {
                 rules: ['syllogistic-core', 'temporal'],
                 tools: false,
                 lm: false,
-                ...initialConfig.subsystems
             },
             memory: {
                 enableMemoryValidation: true,
                 memoryValidationInterval: 30000,
-                ...initialConfig.memory
             },
-            nar: {...initialConfig.nar},
+            nar: {},
             lm: {
                 circuitBreaker: {
                     failureThreshold: 5,
                     timeout: 60000,
                     resetTimeout: 30000
                 },
-                ...initialConfig.lm
             },
-            persistence: initialConfig.persistence || {},
-            inputProcessing: initialConfig.inputProcessing || {}
+            persistence: {},
+            inputProcessing: {}
         };
-        this.dependencies = new Map();
-
-        if (initialConfig) this.withConfig(initialConfig);
     }
 
     static createAgent(config = {}) {
@@ -55,17 +58,17 @@ export class AgentBuilder {
     }
 
     static createAdvancedAgent(config = {}) {
-        return AgentBuilder.createAgent({
+        const advancedConfig = {
             subsystems: {
                 metrics: true,
                 embeddingLayer: true,
                 functors: ['core-arithmetic', 'set-operations'],
                 rules: ['syllogistic-core', 'temporal'],
                 tools: true,
-                lm: {enabled: true}
+                lm: { enabled: true },
             },
-            ...config
-        });
+        };
+        return new AgentBuilder(advancedConfig).withConfig(config).build();
     }
 
     withConfig(config) {

@@ -8,22 +8,29 @@ import { ReasoningTrajectoryLogger } from '../src/rlfp/ReasoningTrajectoryLogger
  * the ReasoningTrajectoryLogger to capture the agent's thought process.
  */
 async function main() {
-  const logger = new ReasoningTrajectoryLogger();
+    const agent = AgentBuilder.createAdvancedAgent({
+        lm: {
+            provider: 'transformers',
+            modelName: 'Xenova/LaMini-Flan-T5-248M'
+        }
+    });
+    await agent.initialize();
 
-  const inputs = [
-    'There are two buttons, a red one and a green one. The red button is dangerous. The green button is safe. Which button should I press?',
-  ];
+    const logger = new ReasoningTrajectoryLogger(agent);
+    logger.startTrajectory();
 
-  await runExample({
-    model: 'Xenova/LaMini-Flan-T5-248M',
-    inputs,
-    onStep: (step) => {
-      logger.logStep(step);
-    },
-  });
+    const inputs = [
+        'There are two buttons, a red one and a green one. The red button is dangerous. The green button is safe. Which button should I press?',
+    ];
 
-  console.log('\n--- Reasoning Trajectory ---');
-  console.log(JSON.stringify(logger.endTrajectory(), null, 2));
+    await runExample({
+        agent,
+        inputs
+    });
+
+    console.log('\n--- Reasoning Trajectory ---');
+    const trajectory = logger.endTrajectory('trajectory.json');
+    console.log(JSON.stringify(trajectory, null, 2));
 }
 
 main();

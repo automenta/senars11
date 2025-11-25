@@ -3,35 +3,42 @@
  *
  * This component captures the internal state and decision-making process of the agent
  * at each step of a reasoning task. The logged data can be used for debugging,
+import fs from 'fs';
+import { AGENT_EVENTS } from '../agent/constants.js';
  * analysis, and as input for the RLFP learner.
  */
 class ReasoningTrajectoryLogger {
-  constructor() {
-    this.trajectory = [];
-  }
+    constructor(agent) {
+        this.agent = agent;
+        this.eventBus = agent._eventBus;
+        this.trajectory = [];
+        this.isLogging = false;
 
-  /**
-   * Starts logging a new trajectory.
-   */
-  startTrajectory() {
-    this.trajectory = [];
-  }
+        this.eventBus.on(AGENT_EVENTS.LLM_PROMPT, (data) => this.logStep('llm_prompt', data));
+        this.eventBus.on(AGENT_EVENTS.TOOL_CALL, (data) => this.logStep('tool_call', data));
+    }
 
-  /**
-   * Adds a new step to the current trajectory.
-   * @param {object} step - The reasoning step to log.
-   */
-  logStep(step) {
-    this.trajectory.push(step);
-  }
+    startTrajectory() {
+        this.trajectory = [];
+        this.isLogging = true;
+    }
 
-  /**
-   * Ends the current trajectory and returns it.
-   * @returns {Array} The completed trajectory.
-   */
-  endTrajectory() {
-    return this.trajectory;
-  }
+    logStep(type, data) {
+        if (!this.isLogging) return;
+        this.trajectory.push({
+            timestamp: Date.now(),
+            type,
+            ...data
+        });
+    }
+
+    endTrajectory(filePath) {
+        this.isLogging = false;
+        if (filePath) {
+            fs.writeFileSync(filePath, JSON.stringify(this.trajectory, null, 2));
+        }
+        return this.trajectory;
+    }
 }
 
 export { ReasoningTrajectoryLogger };

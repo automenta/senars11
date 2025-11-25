@@ -8,24 +8,25 @@ export class InputProcessor {
 
     async processInput(input) {
         const trimmed = input.trim();
+
         if (!trimmed) return this.agent.executeCommand('next');
+        if (trimmed.startsWith('//') || trimmed.startsWith('#') || trimmed.startsWith('*')) return '';
 
-        // Ignore comments
-        if (trimmed.startsWith('//') || trimmed.startsWith('#')) return '';
-
-        // Ignore legacy volume/control commands starting with *
-        if (trimmed.startsWith('*')) return '';
-
-        // Stop auto-step on any input (per spec)
-        if (this.agent.isRunningLoop) {
+        if (this.agent.runState.isRunning) {
             this.agent._stopRun();
         }
 
         this.agent.sessionState.history.push(trimmed);
-        if (trimmed.startsWith('/')) return this.agent.executeCommand(...trimmed.slice(1).split(' '));
 
-        const [cmd, ...args] = trimmed.split(' ');
-        if (this.agent.commandRegistry.get(cmd)) return this.agent.commandRegistry.execute(cmd, this.agent, ...args);
+        if (trimmed.startsWith('/')) {
+            const [command, ...args] = trimmed.slice(1).split(' ');
+            return this.agent.executeCommand(command, ...args);
+        }
+
+        const [command, ...args] = trimmed.split(' ');
+        if (this.agent.commandRegistry.get(command)) {
+            return this.agent.executeCommand(command, ...args);
+        }
 
         return this._processAgentInput(trimmed);
     }
