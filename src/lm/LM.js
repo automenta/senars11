@@ -34,17 +34,17 @@ export class LM extends BaseComponent {
     }
 
     _getCircuitBreakerConfig() {
-        const cbConfig = this.config.circuitBreaker || {};
+        const cbConfig = this.config?.circuitBreaker ?? {};
         return {
-            failureThreshold: cbConfig.failureThreshold || 5,
-            timeout: cbConfig.timeout || 60000,
-            resetTimeout: cbConfig.resetTimeout || 30000
+            failureThreshold: cbConfig.failureThreshold ?? 5,
+            timeout: cbConfig.timeout ?? 60000,
+            resetTimeout: cbConfig.resetTimeout ?? 30000
         };
     }
 
     async _initialize() {
         if (this.lmMetrics.initialize) {
-            await this.lmMetrics.initialize(this.config.metrics || {});
+            await this.lmMetrics.initialize(this.config?.metrics ?? {});
         }
 
         this.logInfo('LM component initialized', {
@@ -63,7 +63,7 @@ export class LM extends BaseComponent {
     }
 
     _getProvider(providerId = null) {
-        const id = providerId || this.providers.defaultProviderId;
+        const id = providerId ?? this.providers.defaultProviderId;
         return id && this.providers.has(id) ? this.providers.get(id) : null;
     }
 
@@ -71,7 +71,7 @@ export class LM extends BaseComponent {
         try {
             return await this.circuitBreaker.execute(() => operation.apply(provider, args));
         } catch (error) {
-            this._handleCircuitBreakerError(error, args[0] || args[1]);
+            this._handleCircuitBreakerError(error, args[0] ?? args[1]);
             throw error;
         }
     }
@@ -87,91 +87,59 @@ export class LM extends BaseComponent {
 
     async generateText(prompt, options = {}, providerId = null) {
         const provider = this._getProvider(providerId);
-        if (!provider) throw new Error(`Provider "${providerId || this.providers.defaultProviderId}" not found.`);
+        if (!provider) throw new Error(`Provider "${providerId ?? this.providers.defaultProviderId}" not found.`);
 
         const startTime = Date.now();
-        try {
-            // Standardize generation method (support generateText, invoke, or generate)
-            const standardGenerate = async function(p, o) {
-                if (this.generateText) return this.generateText(p, o);
-                if (this.invoke) {
-                    const res = await this.invoke(p, o);
-                    return res.content || res;
-                }
-                if (this.generate) return this.generate(p, o);
-                throw new Error('Provider missing generation method');
-            };
+        // Standardize generation method (support generateText, invoke, or generate)
+        const standardGenerate = async function(p, o) {
+            if (this.generateText) return this.generateText(p, o);
+            if (this.invoke) {
+                const res = await this.invoke(p, o);
+                return res?.content ?? res;
+            }
+            if (this.generate) return this.generate(p, o);
+            throw new Error('Provider missing generation method');
+        };
 
-            const result = await this._executeWithCircuitBreaker(provider, standardGenerate, prompt, options);
-            this._updateStats(prompt, result, providerId, startTime);
-            return result;
-        } catch (error) {
-            return this._handleCircuitBreakerError(error, prompt)
-                ? this._handleFallback(prompt, options)
-                : Promise.reject(error);
-        }
+        const result = await this._executeWithCircuitBreaker(provider, standardGenerate, prompt, options);
+        this._updateStats(prompt, result, providerId, startTime);
+        return result;
     }
 
     async streamText(prompt, options = {}, providerId = null) {
         const provider = this._getProvider(providerId);
-        if (!provider) throw new Error(`Provider "${providerId || this.providers.defaultProviderId}" not found.`);
+        if (!provider) throw new Error(`Provider "${providerId ?? this.providers.defaultProviderId}" not found.`);
 
-        try {
-            // Standardize streaming method (support streamText or stream)
-            const standardStream = async function(p, o) {
-                if (this.streamText) return this.streamText(p, o);
-                if (this.stream) return this.stream(p, o);
-                throw new Error('Provider missing streaming method');
-            };
+        // Standardize streaming method (support streamText or stream)
+        const standardStream = async function(p, o) {
+            if (this.streamText) return this.streamText(p, o);
+            if (this.stream) return this.stream(p, o);
+            throw new Error('Provider missing streaming method');
+        };
 
-            return await this._executeWithCircuitBreaker(provider, standardStream, prompt, options);
-        } catch (error) {
-            if (this._handleCircuitBreakerError(error, prompt)) {
-                // For streaming, we return a simulated async iterator as fallback
-                this.logInfo('Circuit breaker fallback for streaming - streaming unavailable');
-                return {
-                    async* [Symbol.asyncIterator]() {
-                        yield 'Streaming unavailable - using fallback response';
-                    }
-                };
-            } else {
-                throw error;
-            }
-        }
+        return await this._executeWithCircuitBreaker(provider, standardStream, prompt, options);
     }
 
     async generateEmbedding(text, providerId = null) {
         const provider = this._getProvider(providerId);
-        if (!provider) throw new Error(`Provider "${providerId || this.providers.defaultProviderId}" not found.`);
+        if (!provider) throw new Error(`Provider "${providerId ?? this.providers.defaultProviderId}" not found.`);
 
-        try {
-            return await this._executeWithCircuitBreaker(provider, provider.generateEmbedding, text);
-        } catch (error) {
-            return this._handleCircuitBreakerError(error, text)
-                ? this._handleEmbeddingFallback(text)
-                : Promise.reject(error);
-        }
+        return await this._executeWithCircuitBreaker(provider, provider.generateEmbedding, text);
     }
 
     async process(prompt, options = {}, providerId = null) {
         const provider = this._getProvider(providerId);
-        if (!provider) throw new Error(`Provider "${providerId || this.providers.defaultProviderId}" not found.`);
+        if (!provider) throw new Error(`Provider "${providerId ?? this.providers.defaultProviderId}" not found.`);
 
-        try {
-            if (typeof provider.process === 'function') {
-                return await this._executeWithCircuitBreaker(provider, provider.process, prompt, options);
-            }
-
-            return provider.generateText
-                ? await this.generateText(prompt, options, providerId)
-                : provider.generate
-                    ? await provider.generate(prompt, options)
-                    : prompt;
-        } catch (error) {
-            return this._handleCircuitBreakerError(error, prompt)
-                ? this._handleFallback(prompt, options)
-                : Promise.reject(error);
+        if (typeof provider.process === 'function') {
+            return await this._executeWithCircuitBreaker(provider, provider.process, prompt, options);
         }
+
+        return provider.generateText
+            ? await this.generateText(prompt, options, providerId)
+            : provider.generate
+                ? await provider.generate(prompt, options)
+                : prompt;
     }
 
     _updateStats(prompt, result, providerId, startTime) {
@@ -180,7 +148,7 @@ export class LM extends BaseComponent {
         const responseTime = Date.now() - startTime;
         this.lmStats.avgResponseTime = (this.lmStats.avgResponseTime * (this.lmStats.totalCalls - 1) + responseTime) / this.lmStats.totalCalls;
 
-        const usage = this.lmStats.providerUsage.get(providerId) || {calls: 0, tokens: 0};
+        const usage = this.lmStats.providerUsage.get(providerId) ?? {calls: 0, tokens: 0};
         usage.calls++;
         usage.tokens += this._countTokens(result);
         this.lmStats.providerUsage.set(providerId, usage);
@@ -209,7 +177,7 @@ export class LM extends BaseComponent {
 
     _handleEmbeddingFallback(text) {
         this.logInfo('Using fallback strategy - Generate embedding unavailable');
-        const textLength = text?.length || 0;
+        const textLength = text?.length ?? 0;
         return Array(8).fill(0).map((_, i) => Math.sin(textLength * (i + 1) * 0.1));
     }
 

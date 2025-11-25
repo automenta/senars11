@@ -8,13 +8,13 @@ import { ChatGenerationChunk } from "@langchain/core/outputs";
  * Supports tool calling via prompt engineering and output parsing.
  */
 export class TransformersJSModel extends BaseChatModel {
-    constructor(fields) {
+    constructor(fields = {}) {
         super(fields);
-        this.modelName = fields?.modelName || 'Xenova/LaMini-Flan-T5-783M';
-        this.task = fields?.task || 'text2text-generation';
-        this.device = fields?.device || 'cpu';
-        this.temperature = fields?.temperature ?? 0;
-        this.maxTokens = fields?.maxTokens ?? 512;
+        this.modelName = fields.modelName ?? 'Xenova/LaMini-Flan-T5-783M';
+        this.task = fields.task ?? 'text2text-generation';
+        this.device = fields.device ?? 'cpu';
+        this.temperature = fields.temperature ?? 0;
+        this.maxTokens = fields.maxTokens ?? 512;
         this.pipeline = null;
         this.boundTools = [];
     }
@@ -25,24 +25,18 @@ export class TransformersJSModel extends BaseChatModel {
 
     async _initialize() {
         if (this.pipeline) return;
-        try {
-            // Suppress ONNX Runtime warnings
-            if (!process.env.ORT_LOG_LEVEL) {
-                process.env.ORT_LOG_LEVEL = '3';
-            }
 
-            const { pipeline, env } = await import('@xenova/transformers');
-
-            // Ensure we use a cache directory that is writable if needed
-            // env.cacheDir = './.cache'; // Optional customization
-
-            this.pipeline = await pipeline(this.task, this.modelName, {
-                device: this.device,
-                quantized: true
-            });
-        } catch (error) {
-            throw new Error(`TransformersJS initialization failed: ${error.message}`);
+        // Suppress ONNX Runtime warnings
+        if (!process.env.ORT_LOG_LEVEL) {
+            process.env.ORT_LOG_LEVEL = '3';
         }
+
+        const { pipeline, env } = await import('@xenova/transformers');
+
+        this.pipeline = await pipeline(this.task, this.modelName, {
+            device: this.device,
+            quantized: true
+        });
     }
 
     bindTools(tools) {
@@ -54,32 +48,28 @@ export class TransformersJSModel extends BaseChatModel {
         const prompt = this._formatMessages(messages);
         await this._initialize();
 
-        try {
-            const output = await this.pipeline(prompt, {
-                max_new_tokens: this.maxTokens,
-                temperature: this.temperature,
-                do_sample: this.temperature > 0,
-            });
+        const output = await this.pipeline(prompt, {
+            max_new_tokens: this.maxTokens,
+            temperature: this.temperature,
+            do_sample: this.temperature > 0,
+        });
 
-            const res = Array.isArray(output) ? output[0] : output;
-            const text = res?.generated_text || res?.text || JSON.stringify(output);
+        const res = Array.isArray(output) ? output[0] : output;
+        const text = res?.generated_text ?? res?.text ?? JSON.stringify(output);
 
-            const { content, tool_calls } = this._parseOutput(text);
+        const { content, tool_calls } = this._parseOutput(text);
 
-            return {
-                generations: [
-                    {
-                        text: text,
-                        message: new AIMessage({
-                            content,
-                            tool_calls
-                        })
-                    }
-                ]
-            };
-        } catch (error) {
-            throw new Error(`TransformersJS generation failed: ${error.message}`);
-        }
+        return {
+            generations: [
+                {
+                    text: text,
+                    message: new AIMessage({
+                        content,
+                        tool_calls
+                    })
+                }
+            ]
+        };
     }
 
     async *_streamResponseChunks(messages, options, runManager) {
@@ -93,39 +83,34 @@ export class TransformersJSModel extends BaseChatModel {
 
         // TODO: implement true streaming if possible with @xenova/transformers Streamer
 
-        try {
-            const output = await this.pipeline(prompt, {
-                max_new_tokens: this.maxTokens,
-                temperature: this.temperature,
-                do_sample: this.temperature > 0,
+        const output = await this.pipeline(prompt, {
+            max_new_tokens: this.maxTokens,
+            temperature: this.temperature,
+            do_sample: this.temperature > 0,
+        });
+
+        const res = Array.isArray(output) ? output[0] : output;
+        const text = res?.generated_text ?? res?.text ?? JSON.stringify(output);
+
+        const { content, tool_calls } = this._parseOutput(text);
+
+        if (tool_calls && tool_calls.length > 0) {
+             // Yield empty content with tool calls
+             yield new ChatGenerationChunk({
+                message: new AIMessageChunk({
+                    content: content ?? "",
+                    tool_calls: tool_calls
+                }),
+                text: text
             });
-
-            const res = Array.isArray(output) ? output[0] : output;
-            const text = res?.generated_text || res?.text || JSON.stringify(output);
-
-            const { content, tool_calls } = this._parseOutput(text);
-
-            if (tool_calls && tool_calls.length > 0) {
-                 // Yield empty content with tool calls
-                 yield new ChatGenerationChunk({
-                    message: new AIMessageChunk({
-                        content: content || "",
-                        tool_calls: tool_calls
-                    }),
-                    text: text
-                });
-            } else {
-                // Yield content
-                 yield new ChatGenerationChunk({
-                    message: new AIMessageChunk({
-                        content: content,
-                    }),
-                    text: content
-                });
-            }
-
-        } catch (error) {
-             throw new Error(`TransformersJS streaming failed: ${error.message}`);
+        } else {
+            // Yield content
+             yield new ChatGenerationChunk({
+                message: new AIMessageChunk({
+                    content: content,
+                }),
+                text: content
+            });
         }
     }
 
@@ -134,10 +119,10 @@ export class TransformersJSModel extends BaseChatModel {
         let chatHistory = "";
 
         // Construct tool definitions
-        if (this.boundTools && this.boundTools.length > 0) {
+        if (this.boundTools?.length > 0) {
             systemPrompt += "You are a helpful assistant. You have access to the following tools:\n";
             this.boundTools.forEach(tool => {
-                const schema = JSON.stringify(tool.schema || tool.parameters || {});
+                const schema = JSON.stringify(tool.schema ?? tool.parameters ?? {});
                 systemPrompt += `- ${tool.name}: ${tool.description}. Arguments: ${schema}\n`;
             });
             systemPrompt += "\nTo use a tool, output exactly:\nAction: <tool_name>\nAction Input: <json_arguments>\n";
@@ -152,7 +137,7 @@ export class TransformersJSModel extends BaseChatModel {
                 chatHistory += `User: ${msg.content}\n`;
             } else if (msg instanceof AIMessage) {
                 chatHistory += `Assistant: ${msg.content}\n`;
-                if (msg.tool_calls && msg.tool_calls.length > 0) {
+                if (msg.tool_calls?.length > 0) {
                     msg.tool_calls.forEach(tc => {
                         chatHistory += `Action: ${tc.name}\nAction Input: ${JSON.stringify(tc.args)}\n`;
                     });

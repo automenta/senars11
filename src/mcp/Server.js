@@ -20,7 +20,7 @@ export class Server extends EventEmitter {
         this.httpServer = null;
 
         // Optional NAR instance for real execution
-        this.nar = options.nar || null;
+        this.nar = options.nar ?? null;
 
         this.auth = options.auth ?? null;
         this.rateLimit = options.rateLimit ?? {requests: 100, windowMs: 60000};
@@ -314,7 +314,7 @@ export class Server extends EventEmitter {
                 const results = this.nar.query(validatedInput.query);
                 return {
                     results: results.slice(0, limit).map(task => ({
-                        id: task.id || 'unknown',
+                        id: task.id ?? 'unknown',
                         content: task.term ? task.term.toString() : 'unknown',
                         confidence: task.truth ? task.truth.confidence : 0,
                         timestamp: new Date().toISOString()
@@ -346,9 +346,9 @@ export class Server extends EventEmitter {
              try {
                  const result = await this.nar.executeTool(validatedInput.toolName, validatedInput.parameters);
                  return {
-                     result: JSON.stringify(result.result || result),
+                     result: JSON.stringify(result.result ?? result),
                      success: result.success !== false,
-                     error: result.error || null
+                     error: result.error ?? null
                  };
              } catch (err) {
                  return {

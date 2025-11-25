@@ -344,7 +344,7 @@ export const TUI = ({engine, app}) => {
                     bold: true
                 }, `${status.isRunning ? '🚀 RUNNING' : '⏸️ PAUSED'} `),
                 React.createElement(Text, {color: 'white'}, `| Cycle: ${status.cycle} `),
-                React.createElement(Text, {color: 'cyan'}, `| Agent: ${app?.activeAgentId || engine.id || 'default'} `)
+                React.createElement(Text, {color: 'cyan'}, `| Agent: ${app?.activeAgentId ?? engine.id ?? 'default'} `)
             ),
             React.createElement(
                 Box,

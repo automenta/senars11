@@ -195,7 +195,7 @@ export class ToolsCommand extends AgentCommand {
     async _executeImpl(agent) {
         let lines = ['🔧 Tools/MCP Configuration:'];
         if (agent.agentLM && agent.agentLM.providers) {
-            lines.push(`  Current Agent LM Provider: ${agent.agentLM.providers.defaultProviderId || 'Default'}`);
+            lines.push(`  Current Agent LM Provider: ${agent.agentLM.providers.defaultProviderId ?? 'Default'}`);
         } else {
             lines.push('  Current Agent LM Provider: None');
         }
@@ -203,7 +203,7 @@ export class ToolsCommand extends AgentCommand {
             const tools = agent.nar.getAvailableTools();
             if (Array.isArray(tools) && tools.length > 0) {
                 lines.push(`  NARS Available Tools (${tools.length}):`);
-                tools.forEach((t, i) => lines.push(`    ${i + 1}. ${typeof t === 'string' ? t : t.name || t.id || 'unnamed'}`));
+                tools.forEach((t, i) => lines.push(`    ${i + 1}. ${typeof t === 'string' ? t : t.name ?? t.id ?? 'unnamed'}`));
             } else {
                 lines.push('  NARS Tools: None available');
             }
@@ -215,7 +215,7 @@ export class ToolsCommand extends AgentCommand {
                  const tools = (p && (typeof p.getAvailableTools === 'function' ? p.getAvailableTools() : p.tools)) || [];
                  if (tools.length > 0) {
                      lines.push(`  🤖 LM Tools (${tools.length}):`);
-                     tools.forEach((t, i) => lines.push(`    ${i + 1}. ${t.name || t.constructor.name}: ${t.description || ''}`));
+                     tools.forEach((t, i) => lines.push(`    ${i + 1}. ${t.name ?? t.constructor.name}: ${t.description ?? ''}`));
                  }
              }
         }
@@ -223,7 +223,7 @@ export class ToolsCommand extends AgentCommand {
             const mcp = agent.nar.mcp.getAvailableTools();
             if (mcp && mcp.allTools && mcp.allTools.length > 0) {
                 lines.push(`  MCP Tools (${mcp.allTools.length}):`);
-                mcp.allTools.forEach((t, i) => lines.push(`    ${i + 1}. ${typeof t === 'string' ? t : t.name || 'unnamed'}`));
+                mcp.allTools.forEach((t, i) => lines.push(`    ${i + 1}. ${typeof t === 'string' ? t : t.name ?? 'unnamed'}`));
             }
         }
         return lines.join('\n');
@@ -245,11 +245,11 @@ export class StatusCommand extends AgentCommand {
         const stats = agent.getStats();
         const ms = stats.memoryStats || {};
         return `📊 System Health:
-  Cycles:     ${stats.cycleCount || 0}
+  Cycles:     ${stats.cycleCount ?? 0}
   Concepts:   ${ms.conceptCount ?? ms.totalConcepts ?? 0}
   Tasks:      ${ms.taskCount ?? ms.totalTasks ?? 0}
   Beliefs:    ${agent.getBeliefs ? agent.getBeliefs().length : 0}
-  Avg Conf:   ${(ms.avgConfidence || 0).toFixed(3)}`;
+  Avg Conf:   ${(ms.avgConfidence ?? 0).toFixed(3)}`;
     }
 }
 

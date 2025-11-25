@@ -67,7 +67,7 @@ export class MCPManager extends EventEmitter {
         if (!this.isInitialized) await this.initialize();
 
         // Pass the NAR instance from options to the server
-        const narInstance = this.options.nar || options.nar;
+        const narInstance = this.options.nar ?? options.nar;
 
         const {Server: MCPServer} = await import('./Server.js');
         this.server = new MCPServer({port, ...options, nar: narInstance, safety: this.safety});

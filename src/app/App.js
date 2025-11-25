@@ -10,7 +10,7 @@ export class App extends EventEmitter {
     }
 
     get agent() {
-        return this.agents.get(this.activeAgentId)?.agent || null;
+        return this.agents.get(this.activeAgentId)?.agent ?? null;
     }
 
     async initialize() {
@@ -19,7 +19,7 @@ export class App extends EventEmitter {
     }
 
     async createAgent(agentId = null, config = {}) {
-        const id = agentId || `agent_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+        const id = agentId ?? `agent_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
         const effectiveConfig = Object.keys(config).length > 0 ? config : this.config;
 
         const agent = await new AgentBuilder({

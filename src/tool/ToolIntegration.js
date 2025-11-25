@@ -23,7 +23,7 @@ export class ToolIntegration extends BaseComponent {
             ...config
         };
 
-        this.engine = new ToolEngine(this._config.engine || {});
+        this.engine = new ToolEngine(this._config.engine ?? {});
         this.registry = this._config.enableRegistry ? new ToolRegistry(this.engine) : null;
         this.reasoningCore = null;
 
@@ -257,10 +257,10 @@ export class ToolIntegration extends BaseComponent {
         }
 
         // Calculate averages
-        Object.entries(toolUsage).forEach(([toolId, data]) => {
+        for (const [toolId, data] of Object.entries(toolUsage)) {
             data.avgExecutionTime = data.totalExecutionTime / data.totalCalls;
             data.successRate = data.successfulCalls / data.totalCalls;
-        });
+        }
 
         return toolUsage;
     }

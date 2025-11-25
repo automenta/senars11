@@ -18,7 +18,7 @@ export class ToolEngine {
             logger: Logger,
             activeExecutions: new Map(),
             executionHistory: [],
-            capabilityManager: config.capabilityManager || null,
+            capabilityManager: config.capabilityManager ?? null,
             performanceTracker: {
                 totalExecutions: 0,
                 successfulExecutions: 0,
@@ -43,7 +43,7 @@ export class ToolEngine {
 
         this._validateToolInterface(id, tool);
 
-        const toolCapabilities = tool.getCapabilities?.() || [];
+        const toolCapabilities = tool.getCapabilities?.() ?? [];
         const toolData = this._createToolData(id, tool, metadata, toolCapabilities);
 
         this.tools.set(id, toolData);
@@ -76,8 +76,8 @@ export class ToolEngine {
             instance: tool,
             name: tool.constructor.name,
             description: tool.getDescription(),
-            parameters: tool.getParameterSchema?.() || {type: 'object', properties: {}},
-            category: tool.getCategory?.() || 'general',
+            parameters: tool.getParameterSchema?.() ?? {type: 'object', properties: {}},
+            category: tool.getCategory?.() ?? 'general',
             capabilities,
             createdAt: Date.now(),
             usageCount: 0,
@@ -134,7 +134,7 @@ export class ToolEngine {
             this._validateSafety(params);
             await this._validateToolParams(tool, params);
 
-            const timeout = context.timeout || this.config.defaultTimeout;
+            const timeout = context.timeout ?? this.config.defaultTimeout;
             const result = await this._executeWithTimeout(
                 tool.instance.execute(params, {engine: this, executionId, context}),
                 timeout,
@@ -152,9 +152,9 @@ export class ToolEngine {
     }
 
     async _validateToolCapabilities(toolId, tool) {
-        const hasRequiredCapabilities = await this.capabilityManager.hasAllCapabilities(toolId, tool.capabilities || []);
+        const hasRequiredCapabilities = await this.capabilityManager.hasAllCapabilities(toolId, tool.capabilities ?? []);
         if (!hasRequiredCapabilities) {
-            const missingCaps = tool.capabilities.filter(cap =>
+            const missingCaps = (tool.capabilities ?? []).filter(cap =>
                 !this.capabilityManager.hasCapability(toolId, cap)
             );
             throw new Error(`Tool "${toolId}" lacks required capabilities: ${missingCaps.join(', ')}`);
@@ -165,7 +165,7 @@ export class ToolEngine {
         if (tool.instance.validate && typeof tool.instance.validate === 'function') {
             const validationResult = tool.instance.validate(params);
             if (!validationResult.isValid) {
-                throw new Error(`Tool parameters validation failed: ${validationResult.errors?.join(', ') || 'Unknown error'}`);
+                throw new Error(`Tool parameters validation failed: ${validationResult.errors?.join(', ') ?? 'Unknown error'}`);
             }
         }
     }
@@ -176,8 +176,8 @@ export class ToolEngine {
             toolId,
             parameters: params,
             context: {
-                user: context.user || 'system',
-                session: context.session || null,
+                user: context.user ?? 'system',
+                session: context.session ?? null,
                 timestamp: Date.now(),
                 ...context
             },
@@ -275,7 +275,7 @@ export class ToolEngine {
     }
 
     getTool(toolId) {
-        return this.tools.get(toolId) || null;
+        return this.tools.get(toolId) ?? null;
     }
 
     getToolsByCategory(category) {
@@ -314,7 +314,7 @@ export class ToolEngine {
 
         for (const tool of this.tools.values()) {
             const category = tool.category;
-            stats.toolsByCategory[category] = (stats.toolsByCategory[category] || 0) + 1;
+            stats.toolsByCategory[category] = (stats.toolsByCategory[category] ?? 0) + 1;
         }
 
         const toolUsage = new Map();
@@ -452,7 +452,7 @@ export class ToolEngine {
         toolStats.averageTime = toolStats.totalTime / toolStats.executions;
 
         const errorKey = error.constructor.name;
-        const count = this.performanceTracker.errorPatterns.get(errorKey) || 0;
+        const count = this.performanceTracker.errorPatterns.get(errorKey) ?? 0;
         this.performanceTracker.errorPatterns.set(errorKey, count + 1);
     }
 

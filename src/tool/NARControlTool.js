@@ -81,88 +81,12 @@ export class NARControlTool extends BaseTool {
 
     async _addBelief(content) {
         // Execute Narsese statement to add a belief using the full NAR input pipeline
-        try {
-            if (this.nar.input) {
-                const result = await this.nar.input(content);
-
-                // Run a reasoning step to ensure processing
-                if (this.nar.step) {
-                    await this.nar.step();
-                } else if (this.nar.cycle) {
-                    await this.nar.cycle(1);
-                }
-
-                return result;
-            } else if (this.nar.addInput) {
-                const result = await this.nar.addInput(content);
-
-                // Run a cycle to ensure the belief gets properly stored in memory
-                if (this.nar.step) {
-                    await this.nar.step();
-                } else if (this.nar.cycle) {
-                    await this.nar.cycle(1);
-                }
-
-                return result;
-            } else if (this.nar.execute) {
-                const result = await this.nar.execute(content);
-
-                // Run a cycle to ensure the belief gets properly stored in memory
-                if (this.nar.step) {
-                    await this.nar.step();
-                } else if (this.nar.cycle) {
-                    await this.nar.cycle(1);
-                }
-
-                return result;
-            }
-        } catch (error) {
-            console.error(`Error adding belief "${content}":`, error);
-            throw error;
-        }
+        return await this._executeNARCommand(content, 'add_belief');
     }
 
     async _addGoal(content) {
         // Execute Narsese statement to add a goal (typically ends with !)
-        try {
-            if (this.nar.input) {
-                const result = await this.nar.input(content);
-
-                // Run a reasoning step to ensure processing
-                if (this.nar.step) {
-                    await this.nar.step();
-                } else if (this.nar.cycle) {
-                    await this.nar.cycle(1);
-                }
-
-                return result;
-            } else if (this.nar.addInput) {
-                const result = await this.nar.addInput(content);
-
-                // Run a cycle to ensure the goal gets properly stored in memory
-                if (this.nar.step) {
-                    await this.nar.step();
-                } else if (this.nar.cycle) {
-                    await this.nar.cycle(1);
-                }
-
-                return result;
-            } else if (this.nar.execute) {
-                const result = await this.nar.execute(content);
-
-                // Run a cycle to ensure the goal gets properly stored in memory
-                if (this.nar.step) {
-                    await this.nar.step();
-                } else if (this.nar.cycle) {
-                    await this.nar.cycle(1);
-                }
-
-                return result;
-            }
-        } catch (error) {
-            console.error(`Error adding goal "${content}":`, error);
-            throw error;
-        }
+        return await this._executeNARCommand(content, 'add_goal');
     }
 
     async _query(content) {
@@ -181,11 +105,7 @@ export class NARControlTool extends BaseTool {
                 await this.nar.addInput(questionContent);
 
                 // Run a step to process the query
-                if (this.nar.step) {
-                    await this.nar.step();
-                } else if (this.nar.cycle) {
-                    await this.nar.cycle(1);
-                }
+                await this._runReasoningCycle();
 
                 // For now, return a success message since actual query results might need different handling
                 return `Query "${questionContent}" processed`;
@@ -206,11 +126,7 @@ export class NARControlTool extends BaseTool {
     async _step() {
         // Execute a single reasoning step
         try {
-            if (this.nar.cycle) {
-                await this.nar.cycle(1); // Execute 1 cycle
-            } else if (this.nar.step) {
-                await this.nar.step();
-            }
+            await this._runReasoningCycle();
         } catch (error) {
             console.error('Error executing reasoning step:', error);
             throw error;
@@ -240,6 +156,37 @@ export class NARControlTool extends BaseTool {
         } catch (error) {
             console.error('Error getting goals:', error);
             return [];
+        }
+    }
+
+    async _executeNARCommand(content, commandType) {
+        try {
+            let result;
+            if (this.nar.input) {
+                result = await this.nar.input(content);
+            } else if (this.nar.addInput) {
+                result = await this.nar.addInput(content);
+            } else if (this.nar.execute) {
+                result = await this.nar.execute(content);
+            } else {
+                throw new Error(`NAR system has no available input method for ${commandType}`);
+            }
+
+            // Run a reasoning cycle to ensure processing
+            await this._runReasoningCycle();
+
+            return result;
+        } catch (error) {
+            console.error(`Error ${commandType === 'add_belief' ? 'adding belief' : 'adding goal'} "${content}":`, error);
+            throw error;
+        }
+    }
+
+    async _runReasoningCycle() {
+        if (this.nar.cycle) {
+            await this.nar.cycle(1); // Execute 1 cycle
+        } else if (this.nar.step) {
+            await this.nar.step();
         }
     }
 }

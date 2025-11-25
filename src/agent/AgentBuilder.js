@@ -72,9 +72,10 @@ export class AgentBuilder {
     }
 
     withConfig(config) {
-        ['subsystems', 'memory', 'nar', 'lm', 'persistence', 'inputProcessing'].forEach(key => {
+        const keys = ['subsystems', 'memory', 'nar', 'lm', 'persistence', 'inputProcessing'];
+        for (const key of keys) {
             if (config[key]) this.config[key] = {...this.config[key], ...config[key]};
-        });
+        }
         return this;
     }
 
@@ -137,7 +138,7 @@ export class AgentBuilder {
 
         const lmProvider = this._createLMProvider(agent);
         if (lmProvider && agent.lm) {
-            const providerName = this.config.lm.provider || 'ollama';
+            const providerName = this.config.lm.provider ?? 'ollama';
             agent.lm.registerProvider(providerName, lmProvider);
             if (!agent.lm.providers.defaultProviderId) {
                 agent.lm.providers.setDefault(providerName);
@@ -172,7 +173,7 @@ export class AgentBuilder {
     }
 
     _createLMProvider(agent) {
-        const providerName = this.config.lm.provider || 'ollama';
+        const providerName = this.config.lm.provider ?? 'ollama';
         let lmProvider = null;
 
         if (providerName === 'ollama') {
@@ -192,12 +193,12 @@ export class AgentBuilder {
 
         if (lmProvider) {
             // Populate tools from registry
-            if (agent && agent.tools && agent.tools.registry) {
+            if (agent?.tools?.registry) {
                  const registeredTools = agent.tools.registry.getDiscoveredTools() || [];
                  const tools = registeredTools.map(tool => ({
                      name: tool.id,
                      description: tool.description,
-                     schema: tool.parameters || tool.schema,
+                     schema: tool.parameters ?? tool.schema,
                      invoke: async (args) => {
                          // Execute tool via tool engine
                          const result = await agent.tools.executeTool(tool.id, args);
@@ -243,7 +244,7 @@ export class AgentBuilder {
     }
 
     _registerArithmeticFunctors(registry) {
-        [
+        const operations = [
             {name: 'add', fn: (a, b) => a + b, commutative: true, associative: true, desc: 'Addition'},
             {name: 'subtract', fn: (a, b) => a - b, commutative: false, associative: false, desc: 'Subtraction'},
             {name: 'multiply', fn: (a, b) => a * b, commutative: true, associative: true, desc: 'Multiplication'},
@@ -254,7 +255,9 @@ export class AgentBuilder {
                 associative: false,
                 desc: 'Division'
             }
-        ].forEach(op => {
+        ];
+
+        for (const op of operations) {
             if (!registry.has(op.name)) {
                 registry.registerFunctorDynamic(op.name, op.fn, {
                     arity: 2,
@@ -263,11 +266,11 @@ export class AgentBuilder {
                     description: op.desc
                 });
             }
-        });
+        }
     }
 
     _registerSetOperationFunctors(registry) {
-        [
+        const operations = [
             {
                 name: 'union',
                 fn: (a, b) => Array.isArray(a) && Array.isArray(b) ? [...new Set([...a, ...b])] : null,
@@ -280,7 +283,9 @@ export class AgentBuilder {
                 commutative: true,
                 desc: 'Set intersection'
             }
-        ].forEach(op => {
+        ];
+
+        for (const op of operations) {
             if (!registry.has(op.name)) {
                 registry.registerFunctorDynamic(op.name, op.fn, {
                     arity: 2,
@@ -288,14 +293,14 @@ export class AgentBuilder {
                     description: op.desc
                 });
             }
-        });
+        }
     }
 
     _registerPlugins(pluginManager, pluginConfig) {
         const register = (config, id) => {
             if (config.instance) pluginManager.registerPlugin(config.instance);
             else if (config.constructor) {
-                pluginManager.registerPlugin(new config.constructor(id || config.constructor.name.toLowerCase(), config.config || {}));
+                pluginManager.registerPlugin(new config.constructor(id ?? config.constructor.name.toLowerCase(), config.config ?? {}));
             }
         };
 

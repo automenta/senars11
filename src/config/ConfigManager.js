@@ -161,7 +161,7 @@ class ConfigManager {
         for (const key in source) {
             if (source.hasOwnProperty(key)) {
                 if (typeof source[key] === 'object' && source[key] !== null && !Array.isArray(source[key])) {
-                    result[key] = this._deepMerge(result[key] || {}, source[key]);
+                    result[key] = this._deepMerge(result[key] ?? {}, source[key]);
                 } else {
                     result[key] = source[key];
                 }

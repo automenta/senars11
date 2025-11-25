@@ -55,13 +55,13 @@ export class ToolRegistry {
 
                     this.logger.info(`Discovered tool: ${toolMetadata.id}`, {
                         name: toolMetadata.name,
-                        category: toolMetadata.category || 'unknown',
+                        category: toolMetadata.category ?? 'unknown',
                         description: toolMetadata.description
                     });
                 }
             } catch (error) {
                 this.logger.warn(`Failed to discover tool from class:`, {
-                    class: toolClass.name || 'anonymous',
+                    class: toolClass.name ?? 'anonymous',
                     error: error.message
                 });
             }
@@ -78,7 +78,7 @@ export class ToolRegistry {
      * @returns {Array<string>} - IDs of successfully registered tools
      */
     registerAll(includeOnly = null, defaultConfig = {}, metadataOverrides = {}) {
-        const toRegister = includeOnly || Array.from(this.discoveredTools.keys());
+        const toRegister = includeOnly ?? Array.from(this.discoveredTools.keys());
         const registered = [];
 
         for (const toolId of toRegister) {
@@ -105,7 +105,7 @@ export class ToolRegistry {
                     // Log registration in history
                     this._logRegistration(toolId, mergedMetadata);
 
-                    this.logger.info(`Registered tool: ${toolId} (${mergedMetadata.category || 'unknown'})`);
+                    this.logger.info(`Registered tool: ${toolId} (${mergedMetadata.category ?? 'unknown'})`);
                 } catch (error) {
                     this.logger.error(`Failed to register tool ${toolId}:`, {
                         error: error.message
@@ -142,7 +142,7 @@ export class ToolRegistry {
             this.engine.registerTool(id, tool, metadata);
             this._logRegistration(id, metadata);
 
-            this.logger.info(`Manually registered tool: ${id} (${metadata.category || 'unknown'})`);
+            this.logger.info(`Manually registered tool: ${id} (${metadata.category ?? 'unknown'})`);
             return this;
         } catch (error) {
             this.logger.error(`Failed to manually register tool ${id}:`, {
@@ -198,7 +198,7 @@ export class ToolRegistry {
      * @private
      */
     _generateToolId(key, value) {
-        return key.toLowerCase().replace(/tool$/, '') ||
+        return key.toLowerCase().replace(/tool$/, '') ??
             (value.name ? value.name.toLowerCase().replace(/tool$/, '') : key);
     }
 
@@ -209,9 +209,9 @@ export class ToolRegistry {
     _createToolMetadata(key, value, metadata) {
         return {
             id: this._generateToolId(key, value),
-            name: value.name || key,
-            description: value.getDescription?.() || `Auto-registered tool: ${key}`,
-            category: value.getCategory?.() || 'general',
+            name: value.name ?? key,
+            description: value.getDescription?.() ?? `Auto-registered tool: ${key}`,
+            category: value.getCategory?.() ?? 'general',
             ...metadata
         };
     }
@@ -259,7 +259,7 @@ export class ToolRegistry {
             }
 
             // Generate metadata
-            const className = toolClass.name || 'AnonymousTool';
+            const className = toolClass.name ?? 'AnonymousTool';
             const toolId = className
                 .replace(/tool$/i, '')
                 .replace(/([a-z])([A-Z])/g, '$1-$2')
@@ -280,9 +280,9 @@ export class ToolRegistry {
             id: toolId,
             name: className,
             description: toolInstance.getDescription(),
-            category: toolInstance.getCategory?.() || 'general',
-            parameters: toolInstance.getParameterSchema?.() || {type: 'object', properties: {}},
-            capabilities: toolInstance.getCapabilities?.() || [],
+            category: toolInstance.getCategory?.() ?? 'general',
+            parameters: toolInstance.getParameterSchema?.() ?? {type: 'object', properties: {}},
+            capabilities: toolInstance.getCapabilities?.() ?? [],
             parameterSchema: toolInstance.getParameterSchema ? toolInstance.getParameterSchema() : null,
             supportsStreaming: typeof toolInstance.stream === 'function',
             supportsValidation: typeof toolInstance.validate === 'function'
@@ -452,7 +452,7 @@ export class ToolRegistry {
             registrationHistoryCount: this.registrationHistory.length,
             autoDiscoveryEnabled: this.autoDiscoveryEnabled,
             discoveryPaths: this.discoveryPaths,
-            lastDiscovery: Math.max(...Array.from(this.discoveredTools.values()).map(d => d.timestamp || 0)) || 0
+            lastDiscovery: Math.max(...Array.from(this.discoveredTools.values()).map(d => d.timestamp ?? 0)) ?? 0
         };
     }
 }
