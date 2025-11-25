@@ -6,20 +6,35 @@
  * to produce reasoning trajectories that are more aligned with user preferences.
  */
 class RLFPLearner {
-  constructor(model) {
-    this.model = model;
-  }
+    constructor(agent) {
+        this.agent = agent;
+    }
 
-  /**
-   * Updates the model based on the collected preferences.
-   * @param {Array} preferences - An array of user preferences.
-   */
-  updateModel(preferences) {
-    // This is where the actual RLFP algorithm would be implemented.
-    // It would involve training the model on the provided preferences.
-    // For now, this is just a placeholder.
-    console.log('Updating model with preferences:', preferences);
-  }
+    updateModel(preferences) {
+        const fineTuningData = this._prepareDataForFineTuning(preferences);
+        if (fineTuningData.length > 0) {
+            this.fineTune(fineTuningData);
+        }
+    }
+
+    _prepareDataForFineTuning(preferences) {
+        return preferences.map(pref => {
+            const chosen = pref.preference === 'A' ? pref.trajectoryA : pref.trajectoryB;
+            const rejected = pref.preference === 'A' ? pref.trajectoryB : pref.trajectoryA;
+            return {
+                chosen: this._formatTrajectoryForTraining(chosen),
+                rejected: this._formatTrajectoryForTraining(rejected),
+            };
+        });
+    }
+
+    _formatTrajectoryForTraining(trajectory) {
+        return trajectory.map(step => step.llm_prompt || step.tool_call || '').join('\n');
+    }
+
+    fineTune(data) {
+        console.log('Fine-tuning model with data:', data);
+    }
 }
 
 export { RLFPLearner };

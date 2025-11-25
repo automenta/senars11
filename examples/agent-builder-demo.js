@@ -1,66 +1,58 @@
 /**
  * Example demonstrating the AgentBuilder functionality
  */
-import {AgentBuilder} from '../src/config/AgentBuilder.js';
+import {AgentBuilder} from '../src/agent/AgentBuilder.js';
 
-// Example 1: Create an agent with default configuration
-console.log('=== Creating agent with default configuration ===');
-const defaultAgent = new AgentBuilder().build();
-console.log('Default agent created successfully');
+async function main() {
+    console.log('=== Creating agent with default configuration ===');
+    const defaultAgent = await new AgentBuilder().build();
+    printAgentStats(defaultAgent);
 
-// Example 2: Create an agent with specific subsystems enabled
-console.log('\n=== Creating agent with metrics and embeddings enabled ===');
-const customAgent = new AgentBuilder()
-    .withMetrics(true)
-    .withEmbeddings({model: 'text-embedding-ada-002', enabled: true})
-    .withLM(true)
-    .withTools(false)
-    .withFunctors(['core-arithmetic'])
-    .build();
+    console.log('\n=== Creating agent with metrics and embeddings enabled ===');
+    const customAgent = await new AgentBuilder()
+        .withMetrics(true)
+        .withEmbeddings({ model: 'text-embedding-ada-002', enabled: true })
+        .withLM(true)
+        .withTools(false)
+        .withFunctors(['core-arithmetic'])
+        .build();
+    printAgentStats(customAgent);
 
-console.log('Custom agent created with:');
-console.log('- Metrics:', customAgent.getMetricsMonitor() !== null);
-console.log('- Embeddings:', customAgent.getEmbeddingLayer() !== null);
-console.log('- Language Model:', customAgent.getLM() !== null);
-console.log('- Tools:', customAgent.getTools() !== null);
-
-// Example 3: Create an agent with configuration object
-console.log('\n=== Creating agent with configuration object ===');
-const configAgent = new AgentBuilder()
-    .withConfig({
+    console.log('\n=== Creating agent with configuration object ===');
+    const configAgent = await new AgentBuilder({
         subsystems: {
             metrics: true,
-            embeddingLayer: {enabled: true, model: 'test-model'},
+            embeddingLayer: { enabled: true, model: 'test-model' },
             functors: ['core-arithmetic', 'set-operations'],
             rules: ['syllogistic-core'],
             tools: false,
             lm: true
         }
-    })
-    .build();
+    }).build();
+    printAgentStats(configAgent);
 
-console.log('Config agent created with:');
-console.log('- Embedding layer:', configAgent.getEmbeddingLayer() !== null);
-console.log('- Language model:', configAgent.getLM() !== null);
-
-// Example 4: Create a minimal agent with only core functionality
-console.log('\n=== Creating minimal agent ===');
-const minimalAgent = new AgentBuilder()
-    .withConfig({
+    console.log('\n=== Creating minimal agent ===');
+    const minimalAgent = await new AgentBuilder({
         subsystems: {
             metrics: false,
-            embeddingLayer: {enabled: false},
+            embeddingLayer: false,
             functors: [],
             rules: [],
             tools: false,
             lm: false
         }
-    })
-    .build();
+    }).build();
+    printAgentStats(minimalAgent);
 
-console.log('Minimal agent created with disabled subsystems:');
-console.log('- Embedding layer:', minimalAgent.getEmbeddingLayer() === null);
-console.log('- Language model:', minimalAgent.getLM() === null);
-console.log('- Tools:', minimalAgent.getTools() === null);
+    console.log('\n=== All examples completed successfully ===');
+}
 
-console.log('\n=== All examples completed successfully ===');
+function printAgentStats(agent) {
+    console.log('Agent created with:');
+    console.log(`- Metrics: ${agent.metrics ? 'enabled' : 'disabled'}`);
+    console.log(`- Embeddings: ${agent.embeddingLayer ? 'enabled' : 'disabled'}`);
+    console.log(`- Language Model: ${agent.lm ? 'enabled' : 'disabled'}`);
+    console.log(`- Tools: ${agent.tools ? 'enabled' : 'disabled'}`);
+}
+
+main().catch(console.error);
