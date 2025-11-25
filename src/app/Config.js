@@ -43,9 +43,21 @@ export class Config {
                 // LM / Ollama Args
                 case '--ollama':
                     config.lm.enabled = true;
+                    config.lm.provider = 'ollama';
                     if (argv[i + 1] && !argv[i + 1].startsWith('--')) {
                         config.lm.modelName = argv[++i];
                     }
+                    break;
+                case '--transformers':
+                    config.lm.enabled = true;
+                    config.lm.provider = 'transformersjs';
+                    if (argv[i + 1] && !argv[i + 1].startsWith('--')) {
+                        config.lm.modelName = argv[++i];
+                    }
+                    break;
+                case '--provider':
+                    config.lm.provider = argv[++i];
+                    config.lm.enabled = true;
                     break;
                 case '--model':
                 case '--modelName':
