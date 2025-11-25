@@ -1,6 +1,7 @@
 import {Agent} from './Agent.js';
 import {PluginManager} from '../util/Plugin.js';
 import {ChatOllama} from "@langchain/ollama";
+import {TransformersJSProvider} from "../lm/TransformersJSProvider.js";
 
 export class AgentBuilder {
     constructor(initialConfig = {}) {
@@ -133,9 +134,9 @@ export class AgentBuilder {
 
         const lmProvider = this._createLMProvider();
         if (lmProvider && agent.lm) {
-            agent.lm.registerProvider('ollama', lmProvider);
+            agent.lm.registerProvider(lmProvider.name || 'default', lmProvider);
             if (!agent.lm.providers.defaultProviderId) {
-                agent.lm.providers.setDefault('ollama');
+                agent.lm.providers.setDefault(lmProvider.name || 'default');
             }
         }
 
@@ -174,6 +175,14 @@ export class AgentBuilder {
                 temperature: this.config.lm.temperature,
             });
             lmProvider.name = 'ollama';
+            lmProvider.tools = [];
+            return lmProvider;
+        } else if (this.config.lm.provider === 'transformersjs') {
+            const lmProvider = new TransformersJSProvider({
+                modelName: this.config.lm.modelName,
+                temperature: this.config.lm.temperature
+            });
+            lmProvider.name = 'transformersjs';
             lmProvider.tools = [];
             return lmProvider;
         }
