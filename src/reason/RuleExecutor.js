@@ -27,37 +27,14 @@ export class RuleExecutor {
     }
 
     buildOptimizationStructure() {
-        this.decisionTree = this._createDecisionTree();
-    }
-
-    _createDecisionTree() {
-        const tree = new Map();
-
-        for (const rule of this.rules) {
-            const key = this._getRuleKey(rule);
-            if (!tree.has(key)) {
-                tree.set(key, []);
-            }
-            tree.get(key).push(rule);
-        }
-
-        return tree;
-    }
-
-    _getRuleKey(rule) {
-        return rule.type ?? 'default';
+        // Optimization temporarily disabled due to key mismatch issues
+        this.decisionTree = null;
     }
 
     getCandidateRules(primaryPremise, secondaryPremise) {
-        // Build decision tree if not already built
-        if (!this.decisionTree) {
-            this.buildOptimizationStructure();
-        }
-
-        // Use decision tree for optimized selection
-        const heuristicKey = this._getHeuristicKey(primaryPremise, secondaryPremise);
-        const treeCandidates = this.decisionTree.get(heuristicKey) ?? this.rules;
-        return this._filterCandidates(treeCandidates, primaryPremise, secondaryPremise);
+        // Optimization temporarily disabled - always scan all rules
+        // This fixes the bug where valid rules were skipped due to key mismatch
+        return this._filterCandidates(this.rules, primaryPremise, secondaryPremise);
     }
 
     /**
@@ -84,15 +61,6 @@ export class RuleExecutor {
      */
     _canRuleApply(rule, primaryPremise, secondaryPremise) {
         return rule.canApply?.(primaryPremise, secondaryPremise) ?? true;
-    }
-
-    _getHeuristicKey(primaryPremise, secondaryPremise) {
-        const primaryType = primaryPremise.type ?? 'unknown';
-        const secondaryType = secondaryPremise.type ?? 'unknown';
-        const primaryTerm = primaryPremise.term?.name?.substring(0, 10) ?? 'unknown';
-        const secondaryTerm = secondaryPremise.term?.name?.substring(0, 10) ?? 'unknown';
-
-        return `${primaryType}_${secondaryType}_${primaryTerm}_${secondaryTerm}`;
     }
 
     executeRule(rule, primaryPremise, secondaryPremise, context = {}) {
