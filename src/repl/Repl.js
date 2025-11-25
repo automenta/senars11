@@ -19,7 +19,9 @@ class Repl {
         // If LM is not enabled via args, it remains disabled.
         // Users should provide --modelName or similar args to enable it.
         if (!this.config.lm.enabled && !this.config.demo) {
-            console.log('ℹ️ LM not enabled. Use --modelName <name> to enable Agent capabilities.');
+            console.log('ℹ️ LM not enabled. Use --provider <name> --modelName <name> to enable Agent capabilities.');
+        } else if (this.config.lm.enabled) {
+            console.log(`ℹ️ LM Enabled: Provider=${this.config.lm.provider}, Model=${this.config.lm.modelName}`);
         }
 
         await this.startRepl();
