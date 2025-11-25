@@ -14,11 +14,17 @@ export class Agent extends NAR {
         this.id = config.id || `agent_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         this.inputQueue = new Input();
         this.sessionState = {history: [], lastResult: null, startTime: Date.now()};
-        this.isRunningLoop = false;
-        this.runInterval = null;
-        this.traceEnabled = false;
-        this.echo = false;
-        this.quiet = false;
+
+        this.runState = {
+            isRunning: false,
+            intervalId: null,
+        };
+
+        this.displaySettings = {
+            trace: false,
+            echo: false,
+            quiet: false,
+        };
 
         this.inputProcessingConfig = {
             enableNarseseFallback: config.inputProcessing?.enableNarseseFallback ?? true,
@@ -145,34 +151,29 @@ export class Agent extends NAR {
     }
 
     async startAutoStep(interval = 10) {
-        if (this.isRunningLoop) {
-             this._stopRun();
+        if (this.runState.isRunning) {
+            this._stopRun();
         }
 
-        this.isRunningLoop = true;
-        this.emit(AGENT_EVENTS.NAR_CYCLE_START, {reason: 'auto-step'});
+        this.runState.isRunning = true;
+        this.emit(AGENT_EVENTS.NAR_CYCLE_START, { reason: 'auto-step' });
 
-        // If not in quiet mode, enable trace for visibility unless explicitly disabled?
-        // Spec says /quiet suppresses trace.
-        // If quiet is false, we generally want trace on for demo.
-        if (!this.quiet && !this.traceEnabled) {
-            this.traceEnabled = true;
-            this.emit(AGENT_EVENTS.NAR_TRACE_ENABLE, {reason: 'auto-step session'});
+        if (!this.displaySettings.quiet && !this.displaySettings.trace) {
+            this.displaySettings.trace = true;
+            this.emit(AGENT_EVENTS.NAR_TRACE_ENABLE, { reason: 'auto-step session' });
         }
 
-        this.runInterval = setInterval(() => {
-            this._autonomousStep().catch(error => {
+        this.runState.intervalId = setInterval(async () => {
+            try {
+                await this.step();
+            } catch (error) {
                 console.error(`❌ Error during run: ${error.message}`);
                 this._stopRun();
-            });
+            }
         }, interval);
 
-        this.emit(AGENT_EVENTS.NAR_CYCLE_RUNNING, {interval});
+        this.emit(AGENT_EVENTS.NAR_CYCLE_RUNNING, { interval });
         return `🏃 Auto-stepping every ${interval}ms... Use "/stop" or input to stop.`;
-    }
-
-    async _autonomousStep() {
-        await this.step();
     }
 
     _stop() {
@@ -180,11 +181,11 @@ export class Agent extends NAR {
     }
 
     _stopRun() {
-        if (this.runInterval) {
-            clearInterval(this.runInterval);
-            this.runInterval = null;
+        if (this.runState.intervalId) {
+            clearInterval(this.runState.intervalId);
+            this.runState.intervalId = null;
         }
-        this.isRunningLoop = false;
+        this.runState.isRunning = false;
         this.emit(AGENT_EVENTS.NAR_CYCLE_STOP);
         return '🛑 Run stopped.';
     }
