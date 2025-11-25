@@ -125,8 +125,8 @@ export class Agent extends NAR {
         yield* this.agentStreamer.streamExecution(input);
     }
 
-    async processInputStreaming(input, onChunk) {
-        return this.agentStreamer.processInputStreaming(input, onChunk);
+    async processInputStreaming(input, onChunk, onStep) {
+        return this.agentStreamer.processInputStreaming(input, onChunk, onStep);
     }
 
     async _next() {

@@ -132,7 +132,7 @@ export class AgentStreamer {
         yield {type: "error", content: `❌ Streaming error: ${error.message}`};
     }
 
-    async processInputStreaming(input, onChunk) {
+    async processInputStreaming(input, onChunk, onStep) {
         const trimmed = input.trim();
         if (!trimmed) {
             const res = await this.agent.executeCommand('next');
@@ -149,9 +149,10 @@ export class AgentStreamer {
         try {
             let fullResponse = "";
             for await (const chunk of this.streamExecution(trimmed)) {
+                onStep?.(chunk);
                 if (chunk.type === 'agent_response') {
                     fullResponse += chunk.content;
-                    onChunk?.(`🤖: ${chunk.content}`);
+                    onChunk?.(chunk.content);
                 } else if (chunk.type === 'tool_call') {
                     onChunk?.(`\n[Calling tool: ${chunk.name}...]\n`);
                 } else if (chunk.type === 'tool_result') {
