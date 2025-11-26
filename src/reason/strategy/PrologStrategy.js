@@ -34,21 +34,14 @@ export class PrologStrategy extends Strategy {
      */
     async selectSecondaryPremises(primaryPremise) {
         if (!isQuestion(primaryPremise)) {
-            // For non-questions, fall back to general reasoning
             return super.selectSecondaryPremises(primaryPremise);
         }
 
         try {
-            // Update knowledge base with current tasks from memory if available
-            if (this.memory) {
-                const allTasks = this._getAvailableTasks();
-                this.updateKnowledgeBase(allTasks);
-            }
-
-            // Use Prolog resolution to find solutions for the question
+            this.memory && this.updateKnowledgeBase(this._getAvailableTasks());
             return await this._resolveGoal(primaryPremise);
         } catch (error) {
-            console.error('Error in PrologStrategy resolution:', error);
+            this.log.error('Error in PrologStrategy resolution:', error);
             return [];
         }
     }

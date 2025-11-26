@@ -30,156 +30,77 @@ export class NARControlTool extends BaseTool {
     }
 
     async execute(args) {
-        if (!this.nar) {
-            return {error: 'NAR system not initialized'};
-        }
+        if (!this.nar) return { error: 'NAR system not initialized' };
 
-        const {action, content} = args;
+        const { action, content } = args;
+        const actionHandler = this._getActionHandler(action);
+
+        if (!actionHandler) return { error: `Unknown action: ${action}` };
 
         try {
-            switch (action) {
-                case 'add_belief':
-                    if (!content) {
-                        return {error: 'Content required for adding belief'};
-                    }
-                    await this._addBelief(content);
-                    return {success: true, message: `Belief added: ${content}`};
-
-                case 'add_goal':
-                    if (!content) {
-                        return {error: 'Content required for adding goal'};
-                    }
-                    await this._addGoal(content);
-                    return {success: true, message: `Goal added: ${content}`};
-
-                case 'query':
-                    if (!content) {
-                        return {error: 'Content required for query'};
-                    }
-                    const queryResult = await this._query(content);
-                    return {success: true, result: queryResult};
-
-                case 'step':
-                    await this._step();
-                    return {success: true, message: 'Single reasoning step executed'};
-
-                case 'get_beliefs':
-                    const beliefs = await this._getBeliefs();
-                    return {success: true, beliefs};
-
-                case 'get_goals':
-                    const goals = await this._getGoals();
-                    return {success: true, goals};
-
-                default:
-                    return {error: `Unknown action: ${action}`};
+            if (actionHandler.requiresContent && !content) {
+                return { error: `Content required for ${action}` };
             }
+            return await actionHandler.handler(content);
         } catch (error) {
-            return {error: `Tool execution failed: ${error.message}`};
+            return { error: `Tool execution failed: ${error.message}` };
         }
+    }
+
+    _getActionHandler(action) {
+        const actions = {
+            'add_belief': { handler: this._addBelief.bind(this), requiresContent: true },
+            'add_goal': { handler: this._addGoal.bind(this), requiresContent: true },
+            'query': { handler: this._query.bind(this), requiresContent: true },
+            'step': { handler: this._step.bind(this), requiresContent: false },
+            'get_beliefs': { handler: this._getBeliefs.bind(this), requiresContent: false },
+            'get_goals': { handler: this._getGoals.bind(this), requiresContent: false },
+        };
+        return actions[action];
     }
 
     async _addBelief(content) {
-        // Execute Narsese statement to add a belief using the full NAR input pipeline
-        return await this._executeNARCommand(content, 'add_belief');
+        await this._executeNARInputCommand(content);
+        return { success: true, message: `Belief added: ${content}` };
     }
 
     async _addGoal(content) {
-        // Execute Narsese statement to add a goal (typically ends with !)
-        return await this._executeNARCommand(content, 'add_goal');
+        await this._executeNARInputCommand(content);
+        return { success: true, message: `Goal added: ${content}` };
     }
 
     async _query(content) {
-        // Execute a query to the NAR system by adding the query as a question task
-        try {
-            // Input the query content as a question to the NAR
-            if (this.nar.addInput) {
-                // Ensure the content ends with '?' for questions
-                let questionContent = content.trim();
-                if (!questionContent.endsWith('?')) {
-                    // Only add '?' if no other punctuation is present
-                    if (!['.', '!', '?'].includes(questionContent.slice(-1))) {
-                        questionContent += '?';
-                    }
-                }
-                await this.nar.addInput(questionContent);
-
-                // Run a step to process the query
-                await this._runReasoningCycle();
-
-                // For now, return a success message since actual query results might need different handling
-                return `Query "${questionContent}" processed`;
-            } else if (this.nar.execute) {
-                await this.nar.execute(content);
-                return `Query "${content}" executed`;
-            } else {
-                // Fallback: just return all beliefs if we can't process the query properly
-                const beliefs = this.nar.getBeliefs ? this.nar.getBeliefs() : [];
-                return beliefs.length > 0 ? beliefs : 'No results found for the query';
-            }
-        } catch (error) {
-            console.error(`Error querying "${content}":`, error);
-            return 'Error executing query';
+        let questionContent = content.trim();
+        if (!['.', '!', '?'].some(p => questionContent.endsWith(p))) {
+            questionContent += '?';
         }
+
+        const result = await this._executeNARInputCommand(questionContent);
+        return { success: true, result: result ?? `Query "${questionContent}" processed` };
     }
 
     async _step() {
-        // Execute a single reasoning step
-        try {
-            await this._runReasoningCycle();
-        } catch (error) {
-            console.error('Error executing reasoning step:', error);
-            throw error;
-        }
+        await this._runReasoningCycle();
+        return { success: true, message: 'Single reasoning step executed' };
     }
 
     async _getBeliefs() {
-        // Get current beliefs from the NAR system
-        try {
-            if (this.nar.getBeliefs) {
-                return this.nar.getBeliefs();
-            }
-            return [];
-        } catch (error) {
-            console.error('Error getting beliefs:', error);
-            return [];
-        }
+        const beliefs = await this.nar.getBeliefs?.() ?? [];
+        return { success: true, beliefs };
     }
 
     async _getGoals() {
-        // Get current goals from the NAR system
-        try {
-            if (this.nar.getGoals) {
-                return this.nar.getGoals();
-            }
-            return [];
-        } catch (error) {
-            console.error('Error getting goals:', error);
-            return [];
-        }
+        const goals = await this.nar.getGoals?.() ?? [];
+        return { success: true, goals };
     }
 
-    async _executeNARCommand(content, commandType) {
-        try {
-            let result;
-            if (this.nar.input) {
-                result = await this.nar.input(content);
-            } else if (this.nar.addInput) {
-                result = await this.nar.addInput(content);
-            } else if (this.nar.execute) {
-                result = await this.nar.execute(content);
-            } else {
-                throw new Error(`NAR system has no available input method for ${commandType}`);
-            }
+    async _executeNARInputCommand(content) {
+        const inputMethod = this.nar.input ?? this.nar.addInput ?? this.nar.execute;
+        if (!inputMethod) throw new Error('NAR system has no available input method');
 
-            // Run a reasoning cycle to ensure processing
-            await this._runReasoningCycle();
-
-            return result;
-        } catch (error) {
-            console.error(`Error ${commandType === 'add_belief' ? 'adding belief' : 'adding goal'} "${content}":`, error);
-            throw error;
-        }
+        const result = await inputMethod.call(this.nar, content);
+        await this._runReasoningCycle();
+        return result;
     }
 
     async _runReasoningCycle() {

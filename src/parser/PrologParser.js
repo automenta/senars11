@@ -23,23 +23,19 @@ export class PrologParser {
     }
 
     _parseLine(line) {
-        if (this._isRule(line)) return this._parseRule(line);
-        if (this._isFact(line)) return [this._parseFact(line)];
-        if (this._isQuery(line)) return [this._parseQuery(line)];
-        return [];
+        const parsers = [
+            { predicate: this._isRule, parser: this._parseRule.bind(this) },
+            { predicate: this._isFact, parser: (l) => [this._parseFact(l)] },
+            { predicate: this._isQuery, parser: (l) => [this._parseQuery(l)] }
+        ];
+
+        const matchingParser = parsers.find(({ predicate }) => predicate(line));
+        return matchingParser ? matchingParser.parser(line) : [];
     }
 
-    _isFact(line) {
-        return line.endsWith('.') && !line.includes(':-');
-    }
-
-    _isRule(line) {
-        return line.includes(':-');
-    }
-
-    _isQuery(line) {
-        return line.endsWith(' ?');
-    }
+    _isFact = (line) => line.endsWith('.') && !line.includes(':-');
+    _isRule = (line) => line.includes(':-');
+    _isQuery = (line) => line.endsWith('?');
 
     /**
      * Parse a Prolog fact: predicate(args).
