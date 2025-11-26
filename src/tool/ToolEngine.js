@@ -1,41 +1,26 @@
 import {Logger} from '../util/Logger.js';
 import {Capability, CapabilityManager} from '../util/CapabilityManager.js';
+import {PerformanceTracker} from './PerformanceTracker.js';
+import {ExecutionHistory} from './ExecutionHistory.js';
 
 export class ToolEngine {
     constructor(config = {}) {
-        Object.assign(this, {
-            config: {
-                defaultTimeout: 5000,
-                safetyLimits: {
-                    maxOutputSize: 10000,
-                    maxCommandLength: 1000
-                },
-                maxHistorySize: 1000,
-                enableSandboxing: true,
-                ...config
+        this.config = {
+            defaultTimeout: 5000,
+            safetyLimits: {
+                maxOutputSize: 10000,
+                maxCommandLength: 1000
             },
-            tools: new Map(),
-            logger: Logger,
-            activeExecutions: new Map(),
-            executionHistory: [],
-            capabilityManager: config.capabilityManager ?? null,
-            performanceTracker: {
-                totalExecutions: 0,
-                successfulExecutions: 0,
-                failedExecutions: 0,
-                averageExecutionTime: 0,
-                totalErrors: 0,
-                toolUsageStats: new Map(),
-                categoryPerformance: new Map(),
-                performanceHistory: [],
-                peakUsageTimes: new Map(),
-                errorPatterns: new Map()
-            }
-        });
-
-        if (!this.capabilityManager) {
-            this.capabilityManager = new CapabilityManager();
-        }
+            maxHistorySize: 1000,
+            enableSandboxing: true,
+            ...config
+        };
+        this.tools = new Map();
+        this.logger = Logger;
+        this.activeExecutions = new Map();
+        this.executionHistory = new ExecutionHistory(this.config.maxHistorySize);
+        this.capabilityManager = config.capabilityManager ?? new CapabilityManager();
+        this.performanceTracker = new PerformanceTracker();
     }
 
     async registerTool(id, tool, metadata = {}) {
@@ -125,14 +110,11 @@ export class ToolEngine {
 
         if (!tool) throw new Error(`Tool "${toolId}" not found`);
 
-        await this._validateToolCapabilities(toolId, tool);
         const executionContext = this._createExecutionContext(executionId, toolId, params, context, startTime);
-
         this.activeExecutions.set(executionId, executionContext);
 
         try {
-            this._validateSafety(params);
-            await this._validateToolParams(tool, params);
+            await this._validateExecution(toolId, tool, params);
 
             const timeout = context.timeout ?? this.config.defaultTimeout;
             const result = await this._executeWithTimeout(
@@ -149,6 +131,12 @@ export class ToolEngine {
         } finally {
             this.activeExecutions.delete(executionId);
         }
+    }
+
+    async _validateExecution(toolId, tool, params) {
+        await this._validateToolCapabilities(toolId, tool);
+        this._validateSafety(params);
+        await this._validateToolParams(tool, params);
     }
 
     async _validateToolCapabilities(toolId, tool) {
@@ -196,8 +184,8 @@ export class ToolEngine {
         tool.usageCount++;
         tool.lastUsed = Date.now();
 
-        this._trackExecutionSuccess(executionId, toolId, startTime, result);
-        this._addToHistory(executionContext);
+        this.performanceTracker.trackExecutionSuccess(toolId, startTime);
+        this.executionHistory.add(executionContext);
 
         this.logger.info(`Tool execution completed: ${toolId} (${executionId}) in ${executionContext.duration}ms`);
 
@@ -226,8 +214,8 @@ export class ToolEngine {
             context: executionContext.context
         };
 
-        this._trackExecutionFailure(executionId, toolId, startTime, error);
-        this._addToHistory(errorContext);
+        this.performanceTracker.trackExecutionFailure(toolId, startTime, error);
+        this.executionHistory.add(errorContext);
 
         this.logger.error(`Tool execution failed: ${toolId} (${executionId})`, error);
 
@@ -283,51 +271,11 @@ export class ToolEngine {
     }
 
     getExecutionHistory(options = {}) {
-        let history = [...this.executionHistory];
-
-        if (options.toolName) {
-            history = history.filter(exec => exec.toolId === options.toolName);
-        }
-        if (options.category) {
-            history = history.filter(exec => {
-                const tool = this.tools.get(exec.toolId);
-                return tool?.category === options.category;
-            });
-        }
-        if (options.limit) {
-            history = history.slice(-options.limit);
-        }
-
-        return history;
+        return this.executionHistory.get(options, this.tools);
     }
 
     getStats() {
-        const stats = {
-            totalTools: this.tools.size,
-            toolsByCategory: {},
-            totalExecutions: this.executionHistory.length,
-            successfulExecutions: this.performanceTracker.successfulExecutions,
-            failedExecutions: this.performanceTracker.failedExecutions,
-            averageExecutionTime: this.performanceTracker.averageExecutionTime,
-            mostUsedTools: []
-        };
-
-        for (const tool of this.tools.values()) {
-            const category = tool.category;
-            stats.toolsByCategory[category] = (stats.toolsByCategory[category] ?? 0) + 1;
-        }
-
-        const toolUsage = new Map();
-        for (const tool of this.tools.values()) {
-            toolUsage.set(tool.id, tool.usageCount);
-        }
-
-        stats.mostUsedTools = Array.from(toolUsage.entries())
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 10)
-            .map(([toolName, count]) => ({toolName, count}));
-
-        return stats;
+        return this.performanceTracker.getStats(this.tools);
     }
 
     _validateSafety(params) {
@@ -393,67 +341,6 @@ export class ToolEngine {
 
     _generateExecutionId() {
         return `exec_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    }
-
-    _addToHistory(execution) {
-        this.executionHistory.push({...execution, timestamp: Date.now()});
-        if (this.executionHistory.length > this.config.maxHistorySize) {
-            this.executionHistory = this.executionHistory.slice(-this.config.maxHistorySize);
-        }
-    }
-
-    _trackExecutionSuccess(executionId, toolName, startTime, result) {
-        const duration = Date.now() - startTime;
-
-        this.performanceTracker.totalExecutions++;
-        this.performanceTracker.successfulExecutions++;
-
-        const {successfulExecutions} = this.performanceTracker;
-        this.performanceTracker.averageExecutionTime =
-            (this.performanceTracker.averageExecutionTime * (successfulExecutions - 1) + duration) / successfulExecutions;
-
-        if (!this.performanceTracker.toolUsageStats.has(toolName)) {
-            this.performanceTracker.toolUsageStats.set(toolName, {
-                executions: 0,
-                successes: 0,
-                failures: 0,
-                totalTime: 0,
-                averageTime: 0
-            });
-        }
-
-        const toolStats = this.performanceTracker.toolUsageStats.get(toolName);
-        toolStats.executions++;
-        toolStats.successes++;
-        toolStats.totalTime += duration;
-        toolStats.averageTime = toolStats.totalTime / toolStats.executions;
-    }
-
-    _trackExecutionFailure(executionId, toolName, startTime, error) {
-        const duration = Date.now() - startTime;
-
-        this.performanceTracker.totalExecutions++;
-        this.performanceTracker.failedExecutions++;
-
-        if (!this.performanceTracker.toolUsageStats.has(toolName)) {
-            this.performanceTracker.toolUsageStats.set(toolName, {
-                executions: 0,
-                successes: 0,
-                failures: 0,
-                totalTime: 0,
-                averageTime: 0
-            });
-        }
-
-        const toolStats = this.performanceTracker.toolUsageStats.get(toolName);
-        toolStats.executions++;
-        toolStats.failures++;
-        toolStats.totalTime += duration;
-        toolStats.averageTime = toolStats.totalTime / toolStats.executions;
-
-        const errorKey = error.constructor.name;
-        const count = this.performanceTracker.errorPatterns.get(errorKey) ?? 0;
-        this.performanceTracker.errorPatterns.set(errorKey, count + 1);
     }
 
     cancelAllExecutions() {

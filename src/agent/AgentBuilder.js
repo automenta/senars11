@@ -1,7 +1,7 @@
 import {Agent} from './Agent.js';
 import {PluginManager} from '../util/Plugin.js';
-import {ChatOllama} from "@langchain/ollama";
-import {TransformersJSModel} from '../lm/TransformersJSModel.js';
+import {FunctorProvider} from './FunctorProvider.js';
+import {LMProviderBuilder} from '../lm/LMProviderBuilder.js';
 
 export class AgentBuilder {
     constructor(initialConfig = {}) {
@@ -72,10 +72,7 @@ export class AgentBuilder {
     }
 
     withConfig(config) {
-        const keys = ['subsystems', 'memory', 'nar', 'lm', 'persistence', 'inputProcessing'];
-        for (const key of keys) {
-            if (config[key]) this.config[key] = {...this.config[key], ...config[key]};
-        }
+        Object.assign(this.config, config);
         return this;
     }
 
@@ -117,183 +114,53 @@ export class AgentBuilder {
     async build() {
         const agent = new Agent(this._buildAgentConfig());
 
-        const pluginManager = new PluginManager({
+        agent._pluginManager = new PluginManager({
             nar: agent,
             agent: agent,
             eventBus: agent._eventBus
         });
 
         if (this.config.subsystems.plugins) {
-            this._registerPlugins(pluginManager, this.config.subsystems.plugins);
+            this._registerPlugins(agent._pluginManager, this.config.subsystems.plugins);
         }
 
-        agent._pluginManager = pluginManager;
-
-        if (this.config.subsystems.functors) {
-            const registry = agent.evaluator?.getFunctorRegistry?.();
-            if (registry) this._registerFunctors(registry, this.config.subsystems.functors);
-        }
+        FunctorProvider.registerFunctors(agent.evaluator?.getFunctorRegistry?.(), this.config.subsystems.functors);
 
         await this._initializeSubsystems(agent);
 
-        const lmProvider = this._createLMProvider(agent);
-        if (lmProvider && agent.lm) {
-            const providerName = this.config.lm.provider ?? 'ollama';
-            agent.lm.registerProvider(providerName, lmProvider);
-            if (!agent.lm.providers.defaultProviderId) {
-                agent.lm.providers.setDefault(providerName);
-            }
+        const lmProvider = LMProviderBuilder.create(agent, this.config.lm);
+        if (lmProvider) {
+            agent.lm?.registerProvider(lmProvider.name, lmProvider);
+            agent.lm?.providers.setDefault(lmProvider.name);
         }
 
         return agent;
     }
 
     _buildAgentConfig() {
-        const {subsystems, nar} = this.config;
+        const {subsystems, nar, memory, persistence, inputProcessing, lm} = this.config;
+        const {lm: lmSubsystem, tools, embeddingLayer, metrics} = subsystems;
+
         return {
             ...nar,
-            memory: this.config.memory,
-            persistence: this.config.persistence,
-            inputProcessing: this.config.inputProcessing,
+            memory,
+            persistence,
+            inputProcessing,
             lm: {
-                enabled: !!subsystems.lm,
-                ...(typeof subsystems.lm === 'object' ? subsystems.lm : {}),
-                ...this.config.lm
+                enabled: !!lmSubsystem,
+                ...(typeof lmSubsystem === 'object' ? lmSubsystem : {}),
+                ...lm
             },
             tools: {
-                enabled: !!subsystems.tools,
-                ...(typeof subsystems.tools === 'object' ? subsystems.tools : {})
+                enabled: !!tools,
+                ...(typeof tools === 'object' ? tools : {})
             },
             embeddingLayer: {
-                enabled: !!subsystems.embeddingLayer,
-                ...(typeof subsystems.embeddingLayer === 'object' ? subsystems.embeddingLayer : {})
+                enabled: !!embeddingLayer,
+                ...(typeof embeddingLayer === 'object' ? embeddingLayer : {})
             },
-            metricsMonitor: subsystems.metrics ? (typeof subsystems.metrics === 'object' ? subsystems.metrics : {}) : undefined
+            metricsMonitor: metrics ? (typeof metrics === 'object' ? metrics : {}) : undefined
         };
-    }
-
-    _createLMProvider(agent) {
-        const providerName = this.config.lm.provider ?? 'ollama';
-        let lmProvider = null;
-
-        if (providerName === 'ollama') {
-            lmProvider = new ChatOllama({
-                model: this.config.lm.modelName,
-                baseUrl: this.config.lm.baseUrl,
-                temperature: this.config.lm.temperature,
-            });
-            lmProvider.name = 'ollama';
-        } else if (providerName === 'transformers') {
-            lmProvider = new TransformersJSModel({
-                modelName: this.config.lm.modelName,
-                temperature: this.config.lm.temperature,
-            });
-            lmProvider.name = 'transformers';
-        }
-
-        if (lmProvider) {
-            // Populate tools from registry
-            if (agent?.tools?.registry) {
-                 const registeredTools = agent.tools.registry.getDiscoveredTools() || [];
-                 const tools = registeredTools.map(tool => ({
-                     name: tool.id,
-                     description: tool.description,
-                     schema: tool.parameters ?? tool.schema,
-                     invoke: async (args) => {
-                         // Execute tool via tool engine
-                         const result = await agent.tools.executeTool(tool.id, args);
-                         if (result && typeof result.result !== 'undefined') {
-                             // Handle cases where result is wrapped
-                             return typeof result.result === 'string' ? result.result : JSON.stringify(result.result);
-                         }
-                         return JSON.stringify(result);
-                     }
-                 }));
-
-                 lmProvider.tools = tools;
-
-                 // Bind tools if model supports it
-                 if (typeof lmProvider.bindTools === 'function') {
-                     lmProvider.bindTools(tools);
-                 }
-            } else {
-                lmProvider.tools = [];
-            }
-            return lmProvider;
-        }
-        return null;
-    }
-
-    _registerFunctors(registry, functorConfig) {
-        if (Array.isArray(functorConfig)) {
-            functorConfig.forEach(c => this._registerFunctorCollection(registry, c));
-        } else if (typeof functorConfig === 'object') {
-            Object.entries(functorConfig)
-                .filter(([, enabled]) => enabled)
-                .forEach(([c]) => this._registerFunctorCollection(registry, c));
-        }
-    }
-
-    _registerFunctorCollection(registry, collectionName) {
-        const collections = {
-            'core-arithmetic': () => this._registerArithmeticFunctors(registry),
-            'set-operations': () => this._registerSetOperationFunctors(registry),
-        };
-        const collection = collections[collectionName];
-        if (collection) collection();
-    }
-
-    _registerArithmeticFunctors(registry) {
-        const operations = [
-            {name: 'add', fn: (a, b) => a + b, commutative: true, associative: true, desc: 'Addition'},
-            {name: 'subtract', fn: (a, b) => a - b, commutative: false, associative: false, desc: 'Subtraction'},
-            {name: 'multiply', fn: (a, b) => a * b, commutative: true, associative: true, desc: 'Multiplication'},
-            {
-                name: 'divide',
-                fn: (a, b) => b !== 0 ? a / b : null,
-                commutative: false,
-                associative: false,
-                desc: 'Division'
-            }
-        ];
-
-        for (const op of operations) {
-            if (!registry.has(op.name)) {
-                registry.registerFunctorDynamic(op.name, op.fn, {
-                    arity: 2,
-                    isCommutative: op.commutative,
-                    isAssociative: op.associative,
-                    description: op.desc
-                });
-            }
-        }
-    }
-
-    _registerSetOperationFunctors(registry) {
-        const operations = [
-            {
-                name: 'union',
-                fn: (a, b) => Array.isArray(a) && Array.isArray(b) ? [...new Set([...a, ...b])] : null,
-                commutative: true,
-                desc: 'Set union'
-            },
-            {
-                name: 'intersection',
-                fn: (a, b) => Array.isArray(a) && Array.isArray(b) ? a.filter(x => b.includes(x)) : null,
-                commutative: true,
-                desc: 'Set intersection'
-            }
-        ];
-
-        for (const op of operations) {
-            if (!registry.has(op.name)) {
-                registry.registerFunctorDynamic(op.name, op.fn, {
-                    arity: 2,
-                    isCommutative: op.commutative,
-                    description: op.desc
-                });
-            }
-        }
     }
 
     _registerPlugins(pluginManager, pluginConfig) {

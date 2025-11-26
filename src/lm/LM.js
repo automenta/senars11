@@ -4,6 +4,8 @@ import {ProviderRegistry} from './ProviderRegistry.js';
 import {ModelSelector} from './ModelSelector.js';
 import {NarseseTranslator} from './NarseseTranslator.js';
 import {CircuitBreaker} from '../util/CircuitBreaker.js';
+import {LMStats} from './LMStats.js';
+import {ProviderUtils} from './ProviderUtils.js';
 
 export class LM extends BaseComponent {
     constructor(config = {}, eventBus = null) {
@@ -15,14 +17,7 @@ export class LM extends BaseComponent {
         this.circuitBreaker = new CircuitBreaker(this._getCircuitBreakerConfig());
         this.lmMetrics = new Metrics();
         this.activeWorkflows = new Map();
-        this.lmStats = {
-            totalCalls: 0,
-            totalTokens: 0,
-            avgResponseTime: 0,
-            providerUsage: new Map()
-        };
-        // Don't freeze during construction, freeze after initialization if needed
-        // Object.freeze(this);
+        this.lmStats = new LMStats();
     }
 
     get config() {
@@ -67,9 +62,9 @@ export class LM extends BaseComponent {
         return id && this.providers.has(id) ? this.providers.get(id) : null;
     }
 
-    async _executeWithCircuitBreaker(provider, operation, ...args) {
+    async _executeWithCircuitBreaker(operation, ...args) {
         try {
-            return await this.circuitBreaker.execute(() => operation.apply(provider, args));
+            return await this.circuitBreaker.execute(() => operation(...args));
         } catch (error) {
             this._handleCircuitBreakerError(error, args[0] ?? args[1]);
             throw error;
@@ -90,19 +85,11 @@ export class LM extends BaseComponent {
         if (!provider) throw new Error(`Provider "${providerId ?? this.providers.defaultProviderId}" not found.`);
 
         const startTime = Date.now();
-        // Standardize generation method (support generateText, invoke, or generate)
-        const standardGenerate = async function(p, o) {
-            if (this.generateText) return this.generateText(p, o);
-            if (this.invoke) {
-                const res = await this.invoke(p, o);
-                return res?.content ?? res;
-            }
-            if (this.generate) return this.generate(p, o);
-            throw new Error('Provider missing generation method');
-        };
-
-        const result = await this._executeWithCircuitBreaker(provider, standardGenerate, prompt, options);
-        this._updateStats(prompt, result, providerId, startTime);
+        const result = await this._executeWithCircuitBreaker(ProviderUtils.standardGenerate, provider, prompt, options);
+        this.lmStats.update(prompt, result, providerId, startTime);
+        this.updateMetric('totalCalls', this.lmStats.totalCalls);
+        this.updateMetric('totalTokens', this.lmStats.totalTokens);
+        this.updateMetric('avgResponseTime', this.lmStats.avgResponseTime);
         return result;
     }
 
@@ -110,21 +97,14 @@ export class LM extends BaseComponent {
         const provider = this._getProvider(providerId);
         if (!provider) throw new Error(`Provider "${providerId ?? this.providers.defaultProviderId}" not found.`);
 
-        // Standardize streaming method (support streamText or stream)
-        const standardStream = async function(p, o) {
-            if (this.streamText) return this.streamText(p, o);
-            if (this.stream) return this.stream(p, o);
-            throw new Error('Provider missing streaming method');
-        };
-
-        return await this._executeWithCircuitBreaker(provider, standardStream, prompt, options);
+        return await this._executeWithCircuitBreaker(ProviderUtils.standardStream, provider, prompt, options);
     }
 
     async generateEmbedding(text, providerId = null) {
         const provider = this._getProvider(providerId);
         if (!provider) throw new Error(`Provider "${providerId ?? this.providers.defaultProviderId}" not found.`);
 
-        return await this._executeWithCircuitBreaker(provider, provider.generateEmbedding, text);
+        return await this._executeWithCircuitBreaker(provider.generateEmbedding.bind(provider), text);
     }
 
     async process(prompt, options = {}, providerId = null) {
@@ -132,30 +112,10 @@ export class LM extends BaseComponent {
         if (!provider) throw new Error(`Provider "${providerId ?? this.providers.defaultProviderId}" not found.`);
 
         if (typeof provider.process === 'function') {
-            return await this._executeWithCircuitBreaker(provider, provider.process, prompt, options);
+            return await this._executeWithCircuitBreaker(provider.process.bind(provider), prompt, options);
         }
 
-        return provider.generateText
-            ? await this.generateText(prompt, options, providerId)
-            : provider.generate
-                ? await provider.generate(prompt, options)
-                : prompt;
-    }
-
-    _updateStats(prompt, result, providerId, startTime) {
-        this.lmStats.totalCalls++;
-        this.lmStats.totalTokens += this._countTokens(prompt) + this._countTokens(result);
-        const responseTime = Date.now() - startTime;
-        this.lmStats.avgResponseTime = (this.lmStats.avgResponseTime * (this.lmStats.totalCalls - 1) + responseTime) / this.lmStats.totalCalls;
-
-        const usage = this.lmStats.providerUsage.get(providerId) ?? {calls: 0, tokens: 0};
-        usage.calls++;
-        usage.tokens += this._countTokens(result);
-        this.lmStats.providerUsage.set(providerId, usage);
-
-        this.updateMetric('totalCalls', this.lmStats.totalCalls);
-        this.updateMetric('totalTokens', this.lmStats.totalTokens);
-        this.updateMetric('avgResponseTime', this.lmStats.avgResponseTime);
+        return this.generateText(prompt, options, providerId);
     }
 
     selectOptimalModel(task, constraints = {}) {
@@ -164,10 +124,6 @@ export class LM extends BaseComponent {
 
     getAvailableModels() {
         return this.modelSelector.getAvailableModels();
-    }
-
-    _countTokens(text) {
-        return typeof text === 'string' ? text.split(/\s+/).filter(token => token.length > 0).length : 0;
     }
 
     _handleFallback(prompt, options = {}) {
@@ -182,11 +138,7 @@ export class LM extends BaseComponent {
     }
 
     getMetrics() {
-        return {
-            providerCount: this.providers.size,
-            lmStats: {...this.lmStats},
-            providerUsage: new Map(this.lmStats.providerUsage)
-        };
+        return this.lmStats.getMetrics(this.providers.size);
     }
 
     getCircuitBreakerState() {

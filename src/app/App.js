@@ -22,13 +22,7 @@ export class App extends EventEmitter {
         const id = agentId ?? `agent_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
         const effectiveConfig = Object.keys(config).length > 0 ? config : this.config;
 
-        const agent = await new AgentBuilder({
-            nar: effectiveConfig.nar,
-            persistence: effectiveConfig.persistence,
-            lm: effectiveConfig.lm,
-            inputProcessing: {lmTemperature: effectiveConfig.lm?.temperature}
-        }).build();
-
+        const agent = await new AgentBuilder(effectiveConfig).build();
         agent.id = id;
 
         this.agents.set(id, {
@@ -39,10 +33,7 @@ export class App extends EventEmitter {
             config: effectiveConfig
         });
 
-        if (!this.activeAgentId) {
-            this.activeAgentId = id;
-        }
-
+        this.activeAgentId ??= id;
         return agent;
     }
 
@@ -76,12 +67,7 @@ export class App extends EventEmitter {
         if (!this.agents.has(agentId)) return false;
 
         const {agent} = this.agents.get(agentId);
-        try {
-            if (typeof agent.stop === 'function') agent.stop();
-            if (typeof agent.dispose === 'function') await agent.dispose();
-        } catch (error) {
-            console.error(`Error removing agent ${agentId}:`, error);
-        }
+        await this._cleanupAgent(agent, agentId);
 
         this.agents.delete(agentId);
 
@@ -112,37 +98,32 @@ export class App extends EventEmitter {
     async shutdown() {
         console.log('\nShutting down application...');
 
-        for (const [id, entry] of this.agents) {
-            const agent = entry.agent;
-            if (agent) {
-                console.log(`Stopping agent ${id}...`);
-                await this._saveAgent(agent, id);
-                await this._stopAgent(agent, id);
+        for (const [id, {agent}] of this.agents) {
+            if (!agent) continue;
+
+            console.log(`Stopping agent ${id}...`);
+            try {
+                if (typeof agent.save === 'function') await agent.save();
+                if (typeof agent.shutdown === 'function') {
+                    await agent.shutdown();
+                } else if (typeof agent.stop === 'function') {
+                    agent.stop();
+                }
+            } catch (error) {
+                console.error(`Error stopping agent ${id}:`, error.message);
             }
         }
 
         this.emit('stopped');
     }
 
-    async _saveAgent(agent, agentId) {
+    async _cleanupAgent(agent, agentId) {
+        if (!agent) return;
         try {
-            if (typeof agent.save === 'function') {
-                await agent.save();
-            }
+            if (typeof agent.stop === 'function') agent.stop();
+            if (typeof agent.dispose === 'function') await agent.dispose();
         } catch (error) {
-            console.error(`Error saving agent ${agentId}:`, error.message);
-        }
-    }
-
-    async _stopAgent(agent, agentId) {
-        try {
-            if (typeof agent.shutdown === 'function') {
-                await agent.shutdown();
-            } else if (typeof agent.stop === 'function') {
-                agent.stop();
-            }
-        } catch (error) {
-            console.error(`Error stopping agent ${agentId}:`, error.message);
+            console.error(`Error cleaning up agent ${agentId}:`, error);
         }
     }
 

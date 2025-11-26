@@ -95,9 +95,9 @@ describe('LM', () => {
     });
 
     test('should count tokens correctly', () => {
-        expect(lm._countTokens('hello world')).toBe(2);
-        expect(lm._countTokens('')).toBe(0);
-        expect(lm._countTokens(null)).toBe(0);
-        expect(lm._countTokens('hello  world')).toBe(2); // multiple spaces
+        expect(lm.lmStats._countTokens('hello world')).toBe(2);
+        expect(lm.lmStats._countTokens('')).toBe(0);
+        expect(lm.lmStats._countTokens(null)).toBe(0);
+        expect(lm.lmStats._countTokens('hello  world')).toBe(2); // multiple spaces
     });
 });

@@ -15,19 +15,15 @@ export class ToolIntegration extends BaseComponent {
      * @param {object} config - Configuration for tool integration
      */
     constructor(config = {}) {
-        super(config, 'ToolIntegration');
-        this._config = {
+        super({
             enableRegistry: true,
             enableDiscovery: true,
-            ...this.config,  // Use BaseComponent's config
             ...config
-        };
+        }, 'ToolIntegration');
 
-        this.engine = new ToolEngine(this._config.engine ?? {});
-        this.registry = this._config.enableRegistry ? new ToolRegistry(this.engine) : null;
+        this.engine = new ToolEngine(this.config.engine ?? {});
+        this.registry = this.config.enableRegistry ? new ToolRegistry(this.engine) : null;
         this.reasoningCore = null;
-
-        // Track tool usage for the reasoning system
         this.toolUsageHistory = [];
     }
 
@@ -44,65 +40,57 @@ export class ToolIntegration extends BaseComponent {
     /**
      * Register all tools for the NAR system
      */
-    async initializeTools(nar) {
-        if (!this.registry) {
-            throw new Error('Tool registry not enabled');
-        }
+    async initializeTools() {
+        if (!this.registry) throw new Error('Tool registry not enabled');
 
         try {
-            const {FileOperationsTool, CommandExecutorTool, WebAutomationTool, MediaProcessingTool, EmbeddingTool} =
-                await import('./index.js');
+            const toolModules = await import('./index.js');
+            const toolConfigs = this._getToolConfigs();
 
-            const toolsConfig = this._getToolsConfig(FileOperationsTool, CommandExecutorTool, WebAutomationTool, MediaProcessingTool, EmbeddingTool);
-
-            // Try to instantiate and register each tool individually to isolate failures
-            for (const {id, toolClass, category, description} of toolsConfig) {
-                try {
-                    const tool = new toolClass();
-                    this.registry.registerTool(id, tool, {category, description});
-                } catch (toolError) {
-                    // Log the specific tool error but continue with other tools
-                    this.logger.warn(`Failed to instantiate tool ${id}, skipping:`, toolError.message);
+            for (const config of toolConfigs) {
+                const toolClass = toolModules[config.className];
+                if (toolClass) {
+                    try {
+                        const tool = new toolClass();
+                        this.registry.registerTool(config.id, tool, {
+                            category: config.category,
+                            description: config.description
+                        });
+                    } catch (toolError) {
+                        this.logger.warn(`Failed to instantiate tool ${config.id}, skipping:`, toolError.message);
+                    }
                 }
             }
 
             this.logger.info('Tools initialization completed', {
                 toolCount: this.engine.getAvailableTools().length
             });
-
-            return this;
         } catch (error) {
-            // Only log if it's not the expected import issue in test environments
-            this.logger.warn('Tool initialization partially failed (some tools may be unavailable):', error.message);
-            // Don't throw the error, just return to prevent error propagation
-            return this;
+            this.logger.warn('Tool initialization partially failed:', error.message);
         }
+        return this;
     }
 
-    /**
-     * Get configuration for all tools
-     * @private
-     */
-    _getToolsConfig(FileOperationsTool, CommandExecutorTool, WebAutomationTool, MediaProcessingTool, EmbeddingTool) {
+    _getToolConfigs() {
         return [
             {
-                id: 'file-operations', toolClass: FileOperationsTool, category: 'file-operations',
+                id: 'file-operations', className: 'FileOperationsTool', category: 'file-operations',
                 description: 'File operations including read, write, append, delete, list, and stat'
             },
             {
-                id: 'command-executor', toolClass: CommandExecutorTool, category: 'command-execution',
+                id: 'command-executor', className: 'CommandExecutorTool', category: 'command-execution',
                 description: 'Safe command execution in sandboxed environment'
             },
             {
-                id: 'web-automation', toolClass: WebAutomationTool, category: 'web-automation',
+                id: 'web-automation', className: 'WebAutomationTool', category: 'web-automation',
                 description: 'Web automation including fetch, scrape, and check operations'
             },
             {
-                id: 'media-processing', toolClass: MediaProcessingTool, category: 'media-processing',
+                id: 'media-processing', className: 'MediaProcessingTool', category: 'media-processing',
                 description: 'Media processing including PDF, image, and text extraction'
             },
             {
-                id: 'embedding', toolClass: EmbeddingTool, category: 'embedding',
+                id: 'embedding', className: 'EmbeddingTool', category: 'embedding',
                 description: 'Text embedding, similarity, and comparison operations'
             }
         ];
@@ -117,56 +105,37 @@ export class ToolIntegration extends BaseComponent {
      */
     async executeTool(toolId, params, context = {}) {
         const startTime = Date.now();
+        let result;
 
         try {
-            const result = await this.engine.executeTool(toolId, params, {
-                reasoningContext: context
-            });
-
-            this._addToolUsageToHistory(toolId, params, result, startTime, context);
-
-            return result;
+            result = await this.engine.executeTool(toolId, params, {reasoningContext: context});
         } catch (error) {
             this.logger.error(`Tool execution failed: ${toolId}`, {
                 error: error.message,
-                params: JSON.stringify(params).substring(0, 200) + '...'
+                params: JSON.stringify(params).substring(0, 200)
             });
-
-            return this._createErrorResult(error.message, startTime, toolId);
+            result = {
+                success: false,
+                error: error.message,
+                toolId
+            };
         }
-    }
 
-    /**
-     * Add tool usage to history
-     * @private
-     */
-    _addToolUsageToHistory(toolId, params, result, startTime, context) {
+        const executionTime = Date.now() - startTime;
         this.toolUsageHistory.push({
             toolId,
             params,
-            result: {...result},
-            executionTime: Date.now() - startTime,
+            result,
+            executionTime,
             timestamp: Date.now(),
-            context: context
+            context
         });
 
-        // Maintain history size
         if (this.toolUsageHistory.length > 1000) {
-            this.toolUsageHistory = this.toolUsageHistory.slice(-500);
+            this.toolUsageHistory.splice(0, this.toolUsageHistory.length - 500);
         }
-    }
 
-    /**
-     * Create a standard error result
-     * @private
-     */
-    _createErrorResult(errorMessage, startTime, toolId) {
-        return {
-            success: false,
-            error: errorMessage,
-            executionTime: Date.now() - startTime,
-            toolId
-        };
+        return {...result, executionTime};
     }
 
     /**

@@ -5,6 +5,7 @@
 
 import {Logger} from '../util/Logger.js';
 import {ToolEngine} from './ToolEngine.js';
+import {ToolDiscovery} from './ToolDiscovery.js';
 
 /**
  * Tool Registry that provides automatic tool discovery and registration
@@ -36,33 +37,19 @@ export class ToolRegistry {
      * @returns {Array<object>} - Discovered tool metadata
      */
     discoverTools(toolClasses, options = {}) {
-        const discovered = [];
+        const discovered = ToolDiscovery.discover(toolClasses);
         const shouldCache = options.cache !== false;
 
-        for (const toolClass of toolClasses) {
-            try {
-                const toolMetadata = this._analyzeTool(toolClass);
-
-                if (toolMetadata) {
-                    if (shouldCache) {
-                        this.discoveredTools.set(toolMetadata.id, {
-                            class: toolClass,
-                            metadata: toolMetadata
-                        });
-                    }
-
-                    discovered.push(toolMetadata);
-
-                    this.logger.info(`Discovered tool: ${toolMetadata.id}`, {
-                        name: toolMetadata.name,
-                        category: toolMetadata.category ?? 'unknown',
-                        description: toolMetadata.description
-                    });
-                }
-            } catch (error) {
-                this.logger.warn(`Failed to discover tool from class:`, {
-                    class: toolClass.name ?? 'anonymous',
-                    error: error.message
+        if (shouldCache) {
+            for (const toolMetadata of discovered) {
+                this.discoveredTools.set(toolMetadata.id, {
+                    class: toolMetadata.class,
+                    metadata: toolMetadata
+                });
+                this.logger.info(`Discovered tool: ${toolMetadata.id}`, {
+                    name: toolMetadata.name,
+                    category: toolMetadata.category ?? 'unknown',
+                    description: toolMetadata.description
                 });
             }
         }
@@ -164,33 +151,26 @@ export class ToolRegistry {
      */
     autoRegisterFromModule(toolModule, options = {}) {
         const {include, exclude, config = {}, metadata = {}} = options;
-        const toolClasses = [];
 
-        // Extract classes/objects that look like tools
-        for (const [key, value] of Object.entries(toolModule)) {
-            if (this._isToolLike(value)) {
-                // Generate a tool ID based on the key or class name
-                const toolId = this._generateToolId(key, value);
+        const discoveredTools = ToolDiscovery.discover(Object.values(toolModule));
 
-                // Skip if excluded or not included (if include list is provided)
-                if ((exclude && exclude.includes(toolId)) ||
-                    (include && !include.includes(toolId))) {
-                    continue;
-                }
+        const toolsToRegister = discoveredTools.filter(tool => {
+            const toolId = this._generateToolId(tool.name, tool.class);
+            if (exclude?.includes(toolId)) return false;
+            if (include && !include.includes(toolId)) return false;
+            return true;
+        });
 
-                // Add to discovery list with default metadata
-                const toolMetadata = this._createToolMetadata(key, value, metadata);
-
-                this.discoveredTools.set(toolId, {
-                    class: value,
-                    metadata: toolMetadata
-                });
-
-                toolClasses.push(value);
-            }
+        for (const tool of toolsToRegister) {
+            this.discoveredTools.set(tool.id, {
+                class: tool.class,
+                metadata: tool
+            });
         }
 
-        return this.registerAll(include, config, metadata);
+        const toolIdsToRegister = toolsToRegister.map(tool => tool.id);
+
+        return this.registerAll(toolIdsToRegister, config, metadata);
     }
 
     /**
@@ -202,19 +182,6 @@ export class ToolRegistry {
             (value.name ? value.name.toLowerCase().replace(/tool$/, '') : key);
     }
 
-    /**
-     * Create tool metadata
-     * @private
-     */
-    _createToolMetadata(key, value, metadata) {
-        return {
-            id: this._generateToolId(key, value),
-            name: value.name ?? key,
-            description: value.getDescription?.() ?? `Auto-registered tool: ${key}`,
-            category: value.getCategory?.() ?? 'general',
-            ...metadata
-        };
-    }
 
     /**
      * Gets all discovered tools
@@ -230,77 +197,6 @@ export class ToolRegistry {
      */
     getRegistrationHistory() {
         return [...this.registrationHistory];
-    }
-
-    /**
-     * Analyzes a potential tool class/object for registration
-     * @private
-     */
-    _analyzeTool(toolClass) {
-        try {
-            // Check if it's a class (function) or object
-            let toolInstance;
-
-            if (typeof toolClass === 'function') {
-                // Try to instantiate it to test it
-                toolInstance = new toolClass();
-            } else {
-                toolInstance = toolClass;
-            }
-
-            // Check required methods
-            const hasRequiredMethods = [
-                'execute',
-                'getDescription'
-            ].every(method => typeof toolInstance[method] === 'function');
-
-            if (!hasRequiredMethods) {
-                return null;
-            }
-
-            // Generate metadata
-            const className = toolClass.name ?? 'AnonymousTool';
-            const toolId = className
-                .replace(/tool$/i, '')
-                .replace(/([a-z])([A-Z])/g, '$1-$2')
-                .toLowerCase();
-
-            return this._createToolMetadataObject(toolClass, toolInstance, className, toolId);
-        } catch (error) {
-            return null;
-        }
-    }
-
-    /**
-     * Create a tool metadata object
-     * @private
-     */
-    _createToolMetadataObject(toolClass, toolInstance, className, toolId) {
-        return {
-            id: toolId,
-            name: className,
-            description: toolInstance.getDescription(),
-            category: toolInstance.getCategory?.() ?? 'general',
-            parameters: toolInstance.getParameterSchema?.() ?? {type: 'object', properties: {}},
-            capabilities: toolInstance.getCapabilities?.() ?? [],
-            parameterSchema: toolInstance.getParameterSchema ? toolInstance.getParameterSchema() : null,
-            supportsStreaming: typeof toolInstance.stream === 'function',
-            supportsValidation: typeof toolInstance.validate === 'function'
-        };
-    }
-
-    /**
-     * Checks if an object looks like a tool
-     * @private
-     */
-    _isToolLike(obj) {
-        // Check if it has the required methods
-        const hasExecute = typeof obj.prototype?.execute === 'function' ||
-            typeof obj.execute === 'function';
-        const hasGetDescription = typeof obj.prototype?.getDescription === 'function' ||
-            typeof obj.getDescription === 'function';
-
-        return hasExecute && hasGetDescription;
     }
 
     /**
