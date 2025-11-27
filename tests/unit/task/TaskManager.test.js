@@ -15,7 +15,7 @@ describe('TaskManager', () => {
 
     beforeEach(() => {
         termFactory = new TermFactory();
-        term = termFactory.create({name: 'A'});
+        term = termFactory.create('A');
         config = {
             priorityThreshold: 0.6,
             defaultBudget: {priority: 0.5, durability: 0.5, quality: 0.5},
@@ -40,7 +40,7 @@ describe('TaskManager', () => {
     test('should process pending tasks', () => {
         const highPriorityTask = new Task({term, budget: {priority: 0.8}, truth: {frequency: 0.9, confidence: 0.8}});
         const lowPriorityTask = new Task({
-            term: termFactory.create({name: 'B'}),
+            term: termFactory.create('B'),
             budget: {priority: 0.4},
             truth: {frequency: 0.9, confidence: 0.8}
         });
@@ -76,7 +76,7 @@ describe('TaskManager', () => {
     test('should get highest priority tasks correctly', () => {
         const task1 = new Task({term, budget: {priority: 0.6}, truth: {frequency: 0.9, confidence: 0.8}});
         const task2 = new Task({
-            term: termFactory.create({name: 'B'}),
+            term: termFactory.create('B'),
             budget: {priority: 0.8},
             truth: {frequency: 0.9, confidence: 0.8}
         });

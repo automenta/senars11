@@ -55,9 +55,9 @@ describe('Memory Architecture', () => {
     describe('Dual Memory System Integration', () => {
         test('should properly manage concepts between focus and long-term memory', () => {
             // Create terms for testing
-            const termA = termFactory.create({name: 'focus_test_A'});
-            const termB = termFactory.create({name: 'focus_test_B'});
-            const termC = termFactory.create({name: 'long_term_test_C'});
+            const termA = termFactory.create('focus_test_A');
+            const termB = termFactory.create('focus_test_B');
+            const termC = termFactory.create('long_term_test_C');
 
             // Create tasks with different priorities
             const highPriorityTask = new Task({
@@ -98,7 +98,7 @@ describe('Memory Architecture', () => {
         });
 
         test('should handle task promotion from focus to long-term memory', () => {
-            const importantTerm = termFactory.create({name: 'important_term'});
+            const importantTerm = termFactory.create('important_term');
             const importantTask = new Task({
                 term: importantTerm,
                 punctuation: '.',
@@ -128,18 +128,18 @@ describe('Memory Architecture', () => {
         test('should properly index different relationship types', () => {
             // Create various compound terms
             const inheritanceTerm = termFactory.inheritance(
-                    termFactory.create({name: 'dog'}),
-                    termFactory.create({name: 'animal'})
+                    termFactory.create('dog'),
+                    termFactory.create('animal')
                 );
 
             const similarityTerm = termFactory.similarity(
-                    termFactory.create({name: 'cat'}),
-                    termFactory.create({name: 'feline'})
+                    termFactory.create('cat'),
+                    termFactory.create('feline')
                 );
 
             const conjunctionTerm = termFactory.conjunction(
-                    termFactory.create({name: 'rain'}),
-                    termFactory.create({name: 'wet'})
+                    termFactory.create('rain'),
+                    termFactory.create('wet')
                 );
 
             // Create concepts for indexing
@@ -161,8 +161,8 @@ describe('Memory Architecture', () => {
 
         test('should provide fast lookup for related concepts', () => {
             // Create inheritance relationship: bird -> animal
-            const subject = termFactory.create({name: 'sparrow'});
-            const predicate = termFactory.create({name: 'bird'});
+            const subject = termFactory.create('sparrow');
+            const predicate = termFactory.create('bird');
             const inheritanceTerm = termFactory.inheritance(subject, predicate);
 
             const concept = new Concept(inheritanceTerm, {});
@@ -180,7 +180,7 @@ describe('Memory Architecture', () => {
             // Create several tasks to test consolidation
             const terms = [];
             for (let i = 0; i < 5; i++) {
-                terms.push(termFactory.create({name: `consolidation_test_${i}`}));
+                terms.push(termFactory.create(`consolidation_test_${i}`));
             }
 
             // Add tasks to memory
@@ -211,7 +211,7 @@ describe('Memory Architecture', () => {
         });
 
         test('should apply appropriate decay to concepts over time', () => {
-            const term = termFactory.create({name: 'decay_test'});
+            const term = termFactory.create('decay_test');
             const task = new Task({
                 term,
                 punctuation: '.',
@@ -245,19 +245,19 @@ describe('Memory Architecture', () => {
 
             // Add tasks to different focus sets
             const taskA = new Task({
-                term: termFactory.create({name: 'A'}),
+                term: termFactory.create('A'),
                 punctuation: '.',
                 budget: {priority: 0.9},
                 truth: {frequency: 0.9, confidence: 0.8}
             });
             const taskB = new Task({
-                term: termFactory.create({name: 'B'}),
+                term: termFactory.create('B'),
                 punctuation: '.',
                 budget: {priority: 0.6},
                 truth: {frequency: 0.9, confidence: 0.8}
             });
             const taskC = new Task({
-                term: termFactory.create({name: 'C'}),
+                term: termFactory.create('C'),
                 punctuation: '.',
                 budget: {priority: 0.4},
                 truth: {frequency: 0.9, confidence: 0.8}
@@ -316,7 +316,7 @@ describe('Memory Architecture', () => {
 
             // Simulate a realistic workload
             for (let i = 0; i < 50; i++) {
-                const term = termFactory.create({name: `integration_test_${i}`});
+                const term = termFactory.create(`integration_test_${i}`);
                 const task = new Task({
                     term,
                     punctuation: '.',
@@ -349,7 +349,7 @@ describe('Memory Architecture', () => {
             // Add many items to test system stability
             const terms = [];
             for (let i = 0; i < 100; i++) {
-                terms.push(termFactory.create({name: `stress_test_${i}`}));
+                terms.push(termFactory.create(`stress_test_${i}`));
             }
 
             // Add to memory

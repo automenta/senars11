@@ -53,10 +53,10 @@ describe('Complex Neurosymbolic Synergy: Ancestry & Genetics', () => {
 
         // 2. NAL Knowledge
         // Rule: ((&&, <($x * $y) --> ancestor_of>, <$x --> red_hair>) ==> <$y --> red_hair>).
-        const $x = termFactory.create({ name: '$x', type: 'variable' });
-        const $y = termFactory.create({ name: '$y', type: 'variable' });
-        const ancestor_of = termFactory.create({ name: 'ancestor_of', type: 'atomic' });
-        const red_hair = termFactory.create({ name: 'red_hair', type: 'atomic' });
+        const $x = termFactory.variable('$x');
+        const $y = termFactory.variable('$y');
+        const ancestor_of = termFactory.create('ancestor_of');
+        const red_hair = termFactory.create('red_hair');
         const product_xy = termFactory.product($x, $y);
         const cond1 = termFactory.inheritance(product_xy, ancestor_of);
         const cond2 = termFactory.inheritance($x, red_hair);
@@ -77,10 +77,10 @@ describe('Complex Neurosymbolic Synergy: Ancestry & Genetics', () => {
         // 3. The Task: Determine if Charlie has red hair?
         // Step A: Agent asks Prolog "ancestor(alice, charlie)?"
         const createPrologTerm = (pred, ...args) => {
-            const predTerm = termFactory.create({ name: pred, type: 'atomic' });
+            const predTerm = termFactory.create(pred);
             const argTerms = args.map(a => {
-                if (a.startsWith('?')) return termFactory.create({ name: a, type: 'variable' });
-                return termFactory.create({ name: a, type: 'atomic' });
+                if (a.startsWith('?')) return termFactory.variable(a);
+                return termFactory.create(a);
             });
             const argsTerm = termFactory.create(',', argTerms);
             return termFactory.create('^', [predTerm, argsTerm]);
@@ -95,8 +95,8 @@ describe('Complex Neurosymbolic Synergy: Ancestry & Genetics', () => {
         // Step B: Translation & Injection
         // Prolog Answer: ancestor(alice, charlie).
         // Translation: <(alice * charlie) --> ancestor_of>.
-        const alice = termFactory.create({ name: 'alice', type: 'atomic' });
-        const charlie = termFactory.create({ name: 'charlie', type: 'atomic' });
+        const alice = termFactory.create('alice');
+        const charlie = termFactory.create('charlie');
         const product_ac = termFactory.product(alice, charlie);
         const translatedTerm = termFactory.inheritance(product_ac, ancestor_of);
 

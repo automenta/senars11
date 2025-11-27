@@ -58,8 +58,8 @@ describe('Memory and Focus Management Integration', () => {
             focus.createFocusSet('secondary', 3);
 
             // Add tasks to different focus sets
-            const term1 = termFactory.create({name: 'urgent'});
-            const term2 = termFactory.create({name: 'normal'});
+            const term1 = termFactory.create('urgent');
+            const term2 = termFactory.create('normal');
 
             const urgentTask = new Task({
                 term: term1,
@@ -96,7 +96,7 @@ describe('Memory and Focus Management Integration', () => {
             focus.createFocusSet('test-set', 5);
             focus.setFocus('test-set');
 
-            const term = termFactory.create({name: 'test'});
+            const term = termFactory.create('test');
             const task = new Task({
                 term,
                 punctuation: '.',
@@ -163,13 +163,13 @@ describe('Memory and Focus Management Integration', () => {
 
         test('should respect priority threshold in selection', () => {
             const highPriorityTask = new Task({
-                term: termFactory.create({name: 'high'}),
+                term: termFactory.create('high'),
                 punctuation: '.',
                 budget: {priority: 0.8},
                 truth: {frequency: 0.9, confidence: 0.8}
             });
             const lowPriorityTask = new Task({
-                term: termFactory.create({name: 'low'}),
+                term: termFactory.create('low'),
                 punctuation: '.',
                 budget: {priority: 0.1},
                 truth: {frequency: 0.9, confidence: 0.8}
@@ -315,7 +315,7 @@ describe('Memory and Focus Management Integration', () => {
 
             // Create many concepts
             for (let i = 0; i < 100; i++) {
-                const term = termFactory.create({name: `concept${i}`});
+                const term = termFactory.create(`concept${i}`);
                 const task = new Task({
                     term,
                     punctuation: '.',
@@ -343,7 +343,7 @@ describe('Memory and Focus Management Integration', () => {
 
             // Add many tasks to focus
             for (let i = 0; i < 50; i++) {
-                const term = termFactory.create({name: `focus_item${i}`});
+                const term = termFactory.create(`focus_item${i}`);
                 const task = new Task({
                     term,
                     punctuation: '.',
@@ -373,9 +373,9 @@ describe('Memory and Focus Management Integration', () => {
             focus.createFocusSet('small-set', 2);
             focus.setFocus('small-set');
 
-            const term1 = termFactory.create({name: 'A'});
-            const term2 = termFactory.create({name: 'B'});
-            const term3 = termFactory.create({name: 'C'});
+            const term1 = termFactory.create('A');
+            const term2 = termFactory.create('B');
+            const term3 = termFactory.create('C');
 
             const task1 = new Task({
                 term: term1,

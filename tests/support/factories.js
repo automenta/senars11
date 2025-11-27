@@ -32,7 +32,7 @@ export const createStamp = (overrides = {}) => {
     return new ArrayStamp({...defaults, ...overrides});
 };
 
-export const createTerm = (name = 'A') => termFactory.create({components: [name]});
+export const createTerm = (name = 'A') => termFactory.create(name);
 
 export const createCompoundTerm = (operator, components) => termFactory.create({operator, components});
 

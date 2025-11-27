@@ -43,7 +43,7 @@ describe('Phase 4 Core Components Integration', () => {
     });
 
     test('Task should be created with proper validation', () => {
-        const testTerm = termFactory.create({name: 'dog'});
+        const testTerm = termFactory.create('dog');
         const testTruth = new Truth(0.9, 0.8);
         const testTask = new Task({term: testTerm, punctuation: '.', truth: testTruth, budget: {priority: 0.8}});
 
@@ -56,7 +56,7 @@ describe('Phase 4 Core Components Integration', () => {
     });
 
     test('Memory should handle proper configuration and task operations', () => {
-        const testTerm = termFactory.create({name: 'dog'});
+        const testTerm = termFactory.create('dog');
         const testTruth = new Truth(0.9, 0.8);
         const testTask = new Task({term: testTerm, punctuation: '.', truth: testTruth, budget: {priority: 0.8}});
 
@@ -113,8 +113,8 @@ describe('Phase 4 Core Components Integration', () => {
 
     test('Integration of all core components should work together', () => {
         // Create terms
-        const subjectTerm = termFactory.create({name: 'dog'});
-        const predicateTerm = termFactory.create({name: 'animal'});
+        const subjectTerm = termFactory.create('dog');
+        const predicateTerm = termFactory.create('animal');
         const inheritanceTerm = termFactory.inheritance(subjectTerm, predicateTerm);
 
         // Create task

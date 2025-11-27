@@ -187,13 +187,13 @@ export class PrologParser {
 
         // Variable
         if (str.startsWith('_') || /^[A-Z]/.test(str)) {
-            return this.termFactory.create({name: `?${str.toLowerCase()}`, type: 'variable'});
+            return this.termFactory.variable(`?${str.toLowerCase()}`);
         }
 
         // Number/Atom
         // If it looks like a number, treat as atomic (or specific number type if NARS supported it)
         // NARS uses atomic terms.
-        return this.termFactory.create({name: str.toLowerCase(), type: 'atomic'});
+        return this.termFactory.create(str.toLowerCase());
     }
 
     _isBalanced(str) {
@@ -209,7 +209,7 @@ export class PrologParser {
     _parseList(str) {
         // [a, b, c] or [H|T]
         const content = str.slice(1, -1).trim(); // remove [ ]
-        if (!content) return this.termFactory.create({name: '[]', type: 'atomic'}); // Empty list
+        if (!content) return this.termFactory.create('[]'); // Empty list
 
         // Check for pipe |
         const pipeSplit = this._splitByDelimiter(content, '|');
@@ -223,7 +223,7 @@ export class PrologParser {
         // Normal list [a, b] -> .(a, .(b, []))
         const items = this._splitByCommaRespectingParens(content);
 
-        let listTerm = this.termFactory.create({name: '[]', type: 'atomic'});
+        let listTerm = this.termFactory.create('[]');
         // Build from end
         for (let i = items.length - 1; i >= 0; i--) {
             const itemTerm = this._parseTerm(items[i]);
@@ -235,15 +235,12 @@ export class PrologParser {
     _createPredicateTerm(predicate, args, argsAreTerms = false) {
         const argTerms = argsAreTerms ? args : args.map(arg => {
             const isVariable = arg.startsWith('_') || /^[A-Z]/.test(arg);
-            return this.termFactory.create({
-                name: isVariable ? `?${arg.toLowerCase()}` : arg.toLowerCase(),
-                type: isVariable ? 'variable' : 'atomic'
-            });
+            return this.termFactory.create(isVariable ? `?${arg.toLowerCase()}` : arg.toLowerCase());
         });
 
         const argsTerm = this.termFactory.create(',', argTerms);
 
-        const predicateTerm = this.termFactory.create({name: predicate, type: 'atomic'});
+        const predicateTerm = this.termFactory.create(predicate);
 
         return this.termFactory.create('^', [predicateTerm, argsTerm]);
     }
