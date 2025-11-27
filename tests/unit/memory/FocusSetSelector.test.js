@@ -98,7 +98,7 @@ describe('FocusSetSelector', () => {
     test('should respect maximum size limit', () => {
         const tasks = [];
         for (let i = 0; i < 5; i++) {
-            const term = termFactory.create({components: [String.fromCharCode(65 + i)]});
+            const term = termFactory.atomic(String.fromCharCode(65 + i));
             const task = new Task({
                 term,
                 punctuation: '.',
@@ -114,7 +114,7 @@ describe('FocusSetSelector', () => {
     });
 
     test('should handle urgency calculation correctly', () => {
-        const term = termFactory.create({components: ['A']});
+        const term = termFactory.atomic('A');
 
         const recentTask = new Task({
             term,
