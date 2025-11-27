@@ -123,13 +123,10 @@ describe('Memory and Focus Management Integration', () => {
         test('should select tasks using composite scoring algorithm', () => {
             // Create tasks with different characteristics
             const simpleTerm = termFactory.create({components: ['simple']});
-            const complexTerm = termFactory.create({
-                components: [
+            const complexTerm = termFactory.inheritance(
                     termFactory.create({components: ['A']}),
                     termFactory.create({components: ['B']})
-                ],
-                operator: '-->'
-            });
+                );
 
             // Note: The convenience constructor doesn't support custom stamps, so keep original for these
             const recentTask = new Task({
@@ -190,7 +187,7 @@ describe('Memory and Focus Management Integration', () => {
         test('should index and retrieve inheritance relationships', () => {
             const subject = termFactory.create({components: ['dog']});
             const predicate = termFactory.create({components: ['animal']});
-            const term = termFactory.create({components: [subject, predicate], operator: '-->'});
+            const term = termFactory.inheritance(subject, predicate);
 
             const concept = memory.getConcept(term) || new Concept(term, {});
             index.addConcept(concept);
@@ -204,7 +201,7 @@ describe('Memory and Focus Management Integration', () => {
         test('should index and retrieve similarity relationships', () => {
             const term1 = termFactory.create({components: ['dog']});
             const term2 = termFactory.create({components: ['wolf']});
-            const term = termFactory.create({components: [term1, term2], operator: '<->'});
+            const term = termFactory.similarity(term1, term2);
 
             const concept = memory.getConcept(term) || new Concept(term, {});
             index.addConcept(concept);
@@ -220,20 +217,14 @@ describe('Memory and Focus Management Integration', () => {
         test('should provide comprehensive index statistics', () => {
             // Add various types of concepts
             const atomicTerm = termFactory.create({components: ['atom']});
-            const inheritanceTerm = termFactory.create({
-                components: [
+            const inheritanceTerm = termFactory.inheritance(
                     termFactory.create({components: ['cat']}),
                     termFactory.create({components: ['animal']})
-                ],
-                operator: '-->'
-            });
-            const similarityTerm = termFactory.create({
-                components: [
+                );
+            const similarityTerm = termFactory.similarity(
                     termFactory.create({components: ['dog']}),
                     termFactory.create({components: ['wolf']})
-                ],
-                operator: '<->'
-            });
+                );
 
             const atomicConcept = new Concept(atomicTerm, {});
             const inheritanceConcept = new Concept(inheritanceTerm, {});
@@ -265,10 +256,10 @@ describe('Memory and Focus Management Integration', () => {
             };
 
             // Create inheritance relationships
-            const catAnimalTerm = termFactory.create({components: [terms.cat, terms.animal], operator: '-->'});
-            const dogAnimalTerm = termFactory.create({components: [terms.dog, terms.animal], operator: '-->'});
-            const catPetTerm = termFactory.create({components: [terms.cat, terms.pet], operator: '-->'});
-            const animalMammalTerm = termFactory.create({components: [terms.animal, terms.mammal], operator: '-->'});
+            const catAnimalTerm = termFactory.inheritance(terms.cat, terms.animal);
+            const dogAnimalTerm = termFactory.inheritance(terms.dog, terms.animal);
+            const catPetTerm = termFactory.inheritance(terms.cat, terms.pet);
+            const animalMammalTerm = termFactory.inheritance(terms.animal, terms.mammal);
 
             // Create tasks
             const tasks = [

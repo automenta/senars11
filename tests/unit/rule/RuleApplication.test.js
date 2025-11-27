@@ -26,8 +26,8 @@ describe('Rule Application Tests', () => {
 
         test('should apply correctly to syllogistic pattern (a==>b) and (b==>c)', () => {
             // Create compound terms (a ==> b) and (b ==> c)
-            const termAB = termFactory.create({operator: '==>', components: [termA, termB]});
-            const termBC = termFactory.create({operator: '==>', components: [termB, termC]});
+            const termAB = termFactory.implication(termA, termB);
+            const termBC = termFactory.implication(termB, termC);
 
             // Create tasks with these terms
             const taskAB = new Task({
@@ -86,8 +86,8 @@ describe('Rule Application Tests', () => {
         });
 
         test('should handle term comparison correctly', () => {
-            const termAB = termFactory.create({operator: '==>', components: [termA, termB]});
-            const termBA = termFactory.create({operator: '==>', components: [termB, termA]});
+            const termAB = termFactory.implication(termA, termB);
+            const termBA = termFactory.implication(termB, termA);
 
             const taskAB = new Task({
                 term: termAB,
@@ -119,7 +119,7 @@ describe('Rule Application Tests', () => {
 
         test('should apply correctly to modus ponens pattern (a==>c) and a', () => {
             // Create compound term (a ==> c)
-            const termAC = termFactory.create({operator: '==>', components: [termA, termC]});
+            const termAC = termFactory.implication(termA, termC);
 
             // Create tasks
             const taskAC = new Task({
@@ -187,9 +187,9 @@ describe('Rule Application Tests', () => {
         });
 
         test('should correctly compare compound terms', () => {
-            const termAB1 = termFactory.create({operator: '==>', components: [termA, termB]});
-            const termAB2 = termFactory.create({operator: '==>', components: [termA, termB]});
-            const termAC = termFactory.create({operator: '==>', components: [termA, termC]});
+            const termAB1 = termFactory.implication(termA, termB);
+            const termAB2 = termFactory.implication(termA, termB);
+            const termAC = termFactory.implication(termA, termC);
 
             // AB terms should be equal
             expect(termAB1.equals(termAB2)).toBe(true);
@@ -202,7 +202,7 @@ describe('Rule Application Tests', () => {
 
         test('should handle different term structures correctly', () => {
             const simpleTerm = termA;
-            const compoundTerm = termFactory.create({operator: '==>', components: [termA, termB]});
+            const compoundTerm = termFactory.implication(termA, termB);
 
             // Simple and compound terms should not match
             expect(simpleTerm.equals(compoundTerm)).toBe(false);

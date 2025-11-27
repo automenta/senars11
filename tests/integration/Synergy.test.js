@@ -40,8 +40,8 @@ describe('NAL and Prolog Synergy', () => {
                 if (a.startsWith('?')) return termFactory.create({ name: a, type: 'variable' });
                 return termFactory.create({ name: a, type: 'atomic' });
             });
-            const argsTerm = termFactory.create({ operator: ',', components: argTerms });
-            return termFactory.create({ operator: '^', components: [predTerm, argsTerm] });
+            const argsTerm = termFactory.create(',', argTerms);
+            return termFactory.create('^', [predTerm, argsTerm]);
         };
 
         const subgoalTerm = createPrologTerm('mortal', 'socrates');

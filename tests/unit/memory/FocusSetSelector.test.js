@@ -141,10 +141,7 @@ describe('FocusSetSelector', () => {
 
     test('should consider term complexity for diversity', () => {
         const simpleTerm = termFactory.create({name: 'A'});
-        const complexTerm = termFactory.create({
-            operator: '-->',
-            components: [termFactory.create({name: 'A'}), termFactory.create({name: 'B'})]
-        });
+        const complexTerm = termFactory.inheritance(termFactory.create({name: 'A'}), termFactory.create({name: 'B'}));
 
         const simpleTask = new Task({
             term: simpleTerm,

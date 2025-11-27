@@ -35,10 +35,7 @@ describe('MemoryIndex', () => {
     test('should add inheritance concepts correctly', () => {
         const subject = termFactory.create({components: ['dog']});
         const predicate = termFactory.create({components: ['animal']});
-        const term = termFactory.create({
-            components: [subject, predicate],
-            operator: '-->'
-        });
+        const term = termFactory.inheritance(subject, predicate);
         const concept = new Concept(term, config);
 
         index.addConcept(concept);
@@ -57,10 +54,7 @@ describe('MemoryIndex', () => {
     test('should add implication concepts correctly', () => {
         const premise = termFactory.create({components: ['rain']});
         const conclusion = termFactory.create({components: ['wet']});
-        const term = termFactory.create({
-            components: [premise, conclusion],
-            operator: '==>'
-        });
+        const term = termFactory.implication(premise, conclusion);
         const concept = new Concept(term, config);
 
         index.addConcept(concept);
@@ -78,10 +72,7 @@ describe('MemoryIndex', () => {
     test('should add similarity concepts correctly', () => {
         const term1 = termFactory.create({components: ['dog']});
         const term2 = termFactory.create({components: ['cat']});
-        const term = termFactory.create({
-            components: [term1, term2],
-            operator: '<->'
-        });
+        const term = termFactory.similarity(term1, term2);
         const concept = new Concept(term, config);
 
         index.addConcept(concept);
@@ -101,14 +92,8 @@ describe('MemoryIndex', () => {
     });
 
     test('should find concepts by operator correctly', () => {
-        const term1 = termFactory.create({
-            components: [termFactory.create({components: ['A']}), termFactory.create({components: ['B']})],
-            operator: '-->'
-        });
-        const term2 = termFactory.create({
-            components: [termFactory.create({components: ['C']}), termFactory.create({components: ['D']})],
-            operator: '-->'
-        });
+        const term1 = termFactory.inheritance(termFactory.create({components: ['A']}), termFactory.create({components: ['B']}));
+        const term2 = termFactory.inheritance(termFactory.create({components: ['C']}), termFactory.create({components: ['D']}));
 
         const concept1 = new Concept(term1, config);
         const concept2 = new Concept(term2, config);
@@ -121,10 +106,7 @@ describe('MemoryIndex', () => {
     });
 
     test('should remove concepts correctly', () => {
-        const term = termFactory.create({
-            components: [termFactory.create({components: ['A']}), termFactory.create({components: ['B']})],
-            operator: '-->'
-        });
+        const term = termFactory.inheritance(termFactory.create({components: ['A']}), termFactory.create({components: ['B']}));
         const concept = new Concept(term, config);
 
         index.addConcept(concept);
@@ -140,14 +122,8 @@ describe('MemoryIndex', () => {
         const term2 = termFactory.create({components: ['B']});
         const term3 = termFactory.create({components: ['C']});
 
-        const innerTerm = termFactory.create({
-            components: [term1, term2],
-            operator: '&'
-        });
-        const complexTerm = termFactory.create({
-            components: [innerTerm, term3],
-            operator: '-->'
-        });
+        const innerTerm = termFactory.conjunction(term1, term2);
+        const complexTerm = termFactory.inheritance(innerTerm, term3);
 
         const concept = new Concept(complexTerm, config);
         index.addConcept(concept);
@@ -161,16 +137,10 @@ describe('MemoryIndex', () => {
         const atomicTerm = termFactory.create({components: ['A']});
         const atomicConcept = new Concept(atomicTerm, config);
 
-        const inheritanceTerm = termFactory.create({
-            components: [termFactory.create({components: ['dog']}), termFactory.create({components: ['animal']})],
-            operator: '-->'
-        });
+        const inheritanceTerm = termFactory.inheritance(termFactory.create({components: ['dog']}), termFactory.create({components: ['animal']}));
         const inheritanceConcept = new Concept(inheritanceTerm, config);
 
-        const similarityTerm = termFactory.create({
-            components: [termFactory.create({components: ['dog']}), termFactory.create({components: ['wolf']})],
-            operator: '<->'
-        });
+        const similarityTerm = termFactory.similarity(termFactory.create({components: ['dog']}), termFactory.create({components: ['wolf']}));
         const similarityConcept = new Concept(similarityTerm, config);
 
         index.addConcept(atomicConcept);
@@ -186,10 +156,7 @@ describe('MemoryIndex', () => {
     });
 
     test('should clear all indexes correctly', () => {
-        const term = termFactory.create({
-            components: [termFactory.create({components: ['A']}), termFactory.create({components: ['B']})],
-            operator: '-->'
-        });
+        const term = termFactory.inheritance(termFactory.create({components: ['A']}), termFactory.create({components: ['B']}));
         const concept = new Concept(term, config);
 
         index.addConcept(concept);
@@ -217,10 +184,7 @@ describe('MemoryIndex', () => {
     });
 
     test('should handle multiple concepts with same terms', () => {
-        const term = termFactory.create({
-            components: [termFactory.create({components: ['A']}), termFactory.create({components: ['B']})],
-            operator: '-->'
-        });
+        const term = termFactory.inheritance(termFactory.create({components: ['A']}), termFactory.create({components: ['B']}));
 
         const concept1 = new Concept(term, config);
         const concept2 = new Concept(term, config);

@@ -25,8 +25,8 @@ describe('Phase 4 Core Components Integration', () => {
     });
 
     test('TermFactory should handle proper hash-based identity with commutativity', () => {
-        const term1 = termFactory.create({operator: '&', components: ['A', 'B']});
-        const term2 = termFactory.create({operator: '&', components: ['B', 'A']}); // Should be same due to commutativity
+        const term1 = termFactory.conjunction('A', 'B');
+        const term2 = termFactory.conjunction('B', 'A'); // Should be same due to commutativity
 
         expect(term1.toString()).toBeDefined();
         expect(term2.toString()).toBeDefined();
@@ -100,14 +100,14 @@ describe('Phase 4 Core Components Integration', () => {
         expect(validTerm.toString()).toBe('simple');
 
         // Test compound term creation
-        const compoundTerm = termFactory.create({operator: '-->', components: ['cat', 'animal']});
+        const compoundTerm = termFactory.inheritance('cat', 'animal');
         expect(compoundTerm).toBeDefined();
         expect(compoundTerm.toString()).toBeDefined(); // Should have a string representation
         expect(compoundTerm.isCompound).toBe(true);
 
         // Test commutativity handling
-        const commuteTerm = termFactory.create({operator: '&', components: ['X', 'Y']});
-        const commuteTerm2 = termFactory.create({operator: '&', components: ['Y', 'X']});
+        const commuteTerm = termFactory.conjunction('X', 'Y');
+        const commuteTerm2 = termFactory.conjunction('Y', 'X');
         expect(commuteTerm.equals(commuteTerm2)).toBe(true);
     });
 
@@ -115,7 +115,7 @@ describe('Phase 4 Core Components Integration', () => {
         // Create terms
         const subjectTerm = termFactory.create({name: 'dog'});
         const predicateTerm = termFactory.create({name: 'animal'});
-        const inheritanceTerm = termFactory.create({operator: '-->', components: [subjectTerm, predicateTerm]});
+        const inheritanceTerm = termFactory.inheritance(subjectTerm, predicateTerm);
 
         // Create task
         const task = new Task({

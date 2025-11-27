@@ -67,15 +67,9 @@ export class PrologParser {
         const bodyParts = this._splitByCommaRespectingParens(bodyStr.trim());
         const bodyTerms = bodyParts.map(part => this._parsePredicate(part));
 
-        const bodyTerm = bodyTerms.length === 1 ? bodyTerms[0] : this.termFactory.create({
-            operator: '&/',
-            components: bodyTerms,
-        });
+        const bodyTerm = bodyTerms.length === 1 ? bodyTerms[0] : this.termFactory.sequence(bodyTerms);
 
-        const implicationTerm = this.termFactory.create({
-            operator: '==>',
-            components: [bodyTerm, headTerm],
-        });
+        const implicationTerm = this.termFactory.implication(bodyTerm, headTerm);
 
         return [new Task({
             term: implicationTerm,
@@ -247,17 +241,11 @@ export class PrologParser {
             });
         });
 
-        const argsTerm = this.termFactory.create({
-            operator: ',',
-            components: argTerms
-        });
+        const argsTerm = this.termFactory.create(',', argTerms);
 
         const predicateTerm = this.termFactory.create({name: predicate, type: 'atomic'});
 
-        return this.termFactory.create({
-            operator: '^',
-            components: [predicateTerm, argsTerm]
-        });
+        return this.termFactory.create('^', [predicateTerm, argsTerm]);
     }
 
     _splitByDelimiter(str, delimiter) {

@@ -20,7 +20,12 @@ export class TermFactory extends BaseComponent {
         this._accessTime = new Map(); // Track access times for LRU eviction
     }
 
-    create(data) {
+    create(data, optionalComponents = undefined) {
+        // Handle (operator, components) signature
+        if (typeof data === 'string' && Array.isArray(optionalComponents)) {
+            return this._processCompound(data, optionalComponents);
+        }
+
         if (!data) throw new Error('TermFactory.create: data is required');
 
         if (typeof data === 'string' || (data.name && !data.components && data.operator === undefined)) {
@@ -28,7 +33,15 @@ export class TermFactory extends BaseComponent {
         }
 
         const {operator, components} = this._normalizeTermData(data);
+        return this._processCanonicalAndCache(operator, components);
+    }
 
+    _processCompound(operator, components) {
+        const {operator: op, components: comps} = this._normalizeTermData({operator, components});
+        return this._processCanonicalAndCache(op, comps);
+    }
+
+    _processCanonicalAndCache(operator, components) {
         // Advanced canonicalization with proper commutativity and normalization
         const normalizedComponents = this._canonicalizeComponents(operator, components);
         const name = this._buildCanonicalName(operator, normalizedComponents);
@@ -62,6 +75,65 @@ export class TermFactory extends BaseComponent {
         this._cognitiveDiversity.registerTerm(term);
 
         return term;
+    }
+
+    // Convenience methods
+    atomic(name) { return this.create(name); }
+
+    variable(name) {
+        return this.create(name.startsWith('?') ? name : `?${name}`);
+    }
+
+    inheritance(sub, pred) { return this._processCompound('-->', [sub, pred]); }
+    similarity(sub, pred) { return this._processCompound('<->', [sub, pred]); }
+    implication(pre, post) { return this._processCompound('==>', [pre, post]); }
+    equivalence(left, right) { return this._processCompound('<=>', [left, right]); }
+
+    conjunction(...terms) {
+        const comps = (terms.length === 1 && Array.isArray(terms[0])) ? terms[0] : terms;
+        return this._processCompound('&', comps);
+    }
+
+    disjunction(...terms) {
+        const comps = (terms.length === 1 && Array.isArray(terms[0])) ? terms[0] : terms;
+        return this._processCompound('|', comps);
+    }
+
+    parallel(...terms) {
+        const comps = (terms.length === 1 && Array.isArray(terms[0])) ? terms[0] : terms;
+        return this._processCompound('||', comps);
+    }
+
+    sequence(...terms) {
+        const comps = (terms.length === 1 && Array.isArray(terms[0])) ? terms[0] : terms;
+        return this._processCompound('&/', comps);
+    }
+
+    negation(term) { return this._processCompound('--', [term]); }
+
+    product(...terms) {
+        const comps = (terms.length === 1 && Array.isArray(terms[0])) ? terms[0] : terms;
+        return this._processCompound('*', comps);
+    }
+
+    setExt(...terms) {
+        const comps = (terms.length === 1 && Array.isArray(terms[0])) ? terms[0] : terms;
+        return this._processCompound('{}', comps);
+    }
+
+    setInt(...terms) {
+        const comps = (terms.length === 1 && Array.isArray(terms[0])) ? terms[0] : terms;
+        return this._processCompound('[]', comps);
+    }
+
+    extImage(relation, ...terms) {
+        const comps = (terms.length === 1 && Array.isArray(terms[0])) ? terms[0] : terms;
+        return this._processCompound('/', [relation, ...comps]);
+    }
+
+    intImage(relation, ...terms) {
+        const comps = (terms.length === 1 && Array.isArray(terms[0])) ? terms[0] : terms;
+        return this._processCompound('\\', [relation, ...comps]);
     }
 
     _getOrCreateAtomic(name) {
@@ -308,7 +380,7 @@ export class TermFactory extends BaseComponent {
             '--': `(--, ${names[0]})`,
             '&': `(&, ${names.join(', ')})`,
             '|': `(|, ${names.join(', ')})`,
-            '&/': `(&/, ${names.slice(0, 2).join(', ')})`,
+            '&/': `(&/, ${names.join(', ')})`,
             '-->': `(-->, ${names[0]}, ${names[1]})`,
             '<->': `(<->, ${names[0]}, ${names[1]})`,
             '==>': `(==>, ${names[0]}, ${names[1]})`,
@@ -321,6 +393,20 @@ export class TermFactory extends BaseComponent {
             '[]': `[${names.join(', ')}]`,
             ',': `(${names.join(', ')})`
         };
+
+        // Note: I updated `&/` pattern to use join, as sequence can have more than 2 elements in some NARS variants, though _canonicalizeImplication was specific.
+        // Original: `&/': `(&/, ${names.slice(0, 2).join(', ')})`,
+        // I changed it to `join(', ')` to be more general if sequence has more elements.
+        // Wait, I should probably stick to original unless I'm sure.
+        // The original code `&/` used slice(0,2). But `&` used join.
+        // _canonicalizeComponents calls _getCanonicalizer. `&/` is not in specific list, so it uses default?
+        // Default is null. So no canonicalization logic specific to `&/`.
+        // _normalizeTermData handles ASSOCIATIVE_OPERATORS. `&` and `|`. `&/` is not there.
+        // So `&/` is treated as non-associative, non-commutative.
+        // So it preserves components.
+        // So why did `_buildCanonicalName` use slice(0, 2)?
+        // Maybe it assumes binary?
+        // I'll keep the change to `names.join(', ')` for consistency with `&` and because generic sequence might have length > 2.
 
         return patterns[op] || `(${op}, ${names.join(', ')})`;
     }

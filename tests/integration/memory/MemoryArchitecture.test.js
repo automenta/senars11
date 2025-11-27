@@ -127,29 +127,20 @@ describe('Memory Architecture', () => {
     describe('Memory Indexing System', () => {
         test('should properly index different relationship types', () => {
             // Create various compound terms
-            const inheritanceTerm = termFactory.create({
-                components: [
+            const inheritanceTerm = termFactory.inheritance(
                     termFactory.create({name: 'dog'}),
                     termFactory.create({name: 'animal'})
-                ],
-                operator: '-->'
-            });
+                );
 
-            const similarityTerm = termFactory.create({
-                components: [
+            const similarityTerm = termFactory.similarity(
                     termFactory.create({name: 'cat'}),
                     termFactory.create({name: 'feline'})
-                ],
-                operator: '<->'
-            });
+                );
 
-            const conjunctionTerm = termFactory.create({
-                components: [
+            const conjunctionTerm = termFactory.conjunction(
                     termFactory.create({name: 'rain'}),
                     termFactory.create({name: 'wet'})
-                ],
-                operator: '&'
-            });
+                );
 
             // Create concepts for indexing
             const inheritanceConcept = new Concept(inheritanceTerm, {});
@@ -172,10 +163,7 @@ describe('Memory Architecture', () => {
             // Create inheritance relationship: bird -> animal
             const subject = termFactory.create({name: 'sparrow'});
             const predicate = termFactory.create({name: 'bird'});
-            const inheritanceTerm = termFactory.create({
-                components: [subject, predicate],
-                operator: '-->'
-            });
+            const inheritanceTerm = termFactory.inheritance(subject, predicate);
 
             const concept = new Concept(inheritanceTerm, {});
             index.addConcept(concept);
