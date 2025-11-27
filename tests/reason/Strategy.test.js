@@ -27,10 +27,24 @@ describe('Strategy', () => {
 
     describe('selectSecondaryPremises', () => {
         test('should return empty array by default', async () => {
-            const primaryPremise = createTestTask({id: 'primary'});
+            const primaryPremise = createTestTask({term: 'primary'});
             const result = await strategy.selectSecondaryPremises(primaryPremise);
 
             expect(result).toEqual([]);
+        });
+
+        test('should delegate to sub-strategies', async () => {
+            const subStrategy = {
+                selectSecondaryPremises: jest.fn().mockResolvedValue([createTestTask({term: 'sub'})])
+            };
+            strategy.addStrategy(subStrategy);
+
+            const primaryPremise = createTestTask({term: 'primary'});
+            const result = await strategy.selectSecondaryPremises(primaryPremise);
+
+            expect(subStrategy.selectSecondaryPremises).toHaveBeenCalledWith(primaryPremise);
+            expect(result.length).toBeGreaterThanOrEqual(1);
+            expect(result[0].term.toString()).toBe('sub');
         });
 
         test('should handle errors gracefully', async () => {
@@ -47,7 +61,7 @@ describe('Strategy', () => {
                 };
                 const errorStrategy = new Strategy({premiseSelector: errorSelector});
 
-                const primaryPremise = createTestTask({id: 'primary'});
+                const primaryPremise = createTestTask({term: 'primary'});
                 const result = await errorStrategy.selectSecondaryPremises(primaryPremise);
 
                 expect(result).toEqual([]);
@@ -61,18 +75,18 @@ describe('Strategy', () => {
         test('should generate premise pairs from stream', async () => {
             const premiseStream = {
                 [Symbol.asyncIterator]: async function* () {
-                    yield createTestTask({id: 'primary1'});
-                    yield createTestTask({id: 'primary2'});
+                    yield createTestTask({term: 'primary1'});
+                    yield createTestTask({term: 'primary2'});
                 }
             };
 
             // Replace the method on the instance to avoid mocking
             const originalMethod = strategy.selectSecondaryPremises.bind(strategy);
             strategy.selectSecondaryPremises = async (primary) => {
-                if (primary.id === 'primary1') {
-                    return [createTestTask({id: 'secondary1a'}), createTestTask({id: 'secondary1b'})];
+                if (primary.term.toString() === 'primary1') {
+                    return [createTestTask({term: 'secondary1a'}), createTestTask({term: 'secondary1b'})];
                 } else {
-                    return [createTestTask({id: 'secondary2a'})];
+                    return [createTestTask({term: 'secondary2a'})];
                 }
             };
 
@@ -105,8 +119,8 @@ describe('Strategy', () => {
             try {
                 const premiseStream = {
                     [Symbol.asyncIterator]: async function* () {
-                        yield createTestTask({id: 'primary1'});
-                        yield createTestTask({id: 'primary2'});
+                        yield createTestTask({term: 'primary1'});
+                        yield createTestTask({term: 'primary2'});
                     }
                 };
 
@@ -118,7 +132,7 @@ describe('Strategy', () => {
                     if (callCount === 1) {
                         throw new Error('Selection failed');
                     }
-                    return [createTestTask({id: 'secondary'})];
+                    return [createTestTask({term: 'secondary'})];
                 };
 
                 const pairs = [];
