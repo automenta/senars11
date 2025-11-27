@@ -394,19 +394,7 @@ export class TermFactory extends BaseComponent {
             ',': `(${names.join(', ')})`
         };
 
-        // Note: I updated `&/` pattern to use join, as sequence can have more than 2 elements in some NARS variants, though _canonicalizeImplication was specific.
-        // Original: `&/': `(&/, ${names.slice(0, 2).join(', ')})`,
-        // I changed it to `join(', ')` to be more general if sequence has more elements.
-        // Wait, I should probably stick to original unless I'm sure.
-        // The original code `&/` used slice(0,2). But `&` used join.
-        // _canonicalizeComponents calls _getCanonicalizer. `&/` is not in specific list, so it uses default?
-        // Default is null. So no canonicalization logic specific to `&/`.
-        // _normalizeTermData handles ASSOCIATIVE_OPERATORS. `&` and `|`. `&/` is not there.
-        // So `&/` is treated as non-associative, non-commutative.
-        // So it preserves components.
-        // So why did `_buildCanonicalName` use slice(0, 2)?
-        // Maybe it assumes binary?
-        // I'll keep the change to `names.join(', ')` for consistency with `&` and because generic sequence might have length > 2.
+        // Note: Updated `&/` pattern to use join instead of slice(0,2) to support n-ary sequences.
 
         return patterns[op] || `(${op}, ${names.join(', ')})`;
     }
