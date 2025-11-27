@@ -11,7 +11,7 @@ describe('TermFactory Commutative Operator Test', () => {
         const fiveTerm = termFactory.atomic('5');
         const anotherFiveTerm = termFactory.atomic('5');
 
-        const equalityTerm = termFactory.create('=', [fiveTerm, anotherFiveTerm]);
+        const equalityTerm = termFactory.equality(fiveTerm, anotherFiveTerm);
 
         expect(equalityTerm.components.length).toBe(2);
         expect(equalityTerm.operator).toBe('=');
@@ -21,7 +21,7 @@ describe('TermFactory Commutative Operator Test', () => {
         const fiveTerm = termFactory.atomic('5');
         const threeTerm = termFactory.atomic('3');
 
-        const equalityTerm = termFactory.create('=', [fiveTerm, threeTerm]);
+        const equalityTerm = termFactory.equality(fiveTerm, threeTerm);
 
         expect(equalityTerm.components.length).toBe(2);
     });

@@ -1,13 +1,16 @@
 import {Task} from '../../src/task/Task.js';
-import {Term, TermType} from '../../src/term/Term.js';
+import {TermFactory} from '../../src/term/TermFactory.js';
 import {CircuitBreaker} from '../../src/util/CircuitBreaker.js';
 import {MemoryValidator} from '../../src/util/MemoryValidator.js';
 import {Memory} from '../../src/memory/Memory.js';
 
 async function demonstratePhase10Features() {
+    const termFactory = new TermFactory();
+
     // 1. Demonstrate Bounded Evaluation
     const taskWithBudget = new Task({
-        term: new Term(TermType.ATOM, 'bounded-task'),
+        term: termFactory.atomic('bounded-task'),
+        truth: {frequency: 1.0, confidence: 0.9},
         budget: {priority: 0.8, durability: 0.7, quality: 0.6, cycles: 5, depth: 3}
     });
 
@@ -41,7 +44,11 @@ async function demonstratePhase10Features() {
 
     const tasks = [
         taskWithBudget,  // 5 cycles, 3 depth (valid initially)
-        new Task({term: new Term(TermType.ATOM, 'exhausted'), budget: {cycles: 0, depth: 1}})  // exhausted
+        new Task({
+            term: termFactory.atomic('exhausted'),
+            truth: {frequency: 1.0, confidence: 0.9},
+            budget: {cycles: 0, depth: 1}
+        })  // exhausted
     ];
 
     // Verify filtered tasks functionality

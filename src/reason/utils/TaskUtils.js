@@ -3,51 +3,32 @@
  * @description Utilities for working with NARS tasks, truth values, and terms.
  */
 
+import {Term} from '../../term/Term.js';
+import {TermFactory} from '../../term/TermFactory.js';
+import {Truth} from '../../Truth.js';
+
+const termFactory = new TermFactory();
+
 export const Punctuation = {
     BELIEF: '.',
     QUESTION: '?',
     GOAL: '!'
 };
 
-export class TruthValue {
-    constructor(frequency = 0.5, confidence = 0.9) {
-        this.f = Math.max(0, Math.min(1, frequency));
-        this.c = Math.max(0, Math.min(1, confidence));
-    }
-
-    static fromObject(obj) {
-        if (!obj) return new TruthValue();
-        return new TruthValue(obj.frequency ?? obj.f ?? 0.5, obj.confidence ?? obj.c ?? 0.9);
-    }
-
-    clone() {
-        return new TruthValue(this.f, this.c);
-    }
+function createTruth(obj) {
+    if (obj instanceof Truth) return obj;
+    if (!obj) return new Truth();
+    return new Truth(obj.frequency ?? obj.f ?? 0.5, obj.confidence ?? obj.c ?? 0.9);
 }
 
-export class Term {
-    constructor(name) {
-        this.name = name;
-    }
-
-    static newAtom(name) {
-        return new Term(name);
-    }
-
-    toString() {
-        return this.name;
-    }
-
-    clone() {
-        return new Term(this.name);
-    }
-}
+// Export Truth for backward compatibility or direct usage
+export { Truth as TruthValue };
 
 export class Task {
     constructor(term, punctuation = '.', truth = null, budget = null, occurrenceTime = null, priority = 0.5, durability = 0.5, occurrenceSpan = null, metadata = null) {
-        this.term = term instanceof Term ? term : new Term(String(term));
+        this.term = term instanceof Term ? term : termFactory.atomic(String(term));
         this.punctuation = punctuation;
-        this.truth = truth ? TruthValue.fromObject(truth) : new TruthValue();
+        this.truth = truth ? createTruth(truth) : new Truth();
         this.budget = budget;
         this.stamp = {
             occurrenceTime: occurrenceTime ?? Date.now(),
@@ -73,9 +54,9 @@ export class Task {
 
     clone() {
         return new Task(
-            this.term.clone(),
+            this.term, // Term is immutable
             this.punctuation,
-            this.truth.clone(),
+            this.truth, // Truth is immutable
             this.budget,
             this.stamp.occurrenceTime,
             this.priority,
@@ -93,9 +74,9 @@ export class TaskDerivation {
         for (const [key, value] of Object.entries(modifications)) {
             if (value !== undefined) {
                 if (key === 'term') {
-                    newTask.term = value instanceof Term ? value : new Term(value);
+                    newTask.term = value instanceof Term ? value : termFactory.atomic(String(value));
                 } else if (key === 'truth') {
-                    newTask.truth = TruthValue.fromObject(value);
+                    newTask.truth = createTruth(value);
                 } else {
                     newTask[key] = value;
                 }
@@ -113,17 +94,17 @@ export class TaskDerivation {
     }
 
     static deriveTruth(originalTruth, confidenceMultiplier = 0.9, frequencyAdjustment = 0) {
-        const baseTruth = TruthValue.fromObject(originalTruth);
+        const baseTruth = createTruth(originalTruth);
         const newFrequency = Math.max(0, Math.min(1, baseTruth.f + frequencyAdjustment));
         const newConfidence = Math.max(0, Math.min(1, baseTruth.c * confidenceMultiplier));
-        return new TruthValue(newFrequency, newConfidence);
+        return new Truth(newFrequency, newConfidence);
     }
 
     static createFromTemplate(originalTask, term, punctuation = '.', truthOptions = {}) {
         const derivedTruth = this.deriveTruth(originalTask.truth, truthOptions.confidenceMultiplier, truthOptions.frequencyAdjustment);
 
         return new Task(
-            term instanceof Term ? term : new Term(term),
+            term instanceof Term ? term : termFactory.atomic(String(term)),
             punctuation,
             {
                 frequency: truthOptions.frequency ?? derivedTruth.f,

@@ -88,6 +88,7 @@ export class TermFactory extends BaseComponent {
     similarity(sub, pred) { return this._processCompound('<->', [sub, pred]); }
     implication(pre, post) { return this._processCompound('==>', [pre, post]); }
     equivalence(left, right) { return this._processCompound('<=>', [left, right]); }
+    equality(left, right) { return this._processCompound('=', [left, right]); }
 
     conjunction(...terms) {
         const comps = (terms.length === 1 && Array.isArray(terms[0])) ? terms[0] : terms;

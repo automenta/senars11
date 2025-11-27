@@ -62,7 +62,7 @@ async function runPerformanceBenchmarks() {
     console.log('1. Benchmarking Term Creation...');
     const termFactory = new TermFactory();
     await benchmark.runBenchmark('Term Creation', (i) => {
-        return termFactory.create({name: `benchmark_term_${i}`});
+        return termFactory.atomic(`benchmark_term_${i}`);
     }, 10000);
 
     // 2. Memory Access Benchmark
@@ -70,7 +70,7 @@ async function runPerformanceBenchmarks() {
     const memory = new Memory();
     // Populate memory with concepts first
     for (let i = 0; i < 1000; i++) {
-        const term = termFactory.create({name: `memory_test_${i}`});
+        const term = termFactory.atomic(`memory_test_${i}`);
         const task = new Task({
             term,
             punctuation: '.',
@@ -80,7 +80,7 @@ async function runPerformanceBenchmarks() {
     }
 
     await benchmark.runBenchmark('Memory Access', (i) => {
-        const term = termFactory.create({name: `memory_test_${i % 1000}`});
+        const term = termFactory.atomic(`memory_test_${i % 1000}`);
         return memory.getConcept(term);
     }, 5000);
 
@@ -95,7 +95,7 @@ async function runPerformanceBenchmarks() {
     // 4. Task Creation and Processing
     console.log('\n4. Benchmarking Task Operations...');
     await benchmark.runBenchmark('Task Creation', (i) => {
-        const term = termFactory.create({name: `task_term_${i}`});
+        const term = termFactory.atomic(`task_term_${i}`);
         return new Task({
             term,
             punctuation: '.',
@@ -106,16 +106,13 @@ async function runPerformanceBenchmarks() {
     // 5. Complex Term Operations (with nesting)
     console.log('\n5. Benchmarking Complex Term Operations...');
     await benchmark.runBenchmark('Complex Term Creation', (i) => {
-        const termA = termFactory.create({name: `A_${i}`});
-        const termB = termFactory.create({name: `B_${i}`});
-        const termC = termFactory.create({name: `C_${i}`});
-        return termFactory.create({
-            components: [
-                termA,
-                termFactory.create({components: [termB, termC], operator: '&'})
-            ],
-            operator: '-->'
-        });
+        const termA = termFactory.atomic(`A_${i}`);
+        const termB = termFactory.atomic(`B_${i}`);
+        const termC = termFactory.atomic(`C_${i}`);
+        return termFactory.inheritance(
+            termA,
+            termFactory.conjunction(termB, termC)
+        );
     }, 2000);
 
     // 6. NAR Input Processing

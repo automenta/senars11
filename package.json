@@ -41,6 +41,7 @@
     "dev:visual-inspection": "node scripts/utils/automated-dev-workflow.js --visual-inspection",
     "dev:tune-heuristics": "node scripts/utils/automated-dev-workflow.js --tune-heuristics",
     "dev:regression": "node scripts/utils/automated-dev-workflow.js --regression-tests",
+    "lint:patterns": "node scripts/utils/lint-patterns.js",
     "build": "npm run build:parser",
     "build:parser": "npx peggy --format es -o src/parser/peggy-parser.js src/parser/narsese.peggy",
     "slides:dev": "slidev slides.md",
