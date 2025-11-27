@@ -1,3 +1,7 @@
+// Third-party imports
+// (none in this file)
+
+// Local imports
 import {Concept} from '../../../src/memory/Concept.js';
 import {createTask, createTerm} from '../../support/factories.js';
 

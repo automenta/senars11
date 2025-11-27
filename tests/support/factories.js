@@ -8,17 +8,27 @@ import {Focus} from '../../src/memory/Focus.js';
 
 const termFactory = new TermFactory();
 
+// Cache common test constants to avoid recreating them
+const CACHED_BUDGET_DEFAULT = Object.freeze({priority: 0.5, durability: 0.5, quality: 0.5, cycles: 100, depth: 10});
+const CACHED_BUDGET_MEDIUM = Object.freeze({priority: 0.7, durability: 0.6, quality: 0.7, cycles: 75, depth: 7});
+const CACHED_BUDGET_HIGH = Object.freeze({priority: 0.9, durability: 0.8, quality: 0.9, cycles: 100, depth: 10});
+const CACHED_BUDGET_LOW = Object.freeze({priority: 0.3, durability: 0.4, quality: 0.3, cycles: 25, depth: 3});
+
+const CACHED_TRUTH_HIGH = Object.freeze({f: 0.9, c: 0.8});
+const CACHED_TRUTH_MEDIUM = Object.freeze({f: 0.7, c: 0.6});
+const CACHED_TRUTH_LOW = Object.freeze({f: 0.3, c: 0.4});
+
 export const TEST_CONSTANTS = {
     BUDGET: {
-        DEFAULT: {priority: 0.5, durability: 0.5, quality: 0.5, cycles: 100, depth: 10},
-        MEDIUM: {priority: 0.7, durability: 0.6, quality: 0.7, cycles: 75, depth: 7},
-        HIGH: {priority: 0.9, durability: 0.8, quality: 0.9, cycles: 100, depth: 10},
-        LOW: {priority: 0.3, durability: 0.4, quality: 0.3, cycles: 25, depth: 3}
+        DEFAULT: CACHED_BUDGET_DEFAULT,
+        MEDIUM: CACHED_BUDGET_MEDIUM,
+        HIGH: CACHED_BUDGET_HIGH,
+        LOW: CACHED_BUDGET_LOW
     },
     TRUTH: {
-        HIGH: {f: 0.9, c: 0.8},
-        MEDIUM: {f: 0.7, c: 0.6},
-        LOW: {f: 0.3, c: 0.4}
+        HIGH: CACHED_TRUTH_HIGH,
+        MEDIUM: CACHED_TRUTH_MEDIUM,
+        LOW: CACHED_TRUTH_LOW
     }
 };
 
@@ -47,7 +57,7 @@ export const createTask = (overrides = {}) => {
     };
     const taskData = {...defaults, ...overrides};
 
-    if ((taskData.punctuation === '.' || taskData.punctuation === '!') && taskData.truth === null) {
+    if (['.', '!'].includes(taskData.punctuation) && taskData.truth === null) {
         taskData.truth = createTruth();
     }
 

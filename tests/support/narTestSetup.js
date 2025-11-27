@@ -30,7 +30,7 @@ export class StandardNARTestSetup {
      * Teardown function to be used in afterEach
      */
     async teardown() {
-        if (this.nar) {
+        if (this.nar?.dispose) {
             await this.nar.dispose();
         }
     }
@@ -39,7 +39,7 @@ export class StandardNARTestSetup {
      * Reset NAR state
      */
     async reset() {
-        if (this.nar) {
+        if (this.nar?.reset) {
             this.nar.reset();
         }
     }
@@ -79,51 +79,45 @@ export const narTestPatterns = {
      * Test basic input processing for different statement types
      */
     testInputProcessing: async (nar, input, expectedType) => {
-        const result = await nar.input(input);
+        const result = await nar?.input(input);
         expect(result).toBe(true);
 
-        let storage;
-        switch (expectedType.toLowerCase()) {
-            case 'belief':
-                storage = nar.getBeliefs();
-                break;
-            case 'goal':
-                storage = nar.getGoals();
-                break;
-            case 'question':
-                storage = nar.getQuestions();
-                break;
-            default:
-                throw new Error(`Unknown expected type: ${expectedType}`);
-        }
+        const typeMap = {
+            'belief': () => nar?.getBeliefs(),
+            'goal': () => nar?.getGoals(),
+            'question': () => nar?.getQuestions()
+        };
 
-        expect(storage.length).toBeGreaterThan(0);
+        const getStorage = typeMap[expectedType.toLowerCase()];
+        if (!getStorage) throw new Error(`Unknown expected type: ${expectedType}`);
+
+        const storage = getStorage();
+        expect(storage?.length ?? 0).toBeGreaterThan(0);
 
         // Try to find a task that matches the input
-        const task = storage.find(t =>
-            t.term.toString().toLowerCase().includes(input.split(/[^\w]/)[0].toLowerCase()) // Extract main term
+        const mainTerm = input?.split(/[^\w]/)[0]?.toLowerCase();
+        const task = storage?.find(t =>
+            t?.term?.toString()?.toLowerCase()?.includes(mainTerm)
         );
 
         expect(task).toBeDefined();
-        expect(task.type).toBe(expectedType.toUpperCase());
+        expect(task?.type).toBe(expectedType.toUpperCase());
     },
 
     /**
      * Test compound term processing
      */
     testCompoundTerm: async (nar, input) => {
-        const result = await nar.input(input);
+        const result = await nar?.input(input);
         expect(result).toBe(true);
 
-        const beliefs = nar.getBeliefs();
+        const beliefs = nar?.getBeliefs() ?? [];
         expect(beliefs.length).toBeGreaterThan(0);
 
         // Check if the compound structure is preserved in the term
+        const compoundOps = ['&', '|', '-->', '==>'];
         const compoundBelief = beliefs.find(b =>
-            b.term.toString().includes('&') ||
-            b.term.toString().includes('|') ||
-            b.term.toString().includes('-->') ||
-            b.term.toString().includes('==>')
+            compoundOps.some(op => b?.term?.toString()?.includes(op))
         );
 
         expect(compoundBelief).toBeDefined();
@@ -133,22 +127,22 @@ export const narTestPatterns = {
      * Test system lifecycle operations
      */
     testLifecycle: async (nar) => {
-        expect(nar.isRunning).toBe(false);
+        expect(nar?.isRunning).toBe(false);
 
-        const started = nar.start();
+        const started = nar?.start();
         expect(started).toBe(true);
-        expect(nar.isRunning).toBe(true);
+        expect(nar?.isRunning).toBe(true);
 
-        const stopped = nar.stop();
+        const stopped = nar?.stop();
         expect(stopped).toBe(true);
-        expect(nar.isRunning).toBe(false);
+        expect(nar?.isRunning).toBe(false);
 
         // Test reset functionality
-        await nar.input('test.');
-        expect(nar.getBeliefs().length).toBeGreaterThan(0);
+        await nar?.input('test.');
+        expect(nar?.getBeliefs?.()?.length ?? 0).toBeGreaterThan(0);
 
-        nar.reset();
-        expect(nar.getBeliefs().length).toBe(0);
+        nar?.reset();
+        expect(nar?.getBeliefs?.()?.length ?? 0).toBe(0);
     },
 
     /**
@@ -158,10 +152,12 @@ export const narTestPatterns = {
         const events = [];
 
         // Set up event listener
-        nar.on(expectedEvent, (data) => events.push(data));
+        if (nar?.on) {
+            nar.on(expectedEvent, (data) => events.push(data));
+        }
 
         // Process input
-        await nar.input(input);
+        await nar?.input(input);
 
         // Verify event was emitted - more flexible check to handle potential system differences
         expect(events.length).toBeGreaterThanOrEqual(0);
@@ -174,8 +170,8 @@ export const narTestPatterns = {
     testPerformance: async (nar, inputs, maxDurationMs = 5000) => {
         const startTime = Date.now();
 
-        for (const input of inputs) {
-            await nar.input(input);
+        for (const input of (inputs ?? [])) {
+            await nar?.input(input);
         }
 
         const duration = Date.now() - startTime;
@@ -188,9 +184,10 @@ export const narTestPatterns = {
      * Test error handling for invalid inputs
      */
     testErrorHandling: async (nar, invalidInputs) => {
-        for (const invalidInput of invalidInputs) {
-            await expect(nar.input(invalidInput)).rejects.toThrow();
-        }
+        const promises = (invalidInputs ?? []).map(invalidInput =>
+            expect(nar?.input(invalidInput)).rejects.toThrow()
+        );
+        await Promise.all(promises);
     }
 };
 
@@ -202,7 +199,7 @@ export const narTestSuites = {
      * Basic functionality test suite
      */
     basicFunctionality: (narProvider) => {
-        describe('Basic Functionality', () => {
+        describe('Basic Functionality Tests', () => {
             test('should accept and store a simple belief', async () => {
                 await narTestPatterns.testInputProcessing(narProvider(), 'cat.', 'BELIEF');
             });
@@ -232,7 +229,7 @@ export const narTestSuites = {
      * System lifecycle test suite
      */
     lifecycle: (narProvider) => {
-        describe('System Lifecycle', () => {
+        describe('System Lifecycle Tests', () => {
             test('should start and stop correctly', async () => {
                 await narTestPatterns.testLifecycle(narProvider());
             });
@@ -252,7 +249,7 @@ export const narTestSuites = {
      * Compound term processing test suite
      */
     compoundTerms: (narProvider) => {
-        describe('Compound Terms', () => {
+        describe('Compound Terms Tests', () => {
             test('should handle inheritance statements', async () => {
                 await narTestPatterns.testCompoundTerm(narProvider(), '(cat --> animal).');
             });
@@ -271,7 +268,7 @@ export const narTestSuites = {
      * Error handling test suite
      */
     errorHandling: (narProvider) => {
-        describe('Error Handling', () => {
+        describe('Error Handling Tests', () => {
             test('should handle malformed input gracefully', async () => {
                 const invalidInputs = [
                     'incomplete statement',

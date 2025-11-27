@@ -91,50 +91,50 @@ export const taskAssertions = {
      * Asserts that a task has the expected properties
      */
     expectTask: (task, expected) => {
-        if (expected.term) expect(task.term).toEqual(expected.term);
-        if (expected.type) expect(task.type).toBe(expected.type);
-        if (expected.truth) expect(task.truth).toEqual(expected.truth);
-        if (expected.budget) expect(task.budget).toEqual(expected.budget);
-        if (expected.stamp) expect(task.stamp).toEqual(expected.stamp);
+        const props = ['term', 'type', 'truth', 'budget', 'stamp'];
+        props.forEach(prop => {
+            if (expected?.[prop]) expect(task?.[prop]).toEqual(expected[prop]);
+        });
     },
 
     /**
      * Asserts that a task is of a specific type
      */
     expectTaskType: (task, type) => {
-        switch (type.toUpperCase()) {
-            case 'BELIEF':
-                expect(task.isBelief()).toBe(true);
-                break;
-            case 'GOAL':
-                expect(task.isGoal()).toBe(true);
-                break;
-            case 'QUESTION':
-                expect(task.isQuestion()).toBe(true);
-                break;
-            default:
-                throw new Error(`Unknown task type: ${type}`);
-        }
+        const typeMap = {
+            'BELIEF': 'isBelief',
+            'GOAL': 'isGoal',
+            'QUESTION': 'isQuestion'
+        };
+
+        const method = typeMap[type.toUpperCase()];
+        if (!method) throw new Error(`Unknown task type: ${type}`);
+
+        expect(task[method]()).toBe(true);
     },
 
     /**
      * Asserts task punctuation
      */
     expectTaskPunctuation: (task, punctuation) => {
-        const expectedType = punctuation === '.' ? 'BELIEF' :
-            punctuation === '!' ? 'GOAL' :
-                punctuation === '?' ? 'QUESTION' : '';
-        expect(task.punctuation).toBe(punctuation);
-        expect(task.type).toBe(expectedType);
+        const expectedType = {
+            '.': 'BELIEF',
+            '!': 'GOAL',
+            '?': 'QUESTION'
+        }[punctuation] || '';
+
+        expect(task?.punctuation).toBe(punctuation);
+        expect(task?.type).toBe(expectedType);
     },
 
     /**
      * Finds a task by term in a collection
      */
     findTaskByTerm: (tasks, searchTerm) => {
-        return tasks.find(t =>
-            t.term.toString().toLowerCase().includes(searchTerm.toLowerCase()) ||
-            t.term.name?.toLowerCase().includes(searchTerm.toLowerCase())
+        const lowerSearch = searchTerm?.toLowerCase();
+        return tasks?.find(t =>
+            t?.term?.toString()?.toLowerCase()?.includes(lowerSearch) ||
+            t?.term?.name?.toLowerCase()?.includes(lowerSearch)
         );
     }
 };
@@ -165,7 +165,17 @@ export const flexibleAssertions = {
      * Checks if collection has 'at least' a certain number of items (not exact count)
      */
     expectAtLeast: (collection, minCount, description = '') => {
-        const count = Array.isArray(collection) ? collection.length : collection.size || collection.length || Object.keys(collection).length;
+        let count;
+        if (Array.isArray(collection)) {
+            count = collection.length;
+        } else if (collection?.size !== undefined) {
+            count = collection.size;
+        } else if (collection?.length !== undefined) {
+            count = collection.length;
+        } else {
+            count = Object.keys(collection || {}).length;
+        }
+
         const message = description ? ` (${description})` : '';
         expect(count).toBeGreaterThanOrEqual(minCount);
     },
@@ -174,16 +184,16 @@ export const flexibleAssertions = {
      * Flexible comparison for objects that allows for implementation changes
      */
     expectObjectContainingFlexible: (actual, expectedSubset, tolerance = 0.01) => {
-        Object.entries(expectedSubset).forEach(([key, expectedValue]) => {
-            if (typeof expectedValue === 'number' && typeof actual[key] === 'number') {
+        for (const [key, expectedValue] of Object.entries(expectedSubset ?? {})) {
+            if (typeof expectedValue === 'number' && typeof actual?.[key] === 'number') {
                 // Use tolerance-based comparison for numbers
                 const diff = Math.abs(actual[key] - expectedValue);
                 expect(diff).toBeLessThanOrEqual(tolerance);
             } else {
                 // Use exact comparison for non-numbers
-                expect(actual[key]).toEqual(expectedValue);
+                expect(actual?.[key]).toEqual(expectedValue);
             }
-        });
+        }
     }
 };
 
@@ -196,15 +206,15 @@ export const memoryAssertions = {
      */
     expectConceptContains: (concept, expectedTerm) => {
         expect(concept).toBeDefined();
-        expect(concept.term).toBeDefined();
-        expect(concept.term.toString().toLowerCase()).toContain(expectedTerm.toLowerCase());
+        expect(concept?.term).toBeDefined();
+        expect(concept?.term?.toString()?.toLowerCase()).toContain(expectedTerm?.toLowerCase());
     },
 
     /**
      * Asserts that memory contains a specific number of concepts
      */
     expectMemoryConcepts: (memory, expectedCount) => {
-        const allConcepts = memory.getAllConcepts();
+        const allConcepts = memory?.getAllConcepts() ?? [];
         expect(allConcepts.length).toBe(expectedCount);
     },
 
@@ -212,9 +222,9 @@ export const memoryAssertions = {
      * Asserts that a memory contains tasks with a specific term
      */
     expectMemoryContainsTerm: (memory, termName) => {
-        const concepts = memory.getAllConcepts();
+        const concepts = memory?.getAllConcepts() ?? [];
         const matchingConcept = concepts.find(c =>
-            c.term.toString().toLowerCase().includes(termName.toLowerCase())
+            c?.term?.toString()?.toLowerCase()?.includes(termName?.toLowerCase())
         );
         expect(matchingConcept).toBeDefined();
     }
@@ -346,7 +356,7 @@ export const errorHandlingTests = {
         test.each(invalidInputs.map(input => [input]))(
             'throws error for invalid input: %s',
             (invalidInput) => {
-                expect(() => testFunction(invalidInput)).toThrow(errorType);
+                expect(() => testFunction?.(invalidInput)).toThrow(errorType);
             }
         );
     },
@@ -355,16 +365,17 @@ export const errorHandlingTests = {
      * Tests async error handling
      */
     asyncErrorHandling: async (testFunction, invalidInputs, errorType = Error) => {
-        for (const invalidInput of invalidInputs) {
-            await expect(testFunction(invalidInput)).rejects.toThrow(errorType);
-        }
+        const promises = invalidInputs.map(invalidInput =>
+            expect(testFunction?.(invalidInput)).rejects.toThrow(errorType)
+        );
+        await Promise.all(promises);
     },
 
     /**
      * Tests error message content
      */
     errorWithMessage: (testFunction, invalidInput, expectedMessage) => {
-        expect(() => testFunction(invalidInput)).toThrow(expectedMessage);
+        expect(() => testFunction?.(invalidInput)).toThrow(expectedMessage);
     }
 };
 
@@ -525,16 +536,22 @@ export const narTestScenarios = {
  */
 export const waitForCondition = async (condition, timeoutMs = 1000, intervalMs = 10) => {
     return new Promise((resolve, reject) => {
+        const startTime = Date.now();
         const interval = setInterval(() => {
-            if (condition()) {
+            try {
+                if (condition()) {
+                    clearInterval(interval);
+                    resolve();
+                }
+            } catch (error) {
                 clearInterval(interval);
-                resolve();
+                reject(new Error(`Error in condition check: ${error.message}`));
             }
         }, intervalMs);
 
         setTimeout(() => {
             clearInterval(interval);
-            reject(new Error('Timeout waiting for condition'));
+            reject(new Error(`Timeout waiting for condition after ${timeoutMs}ms`));
         }, timeoutMs);
     });
 };
@@ -543,11 +560,17 @@ export const waitForCondition = async (condition, timeoutMs = 1000, intervalMs =
  * Runs performance tests with time measurement
  */
 export const runPerformanceTest = async (testFn, maxDurationMs = 5000, description = 'Performance test') => {
+    if (typeof testFn !== 'function') {
+        throw new Error('testFn must be a function');
+    }
+
     const startTime = Date.now();
     const result = await testFn();
     const duration = Date.now() - startTime;
 
-    expect(duration).toBeLessThan(maxDurationMs);
+    if (duration > maxDurationMs) {
+        throw new Error(`Performance test "${description}" exceeded maximum duration: ${duration}ms > ${maxDurationMs}ms`);
+    }
 
     return result;
 };
@@ -560,7 +583,7 @@ export const parameterizedTests = {
      * Run tests with multiple parameter combinations
      */
     runWithParams: (testCases, testFn) => {
-        test.each(testCases.map((testCase, i) => [i, testCase]))(
+        test.each(testCases?.map((testCase, i) => [i, testCase]) ?? [])(
             'test case %i: %s',
             (index, testCase) => {
                 testFn(testCase);
@@ -572,7 +595,7 @@ export const parameterizedTests = {
      * Run async tests with multiple parameter combinations
      */
     runAsyncWithParams: async (testCases, testFn) => {
-        for (const [index, testCase] of testCases.entries()) {
+        for (const [index, testCase] of (testCases ?? []).entries()) {
             await test(`${index}: ${JSON.stringify(testCase)}`, () => testFn(testCase));
         }
     }
@@ -787,9 +810,17 @@ export const robustNARTests = {
  * @returns {void}
  */
 export const testImmutability = (instance, properties) => {
-    Object.keys(properties).forEach(propertyName => {
+    if (!instance || typeof instance !== 'object') {
+        throw new Error('instance must be an object');
+    }
+
+    if (!properties || typeof properties !== 'object') {
+        throw new Error('properties must be an object');
+    }
+
+    Object.entries(properties).forEach(([propertyName, value]) => {
         expect(() => {
-            instance[propertyName] = properties[propertyName];
+            instance[propertyName] = value;
         }).toThrow();
     });
 };

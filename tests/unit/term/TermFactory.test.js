@@ -1,3 +1,7 @@
+// Third-party imports
+// (none in this file)
+
+// Local imports
 import {TermFactory} from '../../../src/term/TermFactory.js';
 
 describe('TermFactory', () => {

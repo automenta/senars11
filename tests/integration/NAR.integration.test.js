@@ -1,3 +1,7 @@
+// Third-party imports
+// (none in this file)
+
+// Local imports
 import {NAR} from '../../src/nar/NAR.js';
 import {TermFactory} from '../../src/term/TermFactory.js';
 import {completeNARIntegrationSuite, flexibleNARIntegrationSuite, narTestSetup} from '../support/commonTestSuites.js';

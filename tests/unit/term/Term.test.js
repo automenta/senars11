@@ -1,6 +1,9 @@
+// Third-party imports
+import fc from 'fast-check';
+
+// Local imports
 import {Term, TermType} from '../../../src/term/Term.js';
 import {createCompoundTerm, createTerm} from '../../support/factories.js';
-import fc from 'fast-check';
 
 describe('Term', () => {
     // Centralize common terms for reuse
