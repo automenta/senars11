@@ -39,7 +39,7 @@ describe('FocusSetSelector', () => {
     });
 
     test('should filter tasks below priority threshold', () => {
-        const term = termFactory.create('A');
+        const term = termFactory.atomic('A');
         const lowPriorityTask = new Task({
             term,
             punctuation: '.',
@@ -59,9 +59,9 @@ describe('FocusSetSelector', () => {
     });
 
     test('should select tasks based on composite scoring', () => {
-        const term1 = termFactory.create('A');
-        const term2 = termFactory.create('B');
-        const term3 = termFactory.create('C');
+        const term1 = termFactory.atomic('A');
+        const term2 = termFactory.atomic('B');
+        const term3 = termFactory.atomic('C');
 
         // Create tasks with different characteristics using stamps with different occurrence times
         const task1 = new Task({
@@ -140,8 +140,8 @@ describe('FocusSetSelector', () => {
     });
 
     test('should consider term complexity for diversity', () => {
-        const simpleTerm = termFactory.create('A');
-        const complexTerm = termFactory.inheritance(termFactory.create('A'), termFactory.create('B'));
+        const simpleTerm = termFactory.atomic('A');
+        const complexTerm = termFactory.inheritance(termFactory.atomic('A'), termFactory.atomic('B'));
 
         const simpleTask = new Task({
             term: simpleTerm,
@@ -176,8 +176,8 @@ describe('FocusSetSelector', () => {
     });
 
     test('should handle edge case of all tasks having same timestamp', () => {
-        const term1 = termFactory.create('A');
-        const term2 = termFactory.create('B');
+        const term1 = termFactory.atomic('A');
+        const term2 = termFactory.atomic('B');
 
         const task1 = new Task({
             term: term1,
@@ -200,7 +200,7 @@ describe('FocusSetSelector', () => {
     });
 
     test('should handle tasks with zero complexity', () => {
-        const term = termFactory.create('A');
+        const term = termFactory.atomic('A');
         const task = new Task({
             term,
             punctuation: '.',
@@ -214,7 +214,7 @@ describe('FocusSetSelector', () => {
     });
 
     test('should maintain selection stability across multiple calls', () => {
-        const term = termFactory.create('A');
+        const term = termFactory.atomic('A');
         const task1 = new Task({
             term,
             punctuation: '.',

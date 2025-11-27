@@ -193,7 +193,7 @@ export class PrologParser {
         // Number/Atom
         // If it looks like a number, treat as atomic (or specific number type if NARS supported it)
         // NARS uses atomic terms.
-        return this.termFactory.create(str.toLowerCase());
+        return this.termFactory.atomic(str.toLowerCase());
     }
 
     _isBalanced(str) {
@@ -235,12 +235,12 @@ export class PrologParser {
     _createPredicateTerm(predicate, args, argsAreTerms = false) {
         const argTerms = argsAreTerms ? args : args.map(arg => {
             const isVariable = arg.startsWith('_') || /^[A-Z]/.test(arg);
-            return this.termFactory.create(isVariable ? `?${arg.toLowerCase()}` : arg.toLowerCase());
+            return this.termFactory.atomic(isVariable ? `?${arg.toLowerCase()}` : arg.toLowerCase());
         });
 
         const argsTerm = this.termFactory.tuple(argTerms);
 
-        const predicateTerm = this.termFactory.create(predicate);
+        const predicateTerm = this.termFactory.atomic(predicate);
 
         return this.termFactory.predicate(predicateTerm, argsTerm);
     }
