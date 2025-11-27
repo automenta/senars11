@@ -234,13 +234,9 @@ export class DisplayUtils {
             // Prepare data rows
             const values = df.values || [];
             const displayRows = Math.min(rows, maxRows);
-            const dataRows = [];
-
-            for (let i = 0; i < displayRows; i++) {
+            const dataRows = Array.from({ length: displayRows }, (_, i) => {
                 const row = values[i] || [];
-                const displayRow = [];
-
-                for (let j = 0; j < displayColumns.length; j++) {
+                return Array.from({ length: displayColumns.length }, (_, j) => {
                     let cell = row[j];
 
                     // Format cell value
@@ -252,11 +248,9 @@ export class DisplayUtils {
                         cell = String(cell);
                     }
 
-                    displayRow.push(cell);
-                }
-
-                dataRows.push(displayRow);
-            }
+                    return cell;
+                });
+            });
 
             // Create the table
             let table = this.createTable(headers, dataRows);

@@ -46,17 +46,10 @@ export const unique = arr => [...new Set(arr)];
 export const isEmpty = arr => !arr?.length;
 
 export const safeGet = (obj, path, defaultValue = undefined) => {
-    if (!obj || typeof obj !== 'object') return defaultValue;
+    if (!obj || typeof obj !== 'object' || !path) return defaultValue;
 
-    const keys = path?.split('.') ?? [];
-    let current = obj;
-
-    for (const key of keys) {
-        if (current == null || typeof current !== 'object') return defaultValue;
-        current = current[key];
-    }
-
-    return current ?? defaultValue;
+    return path.split('.').reduce((current, key) =>
+        current?.[key] ?? defaultValue, obj) ?? defaultValue;
 };
 
 export const deepClone = (obj) => {
@@ -65,13 +58,9 @@ export const deepClone = (obj) => {
     if (Array.isArray(obj)) return obj.map(item => deepClone(item));
 
     if (typeof obj === 'object') {
-        const cloned = {};
-        for (const key in obj) {
-            if (Object.prototype.hasOwnProperty.call(obj, key)) {
-                cloned[key] = deepClone(obj[key]);
-            }
-        }
-        return cloned;
+        return Object.fromEntries(
+            Object.entries(obj).map(([key, value]) => [key, deepClone(value)])
+        );
     }
 
     return obj;

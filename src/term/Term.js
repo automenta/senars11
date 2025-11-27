@@ -120,11 +120,8 @@ export class Term {
             this._name !== other._name) return false;
 
         if (this._type === TermType.COMPOUND) {
-            if (this._components.length !== other._components.length) return false;
-
-            for (let i = 0; i < this._components.length; i++) {
-                if (!this._components[i].equals(other._components[i])) return false;
-            }
+            return this._components.length === other._components.length &&
+                this._components.every((comp, i) => comp.equals(other._components[i]));
         }
 
         return true;

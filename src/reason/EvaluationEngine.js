@@ -195,50 +195,48 @@ export class EvaluationEngine {
      * Perform addition operation
      */
     _performAddition(...args) {
-        if (args.length === 0) return 0;
-        return args
-            .filter(arg => arg !== null && arg !== undefined)
-            .map(arg => typeof arg === 'object' && arg.value !== undefined ? arg.value : arg)
-            .reduce((sum, val) => sum + Number(val), 0);
+        return this._performMathOperation(args, 0, (result, val) => result + val);
     }
 
     /**
      * Perform subtraction operation
      */
     _performSubtraction(...args) {
-        if (args.length === 0) return 0;
-        const values = args
-            .filter(arg => arg !== null && arg !== undefined)
-            .map(arg => typeof arg === 'object' && arg.value !== undefined ? arg.value : arg)
-            .map(val => Number(val));
-
-        if (values.length === 1) return -values[0];
-        return values.slice(1).reduce((result, val) => result - val, values[0]);
+        return this._performMathOperation(args, 0, (result, val, index, values) =>
+            index === 0 && values.length === 1 ? -val : index === 0 ? val : result - val);
     }
 
     /**
      * Perform multiplication operation
      */
     _performMultiplication(...args) {
-        if (args.length === 0) return 1;
-        return args
-            .filter(arg => arg !== null && arg !== undefined)
-            .map(arg => typeof arg === 'object' && arg.value !== undefined ? arg.value : arg)
-            .reduce((product, val) => product * Number(val), 1);
+        return this._performMathOperation(args, 1, (result, val) => result * val);
     }
 
     /**
      * Perform division operation
      */
     _performDivision(...args) {
-        if (args.length === 0) return 1;
+        return this._performMathOperation(args, 1, (result, val, index, values) => {
+            if (index === 0 && values.length === 1) return 1 / (val || 1); // Avoid division by zero
+            return index === 0 ? val : result / (val || 1);
+        });
+    }
+
+    /**
+     * Generic math operation helper
+     */
+    _performMathOperation(args, identityValue, operation) {
+        if (args.length === 0) return identityValue;
+
         const values = args
             .filter(arg => arg !== null && arg !== undefined)
             .map(arg => typeof arg === 'object' && arg.value !== undefined ? arg.value : arg)
             .map(val => Number(val));
 
-        if (values.length === 1) return 1 / (values[0] || 1); // Avoid division by zero
-        return values.slice(1).reduce((result, val) => result / (val || 1), values[0]);
+        if (values.length === 0) return identityValue;
+
+        return values.reduce((result, val, index) => operation(result, val, index, values), identityValue);
     }
 
     /**

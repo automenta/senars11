@@ -26,12 +26,10 @@ export class TermCategorization {
      * Get the complexity level bucket for a given complexity value
      */
     static getComplexityLevel(complexity, config) {
-        for (let i = 0; i < config.complexityLevels.length; i++) {
-            if (complexity <= config.complexityLevels[i]) {
-                return `level_${config.complexityLevels[i]}`;
-            }
-        }
-        return `level_${config.complexityLevels[config.complexityLevels.length - 1]}_plus`;
+        const level = config.complexityLevels.find(threshold => complexity <= threshold);
+        return level !== undefined
+            ? `level_${level}`
+            : `level_${config.complexityLevels[config.complexityLevels.length - 1]}_plus`;
     }
 
     /**
@@ -42,25 +40,18 @@ export class TermCategorization {
 
         if (term.isAtomic) return 'atomic';
 
-        // Categorize based on operator
-        switch (term.operator) {
-            case '-->':
-                return 'inheritance';
-            case '==>':
-                return 'implication';
-            case '<->':
-                return 'similarity';
-            case '&':
-                return 'conjunction';
-            case '|':
-                return 'disjunction';
-            case '^':
-                return 'operation';
-            case '--':
-                return 'negation';
-            default:
-                return 'compound';
-        }
+        // Categorize based on operator using object lookup for better performance
+        const categoryMap = {
+            '-->': 'inheritance',
+            '==>': 'implication',
+            '<->': 'similarity',
+            '&': 'conjunction',
+            '|': 'disjunction',
+            '^': 'operation',
+            '--': 'negation'
+        };
+
+        return categoryMap[term.operator] ?? 'compound';
     }
 
     /**
@@ -69,12 +60,10 @@ export class TermCategorization {
     static getActivationBucket(activation, config) {
         if (activation === undefined) activation = 0;
 
-        for (let i = 0; i < config.activationBuckets.length; i++) {
-            if (activation <= config.activationBuckets[i]) {
-                return `act_${config.activationBuckets[i]}`;
-            }
-        }
-        return `act_${config.activationBuckets[config.activationBuckets.length - 1]}_plus`;
+        const bucket = config.activationBuckets.find(threshold => activation <= threshold);
+        return bucket !== undefined
+            ? `act_${bucket}`
+            : `act_${config.activationBuckets[config.activationBuckets.length - 1]}_plus`;
     }
 
     /**
