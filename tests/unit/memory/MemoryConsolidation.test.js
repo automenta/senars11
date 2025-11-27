@@ -98,18 +98,9 @@ describe('MemoryConsolidation', () => {
     });
 
     test('should calculate compound term similarity correctly', () => {
-        const term1 = termFactory.create({
-            components: [termFactory.create({components: ['A']}), termFactory.create({components: ['B']})],
-            operator: '-->'
-        });
-        const term2 = termFactory.create({
-            components: [termFactory.create({components: ['A']}), termFactory.create({components: ['B']})],
-            operator: '-->'
-        });
-        const term3 = termFactory.create({
-            components: [termFactory.create({components: ['C']}), termFactory.create({components: ['D']})],
-            operator: '-->'
-        });
+        const term1 = termFactory.inheritance(termFactory.create({components: ['A']}), termFactory.create({components: ['B']}));
+        const term2 = termFactory.inheritance(termFactory.create({components: ['A']}), termFactory.create({components: ['B']}));
+        const term3 = termFactory.inheritance(termFactory.create({components: ['C']}), termFactory.create({components: ['D']}));
 
         const similarity1 = consolidation._calculateTermSimilarity(term1, term2);
         const similarity2 = consolidation._calculateTermSimilarity(term1, term3);
@@ -219,14 +210,8 @@ describe('MemoryConsolidation', () => {
 
     test('should handle similarity calculation edge cases', () => {
         // Test with different operators
-        const term1 = termFactory.create({
-            components: [termFactory.create({components: ['A']}), termFactory.create({components: ['B']})],
-            operator: '-->'
-        });
-        const term2 = termFactory.create({
-            components: [termFactory.create({components: ['A']}), termFactory.create({components: ['B']})],
-            operator: '<->'
-        });
+        const term1 = termFactory.inheritance(termFactory.create({components: ['A']}), termFactory.create({components: ['B']}));
+        const term2 = termFactory.similarity(termFactory.create({components: ['A']}), termFactory.create({components: ['B']}));
 
         const similarity = consolidation._calculateTermSimilarity(term1, term2);
         expect(similarity).toBe(0.0); // Different operators

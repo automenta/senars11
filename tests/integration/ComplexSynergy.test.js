@@ -53,16 +53,16 @@ describe('Complex Neurosymbolic Synergy: Ancestry & Genetics', () => {
 
         // 2. NAL Knowledge
         // Rule: ((&&, <($x * $y) --> ancestor_of>, <$x --> red_hair>) ==> <$y --> red_hair>).
-        const $x = termFactory.create({ name: '$x', type: 'variable' });
-        const $y = termFactory.create({ name: '$y', type: 'variable' });
-        const ancestor_of = termFactory.create({ name: 'ancestor_of', type: 'atomic' });
-        const red_hair = termFactory.create({ name: 'red_hair', type: 'atomic' });
-        const product_xy = termFactory.create({ operator: '*', components: [$x, $y] });
-        const cond1 = termFactory.create({ operator: '-->', components: [product_xy, ancestor_of] });
-        const cond2 = termFactory.create({ operator: '-->', components: [$x, red_hair] });
-        const antecedent = termFactory.create({ operator: '&&', components: [cond1, cond2] });
-        const consequent = termFactory.create({ operator: '-->', components: [$y, red_hair] });
-        const ruleTerm = termFactory.create({ operator: '==>', components: [antecedent, consequent] });
+        const $x = termFactory.variable('$x');
+        const $y = termFactory.variable('$y');
+        const ancestor_of = termFactory.create('ancestor_of');
+        const red_hair = termFactory.create('red_hair');
+        const product_xy = termFactory.product($x, $y);
+        const cond1 = termFactory.inheritance(product_xy, ancestor_of);
+        const cond2 = termFactory.inheritance($x, red_hair);
+        const antecedent = termFactory.create('&&', [cond1, cond2]);
+        const consequent = termFactory.inheritance($y, red_hair);
+        const ruleTerm = termFactory.implication(antecedent, consequent);
 
         const nalRuleTask = new Task({
             term: ruleTerm,
@@ -77,13 +77,13 @@ describe('Complex Neurosymbolic Synergy: Ancestry & Genetics', () => {
         // 3. The Task: Determine if Charlie has red hair?
         // Step A: Agent asks Prolog "ancestor(alice, charlie)?"
         const createPrologTerm = (pred, ...args) => {
-            const predTerm = termFactory.create({ name: pred, type: 'atomic' });
+            const predTerm = termFactory.create(pred);
             const argTerms = args.map(a => {
-                if (a.startsWith('?')) return termFactory.create({ name: a, type: 'variable' });
-                return termFactory.create({ name: a, type: 'atomic' });
+                if (a.startsWith('?')) return termFactory.variable(a);
+                return termFactory.create(a);
             });
-            const argsTerm = termFactory.create({ operator: ',', components: argTerms });
-            return termFactory.create({ operator: '^', components: [predTerm, argsTerm] });
+            const argsTerm = termFactory.create(',', argTerms);
+            return termFactory.create('^', [predTerm, argsTerm]);
         };
 
         const queryTerm = createPrologTerm('ancestor', 'alice', 'charlie');
@@ -95,10 +95,10 @@ describe('Complex Neurosymbolic Synergy: Ancestry & Genetics', () => {
         // Step B: Translation & Injection
         // Prolog Answer: ancestor(alice, charlie).
         // Translation: <(alice * charlie) --> ancestor_of>.
-        const alice = termFactory.create({ name: 'alice', type: 'atomic' });
-        const charlie = termFactory.create({ name: 'charlie', type: 'atomic' });
-        const product_ac = termFactory.create({ operator: '*', components: [alice, charlie] });
-        const translatedTerm = termFactory.create({ operator: '-->', components: [product_ac, ancestor_of] });
+        const alice = termFactory.create('alice');
+        const charlie = termFactory.create('charlie');
+        const product_ac = termFactory.product(alice, charlie);
+        const translatedTerm = termFactory.inheritance(product_ac, ancestor_of);
 
         const translatedTask = new Task({
             term: translatedTerm,
@@ -119,7 +119,7 @@ describe('Complex Neurosymbolic Synergy: Ancestry & Genetics', () => {
         // 5. Verification
         // Note: NAL derivation of complex conjunctions might depend on specific rule configuration.
         // We primarily check that the synergy loop (Prolog -> Translation -> NAL Input) succeeded.
-        const targetConsequent = termFactory.create({ operator: '-->', components: [charlie, red_hair] });
+        const targetConsequent = termFactory.inheritance(charlie, red_hair);
         const allTasks = [
             ...nar.memory.getAllConcepts().flatMap(c => c.getTasksByType('BELIEF')),
             ...(nar._focus ? nar._focus.getTasks(1000) : [])

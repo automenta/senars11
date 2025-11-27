@@ -10,7 +10,7 @@ describe('Bag', () => {
     beforeEach(() => {
         bag = new Bag(10);
         termFactory = new TermFactory();
-        createAtom = (name) => termFactory.create({name});
+        createAtom = (name) => termFactory.create(name);
     });
 
     describe('Basic operations', () => {

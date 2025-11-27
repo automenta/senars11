@@ -13,8 +13,8 @@ const mortalTerm = termFactory.create('mortal');
 const socratesTerm = termFactory.create('Socrates');
 
 // Create compound terms
-const manMortalTerm = termFactory.create({operator: '-->', components: [manTerm, mortalTerm]});
-const socratesManTerm = termFactory.create({operator: '-->', components: [socratesTerm, manTerm]});
+const manMortalTerm = termFactory.inheritance(manTerm, mortalTerm);
+const socratesManTerm = termFactory.inheritance(socratesTerm, manTerm);
 
 console.log('Debug - Term structures:');
 console.log('manMortalTerm:', manMortalTerm.toString());

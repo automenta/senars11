@@ -267,24 +267,24 @@ function peg$parse(input, options) {
     return { frequency: f, confidence: 0.9 };
   }
   function peg$f5(op, components) {
-    return options.termFactory.create({ operator: op, components: components });
+    return options.termFactory.create(op, components);
   }
   function peg$f6(operator, components) {
-    return options.termFactory.create({ operator: operator.name, components: components || [] });
+    return options.termFactory.create(operator.name, components || []);
   }
   function peg$f7(components) {
-    return options.termFactory.create({ operator: ',', components: components || [] });
+    return options.termFactory.create(',', components || []);
   }
   function peg$f8(subject, op, predicate) {
-    return options.termFactory.create({ operator: op.trim(), components: [subject, predicate] });
+    return options.termFactory.create(op.trim(), [subject, predicate]);
   }
   function peg$f9(subject, op, predicate) {
-    return options.termFactory.create({ operator: op.trim(), components: [subject, predicate] });
+    return options.termFactory.create(op.trim(), [subject, predicate]);
   }
   function peg$f10(op) {    return op.endsWith(',') ? op.slice(0, -1) : op;  }
   function peg$f11(op) {    return op;  }
-  function peg$f12(components) {    return options.termFactory.create({ operator: '{}', components: components || [] });  }
-  function peg$f13(components) {    return options.termFactory.create({ operator: '[]', components: components || [] });  }
+  function peg$f12(components) {    return options.termFactory.setExt(components || []);  }
+  function peg$f13(components) {    return options.termFactory.setInt(components || []);  }
   function peg$f14(head, tail) {
     const terms = [head];
     if (tail) {

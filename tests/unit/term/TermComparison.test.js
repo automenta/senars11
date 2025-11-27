@@ -17,8 +17,8 @@ describe('Term Comparison Tests', () => {
 
     test('should correctly identify syllogistic patterns in tasks', () => {
         // Create terms for (a ==> b) and (b ==> c)
-        const termAB = termFactory.create({operator: '==>', components: [termA, termB]});
-        const termBC = termFactory.create({operator: '==>', components: [termB, termC]});
+        const termAB = termFactory.implication(termA, termB);
+        const termBC = termFactory.implication(termB, termC);
 
         const taskAB = new Task({
             term: termAB,
@@ -59,8 +59,8 @@ describe('Term Comparison Tests', () => {
 
     test('should correctly identify transitive syllogistic patterns', () => {
         // Test the pattern: (a ==> b) and (b ==> c) should produce (a ==> c)
-        const termAB = termFactory.create({operator: '==>', components: [termA, termB]});
-        const termBC = termFactory.create({operator: '==>', components: [termB, termC]});
+        const termAB = termFactory.implication(termA, termB);
+        const termBC = termFactory.implication(termB, termC);
 
         const taskAB = new Task({
             term: termAB,
@@ -87,8 +87,8 @@ describe('Term Comparison Tests', () => {
 
     test('should handle nested term structures', () => {
         // Create nested compound terms
-        const termAB = termFactory.create({operator: '==>', components: [termA, termB]});
-        const termNested = termFactory.create({operator: '==>', components: [termAB, termC]}); // ((a ==> b) ==> c)
+        const termAB = termFactory.implication(termA, termB);
+        const termNested = termFactory.implication(termAB, termC); // ((a ==> b) ==> c)
 
         expect(termNested.isCompound).toBe(true);
         expect(termNested.components).toHaveLength(2);
@@ -97,8 +97,8 @@ describe('Term Comparison Tests', () => {
     });
 
     test('should maintain proper term structure through rule application', () => {
-        const termAB = termFactory.create({operator: '==>', components: [termA, termB]});
-        const termBC = termFactory.create({operator: '==>', components: [termB, termC]});
+        const termAB = termFactory.implication(termA, termB);
+        const termBC = termFactory.implication(termB, termC);
 
         const taskAB = new Task({
             term: termAB,
@@ -134,8 +134,8 @@ describe('Term Comparison Tests', () => {
         // Create various term structures
         const term1 = termA;
         const term2 = termB;
-        const term3 = termFactory.create({operator: '==>', components: [termA, termB]});
-        const term4 = termFactory.create({operator: '==>', components: [termB, termA]});
+        const term3 = termFactory.implication(termA, termB);
+        const term4 = termFactory.implication(termB, termA);
 
         // Simple terms vs compound terms
         expect(term1.equals(term3)).toBe(false); // 'a' vs '(a==>b)'

@@ -58,8 +58,8 @@ describe('Memory and Focus Management Integration', () => {
             focus.createFocusSet('secondary', 3);
 
             // Add tasks to different focus sets
-            const term1 = termFactory.create({name: 'urgent'});
-            const term2 = termFactory.create({name: 'normal'});
+            const term1 = termFactory.create('urgent');
+            const term2 = termFactory.create('normal');
 
             const urgentTask = new Task({
                 term: term1,
@@ -96,7 +96,7 @@ describe('Memory and Focus Management Integration', () => {
             focus.createFocusSet('test-set', 5);
             focus.setFocus('test-set');
 
-            const term = termFactory.create({name: 'test'});
+            const term = termFactory.create('test');
             const task = new Task({
                 term,
                 punctuation: '.',
@@ -123,13 +123,10 @@ describe('Memory and Focus Management Integration', () => {
         test('should select tasks using composite scoring algorithm', () => {
             // Create tasks with different characteristics
             const simpleTerm = termFactory.create({components: ['simple']});
-            const complexTerm = termFactory.create({
-                components: [
+            const complexTerm = termFactory.inheritance(
                     termFactory.create({components: ['A']}),
                     termFactory.create({components: ['B']})
-                ],
-                operator: '-->'
-            });
+                );
 
             // Note: The convenience constructor doesn't support custom stamps, so keep original for these
             const recentTask = new Task({
@@ -166,13 +163,13 @@ describe('Memory and Focus Management Integration', () => {
 
         test('should respect priority threshold in selection', () => {
             const highPriorityTask = new Task({
-                term: termFactory.create({name: 'high'}),
+                term: termFactory.create('high'),
                 punctuation: '.',
                 budget: {priority: 0.8},
                 truth: {frequency: 0.9, confidence: 0.8}
             });
             const lowPriorityTask = new Task({
-                term: termFactory.create({name: 'low'}),
+                term: termFactory.create('low'),
                 punctuation: '.',
                 budget: {priority: 0.1},
                 truth: {frequency: 0.9, confidence: 0.8}
@@ -190,7 +187,7 @@ describe('Memory and Focus Management Integration', () => {
         test('should index and retrieve inheritance relationships', () => {
             const subject = termFactory.create({components: ['dog']});
             const predicate = termFactory.create({components: ['animal']});
-            const term = termFactory.create({components: [subject, predicate], operator: '-->'});
+            const term = termFactory.inheritance(subject, predicate);
 
             const concept = memory.getConcept(term) || new Concept(term, {});
             index.addConcept(concept);
@@ -204,7 +201,7 @@ describe('Memory and Focus Management Integration', () => {
         test('should index and retrieve similarity relationships', () => {
             const term1 = termFactory.create({components: ['dog']});
             const term2 = termFactory.create({components: ['wolf']});
-            const term = termFactory.create({components: [term1, term2], operator: '<->'});
+            const term = termFactory.similarity(term1, term2);
 
             const concept = memory.getConcept(term) || new Concept(term, {});
             index.addConcept(concept);
@@ -220,20 +217,14 @@ describe('Memory and Focus Management Integration', () => {
         test('should provide comprehensive index statistics', () => {
             // Add various types of concepts
             const atomicTerm = termFactory.create({components: ['atom']});
-            const inheritanceTerm = termFactory.create({
-                components: [
+            const inheritanceTerm = termFactory.inheritance(
                     termFactory.create({components: ['cat']}),
                     termFactory.create({components: ['animal']})
-                ],
-                operator: '-->'
-            });
-            const similarityTerm = termFactory.create({
-                components: [
+                );
+            const similarityTerm = termFactory.similarity(
                     termFactory.create({components: ['dog']}),
                     termFactory.create({components: ['wolf']})
-                ],
-                operator: '<->'
-            });
+                );
 
             const atomicConcept = new Concept(atomicTerm, {});
             const inheritanceConcept = new Concept(inheritanceTerm, {});
@@ -265,10 +256,10 @@ describe('Memory and Focus Management Integration', () => {
             };
 
             // Create inheritance relationships
-            const catAnimalTerm = termFactory.create({components: [terms.cat, terms.animal], operator: '-->'});
-            const dogAnimalTerm = termFactory.create({components: [terms.dog, terms.animal], operator: '-->'});
-            const catPetTerm = termFactory.create({components: [terms.cat, terms.pet], operator: '-->'});
-            const animalMammalTerm = termFactory.create({components: [terms.animal, terms.mammal], operator: '-->'});
+            const catAnimalTerm = termFactory.inheritance(terms.cat, terms.animal);
+            const dogAnimalTerm = termFactory.inheritance(terms.dog, terms.animal);
+            const catPetTerm = termFactory.inheritance(terms.cat, terms.pet);
+            const animalMammalTerm = termFactory.inheritance(terms.animal, terms.mammal);
 
             // Create tasks
             const tasks = [
@@ -324,7 +315,7 @@ describe('Memory and Focus Management Integration', () => {
 
             // Create many concepts
             for (let i = 0; i < 100; i++) {
-                const term = termFactory.create({name: `concept${i}`});
+                const term = termFactory.create(`concept${i}`);
                 const task = new Task({
                     term,
                     punctuation: '.',
@@ -352,7 +343,7 @@ describe('Memory and Focus Management Integration', () => {
 
             // Add many tasks to focus
             for (let i = 0; i < 50; i++) {
-                const term = termFactory.create({name: `focus_item${i}`});
+                const term = termFactory.create(`focus_item${i}`);
                 const task = new Task({
                     term,
                     punctuation: '.',
@@ -382,9 +373,9 @@ describe('Memory and Focus Management Integration', () => {
             focus.createFocusSet('small-set', 2);
             focus.setFocus('small-set');
 
-            const term1 = termFactory.create({name: 'A'});
-            const term2 = termFactory.create({name: 'B'});
-            const term3 = termFactory.create({name: 'C'});
+            const term1 = termFactory.create('A');
+            const term2 = termFactory.create('B');
+            const term3 = termFactory.create('C');
 
             const task1 = new Task({
                 term: term1,

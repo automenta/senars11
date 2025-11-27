@@ -38,13 +38,13 @@ Term "term"
 
 CompoundTerm
   = "(" _ op:Operator _ ","? _ components:TermList _ ")" {
-      return options.termFactory.create({ operator: op, components: components });
+      return options.termFactory.create(op, components);
     }
   / operator:AtomicTerm "(" _ components:TermList? _ ")" {
-      return options.termFactory.create({ operator: operator.name, components: components || [] });
+      return options.termFactory.create(operator.name, components || []);
     }
   / "(" _ components:TermList? _ ")" {
-      return options.termFactory.create({ operator: ',', components: components || [] });
+      return options.termFactory.create(',', components || []);
     }
 
 Statement
@@ -53,12 +53,12 @@ Statement
 
 AngleBracketStatement
   = "<" _ subject:Term _ op:InfixOperator _ predicate:Term _ ">" {
-      return options.termFactory.create({ operator: op.trim(), components: [subject, predicate] });
+      return options.termFactory.create(op.trim(), [subject, predicate]);
     }
 
 ParenthesizedStatement
   = "(" _ subject:Term _ op:InfixOperator _ predicate:Term _ ")" {
-      return options.termFactory.create({ operator: op.trim(), components: [subject, predicate] });
+      return options.termFactory.create(op.trim(), [subject, predicate]);
     }
 
 Operator
@@ -68,8 +68,8 @@ InfixOperator
   = op:("-->" / "<->" / "==>" / "<=>" / "=/>" / "=|" / "=/=" / "=" / "&&" / "||" / "&|" / "&/") { return op; }
 
 Set
-  = "{" _ components:TermList? _ "}" { return options.termFactory.create({ operator: '{}', components: components || [] }); }
-  / "[" _ components:TermList? _ "]" { return options.termFactory.create({ operator: '[]', components: components || [] }); }
+  = "{" _ components:TermList? _ "}" { return options.termFactory.setExt(components || []); }
+  / "[" _ components:TermList? _ "]" { return options.termFactory.setInt(components || []); }
 
 TermList
   = head:Term tail:(_ "," _ Term)* {

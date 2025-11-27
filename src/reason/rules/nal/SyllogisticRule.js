@@ -73,15 +73,18 @@ export class SyllogisticRule extends NALRule {
         const comp1 = term1.components;
         const comp2 = term2.components;
 
+        // Extract termFactory from context
+        const termFactory = context?.termFactory;
+
         // Pattern 1: (S --> M) + (M --> P) => (S --> P)
         if (comp1[1].equals && comp1[1].equals(comp2[0])) {
             // subject = comp1[0], middle = comp1[1], predicate = comp2[1]
-            return this._createDerivedTask(primaryPremise, secondaryPremise, comp1[0], comp2[1], this.operator);
+            return this._createDerivedTask(primaryPremise, secondaryPremise, comp1[0], comp2[1], this.operator, termFactory);
         }
         // Pattern 2: (M --> P) + (S --> M) => (S --> P)
         else if (comp2[1].equals && comp2[1].equals(comp1[0])) {
             // subject = comp2[0], middle = comp2[1], predicate = comp1[1]
-            return this._createDerivedTask(primaryPremise, secondaryPremise, comp2[0], comp1[1], this.operator);
+            return this._createDerivedTask(primaryPremise, secondaryPremise, comp2[0], comp1[1], this.operator, termFactory);
         }
 
         return []; // No valid pattern found
@@ -91,7 +94,7 @@ export class SyllogisticRule extends NALRule {
      * Helper method to create derived task from syllogistic conclusion
      * @private
      */
-    _createDerivedTask(primaryPremise, secondaryPremise, subject, predicate, operator) {
+    _createDerivedTask(primaryPremise, secondaryPremise, subject, predicate, operator, termFactory = null) {
         // Calculate truth value using NAL deduction
         const truth1 = primaryPremise.truth;
         const truth2 = secondaryPremise.truth;
@@ -102,8 +105,13 @@ export class SyllogisticRule extends NALRule {
         if (!derivedTruth) return [];
 
         // Create the conclusion term using the Term class with proper structure
-        const conclusionName = `(${operator}, ${subject.name || 'subject'}, ${predicate.name || 'predicate'})`;
-        const conclusionTerm = new Term(TermType.COMPOUND, conclusionName, [subject, predicate], operator);
+        let conclusionTerm;
+        if (termFactory) {
+            conclusionTerm = termFactory.create(operator, [subject, predicate]);
+        } else {
+            const conclusionName = `(${operator}, ${subject.name || 'subject'}, ${predicate.name || 'predicate'})`;
+            conclusionTerm = new Term(TermType.COMPOUND, conclusionName, [subject, predicate], operator);
+        }
 
         // Use base class to create the task with proper stamp and budget
         const task = super.createDerivedTask(

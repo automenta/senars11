@@ -121,7 +121,7 @@ export class PrologStrategy extends Strategy {
             if (pred === 'is') {
                 // X is Expr
                 const value = this._evalExpression(arg2);
-                const valueTerm = this.termFactory.create({name: String(value), type: 'atomic'});
+                const valueTerm = this.termFactory.create(String(value));
 
                 const unification = this._unify(arg1, valueTerm, substitution);
                 if (unification.success) {
@@ -197,18 +197,11 @@ export class PrologStrategy extends Strategy {
                 if (!mapping[name]) {
                     mapping[name] = `${name}${suffix}`;
                 }
-                return this.termFactory.create({
-                    name: mapping[name],
-                    type: 'variable'
-                });
+                return this.termFactory.variable(mapping[name]);
             }
             if (this._isCompound(term)) {
                 const components = this._getTermComponents(term).map(standardize);
-                return this.termFactory.create({
-                    operator: term.operator,
-                    components: components,
-                    type: term.type
-                });
+                return this.termFactory.create(term.operator, components);
             }
             return term;
         };
@@ -414,11 +407,7 @@ export class PrologStrategy extends Strategy {
                 this._applySubstitutionToTerm(comp, substitution)
             );
 
-            return this.termFactory.create({
-                operator: term.operator,
-                components: newComponents,
-                type: term.type
-            });
+            return this.termFactory.create(term.operator, newComponents);
         }
 
         return term;
