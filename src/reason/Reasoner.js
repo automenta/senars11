@@ -1,6 +1,7 @@
 /**
  * The main Reasoner class that manages the continuous reasoning pipeline.
  */
+import {getHeapUsed} from '../util/common.js';
 export class Reasoner {
     /**
      * @param {PremiseSource} premiseSource - The source of premises
@@ -107,10 +108,10 @@ export class Reasoner {
             // Create a set to track processed premise pairs to avoid duplicates
             const processedPairs = new Set();
 
+            // Generate all unique premise pairs
+            const premisePairs = [];
             for (let i = 0; i < focusTasks.length; i++) {
                 for (let j = i + 1; j < focusTasks.length; j++) {
-                    if (Date.now() - startTime > timeoutMs) break;
-
                     const primaryPremise = focusTasks[i];
                     const secondaryPremise = focusTasks[j];
 
@@ -124,37 +125,35 @@ export class Reasoner {
                         ? `${primaryTermId}-${secondaryTermId}`
                         : `${secondaryTermId}-${primaryTermId}`;
 
-                    if (processedPairs.has(pairId)) {
-                        continue; // Skip if this pair has already been processed
-                    }
-
-                    processedPairs.add(pairId);
-
-                    const primaryTerm = primaryPremise.term?._name || primaryPremise.term || 'unknown';
-                    const secondaryTerm = secondaryPremise.term?._name || secondaryPremise.term || 'unknown';
-                    //console.log(`[STEP] Premise pair: [${primaryTerm}] + [${secondaryTerm}]`);
-
-                    try {
-                        const candidateRules = this.ruleProcessor.ruleExecutor.getCandidateRules(primaryPremise, secondaryPremise);
-
-                        // Process pairing (primary -> secondary)
-                        // The rules themselves handle both directions internally via their canApply method
-                        const forwardResults = await this._processRuleBatch(
-                            candidateRules,
-                            primaryPremise,
-                            secondaryPremise,
-                            startTime,
-                            timeoutMs
-                        );
-                        results.push(...forwardResults.filter(Boolean));
-
-                        if (Date.now() - startTime > timeoutMs) continue; // Don't break on result count, continue for fair sampling
-                    } catch (error) {
-                        console.debug('Error processing premise pair:', error.message);
+                    if (!processedPairs.has(pairId)) {
+                        processedPairs.add(pairId);
+                        premisePairs.push({ primaryPremise, secondaryPremise });
                     }
                 }
+            }
 
+            // Process each unique pair
+            for (const { primaryPremise, secondaryPremise } of premisePairs) {
                 if (Date.now() - startTime > timeoutMs) break;
+
+                try {
+                    const candidateRules = this.ruleProcessor.ruleExecutor.getCandidateRules(primaryPremise, secondaryPremise);
+
+                    // Process pairing (primary -> secondary)
+                    // The rules themselves handle both directions internally via their canApply method
+                    const forwardResults = await this._processRuleBatch(
+                        candidateRules,
+                        primaryPremise,
+                        secondaryPremise,
+                        startTime,
+                        timeoutMs
+                    );
+                    results.push(...forwardResults.filter(Boolean));
+
+                    if (Date.now() - startTime > timeoutMs) continue; // Don't break on result count, continue for fair sampling
+                } catch (error) {
+                    console.debug('Error processing premise pair:', error.message);
+                }
             }
         } catch (error) {
             console.debug('Error in step method:', error.message);
@@ -253,10 +252,7 @@ export class Reasoner {
             this.performance.avgProcessingTime = this.metrics.totalProcessingTime / this.metrics.totalDerivations;
         }
 
-        if (typeof process !== 'undefined' && process.memoryUsage) {
-            const memUsage = process.memoryUsage();
-            this.performance.memoryUsage = memUsage.heapUsed;
-        }
+        this.performance.memoryUsage = getHeapUsed();
 
         const now = Date.now();
         if (this.lastConsumerCheckTime) {
@@ -333,7 +329,7 @@ export class Reasoner {
 
     notifyConsumption(derivation, processingTime, consumerInfo = {}) {
         if (this.consumerFeedbackHandlers?.length > 0) {
-            for (const handler of this.consumerFeedbackHandlers) {
+            this.consumerFeedbackHandlers.forEach(handler => {
                 try {
                     handler(derivation, processingTime, {
                         ...consumerInfo,
@@ -343,7 +339,7 @@ export class Reasoner {
                 } catch (error) {
                     console.error('Error in consumer feedback handler:', error);
                 }
-            }
+            });
         }
     }
 

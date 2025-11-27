@@ -175,34 +175,31 @@ class ConfigManager {
         if (!path) return this._config;
 
         const pathParts = path.split('.');
-        let current = this._config;
 
-        for (const part of pathParts) {
-            if (current === null || current === undefined) return undefined;
-            current = current[part];
-        }
-
-        return current;
+        return pathParts.reduce((current, part) => {
+            return current?.[part];
+        }, this._config);
     }
 
     set(path, value) {
         const pathParts = path.split('.');
-        const newConfig = deepClone(this._config);
-        let current = newConfig;
-
-        for (let i = 0; i < pathParts.length - 1; i++) {
-            const part = pathParts[i];
-            if (current[part] === undefined || current[part] === null) {
-                current[part] = {};
-            }
-            current = current[part];
-        }
-
-        current[pathParts[pathParts.length - 1]] = value;
+        const newConfig = this._setNestedValue(deepClone(this._config), pathParts, value);
 
         // Re-validate the config after modification
         this._config = this._validateAndMergeConfig(newConfig);
         return this;
+    }
+
+    _setNestedValue(obj, pathParts, value) {
+        if (pathParts.length === 1) {
+            obj[pathParts[0]] = value;
+            return obj;
+        }
+
+        const [head, ...tail] = pathParts;
+        obj[head] = obj[head] || {};
+        this._setNestedValue(obj[head], tail, value);
+        return obj;
     }
 
     update(updates) {

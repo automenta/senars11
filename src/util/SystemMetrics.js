@@ -1,5 +1,7 @@
 import {PERFORMANCE} from '../config/constants.js';
 
+import {getMemoryUsage} from './common.js';
+
 export class SystemMetrics {
     constructor() {
         this.metrics = {
@@ -45,8 +47,8 @@ export class SystemMetrics {
     }
 
     updateMemoryUsage() {
-        if (typeof process !== 'undefined' && process.memoryUsage) {
-            const usage = process.memoryUsage();
+        const usage = getMemoryUsage();
+        if (usage) {
             this.metrics.memoryUsage = usage.heapUsed;
             this.metrics.peakMemoryUsage = Math.max(this.metrics.peakMemoryUsage, usage.heapUsed);
         }

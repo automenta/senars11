@@ -15,14 +15,13 @@ export class DisplayUtils {
         if (!headers || !rows) return '';
 
         // Calculate column widths if not provided
-        const calculatedWidths = [];
-        for (let i = 0; i < headers.length; i++) {
-            const headerWidth = headers[i].length;
+        const calculatedWidths = headers.map((header, i) => {
+            const headerWidth = header.length;
             const maxDataWidth = Math.max(...rows.map(row =>
                 row[i] ? String(row[i]).length : 0
             ));
-            calculatedWidths[i] = Math.max(headerWidth, maxDataWidth, columnWidths[i] || 0, 8);
-        }
+            return Math.max(headerWidth, maxDataWidth, columnWidths[i] || 0, 8);
+        });
 
         const widths = calculatedWidths.map(w => Math.min(w, 50)); // Cap widths at 50 chars
 

@@ -36,66 +36,89 @@ export class Config {
     static parse(argv = process.argv.slice(2)) {
         const config = structuredClone(DEFAULT_CONFIG);
 
-        for (let i = 0; i < argv.length; i++) {
-            const arg = argv[i];
+        // Create a copy to avoid modifying original during processing
+        const args = [...argv];
 
-            switch (arg) {
-                // LM / Ollama Args
-                case '--ollama':
-                    config.lm.enabled = true;
-                    if (argv[i + 1] && !argv[i + 1].startsWith('--')) {
-                        config.lm.modelName = argv[++i];
-                    }
-                    break;
-                case '--provider':
-                    config.lm.provider = argv[++i];
-                    config.lm.enabled = true;
-                    break;
-                case '--model':
-                case '--modelName':
-                    config.lm.modelName = argv[++i];
-                    config.lm.enabled = true; // Assume enabled if model specified
-                    break;
-                case '--base-url':
-                    config.lm.baseUrl = argv[++i];
-                    break;
-                case '--temperature':
-                    config.lm.temperature = parseFloat(argv[++i]);
-                    break;
-                case '--api-key':
-                    config.lm.apiKey = argv[++i];
-                    break;
-
-                // WebSocket / Server Args
-                case '--ws-port':
-                    config.webSocket.port = parseInt(argv[++i]);
-                    break;
-                case '--host':
-                    config.webSocket.host = argv[++i];
-                    break;
-
-                // UI Args
-                case '--port':
-                    config.ui.port = parseInt(argv[++i]);
-                    break;
-                case '--graph-ui':
-                    config.ui.layout = 'graph';
-                    break;
-                case '--layout':
-                    config.ui.layout = argv[++i];
-                    break;
-                case '--prod':
-                    config.ui.dev = false;
-                    break;
-                case '--dev':
-                    config.ui.dev = true;
-                    break;
-
-                // Demo
-                case '--demo':
-                    config.demo = true;
-                    break;
+        // Define the argument processing configuration
+        const argHandlers = {
+            '--ollama': (i) => {
+                config.lm.enabled = true;
+                if (args[i + 1] && !args[i + 1].startsWith('--')) {
+                    config.lm.modelName = args[++i];
+                }
+                return i;
+            },
+            '--provider': (i) => {
+                config.lm.provider = args[++i];
+                config.lm.enabled = true;
+                return i;
+            },
+            '--model': (i) => {
+                config.lm.modelName = args[++i];
+                config.lm.enabled = true;
+                return i;
+            },
+            '--modelName': (i) => {
+                config.lm.modelName = args[++i];
+                config.lm.enabled = true;
+                return i;
+            },
+            '--base-url': (i) => {
+                config.lm.baseUrl = args[++i];
+                return i;
+            },
+            '--temperature': (i) => {
+                config.lm.temperature = parseFloat(args[++i]);
+                return i;
+            },
+            '--api-key': (i) => {
+                config.lm.apiKey = args[++i];
+                return i;
+            },
+            '--ws-port': (i) => {
+                config.webSocket.port = parseInt(args[++i]);
+                return i;
+            },
+            '--host': (i) => {
+                config.webSocket.host = args[++i];
+                return i;
+            },
+            '--port': (i) => {
+                config.ui.port = parseInt(args[++i]);
+                return i;
+            },
+            '--graph-ui': (i) => {
+                config.ui.layout = 'graph';
+                return i;
+            },
+            '--layout': (i) => {
+                config.ui.layout = args[++i];
+                return i;
+            },
+            '--prod': (i) => {
+                config.ui.dev = false;
+                return i;
+            },
+            '--dev': (i) => {
+                config.ui.dev = true;
+                return i;
+            },
+            '--demo': (i) => {
+                config.demo = true;
+                return i;
             }
+        };
+
+        // Process arguments using index tracking
+        let i = 0;
+        while (i < args.length) {
+            const arg = args[i];
+            const handler = argHandlers[arg];
+
+            if (handler) {
+                i = handler(i);
+            }
+            i++;
         }
 
         return config;

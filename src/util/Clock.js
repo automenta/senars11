@@ -1,6 +1,8 @@
 /**
  * Time management utility with additional time conversion and formatting functions
  */
+import {isNodeEnvironment} from './common.js';
+
 export class Clock {
     static now() {
         return Date.now();
@@ -66,7 +68,7 @@ export class Clock {
 
     // High-resolution timing for performance measurements
     static hrtime() {
-        if (typeof process !== 'undefined' && process.hrtime) {
+        if (isNodeEnvironment() && process.hrtime) {
             const hr = process.hrtime();
             return hr[0] * 1000 + hr[1] / 1000000; // Convert to milliseconds
         }

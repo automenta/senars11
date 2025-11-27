@@ -77,3 +77,35 @@ export const safeAsync = async (asyncFn, defaultValue = null) => {
         return defaultValue;
     }
 };
+
+/**
+ * Get process memory usage metrics
+ * @returns {Object|null} Memory usage object or null if process.memoryUsage is not available
+ */
+export const getMemoryUsage = () => {
+    if (typeof process !== 'undefined' && process.memoryUsage) {
+        return process.memoryUsage();
+    }
+    return null;
+};
+
+/**
+ * Get heap used memory in bytes, with fallback
+ * @returns {number} Heap used memory in bytes or 0 if unavailable
+ */
+export const getHeapUsed = () => {
+    const memUsage = getMemoryUsage();
+    return memUsage?.heapUsed ?? 0;
+};
+
+/**
+ * Check if running in a Node.js environment
+ * @returns {boolean} True if running in Node.js, false otherwise
+ */
+export const isNodeEnvironment = () => typeof process !== 'undefined' && process.versions?.node;
+
+/**
+ * Check if running in a browser environment
+ * @returns {boolean} True if running in browser, false otherwise
+ */
+export const isBrowserEnvironment = () => typeof window !== 'undefined';

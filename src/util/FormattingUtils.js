@@ -52,11 +52,12 @@ export class FormattingUtils {
         const inputStr = String(input);
         const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
 
-        let hash = 0;
-        for (let i = 0; i < inputStr.length; i++) {
-            hash = ((hash << 5) - hash) + inputStr.charCodeAt(i);
-            hash |= 0;
-        }
+        // Calculate hash using reduce instead of traditional loop
+        let hash = Array.from(inputStr).reduce((acc, char) => {
+            const newHash = ((acc << 5) - acc) + char.charCodeAt(0);
+            return newHash | 0; // Convert to 32-bit signed integer
+        }, 0);
+
         hash = Math.abs(hash);
 
         if (hash === 0) return chars[0];

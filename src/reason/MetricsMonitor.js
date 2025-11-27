@@ -3,6 +3,7 @@
  * Provides comprehensive monitoring and metrics collection for the reasoning process
  */
 import {logError} from './utils/error.js';
+import {getMemoryUsage} from '../util/common.js';
 
 export class MetricsMonitor {
     constructor(config = {}) {
@@ -269,8 +270,8 @@ export class MetricsMonitor {
      * Update resource usage metrics
      */
     _updateResourceUsage() {
-        if (typeof process !== 'undefined' && process.memoryUsage) {
-            const memUsage = process.memoryUsage();
+        const memUsage = getMemoryUsage();
+        if (memUsage) {
             this.metrics.resourceUsage.heapUsed = memUsage.heapUsed;
             this.metrics.resourceUsage.heapTotal = memUsage.heapTotal;
             this.metrics.resourceUsage.memory = memUsage.heapUsed;

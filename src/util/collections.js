@@ -37,11 +37,10 @@ export const createSet = (items, keyFn = x => x) => {
 export const chunk = (array, size) => {
     if (!Array.isArray(array) || size <= 0) return [];
 
-    const chunks = [];
-    for (let i = 0; i < array.length; i += size) {
-        chunks.push(array.slice(i, i + size));
-    }
-    return chunks;
+    return Array.from(
+        { length: Math.ceil(array.length / size) },
+        (_, i) => array.slice(i * size, i * size + size)
+    );
 };
 
 export const flatten = arrays => {
@@ -93,21 +92,17 @@ export const correlation = (values1, values2) => {
     if (!Array.isArray(values1) || !Array.isArray(values2) ||
         values1.length !== values2.length || values1.length === 0) return 0;
 
-    const n = values1.length;
     const avg1 = calculateAverage(values1);
     const avg2 = calculateAverage(values2);
 
-    let numerator = 0;
-    let sumSq1 = 0;
-    let sumSq2 = 0;
+    const diffs = values1.map((val, i) => ({
+        diff1: val - avg1,
+        diff2: values2[i] - avg2
+    }));
 
-    for (let i = 0; i < n; i++) {
-        const diff1 = values1[i] - avg1;
-        const diff2 = values2[i] - avg2;
-        numerator += diff1 * diff2;
-        sumSq1 += diff1 * diff1;
-        sumSq2 += diff2 * diff2;
-    }
+    const numerator = diffs.reduce((sum, { diff1, diff2 }) => sum + diff1 * diff2, 0);
+    const sumSq1 = diffs.reduce((sum, { diff1 }) => sum + diff1 * diff1, 0);
+    const sumSq2 = diffs.reduce((sum, { diff2 }) => sum + diff2 * diff2, 0);
 
     const denominator = Math.sqrt(sumSq1 * sumSq2);
     return denominator === 0 ? 0 : numerator / denominator;

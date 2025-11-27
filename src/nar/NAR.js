@@ -212,11 +212,16 @@ export class NAR extends BaseComponent {
             const task = this._createTask(parsed);
             return await this._processNewTask(task, 'user', narseseString, parsed, options);
         } catch (error) {
+            const inputError = new Error(`Input processing failed: ${error.message}`);
+            inputError.cause = error;
+            inputError.input = typeof input === 'string' ? input : 'Task Object';
+
             this._eventBus.emit('input.error', {
-                error: error.message,
-                input: typeof input === 'string' ? input : 'Task Object'
+                error: inputError.message,
+                input: inputError.input,
+                originalError: error
             }, {traceId: options.traceId});
-            throw error;
+            throw inputError;
         }
     }
 
@@ -541,7 +546,11 @@ export class NAR extends BaseComponent {
 
             return true;
         } catch (error) {
-            this.logError('Error during NAR deserialization:', error);
+            const deserializationError = new Error(`NAR deserialization failed: ${error.message}`);
+            deserializationError.cause = error;
+            deserializationError.stateVersion = state?.version;
+
+            this.logError(deserializationError.message, deserializationError);
             return false;
         }
     }

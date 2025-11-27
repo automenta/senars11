@@ -1,3 +1,5 @@
+import {getMemoryUsage} from '../util/common.js';
+
 export class PerformanceMonitor {
     constructor() {
         this._performance = {
@@ -63,8 +65,8 @@ export class PerformanceMonitor {
      * Get current memory usage
      */
     getMemoryUsage() {
-        if (typeof process !== 'undefined' && process.memoryUsage) {
-            const usage = process.memoryUsage();
+        const usage = getMemoryUsage();
+        if (usage) {
             return {
                 heapUsed: usage.heapUsed,
                 heapTotal: usage.heapTotal,

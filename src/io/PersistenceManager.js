@@ -19,7 +19,11 @@ class FileSystemAdapter extends PersistenceAdapter {
 
     async load(filePath) {
         const data = await fs.readFile(filePath, 'utf8');
-        return JSON.parse(data);
+        try {
+            return JSON.parse(data);
+        } catch (error) {
+            throw new Error(`Failed to parse JSON from ${filePath}: ${error.message}`);
+        }
     }
 }
 
@@ -30,7 +34,11 @@ class MemoryAdapter extends PersistenceAdapter {
     }
 
     async save(state, key = 'default') {
-        this.storage.set(key, JSON.parse(JSON.stringify(state)));
+        try {
+            this.storage.set(key, JSON.parse(JSON.stringify(state)));
+        } catch (error) {
+            throw new Error(`Failed to serialize state for key ${key}: ${error.message}`);
+        }
         return {success: true, identifier: key};
     }
 
