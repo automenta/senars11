@@ -38,8 +38,7 @@ describe('TermFactory', () => {
                 expected: 'different'
             },
         ])('should return $expected instance for $name', ({create1, create2, expected}) => {
-            const term1 = create1(factory);
-            const term2 = create2(factory);
+            const [term1, term2] = [create1(factory), create2(factory)];
             if (expected === 'same') {
                 expect(term1).toBe(term2);
             } else {
@@ -72,9 +71,9 @@ describe('TermFactory', () => {
 
     describe('Convenience Methods', () => {
         test('predicate should create ^ term', () => {
-            const pred = factory.atomic('pred');
-            const args = factory.atomic('args');
+            const [pred, args] = [factory.atomic('pred'), factory.atomic('args')];
             const term = factory.predicate(pred, args);
+
             expect(term.operator).toBe('^');
             expect(term.components).toHaveLength(2);
             expect(term.components[0]).toBe(pred);
@@ -82,9 +81,9 @@ describe('TermFactory', () => {
         });
 
         test('tuple should create , term', () => {
-            const a = factory.atomic('a');
-            const b = factory.atomic('b');
+            const [a, b] = [factory.atomic('a'), factory.atomic('b')];
             const term = factory.tuple(a, b);
+
             expect(term.operator).toBe(',');
             expect(term.components).toHaveLength(2);
             expect(term.components[0]).toBe(a);

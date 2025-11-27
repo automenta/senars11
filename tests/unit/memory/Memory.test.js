@@ -54,8 +54,10 @@ describe('Memory - Additional Specific Tests', () => {
 
         test('handles duplicate tasks correctly', () => {
             const term = createTerm('A');
-            const task1 = createTask({term, truth: TEST_CONSTANTS.TRUTH.HIGH, budget: TEST_CONSTANTS.BUDGET.MEDIUM});
-            const task2 = createTask({term, truth: TEST_CONSTANTS.TRUTH.MEDIUM, budget: TEST_CONSTANTS.BUDGET.LOW});
+            const [task1, task2] = [
+                createTask({term, truth: TEST_CONSTANTS.TRUTH.HIGH, budget: TEST_CONSTANTS.BUDGET.MEDIUM}),
+                createTask({term, truth: TEST_CONSTANTS.TRUTH.MEDIUM, budget: TEST_CONSTANTS.BUDGET.LOW})
+            ];
 
             memory.addTask(task1);
             memory.addTask(task2);
@@ -82,8 +84,10 @@ describe('Memory - Additional Specific Tests', () => {
         });
 
         test('gets all concepts correctly', () => {
-            const taskA = createTask({term: createTerm('A')});
-            const taskB = createTask({term: createTerm('B')});
+            const [taskA, taskB] = [
+                createTask({term: createTerm('A')}),
+                createTask({term: createTerm('B')})
+            ];
 
             memory.addTask(taskA);
             memory.addTask(taskB);
@@ -184,14 +188,16 @@ describe('Memory - Additional Specific Tests', () => {
 
     describe('Advanced Operations', () => {
         test('filters concepts by criteria', () => {
-            const highPriorityTask = createTask({
-                term: createTerm('A'),
-                budget: TEST_CONSTANTS.BUDGET.HIGH
-            });
-            const lowPriorityTask = createTask({
-                term: createTerm('B'),
-                budget: TEST_CONSTANTS.BUDGET.LOW
-            });
+            const [highPriorityTask, lowPriorityTask] = [
+                createTask({
+                    term: createTerm('A'),
+                    budget: TEST_CONSTANTS.BUDGET.HIGH
+                }),
+                createTask({
+                    term: createTerm('B'),
+                    budget: TEST_CONSTANTS.BUDGET.LOW
+                })
+            ];
 
             memory.addTask(highPriorityTask);
             memory.addTask(lowPriorityTask);
@@ -204,8 +210,10 @@ describe('Memory - Additional Specific Tests', () => {
         });
 
         test('gets most active concepts', () => {
-            const taskA = createTask({term: createTerm('A'), budget: TEST_CONSTANTS.BUDGET.HIGH});
-            const taskB = createTask({term: createTerm('B'), budget: TEST_CONSTANTS.BUDGET.MEDIUM});
+            const [taskA, taskB] = [
+                createTask({term: createTerm('A'), budget: TEST_CONSTANTS.BUDGET.HIGH}),
+                createTask({term: createTerm('B'), budget: TEST_CONSTANTS.BUDGET.MEDIUM})
+            ];
 
             memory.addTask(taskA);
             memory.addTask(taskB);
@@ -256,19 +264,15 @@ describe('Memory - Additional Specific Tests', () => {
     });
 
     describe('Error Handling', () => {
-        test('should handle edge cases and error conditions', () => {
+        test('should handle edge cases and error conditions gracefully', () => {
             // Test with null task
             expect(memory.addTask(null)).toBe(false);
 
             // Test consolidation with no concepts
-            expect(() => {
-                memory.consolidate();
-            }).not.toThrow();
+            expect(() => memory.consolidate()).not.toThrow();
 
             // Test getting concept for null term
-            expect(() => {
-                memory.getConcept(null);
-            }).not.toThrow();
+            expect(() => memory.getConcept(null)).not.toThrow();
         });
     });
 });

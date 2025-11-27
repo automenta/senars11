@@ -119,8 +119,6 @@ export * from './consolidatedTestSuites.js';
 export * from './enhancedTestSuites.js';
 export * from './agileRobustnessUtils.js';
 export * from './testSuiteFactory.js';
-// Don't star-export flexibleTestUtils to avoid conflicts, export individually where needed
-// export * from './flexibleTestUtils.js';
 
 // Export flexible utilities individually to avoid conflicts
 export {
@@ -195,7 +193,7 @@ export class TestEnvironment {
     async teardown() {
         // Clean up resources
         for (const [name, resource] of this.resources) {
-            if (resource && typeof resource.destroy === 'function') {
+            if (resource && typeof resource?.destroy === 'function') {
                 resource.destroy();
             }
         }

@@ -38,12 +38,14 @@ describe('TaskManager', () => {
     });
 
     test('should process pending tasks', () => {
-        const highPriorityTask = new Task({term, budget: {priority: 0.8}, truth: {frequency: 0.9, confidence: 0.8}});
-        const lowPriorityTask = new Task({
-            term: termFactory.atomic('B'),
-            budget: {priority: 0.4},
-            truth: {frequency: 0.9, confidence: 0.8}
-        });
+        const [highPriorityTask, lowPriorityTask] = [
+            new Task({term, budget: {priority: 0.8}, truth: {frequency: 0.9, confidence: 0.8}}),
+            new Task({
+                term: termFactory.atomic('B'),
+                budget: {priority: 0.4},
+                truth: {frequency: 0.9, confidence: 0.8}
+            })
+        ];
 
         taskManager.addTask(highPriorityTask);
         taskManager.addTask(lowPriorityTask);
@@ -55,9 +57,11 @@ describe('TaskManager', () => {
     });
 
     test('should create belief, goal, and question tasks', () => {
-        const belief = taskManager.createBelief(term, new Truth(0.9, 0.8));
-        const goal = taskManager.createGoal(term);
-        const question = taskManager.createQuestion(term);
+        const [belief, goal, question] = [
+            taskManager.createBelief(term, new Truth(0.9, 0.8)),
+            taskManager.createGoal(term),
+            taskManager.createQuestion(term)
+        ];
 
         expect(belief.type).toBe('BELIEF');
         expect(goal.type).toBe('GOAL');
@@ -74,12 +78,15 @@ describe('TaskManager', () => {
     });
 
     test('should get highest priority tasks correctly', () => {
-        const task1 = new Task({term, budget: {priority: 0.6}, truth: {frequency: 0.9, confidence: 0.8}});
-        const task2 = new Task({
-            term: termFactory.atomic('B'),
-            budget: {priority: 0.8},
-            truth: {frequency: 0.9, confidence: 0.8}
-        });
+        const [task1, task2] = [
+            new Task({term, budget: {priority: 0.6}, truth: {frequency: 0.9, confidence: 0.8}}),
+            new Task({
+                term: termFactory.atomic('B'),
+                budget: {priority: 0.8},
+                truth: {frequency: 0.9, confidence: 0.8}
+            })
+        ];
+
         taskManager.addTask(task1);
         taskManager.addTask(task2);
         taskManager.processPendingTasks();

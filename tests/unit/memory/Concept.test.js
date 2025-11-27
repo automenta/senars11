@@ -45,10 +45,14 @@ describe('Concept', () => {
         });
 
         test('retrieves tasks by type', () => {
-            const belief = createTask({term, punctuation: '.'});
-            const goal = createTask({term, punctuation: '!'});
+            const [belief, goal] = [
+                createTask({term, punctuation: '.'}),
+                createTask({term, punctuation: '!'})
+            ];
+
             concept.addTask(belief);
             concept.addTask(goal);
+
             const beliefs = concept.getTasksByType('BELIEF');
             expect(beliefs).toHaveLength(1);
             expect(beliefs[0]).toBe(belief);
@@ -90,8 +94,11 @@ describe('Concept', () => {
         });
 
         test('returns the correct average priority', () => {
-            const task1 = createTask({term, budget: {priority: 0.8}});
-            const task2 = createTask({term, budget: {priority: 0.6}});
+            const [task1, task2] = [
+                createTask({term, budget: {priority: 0.8}}),
+                createTask({term, budget: {priority: 0.6}})
+            ];
+
             concept.addTask(task1);
             concept.addTask(task2);
             expect(concept.averagePriority).toBe(0.7);
