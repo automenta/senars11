@@ -16,6 +16,7 @@ export class PrologStrategy extends Strategy {
         super(config);
         this.name = 'PrologStrategy';
         this.prologParser = new PrologParser(config.termFactory || new TermFactory());
+        this.termFactory = this.prologParser.termFactory;
         this.goalStack = []; // For backtracking
         this.knowledgeBase = new Map(); // Store facts and rules for resolution
         this.substitutionStack = []; // Track variable bindings during resolution
@@ -40,7 +41,8 @@ export class PrologStrategy extends Strategy {
 
         try {
             this.memory && this.updateKnowledgeBase(this._getAvailableTasks());
-            return await this._resolveGoal(primaryPremise);
+            const results = await this._resolveGoal(primaryPremise);
+            return results.map(r => r.task);
         } catch (error) {
             this.log.error('Error in PrologStrategy resolution:', error);
             return [];
@@ -49,6 +51,7 @@ export class PrologStrategy extends Strategy {
 
     /**
      * Resolve a goal using Prolog-style backward chaining
+     * Returns array of {substitution, task}
      * @private
      */
     async _resolveGoal(goalTask, currentDepth = 0, substitution = {}) {
@@ -66,35 +69,43 @@ export class PrologStrategy extends Strategy {
                 const newSubstitution = unificationResult.substitution;
 
                 if (rule.isFact) {
-                    solutions.push({ substitution: newSubstitution, originalTask: goalTask });
+                    const resolvedTask = this._applySubstitutionToTask(goalTask, newSubstitution);
+                    solutions.push({ substitution: newSubstitution, task: resolvedTask });
                 } else if (rule.body?.length > 0) {
                     const bodySolutions = await this._resolveRuleBody(rule.body, newSubstitution, currentDepth + 1);
                     for (const bodySub of bodySolutions) {
-                        solutions.push({ substitution: bodySub, originalTask: goalTask });
+                        const resolvedTask = this._applySubstitutionToTask(goalTask, bodySub);
+                        solutions.push({ substitution: bodySub, task: resolvedTask });
                     }
                 }
             }
             if (solutions.length >= this.config.maxSolutions) break;
         }
 
-        return solutions.map(s => this._applySubstitutionToTask(s.originalTask, s.substitution));
+        return solutions;
     }
 
     /**
      * Resolve the body of a rule (a conjunction of goals)
+     * Returns array of substitutions
      * @private
      */
     async _resolveRuleBody(goals, initialSubstitution, currentDepth) {
         if (goals.length === 0) return [initialSubstitution];
 
         const [firstGoal, ...remainingGoals] = goals;
-        const firstGoalTask = this._applySubstitutionToTask(this._createTaskFromTerm(firstGoal, '?'), initialSubstitution);
+        // Apply current substitution to the first goal term
+        const firstGoalTerm = this._applySubstitutionToTerm(firstGoal, initialSubstitution);
+        // Create a task for recursive resolution
+        const firstGoalTask = this._createTaskFromTerm(firstGoalTerm, '?');
 
         const firstSolutions = await this._resolveGoal(firstGoalTask, currentDepth, initialSubstitution);
         const allSolutions = [];
 
         for (const solution of firstSolutions) {
-            const nextSubstitution = this._composeSubstitutions(initialSubstitution, solution.substitution);
+            // solution.substitution contains the accumulated substitution from solving firstGoal
+            const nextSubstitution = solution.substitution;
+
             if (remainingGoals.length === 0) {
                 allSolutions.push(nextSubstitution);
             } else {
@@ -122,17 +133,8 @@ export class PrologStrategy extends Strategy {
             }
         }
 
-        // If no specific predicate match, look for more general matches
-        if (applicable.length === 0) {
-            // Find rules that could potentially unify with the goal
-            for (const [, items] of this.knowledgeBase.entries()) {
-                for (const item of items) {
-                    if (this._couldUnify(goal.term, item.head)) {
-                        applicable.push(item);
-                    }
-                }
-            }
-        }
+        // If no specific predicate match, look for more general matches (optional optimization)
+        // Note: For now we strictly match predicate name to avoid costly scans
 
         return applicable;
     }
@@ -151,9 +153,15 @@ export class PrologStrategy extends Strategy {
             const predicate = term.term.getPredicate();
             if (predicate) return predicate.toString();
         }
-        if (term.components && term.components.length > 0) {
+
+        // Handle compound terms (including plain objects)
+        if (term.components && Array.isArray(term.components) && term.components.length > 0) {
             return this._getPredicateName(term.components[0]);
         }
+
+        // Handle atomic terms (including plain objects)
+        if (term.name) return term.name;
+
         return term.toString();
     }
 
@@ -162,7 +170,7 @@ export class PrologStrategy extends Strategy {
      * @private
      */
     _couldUnify(term1, term2) {
-        // Basic check: if both terms have same predicate name and similar structure
+        // Basic check: if both terms have same predicate name
         return this._getPredicateName(term1) === this._getPredicateName(term2);
     }
 
@@ -192,19 +200,23 @@ export class PrologStrategy extends Strategy {
 
             let currentSubstitution = substitution;
 
-            // Unify predicates
-            const predResult = this._unify(
-                this._getPredicate(t1),
-                this._getPredicate(t2),
-                currentSubstitution
-            );
-            if (!predResult.success) {
-                return { success: false, substitution: {} };
-            }
-            currentSubstitution = predResult.substitution;
-
+            // Get components for unification
             const components1 = this._getTermComponents(t1);
             const components2 = this._getTermComponents(t2);
+
+            // If it's a predicate term like (^, predicate, args), we should unify components.
+            // Note: _getTermComponents normalizes this.
+
+            // Also need to check if operators match?
+            // Usually yes, but strict Prolog unification might just care about structure.
+            // In Narsese, (^, A, B) != (*, A, B).
+            if (t1.operator !== t2.operator) {
+                 // Exception: one might be plain object without operator but same structure?
+                 // But we should enforce operator match for correctness.
+                 if ((t1.operator || '') !== (t2.operator || '')) {
+                     return { success: false, substitution: {} };
+                 }
+            }
 
             for (let i = 0; i < components1.length; i++) {
                 const result = this._unify(
@@ -250,22 +262,18 @@ export class PrologStrategy extends Strategy {
      * @private
      */
     _getTermArity(term) {
-        if (term.components && Array.isArray(term.components)) {
-            return term.components.length;
-        }
-        if (term.args && Array.isArray(term.args)) {
-            return term.args.length;
-        }
-        return 0;
+        const components = this._getTermComponents(term);
+        return components.length;
     }
 
     /**
-     * Get the components of a term
+     * Get the components of a term.
+     * Normalized to include all structural components.
      * @private
      */
     _getTermComponents(term) {
         if (term.components && Array.isArray(term.components)) {
-            return term.components.slice(1);
+            return term.components;
         }
         if (term.args && Array.isArray(term.args)) {
             return term.args;
@@ -289,6 +297,9 @@ export class PrologStrategy extends Strategy {
         if (typeof term1.equals === 'function') {
             return term1.equals(term2);
         }
+        // Fallback for plain objects
+        if (term1.name && term2.name) return term1.name === term2.name;
+
         return term1.toString() === term2.toString();
     }
 
@@ -309,22 +320,6 @@ export class PrologStrategy extends Strategy {
      */
     _getVariableName(term) {
         return term.name || term._name || 'unknown';
-    }
-
-    /**
-     * Bind a variable to a value in the substitution
-     * @private
-     */
-    _bindVariable(varName, value, substitution) {
-        const newSubstitution = {...substitution};
-
-        // Check for circular bindings
-        if (this._occursCheck(varName, value, newSubstitution)) {
-            return {success: false, substitution: {}};
-        }
-
-        newSubstitution[varName] = value;
-        return {success: true, substitution: newSubstitution};
     }
 
     /**
@@ -357,7 +352,7 @@ export class PrologStrategy extends Strategy {
             if (substitution[varName]) {
                 return this._applySubstitutionToTerm(substitution[varName], substitution);
             }
-            return {...term}; // Return a copy
+            return term; // Return original term (assuming immutable or we don't need copy if no change)
         }
 
         // If it's a compound term, apply substitution to components
@@ -367,17 +362,26 @@ export class PrologStrategy extends Strategy {
                 this._applySubstitutionToTerm(comp, substitution)
             );
 
-            // Create a new term with substituted components
-            const newTerm = {...term};
-            if (term.components) {
-                newTerm.components = newComponents;
-            } else if (term.args) {
-                newTerm.args = newComponents;
+            // Use TermFactory to create a valid Term object
+            if (this.termFactory) {
+                return this.termFactory.create({
+                    operator: term.operator,
+                    components: newComponents,
+                    type: term.type
+                });
+            } else {
+                // Fallback if no factory (shouldn't happen with constructor fix)
+                const newTerm = {...term};
+                if (term.components) {
+                    newTerm.components = newComponents;
+                } else if (term.args) {
+                    newTerm.args = newComponents;
+                }
+                return newTerm;
             }
-            return newTerm;
         }
 
-        return {...term}; // Return a copy of the original term
+        return term;
     }
 
     /**
@@ -387,14 +391,15 @@ export class PrologStrategy extends Strategy {
     _applySubstitutionToTask(task, substitution) {
         if (!task || !substitution) return task;
 
-        const newTask = {...task};
-        newTask.term = this._applySubstitutionToTerm(task.term, substitution);
+        const newTerm = this._applySubstitutionToTerm(task.term, substitution);
 
-        if (task.truth) {
-            newTask.truth = {...task.truth}; // Copy truth value
-        }
-
-        return newTask;
+        // Return a new Task with the substituted term
+        return new Task({
+            term: newTerm,
+            punctuation: task.punctuation,
+            truth: task.truth ? new Truth(task.truth.frequency, task.truth.confidence) : undefined,
+            budget: task.budget ? {...task.budget} : undefined
+        });
     }
 
     /**
@@ -408,30 +413,6 @@ export class PrologStrategy extends Strategy {
             truth: punctuation === '?' ? null : truth || new Truth(1.0, 0.9),
             budget: {priority: 0.8, durability: 0.7, quality: 0.8}
         });
-    }
-
-    /**
-     * Extract substitution that was applied to solve a goal
-     * @private
-     */
-    _extractSubstitution(solvedTask, originalTask) {
-        // For now, return the original substitution
-        // In a full implementation, this would extract the specific bindings
-        return {};
-    }
-
-    /**
-     * Compose two substitutions
-     * @private
-     */
-    _composeSubstitutions(sub1, sub2) {
-        const result = {...sub1};
-
-        for (const [varName, value] of Object.entries(sub2)) {
-            result[varName] = this._applySubstitutionToTerm(value, sub1);
-        }
-
-        return result;
     }
 
     /**
@@ -449,7 +430,9 @@ export class PrologStrategy extends Strategy {
                 isFact = false;
                 head = term.components[1];
                 const bodyTerm = term.components[0];
-                if (bodyTerm.operator === '&&') { // Conjunction of goals
+
+                // Handle conjunctions (&& or &/)
+                if (bodyTerm.operator === '&&' || bodyTerm.operator === '&/') {
                     body = bodyTerm.components;
                 } else { // Single goal
                     body = [bodyTerm];
@@ -480,26 +463,8 @@ export class PrologStrategy extends Strategy {
      */
     addPrologRule(prologRuleString) {
         try {
-            // Parse the Prolog rule using the existing parser
             const parsedTasks = this.prologParser.parseProlog(prologRuleString);
-
-            for (const task of parsedTasks) {
-                if (task.punctuation === '.') { // Beliefs (facts and rules become beliefs)
-                    const predicateName = this._getPredicateName(task.term);
-                    if (!this.knowledgeBase.has(predicateName)) {
-                        this.knowledgeBase.set(predicateName, []);
-                    }
-
-                    // For now, treat everything as a fact (in a full implementation, we'd distinguish rules from facts)
-                    // The Prolog parser doesn't directly return rule structure, so we create simple facts for now
-                    this.knowledgeBase.get(predicateName).push({
-                        head: task.term,
-                        body: null, // Simplified - would need proper rule parsing for body
-                        isFact: true, // All parsed items treated as facts in this simple version
-                        sourceTask: task
-                    });
-                }
-            }
+            this.updateKnowledgeBase(parsedTasks);
         } catch (error) {
             console.error('Error adding Prolog rule:', error);
         }
@@ -529,6 +494,7 @@ export class PrologStrategy extends Strategy {
     }
 
     async ask(task) {
-        return this._resolveGoal(task);
+        const results = await this._resolveGoal(task);
+        return results.map(r => r.task);
     }
 }
