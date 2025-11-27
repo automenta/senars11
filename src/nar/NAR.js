@@ -199,8 +199,13 @@ export class NAR extends BaseComponent {
         await ReasonerBuilder.registerDefaultRules(this._streamReasoner, this.config);
     }
 
-    async input(narseseString, options = {}) {
+    async input(input, options = {}) {
         try {
+            if (input instanceof Task) {
+                return await this._processNewTask(input, 'user', input.toString(), null, options);
+            }
+
+            const narseseString = input;
             const parsed = this._parser.parse(narseseString);
             if (!parsed?.term) throw new Error('Invalid parse result');
 
@@ -209,7 +214,7 @@ export class NAR extends BaseComponent {
         } catch (error) {
             this._eventBus.emit('input.error', {
                 error: error.message,
-                input: narseseString
+                input: typeof input === 'string' ? input : 'Task Object'
             }, {traceId: options.traceId});
             throw error;
         }
