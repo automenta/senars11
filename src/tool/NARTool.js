@@ -1,5 +1,5 @@
 /**
- * @file src/tool/NARControlTool.js
+ * @file src/tool/NARTool.js
  * @description Tool that allows LLM to control and interact with the NAR system
  */
 
@@ -11,8 +11,10 @@ export class NARTool extends BaseTool {
     constructor(nar = null) {
         super();
         this.nar = nar;
-        this.prologParser = new PrologParser();
-        this.prologStrategy = nar?.streamReasoner?.strategy.strategies?.find(s => s.name === 'PrologStrategy');
+        // Use NAR's term factory if available to ensure term compatibility
+        const termFactory = nar && nar._termFactory ? nar._termFactory : null;
+        this.prologParser = new PrologParser(termFactory);
+
         this.name = 'nar';
         this.description = 'Control and interact with the NARS reasoning system';
         this.schema = {
@@ -31,6 +33,31 @@ export class NARTool extends BaseTool {
             required: ['action'],
             additionalProperties: false
         };
+
+        this._actionHandlers = {
+            'add_belief': { handler: this._addBelief.bind(this), requiresContent: true },
+            'add_goal': { handler: this._addGoal.bind(this), requiresContent: true },
+            'query': { handler: this._query.bind(this), requiresContent: true },
+            'step': { handler: this._step.bind(this), requiresContent: false },
+            'get_beliefs': { handler: this._getBeliefs.bind(this), requiresContent: false },
+            'get_goals': { handler: this._getGoals.bind(this), requiresContent: false },
+            'assert_prolog': { handler: this._assertProlog.bind(this), requiresContent: true },
+            'query_prolog': { handler: this._queryProlog.bind(this), requiresContent: true },
+        };
+    }
+
+    get prologStrategy() {
+        if (this._prologStrategy) return this._prologStrategy;
+
+        // Try to find it in the strategies list
+        this._prologStrategy = this.nar?.streamReasoner?.strategy?.strategies?.find(s => s instanceof PrologStrategy);
+
+        // Also check if the main strategy IS the PrologStrategy (edge case)
+        if (!this._prologStrategy && this.nar?.streamReasoner?.strategy instanceof PrologStrategy) {
+            this._prologStrategy = this.nar.streamReasoner.strategy;
+        }
+
+        return this._prologStrategy;
     }
 
     async execute(args) {
@@ -52,17 +79,7 @@ export class NARTool extends BaseTool {
     }
 
     _getActionHandler(action) {
-        const actions = {
-            'add_belief': { handler: this._addBelief.bind(this), requiresContent: true },
-            'add_goal': { handler: this._addGoal.bind(this), requiresContent: true },
-            'query': { handler: this._query.bind(this), requiresContent: true },
-            'step': { handler: this._step.bind(this), requiresContent: false },
-            'get_beliefs': { handler: this._getBeliefs.bind(this), requiresContent: false },
-            'get_goals': { handler: this._getGoals.bind(this), requiresContent: false },
-            'assert_prolog': { handler: this._assertProlog.bind(this), requiresContent: true },
-            'query_prolog': { handler: this._queryProlog.bind(this), requiresContent: true },
-        };
-        return actions[action];
+        return this._actionHandlers[action];
     }
 
     async _assertProlog(content) {
@@ -74,7 +91,7 @@ export class NARTool extends BaseTool {
             this.prologStrategy.updateKnowledgeBase(tasks);
             return { success: true, message: 'Prolog assertion successful.' };
         } catch (error) {
-            console.error('NARControlTool _assertProlog error:', error);
+            console.error('NARTool _assertProlog error:', error);
             return { success: false, error: `Failed to assert Prolog: ${error.message}` };
         }
     }
@@ -91,7 +108,7 @@ export class NARTool extends BaseTool {
             const result = await this.nar.ask(tasks[0]);
             return { success: result && result.length > 0, result };
         } catch (error) {
-            console.error('NARControlTool _queryProlog error:', error);
+            console.error('NARTool _queryProlog error:', error);
             return { success: false, error: `Failed to query Prolog: ${error.message}` };
         }
     }
