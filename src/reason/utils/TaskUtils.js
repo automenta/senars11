@@ -3,6 +3,11 @@
  * @description Utilities for working with NARS tasks, truth values, and terms.
  */
 
+import {Term} from '../../term/Term.js';
+import {TermFactory} from '../../term/TermFactory.js';
+
+const termFactory = new TermFactory();
+
 export const Punctuation = {
     BELIEF: '.',
     QUESTION: '?',
@@ -25,27 +30,9 @@ export class TruthValue {
     }
 }
 
-export class Term {
-    constructor(name) {
-        this.name = name;
-    }
-
-    static newAtom(name) {
-        return new Term(name);
-    }
-
-    toString() {
-        return this.name;
-    }
-
-    clone() {
-        return new Term(this.name);
-    }
-}
-
 export class Task {
     constructor(term, punctuation = '.', truth = null, budget = null, occurrenceTime = null, priority = 0.5, durability = 0.5, occurrenceSpan = null, metadata = null) {
-        this.term = term instanceof Term ? term : new Term(String(term));
+        this.term = term instanceof Term ? term : termFactory.atomic(String(term));
         this.punctuation = punctuation;
         this.truth = truth ? TruthValue.fromObject(truth) : new TruthValue();
         this.budget = budget;
@@ -73,7 +60,7 @@ export class Task {
 
     clone() {
         return new Task(
-            this.term.clone(),
+            this.term, // Term is immutable
             this.punctuation,
             this.truth.clone(),
             this.budget,
@@ -93,7 +80,7 @@ export class TaskDerivation {
         for (const [key, value] of Object.entries(modifications)) {
             if (value !== undefined) {
                 if (key === 'term') {
-                    newTask.term = value instanceof Term ? value : new Term(value);
+                    newTask.term = value instanceof Term ? value : termFactory.atomic(String(value));
                 } else if (key === 'truth') {
                     newTask.truth = TruthValue.fromObject(value);
                 } else {
@@ -123,7 +110,7 @@ export class TaskDerivation {
         const derivedTruth = this.deriveTruth(originalTask.truth, truthOptions.confidenceMultiplier, truthOptions.frequencyAdjustment);
 
         return new Task(
-            term instanceof Term ? term : new Term(term),
+            term instanceof Term ? term : termFactory.atomic(String(term)),
             punctuation,
             {
                 frequency: truthOptions.frequency ?? derivedTruth.f,

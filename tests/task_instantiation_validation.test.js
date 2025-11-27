@@ -13,14 +13,16 @@
 
 import {Task} from '../src/task/Task.js';
 import {Truth} from '../src/Truth.js';
-import {Term} from '../src/term/Term.js';
+import {TermFactory} from '../src/term/TermFactory.js';
 
 describe('Task Instantiation Validation', () => {
     let mockTerm;
+    let termFactory;
 
     beforeEach(() => {
+        termFactory = new TermFactory();
         // Create a mock term for testing
-        mockTerm = new Term({name: 'test'});
+        mockTerm = termFactory.atomic('test');
     });
 
     test('BELIEF task without truth should throw error', () => {

@@ -60,7 +60,7 @@ describe('Complex Neurosymbolic Synergy: Ancestry & Genetics', () => {
         const product_xy = termFactory.product($x, $y);
         const cond1 = termFactory.inheritance(product_xy, ancestor_of);
         const cond2 = termFactory.inheritance($x, red_hair);
-        const antecedent = termFactory.create('&&', [cond1, cond2]);
+        const antecedent = termFactory.conjunction(cond1, cond2);
         const consequent = termFactory.inheritance($y, red_hair);
         const ruleTerm = termFactory.implication(antecedent, consequent);
 
@@ -77,10 +77,10 @@ describe('Complex Neurosymbolic Synergy: Ancestry & Genetics', () => {
         // 3. The Task: Determine if Charlie has red hair?
         // Step A: Agent asks Prolog "ancestor(alice, charlie)?"
         const createPrologTerm = (pred, ...args) => {
-            const predTerm = termFactory.create(pred);
+            const predTerm = termFactory.atomic(pred);
             const argTerms = args.map(a => {
                 if (a.startsWith('?')) return termFactory.variable(a);
-                return termFactory.create(a);
+                return termFactory.atomic(a);
             });
             const argsTerm = termFactory.tuple(argTerms);
             return termFactory.predicate(predTerm, argsTerm);

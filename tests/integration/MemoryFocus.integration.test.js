@@ -315,7 +315,7 @@ describe('Memory and Focus Management Integration', () => {
 
             // Create many concepts
             for (let i = 0; i < 100; i++) {
-                const term = termFactory.create(`concept${i}`);
+                const term = termFactory.atomic(`concept${i}`);
                 const task = new Task({
                     term,
                     punctuation: '.',
@@ -343,7 +343,7 @@ describe('Memory and Focus Management Integration', () => {
 
             // Add many tasks to focus
             for (let i = 0; i < 50; i++) {
-                const term = termFactory.create(`focus_item${i}`);
+                const term = termFactory.atomic(`focus_item${i}`);
                 const task = new Task({
                     term,
                     punctuation: '.',

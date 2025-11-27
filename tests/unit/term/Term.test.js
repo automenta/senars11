@@ -137,6 +137,8 @@ describe('Term', () => {
 
         test('normalization should be idempotent and correct', () => {
             fc.assert(fc.property(compoundTermArb, (term) => {
+                if (!term.operator) return; // Atomic terms are already normalized
+
                 const normalizedOnce = createCompoundTerm(term.operator, term.components);
                 const normalizedTwice = createCompoundTerm(normalizedOnce.operator, normalizedOnce.components);
                 expect(normalizedOnce.equals(normalizedTwice)).toBe(true); // Idempotency
@@ -156,7 +158,7 @@ describe('Term', () => {
             fc.assert(fc.property(compoundTermArb, compoundTermArb, (t1, t2) => {
                 expect(t1.equals(t1)).toBe(true); // Reflexivity
                 expect(t1.equals(t2)).toEqual(t2.equals(t1)); // Symmetry
-                if (t1.equals(t2)) {
+                if (t1.equals(t2) && t2.operator) {
                     const t2_clone = createCompoundTerm(t2.operator, t2.components);
                     expect(t1.equals(t2_clone)).toBe(true); // Transitivity
                 }

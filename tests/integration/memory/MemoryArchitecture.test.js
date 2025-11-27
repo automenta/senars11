@@ -180,7 +180,7 @@ describe('Memory Architecture', () => {
             // Create several tasks to test consolidation
             const terms = [];
             for (let i = 0; i < 5; i++) {
-                terms.push(termFactory.create(`consolidation_test_${i}`));
+                terms.push(termFactory.atomic(`consolidation_test_${i}`));
             }
 
             // Add tasks to memory
@@ -316,7 +316,7 @@ describe('Memory Architecture', () => {
 
             // Simulate a realistic workload
             for (let i = 0; i < 50; i++) {
-                const term = termFactory.create(`integration_test_${i}`);
+                const term = termFactory.atomic(`integration_test_${i}`);
                 const task = new Task({
                     term,
                     punctuation: '.',
@@ -349,7 +349,7 @@ describe('Memory Architecture', () => {
             // Add many items to test system stability
             const terms = [];
             for (let i = 0; i < 100; i++) {
-                terms.push(termFactory.create(`stress_test_${i}`));
+                terms.push(termFactory.atomic(`stress_test_${i}`));
             }
 
             // Add to memory

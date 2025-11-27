@@ -35,10 +35,10 @@ describe('NAL and Prolog Synergy', () => {
 
         // 2. Construct Prolog Query Task
         const createPrologTerm = (pred, ...args) => {
-            const predTerm = termFactory.create(pred);
+            const predTerm = termFactory.atomic(pred);
             const argTerms = args.map(a => {
                 if (a.startsWith('?')) return termFactory.variable(a);
-                return termFactory.create(a);
+                return termFactory.atomic(a);
             });
             const argsTerm = termFactory.tuple(argTerms);
             return termFactory.predicate(predTerm, argsTerm);

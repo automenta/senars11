@@ -121,7 +121,7 @@ export class PrologStrategy extends Strategy {
             if (pred === 'is') {
                 // X is Expr
                 const value = this._evalExpression(arg2);
-                const valueTerm = this.termFactory.create(String(value));
+                const valueTerm = this.termFactory.atomic(String(value));
 
                 const unification = this._unify(arg1, valueTerm, substitution);
                 if (unification.success) {
