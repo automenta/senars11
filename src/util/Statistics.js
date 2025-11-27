@@ -68,16 +68,64 @@ export class Statistics {
      */
     static quantiles(values, quantiles = [0.25, 0.5, 0.75, 0.95]) {
         if (!values || values.length === 0) {
-            return quantiles.reduce((acc, q) => {
-                acc[`p${q * 100}`] = 0;
-                return acc;
-            }, {});
+            const result = {};
+            for (const q of quantiles) {
+                result[`p${Math.round(q * 100)}`] = 0;
+            }
+            return result;
         }
 
+        // Sort once and reuse the sorted array for multiple quantile calculations
         const sorted = [...values].sort((a, b) => a - b);
-        return quantiles.reduce((acc, q) => {
-            acc[`p${q * 100}`] = this.quantile(sorted, q); // Use sorted array optimization if we were to refactor quantile to accept it
-            return acc;
-        }, {});
+        const result = {};
+
+        for (const q of quantiles) {
+            result[`p${Math.round(q * 100)}`] = this._quantileFromSorted(sorted, q);
+        }
+
+        return result;
+    }
+
+    /**
+     * Calculate a quantile from a pre-sorted array (optimization).
+     * @private
+     * @param {number[]} sortedValues - Pre-sorted array of numbers
+     * @param {number} q - The quantile to calculate (0 to 1)
+     * @returns {number} The quantile value
+     */
+    static _quantileFromSorted(sortedValues, q) {
+        const pos = (sortedValues.length - 1) * q;
+        const base = Math.floor(pos);
+        const rest = pos - base;
+
+        if (sortedValues[base + 1] !== undefined) {
+            return sortedValues[base] + rest * (sortedValues[base + 1] - sortedValues[base]);
+        } else {
+            return sortedValues[base];
+        }
+    }
+
+    /**
+     * Calculate mean, median, and standard deviation efficiently in a single pass through sorted data.
+     * @param {number[]} values - Array of numbers
+     * @returns {Object} Object containing mean, median, and stdDev
+     */
+    static meanMedianStd(values) {
+        if (!values || values.length === 0) return { mean: 0, median: 0, stdDev: 0 };
+
+        const sum = values.reduce((acc, val) => acc + val, 0);
+        const mean = sum / values.length;
+
+        const sorted = [...values].sort((a, b) => a - b);
+        const mid = Math.floor(sorted.length / 2);
+        const median = sorted.length % 2 === 0
+            ? (sorted[mid - 1] + sorted[mid]) / 2
+            : sorted[mid];
+
+        const squareDiffs = values.map(val => Math.pow(val - mean, 2));
+        const variance = squareDiffs.reduce((acc, val) => acc + val, 0) / values.length;
+        const stdDev = Math.sqrt(variance);
+
+        return { mean, median, stdDev };
     }
 }

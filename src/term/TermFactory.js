@@ -293,18 +293,11 @@ export class TermFactory extends BaseComponent {
      * Calculate structural complexity (depth of the term tree)
      */
     _getStructuralComplexity(term) {
-        if (!term || !term.components || term.components.length === 0) {
-            return 1; // Atomic terms have depth 1
-        }
+        if (!term?.components?.length) return 1; // Atomic terms have depth 1
 
-        let maxDepth = 1;
-        for (const comp of term.components) {
-            if (comp && comp.components && comp.components.length > 0) {
-                maxDepth = Math.max(maxDepth, 1 + this._getStructuralComplexity(comp));
-            }
-        }
-
-        return maxDepth;
+        return 1 + Math.max(...term.components.map(comp =>
+            comp?.components?.length ? this._getStructuralComplexity(comp) : 1
+        ));
     }
 
     /**
@@ -404,27 +397,26 @@ export class TermFactory extends BaseComponent {
         if (!op) return comps[0].toString();
 
         const names = comps.map(c => c.name);
-        const patterns = {
-            '--': `(--, ${names[0]})`,
-            '&': `(&, ${names.join(', ')})`,
-            '|': `(|, ${names.join(', ')})`,
-            '&/': `(&/, ${names.join(', ')})`,
-            '-->': `(-->, ${names[0]}, ${names[1]})`,
-            '<->': `(<->, ${names[0]}, ${names[1]})`,
-            '==>': `(==>, ${names[0]}, ${names[1]})`,
-            '<=>': `(<=>, ${names[0]}, ${names[1]})`,
-            '=': `(=, ${names[0]}, ${names[1]})`,
-            '^': `(^, ${names[0]}, ${names[1]})`,
-            '{{--': `({{--, ${names[0]}, ${names[1]})`,
-            '--}}': `(--}}, ${names[0]}, ${names[1]})`,
-            '{}': `{${names.join(', ')}}`,
-            '[]': `[${names.join(', ')}]`,
-            ',': `(${names.join(', ')})`
+
+        const buildPattern = {
+            '--': (n) => `(--, ${n[0]})`,
+            '&': (n) => `(&, ${n.join(', ')})`,
+            '|': (n) => `(|, ${n.join(', ')})`,
+            '&/': (n) => `(&/, ${n.join(', ')})`,
+            '-->': (n) => `(-->, ${n[0]}, ${n[1]})`,
+            '<->': (n) => `(<->, ${n[0]}, ${n[1]})`,
+            '==>': (n) => `(==>, ${n[0]}, ${n[1]})`,
+            '<=>': (n) => `(<=>, ${n[0]}, ${n[1]})`,
+            '=': (n) => `(=, ${n[0]}, ${n[1]})`,
+            '^': (n) => `(^, ${n[0]}, ${n[1]})`,
+            '{{--': (n) => `({{--, ${n[0]}, ${n[1]})`,
+            '--}}': (n) => `(--}}, ${n[0]}, ${n[1]})`,
+            '{}': (n) => `{${n.join(', ')}}`,
+            '[]': (n) => `[${n.join(', ')}]`,
+            ',': (n) => `(${n.join(', ')})`
         };
 
-        // Note: Updated `&/` pattern to use join instead of slice(0,2) to support n-ary sequences.
-
-        return patterns[op] || `(${op}, ${names.join(', ')})`;
+        return buildPattern[op]?.(names) || `(${op}, ${names.join(', ')})`;
     }
 
     /**

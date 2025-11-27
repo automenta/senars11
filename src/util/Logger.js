@@ -58,17 +58,19 @@ class Logger {
 
     shouldLog(level) {
         const levelValue = this.levels[level.toUpperCase()] ?? this.levels.INFO;
-        const isDebugAllowed = level !== 'debug' ||
-            (typeof process !== 'undefined' &&
-                (process.env.NODE_ENV === 'development' || process.env.DEBUG));
+        const isDebugAllowed = level !== 'debug' || this._isDebugMode();
+        const isInfoAllowed = level !== 'info' || this._isInfoMode();
 
-        const isInfoAllowed = level !== 'info' || !this.isTestEnv ||
-            (typeof process !== 'undefined' && process.env.SHOW_INFO_IN_TESTS);
+        return !this.silent && levelValue <= this.currentLevel && isDebugAllowed && isInfoAllowed;
+    }
 
-        return !this.silent &&
-            levelValue <= this.currentLevel &&
-            isDebugAllowed &&
-            isInfoAllowed;
+    _isDebugMode() {
+        return typeof process !== 'undefined' &&
+            (process.env.NODE_ENV === 'development' || process.env.DEBUG);
+    }
+
+    _isInfoMode() {
+        return !this.isTestEnv || (typeof process !== 'undefined' && process.env.SHOW_INFO_IN_TESTS);
     }
 
     debug(msg, data) {
@@ -84,8 +86,10 @@ class Logger {
     }
 
     error(msg, data) {
-        this.shouldLog('error') && this.log('error', msg,
-            this.isTestEnv ? {message: data?.message || msg} : data);
+        if (this.shouldLog('error')) {
+            const logData = this.isTestEnv ? {message: data?.message || msg} : data;
+            this.log('error', msg, logData);
+        }
     }
 
     setSilent(silent) {

@@ -143,9 +143,9 @@ export class AgentBuilder {
 
     _registerPlugins(pluginManager, pluginConfig) {
         const register = (config, id) => {
-            if (config.instance) {
+            if (config?.instance) {
                 pluginManager.registerPlugin(config.instance);
-            } else if (config.constructor) {
+            } else if (config?.constructor) {
                 const pluginId = id ?? config.constructor.name.toLowerCase();
                 pluginManager.registerPlugin(new config.constructor(pluginId, config.config ?? {}));
             }

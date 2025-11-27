@@ -81,27 +81,29 @@ export class Concept extends BaseComponent {
     }
 
     _calculateWeightedAveragePriority() {
-        const bags = [
-            {bag: this._beliefs, weight: this._beliefs.size},
-            {bag: this._goals, weight: this._goals.size},
-            {bag: this._questions, weight: this._questions.size}
-        ];
+        const bags = [this._beliefs, this._goals, this._questions];
+        const sizes = [this._beliefs.size, this._goals.size, this._questions.size];
 
-        const totalPriority = bags.reduce((sum, {bag, weight}) =>
-            sum + (bag.getAveragePriority() * weight), 0
-        );
+        let totalWeightedPriority = 0;
+        for (let i = 0; i < bags.length; i++) {
+            totalWeightedPriority += bags[i].getAveragePriority() * sizes[i];
+        }
 
-        return totalPriority / this.totalTasks;
+        return totalWeightedPriority / this.totalTasks;
     }
 
     _getStorage(taskType) {
-        const storage = {
+        const storageMap = {
             [TASK_TYPES.BELIEF]: this._beliefs,
             [TASK_TYPES.GOAL]: this._goals,
             [TASK_TYPES.QUESTION]: this._questions
-        }[taskType];
+        };
 
-        if (!storage) throw new Error(`Unknown task type: ${taskType}. Expected ${Object.values(TASK_TYPES).join(', ')}.`);
+        const storage = storageMap[taskType];
+        if (!storage) {
+            const validTypes = Object.values(TASK_TYPES).join(', ');
+            throw new Error(`Unknown task type: ${taskType}. Expected ${validTypes}.`);
+        }
         return storage;
     }
 

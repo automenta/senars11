@@ -43,8 +43,8 @@ async function main() {
 }
 
 const setupGracefulShutdown = (app, monitor) => {
-    process.on('SIGINT', async () => {
-        console.log('\nShutting down gracefully...');
+    const handleShutdown = async (signal) => {
+        console.log(`\nReceived ${signal}, shutting down gracefully...`);
         try {
             await app.shutdown();
         } catch (saveError) {
@@ -52,17 +52,17 @@ const setupGracefulShutdown = (app, monitor) => {
         }
         if (monitor) await monitor.stop();
         process.exit(0);
-    });
+    };
 
-    process.on('uncaughtException', error => {
-        console.error('Uncaught exception:', error?.message || error);
+    const handleException = (error, type) => {
+        console.error(`${type}:`, error?.message || error);
         process.exit(1);
-    });
+    };
 
-    process.on('unhandledRejection', (reason, promise) => {
-        console.error('Unhandled rejection at:', promise, 'reason:', reason?.message || reason);
-        process.exit(1);
-    });
+    process.on('SIGINT', () => handleShutdown('SIGINT'));
+    process.on('SIGTERM', () => handleShutdown('SIGTERM'));
+    process.on('uncaughtException', (error) => handleException(error, 'Uncaught exception'));
+    process.on('unhandledRejection', (reason) => handleException(reason, 'Unhandled rejection'));
 };
 
 if (import.meta.url === `file://${process.argv[1]}`) {

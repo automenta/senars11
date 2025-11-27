@@ -90,8 +90,16 @@ export class Task {
 
     equals(other) {
         if (!(other instanceof Task)) return false;
-        const truthEquals = (!this.truth && !other.truth) || (this.truth?.equals(other.truth) ?? false);
-        return this.term.equals(other.term) && this.type === other.type && truthEquals;
+        if (this.type !== other.type) return false;
+        if (this.term !== other.term && !this.term.equals(other.term)) return false;
+
+        const thisHasTruth = this.truth !== null;
+        const otherHasTruth = other.truth !== null;
+
+        if (thisHasTruth !== otherHasTruth) return false;
+        if (thisHasTruth && otherHasTruth && !this.truth.equals(other.truth)) return false;
+
+        return true;
     }
 
     toString() {

@@ -135,14 +135,13 @@ export class RuleProcessor {
         try {
             const results = await (rule.applyAsync?.(primaryPremise, secondaryPremise, this.config.context) ??
                 rule.apply?.(primaryPremise, secondaryPremise, this.config.context)) ?? [];
+            const resultsArray = Array.isArray(results) ? results : [results];
+            const processedResults = resultsArray
+                .map(this._processDerivation.bind(this))
+                .filter(Boolean);
 
-            const resultArray = Array.isArray(results) ? results : [results];
-
-            for (const result of resultArray) {
-                const processedResult = this._processDerivation(result);
-                if (processedResult) {
-                    this._enqueueAsyncResult(processedResult);
-                }
+            for (const processedResult of processedResults) {
+                this._enqueueAsyncResult(processedResult);
             }
         } catch (error) {
             logError(error, {ruleId: rule.id ?? rule.name, context: 'async_rule_execution'}, 'error');

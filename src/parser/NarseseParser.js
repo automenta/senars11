@@ -12,6 +12,8 @@ export class NarseseParser {
      */
     constructor(termFactory) {
         this.termFactory = termFactory || new TermFactory();
+        this._parseCache = new Map();
+        this._maxCacheSize = 1000; // Limit cache size to prevent memory issues
     }
 
     /**
@@ -24,10 +26,40 @@ export class NarseseParser {
         if (typeof input !== 'string' || input.trim() === '') {
             throw new Error('Input must be a non-empty string');
         }
+
+        // Check cache first for repeat inputs
+        if (this._parseCache.has(input)) {
+            return this._parseCache.get(input);
+        }
+
         try {
-            return parse(input, {termFactory: this.termFactory});
+            const result = parse(input, {termFactory: this.termFactory});
+
+            // Add to cache if cache size is under limit
+            if (this._parseCache.size < this._maxCacheSize) {
+                this._parseCache.set(input, result);
+            }
+
+            return result;
         } catch (error) {
             throw new Error(`Narsese parsing failed: ${error.message}`);
         }
+    }
+
+    /**
+     * Clear the parse cache
+     */
+    clearCache() {
+        this._parseCache.clear();
+    }
+
+    /**
+     * Get cache statistics
+     */
+    getCacheStats() {
+        return {
+            size: this._parseCache.size,
+            maxSize: this._maxCacheSize
+        };
     }
 }

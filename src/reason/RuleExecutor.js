@@ -42,17 +42,22 @@ export class RuleExecutor {
      * @private
      */
     _filterCandidates(candidates, primaryPremise, secondaryPremise) {
-        return candidates.filter(rule => {
+        const validRules = [];
+
+        for (const rule of candidates) {
             try {
-                return this._canRuleApply(rule, primaryPremise, secondaryPremise);
+                if (this._canRuleApply(rule, primaryPremise, secondaryPremise)) {
+                    validRules.push(rule);
+                }
             } catch (error) {
                 logError(error, {
                     ruleId: rule.id ?? rule.name,
                     context: 'rule_candidate_check'
                 }, 'warn');
-                return false;
             }
-        });
+        }
+
+        return validRules;
     }
 
     /**

@@ -254,11 +254,12 @@ export class Memory extends BaseComponent {
 
     getConceptsByCompositeScoring({limit = 10, minScore = 0, scoringOptions = {}, sortBy = 'composite'} = {}) {
         const concepts = this.getAllConcepts();
-
-        return concepts
+        const scoredConcepts = concepts
             .map(concept => ({concept, score: MemoryScorer.calculateDetailedConceptScore(concept, scoringOptions)}))
-            .filter(item => item.score.compositeScore >= minScore)
-            .sort((a, b) => MemoryScorer.getSorterFunction(sortBy)(a, b))
+            .filter(item => item.score.compositeScore >= minScore);
+
+        return scoredConcepts
+            .sort(MemoryScorer.getSorterFunction(sortBy))
             .slice(0, limit)
             .map(item => item.concept);
     }
@@ -300,8 +301,9 @@ export class Memory extends BaseComponent {
     getDetailedStats() {
         const conceptStats = this.getAllConcepts().map(c => c.getStats());
         const hasConcepts = conceptStats.length > 0;
-
         const stats = hasConcepts ? this._calculateConceptStatistics(conceptStats) : this._getDefaultStats();
+
+        const timestamps = hasConcepts ? conceptStats.map(s => s.createdAt) : [];
 
         return {
             ...this._stats,
@@ -312,8 +314,8 @@ export class Memory extends BaseComponent {
                 totalTasks: this._stats.totalTasks
             },
             indexStats: this._index.getStats(),
-            oldestConcept: hasConcepts ? Math.min(...conceptStats.map(s => s.createdAt)) : null,
-            newestConcept: hasConcepts ? Math.max(...conceptStats.map(s => s.createdAt)) : null,
+            oldestConcept: hasConcepts ? Math.min(...timestamps) : null,
+            newestConcept: hasConcepts ? Math.max(...timestamps) : null,
             ...stats,
             conceptCount: hasConcepts ? conceptStats.length : 0
         };

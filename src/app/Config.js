@@ -40,80 +40,80 @@ export class Config {
         const args = [...argv];
 
         // Define the argument processing configuration
-        const argHandlers = {
-            '--ollama': (i) => {
+        const argHandlers = new Map([
+            ['--ollama', (i) => {
                 config.lm.enabled = true;
                 if (args[i + 1] && !args[i + 1].startsWith('--')) {
                     config.lm.modelName = args[++i];
                 }
                 return i;
-            },
-            '--provider': (i) => {
+            }],
+            ['--provider', (i) => {
                 config.lm.provider = args[++i];
                 config.lm.enabled = true;
                 return i;
-            },
-            '--model': (i) => {
+            }],
+            ['--model', (i) => {
                 config.lm.modelName = args[++i];
                 config.lm.enabled = true;
                 return i;
-            },
-            '--modelName': (i) => {
+            }],
+            ['--modelName', (i) => {
                 config.lm.modelName = args[++i];
                 config.lm.enabled = true;
                 return i;
-            },
-            '--base-url': (i) => {
+            }],
+            ['--base-url', (i) => {
                 config.lm.baseUrl = args[++i];
                 return i;
-            },
-            '--temperature': (i) => {
+            }],
+            ['--temperature', (i) => {
                 config.lm.temperature = parseFloat(args[++i]);
                 return i;
-            },
-            '--api-key': (i) => {
+            }],
+            ['--api-key', (i) => {
                 config.lm.apiKey = args[++i];
                 return i;
-            },
-            '--ws-port': (i) => {
+            }],
+            ['--ws-port', (i) => {
                 config.webSocket.port = parseInt(args[++i]);
                 return i;
-            },
-            '--host': (i) => {
+            }],
+            ['--host', (i) => {
                 config.webSocket.host = args[++i];
                 return i;
-            },
-            '--port': (i) => {
+            }],
+            ['--port', (i) => {
                 config.ui.port = parseInt(args[++i]);
                 return i;
-            },
-            '--graph-ui': (i) => {
+            }],
+            ['--graph-ui', (i) => {
                 config.ui.layout = 'graph';
                 return i;
-            },
-            '--layout': (i) => {
+            }],
+            ['--layout', (i) => {
                 config.ui.layout = args[++i];
                 return i;
-            },
-            '--prod': (i) => {
+            }],
+            ['--prod', (i) => {
                 config.ui.dev = false;
                 return i;
-            },
-            '--dev': (i) => {
+            }],
+            ['--dev', (i) => {
                 config.ui.dev = true;
                 return i;
-            },
-            '--demo': (i) => {
+            }],
+            ['--demo', (i) => {
                 config.demo = true;
                 return i;
-            }
-        };
+            }]
+        ]);
 
         // Process arguments using index tracking
         let i = 0;
         while (i < args.length) {
             const arg = args[i];
-            const handler = argHandlers[arg];
+            const handler = argHandlers.get(arg);
 
             if (handler) {
                 i = handler(i);

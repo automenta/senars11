@@ -221,9 +221,10 @@ class FocusSet {
     getTasks(count = 10) {
         const taskEntries = Array.from(this._tasks.values());
 
-        const sortedTaskEntries = sortByProperty(taskEntries, 'priority', true);
+        // Sort by priority in descending order (highest first) using direct comparison
+        taskEntries.sort((a, b) => b.priority - a.priority);
 
-        return sortedTaskEntries.slice(0, count).map(entry => entry.task);
+        return taskEntries.slice(0, Math.min(count, taskEntries.length)).map(entry => entry.task);
     }
 
     getTasksByCompositeScore(count = 10, scoringOptions = {}) {
@@ -324,6 +325,7 @@ class FocusSet {
         let lowestPriorityHash = null;
         let lowestPriority = Infinity;
 
+        // Find the task with the lowest priority efficiently
         for (const [taskHash, entry] of this._tasks) {
             if (entry.priority < lowestPriority) {
                 lowestPriority = entry.priority;
@@ -331,7 +333,7 @@ class FocusSet {
             }
         }
 
-        if (lowestPriorityHash) {
+        if (lowestPriorityHash !== null) {
             this._tasks.delete(lowestPriorityHash);
         }
     }

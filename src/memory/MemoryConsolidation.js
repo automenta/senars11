@@ -462,7 +462,10 @@ export class MemoryConsolidation extends ConfigurableComponent {
         const concepts = memory.getAllConcepts();
         if (concepts.length === 0) return 0;
 
-        const total = concepts.reduce((sum, concept) => sum + concept.useCount, 0);
+        let total = 0;
+        for (const concept of concepts) {
+            total += concept.useCount;
+        }
         return total / concepts.length;
     }
 
@@ -474,7 +477,10 @@ export class MemoryConsolidation extends ConfigurableComponent {
         const concepts = memory.getAllConcepts();
         if (concepts.length === 0) return 0;
 
-        const total = concepts.reduce((sum, concept) => sum + concept.activation, 0);
+        let total = 0;
+        for (const concept of concepts) {
+            total += concept.activation;
+        }
         return total / concepts.length;
     }
 

@@ -173,20 +173,25 @@ export class TaskManager extends BaseComponent {
         });
 
         const totalTasks = Object.values(stats.tasksByType).reduce((sum, count) => sum + count, 0);
-        const priorities = stats.priorities;
+        const {priorities} = stats;
+
+        // Precompute priority statistics for efficiency
+        const priorityStats = {
+            average: Statistics.mean(priorities),
+            std: Statistics.stdDev(priorities),
+            median: Statistics.median(priorities),
+            percentiles: {
+                p25: Statistics.quantile(priorities, 0.25),
+                p75: Statistics.quantile(priorities, 0.75),
+                p95: Statistics.quantile(priorities, 0.95)
+            }
+        };
 
         return {
             ...this._stats,
             tasksByType: stats.tasksByType,
             priorityDistribution: stats.priorityDistribution,
-            averagePriority: Statistics.mean(priorities),
-            priorityStd: Statistics.stdDev(priorities),
-            priorityMedian: Statistics.median(priorities),
-            priorityPercentiles: {
-                p25: Statistics.quantile(priorities, 0.25),
-                p75: Statistics.quantile(priorities, 0.75),
-                p95: Statistics.quantile(priorities, 0.95)
-            },
+            ...priorityStats,
             oldestTask: stats.oldestTask,
             newestTask: stats.newestTask,
             ageRange: stats.newestTask - stats.oldestTask,

@@ -401,21 +401,34 @@ export class MemoryIndex {
     getAllConcepts() {
         const allConcepts = new Set();
 
-        // Use array of indexes to collect concepts from all indexes
-        const indexes = [
-            this._atomicIndex,
-            this._compoundIndex,
-            this._activationIndex,
-            this._temporalIndex,
-            this._relationshipIndex
-        ];
+        // Use direct access to avoid creating and iterating an array
+        if (this._atomicIndex && typeof this._atomicIndex.getAll === 'function') {
+            for (const concept of this._atomicIndex.getAll()) {
+                allConcepts.add(concept);
+            }
+        }
 
-        for (const index of indexes) {
-            if (index && typeof index.getAll === 'function') {
-                const concepts = index.getAll();
-                for (const concept of concepts) {
-                    allConcepts.add(concept);
-                }
+        if (this._compoundIndex && typeof this._compoundIndex.getAll === 'function') {
+            for (const concept of this._compoundIndex.getAll()) {
+                allConcepts.add(concept);
+            }
+        }
+
+        if (this._activationIndex && typeof this._activationIndex.getAll === 'function') {
+            for (const concept of this._activationIndex.getAll()) {
+                allConcepts.add(concept);
+            }
+        }
+
+        if (this._temporalIndex && typeof this._temporalIndex.getAll === 'function') {
+            for (const concept of this._temporalIndex.getAll()) {
+                allConcepts.add(concept);
+            }
+        }
+
+        if (this._relationshipIndex && typeof this._relationshipIndex.getAll === 'function') {
+            for (const concept of this._relationshipIndex.getAll()) {
+                allConcepts.add(concept);
             }
         }
 
@@ -448,7 +461,13 @@ export class MemoryIndex {
             }
         };
 
-        // Count by operator types
+        // Count by operator types efficiently in a single pass
+        const relationshipCounters = {
+            '-->': () => stats.inheritanceEntries++,
+            '==>': () => stats.implicationEntries++,
+            '<->': () => stats.similarityEntries += 2 // bidirectional
+        };
+
         for (const concept of allConcepts) {
             if (concept.term) {
                 if (concept.term.isAtomic) {
@@ -462,12 +481,6 @@ export class MemoryIndex {
                             (stats.compoundTermsByOperator[concept.term.operator] || 0) + 1;
 
                         // Count by relationship type
-                        const relationshipCounters = {
-                            '-->': () => stats.inheritanceEntries++,
-                            '==>': () => stats.implicationEntries++,
-                            '<->': () => stats.similarityEntries += 2 // bidirectional
-                        };
-
                         const counter = relationshipCounters[concept.term.operator];
                         if (counter) counter();
                     }
@@ -475,7 +488,7 @@ export class MemoryIndex {
                     // Count nested operators for compound terms
                     if (concept.term.components) {
                         for (const component of concept.term.components) {
-                            if (component.operator) {
+                            if (component?.operator) {
                                 stats.operatorEntries++; // Increment for each nested operator
                             }
                         }
@@ -487,8 +500,14 @@ export class MemoryIndex {
         // For compoundByOpEntries, count unique operators
         stats.compoundByOpEntries = Object.keys(stats.compoundTermsByOperator).length;
 
-        // For component entries, we count concepts that have components (subterms)
-        stats.componentEntries = this._compoundIndex.getAll().filter(c => c.term && c.term.components).length;
+        // For component entries, count concepts that have components (subterms) more efficiently
+        const compoundConcepts = this._compoundIndex.getAll();
+        stats.componentEntries = 0;
+        for (const concept of compoundConcepts) {
+            if (concept.term && concept.term.components) {
+                stats.componentEntries++;
+            }
+        }
 
         return stats;
     }

@@ -411,16 +411,20 @@ export class NAR extends BaseComponent {
     }
 
     async _processDerivations(results, options) {
-        for (const result of results) {
-            if (result) {
-                const added = await this._inputTask(result, {traceId: options.traceId});
+        const traceId = options.traceId;
+        const validResults = results.filter(Boolean);
 
-                this._eventBus.emit('reasoning.derivation', {
-                    derivedTask: result,
-                    source: 'streamReasoner.step.method',
-                    timestamp: Date.now()
-                }, {traceId: options.traceId});
-            }
+        // Process all valid results with Promise.all for efficiency
+        const addPromises = validResults.map(result => this._inputTask(result, {traceId}));
+        await Promise.all(addPromises);
+
+        // Emit individual events to maintain compatibility with existing tests
+        for (const result of validResults) {
+            this._eventBus.emit('reasoning.derivation', {
+                derivedTask: result,
+                source: 'streamReasoner.step.method',
+                timestamp: Date.now()
+            }, {traceId});
         }
     }
 
@@ -483,28 +487,27 @@ export class NAR extends BaseComponent {
     }
 
     getConceptByName(termString) {
-        if (this._memory) {
-            for (const concept of this._memory.getAllConcepts()) {
-                if (concept.term.toString() === termString) {
-                    return concept;
-                }
-            }
-        }
-        return null;
+        if (!this._memory) return null;
+
+        return this._memory.getAllConcepts().find(concept =>
+            concept.term.toString() === termString
+        ) || null;
     }
 
     getConceptPriorities() {
-        if (this._memory) {
-            return this._memory.getAllConcepts().map(concept => ({
-                term: concept.term.toString(),
-                priority: concept.priority || concept.activation || 0,
-                activation: concept.activation || 0,
-                useCount: concept.useCount || 0,
-                quality: concept.quality || 0,
-                totalTasks: concept.totalTasks || 0
-            }));
-        }
-        return [];
+        if (!this._memory) return [];
+
+        return this._memory.getAllConcepts().map(concept => {
+            const {term, priority, activation, useCount, quality, totalTasks} = concept;
+            return {
+                term: term.toString(),
+                priority: priority || activation || 0,
+                activation: activation || 0,
+                useCount: useCount || 0,
+                quality: quality || 0,
+                totalTasks: totalTasks || 0
+            };
+        });
     }
 
     async deserialize(state) {
@@ -556,7 +559,7 @@ export class NAR extends BaseComponent {
     }
 
     query(queryTerm) {
-        return this._memory.getConcept(queryTerm)?.getTasksByType('BELIEF') || [];
+        return this._memory.getConcept(queryTerm)?.getTasksByType('BELIEF') ?? [];
     }
 
     getBeliefs(queryTerm = null) {
@@ -770,16 +773,18 @@ export class NAR extends BaseComponent {
             const result = await this._withComponentCheck(this._toolIntegration, 'Tool integration is not enabled',
                 toolIntegration => toolIntegration.executeTool(toolId, params, this._createToolContext(context)));
             const duration = Date.now() - startTime;
-            duration > 1000 && this.logger.warn(`Slow tool execution: ${toolId} took ${duration}ms`, {
-                toolId,
-                duration,
-                paramsSize: JSON.stringify(params).length
-            });
+            if (duration > 1000) {
+                this.logger.warn(`Slow tool execution: ${toolId} took ${duration}ms`, {
+                    toolId,
+                    duration,
+                    paramsSize: JSON.stringify(params).length
+                });
+            }
             return result;
         } catch (error) {
             this.logger.error(`Tool execution failed: ${toolId}`, {
                 toolId,
-                error: error.message,
+                error: error?.message || error,
                 duration: Date.now() - startTime
             });
             throw error;

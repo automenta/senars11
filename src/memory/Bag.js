@@ -183,7 +183,7 @@ export class Bag {
         for (const priority of this._items.values()) {
             sum += priority;
         }
-        return sum / this.size;
+        return sum / this._items.size;
     }
 
     getPriority(item) {

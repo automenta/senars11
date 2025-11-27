@@ -80,9 +80,10 @@ export class App extends EventEmitter {
 
     async shutdown() {
         this.log.info('\nShutting down application...');
-        for (const [id, {agent}] of this.agents) {
-            await this._shutdownAgent(agent, id);
-        }
+        const promises = Array.from(this.agents.entries()).map(([id, {agent}]) =>
+            this._shutdownAgent(agent, id)
+        );
+        await Promise.all(promises);
         this.emit('stopped');
     }
 

@@ -89,49 +89,82 @@ export class BaseComponent {
     // Lifecycle operation executor
     async _executeLifecycleOperation(operation, checkCondition, action, metricName = null) {
         if (checkCondition) {
-            if (operation === 'start' && !this._initialized) {
-                this._logger.error(`Cannot start uninitialized component ${this._name}`);
-                return false;
-            }
-            if (operation === 'stop' && !this._started) {
-                this.logWarn(`Component ${this._name} not started`);
-                return true;
-            }
-            if (operation === 'initialize' && this._initialized) {
-                this.logWarn(`Component ${this._name} already initialized`);
-                return true;
-            }
-            if (operation === 'dispose' && this._disposed) {
-                this.logWarn(`Component ${this._name} already disposed`);
-                return true;
+            const validationError = this._validateLifecycleOperation(operation);
+            if (validationError) {
+                this.logWarn(validationError.message);
+                return validationError.returnValue;
             }
         }
 
         try {
-            operation === 'start' && (this._startTime = Date.now());
+            if (operation === 'start') this._startTime = Date.now();
 
             await action();
 
             // Update state after successful operation
-            operation === 'initialize' && (this._initialized = true);
-            operation === 'start' && (this._started = true);
-            operation === 'stop' && (this._started = false);
-            operation === 'dispose' && (this._disposed = true);
+            this._updateComponentState(operation);
 
             // Emit the appropriate event
             this._emitLifecycleEvent(operation);
 
             // Log and update metrics
-            const operationSuffix = operation === 'initialize' ? 'd' :
-                operation === 'start' ? 'ed' :
-                    operation === 'stop' ? 'ped' : 'd';
-            this._logger.info(`${this._name} ${operation}${operationSuffix}`);
+            this._logger.info(`${this._name} ${this._getOperationSuffix(operation)}`);
             metricName && this.incrementMetric(metricName);
             return true;
         } catch (error) {
             this._logger.error(`Failed to ${operation} component`, error);
             return false;
         }
+    }
+
+    /**
+     * Validate lifecycle operation conditions
+     * @private
+     */
+    _validateLifecycleOperation(operation) {
+        const validations = {
+            start: () => !this._initialized && `Cannot start uninitialized component ${this._name}`,
+            stop: () => !this._started && `Component ${this._name} not started`,
+            initialize: () => this._initialized && `Component ${this._name} already initialized`,
+            dispose: () => this._disposed && `Component ${this._name} already disposed`
+        };
+
+        const validation = validations[operation]?.();
+        if (validation) {
+            return {
+                message: validation,
+                returnValue: operation === 'start' ? false : true
+            };
+        }
+
+        return null;
+    }
+
+    /**
+     * Update component state based on operation
+     * @private
+     */
+    _updateComponentState(operation) {
+        const stateUpdates = {
+            initialize: () => this._initialized = true,
+            start: () => this._started = true,
+            stop: () => this._started = false,
+            dispose: () => this._disposed = true
+        };
+        stateUpdates[operation]?.();
+    }
+
+    /**
+     * Get operation suffix for logging
+     * @private
+     */
+    _getOperationSuffix(operation) {
+        const suffixes = {
+            initialize: 'd',
+            start: 'ed',
+            stop: 'ped'
+        };
+        return `${operation}${suffixes[operation] || 'd'}`;
     }
 
     // Lifecycle event emitter
@@ -255,10 +288,11 @@ export class BaseComponent {
 
     // Event emission
     emitEvent(event, data, options = {}) {
+        const currentTime = Date.now();
         this._eventBus.emit(event, {
-            timestamp: Date.now(),
+            timestamp: currentTime,
             component: this._name,
-            uptime: this.uptime,
+            uptime: this._startTime ? currentTime - this._startTime : 0,
             ...data
         }, options);
     }
