@@ -42,14 +42,13 @@ export class PrologParser {
      * Translates to: <predicate(args) --> True>. %1.0;0.9%
      */
     _parseFact(factLine) {
-        const fact = factLine.replace(/\.$/, '').trim(); // Remove trailing dot
+        const fact = factLine.replace(/\.$/, '').trim();
         const relationTerm = this._parsePredicate(fact);
 
-        // Create a belief task with high truth value
         return new Task({
             term: relationTerm,
-            punctuation: '.',  // Belief
-            truth: new Truth(1.0, 0.9),  // High frequency and confidence
+            punctuation: '.',
+            truth: new Truth(1.0, 0.9),
             budget: {priority: 0.8, durability: 0.7, quality: 0.8}
         });
     }
@@ -59,28 +58,21 @@ export class PrologParser {
      * Translates to conditional statements in NARS format
      */
     _parseRule(ruleLine) {
-        const rule = ruleLine.replace(/\.$/, '').trim(); // Remove trailing dot
+        const rule = ruleLine.replace(/\.$/, '').trim();
         const parts = rule.split(':-');
 
-        if (parts.length !== 2) {
-            throw new Error(`Invalid rule format: ${ruleLine}`);
-        }
+        if (parts.length !== 2) throw new Error(`Invalid rule format: ${ruleLine}`);
 
         const [headStr, bodyStr] = parts;
 
         const headTerm = this._parsePredicate(headStr.trim());
-        const bodyParts = this._splitRuleBody(bodyStr.trim());
+        const bodyParts = this._splitByCommaRespectingParens(bodyStr.trim());
         const bodyTerms = bodyParts.map(part => this._parsePredicate(part));
 
-        let bodyTerm;
-        if (bodyTerms.length === 1) {
-            bodyTerm = bodyTerms[0];
-        } else {
-            bodyTerm = this.termFactory.create({
-                operator: '&/',
-                components: bodyTerms,
-            });
-        }
+        const bodyTerm = bodyTerms.length === 1 ? bodyTerms[0] : this.termFactory.create({
+            operator: '&/',
+            components: bodyTerms,
+        });
 
         const implicationTerm = this.termFactory.create({
             operator: '==>',
@@ -89,43 +81,9 @@ export class PrologParser {
 
         return [new Task({
             term: implicationTerm,
-            punctuation: '.', // Belief
-            truth: new Truth(1.0, 0.9), // High frequency and confidence
+            punctuation: '.',
+            truth: new Truth(1.0, 0.9),
         })];
-    }
-
-    /**
-     * Split rule body by commas, respecting nested structures
-     */
-    _splitRuleBody(bodyStr) {
-        if (!bodyStr) return [];
-
-        const parts = [];
-        let currentPart = '';
-        let parenLevel = 0;
-
-        for (let i = 0; i < bodyStr.length; i++) {
-            const char = bodyStr[i];
-
-            if (char === '(') {
-                parenLevel++;
-                currentPart += char;
-            } else if (char === ')') {
-                parenLevel--;
-                currentPart += char;
-            } else if (char === ',' && parenLevel === 0) {
-                parts.push(currentPart.trim());
-                currentPart = '';
-            } else {
-                currentPart += char;
-            }
-        }
-
-        if (currentPart.trim()) {
-            parts.push(currentPart.trim());
-        }
-
-        return parts;
     }
 
     /**
@@ -133,13 +91,12 @@ export class PrologParser {
      * Translates to a question in SeNARS
      */
     _parseQuery(queryLine) {
-        const query = queryLine.replace(/\s*\?$/, '').trim(); // Remove trailing question mark
+        const query = queryLine.replace(/\s*\?$/, '').trim();
         const queryTerm = this._parsePredicate(query);
 
-        // Create a question task
         return new Task({
             term: queryTerm,
-            punctuation: '?'  // Question
+            punctuation: '?'
         });
     }
 
@@ -149,35 +106,25 @@ export class PrologParser {
     _parsePredicate(predicateStr) {
         const predicate = predicateStr.trim();
 
-        // Parse: predicate(arg1, arg2, ...)
         const match = predicate.match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*\(\s*(.*)\s*\)$/);
-        if (!match) {
-            throw new Error(`Invalid predicate format: ${predicateStr}`);
-        }
+        if (!match) throw new Error(`Invalid predicate format: ${predicateStr}`);
 
         const [_, pred, argsStr] = match;
-        const args = this._parseArguments(argsStr);
+        const args = this._splitByCommaRespectingParens(argsStr);
 
-        // Create the relation term: predicate(args) using helper
         return this._createPredicateTerm(pred, args);
     }
 
     /**
      * Helper method to create predicate term structure from arguments
-     * @param {string} predicate - Predicate name
-     * @param {Array} args - Array of argument strings
-     * @returns {Term} Created predicate term
      */
     _createPredicateTerm(predicate, args) {
-        // Create the predicate term: predicate(args)
         const argTerms = args.map(arg => {
-            if (arg.startsWith('_') || /^[A-Z]/.test(arg)) {
-                // Variable
-                return this.termFactory.create({name: `?${arg.toLowerCase()}`, type: 'variable'});
-            } else {
-                // Constant
-                return this.termFactory.create({name: arg.toLowerCase(), type: 'atomic'});
-            }
+            const isVariable = arg.startsWith('_') || /^[A-Z]/.test(arg);
+            return this.termFactory.create({
+                name: isVariable ? `?${arg.toLowerCase()}` : arg.toLowerCase(),
+                type: isVariable ? 'variable' : 'atomic'
+            });
         });
 
         const argsTerm = this.termFactory.create({
@@ -188,57 +135,52 @@ export class PrologParser {
         const predicateTerm = this.termFactory.create({name: predicate, type: 'atomic'});
 
         return this.termFactory.create({
-            operator: '^',  // Operation operator in NARS
+            operator: '^',
             components: [predicateTerm, argsTerm]
         });
     }
 
     /**
-     * Parse arguments string, handling nested terms and lists
+     * Split string by commas, respecting nested parentheses and quotes.
      */
-    _parseArguments(argsStr) {
-        // Simple argument parsing for basic cases
-        // In a full implementation, this would handle nested terms and lists
-        const args = [];
-        let currentArg = '';
-        let parenLevel = 0;
-        let inQuotes = false;
+    _splitByCommaRespectingParens(str) {
+        if (!str) return [];
+        const parts = [];
+        let current = '';
+        let depth = 0;
+        let inQuote = false;
         let quoteChar = null;
 
-        for (let i = 0; i < argsStr.length; i++) {
-            const char = argsStr[i];
+        for (let i = 0; i < str.length; i++) {
+            const char = str[i];
 
-            if (!inQuotes) {
-                if (char === '(') {
-                    parenLevel++;
-                    currentArg += char;
-                } else if (char === ')') {
-                    parenLevel--;
-                    currentArg += char;
-                } else if (char === ',' && parenLevel === 0) {
-                    args.push(currentArg.trim());
-                    currentArg = '';
-                } else if (char === '"' || char === "'") {
-                    inQuotes = true;
-                    quoteChar = char;
-                    currentArg += char;
-                } else {
-                    currentArg += char;
-                }
-            } else {
-                currentArg += char;
-                if (char === quoteChar && argsStr[i - 1] !== '\\') {
-                    inQuotes = false;
+            if (inQuote) {
+                current += char;
+                if (char === quoteChar && str[i - 1] !== '\\') {
+                    inQuote = false;
                     quoteChar = null;
                 }
+                continue;
+            }
+
+            if (char === '"' || char === "'") {
+                inQuote = true;
+                quoteChar = char;
+            }
+
+            if (char === '(') depth++;
+            else if (char === ')') depth--;
+
+            if (char === ',' && depth === 0) {
+                parts.push(current.trim());
+                current = '';
+            } else {
+                current += char;
             }
         }
 
-        if (currentArg.trim()) {
-            args.push(currentArg.trim());
-        }
-
-        return args;
+        if (current.trim()) parts.push(current.trim());
+        return parts;
     }
 }
 
