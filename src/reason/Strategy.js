@@ -69,35 +69,53 @@ export class Strategy {
      */
     async selectSecondaryPremises(primaryPremise) {
         try {
-            // For now, implement a simple strategy
-            // In the future, this would use more sophisticated premise selection logic
-            if (this.config.premiseSelector) {
-                return await this.config.premiseSelector.select(primaryPremise);
+            const results = [];
+
+            // 1. Delegate to sub-strategies
+            for (const strategy of this.strategies) {
+                if (typeof strategy.selectSecondaryPremises === 'function') {
+                    const strategyResults = await strategy.selectSecondaryPremises(primaryPremise);
+                    if (strategyResults && strategyResults.length > 0) {
+                        results.push(...strategyResults);
+                    }
+                }
             }
 
-            // Default strategy: get tasks from focus or memory that could pair with the primary premise
-            // We need to access other tasks in the system to form premise pairs
-            let allTasks = this._getAvailableTasks();
-
-            // Filter tasks to find those that could be meaningfully paired with the primary premise
-            const validSecondaryTasks = allTasks.filter(task =>
-                task &&
-                task !== primaryPremise &&  // Don't pair a task with itself
-                task.term &&  // Has a valid term
-                task.term !== primaryPremise.term  // Different terms
-            );
-
-            // Prioritize secondary premises that are likely to form syllogistic patterns
-            // with the primary premise by looking for matching terms
-            const prioritizedTasks = this._prioritizeCompatibleTasks(primaryPremise, validSecondaryTasks);
+            // 2. Base strategy logic
+            if (this.config.premiseSelector) {
+                const selectorResults = await this.config.premiseSelector.select(primaryPremise);
+                if (selectorResults) results.push(...selectorResults);
+            } else {
+                results.push(...this._selectDefaultSecondaryPremises(primaryPremise));
+            }
 
             // Limit to maxSecondaryPremises if specified
-            return prioritizedTasks.slice(0, this.config.maxSecondaryPremises || 20); // Increased default
+            return results.slice(0, this.config.maxSecondaryPremises || 20); // Increased default
         } catch (error) {
             console.error('Error in selectSecondaryPremises:', error);
             // Return empty array to continue processing instead of failing
             return [];
         }
+    }
+
+    /**
+     * Default selection logic for NAL premises
+     * @private
+     */
+    _selectDefaultSecondaryPremises(primaryPremise) {
+        // Get tasks from focus or memory that could pair with the primary premise
+        let allTasks = this._getAvailableTasks();
+
+        // Filter tasks to find those that could be meaningfully paired with the primary premise
+        const validSecondaryTasks = allTasks.filter(task =>
+            task &&
+            task !== primaryPremise &&  // Don't pair a task with itself
+            task.term &&  // Has a valid term
+            task.term !== primaryPremise.term  // Different terms
+        );
+
+        // Prioritize secondary premises that are likely to form syllogistic patterns
+        return this._prioritizeCompatibleTasks(primaryPremise, validSecondaryTasks);
     }
 
     /**
