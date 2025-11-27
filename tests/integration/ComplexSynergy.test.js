@@ -82,8 +82,8 @@ describe('Complex Neurosymbolic Synergy: Ancestry & Genetics', () => {
                 if (a.startsWith('?')) return termFactory.variable(a);
                 return termFactory.create(a);
             });
-            const argsTerm = termFactory.create(',', argTerms);
-            return termFactory.create('^', [predTerm, argsTerm]);
+            const argsTerm = termFactory.tuple(argTerms);
+            return termFactory.predicate(predTerm, argsTerm);
         };
 
         const queryTerm = createPrologTerm('ancestor', 'alice', 'charlie');

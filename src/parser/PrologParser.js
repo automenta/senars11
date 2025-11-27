@@ -209,7 +209,7 @@ export class PrologParser {
     _parseList(str) {
         // [a, b, c] or [H|T]
         const content = str.slice(1, -1).trim(); // remove [ ]
-        if (!content) return this.termFactory.create('[]'); // Empty list
+        if (!content) return this.termFactory.atomic('[]'); // Empty list
 
         // Check for pipe |
         const pipeSplit = this._splitByDelimiter(content, '|');
@@ -223,7 +223,7 @@ export class PrologParser {
         // Normal list [a, b] -> .(a, .(b, []))
         const items = this._splitByCommaRespectingParens(content);
 
-        let listTerm = this.termFactory.create('[]');
+        let listTerm = this.termFactory.atomic('[]');
         // Build from end
         for (let i = items.length - 1; i >= 0; i--) {
             const itemTerm = this._parseTerm(items[i]);
@@ -238,11 +238,11 @@ export class PrologParser {
             return this.termFactory.create(isVariable ? `?${arg.toLowerCase()}` : arg.toLowerCase());
         });
 
-        const argsTerm = this.termFactory.create(',', argTerms);
+        const argsTerm = this.termFactory.tuple(argTerms);
 
         const predicateTerm = this.termFactory.create(predicate);
 
-        return this.termFactory.create('^', [predicateTerm, argsTerm]);
+        return this.termFactory.predicate(predicateTerm, argsTerm);
     }
 
     _splitByDelimiter(str, delimiter) {

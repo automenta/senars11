@@ -65,4 +65,32 @@ describe('TermFactory', () => {
             expect(term1(factory)).toBe(term2(factory));
         });
     });
+
+    describe('Convenience Methods', () => {
+        test('predicate should create ^ term', () => {
+            const pred = factory.create('pred');
+            const args = factory.create('args');
+            const term = factory.predicate(pred, args);
+            expect(term.operator).toBe('^');
+            expect(term.components).toHaveLength(2);
+            expect(term.components[0]).toBe(pred);
+            expect(term.components[1]).toBe(args);
+        });
+
+        test('tuple should create , term', () => {
+            const a = factory.create('a');
+            const b = factory.create('b');
+            const term = factory.tuple(a, b);
+            expect(term.operator).toBe(',');
+            expect(term.components).toHaveLength(2);
+            expect(term.components[0]).toBe(a);
+            expect(term.components[1]).toBe(b);
+        });
+
+        test('atomic should create atomic term', () => {
+            const term = factory.atomic('A');
+            expect(term.isAtomic).toBe(true);
+            expect(term.name).toBe('A');
+        });
+    });
 });
