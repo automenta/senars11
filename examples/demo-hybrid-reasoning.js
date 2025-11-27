@@ -33,13 +33,13 @@ async function demonstrateHybridReasoning() {
     try {
         console.log('🚀 Starting SeNARS with hybrid reasoning capabilities...');
         const agent = await app.start({startAgent: true});
-        
+
         console.log('✅ SeNARS started with both NAL (symbolic) and LM (neural) reasoning!\n');
 
         // Demonstration 1: Symbolic reasoning with knowledge facts
         console.log('1️⃣  SYMBOLIC REASONING (NAL Logic)');
         console.log('   Input: Knowledge facts about animals...');
-        await agent.input('(bird --> animal).'); 
+        await agent.input('(bird --> animal).');
         await agent.input('(robin --> bird).');
         console.log('   Facts: (bird --> animal) and (robin --> bird)');
         console.log('   Expected: (robin --> animal) [via syllogistic reasoning]\n');
@@ -96,11 +96,12 @@ async function demonstrateHybridReasoning() {
         // Clean shutdown
         await app.shutdown();
         console.log('\n✅ Hybrid reasoning demonstration completed successfully!');
-        
+
     } catch (error) {
         console.error('❌ Error during demonstration:', error.message);
         console.error('Stack:', error.stack);
-        await app.shutdown().catch(() => {}); // Attempt cleanup
+        await app.shutdown().catch(() => {
+        }); // Attempt cleanup
     }
 }
 

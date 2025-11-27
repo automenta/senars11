@@ -6,7 +6,6 @@
 
 import {NALRule} from './NALRule.js';
 import {Truth} from '../../../Truth.js';
-import {TermType} from '../../../term/Term.js';
 import {TermFactory} from '../../../term/TermFactory.js';
 
 export class SyllogisticRule extends NALRule {

@@ -33,16 +33,16 @@ async function demonstrateHybridReasoning() {
     try {
         console.log('🚀 Starting SeNARS with hybrid reasoning capabilities...');
         const agent = await app.start({startAgent: true});
-        
+
         console.log('✅ SeNARS started with both NAL (symbolic) and LM (neural) reasoning!\n');
 
         // Demonstration 1: Natural language input with reasoning
         console.log('1️⃣  NATURAL LANGUAGE UNDERSTANDING & REASONING');
         console.log('   Input: Knowledge facts about animals...');
-        
+
         const inputs = [
             "Birds are animals.",
-            "Robins are birds.", 
+            "Robins are birds.",
             "If birds are animals and robins are birds, then what can we conclude?",
             "What is the relationship between robins and animals?",
             "Robins can fly and birds can fly.",
@@ -80,11 +80,12 @@ async function demonstrateHybridReasoning() {
         // Clean shutdown
         await app.shutdown();
         console.log('\n✅ Hybrid reasoning demonstration completed successfully!');
-        
+
     } catch (error) {
         console.error('❌ Error during demonstration:', error.message);
         console.error('Stack:', error.stack);
-        await app.shutdown().catch(() => {}); // Attempt cleanup
+        await app.shutdown().catch(() => {
+        }); // Attempt cleanup
     }
 }
 

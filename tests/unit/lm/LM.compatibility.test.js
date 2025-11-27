@@ -21,7 +21,7 @@ describe('LM Interface Compatibility', () => {
 
     test('generateText should support provider with invoke method (LangChain style)', async () => {
         const provider = {
-            invoke: jest.fn().mockResolvedValue({ content: 'response-invoke' })
+            invoke: jest.fn().mockResolvedValue({content: 'response-invoke'})
         };
         lm.registerProvider('p2', provider);
         const result = await lm.generateText('test', {}, 'p2');

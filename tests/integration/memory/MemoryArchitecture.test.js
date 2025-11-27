@@ -128,19 +128,19 @@ describe('Memory Architecture', () => {
         test('should properly index different relationship types', () => {
             // Create various compound terms
             const inheritanceTerm = termFactory.inheritance(
-                    termFactory.atomic('dog'),
-                    termFactory.atomic('animal')
-                );
+                termFactory.atomic('dog'),
+                termFactory.atomic('animal')
+            );
 
             const similarityTerm = termFactory.similarity(
-                    termFactory.atomic('cat'),
-                    termFactory.atomic('feline')
-                );
+                termFactory.atomic('cat'),
+                termFactory.atomic('feline')
+            );
 
             const conjunctionTerm = termFactory.conjunction(
-                    termFactory.atomic('rain'),
-                    termFactory.atomic('wet')
-                );
+                termFactory.atomic('rain'),
+                termFactory.atomic('wet')
+            );
 
             // Create concepts for indexing
             const inheritanceConcept = new Concept(inheritanceTerm, {});

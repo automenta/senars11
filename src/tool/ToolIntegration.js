@@ -47,13 +47,13 @@ export class ToolIntegration extends BaseComponent {
             const toolModules = await import('./index.js');
             const toolConfigs = this._getToolConfigs();
 
-            for (const { id, className, category, description } of toolConfigs) {
+            for (const {id, className, category, description} of toolConfigs) {
                 const toolClass = toolModules[className];
                 if (!toolClass) continue;
 
                 try {
                     const tool = new toolClass();
-                    this.registry.registerTool(id, tool, { category, description });
+                    this.registry.registerTool(id, tool, {category, description});
                 } catch (toolError) {
                     this.logger.warn(`Failed to instantiate tool ${id}, skipping:`, toolError.message);
                 }
@@ -70,11 +70,36 @@ export class ToolIntegration extends BaseComponent {
 
     _getToolConfigs() {
         return [
-            { id: 'file-operations', className: 'FileOperationsTool', category: 'file-operations', description: 'File operations including read, write, append, delete, list, and stat' },
-            { id: 'command-executor', className: 'CommandExecutorTool', category: 'command-execution', description: 'Safe command execution in sandboxed environment' },
-            { id: 'web-automation', className: 'WebAutomationTool', category: 'web-automation', description: 'Web automation including fetch, scrape, and check operations' },
-            { id: 'media-processing', className: 'MediaProcessingTool', category: 'media-processing', description: 'Media processing including PDF, image, and text extraction' },
-            { id: 'embedding', className: 'EmbeddingTool', category: 'embedding', description: 'Text embedding, similarity, and comparison operations' }
+            {
+                id: 'file-operations',
+                className: 'FileOperationsTool',
+                category: 'file-operations',
+                description: 'File operations including read, write, append, delete, list, and stat'
+            },
+            {
+                id: 'command-executor',
+                className: 'CommandExecutorTool',
+                category: 'command-execution',
+                description: 'Safe command execution in sandboxed environment'
+            },
+            {
+                id: 'web-automation',
+                className: 'WebAutomationTool',
+                category: 'web-automation',
+                description: 'Web automation including fetch, scrape, and check operations'
+            },
+            {
+                id: 'media-processing',
+                className: 'MediaProcessingTool',
+                category: 'media-processing',
+                description: 'Media processing including PDF, image, and text extraction'
+            },
+            {
+                id: 'embedding',
+                className: 'EmbeddingTool',
+                category: 'embedding',
+                description: 'Text embedding, similarity, and comparison operations'
+            }
         ];
     }
 
@@ -84,17 +109,17 @@ export class ToolIntegration extends BaseComponent {
     async executeTool(toolId, params, context = {}) {
         const startTime = Date.now();
         try {
-            const result = await this.engine.executeTool(toolId, params, { reasoningContext: context });
+            const result = await this.engine.executeTool(toolId, params, {reasoningContext: context});
             const executionTime = this._logToolUsage(toolId, params, result, startTime, context);
-            return { ...result, executionTime };
+            return {...result, executionTime};
         } catch (error) {
             this.logger.error(`Tool execution failed: ${toolId}`, {
                 error: error.message,
                 params: JSON.stringify(params).substring(0, 200)
             });
-            const errorResult = { success: false, error: error.message, toolId };
+            const errorResult = {success: false, error: error.message, toolId};
             const executionTime = this._logToolUsage(toolId, params, errorResult, startTime, context);
-            return { ...errorResult, executionTime };
+            return {...errorResult, executionTime};
         }
     }
 
@@ -148,12 +173,12 @@ export class ToolIntegration extends BaseComponent {
      * Get tool usage statistics
      */
     getUsageStats() {
-        const { totalCalls, successfulCalls } = this.toolUsageHistory.reduce(
+        const {totalCalls, successfulCalls} = this.toolUsageHistory.reduce(
             (acc, item) => ({
                 totalCalls: acc.totalCalls + 1,
                 successfulCalls: acc.successfulCalls + (item.result.success ? 1 : 0),
             }),
-            { totalCalls: 0, successfulCalls: 0 }
+            {totalCalls: 0, successfulCalls: 0}
         );
 
         return {

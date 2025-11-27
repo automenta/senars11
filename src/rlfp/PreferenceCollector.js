@@ -3,7 +3,7 @@
  *
  * This component is responsible for presenting pairs of reasoning trajectories to the user
  * and collecting their feedback on which trajectory they prefer. This feedback is used
-import fs from 'fs';
+ import fs from 'fs';
  * by the RLFPLearner to fine-tune the agent's language model.
  */
 class PreferenceCollector {
@@ -22,7 +22,7 @@ class PreferenceCollector {
         console.log(this._formatTrajectoryForDisplay(trajectoryB));
 
         const preference = await this._getUserInput('Which trajectory is better? (A/B): ');
-        const preferenceData = { trajectoryA, trajectoryB, preference };
+        const preferenceData = {trajectoryA, trajectoryB, preference};
         this.preferences.push(preferenceData);
         return preferenceData;
     }
@@ -44,4 +44,4 @@ class PreferenceCollector {
     }
 }
 
-export { PreferenceCollector };
+export {PreferenceCollector};

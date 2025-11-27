@@ -1,5 +1,5 @@
-import React, {useRef, useState, useMemo} from 'react';
-import {Box, Text, useInput, useStdin} from 'ink';
+import React, {useMemo, useRef, useState} from 'react';
+import {Box, Text, useInput} from 'ink';
 import TextInput from 'ink-text-input';
 import {v4 as uuidv4} from 'uuid';
 import {handleError} from '../../../src/util/ErrorHandler.js';
@@ -24,19 +24,19 @@ export const TUI = ({engine, app}) => {
 
     // Reasoner control functions using Message Handler
     const handleControlCommand = async (type) => {
-         const res = await messageHandler.processMessage({type: `control/${type}`});
-         if (res.payload?.result) {
-             const result = res.payload.result;
-             if (typeof result === 'string') {
-                 addLog(result, 'success');
-             } else {
-                 try {
-                     addLog(JSON.stringify(result), 'success');
-                 } catch (e) {
-                     addLog(`[Object data]`, 'success');
-                 }
-             }
-         }
+        const res = await messageHandler.processMessage({type: `control/${type}`});
+        if (res.payload?.result) {
+            const result = res.payload.result;
+            if (typeof result === 'string') {
+                addLog(result, 'success');
+            } else {
+                try {
+                    addLog(JSON.stringify(result), 'success');
+                } catch (e) {
+                    addLog(`[Object data]`, 'success');
+                }
+            }
+        }
     };
 
     const handleRunCommand = () => handleControlCommand('start');
@@ -48,33 +48,33 @@ export const TUI = ({engine, app}) => {
     };
 
     const handleHelpCommand = async () => {
-         const res = await messageHandler.processMessage({type: '/help'});
-         if (typeof res === 'string') {
-             res.split('\n').forEach(line => addLog(line, 'info'));
-         } else {
-             // Fallback help text with mode commands included
-             const helpText = [
-                 '🤖 Available commands:',
-                 '  /help            - Show this help message',
-                 '  /clear           - Clear the log display',
-                 '  /natural         - Switch to natural language (agent) mode',
-                 '  /narsese         - Switch to Narsese mode',
-                 '  /mode [agent|narsese] - Show or change input mode',
-                 '  /stats           - Show system statistics',
-                 '  /beliefs         - List current beliefs',
-                 '  /goals           - List current goals',
-                 '  /questions       - List active questions',
-                 '  /tasks           - List current tasks',
-                 '  /trace [on|off]  - Toggle derivation trace',
-                 '  /step [n]        - Execute n inference cycles',
-                 '  /reset           - Reset the system',
-                 '  /demo [name]     - List or run demo files',
-                 '  /run <path>      - Execute a .nars file',
-                 '  /save            - Save state to file',
-                 '  /load <path>     - Load state from file',
-             ];
-             helpText.forEach(line => addLog(line, 'info'));
-         }
+        const res = await messageHandler.processMessage({type: '/help'});
+        if (typeof res === 'string') {
+            res.split('\n').forEach(line => addLog(line, 'info'));
+        } else {
+            // Fallback help text with mode commands included
+            const helpText = [
+                '🤖 Available commands:',
+                '  /help            - Show this help message',
+                '  /clear           - Clear the log display',
+                '  /natural         - Switch to natural language (agent) mode',
+                '  /narsese         - Switch to Narsese mode',
+                '  /mode [agent|narsese] - Show or change input mode',
+                '  /stats           - Show system statistics',
+                '  /beliefs         - List current beliefs',
+                '  /goals           - List current goals',
+                '  /questions       - List active questions',
+                '  /tasks           - List current tasks',
+                '  /trace [on|off]  - Toggle derivation trace',
+                '  /step [n]        - Execute n inference cycles',
+                '  /reset           - Reset the system',
+                '  /demo [name]     - List or run demo files',
+                '  /run <path>      - Execute a .nars file',
+                '  /save            - Save state to file',
+                '  /load <path>     - Load state from file',
+            ];
+            helpText.forEach(line => addLog(line, 'info'));
+        }
     };
 
     // Toggle Mode
@@ -124,7 +124,10 @@ export const TUI = ({engine, app}) => {
                     return;
                 case 'c':
                     addLog('👋 Agent TUI terminated', 'info');
-                    try { engine.shutdown(); } catch(e) {}
+                    try {
+                        engine.shutdown();
+                    } catch (e) {
+                    }
                     return process.exit(0);
                 case 'm':
                     toggleMode();
@@ -180,19 +183,19 @@ export const TUI = ({engine, app}) => {
                     // Handle result
                     const output = res.payload?.result ?? res;
                     if (output) {
-                         if (typeof output === 'string') {
-                             output.split('\n').forEach(line => addLog(line, 'success'));
-                         } else {
-                             try {
-                                 addLog(JSON.stringify(output), 'success');
-                             } catch (e) {
-                                 if (output && typeof output === 'object' && Object.keys(output).length > 0) {
-                                     addLog(`[Object with ${Object.keys(output).length} keys]`, 'success');
-                                 } else {
-                                     addLog(`[Object data]`, 'success');
-                                 }
-                             }
-                         }
+                        if (typeof output === 'string') {
+                            output.split('\n').forEach(line => addLog(line, 'success'));
+                        } else {
+                            try {
+                                addLog(JSON.stringify(output), 'success');
+                            } catch (e) {
+                                if (output && typeof output === 'object' && Object.keys(output).length > 0) {
+                                    addLog(`[Object with ${Object.keys(output).length} keys]`, 'success');
+                                } else {
+                                    addLog(`[Object data]`, 'success');
+                                }
+                            }
+                        }
                     } else if (res.error) {
                         addLog(`❌ ${res.error}`, 'error');
                     }

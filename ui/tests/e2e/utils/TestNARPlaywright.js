@@ -1,8 +1,8 @@
-import { expect } from '@playwright/test';
-import { NarPage } from './NarPage.js';
-import { TaskMatch } from '../../../../src/testing/TaskMatch.js';
-import { NarseseParser } from '../../../../src/parser/NarseseParser.js';
-import { TermFactory } from '../../../../src/term/TermFactory.js';
+import {expect} from '@playwright/test';
+import {NarPage} from './NarPage.js';
+import {TaskMatch} from '../../../../src/testing/TaskMatch.js';
+import {NarseseParser} from '../../../../src/parser/NarseseParser.js';
+import {TermFactory} from '../../../../src/term/TermFactory.js';
 
 /**
  * TestNARPlaywright - A fluent API for testing SeNARS via Playwright.
@@ -30,7 +30,7 @@ export class TestNARPlaywright {
      */
     input(termStr, freq, conf) {
         this._validateNarsese(termStr);
-        this.operations.push({ type: 'input', termStr, freq, conf });
+        this.operations.push({type: 'input', termStr, freq, conf});
         return this;
     }
 
@@ -40,7 +40,7 @@ export class TestNARPlaywright {
      * @returns {TestNARPlaywright}
      */
     run(cycles = 1) {
-        this.operations.push({ type: 'run', cycles });
+        this.operations.push({type: 'run', cycles});
         return this;
     }
 
@@ -50,7 +50,7 @@ export class TestNARPlaywright {
      * @returns {TestNARPlaywright}
      */
     step(count = 1) {
-        this.operations.push({ type: 'step', count });
+        this.operations.push({type: 'step', count});
         return this;
     }
 
@@ -61,7 +61,7 @@ export class TestNARPlaywright {
      */
     expect(term) {
         const matcher = term instanceof TaskMatch ? term : new TaskMatch(term);
-        this.operations.push({ type: 'expect', matcher, shouldExist: true });
+        this.operations.push({type: 'expect', matcher, shouldExist: true});
         return this;
     }
 
@@ -72,7 +72,7 @@ export class TestNARPlaywright {
      */
     expectNot(term) {
         const matcher = term instanceof TaskMatch ? term : new TaskMatch(term);
-        this.operations.push({ type: 'expect', matcher, shouldExist: false });
+        this.operations.push({type: 'expect', matcher, shouldExist: false});
         return this;
     }
 
@@ -82,7 +82,7 @@ export class TestNARPlaywright {
      * @returns {TestNARPlaywright}
      */
     expectGraph(nodeName) {
-        this.operations.push({ type: 'expectGraph', nodeName, shouldExist: true });
+        this.operations.push({type: 'expectGraph', nodeName, shouldExist: true});
         return this;
     }
 
@@ -139,7 +139,7 @@ export class TestNARPlaywright {
             if (!op.shouldExist && found) {
                 throw new Error(`Unexpected term found: ${op.matcher.termFilter}`);
             }
-        }).toPass({ timeout: 10000, intervals: [500] });
+        }).toPass({timeout: 10000, intervals: [500]});
     }
 
     async _findInLogs(logsText, matcher) {

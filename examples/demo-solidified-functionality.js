@@ -33,7 +33,7 @@ async function demonstrateSolidifiedFunctionality() {
     try {
         console.log('🚀 Starting SeNARS with full tool integration...\n');
         const agent = await app.start({startAgent: true});
-        
+
         console.log('✅ SeNARS started with:');
         console.log('   • Transformers.js LM provider');
         console.log('   • Tool integration enabled');
@@ -45,7 +45,7 @@ async function demonstrateSolidifiedFunctionality() {
 
         // Create and register an explicit NAR control tool
         const narControlTool = new NARControlTool(agent.nar);
-        
+
         // Add a belief
         const beliefResult = await narControlTool.execute({
             action: 'add_belief',
@@ -55,7 +55,7 @@ async function demonstrateSolidifiedFunctionality() {
 
         // Add another belief
         const belief2Result = await narControlTool.execute({
-            action: 'add_belief', 
+            action: 'add_belief',
             content: '(mammal --> warm-blooded).'
         });
         console.log(`   Added belief: ${belief2Result.message}\n`);
@@ -75,7 +75,7 @@ async function demonstrateSolidifiedFunctionality() {
         if (agent.lm && agent.lm.providers && agent.lm.providers.get('transformers')) {
             const provider = agent.lm.providers.get('transformers');
             console.log(`   Available LM tools: ${provider.tools ? provider.tools.length : 0}`);
-            
+
             if (provider.tools && provider.tools.length > 0) {
                 console.log('   LM tools include:');
                 provider.tools.forEach(tool => {
@@ -119,21 +119,21 @@ async function demonstrateSolidifiedFunctionality() {
 
         // Test 4: Demonstrate advanced reasoning flow
         console.log('5️⃣  ADVANCED REASONING FLOW');
-        
+
         // Add complex knowledge through the NAR control
         await narControlTool.execute({
             action: 'add_belief',
             content: '(student --> person).'
         });
-        
+
         await narControlTool.execute({
-            action: 'add_belief', 
+            action: 'add_belief',
             content: '(person --> mortal).'
         });
-        
+
         // Execute a reasoning step
         await narControlTool.execute({action: 'step'});
-        
+
         console.log('   ✅ Complex reasoning flow executed');
         console.log('   Beliefs: (student --> person), (person --> mortal)');
         console.log('   Result: Should derive (student --> mortal) through transitivity\n');
@@ -151,11 +151,12 @@ async function demonstrateSolidifiedFunctionality() {
 
         await app.shutdown();
         console.log('\n✅ Solidified functionality demonstration completed!');
-        
+
     } catch (error) {
         console.error('❌ Error during demonstration:', error.message);
         console.error('Stack:', error.stack);
-        await app.shutdown().catch(() => {});
+        await app.shutdown().catch(() => {
+        });
     }
 }
 

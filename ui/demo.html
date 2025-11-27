@@ -5,129 +5,132 @@
     <!-- Verified for Unified Demo System -->
     <title>SeNARS Demo System</title>
     <link href="style.css" rel="stylesheet">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600&display=swap"
+          rel="stylesheet">
 </head>
 <body class="demo-runner-body">
-    <div class="app-layout">
-        <!-- Left Sidebar (Demos) -->
-        <aside id="sidebar" class="sidebar">
-            <div class="sidebar-header">
-                <h2>SeNARS Demos</h2>
-                <div class="search-box">
-                    <input type="text" id="search-input" placeholder="Search demos... (Ctrl+K)">
-                    <span class="shortcut-hint">⌘K</span>
-                </div>
-            </div>
-            <div id="demo-list" class="demo-list">
-                <div class="loading-state">Loading demos...</div>
-            </div>
-        </aside>
-
-        <!-- Main Content -->
-        <main class="main-content">
-            <header class="top-bar">
-                <div class="demo-info">
-                    <h2 id="demo-title">Select a Demo</h2>
-                    <p id="demo-description">Choose a demo from the sidebar to begin.</p>
-                </div>
-                <div class="view-controls">
-                    <button class="icon-btn" id="btn-toggle-source" title="Source Code">📝</button>
-                    <button class="icon-btn" id="btn-toggle-graph" title="Graph View">📊</button>
-                    <button class="icon-btn" id="btn-toggle-metrics" title="Metrics">📈</button>
-                    <button class="icon-btn" id="btn-clear-console" title="Clear Console">🧹</button>
-                </div>
-                <div class="header-controls">
-                    <div class="status-badge" id="connection-status">Disconnected</div>
-                    <div class="playback-controls">
-                        <button id="btn-play-pause" class="icon-btn" title="Run/Pause" disabled>▶</button>
-                        <button id="btn-step" class="icon-btn" title="Step" disabled>⏯</button>
-                        <button id="btn-reset" class="icon-btn" title="Reset">🔄</button>
-                    </div>
-                    <button id="btn-config" class="icon-btn" title="Configuration">⚙️</button>
-                </div>
-            </header>
-
-            <div class="main-view">
-                <!-- Console View (Main) -->
-                <div id="console-view" class="console-wrapper">
-                    <div id="console-container" class="console-output"></div>
-
-                    <div class="console-input-area">
-                        <div class="input-wrapper">
-                            <span class="prompt">></span>
-                            <input type="text" id="command-input" placeholder="Enter command or Narsese..." autocomplete="off">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Right Sidebar (Source/Graph) -->
-                <aside id="right-sidebar" class="right-sidebar hidden">
-                    <div class="sidebar-header">
-                         <span id="right-sidebar-title">View</span>
-                         <button class="icon-btn" id="btn-close-right-sidebar" title="Close">×</button>
-                    </div>
-
-                    <div id="source-view" class="sidebar-content hidden">
-                        <div class="editor-container">
-                            <textarea id="source-editor" class="source-editor" spellcheck="false" placeholder="Select a demo to view source..."></textarea>
-                            <div class="editor-toolbar">
-                                <button id="btn-run-custom" class="primary-btn">Run Custom</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="graph-view" class="sidebar-content hidden">
-                        <div id="graph-container" class="cytoscape-container"></div>
-                    </div>
-
-                    <div id="metrics-view" class="sidebar-content hidden">
-                        <div class="metrics-panel" style="padding: 1rem;">
-                            <h3>Demo Metrics</h3>
-                            <pre id="metrics-content" style="font-size: 0.85rem; overflow: auto;"></pre>
-                        </div>
-                    </div>
-                </aside>
-            </div>
-        </main>
-
-        <!-- Config Panel Overlay -->
-        <div id="config-overlay" class="config-overlay hidden">
-            <div class="config-panel">
-                <div class="config-header">
-                    <h3>Configuration</h3>
-                    <button id="btn-close-config" class="close-btn">×</button>
-                </div>
-                <div id="config-content" class="config-content">
-                    <!-- Config items injected here -->
-                </div>
-                <div class="config-footer">
-                    <button id="btn-save-config" class="primary-btn">Apply & Restart</button>
-                </div>
+<div class="app-layout">
+    <!-- Left Sidebar (Demos) -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h2>SeNARS Demos</h2>
+            <div class="search-box">
+                <input id="search-input" placeholder="Search demos... (Ctrl+K)" type="text">
+                <span class="shortcut-hint">⌘K</span>
             </div>
         </div>
+        <div class="demo-list" id="demo-list">
+            <div class="loading-state">Loading demos...</div>
+        </div>
+    </aside>
 
-        <!-- Confirmation Modal -->
-        <div id="confirmation-modal" class="modal hidden">
-            <div class="modal-content">
-                <h3>Confirm Reset</h3>
-                <p>Are you sure you want to reset the current demo? This cannot be undone.</p>
-                <div class="modal-buttons">
-                    <button id="btn-confirm-reset" class="primary-btn">Yes, Reset</button>
-                    <button id="btn-cancel-reset" class="secondary-btn">Cancel</button>
+    <!-- Main Content -->
+    <main class="main-content">
+        <header class="top-bar">
+            <div class="demo-info">
+                <h2 id="demo-title">Select a Demo</h2>
+                <p id="demo-description">Choose a demo from the sidebar to begin.</p>
+            </div>
+            <div class="view-controls">
+                <button class="icon-btn" id="btn-toggle-source" title="Source Code">📝</button>
+                <button class="icon-btn" id="btn-toggle-graph" title="Graph View">📊</button>
+                <button class="icon-btn" id="btn-toggle-metrics" title="Metrics">📈</button>
+                <button class="icon-btn" id="btn-clear-console" title="Clear Console">🧹</button>
+            </div>
+            <div class="header-controls">
+                <div class="status-badge" id="connection-status">Disconnected</div>
+                <div class="playback-controls">
+                    <button class="icon-btn" disabled id="btn-play-pause" title="Run/Pause">▶</button>
+                    <button class="icon-btn" disabled id="btn-step" title="Step">⏯</button>
+                    <button class="icon-btn" id="btn-reset" title="Reset">🔄</button>
                 </div>
+                <button class="icon-btn" id="btn-config" title="Configuration">⚙️</button>
+            </div>
+        </header>
+
+        <div class="main-view">
+            <!-- Console View (Main) -->
+            <div class="console-wrapper" id="console-view">
+                <div class="console-output" id="console-container"></div>
+
+                <div class="console-input-area">
+                    <div class="input-wrapper">
+                        <span class="prompt">></span>
+                        <input autocomplete="off" id="command-input" placeholder="Enter command or Narsese..."
+                               type="text">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Sidebar (Source/Graph) -->
+            <aside class="right-sidebar hidden" id="right-sidebar">
+                <div class="sidebar-header">
+                    <span id="right-sidebar-title">View</span>
+                    <button class="icon-btn" id="btn-close-right-sidebar" title="Close">×</button>
+                </div>
+
+                <div class="sidebar-content hidden" id="source-view">
+                    <div class="editor-container">
+                        <textarea class="source-editor" id="source-editor" placeholder="Select a demo to view source..."
+                                  spellcheck="false"></textarea>
+                        <div class="editor-toolbar">
+                            <button class="primary-btn" id="btn-run-custom">Run Custom</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sidebar-content hidden" id="graph-view">
+                    <div class="cytoscape-container" id="graph-container"></div>
+                </div>
+
+                <div class="sidebar-content hidden" id="metrics-view">
+                    <div class="metrics-panel" style="padding: 1rem;">
+                        <h3>Demo Metrics</h3>
+                        <pre id="metrics-content" style="font-size: 0.85rem; overflow: auto;"></pre>
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </main>
+
+    <!-- Config Panel Overlay -->
+    <div class="config-overlay hidden" id="config-overlay">
+        <div class="config-panel">
+            <div class="config-header">
+                <h3>Configuration</h3>
+                <button class="close-btn" id="btn-close-config">×</button>
+            </div>
+            <div class="config-content" id="config-content">
+                <!-- Config items injected here -->
+            </div>
+            <div class="config-footer">
+                <button class="primary-btn" id="btn-save-config">Apply & Restart</button>
             </div>
         </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.25.0/cytoscape.min.js"></script>
-    <script>
-        // Inject WebSocket configuration from server
-        window.WEBSOCKET_CONFIG = {
-            port: '{{WEBSOCKET_PORT}}',
-            host: window.location.hostname || 'localhost'
-        };
-    </script>
-    <script src="src/demo-runner/index.js" type="module"></script>
+    <!-- Confirmation Modal -->
+    <div class="modal hidden" id="confirmation-modal">
+        <div class="modal-content">
+            <h3>Confirm Reset</h3>
+            <p>Are you sure you want to reset the current demo? This cannot be undone.</p>
+            <div class="modal-buttons">
+                <button class="primary-btn" id="btn-confirm-reset">Yes, Reset</button>
+                <button class="secondary-btn" id="btn-cancel-reset">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.25.0/cytoscape.min.js"></script>
+<script>
+    // Inject WebSocket configuration from server
+    window.WEBSOCKET_CONFIG = {
+        port: '{{WEBSOCKET_PORT}}',
+        host: window.location.hostname || 'localhost'
+    };
+</script>
+<script src="src/demo-runner/index.js" type="module"></script>
 </body>
 </html>

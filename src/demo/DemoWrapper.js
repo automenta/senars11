@@ -256,27 +256,27 @@ export class DemoWrapper {
     }
 
     async runCustomDemo(code, type) {
-         await this.stopDemo();
+        await this.stopDemo();
 
-         this.isRunning = true;
-         this.currentDemoId = 'custom';
+        this.isRunning = true;
+        this.currentDemoId = 'custom';
 
-         await this.sendDemoState('custom', { state: 'running' });
+        await this.sendDemoState('custom', {state: 'running'});
 
-         try {
-             await this.demosManager.runCustomDemo(code, type,
-                 this.sendDemoStep.bind(this),
-                 this.waitIfNotPaused.bind(this),
-                 this.nar
-             );
-             await this.sendDemoState('custom', { state: 'completed' });
-         } catch (error) {
-             console.error('Error running custom demo:', error);
-             await this.sendDemoState('custom', { state: 'error', error: error.message });
-         } finally {
-             this.isRunning = false;
-             this.currentDemoId = null;
-         }
+        try {
+            await this.demosManager.runCustomDemo(code, type,
+                this.sendDemoStep.bind(this),
+                this.waitIfNotPaused.bind(this),
+                this.nar
+            );
+            await this.sendDemoState('custom', {state: 'completed'});
+        } catch (error) {
+            console.error('Error running custom demo:', error);
+            await this.sendDemoState('custom', {state: 'error', error: error.message});
+        } finally {
+            this.isRunning = false;
+            this.currentDemoId = null;
+        }
     }
 
     async sendDemoState(demoId, state) {
@@ -321,7 +321,7 @@ export class DemoWrapper {
                 const source = await this.demosManager.getDemoSource(demoId);
                 this.webSocketMonitor._broadcastToSubscribedClients({
                     type: 'demoSource',
-                    payload: { demoId, source }
+                    payload: {demoId, source}
                 });
             } catch (e) {
                 console.error('Error sending demo source:', e);

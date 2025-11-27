@@ -559,8 +559,8 @@ export class StatsCommand extends AgentCommand {
         // Get task counts from task manager
         if (agent.taskManager && typeof agent.taskManager.findTasksByType === 'function') {
             taskCount = agent.taskManager.findTasksByType('BELIEF').length +
-                       agent.taskManager.findTasksByType('GOAL').length +
-                       agent.taskManager.findTasksByType('QUESTION').length;
+                agent.taskManager.findTasksByType('GOAL').length +
+                agent.taskManager.findTasksByType('QUESTION').length;
             beliefCount = agent.taskManager.findTasksByType('BELIEF').length;
         }
 
@@ -639,14 +639,14 @@ export class ThemeCommand extends AgentCommand {
         if (args.length === 0) {
             return `Available themes: default, light, dark, matrix, nord`;
         }
-        
+
         const theme = args[0];
         const validThemes = ['default', 'light', 'dark', 'matrix', 'nord'];
-        
+
         if (!validThemes.includes(theme)) {
             return `❌ Invalid theme. Available: ${validThemes.join(', ')}`;
         }
-        
+
         // This would need to be implemented in the UI layer to change actual colors
         // For now, acknowledge the command
         return `🎨 Theme set to ${theme} (if supported by terminal).`;

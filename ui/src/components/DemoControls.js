@@ -81,7 +81,7 @@ export class DemoControls {
         if (this.btnStep) {
             // SVG Icon for Step
             if (!this.btnStep.innerHTML.includes('<svg')) {
-                 this.btnStep.innerHTML = '<svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>';
+                this.btnStep.innerHTML = '<svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>';
             }
             this.btnStep.disabled = this.isRunning;
             this.btnStep.style.opacity = this.isRunning ? '0.5' : '1';
@@ -90,38 +90,38 @@ export class DemoControls {
         }
 
         if (state === 'stopped' || state === 'completed') {
-             // Maybe disable play if completed, unless reset?
-             // For now assume user can restart/resume
+            // Maybe disable play if completed, unless reset?
+            // For now assume user can restart/resume
         }
     }
 
     pause() {
         if (this.client && this.demoId) {
-            this.client.wsManager.sendMessage('demoControl', { command: 'pause', demoId: this.demoId });
+            this.client.wsManager.sendMessage('demoControl', {command: 'pause', demoId: this.demoId});
         }
     }
 
     resume() {
-         if (this.client && this.demoId) {
-             this.client.wsManager.sendMessage('demoControl', { command: 'resume', demoId: this.demoId });
-         }
+        if (this.client && this.demoId) {
+            this.client.wsManager.sendMessage('demoControl', {command: 'resume', demoId: this.demoId});
+        }
     }
 
     step() {
-         if (this.client && this.demoId) {
-             this.client.wsManager.sendMessage('demoControl', { command: 'step', demoId: this.demoId });
-         }
+        if (this.client && this.demoId) {
+            this.client.wsManager.sendMessage('demoControl', {command: 'step', demoId: this.demoId});
+        }
     }
 
     reset() {
-         // Logic to reset the demo. "Reset" usually means stop and clear.
-         // We'll send a stop command and maybe clear the console.
-         if (this.client && this.demoId) {
-             this.client.stopDemo(this.demoId);
-             // Maybe start it again? Or just leave it stopped.
-             // "Reset" typically means "Start Over".
-             // Let's stop it. The user can click Play to start.
-         }
+        // Logic to reset the demo. "Reset" usually means stop and clear.
+        // We'll send a stop command and maybe clear the console.
+        if (this.client && this.demoId) {
+            this.client.stopDemo(this.demoId);
+            // Maybe start it again? Or just leave it stopped.
+            // "Reset" typically means "Start Over".
+            // Let's stop it. The user can click Play to start.
+        }
     }
 
     showResetModal() {

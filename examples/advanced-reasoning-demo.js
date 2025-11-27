@@ -1,5 +1,5 @@
-import { runExample } from './utils/example-runner.js';
-import { ReasoningTrajectoryLogger } from '../src/rlfp/ReasoningTrajectoryLogger.js';
+import {runExample} from './utils/example-runner.js';
+import {ReasoningTrajectoryLogger} from '../src/rlfp/ReasoningTrajectoryLogger.js';
 
 /**
  * Demonstrates a more advanced reasoning scenario with the SeNARS agent.

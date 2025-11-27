@@ -1,10 +1,10 @@
-import { WebSocketManager } from '../connection/WebSocketManager.js';
-import { DemoClient } from './DemoClient.js';
-import { Sidebar } from '../components/Sidebar.js';
-import { Console } from '../components/Console.js';
-import { ConfigPanel } from '../components/ConfigPanel.js';
-import { DemoControls } from '../components/DemoControls.js';
-import { GraphPanel } from '../components/GraphPanel.js';
+import {WebSocketManager} from '../connection/WebSocketManager.js';
+import {DemoClient} from './DemoClient.js';
+import {Sidebar} from '../components/Sidebar.js';
+import {Console} from '../components/Console.js';
+import {ConfigPanel} from '../components/ConfigPanel.js';
+import {DemoControls} from '../components/DemoControls.js';
+import {GraphPanel} from '../components/GraphPanel.js';
 
 /**
  * DemoRunnerApp - Main application logic for the demo runner UI.
@@ -42,8 +42,8 @@ export class DemoRunnerApp {
 
         // Setup console input handler
         this.console.onInput((input) => {
-             // Send as Narsese input
-             this.wsManager.sendMessage('narseseInput', { text: input });
+            // Send as Narsese input
+            this.wsManager.sendMessage('narseseInput', {text: input});
         });
 
         this.sidebar.onSelect(this._handleDemoSelect.bind(this));
@@ -98,7 +98,7 @@ export class DemoRunnerApp {
         if (this.metricsView) this.metricsView.classList.toggle('hidden', view !== 'metrics');
 
         if (this.sidebarTitle) {
-            const titles = { source: 'Source Code', graph: 'Graph View', metrics: 'Demo Metrics' };
+            const titles = {source: 'Source Code', graph: 'Graph View', metrics: 'Demo Metrics'};
             this.sidebarTitle.textContent = titles[view] || 'View';
         }
 

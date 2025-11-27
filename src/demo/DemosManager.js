@@ -4,9 +4,9 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { FileSystemDemoSource } from './FileSystemDemoSource.js';
-import { BuiltinDemoSource } from './BuiltinDemoSource.js';
-import { ProcessDemoRunner } from './ProcessDemoRunner.js';
+import {FileSystemDemoSource} from './FileSystemDemoSource.js';
+import {BuiltinDemoSource} from './BuiltinDemoSource.js';
+import {ProcessDemoRunner} from './ProcessDemoRunner.js';
 
 export class DemosManager {
     constructor() {
@@ -84,9 +84,10 @@ export class DemosManager {
                 const tempPath = path.join(os.tmpdir(), `senars_custom_${Date.now()}.js`);
                 await fs.promises.writeFile(tempPath, code);
                 try {
-                    await this.runProcessDemo({ path: tempPath, id: 'custom' }, sendDemoStep);
+                    await this.runProcessDemo({path: tempPath, id: 'custom'}, sendDemoStep);
                 } finally {
-                    await fs.promises.unlink(tempPath).catch(() => {});
+                    await fs.promises.unlink(tempPath).catch(() => {
+                    });
                 }
             } else {
                 // Helper to parse steps
@@ -129,8 +130,7 @@ export class DemosManager {
             } else {
                 await nar.input(input);
             }
-        }
-        catch (error) {
+        } catch (error) {
             console.error(`Step ${step} error:`, error);
             sendDemoStep?.(demoId, step, `Error: ${error.message}`);
         }

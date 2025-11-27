@@ -37,4 +37,4 @@ class RLFPLearner {
     }
 }
 
-export { RLFPLearner };
+export {RLFPLearner};

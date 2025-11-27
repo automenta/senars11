@@ -3,8 +3,8 @@
  *
  * This component captures the internal state and decision-making process of the agent
  * at each step of a reasoning task. The logged data can be used for debugging,
-import fs from 'fs';
-import { AGENT_EVENTS } from '../agent/constants.js';
+ import fs from 'fs';
+ import { AGENT_EVENTS } from '../agent/constants.js';
  * analysis, and as input for the RLFP learner.
  */
 class ReasoningTrajectoryLogger {
@@ -41,4 +41,4 @@ class ReasoningTrajectoryLogger {
     }
 }
 
-export { ReasoningTrajectoryLogger };
+export {ReasoningTrajectoryLogger};

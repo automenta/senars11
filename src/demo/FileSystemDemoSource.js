@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import {fileURLToPath} from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -88,12 +88,12 @@ export class FileSystemDemoSource {
                 const comment = trimmed.substring(1).trim();
                 currentComment = comment;
             } else if (!trimmed.startsWith('*')) {
-                 // It's an input line (or command starting with /)
-                 steps.push({
-                     description: currentComment || 'Execute input',
-                     input: trimmed
-                 });
-                 currentComment = '';
+                // It's an input line (or command starting with /)
+                steps.push({
+                    description: currentComment || 'Execute input',
+                    input: trimmed
+                });
+                currentComment = '';
             }
         }
         return steps;

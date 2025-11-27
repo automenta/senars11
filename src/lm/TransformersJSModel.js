@@ -1,7 +1,6 @@
-
-import { BaseChatModel } from "@langchain/core/language_models/chat_models";
-import { AIMessage, AIMessageChunk, HumanMessage, SystemMessage, ToolMessage } from "@langchain/core/messages";
-import { ChatGenerationChunk } from "@langchain/core/outputs";
+import {BaseChatModel} from "@langchain/core/language_models/chat_models";
+import {AIMessage, AIMessageChunk, HumanMessage, SystemMessage, ToolMessage} from "@langchain/core/messages";
+import {ChatGenerationChunk} from "@langchain/core/outputs";
 
 /**
  * Wrapper for Transformers.js to behave like a LangChain ChatModel.
@@ -29,7 +28,7 @@ export class TransformersJSModel extends BaseChatModel {
         // Suppress ONNX Runtime warnings
         process.env.ORT_LOG_LEVEL ??= '3';
 
-        const { pipeline } = await import('@xenova/transformers');
+        const {pipeline} = await import('@xenova/transformers');
 
         this.pipeline = await pipeline(this.task, this.modelName, {
             device: this.device,
@@ -38,34 +37,33 @@ export class TransformersJSModel extends BaseChatModel {
     }
 
 
-
     bindTools(tools) {
         this.boundTools = tools;
         return this;
     }
 
     async _generate(messages, options, runManager) {
-        const { text, content, tool_calls } = await this._invoke(messages);
+        const {text, content, tool_calls} = await this._invoke(messages);
         return {
             generations: [{
                 text: text,
-                message: new AIMessage({ content, tool_calls }),
+                message: new AIMessage({content, tool_calls}),
             }],
         };
     }
 
-    async *_streamResponseChunks(messages, options, runManager) {
+    async* _streamResponseChunks(messages, options, runManager) {
         // TODO: Implement true streaming if possible with @xenova/transformers Streamer
-        const { text, content, tool_calls } = await this._invoke(messages);
+        const {text, content, tool_calls} = await this._invoke(messages);
 
         if (tool_calls?.length > 0) {
             yield new ChatGenerationChunk({
-                message: new AIMessageChunk({ content: content ?? "", tool_calls }),
+                message: new AIMessageChunk({content: content ?? "", tool_calls}),
                 text: text,
             });
         } else {
             yield new ChatGenerationChunk({
-                message: new AIMessageChunk({ content }),
+                message: new AIMessageChunk({content}),
                 text: content,
             });
         }
@@ -85,7 +83,7 @@ export class TransformersJSModel extends BaseChatModel {
         const text = res?.generated_text ?? res?.text ?? JSON.stringify(res);
         const parsed = this._parseOutput(text);
 
-        return { text, ...parsed };
+        return {text, ...parsed};
     }
 
     _formatMessages(messages) {
@@ -136,7 +134,7 @@ export class TransformersJSModel extends BaseChatModel {
         const match = text.match(actionRegex);
 
         if (!match) {
-            return { content: text, tool_calls: [] };
+            return {content: text, tool_calls: []};
         }
 
         try {
@@ -148,10 +146,10 @@ export class TransformersJSModel extends BaseChatModel {
                 args,
                 id: `call_${Date.now()}` // Mock ID
             }];
-            return { content, tool_calls };
+            return {content, tool_calls};
         } catch (e) {
             console.warn("Failed to parse tool call, returning as text.", e);
-            return { content: text, tool_calls: [] };
+            return {content: text, tool_calls: []};
         }
     }
 }

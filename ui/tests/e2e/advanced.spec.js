@@ -17,8 +17,8 @@ test.describe('Advanced Reasoning', () => {
         // But we try to check for the specific answer
         try {
             await t.input('<bird --> living_thing>?')
-                   .expect('<bird --> living_thing>')
-                   .execute();
+                .expect('<bird --> living_thing>')
+                .execute();
         } catch (e) {
             console.log('Strict deduction check failed, checking for basic response');
             await productionPage.expectLog('bird');
@@ -36,10 +36,10 @@ test.describe('Advanced Reasoning', () => {
         // Check if system infers red_apple is fruit
         try {
             await t.input('<red_apple --> fruit>?')
-                   .expect('<red_apple --> fruit>')
-                   .execute();
-        } catch(e) {
-             await productionPage.expectLog('red_apple');
+                .expect('<red_apple --> fruit>')
+                .execute();
+        } catch (e) {
+            await productionPage.expectLog('red_apple');
         }
     });
 
@@ -47,12 +47,12 @@ test.describe('Advanced Reasoning', () => {
         const t = new TestNARPlaywright(productionPage.page, productionPage);
 
         await t.input('<initial_concept --> property>.')
-               .expectGraph('initial_concept')
-               .execute();
+            .expectGraph('initial_concept')
+            .execute();
 
         await t.input('<derived_concept --> type>.')
-               .expectGraph('derived_concept')
-               .execute();
+            .expectGraph('derived_concept')
+            .execute();
 
         // *step is not Narsese, so TestNARPlaywright.expect might fail if it expects Narsese logs
         await t.input('*step').execute();

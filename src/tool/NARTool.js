@@ -4,8 +4,8 @@
  */
 
 import {BaseTool} from './BaseTool.js';
-import { PrologParser } from '../parser/PrologParser.js';
-import { PrologStrategy } from '../reason/strategy/PrologStrategy.js';
+import {PrologParser} from '../parser/PrologParser.js';
+import {PrologStrategy} from '../reason/strategy/PrologStrategy.js';
 
 export class NARTool extends BaseTool {
     constructor(nar = null) {
@@ -35,14 +35,14 @@ export class NARTool extends BaseTool {
         };
 
         this._actionHandlers = {
-            'add_belief': { handler: this._addBelief.bind(this), requiresContent: true },
-            'add_goal': { handler: this._addGoal.bind(this), requiresContent: true },
-            'query': { handler: this._query.bind(this), requiresContent: true },
-            'step': { handler: this._step.bind(this), requiresContent: false },
-            'get_beliefs': { handler: this._getBeliefs.bind(this), requiresContent: false },
-            'get_goals': { handler: this._getGoals.bind(this), requiresContent: false },
-            'assert_prolog': { handler: this._assertProlog.bind(this), requiresContent: true },
-            'query_prolog': { handler: this._queryProlog.bind(this), requiresContent: true },
+            'add_belief': {handler: this._addBelief.bind(this), requiresContent: true},
+            'add_goal': {handler: this._addGoal.bind(this), requiresContent: true},
+            'query': {handler: this._query.bind(this), requiresContent: true},
+            'step': {handler: this._step.bind(this), requiresContent: false},
+            'get_beliefs': {handler: this._getBeliefs.bind(this), requiresContent: false},
+            'get_goals': {handler: this._getGoals.bind(this), requiresContent: false},
+            'assert_prolog': {handler: this._assertProlog.bind(this), requiresContent: true},
+            'query_prolog': {handler: this._queryProlog.bind(this), requiresContent: true},
         };
     }
 
@@ -61,20 +61,20 @@ export class NARTool extends BaseTool {
     }
 
     async execute(args) {
-        if (!this.nar) return { error: 'NAR system not initialized' };
+        if (!this.nar) return {error: 'NAR system not initialized'};
 
-        const { action, content } = args;
+        const {action, content} = args;
         const actionHandler = this._getActionHandler(action);
 
-        if (!actionHandler) return { error: `Unknown action: ${action}` };
+        if (!actionHandler) return {error: `Unknown action: ${action}`};
 
         try {
             if (actionHandler.requiresContent && !content) {
-                return { error: `Content required for ${action}` };
+                return {error: `Content required for ${action}`};
             }
             return await actionHandler.handler(content);
         } catch (error) {
-            return { error: `Tool execution failed: ${error.message}` };
+            return {error: `Tool execution failed: ${error.message}`};
         }
     }
 
@@ -84,43 +84,43 @@ export class NARTool extends BaseTool {
 
     async _assertProlog(content) {
         if (!this.prologStrategy) {
-            return { error: 'PrologStrategy not available.' };
+            return {error: 'PrologStrategy not available.'};
         }
         try {
             const tasks = this.prologParser.parseProlog(content);
             this.prologStrategy.updateKnowledgeBase(tasks);
-            return { success: true, message: 'Prolog assertion successful.' };
+            return {success: true, message: 'Prolog assertion successful.'};
         } catch (error) {
             console.error('NARTool _assertProlog error:', error);
-            return { success: false, error: `Failed to assert Prolog: ${error.message}` };
+            return {success: false, error: `Failed to assert Prolog: ${error.message}`};
         }
     }
 
     async _queryProlog(content) {
         if (!this.prologStrategy) {
-            return { error: 'PrologStrategy not available.' };
+            return {error: 'PrologStrategy not available.'};
         }
         try {
             const tasks = this.prologParser.parseProlog(content);
             if (tasks.length === 0) {
-                return { success: false, message: 'No query to execute.' };
+                return {success: false, message: 'No query to execute.'};
             }
             const result = await this.nar.ask(tasks[0]);
-            return { success: result && result.length > 0, result };
+            return {success: result && result.length > 0, result};
         } catch (error) {
             console.error('NARTool _queryProlog error:', error);
-            return { success: false, error: `Failed to query Prolog: ${error.message}` };
+            return {success: false, error: `Failed to query Prolog: ${error.message}`};
         }
     }
 
     async _addBelief(content) {
         await this._executeNARInputCommand(content);
-        return { success: true, message: `Belief added: ${content}` };
+        return {success: true, message: `Belief added: ${content}`};
     }
 
     async _addGoal(content) {
         await this._executeNARInputCommand(content);
-        return { success: true, message: `Goal added: ${content}` };
+        return {success: true, message: `Goal added: ${content}`};
     }
 
     async _query(content) {
@@ -130,22 +130,22 @@ export class NARTool extends BaseTool {
         }
 
         const result = await this._executeNARInputCommand(questionContent);
-        return { success: true, result: result ?? `Query "${questionContent}" processed` };
+        return {success: true, result: result ?? `Query "${questionContent}" processed`};
     }
 
     async _step() {
         await this._runReasoningCycle();
-        return { success: true, message: 'Single reasoning step executed' };
+        return {success: true, message: 'Single reasoning step executed'};
     }
 
     async _getBeliefs() {
         const beliefs = await this.nar.getBeliefs?.() ?? [];
-        return { success: true, beliefs };
+        return {success: true, beliefs};
     }
 
     async _getGoals() {
         const goals = await this.nar.getGoals?.() ?? [];
-        return { success: true, goals };
+        return {success: true, goals};
     }
 
     async _executeNARInputCommand(content) {

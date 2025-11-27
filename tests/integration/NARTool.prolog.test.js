@@ -1,7 +1,6 @@
-
-import { NAR } from '../../src/nar/NAR.js';
-import { NARTool } from '../../src/tool/NARTool.js';
-import { PrologStrategy } from '../../src/reason/strategy/PrologStrategy.js';
+import {NAR} from '../../src/nar/NAR.js';
+import {NARTool} from '../../src/tool/NARTool.js';
+import {PrologStrategy} from '../../src/reason/strategy/PrologStrategy.js';
 
 describe('NARTool Prolog Integration', () => {
     let nar;
@@ -23,10 +22,10 @@ describe('NARTool Prolog Integration', () => {
         const fact = 'father(john, peter).';
         const query = 'father(john, peter)?';
 
-        const assertResult = await narTool.execute({ action: 'assert_prolog', content: fact });
+        const assertResult = await narTool.execute({action: 'assert_prolog', content: fact});
         expect(assertResult.success).toBe(true);
 
-        const queryResult = await narTool.execute({ action: 'query_prolog', content: query });
+        const queryResult = await narTool.execute({action: 'query_prolog', content: query});
         expect(queryResult.success).toBe(true);
         expect(queryResult.result).toBeDefined();
         expect(queryResult.result.length).toBeGreaterThan(0);
@@ -37,10 +36,10 @@ describe('NARTool Prolog Integration', () => {
         const rule = 'mortal(X) :- man(X).';
         const query = 'mortal(socrates)?';
 
-        await narTool.execute({ action: 'assert_prolog', content: fact });
-        await narTool.execute({ action: 'assert_prolog', content: rule });
+        await narTool.execute({action: 'assert_prolog', content: fact});
+        await narTool.execute({action: 'assert_prolog', content: rule});
 
-        const queryResult = await narTool.execute({ action: 'query_prolog', content: query });
+        const queryResult = await narTool.execute({action: 'query_prolog', content: query});
         expect(queryResult.success).toBe(true);
         expect(queryResult.result).toBeDefined();
         expect(queryResult.result.length).toBeGreaterThan(0);
@@ -55,11 +54,11 @@ describe('NARTool Prolog Integration', () => {
         const query = 'philosopher(socrates)?';
 
         for (const fact of facts) {
-            await narTool.execute({ action: 'assert_prolog', content: fact });
+            await narTool.execute({action: 'assert_prolog', content: fact});
         }
-        await narTool.execute({ action: 'assert_prolog', content: rule });
+        await narTool.execute({action: 'assert_prolog', content: rule});
 
-        const queryResult = await narTool.execute({ action: 'query_prolog', content: query });
+        const queryResult = await narTool.execute({action: 'query_prolog', content: query});
         expect(queryResult.success).toBe(true);
         expect(queryResult.result).toBeDefined();
         expect(queryResult.result.length).toBeGreaterThan(0);

@@ -8,8 +8,13 @@ export class Truth {
         Object.freeze(this);
     }
 
-    get f() { return this.frequency; }
-    get c() { return this.confidence; }
+    get f() {
+        return this.frequency;
+    }
+
+    get c() {
+        return this.confidence;
+    }
 
     static binaryOperation = (truth1, truth2, operation) =>
         truth1 && truth2 ? operation(truth1, truth2) : null;

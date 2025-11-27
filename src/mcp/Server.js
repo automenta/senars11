@@ -32,7 +32,7 @@ export class Server extends EventEmitter {
             return;
         }
 
-        const { port, host } = await this.safety.validateServerOptions(this.options);
+        const {port, host} = await this.safety.validateServerOptions(this.options);
         this.port = port ?? this.port;
         this.host = host ?? this.host;
 
@@ -56,11 +56,11 @@ export class Server extends EventEmitter {
 
     async _listen() {
         return new Promise((resolve, reject) => {
-            this.httpServer.listen({ port: this.port, host: this.host }, () => {
+            this.httpServer.listen({port: this.port, host: this.host}, () => {
                 this.isRunning = true;
                 this.serverUrl = `http://${this.host}:${this.port}`;
                 this.log.info(`MCP server listening on ${this.serverUrl}`);
-                this.emit('serverStarted', { port: this.port, host: this.host, url: this.serverUrl });
+                this.emit('serverStarted', {port: this.port, host: this.host, url: this.serverUrl});
                 resolve();
             });
             this.httpServer.on('error', (err) => {
@@ -79,16 +79,16 @@ export class Server extends EventEmitter {
             if (handler) {
                 await handler(req, res, url);
             } else {
-                this._sendJSON(res, 404, { error: 'Not found', path: req.url });
+                this._sendJSON(res, 404, {error: 'Not found', path: req.url});
             }
         } catch (error) {
             this.log.error('Error handling request:', error);
-            this._sendJSON(res, 500, { error: error.message });
+            this._sendJSON(res, 500, {error: error.message});
         }
     }
 
     _sendJSON(res, statusCode, data) {
-        res.writeHead(statusCode, { 'Content-Type': 'application/json' });
+        res.writeHead(statusCode, {'Content-Type': 'application/json'});
         res.end(JSON.stringify(data));
     }
 
@@ -105,23 +105,23 @@ export class Server extends EventEmitter {
     async handleInitialize(req, res) {
         const response = {
             protocolVersion: '2024-11-05',
-            capabilities: { tools: { listChanged: true }, resources: { listChanged: true } },
-            serverInfo: { name: 'SeNARS-MCP-Server', version: '1.0.0' }
+            capabilities: {tools: {listChanged: true}, resources: {listChanged: true}},
+            serverInfo: {name: 'SeNARS-MCP-Server', version: '1.0.0'}
         };
         this._sendJSON(res, 200, response);
     }
 
     async handleListTools(req, res) {
-        const tools = Array.from(this.exposedTools.values()).map(({ name, description, inputSchema, outputSchema }) => ({
+        const tools = Array.from(this.exposedTools.values()).map(({name, description, inputSchema, outputSchema}) => ({
             name, description, inputSchema, outputSchema
         }));
-        this._sendJSON(res, 200, { tools });
+        this._sendJSON(res, 200, {tools});
     }
 
     async handleCallTool(req, res, url) {
         const toolName = url.pathname.split('/').pop();
         if (!this.exposedTools.has(toolName)) {
-            return this._sendJSON(res, 404, { error: `Tool ${toolName} not found` });
+            return this._sendJSON(res, 404, {error: `Tool ${toolName} not found`});
         }
 
         try {
@@ -130,11 +130,11 @@ export class Server extends EventEmitter {
             const result = await this.executeToolHandler(toolName, validatedInput);
             const validatedOutput = await this.safety.validateOutput(toolName, result);
 
-            this._sendJSON(res, 200, { result: validatedOutput });
-            this.emit('toolCalled', { toolName, input: validatedInput, result: validatedOutput });
+            this._sendJSON(res, 200, {result: validatedOutput});
+            this.emit('toolCalled', {toolName, input: validatedInput, result: validatedOutput});
         } catch (error) {
             this.log.error(`Error calling tool ${toolName}:`, error.message);
-            this._sendJSON(res, 500, { error: error.message });
+            this._sendJSON(res, 500, {error: error.message});
         }
     }
 
@@ -145,7 +145,7 @@ export class Server extends EventEmitter {
     }
 
     async handleListResources(req, res) {
-        this._sendJSON(res, 200, { resources: [] });
+        this._sendJSON(res, 200, {resources: []});
     }
 
     async _registerBuiltInTools() {
@@ -167,22 +167,60 @@ export class Server extends EventEmitter {
                 name: 'reason',
                 title: 'SeNARS Reasoning Engine',
                 description: 'Performs logical inference and reasoning',
-                inputSchema: { type: 'object', properties: { premises: { type: 'array', items: { type: 'string' } }, goal: { type: 'string' } }, required: ['premises'] },
-                outputSchema: { type: 'object', properties: { conclusions: { type: 'array', items: { type: 'string' } }, confidence: { type: 'number' }, derivationSteps: { type: 'array', items: { type: 'string' } } } }
+                inputSchema: {
+                    type: 'object',
+                    properties: {premises: {type: 'array', items: {type: 'string'}}, goal: {type: 'string'}},
+                    required: ['premises']
+                },
+                outputSchema: {
+                    type: 'object',
+                    properties: {
+                        conclusions: {type: 'array', items: {type: 'string'}},
+                        confidence: {type: 'number'},
+                        derivationSteps: {type: 'array', items: {type: 'string'}}
+                    }
+                }
             },
             {
                 name: 'memory-query',
                 title: 'SeNARS Memory Query',
                 description: 'Queries SeNARS memory for stored information',
-                inputSchema: { type: 'object', properties: { query: { type: 'string' }, limit: { type: 'number', default: 10 } }, required: ['query'] },
-                outputSchema: { type: 'object', properties: { results: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, content: { type: 'string' }, confidence: { type: 'number' }, timestamp: { type: 'string' } } } }, count: { type: 'number' } } }
+                inputSchema: {
+                    type: 'object',
+                    properties: {query: {type: 'string'}, limit: {type: 'number', default: 10}},
+                    required: ['query']
+                },
+                outputSchema: {
+                    type: 'object',
+                    properties: {
+                        results: {
+                            type: 'array',
+                            items: {
+                                type: 'object',
+                                properties: {
+                                    id: {type: 'string'},
+                                    content: {type: 'string'},
+                                    confidence: {type: 'number'},
+                                    timestamp: {type: 'string'}
+                                }
+                            }
+                        }, count: {type: 'number'}
+                    }
+                }
             },
             {
                 name: 'execute-tool',
                 title: 'Execute SeNARS Tool',
                 description: 'Executes a SeNARS tool/engine',
-                inputSchema: { type: 'object', properties: { toolName: { type: 'string' }, parameters: { type: 'object' } }, required: ['toolName'] },
-                outputSchema: { type: 'object', properties: { result: { type: 'string' }, success: { type: 'boolean' }, error: { type: 'string' } } }
+                inputSchema: {
+                    type: 'object',
+                    properties: {toolName: {type: 'string'}, parameters: {type: 'object'}},
+                    required: ['toolName']
+                },
+                outputSchema: {
+                    type: 'object',
+                    properties: {result: {type: 'string'}, success: {type: 'boolean'}, error: {type: 'string'}}
+                }
             }
         ];
     }
@@ -202,7 +240,7 @@ export class Server extends EventEmitter {
                 // If NAR instance is available, use it
                 const results = [];
                 for (const premise of validatedInput.premises) {
-                     await this.nar.input(premise);
+                    await this.nar.input(premise);
                 }
 
                 if (validatedInput.goal) {
@@ -254,7 +292,7 @@ export class Server extends EventEmitter {
                     count: results.length
                 };
             } catch (err) {
-                 console.error("NAR memory query error:", err);
+                console.error("NAR memory query error:", err);
             }
         }
 
@@ -275,20 +313,20 @@ export class Server extends EventEmitter {
         const validatedInput = await this.safety.validateInput('execute-tool', input);
 
         if (this.nar) {
-             try {
-                 const result = await this.nar.executeTool(validatedInput.toolName, validatedInput.parameters);
-                 return {
-                     result: JSON.stringify(result.result ?? result),
-                     success: result.success !== false,
-                     error: result.error ?? null
-                 };
-             } catch (err) {
-                 return {
-                     result: null,
-                     success: false,
-                     error: err.message
-                 };
-             }
+            try {
+                const result = await this.nar.executeTool(validatedInput.toolName, validatedInput.parameters);
+                return {
+                    result: JSON.stringify(result.result ?? result),
+                    success: result.success !== false,
+                    error: result.error ?? null
+                };
+            } catch (err) {
+                return {
+                    result: null,
+                    success: false,
+                    error: err.message
+                };
+            }
         }
 
         return {

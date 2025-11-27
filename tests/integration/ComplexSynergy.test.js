@@ -1,10 +1,8 @@
-
-import { NAR } from '../../src/nar/NAR.js';
-import { NARTool } from '../../src/tool/NARTool.js';
-import { PrologStrategy } from '../../src/reason/strategy/PrologStrategy.js';
-import { TermFactory } from '../../src/term/TermFactory.js';
-import { Task } from '../../src/task/Task.js';
-import { Truth } from '../../src/Truth.js';
+import {NAR} from '../../src/nar/NAR.js';
+import {NARTool} from '../../src/tool/NARTool.js';
+import {PrologStrategy} from '../../src/reason/strategy/PrologStrategy.js';
+import {Task} from '../../src/task/Task.js';
+import {Truth} from '../../src/Truth.js';
 
 describe('Complex Neurosymbolic Synergy: Ancestry & Genetics', () => {
     let nar;
@@ -24,7 +22,7 @@ describe('Complex Neurosymbolic Synergy: Ancestry & Genetics', () => {
         await nar.initialize();
 
         // Inject PrologStrategy with shared TermFactory
-        const prologStrategy = new PrologStrategy({ termFactory: nar._termFactory });
+        const prologStrategy = new PrologStrategy({termFactory: nar._termFactory});
         if (nar.streamReasoner && nar.streamReasoner.strategy) {
             nar.streamReasoner.strategy.addStrategy(prologStrategy);
         }
@@ -48,7 +46,7 @@ describe('Complex Neurosymbolic Synergy: Ancestry & Genetics', () => {
         ];
 
         for (const k of prologKnowledge) {
-            await narTool.execute({ action: 'assert_prolog', content: k });
+            await narTool.execute({action: 'assert_prolog', content: k});
         }
 
         // 2. NAL Knowledge
@@ -68,7 +66,7 @@ describe('Complex Neurosymbolic Synergy: Ancestry & Genetics', () => {
             term: ruleTerm,
             punctuation: '.',
             truth: new Truth(1.0, 0.9),
-            budget: { priority: 0.99, durability: 0.9, quality: 0.9 }
+            budget: {priority: 0.99, durability: 0.9, quality: 0.9}
         });
 
         await nar.input(nalRuleTask);
@@ -87,7 +85,7 @@ describe('Complex Neurosymbolic Synergy: Ancestry & Genetics', () => {
         };
 
         const queryTerm = createPrologTerm('ancestor', 'alice', 'charlie');
-        const queryTask = new Task({ term: queryTerm, punctuation: '?' });
+        const queryTask = new Task({term: queryTerm, punctuation: '?'});
 
         const answers = await nar.ask(queryTask);
         expect(answers.length).toBeGreaterThan(0);
@@ -104,7 +102,7 @@ describe('Complex Neurosymbolic Synergy: Ancestry & Genetics', () => {
             term: translatedTerm,
             punctuation: '.',
             truth: new Truth(1.0, 0.9),
-            budget: { priority: 0.99, durability: 0.9, quality: 0.9 }
+            budget: {priority: 0.99, durability: 0.9, quality: 0.9}
         });
 
         await nar.input(translatedTask);

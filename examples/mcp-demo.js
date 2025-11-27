@@ -1,13 +1,12 @@
-
-import { NAR } from '../src/nar/NAR.js';
-import { SeNARSMCPSystem } from '../src/mcp/index.js';
+import {NAR} from '../src/nar/NAR.js';
+import {SeNARSMCPSystem} from '../src/mcp/index.js';
 
 // Configuration for MCP-enabled NAR
 const config = {
     // Note: MCP is NOT in this config, keeping it optional/decoupled
-    memory: { conceptForgetDuration: 10000 },
-    focus: { capacity: 100 },
-    tools: { enabled: true } // Ensure tool system is enabled in NAR
+    memory: {conceptForgetDuration: 10000},
+    focus: {capacity: 100},
+    tools: {enabled: true} // Ensure tool system is enabled in NAR
 };
 
 async function runDemo() {
@@ -20,7 +19,7 @@ async function runDemo() {
     const mcpSystemServer = new SeNARSMCPSystem();
     await mcpSystemServer.initialize('server');
     // We pass 'nar' to the server setup so it can execute real reasoning
-    await mcpSystemServer.setupAsServer(3005, { nar: narServer });
+    await mcpSystemServer.setupAsServer(3005, {nar: narServer});
     console.log('MCP Server running on port 3005');
 
     // --- Separate Client Instance ---

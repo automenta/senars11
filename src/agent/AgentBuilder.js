@@ -20,10 +20,10 @@ export class AgentBuilder {
                 tools: false,
                 lm: false,
             },
-            memory: { enableMemoryValidation: true, memoryValidationInterval: 30000 },
+            memory: {enableMemoryValidation: true, memoryValidationInterval: 30000},
             nar: {},
             lm: {
-                circuitBreaker: { failureThreshold: 5, timeout: 60000, resetTimeout: 30000 },
+                circuitBreaker: {failureThreshold: 5, timeout: 60000, resetTimeout: 30000},
             },
             persistence: {},
             inputProcessing: {}
@@ -55,7 +55,7 @@ export class AgentBuilder {
                 functors: ['core-arithmetic', 'set-operations'],
                 rules: ['syllogistic-core', 'temporal'],
                 tools: true,
-                lm: { enabled: true },
+                lm: {enabled: true},
             },
         };
         return new AgentBuilder(advancedConfig).withConfig(config).build();
@@ -71,12 +71,29 @@ export class AgentBuilder {
         return this;
     }
 
-    withMetrics(config = true) { return this.withSubsystem('metrics', config); }
-    withEmbeddings(config = true) { return this.withSubsystem('embeddingLayer', config); }
-    withFunctors(config) { return this.withSubsystem('functors', Array.isArray(config) ? config : config); }
-    withRules(config) { return this.withSubsystem('rules', Array.isArray(config) ? config : config); }
-    withTools(config = true) { return this.withSubsystem('tools', config); }
-    withLM(config = true) { return this.withSubsystem('lm', config); }
+    withMetrics(config = true) {
+        return this.withSubsystem('metrics', config);
+    }
+
+    withEmbeddings(config = true) {
+        return this.withSubsystem('embeddingLayer', config);
+    }
+
+    withFunctors(config) {
+        return this.withSubsystem('functors', Array.isArray(config) ? config : config);
+    }
+
+    withRules(config) {
+        return this.withSubsystem('rules', Array.isArray(config) ? config : config);
+    }
+
+    withTools(config = true) {
+        return this.withSubsystem('tools', config);
+    }
+
+    withLM(config = true) {
+        return this.withSubsystem('lm', config);
+    }
 
     registerDependency(name, dependency) {
         this.dependencies.set(name, dependency);
@@ -97,8 +114,8 @@ export class AgentBuilder {
     }
 
     _buildAgentConfig() {
-        const { subsystems, nar, memory, persistence, inputProcessing, lm } = this.config;
-        const { lm: lmSubsystem, tools, embeddingLayer, metrics } = subsystems;
+        const {subsystems, nar, memory, persistence, inputProcessing, lm} = this.config;
+        const {lm: lmSubsystem, tools, embeddingLayer, metrics} = subsystems;
 
         const getSubsystemConfig = (subsystem) => ({
             enabled: !!subsystem,
@@ -110,7 +127,7 @@ export class AgentBuilder {
             memory,
             persistence,
             inputProcessing,
-            lm: { ...getSubsystemConfig(lmSubsystem), ...lm },
+            lm: {...getSubsystemConfig(lmSubsystem), ...lm},
             tools: getSubsystemConfig(tools),
             embeddingLayer: getSubsystemConfig(embeddingLayer),
             metricsMonitor: metrics ? (typeof metrics === 'object' ? metrics : {}) : undefined
@@ -118,7 +135,7 @@ export class AgentBuilder {
     }
 
     _setupPlugins(agent) {
-        agent._pluginManager = new PluginManager({ nar: agent, agent: agent, eventBus: agent._eventBus });
+        agent._pluginManager = new PluginManager({nar: agent, agent: agent, eventBus: agent._eventBus});
         if (this.config.subsystems.plugins) {
             this._registerPlugins(agent._pluginManager, this.config.subsystems.plugins);
         }

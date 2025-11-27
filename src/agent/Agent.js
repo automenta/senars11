@@ -156,11 +156,11 @@ export class Agent extends NAR {
         }
 
         this.runState.isRunning = true;
-        this.emit(AGENT_EVENTS.NAR_CYCLE_START, { reason: 'auto-step' });
+        this.emit(AGENT_EVENTS.NAR_CYCLE_START, {reason: 'auto-step'});
 
         if (!this.displaySettings.quiet && !this.displaySettings.trace) {
             this.displaySettings.trace = true;
-            this.emit(AGENT_EVENTS.NAR_TRACE_ENABLE, { reason: 'auto-step session' });
+            this.emit(AGENT_EVENTS.NAR_TRACE_ENABLE, {reason: 'auto-step session'});
         }
 
         this.runState.intervalId = setInterval(async () => {
@@ -172,7 +172,7 @@ export class Agent extends NAR {
             }
         }, interval);
 
-        this.emit(AGENT_EVENTS.NAR_CYCLE_RUNNING, { interval });
+        this.emit(AGENT_EVENTS.NAR_CYCLE_RUNNING, {interval});
         return `🏃 Auto-stepping every ${interval}ms... Use "/stop" or input to stop.`;
     }
 
@@ -206,9 +206,9 @@ export class Agent extends NAR {
     async load(filepath = null) {
         let state;
         if (filepath) {
-             state = await this.persistenceManager.loadFromPath(filepath);
+            state = await this.persistenceManager.loadFromPath(filepath);
         } else {
-             state = await this.persistenceManager.loadFromDefault();
+            state = await this.persistenceManager.loadFromDefault();
         }
         if (!state) return false;
         return await this.deserialize(state);

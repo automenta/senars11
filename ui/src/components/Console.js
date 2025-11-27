@@ -1,5 +1,5 @@
-import { Component } from './Component.js';
-import { LogViewer } from './LogViewer.js';
+import {Component} from './Component.js';
+import {LogViewer} from './LogViewer.js';
 
 export class Console extends Component {
     constructor(containerId, inputId) {

@@ -1,6 +1,5 @@
-
-import { TransformersJSModel } from '../../../src/lm/TransformersJSModel.js';
-import { HumanMessage, ToolMessage, AIMessage } from '@langchain/core/messages';
+import {TransformersJSModel} from '../../../src/lm/TransformersJSModel.js';
+import {HumanMessage} from '@langchain/core/messages';
 
 describe('TransformersJSModel', () => {
     it('should format messages with tool definitions', async () => {
@@ -8,7 +7,7 @@ describe('TransformersJSModel', () => {
         const tools = [{
             name: 'calc',
             description: 'Calculate stuff',
-            parameters: { type: 'object', properties: { x: { type: 'number' } } }
+            parameters: {type: 'object', properties: {x: {type: 'number'}}}
         }];
 
         model.bindTools(tools);

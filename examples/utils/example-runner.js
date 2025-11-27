@@ -1,18 +1,17 @@
-
-import { App } from '../../src/app/App.js';
-import { Config } from '../../src/app/Config.js';
+import {App} from '../../src/app/App.js';
+import {Config} from '../../src/app/Config.js';
 
 process.env.ORT_LOG_LEVEL = 'error';
 
-export async function runExample({ model, inputs, onStep, tools }) {
+export async function runExample({model, inputs, onStep, tools}) {
     console.log(`🚀 Starting SeNARS Agent Example Runner with ${model}...`);
 
     const config = new Config({
         provider: 'transformers',
         model,
         temperature: 0,
-        nar: { tools: { enabled: true } },
-        subsystems: { tools: true, lm: true },
+        nar: {tools: {enabled: true}},
+        subsystems: {tools: true, lm: true},
         tools: tools,
     });
 
@@ -29,7 +28,7 @@ export async function runExample({ model, inputs, onStep, tools }) {
             await agent.processInputStreaming(input, process.stdout.write.bind(process.stdout), onStep);
             process.stdout.write("\n");
         } catch (e) {
-            console.error(`❌ Error processing input:`, { message: e.message, stack: e.stack });
+            console.error(`❌ Error processing input:`, {message: e.message, stack: e.stack});
         }
     }
 

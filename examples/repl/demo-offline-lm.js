@@ -20,7 +20,7 @@ async function main() {
         console.log(`\n🤖 Result (${duration}s):\n${result}`);
 
     } catch (error) {
-        console.error('\n❌ Error:', { message: error.message, stack: error.stack });
+        console.error('\n❌ Error:', {message: error.message, stack: error.stack});
     }
 }
 

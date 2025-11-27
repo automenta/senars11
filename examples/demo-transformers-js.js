@@ -35,9 +35,9 @@ async function demonstrateTransformersJS() {
     try {
         console.log('🚀 Starting SeNARS with Transformers.js LM...');
         const agent = await app.start({startAgent: true});
-        
+
         console.log('✅ SeNARS started successfully with Transformers.js integration!\n');
-        
+
         console.log('📊 System Status:');
         console.log(`   - Agent ID: ${agent.id}`);
         console.log(`   - LM Providers: ${agent.lm.providers.size}`);
@@ -47,7 +47,7 @@ async function demonstrateTransformersJS() {
         console.log('🎯 Example Usage:');
         console.log('   You can now run the REPL with Transformers.js using:');
         console.log('   npm run repl -- --provider transformers --model Xenova/LaMini-Flan-T5-248M\n');
-        
+
         console.log('💡 Benefits of Transformers.js Integration:');
         console.log('   - Zero-configuration compact LM option');
         console.log('   - Runs entirely offline on your CPU');
@@ -58,11 +58,12 @@ async function demonstrateTransformersJS() {
         // Clean shutdown
         await app.shutdown();
         console.log('✅ Demonstration completed successfully!');
-        
+
     } catch (error) {
         console.error('❌ Error during demonstration:', error.message);
         console.error('Stack:', error.stack);
-        await app.shutdown().catch(() => {}); // Attempt cleanup
+        await app.shutdown().catch(() => {
+        }); // Attempt cleanup
     }
 }
 

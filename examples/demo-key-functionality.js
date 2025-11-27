@@ -25,7 +25,7 @@ async function demonstrateKeyFunctionality() {
     };
 
     const app = new App(config);
-    
+
     try {
         const agent = await app.start({startAgent: true});
         console.log('✅ SeNARS with Transformers.js started successfully!\n');
@@ -62,7 +62,8 @@ async function demonstrateKeyFunctionality() {
 
     } catch (error) {
         console.error('❌ Error:', error.message);
-        await app.shutdown().catch(() => {});
+        await app.shutdown().catch(() => {
+        });
     }
 }
 

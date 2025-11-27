@@ -24,12 +24,12 @@ export class PrologParser {
 
     _parseLine(line) {
         const parsers = [
-            { predicate: this._isRule, parser: this._parseRule.bind(this) },
-            { predicate: this._isFact, parser: (l) => [this._parseFact(l)] },
-            { predicate: this._isQuery, parser: (l) => [this._parseQuery(l)] }
+            {predicate: this._isRule, parser: this._parseRule.bind(this)},
+            {predicate: this._isFact, parser: (l) => [this._parseFact(l)]},
+            {predicate: this._isQuery, parser: (l) => [this._parseQuery(l)]}
         ];
 
-        const matchingParser = parsers.find(({ predicate }) => predicate(line));
+        const matchingParser = parsers.find(({predicate}) => predicate(line));
         return matchingParser ? matchingParser.parser(line) : [];
     }
 
@@ -151,29 +151,29 @@ export class PrologParser {
         // Simple Math Regex for "A + B" (only one op supported for MVP)
         const mathMatch = str.match(/^(.+?)(\+|-|\*|\/)(.+)$/);
         if (mathMatch) {
-             // Check nesting? If A+B is inside parens `(A+B)`, this regex might fail or match wrong.
-             // We'll rely on _createTerm handling atoms/vars if no op found.
-             // This is heuristic. Proper expression parsing is out of scope for simple enhancement.
-             // We'll trust user uses simple expressions "X + 1".
-             const [_, left, op, right] = mathMatch;
-             // Ensure parens balance in left?
-             // This is risky.
-             // Better: "X + 1" -> op is +. left "X", right " 1".
-             // We will try to parse left/right.
-             // For "X is Y + 1", "Y + 1" is parsed here.
+            // Check nesting? If A+B is inside parens `(A+B)`, this regex might fail or match wrong.
+            // We'll rely on _createTerm handling atoms/vars if no op found.
+            // This is heuristic. Proper expression parsing is out of scope for simple enhancement.
+            // We'll trust user uses simple expressions "X + 1".
+            const [_, left, op, right] = mathMatch;
+            // Ensure parens balance in left?
+            // This is risky.
+            // Better: "X + 1" -> op is +. left "X", right " 1".
+            // We will try to parse left/right.
+            // For "X is Y + 1", "Y + 1" is parsed here.
 
-             // Check if it's really a compound term `f(a)` which might match `f(a` + `)`? No.
-             // Only if op is outside parens.
-             // Let's skip complex math parsing for now and rely on atomic structure except for simple cases.
-             // For "Y + 1", it matches.
+            // Check if it's really a compound term `f(a)` which might match `f(a` + `)`? No.
+            // Only if op is outside parens.
+            // Let's skip complex math parsing for now and rely on atomic structure except for simple cases.
+            // For "Y + 1", it matches.
 
-             // Check balanced parens in left part to ensure op is top-level
-             if (this._isBalanced(left)) {
-                 return this._createPredicateTerm(op.trim(), [
-                     this._parseTerm(left),
-                     this._parseTerm(right)
-                 ], true);
-             }
+            // Check balanced parens in left part to ensure op is top-level
+            if (this._isBalanced(left)) {
+                return this._createPredicateTerm(op.trim(), [
+                    this._parseTerm(left),
+                    this._parseTerm(right)
+                ], true);
+            }
         }
 
         // Predicate/Compound term f(a,b)

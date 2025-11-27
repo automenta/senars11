@@ -1,10 +1,7 @@
-
-import { NAR } from '../../src/nar/NAR.js';
-import { NARTool } from '../../src/tool/NARTool.js';
-import { PrologStrategy } from '../../src/reason/strategy/PrologStrategy.js';
-import { TermFactory } from '../../src/term/TermFactory.js';
-import { Task } from '../../src/task/Task.js';
-import { Truth } from '../../src/Truth.js';
+import {NAR} from '../../src/nar/NAR.js';
+import {NARTool} from '../../src/tool/NARTool.js';
+import {PrologStrategy} from '../../src/reason/strategy/PrologStrategy.js';
+import {Task} from '../../src/task/Task.js';
 
 describe('NAL and Prolog Synergy', () => {
     let nar;
@@ -30,8 +27,8 @@ describe('NAL and Prolog Synergy', () => {
 
     test('should enable Prolog feedback loop into NAL stream', async () => {
         // 1. Prolog Knowledge
-        await narTool.execute({ action: 'assert_prolog', content: 'man(socrates).' });
-        await narTool.execute({ action: 'assert_prolog', content: 'mortal(X) :- man(X).' });
+        await narTool.execute({action: 'assert_prolog', content: 'man(socrates).'});
+        await narTool.execute({action: 'assert_prolog', content: 'mortal(X) :- man(X).'});
 
         // 2. Construct Prolog Query Task
         const createPrologTerm = (pred, ...args) => {
@@ -45,7 +42,7 @@ describe('NAL and Prolog Synergy', () => {
         };
 
         const subgoalTerm = createPrologTerm('mortal', 'socrates');
-        const subgoalTask = new Task({ term: subgoalTerm, punctuation: '?' });
+        const subgoalTask = new Task({term: subgoalTerm, punctuation: '?'});
 
         // 3. Query Prolog via NAR
         const answers = await nar.ask(subgoalTask);

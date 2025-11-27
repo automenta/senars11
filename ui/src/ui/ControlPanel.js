@@ -129,8 +129,8 @@ export class ControlPanel {
                 this._hideResetModal();
                 // Also reset playback state if needed
                 if (this.isRunning) {
-                     this.isRunning = false;
-                     this._updatePlaybackControls();
+                    this.isRunning = false;
+                    this._updatePlaybackControls();
                 }
                 // Reset cycle count
                 this.updateCycleCount(0);

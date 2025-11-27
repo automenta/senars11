@@ -84,7 +84,7 @@ export class MCPManager extends EventEmitter {
     async registerLocalTools(nar) {
         if (!this.server) return;
 
-        const { NARTool } = await import('../tool/NARTool.js');
+        const {NARTool} = await import('../tool/NARTool.js');
         const narTool = new NARTool(nar);
         this.server.registerTool(narTool.name, narTool);
     }
@@ -153,19 +153,19 @@ export class MCPManager extends EventEmitter {
             return false;
         }
 
-        const { MCPProxyTool } = await import('./MCPProxyTool.js');
+        const {MCPProxyTool} = await import('./MCPProxyTool.js');
 
         // Register client tools
         if (this.client) {
             for (const [name, toolInfo] of this.discoveredTools) {
                 // Check if tool already exists to avoid conflict
                 if (!nar.tools.registry.getTool(name)) {
-                     const proxyTool = new MCPProxyTool(this.client, name, toolInfo);
-                     nar.tools.registry.registerTool(name, proxyTool, {
-                         category: 'mcp',
-                         description: toolInfo.description
-                     });
-                     console.log(`Registered MCP tool '${name}' with NAR`);
+                    const proxyTool = new MCPProxyTool(this.client, name, toolInfo);
+                    nar.tools.registry.registerTool(name, proxyTool, {
+                        category: 'mcp',
+                        description: toolInfo.description
+                    });
+                    console.log(`Registered MCP tool '${name}' with NAR`);
                 }
             }
         }

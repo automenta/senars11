@@ -1,5 +1,4 @@
-import { spawn } from 'child_process';
-import path from 'path';
+import {spawn} from 'child_process';
 
 // Regex to strip ANSI escape codes
 const ANSI_REGEX = /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g;
@@ -25,7 +24,7 @@ export class ProcessDemoRunner {
 
         this.process = spawn('node', [scriptPath], {
             cwd: cwd,
-            env: { ...process.env, TERM: 'xterm-256color', FORCE_COLOR: '1' },
+            env: {...process.env, TERM: 'xterm-256color', FORCE_COLOR: '1'},
             stdio: ['pipe', 'pipe', 'pipe']
         });
 

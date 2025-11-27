@@ -31,7 +31,7 @@ export class App extends EventEmitter {
         const agent = await new AgentBuilder(effectiveConfig).build();
         agent.id = id;
 
-        this.agents.set(id, { id, agent, createdAt: new Date(), lastAccessed: new Date(), config: effectiveConfig });
+        this.agents.set(id, {id, agent, createdAt: new Date(), lastAccessed: new Date(), config: effectiveConfig});
         this.activeAgentId ??= id;
 
         return agent;
@@ -70,7 +70,7 @@ export class App extends EventEmitter {
         return true;
     }
 
-    async start({ startAgent = true, setupSignals = false } = {}) {
+    async start({startAgent = true, setupSignals = false} = {}) {
         await this.initialize();
         if (startAgent) this.agent?.start?.();
         if (setupSignals) this.setupGracefulShutdown();
@@ -80,7 +80,7 @@ export class App extends EventEmitter {
 
     async shutdown() {
         this.log.info('\nShutting down application...');
-        for (const [id, { agent }] of this.agents) {
+        for (const [id, {agent}] of this.agents) {
             await this._shutdownAgent(agent, id);
         }
         this.emit('stopped');

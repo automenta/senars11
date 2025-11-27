@@ -1,4 +1,4 @@
-import { Component } from './Component.js';
+import {Component} from './Component.js';
 
 const DEFAULT_CONFIG = {
     lm: {
@@ -26,7 +26,7 @@ export class ConfigPanel extends Component {
         try {
             const stored = localStorage.getItem('senars-demo-config');
             if (stored) {
-                return { ...DEFAULT_CONFIG, ...JSON.parse(stored) };
+                return {...DEFAULT_CONFIG, ...JSON.parse(stored)};
             }
         } catch (e) {
             console.error('Error loading config:', e);

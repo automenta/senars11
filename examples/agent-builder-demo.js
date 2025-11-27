@@ -11,7 +11,7 @@ async function main() {
     console.log('\n=== Creating agent with metrics and embeddings enabled ===');
     const customAgent = await new AgentBuilder()
         .withMetrics(true)
-        .withEmbeddings({ model: 'text-embedding-ada-002', enabled: true })
+        .withEmbeddings({model: 'text-embedding-ada-002', enabled: true})
         .withLM(true)
         .withTools(false)
         .withFunctors(['core-arithmetic'])
@@ -22,7 +22,7 @@ async function main() {
     const configAgent = await new AgentBuilder({
         subsystems: {
             metrics: true,
-            embeddingLayer: { enabled: true, model: 'test-model' },
+            embeddingLayer: {enabled: true, model: 'test-model'},
             functors: ['core-arithmetic', 'set-operations'],
             rules: ['syllogistic-core'],
             tools: false,

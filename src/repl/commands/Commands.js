@@ -4,7 +4,7 @@
 
 import {handleError} from '../../util/ErrorHandler.js';
 import {fileURLToPath} from 'url';
-import {dirname, resolve, join, basename} from 'path';
+import {basename, dirname, join, resolve} from 'path';
 import {promises as fs} from 'fs';
 import {FormattingUtils} from '../../util/FormattingUtils.js';
 
@@ -132,7 +132,10 @@ export class GoalCommand extends AgentCommand {
 }
 
 export class PlanCommand extends AgentCommand {
-    constructor() { super('plan', 'Generate a plan using LM', 'plan <description>'); }
+    constructor() {
+        super('plan', 'Generate a plan using LM', 'plan <description>');
+    }
+
     async _executeImpl(agent, ...args) {
         if (args.length < 1) return 'Usage: plan <description>';
         if (!agent.lm) return '❌ No Language Model enabled.';
@@ -142,7 +145,10 @@ export class PlanCommand extends AgentCommand {
 }
 
 export class ThinkCommand extends AgentCommand {
-    constructor() { super('think', 'Have agent think about a topic', 'think <topic>'); }
+    constructor() {
+        super('think', 'Have agent think about a topic', 'think <topic>');
+    }
+
     async _executeImpl(agent, ...args) {
         if (args.length < 1) return 'Usage: think <topic>';
         if (!agent.lm) return '❌ No Language Model enabled.';
@@ -152,7 +158,10 @@ export class ThinkCommand extends AgentCommand {
 }
 
 export class ReasonCommand extends AgentCommand {
-    constructor() { super('reason', 'Perform reasoning using LM', 'reason <statement>'); }
+    constructor() {
+        super('reason', 'Perform reasoning using LM', 'reason <statement>');
+    }
+
     async _executeImpl(agent, ...args) {
         if (args.length < 1) return 'Usage: reason <statement>';
         if (!agent.lm) return '❌ No Language Model enabled.';
@@ -162,7 +171,10 @@ export class ReasonCommand extends AgentCommand {
 }
 
 export class LMCommand extends AgentCommand {
-    constructor() { super('lm', 'Direct LM communication', 'lm <prompt>'); }
+    constructor() {
+        super('lm', 'Direct LM communication', 'lm <prompt>');
+    }
+
     async _executeImpl(agent, ...args) {
         if (args.length < 1) return 'Usage: lm <prompt>';
         if (!agent.lm) return '❌ No Language Model enabled.';
@@ -172,7 +184,10 @@ export class LMCommand extends AgentCommand {
 }
 
 export class ProvidersCommand extends AgentCommand {
-    constructor() { super('providers', 'Manage LM providers', 'providers [list|select <id>]'); }
+    constructor() {
+        super('providers', 'Manage LM providers', 'providers [list|select <id>]');
+    }
+
     async _executeImpl(agent, ...args) {
         if (!agent.lm) return '❌ No Language Model enabled.';
         if (args.length === 0 || args[0] === 'list') {
@@ -191,7 +206,10 @@ export class ProvidersCommand extends AgentCommand {
 }
 
 export class ToolsCommand extends AgentCommand {
-    constructor() { super('tools', 'Show Tools/MCP configuration', 'tools'); }
+    constructor() {
+        super('tools', 'Show Tools/MCP configuration', 'tools');
+    }
+
     async _executeImpl(agent) {
         let lines = ['🔧 Tools/MCP Configuration:'];
         if (agent.agentLM && agent.agentLM.providers) {
@@ -209,15 +227,15 @@ export class ToolsCommand extends AgentCommand {
             }
         }
         if (agent.agentLM) {
-             const pid = agent.agentLM.providers?.defaultProviderId;
-             if (pid) {
-                 const p = agent.agentLM.providers.get(pid);
-                 const tools = (p && (typeof p.getAvailableTools === 'function' ? p.getAvailableTools() : p.tools)) || [];
-                 if (tools.length > 0) {
-                     lines.push(`  🤖 LM Tools (${tools.length}):`);
-                     tools.forEach((t, i) => lines.push(`    ${i + 1}. ${t.name ?? t.constructor.name}: ${t.description ?? ''}`));
-                 }
-             }
+            const pid = agent.agentLM.providers?.defaultProviderId;
+            if (pid) {
+                const p = agent.agentLM.providers.get(pid);
+                const tools = (p && (typeof p.getAvailableTools === 'function' ? p.getAvailableTools() : p.tools)) || [];
+                if (tools.length > 0) {
+                    lines.push(`  🤖 LM Tools (${tools.length}):`);
+                    tools.forEach((t, i) => lines.push(`    ${i + 1}. ${t.name ?? t.constructor.name}: ${t.description ?? ''}`));
+                }
+            }
         }
         if (agent.nar && agent.nar.mcp) {
             const mcp = agent.nar.mcp.getAvailableTools();
@@ -233,14 +251,20 @@ export class ToolsCommand extends AgentCommand {
 // --- System Commands ---
 
 export class HelpCommand extends AgentCommand {
-    constructor() { super('help', 'Show available commands', 'help'); }
+    constructor() {
+        super('help', 'Show available commands', 'help');
+    }
+
     async _executeImpl(agent) {
         return `🤖 Available commands:\n${agent.commandRegistry ? agent.commandRegistry.getHelp() : 'No help available'}`;
     }
 }
 
 export class StatusCommand extends AgentCommand {
-    constructor() { super('stats', 'Show system health', 'stats'); }
+    constructor() {
+        super('stats', 'Show system health', 'stats');
+    }
+
     async _executeImpl(agent) {
         const stats = agent.getStats();
         const ms = stats.memoryStats || {};
@@ -254,7 +278,10 @@ export class StatusCommand extends AgentCommand {
 }
 
 export class MemoryCommand extends AgentCommand {
-    constructor() { super('memory', 'Show memory statistics', 'memory'); }
+    constructor() {
+        super('memory', 'Show memory statistics', 'memory');
+    }
+
     async _executeImpl(agent) {
         const stats = agent.getStats();
         const ms = stats.memoryStats || {};
@@ -266,7 +293,10 @@ export class MemoryCommand extends AgentCommand {
 }
 
 export class TraceCommand extends AgentCommand {
-    constructor() { super('trace', 'Toggle derivation trace', 'trace [on|off]'); }
+    constructor() {
+        super('trace', 'Toggle derivation trace', 'trace [on|off]');
+    }
+
     async _executeImpl(agent, ...args) {
         if (args[0] === 'on') agent.traceEnabled = true;
         else if (args[0] === 'off') agent.traceEnabled = false;
@@ -277,7 +307,10 @@ export class TraceCommand extends AgentCommand {
 }
 
 export class ResetCommand extends AgentCommand {
-    constructor() { super('reset', 'Reset the system', 'reset'); }
+    constructor() {
+        super('reset', 'Reset the system', 'reset');
+    }
+
     async _executeImpl(agent) {
         agent.reset();
         return '🔄 System reset successfully.';
@@ -285,11 +318,16 @@ export class ResetCommand extends AgentCommand {
 }
 
 export class RestartCommand extends ResetCommand {
-    constructor() { super('restart', 'Restart the system', 'restart'); }
+    constructor() {
+        super('restart', 'Restart the system', 'restart');
+    }
 }
 
 export class SaveCommand extends AgentCommand {
-    constructor() { super('save', 'Save state to file', 'save'); }
+    constructor() {
+        super('save', 'Save state to file', 'save');
+    }
+
     async _executeImpl(agent) {
         const result = await agent.save();
         return `💾 Saved to ${result.identifier} (${result.size} bytes)`;
@@ -297,7 +335,10 @@ export class SaveCommand extends AgentCommand {
 }
 
 export class LoadCommand extends AgentCommand {
-    constructor() { super('load', 'Load state from file', 'load <filepath>'); }
+    constructor() {
+        super('load', 'Load state from file', 'load <filepath>');
+    }
+
     async _executeImpl(agent, ...args) {
         if (args.length === 0) return 'Usage: load <filepath>';
         const filepath = args[0];
@@ -308,7 +349,10 @@ export class LoadCommand extends AgentCommand {
 }
 
 export class DemoCommand extends AgentCommand {
-    constructor() { super('demo', 'Run .nars demo', 'demo [name]'); }
+    constructor() {
+        super('demo', 'Run .nars demo', 'demo [name]');
+    }
+
     async _executeImpl(agent, ...args) {
         try {
             const files = (await fs.readdir(EXAMPLES_DIR)).filter(f => f.endsWith('.nars'));
@@ -338,7 +382,10 @@ export class DemoCommand extends AgentCommand {
 }
 
 export class RunCommand extends AgentCommand {
-    constructor() { super('run', 'Execute .nars file', 'run <path>'); }
+    constructor() {
+        super('run', 'Execute .nars file', 'run <path>');
+    }
+
     async _executeImpl(agent, ...args) {
         if (args.length === 0) return 'Usage: run <path>';
 
@@ -346,7 +393,7 @@ export class RunCommand extends AgentCommand {
         let filepath = args[0];
         if (!filepath.startsWith('/') && !filepath.includes(':')) {
             // Relative path, try resolving from cwd
-             filepath = resolve(process.cwd(), filepath);
+            filepath = resolve(process.cwd(), filepath);
         }
 
         try {
@@ -367,28 +414,31 @@ export class RunCommand extends AgentCommand {
                 if (trimmed.startsWith('*')) continue; // Ignore legacy control
 
                 if (agent.echo) {
-                     output.push(`> ${trimmed}`);
+                    output.push(`> ${trimmed}`);
                 }
 
                 if (trimmed.startsWith('/')) {
-                     // Slash command
-                     const [cmd, ...cmdArgs] = trimmed.slice(1).split(' ');
-                     const res = await agent.executeCommand(cmd, ...cmdArgs);
-                     if (res) output.push(res);
+                    // Slash command
+                    const [cmd, ...cmdArgs] = trimmed.slice(1).split(' ');
+                    const res = await agent.executeCommand(cmd, ...cmdArgs);
+                    if (res) output.push(res);
                 } else {
-                     // Narsese
-                     await agent.processInput(trimmed);
+                    // Narsese
+                    await agent.processInput(trimmed);
                 }
             }
             return output.join('\n');
         } catch (error) {
-             return `❌ Error executing file ${filepath}: ${error.message}`;
+            return `❌ Error executing file ${filepath}: ${error.message}`;
         }
     }
 }
 
 export class EchoCommand extends AgentCommand {
-    constructor() { super('echo', 'Toggle command echo', 'echo [on|off]'); }
+    constructor() {
+        super('echo', 'Toggle command echo', 'echo [on|off]');
+    }
+
     async _executeImpl(agent, ...args) {
         if (args[0] === 'on') agent.echo = true;
         else if (args[0] === 'off') agent.echo = false;
@@ -398,7 +448,10 @@ export class EchoCommand extends AgentCommand {
 }
 
 export class QuietCommand extends AgentCommand {
-    constructor() { super('quiet', 'Toggle quiet mode', 'quiet [on|off]'); }
+    constructor() {
+        super('quiet', 'Toggle quiet mode', 'quiet [on|off]');
+    }
+
     async _executeImpl(agent, ...args) {
         if (args[0] === 'on') agent.quiet = true;
         else if (args[0] === 'off') agent.quiet = false;
@@ -408,7 +461,10 @@ export class QuietCommand extends AgentCommand {
 }
 
 export class StepCommand extends AgentCommand {
-    constructor() { super('step', 'Step inference cycles', 'step [n|duration]'); }
+    constructor() {
+        super('step', 'Step inference cycles', 'step [n|duration]');
+    }
+
     async _executeImpl(agent, ...args) {
         if (args.length === 0) {
             await agent.step();
@@ -428,8 +484,8 @@ export class StepCommand extends AgentCommand {
         // Number of steps
         const steps = parseInt(arg);
         if (!isNaN(steps)) {
-             await agent.runCycles(steps);
-             return `Executed ${steps} cycles. Cycle: ${agent.cycleCount}`;
+            await agent.runCycles(steps);
+            return `Executed ${steps} cycles. Cycle: ${agent.cycleCount}`;
         }
 
         if (arg === 'off') {
@@ -442,23 +498,29 @@ export class StepCommand extends AgentCommand {
 }
 
 export class CycleCommand extends AgentCommand {
-    constructor() { super('cycle', 'Show current cycle', 'cycle'); }
+    constructor() {
+        super('cycle', 'Show current cycle', 'cycle');
+    }
+
     async _executeImpl(agent) {
         return `Cycle: ${agent.cycleCount}`;
     }
 }
 
 export class ConceptsCommand extends AgentCommand {
-    constructor() { super('concepts', 'List concepts', 'concepts [term]'); }
+    constructor() {
+        super('concepts', 'List concepts', 'concepts [term]');
+    }
+
     async _executeImpl(agent, ...args) {
         const concepts = agent.getConceptPriorities();
         if (concepts.length === 0) return 'No concepts.';
 
         if (args.length > 0) {
-             const term = args[0];
-             const concept = concepts.find(c => c.term === term);
-             if (!concept) return `Concept '${term}' not found.`;
-             return `Concept: ${term}\nPriority: ${concept.priority.toFixed(3)}\nActivation: ${concept.activation.toFixed(3)}\nQuality: ${concept.quality.toFixed(3)}\nTasks: ${concept.totalTasks}`;
+            const term = args[0];
+            const concept = concepts.find(c => c.term === term);
+            if (!concept) return `Concept '${term}' not found.`;
+            return `Concept: ${term}\nPriority: ${concept.priority.toFixed(3)}\nActivation: ${concept.activation.toFixed(3)}\nQuality: ${concept.quality.toFixed(3)}\nTasks: ${concept.totalTasks}`;
         }
 
         const list = concepts.slice(0, 20).map(c =>
@@ -469,7 +531,10 @@ export class ConceptsCommand extends AgentCommand {
 }
 
 export class TasksCommand extends AgentCommand {
-    constructor() { super('tasks', 'List tasks', 'tasks [term]'); }
+    constructor() {
+        super('tasks', 'List tasks', 'tasks [term]');
+    }
+
     async _executeImpl(agent, ...args) {
         let tasks = [];
 
@@ -508,9 +573,9 @@ export class TasksCommand extends AgentCommand {
         // Deduplicate based on task string representation
         const uniqueTasks = new Map();
         tasks.forEach(item => {
-             const t = item.task;
-             const key = FormattingUtils.formatTask(t);
-             if (!uniqueTasks.has(key)) uniqueTasks.set(key, item);
+            const t = item.task;
+            const key = FormattingUtils.formatTask(t);
+            if (!uniqueTasks.has(key)) uniqueTasks.set(key, item);
         });
 
         const sortedTasks = Array.from(uniqueTasks.values()).slice(0, 30); // Limit output
@@ -524,14 +589,20 @@ export class TasksCommand extends AgentCommand {
 }
 
 export class ContinueCommand extends AgentCommand {
-    constructor() { super('continue', 'Resume continuous execution', 'continue'); }
+    constructor() {
+        super('continue', 'Resume continuous execution', 'continue');
+    }
+
     async _executeImpl(agent) {
         return agent.startAutoStep(10);
     }
 }
 
 export class BeliefsCommand extends AgentCommand {
-    constructor() { super('beliefs', 'List beliefs', 'beliefs'); }
+    constructor() {
+        super('beliefs', 'List beliefs', 'beliefs');
+    }
+
     async _executeImpl(agent) {
         const beliefs = agent.getBeliefs();
         const list = beliefs.slice(0, 20).map(t => FormattingUtils.formatTask(t)).join('\n');
@@ -540,7 +611,10 @@ export class BeliefsCommand extends AgentCommand {
 }
 
 export class QuestionsCommand extends AgentCommand {
-    constructor() { super('questions', 'List questions', 'questions'); }
+    constructor() {
+        super('questions', 'List questions', 'questions');
+    }
+
     async _executeImpl(agent) {
         const questions = agent.getQuestions();
         const list = questions.slice(0, 20).map(t => FormattingUtils.formatTask(t)).join('\n');
@@ -549,7 +623,10 @@ export class QuestionsCommand extends AgentCommand {
 }
 
 export class HistoryCommand extends AgentCommand {
-    constructor() { super('history', 'Show command history', 'history [n]'); }
+    constructor() {
+        super('history', 'Show command history', 'history [n]');
+    }
+
     async _executeImpl(agent, ...args) {
         const n = args[0] ? parseInt(args[0]) : 10;
         const history = agent.getHistory();
@@ -558,7 +635,10 @@ export class HistoryCommand extends AgentCommand {
 }
 
 export class LastCommand extends AgentCommand {
-    constructor() { super('last', 'Re-run last command', 'last'); }
+    constructor() {
+        super('last', 'Re-run last command', 'last');
+    }
+
     async _executeImpl(agent) {
         const history = agent.getHistory();
         if (history.length === 0) return 'No history.';
@@ -568,14 +648,20 @@ export class LastCommand extends AgentCommand {
 }
 
 export class ThemeCommand extends AgentCommand {
-    constructor() { super('theme', 'Change theme', 'theme <name>'); }
+    constructor() {
+        super('theme', 'Change theme', 'theme <name>');
+    }
+
     async _executeImpl(agent, ...args) {
         return 'Theme change requested (UI only).';
     }
 }
 
 export class ModeCommand extends AgentCommand {
-    constructor() { super('mode', 'Show or change input mode', 'mode [agent|narsese]'); }
+    constructor() {
+        super('mode', 'Show or change input mode', 'mode [agent|narsese]');
+    }
+
     async _executeImpl(agent, ...args) {
         // This command is handled specially in UI layer, but we provide basic functionality
         if (args.length === 0) {
@@ -593,7 +679,10 @@ export class ModeCommand extends AgentCommand {
 }
 
 export class NaturalCommand extends AgentCommand {
-    constructor() { super('natural', 'Switch to natural language mode', 'natural'); }
+    constructor() {
+        super('natural', 'Switch to natural language mode', 'natural');
+    }
+
     async _executeImpl(agent, ...args) {
         // This command is handled specially in UI layer, but we provide basic functionality
         return '🔄 Switched to natural language (agent) mode';
@@ -601,7 +690,10 @@ export class NaturalCommand extends AgentCommand {
 }
 
 export class NarseseCommand extends AgentCommand {
-    constructor() { super('narsese', 'Switch to Narsese mode', 'narsese'); }
+    constructor() {
+        super('narsese', 'Switch to Narsese mode', 'narsese');
+    }
+
     async _executeImpl(agent, ...args) {
         // This command is handled specially in UI layer, but we provide basic functionality
         return '🔄 Switched to Narsese mode';
@@ -609,7 +701,10 @@ export class NarseseCommand extends AgentCommand {
 }
 
 export class VolCommand extends AgentCommand {
-    constructor() { super('vol', 'Set volume', 'vol <n>'); }
+    constructor() {
+        super('vol', 'Set volume', 'vol <n>');
+    }
+
     async _executeImpl(agent, ...args) {
         // Ignore volume per instruction, but ack
         return 'Volume set (simulated).';

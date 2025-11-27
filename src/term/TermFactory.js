@@ -78,17 +78,33 @@ export class TermFactory extends BaseComponent {
     }
 
     // Convenience methods
-    atomic(name) { return this.create(name); }
+    atomic(name) {
+        return this.create(name);
+    }
 
     variable(name) {
         return this.create(name.startsWith('?') ? name : `?${name}`);
     }
 
-    inheritance(sub, pred) { return this._processCompound('-->', [sub, pred]); }
-    similarity(sub, pred) { return this._processCompound('<->', [sub, pred]); }
-    implication(pre, post) { return this._processCompound('==>', [pre, post]); }
-    equivalence(left, right) { return this._processCompound('<=>', [left, right]); }
-    equality(left, right) { return this._processCompound('=', [left, right]); }
+    inheritance(sub, pred) {
+        return this._processCompound('-->', [sub, pred]);
+    }
+
+    similarity(sub, pred) {
+        return this._processCompound('<->', [sub, pred]);
+    }
+
+    implication(pre, post) {
+        return this._processCompound('==>', [pre, post]);
+    }
+
+    equivalence(left, right) {
+        return this._processCompound('<=>', [left, right]);
+    }
+
+    equality(left, right) {
+        return this._processCompound('=', [left, right]);
+    }
 
     conjunction(...terms) {
         const comps = (terms.length === 1 && Array.isArray(terms[0])) ? terms[0] : terms;
@@ -110,7 +126,9 @@ export class TermFactory extends BaseComponent {
         return this._processCompound('&/', comps);
     }
 
-    negation(term) { return this._processCompound('--', [term]); }
+    negation(term) {
+        return this._processCompound('--', [term]);
+    }
 
     product(...terms) {
         const comps = (terms.length === 1 && Array.isArray(terms[0])) ? terms[0] : terms;
@@ -137,7 +155,9 @@ export class TermFactory extends BaseComponent {
         return this._processCompound('\\', [relation, ...comps]);
     }
 
-    predicate(pred, args) { return this._processCompound('^', [pred, args]); }
+    predicate(pred, args) {
+        return this._processCompound('^', [pred, args]);
+    }
 
     tuple(...terms) {
         const comps = (terms.length === 1 && Array.isArray(terms[0])) ? terms[0] : terms;

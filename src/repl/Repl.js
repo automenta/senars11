@@ -25,10 +25,10 @@ class Repl {
         }
 
         this.log.info('🚀 Starting REPL engine...\n');
-        const agent = await this.app.start({ startAgent: false });
+        const agent = await this.app.start({startAgent: false});
         this.log.info('✅ Engine ready. Rendering UI...');
 
-        this.inkInstance = render(React.createElement(TUI, { engine: agent, app: this.app }));
+        this.inkInstance = render(React.createElement(TUI, {engine: agent, app: this.app}));
     }
 
     async shutdown() {

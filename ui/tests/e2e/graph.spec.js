@@ -6,8 +6,8 @@ test.describe('Graph Functionality', () => {
         const nar = new TestNARPlaywright(productionPage.page);
 
         await nar.input('<graph_test_concept --> test>.')
-           .run(5)
-           .expectGraph('graph_test_concept')
-           .execute();
+            .run(5)
+            .expectGraph('graph_test_concept')
+            .execute();
     });
 });

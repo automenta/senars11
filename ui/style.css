@@ -176,15 +176,50 @@ body {
 }
 
 /* Message type styles */
-.type-info { background-color: #2a2d2e; border-left: 3px solid #0078d7; }
-.type-success { background-color: #2a2d2e; border-left: 3px solid #4ec9b0; }
-.type-error { background-color: #2a2d2e; border-left: 3px solid #f48771; }
-.type-warning { background-color: #2a2d2e; border-left: 3px solid #ffcc02; }
-.type-debug { background-color: #2a2d2e; border-left: 3px solid #c586c0; }
-.type-input { background-color: #2a2d2e; border-left: 3px solid #569cd6; }
-.type-output { background-color: #2a2d2e; border-left: 3px solid #b5cea8; }
-.type-task { background-color: #2a2d2e; border-left: 3px solid #ff8c00; }
-.type-concept { background-color: #2a2d2e; border-left: 3px solid #4ec9b0; }
+.type-info {
+    background-color: #2a2d2e;
+    border-left: 3px solid #0078d7;
+}
+
+.type-success {
+    background-color: #2a2d2e;
+    border-left: 3px solid #4ec9b0;
+}
+
+.type-error {
+    background-color: #2a2d2e;
+    border-left: 3px solid #f48771;
+}
+
+.type-warning {
+    background-color: #2a2d2e;
+    border-left: 3px solid #ffcc02;
+}
+
+.type-debug {
+    background-color: #2a2d2e;
+    border-left: 3px solid #c586c0;
+}
+
+.type-input {
+    background-color: #2a2d2e;
+    border-left: 3px solid #569cd6;
+}
+
+.type-output {
+    background-color: #2a2d2e;
+    border-left: 3px solid #b5cea8;
+}
+
+.type-task {
+    background-color: #2a2d2e;
+    border-left: 3px solid #ff8c00;
+}
+
+.type-concept {
+    background-color: #2a2d2e;
+    border-left: 3px solid #4ec9b0;
+}
 
 .input-section {
     padding: 12px 15px;
@@ -331,10 +366,22 @@ select {
     min-width: 250px;
 }
 
-.notification-success { background-color: #4ec9b0; }
-.notification-error { background-color: #f48771; }
-.notification-warning { background-color: #ffcc02; color: #000; }
-.notification-info { background-color: #0078d7; }
+.notification-success {
+    background-color: #4ec9b0;
+}
+
+.notification-error {
+    background-color: #f48771;
+}
+
+.notification-warning {
+    background-color: #ffcc02;
+    color: #000;
+}
+
+.notification-info {
+    background-color: #0078d7;
+}
 
 /* Cytoscape.js specific styles */
 .cytoscape-container {
@@ -739,8 +786,15 @@ select {
     background: #0062a3;
 }
 
-.hidden { display: none !important; }
-.playback-controls { display: flex; gap: 4px; margin-right: 8px; }
+.hidden {
+    display: none !important;
+}
+
+.playback-controls {
+    display: flex;
+    gap: 4px;
+    margin-right: 8px;
+}
 
 /* Tabs and Editor */
 .view-controls {

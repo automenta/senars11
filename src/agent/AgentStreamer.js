@@ -1,6 +1,5 @@
 import {HumanMessage, ToolMessage} from "@langchain/core/messages";
 import {handleError} from '../util/ErrorHandler.js';
-import {AGENT_EVENTS} from "./constants.js";
 
 export class AgentStreamer {
     constructor(agent) {

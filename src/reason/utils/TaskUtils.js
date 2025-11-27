@@ -22,7 +22,7 @@ function createTruth(obj) {
 }
 
 // Export Truth for backward compatibility or direct usage
-export { Truth as TruthValue };
+export {Truth as TruthValue};
 
 export class Task {
     constructor(term, punctuation = '.', truth = null, budget = null, occurrenceTime = null, priority = 0.5, durability = 0.5, occurrenceSpan = null, metadata = null) {

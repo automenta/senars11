@@ -102,7 +102,7 @@ export class PrologStrategy extends Strategy {
         const components = this._getTermComponents(term);
         // Handle PrologParser structure (^, Pred, ArgsTuple)
         if (term.operator === '^' && components.length === 2) {
-             return this._getTermComponents(components[1]);
+            return this._getTermComponents(components[1]);
         }
         return components;
     }
@@ -125,10 +125,10 @@ export class PrologStrategy extends Strategy {
 
                 const unification = this._unify(arg1, valueTerm, substitution);
                 if (unification.success) {
-                     return [{
-                         substitution: unification.substitution,
-                         task: this._applySubstitutionToTask(goalTask, unification.substitution)
-                     }];
+                    return [{
+                        substitution: unification.substitution,
+                        task: this._applySubstitutionToTask(goalTask, unification.substitution)
+                    }];
                 }
                 return [];
             }
@@ -138,17 +138,29 @@ export class PrologStrategy extends Strategy {
             const val2 = this._evalExpression(arg2);
             let success = false;
 
-            switch(pred) {
-                case '>': success = val1 > val2; break;
-                case '<': success = val1 < val2; break;
-                case '>=': success = val1 >= val2; break;
-                case '<=': success = val1 <= val2; break;
-                case '=': success = val1 === val2; break;
-                case '\\=': success = val1 !== val2; break;
+            switch (pred) {
+                case '>':
+                    success = val1 > val2;
+                    break;
+                case '<':
+                    success = val1 < val2;
+                    break;
+                case '>=':
+                    success = val1 >= val2;
+                    break;
+                case '<=':
+                    success = val1 <= val2;
+                    break;
+                case '=':
+                    success = val1 === val2;
+                    break;
+                case '\\=':
+                    success = val1 !== val2;
+                    break;
             }
 
             if (success) {
-                return [{ substitution, task: goalTask }];
+                return [{substitution, task: goalTask}];
             }
             return [];
 
@@ -171,11 +183,15 @@ export class PrologStrategy extends Strategy {
             if (args.length === 2) {
                 const v1 = this._evalExpression(args[0]);
                 const v2 = this._evalExpression(args[1]);
-                switch(pred) {
-                    case '+': return v1 + v2;
-                    case '-': return v1 - v2;
-                    case '*': return v1 * v2;
-                    case '/': return v1 / v2;
+                switch (pred) {
+                    case '+':
+                        return v1 + v2;
+                    case '-':
+                        return v1 - v2;
+                    case '*':
+                        return v1 * v2;
+                    case '/':
+                        return v1 / v2;
                 }
             }
         }
@@ -276,15 +292,15 @@ export class PrologStrategy extends Strategy {
         if (this._isVariable(t1)) return this._unifyVariable(t1, t2, substitution);
         if (this._isVariable(t2)) return this._unifyVariable(t2, t1, substitution);
 
-        if (this._termsEqual(t1, t2)) return { success: true, substitution };
+        if (this._termsEqual(t1, t2)) return {success: true, substitution};
 
         if (this._isCompound(t1) && this._isCompound(t2)) {
             if (this._getTermArity(t1) !== this._getTermArity(t2)) {
-                return { success: false, substitution: {} };
+                return {success: false, substitution: {}};
             }
 
             if ((t1.operator || '') !== (t2.operator || '')) {
-                return { success: false, substitution: {} };
+                return {success: false, substitution: {}};
             }
 
             let currentSubstitution = substitution;
@@ -293,12 +309,12 @@ export class PrologStrategy extends Strategy {
 
             for (let i = 0; i < components1.length; i++) {
                 const result = this._unify(components1[i], components2[i], currentSubstitution);
-                if (!result.success) return { success: false, substitution: {} };
+                if (!result.success) return {success: false, substitution: {}};
                 currentSubstitution = result.substitution;
             }
-            return { success: true, substitution: currentSubstitution };
+            return {success: true, substitution: currentSubstitution};
         }
-        return { success: false, substitution: {} };
+        return {success: false, substitution: {}};
     }
 
     _unifyVariable(variable, term, substitution) {
@@ -313,10 +329,10 @@ export class PrologStrategy extends Strategy {
         }
 
         if (this._occursCheck(varName, term, substitution)) {
-            return { success: false, substitution: {} };
+            return {success: false, substitution: {}};
         }
 
-        return { success: true, substitution: { ...substitution, [varName]: term } };
+        return {success: true, substitution: {...substitution, [varName]: term}};
     }
 
     /**

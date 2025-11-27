@@ -124,9 +124,9 @@ describe('Memory and Focus Management Integration', () => {
             // Create tasks with different characteristics
             const simpleTerm = termFactory.atomic('simple');
             const complexTerm = termFactory.inheritance(
-                    termFactory.atomic('A'),
-                    termFactory.atomic('B')
-                );
+                termFactory.atomic('A'),
+                termFactory.atomic('B')
+            );
 
             // Note: The convenience constructor doesn't support custom stamps, so keep original for these
             const recentTask = new Task({
@@ -218,13 +218,13 @@ describe('Memory and Focus Management Integration', () => {
             // Add various types of concepts
             const atomicTerm = termFactory.atomic('atom');
             const inheritanceTerm = termFactory.inheritance(
-                    termFactory.atomic('cat'),
-                    termFactory.atomic('animal')
-                );
+                termFactory.atomic('cat'),
+                termFactory.atomic('animal')
+            );
             const similarityTerm = termFactory.similarity(
-                    termFactory.atomic('dog'),
-                    termFactory.atomic('wolf')
-                );
+                termFactory.atomic('dog'),
+                termFactory.atomic('wolf')
+            );
 
             const atomicConcept = new Concept(atomicTerm, {});
             const inheritanceConcept = new Concept(inheritanceTerm, {});

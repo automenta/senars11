@@ -39,12 +39,12 @@ async function demonstrateEnhancedIntegration() {
     try {
         console.log('🚀 Initializing SeNARS with enhanced integration...\n');
         const agent = await app.start({startAgent: true});
-        
+
         console.log('✅ SeNARS initialized with full component access\n');
 
         // Properly connect NAR control tool with actual NAR instance
         console.log('1️⃣  ENHANCED NAR CONTROL TOOL INTEGRATION');
-        
+
         // Create NAR control tool with the actual NAR instance
         const narControlTool = new NARControlTool(agent.nar || agent);
         console.log('   ✅ Created NARControlTool with NAR instance\n');
@@ -62,15 +62,15 @@ async function demonstrateEnhancedIntegration() {
 
         // Test the LM's access to tools
         console.log('2️⃣  LM-TOOL INTEGRATION VERIFICATION');
-        
+
         if (agent.lm && agent.lm.providers && agent.lm.providers.size > 0) {
             console.log(`   ✅ LM has ${agent.lm.providers.size} providers registered`);
-            
+
             // Check if tools are properly bound to the LM provider
             for (const [providerId, provider] of agent.lm.providers.getAll()) {
                 console.log(`   Provider: ${providerId}`);
                 console.log(`   Provider type: ${provider.constructor?.name}`);
-                
+
                 // Check if the provider has tools attached
                 if (provider.tools && Array.isArray(provider.tools)) {
                     console.log(`   ✅ Provider has ${provider.tools.length} tools`);
@@ -82,19 +82,19 @@ async function demonstrateEnhancedIntegration() {
                 }
             }
         }
-        
+
         // Set up MCP server for enhanced external integration
         console.log('\n3️⃣  MCP SERVER INTEGRATION');
-        
+
         try {
             const mcpManager = new MCPManager({nar: agent.nar || agent});
             await mcpManager.initialize();
-            
+
             // Set up MCP server to expose SeNARS services
             const server = await mcpManager.setupServer(8082, {nar: agent.nar || agent});
             console.log('   ✅ MCP server started on port 8082');
             console.log(`   ✅ Exposed tools: ${server.getExposedTools()}`);
-            
+
             // Register MCP tools with the agent's tool system
             await mcpManager.registerToolsWithNAR(agent);
             console.log('   ✅ MCP tools registered with NAR\n');
@@ -139,7 +139,8 @@ async function demonstrateEnhancedIntegration() {
     } catch (error) {
         console.error('❌ Error during enhancement demonstration:', error.message);
         console.error('Stack:', error.stack);
-        await app.shutdown().catch(() => {});
+        await app.shutdown().catch(() => {
+        });
     }
 }
 
