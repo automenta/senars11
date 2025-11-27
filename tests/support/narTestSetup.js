@@ -55,18 +55,21 @@ export class StandardNARTestSetup {
 /**
  * Creates a standard NAR test setup with beforeEach and afterEach hooks
  * @param {object} config - NAR configuration
+ * @param {boolean} autoSetupHooks - Whether to automatically register setup/teardown hooks
  * @returns {StandardNARTestSetup} - Test setup instance
  */
-export const createStandardNARTestSetup = (config = {}) => {
+export const createStandardNARTestSetup = (config = {}, autoSetupHooks = true) => {
     const testSetup = new StandardNARTestSetup(config);
 
-    beforeEach(async () => {
-        await testSetup.setup();
-    });
+    if (autoSetupHooks) {
+        beforeEach(async () => {
+            await testSetup.setup();
+        });
 
-    afterEach(async () => {
-        await testSetup.teardown();
-    });
+        afterEach(async () => {
+            await testSetup.teardown();
+        });
+    }
 
     return testSetup;
 };
@@ -287,16 +290,18 @@ export const narTestSuites = {
 /**
  * Creates a complete NAR integration test suite with common patterns
  */
-export const createNARIntegrationTestSuite = (config = {}) => {
+export const createNARIntegrationTestSuite = (config = {}, autoSetupHooks = true) => {
     const testSetup = new StandardNARTestSetup(config);
 
-    beforeEach(async () => {
-        await testSetup.setup();
-    });
+    if (autoSetupHooks) {
+        beforeEach(async () => {
+            await testSetup.setup();
+        });
 
-    afterEach(() => {
-        testSetup.teardown();
-    });
+        afterEach(() => {
+            testSetup.teardown();
+        });
+    }
 
     // Return an object with the NAR instance and test utilities
     return {
@@ -305,4 +310,107 @@ export const createNARIntegrationTestSuite = (config = {}) => {
         patterns: narTestPatterns,
         suites: narTestSuites
     };
+};
+
+/**
+ * Creates a common test setup pattern that can be reused across different test files
+ * @param {Object} testConfig - Configuration for the test setup
+ * @param {string} testConfig.description - Description for the describe block
+ * @param {Function} testConfig.setupFn - Function to create the test instance
+ * @param {Function} testConfig.teardownFn - Function to destroy the test instance
+ * @param {Function} testConfig.testSuite - Function containing the actual tests
+ * @param {Object} testConfig.defaultConfig - Default configuration to use
+ */
+export const createCommonTestPattern = ({description, setupFn, teardownFn, testSuite, defaultConfig = {}}) => {
+    describe(description, () => {
+        let testInstance;
+        let config;
+
+        beforeEach(async () => {
+            config = defaultConfig;
+            testInstance = await setupFn(config);
+        });
+
+        afterEach(async () => {
+            if (teardownFn && testInstance) {
+                await teardownFn(testInstance);
+            }
+        });
+
+        testSuite(testInstance, config);
+    });
+};
+
+/**
+ * Common setup patterns for different types of tests
+ */
+export const commonTestPatterns = {
+    /**
+     * Pattern for component testing with initialization and cleanup
+     */
+    componentTest: (ComponentClass, config = {}) => ({
+        setup: async (setupConfig = {}) => new ComponentClass({...config, ...setupConfig}),
+        teardown: async (instance) => {
+            if (instance?.dispose) {
+                await instance.dispose();
+            } else if (instance?.destroy) {
+                instance.destroy();
+            }
+        }
+    }),
+
+    /**
+     * Pattern for memory-related component testing
+     */
+    memoryComponentTest: (ComponentClass, config = {}) => ({
+        setup: async (setupConfig = {}) => {
+            const component = new ComponentClass({...config, ...setupConfig});
+            // Initialize with default memory config if available
+            return component;
+        },
+        teardown: async (instance) => {
+            if (instance?.clear) {
+                instance.clear();
+            }
+            if (instance?.dispose) {
+                await instance.dispose();
+            }
+        }
+    })
+};
+
+/**
+ * Creates a reusable test template for validation tests
+ */
+export const createValidationTestTemplate = (
+    testDescription,
+    validationFunction,
+    validInputs,
+    invalidInputs,
+    customExpectations = {}
+) => {
+    describe(testDescription, () => {
+        // Test valid inputs
+        test.each(validInputs.map(input => [input]))(
+            'should validate valid input: %j',
+            (input) => {
+                const result = validationFunction(input);
+                expect(result).toBe(true);
+                if (customExpectations.valid) {
+                    customExpectations.valid(input, result);
+                }
+            }
+        );
+
+        // Test invalid inputs
+        test.each(invalidInputs.map(input => [input]))(
+            'should reject invalid input: %j',
+            (input) => {
+                expect(() => validationFunction(input)).toThrow();
+                if (customExpectations.invalid) {
+                    customExpectations.invalid(input);
+                }
+            }
+        );
+    });
 };

@@ -313,20 +313,20 @@ describe('Memory and Focus Management Integration', () => {
         test('should handle large numbers of concepts efficiently', () => {
             const startTime = Date.now();
 
-            // Create many concepts
-            for (let i = 0; i < 100; i++) {
-                const term = termFactory.atomic(`concept${i}`);
-                const task = new Task({
-                    term,
+            // Use batch creation to improve performance by reducing object creation overhead
+            const tasks = Array.from({length: 100}, (_, i) =>
+                new Task({
+                    term: termFactory.atomic(`concept${i}`),
                     punctuation: '.',
                     budget: {priority: 0.5},
                     truth: {frequency: 0.9, confidence: 0.8}
-                });
-                memory.addTask(task, currentTime);
-            }
+                })
+            );
 
-            const endTime = Date.now();
-            const duration = endTime - startTime;
+            // Add tasks to memory
+            tasks.forEach(task => memory.addTask(task, currentTime));
+
+            const duration = Date.now() - startTime;
 
             // Should complete in reasonable time
             expect(duration).toBeLessThan(2000);
@@ -341,20 +341,20 @@ describe('Memory and Focus Management Integration', () => {
 
             const startTime = Date.now();
 
-            // Add many tasks to focus
-            for (let i = 0; i < 50; i++) {
-                const term = termFactory.atomic(`focus_item${i}`);
-                const task = new Task({
-                    term,
+            // Use batch creation for better performance
+            const tasks = Array.from({length: 50}, (_, i) =>
+                new Task({
+                    term: termFactory.atomic(`focus_item${i}`),
                     punctuation: '.',
                     budget: {priority: 0.5},
                     truth: {frequency: 0.9, confidence: 0.8}
-                });
-                focus.addTaskToFocus(task);
-            }
+                })
+            );
 
-            const endTime = Date.now();
-            const duration = endTime - startTime;
+            // Add tasks to focus
+            tasks.forEach(task => focus.addTaskToFocus(task));
+
+            const duration = Date.now() - startTime;
 
             // Should complete quickly
             expect(duration).toBeLessThan(1000);

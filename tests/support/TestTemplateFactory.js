@@ -17,18 +17,10 @@ import {flexible} from './testOrganizer.js';
  */
 export const createInferenceTest = (testName, inputs, expected, tolerance = 0.05, cycles = 2) => {
     it(testName, async () => {
-        let testNAR = new TestNAR();
-
-        // Add all inputs
-        inputs.forEach(([statement, freq, conf]) => {
-            testNAR = testNAR.input(statement, freq, conf);
-        });
-
-        // Run reasoning
-        testNAR = testNAR.run(cycles);
-
-        // Add flexible expectation
-        testNAR = testNAR.expect(
+        const testNAR = inputs.reduce(
+            (nar, [statement, freq, conf]) => nar.input(statement, freq, conf),
+            new TestNAR()
+        ).run(cycles).expect(
             new TaskMatch(expected.term)
                 .withFlexibleTruth(expected.freq, expected.conf, tolerance)
         );
@@ -47,14 +39,11 @@ export const createInferenceTest = (testName, inputs, expected, tolerance = 0.05
  */
 export const createStructuralReasoningTest = (testName, premises, conclusion, tolerance = 0.05) => {
     it(testName, async () => {
-        let testNAR = new TestNAR();
+        const testNAR = premises.reduce(
+            (nar, {statement, freq, conf}) => nar.input(statement, freq, conf),
+            new TestNAR()
+        );
 
-        // Add premises
-        premises.forEach(premise => {
-            testNAR = testNAR.input(premise.statement, premise.freq, premise.conf);
-        });
-
-        // Run test
         const result = await testNAR
             .run(3)
             .expect(
@@ -75,12 +64,10 @@ export const createStructuralReasoningTest = (testName, premises, conclusion, to
  */
 export const createNegativeReasoningTest = (testName, inputs, conclusionTerm) => {
     it(testName, async () => {
-        let testNAR = new TestNAR();
-
-        // Add inputs
-        inputs.forEach(([statement, freq, conf]) => {
-            testNAR = testNAR.input(statement, freq, conf);
-        });
+        const testNAR = inputs.reduce(
+            (nar, [statement, freq, conf]) => nar.input(statement, freq, conf),
+            new TestNAR()
+        );
 
         // Expect the conclusion NOT to be derived
         const result = await testNAR
@@ -141,26 +128,24 @@ export const createPropertyBasedTest = (testName, reasoningSetup, validation) =>
  */
 export const createReasoningChainTest = (testName, sequence, expectedResults, tolerance = 0.05) => {
     it(testName, async () => {
-        let testNAR = new TestNAR();
-
-        // Execute each step in the sequence
-        for (const step of sequence) {
+        const testNAR = sequence.reduce((nar, step) => {
             if (step.type === 'input') {
-                testNAR = testNAR.input(step.statement, step.freq, step.conf);
+                return nar.input(step.statement, step.freq, step.conf);
             } else if (step.type === 'run') {
-                testNAR = testNAR.run(step.cycles || 1);
+                return nar.run(step.cycles || 1);
             }
-        }
+            return nar;
+        }, new TestNAR());
 
-        // Add expectations for each expected result
-        for (const expected of expectedResults) {
-            testNAR = testNAR.expect(
+        const finalNAR = expectedResults.reduce(
+            (nar, expected) => nar.expect(
                 new TaskMatch(expected.term)
                     .withFlexibleTruth(expected.freq, expected.conf, tolerance)
-            );
-        }
+            ),
+            testNAR
+        );
 
-        const result = await testNAR.execute();
+        const result = await finalNAR.execute();
         expect(result).toBe(true);
     });
 };
@@ -180,6 +165,55 @@ export const createFlexiblePerformanceTest = (testName, testFn, maxDurationMs = 
 };
 
 /**
+ * Helper function to create a TestNAR with inputs applied
+ * @param {Array} inputs - Array of [statement, freq, conf] tuples
+ * @returns {TestNAR} - TestNAR instance with inputs applied
+ */
+export const createNARWithInputs = (inputs) => {
+    return inputs.reduce(
+        (nar, [statement, freq, conf]) => nar.input(statement, freq, conf),
+        new TestNAR()
+    );
+};
+
+/**
+ * Helper function to chain expectations on a TestNAR
+ * @param {TestNAR} testNAR - TestNAR instance
+ * @param {Array} expectations - Array of expectation objects
+ * @param {number} tolerance - Tolerance for truth value matching
+ * @returns {TestNAR} - TestNAR instance with expectations applied
+ */
+export const addExpectations = (testNAR, expectations, tolerance = 0.05) => {
+    return expectations.reduce(
+        (nar, expected) => nar.expect(
+            new TaskMatch(expected.term)
+                .withFlexibleTruth(expected.freq, expected.conf, tolerance)
+        ),
+        testNAR
+    );
+};
+
+/**
+ * Helper function to build a TestNAR through a sequence of operations
+ * @param {Array} sequence - Array of operation objects
+ * @returns {TestNAR} - TestNAR instance after applying all operations
+ */
+export const buildNARFromSequence = (sequence) => {
+    return sequence.reduce((nar, step) => {
+        switch (step.type) {
+            case 'input':
+                return nar.input(step.statement, step.freq, step.conf);
+            case 'run':
+                return nar.run(step.cycles || 1);
+            case 'expect':
+                return nar.expect(new TaskMatch(step.term));
+            default:
+                return nar;
+        }
+    }, new TestNAR());
+};
+
+/**
  * Export a comprehensive test suite factory
  */
 export const TestTemplateFactory = {
@@ -189,7 +223,10 @@ export const TestTemplateFactory = {
     createTruthOperationTest,
     createPropertyBasedTest,
     createReasoningChainTest,
-    createFlexiblePerformanceTest
+    createFlexiblePerformanceTest,
+    createNARWithInputs,
+    addExpectations,
+    buildNARFromSequence
 };
 
 export default TestTemplateFactory;

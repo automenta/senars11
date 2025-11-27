@@ -98,13 +98,7 @@ describe('Task - Additional Specific Tests', () => {
     ])('compares equality correctly when other is $name', ({getOther, expected}) => {
         const task = createTask({term, punctuation: '.', truth: createTruth(0.9, 0.9)});
         const other = getOther(term);
-        if (expected === false && other !== null) {
-            expect(task.equals(other)).toBe(false);
-        } else if (expected === true) {
-            expect(task.equals(other)).toBe(true);
-        } else if (other === null) {
-            expect(task.equals(other)).toBe(false);
-        }
+        expect(task.equals(other)).toBe(expected);
     });
 
     test('stringifies correctly', () => {
