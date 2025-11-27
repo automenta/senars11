@@ -4,20 +4,24 @@
  */
 
 import {BaseTool} from './BaseTool.js';
+import { PrologParser } from '../parser/PrologParser.js';
+import { PrologStrategy } from '../reason/strategy/PrologStrategy.js';
 
-export class NARControlTool extends BaseTool {
+export class NARTool extends BaseTool {
     constructor(nar = null) {
         super();
         this.nar = nar;
-        this.name = 'nar_control';
+        this.prologParser = new PrologParser();
+        this.prologStrategy = nar?.streamReasoner?.strategy.strategies?.find(s => s.name === 'PrologStrategy');
+        this.name = 'nar';
         this.description = 'Control and interact with the NARS reasoning system';
         this.schema = {
             type: 'object',
             properties: {
                 action: {
                     type: 'string',
-                    enum: ['add_belief', 'add_goal', 'query', 'step', 'get_beliefs', 'get_goals'],
-                    description: 'The action to perform on the NAR system. Choose add_belief to add a belief statement in Narsese format, add_goal to add a goal statement, query to query the system, step to execute a single reasoning cycle, get_beliefs to retrieve current beliefs, or get_goals to retrieve current goals.'
+                    enum: ['add_belief', 'add_goal', 'query', 'step', 'get_beliefs', 'get_goals', 'assert_prolog', 'query_prolog'],
+                    description: 'The action to perform on the NAR system. Choose add_belief to add a belief statement in Narsese format, add_goal to add a goal statement, query to query the system, step to execute a single reasoning cycle, get_beliefs to retrieve current beliefs, get_goals to retrieve current goals, assert_prolog to assert a Prolog fact or rule, or query_prolog to query the system using Prolog.'
                 },
                 content: {
                     type: 'string',
@@ -55,8 +59,41 @@ export class NARControlTool extends BaseTool {
             'step': { handler: this._step.bind(this), requiresContent: false },
             'get_beliefs': { handler: this._getBeliefs.bind(this), requiresContent: false },
             'get_goals': { handler: this._getGoals.bind(this), requiresContent: false },
+            'assert_prolog': { handler: this._assertProlog.bind(this), requiresContent: true },
+            'query_prolog': { handler: this._queryProlog.bind(this), requiresContent: true },
         };
         return actions[action];
+    }
+
+    async _assertProlog(content) {
+        if (!this.prologStrategy) {
+            return { error: 'PrologStrategy not available.' };
+        }
+        try {
+            const tasks = this.prologParser.parseProlog(content);
+            this.prologStrategy.updateKnowledgeBase(tasks);
+            return { success: true, message: 'Prolog assertion successful.' };
+        } catch (error) {
+            console.error('NARControlTool _assertProlog error:', error);
+            return { success: false, error: `Failed to assert Prolog: ${error.message}` };
+        }
+    }
+
+    async _queryProlog(content) {
+        if (!this.prologStrategy) {
+            return { error: 'PrologStrategy not available.' };
+        }
+        try {
+            const tasks = this.prologParser.parseProlog(content);
+            if (tasks.length === 0) {
+                return { success: false, message: 'No query to execute.' };
+            }
+            const result = await this.nar.ask(tasks[0]);
+            return { success: result && result.length > 0, result };
+        } catch (error) {
+            console.error('NARControlTool _queryProlog error:', error);
+            return { success: false, error: `Failed to query Prolog: ${error.message}` };
+        }
     }
 
     async _addBelief(content) {

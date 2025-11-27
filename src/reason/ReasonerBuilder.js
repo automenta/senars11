@@ -22,6 +22,13 @@ export class ReasonerBuilder {
             memory: nar._memory
         });
 
+        // Add strategies from config
+        if (reasoningConfig.strategies) {
+            for (const s of reasoningConfig.strategies) {
+                strategy.addStrategy(s);
+            }
+        }
+
         // Create rule executor
         const ruleExecutor = new RuleExecutor(reasoningConfig.streamRuleExecutor || {});
 

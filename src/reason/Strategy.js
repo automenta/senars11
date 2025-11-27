@@ -14,6 +14,23 @@ export class Strategy {
         // Store the focus or memory reference if provided in config
         this.focus = config.focus || null;
         this.memory = config.memory || null;
+        this.strategies = [];
+    }
+
+    addStrategy(strategy) {
+        this.strategies.push(strategy);
+    }
+
+    async ask(task) {
+        for (const strategy of this.strategies) {
+            if (typeof strategy.ask === 'function') {
+                const result = await strategy.ask(task);
+                if (result && result.length > 0) {
+                    return result;
+                }
+            }
+        }
+        return null;
     }
 
     /**

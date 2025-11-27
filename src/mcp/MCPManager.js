@@ -71,9 +71,22 @@ export class MCPManager extends EventEmitter {
 
         const {Server: MCPServer} = await import('./Server.js');
         this.server = new MCPServer({port, ...options, nar: narInstance, safety: this.safety});
+
+        await this.registerLocalTools(narInstance);
         await this.server.start();
         this.emit('serverStarted', {port});
         return this.server;
+    }
+
+    /**
+     * Register local tools with the MCP server
+     */
+    async registerLocalTools(nar) {
+        if (!this.server) return;
+
+        const { NARTool } = await import('../tool/NARTool.js');
+        const narTool = new NARTool(nar);
+        this.server.registerTool(narTool.name, narTool);
     }
 
     /**

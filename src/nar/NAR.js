@@ -550,6 +550,13 @@ export class NAR extends BaseComponent {
             : this._memory.getAllConcepts().flatMap(c => c.getTasksByType('BELIEF'));
     }
 
+    async ask(task) {
+        if (!this._streamReasoner) {
+            throw new Error('Stream reasoner is not initialized.');
+        }
+        return this._streamReasoner.strategy.ask(task);
+    }
+
     getGoals() {
         return this._taskManager.findTasksByType('GOAL');
     }

@@ -43,18 +43,7 @@ export class PrologParser {
      */
     _parseFact(factLine) {
         const fact = factLine.replace(/\.$/, '').trim(); // Remove trailing dot
-
-        // Parse: predicate(arg1, arg2, ...)
-        const match = fact.match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*\(\s*(.*)\s*\)$/);
-        if (!match) {
-            throw new Error(`Invalid fact format: ${factLine}`);
-        }
-
-        const [_, predicate, argsStr] = match;
-        const args = this._parseArguments(argsStr);
-
-        // Create the relation term: predicate(args) using helper
-        const relationTerm = this._createPredicateTerm(predicate, args);
+        const relationTerm = this._parsePredicate(fact);
 
         // Create a belief task with high truth value
         return new Task({
@@ -78,25 +67,31 @@ export class PrologParser {
         }
 
         const [headStr, bodyStr] = parts;
-        const head = headStr.trim();
-        const body = bodyStr.trim();
 
-        const tasks = [];
+        const headTerm = this._parsePredicate(headStr.trim());
+        const bodyParts = this._splitRuleBody(bodyStr.trim());
+        const bodyTerms = bodyParts.map(part => this._parsePredicate(part));
 
-        // Parse the head of the rule (conclusion)
-        const headTask = this._parseFact(`${head}.`);
-        tasks.push(headTask);
-
-        // For body components, parse each part separated by comma
-        // Need to handle commas inside parentheses properly
-        const bodyParts = this._splitRuleBody(body);
-
-        for (const bodyPart of bodyParts) {
-            const bodyTask = this._parseFact(`${bodyPart.trim()}.`);
-            tasks.push(bodyTask);
+        let bodyTerm;
+        if (bodyTerms.length === 1) {
+            bodyTerm = bodyTerms[0];
+        } else {
+            bodyTerm = this.termFactory.create({
+                operator: '&/',
+                components: bodyTerms,
+            });
         }
 
-        return tasks;
+        const implicationTerm = this.termFactory.create({
+            operator: '==>',
+            components: [bodyTerm, headTerm],
+        });
+
+        return [new Task({
+            term: implicationTerm,
+            punctuation: '.', // Belief
+            truth: new Truth(1.0, 0.9), // High frequency and confidence
+        })];
     }
 
     /**
@@ -139,23 +134,32 @@ export class PrologParser {
      */
     _parseQuery(queryLine) {
         const query = queryLine.replace(/\s*\?$/, '').trim(); // Remove trailing question mark
-
-        const match = query.match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*\(\s*(.*)\s*\)$/);
-        if (!match) {
-            throw new Error(`Invalid query format: ${queryLine}`);
-        }
-
-        const [_, predicate, argsStr] = match;
-        const args = this._parseArguments(argsStr);
-
-        // Create the query term using helper
-        const queryTerm = this._createPredicateTerm(predicate, args);
+        const queryTerm = this._parsePredicate(query);
 
         // Create a question task
         return new Task({
             term: queryTerm,
             punctuation: '?'  // Question
         });
+    }
+
+    /**
+     * Parses a predicate string like `predicate(arg1, arg2)` into a SeNARS term.
+     */
+    _parsePredicate(predicateStr) {
+        const predicate = predicateStr.trim();
+
+        // Parse: predicate(arg1, arg2, ...)
+        const match = predicate.match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*\(\s*(.*)\s*\)$/);
+        if (!match) {
+            throw new Error(`Invalid predicate format: ${predicateStr}`);
+        }
+
+        const [_, pred, argsStr] = match;
+        const args = this._parseArguments(argsStr);
+
+        // Create the relation term: predicate(args) using helper
+        return this._createPredicateTerm(pred, args);
     }
 
     /**
