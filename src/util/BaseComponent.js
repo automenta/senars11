@@ -101,19 +101,25 @@ export class BaseComponent {
 
             await action();
 
-            // Update state after successful operation
-            this._updateComponentState(operation);
-
-            // Emit the appropriate event
-            this._emitLifecycleEvent(operation);
-
-            // Log and update metrics
-            this._logger.info(`${this._name} ${this._getOperationSuffix(operation)}`);
-            metricName && this.incrementMetric(metricName);
+            await this._finalizeLifecycleOperation(operation, metricName);
             return true;
         } catch (error) {
             this._logger.error(`Failed to ${operation} component`, error);
             return false;
+        }
+    }
+
+    async _finalizeLifecycleOperation(operation, metricName = null) {
+        // Update state after successful operation
+        this._updateComponentState(operation);
+
+        // Emit the appropriate event
+        this._emitLifecycleEvent(operation);
+
+        // Log and update metrics
+        this._logger.info(`${this._name} ${this._getOperationSuffix(operation)}`);
+        if (metricName) {
+            this.incrementMetric(metricName);
         }
     }
 
@@ -289,12 +295,16 @@ export class BaseComponent {
     // Event emission
     emitEvent(event, data, options = {}) {
         const currentTime = Date.now();
-        this._eventBus.emit(event, {
-            timestamp: currentTime,
+        this._eventBus.emit(event, this._createEventPayload(currentTime, data), options);
+    }
+
+    _createEventPayload(timestamp, data) {
+        return {
+            timestamp,
             component: this._name,
-            uptime: this._startTime ? currentTime - this._startTime : 0,
+            uptime: this._startTime ? timestamp - this._startTime : 0,
             ...data
-        }, options);
+        };
     }
 
     _emitIntrospectionEvent(eventName, payload) {

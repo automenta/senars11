@@ -114,10 +114,10 @@ export class Term {
     }
 
     equals(other) {
-        if (!(other instanceof Term) ||
-            this._type !== other._type ||
-            this._operator !== other._operator ||
-            this._name !== other._name) return false;
+        if (!(other instanceof Term)) return false;
+        if (this._type !== other._type) return false;
+        if (this._name !== other._name) return false;
+        if (this._operator !== other._operator) return false;
 
         if (this._type === TermType.COMPOUND) {
             const len = this._components.length;
@@ -126,8 +126,6 @@ export class Term {
             for (let i = 0; i < len; i++) {
                 if (!this._components[i].equals(other._components[i])) return false;
             }
-
-            return true;
         }
 
         return true;

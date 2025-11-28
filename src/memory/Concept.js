@@ -93,18 +93,14 @@ export class Concept extends BaseComponent {
     }
 
     _getStorage(taskType) {
-        const storageMap = {
-            [TASK_TYPES.BELIEF]: this._beliefs,
-            [TASK_TYPES.GOAL]: this._goals,
-            [TASK_TYPES.QUESTION]: this._questions
-        };
-
-        const storage = storageMap[taskType];
-        if (!storage) {
-            const validTypes = Object.values(TASK_TYPES).join(', ');
-            throw new Error(`Unknown task type: ${taskType}. Expected ${validTypes}.`);
+        switch (taskType) {
+            case TASK_TYPES.BELIEF: return this._beliefs;
+            case TASK_TYPES.GOAL: return this._goals;
+            case TASK_TYPES.QUESTION: return this._questions;
+            default:
+                const validTypes = Object.values(TASK_TYPES).join(', ');
+                throw new Error(`Unknown task type: ${taskType}. Expected ${validTypes}.`);
         }
-        return storage;
     }
 
     _updateLastAccessed() {
@@ -158,7 +154,8 @@ export class Concept extends BaseComponent {
     }
 
     getTasksByType(taskType) {
-        return this._getStorage(taskType).getItemsInPriorityOrder() || [];
+        const storage = this._getStorage(taskType);
+        return storage.getItemsInPriorityOrder?.() || [];
     }
 
     removeTask(task) {
@@ -190,16 +187,18 @@ export class Concept extends BaseComponent {
     }
 
     containsTask(task) {
-        return this._beliefs.contains(task) || this._goals.contains(task) || this._questions.contains(task);
+        return this._getStorage(task.type).contains(task);
     }
 
     getAllTasks() {
-        const allTasks = [
-            ...this._beliefs.getItemsInPriorityOrder(),
-            ...this._goals.getItemsInPriorityOrder(),
-            ...this._questions.getItemsInPriorityOrder()
-        ];
-        return allTasks.sort((a, b) => b.budget.priority - a.budget.priority);
+        // Get tasks from all storage bags using efficient array concatenation
+        const beliefs = this._beliefs.getItemsInPriorityOrder?.() || [];
+        const goals = this._goals.getItemsInPriorityOrder?.() || [];
+        const questions = this._questions.getItemsInPriorityOrder?.() || [];
+
+        // Combine all tasks and sort by priority
+        return [...beliefs, ...goals, ...questions]
+            .sort((a, b) => b.budget.priority - a.budget.priority);
     }
 
     updateTaskBudget(task, newBudget) {
@@ -244,11 +243,12 @@ export class Concept extends BaseComponent {
     }
 
     async deserialize(data) {
-        try {
-            if (!data) {
-                throw new Error('Invalid concept data for deserialization');
-            }
+        if (!data) {
+            this.logError('Invalid concept data for deserialization');
+            return false;
+        }
 
+        try {
             this._createdAt = data.createdAt || Date.now();
             this._lastAccessed = data.lastAccessed || Date.now();
             this._activation = data.activation || 0;
@@ -256,7 +256,7 @@ export class Concept extends BaseComponent {
             this._quality = data.quality || 0;
 
             if (data.config) {
-                this.configure(data.config);
+                Object.assign(this.config, data.config);
             }
 
             const deserializationMap = [
@@ -273,7 +273,7 @@ export class Concept extends BaseComponent {
 
             return true;
         } catch (error) {
-            console.error('Error during concept deserialization:', error);
+            this.logError('Error during concept deserialization:', {error: error.message, stack: error.stack});
             return false;
         }
     }

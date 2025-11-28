@@ -37,16 +37,29 @@ export const clampAndFreeze = (obj, min = 0, max = 1) =>
 export const mergeConfig = (base, ...overrides) => freeze({...base, ...Object.assign({}, ...overrides)});
 
 export const isNumber = value => typeof value === 'number' && !isNaN(value);
-export const round = (value, decimals = 2) => Number(Math.round(value + 'e' + decimals) + 'e-' + decimals);
+export const round = (value, decimals = 2) => {
+    if (!isNumber(value)) return 0;
+    if (decimals < 0) decimals = 0;
+    const factor = Math.pow(10, decimals);
+    return Math.round(value * factor) / factor;
+};
 
 export const capitalize = str => str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
-export const kebabCase = str => str?.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase() ?? '';
+export const kebabCase = str => str ? str.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase() : '';
 
-export const unique = arr => [...new Set(arr)];
+export const unique = arr => {
+    if (!arr || !Array.isArray(arr)) return [];
+    return [...new Set(arr)];
+};
 export const isEmpty = arr => !arr?.length;
 
 export const safeGet = (obj, path, defaultValue = undefined) => {
     if (!obj || typeof obj !== 'object' || !path) return defaultValue;
+
+    // Optimize for common case of single property
+    if (!path.includes('.')) {
+        return obj[path] ?? defaultValue;
+    }
 
     return path.split('.').reduce((current, key) =>
         current?.[key] ?? defaultValue, obj) ?? defaultValue;
@@ -56,18 +69,24 @@ export const deepClone = (obj) => {
     if (obj === null || typeof obj !== 'object') return obj;
     if (obj instanceof Date) return new Date(obj.getTime());
     if (Array.isArray(obj)) return obj.map(item => deepClone(item));
+    if (obj instanceof Set) return new Set([...obj].map(item => deepClone(item)));
+    if (obj instanceof Map) return new Map([...obj].map(([key, value]) => [key, deepClone(value)]));
 
-    if (typeof obj === 'object') {
-        return Object.fromEntries(
-            Object.entries(obj).map(([key, value]) => [key, deepClone(value)])
-        );
+    // For regular objects, use a more efficient cloning approach
+    const cloned = {};
+    for (const key in obj) {
+        if (Object.prototype.hasOwnProperty.call(obj, key)) {
+            cloned[key] = deepClone(obj[key]);
+        }
     }
-
-    return obj;
+    return cloned;
 };
 
-export const formatNumber = (num, decimals = 2) =>
-    typeof num === 'number' ? num.toFixed(decimals) : String(num ?? '0');
+export const formatNumber = (num, decimals = 2) => {
+    if (!isNumber(num)) return String(num ?? '0');
+    if (decimals < 0) decimals = 0;
+    return num.toFixed(decimals);
+};
 
 export const safeAsync = async (asyncFn, defaultValue = null) => {
     try {

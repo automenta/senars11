@@ -11,7 +11,7 @@ export class AgentBuilder {
     }
 
     static getDefaultConfig() {
-        return {
+        return Object.freeze({
             subsystems: {
                 metrics: true,
                 embeddingLayer: false,
@@ -27,7 +27,7 @@ export class AgentBuilder {
             },
             persistence: {},
             inputProcessing: {}
-        };
+        });
     }
 
     static createAgent(config = {}) {
@@ -117,21 +117,28 @@ export class AgentBuilder {
         const {subsystems, nar, memory, persistence, inputProcessing, lm} = this.config;
         const {lm: lmSubsystem, tools, embeddingLayer, metrics} = subsystems;
 
-        const getSubsystemConfig = (subsystem) => ({
-            enabled: !!subsystem,
-            ...(typeof subsystem === 'object' ? subsystem : {})
-        });
-
         return {
             ...nar,
             memory,
             persistence,
             inputProcessing,
-            lm: {...getSubsystemConfig(lmSubsystem), ...lm},
-            tools: getSubsystemConfig(tools),
-            embeddingLayer: getSubsystemConfig(embeddingLayer),
-            metricsMonitor: metrics ? (typeof metrics === 'object' ? metrics : {}) : undefined
+            lm: this._buildSubsystemConfig(lmSubsystem, lm),
+            tools: this._buildSubsystemConfig(tools),
+            embeddingLayer: this._buildSubsystemConfig(embeddingLayer),
+            metricsMonitor: this._buildMetricsMonitorConfig(metrics)
         };
+    }
+
+    _buildSubsystemConfig(subsystem, additionalConfig = {}) {
+        const baseConfig = {
+            enabled: !!subsystem,
+            ...(typeof subsystem === 'object' ? subsystem : {})
+        };
+        return {...baseConfig, ...additionalConfig};
+    }
+
+    _buildMetricsMonitorConfig(metrics) {
+        return metrics ? (typeof metrics === 'object' ? metrics : {}) : undefined;
     }
 
     _setupPlugins(agent) {

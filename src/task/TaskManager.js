@@ -51,13 +51,14 @@ export class TaskManager extends BaseComponent {
     processPendingTasks(currentTime = Date.now()) {
         const priorityThreshold = this._config?.priorityThreshold ?? DEFAULT_PRIORITY_THRESHOLD;
         const processedTasks = [];
+        const focusTasks = [];
 
+        // Process all pending tasks efficiently
         for (const [_, task] of this._pendingTasks) {
-            const addedToMemory = this._memory.addTask(task, currentTime);
-
-            if (addedToMemory) {
+            if (this._memory.addTask(task, currentTime)) {
+                // Collect tasks that need to be added to focus for batch processing
                 if (this._focus && task.budget.priority >= priorityThreshold) {
-                    this._focus.addTaskToFocus(task);
+                    focusTasks.push(task);
                 }
 
                 processedTasks.push(task);
@@ -65,6 +66,14 @@ export class TaskManager extends BaseComponent {
             }
         }
 
+        // Batch add tasks to focus to reduce event emissions
+        if (this._focus && focusTasks.length > 0) {
+            for (const task of focusTasks) {
+                this._focus.addTaskToFocus(task);
+            }
+        }
+
+        // Clear all pending tasks at once
         this._pendingTasks.clear();
         this._stats.tasksPending = 0;
         return processedTasks;
@@ -155,39 +164,49 @@ export class TaskManager extends BaseComponent {
 
     getTaskStats() {
         const allTasks = collectTasksFromAllConcepts(this._memory);
+        const taskCount = allTasks.length;
 
-        // Initialize the stats object with computed values from all tasks
-        const stats = allTasks.reduce((acc, task) => {
-            acc.tasksByType[task.type]++;
-            acc.priorityDistribution[this._getPriorityBucket(task.budget.priority)]++;
-            acc.priorities.push(task.budget.priority);
-            acc.creationTimes.push(task.stamp.creationTime);
-            acc.oldestTask = Math.min(acc.oldestTask, task.stamp.creationTime);
-            acc.newestTask = Math.max(acc.newestTask, task.stamp.creationTime);
-            return acc;
-        }, {
+        if (taskCount === 0) {
+            return {
+                ...this._stats,
+                tasksByType: {BELIEF: 0, GOAL: 0, QUESTION: 0},
+                priorityDistribution: {low: 0, medium: 0, high: 0},
+                average: 0,
+                std: 0,
+                median: 0,
+                percentiles: {p25: 0, p75: 0, p95: 0},
+                oldestTask: Date.now(),
+                newestTask: 0,
+                ageRange: 0,
+                taskCount: 0
+            };
+        }
+
+        // Pre-calculate all values in a single pass through tasks
+        const stats = {
             tasksByType: {BELIEF: 0, GOAL: 0, QUESTION: 0},
             priorityDistribution: {low: 0, medium: 0, high: 0},
-            priorities: [],
-            creationTimes: [],
-            oldestTask: Date.now(),
+            priorities: new Array(taskCount),
+            creationTimes: new Array(taskCount),
+            oldestTask: Number.MAX_SAFE_INTEGER,
             newestTask: 0
-        });
-
-        const totalTasks = Object.values(stats.tasksByType).reduce((sum, count) => sum + count, 0);
-        const {priorities} = stats;
-
-        // Precompute priority statistics for efficiency
-        const priorityStats = {
-            average: Statistics.mean(priorities),
-            std: Statistics.stdDev(priorities),
-            median: Statistics.median(priorities),
-            percentiles: {
-                p25: Statistics.quantile(priorities, 0.25),
-                p75: Statistics.quantile(priorities, 0.75),
-                p95: Statistics.quantile(priorities, 0.95)
-            }
         };
+
+        for (let i = 0; i < taskCount; i++) {
+            const task = allTasks[i];
+            stats.tasksByType[task.type]++;
+            const priorityBucket = this._getPriorityBucket(task.budget.priority);
+            stats.priorityDistribution[priorityBucket]++;
+            stats.priorities[i] = task.budget.priority;
+            stats.creationTimes[i] = task.stamp.creationTime;
+            stats.oldestTask = Math.min(stats.oldestTask, task.stamp.creationTime);
+            stats.newestTask = Math.max(stats.newestTask, task.stamp.creationTime);
+        }
+
+        // Calculate priority statistics
+        const priorityStats = this._calculatePriorityStats(stats.priorities);
+
+        const totalTasks = taskCount;
 
         return {
             ...this._stats,
@@ -201,9 +220,33 @@ export class TaskManager extends BaseComponent {
         };
     }
 
-    _getPriorityBucket = (priority) =>
-        priority < PRIORITY_BUCKETS.LOW_THRESHOLD ? 'low' :
-            priority < PRIORITY_BUCKETS.MEDIUM_THRESHOLD ? 'medium' : 'high';
+    _calculatePriorityStats(priorities) {
+        if (priorities.length === 0) {
+            return {
+                average: 0,
+                std: 0,
+                median: 0,
+                percentiles: {p25: 0, p75: 0, p95: 0}
+            };
+        }
+
+        return {
+            average: Statistics.mean(priorities),
+            std: Statistics.stdDev(priorities),
+            median: Statistics.median(priorities),
+            percentiles: {
+                p25: Statistics.quantile(priorities, 0.25),
+                p75: Statistics.quantile(priorities, 0.75),
+                p95: Statistics.quantile(priorities, 0.95)
+            }
+        };
+    }
+
+    _getPriorityBucket(priority) {
+        if (priority < PRIORITY_BUCKETS.LOW_THRESHOLD) return 'low';
+        if (priority < PRIORITY_BUCKETS.MEDIUM_THRESHOLD) return 'medium';
+        return 'high';
+    }
 
     clearPendingTasks() {
         this._pendingTasks.clear();
@@ -234,7 +277,7 @@ export class TaskManager extends BaseComponent {
     async deserialize(data) {
         try {
             if (!data) {
-                throw new Error('Invalid task manager data for deserialization');
+                throw new Error('TaskManager: Invalid data provided for deserialization');
             }
 
             if (data.config) {
@@ -246,7 +289,10 @@ export class TaskManager extends BaseComponent {
             if (data.pendingTasks) {
                 for (const {id, task: taskData} of data.pendingTasks) {
                     if (taskData) {
-                        this._pendingTasks.set(id, Task.fromJSON ? Task.fromJSON(taskData) : null);
+                        const task = Task.fromJSON ? Task.fromJSON(taskData) : null;
+                        if (task) {
+                            this._pendingTasks.set(id, task);
+                        }
                     }
                 }
             }
@@ -257,7 +303,10 @@ export class TaskManager extends BaseComponent {
 
             return true;
         } catch (error) {
-            console.error('Error during task manager deserialization:', error);
+            this.logError('TaskManager deserialization failed', {
+                error: error.message,
+                stack: error.stack
+            });
             return false;
         }
     }

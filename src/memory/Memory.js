@@ -17,7 +17,7 @@ export class Memory extends BaseComponent {
     });
 
     constructor(config = {}) {
-        const defaultConfig = Object.freeze({
+        const defaultConfig = {
             priorityThreshold: 0.5,
             priorityDecayRate: 0.01,
             consolidationInterval: 10,
@@ -30,10 +30,13 @@ export class Memory extends BaseComponent {
             enableAdaptiveForgetting: true,
             enableMemoryValidation: config.enableMemoryValidation !== false,
             memoryValidationInterval: config.memoryValidationInterval || 30000,
-        });
+        };
 
-        super({...defaultConfig, ...config}, 'Memory');
-        this._config = {...this.config, ...config};
+        // Merge configs using object spread for performance
+        const mergedConfig = Object.freeze({ ...defaultConfig, ...config });
+
+        super(mergedConfig, 'Memory');
+        this._config = mergedConfig;
 
         this._concepts = new Map();
         this._conceptBag = new Bag(this._config.maxConcepts, this._config.forgetPolicy);
@@ -99,15 +102,19 @@ export class Memory extends BaseComponent {
         if (!task?.term) return false;
 
         const term = task.term;
-        let concept = this.getConcept(term) || this._createConcept(term);
+        let concept = this._concepts.get(term) || this._findConceptByEquality(term) || this._createConcept(term);
 
-        if (concept && concept.totalTasks >= this._config.maxTasksPerConcept) {
+        if (concept.totalTasks >= this._config.maxTasksPerConcept) {
             concept.enforceCapacity(this._config.maxTasksPerConcept, this._config.forgetPolicy);
         }
 
         const added = concept.addTask(task);
         if (added) {
-            this._emitIntrospectionEvent(IntrospectionEvents.MEMORY_TASK_ADDED, {task: task.serialize()});
+            // Only emit event if introspection is enabled
+            if (this._config.introspection?.enabled) {
+                this._emitIntrospectionEvent(IntrospectionEvents.MEMORY_TASK_ADDED, {task: task.serialize()});
+            }
+
             this._stats.totalTasks++;
             this._updateResourceUsage(concept, 1);
 
@@ -139,10 +146,21 @@ export class Memory extends BaseComponent {
     getConcept(term) {
         if (!term) return null;
 
-        const concept = this._concepts.get(term) || this._findConceptByEquality(term);
-
+        // Direct lookup first for performance
+        let concept = this._concepts.get(term);
         if (concept) {
-            this._emitIntrospectionEvent(IntrospectionEvents.MEMORY_CONCEPT_ACCESSED, {concept: concept.serialize()});
+            if (this._config.introspection?.enabled) {
+                this._emitIntrospectionEvent(IntrospectionEvents.MEMORY_CONCEPT_ACCESSED, {concept: concept.serialize()});
+            }
+            return concept;
+        }
+
+        // Only try equality search if direct lookup fails
+        concept = this._findConceptByEquality(term);
+        if (concept) {
+            if (this._config.introspection?.enabled) {
+                this._emitIntrospectionEvent(IntrospectionEvents.MEMORY_CONCEPT_ACCESSED, {concept: concept.serialize()});
+            }
         }
 
         return concept;
@@ -200,8 +218,10 @@ export class Memory extends BaseComponent {
     }
 
     _findConceptByEquality(term) {
+        // In most cases, term objects should be the same reference, so direct lookup should be sufficient
+        // This method is a fallback and should be used sparingly for performance
         for (const [key, value] of this._concepts) {
-            if (key.equals(term)) return value;
+            if (key.equals && key.equals(term)) return value;
         }
         return null;
     }
@@ -396,11 +416,11 @@ export class Memory extends BaseComponent {
     }
 
     _isUnderMemoryPressure() {
-        const conceptPressure = this._stats.totalConcepts / this._config.maxConcepts;
-        const resourcePressure = this._stats.totalResourceUsage / this._config.resourceBudget;
-        const taskPressure = this._stats.totalTasks / (this._config.maxConcepts * this._config.maxTasksPerConcept);
-
-        return Math.max(conceptPressure, resourcePressure, taskPressure) >= this._config.memoryPressureThreshold;
+        // Use early return strategy for better performance
+        if (this._stats.totalConcepts / this._config.maxConcepts >= this._config.memoryPressureThreshold) return true;
+        if (this._stats.totalResourceUsage / this._config.resourceBudget >= this._config.memoryPressureThreshold) return true;
+        if (this._stats.totalTasks / (this._config.maxConcepts * this._config.maxTasksPerConcept) >= this._config.memoryPressureThreshold) return true;
+        return false;
     }
 
     _applyAdaptiveForgetting() {

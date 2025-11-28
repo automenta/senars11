@@ -91,27 +91,10 @@ export class Agent extends NAR {
     }
 
     async executeCommand(cmd, ...args) {
-        const ALIASES = {
-            'next': 'n', 'stop': 'st', 'quit': 'exit', 'q': 'exit'
-        };
-        const command = ALIASES[cmd] ?? cmd;
+        const command = this._resolveCommandAlias(cmd);
+        const builtinResult = this._executeBuiltinCommand(command, ...args);
 
-        const builtins = {
-            'n': () => this._next(),
-            'go': () => this._run(),
-            'st': () => this._stop(),
-            'exit': () => {
-                this.emit(AGENT_EVENTS.ENGINE_QUIT);
-                return '👋 Goodbye!';
-            }
-        };
-
-        // Prefer registry commands over builtins if strict match?
-        // But here builtins check comes first.
-        // 'go' is still builtin for continuous run without args.
-        // 'run' is now free to be handled by registry.
-
-        if (builtins[command]) return builtins[command]();
+        if (builtinResult !== null) return builtinResult;
 
         if (this.commandRegistry.get(command)) {
             const result = await this.commandRegistry.execute(command, this, ...args);
@@ -120,6 +103,25 @@ export class Agent extends NAR {
         }
 
         return `❌ Unknown command: ${command}`;
+    }
+
+    _resolveCommandAlias(cmd) {
+        const ALIASES = {'next': 'n', 'stop': 'st', 'quit': 'exit', 'q': 'exit'};
+        return ALIASES[cmd] ?? cmd;
+    }
+
+    _executeBuiltinCommand(command, ...args) {
+        const builtins = {
+            'n': async () => await this._next(),
+            'go': async () => await this._run(),
+            'st': async () => await this._stop(),
+            'exit': () => {
+                this.emit(AGENT_EVENTS.ENGINE_QUIT);
+                return '👋 Goodbye!';
+            }
+        };
+
+        return builtins[command] ? builtins[command]() : null;
     }
 
     // Delegate methods for backward compatibility and API

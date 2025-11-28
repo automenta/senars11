@@ -156,12 +156,21 @@ class ConfigManager {
     }
 
     _deepMerge(target, source) {
+        if (!source || typeof source !== 'object' || Array.isArray(source)) {
+            return source;
+        }
+
+        // If target is not an object, create a new one
+        if (!target || typeof target !== 'object' || Array.isArray(target)) {
+            target = {};
+        }
+
         const result = {...target};
 
         for (const key in source) {
-            if (source.hasOwnProperty(key)) {
-                if (typeof source[key] === 'object' && source[key] !== null && !Array.isArray(source[key])) {
-                    result[key] = this._deepMerge(result[key] ?? {}, source[key]);
+            if (Object.prototype.hasOwnProperty.call(source, key)) {
+                if (this._isPlainObject(source[key]) && this._isPlainObject(target[key])) {
+                    result[key] = this._deepMerge(target[key], source[key]);
                 } else {
                     result[key] = source[key];
                 }
@@ -171,14 +180,27 @@ class ConfigManager {
         return result;
     }
 
+    _isPlainObject(obj) {
+        return obj != null && typeof obj === 'object' && !Array.isArray(obj) && obj.constructor === Object;
+    }
+
     get(path) {
         if (!path) return this._config;
 
-        const pathParts = path.split('.');
+        // Optimize for common case of single property access
+        if (!path.includes('.')) {
+            return this._config[path];
+        }
 
-        return pathParts.reduce((current, part) => {
-            return current?.[part];
-        }, this._config);
+        const pathParts = path.split('.');
+        let current = this._config;
+
+        for (const part of pathParts) {
+            if (current == null) return undefined;
+            current = current[part];
+        }
+
+        return current;
     }
 
     set(path, value) {

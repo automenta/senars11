@@ -207,7 +207,9 @@ export class NAR extends BaseComponent {
 
             const narseseString = input;
             const parsed = this._parser.parse(narseseString);
-            if (!parsed?.term) throw new Error('Invalid parse result');
+            if (!parsed?.term) {
+                throw new Error(`Invalid parse result for input: ${narseseString}`);
+            }
 
             const task = this._createTask(parsed);
             return await this._processNewTask(task, 'user', narseseString, parsed, options);
@@ -215,10 +217,12 @@ export class NAR extends BaseComponent {
             const inputError = new Error(`Input processing failed: ${error.message}`);
             inputError.cause = error;
             inputError.input = typeof input === 'string' ? input : 'Task Object';
+            inputError.inputType = typeof input;
 
             this._eventBus.emit('input.error', {
                 error: inputError.message,
                 input: inputError.input,
+                inputType: inputError.inputType,
                 originalError: error
             }, {traceId: options.traceId});
             throw inputError;
@@ -282,11 +286,10 @@ export class NAR extends BaseComponent {
         return truthValue ? new Truth(truthValue.frequency, truthValue.confidence) : new Truth(1.0, 0.9);
     }
 
-    _getTaskTypeFromPunctuation = punctuation => ({
-        '.': 'BELIEF',
-        '!': 'GOAL',
-        '?': 'QUESTION'
-    })[punctuation] || 'BELIEF';
+    _getTaskTypeFromPunctuation = punctuation => {
+        const PUNCTUATION_TO_TYPE = {'.': 'BELIEF', '!': 'GOAL', '?': 'QUESTION'};
+        return PUNCTUATION_TO_TYPE[punctuation] ?? 'BELIEF';
+    };
 
     start(options = {}) {
         if (this._isRunning) {
@@ -569,7 +572,7 @@ export class NAR extends BaseComponent {
 
     async ask(task) {
         if (!this._streamReasoner) {
-            throw new Error('Stream reasoner is not initialized.');
+            throw new Error('Stream reasoner is not initialized. Call initialize() method first.');
         }
         return this._streamReasoner.strategy.ask(task);
     }
@@ -618,16 +621,20 @@ export class NAR extends BaseComponent {
         return operation(component);
     }
 
+    _ensureComponentEnabled(component, message) {
+        if (!component) throw new Error(message);
+    }
+
     _ensureLMEnabled() {
-        if (!this._lm) throw new Error('Language Model is not enabled in this NAR instance');
+        this._ensureComponentEnabled(this._lm, 'Language Model is not enabled in this NAR instance');
     }
 
     _ensureToolIntegration() {
-        if (!this._toolIntegration) throw new Error('Tool integration is not enabled');
+        this._ensureComponentEnabled(this._toolIntegration, 'Tool integration is not enabled');
     }
 
     _ensureExplanationService() {
-        if (!this._explanationService) throw new Error('Explanation service is not enabled');
+        this._ensureComponentEnabled(this._explanationService, 'Explanation service is not enabled');
     }
 
     registerLMProvider(id, provider) {
@@ -653,15 +660,18 @@ export class NAR extends BaseComponent {
 
     _calculateInputPriority(parsed) {
         const {truthValue, taskType} = parsed;
-        const basePriority = this.config.taskManager?.defaultPriority || PRIORITY.DEFAULT;
+        const config = this.config.taskManager || {};
+        const basePriority = config.defaultPriority ?? PRIORITY.DEFAULT;
 
         if (!truthValue) return basePriority;
 
-        const priorityConfig = this.config.taskManager?.priority || {};
-        const {confidenceMultiplier = 0.3, goalBoost = 0.2, questionBoost = 0.1} = priorityConfig;
+        const priorityConfig = config.priority || {};
+        const confidenceMultiplier = priorityConfig.confidenceMultiplier ?? 0.3;
+        const goalBoost = priorityConfig.goalBoost ?? 0.2;
+        const questionBoost = priorityConfig.questionBoost ?? 0.1;
 
-        const confidenceBoost = (truthValue.confidence || 0) * confidenceMultiplier;
-        const typeBoost = {GOAL: goalBoost, QUESTION: questionBoost}[taskType] || 0;
+        const confidenceBoost = (truthValue.confidence ?? 0) * confidenceMultiplier;
+        const typeBoost = {GOAL: goalBoost, QUESTION: questionBoost}[taskType] ?? 0;
 
         return Math.min(PRIORITY.MAX_PRIORITY, basePriority + confidenceBoost + typeBoost);
     }

@@ -238,11 +238,12 @@ export class Bag {
     }
 
     async deserialize(data, itemDeserializer = null) {
-        try {
-            if (!data) {
-                throw new Error('Invalid bag data for deserialization');
-            }
+        if (!data) {
+            console.error('Invalid bag data for deserialization');
+            return false;
+        }
 
+        try {
             this._maxSize = data.maxSize || this._maxSize;
             this._forgetPolicyName = data.forgetPolicyName || DEFAULT_POLICY;
             this.setForgetPolicy(this._forgetPolicyName);
@@ -299,7 +300,7 @@ export class Bag {
 
             return true;
         } catch (error) {
-            console.error('Error during bag deserialization:', error);
+            console.error('Error during bag deserialization:', {error: error.message, stack: error.stack});
             return false;
         }
     }

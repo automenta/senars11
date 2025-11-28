@@ -15,7 +15,9 @@ export class Task {
                     budget = DEFAULT_BUDGET,
                     stamp = null
                 }) {
-        if (!(term instanceof Term)) throw new ConfigurationError('Task must be initialized with a valid Term object.');
+        if (!(term instanceof Term)) {
+            throw new ConfigurationError(`Task must be initialized with a valid Term object. Received: ${typeof term}, value: ${term}`);
+        }
 
         this.term = term;
         this.type = PUNCTUATION_TO_TYPE[punctuation] || 'BELIEF';
@@ -23,11 +25,11 @@ export class Task {
         // Validate truth value based on task type
         if (this.type === 'QUESTION') {
             if (truth !== null) {
-                throw new ConfigurationError('Questions cannot have truth values');
+                throw new ConfigurationError(`Questions cannot have truth values. Attempted to create ${this.type} task with truth value: ${truth}`);
             }
         } else if (this.type === 'BELIEF' || this.type === 'GOAL') {
             if (truth === null) {
-                throw new ConfigurationError(`${this.type} tasks must have valid truth values`);
+                throw new ConfigurationError(`${this.type} tasks must have valid truth values. Attempted to create ${this.type} task without truth value`);
             }
         }
 
@@ -61,15 +63,14 @@ export class Task {
     }
 
     _createTruth(truth) {
-        if (truth instanceof Truth) return truth;
         if (!truth) return null;
-
-        // Handle format: {frequency, confidence}
-        if (truth.frequency !== undefined && truth.confidence !== undefined) {
-            return new Truth(truth.frequency, truth.confidence);
-        }
-
+        if (truth instanceof Truth) return truth;
+        if (this._isValidTruthFormat(truth)) return new Truth(truth.frequency, truth.confidence);
         return null;
+    }
+
+    _isValidTruthFormat(truth) {
+        return truth.frequency !== undefined && truth.confidence !== undefined;
     }
 
     clone(overrides = {}) {

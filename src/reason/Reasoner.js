@@ -90,42 +90,37 @@ export class Reasoner {
 
     async step(timeoutMs = 5000) {
         const results = [];
+        const startTime = Date.now();
 
         try {
-            const startTime = Date.now();
             const focusTasks = this.premiseSource.focusComponent?.getTasks(1000) ?? [];
-
             if (focusTasks.length === 0) return results;
 
-            // Generate unique premise pairs efficiently using a single loop with Set for deduplication
+            // Process premise pairs with timeout protection
             const premisePairs = this._generateUniquePremisePairs(focusTasks);
-
-            // Process each unique pair with timeout protection
-            for (const { primaryPremise, secondaryPremise } of premisePairs) {
-                if (Date.now() - startTime > timeoutMs) break;
-
-                try {
-                    const candidateRules = this.ruleProcessor.ruleExecutor.getCandidateRules(primaryPremise, secondaryPremise);
-
-                    const forwardResults = await this._processRuleBatch(
-                        candidateRules,
-                        primaryPremise,
-                        secondaryPremise,
-                        startTime,
-                        timeoutMs
-                    );
-                    results.push(...forwardResults.filter(Boolean));
-
-                    if (Date.now() - startTime > timeoutMs) continue; // Continue for fair sampling
-                } catch (error) {
-                    console.debug('Error processing premise pair:', error.message);
-                }
-            }
+            await this._processPremisePairs(premisePairs, results, startTime, timeoutMs);
         } catch (error) {
             console.debug('Error in step method:', error.message);
         }
 
         return results;
+    }
+
+    async _processPremisePairs(premisePairs, results, startTime, timeoutMs) {
+        for (const { primaryPremise, secondaryPremise } of premisePairs) {
+            if (Date.now() - startTime > timeoutMs) break;
+
+            try {
+                const candidateRules = this.ruleProcessor.ruleExecutor.getCandidateRules(primaryPremise, secondaryPremise);
+                const pairResults = await this._processRuleBatch(candidateRules, primaryPremise, secondaryPremise, startTime, timeoutMs);
+
+                results.push(...pairResults.filter(Boolean));
+
+                if (Date.now() - startTime > timeoutMs) continue; // Continue for fair sampling
+            } catch (error) {
+                console.debug('Error processing premise pair:', error.message);
+            }
+        }
     }
 
     /**
@@ -214,17 +209,7 @@ export class Reasoner {
         try {
             for await (const derivation of this.outputStream) {
                 if (!this.isRunning) break;
-
-                const startTime = Date.now();
-                this._processDerivation(derivation);
-                this._updateMetrics(startTime);
-
-                if (this.metrics.totalDerivations % 50 === 0) {
-                    this._updatePerformanceMetrics();
-                    await this._adaptProcessingRate();
-                }
-
-                await this._checkAndApplyBackpressure();
+                await this._processPipelineDerivation(derivation);
             }
         } catch (error) {
             console.error('Error in reasoning pipeline:', error);
@@ -232,6 +217,19 @@ export class Reasoner {
             this.isRunning = false;
             this._updatePerformanceMetrics();
         }
+    }
+
+    async _processPipelineDerivation(derivation) {
+        const startTime = Date.now();
+        this._processDerivation(derivation);
+        this._updateMetrics(startTime);
+
+        if (this.metrics.totalDerivations % 50 === 0) {
+            this._updatePerformanceMetrics();
+            await this._adaptProcessingRate();
+        }
+
+        await this._checkAndApplyBackpressure();
     }
 
     _updateMetrics(startTime) {
@@ -284,16 +282,20 @@ export class Reasoner {
     async _adaptProcessingRate() {
         this._updatePerformanceMetrics();
 
-        let adjustmentFactor = 1.0;
+        const adjustmentFactor = this._calculateAdjustmentFactor();
 
-        if (this.performance.backpressureLevel > 20) {
-            adjustmentFactor = 0.5;
-        } else if (this.performance.backpressureLevel > 5) {
-            adjustmentFactor = 0.8;
-        } else if (this.performance.backpressureLevel < -5) {
-            adjustmentFactor = 1.2;
-        }
+        this._applyAdjustmentFactor(adjustmentFactor);
+    }
 
+    _calculateAdjustmentFactor() {
+        const backpressure = this.performance.backpressureLevel;
+        if (backpressure > 20) return 0.5;
+        if (backpressure > 5) return 0.8;
+        if (backpressure < -5) return 1.2;
+        return 1.0;
+    }
+
+    _applyAdjustmentFactor(adjustmentFactor) {
         const baseThrottle = this.config.cpuThrottleInterval ?? 0;
         const newThrottle = Math.max(0, baseThrottle / adjustmentFactor);
         const adjustedThrottle = this.config.cpuThrottleInterval * 0.9 + newThrottle * 0.1;

@@ -197,7 +197,11 @@ export class TermFactory extends BaseComponent {
             operator
         );
         this._cache.set(name, term);
-        this._emitIntrospectionEvent(IntrospectionEvents.TERM_CREATED, {term: term.serialize()});
+
+        // Only emit event if introspection is enabled
+        if (this._config.introspection?.enabled) {
+            this._emitIntrospectionEvent(IntrospectionEvents.TERM_CREATED, {term: term.serialize()});
+        }
         return term;
     }
 
@@ -465,17 +469,26 @@ export class TermFactory extends BaseComponent {
         // Calculate number of entries to remove
         const entriesToRemove = this._cache.size - this._maxCacheSize;
 
-        // Get oldest entries by access time and remove them
-        const sortedEntries = Array.from(this._accessTime.entries())
-            .sort((a, b) => a[1] - b[1]) // Sort by access time, oldest first
-            .slice(0, entriesToRemove);   // Take only the number we need to remove
+        // Find the oldest entries to remove efficiently
+        const entriesForRemoval = this._findOldestEntries(entriesToRemove);
 
-        for (const [key] of sortedEntries) {
+        for (const [key] of entriesForRemoval) {
             this._cache.delete(key);
             this._accessTime.delete(key);
             this._complexityCache.delete(key);
             this._cognitiveDiversity.unregisterTerm(key);
         }
+    }
+
+    /**
+     * Find the oldest entries to remove efficiently
+     * @private
+     */
+    _findOldestEntries(count) {
+        const entries = Array.from(this._accessTime.entries());
+
+        // Simple sort and slice - in most cases the count is small enough that this is sufficient
+        return entries.sort((a, b) => a[1] - b[1]).slice(0, count);
     }
 
     /**
