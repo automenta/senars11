@@ -63,3 +63,16 @@ export function collectTasksFromAllConcepts(memory, filterFn = null) {
     return memory.getAllConcepts()
         .flatMap(concept => filterFn ? concept.getAllTasks().filter(filterFn) : concept.getAllTasks());
 }
+
+/**
+ * Iterate over tasks from all concepts in memory
+ */
+export function iterateTasksInAllConcepts(memory, callback) {
+    const concepts = memory.getAllConcepts();
+    for (const concept of concepts) {
+        const tasks = concept.getAllTasks();
+        for (const task of tasks) {
+            callback(task);
+        }
+    }
+}

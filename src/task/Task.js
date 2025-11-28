@@ -1,7 +1,7 @@
 import {Truth} from '../Truth.js';
 import {ArrayStamp} from '../Stamp.js';
 import {Term} from '../term/Term.js';
-import {ConfigurationError, ParseError} from '../util/Errors.js';
+import {ConfigurationError} from '../util/Errors.js';
 
 const PUNCTUATION_TO_TYPE = Object.freeze({'.': 'BELIEF', '!': 'GOAL', '?': 'QUESTION'});
 const TYPE_TO_PUNCTUATION = Object.freeze({'BELIEF': '.', 'GOAL': '!', 'QUESTION': '?'});

@@ -19,9 +19,6 @@ const termFactory = new TermFactory();
  * Base test setup for NAR integration tests
  * Provides consistent initialization and cleanup for NAR instances
  */
-// Cache expensive NAR instances to improve test performance
-const narInstanceCache = new WeakMap();
-
 export class NARTestSetup {
     constructor(config = {}) {
         this.config = {
@@ -1092,8 +1089,8 @@ export const createTestMemory = (options = {}) => {
             add: (task) => tasks.push(task),
             size: () => tasks.length
         },
-        addTask: (task) => { this.taskBag.add(task); },
-        getTask: () => this.taskBag.take()
+        addTask(task) { this.taskBag.add(task); },
+        getTask() { return this.taskBag.take(); }
     };
 };
 
