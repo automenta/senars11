@@ -17,6 +17,10 @@ export class GraphManager {
         this.pendingLayout = false;
         this.layoutDebounceTime = 300; // milliseconds
         this.updatesEnabled = false; // Disabled by default (since sidebar is hidden by default)
+
+        // Bind event handlers to preserve 'this' context
+        this._onNodeTap = this._onNodeTap.bind(this);
+        this._onEdgeTap = this._onEdgeTap.bind(this);
     }
 
     /**
@@ -35,48 +39,75 @@ export class GraphManager {
      * Initialize the Cytoscape instance
      */
     initialize() {
-        // Guard clause: Check if UI elements are available
-        if (!this.uiElements?.graphContainer) {
-            console.error('Graph container element not found');
-            return false;
-        }
+        if (!this._validateInitialization()) return false;
 
         try {
-            this.cy = cytoscape({
-                container: this.uiElements.graphContainer,
-                style: Config.getGraphStyle(),
-                layout: Config.getGraphLayout()
-            });
+            this._initializeCytoscape();
+            this._setupEventListeners();
+            return true;
         } catch (error) {
             console.error('Failed to initialize Cytoscape:', error);
             return false;
         }
+    }
 
-        // Add click event for graph details
-        this.cy.on('tap', 'node', (event) => {
-            const node = event.target;
-            this.updateGraphDetails({
-                type: 'node',
-                label: node.data('label'),
-                id: node.id(),
-                nodeType: node.data('type') || 'unknown',
-                weight: node.data('weight') || 0,
-                fullData: node.data('fullData')
-            });
-        });
-
-        this.cy.on('tap', 'edge', (event) => {
-            const edge = event.target;
-            this.updateGraphDetails({
-                type: 'edge',
-                label: edge.data('label') || 'Relationship',
-                source: edge.data('source'),
-                target: edge.data('target'),
-                edgeType: edge.data('type') || 'unknown'
-            });
-        });
-
+    /**
+     * Validate initialization requirements
+     */
+    _validateInitialization() {
+        if (!this.uiElements?.graphContainer) {
+            console.error('Graph container element not found');
+            return false;
+        }
         return true;
+    }
+
+    /**
+     * Initialize the Cytoscape instance
+     */
+    _initializeCytoscape() {
+        this.cy = cytoscape({
+            container: this.uiElements.graphContainer,
+            style: Config.getGraphStyle(),
+            layout: Config.getGraphLayout()
+        });
+    }
+
+    /**
+     * Setup graph event listeners
+     */
+    _setupEventListeners() {
+        this.cy.on('tap', 'node', this._onNodeTap);
+        this.cy.on('tap', 'edge', this._onEdgeTap);
+    }
+
+    /**
+     * Handle node tap event
+     */
+    _onNodeTap(event) {
+        const node = event.target;
+        this.updateGraphDetails({
+            type: 'node',
+            label: node.data('label'),
+            id: node.id(),
+            nodeType: node.data('type') || 'unknown',
+            weight: node.data('weight') || 0,
+            fullData: node.data('fullData')
+        });
+    }
+
+    /**
+     * Handle edge tap event
+     */
+    _onEdgeTap(event) {
+        const edge = event.target;
+        this.updateGraphDetails({
+            type: 'edge',
+            label: edge.data('label') || 'Relationship',
+            source: edge.data('source'),
+            target: edge.data('target'),
+            edgeType: edge.data('type') || 'unknown'
+        });
     }
 
     /**
@@ -92,17 +123,32 @@ export class GraphManager {
      * @returns {boolean} - True if node was successfully added, false otherwise
      */
     addNode(nodeData, runLayout = true) {
-        if (!this.cy) return false;
+        if (!this.cy || this._nodeExists(nodeData)) return false;
 
+        const node = this._createNodeObject(nodeData);
+        this.cy.add(node);
+
+        if (runLayout) {
+            this.scheduleLayout();
+        }
+        return true;
+    }
+
+    /**
+     * Check if a node already exists
+     */
+    _nodeExists(nodeData) {
+        const nodeId = nodeData.id || `concept_${Date.now()}`;
+        return this.cy.getElementById(nodeId).length > 0;
+    }
+
+    /**
+     * Create node object from node data
+     */
+    _createNodeObject(nodeData) {
         const {id, label, term, type: nodeType, nodeType: nodeTypeOverride} = nodeData;
         const nodeId = id || `concept_${Date.now()}`;
 
-        // Don't add duplicate nodes
-        if (this.cy.getElementById(nodeId).length) {
-            return false;
-        }
-
-        // Create node data object efficiently
         let displayLabel = label || term || id;
         if (nodeData.truth) {
             const {frequency, confidence} = nodeData.truth;
@@ -111,7 +157,7 @@ export class GraphManager {
             displayLabel += `\n{${freq}, ${conf}}`;
         }
 
-        const newNode = {
+        return {
             group: 'nodes',
             data: {
                 id: nodeId,
@@ -121,13 +167,6 @@ export class GraphManager {
                 fullData: nodeData
             }
         };
-
-        this.cy.add(newNode);
-
-        if (runLayout) {
-            this.scheduleLayout();
-        }
-        return true;
     }
 
     /**
@@ -142,17 +181,33 @@ export class GraphManager {
      * Add an edge to the graph
      */
     addEdge(edgeData, runLayout = true) {
-        if (!this.cy) return false;
+        if (!this.cy || this._edgeExists(edgeData)) return false;
 
+        const edge = this._createEdgeObject(edgeData);
+        this.cy.add(edge);
+
+        if (runLayout) {
+            this.scheduleLayout();
+        }
+        return true;
+    }
+
+    /**
+     * Check if an edge already exists
+     */
+    _edgeExists(edgeData) {
+        const edgeId = edgeData.id || `edge_${Date.now()}_${edgeData.source}_${edgeData.target}`;
+        return this.cy.getElementById(edgeId).length > 0;
+    }
+
+    /**
+     * Create edge object from edge data
+     */
+    _createEdgeObject(edgeData) {
         const {id, source, target, label, type: edgeType, edgeType: edgeTypeOverride} = edgeData;
         const edgeId = id || `edge_${Date.now()}_${source}_${target}`;
 
-        // Don't add duplicate edges
-        if (this.cy.getElementById(edgeId).length) {
-            return false;
-        }
-
-        const newEdge = {
+        return {
             group: 'edges',
             data: {
                 id: edgeId,
@@ -162,13 +217,6 @@ export class GraphManager {
                 type: edgeTypeOverride || edgeType || 'relationship'
             }
         };
-
-        this.cy.add(newEdge);
-
-        if (runLayout) {
-            this.scheduleLayout();
-        }
-        return true;
     }
 
     /**
@@ -177,27 +225,31 @@ export class GraphManager {
     updateFromSnapshot(payload) {
         if (!this.cy || !payload?.concepts) return;
 
-        // Clear existing elements
         this.cy.elements().remove();
 
-        // Add nodes from concepts in batch
         const concepts = payload.concepts || [];
         if (concepts.length > 0) {
-            const nodes = concepts.map((concept, index) => ({
-                group: 'nodes',
-                data: {
-                    id: concept.id || `concept_${index}`,
-                    label: concept.term || `Concept ${index}`,
-                    type: concept.type || 'concept',
-                    weight: concept.truth?.confidence ? concept.truth.confidence * 100 : 50,
-                    fullData: concept
-                }
-            }));
+            const nodes = this._createNodesFromConcepts(concepts);
             this.cy.add(nodes);
         }
 
-        // Layout the graph
         this.scheduleLayout();
+    }
+
+    /**
+     * Create nodes array from concepts array
+     */
+    _createNodesFromConcepts(concepts) {
+        return concepts.map((concept, index) => ({
+            group: 'nodes',
+            data: {
+                id: concept.id || `concept_${index}`,
+                label: concept.term || `Concept ${index}`,
+                type: concept.type || 'concept',
+                weight: concept.truth?.confidence ? concept.truth.confidence * 100 : 50,
+                fullData: concept
+            }
+        }));
     }
 
     /**
@@ -206,27 +258,30 @@ export class GraphManager {
     updateFromMessage(message) {
         if (!this.cy || !this.updatesEnabled) return;
 
+        const updateFn = this._getMessageUpdateFunction(message);
+        if (updateFn) {
+            updateFn();
+
+            if (this.shouldRunLayoutAfterMessage(message.type)) {
+                this.scheduleLayout();
+            }
+        }
+    }
+
+    /**
+     * Get the update function for a specific message type
+     */
+    _getMessageUpdateFunction(message) {
         const messageUpdates = {
             'concept.created': () => this.addNodeWithPayload(message.payload, false),
             'concept.added': () => this.addNodeWithPayload(message.payload, false),
             'task.added': () => this.addNodeWithPayload({...message.payload, nodeType: 'task'}, false),
             'task.input': () => this.addNodeWithPayload({...message.payload, nodeType: 'task'}, false),
             'question.answered': () => this.addQuestionNode(message.payload),
-            'memorySnapshot': () => {
-                this.updateFromSnapshot(message.payload);
-                return; // Snapshot updates already run layout
-            }
+            'memorySnapshot': () => this.updateFromSnapshot(message.payload)
         };
 
-        const updateFn = messageUpdates[message.type];
-        if (updateFn) {
-            updateFn();
-
-            // Only run layout once after processing the message, if we added nodes/edges
-            if (this.shouldRunLayoutAfterMessage(message.type)) {
-                this.scheduleLayout();
-            }
-        }
+        return messageUpdates[message.type];
     }
 
     /**
@@ -256,7 +311,12 @@ export class GraphManager {
      * Determine if layout should run after a specific message type
      */
     shouldRunLayoutAfterMessage(messageType) {
-        return ['concept.created', 'concept.added', 'task.added', 'task.input', 'question.answered'].includes(messageType);
+        const layoutMessageTypes = [
+            'concept.created', 'concept.added',
+            'task.added', 'task.input',
+            'question.answered'
+        ];
+        return layoutMessageTypes.includes(messageType);
     }
 
     /**
@@ -266,12 +326,10 @@ export class GraphManager {
     scheduleLayout() {
         this.pendingLayout = true;
 
-        // Clear existing timeout to debounce
         if (this.layoutTimeout) {
             clearTimeout(this.layoutTimeout);
         }
 
-        // Schedule layout to run after debounce time
         this.layoutTimeout = setTimeout(() => {
             if (this.pendingLayout && this.cy) {
                 this.cy.layout(Config.getGraphLayout()).run();
@@ -296,7 +354,6 @@ export class GraphManager {
         const graphDetailsElement = this.uiElements?.graphDetails;
         if (!graphDetailsElement) return;
 
-        // Create content based on type to avoid duplicate code
         const content = details.type === 'node'
             ? this.createNodeDetailsContent(details)
             : this.createEdgeDetailsContent(details);
@@ -309,12 +366,9 @@ export class GraphManager {
      */
     setTaskVisibility(visible) {
         if (!this.cy) return;
+
         const tasks = this.cy.nodes('[type = "task"]');
-        if (visible) {
-            tasks.style('display', 'element');
-        } else {
-            tasks.style('display', 'none');
-        }
+        tasks.style('display', visible ? 'element' : 'none');
     }
 
     /**
@@ -322,26 +376,47 @@ export class GraphManager {
      */
     createNodeDetailsContent(details) {
         const data = details.fullData || {};
-        let html = [
-            `<div style="margin-bottom:4px"><strong>Type:</strong> ${details.nodeType}</div>`,
-            `<div style="margin-bottom:4px"><strong>Term:</strong> <span style="color:#4ec9b0; font-family:monospace">${details.label}</span></div>`
-        ].join('');
+        let html = this._createNodeBasicDetails(details);
 
         if (data.truth) {
-            const {frequency, confidence} = data.truth;
-            const freq = typeof frequency === 'number' ? frequency.toFixed(2) : '0.00';
-            const conf = typeof confidence === 'number' ? confidence.toFixed(2) : '0.00';
-            html += `<div style="margin-bottom:4px"><strong>Truth:</strong> <span style="color:#ce9178; font-family:monospace">{${freq}, ${conf}}</span></div>`;
+            html += this._createTruthDetails(data.truth);
         }
 
         if (data.budget) {
-            const {priority} = data.budget;
-            const pri = typeof priority === 'number' ? priority.toFixed(2) : '0.00';
-            html += `<div style="margin-bottom:4px"><strong>Priority:</strong> ${pri}</div>`;
+            html += this._createBudgetDetails(data.budget);
         }
 
         html += `<div style="margin-top:4px; font-size:0.8em; color:#666">ID: ${details.id}</div>`;
         return html;
+    }
+
+    /**
+     * Create basic node details HTML
+     */
+    _createNodeBasicDetails(details) {
+        return [
+            `<div style="margin-bottom:4px"><strong>Type:</strong> ${details.nodeType}</div>`,
+            `<div style="margin-bottom:4px"><strong>Term:</strong> <span style="color:#4ec9b0; font-family:monospace">${details.label}</span></div>`
+        ].join('');
+    }
+
+    /**
+     * Create truth value details HTML
+     */
+    _createTruthDetails(truth) {
+        const {frequency, confidence} = truth;
+        const freq = typeof frequency === 'number' ? frequency.toFixed(2) : '0.00';
+        const conf = typeof confidence === 'number' ? confidence.toFixed(2) : '0.00';
+        return `<div style="margin-bottom:4px"><strong>Truth:</strong> <span style="color:#ce9178; font-family:monospace">{${freq}, ${conf}}</span></div>`;
+    }
+
+    /**
+     * Create budget details HTML
+     */
+    _createBudgetDetails(budget) {
+        const {priority} = budget;
+        const pri = typeof priority === 'number' ? priority.toFixed(2) : '0.00';
+        return `<div style="margin-bottom:4px"><strong>Priority:</strong> ${pri}</div>`;
     }
 
     /**

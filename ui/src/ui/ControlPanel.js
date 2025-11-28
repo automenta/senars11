@@ -10,7 +10,25 @@ export class ControlPanel {
         this.isRunning = false;
         this.isSidebarVisible = false;
 
+        this._bindMethods();
         this.initialize();
+    }
+
+    /**
+     * Bind method context to preserve 'this' reference
+     */
+    _bindMethods() {
+        this._onPlayPauseClick = this._onPlayPauseClick.bind(this);
+        this._onStepClick = this._onStepClick.bind(this);
+        this._onResetClick = this._onResetClick.bind(this);
+        this._onConfirmResetClick = this._onConfirmResetClick.bind(this);
+        this._onCancelResetClick = this._onCancelResetClick.bind(this);
+        this._onModalClick = this._onModalClick.bind(this);
+        this._onModeChange = this._onModeChange.bind(this);
+        this._onSaveClick = this._onSaveClick.bind(this);
+        this._onLoadClick = this._onLoadClick.bind(this);
+        this._onToggleSidebarClick = this._onToggleSidebarClick.bind(this);
+        this._onCloseSidebarClick = this._onCloseSidebarClick.bind(this);
     }
 
     initialize() {
@@ -28,24 +46,15 @@ export class ControlPanel {
         const {btnPlayPause, btnStep, btnReset} = this.uiElements.getAll();
 
         if (btnPlayPause) {
-            btnPlayPause.addEventListener('click', () => {
-                this._togglePlayback();
-            });
+            btnPlayPause.addEventListener('click', this._onPlayPauseClick);
         }
 
         if (btnStep) {
-            btnStep.addEventListener('click', () => {
-                if (!this.isRunning) {
-                    this.commandProcessor.executeControlCommand('control/step');
-                    this.logger.log('Stepping...', 'debug', '⏯️');
-                }
-            });
+            btnStep.addEventListener('click', this._onStepClick);
         }
 
         if (btnReset) {
-            btnReset.addEventListener('click', () => {
-                this._showResetModal();
-            });
+            btnReset.addEventListener('click', this._onResetClick);
         }
     }
 
@@ -90,11 +99,11 @@ export class ControlPanel {
         const {btnToggleSidebar, btnCloseSidebar, sidebarPanel} = this.uiElements.getAll();
 
         if (btnToggleSidebar) {
-            btnToggleSidebar.addEventListener('click', () => this.toggleSidebar());
+            btnToggleSidebar.addEventListener('click', this._onToggleSidebarClick);
         }
 
         if (btnCloseSidebar) {
-            btnCloseSidebar.addEventListener('click', () => this.toggleSidebar(false));
+            btnCloseSidebar.addEventListener('click', this._onCloseSidebarClick);
         }
     }
 
@@ -126,33 +135,16 @@ export class ControlPanel {
         const {confirmationModal, btnConfirmReset, btnCancelReset} = this.uiElements.getAll();
 
         if (btnConfirmReset) {
-            btnConfirmReset.addEventListener('click', () => {
-                this.commandProcessor.executeControlCommand('control/reset');
-                this.logger.log('System reset', 'warning', '🔄');
-                this._hideResetModal();
-                // Also reset playback state if needed
-                if (this.isRunning) {
-                    this.isRunning = false;
-                    this._updatePlaybackControls();
-                }
-                // Reset cycle count
-                this.updateCycleCount(0);
-            });
+            btnConfirmReset.addEventListener('click', this._onConfirmResetClick);
         }
 
         if (btnCancelReset) {
-            btnCancelReset.addEventListener('click', () => {
-                this._hideResetModal();
-            });
+            btnCancelReset.addEventListener('click', this._onCancelResetClick);
         }
 
         // Close on click outside (optional, but good UX)
         if (confirmationModal) {
-            confirmationModal.addEventListener('click', (e) => {
-                if (e.target === confirmationModal) {
-                    this._hideResetModal();
-                }
-            });
+            confirmationModal.addEventListener('click', this._onModalClick);
         }
     }
 
@@ -173,22 +165,15 @@ export class ControlPanel {
     _setupInputMode() {
         const {inputModeNarsese, inputModeAgent} = this.uiElements.getAll();
 
-        const handleModeChange = (e) => {
-            if (e.target.checked) {
-                this.inputMode = e.target.value;
-                this.logger.log(`Input mode switched to: ${this.inputMode.toUpperCase()}`, 'info', '⚙️');
-            }
-        };
-
-        if (inputModeNarsese) inputModeNarsese.addEventListener('change', handleModeChange);
-        if (inputModeAgent) inputModeAgent.addEventListener('change', handleModeChange);
+        if (inputModeNarsese) inputModeNarsese.addEventListener('change', this._onModeChange);
+        if (inputModeAgent) inputModeAgent.addEventListener('change', this._onModeChange);
     }
 
     _setupSaveLoad() {
         const {btnSave, btnLoad} = this.uiElements.getAll();
 
-        if (btnSave) btnSave.addEventListener('click', () => this.commandProcessor.processCommand('/save'));
-        if (btnLoad) btnLoad.addEventListener('click', () => this.commandProcessor.processCommand('/load'));
+        if (btnSave) btnSave.addEventListener('click', this._onSaveClick);
+        if (btnLoad) btnLoad.addEventListener('click', this._onLoadClick);
     }
 
     updateCycleCount(count) {
@@ -200,5 +185,99 @@ export class ControlPanel {
 
     getInputMode() {
         return this.inputMode;
+    }
+
+    /**
+     * Event handler for play/pause button click
+     */
+    _onPlayPauseClick() {
+        this._togglePlayback();
+    }
+
+    /**
+     * Event handler for step button click
+     */
+    _onStepClick() {
+        if (!this.isRunning) {
+            this.commandProcessor.executeControlCommand('control/step');
+            this.logger.log('Stepping...', 'debug', '⏯️');
+        }
+    }
+
+    /**
+     * Event handler for reset button click
+     */
+    _onResetClick() {
+        this._showResetModal();
+    }
+
+    /**
+     * Event handler for confirm reset button click
+     */
+    _onConfirmResetClick() {
+        this.commandProcessor.executeControlCommand('control/reset');
+        this.logger.log('System reset', 'warning', '🔄');
+        this._hideResetModal();
+        // Also reset playback state if needed
+        if (this.isRunning) {
+            this.isRunning = false;
+            this._updatePlaybackControls();
+        }
+        // Reset cycle count
+        this.updateCycleCount(0);
+    }
+
+    /**
+     * Event handler for cancel reset button click
+     */
+    _onCancelResetClick() {
+        this._hideResetModal();
+    }
+
+    /**
+     * Event handler for modal click (outside area)
+     */
+    _onModalClick(e) {
+        if (e.target === this.uiElements.get('confirmationModal')) {
+            this._hideResetModal();
+        }
+    }
+
+    /**
+     * Event handler for input mode change
+     */
+    _onModeChange(e) {
+        if (e.target.checked) {
+            this.inputMode = e.target.value;
+            this.logger.log(`Input mode switched to: ${this.inputMode.toUpperCase()}`, 'info', '⚙️');
+        }
+    }
+
+    /**
+     * Event handler for save button click
+     */
+    _onSaveClick() {
+        this.commandProcessor.processCommand('/save');
+    }
+
+    /**
+     * Event handler for load button click
+     */
+    _onLoadClick() {
+        this.commandProcessor.processCommand('/load');
+    }
+
+    /**
+     * Event handler for toggle sidebar button click
+     */
+    _onToggleSidebarClick() {
+        this.toggleSidebar();
+    }
+
+    /**
+     * Event handler for close sidebar button click
+     */
+    _onCloseSidebarClick() {
+        this.toggleSidebar(false);
     }
 }

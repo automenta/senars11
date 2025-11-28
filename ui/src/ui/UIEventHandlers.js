@@ -21,39 +21,32 @@ export class UIEventHandlers {
      * Setup all event listeners
      */
     setupEventListeners() {
-        const eventConfig = this._getEventConfigurations();
-        eventConfig.forEach(config => this._attachEventHandler(config));
+        const eventConfigs = this._getEventConfigurations();
+        eventConfigs.forEach(config => this._attachEventHandler(config));
     }
 
     /**
      * Get event configurations for all UI elements
      */
     _getEventConfigurations() {
-        // Define handler mapping to reduce duplication
-        const handlerMap = {
+        return [
             // Command Input handlers
-            'sendButton': { event: 'click', handler: () => this.commandHandlers.handleCommandSubmit() },
-            'commandInput': { event: 'keypress', handler: (e) => this.commandHandlers.handleCommandKeyPress(e) },
-            'execQuick': { event: 'click', handler: () => this.commandHandlers.handleQuickCommand() },
-            'showHistory': { event: 'click', handler: () => this.commandHandlers.showCommandHistory() },
+            { element: 'sendButton', event: 'click', handler: () => this.commandHandlers.handleCommandSubmit() },
+            { element: 'commandInput', event: 'keypress', handler: (e) => this.commandHandlers.handleCommandKeyPress(e) },
+            { element: 'execQuick', event: 'click', handler: () => this.commandHandlers.handleQuickCommand() },
+            { element: 'showHistory', event: 'click', handler: () => this.commandHandlers.showCommandHistory() },
 
             // Controls & Logs handlers
-            'clearLogs': { event: 'click', handler: () => this.controlHandlers.handleClearLogs() },
-            'refreshGraph': { event: 'click', handler: () => this.controlHandlers.handleRefresh() },
-            'toggleLive': { event: 'click', handler: () => this.controlHandlers.handleToggleLive() },
-            'runDemo': { event: 'click', handler: () => this.controlHandlers.handleRunDemo() },
-            'showTasksToggle': {
+            { element: 'clearLogs', event: 'click', handler: () => this.controlHandlers.handleClearLogs() },
+            { element: 'refreshGraph', event: 'click', handler: () => this.controlHandlers.handleRefresh() },
+            { element: 'toggleLive', event: 'click', handler: () => this.controlHandlers.handleToggleLive() },
+            { element: 'runDemo', event: 'click', handler: () => this.controlHandlers.handleRunDemo() },
+            {
+                element: 'showTasksToggle',
                 event: 'change',
                 handler: (e) => this.controlHandlers.handleTaskVisibility(e.target.checked)
             }
-        };
-
-        // Transform the handlerMap into the required format
-        return Object.entries(handlerMap).map(([element, {event, handler}]) => ({
-            element,
-            event,
-            handler
-        }));
+        ];
     }
 
     /**
@@ -64,9 +57,6 @@ export class UIEventHandlers {
         if (elementRef) {
             elementRef.addEventListener(event, handler);
             this._eventHandlers.set(`${element}-${event}`, {element: elementRef, event, handler});
-        } else {
-            // Optional: log warning only in debug mode to reduce noise
-            // this.commandProcessor.logger.log(`UI element not found: ${element}`, 'warning', '⚠️');
         }
     }
 

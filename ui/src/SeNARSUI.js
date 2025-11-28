@@ -16,7 +16,7 @@ export class SeNARSUI {
     constructor() {
         this.uiElements = new UIElements();
 
-        // Initialize core modules
+        // Initialize core modules with dependency injection
         this.logger = new Logger();
         this.webSocketManager = new WebSocketManager();
         this.graphManager = new GraphManager(this.uiElements.getAll());
@@ -31,8 +31,6 @@ export class SeNARSUI {
             this.webSocketManager,
             this.controlPanel
         );
-
-        // Initialize message handler
         this.messageHandler = new MessageHandler(this.graphManager);
 
         // Set logger UI elements
@@ -46,26 +44,11 @@ export class SeNARSUI {
      * Initialize the application
      */
     initialize() {
-        // Initialize graph
         this.graphManager.initialize();
-
-        // Setup UI event listeners
         this.uiEventHandlers.setupEventListeners();
-
-        // Setup WebSocket message handlers
         this._setupWebSocketHandlers();
-
-        // Connect to WebSocket
         this.webSocketManager.connect();
-
-        // Initialize Demo Manager (fetches demos)
-        this.webSocketManager.subscribe('connection.status', (status) => {
-            if (status === 'connected') {
-                this.demoManager.initialize();
-            }
-        });
-
-        // Add initial log entry
+        this._setupConnectionStatusListener();
         this.logger.addLogEntry('SeNARS UI2 - Ready', 'info', '🚀');
     }
 
@@ -74,13 +57,19 @@ export class SeNARSUI {
      */
     _setupWebSocketHandlers() {
         // Subscribe to general messages
-        this.webSocketManager.subscribe('*', (message) => {
-            this._handleMessage(message);
-        });
-
+        this.webSocketManager.subscribe('*', this._handleMessage.bind(this));
         // Subscribe to connection status changes
+        this.webSocketManager.subscribe('connection.status', this._updateStatus.bind(this));
+    }
+
+    /**
+     * Setup connection status listener for demo initialization
+     */
+    _setupConnectionStatusListener() {
         this.webSocketManager.subscribe('connection.status', (status) => {
-            this._updateStatus(status);
+            if (status === 'connected') {
+                this.demoManager.initialize();
+            }
         });
     }
 
@@ -92,31 +81,39 @@ export class SeNARSUI {
             // Early return if message is null/undefined
             if (!message) return;
 
-            // Update message count display
+            // Process message components sequentially
             this._updateMessageCount();
-
-            // Update system state (cycle count, etc.)
             this._updateSystemState(message);
 
             // Handle specialized messages that shouldn't go through the generic logger
-            if (this._handleSpecializedMessages(message)) {
-                return;
-            }
+            if (this._handleSpecializedMessages(message)) return;
 
-            // Process message with appropriate handler
+            // Process and log message
             const {content, type, icon} = this.messageHandler.processMessage(message);
-
-            // Add log entry and update graph simultaneously
-            this.logger.addLogEntry(content, type, icon);
-            this.graphManager.updateFromMessage(message);
+            this._logAndVisualizeMessage(content, type, icon, message);
         } catch (error) {
-            const errorMsg = `Error handling message of type ${message?.type ?? 'unknown'}: ${error.message}`;
-            this.logger.log(errorMsg, 'error', '❌');
+            this._handleMessageError(message, error);
+        }
+    }
 
-            // Only log to console in development mode to avoid spam
-            if (process?.env?.NODE_ENV !== 'production') {
-                console.error('Full error details:', error, message);
-            }
+    /**
+     * Log content and update graph visualization
+     */
+    _logAndVisualizeMessage(content, type, icon, message) {
+        this.logger.addLogEntry(content, type, icon);
+        this.graphManager.updateFromMessage(message);
+    }
+
+    /**
+     * Handle message processing errors
+     */
+    _handleMessageError(message, error) {
+        const errorMsg = `Error handling message of type ${message?.type ?? 'unknown'}: ${error.message}`;
+        this.logger.log(errorMsg, 'error', '❌');
+
+        // Only log to console in development mode to avoid spam
+        if (process?.env?.NODE_ENV !== 'production') {
+            console.error('Full error details:', error, message);
         }
     }
 
@@ -125,54 +122,54 @@ export class SeNARSUI {
      * Returns true if message was handled and should stop processing
      */
     _handleSpecializedMessages(message) {
-        // Map of message types to handler functions for DRY principle
         const specializedMessageHandlers = {
             'demoList': (payload) => this.demoManager.handleDemoList(payload),
             'demoStep': (payload) => this.demoManager.handleDemoStep(payload),
             'demoState': (payload) => this.demoManager.handleDemoState(payload),
-            'demoMetrics': (payload) => {
-                // Update cycle count from metrics
-                const metrics = payload?.metrics;
-                if (metrics && metrics.cyclesCompleted !== undefined) {
-                    this.controlPanel.updateCycleCount(metrics.cyclesCompleted);
-                }
-                // Suppress from logs (return true to stop processing)
-                return true;
-            },
-            'agent/result': (payload) => {
-                // Log agent result specifically
-                const result = typeof payload.result === 'string' ? payload.result : JSON.stringify(payload.result);
-                this.logger.addLogEntry(result, 'info', '🤖');
-            }
+            'demoMetrics': (payload) => this._handleDemoMetrics(payload),
+            'agent/result': (payload) => this._handleAgentResult(payload)
         };
 
         const handler = specializedMessageHandlers[message.type];
-        if (handler) {
-            handler(message.payload);
-            // demoMetrics should suppress from logs (return true to stop processing)
-            if (message.type === 'demoMetrics') return true;
-            // agent/result doesn't need special suppression handling, let it continue
-        }
+        return handler ? handler(message.payload) : false;
+    }
 
-        return false;
+    /**
+     * Handle demo metrics message
+     */
+    _handleDemoMetrics(payload) {
+        // Update cycle count from metrics
+        const metrics = payload?.metrics;
+        if (metrics?.cyclesCompleted !== undefined) {
+            this.controlPanel.updateCycleCount(metrics.cyclesCompleted);
+        }
+        return true; // Suppress from logs
+    }
+
+    /**
+     * Handle agent result message
+     */
+    _handleAgentResult(payload) {
+        const result = typeof payload.result === 'string' ? payload.result : JSON.stringify(payload.result);
+        this.logger.addLogEntry(result, 'info', '🤖');
+        return false; // Don't suppress from logs
     }
 
     /**
      * Update system state based on message
      */
     _updateSystemState(message) {
-        // Map of message types to cycle update functions
         const cycleUpdateMap = {
             'nar.cycle.step': (payload) => payload?.cycle,
             'narInstance': (payload) => payload?.cycleCount
         };
 
         const getCycleValue = cycleUpdateMap[message.type];
-        if (getCycleValue) {
-            const cycleValue = getCycleValue(message.payload);
-            if (cycleValue !== undefined) {
-                this.controlPanel.updateCycleCount(cycleValue);
-            }
+        if (!getCycleValue) return;
+
+        const cycleValue = getCycleValue(message.payload);
+        if (cycleValue !== undefined) {
+            this.controlPanel.updateCycleCount(cycleValue);
         }
     }
 
@@ -180,10 +177,10 @@ export class SeNARSUI {
      * Update the message count display
      */
     _updateMessageCount() {
-        const messageCountElement = this.uiElements.get('messageCount');
-        if (messageCountElement) {
-            const currentCount = parseInt(messageCountElement.textContent) ?? 0;
-            messageCountElement.textContent = currentCount + 1;
+        const element = this.uiElements.get('messageCount');
+        if (element) {
+            const currentCount = parseInt(element.textContent) ?? 0;
+            element.textContent = currentCount + 1;
         }
     }
 
@@ -193,18 +190,10 @@ export class SeNARSUI {
     _updateStatus(status) {
         const {connectionStatus, statusIndicator} = this.uiElements.getAll();
 
-        if (connectionStatus) {
-            connectionStatus.textContent = capitalizeFirst(status);
-        }
-
-        // Update indicator class
-        if (statusIndicator) {
-            statusIndicator.className = `status-indicator status-${status}`;
-        }
+        connectionStatus?.textContent = capitalizeFirst(status);
+        statusIndicator?.className = `status-indicator status-${status}`;
     }
 }
 
 // Initialize the app when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    new SeNARSUI();
-});
+document.addEventListener('DOMContentLoaded', () => new SeNARSUI());

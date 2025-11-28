@@ -14,6 +14,12 @@ export class WebSocketManager {
         this.reconnectDelay = Config.getConstants().RECONNECT_DELAY;
         this.messageHandlers = new Map();
         this.logger = new Logger();
+
+        // Bind methods to preserve 'this' context
+        this._onOpen = this._onOpen.bind(this);
+        this._onClose = this._onClose.bind(this);
+        this._onError = this._onError.bind(this);
+        this._onMessage = this._onMessage.bind(this);
     }
 
     /**
@@ -24,49 +30,75 @@ export class WebSocketManager {
             const wsUrl = Config.getWebSocketUrl();
             this.ws = new WebSocket(wsUrl);
 
-            this.ws.onopen = () => {
-                this.connectionStatus = 'connected';
-                this.reconnectAttempts = 0;
-                this.logger.log('Connected to SeNARS server', 'success', '🌐');
-                this.notifyStatusChange('connected');
-            };
-
-            this.ws.onclose = () => {
-                this.connectionStatus = 'disconnected';
-                this.logger.log('Disconnected from server', 'warning', '🔌');
-                this.notifyStatusChange('disconnected');
-
-                // Attempt to reconnect after delay, unless we've reached the max attempts
-                if (this.reconnectAttempts < this.maxReconnectAttempts) {
-                    this.reconnectAttempts++;
-                    setTimeout(() => this.connect(), this.reconnectDelay);
-                } else {
-                    this.logger.log(`Max reconnection attempts (${this.maxReconnectAttempts}) reached`, 'error', '🚨');
-                }
-            };
-
-            this.ws.onerror = (error) => {
-                this.connectionStatus = 'error';
-                this.logger.log('WebSocket connection error', 'error', '🚨');
-                this.notifyStatusChange('error');
-            };
-
-            this.ws.onmessage = (event) => {
-                try {
-                    const message = JSON.parse(event.data);
-                    this.handleMessage(message);
-                } catch (e) {
-                    this.logger.log(`Invalid message format: ${event.data}`, 'error', '🚨');
-                }
-            };
+            // Set up event handlers
+            this.ws.onopen = this._onOpen;
+            this.ws.onclose = this._onClose;
+            this.ws.onerror = this._onError;
+            this.ws.onmessage = this._onMessage;
         } catch (error) {
-            this.connectionStatus = 'error';
-            this.logger.log('Failed to create WebSocket', 'error', '🚨');
-            if (error instanceof WebSocketConnectionError) {
-                throw error;
-            } else {
-                throw new WebSocketConnectionError(error.message, 'WEBSOCKET_CREATION_FAILED');
-            }
+            this._handleConnectionError(error);
+        }
+    }
+
+    /**
+     * Handle WebSocket open event
+     */
+    _onOpen() {
+        this.connectionStatus = 'connected';
+        this.reconnectAttempts = 0;
+        this.logger.log('Connected to SeNARS server', 'success', '🌐');
+        this.notifyStatusChange('connected');
+    }
+
+    /**
+     * Handle WebSocket close event
+     */
+    _onClose() {
+        this.connectionStatus = 'disconnected';
+        this.logger.log('Disconnected from server', 'warning', '🔌');
+        this.notifyStatusChange('disconnected');
+
+        // Attempt to reconnect after delay, unless we've reached the max attempts
+        if (this.reconnectAttempts < this.maxReconnectAttempts) {
+            this.reconnectAttempts++;
+            setTimeout(() => this.connect(), this.reconnectDelay);
+        } else {
+            this.logger.log(`Max reconnection attempts (${this.maxReconnectAttempts}) reached`, 'error', '🚨');
+        }
+    }
+
+    /**
+     * Handle WebSocket error event
+     */
+    _onError(error) {
+        this.connectionStatus = 'error';
+        this.logger.log('WebSocket connection error', 'error', '🚨');
+        this.notifyStatusChange('error');
+    }
+
+    /**
+     * Handle WebSocket message event
+     */
+    _onMessage(event) {
+        try {
+            const message = JSON.parse(event.data);
+            this.handleMessage(message);
+        } catch (e) {
+            this.logger.log(`Invalid message format: ${event.data}`, 'error', '🚨');
+        }
+    }
+
+    /**
+     * Handle connection errors
+     */
+    _handleConnectionError(error) {
+        this.connectionStatus = 'error';
+        this.logger.log('Failed to create WebSocket', 'error', '🚨');
+
+        if (error instanceof WebSocketConnectionError) {
+            throw error;
+        } else {
+            throw new WebSocketConnectionError(error.message, 'WEBSOCKET_CREATION_FAILED');
         }
     }
 
@@ -75,7 +107,6 @@ export class WebSocketManager {
      */
     sendMessage(type, payload) {
         if (this.isConnected()) {
-            // Use a more efficient message format to avoid object creation in hot paths
             const messageStr = JSON.stringify({type, payload});
             this.ws.send(messageStr);
             return true;
@@ -128,15 +159,7 @@ export class WebSocketManager {
 
         // Handle batch events
         if (message.type === 'eventBatch') {
-            const events = message.data || [];
-            this.logger.log(`Received batch of ${events.length} events`, 'debug', '📦');
-
-            // Process events in batch to improve performance with many messages
-            const batchLimit = Config.getConstants().MESSAGE_BATCH_SIZE;
-            for (let i = 0; i < events.length; i += batchLimit) {
-                const batch = events.slice(i, i + batchLimit);
-                this.processBatch(batch);
-            }
+            this._handleEventBatch(message);
             return;
         }
 
@@ -145,15 +168,22 @@ export class WebSocketManager {
             return; // Too noisy for main log
         }
 
-        // Notify all handlers for this message type and general handlers
-        const specificHandlers = this.messageHandlers.get(message.type) || [];
-        const generalHandlers = this.messageHandlers.get('*') || [];
+        this._notifyMessageHandlers(message);
+    }
 
-        // Process specific handlers first, then general handlers
-        [...specificHandlers, ...generalHandlers].forEach((handler, index) => {
-            const handlerType = index < specificHandlers.length ? message.type : '*';
-            this.tryHandleMessage(handler, message, handlerType);
-        });
+    /**
+     * Handle event batch messages
+     */
+    _handleEventBatch(message) {
+        const events = message.data || [];
+        this.logger.log(`Received batch of ${events.length} events`, 'debug', '📦');
+
+        // Process events in batch to improve performance with many messages
+        const batchLimit = Config.getConstants().MESSAGE_BATCH_SIZE;
+        for (let i = 0; i < events.length; i += batchLimit) {
+            const batch = events.slice(i, i + batchLimit);
+            this.processBatch(batch);
+        }
     }
 
     /**
@@ -169,6 +199,20 @@ export class WebSocketManager {
                 timestamp: event.timestamp
             });
         }
+    }
+
+    /**
+     * Notify all message handlers for a specific message
+     */
+    _notifyMessageHandlers(message) {
+        const specificHandlers = this.messageHandlers.get(message.type) ?? [];
+        const generalHandlers = this.messageHandlers.get('*') ?? [];
+
+        // Process specific handlers first, then general handlers
+        [...specificHandlers, ...generalHandlers].forEach((handler, index) => {
+            const handlerType = index < specificHandlers.length ? message.type : '*';
+            this.tryHandleMessage(handler, message, handlerType);
+        });
     }
 
     /**
@@ -200,7 +244,7 @@ export class WebSocketManager {
      * Notify status changes
      */
     notifyStatusChange(status) {
-        const statusHandlers = this.messageHandlers.get('connection.status') || [];
+        const statusHandlers = this.messageHandlers.get('connection.status') ?? [];
         for (const handler of statusHandlers) { // Use for-of instead of forEach for better performance
             this.tryExecuteHandler(handler, status, 'status handler');
         }

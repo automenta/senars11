@@ -24,31 +24,31 @@ export class MessageHandler {
         }
 
         if (type === 'narsese.output') {
-            this.logger.log(payload, UI_CONSTANTS.LOG_TYPES.REASONING);
+            this.logger.log(payload, UI_CONSTANTS.LOG.TYPES.REASONING);
             return true;
         }
 
         if (type === 'reasoning.derivation' || type === 'reasoning.step') {
             const content = payload ? this._formatObject(payload) : 'Processing...';
-            this.logger.log(`[Reasoning] ${content}`, UI_CONSTANTS.LOG_TYPES.REASONING);
+            this.logger.log(`[Reasoning] ${content}`, UI_CONSTANTS.LOG.TYPES.REASONING);
             return true;
         }
 
         if (type === 'task.added' || type.includes('task')) {
             const content = payload ? this._formatObject(payload) : 'Task processed';
-            this.logger.log(`[Task] ${content}`, UI_CONSTANTS.LOG_TYPES.TASK);
+            this.logger.log(`[Task] ${content}`, UI_CONSTANTS.LOG.TYPES.TASK);
             return true;
         }
 
         if (type.includes('question') || type.includes('answer')) {
             const content = payload ? this._formatObject(payload) : 'Question processed';
-            this.logger.log(`[Question] ${content}`, UI_CONSTANTS.LOG_TYPES.QUESTION);
+            this.logger.log(`[Question] ${content}`, UI_CONSTANTS.LOG.TYPES.QUESTION);
             return true;
         }
 
         if (type.includes('concept')) {
             const content = payload ? this._formatObject(payload) : 'Concept processed';
-            this.logger.log(`[Concept] ${content}`, UI_CONSTANTS.LOG_TYPES.CONCEPT);
+            this.logger.log(`[Concept] ${content}`, UI_CONSTANTS.LOG.TYPES.CONCEPT);
             return true;
         }
 

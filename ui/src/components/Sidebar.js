@@ -1,4 +1,5 @@
 import {Component} from './Component.js';
+import {debounce} from '../utils/Helpers.js';
 
 /**
  * Sidebar component for demo selection and search functionality
@@ -13,8 +14,7 @@ export class Sidebar extends Component {
 
         if (this.searchInput) {
             // Use debounced input handler to improve performance
-            const debouncedFilter = this._debounce((value) => this.filterDemos(value), 300);
-            this.searchInput.addEventListener('input', (e) => debouncedFilter(e.target.value));
+            this.searchInput.addEventListener('input', debounce((e) => this.filterDemos(e.target.value), 300));
 
             // Shortcut handling
             document.addEventListener('keydown', (e) => {
@@ -91,20 +91,5 @@ export class Sidebar extends Component {
         }
 
         this.listContainer.appendChild(fragment);
-    }
-
-    /**
-     * Debounce utility function to limit filter calls
-     */
-    _debounce(func, wait) {
-        let timeout;
-        return function executedFunction(...args) {
-            const later = () => {
-                clearTimeout(timeout);
-                func(...args);
-            };
-            clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
-        };
     }
 }

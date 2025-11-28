@@ -12,26 +12,34 @@ export class Logger {
             this.logViewer = new LogViewer(uiElements.logsContainer);
         }
         this.messageCounter = 1;
-        this.icons = {
-            success: UI_CONSTANTS.LOG_ICONS.SUCCESS,
-            error: UI_CONSTANTS.LOG_ICONS.ERROR,
-            warning: UI_CONSTANTS.LOG_ICONS.WARNING,
-            info: UI_CONSTANTS.LOG_ICONS.INFO,
-            debug: UI_CONSTANTS.LOG_ICONS.DEBUG,
-            input: UI_CONSTANTS.LOG_ICONS.INPUT,
-            task: UI_CONSTANTS.LOG_ICONS.TASK,
-            concept: UI_CONSTANTS.LOG_ICONS.CONCEPT,
-            question: UI_CONSTANTS.LOG_ICONS.QUESTION,
-            reasoning: UI_CONSTANTS.LOG_ICONS.REASONING,
-            connection: UI_CONSTANTS.LOG_ICONS.CONNECTION,
-            snapshot: UI_CONSTANTS.LOG_ICONS.SNAPSHOT,
-            control: UI_CONSTANTS.LOG_ICONS.CONTROL,
-            notification: UI_CONSTANTS.LOG_ICONS.NOTIFICATION,
-            command: UI_CONSTANTS.LOG_ICONS.COMMAND,
-            demo: UI_CONSTANTS.LOG_ICONS.DEMO,
-            refresh: UI_CONSTANTS.LOG_ICONS.REFRESH,
-            clear: UI_CONSTANTS.LOG_ICONS.CLEAR,
-            eventBatch: UI_CONSTANTS.LOG_ICONS.EVENT_BATCH
+        this.icons = this._initializeIcons();
+    }
+
+    /**
+     * Initialize icons map
+     */
+    _initializeIcons() {
+        const {LOG} = UI_CONSTANTS;
+        return {
+            success: LOG.ICONS.SUCCESS,
+            error: LOG.ICONS.ERROR,
+            warning: LOG.ICONS.WARNING,
+            info: LOG.ICONS.INFO,
+            debug: LOG.ICONS.DEBUG,
+            input: LOG.ICONS.INPUT,
+            task: LOG.ICONS.TASK,
+            concept: LOG.ICONS.CONCEPT,
+            question: LOG.ICONS.QUESTION,
+            reasoning: LOG.ICONS.REASONING,
+            connection: LOG.ICONS.CONNECTION,
+            snapshot: LOG.ICONS.SNAPSHOT,
+            control: LOG.ICONS.CONTROL,
+            notification: LOG.ICONS.NOTIFICATION,
+            command: LOG.ICONS.COMMAND,
+            demo: LOG.ICONS.DEMO,
+            refresh: LOG.ICONS.REFRESH,
+            clear: LOG.ICONS.CLEAR,
+            eventBatch: LOG.ICONS.EVENT_BATCH
         };
     }
 
@@ -54,7 +62,7 @@ export class Logger {
         }
 
         // Fallback for when LogViewer is not initialized (e.g. tests or missing container)
-        const effectiveIcon = icon ?? this.icons[type] ?? this.icons[UI_CONSTANTS.LOG_TYPES.INFO];
+        const effectiveIcon = icon ?? this.icons[type] ?? this.icons[UI_CONSTANTS.LOG.TYPES.INFO];
         const timestamp = new Date().toLocaleTimeString();
 
         console.log(`[${timestamp}] ${effectiveIcon} ${content}`);
@@ -72,13 +80,36 @@ export class Logger {
      * Show a notification message
      */
     showNotification(message, type = 'info') {
-        const container = this.uiElements?.notificationContainer || document.getElementById('notification-container');
+        const container = this._getNotificationContainer();
         if (!container) {
             // If no container, just log to console
-            console[type === 'error' ? 'error' : type === 'warning' ? 'warn' : 'log'](message);
+            this._logToConsole(message, type);
             return;
         }
 
+        this._createAndShowNotification(container, message, type);
+    }
+
+    /**
+     * Get notification container element
+     */
+    _getNotificationContainer() {
+        return this.uiElements?.notificationContainer || document.getElementById('notification-container');
+    }
+
+    /**
+     * Log message to console based on type
+     */
+    _logToConsole(message, type) {
+        const consoleMethod = type === 'error' ? 'error' :
+                             type === 'warning' ? 'warn' : 'log';
+        console[consoleMethod](message);
+    }
+
+    /**
+     * Create and show notification element
+     */
+    _createAndShowNotification(container, message, type) {
         const notification = document.createElement('div');
         notification.className = `notification notification-${type}`;
         notification.textContent = message;
@@ -99,17 +130,25 @@ export class Logger {
     clearLogs() {
         if (this.logViewer) {
             this.logViewer.clear();
-            this.log('Cleared logs', 'info', '🧹');
         } else if (this.uiElements?.logsContainer) {
             // Fallback
-            try {
-                this.uiElements.logsContainer.innerHTML = '';
-            } catch (e) {
-                console.error('[Logger] Error clearing logs:', e);
-            }
-            this.log('Cleared logs', 'info', '🧹');
+            this._clearLogsFallback();
         } else {
             console.error('[Logger] Cannot clear logs: logsContainer not found');
+            return;
+        }
+
+        this.log('Cleared logs', 'info', '🧹');
+    }
+
+    /**
+     * Fallback method to clear logs when logViewer is not available
+     */
+    _clearLogsFallback() {
+        try {
+            this.uiElements.logsContainer.innerHTML = '';
+        } catch (e) {
+            console.error('[Logger] Error clearing logs:', e);
         }
     }
 }

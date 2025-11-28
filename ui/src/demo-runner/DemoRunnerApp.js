@@ -30,6 +30,21 @@ export class DemoRunnerApp {
         this.graphView = document.getElementById('graph-view');
         this.metricsView = document.getElementById('metrics-view');
         this.sidebarTitle = document.getElementById('right-sidebar-title');
+
+        this._bindMethods();
+    }
+
+    /**
+     * Bind method context to preserve 'this' reference
+     */
+    _bindMethods() {
+        this._handleDemoSelect = this._handleDemoSelect.bind(this);
+        this._handleConnectionStatus = this._handleConnectionStatus.bind(this);
+        this._handleDemoList = this._handleDemoList.bind(this);
+        this._handleDemoStep = this._handleDemoStep.bind(this);
+        this._handleDemoState = this._handleDemoState.bind(this);
+        this._handleDemoSource = this._handleDemoSource.bind(this);
+        this._handleGeneralMessage = this._handleGeneralMessage.bind(this);
     }
 
     initialize() {
@@ -46,7 +61,7 @@ export class DemoRunnerApp {
             this.wsManager.sendMessage('narseseInput', {text: input});
         });
 
-        this.sidebar.onSelect(this._handleDemoSelect.bind(this));
+        this.sidebar.onSelect(this._handleDemoSelect);
 
         // Connect
         this.wsManager.connect();
@@ -63,11 +78,19 @@ export class DemoRunnerApp {
     }
 
     _handleDemoSelect(demoId, demo) {
+        this._updateDemoHeader(demo);
+        this.runDemo(demoId);
+    }
+
+    /**
+     * Update the demo header with title and description
+     */
+    _updateDemoHeader(demo) {
         const title = document.getElementById('demo-title');
         const desc = document.getElementById('demo-description');
+
         if (title) title.textContent = demo.name;
         if (desc) desc.textContent = demo.description;
-        this.runDemo(demoId);
     }
 
     _setupSidebarControls() {
@@ -93,21 +116,47 @@ export class DemoRunnerApp {
         }
 
         // Toggle views
-        this.sourceView.classList.toggle('hidden', view !== 'source');
-        this.graphView.classList.toggle('hidden', view !== 'graph');
-        if (this.metricsView) this.metricsView.classList.toggle('hidden', view !== 'metrics');
+        this._toggleViewElements(view);
 
-        if (this.sidebarTitle) {
-            const titles = {source: 'Source Code', graph: 'Graph View', metrics: 'Demo Metrics'};
-            this.sidebarTitle.textContent = titles[view] || 'View';
-        }
+        // Update sidebar title
+        this._updateSidebarTitle(view);
 
         if (view === 'graph') {
             // Resize graph after visibility change
-            setTimeout(() => {
-                this.graphPanel.graphManager?.cy?.resize();
-                this.graphPanel.graphManager?.cy?.fit();
-            }, 100);
+            setTimeout(() => this._resizeGraph(), 100);
+        }
+    }
+
+    /**
+     * Toggle view elements based on selected view
+     */
+    _toggleViewElements(view) {
+        this.sourceView?.classList.toggle('hidden', view !== 'source');
+        this.graphView?.classList.toggle('hidden', view !== 'graph');
+        this.metricsView?.classList.toggle('hidden', view !== 'metrics');
+    }
+
+    /**
+     * Update the sidebar title based on the selected view
+     */
+    _updateSidebarTitle(view) {
+        if (this.sidebarTitle) {
+            const titles = {
+                source: 'Source Code',
+                graph: 'Graph View',
+                metrics: 'Demo Metrics'
+            };
+            this.sidebarTitle.textContent = titles[view] || 'View';
+        }
+    }
+
+    /**
+     * Resize the graph after it becomes visible
+     */
+    _resizeGraph() {
+        if (this.graphPanel?.graphManager?.cy) {
+            this.graphPanel.graphManager.cy.resize();
+            this.graphPanel.graphManager.cy.fit();
         }
     }
 
@@ -187,12 +236,29 @@ export class DemoRunnerApp {
         }
 
         this.graphPanel.update(msg);
+        this._logMessageToConsole(msg);
+    }
 
-        if (msg.type === 'narsese.output') {
-            this.console.log(msg.payload, 'reasoning');
-        } else if (msg.type === 'reasoning.derivation' || msg.type === 'reasoning.step') {
-            this.console.log(msg.payload || 'Processing...', 'reasoning');
-        } else if (msg.type === 'task.added' || msg.type.includes('task')) {
+    /**
+     * Log message to console based on message type
+     */
+    _logMessageToConsole(msg) {
+        const messageLoggers = {
+            'narsese.output': (payload) => this.console.log(payload, 'reasoning'),
+            'reasoning.derivation': (payload) => this.console.log(payload || 'Processing...', 'reasoning'),
+            'reasoning.step': (payload) => this.console.log(payload || 'Processing...', 'reasoning'),
+            'task.added': (payload) => this.console.log(payload || 'Task processed', 'task'),
+            'task.input': (payload) => this.console.log(payload || 'Task processed', 'task')
+        };
+
+        const logger = messageLoggers[msg.type];
+        if (logger) {
+            logger(msg.payload);
+            return;
+        }
+
+        // Handle messages that contain specific keywords
+        if (msg.type.includes('task')) {
             this.console.log(msg.payload || 'Task processed', 'task');
         } else if (msg.type.includes('question') || msg.type.includes('answer')) {
             this.console.log(msg.payload || 'Question processed', 'question');

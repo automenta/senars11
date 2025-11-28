@@ -56,8 +56,7 @@ export function deepClone(obj) {
  * Capitalize the first letter of a string
  */
 export function capitalizeFirst(str) {
-    if (!str) return '';
-    return `${str.charAt(0).toUpperCase()}${str.slice(1)}`;
+    return str ? `${str.charAt(0).toUpperCase()}${str.slice(1)}` : '';
 }
 
 /**
@@ -93,7 +92,7 @@ export function debounce(func, wait) {
  * Generate a unique ID
  */
 export function generateId(prefix = '') {
-    return `${prefix}${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `${prefix}${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
 }
 
 /**
@@ -116,4 +115,55 @@ export function formatBytes(bytes, decimals = 2) {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
 
     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+}
+
+/**
+ * Check if value is a string
+ */
+export function isString(value) {
+    return typeof value === 'string';
+}
+
+/**
+ * Check if value is a number
+ */
+export function isNumber(value) {
+    return typeof value === 'number' && !isNaN(value);
+}
+
+/**
+ * Check if array is not empty
+ */
+export function isNotEmptyArray(value) {
+    return Array.isArray(value) && value.length > 0;
+}
+
+/**
+ * Create a throttled version of a function
+ */
+export function throttle(func, limit) {
+    let inThrottle;
+    return function(...args) {
+        if (!inThrottle) {
+            func.apply(this, args);
+            inThrottle = true;
+            setTimeout(() => inThrottle = false, limit);
+        }
+    };
+}
+
+/**
+ * Memoize a function to cache results
+ */
+export function memoize(fn) {
+    const cache = new Map();
+    return function(...args) {
+        const key = JSON.stringify(args);
+        if (cache.has(key)) {
+            return cache.get(key);
+        }
+        const result = fn.apply(this, args);
+        cache.set(key, result);
+        return result;
+    };
 }

@@ -2,9 +2,9 @@
  * Constants for the SeNARS UI application
  */
 
-export const UI_CONSTANTS = {
-    // Log types
-    LOG_TYPES: {
+// Log-related constants
+const LOG_CONSTANTS = {
+    TYPES: {
         SUCCESS: 'success',
         ERROR: 'error',
         WARNING: 'warning',
@@ -26,8 +26,7 @@ export const UI_CONSTANTS = {
         EVENT_BATCH: 'eventBatch'
     },
 
-    // Log icons
-    LOG_ICONS: {
+    ICONS: {
         SUCCESS: '✅',
         ERROR: '❌',
         WARNING: '⚠️',
@@ -47,10 +46,12 @@ export const UI_CONSTANTS = {
         REFRESH: '🔄',
         CLEAR: '🧹',
         EVENT_BATCH: '📦'
-    },
+    }
+};
 
-    // Message types
-    MESSAGE_TYPES: {
+// Message-related constants
+const MESSAGE_CONSTANTS = {
+    TYPES: {
         NARSESE_RESULT: 'narsese.result',
         NARSESE_ERROR: 'narsese.error',
         TASK_ADDED: 'task.added',
@@ -70,22 +71,29 @@ export const UI_CONSTANTS = {
         CONTROL_RESULT: 'control.result',
         CYCLE_START: 'cycle.start',
         CYCLE_COMPLETE: 'cycle.complete'
-    },
+    }
+};
 
-    // Node types
+// Graph-related constants
+const GRAPH_CONSTANTS = {
     NODE_TYPES: {
         CONCEPT: 'concept',
         TASK: 'task',
         QUESTION: 'question'
     },
 
-    // Edge types
     EDGE_TYPES: {
         RELATIONSHIP: 'relationship'
     },
 
-    // Graph layout names
     LAYOUT_NAMES: {
         COSE: 'cose'
     }
+};
+
+// Export organized constants
+export const UI_CONSTANTS = {
+    LOG: LOG_CONSTANTS,
+    MESSAGE: MESSAGE_CONSTANTS,
+    GRAPH: GRAPH_CONSTANTS
 };

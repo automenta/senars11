@@ -15,9 +15,16 @@ export class ConfigPanel extends Component {
     constructor(containerId) {
         super(containerId);
         this.config = this.loadConfig();
-
+        this._bindMethods();
         this._setupEventListeners();
         this.renderContent();
+    }
+
+    /**
+     * Bind method context to preserve 'this' reference
+     */
+    _bindMethods() {
+        this._onTempInputChange = this._onTempInputChange.bind(this);
     }
 
     /**
@@ -91,16 +98,26 @@ export class ConfigPanel extends Component {
         const content = document.getElementById('config-content');
         if (!content) return;
 
-        content.innerHTML = `
+        content.innerHTML = this._createConfigHTML();
+
+        // Add listeners for dynamic updates (e.g. range slider value)
+        const tempInput = document.getElementById('config-lm-temp');
+        if (tempInput) {
+            tempInput.addEventListener('input', this._onTempInputChange);
+        }
+    }
+
+    /**
+     * Create configuration HTML based on current settings
+     */
+    _createConfigHTML() {
+        return `
             <div class="config-section">
                 <h4>Language Model</h4>
                 <div class="form-group">
                     <label>Provider</label>
                     <select id="config-lm-provider">
-                        <option value="openai" ${this.config.lm.provider === 'openai' ? 'selected' : ''}>OpenAI</option>
-                        <option value="anthropic" ${this.config.lm.provider === 'anthropic' ? 'selected' : ''}>Anthropic</option>
-                        <option value="ollama" ${this.config.lm.provider === 'ollama' ? 'selected' : ''}>Ollama</option>
-                        <option value="dummy" ${this.config.lm.provider === 'dummy' ? 'selected' : ''}>Dummy / Disabled</option>
+                        ${this._createProviderOptions()}
                     </select>
                 </div>
                 <div class="form-group">
@@ -117,13 +134,28 @@ export class ConfigPanel extends Component {
                 </div>
             </div>
         `;
+    }
 
-        // Add listeners for dynamic updates (e.g. range slider value)
-        const tempInput = document.getElementById('config-lm-temp');
-        if (tempInput) {
-            tempInput.addEventListener('input', (e) => {
-                e.target.previousElementSibling.textContent = `Temperature (${e.target.value})`;
-            });
-        }
+    /**
+     * Create provider options HTML
+     */
+    _createProviderOptions() {
+        const providers = [
+            { value: 'openai', label: 'OpenAI' },
+            { value: 'anthropic', label: 'Anthropic' },
+            { value: 'ollama', label: 'Ollama' },
+            { value: 'dummy', label: 'Dummy / Disabled' }
+        ];
+
+        return providers.map(provider =>
+            `<option value="${provider.value}" ${this.config.lm.provider === provider.value ? 'selected' : ''}>${provider.label}</option>`
+        ).join('');
+    }
+
+    /**
+     * Handle temperature input change event
+     */
+    _onTempInputChange(e) {
+        e.target.previousElementSibling.textContent = `Temperature (${e.target.value})`;
     }
 }
