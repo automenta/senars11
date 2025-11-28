@@ -33,7 +33,7 @@ import { TestSuiteFactory as _TestSuiteFactory } from './testSuiteFactory.js';
 const TestOrganizer = {
     // Core assertions
     assertions: {
-        flexible: _flexibleAssertions,
+        flexible: _flexibleAssertions,  // from flexibleTestUtils.js
         truth: baseUtils.truthAssertions,
         task: baseUtils.taskAssertions,
         memory: baseUtils.memoryAssertions,
@@ -98,6 +98,14 @@ export const {
     errorHandling,
     helpers
 } = TestOrganizer;
+
+// Export specific utilities that are directly needed by test files
+export const TestSuiteFactory = TestOrganizer.suites.factory;
+export const taskAssertions = TestOrganizer.assertions.task;
+export const memoryAssertions = TestOrganizer.assertions.memory;
+export const testImmutability = TestOrganizer.helpers.testImmutability;
+export const comprehensiveTestSuites = TestOrganizer.suites.comprehensive;
+export const flexibleAssertions = baseUtils.flexibleAssertions;
 
 // Export the organizer itself
 export { TestOrganizer };
