@@ -99,8 +99,14 @@ export class CommandRegistry {
         const nodeCount = graphManager.getNodeCount();
         logger.log(`Graph has ${nodeCount} nodes`, 'info', '🌐');
 
+        if (!graphManager.cy) {
+            logger.log('Cytoscape instance not available', 'error', '❌');
+            return false;
+        }
+
         const allNodes = graphManager.cy.nodes();
-        for (const node of allNodes) {  // Using for...of for better performance
+        // Use for...of for better performance
+        for (const node of allNodes) {
             try {
                 const label = node.data('label') ?? 'unnamed';
                 const id = node.id() ?? 'no-id';
