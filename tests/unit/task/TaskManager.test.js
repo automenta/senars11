@@ -1,27 +1,25 @@
+// Third-party imports
+// (none in this file)
+
+// Local imports
 import {TaskManager} from '../../../src/task/TaskManager.js';
-import {Memory} from '../../../src/memory/Memory.js';
-import {Focus} from '../../../src/memory/Focus.js';
-import {Task} from '../../../src/task/Task.js';
-import {TermFactory} from '../../../src/term/TermFactory.js';
-import {Truth} from '../../../src/Truth.js';
+import {createTask, createTerm, createTruth, createMemory, createFocus, TEST_CONSTANTS} from '../../support/factories.js';
 
 describe('TaskManager', () => {
     let taskManager;
     let memory;
     let focus;
-    let termFactory;
     let term;
     let config;
 
     beforeEach(() => {
-        termFactory = new TermFactory();
-        term = termFactory.atomic('A');
+        term = createTerm('A');
         config = {
             priorityThreshold: 0.6,
-            defaultBudget: {priority: 0.5, durability: 0.5, quality: 0.5},
+            defaultBudget: TEST_CONSTANTS.BUDGET.DEFAULT,
         };
-        memory = new Memory(config);
-        focus = new Focus();
+        memory = createMemory(config);
+        focus = createFocus();
         taskManager = new TaskManager(memory, focus, config);
     });
 
@@ -31,7 +29,7 @@ describe('TaskManager', () => {
     });
 
     test('should add a task to pending queue', () => {
-        const task = new Task({term, truth: {frequency: 0.9, confidence: 0.8}});
+        const task = createTask({term, truth: createTruth(0.9, 0.8)});
         taskManager.addTask(task);
         expect(taskManager.pendingTasksCount).toBe(1);
         expect(taskManager.getPendingTasks()).toContain(task);
@@ -39,11 +37,10 @@ describe('TaskManager', () => {
 
     test('should process pending tasks', () => {
         const [highPriorityTask, lowPriorityTask] = [
-            new Task({term, budget: {priority: 0.8}, truth: {frequency: 0.9, confidence: 0.8}}),
-            new Task({
-                term: termFactory.atomic('B'),
-                budget: {priority: 0.4},
-                truth: {frequency: 0.9, confidence: 0.8}
+            createTask({term, budget: TEST_CONSTANTS.BUDGET.HIGH}),
+            createTask({
+                term: createTerm('B'),
+                budget: TEST_CONSTANTS.BUDGET.LOW
             })
         ];
 
@@ -58,7 +55,7 @@ describe('TaskManager', () => {
 
     test('should create belief, goal, and question tasks', () => {
         const [belief, goal, question] = [
-            taskManager.createBelief(term, new Truth(0.9, 0.8)),
+            taskManager.createBelief(term, createTruth(0.9, 0.8)),
             taskManager.createGoal(term),
             taskManager.createQuestion(term)
         ];
@@ -69,7 +66,7 @@ describe('TaskManager', () => {
     });
 
     test('should find tasks by term', () => {
-        const task = new Task({term, truth: {frequency: 0.9, confidence: 0.8}});
+        const task = createTask({term, truth: createTruth(0.9, 0.8)});
         taskManager.addTask(task);
         taskManager.processPendingTasks();
         const foundTasks = taskManager.findTasksByTerm(term);
@@ -79,11 +76,10 @@ describe('TaskManager', () => {
 
     test('should get highest priority tasks correctly', () => {
         const [task1, task2] = [
-            new Task({term, budget: {priority: 0.6}, truth: {frequency: 0.9, confidence: 0.8}}),
-            new Task({
-                term: termFactory.atomic('B'),
-                budget: {priority: 0.8},
-                truth: {frequency: 0.9, confidence: 0.8}
+            createTask({term, budget: TEST_CONSTANTS.BUDGET.MEDIUM}),
+            createTask({
+                term: createTerm('B'),
+                budget: TEST_CONSTANTS.BUDGET.HIGH
             })
         ];
 
@@ -93,12 +89,12 @@ describe('TaskManager', () => {
 
         const highestPriorityTasks = taskManager.getHighestPriorityTasks(2);
         expect(highestPriorityTasks).toHaveLength(2);
-        expect(highestPriorityTasks[0].budget.priority).toBe(0.8);
-        expect(highestPriorityTasks[1].budget.priority).toBe(0.6);
+        expect(highestPriorityTasks[0].budget.priority).toBe(TEST_CONSTANTS.BUDGET.HIGH.priority);
+        expect(highestPriorityTasks[1].budget.priority).toBe(TEST_CONSTANTS.BUDGET.MEDIUM.priority);
     });
 
     test('should update task priority correctly', () => {
-        const task = new Task({term, budget: {priority: 0.5}, truth: {frequency: 0.9, confidence: 0.8}});
+        const task = createTask({term, budget: TEST_CONSTANTS.BUDGET.DEFAULT});
         taskManager.addTask(task);
         taskManager.processPendingTasks();
 

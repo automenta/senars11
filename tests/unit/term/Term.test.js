@@ -7,11 +7,8 @@ import {createCompoundTerm, createTerm} from '../../support/factories.js';
 
 describe('Term', () => {
     // Centralize common terms for reuse
-    const atomA = createTerm('A');
-    const atomB = createTerm('B');
-    const atomC = createTerm('C');
-    const inheritanceAB = createCompoundTerm('-->', [atomA, atomB]);
-    const inheritanceAB_clone = createCompoundTerm('-->', [atomA, atomB]);
+    const [atomA, atomB, atomC] = ['A', 'B', 'C'].map(createTerm);
+    const [inheritanceAB, inheritanceAB_clone] = [createCompoundTerm('-->', [atomA, atomB]), createCompoundTerm('-->', [atomA, atomB])];
     const similarityAB = createCompoundTerm('<->', [atomA, atomB]);
 
     describe('Core Functionality', () => {
@@ -44,21 +41,18 @@ describe('Term', () => {
                 }
             },
         ])('should create $name with correct properties', ({term, expected}) => {
-            expect(term.type).toBe(expected.type);
-            expect(term.name).toBe(expected.name);
-            expect(term.components).toEqual(expected.components);
-            expect(term.complexity).toBe(expected.complexity);
-            expect(term.toString()).toBe(expected.string);
+            const {type, name, components, complexity, string} = expected;
+            expect(term.type).toBe(type);
+            expect(term.name).toBe(name);
+            expect(term.components).toEqual(components);
+            expect(term.complexity).toBe(complexity);
+            expect(term.toString()).toBe(string);
             expect(term.hash).toBeDefined();
         });
 
         test('should maintain strict immutability', () => {
-            expect(() => {
-                atomA.name = 'B';
-            }).toThrow();
-            expect(() => {
-                inheritanceAB.components.push(atomC);
-            }).toThrow();
+            expect(() => atomA.name = 'B').toThrow();
+            expect(() => inheritanceAB.components.push(atomC)).toThrow();
         });
     });
 
@@ -83,8 +77,7 @@ describe('Term', () => {
 
     describe('Normalization', () => {
         test('should handle commutative operators by canonicalization', () => {
-            const term1 = createCompoundTerm('&', [atomA, atomB]);
-            const term2 = createCompoundTerm('&', [atomB, atomA]);
+            const [term1, term2] = [createCompoundTerm('&', [atomA, atomB]), createCompoundTerm('&', [atomB, atomA])];
             // Both terms should have the same canonical form
             expect(term1.name).toBe('(&, A, B)');
             expect(term2.name).toBe('(&, A, B)');

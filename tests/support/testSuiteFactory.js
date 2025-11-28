@@ -6,9 +6,8 @@
  * Abstract, Modularized, Parameterized with Terse syntax, Few comments: rely on self-documenting code
  */
 
-import {FlexibleTestPatterns, ParameterizedTestPatterns, StandardTestSuites} from './consolidatedTestSuites.js';
+import {FlexibleTestPatterns, ParameterizedTestPatterns, StandardTestSuites, NARTestSuites} from './consolidatedTestSuites.js';
 import {flexibleAssertions, memoryAssertions, taskAssertions, truthAssertions} from './baseTestUtils.js';
-import {T} from './enhancedTestSuites.js';
 
 /**
  * Factory function to create comprehensive test suites for different types of classes
@@ -258,10 +257,25 @@ export const TestSuiteFactory = {
     },
 
     /**
-     * Create a combined suite using the T shorthand from enhancedTestSuites
+     * Create a combined suite using internal shorthand patterns
      */
-    createShorthandSuite: (type, ...args) => {
-        return T.suite(type, ...args);
+    createShorthandSuite: (type, config) => {
+        switch (type) {
+            case 'truth':
+                return TestSuiteFactory.createTruthRelatedSuite(config);
+            case 'task':
+                return TestSuiteFactory.createTaskRelatedSuite(config);
+            case 'lifecycle':
+                return TestSuiteFactory.createAgileSuite(config);
+            case 'nar':
+                return TestSuiteFactory.createNARIntegrationSuite(config);
+            case 'error':
+                return TestSuiteFactory.createAgileSuite(config);
+            case 'data':
+                return TestSuiteFactory.createDataModelSuite(config);
+            default:
+                throw new Error(`Unknown suite type: ${type}`);
+        }
     }
 };
 

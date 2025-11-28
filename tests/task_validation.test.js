@@ -28,14 +28,12 @@ describe('Task Validation', () => {
     ])('should validate $type tasks correctly', ({ type, punctuation, truthRequired, validTruth }) => {
         if (truthRequired) {
             // Test that task without truth throws error
-            expect(() => {
-                new Task({
-                    term: mockTerm,
-                    punctuation,
-                    truth: null,
-                    budget: { priority: 0.5 }
-                });
-            }).toThrow(new RegExp(`${type} tasks must have valid truth values`));
+            expect(() => new Task({
+                term: mockTerm,
+                punctuation,
+                truth: null,
+                budget: { priority: 0.5 }
+            })).toThrow(new RegExp(`${type} tasks must have valid truth values`));
 
             // Test that task with valid truth succeeds
             const task = new Task({
@@ -50,14 +48,12 @@ describe('Task Validation', () => {
             expect(task.truth).toBe(validTruth);
         } else {
             // For questions, test that task with truth throws error
-            expect(() => {
-                new Task({
-                    term: mockTerm,
-                    punctuation,
-                    truth: new Truth(1.0, 0.9),
-                    budget: { priority: 0.5 }
-                });
-            }).toThrow(/Questions cannot have truth values/);
+            expect(() => new Task({
+                term: mockTerm,
+                punctuation,
+                truth: new Truth(1.0, 0.9),
+                budget: { priority: 0.5 }
+            })).toThrow(/Questions cannot have truth values/);
 
             // Test that task without truth succeeds
             const task = new Task({
@@ -74,12 +70,10 @@ describe('Task Validation', () => {
     });
 
     test('Default punctuation (.) should require truth for BELIEF', () => {
-        expect(() => {
-            new Task({
-                term: mockTerm,
-                truth: null,
-                budget: { priority: 0.5 }
-            });
-        }).toThrow(/BELIEF tasks must have valid truth values/);
+        expect(() => new Task({
+            term: mockTerm,
+            truth: null,
+            budget: { priority: 0.5 }
+        })).toThrow(/BELIEF tasks must have valid truth values/);
     });
 });

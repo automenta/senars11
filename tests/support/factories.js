@@ -65,9 +65,9 @@ export const createTask = (overrides = {}) => {
     const taskData = {...defaults, ...overrides};
 
     // BELIEF and GOAL tasks require truth values, QUESTION tasks cannot have truth values
-    if (['.', '!'].includes(taskData.punctuation) && taskData.truth === null) {
+    if (['.', '!'].includes(taskData.punctuation) && taskData.truth == null) {
         taskData.truth = createTruth();
-    } else if (taskData.punctuation === '?' && taskData.truth !== null) {
+    } else if (taskData.punctuation === '?' && taskData.truth != null) {
         taskData.truth = null; // Ensure questions don't have truth values
     }
 
@@ -95,7 +95,18 @@ export const createMemory = (config = createMemoryConfig()) => new Memory(config
 
 export const createFocus = (config = {}) => new Focus(config);
 
+// Cache for expensive NAR imports to improve test performance
+const narModuleCache = new Map();
+
 export const createTestNAR = async (config = {}) => {
+    // Check cache first to avoid repeated imports
+    const cacheKey = JSON.stringify(config);
+    if (narModuleCache.has(cacheKey)) {
+        const {NAR} = narModuleCache.get(cacheKey);
+        return new NAR(config);
+    }
+
     const {NAR} = await import('../../src/nar/NAR.js');
+    narModuleCache.set(cacheKey, {NAR});
     return new NAR(config);
 };

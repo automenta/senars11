@@ -2,8 +2,8 @@
  * @file testUtils.js
  * @description Common test utilities following AGENTS.md guidelines
  *
- * NOTE: This file now uses the organized test utilities from testOrganizer.js
- * for better maintainability and reduced duplication
+ * NOTE: This file re-exports organized test utilities from testOrganizer.js
+ * for consistent access patterns and better maintainability
  */
 
 // Re-export organized test utilities for backward compatibility and ease of use

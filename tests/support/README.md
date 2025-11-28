@@ -67,7 +67,7 @@ import { TestSuiteFactory, taggedTest } from './support/index.js';
 
 ## Deprecation Notice
 
-Some older test utility files (generalTestSuites.js, commonTestSuites.js, enhancedTestSuites.js) have been deprecated and now re-export functionality from the consolidated files. All new tests should use the consolidated utilities.
+Some older test utility files (generalTestSuites.js, commonTestSuites.js, enhancedTestSuites.js) have been deprecated and now re-export functionality from the consolidated test suite files. The test suite factory (testSuiteFactory.js) no longer depends on deprecated files. All new tests should use the consolidated utilities.
 
 ## Performance Optimizations
 

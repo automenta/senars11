@@ -6,14 +6,9 @@ describe('AgentBuilder', () => {
     let agent;
 
     afterEach(async () => {
-        if (agent) {
-            if (typeof agent.dispose === 'function') {
-                await agent.dispose();
-            } else if (typeof agent.stop === 'function') {
-                agent.stop();
-            }
-            agent = null;
-        }
+        if (agent?.dispose) await agent.dispose();
+        else if (agent?.stop) agent.stop();
+        agent = null;
     });
 
     test('should create an agent with default configuration', async () => {
@@ -25,12 +20,13 @@ describe('AgentBuilder', () => {
         expect(agent.inputQueue).toBeDefined(); // Agent has inputQueue
     });
 
-    test('should create an agent with metrics enabled', async () => {
-        agent = await new AgentBuilder()
-            .withMetrics(true)
-            .build();
-
-        expect(agent.metricsMonitor).toBeDefined();
+    test.each([
+        { method: 'withMetrics', prop: 'metricsMonitor', value: true },
+        { method: 'withLM', prop: 'lm', value: true },
+        { method: 'withTools', prop: 'tools', value: true }
+    ])('should create an agent with $method', async ({ method, prop, value }) => {
+        agent = await new AgentBuilder()[method](value).build();
+        expect(agent[prop]).toBeDefined();
     });
 
     test('should create an agent with embeddings enabled', async () => {
@@ -39,22 +35,6 @@ describe('AgentBuilder', () => {
             .build();
 
         expect(agent.embeddingLayer).toBeDefined();
-    });
-
-    test('should create an agent with LM enabled', async () => {
-        agent = await new AgentBuilder()
-            .withLM(true)
-            .build();
-
-        expect(agent.lm).toBeDefined();
-    });
-
-    test('should create an agent with tools enabled', async () => {
-        agent = await new AgentBuilder()
-            .withTools(true)
-            .build();
-
-        expect(agent.tools).toBeDefined();
     });
 
     test('should create an agent with functors configured', async () => {

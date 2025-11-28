@@ -5,7 +5,7 @@
 // (none in this file)
 
 // Local imports
-import {createTestInstance as createTestInstanceHelper, validateTestEnvironment} from '../utils/test-helpers.js';
+import {validateTestEnvironment} from '../support/baseTestUtils.js';
 
 // Set up test-specific configurations
 process.env.NODE_ENV = 'test';
@@ -17,7 +17,7 @@ if (!envValidation.isValid) {
 }
 
 // Create isolated test instances with real dependencies
-global.createTestInstance = createTestInstanceHelper;
+// Note: Using test factories is preferred over global helpers
 
 // Cleanup functions for after tests
 afterEach(() => {

@@ -5,7 +5,7 @@
 // (none in this file)
 
 // Local imports
-import {generateTestId, getIsolatedPort, validateTestEnvironment} from '../utils/test-helpers.js';
+import {validateTestEnvironment} from '../support/baseTestUtils.js';
 
 // Set up test-specific configurations for integration tests
 process.env.NODE_ENV = 'test';
@@ -19,8 +19,8 @@ if (!envValidation.isValid) {
 // Initialize any shared resources needed for integration tests
 beforeAll(async () => {
     // Generate unique test ID for isolation
-    global.testId = generateTestId();
-    global.testPort = getIsolatedPort();
+    global.testId = `test-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+    global.testPort = Math.floor(Math.random() * 1000) + 8000;
 
     // Any setup required before all integration tests
     // For example, starting isolated test services, preparing databases, etc.

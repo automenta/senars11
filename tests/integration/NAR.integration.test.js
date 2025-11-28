@@ -35,19 +35,19 @@ describe('NAR Integration Tests', () => {
                 description: 'handles simple belief input',
                 input: 'cat.',
                 expectedOutput: null,
-                validator: (result, expected) => result.some(b => b.term.toString().includes('cat') && b.type === 'BELIEF')
+                validator: (result) => result.some(b => b.term.toString().includes('cat') && b.type === 'BELIEF')
             },
             {
                 description: 'handles goal input',
                 input: 'want_food!',
                 expectedOutput: null,
-                validator: (result, expected) => result.some(b => b.term.toString().includes('want_food') && b.type === 'GOAL')
+                validator: (result) => result.some(b => b.term.toString().includes('want_food') && b.type === 'GOAL')
             },
             {
                 description: 'handles compound terms',
                 input: '(&, A, B).',
                 expectedOutput: null,
-                validator: (result, expected) => result.some(b => b.term.toString().includes('&'))
+                validator: (result) => result.some(b => b.term.toString().includes('&'))
             }
         ]
     );

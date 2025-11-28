@@ -19,6 +19,9 @@ const termFactory = new TermFactory();
  * Base test setup for NAR integration tests
  * Provides consistent initialization and cleanup for NAR instances
  */
+// Cache expensive NAR instances to improve test performance
+const narInstanceCache = new WeakMap();
+
 export class NARTestSetup {
     constructor(config = {}) {
         this.config = {
@@ -35,9 +38,9 @@ export class NARTestSetup {
     }
 
     async teardown() {
-        if (this.nar && typeof this.nar.dispose === 'function') {
+        if (this.nar?.dispose) {
             await this.nar.dispose();
-        } else if (this.nar && this.nar.isRunning) {
+        } else if (this.nar?.isRunning) {
             this.nar.stop();
         }
         this.nar = null;
@@ -382,7 +385,7 @@ export const errorHandlingTests = {
     },
 
     /**
-     * Tests async error handling
+     * Tests async error handling with proper context
      */
     asyncErrorHandling: async (testFunction, invalidInputs, errorType = Error) => {
         for (const invalidInput of invalidInputs) {
@@ -391,10 +394,26 @@ export const errorHandlingTests = {
     },
 
     /**
-     * Tests error message content
+     * Tests error message content with specific expectations
      */
     errorWithMessage: (testFunction, invalidInput, expectedMessage) => {
         expect(() => testFunction?.(invalidInput)).toThrow(expectedMessage);
+    },
+
+    /**
+     * Tests error handling with specific error types and message validation
+     */
+    errorWithSpecificTypeAndMessage: (testFunction, invalidInput, errorConstructor, expectedMessagePattern) => {
+        try {
+            testFunction?.(invalidInput);
+            // If no error is thrown, fail the test
+            expect(false).toBe(true); // This will cause test to fail
+        } catch (error) {
+            expect(error).toBeInstanceOf(errorConstructor);
+            if (expectedMessagePattern) {
+                expect(error.message).toMatch(expectedMessagePattern);
+            }
+        }
     }
 };
 
@@ -1021,17 +1040,17 @@ export const COMMON_TRUTH_VALUES = [
  * @param {number} priority - Task priority (0-1)
  * @returns {Task} A test task instance
  */
-export function createTestTask(termStr, type = 'BELIEF', frequency = 0.9, confidence = 0.9, priority = 0.5) {
+export const createTestTask = (termStr, type = 'BELIEF', frequency = 0.9, confidence = 0.9, priority = 0.5) => {
     let term, punctuation, truth = null;
 
     if (typeof termStr === 'object') {
         // Handle the case where a configuration object is passed
         const config = termStr;
         term = config.term || createTerm('A');
-        type = config.type || type;
-        frequency = config.frequency !== undefined ? config.frequency : frequency;
-        confidence = config.confidence !== undefined ? config.confidence : confidence;
-        priority = config.priority !== undefined ? config.priority : priority;
+        type = config.type ?? type;
+        frequency = config.frequency ?? frequency;
+        confidence = config.confidence ?? confidence;
+        priority = config.priority ?? priority;
         punctuation = config.punctuation || (type === 'GOAL' ? '!' : type === 'QUESTION' ? '?' : '.');
     } else {
         // Handle the case where a string is passed
@@ -1056,60 +1075,40 @@ export function createTestTask(termStr, type = 'BELIEF', frequency = 0.9, confid
         truth,
         budget
     });
-}
+};
 
 /**
  * Creates a test memory-like object for testing
  * @param {Object} options - Configuration options for the test memory
  * @returns {Object} A mock memory object
  */
-export function createTestMemory(options = {}) {
-    const tasks = options.tasks || [];
+export const createTestMemory = (options = {}) => {
+    const tasks = options.tasks ?? [];
 
     return {
         taskBag: {
             tasks: Array.isArray(tasks) ? tasks : [],
-            take: function () {
-                return this.tasks.shift() || null;
-            },
-            add: function (task) {
-                this.tasks.push(task);
-            },
-            size: function () {
-                return this.tasks.length;
-            }
+            take: () => tasks.shift() ?? null,
+            add: (task) => tasks.push(task),
+            size: () => tasks.length
         },
-        addTask: function (task) {
-            this.taskBag.add(task);
-        },
-        getTask: function () {
-            return this.taskBag.take();
-        }
+        addTask: (task) => { this.taskBag.add(task); },
+        getTask: () => this.taskBag.take()
     };
-}
+};
 
 /**
  * Creates a test task bag for testing
  * @param {Array} tasks - Array of tasks to include in the bag
  * @returns {Object} A mock task bag object
  */
-export function createTestTaskBag(tasks = []) {
-    return {
-        tasks: tasks,
-        take: function () {
-            return this.tasks.shift() || null;
-        },
-        add: function (task) {
-            this.tasks.push(task);
-        },
-        size: function () {
-            return this.tasks.length;
-        },
-        peek: function () {
-            return this.tasks[0] || null;
-        }
-    };
-}
+export const createTestTaskBag = (tasks = []) => ({
+    tasks,
+    take: () => tasks.shift() ?? null,
+    add: (task) => tasks.push(task),
+    size: () => tasks.length,
+    peek: () => tasks[0] ?? null
+});
 
 export const COMMON_BUDGET_VALUES = [
     {priority: 0.9, durability: 0.8, quality: 0.7, name: 'high'},
