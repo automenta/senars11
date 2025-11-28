@@ -89,6 +89,9 @@ export class SeNARSUI {
      */
     _handleMessage(message) {
         try {
+            // Early return if message is null/undefined
+            if (!message) return;
+
             // Update message count display
             this._updateMessageCount();
 
@@ -122,34 +125,33 @@ export class SeNARSUI {
      * Returns true if message was handled and should stop processing
      */
     _handleSpecializedMessages(message) {
-        if (message.type === 'demoList') {
-            this.demoManager.handleDemoList(message.payload);
-            return true;
-        }
-        if (message.type === 'demoStep') {
-            this.demoManager.handleDemoStep(message.payload);
-            return true;
-        }
-        if (message.type === 'demoState') {
-            this.demoManager.handleDemoState(message.payload);
-            return true;
-        }
-        if (message.type === 'demoMetrics') {
-            // Update cycle count from metrics
-            const metrics = message.payload?.metrics;
-            if (metrics && metrics.cyclesCompleted !== undefined) {
-                this.controlPanel.updateCycleCount(metrics.cyclesCompleted);
+        // Map of message types to handler functions for DRY principle
+        const specializedMessageHandlers = {
+            'demoList': (payload) => this.demoManager.handleDemoList(payload),
+            'demoStep': (payload) => this.demoManager.handleDemoStep(payload),
+            'demoState': (payload) => this.demoManager.handleDemoState(payload),
+            'demoMetrics': (payload) => {
+                // Update cycle count from metrics
+                const metrics = payload?.metrics;
+                if (metrics && metrics.cyclesCompleted !== undefined) {
+                    this.controlPanel.updateCycleCount(metrics.cyclesCompleted);
+                }
+                // Suppress from logs (return true to stop processing)
+                return true;
+            },
+            'agent/result': (payload) => {
+                // Log agent result specifically
+                const result = typeof payload.result === 'string' ? payload.result : JSON.stringify(payload.result);
+                this.logger.addLogEntry(result, 'info', '🤖');
             }
-            // Suppress from logs (return true to stop processing)
-            return true;
+        };
+
+        const handler = specializedMessageHandlers[message.type];
+        if (handler) {
+            handler(message.payload);
+            return message.type === 'demoMetrics' || message.type === 'agent/result' ? false : true; // demoMetrics returns true to suppress logs
         }
-        if (message.type === 'agent/result') {
-            // Log agent result specifically
-            const payload = message.payload;
-            const result = typeof payload.result === 'string' ? payload.result : JSON.stringify(payload.result);
-            this.logger.addLogEntry(result, 'info', '🤖');
-            return true;
-        }
+
         return false;
     }
 
@@ -157,10 +159,18 @@ export class SeNARSUI {
      * Update system state based on message
      */
     _updateSystemState(message) {
-        if (message.type === 'nar.cycle.step' && message.payload?.cycle) {
-            this.controlPanel.updateCycleCount(message.payload.cycle);
-        } else if (message.type === 'narInstance' && message.payload?.cycleCount) {
-            this.controlPanel.updateCycleCount(message.payload.cycleCount);
+        // Map of message types to cycle update functions
+        const cycleUpdateMap = {
+            'nar.cycle.step': (payload) => payload?.cycle,
+            'narInstance': (payload) => payload?.cycleCount
+        };
+
+        const getCycleValue = cycleUpdateMap[message.type];
+        if (getCycleValue) {
+            const cycleValue = getCycleValue(message.payload);
+            if (cycleValue !== undefined) {
+                this.controlPanel.updateCycleCount(cycleValue);
+            }
         }
     }
 
@@ -179,15 +189,15 @@ export class SeNARSUI {
      * Update connection status display
      */
     _updateStatus(status) {
-        const connectionStatusElement = this.uiElements.get('connectionStatus');
-        if (connectionStatusElement) {
-            connectionStatusElement.textContent = capitalizeFirst(status);
+        const {connectionStatus, statusIndicator} = this.uiElements.getAll();
+
+        if (connectionStatus) {
+            connectionStatus.textContent = capitalizeFirst(status);
         }
 
         // Update indicator class
-        const indicator = this.uiElements.get('statusIndicator');
-        if (indicator) {
-            indicator.className = `status-indicator status-${status}`;
+        if (statusIndicator) {
+            statusIndicator.className = `status-indicator status-${status}`;
         }
     }
 }

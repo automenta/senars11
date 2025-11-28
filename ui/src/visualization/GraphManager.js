@@ -27,7 +27,7 @@ export class GraphManager {
         if (enabled && this.cy) {
             this.cy.resize();
             this.cy.fit();
-            this._scheduleLayout();
+            this.scheduleLayout();
         }
     }
 
@@ -55,7 +55,7 @@ export class GraphManager {
         // Add click event for graph details
         this.cy.on('tap', 'node', (event) => {
             const node = event.target;
-            this._updateGraphDetails({
+            this.updateGraphDetails({
                 type: 'node',
                 label: node.data('label'),
                 id: node.id(),
@@ -67,7 +67,7 @@ export class GraphManager {
 
         this.cy.on('tap', 'edge', (event) => {
             const edge = event.target;
-            this._updateGraphDetails({
+            this.updateGraphDetails({
                 type: 'edge',
                 label: edge.data('label') || 'Relationship',
                 source: edge.data('source'),
@@ -105,8 +105,9 @@ export class GraphManager {
         // Create node data object efficiently
         let displayLabel = label || term || id;
         if (nodeData.truth) {
-            const freq = typeof nodeData.truth.frequency === 'number' ? nodeData.truth.frequency.toFixed(2) : '0.00';
-            const conf = typeof nodeData.truth.confidence === 'number' ? nodeData.truth.confidence.toFixed(2) : '0.00';
+            const {frequency, confidence} = nodeData.truth;
+            const freq = typeof frequency === 'number' ? frequency.toFixed(2) : '0.00';
+            const conf = typeof confidence === 'number' ? confidence.toFixed(2) : '0.00';
             displayLabel += `\n{${freq}, ${conf}}`;
         }
 
@@ -116,7 +117,7 @@ export class GraphManager {
                 id: nodeId,
                 label: displayLabel,
                 type: nodeTypeOverride || nodeType || 'concept',
-                weight: this._getNodeWeight(nodeData),
+                weight: this.getNodeWeight(nodeData),
                 fullData: nodeData
             }
         };
@@ -124,7 +125,7 @@ export class GraphManager {
         this.cy.add(newNode);
 
         if (runLayout) {
-            this._scheduleLayout();
+            this.scheduleLayout();
         }
         return true;
     }
@@ -132,9 +133,9 @@ export class GraphManager {
     /**
      * Calculate node weight based on input data
      */
-    _getNodeWeight(nodeData) {
-        const truth = nodeData.truth;
-        return nodeData.weight || (truth?.confidence ? truth.confidence * 100 : Config.getConstants().DEFAULT_NODE_WEIGHT);
+    getNodeWeight(nodeData) {
+        const {truth, weight} = nodeData;
+        return weight || (truth?.confidence ? truth.confidence * 100 : Config.getConstants().DEFAULT_NODE_WEIGHT);
     }
 
     /**
@@ -165,7 +166,7 @@ export class GraphManager {
         this.cy.add(newEdge);
 
         if (runLayout) {
-            this._scheduleLayout();
+            this.scheduleLayout();
         }
         return true;
     }
@@ -180,24 +181,23 @@ export class GraphManager {
         this.cy.elements().remove();
 
         // Add nodes from concepts in batch
-        const nodes = payload.concepts?.map((concept, index) => ({
-            group: 'nodes',
-            data: {
-                id: concept.id || `concept_${index}`,
-                label: concept.term || `Concept ${index}`,
-                type: concept.type || 'concept',
-                weight: concept.truth?.confidence ? concept.truth.confidence * 100 : 50,
-                fullData: concept
-            }
-        })) || [];
-
-        // Add nodes to graph if any exist
-        if (nodes.length > 0) {
+        const concepts = payload.concepts || [];
+        if (concepts.length > 0) {
+            const nodes = concepts.map((concept, index) => ({
+                group: 'nodes',
+                data: {
+                    id: concept.id || `concept_${index}`,
+                    label: concept.term || `Concept ${index}`,
+                    type: concept.type || 'concept',
+                    weight: concept.truth?.confidence ? concept.truth.confidence * 100 : 50,
+                    fullData: concept
+                }
+            }));
             this.cy.add(nodes);
         }
 
         // Layout the graph
-        this._scheduleLayout();
+        this.scheduleLayout();
     }
 
     /**
@@ -207,11 +207,11 @@ export class GraphManager {
         if (!this.cy || !this.updatesEnabled) return;
 
         const messageUpdates = {
-            'concept.created': () => this._addNodeWithPayload(message.payload, false),
-            'concept.added': () => this._addNodeWithPayload(message.payload, false),
-            'task.added': () => this._addNodeWithPayload({...message.payload, nodeType: 'task'}, false),
-            'task.input': () => this._addNodeWithPayload({...message.payload, nodeType: 'task'}, false),
-            'question.answered': () => this._addQuestionNode(message.payload),
+            'concept.created': () => this.addNodeWithPayload(message.payload, false),
+            'concept.added': () => this.addNodeWithPayload(message.payload, false),
+            'task.added': () => this.addNodeWithPayload({...message.payload, nodeType: 'task'}, false),
+            'task.input': () => this.addNodeWithPayload({...message.payload, nodeType: 'task'}, false),
+            'question.answered': () => this.addQuestionNode(message.payload),
             'memorySnapshot': () => {
                 this.updateFromSnapshot(message.payload);
                 return; // Snapshot updates already run layout
@@ -223,8 +223,8 @@ export class GraphManager {
             updateFn();
 
             // Only run layout once after processing the message, if we added nodes/edges
-            if (this._shouldRunLayoutAfterMessage(message.type)) {
-                this._scheduleLayout();
+            if (this.shouldRunLayoutAfterMessage(message.type)) {
+                this.scheduleLayout();
             }
         }
     }
@@ -232,7 +232,7 @@ export class GraphManager {
     /**
      * Helper method to add a node with payload
      */
-    _addNodeWithPayload(payload, runLayout = true) {
+    addNodeWithPayload(payload, runLayout = true) {
         if (payload) {
             this.addNode(payload, runLayout);
         }
@@ -241,7 +241,7 @@ export class GraphManager {
     /**
      * Helper method to add a question node
      */
-    _addQuestionNode(payload) {
+    addQuestionNode(payload) {
         if (payload) {
             const {answer, question} = payload;
             this.addNode({
@@ -255,7 +255,7 @@ export class GraphManager {
     /**
      * Determine if layout should run after a specific message type
      */
-    _shouldRunLayoutAfterMessage(messageType) {
+    shouldRunLayoutAfterMessage(messageType) {
         return ['concept.created', 'concept.added', 'task.added', 'task.input', 'question.answered'].includes(messageType);
     }
 
@@ -263,7 +263,7 @@ export class GraphManager {
      * Schedule a graph layout run with debouncing to improve performance
      * This prevents excessive layout calculations when multiple graph changes occur rapidly
      */
-    _scheduleLayout() {
+    scheduleLayout() {
         this.pendingLayout = true;
 
         // Clear existing timeout to debounce
@@ -283,7 +283,7 @@ export class GraphManager {
     /**
      * Run the graph layout immediately (without debouncing)
      */
-    _runLayout() {
+    runLayout() {
         if (this.cy) {
             this.cy.layout(Config.getGraphLayout()).run();
         }
@@ -292,14 +292,14 @@ export class GraphManager {
     /**
      * Update the graph details panel
      */
-    _updateGraphDetails(details) {
+    updateGraphDetails(details) {
         const graphDetailsElement = this.uiElements?.graphDetails;
         if (!graphDetailsElement) return;
 
         // Create content based on type to avoid duplicate code
         const content = details.type === 'node'
-            ? this._createNodeDetailsContent(details)
-            : this._createEdgeDetailsContent(details);
+            ? this.createNodeDetailsContent(details)
+            : this.createEdgeDetailsContent(details);
 
         graphDetailsElement.innerHTML = content;
     }
@@ -320,21 +320,23 @@ export class GraphManager {
     /**
      * Create content for node details
      */
-    _createNodeDetailsContent(details) {
+    createNodeDetailsContent(details) {
         const data = details.fullData || {};
-        let html = `
-            <div style="margin-bottom:4px"><strong>Type:</strong> ${details.nodeType}</div>
-            <div style="margin-bottom:4px"><strong>Term:</strong> <span style="color:#4ec9b0; font-family:monospace">${details.label}</span></div>
-        `;
+        let html = [
+            `<div style="margin-bottom:4px"><strong>Type:</strong> ${details.nodeType}</div>`,
+            `<div style="margin-bottom:4px"><strong>Term:</strong> <span style="color:#4ec9b0; font-family:monospace">${details.label}</span></div>`
+        ].join('');
 
         if (data.truth) {
-            const freq = typeof data.truth.frequency === 'number' ? data.truth.frequency.toFixed(2) : '0.00';
-            const conf = typeof data.truth.confidence === 'number' ? data.truth.confidence.toFixed(2) : '0.00';
+            const {frequency, confidence} = data.truth;
+            const freq = typeof frequency === 'number' ? frequency.toFixed(2) : '0.00';
+            const conf = typeof confidence === 'number' ? confidence.toFixed(2) : '0.00';
             html += `<div style="margin-bottom:4px"><strong>Truth:</strong> <span style="color:#ce9178; font-family:monospace">{${freq}, ${conf}}</span></div>`;
         }
 
         if (data.budget) {
-            const pri = typeof data.budget.priority === 'number' ? data.budget.priority.toFixed(2) : '0.00';
+            const {priority} = data.budget;
+            const pri = typeof priority === 'number' ? priority.toFixed(2) : '0.00';
             html += `<div style="margin-bottom:4px"><strong>Priority:</strong> ${pri}</div>`;
         }
 
@@ -345,13 +347,13 @@ export class GraphManager {
     /**
      * Create content for edge details
      */
-    _createEdgeDetailsContent(details) {
-        return `
-      <strong>Edge:</strong> ${details.label}<br>
-      <strong>Source:</strong> ${details.source}<br>
-      <strong>Target:</strong> ${details.target}<br>
-      <strong>Type:</strong> ${details.edgeType}
-    `;
+    createEdgeDetailsContent(details) {
+        return [
+            `<strong>Edge:</strong> ${details.label}<br>`,
+            `<strong>Source:</strong> ${details.source}<br>`,
+            `<strong>Target:</strong> ${details.target}<br>`,
+            `<strong>Type:</strong> ${details.edgeType}`
+        ].join('');
     }
 
     /**

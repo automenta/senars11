@@ -1,3 +1,6 @@
+/**
+ * Base Component class providing common functionality for UI components
+ */
 export class Component {
     constructor(container) {
         this.container = typeof container === 'string' ? document.getElementById(container) : container;

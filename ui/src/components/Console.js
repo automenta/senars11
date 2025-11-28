@@ -1,6 +1,9 @@
 import {Component} from './Component.js';
 import {LogViewer} from './LogViewer.js';
 
+/**
+ * Console component that provides command input and log display functionality
+ */
 export class Console extends Component {
     constructor(containerId, inputId) {
         super(containerId);

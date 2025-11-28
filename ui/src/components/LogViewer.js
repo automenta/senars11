@@ -1,6 +1,9 @@
 import {Component} from './Component.js';
 import {UI_CONSTANTS} from '../utils/Constants.js';
 
+/**
+ * LogViewer component for displaying log entries with icons and formatting
+ */
 export class LogViewer extends Component {
     constructor(container) {
         super(container);

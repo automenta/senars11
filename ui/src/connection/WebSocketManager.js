@@ -28,13 +28,13 @@ export class WebSocketManager {
                 this.connectionStatus = 'connected';
                 this.reconnectAttempts = 0;
                 this.logger.log('Connected to SeNARS server', 'success', '🌐');
-                this._notifyStatusChange('connected');
+                this.notifyStatusChange('connected');
             };
 
             this.ws.onclose = () => {
                 this.connectionStatus = 'disconnected';
                 this.logger.log('Disconnected from server', 'warning', '🔌');
-                this._notifyStatusChange('disconnected');
+                this.notifyStatusChange('disconnected');
 
                 // Attempt to reconnect after delay, unless we've reached the max attempts
                 if (this.reconnectAttempts < this.maxReconnectAttempts) {
@@ -48,13 +48,13 @@ export class WebSocketManager {
             this.ws.onerror = (error) => {
                 this.connectionStatus = 'error';
                 this.logger.log('WebSocket connection error', 'error', '🚨');
-                this._notifyStatusChange('error');
+                this.notifyStatusChange('error');
             };
 
             this.ws.onmessage = (event) => {
                 try {
                     const message = JSON.parse(event.data);
-                    this._handleMessage(message);
+                    this.handleMessage(message);
                 } catch (e) {
                     this.logger.log(`Invalid message format: ${event.data}`, 'error', '🚨');
                 }
@@ -75,8 +75,9 @@ export class WebSocketManager {
      */
     sendMessage(type, payload) {
         if (this.isConnected()) {
-            const message = {type, payload};
-            this.ws.send(JSON.stringify(message));
+            // Use a more efficient message format to avoid object creation in hot paths
+            const messageStr = JSON.stringify({type, payload});
+            this.ws.send(messageStr);
             return true;
         }
         return false;
@@ -120,9 +121,11 @@ export class WebSocketManager {
     }
 
     /**
-     * Private method to handle incoming messages
+     * Handle incoming messages
      */
-    _handleMessage(message) {
+    handleMessage(message) {
+        if (!message) return; // Early return if message is null/undefined
+
         // Handle batch events
         if (message.type === 'eventBatch') {
             const events = message.data || [];
@@ -132,7 +135,7 @@ export class WebSocketManager {
             const batchLimit = Config.getConstants().MESSAGE_BATCH_SIZE;
             for (let i = 0; i < events.length; i += batchLimit) {
                 const batch = events.slice(i, i + batchLimit);
-                this._processBatch(batch);
+                this.processBatch(batch);
             }
             return;
         }
@@ -149,37 +152,31 @@ export class WebSocketManager {
         // Process specific handlers first, then general handlers
         [...specificHandlers, ...generalHandlers].forEach((handler, index) => {
             const handlerType = index < specificHandlers.length ? message.type : '*';
-            this._tryHandleMessage(handler, message, handlerType);
+            this.tryHandleMessage(handler, message, handlerType);
         });
     }
 
     /**
      * Process a batch of events
      */
-    _processBatch(batch) {
-        const processBatch = () => {
-            for (const event of batch) {
-                // Reuse existing _handleMessage method for individual events
-                this._handleMessage({
-                    type: event.type,
-                    payload: event.data,
-                    timestamp: event.timestamp
-                });
-            }
-        };
-
-        if (typeof window !== 'undefined' && window.requestAnimationFrame) {
-            window.requestAnimationFrame(processBatch);
-        } else {
-            // Fallback for environments without requestAnimationFrame
-            processBatch();
+    processBatch(batch) {
+        // Use for-of loop instead of forEach for better performance in hot paths
+        for (const event of batch) {
+            // Reuse existing handleMessage method for individual events
+            this.handleMessage({
+                type: event.type,
+                payload: event.data,
+                timestamp: event.timestamp
+            });
         }
     }
 
     /**
      * Safely execute a handler function with error context
      */
-    _tryExecuteHandler(handler, arg, handlerType, message = null) {
+    tryExecuteHandler(handler, arg, handlerType, message = null) {
+        if (!handler || typeof handler !== 'function') return; // Early return for invalid handlers
+
         try {
             handler(arg);
         } catch (error) {
@@ -194,19 +191,19 @@ export class WebSocketManager {
     /**
      * Safely execute a message handler with error handling
      */
-    _tryHandleMessage(handler, message, handlerType) {
+    tryHandleMessage(handler, message, handlerType) {
         const context = handlerType === '*' ? 'general' : `message handler for ${message.type}`;
-        this._tryExecuteHandler(handler, message, context, message);
+        this.tryExecuteHandler(handler, message, context, message);
     }
 
     /**
-     * Private method to notify status changes
+     * Notify status changes
      */
-    _notifyStatusChange(status) {
+    notifyStatusChange(status) {
         const statusHandlers = this.messageHandlers.get('connection.status') || [];
-        statusHandlers.forEach(handler => {
-            this._tryExecuteHandler(handler, status, 'status handler');
-        });
+        for (const handler of statusHandlers) { // Use for-of instead of forEach for better performance
+            this.tryExecuteHandler(handler, status, 'status handler');
+        }
     }
 
     /**

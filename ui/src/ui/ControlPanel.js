@@ -1,3 +1,6 @@
+/**
+ * ControlPanel handles playback controls, input mode switching, and sidebar management
+ */
 export class ControlPanel {
     constructor(uiElements, commandProcessor, logger) {
         this.uiElements = uiElements;
