@@ -1,7 +1,16 @@
-import {NAR} from '../../src/nar/NAR.js';
-import {Task} from '../../src/task/Task.js';
+// Core imports
 import {Truth} from '../../src/Truth.js';
+
+// NAR imports
+import {NAR} from '../../src/nar/NAR.js';
+
+// Task imports
+import {Task} from '../../src/task/Task.js';
+
+// Term imports
 import {TermFactory} from '../../src/term/TermFactory.js';
+
+// Test support imports
 import {createTask, createTerm, createTruth, TEST_CONSTANTS} from './factories.js';
 
 const termFactory = new TermFactory();

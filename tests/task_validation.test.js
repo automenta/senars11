@@ -20,78 +20,57 @@ describe('Task Validation', () => {
         mockTerm = termFactory.atomic('test');
     });
 
-    test('BELIEF task without truth should throw error', () => {
-        expect(() => {
-            new Task({
+    // Parameterized tests for task validation
+    test.each([
+        { type: 'BELIEF', punctuation: '.', truthRequired: true, validTruth: new Truth(1.0, 0.9) },
+        { type: 'GOAL', punctuation: '!', truthRequired: true, validTruth: new Truth(0.8, 0.7) },
+        { type: 'QUESTION', punctuation: '?', truthRequired: false, validTruth: null }
+    ])('should validate $type tasks correctly', ({ type, punctuation, truthRequired, validTruth }) => {
+        if (truthRequired) {
+            // Test that task without truth throws error
+            expect(() => {
+                new Task({
+                    term: mockTerm,
+                    punctuation,
+                    truth: null,
+                    budget: { priority: 0.5 }
+                });
+            }).toThrow(new RegExp(`${type} tasks must have valid truth values`));
+
+            // Test that task with valid truth succeeds
+            const task = new Task({
                 term: mockTerm,
-                punctuation: '.',
+                punctuation,
+                truth: validTruth,
+                budget: { priority: 0.5 }
+            });
+
+            expect(task).toBeDefined();
+            expect(task.type).toBe(type);
+            expect(task.truth).toBe(validTruth);
+        } else {
+            // For questions, test that task with truth throws error
+            expect(() => {
+                new Task({
+                    term: mockTerm,
+                    punctuation,
+                    truth: new Truth(1.0, 0.9),
+                    budget: { priority: 0.5 }
+                });
+            }).toThrow(/Questions cannot have truth values/);
+
+            // Test that task without truth succeeds
+            const task = new Task({
+                term: mockTerm,
+                punctuation,
                 truth: null,
                 budget: { priority: 0.5 }
             });
-        }).toThrow(/BELIEF tasks must have valid truth values/);
-    });
 
-    test('BELIEF task with valid truth should succeed', () => {
-        const validTruth = new Truth(1.0, 0.9);
-        const task = new Task({
-            term: mockTerm,
-            punctuation: '.',
-            truth: validTruth,
-            budget: { priority: 0.5 }
-        });
-
-        expect(task).toBeDefined();
-        expect(task.type).toBe('BELIEF');
-        expect(task.truth).toBe(validTruth);
-    });
-
-    test('GOAL task without truth should throw error', () => {
-        expect(() => {
-            new Task({
-                term: mockTerm,
-                punctuation: '!',
-                truth: null,
-                budget: { priority: 0.5 }
-            });
-        }).toThrow(/GOAL tasks must have valid truth values/);
-    });
-
-    test('GOAL task with valid truth should succeed', () => {
-        const validTruth = new Truth(0.8, 0.7);
-        const task = new Task({
-            term: mockTerm,
-            punctuation: '!',
-            truth: validTruth,
-            budget: { priority: 0.5 }
-        });
-
-        expect(task).toBeDefined();
-        expect(task.type).toBe('GOAL');
-        expect(task.truth).toBe(validTruth);
-    });
-
-    test('QUESTION task with truth should throw error', () => {
-        expect(() => {
-            new Task({
-                term: mockTerm,
-                punctuation: '?',
-                truth: new Truth(1.0, 0.9),
-                budget: { priority: 0.5 }
-            });
-        }).toThrow(/Questions cannot have truth values/);
-    });
-
-    test('QUESTION task without truth should succeed', () => {
-        const task = new Task({
-            term: mockTerm,
-            punctuation: '?',
-            truth: null,
-            budget: { priority: 0.5 }
-        });
-
-        expect(task).toBeDefined();
-        expect(task.type).toBe('QUESTION');
-        expect(task.truth).toBeNull();
+            expect(task).toBeDefined();
+            expect(task.type).toBe(type);
+            expect(task.truth).toBeNull();
+        }
     });
 
     test('Default punctuation (.) should require truth for BELIEF', () => {

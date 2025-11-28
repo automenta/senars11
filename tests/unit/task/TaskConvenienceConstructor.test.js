@@ -22,22 +22,18 @@ describe('Task convenience constructor', () => {
         expect(task.budget.priority).toBe(0.9);
     });
 
-    test('should create belief task with punctuation "."', () => {
-        const task = new Task({term, punctuation: '.', truth: new Truth()});
-
-        expect(task.type).toBe('BELIEF');
-    });
-
-    test('should create goal task with punctuation "!"', () => {
-        const task = new Task({term, punctuation: '!', truth: new Truth()});
-
-        expect(task.type).toBe('GOAL');
-    });
-
-    test('should create question task with punctuation "?"', () => {
-        const task = new Task({term, punctuation: '?'});
-
-        expect(task.type).toBe('QUESTION');
+    test.each([
+        { punctuation: '.', expectedType: 'BELIEF', requiresTruth: true },
+        { punctuation: '!', expectedType: 'GOAL', requiresTruth: true },
+        { punctuation: '?', expectedType: 'QUESTION', requiresTruth: false }
+    ])('should create $expectedType task with punctuation "$punctuation"', ({ punctuation, expectedType, requiresTruth }) => {
+        if (requiresTruth) {
+            const task = new Task({term, punctuation, truth: new Truth()});
+            expect(task.type).toBe(expectedType);
+        } else {
+            const task = new Task({term, punctuation});
+            expect(task.type).toBe(expectedType);
+        }
     });
 
     test('should use default priority when not provided', () => {

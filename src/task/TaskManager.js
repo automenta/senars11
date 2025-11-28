@@ -49,11 +49,10 @@ export class TaskManager extends BaseComponent {
     }
 
     processPendingTasks(currentTime = Date.now()) {
+        const priorityThreshold = this._config?.priorityThreshold ?? DEFAULT_PRIORITY_THRESHOLD;
         const processedTasks = [];
 
-        const priorityThreshold = this._config?.priorityThreshold ?? DEFAULT_PRIORITY_THRESHOLD;
-
-        for (const [taskId, task] of this._pendingTasks) {
+        for (const [_, task] of this._pendingTasks) {
             const addedToMemory = this._memory.addTask(task, currentTime);
 
             if (addedToMemory) {
@@ -118,7 +117,9 @@ export class TaskManager extends BaseComponent {
 
     getHighestPriorityTasks(limit = 10) {
         const allTasks = collectTasksFromAllConcepts(this._memory);
-        return allTasks.sort((a, b) => b.budget.priority - a.budget.priority).slice(0, limit);
+        return allTasks
+            .sort((a, b) => b.budget.priority - a.budget.priority)
+            .slice(0, limit);
     }
 
     updateTaskPriority(task, newPriority) {
@@ -153,23 +154,24 @@ export class TaskManager extends BaseComponent {
     }
 
     getTaskStats() {
-        const stats = {
+        const allTasks = collectTasksFromAllConcepts(this._memory);
+
+        // Initialize the stats object with computed values from all tasks
+        const stats = allTasks.reduce((acc, task) => {
+            acc.tasksByType[task.type]++;
+            acc.priorityDistribution[this._getPriorityBucket(task.budget.priority)]++;
+            acc.priorities.push(task.budget.priority);
+            acc.creationTimes.push(task.stamp.creationTime);
+            acc.oldestTask = Math.min(acc.oldestTask, task.stamp.creationTime);
+            acc.newestTask = Math.max(acc.newestTask, task.stamp.creationTime);
+            return acc;
+        }, {
             tasksByType: {BELIEF: 0, GOAL: 0, QUESTION: 0},
             priorityDistribution: {low: 0, medium: 0, high: 0},
             priorities: [],
             creationTimes: [],
             oldestTask: Date.now(),
             newestTask: 0
-        };
-
-        collectTasksFromAllConcepts(this._memory, task => {
-            stats.tasksByType[task.type]++;
-            stats.priorityDistribution[this._getPriorityBucket(task.budget.priority)]++;
-            stats.priorities.push(task.budget.priority);
-            stats.creationTimes.push(task.stamp.creationTime);
-            stats.oldestTask = Math.min(stats.oldestTask, task.stamp.creationTime);
-            stats.newestTask = Math.max(stats.newestTask, task.stamp.creationTime);
-            return true;
         });
 
         const totalTasks = Object.values(stats.tasksByType).reduce((sum, count) => sum + count, 0);

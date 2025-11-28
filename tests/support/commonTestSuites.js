@@ -74,15 +74,15 @@ export const systemLifecycleSuite = (narProvider) => {
 
             expect(results.length).toBe(3);
             // Use relative comparison to make it more robust to internal changes
-            for (let i = 0; i < results.length; i++) {
-                if (results[i] && results[i].cycleNumber !== undefined) {
-                    expect(results[i].cycleNumber).toBeGreaterThan(i); // Ensure cycle numbers are sequential
+            results.forEach((result, i) => {
+                if (result?.cycleNumber !== undefined) {
+                    expect(result.cycleNumber).toBeGreaterThan(i); // Ensure cycle numbers are sequential
                 }
                 // For stream reasoner, results may be different - just ensure we have results
                 else {
-                    expect(results[i]).toBeDefined();
+                    expect(result).toBeDefined();
                 }
-            }
+            });
         });
 
         test('should reset system state', async () => {

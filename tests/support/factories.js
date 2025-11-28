@@ -1,8 +1,15 @@
+// Core imports
 import {ArrayStamp} from '../../src/Stamp.js';
-import {TermFactory} from '../../src/term/TermFactory.js';
-import {Task} from '../../src/task/Task.js';
 import {Truth} from '../../src/Truth.js';
+
+// Term imports
+import {TermFactory} from '../../src/term/TermFactory.js';
+
+// Task imports
+import {Task} from '../../src/task/Task.js';
 import {TaskManager} from '../../src/task/TaskManager.js';
+
+// Memory imports
 import {Memory} from '../../src/memory/Memory.js';
 import {Focus} from '../../src/memory/Focus.js';
 
@@ -57,8 +64,11 @@ export const createTask = (overrides = {}) => {
     };
     const taskData = {...defaults, ...overrides};
 
+    // BELIEF and GOAL tasks require truth values, QUESTION tasks cannot have truth values
     if (['.', '!'].includes(taskData.punctuation) && taskData.truth === null) {
         taskData.truth = createTruth();
+    } else if (taskData.punctuation === '?' && taskData.truth !== null) {
+        taskData.truth = null; // Ensure questions don't have truth values
     }
 
     return new Task(taskData);
