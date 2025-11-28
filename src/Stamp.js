@@ -1,8 +1,9 @@
 import {v4 as uuidv4} from 'uuid';
+import {SeNARSError} from './util/Errors.js';
 
 export class Stamp {
     constructor() {
-        if (this.constructor === Stamp) throw new Error("Abstract classes can't be instantiated.");
+        if (this.constructor === Stamp) throw new SeNARSError("Abstract classes can't be instantiated.", "IllegalInstantiation");
     }
 
     static createInput = () => new ArrayStamp({source: 'INPUT', depth: 0});
