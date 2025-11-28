@@ -77,7 +77,7 @@ export class TermFactory extends BaseComponent {
         return term;
     }
 
-    // Convenience methods
+    // Fluent interface for term construction following project-specific patterns
     atomic(name) {
         return this.create(name);
     }
@@ -255,34 +255,6 @@ export class TermFactory extends BaseComponent {
     }
 
     /**
-     * Advanced term comparison that considers multiple factors for consistent ordering
-     */
-    _compareTerms(termA, termB) {
-        // 1. Compare by structural complexity first (depth of the term tree)
-        const complexityA = this._getStructuralComplexity(termA);
-        const complexityB = this._getStructuralComplexity(termB);
-        if (complexityA !== complexityB) return complexityA - complexityB;
-
-        // 2. Compare by total complexity (calculated by our complexity system)
-        const totalCompA = this.getComplexity(termA);
-        const totalCompB = this.getComplexity(termB);
-        if (totalCompA !== totalCompB) return totalCompA - totalCompB;
-
-        // 3. Compare by type: compound terms before atomic terms
-        const aIsCompound = !!termA.operator;
-        const bIsCompound = !!termB.operator;
-        if (aIsCompound !== bIsCompound) return aIsCompound ? -1 : 1;
-
-        // 4. Compare by operator if both are compound and have the same operator
-        if (aIsCompound && bIsCompound && termA.operator !== termB.operator) {
-            return termA.operator.localeCompare(termB.operator);
-        }
-
-        // 5. Compare by name
-        return termA.name.localeCompare(termB.name);
-    }
-
-    /**
      * Compare terms alphabetically by name for standard commutative operators
      */
     _compareTermsAlphabetically(termA, termB) {
@@ -398,6 +370,7 @@ export class TermFactory extends BaseComponent {
 
         const names = comps.map(c => c.name);
 
+        // Use a lookup table for building canonical names efficiently
         const buildPattern = {
             '--': (n) => `(--, ${n[0]})`,
             '&': (n) => `(&, ${n.join(', ')})`,
@@ -445,9 +418,7 @@ export class TermFactory extends BaseComponent {
             complexity += components.length;
 
             // Add complexity based on nested terms
-            for (const comp of components) {
-                complexity += this.getComplexity(comp) || 0;
-            }
+            complexity += components.reduce((sum, comp) => sum + (this.getComplexity(comp) || 0), 0);
         }
 
         this._complexityCache.set(term.name, complexity);
@@ -520,15 +491,6 @@ export class TermFactory extends BaseComponent {
             efficiency: cacheHitRate,
             maxCacheSize: this._maxCacheSize
         };
-    }
-
-    /**
-     * Calculate caching efficiency
-     */
-    _calculateEfficiency() {
-        // This is a simple efficiency calculation
-        // In a real implementation, you'd track hits/misses
-        return this._cache.size > 0 ? 1 : 0;
     }
 
     /**

@@ -101,18 +101,23 @@ export class NAR extends BaseComponent {
     }
 
     async initialize() {
-        const success = await this._componentManager.initializeAll();
-        if (success) {
-            await this._setupDefaultRules();
-        }
+        try {
+            const success = await this._componentManager.initializeAll();
+            if (success) {
+                await this._setupDefaultRules();
+            }
 
-        // Initialize stream reasoner if it's going to be used
-        if (!this._streamReasoner) {
-            this._initStreamReasoner();
-            await this._registerRulesWithStreamReasoner();
-        }
+            // Initialize stream reasoner if it's going to be used
+            if (!this._streamReasoner) {
+                this._initStreamReasoner();
+                await this._registerRulesWithStreamReasoner();
+            }
 
-        return success;
+            return success;
+        } catch (error) {
+            this.logError('NAR initialization failed:', error);
+            throw error;
+        }
     }
 
     _initComponents() {
@@ -207,7 +212,11 @@ export class NAR extends BaseComponent {
 
             const narseseString = input;
             const parsed = this._parser.parse(narseseString);
-            if (!parsed?.term) throw new Error('Invalid parse result');
+            if (!parsed?.term) {
+                const error = new Error('Invalid parse result');
+                error.input = narseseString;
+                throw error;
+            }
 
             const task = this._createTask(parsed);
             return await this._processNewTask(task, 'user', narseseString, parsed, options);
@@ -221,6 +230,13 @@ export class NAR extends BaseComponent {
                 input: inputError.input,
                 originalError: error
             }, {traceId: options.traceId});
+
+            this.logError('Input processing error', {
+                input: inputError.input,
+                error: error.message,
+                stack: error.stack
+            });
+
             throw inputError;
         }
     }
@@ -241,21 +257,26 @@ export class NAR extends BaseComponent {
     }
 
     async _emitTaskEvents(task, source, originalInput, parsed, options) {
-        this._eventBus.emit('task.input', {
-            task,
-            source,
-            originalInput,
-            parsed
-        }, {traceId: options.traceId});
+        try {
+            this._eventBus.emit('task.input', {
+                task,
+                source,
+                originalInput,
+                parsed
+            }, {traceId: options.traceId});
 
-        if (this._focus) {
-            const addedToFocus = this._focus.addTaskToFocus(task);
-            if (addedToFocus) {
-                this._eventBus.emit('task.focus', task, {traceId: options.traceId});
+            if (this._focus) {
+                const addedToFocus = this._focus.addTaskToFocus(task);
+                if (addedToFocus) {
+                    this._eventBus.emit('task.focus', task, {traceId: options.traceId});
+                }
             }
-        }
 
-        await this._processPendingTasks(options.traceId);
+            await this._processPendingTasks(options.traceId);
+        } catch (error) {
+            this.logError('_emitTaskEvents failed:', error);
+            throw error; // Re-throw to maintain error handling contract
+        }
     }
 
     _createTask(parsed) {
@@ -286,7 +307,7 @@ export class NAR extends BaseComponent {
         '.': 'BELIEF',
         '!': 'GOAL',
         '?': 'QUESTION'
-    })[punctuation] || 'BELIEF';
+    })[punctuation] ?? 'BELIEF';
 
     start(options = {}) {
         if (this._isRunning) {
@@ -405,7 +426,11 @@ export class NAR extends BaseComponent {
             return results;
         } catch (error) {
             this._eventBus.emit('streamReasoner.error', {error: error.message}, {traceId: options.traceId});
-            this.logError('Error in reasoning step:', error);
+            this.logError('Error in reasoning step:', {
+                error: error.message,
+                stack: error.stack,
+                traceId: options.traceId
+            });
             throw error;
         }
     }
@@ -414,17 +439,27 @@ export class NAR extends BaseComponent {
         const traceId = options.traceId;
         const validResults = results.filter(Boolean);
 
-        // Process all valid results with Promise.all for efficiency
-        const addPromises = validResults.map(result => this._inputTask(result, {traceId}));
-        await Promise.all(addPromises);
+        try {
+            // Process all valid results with Promise.all for efficiency
+            const addPromises = validResults.map(result => this._inputTask(result, {traceId}));
+            await Promise.all(addPromises);
 
-        // Emit individual events to maintain compatibility with existing tests
-        for (const result of validResults) {
-            this._eventBus.emit('reasoning.derivation', {
-                derivedTask: result,
-                source: 'streamReasoner.step.method',
-                timestamp: Date.now()
-            }, {traceId});
+            // Emit individual events to maintain compatibility with existing tests
+            for (const result of validResults) {
+                this._eventBus.emit('reasoning.derivation', {
+                    derivedTask: result,
+                    source: 'streamReasoner.step.method',
+                    timestamp: Date.now()
+                }, {traceId});
+            }
+        } catch (error) {
+            this.logError('_processDerivations failed:', {
+                error: error.message,
+                stack: error.stack,
+                traceId,
+                resultsCount: validResults.length
+            });
+            throw error;
         }
     }
 
@@ -667,7 +702,15 @@ export class NAR extends BaseComponent {
     }
 
     async _processPendingTasks(traceId) {
-        for (const task of this._taskManager.processPendingTasks(Date.now())) {
+        const pendingTasks = this._taskManager.processPendingTasks(Date.now());
+
+        // If there are no pending tasks, return early to avoid unnecessary operations
+        if (!pendingTasks.length) {
+            return;
+        }
+
+        // Emit all task events in a batch to reduce event emission overhead
+        for (const task of pendingTasks) {
             this._eventBus.emit('task.added', {task}, {traceId});
         }
     }
@@ -832,6 +875,7 @@ export class NAR extends BaseComponent {
         const existingConcept = this._memory.getConcept(task.term);
         if (existingConcept) {
             const storage = existingConcept._getStorage(task.type);
+            // Use for...of for better readability and proper iteration
             for (const [existingTask] of storage._items) {
                 if (task.equals(existingTask)) {
                     return true;
@@ -851,6 +895,14 @@ export class NAR extends BaseComponent {
                 error: error.message,
                 input: 'derived-task'
             }, {traceId: options.traceId});
+
+            this.logError('_inputTask failed:', {
+                error: error.message,
+                stack: error.stack,
+                input: 'derived-task',
+                traceId: options.traceId
+            });
+
             throw error;
         }
     }

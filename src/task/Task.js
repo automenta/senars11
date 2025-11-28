@@ -17,22 +17,23 @@ export class Task {
         if (!(term instanceof Term)) throw new Error('Task must be initialized with a valid Term object.');
 
         this.term = term;
-        this.type = PUNCTUATION_TO_TYPE[punctuation] || 'BELIEF';
+        this.type = PUNCTUATION_TO_TYPE[punctuation] ?? 'BELIEF';
 
         // Validate truth value based on task type
-        if (this.type === 'QUESTION') {
-            if (truth !== null) {
-                throw new Error('Questions cannot have truth values');
-            }
-        } else if (this.type === 'BELIEF' || this.type === 'GOAL') {
-            if (truth === null) {
-                throw new Error(`${this.type} tasks must have valid truth values`);
-            }
+        const hasValidTruthForType = this.type === 'QUESTION'
+            ? (truth === null)
+            : (truth !== null);
+
+        if (!hasValidTruthForType) {
+            const errorMsg = this.type === 'QUESTION'
+                ? 'Questions cannot have truth values'
+                : `${this.type} tasks must have valid truth values`;
+            throw new Error(errorMsg);
         }
 
         this.truth = this._createTruth(truth);
         this.budget = Object.freeze({...budget});
-        this.stamp = stamp || ArrayStamp.createInput();
+        this.stamp = stamp ?? ArrayStamp.createInput();
         Object.freeze(this);
     }
 
@@ -76,7 +77,7 @@ export class Task {
             term: this.term,
             punctuation: this.punctuation,
             truth: this.truth,
-            budget: this.budget,
+            budget: {...this.budget}, // Shallow copy budget to avoid reference issues
             stamp: this.stamp,
             ...overrides,
         });
@@ -89,14 +90,18 @@ export class Task {
     isQuestion = () => this.type === 'QUESTION';
 
     equals(other) {
-        if (!(other instanceof Task)) return false;
-        if (this.type !== other.type) return false;
+        if (!(other instanceof Task) || this.type !== other.type) return false;
+
+        // Check term equality first (early exit if terms don't match)
         if (this.term !== other.term && !this.term.equals(other.term)) return false;
 
         const thisHasTruth = this.truth !== null;
         const otherHasTruth = other.truth !== null;
 
+        // Check truth existence first (early exit if truth existence differs)
         if (thisHasTruth !== otherHasTruth) return false;
+
+        // If both have truth, check truth equality
         if (thisHasTruth && otherHasTruth && !this.truth.equals(other.truth)) return false;
 
         return true;

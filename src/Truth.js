@@ -16,29 +16,59 @@ export class Truth {
         return this.confidence;
     }
 
-    static binaryOperation = (truth1, truth2, operation) =>
-        truth1 && truth2 ? operation(truth1, truth2) : null;
+    /**
+     * Safely execute binary operations between two Truth objects
+     * @param {Truth} truth1 - First truth object
+     * @param {Truth} truth2 - Second truth object
+     * @param {Function} operation - Binary operation to perform
+     * @returns {Truth|null} - Result of operation or null if inputs invalid
+     */
+    static binaryOperation(truth1, truth2, operation) {
+        return truth1 && truth2 ? operation(truth1, truth2) : null;
+    }
 
-    static unaryOperation = (truth, operation) =>
-        truth ? operation(truth) : null;
+    /**
+     * Safely execute unary operations on a Truth object
+     * @param {Truth} truth - Truth object to operate on
+     * @param {Function} operation - Unary operation to perform
+     * @returns {Truth|null} - Result of operation or null if input invalid
+     */
+    static unaryOperation(truth, operation) {
+        return truth ? operation(truth) : null;
+    }
 
-    static deduction = (t1, t2) =>
-        Truth.binaryOperation(t1, t2, (t, u) =>
+    /**
+     * Safe division with clamping
+     * @param {number} numerator - Numerator
+     * @param {number} denominator - Denominator
+     * @returns {number} - Result of division or 0 if denominator is 0
+     */
+    static safeDiv(numerator, denominator) {
+        return denominator === 0 ? 0 : clamp(numerator / denominator, 0, 1);
+    }
+
+    // Truth operation methods using a more modular approach
+    static deduction(t1, t2) {
+        return Truth.binaryOperation(t1, t2, (t, u) =>
             new Truth(t.frequency * u.frequency, t.confidence * u.confidence));
+    }
 
-    static induction = (t1, t2) =>
-        Truth.binaryOperation(t1, t2, (t, u) =>
+    static induction(t1, t2) {
+        return Truth.binaryOperation(t1, t2, (t, u) =>
             new Truth(u.frequency, t.confidence * u.confidence));
+    }
 
-    static abduction = (t1, t2) =>
-        Truth.binaryOperation(t1, t2, (t, u) =>
+    static abduction(t1, t2) {
+        return Truth.binaryOperation(t1, t2, (t, u) =>
             new Truth(t.frequency, Math.min(t.confidence * u.confidence, u.confidence)));
+    }
 
-    static detachment = (t1, t2) =>
-        Truth.binaryOperation(t1, t2, (t, u) =>
+    static detachment(t1, t2) {
+        return Truth.binaryOperation(t1, t2, (t, u) =>
             new Truth(u.frequency, t.frequency * t.confidence * u.confidence));
+    }
 
-    static revision = (truth1, truth2) => {
+    static revision(truth1, truth2) {
         if (!truth1 || !truth2) return truth1 || truth2;
         if (truth1.equals(truth2)) return truth1;
 
@@ -50,44 +80,53 @@ export class Truth {
             confidenceSum > 0 ? (f1 * c1 + f2 * c2) / confidenceSum : (f1 + f2) / 2,
             clamp(confidenceSum, 0, 1)
         );
-    };
+    }
 
-    static negation = truth =>
-        Truth.unaryOperation(truth, t => new Truth(1 - t.frequency, t.confidence));
+    static negation(truth) {
+        return Truth.unaryOperation(truth, t => new Truth(1 - t.frequency, t.confidence));
+    }
 
-    static conversion = truth =>
-        Truth.unaryOperation(truth, t => new Truth(t.frequency, t.frequency * t.confidence));
+    static conversion(truth) {
+        return Truth.unaryOperation(truth, t => new Truth(t.frequency, t.frequency * t.confidence));
+    }
 
-    static expectation = truth => truth?.frequency * truth?.confidence ?? 0;
+    static expectation(truth) {
+        return truth?.frequency * truth?.confidence ?? 0;
+    }
 
-    static comparison = (t1, t2) =>
-        Truth.binaryOperation(t1, t2, (t, u) => {
+    static comparison(t1, t2) {
+        return Truth.binaryOperation(t1, t2, (t, u) => {
             const frequencyProduct = t.frequency * u.frequency;
             const denominator = frequencyProduct + (1 - t.frequency) * (1 - u.frequency);
             return new Truth(Truth.safeDiv(frequencyProduct, denominator), t.confidence * u.confidence);
         });
+    }
 
-    static analogy = (t1, t2) =>
-        Truth.binaryOperation(t1, t2, (t, u) =>
+    static analogy(t1, t2) {
+        return Truth.binaryOperation(t1, t2, (t, u) =>
             new Truth(t.frequency * u.frequency, t.confidence * u.confidence * u.frequency));
+    }
 
-    static resemblance = (t1, t2) =>
-        Truth.binaryOperation(t1, t2, (t, u) =>
+    static resemblance(t1, t2) {
+        return Truth.binaryOperation(t1, t2, (t, u) =>
             new Truth((t.frequency + u.frequency) / 2, t.confidence * u.confidence));
+    }
 
-    static contraposition = (t1, t2) =>
-        Truth.binaryOperation(t1, t2, (t, u) => {
+    static contraposition(t1, t2) {
+        return Truth.binaryOperation(t1, t2, (t, u) => {
             const contraFreq = u.frequency * (1 - t.frequency);
             const denom = contraFreq + (1 - u.frequency) * t.frequency;
             return new Truth(Truth.safeDiv(contraFreq, denom), t.confidence * u.confidence);
         });
+    }
 
-    static isStronger = (t1, t2) => Truth.expectation(t1) > Truth.expectation(t2);
+    static isStronger(t1, t2) {
+        return Truth.expectation(t1) > Truth.expectation(t2);
+    }
 
-    static weak = confidence => clamp(confidence / (confidence + TRUTH.WEAKENING_FACTOR), 0, 1);
-
-    static safeDiv = (numerator, denominator) =>
-        denominator === 0 ? 0 : clamp(numerator / denominator, 0, 1);
+    static weak(confidence) {
+        return clamp(confidence / (confidence + TRUTH.WEAKENING_FACTOR), 0, 1);
+    }
 
     equals(other) {
         return other instanceof Truth &&
