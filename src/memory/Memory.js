@@ -32,8 +32,11 @@ export class Memory extends BaseComponent {
             memoryValidationInterval: config.memoryValidationInterval || 30000,
         });
 
-        super({...defaultConfig, ...config}, 'Memory');
-        this._config = {...this.config, ...config};
+        // Merge configs using object spread for performance and clarity
+        const mergedConfig = {...defaultConfig, ...config};
+
+        super(mergedConfig, 'Memory');
+        this._config = mergedConfig;
 
         this._concepts = new Map();
         this._conceptBag = new Bag(this._config.maxConcepts, this._config.forgetPolicy);
