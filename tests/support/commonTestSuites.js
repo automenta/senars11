@@ -1,16 +1,22 @@
 /**
  * @file commonTestSuites.js
- * @description Common test suites that can be reused across multiple test files to reduce duplication
+ * @description Common test suites - DEPRECATED
  *
- * This file consolidates common test patterns, particularly for NAR integration tests.
+ * NOTE: This file is being deprecated. All functionality has been consolidated
+ * into consolidatedTestSuites.js following AGENTS.md guidelines.
  */
 
-import {errorHandlingTests, flexibleAssertions, runPerformanceTest, truthAssertions} from './baseTestUtils.js';
-import {narTestPatterns} from './narTestSetup.js';
+// Re-export all functionality from the consolidated test suites
+export * from './consolidatedTestSuites.js';
+export * from './baseTestUtils.js';
+export * from './narTestSetup.js';
+export * from './testSuiteFactory.js';
 
-/**
- * Common test suite for basic input processing
- */
+// For backward compatibility, provide the original exports as aliases
+import { NARTestSuites, FlexibleTestPatterns } from './consolidatedTestSuites.js';
+import { errorHandlingTests, flexibleAssertions, runPerformanceTest, truthAssertions } from './baseTestUtils.js';
+import { narTestPatterns } from './narTestSetup.js';
+
 export const basicInputProcessingSuite = (narProvider) => {
     describe('Basic Input Processing', () => {
         test('should accept and store a simple belief', async () => {
@@ -38,9 +44,6 @@ export const basicInputProcessingSuite = (narProvider) => {
     });
 };
 
-/**
- * Common test suite for compound term processing
- */
 export const compoundTermProcessingSuite = (narProvider) => {
     describe('Compound Term Processing', () => {
         test('should handle inheritance statements', async () => {
@@ -57,9 +60,6 @@ export const compoundTermProcessingSuite = (narProvider) => {
     });
 };
 
-/**
- * Common test suite for system lifecycle
- */
 export const systemLifecycleSuite = (narProvider) => {
     describe('System Lifecycle', () => {
         test('should start and stop correctly', async () => {
@@ -106,9 +106,6 @@ export const systemLifecycleSuite = (narProvider) => {
     });
 };
 
-/**
- * Common test suite for event system
- */
 export const eventSystemSuite = (narProvider) => {
     describe('Event System', () => {
         test('should emit events for input processing', async () => {
@@ -131,9 +128,6 @@ export const eventSystemSuite = (narProvider) => {
     });
 };
 
-/**
- * Common test suite for error handling
- */
 export const errorHandlingSuite = (narProvider) => {
     describe('Error Handling', () => {
         test('should handle malformed input gracefully', async () => {
@@ -153,9 +147,6 @@ export const errorHandlingSuite = (narProvider) => {
     });
 };
 
-/**
- * Common test suite for performance
- */
 export const performanceSuite = (narProvider) => {
     describe('Performance and Scalability', () => {
         test('should handle multiple inputs efficiently', async () => {
@@ -186,9 +177,6 @@ export const performanceSuite = (narProvider) => {
     });
 };
 
-/**
- * Complete NAR integration test suite combining all common test suites
- */
 export const completeNARIntegrationSuite = (narProvider) => {
     basicInputProcessingSuite(narProvider);
     compoundTermProcessingSuite(narProvider);
@@ -198,9 +186,6 @@ export const completeNARIntegrationSuite = (narProvider) => {
     performanceSuite(narProvider);
 };
 
-/**
- * Common setup and teardown for NAR tests to avoid duplication
- */
 export const narTestSetup = (config = {}) => {
     const defaultConfig = {
         debug: {enabled: false},
@@ -224,9 +209,6 @@ export const narTestSetup = (config = {}) => {
     return () => nar;
 };
 
-/**
- * Enhanced NAR test suite that uses more flexible assertions and can adapt to changes in implementation
- */
 export const flexibleNARIntegrationSuite = (narProvider) => {
     describe('Flexible NAR Integration Tests', () => {
         test('should handle basic operations with flexible expectations', async () => {

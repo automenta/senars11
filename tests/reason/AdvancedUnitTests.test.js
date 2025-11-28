@@ -4,7 +4,7 @@ import {RuleProcessor} from '../../src/reason/RuleProcessor.js';
 import {RuleExecutor} from '../../src/reason/RuleExecutor.js';
 import {Strategy} from '../../src/reason/Strategy.js';
 import {Focus} from '../../src/memory/Focus.js';
-import {createTestTask} from './testUtils.js';
+import {createTestTask} from '../support/baseTestUtils.js';
 
 describe('Advanced Unit Tests for Sophisticated Features', () => {
     describe('TaskBagPremiseSource - Dynamic Adaptation', () => {

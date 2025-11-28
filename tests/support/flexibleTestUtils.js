@@ -131,11 +131,48 @@ export const flexibleTestWrappers = {
 };
 
 /**
+ * Parameterized test utilities for running multiple test cases with different inputs
+ */
+export const parameterizedTestUtils = {
+    /**
+     * Run tests with multiple parameter combinations using Jest's each
+     */
+    runWithParams: (testCases, testFn, description = 'Parameterized test') => {
+        test.each(testCases.map((testCase, i) => [i, testCase]))(
+            `${description} - case %i`,
+            (_, testCase) => {
+                testFn(testCase);
+            }
+        );
+    },
+
+    /**
+     * Run async parameterized tests
+     */
+    runAsyncWithParams: async (testCases, testFn, description = 'Async parameterized test') => {
+        for (const [index, testCase] of testCases.entries()) {
+            await test(`${description} - case ${index}`, () => testFn(testCase));
+        }
+    },
+
+    /**
+     * Create parameterized test data from cartesian product
+     */
+    createCartesianProduct: (arrays) => {
+        return arrays.reduce(
+            (acc, curr) => acc.flatMap(c => curr.map(n => [...c, n])),
+            [[]]
+        );
+    }
+};
+
+/**
  * Export everything for easy import
  */
 export default {
     flexibleAssertions,
     flexibleTruthUtils,
     flexibleTestConfig,
-    flexibleTestWrappers
+    flexibleTestWrappers,
+    parameterizedTestUtils
 };

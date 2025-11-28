@@ -1,15 +1,23 @@
 /**
  * Test utilities for reasoner components
+ *
+ * NOTE: This file is being deprecated. All utilities should be consolidated
+ * in the support directory following AGENTS.md guidelines.
  */
 
-import {Task} from '../../src/task/Task.js';
-import {Truth} from '../../src/Truth.js';
-import {TermFactory} from '../../src/term/TermFactory.js';
+// Re-export organized test utilities to maintain backward compatibility
+export * from '../support/testUtils.js';
+
+// Import and re-export the specific functions that might be needed for backward compatibility
+import { Task } from '../../src/task/Task.js';
+import { Truth } from '../../src/Truth.js';
+import { TermFactory } from '../../src/term/TermFactory.js';
+import { createTask as baseCreateTask, createTerm } from '../support/factories.js';
 
 const termFactory = new TermFactory();
 
 /**
- * Creates a test task with specified parameters
+ * Creates a test task with specified parameters (for backward compatibility)
  * @param {string|Object} termStr - Term string or task configuration object
  * @param {string} type - Task type (BELIEF, GOAL, QUESTION)
  * @param {number} frequency - Truth frequency (0-1)
@@ -36,7 +44,7 @@ export function createTestTask(termStr, type = 'BELIEF', frequency = 0.9, confid
     }
 
     // Create a proper Term object using TermFactory
-    const termObj = typeof term === 'string' ? termFactory.atomic(term) : term;
+    const termObj = typeof term === 'string' ? (typeof term === 'string' ? termFactory.atomic(term) : term) : term;
 
     // Questions don't have truth values, so only create truth for BELIEF and GOAL
     if (type !== 'QUESTION') {
@@ -58,7 +66,7 @@ export function createTestTask(termStr, type = 'BELIEF', frequency = 0.9, confid
 }
 
 /**
- * Creates a test memory-like object for testing
+ * Creates a test memory-like object for testing (for backward compatibility)
  * @param {Object} options - Configuration options for the test memory
  * @returns {Object} A mock memory object
  */
@@ -88,7 +96,7 @@ export function createTestMemory(options = {}) {
 }
 
 /**
- * Creates a test task bag for testing
+ * Creates a test task bag for testing (for backward compatibility)
  * @param {Array} tasks - Array of tasks to include in the bag
  * @returns {Object} A mock task bag object
  */

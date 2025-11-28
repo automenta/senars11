@@ -1,5 +1,10 @@
 import {NAR} from '../../src/nar/NAR.js';
+import {Task} from '../../src/task/Task.js';
+import {Truth} from '../../src/Truth.js';
+import {TermFactory} from '../../src/term/TermFactory.js';
 import {createTask, createTerm, createTruth, TEST_CONSTANTS} from './factories.js';
+
+const termFactory = new TermFactory();
 
 /**
  * Base test setup for NAR integration tests
@@ -20,10 +25,13 @@ export class NARTestSetup {
         return this.nar;
     }
 
-    teardown() {
-        if (this.nar && this.nar.isRunning) {
+    async teardown() {
+        if (this.nar && typeof this.nar.dispose === 'function') {
+            await this.nar.dispose();
+        } else if (this.nar && this.nar.isRunning) {
             this.nar.stop();
         }
+        this.nar = null;
     }
 
     async reset() {
@@ -50,7 +58,10 @@ export class ComponentTestSetup {
         return this.instance;
     }
 
-    teardown() {
+    async teardown() {
+        if (this.instance && typeof this.instance.dispose === 'function') {
+            await this.instance.dispose();
+        }
         this.instance = null;
     }
 }
@@ -365,10 +376,9 @@ export const errorHandlingTests = {
      * Tests async error handling
      */
     asyncErrorHandling: async (testFunction, invalidInputs, errorType = Error) => {
-        const promises = invalidInputs.map(invalidInput =>
-            expect(testFunction?.(invalidInput)).rejects.toThrow(errorType)
-        );
-        await Promise.all(promises);
+        for (const invalidInput of invalidInputs) {
+            await expect(testFunction?.(invalidInput)).rejects.toThrow(errorType);
+        }
     },
 
     /**
@@ -804,6 +814,141 @@ export const robustNARTests = {
 };
 
 /**
+ * Performance optimization utilities for faster test execution
+ */
+export const performanceOptimization = {
+    /**
+     * Cache for expensive test setup operations
+     */
+    testCache: new Map(),
+
+    /**
+     * Get cached test setup or create and cache it
+     */
+    getCachedSetup: async (cacheKey, setupFn) => {
+        if (performanceOptimization.testCache.has(cacheKey)) {
+            return performanceOptimization.testCache.get(cacheKey);
+        }
+
+        const result = await setupFn();
+        performanceOptimization.testCache.set(cacheKey, result);
+        return result;
+    },
+
+    /**
+     * Clear test cache (use in afterEach or after tests)
+     */
+    clearCache: () => {
+        performanceOptimization.testCache.clear();
+    },
+
+    /**
+     * Batch operations for better performance
+     */
+    batchProcess: async (items, processor, batchSize = 10) => {
+        const results = [];
+        for (let i = 0; i < items.length; i += batchSize) {
+            const batch = items.slice(i, i + batchSize);
+            const batchResults = await Promise.all(batch.map(processor));
+            results.push(...batchResults);
+        }
+        return results;
+    },
+
+    /**
+     * Efficiently collect multiple test results
+     */
+    collectResults: async (operations) => {
+        // Use Promise.all for parallel execution when safe
+        return await Promise.all(operations.map(op => op()));
+    },
+
+    /**
+     * Performance-optimized collection search
+     */
+    findInCollectionOptimized: (collection, predicate) => {
+        if (Array.isArray(collection)) {
+            return collection.find(predicate);
+        } else if (collection && typeof collection[Symbol.iterator] === 'function') {
+            for (const item of collection) {
+                if (predicate(item)) {
+                    return item;
+                }
+            }
+        } else if (collection && typeof collection.forEach === 'function') {
+            let result = null;
+            collection.forEach(item => {
+                if (result === null && predicate(item)) {
+                    result = item;
+                }
+            });
+            return result;
+        }
+        return null;
+    }
+};
+
+/**
+ * Utility for creating optimized test patterns
+ */
+export const optimizedTestPatterns = {
+    /**
+     * Optimized NAR setup that reuses instances when safe
+     */
+    createOptimizedNARSetup: (config = {}) => {
+        return new class {
+            constructor(config) {
+                this.config = config;
+                this.nar = null;
+            }
+
+            async setup() {
+                if (!this.nar) {
+                    this.nar = new NAR(this.config);
+                }
+                return this.nar;
+            }
+
+            async teardown() {
+                if (this.nar && typeof this.nar.dispose === 'function') {
+                    await this.nar.dispose();
+                }
+                this.nar = null;
+            }
+        }(config);
+    },
+
+    /**
+     * Optimized test data generator to avoid repeated object creation
+     */
+    testDataGenerator: {
+        truthCache: [],
+        taskCache: [],
+
+        getTruth: (f, c) => {
+            // Use cached instances when possible
+            const cached = optimizedTestPatterns.testDataGenerator.truthCache
+                .find(t => Math.abs(t.f - f) < 0.001 && Math.abs(t.c - c) < 0.001);
+            if (cached) return cached;
+
+            const newTruth = new Truth(f, c);
+            optimizedTestPatterns.testDataGenerator.truthCache.push(newTruth);
+            return newTruth;
+        },
+
+        getTask: (config = {}) => {
+            const term = config.term || createTerm('A');
+            const punctuation = config.punctuation || '.';
+            const truth = config.truth || (punctuation !== '?' ? optimizedTestPatterns.testDataGenerator.getTruth(0.9, 0.8) : null);
+            const budget = config.budget || TEST_CONSTANTS.BUDGET.DEFAULT;
+
+            const task = new Task({term, punctuation, truth, budget});
+            return task;
+        }
+    }
+};
+
+/**
  * Common test pattern for property immutability
  * @param {Object} instance - The instance to test
  * @param {Object} properties - Object with {propertyName: value} pairs to attempt to modify
@@ -857,6 +1002,105 @@ export const COMMON_TRUTH_VALUES = [
     {f: 0.1, c: 0.2, name: 'low'},
     {f: 0.0, c: 0.1, name: 'false'}
 ];
+
+/**
+ * Creates a test task with specified parameters
+ * @param {string|Object} termStr - Term string or task configuration object
+ * @param {string} type - Task type (BELIEF, GOAL, QUESTION)
+ * @param {number} frequency - Truth frequency (0-1)
+ * @param {number} confidence - Truth confidence (0-1)
+ * @param {number} priority - Task priority (0-1)
+ * @returns {Task} A test task instance
+ */
+export function createTestTask(termStr, type = 'BELIEF', frequency = 0.9, confidence = 0.9, priority = 0.5) {
+    let term, punctuation, truth = null;
+
+    if (typeof termStr === 'object') {
+        // Handle the case where a configuration object is passed
+        const config = termStr;
+        term = config.term || createTerm('A');
+        type = config.type || type;
+        frequency = config.frequency !== undefined ? config.frequency : frequency;
+        confidence = config.confidence !== undefined ? config.confidence : confidence;
+        priority = config.priority !== undefined ? config.priority : priority;
+        punctuation = config.punctuation || (type === 'GOAL' ? '!' : type === 'QUESTION' ? '?' : '.');
+    } else {
+        // Handle the case where a string is passed
+        term = typeof termStr === 'string' ? termFactory.atomic(termStr) : termStr;
+        punctuation = type === 'GOAL' ? '!' : type === 'QUESTION' ? '?' : '.';
+    }
+
+    // Questions don't have truth values, so only create truth for BELIEF and GOAL
+    if (type !== 'QUESTION') {
+        truth = new Truth(frequency, confidence);
+    }
+
+    const budget = {
+        priority,
+        durability: 0.7,
+        quality: 0.8
+    };
+
+    return new Task({
+        term,
+        punctuation,
+        truth,
+        budget
+    });
+}
+
+/**
+ * Creates a test memory-like object for testing
+ * @param {Object} options - Configuration options for the test memory
+ * @returns {Object} A mock memory object
+ */
+export function createTestMemory(options = {}) {
+    const tasks = options.tasks || [];
+
+    return {
+        taskBag: {
+            tasks: Array.isArray(tasks) ? tasks : [],
+            take: function () {
+                return this.tasks.shift() || null;
+            },
+            add: function (task) {
+                this.tasks.push(task);
+            },
+            size: function () {
+                return this.tasks.length;
+            }
+        },
+        addTask: function (task) {
+            this.taskBag.add(task);
+        },
+        getTask: function () {
+            return this.taskBag.take();
+        }
+    };
+}
+
+/**
+ * Creates a test task bag for testing
+ * @param {Array} tasks - Array of tasks to include in the bag
+ * @returns {Object} A mock task bag object
+ */
+export function createTestTaskBag(tasks = []) {
+    return {
+        tasks: tasks,
+        take: function () {
+            return this.tasks.shift() || null;
+        },
+        add: function (task) {
+            this.tasks.push(task);
+        },
+        size: function () {
+            return this.tasks.length;
+        },
+        peek: function () {
+            return this.tasks[0] || null;
+        }
+    };
+}
 
 export const COMMON_BUDGET_VALUES = [
     {priority: 0.9, durability: 0.8, quality: 0.7, name: 'high'},

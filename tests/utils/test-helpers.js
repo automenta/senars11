@@ -1,9 +1,15 @@
 /**
  * @file tests/utils/test-helpers.js
  * @description Shared test utilities and helper functions for consistent test setup
+ *
+ * NOTE: This file is being deprecated. All utilities should be consolidated
+ * in the support directory following AGENTS.md guidelines.
  */
 
 import {TestSetupError, TestTeardownError} from './test-errors.js';
+
+// Re-export organized test utilities to maintain backward compatibility
+export * from '../support/testUtils.js';
 
 /**
  * Creates a test instance with specified configuration

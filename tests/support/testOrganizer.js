@@ -10,13 +10,15 @@
 import * as baseUtils from './baseTestUtils.js';
 import * as narUtils from './narTestSetup.js';
 import * as factories from './factories.js';
-import * as commonSuites from './commonTestSuites.js';
-import * as generalSuites from './generalTestSuites.js';
 import * as consolidatedSuites from './consolidatedTestSuites.js';
-import * as enhancedSuites from './enhancedTestSuites.js';
 import * as testSuiteFactory from './testSuiteFactory.js';
 import * as flexibleUtils from './flexibleTestUtils.js';
 import * as templateFactory from './TestTemplateFactory.js';
+import * as categorizationUtils from './testCategorization.js';
+import * as errorHandlingUtils from './testErrorHandling.js';
+import * as commonUtils from './commonTestSuites.js';
+import * as generalUtils from './generalTestSuites.js';
+import * as enhancedUtils from './enhancedTestSuites.js';
 
 /**
  * Consolidated test utilities organized by functionality
@@ -60,10 +62,10 @@ const TestOrganizer = {
 
     // Comprehensive test suites
     suites: {
-        ...commonSuites,
-        ...generalSuites,
+        ...commonUtils,
+        ...generalUtils,
         ...consolidatedSuites, // Include the new consolidated test suites
-        ...enhancedSuites,     // Include the enhanced test suites
+        ...enhancedUtils,     // Include the enhanced test suites
         factory: testSuiteFactory, // Include the test suite factory
         comprehensive: baseUtils.comprehensiveTestSuites
     },
@@ -73,13 +75,37 @@ const TestOrganizer = {
         assertions: flexibleUtils.flexibleAssertions,
         truth: flexibleUtils.flexibleTruthUtils,
         config: flexibleUtils.flexibleTestConfig,
-        wrappers: flexibleUtils.flexibleTestWrappers
+        wrappers: flexibleUtils.flexibleTestWrappers,
+        parameterized: flexibleUtils.parameterizedTestUtils
     },
 
     // Test templates for standardized, flexible testing
     templates: {
         factory: templateFactory.TestTemplateFactory,
         ...templateFactory
+    },
+
+    // Test categorization and organization
+    categorization: {
+        ...categorizationUtils,
+        taggedTest: categorizationUtils.taggedTest,
+        createCategorizedSuite: categorizationUtils.createCategorizedSuite,
+        conditionalTest: categorizationUtils.conditionalTest,
+        createPerformanceSuite: categorizationUtils.createPerformanceSuite,
+        SuiteBuilder: categorizationUtils.TestCategorization.SuiteBuilder,
+        Tags: categorizationUtils.TestCategorization.Tags
+    },
+
+    // Error handling utilities
+    errorHandling: {
+        ...errorHandlingUtils,
+        assertions: errorHandlingUtils.TestErrorHandling.assertions,
+        patterns: errorHandlingUtils.TestErrorHandling.patterns,
+        validation: errorHandlingUtils.TestErrorHandling.validation,
+        TestEnvironmentError: errorHandlingUtils.TestEnvironmentError,
+        TestSetupError: errorHandlingUtils.TestSetupError,
+        TestTeardownError: errorHandlingUtils.TestTeardownError,
+        TestAssertionError: errorHandlingUtils.TestAssertionError
     },
 
     // Common helper functions
@@ -122,9 +148,11 @@ export * from './testSuiteFactory.js';
 
 // Export flexible utilities individually to avoid conflicts
 export {
-    flexibleAssertions, flexibleTruthUtils, flexibleTestConfig, flexibleTestWrappers, default as flexibleTestUtils
+    flexibleAssertions, flexibleTruthUtils, flexibleTestConfig, flexibleTestWrappers, parameterizedTestUtils, default as flexibleTestUtils
 } from './flexibleTestUtils.js';
 export {TestTemplateFactory, default as testTemplateFactory} from './TestTemplateFactory.js';
+export {TestCategorization, taggedTest, createCategorizedSuite, conditionalTest, createPerformanceSuite, default as testCategorization} from './testCategorization.js';
+export {TestErrorHandling, TestEnvironmentError, TestSetupError, TestTeardownError, TestAssertionError, default as testErrorHandling} from './testErrorHandling.js';
 
 /**
  * Fluent test API for more readable and expressive tests

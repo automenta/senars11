@@ -1,24 +1,23 @@
 /**
  * @file enhancedTestSuites.js
- * @description Enhanced, consolidated test suites following AGENTS.md guidelines
+ * @description Enhanced test suites - DEPRECATED
  *
- * Focus on: Elegant, Consolidated, Consistent, Organized, Deeply deduplicated patterns
- * with Abstract, Modularized, Parameterized approaches using Terse syntax.
+ * NOTE: This file is being deprecated. All functionality has been consolidated
+ * into consolidatedTestSuites.js following AGENTS.md guidelines.
  */
 
-import {FlexibleTestPatterns, NARTestSuites, StandardTestSuites} from './consolidatedTestSuites.js';
+// Re-export all functionality from the consolidated test suites
+export * from './consolidatedTestSuites.js';
+export * from './baseTestUtils.js';
+export * from './factories.js';
+export * from './testSuiteFactory.js';
 
-import {errorHandlingTests, flexibleAssertions, truthAssertions} from './baseTestUtils.js';
+// For backward compatibility, provide the original exports as aliases
+import { FlexibleTestPatterns, StandardTestSuites, NARTestSuites } from './consolidatedTestSuites.js';
+import { errorHandlingTests, flexibleAssertions, truthAssertions } from './baseTestUtils.js';
+import { createTask, createTerm, createTruth } from './factories.js';
 
-import {createTask, createTerm, createTruth} from './factories.js';
-
-/**
- * Enhanced, parameterized test suites that follow AGENTS.md principles
- */
 export const EnhancedTestSuites = {
-    /**
-     * Parameterized data model test suite with flexible assertions
-     */
     dataModel: (config) => {
         const {
             className,
@@ -44,9 +43,6 @@ export const EnhancedTestSuites = {
         });
     },
 
-    /**
-     * Parameterized NAR test suite with flexible timing
-     */
     narIntegration: (config) => {
         const {narProvider, testScenarios = [], options = {}} = config;
 
@@ -70,9 +66,6 @@ export const EnhancedTestSuites = {
         });
     },
 
-    /**
-     * Parameterized component lifecycle test suite
-     */
     lifecycle: (config) => {
         const {
             componentName,
@@ -102,9 +95,6 @@ export const EnhancedTestSuites = {
         });
     },
 
-    /**
-     * Parameterized error handling test suite with flexible patterns
-     */
     errorHandling: (config) => {
         const {
             className,
@@ -140,13 +130,7 @@ export const EnhancedTestSuites = {
     }
 };
 
-/**
- * Factory functions for creating common test patterns - following AGENTS.md principles
- */
 export const TestFactories = {
-    /**
-     * Create a truth value test suite with parameterized inputs
-     */
     createTruthTestSuite: (f, c) => ({
         className: 'Truth',
         Constructor: (args) => new Truth(args?.f ?? f, args?.c ?? c),
@@ -163,15 +147,12 @@ export const TestFactories = {
         options: {
             validInput: {f, c},
             expectedProperties: {f, c},
-            expectedString: `%${f.toFixed(TRUTH.PRECISION)};${c.toFixed(TRUTH.PRECISION)}%`,
+            expectedString: `%${f.toFixed(2)};${c.toFixed(2)}%`,
             immutable: true,
             testEquality: true
         }
     }),
 
-    /**
-     * Create a task test suite with flexible validation
-     */
     createTaskTestSuite: (term, punctuation = '.') => ({
         className: 'Task',
         Constructor: (args) => createTask({
@@ -198,9 +179,6 @@ export const TestFactories = {
     })
 };
 
-/**
- * Abstract test suite base class - following AGENTS.md abstraction principle
- */
 export class AbstractTestSuite {
     constructor(name, config = {}) {
         this.name = name;
@@ -233,9 +211,6 @@ export class AbstractTestSuite {
     }
 }
 
-/**
- * Specific test suite for Truth values - following AGENTS.md principles
- */
 export class TruthTestSuite extends AbstractTestSuite {
     constructor(config = {}) {
         super('Truth Tests', config);
@@ -259,9 +234,6 @@ export class TruthTestSuite extends AbstractTestSuite {
     }
 }
 
-/**
- * Specific test suite for Task values - following AGENTS.md principles
- */
 export class TaskTestSuite extends AbstractTestSuite {
     constructor(config = {}) {
         super('Task Tests', config);
@@ -279,21 +251,11 @@ export class TaskTestSuite extends AbstractTestSuite {
     }
 }
 
-/**
- * Terse, parameterized functions for common test operations
- */
 export const T = {
-    // Truth test shorthand
     truth: (f, c) => new TruthTestSuite({truth: createTruth(f, c)}),
-
-    // Task test shorthand
     task: (term, punct) => new TaskTestSuite({task: createTask({term: term || createTerm('A'), punctuation: punct})}),
-
-    // Flexible assertion shorthand
     flex: (actual, expected, tolerance = 0.01) =>
         flexibleAssertions.expectCloseTo(actual, expected, tolerance),
-
-    // Standard suite shorthand
     suite: (type, ...args) => {
         switch (type) {
             case 'truth':
@@ -312,6 +274,5 @@ export const T = {
     }
 };
 
-// Export everything
 export const {truth, task, flex, suite} = T;
 export default EnhancedTestSuites;
