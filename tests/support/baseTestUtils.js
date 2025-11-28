@@ -1115,3 +1115,13 @@ export const COMMON_BUDGET_VALUES = [
     {priority: 0.5, durability: 0.5, quality: 0.5, name: 'medium'},
     {priority: 0.1, durability: 0.2, quality: 0.3, name: 'low'}
 ];
+
+/**
+ * Validates test environment
+ * @returns {Object} Environment validation result
+ */
+export const validateTestEnvironment = () => ({
+    isValid: process.env.NODE_ENV === 'test',
+    environment: process.env.NODE_ENV,
+    timestamp: Date.now()
+});

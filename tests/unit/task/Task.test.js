@@ -1,7 +1,7 @@
 import {Task} from '../../../src/task/Task.js';
 import {Stamp} from '../../../src/Stamp.js';
 import {createTask, createTerm, createTruth, TEST_CONSTANTS} from '../../support/factories.js';
-import {taskAssertions, testImmutability} from '../../support/testOrganizer.js';
+import {taskAssertions, testImmutability} from '../../support/baseTestUtils.js';
 import {TestSuiteFactory} from '../../support/testSuiteFactory.js';
 
 // Use the TestSuiteFactory to create a comprehensive Task test suite

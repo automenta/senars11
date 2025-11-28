@@ -4,7 +4,8 @@
 // Local imports
 import {Memory} from '../../../src/memory/Memory.js';
 import {createMemoryConfig, createTask, createTerm, TEST_CONSTANTS} from '../../support/factories.js';
-import {memoryAssertions, TestSuiteFactory} from '../../support/testOrganizer.js';
+import {memoryAssertions} from '../../support/baseTestUtils.js';
+import {TestSuiteFactory} from '../../support/testSuiteFactory.js';
 
 // Use the TestSuiteFactory to create a comprehensive Memory test suite
 TestSuiteFactory.createMemoryRelatedSuite({
