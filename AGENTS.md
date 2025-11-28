@@ -42,5 +42,5 @@
   prefer composition over inheritance, maintain consistent class structure
 
 - Project Specific Patterns
-    - Term Construction: Prefer fluent/convenience methods in `TermFactory` (e.g., `termFactory.inheritance(a, b)`,
-      `termFactory.variable('x')`) over verbose object literal construction (`create({operator: '-->', ...})`).
+    - Term Construction: Use fluent methods in `TermFactory` (e.g., `termFactory.inheritance(a, b)`,
+      `termFactory.variable('x')`)

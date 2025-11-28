@@ -1,6 +1,6 @@
-import {AgentBuilder} from '../src/agent/AgentBuilder.js';
-import {Agent} from '../src/agent/Agent.js';
-import {NAR} from '../src/nar/NAR.js';
+import { AgentBuilder } from '../src/agent/AgentBuilder.js';
+import { Agent } from '../src/agent/Agent.js';
+import { NAR } from '../src/nar/NAR.js';
 
 describe('AgentBuilder', () => {
     let agent;
@@ -35,7 +35,7 @@ describe('AgentBuilder', () => {
 
     test('should create an agent with embeddings enabled', async () => {
         agent = await new AgentBuilder()
-            .withEmbeddings({enabled: true, model: 'test-model'})
+            .withEmbeddings({ enabled: true, model: 'test-model' })
             .build();
 
         expect(agent.embeddingLayer).toBeDefined();
@@ -72,7 +72,7 @@ describe('AgentBuilder', () => {
             .withConfig({
                 subsystems: {
                     metrics: true,
-                    embeddingLayer: {enabled: true},
+                    embeddingLayer: { enabled: true },
                     functors: ['core-arithmetic'],
                     rules: ['syllogistic-core'],
                     tools: false,
@@ -94,7 +94,7 @@ describe('AgentBuilder', () => {
             .withConfig({
                 subsystems: {
                     metrics: false,
-                    embeddingLayer: {enabled: false},
+                    embeddingLayer: { enabled: false },
                     tools: false,
                     lm: false
                 }

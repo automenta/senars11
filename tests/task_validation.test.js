@@ -1,5 +1,5 @@
 /**
- * Unit Test for Task Validation - Proper Jest Format
+ * Unit Test for Task Validation
  *
  * This test validates that Task instantiation properly validates:
  * 1. BELIEF tasks must have truth values
@@ -7,9 +7,9 @@
  * 3. QUESTION tasks cannot have truth values
  */
 
-import {Task} from '../src/task/Task.js';
-import {Truth} from '../src/Truth.js';
-import {TermFactory} from '../src/term/TermFactory.js';
+import { Task } from '../src/task/Task.js';
+import { Truth } from '../src/Truth.js';
+import { TermFactory } from '../src/term/TermFactory.js';
 
 describe('Task Validation', () => {
     let mockTerm;
@@ -17,7 +17,6 @@ describe('Task Validation', () => {
 
     beforeEach(() => {
         termFactory = new TermFactory();
-        // Create a mock term for testing
         mockTerm = termFactory.atomic('test');
     });
 
@@ -27,7 +26,7 @@ describe('Task Validation', () => {
                 term: mockTerm,
                 punctuation: '.',
                 truth: null,
-                budget: {priority: 0.5}
+                budget: { priority: 0.5 }
             });
         }).toThrow(/BELIEF tasks must have valid truth values/);
     });
@@ -38,7 +37,7 @@ describe('Task Validation', () => {
             term: mockTerm,
             punctuation: '.',
             truth: validTruth,
-            budget: {priority: 0.5}
+            budget: { priority: 0.5 }
         });
 
         expect(task).toBeDefined();
@@ -52,7 +51,7 @@ describe('Task Validation', () => {
                 term: mockTerm,
                 punctuation: '!',
                 truth: null,
-                budget: {priority: 0.5}
+                budget: { priority: 0.5 }
             });
         }).toThrow(/GOAL tasks must have valid truth values/);
     });
@@ -63,7 +62,7 @@ describe('Task Validation', () => {
             term: mockTerm,
             punctuation: '!',
             truth: validTruth,
-            budget: {priority: 0.5}
+            budget: { priority: 0.5 }
         });
 
         expect(task).toBeDefined();
@@ -77,7 +76,7 @@ describe('Task Validation', () => {
                 term: mockTerm,
                 punctuation: '?',
                 truth: new Truth(1.0, 0.9),
-                budget: {priority: 0.5}
+                budget: { priority: 0.5 }
             });
         }).toThrow(/Questions cannot have truth values/);
     });
@@ -87,7 +86,7 @@ describe('Task Validation', () => {
             term: mockTerm,
             punctuation: '?',
             truth: null,
-            budget: {priority: 0.5}
+            budget: { priority: 0.5 }
         });
 
         expect(task).toBeDefined();
@@ -100,7 +99,7 @@ describe('Task Validation', () => {
             new Task({
                 term: mockTerm,
                 truth: null,
-                budget: {priority: 0.5}
+                budget: { priority: 0.5 }
             });
         }).toThrow(/BELIEF tasks must have valid truth values/);
     });

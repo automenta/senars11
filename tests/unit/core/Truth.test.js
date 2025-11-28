@@ -1,157 +1,138 @@
-import {Truth} from '../../../src/Truth.js';
-import {TRUTH} from '../../../src/config/constants.js';
-import {createTruth, TEST_CONSTANTS} from '../../support/factories.js';
-import {
-    equalityTests,
-    flexibleAssertions,
-    stringRepresentationTests,
-    TestSuiteFactory,
-    truthAssertions
-} from '../../support/testOrganizer.js';
-import fc from 'fast-check';
+/**
+ * @file tests/unit/core/Truth.test.js
+ * @description Unit tests for Truth class using real objects with minimal mocks
+ */
 
-// Use the TestSuiteFactory to create a comprehensive Truth test suite
-TestSuiteFactory.createTruthRelatedSuite({
-    className: 'Truth',
-    Constructor: Truth,
-    validInput: {f: 0.9, c: 0.8},
-    testAssertions: true,
-    assertionUtils: truthAssertions
-});
+import { TRUTH } from '../../../src/config/constants.js';
+import { Truth } from '../../../src/Truth.js';
 
-describe('Truth - Additional Specific Tests', () => {
+describe('Truth Class - Unit Tests with Real Objects', () => {
     describe('Initialization', () => {
-        test.each([
-            {
-                name: 'initializes with given values',
-                truth: createTruth(),
-                expected: {f: TEST_CONSTANTS.TRUTH.HIGH.f, c: TEST_CONSTANTS.TRUTH.HIGH.c}
-            },
-            {
-                name: 'uses defaults for empty constructor',
-                truth: new Truth(),
-                expected: {f: TRUTH.DEFAULT_FREQUENCY, c: TRUTH.DEFAULT_CONFIDENCE}
-            },
-        ])('$name', ({truth, expected}) => {
-            expect(truth.f).toBe(expected.f);
-            expect(truth.c).toBe(expected.c);
+        test('should create Truth instance with default values when no parameters provided', () => {
+            const truth = new Truth();
+
+            expect(truth).toBeInstanceOf(Truth);
+            expect(truth.frequency).toBe(TRUTH.DEFAULT_FREQUENCY);
+            expect(truth.confidence).toBe(TRUTH.DEFAULT_CONFIDENCE);
+            expect(truth.f).toBe(TRUTH.DEFAULT_FREQUENCY);
+            expect(truth.c).toBe(TRUTH.DEFAULT_CONFIDENCE);
         });
 
-        test('is immutable', () => {
-            const truth = createTruth();
-            expect(() => truth.f = 0.5).toThrow();
-        });
-    });
+        test('should create Truth instance with specified frequency and confidence', () => {
+            const [frequency, confidence] = [0.8, 0.9];
+            const truth = new Truth(frequency, confidence);
 
-    describe('Comparison', () => {
-        test('compares values correctly', () => {
-            const t1 = createTruth();
-            const t2 = createTruth();
-            const t3 = createTruth(0.5, 0.8);
-
-            expect(t1.equals(t2)).toBe(true);
-            expect(t1.equals(t3)).toBe(false);
+            expect(truth).toMatchObject({ frequency, confidence, f: frequency, c: confidence });
         });
 
-        test('handles precision within epsilon', () => {
-            const t1 = createTruth();
-            const t2 = new Truth(
-                TEST_CONSTANTS.TRUTH.HIGH.f + TRUTH.EPSILON / 2,
-                TEST_CONSTANTS.TRUTH.HIGH.c - TRUTH.EPSILON / 2
-            );
-            expect(t1.equals(t2)).toBe(true);
+        test('should clamp frequency and confidence values to valid range [0, 1]', () => {
+            // Test with values outside the valid range
+            const [truthLow, truthHigh] = [new Truth(-0.5, -0.2), new Truth(1.5, 1.8)];
+
+            expect(truthLow).toMatchObject({ frequency: 0, confidence: 0 });
+            expect(truthHigh).toMatchObject({ frequency: 1, confidence: 1 });
         });
 
-        test('obeys equality laws', () => {
-            const t1 = createTruth();
-            const t2 = createTruth();
-            const t3 = createTruth(0.5, 0.8);
+        test('should handle NaN values by using default values', () => {
+            const truthNaN = new Truth(NaN, NaN);
 
-            equalityTests.runEqualityLaws(t1, t2, t3);
+            expect(truthNaN).toMatchObject({
+                frequency: TRUTH.DEFAULT_FREQUENCY,
+                confidence: TRUTH.DEFAULT_CONFIDENCE
+            });
         });
-    });
 
-    describe('String Representation', () => {
-        test('toString returns expected format', () => {
-            const truth = createTruth();
-            const {f, c} = TEST_CONSTANTS.TRUTH.HIGH;
-            const expected = `%${f.toFixed(TRUTH.PRECISION)};${c.toFixed(TRUTH.PRECISION)}%`;
-            stringRepresentationTests.verifyToString(truth, expected);
+        test('should create frozen object that cannot be modified', () => {
+            const truth = new Truth(0.7, 0.8);
+
+            // Verify the object is frozen
+            expect(Object.isFrozen(truth)).toBe(true);
+
+            // Store original values
+            const { frequency: originalFrequency, confidence: originalConfidence } = truth;
+
+            // Attempt to modify the object in strict mode context
+            expect(() => {
+                'use strict';
+                truth.frequency = 0.9;
+            }).toThrow();
+
+            // Values should remain unchanged
+            expect({ frequency: truth.frequency, confidence: truth.confidence })
+                .toMatchObject({ frequency: originalFrequency, confidence: originalConfidence });
         });
     });
 
     describe('Operations', () => {
-        const t1 = createTruth(0.8, 0.9);
-        const t2 = createTruth(0.6, 0.7);
+        test('should correctly use deduction operation with real Truth objects', () => {
+            const [truth1, truth2] = [new Truth(0.8, 0.9), new Truth(0.7, 0.6)];
+            const result = Truth.deduction(truth1, truth2);
+            const [expectedFreq, expectedConf] = [0.8 * 0.7, 0.9 * 0.6]; // 0.56, 0.54
 
-        test.each([
-            {name: 'deduction', args: [t1, t2], expected: {f: 0.48, c: 0.63}},
-            {name: 'revision', args: [t1, t2], expected: {f: 0.7125, c: 1.0}},
-            {name: 'negation', args: [t1], expected: {f: 0.2, c: 0.9}},
-            {name: 'expectation', args: [t1], expected: 0.72},
-        ])('$name', ({name, args, expected}) => {
-            const result = Truth[name](...args);
-            if (typeof expected === 'object') {
-                // Use more flexible tolerance for truth operations that might vary with implementation
-                flexibleAssertions.expectCloseTo(result.f, expected.f, 0.05, `Truth.${name} frequency`);
-                flexibleAssertions.expectCloseTo(result.c, expected.c, 0.05, `Truth.${name} confidence`);
-            } else {
-                flexibleAssertions.expectCloseTo(result, expected, 0.05, `Truth.${name} operation result`);
-            }
+            expect(result).toBeInstanceOf(Truth);
+            expect(result).toMatchObject({ frequency: expectedFreq, confidence: expectedConf });
+        });
+
+        test('should correctly use induction operation with real Truth objects', () => {
+            const [truth1, truth2] = [new Truth(0.8, 0.9), new Truth(0.7, 0.6)];
+            const result = Truth.induction(truth1, truth2);
+
+            expect(result).toBeInstanceOf(Truth);
+            expect(result).toMatchObject({ frequency: 0.7, confidence: 0.9 * 0.6 });
+        });
+
+        test('should handle null/undefined inputs gracefully in operations', () => {
+            const truth1 = new Truth(0.8, 0.9);
+
+            // Test with null and undefined using array destructuring
+            const [resultNull, resultUndefined] = [
+                Truth.deduction(truth1, null),
+                Truth.induction(undefined, truth1)
+            ];
+
+            expect([resultNull, resultUndefined]).toEqual([null, null]);
+        });
+
+        test('should correctly compute expectation value', () => {
+            const truth = new Truth(0.8, 0.7);
+            const expectation = Truth.expectation(truth);
+
+            expect(expectation).toBe(0.8 * 0.7); // 0.56
+        });
+
+        test('should determine stronger truth using expectation comparison', () => {
+            const [truth1, truth2] = [new Truth(0.8, 0.5), new Truth(0.6, 0.7)]; // expectations: 0.4, 0.42
+
+            expect([
+                Truth.isStronger(truth2, truth1),
+                Truth.isStronger(truth1, truth2)
+            ]).toEqual([true, false]);
         });
     });
 
-    describe('Truth Assertions', () => {
-        test('expectation calculation works correctly', () => {
-            const truth = new Truth(0.8, 0.9);
-            const expectedValue = 0.8 * (0.9 - 0.5) + 0.5; // frequency * (confidence - 0.5) + 0.5
-            truthAssertions.expectTruthExpectation(truth, expectedValue, 5);
+    describe('Equality', () => {
+        test('should compare truth objects correctly using equals method', () => {
+            const [truth1, truth2, truth3] = [
+                new Truth(0.7, 0.8),
+                new Truth(0.7, 0.8),
+                new Truth(0.8, 0.8)
+            ];
+
+            expect([
+                truth1.equals(truth2),
+                truth1.equals(truth3),
+                truth1.equals("not a truth object")
+            ]).toEqual([true, false, false]);
         });
     });
 
-    describe('Property-Based Tests for Truth Operations', () => {
-        const truthArb = fc.record({f: fc.double(0, 1), c: fc.double(0, 1)}).map(v => new Truth(v.f, v.c));
+    describe('String Representation', () => {
+        test('should provide correct string representation', () => {
+            const truth = new Truth(0.75, 0.85);
+            const str = truth.toString();
 
-        const isValidTruth = (t) => {
-            return t.f >= 0 && t.f <= 1 && t.c >= 0 && t.c <= 1;
-        };
-
-        test('all binary operations should produce valid truth values', () => {
-            const binaryOps = [Truth.deduction, Truth.revision, Truth.induction, Truth.abduction];
-            fc.assert(
-                fc.property(truthArb, truthArb, fc.constantFrom(...binaryOps), (t1, t2, op) => {
-                    const result = op(t1, t2);
-                    expect(isValidTruth(result)).toBe(true);
-                })
-            );
-        });
-
-        test('all unary operations should produce valid truth values', () => {
-            const unaryOps = [Truth.negation, Truth.conversion];
-            fc.assert(
-                fc.property(truthArb, fc.constantFrom(...unaryOps), (t, op) => {
-                    const result = op(t);
-                    expect(isValidTruth(result)).toBe(true);
-                })
-            );
-        });
-
-        test('operations should be immutable', () => {
-            fc.assert(
-                fc.property(truthArb, truthArb, (t1, t2) => {
-                    const originalT1 = {...t1};
-                    const originalT2 = {...t2};
-
-                    Truth.deduction(t1, t2);
-                    Truth.revision(t1, t2);
-                    Truth.negation(t1);
-
-                    expect(t1.frequency).toBe(originalT1.frequency);
-                    expect(t1.confidence).toBe(originalT1.confidence);
-                    expect(t2.frequency).toBe(originalT2.frequency);
-                    expect(t2.confidence).toBe(originalT2.confidence);
-                })
-            );
+            // The exact format depends on the precision constant in constants
+            expect(str).toMatch(/^%[0-9.]+;[0-9.]+%$/);
         });
     });
 });

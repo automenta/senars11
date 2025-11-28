@@ -1,5 +1,5 @@
-import {NAR} from '../src/nar/NAR.js';
-import {WebSocketMonitor} from '../src/server/WebSocketMonitor.js';
+import { NAR } from '../src/nar/NAR.js';
+import { WebSocketMonitor } from '../src/server/WebSocketMonitor.js';
 
 describe('SeNARS Integration Test', () => {
     let nar;
@@ -7,8 +7,8 @@ describe('SeNARS Integration Test', () => {
 
     beforeEach(async () => {
         nar = new NAR({
-            lm: {enabled: false},
-            reasoningAboutReasoning: {enabled: true}
+            lm: { enabled: false },
+            reasoningAboutReasoning: { enabled: true }
         });
         await nar.initialize();
 
@@ -38,8 +38,8 @@ describe('SeNARS Integration Test', () => {
         expect(concepts.length).toBeGreaterThan(0);
 
         const stats = nar.getStats();
-        expect(stats.cycleCount).toBeDefined();
-        expect(stats.isRunning).toBeDefined();
+        expect(stats?.cycleCount).toBeDefined();
+        expect(stats?.isRunning).toBeDefined();
 
         nar.start();
         await new Promise(resolve => setTimeout(resolve, 200));

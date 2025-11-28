@@ -4,8 +4,8 @@
  */
 
 import puppeteer from 'puppeteer';
-import {spawn} from 'child_process';
-import {setTimeout as sleep} from 'timers/promises';
+import { spawn } from 'child_process';
+import { setTimeout as sleep } from 'timers/promises';
 
 async function startNARServer() {
     // Get the current working directory to create absolute imports
@@ -29,19 +29,19 @@ startServer().catch(console.error);
     `;
 
     // Write server script to temp file
-    const fs = await import('fs');
-    const path = await import('path');
-    const os = await import('os');
+    const { promises: fs } = await import('fs');
+    const { join: pathJoin } = await import('path');
+    const { tmpdir } = await import('os');
 
-    const tempDir = os.tmpdir();
-    const tempScriptPath = path.join(tempDir, `nar-server-${Date.now()}.js`);
-    await fs.promises.writeFile(tempScriptPath, serverScript);
+    const tempDir = tmpdir();
+    const tempScriptPath = pathJoin(tempDir, `nar-server-${Date.now()}.js`);
+    await fs.writeFile(tempScriptPath, serverScript);
 
     // Start the server process from project root
     const serverProcess = spawn('node', [tempScriptPath], {
         stdio: ['pipe', 'pipe', 'pipe'],
         cwd: process.cwd(), // Run from project root
-        env: {...process.env, NODE_NO_WARNINGS: '1'}
+        env: { ...process.env, NODE_NO_WARNINGS: '1' }
     });
 
     // Wait for server to start
@@ -67,7 +67,7 @@ startServer().catch(console.error);
         });
     });
 
-    return {serverProcess, tempScriptPath};
+    return { serverProcess, tempScriptPath };
 }
 
 async function runDebugReplTest() {
@@ -79,9 +79,9 @@ async function runDebugReplTest() {
     try {
         // Start NAR server
         console.log('🚀 Starting NAR server...');
-        const serverInfo = await startNARServer();
-        serverProcess = serverInfo.serverProcess;
-        tempScriptPath = serverInfo.tempScriptPath;
+        const { serverProcess: proc, tempScriptPath: path } = await startNARServer();
+        serverProcess = proc;
+        tempScriptPath = path;
 
         // Start browser
         console.log('🌐 Launching browser...');
@@ -102,10 +102,10 @@ async function runDebugReplTest() {
         });
 
         // Navigate to the page
-        await page.goto(debugUrl, {waitUntil: 'networkidle2', timeout: 10000});
+        await page.goto(debugUrl, { waitUntil: 'networkidle2', timeout: 10000 });
 
         // Wait for connection status element
-        await page.waitForSelector('#status-bar', {timeout: 5000});
+        await page.waitForSelector('#status-bar', { timeout: 5000 });
 
         // Wait a bit for connection to establish
         await sleep(3000);
@@ -167,8 +167,8 @@ async function runDebugReplTest() {
         // Remove temp script
         if (tempScriptPath) {
             try {
-                const fs = await import('fs');
-                await fs.promises.unlink(tempScriptPath);
+                const { promises: fs } = await import('fs');
+                await fs.unlink(tempScriptPath);
             } catch (e) {
                 console.warn('Warning cleaning up temp script:', e.message);
             }
@@ -189,4 +189,4 @@ if (import.meta.url === `file://${process.argv[1]}`) {
         });
 }
 
-export {runDebugReplTest};
+export { runDebugReplTest };

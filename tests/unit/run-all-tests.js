@@ -15,8 +15,8 @@
  * - Extend, abstract, or parameterize existing integration tests to avoid redundant code
  */
 
-import {spawn} from 'child_process';
-import {setTimeout} from 'timers/promises';
+import { spawn } from 'child_process';
+import { setTimeout } from 'timers/promises';
 
 async function runTest(testFile, testType = 'normal') {
     console.log(`\n🧪 Running test: ${testFile} (${testType})`);
@@ -25,7 +25,7 @@ async function runTest(testFile, testType = 'normal') {
         const testProcess = spawn('node', [testFile, testType], {
             cwd: './tests',
             stdio: ['pipe', 'pipe', 'pipe'],
-            env: {...process.env}
+            env: { ...process.env }
         });
 
         testProcess.stdout.on('data', (data) => {
@@ -57,12 +57,12 @@ async function runAllTests() {
 
     // Test configuration
     const tests = [
-        {file: './comprehensive-integration-test.js', config: 'normal'},
-        {file: './extended-integration-test.js', config: 'normal'},
-        {file: './extended-integration-test.js', config: 'small_buffer'}, // Test with small capacities
-        {file: './test-buffering-batching.js', config: 'small_buffer'},   // Dedicated buffering test
-        {file: './test-roundtrip-io.js', config: 'normal'},
-        {file: './comprehensive-web-test.js', config: 'simple'}
+        { file: './comprehensive-integration-test.js', config: 'normal' },
+        { file: './extended-integration-test.js', config: 'normal' },
+        { file: './extended-integration-test.js', config: 'small_buffer' }, // Test with small capacities
+        { file: './test-buffering-batching.js', config: 'small_buffer' },   // Dedicated buffering test
+        { file: './test-roundtrip-io.js', config: 'normal' },
+        { file: './comprehensive-web-test.js', config: 'simple' }
     ];
 
     const results = [];
@@ -74,7 +74,7 @@ async function runAllTests() {
             results.push({
                 test: test.file,
                 config: test.config,
-                success: success
+                success
             });
 
             // Add delay between tests to prevent resource conflicts
@@ -103,7 +103,7 @@ async function runAllTests() {
     if (failedTests > 0) {
         console.log('\n❌ Failed Tests:');
         results.filter(r => !r.success).forEach(r => {
-            console.log(`  • ${r.test} (${r.config}) - ${r.error || 'Unknown error'}`);
+            console.log(`  • ${r.test} (${r.config}) - ${r.error ?? 'Unknown error'}`);
         });
     }
 
@@ -122,4 +122,4 @@ if (process.argv[1] === new URL(import.meta.url).pathname) {
     });
 }
 
-export {runAllTests};
+export { runAllTests };
