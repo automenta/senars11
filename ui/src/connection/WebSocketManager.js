@@ -162,7 +162,7 @@ export class WebSocketManager {
     processBatch(batch) {
         // Use for-of loop instead of forEach for better performance in hot paths
         for (const event of batch) {
-            // Reuse existing handleMessage method for individual events
+            // Process individual events using internal logic to avoid double-handling
             this.handleMessage({
                 type: event.type,
                 payload: event.data,

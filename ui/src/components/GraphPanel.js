@@ -1,6 +1,9 @@
 import {Component} from './Component.js';
 import {GraphManager} from '../visualization/GraphManager.js';
 
+/**
+ * GraphPanel component for displaying and managing the visualization
+ */
 export class GraphPanel extends Component {
     constructor(containerId) {
         super(containerId);
@@ -9,8 +12,7 @@ export class GraphPanel extends Component {
     }
 
     initialize() {
-        if (this.initialized) return;
-        if (!this.container) return;
+        if (this.initialized || !this.container) return;
 
         // GraphManager expects a map of elements
         const uiElements = {
@@ -20,8 +22,7 @@ export class GraphPanel extends Component {
 
         try {
             this.graphManager = new GraphManager(uiElements);
-            this.graphManager.initialize();
-            this.initialized = true;
+            this.initialized = this.graphManager.initialize();
         } catch (e) {
             console.error('Failed to initialize GraphManager:', e);
         }
@@ -35,8 +36,7 @@ export class GraphPanel extends Component {
 
     reset() {
         if (this.graphManager && this.initialized) {
-            // GraphManager might not have reset, but we can clear
-            this.graphManager.cy.elements().remove();
+            this.graphManager.clear();
         }
     }
 }

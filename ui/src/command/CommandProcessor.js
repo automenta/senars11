@@ -41,11 +41,11 @@ export class CommandProcessor {
 
         // Send via WebSocket
         if (this.webSocketManager.isConnected()) {
-            if (mode === 'agent') {
-                this.webSocketManager.sendMessage('agent/input', {input: trimmedCommand});
-            } else {
-                this.webSocketManager.sendMessage('narseseInput', {input: trimmedCommand});
-            }
+            // Use consistent message format
+            const messageData = {input: trimmedCommand};
+            const messageType = mode === 'agent' ? 'agent/input' : 'narseseInput';
+
+            this.webSocketManager.sendMessage(messageType, messageData);
             return true;
         } else {
             this.logger.log(`Cannot send: Not connected`, 'error', '❌');

@@ -149,7 +149,9 @@ export class SeNARSUI {
         const handler = specializedMessageHandlers[message.type];
         if (handler) {
             handler(message.payload);
-            return message.type === 'demoMetrics' || message.type === 'agent/result' ? false : true; // demoMetrics returns true to suppress logs
+            // demoMetrics should suppress from logs (return true to stop processing)
+            if (message.type === 'demoMetrics') return true;
+            // agent/result doesn't need special suppression handling, let it continue
         }
 
         return false;

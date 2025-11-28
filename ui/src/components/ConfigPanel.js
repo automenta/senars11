@@ -1,5 +1,8 @@
 import {Component} from './Component.js';
 
+/**
+ * Configuration panel for managing application settings
+ */
 const DEFAULT_CONFIG = {
     lm: {
         provider: 'openai',
@@ -13,13 +16,19 @@ export class ConfigPanel extends Component {
         super(containerId);
         this.config = this.loadConfig();
 
+        this._setupEventListeners();
+        this.renderContent();
+    }
+
+    /**
+     * Set up event listeners for the config panel
+     */
+    _setupEventListeners() {
         const closeBtn = document.getElementById('btn-close-config');
         if (closeBtn) closeBtn.addEventListener('click', () => this.hide());
 
         const saveBtn = document.getElementById('btn-save-config');
         if (saveBtn) saveBtn.addEventListener('click', () => this.saveAndApply());
-
-        this.renderContent();
     }
 
     loadConfig() {

@@ -42,14 +42,15 @@ export class DemoManager {
         }
 
         if (Array.isArray(payload)) {
-            payload.forEach(demo => {
+            // Use for...of for better performance
+            for (const demo of payload) {
                 this.demos.set(demo.id, demo);
                 const option = document.createElement('option');
                 option.value = demo.id;
                 option.textContent = demo.name;
                 option.title = demo.description || '';
                 select.appendChild(option);
-            });
+            }
 
             // Only log if we actually loaded something, to avoid noise on re-connect
             if (payload.length > 0) {
@@ -90,17 +91,19 @@ export class DemoManager {
      * Handle demo state updates
      */
     handleDemoState(payload) {
-        // {demoId, state, ...}
         if (!payload) return;
 
-        if (payload.state === 'completed') {
-            this.logger.log(`Demo completed successfully`, 'success', '🏁');
-        } else if (payload.state === 'error') {
-            this.logger.log(`Demo error: ${payload.error || 'Unknown error'}`, 'error', '❌');
-        } else if (payload.state === 'running') {
-            this.logger.log(`Demo started...`, 'info', '▶️');
-        } else if (payload.state === 'stopped') {
-            this.logger.log(`Demo stopped`, 'warning', '⏹️');
+        // Use a mapping approach for better maintainability
+        const stateHandlers = {
+            'completed': () => this.logger.log('Demo completed successfully', 'success', '🏁'),
+            'error': () => this.logger.log(`Demo error: ${payload.error || 'Unknown error'}`, 'error', '❌'),
+            'running': () => this.logger.log('Demo started...', 'info', '▶️'),
+            'stopped': () => this.logger.log('Demo stopped', 'warning', '⏹️')
+        };
+
+        const handler = stateHandlers[payload.state];
+        if (handler) {
+            handler();
         }
     }
 }

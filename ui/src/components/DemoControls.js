@@ -1,3 +1,6 @@
+/**
+ * DemoControls manages the UI controls for demo playback and execution
+ */
 export class DemoControls {
     constructor() {
         this.btnPlayPause = document.getElementById('btn-play-pause');

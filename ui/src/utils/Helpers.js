@@ -39,11 +39,11 @@ export function isObject(value) {
 export function deepClone(obj) {
     if (obj === null || typeof obj !== 'object') return obj;
     if (obj instanceof Date) return new Date(obj.getTime());
-    if (obj instanceof Array) return obj.map(item => deepClone(item));
-    if (typeof obj === 'object') {
+    if (Array.isArray(obj)) return obj.map(item => deepClone(item));
+    if (obj instanceof Object) {
         const cloned = {};
         for (const key in obj) {
-            if (obj.hasOwnProperty(key)) {
+            if (Object.prototype.hasOwnProperty.call(obj, key)) {
                 cloned[key] = deepClone(obj[key]);
             }
         }
@@ -64,11 +64,10 @@ export function capitalizeFirst(str) {
  * Safely execute a function with error handling
  */
 export function safeExecute(fn, ...args) {
+    if (!isFunction(fn)) return undefined;
+
     try {
-        if (isFunction(fn)) {
-            return fn(...args);
-        }
-        return undefined;
+        return fn(...args);
     } catch (error) {
         console.error('Error executing function:', error);
         return undefined;
