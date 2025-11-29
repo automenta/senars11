@@ -1,5 +1,5 @@
-import { NAR } from '../src/nar/NAR.js';
-import { WebSocketMonitor } from '../src/server/WebSocketMonitor.js';
+import { NAR } from '../../../src/nar/NAR.js';
+import { WebSocketMonitor } from '../../../src/server/WebSocketMonitor.js';
 
 describe('SeNARS Integration Test', () => {
     let nar;

@@ -7,9 +7,9 @@
  * 3. QUESTION tasks cannot have truth values
  */
 
-import { Task } from '../src/task/Task.js';
-import { Truth } from '../src/Truth.js';
-import { TermFactory } from '../src/term/TermFactory.js';
+import { Task } from '../../../src/task/Task.js';
+import { Truth } from '../../../src/Truth.js';
+import { TermFactory } from '../../../src/term/TermFactory.js';
 
 describe('Task Validation', () => {
     let mockTerm;

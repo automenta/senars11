@@ -1,6 +1,6 @@
-import { AgentBuilder } from '../src/agent/AgentBuilder.js';
-import { Agent } from '../src/agent/Agent.js';
-import { NAR } from '../src/nar/NAR.js';
+import { AgentBuilder } from '../../../src/agent/AgentBuilder.js';
+import { Agent } from '../../../src/agent/Agent.js';
+import { NAR } from '../../../src/nar/NAR.js';
 
 describe('AgentBuilder', () => {
     let agent;
@@ -96,7 +96,8 @@ describe('AgentBuilder', () => {
                     metrics: false,
                     embeddingLayer: { enabled: false },
                     tools: false,
-                    lm: false
+                    lm: false,
+                    functors: []
                 }
             })
             .build();
