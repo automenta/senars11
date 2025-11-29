@@ -697,9 +697,9 @@ export const comprehensiveTestSuites = {
                 module = await createModule();
             });
 
-            afterEach(() => {
+            afterEach(async () => {
                 if (module && typeof module.destroy === 'function') {
-                    module.destroy();
+                    await module.destroy();
                 }
             });
 
