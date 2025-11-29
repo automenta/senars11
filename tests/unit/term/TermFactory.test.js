@@ -67,6 +67,17 @@ describe('TermFactory', () => {
         ])('should handle $name correctly by returning the same instance', ({term1, term2}) => {
             expect(term1(factory)).toBe(term2(factory));
         });
+
+        test('equality operator should sort but NOT remove redundancy', () => {
+            // Sorting check
+            const t1 = factory.equality(factory.atomic('B'), factory.atomic('A'));
+            expect(t1.name).toBe('(=, A, B)');
+
+            // Redundancy check
+            const t2 = factory.equality(factory.atomic('A'), factory.atomic('A'));
+            expect(t2.components.length).toBe(2);
+            expect(t2.name).toBe('(=, A, A)');
+        });
     });
 
     describe('Convenience Methods', () => {
