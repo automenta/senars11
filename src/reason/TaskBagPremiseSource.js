@@ -83,21 +83,26 @@ export class TaskBagPremiseSource extends PremiseSource {
 
     /**
      * Returns an async stream of premises sampled from the task bag.
+     * @param {AbortSignal} [signal] - Optional signal to abort the stream
      * @returns {AsyncGenerator<Task>}
      */
-    async* stream() {
+    async* stream(signal = null) {
         // Implement different sampling strategies based on objectives
         while (true) {
+            if (signal?.aborted) break;
+
             try {
                 const task = await this._sampleTask();
                 if (task) {
                     yield task;
                 } else {
+                    if (signal?.aborted) break;
                     // If no task is available, wait a bit before trying again
                     // We can add a mechanism to detect if the stream should end
                     await this._waitForTask();
                 }
             } catch (error) {
+                if (signal?.aborted) break;
                 logError(error, {context: 'premise_source_stream'}, 'warn');
                 // Wait before continuing to avoid tight error loop
                 await this._waitForTask();

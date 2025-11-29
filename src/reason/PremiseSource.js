@@ -16,9 +16,10 @@ export class PremiseSource {
 
     /**
      * Returns an async stream of premises.
+     * @param {AbortSignal} [signal] - Optional signal to abort the stream
      * @returns {AsyncGenerator<Task>}
      */
-    async* stream() {
+    async* stream(signal = null) {
         // This is a stub implementation - to be overridden by subclasses
         throw new Error('Method stream() must be implemented by subclasses');
     }

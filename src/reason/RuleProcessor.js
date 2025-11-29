@@ -26,10 +26,14 @@ export class RuleProcessor {
         this.maxQueueSize = 0;
     }
 
-    async* process(premisePairStream, timeoutMs = 0) {
+    async* process(premisePairStream, timeoutMs = 0, signal = null) {
         const startTime = Date.now();
         try {
             for await (const [primaryPremise, secondaryPremise] of premisePairStream) {
+                if (signal?.aborted) {
+                    break;
+                }
+
                 if (this._isTimeoutExceeded(startTime, timeoutMs)) {
                     console.debug(`RuleProcessor: timeout reached after ${timeoutMs}ms`);
                     break;
@@ -40,6 +44,10 @@ export class RuleProcessor {
                 const candidateRules = this.ruleExecutor.getCandidateRules(primaryPremise, secondaryPremise);
 
                 for (const rule of candidateRules) {
+                    if (signal?.aborted) {
+                        break;
+                    }
+
                     if (this._isTimeoutExceeded(startTime, timeoutMs)) {
                         console.debug(`RuleProcessor: timeout reached after ${timeoutMs}ms`);
                         break;
@@ -63,7 +71,7 @@ export class RuleProcessor {
                 yield* this._yieldAsyncResults();
             }
 
-            yield* this._processRemainingAsyncResults(timeoutMs, startTime);
+            yield* this._processRemainingAsyncResults(timeoutMs, startTime, signal);
         } catch (error) {
             logError(error, {context: 'rule_processor_stream'});
             throw new ReasonerError(`Error in RuleProcessor process: ${error.message}`, 'STREAM_ERROR', {originalError: error});
@@ -165,11 +173,15 @@ export class RuleProcessor {
      * Process remaining async results after main processing
      * @private
      */
-    async* _processRemainingAsyncResults(timeoutMs, startTime) {
+    async* _processRemainingAsyncResults(timeoutMs, startTime, signal = null) {
         let checkCount = 0;
         const initialRemainingTime = timeoutMs > 0 ? timeoutMs - (Date.now() - startTime) : 0;
 
         while (checkCount < this.config.maxChecks && (timeoutMs === 0 || initialRemainingTime > 0)) {
+            if (signal?.aborted) {
+                break;
+            }
+
             if (this._isTimeoutExceeded(startTime, timeoutMs)) {
                 console.debug(`RuleProcessor: timeout reached after ${timeoutMs}ms (in async results loop)`);
                 break;
