@@ -157,20 +157,20 @@ describe('Advanced Unit Tests for Sophisticated Features', () => {
 
         test('should detect backpressure when queue exceeds threshold', () => {
             // Fill queue above threshold
-            ruleProcessor.asyncResultsQueue = new Array(15).fill(createTestTask({id: 'task'}));
+            ruleProcessor.asyncResultsQueue = { size: 15 };
 
-            expect(ruleProcessor.asyncResultsQueue.length).toBe(15);
-            expect(ruleProcessor.asyncResultsQueue.length > ruleProcessor.config.backpressureThreshold).toBe(true);
+            expect(ruleProcessor.asyncResultsQueue.size).toBe(15);
+            expect(ruleProcessor.asyncResultsQueue.size > ruleProcessor.config.backpressureThreshold).toBe(true);
         });
 
         test('should update max queue size tracking', async () => {
-            ruleProcessor.asyncResultsQueue = new Array(15).fill(createTestTask({id: 'task'}));
+            ruleProcessor.asyncResultsQueue = { size: 15 };
             await ruleProcessor._checkAndApplyBackpressure();
 
             expect(ruleProcessor.maxQueueSize).toBeGreaterThanOrEqual(15);
 
             // Reduce queue size and verify max doesn't decrease
-            ruleProcessor.asyncResultsQueue = new Array(5).fill(createTestTask({id: 'task'}));
+            ruleProcessor.asyncResultsQueue = { size: 5 };
             await ruleProcessor._checkAndApplyBackpressure();
 
             expect(ruleProcessor.maxQueueSize).toBeGreaterThanOrEqual(15); // Should maintain max
@@ -178,7 +178,7 @@ describe('Advanced Unit Tests for Sophisticated Features', () => {
 
         test('should apply backpressure based on queue size', async () => {
             // Test with queue size above threshold
-            ruleProcessor.asyncResultsQueue = new Array(15).fill(createTestTask({id: 'task'})); // Above threshold of 10
+            ruleProcessor.asyncResultsQueue = { size: 15 }; // Above threshold of 10
 
             const start = Date.now();
             await ruleProcessor._checkAndApplyBackpressure();
@@ -190,7 +190,7 @@ describe('Advanced Unit Tests for Sophisticated Features', () => {
 
         test('should not apply backpressure when under threshold', async () => {
             // Test with queue size below threshold
-            ruleProcessor.asyncResultsQueue = new Array(5).fill(createTestTask({id: 'task'})); // Below threshold of 10
+            ruleProcessor.asyncResultsQueue = { size: 5 }; // Below threshold of 10
 
             const start = Date.now();
             await ruleProcessor._checkAndApplyBackpressure();
@@ -201,7 +201,7 @@ describe('Advanced Unit Tests for Sophisticated Features', () => {
         });
 
         test('should include backpressure information in status', () => {
-            ruleProcessor.asyncResultsQueue = new Array(12).fill(createTestTask({id: 'task'}));
+            ruleProcessor.asyncResultsQueue = { size: 12 };
 
             const status = ruleProcessor.getStatus();
 

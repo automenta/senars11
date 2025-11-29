@@ -1019,6 +1019,9 @@ export function createTestTask(termStr, type = 'BELIEF', frequency = 0.9, confid
         // Handle the case where a configuration object is passed
         const config = termStr;
         term = config.term || createTerm('A');
+        if (typeof term === 'string') {
+            term = termFactory.atomic(term);
+        }
         type = config.type || type;
         frequency = config.frequency !== undefined ? config.frequency : frequency;
         confidence = config.confidence !== undefined ? config.confidence : confidence;

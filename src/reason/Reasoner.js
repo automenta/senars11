@@ -1,20 +1,21 @@
+import {EventEmitter} from 'eventemitter3';
+import {getHeapUsed} from '../util/common.js';
+
 /**
  * The main Reasoner class that manages the continuous reasoning pipeline.
  */
-import {getHeapUsed} from '../util/common.js';
-export class Reasoner {
+export class Reasoner extends EventEmitter {
     /**
      * @param {PremiseSource} premiseSource - The source of premises
      * @param {Strategy} strategy - The strategy for premise pairing
      * @param {RuleProcessor} ruleProcessor - The processor for rules
      * @param {object} config - Configuration options
-     * @param {object} parentNAR - Reference to the parent NAR instance (optional)
      */
-    constructor(premiseSource, strategy, ruleProcessor, config = {}, parentNAR = null) {
+    constructor(premiseSource, strategy, ruleProcessor, config = {}) {
+        super();
         this.premiseSource = premiseSource;
         this.strategy = strategy;
         this.ruleProcessor = ruleProcessor;
-        this.parentNAR = parentNAR;
         this.config = {
             maxDerivationDepth: config.maxDerivationDepth ?? 10,
             cpuThrottleInterval: config.cpuThrottleInterval ?? 0,
@@ -198,12 +199,6 @@ export class Reasoner {
         return (rule.type ?? '').toLowerCase().includes('nal');
     }
 
-    _processDerivation(result) {
-        // Return the derivation for centralized processing by the NAR
-        // Don't emit events or add to task manager here to maintain uniform flow
-        return result;
-    }
-
     async _cpuThrottle() {
         if (this.config.cpuThrottleInterval > 0) {
             return new Promise(resolve => setTimeout(resolve, this.config.cpuThrottleInterval));
@@ -305,7 +300,8 @@ export class Reasoner {
 
     _processDerivation(derivation) {
         // Return the derivation for centralized processing by the NAR
-        // Don't emit events or add to task manager here to maintain uniform flow
+        // Emit event for subscribers (like NAR) to handle the derivation
+        this.emit('derivation', derivation);
         return derivation;
     }
 
@@ -450,5 +446,6 @@ export class Reasoner {
         await this.stop();
         this._outputStream = null;
         this.resetMetrics();
+        this.removeAllListeners(); // Cleanup listeners
     }
 }

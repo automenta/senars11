@@ -5,21 +5,21 @@ import {RuleProcessor} from './RuleProcessor.js';
 import {Reasoner as StreamReasoner} from './Reasoner.js';
 
 export class ReasonerBuilder {
-    static build(nar) {
-        const config = nar.config;
+    static build(config, context) {
         const reasoningConfig = config.reasoning || {};
+        const { focus, memory, termFactory } = context;
 
         // Create premise source using the new reasoner's approach
         const premiseSource = new TaskBagPremiseSource(
-            nar._focus,
+            focus,
             reasoningConfig.streamSamplingObjectives || {priority: true}
         );
 
         // Create strategy
         const strategy = new Strategy({
             ...reasoningConfig.streamStrategy,
-            focus: nar._focus,
-            memory: nar._memory
+            focus: focus,
+            memory: memory
         });
 
         // Add strategies from config
@@ -35,7 +35,7 @@ export class ReasonerBuilder {
         // Create rule processor
         const ruleProcessor = new RuleProcessor(ruleExecutor, {
             maxDerivationDepth: reasoningConfig.maxDerivationDepth || 10,
-            termFactory: nar._termFactory
+            termFactory: termFactory
         });
 
         // Create the main stream reasoner
@@ -46,8 +46,7 @@ export class ReasonerBuilder {
             {
                 maxDerivationDepth: reasoningConfig.maxDerivationDepth || 10,
                 cpuThrottleInterval: reasoningConfig.cpuThrottleInterval || 0
-            },
-            nar  // Pass the NAR instance as parent for derivation feedback
+            }
         );
     }
 
