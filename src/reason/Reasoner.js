@@ -55,9 +55,9 @@ export class Reasoner extends EventEmitter {
 
     async* _createOutputStream() {
         try {
-            const premiseStream = this.premiseSource.stream();
+            const premiseStream = this.premiseSource.stream(this.abortController?.signal);
             const premisePairStream = this.strategy.generatePremisePairs(premiseStream);
-            const derivationStream = this.ruleProcessor.process(premisePairStream, 30000);
+            const derivationStream = this.ruleProcessor.process(premisePairStream, 1000, this.abortController?.signal);
 
             for await (const derivation of derivationStream) {
                 if (this.config.cpuThrottleInterval > 0) {
@@ -80,12 +80,16 @@ export class Reasoner extends EventEmitter {
         }
 
         this.isRunning = true;
+        this.abortController = new AbortController();
         this.metrics.startTime = Date.now();
         this._runPipeline();
     }
 
     async stop() {
         this.isRunning = false;
+        this.abortController?.abort();
+        this.abortController = null;
+        this._outputStream = null;
         await new Promise(resolve => setTimeout(resolve, 10));
     }
 

@@ -7,19 +7,32 @@ import {TermFactory} from '../../src/term/TermFactory.js';
 import {completeNARIntegrationSuite, flexibleNARIntegrationSuite, narTestSetup} from '../support/commonTestSuites.js';
 import {comprehensiveTestSuites, flexibleAssertions} from '../support/testOrganizer.js';
 
-// Using the common test setup to avoid duplication
-const narProvider = narTestSetup({
-    debug: {enabled: false},
-    cycle: {delay: 10, maxTasksPerCycle: 5}
-});
-
 describe('NAR Integration Tests', () => {
+    let nar;
+    const narProvider = () => nar;
+
+    beforeAll(async () => {
+        nar = new NAR({
+            debug: {enabled: false},
+            cycle: {delay: 10, maxTasksPerCycle: 5}
+        });
+        if (nar.initialize) await nar.initialize();
+    });
+
+    afterAll(async () => {
+        if (nar) await nar.dispose();
+    });
+
+    afterEach(() => {
+        if (nar) nar.reset();
+    });
     comprehensiveTestSuites.inputOutputModuleTests('NAR',
         async () => {
             const nar = new NAR({
                 debug: {enabled: false},
                 cycle: {delay: 10, maxTasksPerCycle: 5}
             });
+            if (nar.initialize) await nar.initialize();
             return {
                 process: async (input) => {
                     await nar.input(input);

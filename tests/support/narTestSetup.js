@@ -23,6 +23,9 @@ export class StandardNARTestSetup {
      */
     async setup() {
         this.nar = new NAR(this.config);
+        if (this.nar.initialize) {
+            await this.nar.initialize();
+        }
         return this.nar;
     }
 
