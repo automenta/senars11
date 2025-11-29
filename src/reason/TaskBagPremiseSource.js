@@ -121,7 +121,7 @@ export class TaskBagPremiseSource extends PremiseSource {
     async _sampleTask() {
         try {
             // Check if taskBag is available and has items
-            if (!this.taskBag || this._getBagSize() === 0) {
+            if (this._getBagSize() === 0) {
                 return null;
             }
 

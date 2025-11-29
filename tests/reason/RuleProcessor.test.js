@@ -48,7 +48,7 @@ describe('RuleProcessor', () => {
         test('should initialize with default config', () => {
             expect(ruleProcessor.config.maxDerivationDepth).toBe(10);
             expect(ruleProcessor.config.backpressureThreshold).toBe(50);
-            expect(ruleProcessor.asyncResultsQueue).toEqual([]);
+            expect(ruleProcessor.asyncResultsQueue.size).toBe(0);
             expect(ruleProcessor.syncRuleExecutions).toBe(0);
             expect(ruleProcessor.asyncRuleExecutions).toBe(0);
         });
@@ -133,7 +133,7 @@ describe('RuleProcessor', () => {
     describe('_checkAndApplyBackpressure', () => {
         test('should apply backpressure when queue is above threshold', async () => {
             // Set up a queue above the threshold
-            ruleProcessor.asyncResultsQueue = new Array(60).fill(createTestTask({id: 'task'})); // Above default threshold of 50
+            ruleProcessor.asyncResultsQueue = { size: 60 }; // Mock Queue with size property
 
             const start = Date.now();
             await ruleProcessor._checkAndApplyBackpressure();
@@ -146,7 +146,7 @@ describe('RuleProcessor', () => {
 
         test('should not apply backpressure when queue is below threshold', async () => {
             // Set up a queue below the threshold
-            ruleProcessor.asyncResultsQueue = new Array(10).fill(createTestTask({id: 'task'})); // Below default threshold of 50
+            ruleProcessor.asyncResultsQueue = { size: 10 }; // Mock Queue with size property
 
             const start = Date.now();
             await ruleProcessor._checkAndApplyBackpressure();
@@ -159,7 +159,7 @@ describe('RuleProcessor', () => {
 
     describe('getStatus', () => {
         test('should return status information', () => {
-            ruleProcessor.asyncResultsQueue = new Array(5).fill(createTestTask({id: 'task'}));
+            ruleProcessor.asyncResultsQueue = { size: 5 }; // Mock Queue with size property
             ruleProcessor.maxQueueSize = 10;
             ruleProcessor.syncRuleExecutions = 15;
             ruleProcessor.asyncRuleExecutions = 8;
@@ -225,11 +225,13 @@ describe('RuleProcessor', () => {
                 }
 
                 const results = [];
-                await expect(async () => {
+                const processPromise = (async () => {
                     for await (const result of ruleProcessor.process(premisePairStream())) {
                         results.push(result);
                     }
-                }).resolves.not.toThrow();
+                })();
+
+                await expect(processPromise).resolves.not.toThrow();
 
                 // Should continue processing despite the error
                 expect(results.length).toBe(0);

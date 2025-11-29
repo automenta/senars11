@@ -155,7 +155,33 @@ export class NAR extends BaseComponent {
     }
 
     _initStreamReasoner() {
-        this._streamReasoner = ReasonerBuilder.build(this);
+        this._streamReasoner = ReasonerBuilder.build(this.config, {
+            focus: this._focus,
+            memory: this._memory,
+            termFactory: this._termFactory
+        });
+
+        // Subscribe to output events from the reasoner
+        this._streamReasoner.on('derivation', (derivation) => {
+            this._handleStreamDerivation(derivation);
+        });
+    }
+
+    async _handleStreamDerivation(derivation) {
+        try {
+            await this._inputTask(derivation, {traceId: 'stream'});
+
+            this._eventBus.emit('reasoning.derivation', {
+                derivedTask: derivation,
+                source: 'streamReasoner.stream',
+                timestamp: Date.now()
+            });
+        } catch (error) {
+            this.logError('Error handling stream derivation:', {
+                error: error.message,
+                task: derivation?.toString()
+            });
+        }
     }
 
     _registerComponents() {
