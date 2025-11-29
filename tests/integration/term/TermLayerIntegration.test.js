@@ -1,5 +1,5 @@
-import {NAR} from '../../src/nar/NAR.js';
-import {TermFactory} from '../../src/term/TermFactory.js';
+import {NAR} from '../../../src/nar/NAR.js';
+import {TermFactory} from '../../../src/term/TermFactory.js';
 
 describe('TermLayer Integration', () => {
     let nar;

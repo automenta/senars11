@@ -1,12 +1,12 @@
-import {Memory} from '../../src/memory/Memory.js';
-import {Focus} from '../../src/memory/Focus.js';
-import {FocusSetSelector} from '../../src/memory/FocusSetSelector.js';
-import {MemoryIndex} from '../../src/memory/MemoryIndex.js';
-import {MemoryConsolidation} from '../../src/memory/MemoryConsolidation.js';
-import {Task} from '../../src/task/Task.js';
-import {TermFactory} from '../../src/term/TermFactory.js';
-import {ArrayStamp} from '../../src/Stamp.js';
-import {Concept} from '../../src/memory/Concept.js';
+import {Memory} from '../../../src/memory/Memory.js';
+import {Focus} from '../../../src/memory/Focus.js';
+import {FocusSetSelector} from '../../../src/memory/FocusSetSelector.js';
+import {MemoryIndex} from '../../../src/memory/MemoryIndex.js';
+import {MemoryConsolidation} from '../../../src/memory/MemoryConsolidation.js';
+import {Task} from '../../../src/task/Task.js';
+import {TermFactory} from '../../../src/term/TermFactory.js';
+import {ArrayStamp} from '../../../src/Stamp.js';
+import {Concept} from '../../../src/memory/Concept.js';
 
 describe('Memory and Focus Management Integration', () => {
     let memory;

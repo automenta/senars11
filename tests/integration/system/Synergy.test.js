@@ -1,7 +1,7 @@
-import {NAR} from '../../src/nar/NAR.js';
-import {NARTool} from '../../src/tool/NARTool.js';
-import {PrologStrategy} from '../../src/reason/strategy/PrologStrategy.js';
-import {Task} from '../../src/task/Task.js';
+import {NAR} from '../../../src/nar/NAR.js';
+import {NARTool} from '../../../src/tool/NARTool.js';
+import {PrologStrategy} from '../../../src/reason/strategy/PrologStrategy.js';
+import {Task} from '../../../src/task/Task.js';
 
 describe('NAL and Prolog Synergy', () => {
     let nar;

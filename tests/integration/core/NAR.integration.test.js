@@ -2,10 +2,10 @@
 // (none in this file)
 
 // Local imports
-import {NAR} from '../../src/nar/NAR.js';
-import {TermFactory} from '../../src/term/TermFactory.js';
-import {completeNARIntegrationSuite, flexibleNARIntegrationSuite, narTestSetup} from '../support/commonTestSuites.js';
-import {comprehensiveTestSuites, flexibleAssertions} from '../support/testOrganizer.js';
+import {NAR} from '../../../src/nar/NAR.js';
+import {TermFactory} from '../../../src/term/TermFactory.js';
+import {completeNARIntegrationSuite, flexibleNARIntegrationSuite, narTestSetup} from '../../support/commonTestSuites.js';
+import {comprehensiveTestSuites, flexibleAssertions} from '../../support/testOrganizer.js';
 
 describe('NAR Integration Tests', () => {
     let nar;

@@ -1,6 +1,6 @@
-import {Truth} from '../../src/Truth.js';
-import {createNARIntegrationTestSuite} from '../support/narTestSetup.js';
-import {flexibleAssertions, runPerformanceTest} from '../support/baseTestUtils.js';
+import {Truth} from '../../../src/Truth.js';
+import {createNARIntegrationTestSuite} from '../../support/narTestSetup.js';
+import {flexibleAssertions, runPerformanceTest} from '../../support/baseTestUtils.js';
 
 describe('NAR Parser Integration', () => {
     // Using the new NAR test setup utilities

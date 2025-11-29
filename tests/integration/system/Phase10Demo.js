@@ -1,8 +1,8 @@
-import {Task} from '../../src/task/Task.js';
-import {TermFactory} from '../../src/term/TermFactory.js';
-import {CircuitBreaker} from '../../src/util/CircuitBreaker.js';
-import {MemoryValidator} from '../../src/util/MemoryValidator.js';
-import {Memory} from '../../src/memory/Memory.js';
+import {Task} from '../../../src/task/Task.js';
+import {TermFactory} from '../../../src/term/TermFactory.js';
+import {CircuitBreaker} from '../../../src/util/CircuitBreaker.js';
+import {MemoryValidator} from '../../../src/util/MemoryValidator.js';
+import {Memory} from '../../../src/memory/Memory.js';
 
 async function demonstratePhase10Features() {
     const termFactory = new TermFactory();

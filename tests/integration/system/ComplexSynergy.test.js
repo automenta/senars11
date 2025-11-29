@@ -1,8 +1,8 @@
-import {NAR} from '../../src/nar/NAR.js';
-import {NARTool} from '../../src/tool/NARTool.js';
-import {PrologStrategy} from '../../src/reason/strategy/PrologStrategy.js';
-import {Task} from '../../src/task/Task.js';
-import {Truth} from '../../src/Truth.js';
+import {NAR} from '../../../src/nar/NAR.js';
+import {NARTool} from '../../../src/tool/NARTool.js';
+import {PrologStrategy} from '../../../src/reason/strategy/PrologStrategy.js';
+import {Task} from '../../../src/task/Task.js';
+import {Truth} from '../../../src/Truth.js';
 
 describe('Complex Neurosymbolic Synergy: Ancestry & Genetics', () => {
     let nar;
