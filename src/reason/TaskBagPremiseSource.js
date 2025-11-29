@@ -62,6 +62,14 @@ export class TaskBagPremiseSource extends PremiseSource {
         this.dynamicAdaptation = defaults.dynamic;
         this.lastUpdate = Date.now();
         this.samplingObjectives = defaults;
+        this._isActive = true;
+    }
+
+    /**
+     * Stops the premise source stream
+     */
+    stop() {
+        this._isActive = false;
     }
 
     /**
@@ -86,8 +94,9 @@ export class TaskBagPremiseSource extends PremiseSource {
      * @returns {AsyncGenerator<Task>}
      */
     async* stream() {
+        this._isActive = true;
         // Implement different sampling strategies based on objectives
-        while (true) {
+        while (this._isActive) {
             try {
                 const task = await this._sampleTask();
                 if (task) {

@@ -86,6 +86,9 @@ export class Reasoner extends EventEmitter {
 
     async stop() {
         this.isRunning = false;
+        if (this.premiseSource && typeof this.premiseSource.stop === 'function') {
+            this.premiseSource.stop();
+        }
         await new Promise(resolve => setTimeout(resolve, 10));
     }
 
