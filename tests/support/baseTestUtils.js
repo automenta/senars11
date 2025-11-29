@@ -2,6 +2,7 @@ import {NAR} from '../../src/nar/NAR.js';
 import {Task} from '../../src/task/Task.js';
 import {Truth} from '../../src/Truth.js';
 import {TermFactory} from '../../src/term/TermFactory.js';
+import {ReasonerBuilder} from '../../src/reason/ReasonerBuilder.js';
 import {createTask, createTerm, createTruth, TEST_CONSTANTS} from './factories.js';
 
 const termFactory = new TermFactory();
@@ -1103,6 +1104,33 @@ export function createTestTaskBag(tasks = []) {
             return this.tasks[0] || null;
         }
     };
+}
+
+/**
+ * Creates a test reasoner with simplified configuration
+ * @param {Object} options - Configuration options
+ * @returns {Reasoner} Configured reasoner
+ */
+export function createTestReasoner(options = {}) {
+    const memory = options.memory || createTestMemory();
+    // Use provided focus or create a minimal mock
+    const focus = options.focus || {
+        getTasks: () => [],
+        addTaskToFocus: () => {}
+    };
+    const termFactory = options.termFactory || {};
+
+    const context = { focus, memory, termFactory };
+
+    const builder = new ReasonerBuilder(context)
+        .withConfig(options.config || {});
+
+    // Allow overriding components if passed in options
+    if (options.premiseSource) builder.withPremiseSource(options.premiseSource);
+    if (options.strategy) builder.withStrategy(options.strategy);
+    if (options.ruleProcessor) builder.withRuleProcessor(options.ruleProcessor);
+
+    return builder.build();
 }
 
 export const COMMON_BUDGET_VALUES = [
