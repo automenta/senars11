@@ -1,11 +1,11 @@
 import {jest} from '@jest/globals';
-import {Reasoner} from '../../src/reason/Reasoner.js';
-import {Strategy} from '../../src/reason/Strategy.js';
-import {RuleProcessor} from '../../src/reason/RuleProcessor.js';
-import {RuleExecutor} from '../../src/reason/RuleExecutor.js';
-import {TaskBagPremiseSource} from '../../src/reason/TaskBagPremiseSource.js';
-import {Focus} from '../../src/memory/Focus.js';
-import {createTestMemory} from '../support/baseTestUtils.js';
+import {Reasoner} from '../../../src/reason/Reasoner.js';
+import {Strategy} from '../../../src/reason/Strategy.js';
+import {RuleProcessor} from '../../../src/reason/RuleProcessor.js';
+import {RuleExecutor} from '../../../src/reason/RuleExecutor.js';
+import {TaskBagPremiseSource} from '../../../src/reason/TaskBagPremiseSource.js';
+import {Focus} from '../../../src/memory/Focus.js';
+import {createTestMemory, createTestReasoner} from '../../support/baseTestUtils.js';
 
 describe('Reasoner', () => {
     let reasoner;
@@ -17,13 +17,17 @@ describe('Reasoner', () => {
 
     beforeEach(() => {
         testMemory = createTestMemory();
-        // Use Focus instead of Memory for TaskBagPremiseSource
         const focus = new Focus();
-        premiseSource = new TaskBagPremiseSource(focus);
-        strategy = new Strategy();
-        ruleExecutor = new RuleExecutor();
-        ruleProcessor = new RuleProcessor(ruleExecutor);
-        reasoner = new Reasoner(premiseSource, strategy, ruleProcessor);
+
+        reasoner = createTestReasoner({
+            focus,
+            memory: testMemory
+        });
+
+        premiseSource = reasoner.premiseSource;
+        strategy = reasoner.strategy;
+        ruleProcessor = reasoner.ruleProcessor;
+        ruleExecutor = ruleProcessor.ruleExecutor;
     });
 
     describe('constructor', () => {
@@ -34,11 +38,15 @@ describe('Reasoner', () => {
         });
 
         test('should initialize with custom config', () => {
-            reasoner = new Reasoner(premiseSource, strategy, ruleProcessor, {
-                maxDerivationDepth: 5,
-                cpuThrottleInterval: 1,
-                backpressureThreshold: 50,
-                backpressureInterval: 10
+             reasoner = createTestReasoner({
+                focus: new Focus(),
+                memory: testMemory,
+                config: {
+                    maxDerivationDepth: 5,
+                    cpuThrottleInterval: 1,
+                    backpressureThreshold: 50,
+                    backpressureInterval: 10
+                }
             });
 
             expect(reasoner.config.maxDerivationDepth).toBe(5);
