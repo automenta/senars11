@@ -440,7 +440,8 @@ export class NAR extends BaseComponent {
         try {
             await this._processPendingTasks(options.traceId);
 
-            const results = await this._streamReasoner.step();
+            // Suppress events to avoid double-processing, as we handle results manually here
+            const results = await this._streamReasoner.step(undefined, true);
 
             // Process all derivations through the same Input/Memory/Focus/Event process
             await this._processDerivations(results, options);

@@ -89,7 +89,7 @@ export class Reasoner extends EventEmitter {
         await new Promise(resolve => setTimeout(resolve, 10));
     }
 
-    async step(timeoutMs = 5000) {
+    async step(timeoutMs = 5000, suppressEvents = false) {
         const results = [];
 
         try {
@@ -113,7 +113,8 @@ export class Reasoner extends EventEmitter {
                         primaryPremise,
                         secondaryPremise,
                         startTime,
-                        timeoutMs
+                        timeoutMs,
+                        suppressEvents
                     );
                     results.push(...forwardResults.filter(Boolean));
 
@@ -165,7 +166,7 @@ export class Reasoner extends EventEmitter {
      * Process a batch of rules for a premise pair
      * @private
      */
-    async _processRuleBatch(candidateRules, primaryPremise, secondaryPremise, startTime, maxTimeMs) {
+    async _processRuleBatch(candidateRules, primaryPremise, secondaryPremise, startTime, maxTimeMs, suppressEvents = false) {
         const results = [];
 
         for (const rule of candidateRules) {
@@ -176,7 +177,7 @@ export class Reasoner extends EventEmitter {
                 const ruleResults = this.ruleProcessor.ruleExecutor.executeRule(rule, primaryPremise, secondaryPremise, ruleContext);
 
                 for (const result of ruleResults) {
-                    const processedResult = this._processDerivation(result);
+                    const processedResult = this._processDerivation(result, suppressEvents);
                     if (processedResult) results.push(processedResult);
                 }
             }
@@ -298,10 +299,12 @@ export class Reasoner extends EventEmitter {
         this.config.backpressureInterval = Math.max(1, baseBackpressureInterval / adjustmentFactor);
     }
 
-    _processDerivation(derivation) {
+    _processDerivation(derivation, suppressEvents = false) {
         // Return the derivation for centralized processing by the NAR
         // Emit event for subscribers (like NAR) to handle the derivation
-        this.emit('derivation', derivation);
+        if (!suppressEvents) {
+            this.emit('derivation', derivation);
+        }
         return derivation;
     }
 

@@ -1,7 +1,7 @@
-import {TaskBagPremiseSource} from '../../src/reason/TaskBagPremiseSource.js';
-import {Strategy} from '../../src/reason/Strategy.js';
-import {randomWeightedSelect} from '../../src/reason/utils/randomWeightedSelect.js';
-import {createTestMemory, createTestTask} from '../support/baseTestUtils.js';
+import {TaskBagPremiseSource} from '../../../src/reason/TaskBagPremiseSource.js';
+import {Strategy} from '../../../src/reason/Strategy.js';
+import {randomWeightedSelect} from '../../../src/reason/utils/randomWeightedSelect.js';
+import {createTestMemory, createTestTask} from '../../support/baseTestUtils.js';
 
 // Helper function to generate random tasks
 function generateRandomTask() {
