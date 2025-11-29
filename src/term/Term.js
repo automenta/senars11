@@ -119,18 +119,9 @@ export class Term {
             this._operator !== other._operator ||
             this._name !== other._name) return false;
 
-        if (this._type === TermType.COMPOUND) {
-            const len = this._components.length;
-            if (len !== other._components.length) return false;
-
-            for (let i = 0; i < len; i++) {
-                if (!this._components[i].equals(other._components[i])) return false;
-            }
-
-            return true;
-        }
-
-        return true;
+        return this._type !== TermType.COMPOUND ||
+            (this._components.length === other._components.length &&
+                this._components.every((c, i) => c.equals(other._components[i])));
     }
 
     toString() {

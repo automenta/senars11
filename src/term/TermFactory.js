@@ -8,6 +8,24 @@ export {Term};
 const COMMUTATIVE_OPERATORS = new Set(['&', '|', '+', '*', '<->', '=']);
 const ASSOCIATIVE_OPERATORS = new Set(['&', '|']);
 
+const CANONICAL_NAME_PATTERNS = {
+    '--': (n) => `(--, ${n[0]})`,
+    '&': (n) => `(&, ${n.join(', ')})`,
+    '|': (n) => `(|, ${n.join(', ')})`,
+    '&/': (n) => `(&/, ${n.join(', ')})`,
+    '-->': (n) => `(-->, ${n[0]}, ${n[1]})`,
+    '<->': (n) => `(<->, ${n[0]}, ${n[1]})`,
+    '==>': (n) => `(==>, ${n[0]}, ${n[1]})`,
+    '<=>': (n) => `(<=>, ${n[0]}, ${n[1]})`,
+    '=': (n) => `(=, ${n[0]}, ${n[1]})`,
+    '^': (n) => `(^, ${n[0]}, ${n[1]})`,
+    '{{--': (n) => `({{--, ${n[0]}, ${n[1]})`,
+    '--}}': (n) => `(--}}, ${n[0]}, ${n[1]})`,
+    '{}': (n) => `{${n.join(', ')}}`,
+    '[]': (n) => `[${n.join(', ')}]`,
+    ',': (n) => `(${n.join(', ')})`
+};
+
 export class TermFactory extends BaseComponent {
     constructor(config = {}, eventBus = null) {
         super(config, 'TermFactory', eventBus);
@@ -223,12 +241,9 @@ export class TermFactory extends BaseComponent {
             }
 
             if (COMMUTATIVE_OPERATORS.has(operator)) {
-                if (operator === '=') {
-                    // Special handling for '=' - sort but don't remove redundancy
-                    normalizedComponents = normalizedComponents.sort((a, b) => this._compareTermsAlphabetically(a, b));
-                } else {
-                    normalizedComponents = this._normalizeCommutative(normalizedComponents);
-                }
+                normalizedComponents = operator === '='
+                    ? normalizedComponents.sort((a, b) => this._compareTermsAlphabetically(a, b))
+                    : this._normalizeCommutative(normalizedComponents);
             }
 
             // Handle nested operators with same precedence
@@ -369,27 +384,7 @@ export class TermFactory extends BaseComponent {
         if (!op) return comps[0].toString();
 
         const names = comps.map(c => c.name);
-
-        // Use a lookup table for building canonical names efficiently
-        const buildPattern = {
-            '--': (n) => `(--, ${n[0]})`,
-            '&': (n) => `(&, ${n.join(', ')})`,
-            '|': (n) => `(|, ${n.join(', ')})`,
-            '&/': (n) => `(&/, ${n.join(', ')})`,
-            '-->': (n) => `(-->, ${n[0]}, ${n[1]})`,
-            '<->': (n) => `(<->, ${n[0]}, ${n[1]})`,
-            '==>': (n) => `(==>, ${n[0]}, ${n[1]})`,
-            '<=>': (n) => `(<=>, ${n[0]}, ${n[1]})`,
-            '=': (n) => `(=, ${n[0]}, ${n[1]})`,
-            '^': (n) => `(^, ${n[0]}, ${n[1]})`,
-            '{{--': (n) => `({{--, ${n[0]}, ${n[1]})`,
-            '--}}': (n) => `(--}}, ${n[0]}, ${n[1]})`,
-            '{}': (n) => `{${n.join(', ')}}`,
-            '[]': (n) => `[${n.join(', ')}]`,
-            ',': (n) => `(${n.join(', ')})`
-        };
-
-        return buildPattern[op]?.(names) || `(${op}, ${names.join(', ')})`;
+        return CANONICAL_NAME_PATTERNS[op]?.(names) || `(${op}, ${names.join(', ')})`;
     }
 
     /**
