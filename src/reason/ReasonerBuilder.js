@@ -5,49 +5,126 @@ import {RuleProcessor} from './RuleProcessor.js';
 import {Reasoner as StreamReasoner} from './Reasoner.js';
 
 export class ReasonerBuilder {
-    static build(config, context) {
-        const reasoningConfig = config.reasoning || {};
-        const { focus, memory, termFactory } = context;
+    constructor(context = {}) {
+        this.context = context;
+        this.config = {};
+        this.components = {
+            premiseSource: null,
+            strategy: null,
+            ruleExecutor: null,
+            ruleProcessor: null
+        };
+    }
 
-        // Create premise source using the new reasoner's approach
-        const premiseSource = new TaskBagPremiseSource(
+    withConfig(config) {
+        this.config = {...this.config, ...config};
+        return this;
+    }
+
+    withPremiseSource(premiseSource) {
+        this.components.premiseSource = premiseSource;
+        return this;
+    }
+
+    withStrategy(strategy) {
+        this.components.strategy = strategy;
+        return this;
+    }
+
+    withRuleExecutor(ruleExecutor) {
+        this.components.ruleExecutor = ruleExecutor;
+        return this;
+    }
+
+    withRuleProcessor(ruleProcessor) {
+        this.components.ruleProcessor = ruleProcessor;
+        return this;
+    }
+
+    useDefaultPremiseSource(options = {}) {
+        const { focus } = this.context;
+        const config = {...this.config, ...options};
+        const streamSamplingObjectives = config.streamSamplingObjectives || {priority: true};
+
+        this.components.premiseSource = new TaskBagPremiseSource(
             focus,
-            reasoningConfig.streamSamplingObjectives || {priority: true}
+            streamSamplingObjectives
         );
+        return this;
+    }
 
-        // Create strategy
-        const strategy = new Strategy({
-            ...reasoningConfig.streamStrategy,
+    useDefaultStrategy(options = {}) {
+        const { focus, memory } = this.context;
+        const config = {...this.config, ...options};
+
+        this.components.strategy = new Strategy({
+            ...config.streamStrategy,
             focus: focus,
             memory: memory
         });
 
         // Add strategies from config
-        if (reasoningConfig.strategies) {
-            for (const s of reasoningConfig.strategies) {
-                strategy.addStrategy(s);
+        if (config.strategies) {
+            for (const s of config.strategies) {
+                this.components.strategy.addStrategy(s);
             }
         }
 
-        // Create rule executor
-        const ruleExecutor = new RuleExecutor(reasoningConfig.streamRuleExecutor || {});
+        return this;
+    }
 
-        // Create rule processor
-        const ruleProcessor = new RuleProcessor(ruleExecutor, {
-            maxDerivationDepth: reasoningConfig.maxDerivationDepth || 10,
+    useDefaultRuleExecutor(options = {}) {
+        const config = {...this.config, ...options};
+        this.components.ruleExecutor = new RuleExecutor(config.streamRuleExecutor || {});
+        return this;
+    }
+
+    useDefaultRuleProcessor(options = {}) {
+        const { termFactory } = this.context;
+        const config = {...this.config, ...options};
+
+        if (!this.components.ruleExecutor) {
+            this.useDefaultRuleExecutor(options);
+        }
+
+        this.components.ruleProcessor = new RuleProcessor(this.components.ruleExecutor, {
+            maxDerivationDepth: config.maxDerivationDepth || 10,
             termFactory: termFactory
         });
+        return this;
+    }
 
-        // Create the main stream reasoner
+    build() {
+        if (!this.components.premiseSource) {
+            this.useDefaultPremiseSource();
+        }
+
+        if (!this.components.strategy) {
+            this.useDefaultStrategy();
+        }
+
+        if (!this.components.ruleProcessor) {
+            this.useDefaultRuleProcessor();
+        }
+
+        const reasonerConfig = {
+            maxDerivationDepth: 10,
+            cpuThrottleInterval: 0,
+            ...this.config
+        };
+
         return new StreamReasoner(
-            premiseSource,
-            strategy,
-            ruleProcessor,
-            {
-                maxDerivationDepth: reasoningConfig.maxDerivationDepth || 10,
-                cpuThrottleInterval: reasoningConfig.cpuThrottleInterval || 0
-            }
+            this.components.premiseSource,
+            this.components.strategy,
+            this.components.ruleProcessor,
+            reasonerConfig
         );
+    }
+
+    static build(config, context) {
+        return new ReasonerBuilder(context)
+            .withConfig(config.reasoning || {})
+            .build();
     }
 
     static async registerDefaultRules(streamReasoner, config) {

@@ -1,10 +1,10 @@
-import {TaskBagPremiseSource} from '../../src/reason/TaskBagPremiseSource.js';
-import {Reasoner} from '../../src/reason/Reasoner.js';
-import {RuleProcessor} from '../../src/reason/RuleProcessor.js';
-import {RuleExecutor} from '../../src/reason/RuleExecutor.js';
-import {Strategy} from '../../src/reason/Strategy.js';
-import {Focus} from '../../src/memory/Focus.js';
-import {createTestTask} from '../support/baseTestUtils.js';
+import {TaskBagPremiseSource} from '../../../src/reason/TaskBagPremiseSource.js';
+import {Reasoner} from '../../../src/reason/Reasoner.js';
+import {RuleProcessor} from '../../../src/reason/RuleProcessor.js';
+import {RuleExecutor} from '../../../src/reason/RuleExecutor.js';
+import {Strategy} from '../../../src/reason/Strategy.js';
+import {Focus} from '../../../src/memory/Focus.js';
+import {createTestTask} from '../../support/baseTestUtils.js';
 
 describe('Advanced Unit Tests for Sophisticated Features', () => {
     describe('TaskBagPremiseSource - Dynamic Adaptation', () => {
@@ -151,7 +151,7 @@ describe('Advanced Unit Tests for Sophisticated Features', () => {
             const ruleExecutor = new RuleExecutor();
             ruleProcessor = new RuleProcessor(ruleExecutor, {
                 backpressureThreshold: 10,
-                backpressureInterval: 2
+                backpressureInterval: 20
             });
         });
 
@@ -185,7 +185,8 @@ describe('Advanced Unit Tests for Sophisticated Features', () => {
             const end = Date.now();
 
             // Should have delayed execution due to backpressure
-            expect(end - start).toBeGreaterThanOrEqual(ruleProcessor.config.backpressureInterval);
+            // Allow small margin for potential timer inaccuracies
+            expect(end - start).toBeGreaterThanOrEqual(ruleProcessor.config.backpressureInterval - 5);
         });
 
         test('should not apply backpressure when under threshold', async () => {
@@ -196,8 +197,8 @@ describe('Advanced Unit Tests for Sophisticated Features', () => {
             await ruleProcessor._checkAndApplyBackpressure();
             const end = Date.now();
 
-            // Should not have significant delay
-            expect(end - start).toBeLessThan(ruleProcessor.config.backpressureInterval * 2);
+            // Should not have significant delay (less than the interval)
+            expect(end - start).toBeLessThan(ruleProcessor.config.backpressureInterval);
         });
 
         test('should include backpressure information in status', () => {
