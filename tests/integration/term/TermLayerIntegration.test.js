@@ -5,14 +5,15 @@ describe('TermLayer Integration', () => {
     let nar;
     let termFactory;
 
-    beforeEach(() => {
+    beforeEach(async () => {
         nar = new NAR();
+        await nar.initialize();
         termFactory = new TermFactory();
     });
 
     afterEach(async () => {
         // Clean up NAR instance
-        if (nar && typeof nar.dispose === 'function') {
+        if (nar) {
             await nar.dispose();
         }
     });
@@ -64,22 +65,25 @@ describe('TermLayer Integration', () => {
         expect(stats.linkCount).toBeGreaterThanOrEqual(2);
     });
 
-    test('TermLayer capacity limits are enforced', () => {
-        const layer = nar.termLayer;
-        const originalCapacity = layer.capacity;
+    test('TermLayer capacity limits are enforced', async () => {
+        // Create a new NAR with restricted TermLayer capacity
+        const restrictedNar = new NAR({
+            termLayer: { capacity: 2 }
+        });
+        await restrictedNar.initialize();
 
-        // Temporarily set a small capacity for testing
-        Object.defineProperty(layer, 'capacity', {value: 2, writable: true});
+        const layer = restrictedNar.termLayer;
+        const factory = new TermFactory();
 
-        const source1 = termFactory.atomic('source1');
-        const source2 = termFactory.atomic('source2');
-        const source3 = termFactory.atomic('source3');
-        const target1 = termFactory.atomic('target1');
-        const target2 = termFactory.atomic('target2');
-        const target3 = termFactory.atomic('target3');
+        const source1 = factory.atomic('source1');
+        const source2 = factory.atomic('source2');
+        const source3 = factory.atomic('source3');
+        const target1 = factory.atomic('target1');
+        const target2 = factory.atomic('target2');
+        const target3 = factory.atomic('target3');
 
-        // Add three links with increasing priorities (so lowest priority gets removed)
-        layer.add(source1, target1, {priority: 1}); // Should be removed when capacity exceeded
+        // Add three links with increasing priorities
+        layer.add(source1, target1, {priority: 1});
         layer.add(source2, target2, {priority: 2});
         layer.add(source3, target3, {priority: 3});
 
@@ -89,7 +93,6 @@ describe('TermLayer Integration', () => {
         expect(layer.has(source2, target2)).toBe(true);
         expect(layer.has(source3, target3)).toBe(true);
 
-        // Reset capacity to original
-        Object.defineProperty(layer, 'capacity', {value: originalCapacity, writable: true});
+        await restrictedNar.dispose();
     });
 });

@@ -1,14 +1,17 @@
 // Unit Test Setup
 // This file sets up the environment for unit tests with real objects and minimal dependencies
 
-// Third-party imports
-// (none in this file)
-
-// Local imports
-import {createTestInstance as createTestInstanceHelper, validateTestEnvironment} from '../utils/test-helpers.js';
-
 // Set up test-specific configurations
 process.env.NODE_ENV = 'test';
+
+// Helper functions
+const validateTestEnvironment = () => ({
+    isValid: process.env.NODE_ENV === 'test',
+    environment: process.env.NODE_ENV,
+    timestamp: Date.now()
+});
+
+const createTestInstanceHelper = (config = {}) => ({config: {...config}});
 
 // Validate test environment
 const envValidation = validateTestEnvironment();

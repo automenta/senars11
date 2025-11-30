@@ -127,7 +127,7 @@ class WebSocketMonitor {
                 console.log(`WebSocket monitoring server started on ws://${this.host}:${this.port}${this.path}`);
 
                 // Start batching interval to send accumulated events
-                setInterval(() => {
+                this.batchInterval = setInterval(() => {
                     if (this.eventBuffer.length > 0) {
                         const batch = [...this.eventBuffer]; // Create a copy of the buffer
                         this.eventBuffer = []; // Clear the buffer
@@ -162,6 +162,11 @@ class WebSocketMonitor {
     }
 
     async stop() {
+        if (this.batchInterval) {
+            clearInterval(this.batchInterval);
+            this.batchInterval = null;
+        }
+
         return new Promise((resolve) => {
             for (const client of this.clients) {
                 client.close(1001, 'Server shutting down');
@@ -377,6 +382,28 @@ class WebSocketMonitor {
                 this.metrics.messagesSent++;
             }
         }
+    }
+
+    listenToNAR(nar) {
+        const events = [
+            'task.input',
+            'task.added',
+            'task.focus',
+            'reasoning.derivation',
+            'streamReasoner.metrics',
+            'system.started',
+            'system.stopped',
+            'streamReasoner.step',
+            'streamReasoner.error',
+            'input.error',
+            'reasoningState'
+        ];
+
+        events.forEach(event => {
+            nar.on(event, (data, options) => {
+                this.bufferEvent(event, data, options);
+            });
+        });
     }
 
     on(event, listener) {

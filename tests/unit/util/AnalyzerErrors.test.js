@@ -1,4 +1,4 @@
-import {AnalysisError, AnalyzerError, ConfigurationError, ValidationError} from '../../src/util/AnalyzerErrors.js';
+import {AnalysisError, AnalyzerError, ConfigurationError, ValidationError} from '../../../src/util/AnalyzerErrors.js';
 
 describe('AnalyzerErrors', () => {
     describe('AnalyzerError', () => {

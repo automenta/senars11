@@ -1,6 +1,6 @@
-import {ArrayStamp, Stamp} from '../../src/Stamp.js';
-import {createStamp} from '../support/factories.js';
-import {flexibleAssertions} from '../support/baseTestUtils.js';
+import {ArrayStamp, Stamp} from '../../../src/Stamp.js';
+import {createStamp} from '../../support/factories.js';
+import {flexibleAssertions} from '../../support/baseTestUtils.js';
 
 describe('Stamp', () => {
     test('should create a Stamp instance with specified properties', () => {
