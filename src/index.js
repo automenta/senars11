@@ -30,7 +30,9 @@ async function main() {
                 metrics: false,
                 tools: false,
                 lm: false,
-                embeddingLayer: false
+                embeddingLayer: false,
+                functors: ['core-arithmetic', 'set-operations'],
+                rules: ['syllogistic-core', 'temporal']
             },
             nar: {
                 ...config.nar,
