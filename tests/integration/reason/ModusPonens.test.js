@@ -1,7 +1,7 @@
 import {TaskMatch, TestNAR} from '../../../src/testing/TestNAR.js';
 
-describe('Modus Ponens Tests (with new TestNAR)', () => {
-    it('should derive b from (a ==> b) and a with correct truth value', async () => {
+describe('Modus Ponens', () => {
+    test('derive b from (a ==> b) and a', async () => {
         const result = await new TestNAR()
             .input('(a ==> b)', 0.9, 0.9)
             .input('a', 0.8, 0.8)
@@ -12,7 +12,7 @@ describe('Modus Ponens Tests (with new TestNAR)', () => {
         expect(result).toBe(true);
     });
 
-    it('should not derive without the antecedent', async () => {
+    test('no derivation without antecedent', async () => {
         const result = await new TestNAR()
             .input('(a ==> b)', 0.9, 0.9)
             .run(1)
@@ -22,7 +22,7 @@ describe('Modus Ponens Tests (with new TestNAR)', () => {
         expect(result).toBe(true);
     });
 
-    it('should work with complex terms', async () => {
+    test('complex terms', async () => {
         const result = await new TestNAR()
             .input('(sunny_day ==> good_mood)', 0.85, 0.9)
             .input('sunny_day', 0.9, 0.85)

@@ -13,6 +13,7 @@ describe('Stamp', () => {
         expect(Object.isFrozen(stamp)).toBe(true);
         expect(Object.isFrozen(stamp.derivations)).toBe(true);
         expect(() => stamp.id = 'new-id').toThrow();
+        expect(() => stamp.derivations.push('new')).toThrow();
     });
 
     test('static createInput', () => {

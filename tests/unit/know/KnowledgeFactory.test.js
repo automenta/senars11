@@ -8,31 +8,26 @@ class TestKnowledge extends Knowledge {
 }
 
 describe('KnowledgeFactory', () => {
-    beforeEach(() => {
-        KnowledgeFactory.knowledgeRegistry = {};
+    const typeName = `test-${Math.random().toString(36).substring(7)}`;
+
+    test('register and create', () => {
+        KnowledgeFactory.registerKnowledgeType(typeName, TestKnowledge);
+        expect(() => KnowledgeFactory.createKnowledge(typeName, {value: 'test'})).not.toThrow();
+        expect(KnowledgeFactory.getAvailableTypes()).toContain(typeName);
     });
 
-    test('should register and create knowledge types', () => {
-        KnowledgeFactory.registerKnowledgeType('test', TestKnowledge);
-        expect(() => KnowledgeFactory.createKnowledge('test', {value: 'test'})).not.toThrow();
+    test('unknown type throws', () => {
+        expect(() => KnowledgeFactory.createKnowledge('unknown-type-xyz', {})).toThrow(/Unknown knowledge type/);
     });
 
-    test('should throw error for unknown knowledge type', () => {
-        expect(() => KnowledgeFactory.createKnowledge('unknown', {})).toThrow('Unknown knowledge type: unknown');
-    });
-
-    test('should validate knowledge class inheritance', () => {
+    test('invalid inheritance throws', () => {
         expect(() => KnowledgeFactory.registerKnowledgeType('invalid', class {}))
             .toThrow('Knowledge class must extend the Knowledge base class');
     });
 
-    test('should auto-detect knowledge for generic data', () => {
+    test('autoDetectKnowledge', () => {
         const knowledge = KnowledgeFactory.autoDetectKnowledge({key: 'value'});
         expect(knowledge.constructor.name).toBe('DataTableKnowledge');
-    });
-
-    test('should get available types', () => {
-        KnowledgeFactory.registerKnowledgeType('test', TestKnowledge);
-        expect(KnowledgeFactory.getAvailableTypes()).toContain('test');
+        expect(KnowledgeFactory.autoDetectKnowledge(null)).toBeNull();
     });
 });

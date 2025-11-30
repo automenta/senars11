@@ -1,7 +1,6 @@
 import fc from 'fast-check';
 import {TermType} from '../../../src/term/Term.js';
 import {TermFactory} from '../../../src/term/TermFactory.js';
-import {createCompoundTerm, createTerm} from '../../support/factories.js';
 
 const tf = new TermFactory();
 
@@ -103,10 +102,14 @@ describe('Term', () => {
     });
 
     describe('Property-Based', () => {
+        const createTerm = (name) => tf.atomic(name);
+        const createCompoundTerm = (operator, components) => tf.create(operator, components);
+
         const atomicTermArb = fc.stringOf(fc.constantFrom('a', 'b', 'c', 'd'), {
             minLength: 1,
             maxLength: 1
         }).map(createTerm);
+
         const compoundTermArb = fc.letrec(tie => ({
             term: fc.oneof(atomicTermArb, tie('compound')),
             compound: fc.record({
