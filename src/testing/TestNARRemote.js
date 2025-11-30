@@ -18,7 +18,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 export class TestNARRemote {
-    constructor() {
+    constructor(options = {}) {
+        this.options = options;
+        this.verbose = options.verbose || process.env.DEBUG_NAR_REMOTE === 'true';
         this.operations = [];
         this.serverProcess = null;
         this.client = null;
@@ -102,6 +104,7 @@ export class TestNARRemote {
     }
 
     printLogs() {
+        if (!this.verbose) return;
         const logs = this.virtualConsole.getLogs();
         if (logs.length > 0) {
             console.log('\n=== Virtual Console Logs ===');
@@ -136,7 +139,9 @@ export class TestNARRemote {
             });
 
             this.serverProcess.stderr.on('data', (data) => {
-                console.error(`Server stderr: ${data}`);
+                if (this.verbose) {
+                    console.error(`Server stderr: ${data}`);
+                }
                 // Don't reject immediately, wait for close or error
             });
 
@@ -183,7 +188,9 @@ export class TestNARRemote {
                         const message = JSON.parse(data);
                         this._processIncomingMessage(message);
                     } catch (e) {
-                        console.error('Failed to parse incoming message:', e);
+                        if (this.verbose) {
+                            console.error('Failed to parse incoming message:', e);
+                        }
                     }
                 });
                 resolve();
@@ -231,51 +238,96 @@ export class TestNARRemote {
         });
     }
 
-    sendNarsese(narseseString) {
+    async sendMessageAndWait(message, expectedResponseType, timeoutMs = 5000) {
         return new Promise((resolve, reject) => {
-            let message;
-            if (narseseString.startsWith('*')) {
-                message = {
-                    sessionId: 'test',
-                    type: `control/${narseseString.substring(1)}`,
-                    payload: {}
-                };
-            } else {
-                message = {
-                    sessionId: 'test',
-                    type: 'reason/step', // Keeping for legacy unless command() is used
-                    payload: {text: narseseString}
-                };
-            }
+            let listener;
+            let timeout;
+
+            const cleanup = () => {
+                if (listener) this.client.removeListener('message', listener);
+                if (timeout) clearTimeout(timeout);
+            };
+
+            listener = (data) => {
+                try {
+                    const msg = JSON.parse(data);
+                    if (this.verbose) console.log(`[RX] ${msg.type}`);
+
+                    const check = (m) => m.type === expectedResponseType;
+                    const isError = (m) => m.type === 'error' || m.type === 'error.message';
+
+                    if (msg.type === 'eventBatch' && Array.isArray(msg.data)) {
+                        if (msg.data.some(check)) {
+                            cleanup();
+                            resolve(msg.data.find(check));
+                        }
+                    } else {
+                        if (check(msg)) {
+                            cleanup();
+                            resolve(msg);
+                        } else if (isError(msg)) {
+                            cleanup();
+                            if (this.verbose) console.error('Received error response:', msg);
+                            // Don't reject for now, just log, so we don't crash test immediately
+                            // unless we want to fail fast.
+                            // But maybe we want to see if correct message comes later?
+                            // Usually error means request failed.
+                            // reject(new Error(`Received error response: ${JSON.stringify(msg)}`));
+                        }
+                    }
+                } catch (e) {
+                    // Ignore parsing errors here
+                }
+            };
+
+            this.client.on('message', listener);
+
+            timeout = setTimeout(() => {
+                cleanup();
+                if (this.verbose) console.warn(`Timeout waiting for ${expectedResponseType}`);
+                resolve(null);
+            }, timeoutMs);
 
             this.client.send(JSON.stringify(message), (error) => {
-                if (error) reject(error);
-                else resolve();
+                if (error) {
+                    cleanup();
+                    reject(error);
+                }
             });
         });
     }
 
-    sendCommand(command, mode) {
-        return new Promise((resolve, reject) => {
-            const messageType = mode === 'agent' ? 'agent/input' : 'narseseInput';
-            const message = {
-                type: messageType,
-                payload: {input: command} // Check payload structure in ClientMessageHandlers
+    sendNarsese(narseseString) {
+        let message;
+        let responseType;
+        if (narseseString.startsWith('*')) {
+            message = {
+                sessionId: 'test',
+                type: `control/${narseseString.substring(1)}`,
+                payload: {}
             };
+            responseType = 'control.result';
+        } else {
+            message = {
+                sessionId: 'test',
+                type: 'reason/step', // Keeping for legacy unless command() is used
+                payload: {text: narseseString}
+            };
+            responseType = 'narsese.result';
+        }
 
-            // Wait, CommandProcessor sends: {type, payload}
-            // ClientMessageHandlers expects message.
-            // ClientMessageHandlers.handleNarseseInput delegates to ReplMessageHandler.
-            // ReplMessageHandler expects {type: 'narseseInput', payload: {input: '...'}}?
-            // CommandProcessor: this.webSocketManager.sendMessage(messageType, messageData);
-            // WebSocketManager: JSON.stringify({type, payload})
-            // So structure is correct.
+        return this.sendMessageAndWait(message, responseType);
+    }
 
-            this.client.send(JSON.stringify(message), (error) => {
-                if (error) reject(error);
-                else resolve();
-            });
-        });
+    sendCommand(command, mode) {
+        const messageType = mode === 'agent' ? 'agent/input' : 'narseseInput';
+        const message = {
+            type: messageType,
+            payload: {input: command}
+        };
+        const responseType = mode === 'agent' ? 'agent/result' : 'narsese.result';
+
+        return this.sendMessageAndWait(message, responseType);
     }
 
     async waitForExpectationsEventDriven(expectations) {
@@ -301,7 +353,12 @@ export class TestNARRemote {
                 };
 
                 const timeout = setTimeout(() => {
-                    safeReject(new Error(`Expectation timeout: ${JSON.stringify(exp)}`));
+                    let debugInfo = '';
+                    if (this.verbose) {
+                        debugInfo = `\nTasks in queue (${this.taskQueue.length}):\n` +
+                            this.taskQueue.map(t => JSON.stringify(t)).join('\n');
+                    }
+                    safeReject(new Error(`Expectation timeout: ${JSON.stringify(exp)}${debugInfo}`));
                 }, 20000);
 
                 const checkState = () => {

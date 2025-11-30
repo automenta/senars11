@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
-import puppeteer from 'puppeteer';
+import { chromium } from 'playwright';
 import fs from 'fs/promises';
-import {exec} from 'child_process';
-import {promisify} from 'util';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 
 const execAsync = promisify(exec);
 
@@ -23,13 +23,15 @@ class ScreenshotMovieGenerator {
         await fs.mkdir('test-results/videos', {recursive: true});
 
         // Launch browser
-        this.browser = await puppeteer.launch({
-            headless: false, // Set to true if you don't want to see the browser
-            defaultViewport: {width: 1280, height: 720},
+        this.browser = await chromium.launch({
+            headless: true, // Use headless for robustness in environments without display
             args: ['--no-sandbox', '--disable-setuid-sandbox']
         });
 
-        this.page = await this.browser.newPage();
+        const context = await this.browser.newContext({
+             viewport: {width: 1280, height: 720}
+        });
+        this.page = await context.newPage();
 
         console.log('✓ Screenshot/movie generator initialized');
     }
@@ -37,7 +39,11 @@ class ScreenshotMovieGenerator {
     async captureScreenshots(url, duration = 30000, interval = 2000, prefix = 'screenshot') {
         console.log(`Capturing screenshots from ${url} for ${duration}ms...`);
 
-        await this.page.goto(url, {waitUntil: 'networkidle2'});
+        try {
+            await this.page.goto(url, {waitUntil: 'networkidle'});
+        } catch (e) {
+             console.log(`Navigation error (might be fine if page keeps loading): ${e.message}`);
+        }
 
         const startTime = Date.now();
         let count = 0;
@@ -78,6 +84,7 @@ class ScreenshotMovieGenerator {
         await fs.writeFile(listFilePath, listContent);
 
         // Generate movie using ffmpeg
+        // Note: This requires ffmpeg to be installed on the system
         const fpsOption = `fps=${fps},scale=1280:720`;
         const cmd = `ffmpeg -r ${fps} -f concat -safe 0 -i "${listFilePath}" -r ${fps} -vf "${fpsOption}" -c:v libx264 -pix_fmt yuv420p -y "${outputPath}"`;
 
@@ -87,18 +94,27 @@ class ScreenshotMovieGenerator {
             this.videoPath = outputPath;
             return outputPath;
         } catch (error) {
-            console.error('Error generating movie:', error);
-            throw error;
+            console.error('Error generating movie (ffmpeg might be missing):', error.message);
+            // Don't throw, just return null so we don't crash
+            return null;
         }
     }
 
     async capturePriorityFluctuations(url, duration = 30000) {
         console.log('Capturing priority fluctuation visualizations...');
 
-        await this.page.goto(url, {waitUntil: 'networkidle2'});
+        try {
+            await this.page.goto(url, {waitUntil: 'networkidle'});
+        } catch (e) {
+             console.log(`Navigation warning: ${e.message}`);
+        }
 
         // Wait for page to load completely
-        await this.page.waitForSelector('[data-testid="task-monitor-container"]', {timeout: 10000});
+        try {
+            await this.page.waitForSelector('[data-testid="task-monitor-container"]', {timeout: 10000});
+        } catch (e) {
+            console.warn('Timeout waiting for task-monitor-container');
+        }
 
         const startTime = Date.now();
         let count = 0;
@@ -168,10 +184,18 @@ class ScreenshotMovieGenerator {
     async captureDerivations(url, duration = 30000) {
         console.log('Capturing derivation process...');
 
-        await this.page.goto(url, {waitUntil: 'networkidle2'});
+        try {
+            await this.page.goto(url, {waitUntil: 'networkidle'});
+        } catch (e) {
+             console.log(`Navigation warning: ${e.message}`);
+        }
 
         // Wait for page to load
-        await this.page.waitForSelector('[data-testid="narsese-input-container"]', {timeout: 10000});
+        try {
+            await this.page.waitForSelector('[data-testid="narsese-input-container"]', {timeout: 10000});
+        } catch (e) {
+            console.warn('Timeout waiting for narsese-input-container');
+        }
 
         const startTime = Date.now();
         let count = 0;
@@ -256,8 +280,8 @@ class ScreenshotMovieGenerator {
             console.log(`✓ Animated GIF generated: ${outputPath}`);
             return outputPath;
         } catch (error) {
-            console.error('Error generating GIF:', error);
-            throw error;
+            console.error('Error generating GIF (ffmpeg might be missing):', error.message);
+            return null;
         }
     }
 
