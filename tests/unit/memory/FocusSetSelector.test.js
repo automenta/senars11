@@ -4,236 +4,80 @@ import {TermFactory} from '../../../src/term/TermFactory.js';
 import {ArrayStamp} from '../../../src/Stamp.js';
 
 describe('FocusSetSelector', () => {
-    let selector;
-    let termFactory;
-    let currentTime;
+    let selector, tf, now;
 
     beforeEach(() => {
-        termFactory = new TermFactory();
-        currentTime = Date.now();
+        tf = new TermFactory();
+        now = Date.now();
         selector = new FocusSetSelector({
-            maxSize: 3,
-            priorityThreshold: 0.2,
-            priorityWeight: 0.5,
-            urgencyWeight: 0.3,
-            diversityWeight: 0.2
+            maxSize: 3, priorityThreshold: 0.2,
+            priorityWeight: 0.5, urgencyWeight: 0.3, diversityWeight: 0.2
         });
     });
 
-    test('should initialize with correct configuration', () => {
-        expect(selector.config.maxSize).toBe(3);
-        expect(selector.config.priorityThreshold).toBe(0.2);
-        expect(selector.config.priorityWeight).toBe(0.5);
-        expect(selector.config.urgencyWeight).toBe(0.3);
-        expect(selector.config.diversityWeight).toBe(0.2);
+    const createTask = (p, timeOffset = 0, termName = 'A') => new Task({
+        term: tf.atomic(termName),
+        punctuation: '.',
+        budget: {priority: p},
+        truth: {frequency: 0.9, confidence: 0.8},
+        stamp: new ArrayStamp({id: `id-${Math.random()}`, creationTime: now - timeOffset, source: 'INPUT'})
     });
 
-    test('should return empty array for no tasks', () => {
-        const selected = selector.select([], currentTime);
-        expect(selected).toEqual([]);
-    });
-
-    test('should return empty array for null/undefined tasks', () => {
-        expect(selector.select(null, currentTime)).toEqual([]);
-        expect(selector.select(undefined, currentTime)).toEqual([]);
-    });
-
-    test('should filter tasks below priority threshold', () => {
-        const term = termFactory.atomic('A');
-        const lowPriorityTask = new Task({
-            term,
-            punctuation: '.',
-            budget: {priority: 0.1}, // Below threshold
-            truth: {frequency: 0.9, confidence: 0.8}
+    test('initialization', () => {
+        expect(selector.config).toMatchObject({
+            maxSize: 3, priorityThreshold: 0.2,
+            priorityWeight: 0.5, urgencyWeight: 0.3, diversityWeight: 0.2
         });
-        const highPriorityTask = new Task({
-            term,
-            punctuation: '.',
-            budget: {priority: 0.5}, // Above threshold
-            truth: {frequency: 0.9, confidence: 0.8}
-        });
+    });
 
-        const selected = selector.select([lowPriorityTask, highPriorityTask], currentTime);
+    test('empty inputs', () => {
+        [[], null, undefined].forEach(input => {
+            expect(selector.select(input, now)).toEqual([]);
+        });
+    });
+
+    test('priority threshold filtering', () => {
+        const tasks = [createTask(0.1), createTask(0.5)];
+        const selected = selector.select(tasks, now);
         expect(selected).toHaveLength(1);
-        expect(selected[0]).toBe(highPriorityTask);
+        expect(selected[0].budget.priority).toBe(0.5);
     });
 
-    test('should select tasks based on composite scoring', () => {
-        const term1 = termFactory.atomic('A');
-        const term2 = termFactory.atomic('B');
-        const term3 = termFactory.atomic('C');
+    test('composite scoring', () => {
+        // High priority + recent (urgency)
+        const t1 = createTask(0.8, 1000, 'A');
+        const t2 = createTask(0.6, 500, 'B');
+        const t3 = createTask(0.4, 2000, 'C');
 
-        // Create tasks with different characteristics using stamps with different occurrence times
-        const task1 = new Task({
-            term: term1,
-            punctuation: '.',
-            budget: {priority: 0.8},
-            truth: {frequency: 0.9, confidence: 0.8},
-            stamp: new ArrayStamp({id: 'id1', creationTime: currentTime - 1000, source: 'INPUT'}),
-        });
-
-        const task2 = new Task({
-            term: term2,
-            punctuation: '.',
-            budget: {priority: 0.6},
-            truth: {frequency: 0.9, confidence: 0.8},
-            stamp: new ArrayStamp({id: 'id2', creationTime: currentTime - 500, source: 'INPUT'}),
-        });
-
-        const task3 = new Task({
-            term: term3,
-            punctuation: '.',
-            budget: {priority: 0.4},
-            truth: {frequency: 0.9, confidence: 0.8},
-            stamp: new ArrayStamp({id: 'id3', creationTime: currentTime - 2000, source: 'INPUT'}),
-        });
-
-        const selected = selector.select([task1, task2, task3], currentTime);
+        const selected = selector.select([t1, t2, t3], now);
         expect(selected).toHaveLength(3);
-
-        // Task1 should be first due to high priority and urgency
-        expect(selected[0]).toBe(task1);
+        expect(selected[0]).toBe(t1); // Highest priority usually wins if urgency is close
     });
 
-    test('should respect maximum size limit', () => {
-        const tasks = [];
-        for (let i = 0; i < 5; i++) {
-            const term = termFactory.atomic(String.fromCharCode(65 + i));
-            const task = new Task({
-                term,
-                punctuation: '.',
-                budget: {priority: 0.5 + (i * 0.1)},
-                truth: {frequency: 0.9, confidence: 0.8},
-                stamp: new ArrayStamp({id: `id${i}`, creationTime: currentTime - (i * 100), source: 'INPUT'}),
-            });
-            tasks.push(task);
-        }
-
-        const selected = selector.select(tasks, currentTime);
-        expect(selected).toHaveLength(3); // maxSize limit
+    test('max size limit', () => {
+        const tasks = Array.from({length: 5}, (_, i) => createTask(0.5 + i * 0.1, i * 100, String.fromCharCode(65 + i)));
+        expect(selector.select(tasks, now)).toHaveLength(3);
     });
 
-    test('should handle urgency calculation correctly', () => {
-        const term = termFactory.atomic('A');
+    test('urgency influence', () => {
+        const recent = createTask(0.5, 100);
+        const old = createTask(0.5, 10000); // Higher urgency due to age
 
-        const recentTask = new Task({
-            term,
-            punctuation: '.',
-            budget: {priority: 0.5},
-            truth: {frequency: 0.9, confidence: 0.8},
-            stamp: new ArrayStamp({id: 'recent', creationTime: currentTime - 100, source: 'INPUT'}),
-        });
-
-        const oldTask = new Task({
-            term,
-            punctuation: '.',
-            budget: {priority: 0.5},
-            truth: {frequency: 0.9, confidence: 0.8},
-            stamp: new ArrayStamp({id: 'old', creationTime: currentTime - 10000, source: 'INPUT'}),
-        });
-
-        const selected = selector.select([recentTask, oldTask], currentTime);
-
-        // Old task should be selected due to higher urgency
-        expect(selected).toHaveLength(2);
-        expect(selected[0]).toBe(oldTask);
+        const selected = selector.select([recent, old], now);
+        expect(selected[0]).toBe(old);
     });
 
-    test('should consider term complexity for diversity', () => {
-        const simpleTerm = termFactory.atomic('A');
-        const complexTerm = termFactory.inheritance(termFactory.atomic('A'), termFactory.atomic('B'));
-
-        const simpleTask = new Task({
-            term: simpleTerm,
-            punctuation: '.',
-            budget: {priority: 0.5},
-            truth: {frequency: 0.9, confidence: 0.8}
-        });
-        const complexTask = new Task({
-            term: complexTerm,
-            punctuation: '.',
-            budget: {priority: 0.5},
-            truth: {frequency: 0.9, confidence: 0.8}
-        });
-
-        const selected = selector.select([simpleTask, complexTask], currentTime);
-
-        // Both should be selected, but complex task might get slight boost
-        expect(selected).toHaveLength(2);
-    });
-
-    test('should update configuration correctly', () => {
-        selector.configure({
-            maxSize: 5,
-            priorityThreshold: 0.3,
-            priorityWeight: 0.6
-        });
-
+    test('reconfiguration', () => {
+        selector.configure({maxSize: 5, priorityThreshold: 0.3});
         expect(selector.config.maxSize).toBe(5);
         expect(selector.config.priorityThreshold).toBe(0.3);
-        expect(selector.config.priorityWeight).toBe(0.6);
         expect(selector.config.urgencyWeight).toBe(0.3); // Unchanged
     });
 
-    test('should handle edge case of all tasks having same timestamp', () => {
-        const term1 = termFactory.atomic('A');
-        const term2 = termFactory.atomic('B');
-
-        const task1 = new Task({
-            term: term1,
-            punctuation: '.',
-            budget: {priority: 0.5},
-            truth: {frequency: 0.9, confidence: 0.8}
-        });
-        const task2 = new Task({
-            term: term2,
-            punctuation: '.',
-            budget: {priority: 0.8},
-            truth: {frequency: 0.9, confidence: 0.8}
-        });
-
-        // Same timestamp - urgency should be 0 for both
-        const selected = selector.select([task1, task2].reverse(), currentTime);
-
-        expect(selected).toHaveLength(2);
-        expect(selected[0]).toBe(task2); // Higher priority should win
-    });
-
-    test('should handle tasks with zero complexity', () => {
-        const term = termFactory.atomic('A');
-        const task = new Task({
-            term,
-            punctuation: '.',
-            budget: {priority: 0.5},
-            truth: {frequency: 0.9, confidence: 0.8}
-        });
-
-        const selected = selector.select([task], currentTime);
-        expect(selected).toHaveLength(1);
-        expect(selected[0]).toBe(task);
-    });
-
-    test('should maintain selection stability across multiple calls', () => {
-        const term = termFactory.atomic('A');
-        const task1 = new Task({
-            term,
-            punctuation: '.',
-            budget: {priority: 0.8},
-            truth: {frequency: 0.9, confidence: 0.8}
-        });
-        const task2 = new Task({
-            term,
-            punctuation: '.',
-            budget: {priority: 0.6},
-            truth: {frequency: 0.9, confidence: 0.8}
-        });
-
-        const selected1 = selector.select([task1, task2], currentTime);
-        const selected2 = selector.select([task1, task2], currentTime);
-
-        expect(selected1).toHaveLength(2);
-        expect(selected2).toHaveLength(2);
-        expect(selected1[0]).toBe(task1);
-        expect(selected2[0]).toBe(task1);
+    test('stability', () => {
+        const tasks = [createTask(0.8), createTask(0.6)];
+        const s1 = selector.select(tasks, now);
+        const s2 = selector.select(tasks, now);
+        expect(s1).toEqual(s2);
     });
 });

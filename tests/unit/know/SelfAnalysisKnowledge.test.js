@@ -1,71 +1,44 @@
 import {
-    DependencyGraphKnowledge,
-    DirectoryStructureKnowledge,
-    FileAnalysisKnowledge,
-    TestResultKnowledge
+    DependencyGraphKnowledge, DirectoryStructureKnowledge, FileAnalysisKnowledge, TestResultKnowledge
 } from '../../../src/know/SoftwareKnowledge.js';
 import {SoftwareKnowledgeFactory} from '../../../src/know/SoftwareKnowledgeFactory.js';
 
 describe('Self-Analysis Knowledge', () => {
-    describe('FileAnalysisKnowledge', () => {
-        test('should process file analysis data', async () => {
-            const knowledge = new FileAnalysisKnowledge({
-                fileDetails: [{
-                    path: 'test.js',
-                    directory: 'src',
-                    lines: 100,
-                    size: 1000,
-                    complexity: {cyclomatic: 5}
-                }]
-            });
-            expect(await knowledge.getItems()).toHaveLength(1);
-            expect(await knowledge.toTasks()).toBeInstanceOf(Array);
-        });
+    const cases = [
+        {
+            name: 'FileAnalysisKnowledge',
+            Class: FileAnalysisKnowledge,
+            data: {fileDetails: [{path: 't.js', directory: 'src', lines: 10, size: 100, complexity: {cyclomatic: 1}}]},
+            factoryData: {fileDetails: [{path: 't.js', lines: 10}]}
+        },
+        {
+            name: 'TestResultKnowledge',
+            Class: TestResultKnowledge,
+            data: {individualTestResults: [{name: 't1', status: 'passed', duration: 10, suite: 's1'}]},
+            factoryData: {individualTestResults: [{name: 't1'}]}
+        },
+        {
+            name: 'DirectoryStructureKnowledge',
+            Class: DirectoryStructureKnowledge,
+            data: {directoryStats: {'src': {path: 'src', files: 1, lines: 10}}},
+            factoryData: {directoryStats: {'src': {}}}
+        },
+        {
+            name: 'DependencyGraphKnowledge',
+            Class: DependencyGraphKnowledge,
+            data: {dependencyGraph: {'f1.js': ['d1.js']}},
+            factoryData: {dependencyGraph: {'f1': []}}
+        }
+    ];
+
+    test.each(cases)('$name processing', async ({Class, data}) => {
+        const knowledge = new Class(data);
+        expect(await knowledge.getItems()).toHaveLength(1);
+        expect(await knowledge.toTasks()).toBeInstanceOf(Array);
     });
 
-    describe('TestResultKnowledge', () => {
-        test('should process test result data', async () => {
-            const knowledge = new TestResultKnowledge({
-                individualTestResults: [{
-                    name: 'test1',
-                    status: 'passed',
-                    duration: 100,
-                    suite: 'suite1'
-                }]
-            });
-            expect(await knowledge.getItems()).toHaveLength(1);
-            expect(await knowledge.toTasks()).toBeInstanceOf(Array);
-        });
-    });
-
-    describe('DirectoryStructureKnowledge', () => {
-        test('should process directory structure data', async () => {
-            const knowledge = new DirectoryStructureKnowledge({
-                directoryStats: {
-                    'src/test': {path: 'src/test', files: 5, lines: 1000}
-                }
-            });
-            expect(await knowledge.getItems()).toHaveLength(1);
-            expect(await knowledge.toTasks()).toBeInstanceOf(Array);
-        });
-    });
-
-    describe('DependencyGraphKnowledge', () => {
-        test('should process dependency graph data', async () => {
-            const knowledge = new DependencyGraphKnowledge({
-                dependencyGraph: {'file1.js': ['dependency1.js']}
-            });
-            expect(await knowledge.getItems()).toHaveLength(1);
-            expect(await knowledge.toTasks()).toBeInstanceOf(Array);
-        });
-    });
-
-    describe('SelfAnalysisKnowledgeFactory', () => {
-        test('should auto-detect self-analysis knowledge', () => {
-            const knowledge = SoftwareKnowledgeFactory.autoDetectSelfAnalysisKnowledge({
-                fileDetails: [{path: 'test.js', lines: 100}]
-            });
-            expect(knowledge.constructor.name).toBe('FileAnalysisKnowledge');
-        });
+    test.each(cases)('Factory auto-detect $name', ({name, factoryData}) => {
+        const knowledge = SoftwareKnowledgeFactory.autoDetectSelfAnalysisKnowledge(factoryData);
+        expect(knowledge.constructor.name).toBe(name);
     });
 });

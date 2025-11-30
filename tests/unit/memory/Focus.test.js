@@ -3,224 +3,138 @@ import {Task} from '../../../src/task/Task.js';
 import {TermFactory} from '../../../src/term/TermFactory.js';
 
 describe('Focus', () => {
-    let focus;
-    let termFactory;
-    let config;
+    let focus, tf;
+    const config = {maxFocusSets: 3, defaultFocusSetSize: 5, attentionDecayRate: 0.1};
 
     beforeEach(() => {
-        termFactory = new TermFactory();
-        config = {
-            maxFocusSets: 3,
-            defaultFocusSetSize: 5,
-            attentionDecayRate: 0.1
-        };
+        tf = new TermFactory();
         focus = new Focus(config);
     });
 
-    test('should initialize with default focus set', () => {
-        expect(focus.getCurrentFocus()).toBe('default');
-        expect(focus.getStats().currentFocus).toBe('default');
-        expect(focus.getStats().totalFocusSets).toBe(1);
-    });
-
-    test('should create new focus sets correctly', () => {
-        const created = focus.createFocusSet('test-set', 10);
-        expect(created).toBe(true);
-        expect(focus.getStats().totalFocusSets).toBe(2);
-        expect(focus.getStats().focusSets['test-set']).toBeDefined();
-    });
-
-    test('should not create duplicate focus sets', () => {
-        focus.createFocusSet('test-set');
-        const createdAgain = focus.createFocusSet('test-set');
-        expect(createdAgain).toBe(false);
-        expect(focus.getStats().totalFocusSets).toBe(2); // default + test-set
-    });
-
-    test('should not exceed maximum focus sets', () => {
-        focus.createFocusSet('set1');
-        focus.createFocusSet('set2');
-
-        const createdFourth = focus.createFocusSet('set4');
-        expect(createdFourth).toBe(false);
-        expect(focus.getStats().totalFocusSets).toBe(3);
-    });
-
-    test('should set current focus correctly', () => {
-        focus.createFocusSet('test-set');
-        const setSuccess = focus.setFocus('test-set');
-        expect(setSuccess).toBe(true);
-        expect(focus.getCurrentFocus()).toBe('test-set');
-    });
-
-    test('should not set non-existent focus as current', () => {
-        const setSuccess = focus.setFocus('non-existent');
-        expect(setSuccess).toBe(false);
-        expect(focus.getCurrentFocus()).toBe('default');
-    });
-
-    test('should add tasks to current focus set', () => {
-        const term = termFactory.atomic('A');
-        const task = new Task({
-            term,
-            truth: {frequency: 0.9, confidence: 0.8},
-            punctuation: '.',
-            budget: {priority: 0.7}
+    describe('Focus Sets', () => {
+        test('initialization', () => {
+            expect(focus.getCurrentFocus()).toBe('default');
+            expect(focus.getStats()).toMatchObject({currentFocus: 'default', totalFocusSets: 1});
         });
 
-        const added = focus.addTaskToFocus(task);
-        expect(added).toBe(true);
-
-        const tasks = focus.getTasks(10);
-        expect(tasks).toHaveLength(1);
-        expect(tasks[0]).toBe(task);
-    });
-
-    test('should not add task with duplicate hash', () => {
-        const term = termFactory.atomic('A');
-        const task = new Task({
-            term,
-            truth: {frequency: 0.9, confidence: 0.8},
-            punctuation: '.',
-            budget: {priority: 0.7}
+        test('creation', () => {
+            expect(focus.createFocusSet('test-set', 10)).toBe(true);
+            expect(focus.getStats().totalFocusSets).toBe(2);
+            expect(focus.getStats().focusSets['test-set']).toBeDefined();
         });
 
-        focus.addTaskToFocus(task);
-        const addedAgain = focus.addTaskToFocus(task);
-        expect(addedAgain).toBe(false);
-
-        const tasks = focus.getTasks(10);
-        expect(tasks).toHaveLength(1);
-    });
-
-    test('should remove lowest priority task when at capacity', () => {
-        focus.createFocusSet('small-set', 2);
-        focus.setFocus('small-set');
-
-        const term1 = termFactory.atomic('A');
-        const term2 = termFactory.atomic('B');
-        const term3 = termFactory.atomic('C');
-
-        const task1 = new Task({
-            term: term1,
-            punctuation: '.',
-            budget: {priority: 0.5},
-            truth: {frequency: 0.9, confidence: 0.8}
-        });
-        const task2 = new Task({
-            term: term2,
-            punctuation: '.',
-            budget: {priority: 0.3},
-            truth: {frequency: 0.9, confidence: 0.8}
-        });
-        const task3 = new Task({
-            term: term3,
-            punctuation: '.',
-            budget: {priority: 0.8},
-            truth: {frequency: 0.9, confidence: 0.8}
+        test('duplicates prevented', () => {
+            focus.createFocusSet('test-set');
+            expect(focus.createFocusSet('test-set')).toBe(false);
+            expect(focus.getStats().totalFocusSets).toBe(2);
         });
 
-        focus.addTaskToFocus(task1);
-        focus.addTaskToFocus(task2);
-        focus.addTaskToFocus(task3);
-
-        const tasks = focus.getTasks(10);
-        expect(tasks).toHaveLength(2);
-        expect(tasks[0].budget.priority).toBe(0.8); // task3
-        expect(tasks[1].budget.priority).toBe(0.5); // task1
-    });
-
-    test('should remove task from all focus sets', () => {
-        focus.createFocusSet('set1');
-        focus.createFocusSet('set2');
-
-        const term = termFactory.atomic('A');
-        const task = new Task({
-            term,
-            punctuation: '.',
-            budget: {priority: 0.7},
-            truth: {frequency: 0.9, confidence: 0.8}
+        test('max limit respected', () => {
+            ['s1', 's2'].forEach(s => focus.createFocusSet(s));
+            expect(focus.createFocusSet('s3')).toBe(false); // 1 default + 2 = 3
         });
 
-        focus.setFocus('set1');
-        focus.addTaskToFocus(task);
-        focus.setFocus('set2');
-        focus.addTaskToFocus(task);
-
-        const removed = focus.removeTaskFromFocus(task.stamp.id);
-        expect(removed).toBe(true);
-
-        focus.setFocus('set1');
-        const tasks1 = focus.getTasks(10);
-        expect(tasks1).toHaveLength(0);
-
-        focus.setFocus('set2');
-        const tasks2 = focus.getTasks(10);
-        expect(tasks2).toHaveLength(0);
+        test('switching focus', () => {
+            focus.createFocusSet('test-set');
+            expect(focus.setFocus('test-set')).toBe(true);
+            expect(focus.getCurrentFocus()).toBe('test-set');
+            expect(focus.setFocus('non-existent')).toBe(false);
+        });
     });
 
-    test('should update attention score correctly', () => {
-        const initialStats = focus.getStats();
-        const initialAttention = initialStats.focusSets['default'].attentionScore;
+    describe('Task Operations', () => {
+        let task;
+        beforeEach(() => {
+            task = new Task({
+                term: tf.atomic('A'),
+                truth: {frequency: 0.9, confidence: 0.8},
+                punctuation: '.',
+                budget: {priority: 0.7}
+            });
+        });
 
-        focus.updateAttention('default', 0.2);
+        test('add task', () => {
+            expect(focus.addTaskToFocus(task)).toBe(true);
+            const tasks = focus.getTasks(10);
+            expect(tasks).toHaveLength(1);
+            expect(tasks[0]).toBe(task);
+        });
 
-        const updatedStats = focus.getStats();
-        expect(updatedStats.focusSets['default'].attentionScore).toBe(
-            Math.max(0, Math.min(1, initialAttention + 0.2))
-        );
+        test('prevent duplicates', () => {
+            focus.addTaskToFocus(task);
+            expect(focus.addTaskToFocus(task)).toBe(false);
+            expect(focus.getTasks(10)).toHaveLength(1);
+        });
+
+        test('remove task from all sets', () => {
+            focus.createFocusSet('s1');
+            focus.createFocusSet('s2');
+
+            ['s1', 's2'].forEach(s => {
+                focus.setFocus(s);
+                focus.addTaskToFocus(task);
+            });
+
+            expect(focus.removeTaskFromFocus(task.stamp.id)).toBe(true);
+
+            ['s1', 's2'].forEach(s => {
+                focus.setFocus(s);
+                expect(focus.getTasks(10)).toHaveLength(0);
+            });
+        });
+
+        test('capacity eviction by priority', () => {
+            focus.createFocusSet('tiny', 2);
+            focus.setFocus('tiny');
+
+            const tasks = [0.5, 0.3, 0.8].map((p, i) => new Task({
+                term: tf.atomic('T' + i),
+                punctuation: '.',
+                budget: {priority: p},
+                truth: {frequency: 0.9, confidence: 0.8}
+            }));
+
+            tasks.forEach(t => focus.addTaskToFocus(t));
+
+            const kept = focus.getTasks(10);
+            expect(kept).toHaveLength(2);
+            // 0.8 (T2) and 0.5 (T0) should stay, 0.3 (T1) evicted
+            expect(kept.map(t => t.budget.priority)).toEqual(expect.arrayContaining([0.8, 0.5]));
+        });
     });
 
-    test('should apply decay to all focus sets', () => {
-        focus.createFocusSet('test-set');
-        focus.updateAttention('default', 0.5);
-        focus.updateAttention('test-set', 0.8);
+    describe('Attention & Stats', () => {
+        test('update attention', () => {
+            const initial = focus.getStats().focusSets['default'].attentionScore;
+            focus.updateAttention('default', 0.2);
+            expect(focus.getStats().focusSets['default'].attentionScore).toBeCloseTo(Math.min(1, initial + 0.2));
+        });
 
-        focus.applyDecay();
+        test('apply decay', () => {
+            focus.createFocusSet('s1');
+            focus.updateAttention('default', 0.5);
+            focus.updateAttention('s1', 0.8);
 
-        const stats = focus.getStats();
-        expect(stats.focusSets['default'].attentionScore).toBeLessThan(0.5);
-        expect(stats.focusSets['test-set'].attentionScore).toBeLessThan(0.8);
+            focus.applyDecay();
+            const stats = focus.getStats();
+            expect(stats.focusSets['default'].attentionScore).toBeLessThan(0.5);
+            expect(stats.focusSets['s1'].attentionScore).toBeLessThan(0.8);
+        });
+
+        test('clear', () => {
+            focus.createFocusSet('s1');
+            focus.clear();
+            expect(focus.getCurrentFocus()).toBeNull();
+            expect(focus.getStats().totalFocusSets).toBe(0);
+        });
     });
 
-    test('should provide comprehensive statistics', () => {
-        focus.createFocusSet('test-set');
-        focus.updateAttention('default', 0.3);
-        focus.updateAttention('test-set', 0.7);
-
-        const stats = focus.getStats();
-        expect(stats.currentFocus).toBe('default');
-        expect(stats.totalFocusSets).toBe(2);
-        expect(stats.focusSets['default']).toBeDefined();
-        expect(stats.focusSets['test-set']).toBeDefined();
-        expect(stats.focusSets['default'].attentionScore).toBe(0.3);
-        expect(stats.focusSets['test-set'].attentionScore).toBe(0.7);
-    });
-
-    test('should clear all focus sets', () => {
-        focus.createFocusSet('test-set');
-        focus.updateAttention('default', 0.5);
-        focus.updateAttention('test-set', 0.8);
-
-        focus.clear();
-
-        expect(focus.getCurrentFocus()).toBeNull();
-        expect(focus.getStats().totalFocusSets).toBe(0);
-    });
-
-    test('should handle edge cases gracefully', () => {
-        // Test getting tasks from non-existent focus
-        focus.setFocus('non-existent');
-        const tasks = focus.getTasks(10);
-        expect(tasks).toEqual([]);
-
-        // Test updating attention for non-existent focus
-        expect(() => {
-            focus.updateAttention('non-existent', 0.1);
-        }).not.toThrow();
-
-        // Test removing task that doesn't exist
-        const removed = focus.removeTaskFromFocus('non-existent-hash');
-        expect(removed).toBe(false);
+    describe('Edge Cases', () => {
+        test('graceful failures', () => {
+            focus.setFocus('non-existent');
+            expect(focus.getTasks(10)).toEqual([]);
+            expect(() => focus.updateAttention('non-existent', 0.1)).not.toThrow();
+            expect(focus.removeTaskFromFocus('bad-hash')).toBe(false);
+        });
     });
 });

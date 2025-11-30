@@ -8,28 +8,14 @@ describe('NAR - Basic Functionality', () => {
         await nar.initialize();
     });
 
-    test('should handle basic atomic terms', async () => {
-        const success = await nar.input('cat.');
-        expect(success).toBe(true);
-
+    test.each([
+        ['atomic', 'cat.', t => t.includes('cat')],
+        ['spaced compound', '(cat --> dog).', t => t.includes('-->')],
+        ['tight compound', '(cat-->dog).', t => t.includes('-->')]
+    ])('handle %s terms', async (_, input, check) => {
+        expect(await nar.input(input)).toBe(true);
         const beliefs = nar.getBeliefs();
         expect(beliefs.length).toBeGreaterThan(0);
-        expect(beliefs[0].term.toString()).toContain('cat');
-    });
-
-    test('should handle spaced compounds', async () => {
-        const success = await nar.input('(cat --> dog).');
-        expect(success).toBe(true);
-
-        const beliefs = nar.getBeliefs();
-        expect(beliefs.length).toBeGreaterThan(0);
-    });
-
-    test('should handle tight compounds', async () => {
-        const success = await nar.input('(cat-->dog).');
-        expect(success).toBe(true);
-
-        const beliefs = nar.getBeliefs();
-        expect(beliefs.length).toBeGreaterThan(0);
+        expect(check(beliefs[0].term.toString())).toBe(true);
     });
 });
