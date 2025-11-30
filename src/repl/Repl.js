@@ -5,12 +5,14 @@ import {render} from 'ink';
 import {Config} from '../app/Config.js';
 import {App} from '../app/App.js';
 import {TUI} from './components/TUI.js';
+import {Logger} from '../util/Logger.js';
 
 class Repl {
     constructor() {
         this.config = Config.parse();
         this.app = new App(this.config);
         this.inkInstance = null;
+        this.log = Logger;
     }
 
     async start() {

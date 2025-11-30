@@ -1,5 +1,6 @@
 import {AgentBuilder} from '../agent/AgentBuilder.js';
 import EventEmitter from 'events';
+import {Logger} from '../util/Logger.js';
 
 export class App extends EventEmitter {
     constructor(config = {}) {
@@ -7,6 +8,7 @@ export class App extends EventEmitter {
         this.config = config;
         this.agents = new Map();
         this.activeAgentId = null;
+        this.log = Logger;
     }
 
     get agent() {
