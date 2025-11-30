@@ -22,7 +22,7 @@ export class QuestionReasoningMessageHandler extends BaseMessageHandler {
      */
     handleReasoningDerivation(msg) {
         const payload = msg.payload || {};
-        const derivation = payload.derivation || payload.task || payload;
+        const derivation = payload.derivation || payload.derivedTask || payload.task || payload;
         return {
             content: `OUT: ${this._formatTask(derivation)}`,
             type: 'info',

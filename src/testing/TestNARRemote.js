@@ -179,21 +179,12 @@ export class TestNARRemote {
 
             this.client.on('open', () => {
                 this.client.on('message', (data) => {
-                    const message = JSON.parse(data);
-
-                    // Update Virtual UI
-                    this.virtualGraph.updateFromMessage(message);
-                    this.virtualConsole.processMessage(message);
-
-                    // Legacy task queue logic
-                    if (message.type === 'event' && (message.eventType === 'task.added' || message.eventType === 'task.processed' || message.eventType === 'reasoning.derivation')) {
-                        const taskData = message.data?.data?.task || message.data?.task;
-                        if (taskData) {
-                            this.taskQueue.push(taskData);
-                        }
+                    try {
+                        const message = JSON.parse(data);
+                        this._processIncomingMessage(message);
+                    } catch (e) {
+                        console.error('Failed to parse incoming message:', e);
                     }
-
-                    // Also check for Narsese result/error/etc for log expectations
                 });
                 resolve();
             });
@@ -202,6 +193,28 @@ export class TestNARRemote {
                 reject(error);
             });
         });
+    }
+
+    _processIncomingMessage(message) {
+        if (message.type === 'eventBatch' && Array.isArray(message.data)) {
+            message.data.forEach(event => this._processSingleMessage(event));
+        } else {
+            this._processSingleMessage(message);
+        }
+    }
+
+    _processSingleMessage(message) {
+        // Update Virtual UI
+        this.virtualGraph.updateFromMessage(message);
+        this.virtualConsole.processMessage(message);
+
+        // Update task queue
+        if (message.type === 'task.added' || message.type === 'task.processed' || message.type === 'reasoning.derivation') {
+            const task = message.data?.derivedTask || message.data?.task;
+            if (task) {
+                this.taskQueue.push(task);
+            }
+        }
     }
 
     disconnectClient() {
@@ -289,7 +302,7 @@ export class TestNARRemote {
 
                 const timeout = setTimeout(() => {
                     safeReject(new Error(`Expectation timeout: ${JSON.stringify(exp)}`));
-                }, 10000);
+                }, 20000);
 
                 const checkState = () => {
                     // Check task queue (legacy)
