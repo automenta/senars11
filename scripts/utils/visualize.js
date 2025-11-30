@@ -101,7 +101,7 @@ console.log(`Capturing ${captureType} from ${url} for ${duration}ms...`);
 let generatorArgs = [captureType, url];
 
 // Run the screenshot generator with appropriate parameters
-const child = spawn('node', ['screenshot-generator.js', ...generatorArgs], {
+const child = spawn('node', ['scripts/utils/screenshot-generator.js', ...generatorArgs], {
     stdio: 'inherit',
     cwd: join(__dirname, '../..')
 });
