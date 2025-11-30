@@ -65,7 +65,7 @@ export const WEBSOCKET_CONFIG = Object.freeze({
     defaultHost: '0.0.0.0',
     defaultPath: '/ws',
     maxConnections: 50,
-    minBroadcastInterval: 1,
+    minBroadcastInterval: 10,
     messageBufferSize: 10000,
     rateLimitWindowMs: 1000,
     maxMessagesPerWindow: 1000,
