@@ -3,36 +3,34 @@ import {Task} from '../../../src/task/Task.js';
 import {TermFactory} from '../../../src/term/TermFactory.js';
 
 describe('Bag', () => {
-    let bag;
-    let termFactory;
-    let createAtom;
+    let bag, factory, createAtom;
 
     beforeEach(() => {
         bag = new Bag(10);
-        termFactory = new TermFactory();
-        createAtom = (name) => termFactory.atomic(name);
+        factory = new TermFactory();
+        createAtom = (name) => factory.atomic(name);
     });
 
-    describe('Basic operations', () => {
-        test('initializes with the correct default state', () => {
+    describe('Basic', () => {
+        test('defaults', () => {
             expect(bag.size).toBe(0);
             expect(bag.maxSize).toBe(10);
         });
 
-        test('adds an item', () => {
+        test('add', () => {
             const task = new Task({term: createAtom('A'), truth: {frequency: 0.9, confidence: 0.8}});
             expect(bag.add(task)).toBe(true);
             expect(bag.size).toBe(1);
         });
 
-        test('does not add a duplicate item', () => {
+        test('duplicate add -> fail', () => {
             const task = new Task({term: createAtom('A'), truth: {frequency: 0.9, confidence: 0.8}});
             bag.add(task);
             expect(bag.add(task)).toBe(false);
             expect(bag.size).toBe(1);
         });
 
-        test('removes an item', () => {
+        test('remove', () => {
             const task = new Task({term: createAtom('A'), truth: {frequency: 0.9, confidence: 0.8}});
             bag.add(task);
             expect(bag.remove(task)).toBe(true);
@@ -40,34 +38,25 @@ describe('Bag', () => {
         });
     });
 
-    describe('Priority-based operations', () => {
-        let task1, task2;
+    describe('Priority', () => {
+        let t1, t2;
 
         beforeEach(() => {
-            task1 = new Task({
-                term: createAtom('A'),
-                budget: {priority: 0.5},
-                truth: {frequency: 0.9, confidence: 0.8}
-            });
-            task2 = new Task({
-                term: createAtom('B'),
-                budget: {priority: 0.8},
-                truth: {frequency: 0.9, confidence: 0.8}
-            });
-            bag.add(task1);
-            bag.add(task2);
+            t1 = new Task({term: createAtom('A'), budget: {priority: 0.5}, truth: {frequency: 0.9, confidence: 0.8}});
+            t2 = new Task({term: createAtom('B'), budget: {priority: 0.8}, truth: {frequency: 0.9, confidence: 0.8}});
+            bag.add(t1);
+            bag.add(t2);
         });
 
-        test('peeks at the highest priority item', () => {
-            expect(bag.peek()).toBe(task2);
+        test('peek', () => {
+            expect(bag.peek()).toBe(t2);
         });
 
-        test('gets items in priority order', () => {
-            const items = bag.getItemsInPriorityOrder();
-            expect(items).toEqual([task2, task1]);
+        test('getItemsInPriorityOrder', () => {
+            expect(bag.getItemsInPriorityOrder()).toEqual([t2, t1]);
         });
 
-        test('applies decay to priorities', () => {
+        test('applyDecay', () => {
             bag.applyDecay(0.5);
             const items = bag.getItemsInPriorityOrder();
             expect(bag.getPriority(items[0])).toBe(0.4);

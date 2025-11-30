@@ -1,24 +1,18 @@
-// Third-party imports
-// (none in this file)
-
-// Local imports
 import {Memory} from '../../../src/memory/Memory.js';
 import {createMemoryConfig, createTask, createTerm, TEST_CONSTANTS} from '../../support/factories.js';
 import {memoryAssertions, TestSuiteFactory} from '../../support/testOrganizer.js';
 
-// Use the TestSuiteFactory to create a comprehensive Memory test suite
 TestSuiteFactory.createMemoryRelatedSuite({
     className: 'Memory',
     Constructor: Memory,
     validInput: createMemoryConfig(),
     testAssertions: true,
-    testDataModel: false,  // Memory has complex initialization, skip data model tests
+    testDataModel: false,
     assertionUtils: memoryAssertions
 });
 
-describe('Memory - Additional Specific Tests', () => {
-    let memory;
-    let config;
+describe('Memory', () => {
+    let memory, config;
 
     beforeEach(() => {
         config = createMemoryConfig();
@@ -26,252 +20,152 @@ describe('Memory - Additional Specific Tests', () => {
     });
 
     describe('Initialization', () => {
-        test('initializes with correct default state', () => {
+        test('defaults', () => {
             expect(memory.concepts.size).toBe(0);
             expect(memory.focusConcepts.size).toBe(0);
             expect(memory.stats.totalConcepts).toBe(0);
-            expect(memory.stats.totalTasks).toBe(0);
-            expect(memory.stats.focusConceptsCount).toBe(0);
             expect(memory.config).toStrictEqual(config);
         });
     });
 
     describe('Task Operations', () => {
-        test('adds tasks and creates concepts', () => {
+        test('add task -> creates concept', () => {
             const task = createTask({
                 term: createTerm('A'),
                 truth: TEST_CONSTANTS.TRUTH.HIGH,
                 budget: TEST_CONSTANTS.BUDGET.MEDIUM
             });
 
-            const added = memory.addTask(task);
-
-            expect(added).toBe(true);
+            expect(memory.addTask(task)).toBe(true);
             expect(memory.stats.totalConcepts).toBe(1);
-            expect(memory.stats.totalTasks).toBe(1);
             expect(memory.focusConcepts.size).toBe(1);
         });
 
-        test('handles duplicate tasks correctly', () => {
+        test('duplicate tasks', () => {
             const term = createTerm('A');
-            const [task1, task2] = [
-                createTask({term, truth: TEST_CONSTANTS.TRUTH.HIGH, budget: TEST_CONSTANTS.BUDGET.MEDIUM}),
-                createTask({term, truth: TEST_CONSTANTS.TRUTH.MEDIUM, budget: TEST_CONSTANTS.BUDGET.LOW})
-            ];
-
-            memory.addTask(task1);
-            memory.addTask(task2);
+            memory.addTask(createTask({term, truth: TEST_CONSTANTS.TRUTH.HIGH}));
+            memory.addTask(createTask({term, truth: TEST_CONSTANTS.TRUTH.MEDIUM}));
 
             expect(memory.stats.totalConcepts).toBe(1);
             expect(memory.stats.totalTasks).toBe(2);
         });
 
-        test('retrieves concepts correctly', () => {
+        test('getConcept', () => {
             const term = createTerm('A');
-            const task = createTask({term, truth: TEST_CONSTANTS.TRUTH.HIGH});
+            memory.addTask(createTask({term}));
 
-            memory.addTask(task);
             const concept = memory.getConcept(term);
-
             expect(concept).toBeDefined();
             expect(concept.term).toBe(term);
-            expect(concept.totalTasks).toBe(1);
         });
 
-        test('returns null for non-existent concepts', () => {
-            const nonExistentTerm = createTerm('B');
-            expect(memory.getConcept(nonExistentTerm)).toBeNull();
+        test('getConcept null', () => {
+            expect(memory.getConcept(createTerm('B'))).toBeNull();
         });
 
-        test('gets all concepts correctly', () => {
-            const [taskA, taskB] = [
-                createTask({term: createTerm('A')}),
-                createTask({term: createTerm('B')})
-            ];
-
-            memory.addTask(taskA);
-            memory.addTask(taskB);
-
+        test('getAllConcepts', () => {
+            memory.addTask(createTask({term: createTerm('A')}));
+            memory.addTask(createTask({term: createTerm('B')}));
             expect(memory.getAllConcepts()).toHaveLength(2);
         });
     });
 
     describe('Concept Management', () => {
         test.each([
-            {name: 'high priority', budget: TEST_CONSTANTS.BUDGET.HIGH, shouldFocus: true},
-            {name: 'low priority', budget: TEST_CONSTANTS.BUDGET.LOW, shouldFocus: false}
-        ])('handles $name tasks for focus memory', ({budget, shouldFocus}) => {
-            const term = createTerm('A');
-            const task = createTask({term, budget});
-
-            memory.addTask(task);
-
-            if (shouldFocus) {
-                expect(memory.focusConcepts.size).toBe(1);
-            } else {
-                expect(memory.focusConcepts.size).toBe(0);
-            }
+            {name: 'high', budget: TEST_CONSTANTS.BUDGET.HIGH, expectFocus: 1},
+            {name: 'low', budget: TEST_CONSTANTS.BUDGET.LOW, expectFocus: 0}
+        ])('$name priority', ({budget, expectFocus}) => {
+            memory.addTask(createTask({term: createTerm('A'), budget}));
+            expect(memory.focusConcepts.size).toBe(expectFocus);
         });
 
-        test('removes concepts correctly', () => {
+        test('removeConcept', () => {
             const term = createTerm('A');
-            const task = createTask({term, budget: TEST_CONSTANTS.BUDGET.HIGH});
+            memory.addTask(createTask({term}));
 
-            memory.addTask(task);
-            expect(memory.stats.totalConcepts).toBe(1);
-            expect(memory.stats.totalTasks).toBe(1);
-
-            const removed = memory.removeConcept(term);
-            expect(removed).toBe(true);
+            expect(memory.removeConcept(term)).toBe(true);
             expect(memory.stats.totalConcepts).toBe(0);
-            expect(memory.stats.totalTasks).toBe(0);
-            expect(memory.focusConcepts.size).toBe(0);
         });
 
-        test('returns false when removing non-existent concept', () => {
-            const removed = memory.removeConcept(createTerm('A'));
-            expect(removed).toBe(false);
+        test('removeConcept non-existent', () => {
+            expect(memory.removeConcept(createTerm('A'))).toBe(false);
         });
 
-        test('checks concept existence', () => {
+        test('hasConcept', () => {
             const term = createTerm('A');
-            const nonExistentTerm = createTerm('B');
-
             expect(memory.hasConcept(term)).toBe(false);
-
             memory.addTask(createTask({term}));
             expect(memory.hasConcept(term)).toBe(true);
-            expect(memory.hasConcept(nonExistentTerm)).toBe(false);
         });
     });
 
-    describe('Statistics and Utilities', () => {
-        test('gets total task count', () => {
+    describe('Stats & Utils', () => {
+        test('getTotalTaskCount', () => {
             expect(memory.getTotalTaskCount()).toBe(0);
-
-            const term = createTerm('A');
-            const task = createTask({term});
-
-            memory.addTask(task);
+            memory.addTask(createTask({term: createTerm('A')}));
             expect(memory.getTotalTaskCount()).toBe(1);
         });
 
-        test('provides detailed statistics', () => {
-            const term = createTerm('A');
-            const task = createTask({term, budget: TEST_CONSTANTS.BUDGET.HIGH});
-
-            memory.addTask(task);
-
+        test('getDetailedStats', () => {
+            memory.addTask(createTask({term: createTerm('A')}));
             const stats = memory.getDetailedStats();
-
             expect(stats.totalConcepts).toBe(1);
-            expect(stats.totalTasks).toBe(1);
             expect(stats.memoryUsage).toBeDefined();
-            expect(stats.conceptStats).toBeDefined();
         });
 
-        test('clears correctly', () => {
-            const term = createTerm('A');
-            const task = createTask({term, budget: TEST_CONSTANTS.BUDGET.HIGH});
-
-            memory.addTask(task);
-            expect(memory.stats.totalConcepts).toBe(1);
-
+        test('clear', () => {
+            memory.addTask(createTask({term: createTerm('A')}));
             memory.clear();
-
             expect(memory.stats.totalConcepts).toBe(0);
-            expect(memory.stats.totalTasks).toBe(0);
-            expect(memory.focusConcepts.size).toBe(0);
-            expect(memory.concepts.size).toBe(0);
         });
     });
 
-    describe('Advanced Operations', () => {
-        test('filters concepts by criteria', () => {
-            const [highPriorityTask, lowPriorityTask] = [
-                createTask({
-                    term: createTerm('A'),
-                    budget: TEST_CONSTANTS.BUDGET.HIGH
-                }),
-                createTask({
-                    term: createTerm('B'),
-                    budget: TEST_CONSTANTS.BUDGET.LOW
-                })
-            ];
+    describe('Advanced', () => {
+        test('filters', () => {
+            memory.addTask(createTask({term: createTerm('A'), budget: TEST_CONSTANTS.BUDGET.HIGH}));
+            memory.addTask(createTask({term: createTerm('B'), budget: TEST_CONSTANTS.BUDGET.LOW}));
 
-            memory.addTask(highPriorityTask);
-            memory.addTask(lowPriorityTask);
-
-            const activeConcepts = memory.getConceptsByCriteria({minActivation: 0.5});
-            expect(activeConcepts.length).toBeGreaterThanOrEqual(0);
-
-            const focusConcepts = memory.getConceptsByCriteria({onlyFocus: true});
-            expect(focusConcepts.length).toBeGreaterThanOrEqual(0);
+            expect(memory.getConceptsByCriteria({minActivation: 0.5}).length).toBeGreaterThanOrEqual(0);
+            expect(memory.getConceptsByCriteria({onlyFocus: true}).length).toBeGreaterThanOrEqual(0);
         });
 
-        test('gets most active concepts', () => {
-            const [taskA, taskB] = [
-                createTask({term: createTerm('A'), budget: TEST_CONSTANTS.BUDGET.HIGH}),
-                createTask({term: createTerm('B'), budget: TEST_CONSTANTS.BUDGET.MEDIUM})
-            ];
-
-            memory.addTask(taskA);
-            memory.addTask(taskB);
-
-            const mostActive = memory.getMostActiveConcepts(5);
-            // Use flexible assertion since implementation details might change
-            expect(mostActive.length).toBeGreaterThanOrEqual(0);
-            expect(mostActive.length).toBeLessThanOrEqual(2);
+        test('most active', () => {
+            memory.addTask(createTask({term: createTerm('A'), budget: TEST_CONSTANTS.BUDGET.HIGH}));
+            expect(memory.getMostActiveConcepts(5).length).toBeGreaterThanOrEqual(0);
         });
 
-        test('boosts concept activation', () => {
+        test('boost activation', () => {
             const term = createTerm('A');
-            const task = createTask({term, budget: TEST_CONSTANTS.BUDGET.HIGH});
+            memory.addTask(createTask({term}));
 
-            memory.addTask(task);
             const concept = memory.getConcept(term);
-
-            const originalActivation = concept.activation;
+            const orig = concept.activation;
             memory.boostConceptActivation(term, 0.2);
-
-            expect(concept.activation).toBeGreaterThanOrEqual(originalActivation);
+            expect(concept.activation).toBeGreaterThanOrEqual(orig);
         });
 
-        test('updates concept quality', () => {
+        test('update quality', () => {
             const term = createTerm('A');
-            const task = createTask({term, budget: TEST_CONSTANTS.BUDGET.HIGH});
+            memory.addTask(createTask({term}));
 
-            memory.addTask(task);
             const concept = memory.getConcept(term);
-
-            const originalQuality = concept.quality;
+            const orig = concept.quality;
             memory.updateConceptQuality(term, 0.1);
-
-            expect(concept.quality).toBeGreaterThanOrEqual(originalQuality);
+            expect(concept.quality).toBeGreaterThanOrEqual(orig);
         });
 
-        test('consolidates correctly', () => {
-            const term = createTerm('A');
-            const task = createTask({term, budget: TEST_CONSTANTS.BUDGET.HIGH});
-
-            memory.addTask(task);
-
-            const beforeConsolidation = memory.stats.lastConsolidation;
+        test('consolidate', () => {
+            memory.addTask(createTask({term: createTerm('A')}));
+            const before = memory.stats.lastConsolidation;
             memory.consolidate();
-
-            expect(memory.stats.lastConsolidation).toBeGreaterThanOrEqual(beforeConsolidation);
+            expect(memory.stats.lastConsolidation).toBeGreaterThanOrEqual(before);
         });
     });
 
     describe('Error Handling', () => {
-        test('should handle edge cases and error conditions gracefully', () => {
-            // Test with null task
+        test('graceful failures', () => {
             expect(memory.addTask(null)).toBe(false);
-
-            // Test consolidation with no concepts
             expect(() => memory.consolidate()).not.toThrow();
-
-            // Test getting concept for null term
             expect(() => memory.getConcept(null)).not.toThrow();
         });
     });

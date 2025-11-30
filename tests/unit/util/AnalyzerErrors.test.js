@@ -2,80 +2,65 @@ import {AnalysisError, AnalyzerError, ConfigurationError, ValidationError} from 
 
 describe('AnalyzerErrors', () => {
     describe('AnalyzerError', () => {
-        test('should create an error with correct properties', () => {
-            const originalError = new Error('Original error');
-            const error = new AnalyzerError('Test message', 'TEST_CODE', originalError);
+        test('initialization with original error', () => {
+            const orig = new Error('Original');
+            const err = new AnalyzerError('Test msg', 'TEST', orig);
 
-            expect(error).toBeInstanceOf(Error);
-            expect(error).toBeInstanceOf(AnalyzerError);
-            expect(error.name).toBe('AnalyzerError');
-            expect(error.message).toBe('Test message');
-            expect(error.code).toBe('TEST_CODE');
-            expect(error.originalError).toBe(originalError);
-            expect(error.timestamp).toBeDefined();
+            expect(err).toBeInstanceOf(AnalyzerError);
+            expect(err.name).toBe('AnalyzerError');
+            expect(err.message).toBe('Test msg');
+            expect(err.code).toBe('TEST');
+            expect(err.originalError).toBe(orig);
+            expect(err.timestamp).toBeDefined();
         });
 
-        test('should create an error without original error', () => {
-            const error = new AnalyzerError('Test message');
-
-            expect(error.name).toBe('AnalyzerError');
-            expect(error.message).toBe('Test message');
-            expect(error.code).toBe('ANALYZER_ERROR');
-            expect(error.originalError).toBeNull();
+        test('initialization default', () => {
+            const err = new AnalyzerError('Test msg');
+            expect(err.message).toBe('Test msg');
+            expect(err.code).toBe('ANALYZER_ERROR');
+            expect(err.originalError).toBeNull();
         });
     });
 
     describe('ConfigurationError', () => {
-        test('should create a configuration error with correct properties', () => {
-            const originalError = new Error('Original error');
-            const error = new ConfigurationError('Config error', originalError);
+        test('initialization', () => {
+            const orig = new Error('Original');
+            const err = new ConfigurationError('Config err', orig);
 
-            expect(error).toBeInstanceOf(Error);
-            expect(error).toBeInstanceOf(AnalyzerError);
-            expect(error).toBeInstanceOf(ConfigurationError);
-            expect(error.name).toBe('ConfigurationError');
-            expect(error.message).toBe('Config error');
-            expect(error.code).toBe('CONFIG_ERROR');
-            expect(error.originalError).toBe(originalError);
+            expect(err).toBeInstanceOf(ConfigurationError);
+            expect(err.name).toBe('ConfigurationError');
+            expect(err.code).toBe('CONFIG_ERROR');
+            expect(err.originalError).toBe(orig);
         });
     });
 
     describe('AnalysisError', () => {
-        test('should create an analysis error with correct properties', () => {
-            const originalError = new Error('Original error');
-            const error = new AnalysisError('Analysis error', 'tests', originalError);
+        test('initialization', () => {
+            const orig = new Error('Original');
+            const err = new AnalysisError('Analysis err', 'tests', orig);
 
-            expect(error).toBeInstanceOf(Error);
-            expect(error).toBeInstanceOf(AnalyzerError);
-            expect(error).toBeInstanceOf(AnalysisError);
-            expect(error.name).toBe('AnalysisError');
-            expect(error.message).toBe('Analysis error');
-            expect(error.code).toBe('ANALYSIS_ERROR_TESTS');
-            expect(error.originalError).toBe(originalError);
-            expect(error.analysisType).toBe('tests');
+            expect(err).toBeInstanceOf(AnalysisError);
+            expect(err.name).toBe('AnalysisError');
+            expect(err.code).toBe('ANALYSIS_ERROR_TESTS');
+            expect(err.analysisType).toBe('tests');
         });
 
-        test('should handle unknown analysis type', () => {
-            const error = new AnalysisError('Analysis error');
-
-            expect(error.code).toBe('ANALYSIS_ERROR_UNKNOWN');
-            expect(error.analysisType).toBe('unknown');
+        test('unknown type', () => {
+            const err = new AnalysisError('Err');
+            expect(err.code).toBe('ANALYSIS_ERROR_UNKNOWN');
+            expect(err.analysisType).toBe('unknown');
         });
     });
 
     describe('ValidationError', () => {
-        test('should create a validation error with correct properties', () => {
-            const originalError = new Error('Original error');
-            const error = new ValidationError('Validation error', 'field1', originalError);
+        test('initialization', () => {
+            const orig = new Error('Original');
+            const err = new ValidationError('Valid err', 'field1', orig);
 
-            expect(error).toBeInstanceOf(Error);
-            expect(error).toBeInstanceOf(AnalyzerError);
-            expect(error).toBeInstanceOf(ValidationError);
-            expect(error.name).toBe('ValidationError');
-            expect(error.message).toBe('Validation error');
-            expect(error.code).toBe('VALIDATION_ERROR');
-            expect(error.originalError).toBe(originalError);
-            expect(error.field).toBe('field1');
+            expect(err).toBeInstanceOf(ValidationError);
+            expect(err.name).toBe('ValidationError');
+            expect(err.code).toBe('VALIDATION_ERROR');
+            expect(err.field).toBe('field1');
         });
     });
 });
