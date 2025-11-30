@@ -54,9 +54,7 @@ describe('Memory', () => {
             const term = createTerm('A');
             memory.addTask(createTask({term}));
 
-            const concept = memory.getConcept(term);
-            expect(concept).toBeDefined();
-            expect(concept.term).toBe(term);
+            expect(memory.getConcept(term)).toMatchObject({term});
         });
 
         test('getConcept null', () => {
@@ -108,9 +106,10 @@ describe('Memory', () => {
 
         test('getDetailedStats', () => {
             memory.addTask(createTask({term: createTerm('A')}));
-            const stats = memory.getDetailedStats();
-            expect(stats.totalConcepts).toBe(1);
-            expect(stats.memoryUsage).toBeDefined();
+            expect(memory.getDetailedStats()).toMatchObject({
+                totalConcepts: 1,
+                memoryUsage: expect.any(Object)
+            });
         });
 
         test('clear', () => {

@@ -1,13 +1,8 @@
-// Third-party imports
-// (none in this file)
-
-// Local imports
 import {Concept} from '../../../src/memory/Concept.js';
 import {createTask, createTerm} from '../../support/factories.js';
 
 describe('Concept', () => {
-    let concept;
-    let term;
+    let concept, term;
 
     beforeEach(() => {
         term = createTerm('A');
@@ -16,12 +11,14 @@ describe('Concept', () => {
 
     describe('Initialization', () => {
         test('initializes with the correct default state', () => {
-            expect(concept.term).toBe(term);
+            expect(concept).toMatchObject({
+                term,
+                totalTasks: 0,
+                activation: 0,
+                quality: 0,
+                useCount: 0
+            });
             expect(concept.getAllTasks()).toEqual([]);
-            expect(concept.totalTasks).toBe(0);
-            expect(concept.activation).toBe(0);
-            expect(concept.quality).toBe(0);
-            expect(concept.useCount).toBe(0);
         });
     });
 
@@ -72,7 +69,7 @@ describe('Concept', () => {
             concept.boostActivation(0.3);
             expect(concept.activation).toBe(0.8);
             concept.boostActivation(0.3);
-            expect(concept.activation).toBe(1.0); // Capped at 1.0
+            expect(concept.activation).toBe(1.0);
         });
 
         test('applies decay correctly', () => {
@@ -94,13 +91,11 @@ describe('Concept', () => {
         });
 
         test('returns the correct average priority', () => {
-            const [task1, task2] = [
+            [
                 createTask({term, budget: {priority: 0.8}}),
                 createTask({term, budget: {priority: 0.6}})
-            ];
+            ].forEach(t => concept.addTask(t));
 
-            concept.addTask(task1);
-            concept.addTask(task2);
             expect(concept.averagePriority).toBe(0.7);
         });
     });

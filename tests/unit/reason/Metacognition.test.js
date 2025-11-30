@@ -4,38 +4,29 @@ import {EventBus} from '../../../src/util/EventBus.js';
 import {IntrospectionEvents} from '../../../src/util/IntrospectionEvents.js';
 
 describe('Metacognition', () => {
-    let eventBus;
-    let metacognition;
-    let nar;
+    let eventBus, metacognition, nar;
 
     beforeEach(() => {
         eventBus = new EventBus();
         nar = {
             input: jest.fn(),
-            config: {
-                get: jest.fn(),
-            },
+            config: { get: jest.fn() },
             logInfo: jest.fn(),
         };
     });
 
-    it('should load analyzers specified in the config', () => {
-        const config = {
+    test('should load analyzers specified in the config', () => {
+        metacognition = new Metacognition({
             analyzers: ['PerformanceAnalyzer'],
-            PerformanceAnalyzer: {
-                avgCycleTimeThreshold: 50,
-            },
-        };
-        metacognition = new Metacognition(config, eventBus, nar);
-        expect(metacognition.analyzers.length).toBe(1);
+            PerformanceAnalyzer: { avgCycleTimeThreshold: 50 },
+        }, eventBus, nar);
+
+        expect(metacognition.analyzers).toHaveLength(1);
         expect(metacognition.analyzers[0].config.avgCycleTimeThreshold).toBe(50);
     });
 
-    it('should handle events and trigger analyzers', () => {
-        const config = {
-            analyzers: ['PerformanceAnalyzer'],
-        };
-        metacognition = new Metacognition(config, eventBus, nar);
+    test('should handle events and trigger analyzers', () => {
+        metacognition = new Metacognition({ analyzers: ['PerformanceAnalyzer'] }, eventBus, nar);
         metacognition.start();
 
         const analyzeSpy = jest.spyOn(metacognition.analyzers[0], 'analyze');
@@ -44,18 +35,14 @@ describe('Metacognition', () => {
         expect(analyzeSpy).toHaveBeenCalled();
     });
 
-    it('should process findings and input them into NAR', () => {
-        const config = {
+    test('should process findings and input them into NAR', () => {
+        metacognition = new Metacognition({
             analyzers: ['PerformanceAnalyzer'],
-            PerformanceAnalyzer: {
-                avgCycleTimeThreshold: 10,
-            },
-        };
-        metacognition = new Metacognition(config, eventBus, nar);
+            PerformanceAnalyzer: { avgCycleTimeThreshold: 10 },
+        }, eventBus, nar);
         metacognition.start();
 
         const processFindingsSpy = jest.spyOn(metacognition, 'processFindings');
-
         eventBus.emit(IntrospectionEvents.CYCLE_START, {timestamp: Date.now()});
         eventBus.emit(IntrospectionEvents.CYCLE_END, {timestamp: Date.now() + 20});
 
