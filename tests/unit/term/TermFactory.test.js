@@ -1,7 +1,3 @@
-// Third-party imports
-// (none in this file)
-
-// Local imports
 import {TermFactory} from '../../../src/term/TermFactory.js';
 
 describe('TermFactory', () => {
@@ -37,13 +33,10 @@ describe('TermFactory', () => {
                 create2: (f) => f.similarity(f.atomic('A'), f.atomic('B')),
                 expected: 'different'
             },
-        ])('should return $expected instance for $name', ({create1, create2, expected}) => {
-            const [term1, term2] = [create1(factory), create2(factory)];
-            if (expected === 'same') {
-                expect(term1).toBe(term2);
-            } else {
-                expect(term1).not.toBe(term2);
-            }
+        ])('$name -> $expected instance', ({create1, create2, expected}) => {
+            const [t1, t2] = [create1(factory), create2(factory)];
+            if (expected === 'same') expect(t1).toBe(t2);
+            else expect(t1).not.toBe(t2);
         });
     });
 
@@ -64,16 +57,14 @@ describe('TermFactory', () => {
                 term1: (f) => f.conjunction(f.atomic('A'), f.atomic('A')),
                 term2: (f) => f.conjunction(f.atomic('A'))
             },
-        ])('should handle $name correctly by returning the same instance', ({term1, term2}) => {
+        ])('$name', ({term1, term2}) => {
             expect(term1(factory)).toBe(term2(factory));
         });
 
-        test('equality operator should sort but NOT remove redundancy', () => {
-            // Sorting check
+        test('equality operator: sort but NO redundancy removal', () => {
             const t1 = factory.equality(factory.atomic('B'), factory.atomic('A'));
             expect(t1.name).toBe('(=, A, B)');
 
-            // Redundancy check
             const t2 = factory.equality(factory.atomic('A'), factory.atomic('A'));
             expect(t2.components.length).toBe(2);
             expect(t2.name).toBe('(=, A, A)');
@@ -81,7 +72,7 @@ describe('TermFactory', () => {
     });
 
     describe('Convenience Methods', () => {
-        test('predicate should create ^ term', () => {
+        test('predicate -> ^ term', () => {
             const [pred, args] = [factory.atomic('pred'), factory.atomic('args')];
             const term = factory.predicate(pred, args);
 
@@ -91,7 +82,7 @@ describe('TermFactory', () => {
             expect(term.components[1]).toBe(args);
         });
 
-        test('tuple should create , term', () => {
+        test('tuple -> , term', () => {
             const [a, b] = [factory.atomic('a'), factory.atomic('b')];
             const term = factory.tuple(a, b);
 
@@ -101,7 +92,7 @@ describe('TermFactory', () => {
             expect(term.components[1]).toBe(b);
         });
 
-        test('atomic should create atomic term', () => {
+        test('atomic -> atomic term', () => {
             const term = factory.atomic('A');
             expect(term.isAtomic).toBe(true);
             expect(term.name).toBe('A');

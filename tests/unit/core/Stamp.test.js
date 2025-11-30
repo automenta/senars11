@@ -1,10 +1,8 @@
 import {ArrayStamp, Stamp} from '../../../src/Stamp.js';
-import {createStamp} from '../../support/factories.js';
-import {flexibleAssertions} from '../../support/baseTestUtils.js';
 
 describe('Stamp', () => {
-    test('should create a Stamp instance with specified properties', () => {
-        const stamp = createStamp({
+    test('initialization', () => {
+        const stamp = new ArrayStamp({
             id: 'test-id',
             creationTime: 12345,
             source: 'INPUT',
@@ -18,55 +16,50 @@ describe('Stamp', () => {
         expect(stamp.derivations).toEqual(['d1', 'd2']);
     });
 
-    test('should be immutable', () => {
-        const stamp = createStamp();
-        expect(() => {
-            stamp.id = 'new-id';
-        }).toThrow();
-        expect(() => {
-            stamp.derivations.push('d3');
-        }).toThrow();
+    test('immutability', () => {
+        const stamp = new ArrayStamp({id: 's1'});
+        expect(() => { stamp.id = 'new-id'; }).toThrow();
+        expect(() => { stamp.derivations.push('d3'); }).toThrow();
     });
 
-    test('should create an input stamp using static factory', () => {
+    test('static createInput', () => {
         const inputStamp = Stamp.createInput();
         expect(inputStamp).toBeInstanceOf(ArrayStamp);
         expect(inputStamp.source).toBe('INPUT');
-        expect(inputStamp.derivations.length).toBe(0);
-        flexibleAssertions.expectInRange(inputStamp.creationTime, Date.now() - 1000, Date.now() + 1000, 'creation time within reasonable range');
+        expect(inputStamp.derivations).toHaveLength(0);
+        const now = Date.now();
+        expect(inputStamp.creationTime).toBeGreaterThanOrEqual(now - 1000);
+        expect(inputStamp.creationTime).toBeLessThanOrEqual(now + 1000);
     });
 
-    test('should derive a new stamp from parents, handling overlapping derivations', () => {
-        const parent1 = createStamp({id: 'p1', derivations: ['d1']});
-        const parent2 = createStamp({id: 'p2', derivations: ['d2']});
-        const derivedStamp1 = Stamp.derive([parent1, parent2]);
+    test('derive', () => {
+        const p1 = new ArrayStamp({id: 'p1', derivations: ['d1']});
+        const p2 = new ArrayStamp({id: 'p2', derivations: ['d2']});
+        const derived1 = Stamp.derive([p1, p2]);
 
-        expect(derivedStamp1).toBeInstanceOf(ArrayStamp);
-        expect(derivedStamp1.source).toBe('DERIVED');
-        expect(derivedStamp1.derivations).toEqual(expect.arrayContaining(['p1', 'p2', 'd1', 'd2']));
-        flexibleAssertions.expectInRange(derivedStamp1.derivations.length, 4, 4);
+        expect(derived1.source).toBe('DERIVED');
+        expect(derived1.derivations).toEqual(expect.arrayContaining(['p1', 'p2', 'd1', 'd2']));
+        expect(derived1.derivations).toHaveLength(4);
 
-        const parent3 = createStamp({id: 'p3', derivations: ['d1', 'd2']});
-        const parent4 = createStamp({id: 'p4', derivations: ['d2', 'd3']});
-        const derivedStamp2 = Stamp.derive([parent3, parent4]);
+        const p3 = new ArrayStamp({id: 'p3', derivations: ['d1', 'd2']});
+        const p4 = new ArrayStamp({id: 'p4', derivations: ['d2', 'd3']});
+        const derived2 = Stamp.derive([p3, p4]);
 
-        expect(derivedStamp2.derivations).toEqual(expect.arrayContaining(['p3', 'p4', 'd1', 'd2', 'd3']));
-        flexibleAssertions.expectInRange(derivedStamp2.derivations.length, 5, 5);
+        expect(derived2.derivations).toEqual(expect.arrayContaining(['p3', 'p4', 'd1', 'd2', 'd3']));
+        expect(derived2.derivations).toHaveLength(5);
     });
 
-    test('should correctly check for equality', () => {
-        const stamp1 = createStamp({id: 's1'});
-        const stamp1Clone = new ArrayStamp({id: 's1'});
-        const stamp2 = createStamp({id: 's2'});
+    test('equality', () => {
+        const s1 = new ArrayStamp({id: 's1'});
+        const s1Clone = new ArrayStamp({id: 's1'});
+        const s2 = new ArrayStamp({id: 's2'});
 
-        expect(stamp1.equals(stamp1Clone)).toBe(true);
-        expect(stamp1.equals(stamp2)).toBe(false);
-        expect(stamp1.equals(null)).toBe(false);
+        expect(s1.equals(s1Clone)).toBe(true);
+        expect(s1.equals(s2)).toBe(false);
+        expect(s1.equals(null)).toBe(false);
     });
 
-    test('should generate a unique ID if none is provided', () => {
-        const stamp1 = new ArrayStamp();
-        const stamp2 = new ArrayStamp();
-        expect(stamp1.id).not.toBe(stamp2.id);
+    test('unique ID generation', () => {
+        expect(new ArrayStamp().id).not.toBe(new ArrayStamp().id);
     });
 });
