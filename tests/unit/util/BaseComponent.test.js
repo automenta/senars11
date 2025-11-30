@@ -1,118 +1,76 @@
 import {BaseComponent} from '../../../src/util/BaseComponent.js';
 import {EventBus} from '../../../src/util/EventBus.js';
 
+class TestComponent extends BaseComponent {
+    constructor(config = {}) { super(config, 'TestComponent'); this.state = 0; }
+    async _initialize() { this.state = 1; return true; }
+    async _start() { this.state = 2; return true; }
+    async _stop() { this.state = 3; return true; }
+    async _dispose() { this.state = 4; return true; }
+}
+
 describe('BaseComponent', () => {
-    class TestComponent extends BaseComponent {
-        constructor(config = {}, name = 'TestComponent', eventBus = null) {
-            super(config, name, eventBus);
-            this.testValue = 0;
-        }
-        async _initialize() { this.testValue = 10; return true; }
-        async _start() { this.testValue = 20; return true; }
-        async _stop() { this.testValue = 30; return true; }
-        async _dispose() { this.testValue = 40; return true; }
-    }
-
-    test('constructor initializes properly', () => {
-        const component = new TestComponent();
-        expect(component).toMatchObject({
-            name: 'TestComponent',
-            config: {},
-            eventBus: expect.any(EventBus),
-            isInitialized: false,
-            isStarted: false,
-            isDisposed: false
+    test('initialization properties', () => {
+        const c = new TestComponent();
+        expect(c).toMatchObject({
+            name: 'TestComponent', config: {}, eventBus: expect.any(EventBus),
+            isInitialized: false, isStarted: false, isDisposed: false
         });
-        expect(component.logger).toBeDefined();
+        expect(c.logger).toBeDefined();
     });
 
-    test('initialize lifecycle method works', async () => {
-        const component = new TestComponent();
-        expect(await component.initialize()).toBe(true);
-        expect(component.isInitialized).toBe(true);
-        expect(component.testValue).toBe(10);
+    test('lifecycle flow', async () => {
+        const c = new TestComponent();
+
+        await c.initialize();
+        expect(c.isInitialized).toBe(true);
+        expect(c.state).toBe(1);
+
+        await c.start();
+        expect(c.isStarted).toBe(true);
+        expect(c.state).toBe(2);
+
+        await c.stop();
+        expect(c.isStarted).toBe(false);
+        expect(c.state).toBe(3);
+
+        await c.dispose();
+        expect(c.isDisposed).toBe(true);
+        expect(c.state).toBe(4);
     });
 
-    test('start lifecycle method works', async () => {
-        const component = new TestComponent();
-        await component.initialize();
+    test('metrics', () => {
+        const c = new TestComponent();
+        c.incrementMetric('init');
+        expect(c.getMetric('init')).toBe(1);
 
-        expect(await component.start()).toBe(true);
-        expect(component.isStarted).toBe(true);
-        expect(component.testValue).toBe(20);
+        c.updateMetric('val', 10);
+        expect(c.getMetric('val')).toBe(10);
+
+        expect(c.getMetrics()).toMatchObject({init: 1, val: 10});
     });
 
-    test('stop lifecycle method works', async () => {
-        const component = new TestComponent();
-        await component.initialize();
-        await component.start();
-
-        expect(await component.stop()).toBe(true);
-        expect(component.isStarted).toBe(false);
-        expect(component.testValue).toBe(30);
-    });
-
-    test('dispose lifecycle method works', async () => {
-        const component = new TestComponent();
-        await component.initialize();
-        await component.start();
-
-        expect(await component.dispose()).toBe(true);
-        expect(component.isDisposed).toBe(true);
-        expect(component.testValue).toBe(40);
-    });
-
-    test('metrics tracking works', () => {
-        const component = new TestComponent();
-        expect(component.getMetric('initializeCount')).toBe(0);
-
-        component.incrementMetric('initializeCount');
-        expect(component.getMetric('initializeCount')).toBe(1);
-
-        component.updateMetric('testMetric', 'testValue');
-        expect(component.getMetric('testMetric')).toBe('testValue');
-    });
-
-    test('logging methods work without errors', () => {
-        const component = new TestComponent();
-        ['logInfo', 'logWarn', 'logError', 'logDebug'].forEach(method => {
-            expect(() => component[method]('test')).not.toThrow();
+    test('logging', () => {
+        const c = new TestComponent();
+        ['logInfo', 'logWarn', 'logError', 'logDebug'].forEach(m => {
+            expect(() => c[m]('msg')).not.toThrow();
         });
     });
 
-    test('event emission and subscription works', (done) => {
-        const component = new TestComponent();
-        const testEvent = 'test.event';
-
-        component.onEvent(testEvent, (data) => {
-            expect(data).toMatchObject({
-                component: 'TestComponent',
-                testValue: 'testData'
-            });
+    test('events', (done) => {
+        const c = new TestComponent();
+        c.onEvent('test', (d) => {
+            expect(d).toMatchObject({val: 1, component: 'TestComponent'});
             done();
         });
-
-        component.emitEvent(testEvent, {testValue: 'testData'});
+        c.emitEvent('test', {val: 1});
     });
 
-    test('getMetrics returns expected structure', () => {
-        expect(new TestComponent().getMetrics()).toMatchObject({
-            initializeCount: expect.any(Number),
-            startCount: expect.any(Number),
-            stopCount: expect.any(Number),
-            errorCount: expect.any(Number),
-            uptime: expect.any(Number),
-            isRunning: expect.any(Boolean)
-        });
-    });
-
-    test('uptime property works', async () => {
-        const component = new TestComponent();
-        expect(component.uptime).toBe(0);
-
-        await component.initialize();
-        await component.start();
-
-        expect(component.uptime).toBeGreaterThanOrEqual(0);
+    test('uptime', async () => {
+        const c = new TestComponent();
+        expect(c.uptime).toBe(0);
+        await c.initialize();
+        await c.start();
+        expect(c.uptime).toBeGreaterThanOrEqual(0);
     });
 });

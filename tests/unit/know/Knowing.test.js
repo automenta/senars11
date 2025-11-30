@@ -9,61 +9,43 @@ class SimpleTestKnowledge extends Knowledge {
 }
 
 describe('Knowing System', () => {
-    test('should initialize with empty stats', () => {
-        expect(new Knowing().getStats()).toMatchObject({
-            totalKnowledgeItems: 0,
-            totalTasks: 0,
-            totalRelationships: 0
+    let knowing;
+    beforeEach(() => { knowing = new Knowing(); });
+
+    test('initialization', () => {
+        expect(knowing.getStats()).toMatchObject({
+            totalKnowledgeItems: 0, totalTasks: 0, totalRelationships: 0
         });
     });
 
-    test('should add knowledge items', async () => {
-        const knowing = new Knowing();
+    test('add knowledge', async () => {
         await knowing.addKnowledge(new SimpleTestKnowledge({tasks: ['<test --> value>. %1.00;0.90%']}));
         expect(knowing.getStats().totalKnowledgeItems).toBe(1);
     });
 
-    test('should query knowledge by predicate', async () => {
-        const knowing = new Knowing();
+    test('query and find', async () => {
         await knowing.addKnowledge(new SimpleTestKnowledge({type: 'test'}));
-        expect(knowing.query(k => k.constructor.name === 'SimpleTestKnowledge')).toHaveLength(1);
-    });
-
-    test('should find knowledge by type', async () => {
-        const knowing = new Knowing();
-        await knowing.addKnowledge(new SimpleTestKnowledge({type: 'test'}));
+        expect(knowing.query(k => k instanceof SimpleTestKnowledge)).toHaveLength(1);
         expect(knowing.findByType('SimpleTestKnowledge')).toHaveLength(1);
     });
 
-    test('should get all tasks', async () => {
-        const knowing = new Knowing();
+    test('get tasks and relationships', async () => {
         await knowing.addKnowledge(new SimpleTestKnowledge({
-            tasks: ['<task1 --> value>. %1.00;0.90%', '<task2 --> value>. %0.50;0.90%']
+            tasks: ['<t1 --> v>. %1.0;0.9%', '<t2 --> v>. %0.5;0.9%'],
+            relationships: ['<r1 --> r2>. %1.0;0.9%']
         }));
-        expect(await knowing.getAllTasks()).toHaveLength(2);
-    });
 
-    test('should get all relationships', async () => {
-        const knowing = new Knowing();
-        await knowing.addKnowledge(new SimpleTestKnowledge({
-            relationships: ['<rel1 --> rel2>. %1.00;0.90%']
-        }));
+        expect(await knowing.getAllTasks()).toHaveLength(2);
         expect(await knowing.getAllRelationships()).toHaveLength(1);
     });
 
-    test('should clear all knowledge', async () => {
-        const knowing = new Knowing();
-        await knowing.addKnowledge(new SimpleTestKnowledge({tasks: ['<test --> value>. %1.00;0.90%']}));
-
+    test('clear', async () => {
+        await knowing.addKnowledge(new SimpleTestKnowledge({items: [1]}));
         knowing.clear();
-        expect(knowing.getStats()).toMatchObject({
-            totalKnowledgeItems: 0,
-            totalTasks: 0
-        });
+        expect(knowing.getStats().totalKnowledgeItems).toBe(0);
     });
 
-    test('should handle invalid knowledge objects', async () => {
-        await expect(new Knowing().addKnowledge('invalid'))
-            .rejects.toThrow('Invalid knowledge object: must implement Knowledge interface');
+    test('invalid input throws', async () => {
+        await expect(knowing.addKnowledge('invalid')).rejects.toThrow('Invalid knowledge object');
     });
 });

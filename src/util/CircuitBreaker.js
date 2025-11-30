@@ -37,12 +37,30 @@ export class CircuitBreaker {
         }
 
         try {
-            const result = await fn(context);
+            const result = await this._executeWithTimeout(fn, context);
             this.onSuccess();
             return result;
         } catch (error) {
             this.onFailure();
             throw error;
+        }
+    }
+
+    async _executeWithTimeout(fn, context) {
+        let timer;
+        const timeoutPromise = new Promise((_, reject) => {
+            timer = setTimeout(() => {
+                reject(new Error(`Operation timed out after ${this.options.timeout}ms`));
+            }, this.options.timeout);
+        });
+
+        try {
+            return await Promise.race([
+                fn(context),
+                timeoutPromise
+            ]);
+        } finally {
+            clearTimeout(timer);
         }
     }
 

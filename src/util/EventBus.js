@@ -128,11 +128,13 @@ export class EventBus {
     }
 
     hasListeners(eventName) {
-        return !!this._emitter.all.get(eventName)?.size;
+        const handlers = this._emitter.all.get(eventName);
+        return !!(handlers?.length || handlers?.size);
     }
 
     listenerCount(eventName) {
-        return this._emitter.all.get(eventName)?.size || 0;
+        const handlers = this._emitter.all.get(eventName);
+        return handlers?.length || handlers?.size || 0;
     }
 
     // Added utility methods for better control

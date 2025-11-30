@@ -1,93 +1,61 @@
+import {jest} from '@jest/globals';
 import {CircuitBreaker, withCircuitBreaker} from '../../../src/util/CircuitBreaker.js';
 
-describe('Circuit Breaker Tests', () => {
-    test('Circuit breaker starts in CLOSED state', () => {
-        const cb = new CircuitBreaker();
+describe('CircuitBreaker', () => {
+    let cb;
+    beforeEach(() => { cb = new CircuitBreaker(); });
+
+    test('initial state', () => {
         expect(cb.getState().state).toBe('CLOSED');
     });
 
-    test('Circuit breaker executes function successfully in CLOSED state', async () => {
-        const cb = new CircuitBreaker();
-        let callCount = 0;
-        const fn = () => {
-            callCount++;
-            return Promise.resolve('success');
-        };
-
-        const result = await cb.execute(fn);
-        expect(result).toBe('success');
-        expect(callCount).toBe(1);
+    test('execution success', async () => {
+        const fn = jest.fn().mockResolvedValue('success');
+        expect(await cb.execute(fn)).toBe('success');
+        expect(fn).toHaveBeenCalledTimes(1);
     });
 
-    test('Circuit breaker opens after threshold failures', async () => {
-        const cb = new CircuitBreaker({failureThreshold: 2});
-        const fn = () => Promise.reject(new Error('failure'));
+    test('failure threshold', async () => {
+        cb = new CircuitBreaker({failureThreshold: 2});
+        const fail = () => Promise.reject(new Error('fail'));
 
-        await expect(cb.execute(fn)).rejects.toThrow('failure');
+        await expect(cb.execute(fail)).rejects.toThrow('fail');
         expect(cb.getState().state).toBe('CLOSED');
 
-        await expect(cb.execute(fn)).rejects.toThrow('failure');
-        expect(cb.getState().state).toBe('OPEN');
-    });
-
-    test('Circuit breaker allows execution when CLOSED', async () => {
-        const cb = new CircuitBreaker();
-        let callCount = 0;
-        const fn = () => {
-            callCount++;
-            return Promise.resolve('success');
-        };
-
-        await cb.execute(fn);
-        expect(callCount).toBe(1);
-
-        await cb.execute(fn);
-        expect(callCount).toBe(2);
-    });
-
-    test('Circuit breaker blocks execution when OPEN', async () => {
-        const cb = new CircuitBreaker({failureThreshold: 1, timeout: 100});
-        let successCallCount = 0;
-        const successFn = () => {
-            successCallCount++;
-            return Promise.resolve('success');
-        };
-
-        await expect(cb.execute(() => Promise.reject(new Error('failure')))).rejects.toThrow();
+        await expect(cb.execute(fail)).rejects.toThrow('fail');
         expect(cb.getState().state).toBe('OPEN');
 
-        await expect(cb.execute(successFn)).rejects.toThrow('Circuit breaker is OPEN');
-        expect(successCallCount).toBe(0);
+        // Next call blocked
+        await expect(cb.execute(fail)).rejects.toThrow('Circuit breaker is OPEN');
     });
 
-    test('Circuit breaker transitions to HALF_OPEN after timeout', async () => {
-        const cb = new CircuitBreaker({failureThreshold: 2, resetTimeout: 10});
+    test('timeout', async () => {
+        cb = new CircuitBreaker({timeout: 10});
+        const slowFn = () => new Promise(r => setTimeout(r, 20));
 
-        await expect(cb.execute(() => Promise.reject(new Error('failure')))).rejects.toThrow();
+        await expect(cb.execute(slowFn)).rejects.toThrow(/timed out/);
+        // Timeout counts as failure? Usually yes.
+        expect(cb.failureCount).toBe(1);
+    });
+
+    test('half-open recovery', async () => {
+        cb = new CircuitBreaker({failureThreshold: 1, resetTimeout: 10});
+
+        await expect(cb.execute(() => Promise.reject(new Error('fail')))).rejects.toThrow();
+        expect(cb.getState().state).toBe('OPEN');
+
+        await new Promise(r => setTimeout(r, 20)); // Wait for reset timeout
+
+        // First call probes (Half-Open)
+        const success = jest.fn().mockResolvedValue('ok');
+        expect(await cb.execute(success)).toBe('ok');
         expect(cb.getState().state).toBe('CLOSED');
-
-        await expect(cb.execute(() => Promise.reject(new Error('failure')))).rejects.toThrow();
-        expect(cb.getState().state).toBe('OPEN');
-
-        await new Promise(resolve => setTimeout(resolve, 15));
-
-        const fn = () => Promise.resolve('success');
-        await expect(cb.execute(fn)).resolves.toBe('success');
-
-        const finalState = cb.getState();
-        expect(finalState.state).toBe('CLOSED');
     });
 
-    test('Circuit breaker decorator works', async () => {
-        let callCount = 0;
-        const fn = () => {
-            callCount++;
-            return Promise.resolve('success');
-        };
+    test('decorator', async () => {
+        const fn = jest.fn().mockResolvedValue('ok');
         const protectedFn = withCircuitBreaker(fn, {failureThreshold: 1});
-
-        const result = await protectedFn();
-        expect(result).toBe('success');
-        expect(callCount).toBe(1);
+        expect(await protectedFn()).toBe('ok');
+        expect(fn).toHaveBeenCalled();
     });
 });

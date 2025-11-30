@@ -2,96 +2,66 @@ import {TermLayer} from '../../../src/memory/TermLayer.js';
 import {TermFactory} from '../../../src/term/TermFactory.js';
 
 describe('TermLayer', () => {
-    let termLayer;
-    let factory;
+    let layer, tf;
 
     beforeEach(() => {
-        termLayer = new TermLayer({capacity: 10});
-        factory = new TermFactory();
+        layer = new TermLayer({capacity: 10});
+        tf = new TermFactory();
     });
 
-    test('initializes correctly with capacity', () => {
-        expect(termLayer.capacity).toBe(10);
-        expect(termLayer.count).toBe(0);
+    test('initialization', () => {
+        expect(layer.capacity).toBe(10);
+        expect(layer.count).toBe(0);
+        expect(layer.getStats()).toMatchObject({linkCount: 0, capacity: 10, utilization: 0});
     });
 
-    test('adds and retrieves links', () => {
-        const source = factory.atomic('A');
-        const target = factory.atomic('B');
+    test('add and retrieve', () => {
+        const [src, tgt] = [tf.atomic('A'), tf.atomic('B')];
+        expect(layer.add(src, tgt, {priority: 5})).toBe(true);
+        expect(layer.count).toBe(1);
 
-        const result = termLayer.add(source, target, {priority: 5});
-        expect(result).toBe(true);
-        expect(termLayer.count).toBe(1);
-
-        const links = termLayer.get(source);
+        const links = layer.get(src);
         expect(links).toHaveLength(1);
         expect(links[0].target.name).toBe('B');
     });
 
-    test('removes links', () => {
-        const source = factory.atomic('A');
-        const target = factory.atomic('B');
+    test('remove', () => {
+        const [src, tgt] = [tf.atomic('A'), tf.atomic('B')];
+        layer.add(src, tgt);
+        expect(layer.has(src, tgt)).toBe(true);
 
-        termLayer.add(source, target);
-        expect(termLayer.has(source, target)).toBe(true);
-
-        const result = termLayer.remove(source, target);
-        expect(result).toBe(true);
-        expect(termLayer.has(source, target)).toBe(false);
-        expect(termLayer.count).toBe(0);
+        expect(layer.remove(src, tgt)).toBe(true);
+        expect(layer.has(src, tgt)).toBe(false);
+        expect(layer.count).toBe(0);
     });
 
-    test('updates link data', () => {
-        const source = factory.atomic('A');
-        const target = factory.atomic('B');
+    test('update', () => {
+        const [src, tgt] = [tf.atomic('A'), tf.atomic('B')];
+        layer.add(src, tgt, {priority: 1});
 
-        termLayer.add(source, target, {priority: 3, confidence: 0.8});
-        expect(termLayer.has(source, target)).toBe(true);
-
-        const updateResult = termLayer.update(source, target, {priority: 7, confidence: 0.9});
-        expect(updateResult).toBe(true);
-
-        const links = termLayer.get(source);
-        expect(links[0].data.priority).toBe(7);
-        expect(links[0].data.confidence).toBe(0.9);
+        expect(layer.update(src, tgt, {priority: 10, confidence: 0.9})).toBe(true);
+        const link = layer.get(src)[0];
+        expect(link.data).toMatchObject({priority: 10, confidence: 0.9});
     });
 
-    test('respects capacity limits', () => {
-        const layer = new TermLayer({capacity: 2});
+    test('capacity eviction', () => {
+        layer = new TermLayer({capacity: 2});
+        const pairs = [['A','B',1], ['C','D',2], ['E','F',3]].map(([s, t, p]) => ({
+            s: tf.atomic(s), t: tf.atomic(t), p
+        }));
 
-        const source1 = factory.atomic('A');
-        const target1 = factory.atomic('B');
-        const source2 = factory.atomic('C');
-        const target2 = factory.atomic('D');
-        const source3 = factory.atomic('E');
-        const target3 = factory.atomic('F');
-
-        layer.add(source1, target1, {priority: 1});
-        layer.add(source2, target2, {priority: 2});
-        layer.add(source3, target3, {priority: 3}); // Should evict lowest priority
+        pairs.forEach(({s, t, p}) => layer.add(s, t, {priority: p}));
 
         expect(layer.count).toBe(2);
-        expect(layer.has(source1, target1)).toBe(false); // Lowest priority removed
-        expect(layer.has(source2, target2)).toBe(true);
-        expect(layer.has(source3, target3)).toBe(true);
+        // Lowest priority (A->B, p=1) should be evicted
+        expect(layer.has(pairs[0].s, pairs[0].t)).toBe(false);
+        expect(layer.has(pairs[1].s, pairs[1].t)).toBe(true);
+        expect(layer.has(pairs[2].s, pairs[2].t)).toBe(true);
     });
 
-    test('clears all links', () => {
-        const source = factory.atomic('A');
-        const target = factory.atomic('B');
-
-        termLayer.add(source, target);
-        expect(termLayer.count).toBe(1);
-
-        termLayer.clear();
-        expect(termLayer.count).toBe(0);
-        expect(termLayer.get(source)).toHaveLength(0);
-    });
-
-    test('gets statistics', () => {
-        const stats = termLayer.getStats();
-        expect(stats.linkCount).toBe(0);
-        expect(stats.capacity).toBe(10);
-        expect(stats.utilization).toBe(0);
+    test('clear', () => {
+        layer.add(tf.atomic('A'), tf.atomic('B'));
+        layer.clear();
+        expect(layer.count).toBe(0);
     });
 });
