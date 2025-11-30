@@ -26,6 +26,12 @@ async function main() {
         // Use optimized config for tests
         config = {
             ...config,
+            subsystems: {
+                metrics: false,
+                tools: false,
+                lm: false,
+                embeddingLayer: false
+            },
             nar: {
                 ...config.nar,
                 performance: {
