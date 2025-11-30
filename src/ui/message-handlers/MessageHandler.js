@@ -47,8 +47,14 @@ export class MessageHandler {
      * Process a message and return content, type, and icon
      */
     processMessage(message) {
+        // Normalize message to ensure payload is available
+        const normalizedMessage = {...message};
+        if (!normalizedMessage.payload && normalizedMessage.data) {
+            normalizedMessage.payload = normalizedMessage.data;
+        }
+
         const handler = this.handlers[message.type] || ((msg) => this._createDefaultMessage(msg));
-        return typeof handler === 'function' ? handler(message) : this._createDefaultMessage(message);
+        return typeof handler === 'function' ? handler(normalizedMessage) : this._createDefaultMessage(normalizedMessage);
     }
 
     /**

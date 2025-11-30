@@ -12,7 +12,8 @@ export class VirtualGraph {
     updateFromMessage(message) {
         if (!message) return;
 
-        const {type, payload} = message;
+        const {type} = message;
+        const payload = message.payload || message.data;
 
         switch (type) {
             case UI_CONSTANTS.MESSAGE_TYPES.CONCEPT_CREATED:
@@ -22,6 +23,7 @@ export class VirtualGraph {
                 break;
             case UI_CONSTANTS.MESSAGE_TYPES.TASK_ADDED:
             case UI_CONSTANTS.MESSAGE_TYPES.TASK_INPUT:
+            case UI_CONSTANTS.MESSAGE_TYPES.REASONING_DERIVATION:
                 this.addNode(payload, 'task');
                 break;
             case UI_CONSTANTS.MESSAGE_TYPES.QUESTION_ANSWERED:
@@ -54,20 +56,19 @@ export class VirtualGraph {
     addNode(data, defaultType = 'concept') {
         if (!data) return;
 
-        const id = data.id || data.term;
+        // Unwrap nested data structures common in NAR events
+        const actualData = data.task || data.concept || data.derivedTask || data;
+
+        const id = actualData.id || actualData.term;
         if (!id) return;
 
         // If it's a string, wrap it
-        const nodeData = typeof data === 'string' ? {term: data, id: data} : {...data};
+        const nodeData = typeof actualData === 'string' ? {term: actualData, id: actualData} : {...actualData};
 
         // Ensure type
         if (!nodeData.type) nodeData.type = defaultType;
 
         this.nodes.set(id, nodeData);
-
-        // Track edges if links exist in data?
-        // GraphManager doesn't seem to extract edges from concept payload automatically in addNode.
-        // But let's check GraphManager.addNode.
     }
 
     getNode(idOrTerm) {

@@ -20,6 +20,7 @@ class WebSocketMonitor {
         this.host = options.host ?? DEFAULT_OPTIONS.host;
         this.path = options.path ?? DEFAULT_OPTIONS.path;
         this.maxConnections = options.maxConnections ?? DEFAULT_OPTIONS.maxConnections;
+        this.minBroadcastInterval = options.minBroadcastInterval ?? DEFAULT_OPTIONS.minBroadcastInterval;
         this.eventFilter = options.eventFilter ?? null;
 
         this.clients = new Set();
@@ -126,24 +127,28 @@ class WebSocketMonitor {
             this.server.on('listening', () => {
                 console.log(`WebSocket monitoring server started on ws://${this.host}:${this.port}${this.path}`);
 
-                // Start batching interval to send accumulated events
-                this.batchInterval = setInterval(() => {
-                    if (this.eventBuffer.length > 0) {
-                        const batch = [...this.eventBuffer]; // Create a copy of the buffer
-                        this.eventBuffer = []; // Clear the buffer
-
-                        // Broadcast the batch to all connected clients
-                        this._broadcastToSubscribedClients({
-                            type: 'eventBatch',
-                            data: batch,
-                            timestamp: Date.now()
-                        });
-                    }
-                }, 150);
+                this._scheduleBatch();
 
                 resolve();
             });
         });
+    }
+
+    _scheduleBatch() {
+        this.batchTimer = setTimeout(() => {
+            if (this.eventBuffer.length > 0) {
+                const batch = [...this.eventBuffer]; // Create a copy of the buffer
+                this.eventBuffer = []; // Clear the buffer
+
+                // Broadcast the batch to all connected clients
+                this._broadcastToSubscribedClients({
+                    type: 'eventBatch',
+                    data: batch,
+                    timestamp: Date.now()
+                });
+            }
+            this._scheduleBatch();
+        }, this.minBroadcastInterval);
     }
 
     _isClientRateLimited(clientId) {
@@ -162,9 +167,9 @@ class WebSocketMonitor {
     }
 
     async stop() {
-        if (this.batchInterval) {
-            clearInterval(this.batchInterval);
-            this.batchInterval = null;
+        if (this.batchTimer) {
+            clearTimeout(this.batchTimer);
+            this.batchTimer = null;
         }
 
         return new Promise((resolve) => {
@@ -192,10 +197,6 @@ class WebSocketMonitor {
         try {
             if (client && typeof client.send === 'function' && client.readyState === client.OPEN) {
                 client.send(JSON.stringify(message));
-            } else if (client && typeof client.send === 'function') {
-                console.warn('Attempted to send to client in non-OPEN state:', client.readyState);
-            } else {
-                console.warn('Attempted to send to invalid client:', typeof client);
             }
         } catch (error) {
             console.error('Error sending message to client:', error);
