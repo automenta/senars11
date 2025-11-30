@@ -118,8 +118,7 @@ export class RelationshipIndex extends BaseIndex {
         if (relationshipType) {
             const operation = this._findOperations[relationshipType];
             if (operation) {
-                const result = operation(filters);
-                return result.length > 0 ? result : this.getAll();
+                return operation(filters);
             }
         }
 
@@ -159,8 +158,15 @@ export class RelationshipIndex extends BaseIndex {
     }
 
     _findSimilarity(filters) {
-        // Add logic for similarity relationships
-        return [];
+        const {term} = filters;
+        const result = [];
+
+        if (term) {
+            const concepts = this._similarityIndex.get(`similar:${term.toString()}`);
+            if (concepts) result.push(...Array.from(concepts));
+        }
+
+        return result;
     }
 
     clear() {

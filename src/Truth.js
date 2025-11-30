@@ -91,7 +91,7 @@ export class Truth {
     }
 
     static expectation(truth) {
-        return truth?.frequency * truth?.confidence ?? 0;
+        return (truth?.frequency ?? 0) * (truth?.confidence ?? 0);
     }
 
     static comparison(t1, t2) {

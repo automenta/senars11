@@ -828,20 +828,23 @@ export class MemoryIndex {
     findInheritanceConcepts(term) {
         return this._relationshipIndex.find({
             relationshipType: 'inheritance',
-            subject: term
+            subject: term,
+            predicate: term
         });
     }
 
     findImplicationConcepts(term) {
         return this._relationshipIndex.find({
             relationshipType: 'implication',
-            premise: term
+            premise: term,
+            conclusion: term
         });
     }
 
     findSimilarityConcepts(term) {
         return this._relationshipIndex.find({
-            relationshipType: 'similarity'
+            relationshipType: 'similarity',
+            term
         });
     }
 

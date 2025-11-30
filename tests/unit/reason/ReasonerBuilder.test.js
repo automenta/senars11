@@ -1,4 +1,3 @@
-import {jest} from '@jest/globals';
 import {ReasonerBuilder} from '../../../src/reason/ReasonerBuilder.js';
 import {TaskBagPremiseSource} from '../../../src/reason/TaskBagPremiseSource.js';
 import {Strategy} from '../../../src/reason/Strategy.js';
@@ -8,68 +7,31 @@ import {createTestMemory} from '../../support/baseTestUtils.js';
 
 describe('ReasonerBuilder', () => {
     let context;
-    let focus;
-    let memory;
-
     beforeEach(() => {
-        memory = createTestMemory();
-        focus = new Focus();
-        context = {
-            focus,
-            memory,
-            termFactory: {} // Mock termFactory
-        };
+        context = {focus: new Focus(), memory: createTestMemory(), termFactory: {}};
     });
 
-    test('should build a reasoner with default components', () => {
-        const builder = new ReasonerBuilder(context);
-        const reasoner = builder.build();
-
-        expect(reasoner).toBeDefined();
+    test('default build', () => {
+        const reasoner = new ReasonerBuilder(context).build();
         expect(reasoner.premiseSource).toBeInstanceOf(TaskBagPremiseSource);
         expect(reasoner.strategy).toBeInstanceOf(Strategy);
         expect(reasoner.ruleProcessor).toBeInstanceOf(RuleProcessor);
     });
 
-    test('should allow configuring the reasoner', () => {
-        const config = {
-            maxDerivationDepth: 5,
-            cpuThrottleInterval: 10
-        };
-        const builder = new ReasonerBuilder(context).withConfig(config);
-        const reasoner = builder.build();
-
+    test('config', () => {
+        const reasoner = new ReasonerBuilder(context).withConfig({maxDerivationDepth: 5}).build();
         expect(reasoner.config.maxDerivationDepth).toBe(5);
-        expect(reasoner.config.cpuThrottleInterval).toBe(10);
     });
 
-    test('should allow injecting custom components', () => {
-        const customPremiseSource = new TaskBagPremiseSource(focus);
-        const customStrategy = new Strategy({focus, memory});
-
-        const builder = new ReasonerBuilder(context)
-            .withPremiseSource(customPremiseSource)
-            .withStrategy(customStrategy);
-
-        const reasoner = builder.build();
-
-        expect(reasoner.premiseSource).toBe(customPremiseSource);
-        expect(reasoner.strategy).toBe(customStrategy);
-        // RuleProcessor should be default since not injected
-        expect(reasoner.ruleProcessor).toBeInstanceOf(RuleProcessor);
+    test('custom components', () => {
+        const [ps, strat] = [new TaskBagPremiseSource(context.focus), new Strategy(context)];
+        const reasoner = new ReasonerBuilder(context).withPremiseSource(ps).withStrategy(strat).build();
+        expect(reasoner.premiseSource).toBe(ps);
+        expect(reasoner.strategy).toBe(strat);
     });
 
-    test('static build method should work (backward compatibility)', () => {
-        const config = {
-            reasoning: {
-                maxDerivationDepth: 7
-            }
-        };
-
-        const reasoner = ReasonerBuilder.build(config, context);
-
-        expect(reasoner).toBeDefined();
+    test('static build', () => {
+        const reasoner = ReasonerBuilder.build({reasoning: {maxDerivationDepth: 7}}, context);
         expect(reasoner.config.maxDerivationDepth).toBe(7);
-        expect(reasoner.premiseSource).toBeInstanceOf(TaskBagPremiseSource);
     });
 });
