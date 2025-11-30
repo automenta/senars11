@@ -1,25 +1,22 @@
-/**
- * Knowledge System Unit Tests
- * Tests for the core Knowledge classes and their functionality
- */
 import {Knowledge, TruthValueUtils} from '../../../src/know/Knowledge.js';
 import {DataTableKnowledge} from '../../../src/know/DataTableKnowledge.js';
 
 describe('Knowledge System', () => {
     describe('TruthValueUtils', () => {
         test('should normalize metrics correctly', () => {
-            expect(TruthValueUtils.normalizeMetric(50, 0, 100)).toBe(0.5);
-            expect(TruthValueUtils.normalizeMetric(0, 0, 100)).toBe(0);
-            expect(TruthValueUtils.normalizeMetric(100, 0, 100)).toBe(1);
-            expect(TruthValueUtils.normalizeMetric(-10, 0, 100)).toBe(0);
-            expect(TruthValueUtils.normalizeMetric(110, 0, 100)).toBe(1);
+            const cases = [
+                {val: 50, expected: 0.5},
+                {val: 0, expected: 0},
+                {val: 100, expected: 1},
+                {val: -10, expected: 0},
+                {val: 110, expected: 1}
+            ];
+            cases.forEach(({val, expected}) =>
+                expect(TruthValueUtils.normalizeMetric(val, 0, 100)).toBe(expected));
         });
 
-        test('should calculate frequency from metric', () => {
+        test('should calculate frequency and confidence from metric', () => {
             expect(TruthValueUtils.calculateFrequencyFromMetric(75, 0, 100)).toBe(0.75);
-        });
-
-        test('should calculate confidence from metric', () => {
             expect(TruthValueUtils.calculateConfidenceFromMetric(50, 0, 100)).toBe(0.5);
         });
 
@@ -30,38 +27,28 @@ describe('Knowledge System', () => {
 
     describe('DataTableKnowledge', () => {
         test('should handle basic data', async () => {
-            const data = [
+            const knowledge = new DataTableKnowledge([
                 {name: 'test1', value: 100},
                 {name: 'test2', value: 200}
-            ];
-            const knowledge = new DataTableKnowledge(data);
+            ]);
 
-            const items = await knowledge.getItems();
-            expect(items.length).toBe(2);
-
-            const summary = await knowledge.getSummary();
-            expect(summary.rowCount).toBe(2);
-            expect(summary.columnCount).toBe(2);
+            expect(await knowledge.getItems()).toHaveLength(2);
+            expect(await knowledge.getSummary()).toMatchObject({rowCount: 2, columnCount: 2});
         });
 
         test('should generate default tasks for rows', async () => {
-            const data = [
+            const knowledge = new DataTableKnowledge([
                 {id: 'item1', value: 50},
                 {id: 'item2', value: 75}
-            ];
-            const knowledge = new DataTableKnowledge(data);
+            ]);
 
-            const tasks = await knowledge.toTasks();
-            expect(Array.isArray(tasks)).toBe(true);
-            expect(tasks.length).toBe(2);
+            expect(await knowledge.toTasks()).toHaveLength(2);
         });
     });
 
     describe('Abstract Knowledge Class', () => {
         test('should not instantiate abstract class directly', () => {
-            expect(() => {
-                new Knowledge();
-            }).toThrow('Cannot instantiate abstract class Knowledge');
+            expect(() => new Knowledge()).toThrow('Cannot instantiate abstract class Knowledge');
         });
     });
 });

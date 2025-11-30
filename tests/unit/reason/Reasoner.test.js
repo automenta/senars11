@@ -1,44 +1,30 @@
 import {jest} from '@jest/globals';
 import {Reasoner} from '../../../src/reason/Reasoner.js';
-import {Strategy} from '../../../src/reason/Strategy.js';
-import {RuleProcessor} from '../../../src/reason/RuleProcessor.js';
-import {RuleExecutor} from '../../../src/reason/RuleExecutor.js';
-import {TaskBagPremiseSource} from '../../../src/reason/TaskBagPremiseSource.js';
 import {Focus} from '../../../src/memory/Focus.js';
 import {createTestMemory, createTestReasoner} from '../../support/baseTestUtils.js';
 
 describe('Reasoner', () => {
-    let reasoner;
-    let premiseSource;
-    let strategy;
-    let ruleProcessor;
-    let ruleExecutor;
-    let testMemory;
+    let reasoner, testMemory;
 
     beforeEach(() => {
         testMemory = createTestMemory();
-        const focus = new Focus();
-
         reasoner = createTestReasoner({
-            focus,
+            focus: new Focus(),
             memory: testMemory
         });
-
-        premiseSource = reasoner.premiseSource;
-        strategy = reasoner.strategy;
-        ruleProcessor = reasoner.ruleProcessor;
-        ruleExecutor = ruleProcessor.ruleExecutor;
     });
 
     describe('constructor', () => {
         test('should initialize with default config', () => {
-            expect(reasoner.config.maxDerivationDepth).toBe(10);
-            expect(reasoner.config.cpuThrottleInterval).toBe(0);
+            expect(reasoner.config).toMatchObject({
+                maxDerivationDepth: 10,
+                cpuThrottleInterval: 0
+            });
             expect(reasoner.isRunning).toBe(false);
         });
 
         test('should initialize with custom config', () => {
-             reasoner = createTestReasoner({
+             const customReasoner = createTestReasoner({
                 focus: new Focus(),
                 memory: testMemory,
                 config: {
@@ -49,17 +35,18 @@ describe('Reasoner', () => {
                 }
             });
 
-            expect(reasoner.config.maxDerivationDepth).toBe(5);
-            expect(reasoner.config.cpuThrottleInterval).toBe(1);
-            expect(reasoner.config.backpressureThreshold).toBe(50);
-            expect(reasoner.config.backpressureInterval).toBe(10);
+            expect(customReasoner.config).toMatchObject({
+                maxDerivationDepth: 5,
+                cpuThrottleInterval: 1,
+                backpressureThreshold: 50,
+                backpressureInterval: 10
+            });
         });
     });
 
     describe('getMetrics', () => {
         test('should return metrics object', () => {
             const metrics = reasoner.getMetrics();
-
             expect(metrics.totalDerivations).toBeDefined();
             expect(metrics.startTime).toBeDefined();
             expect(metrics.throughput).toBeDefined();
@@ -69,45 +56,45 @@ describe('Reasoner', () => {
 
     describe('getState', () => {
         test('should return state information', () => {
-            const state = reasoner.getState();
-
-            expect(state.isRunning).toBe(false);
-            expect(state.config).toBeDefined();
-            expect(state.metrics).toBeDefined();
-            expect(state.timestamp).toBeDefined();
+            expect(reasoner.getState()).toMatchObject({
+                isRunning: false,
+                config: expect.anything(),
+                metrics: expect.anything(),
+                timestamp: expect.anything()
+            });
         });
     });
 
     describe('getComponentStatus', () => {
         test('should return component status', () => {
-            const status = reasoner.getComponentStatus();
-
-            expect(status.premiseSource).toBeDefined();
-            expect(status.strategy).toBeDefined();
-            expect(status.ruleProcessor).toBeDefined();
+            expect(reasoner.getComponentStatus()).toMatchObject({
+                premiseSource: expect.anything(),
+                strategy: expect.anything(),
+                ruleProcessor: expect.anything()
+            });
         });
     });
 
     describe('getDebugInfo', () => {
         test('should return debug information', () => {
-            const debugInfo = reasoner.getDebugInfo();
-
-            expect(debugInfo.state).toBeDefined();
-            expect(debugInfo.config).toBeDefined();
-            expect(debugInfo.metrics).toBeDefined();
-            expect(debugInfo.componentStatus).toBeDefined();
-            expect(debugInfo.timestamp).toBeDefined();
+            expect(reasoner.getDebugInfo()).toMatchObject({
+                state: expect.anything(),
+                config: expect.anything(),
+                metrics: expect.anything(),
+                componentStatus: expect.anything(),
+                timestamp: expect.anything()
+            });
         });
     });
 
     describe('getPerformanceMetrics', () => {
         test('should return performance metrics', () => {
-            const perfMetrics = reasoner.getPerformanceMetrics();
-
-            expect(perfMetrics.throughput).toBeDefined();
-            expect(perfMetrics.avgProcessingTime).toBeDefined();
-            expect(perfMetrics.memoryUsage).toBeDefined();
-            expect(perfMetrics.detailed).toBeDefined();
+            expect(reasoner.getPerformanceMetrics()).toMatchObject({
+                throughput: expect.anything(),
+                avgProcessingTime: expect.anything(),
+                memoryUsage: expect.anything(),
+                detailed: expect.anything()
+            });
         });
     });
 
@@ -123,22 +110,18 @@ describe('Reasoner', () => {
         });
 
         test('should warn if starting already running reasoner', () => {
-            console.warn = jest.fn();
-
+            const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
             reasoner.start();
-            reasoner.start(); // Should trigger warning
-
-            expect(console.warn).toHaveBeenCalledWith('Reasoner is already running');
+            reasoner.start();
+            expect(warnSpy).toHaveBeenCalledWith('Reasoner is already running');
+            warnSpy.mockRestore();
         });
     });
 
     describe('step', () => {
         test('should execute a single reasoning step', async () => {
             reasoner.start();
-            const result = await reasoner.step(100); // 100ms timeout
-
-            // Should either return a result or null due to timeout
-            expect(result).toBeDefined();
+            expect(await reasoner.step(100)).toBeDefined();
         });
     });
 
@@ -164,15 +147,12 @@ describe('Reasoner', () => {
 
     describe('receiveConsumerFeedback', () => {
         test('should adjust behavior based on consumer feedback', () => {
-            const feedback = {
+            reasoner.receiveConsumerFeedback({
                 processingSpeed: 5,
                 backlogSize: 20,
                 consumerId: 'test-consumer'
-            };
+            });
 
-            reasoner.receiveConsumerFeedback(feedback);
-
-            // Should have adjusted based on high backlog
             expect(reasoner.outputConsumerSpeed).toBe(5);
             expect(reasoner.performance.backpressureLevel).toBe(20);
         });

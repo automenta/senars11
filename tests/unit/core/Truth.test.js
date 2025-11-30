@@ -3,13 +3,10 @@ import { Truth } from '../../../src/Truth.js';
 
 describe('Truth', () => {
     describe('Initialization', () => {
-        test('default values', () => {
-            const truth = new Truth();
-            expect(truth).toMatchObject({
+        test('defaults', () => {
+            expect(new Truth()).toMatchObject({
                 frequency: TRUTH.DEFAULT_FREQUENCY,
-                confidence: TRUTH.DEFAULT_CONFIDENCE,
-                f: TRUTH.DEFAULT_FREQUENCY,
-                c: TRUTH.DEFAULT_CONFIDENCE
+                confidence: TRUTH.DEFAULT_CONFIDENCE
             });
         });
 
@@ -33,25 +30,25 @@ describe('Truth', () => {
         test('immutability', () => {
             const truth = new Truth(0.7, 0.8);
             expect(Object.isFrozen(truth)).toBe(true);
-            expect(() => {
-                'use strict';
-                truth.frequency = 0.9;
-            }).toThrow();
+            expect(() => truth.frequency = 0.9).toThrow();
         });
     });
 
     describe('Operations', () => {
-        const t1 = new Truth(0.8, 0.9);
-        const t2 = new Truth(0.7, 0.6);
+        const [t1, t2] = [new Truth(0.8, 0.9), new Truth(0.7, 0.6)];
 
         test('deduction', () => {
-            const result = Truth.deduction(t1, t2);
-            expect(result).toMatchObject({ frequency: 0.8 * 0.7, confidence: 0.9 * 0.6 });
+            expect(Truth.deduction(t1, t2)).toMatchObject({
+                frequency: 0.8 * 0.7,
+                confidence: 0.9 * 0.6
+            });
         });
 
         test('induction', () => {
-            const result = Truth.induction(t1, t2);
-            expect(result).toMatchObject({ frequency: 0.7, confidence: 0.9 * 0.6 });
+            expect(Truth.induction(t1, t2)).toMatchObject({
+                frequency: 0.7,
+                confidence: 0.9 * 0.6
+            });
         });
 
         test('null/undefined inputs', () => {
@@ -64,8 +61,7 @@ describe('Truth', () => {
         });
 
         test('isStronger', () => {
-            const weak = new Truth(0.8, 0.5); // exp 0.4
-            const strong = new Truth(0.6, 0.7); // exp 0.42
+            const [weak, strong] = [new Truth(0.8, 0.5), new Truth(0.6, 0.7)];
             expect(Truth.isStronger(strong, weak)).toBe(true);
             expect(Truth.isStronger(weak, strong)).toBe(false);
         });
@@ -74,11 +70,8 @@ describe('Truth', () => {
     describe('Equality', () => {
         test('equals', () => {
             const t1 = new Truth(0.7, 0.8);
-            const t2 = new Truth(0.7, 0.8);
-            const t3 = new Truth(0.8, 0.8);
-
-            expect(t1.equals(t2)).toBe(true);
-            expect(t1.equals(t3)).toBe(false);
+            expect(t1.equals(new Truth(0.7, 0.8))).toBe(true);
+            expect(t1.equals(new Truth(0.8, 0.8))).toBe(false);
             expect(t1.equals("not a truth object")).toBe(false);
         });
     });

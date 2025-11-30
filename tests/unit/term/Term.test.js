@@ -2,14 +2,11 @@
 import fc from 'fast-check';
 
 // Local imports
-import {Term, TermType} from '../../../src/term/Term.js';
+import {TermType} from '../../../src/term/Term.js';
 import {createCompoundTerm, createTerm} from '../../support/factories.js';
 
 describe('Term', () => {
-    // Centralize common terms for reuse
-    const atomA = createTerm('A');
-    const atomB = createTerm('B');
-    const atomC = createTerm('C');
+    const [atomA, atomB, atomC] = [createTerm('A'), createTerm('B'), createTerm('C')];
     const inheritanceAB = createCompoundTerm('-->', [atomA, atomB]);
     const inheritanceAB_clone = createCompoundTerm('-->', [atomA, atomB]);
     const similarityAB = createCompoundTerm('<->', [atomA, atomB]);
@@ -38,27 +35,25 @@ describe('Term', () => {
                 expected: {
                     type: TermType.COMPOUND,
                     name: '(<->, (-->, A, B), C)',
-                    components: [inheritanceAB, atomC],  // Note: order is normalized
+                    components: [inheritanceAB, atomC],
                     complexity: 5,
                     string: '(<->, (-->, A, B), C)'
                 }
             },
         ])('should create $name with correct properties', ({term, expected}) => {
-            expect(term.type).toBe(expected.type);
-            expect(term.name).toBe(expected.name);
-            expect(term.components).toEqual(expected.components);
-            expect(term.complexity).toBe(expected.complexity);
+            expect(term).toMatchObject({
+                type: expected.type,
+                name: expected.name,
+                components: expected.components,
+                complexity: expected.complexity
+            });
             expect(term.toString()).toBe(expected.string);
             expect(term.hash).toBeDefined();
         });
 
         test('should maintain strict immutability', () => {
-            expect(() => {
-                atomA.name = 'B';
-            }).toThrow();
-            expect(() => {
-                inheritanceAB.components.push(atomC);
-            }).toThrow();
+            expect(() => atomA.name = 'B').toThrow();
+            expect(() => inheritanceAB.components.push(atomC)).toThrow();
         });
     });
 
@@ -85,10 +80,9 @@ describe('Term', () => {
         test('should handle commutative operators by canonicalization', () => {
             const term1 = createCompoundTerm('&', [atomA, atomB]);
             const term2 = createCompoundTerm('&', [atomB, atomA]);
-            // Both terms should have the same canonical form
+
             expect(term1.name).toBe('(&, A, B)');
             expect(term2.name).toBe('(&, A, B)');
-            // Since both terms are in canonical form, equality should match them
             expect(term1.equals(term2)).toBe(true);
         });
 
@@ -117,11 +111,8 @@ describe('Term', () => {
         });
 
         test('should implement reduce pattern correctly', () => {
-            const complexitySum = inheritanceAB.reduce((sum, t) => sum + t.complexity, 0);
-            expect(complexitySum).toBe(5); // 3 (compound) + 1 (A) + 1 (B)
-
-            const termNames = inheritanceAB.reduce((names, t) => [...names, t.name], []);
-            expect(termNames).toEqual(['(-->, A, B)', 'A', 'B']);
+            expect(inheritanceAB.reduce((sum, t) => sum + t.complexity, 0)).toBe(5);
+            expect(inheritanceAB.reduce((names, t) => [...names, t.name], [])).toEqual(['(-->, A, B)', 'A', 'B']);
         });
     });
 
@@ -140,39 +131,37 @@ describe('Term', () => {
 
         test('normalization should be idempotent and correct', () => {
             fc.assert(fc.property(compoundTermArb, (term) => {
-                if (!term.operator) return; // Atomic terms are already normalized
+                if (!term.operator) return;
 
                 const normalizedOnce = createCompoundTerm(term.operator, term.components);
                 const normalizedTwice = createCompoundTerm(normalizedOnce.operator, normalizedOnce.components);
-                expect(normalizedOnce.equals(normalizedTwice)).toBe(true); // Idempotency
+                expect(normalizedOnce.equals(normalizedTwice)).toBe(true);
 
                 if (['&', '|', '<->'].includes(term.operator)) {
                     const reversedTerm = createCompoundTerm(term.operator, [...term.components].reverse());
-                    expect(term.equals(reversedTerm)).toBe(true); // Commutativity
+                    expect(term.equals(reversedTerm)).toBe(true);
                 }
                 if (['&', '|'].includes(term.operator)) {
-                    expect(!term.components.some(c => c.operator === term.operator)).toBe(true); // Associativity
-                    expect(new Set(term.components).size).toBe(term.components.length); // Redundancy
+                    expect(!term.components.some(c => c.operator === term.operator)).toBe(true);
+                    expect(new Set(term.components).size).toBe(term.components.length);
                 }
             }));
         });
 
         test('equality should follow equivalence relation properties', () => {
             fc.assert(fc.property(compoundTermArb, compoundTermArb, (t1, t2) => {
-                expect(t1.equals(t1)).toBe(true); // Reflexivity
-                expect(t1.equals(t2)).toEqual(t2.equals(t1)); // Symmetry
+                expect(t1.equals(t1)).toBe(true);
+                expect(t1.equals(t2)).toEqual(t2.equals(t1));
                 if (t1.equals(t2) && t2.operator) {
                     const t2_clone = createCompoundTerm(t2.operator, t2.components);
-                    expect(t1.equals(t2_clone)).toBe(true); // Transitivity
+                    expect(t1.equals(t2_clone)).toBe(true);
                 }
             }));
         });
 
         test('equal terms should have consistent hash codes', () => {
             fc.assert(fc.property(compoundTermArb, compoundTermArb, (t1, t2) => {
-                if (t1.equals(t2)) {
-                    expect(t1.hash).toBe(t2.hash);
-                }
+                if (t1.equals(t2)) expect(t1.hash).toBe(t2.hash);
             }));
         });
     });

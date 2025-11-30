@@ -8,13 +8,12 @@ describe('Bag', () => {
     beforeEach(() => {
         bag = new Bag(10);
         factory = new TermFactory();
-        createAtom = (name) => factory.atomic(name);
+        createAtom = name => factory.atomic(name);
     });
 
     describe('Basic', () => {
         test('defaults', () => {
-            expect(bag.size).toBe(0);
-            expect(bag.maxSize).toBe(10);
+            expect(bag).toMatchObject({size: 0, maxSize: 10});
         });
 
         test('add', () => {
@@ -44,8 +43,7 @@ describe('Bag', () => {
         beforeEach(() => {
             t1 = new Task({term: createAtom('A'), budget: {priority: 0.5}, truth: {frequency: 0.9, confidence: 0.8}});
             t2 = new Task({term: createAtom('B'), budget: {priority: 0.8}, truth: {frequency: 0.9, confidence: 0.8}});
-            bag.add(t1);
-            bag.add(t2);
+            [t1, t2].forEach(t => bag.add(t));
         });
 
         test('peek', () => {
