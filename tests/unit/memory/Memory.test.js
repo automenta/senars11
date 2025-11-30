@@ -13,7 +13,6 @@ TestSuiteFactory.createMemoryRelatedSuite({
 
 describe('Memory', () => {
     let memory, config;
-
     beforeEach(() => {
         config = createMemoryConfig();
         memory = new Memory(config);
@@ -35,7 +34,6 @@ describe('Memory', () => {
                 truth: TEST_CONSTANTS.TRUTH.HIGH,
                 budget: TEST_CONSTANTS.BUDGET.MEDIUM
             });
-
             expect(memory.addTask(task)).toBe(true);
             expect(memory.stats.totalConcepts).toBe(1);
             expect(memory.focusConcepts.size).toBe(1);
@@ -45,7 +43,6 @@ describe('Memory', () => {
             const term = createTerm('A');
             memory.addTask(createTask({term, truth: TEST_CONSTANTS.TRUTH.HIGH}));
             memory.addTask(createTask({term, truth: TEST_CONSTANTS.TRUTH.MEDIUM}));
-
             expect(memory.stats.totalConcepts).toBe(1);
             expect(memory.stats.totalTasks).toBe(2);
         });
@@ -53,17 +50,12 @@ describe('Memory', () => {
         test('getConcept', () => {
             const term = createTerm('A');
             memory.addTask(createTask({term}));
-
             expect(memory.getConcept(term)).toMatchObject({term});
-        });
-
-        test('getConcept null', () => {
             expect(memory.getConcept(createTerm('B'))).toBeNull();
         });
 
         test('getAllConcepts', () => {
-            memory.addTask(createTask({term: createTerm('A')}));
-            memory.addTask(createTask({term: createTerm('B')}));
+            ['A', 'B'].forEach(t => memory.addTask(createTask({term: createTerm(t)})));
             expect(memory.getAllConcepts()).toHaveLength(2);
         });
     });
@@ -80,13 +72,9 @@ describe('Memory', () => {
         test('removeConcept', () => {
             const term = createTerm('A');
             memory.addTask(createTask({term}));
-
             expect(memory.removeConcept(term)).toBe(true);
             expect(memory.stats.totalConcepts).toBe(0);
-        });
-
-        test('removeConcept non-existent', () => {
-            expect(memory.removeConcept(createTerm('A'))).toBe(false);
+            expect(memory.removeConcept(createTerm('B'))).toBe(false);
         });
 
         test('hasConcept', () => {
@@ -123,7 +111,6 @@ describe('Memory', () => {
         test('filters', () => {
             memory.addTask(createTask({term: createTerm('A'), budget: TEST_CONSTANTS.BUDGET.HIGH}));
             memory.addTask(createTask({term: createTerm('B'), budget: TEST_CONSTANTS.BUDGET.LOW}));
-
             expect(memory.getConceptsByCriteria({minActivation: 0.5}).length).toBeGreaterThanOrEqual(0);
             expect(memory.getConceptsByCriteria({onlyFocus: true}).length).toBeGreaterThanOrEqual(0);
         });
@@ -136,21 +123,19 @@ describe('Memory', () => {
         test('boost activation', () => {
             const term = createTerm('A');
             memory.addTask(createTask({term}));
-
-            const concept = memory.getConcept(term);
-            const orig = concept.activation;
+            const c = memory.getConcept(term);
+            const orig = c.activation;
             memory.boostConceptActivation(term, 0.2);
-            expect(concept.activation).toBeGreaterThanOrEqual(orig);
+            expect(c.activation).toBeGreaterThanOrEqual(orig);
         });
 
         test('update quality', () => {
             const term = createTerm('A');
             memory.addTask(createTask({term}));
-
-            const concept = memory.getConcept(term);
-            const orig = concept.quality;
+            const c = memory.getConcept(term);
+            const orig = c.quality;
             memory.updateConceptQuality(term, 0.1);
-            expect(concept.quality).toBeGreaterThanOrEqual(orig);
+            expect(c.quality).toBeGreaterThanOrEqual(orig);
         });
 
         test('consolidate', () => {

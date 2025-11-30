@@ -4,15 +4,12 @@ import { Truth } from '../../../src/Truth.js';
 describe('Truth', () => {
     describe('Initialization', () => {
         test('defaults', () => {
-            expect(new Truth()).toMatchObject({
-                frequency: TRUTH.DEFAULT_FREQUENCY,
-                confidence: TRUTH.DEFAULT_CONFIDENCE
-            });
+            expect(new Truth()).toMatchObject({ frequency: TRUTH.DEFAULT_FREQUENCY, confidence: TRUTH.DEFAULT_CONFIDENCE });
         });
 
         test('specified values', () => {
             const [f, c] = [0.8, 0.9];
-            expect(new Truth(f, c)).toMatchObject({ frequency: f, confidence: c, f, c });
+            expect(new Truth(f, c)).toMatchObject({ frequency: f, confidence: c });
         });
 
         test('clamping', () => {
@@ -21,16 +18,13 @@ describe('Truth', () => {
         });
 
         test('NaN handling', () => {
-            expect(new Truth(NaN, NaN)).toMatchObject({
-                frequency: TRUTH.DEFAULT_FREQUENCY,
-                confidence: TRUTH.DEFAULT_CONFIDENCE
-            });
+            expect(new Truth(NaN, NaN)).toMatchObject({ frequency: TRUTH.DEFAULT_FREQUENCY, confidence: TRUTH.DEFAULT_CONFIDENCE });
         });
 
         test('immutability', () => {
-            const truth = new Truth(0.7, 0.8);
-            expect(Object.isFrozen(truth)).toBe(true);
-            expect(() => truth.frequency = 0.9).toThrow();
+            const t = new Truth(0.7, 0.8);
+            expect(Object.isFrozen(t)).toBe(true);
+            expect(() => t.frequency = 0.9).toThrow();
         });
     });
 
@@ -38,17 +32,11 @@ describe('Truth', () => {
         const [t1, t2] = [new Truth(0.8, 0.9), new Truth(0.7, 0.6)];
 
         test('deduction', () => {
-            expect(Truth.deduction(t1, t2)).toMatchObject({
-                frequency: 0.8 * 0.7,
-                confidence: 0.9 * 0.6
-            });
+            expect(Truth.deduction(t1, t2)).toMatchObject({ frequency: 0.8 * 0.7, confidence: 0.9 * 0.6 });
         });
 
         test('induction', () => {
-            expect(Truth.induction(t1, t2)).toMatchObject({
-                frequency: 0.7,
-                confidence: 0.9 * 0.6
-            });
+            expect(Truth.induction(t1, t2)).toMatchObject({ frequency: 0.7, confidence: 0.9 * 0.6 });
         });
 
         test('null/undefined inputs', () => {
