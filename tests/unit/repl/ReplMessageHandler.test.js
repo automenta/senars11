@@ -1,4 +1,4 @@
-import {ReplMessageHandler} from '../../src/repl/ReplMessageHandler.js';
+import {ReplMessageHandler} from '../../../src/repl/ReplMessageHandler.js';
 import {jest} from '@jest/globals';
 
 describe('ReplMessageHandler', () => {
