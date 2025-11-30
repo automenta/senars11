@@ -2,37 +2,23 @@ import {ArrayStamp, Stamp} from '../../../src/Stamp.js';
 
 describe('Stamp', () => {
     test('initialization', () => {
-        const stamp = new ArrayStamp({
-            id: 'test-id',
-            creationTime: 12345,
-            source: 'INPUT',
-            derivations: ['d1', 'd2'],
-        });
-
+        const opts = { id: 'test-id', creationTime: 12345, source: 'INPUT', derivations: ['d1', 'd2'] };
+        const stamp = new ArrayStamp(opts);
         expect(stamp).toBeInstanceOf(ArrayStamp);
-        expect(stamp).toMatchObject({
-            id: 'test-id',
-            creationTime: 12345,
-            source: 'INPUT',
-            derivations: ['d1', 'd2']
-        });
+        expect(stamp).toMatchObject(opts);
     });
 
     test('immutability', () => {
         const stamp = new ArrayStamp({id: 's1'});
-        expect(() => { stamp.id = 'new-id'; }).toThrow();
-        expect(() => { stamp.derivations.push('d3'); }).toThrow();
+        expect(() => stamp.id = 'new-id').toThrow();
+        expect(() => stamp.derivations.push('d3')).toThrow();
     });
 
     test('static createInput', () => {
-        const inputStamp = Stamp.createInput();
-        expect(inputStamp).toBeInstanceOf(ArrayStamp);
-        expect(inputStamp).toMatchObject({
-            source: 'INPUT',
-            derivations: []
-        });
-        const now = Date.now();
-        expect(Math.abs(inputStamp.creationTime - now)).toBeLessThanOrEqual(1000);
+        const s = Stamp.createInput();
+        expect(s).toBeInstanceOf(ArrayStamp);
+        expect(s).toMatchObject({ source: 'INPUT', derivations: [] });
+        expect(Math.abs(s.creationTime - Date.now())).toBeLessThanOrEqual(1000);
     });
 
     test('derive', () => {
@@ -43,14 +29,14 @@ describe('Stamp', () => {
             new ArrayStamp({id: 'p4', derivations: ['d2', 'd3']})
         ];
 
-        const derived1 = Stamp.derive([p1, p2]);
-        expect(derived1.source).toBe('DERIVED');
-        expect(derived1.derivations).toEqual(expect.arrayContaining(['p1', 'p2', 'd1', 'd2']));
-        expect(derived1.derivations).toHaveLength(4);
+        const d1 = Stamp.derive([p1, p2]);
+        expect(d1.source).toBe('DERIVED');
+        expect(d1.derivations).toEqual(expect.arrayContaining(['p1', 'p2', 'd1', 'd2']));
+        expect(d1.derivations).toHaveLength(4);
 
-        const derived2 = Stamp.derive([p3, p4]);
-        expect(derived2.derivations).toEqual(expect.arrayContaining(['p3', 'p4', 'd1', 'd2', 'd3']));
-        expect(derived2.derivations).toHaveLength(5);
+        const d2 = Stamp.derive([p3, p4]);
+        expect(d2.derivations).toEqual(expect.arrayContaining(['p3', 'p4', 'd1', 'd2', 'd3']));
+        expect(d2.derivations).toHaveLength(5);
     });
 
     test('equality', () => {

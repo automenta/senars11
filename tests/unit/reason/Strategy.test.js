@@ -4,163 +4,82 @@ import {createTestTask} from '../../support/baseTestUtils.js';
 
 describe('Strategy', () => {
     let strategy;
+    beforeEach(() => { strategy = new Strategy(); });
 
-    beforeEach(() => {
-        strategy = new Strategy();
-    });
-
-    describe('constructor', () => {
-        test('should initialize with default config', () => {
+    describe('Initialization', () => {
+        test('defaults', () => {
             expect(strategy.config.maxSecondaryPremises).toBe(10);
         });
 
-        test('should initialize with custom config', () => {
-            strategy = new Strategy({
-                maxSecondaryPremises: 5,
-                customParam: 'value'
-            });
-
-            expect(strategy.config.maxSecondaryPremises).toBe(5);
-            expect(strategy.config.customParam).toBe('value');
+        test('custom config', () => {
+            strategy = new Strategy({ maxSecondaryPremises: 5, custom: 'val' });
+            expect(strategy.config).toMatchObject({ maxSecondaryPremises: 5, custom: 'val' });
         });
     });
 
-    describe('selectSecondaryPremises', () => {
-        test('should return empty array by default', async () => {
-            const primaryPremise = createTestTask({term: 'primary'});
-            const result = await strategy.selectSecondaryPremises(primaryPremise);
-
-            expect(result).toEqual([]);
+    describe('Premise Selection', () => {
+        test('selectSecondaryPremises default empty', async () => {
+            expect(await strategy.selectSecondaryPremises(createTestTask({term: 'p'}))).toEqual([]);
         });
 
-        test('should delegate to sub-strategies', async () => {
-            const subStrategy = {
-                selectSecondaryPremises: jest.fn().mockResolvedValue([createTestTask({term: 'sub'})])
-            };
-            strategy.addStrategy(subStrategy);
+        test('delegates to sub-strategies', async () => {
+            const sub = { selectSecondaryPremises: jest.fn().mockResolvedValue([createTestTask({term: 'sub'})]) };
+            strategy.addStrategy(sub);
 
-            const primaryPremise = createTestTask({term: 'primary'});
-            const result = await strategy.selectSecondaryPremises(primaryPremise);
+            const p = createTestTask({term: 'p'});
+            const res = await strategy.selectSecondaryPremises(p);
 
-            expect(subStrategy.selectSecondaryPremises).toHaveBeenCalledWith(primaryPremise);
-            expect(result.length).toBeGreaterThanOrEqual(1);
-            expect(result[0].term.toString()).toBe('sub');
+            expect(sub.selectSecondaryPremises).toHaveBeenCalledWith(p);
+            expect(res[0].term.toString()).toBe('sub');
         });
 
-        test('should handle errors gracefully', async () => {
-            // Mock console.error to prevent test output pollution
-            const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {
-            });
+        test('handles errors gracefully', async () => {
+            const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
+            const errSelector = { select: () => { throw new Error('Error'); } };
+            const errStrategy = new Strategy({premiseSelector: errSelector});
 
-            try {
-                // Create a Strategy with a premiseSelector that throws an error
-                const errorSelector = {
-                    select: () => {
-                        throw new Error('Selector error');
-                    }
-                };
-                const errorStrategy = new Strategy({premiseSelector: errorSelector});
-
-                const primaryPremise = createTestTask({term: 'primary'});
-                const result = await errorStrategy.selectSecondaryPremises(primaryPremise);
-
-                expect(result).toEqual([]);
-            } finally {
-                consoleSpy.mockRestore();
-            }
+            expect(await errStrategy.selectSecondaryPremises(createTestTask({term: 'p'}))).toEqual([]);
+            spy.mockRestore();
         });
     });
 
-    describe('generatePremisePairs', () => {
-        test('should generate premise pairs from stream', async () => {
-            const premiseStream = {
-                [Symbol.asyncIterator]: async function* () {
-                    yield createTestTask({term: 'primary1'});
-                    yield createTestTask({term: 'primary2'});
-                }
-            };
+    describe('Premise Pair Generation', () => {
+        test('generates pairs from stream', async () => {
+            strategy.selectSecondaryPremises = async (p) => [createTestTask({term: 's-' + p.term})];
 
-            // Replace the method on the instance to avoid mocking
-            const originalMethod = strategy.selectSecondaryPremises.bind(strategy);
-            strategy.selectSecondaryPremises = async (primary) => {
-                if (primary.term.toString() === 'primary1') {
-                    return [createTestTask({term: 'secondary1a'}), createTestTask({term: 'secondary1b'})];
-                } else {
-                    return [createTestTask({term: 'secondary2a'})];
-                }
-            };
+            async function* stream() { yield createTestTask({term: 'p1'}); yield createTestTask({term: 'p2'}); }
 
             const pairs = [];
-            for await (const pair of strategy.generatePremisePairs(premiseStream)) {
-                pairs.push(pair);
-            }
+            for await (const p of strategy.generatePremisePairs(stream())) pairs.push(p);
 
-            // Restore original method
-            strategy.selectSecondaryPremises = originalMethod;
-
-            // Check that we got some pairs (the exact count may vary based on implementation)
-            expect(pairs.length).toBeGreaterThanOrEqual(1);
-
-            // If pairs were generated, check their structure
-            if (pairs.length > 0) {
-                for (const pair of pairs) {
-                    expect(pair).toHaveLength(2);
-                    expect(pair[0]).toBeDefined();
-                    expect(pair[1]).toBeDefined();
-                }
-            }
+            expect(pairs.length).toBeGreaterThanOrEqual(2);
+            pairs.forEach(p => expect(p).toHaveLength(2));
         });
 
-        test('should handle errors during premise selection', async () => {
-            // Mock console.error to prevent test output pollution
-            const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {
-            });
+        test('handles errors during selection', async () => {
+            const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
+            let calls = 0;
+            // Provide a term to ensure createTestTask creates a valid task
+            strategy.selectSecondaryPremises = async () => {
+                if (calls++ === 0) throw new Error('Fail');
+                return [createTestTask({term: 'secondary'})];
+            };
 
-            try {
-                const premiseStream = {
-                    [Symbol.asyncIterator]: async function* () {
-                        yield createTestTask({term: 'primary1'});
-                        yield createTestTask({term: 'primary2'});
-                    }
-                };
+            async function* stream() { yield createTestTask({term: 'p1'}); yield createTestTask({term: 'p2'}); }
 
-                // Replace the method on the instance to avoid mocking
-                const originalMethod = strategy.selectSecondaryPremises.bind(strategy);
-                let callCount = 0;
-                strategy.selectSecondaryPremises = async (primary) => {
-                    callCount++;
-                    if (callCount === 1) {
-                        throw new Error('Selection failed');
-                    }
-                    return [createTestTask({term: 'secondary'})];
-                };
+            const pairs = [];
+            for await (const p of strategy.generatePremisePairs(stream())) pairs.push(p);
 
-                const pairs = [];
-                for await (const pair of strategy.generatePremisePairs(premiseStream)) {
-                    pairs.push(pair);
-                }
-
-                // Restore original method
-                strategy.selectSecondaryPremises = originalMethod;
-
-                // Should skip the failed premise and continue with the second
-                // At least one pair should be produced from the successful premise
-                expect(pairs.length).toBeGreaterThanOrEqual(1);
-            } finally {
-                consoleSpy.mockRestore();
-            }
+            expect(pairs.length).toBeGreaterThanOrEqual(1);
+            spy.mockRestore();
         });
     });
 
-    describe('getStatus', () => {
-        test('should return status information', () => {
-            strategy = new Strategy({maxSecondaryPremises: 8});
-
-            const status = strategy.getStatus();
-
-            expect(status.config.maxSecondaryPremises).toBe(8);
-            expect(status.type).toBe('Strategy');
-            expect(status.timestamp).toBeDefined();
+    test('getStatus', () => {
+        expect(new Strategy({maxSecondaryPremises: 8}).getStatus()).toMatchObject({
+            type: 'Strategy',
+            config: { maxSecondaryPremises: 8 },
+            timestamp: expect.any(Number)
         });
     });
 });
