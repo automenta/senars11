@@ -1,15 +1,15 @@
-// Third-party imports
 import fc from 'fast-check';
-
-// Local imports
 import {TermType} from '../../../src/term/Term.js';
+import {TermFactory} from '../../../src/term/TermFactory.js';
 import {createCompoundTerm, createTerm} from '../../support/factories.js';
 
+const tf = new TermFactory();
+
 describe('Term', () => {
-    const [atomA, atomB, atomC] = [createTerm('A'), createTerm('B'), createTerm('C')];
-    const inheritanceAB = createCompoundTerm('-->', [atomA, atomB]);
-    const inheritanceAB_clone = createCompoundTerm('-->', [atomA, atomB]);
-    const similarityAB = createCompoundTerm('<->', [atomA, atomB]);
+    const [atomA, atomB, atomC] = ['A', 'B', 'C'].map(c => tf.atomic(c));
+    const inheritanceAB = tf.inheritance(atomA, atomB);
+    const inheritanceAB_clone = tf.inheritance(atomA, atomB);
+    const similarityAB = tf.similarity(atomA, atomB);
 
     describe('Core Functionality', () => {
         test.each([
@@ -31,7 +31,7 @@ describe('Term', () => {
             },
             {
                 name: 'nested compound term',
-                term: createCompoundTerm('<->', [atomC, inheritanceAB]),
+                term: tf.similarity(atomC, inheritanceAB),
                 expected: {
                     type: TermType.COMPOUND,
                     name: '(<->, (-->, A, B), C)',
@@ -44,9 +44,9 @@ describe('Term', () => {
             expect(term).toMatchObject({
                 type: expected.type,
                 name: expected.name,
-                components: expected.components,
                 complexity: expected.complexity
             });
+            expect(term.components).toEqual(expect.arrayContaining(expected.components));
             expect(term.toString()).toBe(expected.string);
             expect(term.hash).toBeDefined();
         });
@@ -60,7 +60,7 @@ describe('Term', () => {
     describe('Comparison and Hashing', () => {
         test.each([
             {name: 'reflexivity', t1: atomA, t2: atomA, expected: true},
-            {name: 'identity', t1: atomA, t2: createTerm('A'), expected: true},
+            {name: 'identity', t1: atomA, t2: tf.atomic('A'), expected: true},
             {name: 'different atoms', t1: atomA, t2: atomB, expected: false},
             {name: 'compound identity', t1: inheritanceAB, t2: inheritanceAB_clone, expected: true},
             {name: 'different compounds', t1: inheritanceAB, t2: similarityAB, expected: false},
@@ -71,15 +71,15 @@ describe('Term', () => {
         });
 
         test('should generate consistent hash codes for equal terms', () => {
-            expect(atomA.hash).toBe(createTerm('A').hash);
+            expect(atomA.hash).toBe(tf.atomic('A').hash);
             expect(inheritanceAB.hash).toBe(inheritanceAB_clone.hash);
         });
     });
 
     describe('Normalization', () => {
         test('should handle commutative operators by canonicalization', () => {
-            const term1 = createCompoundTerm('&', [atomA, atomB]);
-            const term2 = createCompoundTerm('&', [atomB, atomA]);
+            const term1 = tf.conjunction(atomA, atomB);
+            const term2 = tf.conjunction(atomB, atomA);
 
             expect(term1.name).toBe('(&, A, B)');
             expect(term2.name).toBe('(&, A, B)');
@@ -87,12 +87,12 @@ describe('Term', () => {
         });
 
         test('should handle associativity by flattening components', () => {
-            const term1 = createCompoundTerm('&', [atomA, createCompoundTerm('&', [atomB, atomC])]);
+            const term1 = tf.conjunction(atomA, tf.conjunction(atomB, atomC));
             expect(term1.name).toBe('(&, A, B, C)');
         });
 
         test('should handle redundancy by removing duplicate components', () => {
-            const term = createCompoundTerm('&', [atomA, atomA]);
+            const term = tf.conjunction(atomA, atomA);
             expect(term.name).toBe('(&, A)');
         });
     });

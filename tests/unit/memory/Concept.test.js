@@ -3,7 +3,6 @@ import {createTask, createTerm} from '../../support/factories.js';
 
 describe('Concept', () => {
     let concept, term;
-
     beforeEach(() => {
         term = createTerm('A');
         concept = new Concept(term, {priorityDecayRate: 0.9});
@@ -12,11 +11,7 @@ describe('Concept', () => {
     describe('Initialization', () => {
         test('initializes with the correct default state', () => {
             expect(concept).toMatchObject({
-                term,
-                totalTasks: 0,
-                activation: 0,
-                quality: 0,
-                useCount: 0
+                term, totalTasks: 0, activation: 0, quality: 0, useCount: 0
             });
             expect(concept.getAllTasks()).toEqual([]);
         });
@@ -24,10 +19,7 @@ describe('Concept', () => {
 
     describe('Task Management', () => {
         let task;
-
-        beforeEach(() => {
-            task = createTask({term});
-        });
+        beforeEach(() => { task = createTask({term}); });
 
         test('adds a task correctly', () => {
             expect(concept.addTask(task)).toBe(true);
@@ -46,10 +38,7 @@ describe('Concept', () => {
                 createTask({term, punctuation: '.'}),
                 createTask({term, punctuation: '!'})
             ];
-
-            concept.addTask(belief);
-            concept.addTask(goal);
-
+            [belief, goal].forEach(t => concept.addTask(t));
             const beliefs = concept.getTasksByType('BELIEF');
             expect(beliefs).toHaveLength(1);
             expect(beliefs[0]).toBe(belief);
@@ -95,7 +84,6 @@ describe('Concept', () => {
                 createTask({term, budget: {priority: 0.8}}),
                 createTask({term, budget: {priority: 0.6}})
             ].forEach(t => concept.addTask(t));
-
             expect(concept.averagePriority).toBe(0.7);
         });
     });
