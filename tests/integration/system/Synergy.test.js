@@ -4,65 +4,44 @@ import {PrologStrategy} from '../../../src/reason/strategy/PrologStrategy.js';
 import {Task} from '../../../src/task/Task.js';
 
 describe('NAL and Prolog Synergy', () => {
-    let nar;
-    let narTool;
-    let termFactory;
+    let nar, narTool, tf;
 
     beforeEach(async () => {
-        const prologStrategy = new PrologStrategy();
         nar = new NAR({
             reasoning: {
                 type: 'stream',
-                strategies: [prologStrategy],
+                strategies: [new PrologStrategy()],
                 maxDerivationDepth: 10
             },
-            debug: {
-                reasoning: false
-            }
+            debug: {reasoning: false}
         });
         await nar.initialize();
         narTool = new NARTool(nar);
-        termFactory = nar._termFactory;
+        tf = nar._termFactory;
     });
 
-    test('should enable Prolog feedback loop into NAL stream', async () => {
-        // 1. Prolog Knowledge
+    test('Prolog feedback loop into NAL stream', async () => {
         await narTool.execute({action: 'assert_prolog', content: 'man(socrates).'});
         await narTool.execute({action: 'assert_prolog', content: 'mortal(X) :- man(X).'});
 
-        // 2. Construct Prolog Query Task
         const createPrologTerm = (pred, ...args) => {
-            const predTerm = termFactory.atomic(pred);
-            const argTerms = args.map(a => {
-                if (a.startsWith('?')) return termFactory.variable(a);
-                return termFactory.atomic(a);
-            });
-            const argsTerm = termFactory.tuple(argTerms);
-            return termFactory.predicate(predTerm, argsTerm);
+            const argTerms = args.map(a => a.startsWith('?') ? tf.variable(a) : tf.atomic(a));
+            return tf.predicate(tf.atomic(pred), tf.tuple(argTerms));
         };
 
-        const subgoalTerm = createPrologTerm('mortal', 'socrates');
-        const subgoalTask = new Task({term: subgoalTerm, punctuation: '?'});
+        const subgoalTask = new Task({
+            term: createPrologTerm('mortal', 'socrates'),
+            punctuation: '?'
+        });
 
-        // 3. Query Prolog via NAR
         const answers = await nar.ask(subgoalTask);
-
-        expect(answers).toBeDefined();
         expect(answers.length).toBeGreaterThan(0);
+
         const answerTask = answers[0];
-
-        // Verify answer is "mortal(socrates)."
-        // We can check term structure roughly or just re-input
-
-        // 4. Feedback Loop: Inject Prolog answer into NAL stream
-        // This validates that PrologStrategy output is compatible with NAR input
         const inputResult = await nar.input(answerTask);
-        expect(inputResult).toBe(true); // Task accepted
+        expect(inputResult).toBe(true);
 
-        // 5. Verify it exists in memory/focus
-        const concept = nar.memory.getConcept(answerTask.term);
-        const inMemory = concept || (nar._focus && nar._focus.hasTask(answerTask));
-
+        const inMemory = nar.memory.getConcept(answerTask.term) || nar._focus?.hasTask(answerTask);
         expect(inMemory).toBeTruthy();
     });
 });

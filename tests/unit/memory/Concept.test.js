@@ -16,15 +16,14 @@ describe('Concept', () => {
     });
 
     describe('Task Management', () => {
-        let task;
-        beforeEach(() => { task = createTask({term}); });
-
         test('add/duplicate/remove', () => {
+            const task = createTask({term});
+
             expect(concept.addTask(task)).toBe(true);
             expect(concept.totalTasks).toBe(1);
             expect(concept.getAllTasks()).toContain(task);
 
-            expect(concept.addTask(task)).toBe(false); // Duplicate
+            expect(concept.addTask(task)).toBe(false);
             expect(concept.totalTasks).toBe(1);
 
             expect(concept.removeTask(task)).toBe(true);
@@ -32,15 +31,19 @@ describe('Concept', () => {
         });
 
         test('getTasksByType', () => {
-            const [belief, goal] = [createTask({term, punctuation: '.'}), createTask({term, punctuation: '!'})];
+            const [belief, goal] = [
+                createTask({term, punctuation: '.'}),
+                createTask({term, punctuation: '!'})
+            ];
             [belief, goal].forEach(t => concept.addTask(t));
             expect(concept.getTasksByType('BELIEF')).toEqual([belief]);
+            expect(concept.getTasksByType('GOAL')).toEqual([goal]);
         });
     });
 
     describe('Properties', () => {
         test.each([
-            ['boostActivation', c => { c.boostActivation(0.5); c.boostActivation(0.6); }, c => c.activation, 1], // Clamped
+            ['boostActivation clamped', c => { c.boostActivation(0.5); c.boostActivation(0.6); }, c => c.activation, 1],
             ['applyDecay', c => { c.boostActivation(1); c.applyDecay(0.2); }, c => c.activation, 0.8],
             ['updateQuality', c => { c.updateQuality(0.5); c.updateQuality(-0.2); }, c => c.quality, 0.3],
             ['incrementUseCount', c => c.incrementUseCount(), c => c.useCount, 1],
