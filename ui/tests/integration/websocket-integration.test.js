@@ -97,32 +97,6 @@ describe('WebSocketManager Integration', () => {
         }));
     });
 
-    test('should handle batch messages', () => {
-        wsManager.connect();
-        wsManager.ws.onopen();
-
-        const mockHandler = jest.fn();
-        wsManager.subscribe('concept.created', mockHandler);
-
-        const batchMessage = {
-            type: 'eventBatch',
-            data: [
-                {type: 'concept.created', data: {concept: 'A'}},
-                {type: 'concept.created', data: {concept: 'B'}}
-            ]
-        };
-
-        const event = {data: JSON.stringify(batchMessage)};
-        wsManager.ws.onmessage(event);
-
-        expect(mockHandler).toHaveBeenCalledTimes(2);
-        expect(mockHandler).toHaveBeenCalledWith(expect.objectContaining({
-            payload: {concept: 'A'}
-        }));
-        expect(mockHandler).toHaveBeenCalledWith(expect.objectContaining({
-            payload: {concept: 'B'}
-        }));
-    });
 
     test('should handle connection errors', () => {
         wsManager.connect();

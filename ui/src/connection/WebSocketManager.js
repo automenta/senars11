@@ -126,20 +126,6 @@ export class WebSocketManager {
     handleMessage(message) {
         if (!message) return; // Early return if message is null/undefined
 
-        // Handle batch events
-        if (message.type === 'eventBatch') {
-            const events = message.data || [];
-            this.logger.log(`Received batch of ${events.length} events`, 'debug', '📦');
-
-            // Process events in batch to improve performance with many messages
-            const batchLimit = Config.getConstants().MESSAGE_BATCH_SIZE;
-            for (let i = 0; i < events.length; i += batchLimit) {
-                const batch = events.slice(i, i + batchLimit);
-                this.processBatch(batch);
-            }
-            return;
-        }
-
         // Filter out noisy events
         if (message.type === 'cycle.start' || message.type === 'cycle.complete') {
             return; // Too noisy for main log
@@ -154,21 +140,6 @@ export class WebSocketManager {
             const handlerType = index < specificHandlers.length ? message.type : '*';
             this.tryHandleMessage(handler, message, handlerType);
         });
-    }
-
-    /**
-     * Process a batch of events
-     */
-    processBatch(batch) {
-        // Use for-of loop instead of forEach for better performance in hot paths
-        for (const event of batch) {
-            // Process individual events using internal logic to avoid double-handling
-            this.handleMessage({
-                type: event.type,
-                payload: event.data,
-                timestamp: event.timestamp
-            });
-        }
     }
 
     /**

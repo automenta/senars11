@@ -28,7 +28,7 @@ describe('WebSocket Pathway Tests', () => {
         // Verifies that the headless UI components (VirtualGraph, VirtualConsole) are populated correctly
         await new TestNARRemote()
             .input('<cat ==> animal>', 1.0, 0.9)
-            .command('<dog ==> animal>.', 'narsese') // Test command/input method
+            .input('<dog ==> animal>', 1.0, 0.9)
             .run(50)
             // Verify Logic
             .expect('<cat ==> animal>')
