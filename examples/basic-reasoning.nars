@@ -3,9 +3,9 @@
 *50
 
 // Basic syllogistic reasoning
-(<a --> b> && <b --> c>) => <a --> c>.
-<a --> b>.
-<b --> c>.
+(((a --> b) && (b --> c)) ==> (a --> c)).
+(a --> b).
+(b --> c).
 
 // Wait for derivations
 /step 10

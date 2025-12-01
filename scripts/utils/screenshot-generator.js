@@ -77,6 +77,30 @@ class ScreenshotGenerator {
         return this.screenshots;
     }
 
+    // Added function to capture a single screenshot
+    async captureSingleScreenshot(url, outputPath, prefix = 'single') {
+        console.log(`Capturing single screenshot from ${url}...`);
+
+        try {
+            await this.page.goto(url, {waitUntil: 'networkidle'});
+        } catch (e) {
+            console.log(`Navigation note: ${e.message} - continuing anyway`);
+        }
+
+        const timestamp = Date.now();
+        const screenshotPath = outputPath || path.join(this.outputDir, `${prefix}_${timestamp}.png`);
+
+        const buffer = await this.page.screenshot({
+            fullPage: true
+        });
+
+        await fs.writeFile(screenshotPath, buffer);
+        this.screenshots.push(screenshotPath);
+        console.log(`✓ Single screenshot saved: ${screenshotPath}`);
+
+        return screenshotPath;
+    }
+
     async capturePriorityFluctuations(url, duration = 30000) {
         console.log('Capturing priority fluctuation visualizations...');
 
@@ -249,6 +273,11 @@ async function runGenerator() {
         switch (mode) {
             case 'screenshots':
                 await generator.captureScreenshots(url, duration, interval, 'demo');
+                break;
+
+            case 'single-screenshot':
+                // For single screenshot mode, capture just one screenshot
+                await generator.captureSingleScreenshot(url, outputDir, 'single');
                 break;
 
             case 'priority':

@@ -22,10 +22,10 @@ async function syllogismDemo() {
     await traditionalNar.initialize();
 
     console.log('Input: All men are mortal');
-    await traditionalNar.input('<man --> mortal>. %1.0;0.9%');
+    await traditionalNar.input('(man --> mortal). %1.0;0.9%');
 
     console.log('Input: Socrates is a man');
-    await traditionalNar.input('<Socrates --> man>. %1.0;0.8%');
+    await traditionalNar.input('(Socrates --> man). %1.0;0.8%');
 
     console.log('\nRunning reasoning cycles...\n');
     await traditionalNar.runCycles(10);
@@ -57,10 +57,10 @@ async function syllogismDemo() {
     await streamNar.initialize();
 
     console.log('Input: All men are mortal');
-    await streamNar.input('<man --> mortal>. %1.0;0.9%');
+    await streamNar.input('(man --> mortal). %1.0;0.9%');
 
     console.log('Input: Socrates is a man');
-    await streamNar.input('<Socrates --> man>. %1.0;0.8%');
+    await streamNar.input('(Socrates --> man). %1.0;0.8%');
 
     console.log('\nStarting stream reasoning...\n');
 
@@ -107,3 +107,4 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 }
 
 export default syllogismDemo;
+
