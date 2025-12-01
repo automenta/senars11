@@ -58,6 +58,7 @@ class WebSocketMonitor {
     }
 
     async start() {
+        this._isStopped = false;
         return new Promise((resolve, reject) => {
             this.server = new WebSocketServer({
                 port: this.port,
@@ -135,7 +136,11 @@ class WebSocketMonitor {
     }
 
     _scheduleBatch() {
+        if (this._isStopped) return;
+
         this.batchTimer = setTimeout(() => {
+            if (this._isStopped) return;
+
             if (this.eventBuffer.length > 0) {
                 const batch = [...this.eventBuffer]; // Create a copy of the buffer
                 this.eventBuffer = []; // Clear the buffer
@@ -167,6 +172,7 @@ class WebSocketMonitor {
     }
 
     async stop() {
+        this._isStopped = true;
         if (this.batchTimer) {
             clearTimeout(this.batchTimer);
             this.batchTimer = null;

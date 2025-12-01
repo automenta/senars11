@@ -33,9 +33,11 @@ export default defineConfig({
     // Start the UI and mock backend servers before running tests and stop them after all tests
     // This serves the default "mocked" environment used by most tests (e.g. verification.spec.js)
     webServer: {
-        command: 'npm start', // Use main server.js which has the shared code logic
+        command: 'node ../scripts/ui/launcher.js --port 8080 --ws-port 8081', // Use launcher to start both UI and Backend
         url: 'http://localhost:8080',
         timeout: 120000,
         reuseExistingServer: true, // Allow reusing existing server to prevent conflicts
+        stdout: 'pipe',
+        stderr: 'pipe',
     },
 });
