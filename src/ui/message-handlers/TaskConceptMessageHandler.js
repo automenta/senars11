@@ -1,6 +1,4 @@
 import {BaseMessageHandler} from './BaseMessageHandler.js';
-// Note: FormattingUtils import path may need to be updated based on the actual project structure
-// import {FormattingUtils} from '/src/util/FormattingUtils.js'; // This path appears to be incorrect
 
 /**
  * Handler for task and concept related messages
@@ -11,13 +9,29 @@ export class TaskConceptMessageHandler extends BaseMessageHandler {
      */
     handleTaskMessage(message) {
         const payload = message.payload || {};
+        const task = payload.task || payload;
         let content;
 
-        if (payload.term) {
-            // Format task manually since FormattingUtils isn't available
-            content = payload.term.toString();
-            if (payload.truth) {
-                const {frequency, confidence} = payload.truth;
+        // Handle term being an object or string
+        let termStr = '';
+        const term = task.term;
+
+        if (term) {
+            if (typeof term === 'string') {
+                termStr = term;
+            } else if (typeof term === 'object') {
+                termStr = term._name || term.name || term.toString();
+                if (termStr === '[object Object]') {
+                    termStr = JSON.stringify(term);
+                }
+            }
+        }
+
+        if (termStr) {
+            content = termStr;
+            const truth = task.truth || payload.truth;
+            if (truth) {
+                const {frequency, confidence} = truth;
                 content += ` {${frequency?.toFixed(2) ?? '0.00'}, ${confidence?.toFixed(2) ?? '0.00'}}`;
             }
         } else {

@@ -59,11 +59,30 @@ export class VirtualGraph {
         // Unwrap nested data structures common in NAR events
         const actualData = data.task || data.concept || data.derivedTask || data;
 
-        const id = actualData.id || actualData.term;
+        let id = actualData.id;
+        let term = actualData.term;
+
+        // Handle object term
+        if (typeof term === 'object' && term !== null) {
+            // Extract components before flattening term to string
+            if (Array.isArray(term._components)) {
+                term._components.forEach(comp => {
+                    this.addNode({term: comp}, 'concept');
+                });
+            }
+            term = term._name || term.name; // Use name as string representation
+        }
+
+        if (!id) id = term;
         if (!id) return;
 
         // If it's a string, wrap it
         const nodeData = typeof actualData === 'string' ? {term: actualData, id: actualData} : {...actualData};
+
+        // Ensure we store string term if we have it
+        if (term && typeof term === 'string') {
+            nodeData.term = term;
+        }
 
         // Ensure type
         if (!nodeData.type) nodeData.type = defaultType;
