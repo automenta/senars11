@@ -4,7 +4,21 @@ A hybrid neuro-symbolic reasoning system that combines Non-Axiomatic Logic (NAL)
 observable platform for exploring advanced AI concepts. The system implements a continuous, stream-based dataflow
 architecture for processing streams of premises into conclusions.
 
-**System Definition:**
+## About
+
+This is not being built to be a finished application.
+
+It is being built to be substrate — the common seed for a future industrial ecosystem of cognitive architectures.
+
+The less complete it is right now, the more possibilities it can grow into.
+
+What matters is that the core reasoning stream, the observation contract, and the hybrid NAL–LM integration remain stable and extensible. Everything else is deliberately left rough, partial, or missing so that different groups can fork and mutate it toward radically different goals: minimal edge reasoners, high-agency planners, educational sandboxes, lifelong personal memory layers, distributed multi-agent societies, or entirely new logics.
+
+If something you need is not here yet, that is by design.
+
+Fork it, strip it, break it, and grow it into the species you need.
+
+## System Definition
 
 - **Stream Reasoner**: A continuous, stream-based dataflow architecture that transforms streams of premises into streams
   of conclusions. It utilizes a non-blocking pipeline (`PremiseSource` → `Strategy` → `RuleProcessor`) to handle
@@ -13,8 +27,6 @@ architecture for processing streams of premises into conclusions.
   evidence
 - **Observable Platform**: A system that provides real-time visibility into its reasoning processes, enabling analysis
   and understanding of its decision-making
-
----
 
 ## Key Architectural Patterns
 
