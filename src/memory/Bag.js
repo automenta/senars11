@@ -1,3 +1,4 @@
+
 class ForgetPolicy {
     selectForRemoval(items, itemData, insertionOrder, accessTimes) {
     }
@@ -94,6 +95,7 @@ const POLICIES = Object.freeze({
 export class Bag {
     constructor(maxSize, forgetPolicy = DEFAULT_POLICY) {
         this._items = new Map();
+        this._itemKeys = new Map(); // Content Key -> Item
         this._maxSize = maxSize;
         this._insertionOrder = [];
         this._accessTimes = new Map();
@@ -126,7 +128,15 @@ export class Bag {
         this._forgetPolicyName = policy;
     }
 
+    _getKey(item) {
+        return item && item.toString ? item.toString() : item;
+    }
+
     add(item) {
+        const key = this._getKey(item);
+        if (this._itemKeys.has(key)) return false;
+
+        // Double check referential equality just in case, though key check should suffice
         if (this._items.has(item)) return false;
 
         if (this.size >= this.maxSize) {
@@ -135,6 +145,7 @@ export class Bag {
 
         const priority = item.budget?.priority ?? 0;
         this._addItemToStorage(item, priority);
+        this._itemKeys.set(key, item);
 
         return true;
     }
@@ -148,6 +159,9 @@ export class Bag {
     remove(item) {
         const result = this._items.delete(item);
         if (result) {
+            const key = this._getKey(item);
+            this._itemKeys.delete(key);
+
             this._insertionOrder = this._insertionOrder.filter(i => i !== item);
             this._accessTimes.delete(item);
         }
@@ -155,7 +169,8 @@ export class Bag {
     }
 
     contains(item) {
-        return this._items.has(item);
+        const key = this._getKey(item);
+        return this._itemKeys.has(key);
     }
 
     find(predicate) {
@@ -213,6 +228,7 @@ export class Bag {
 
     clear() {
         this._items.clear();
+        this._itemKeys.clear();
         this._insertionOrder = [];
         this._accessTimes.clear();
     }
@@ -276,6 +292,7 @@ export class Bag {
                         // We use the internal method to force the exact priority from serialization
                         // instead of recalculating it from the item's budget
                         this._addItemToStorage(item, priority);
+                        this._itemKeys.set(this._getKey(item), item);
                     }
                 }
             }

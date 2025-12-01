@@ -47,6 +47,21 @@ async function startWebSocketServer(config) {
     const monitor = await _initializeWebSocketMonitor(config.webSocket);
     const serverAdapter = await _setupSessionServerAdapter(replEngine, monitor);
 
+    // Add logging listeners for demo tour
+    replEngine.on('task.input', (data) => {
+        console.log(`IN: ${data.originalInput || data.task}`);
+    });
+
+    replEngine.on('reasoning.derivation', (data) => {
+        console.log(`OUT: ${data.derivedTask}`);
+    });
+
+    replEngine.on('question.answered', (data) => {
+        const payload = data.payload || data;
+        const answer = payload.answer || payload.task || payload;
+        console.log(`Answer: ${answer}`);
+    });
+
     // Check for demo argument
     const args = process.argv.slice(2);
     const demoIndex = args.indexOf('--demo');

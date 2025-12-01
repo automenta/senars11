@@ -8,18 +8,37 @@ import {fileURLToPath} from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '../..');
-const screenshotsDir = path.join(rootDir, 'test-results/screenshots');
-const outputDir = path.join(rootDir, 'test-results');
+
+// Default paths
+let screenshotsDir = path.join(rootDir, 'test-results/screenshots');
+let outputDir = path.join(rootDir, 'test-results');
+
+// Parse args
+const args = process.argv.slice(2);
+for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--input' && args[i+1]) {
+        screenshotsDir = path.resolve(process.cwd(), args[i+1]);
+        i++;
+    } else if (args[i] === '--output' && args[i+1]) {
+        outputDir = path.resolve(process.cwd(), args[i+1]);
+        i++;
+    }
+}
 
 async function generateComposite() {
-    console.log('Generating composite image...');
+    console.log(`Generating composite image...`);
+    console.log(`Input: ${screenshotsDir}`);
+    console.log(`Output: ${outputDir}`);
 
     try {
+        // Ensure output dir exists
+        await fs.mkdir(outputDir, {recursive: true});
+
         // Check if screenshots directory exists
         try {
             await fs.access(screenshotsDir);
         } catch {
-            console.error('❌ Screenshots directory not found. Run screenshots generation first.');
+            console.error('❌ Screenshots directory not found.');
             process.exit(1);
         }
 
@@ -50,7 +69,7 @@ async function generateComposite() {
         h1 { text-align: center; margin-bottom: 20px; }
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(600px, 1fr)); /* Increased size */
             gap: 15px;
         }
         .card {
@@ -67,7 +86,7 @@ async function generateComposite() {
         }
         .card-info {
             padding: 10px;
-            font-size: 12px;
+            font-size: 14px;
             color: #aaa;
             background: #333;
             border-top: 1px solid #444;
@@ -82,7 +101,7 @@ async function generateComposite() {
     <div class="grid">
         ${images.map(img => `
             <div class="card">
-                <img src="screenshots/${img}" loading="lazy" alt="${img}">
+                <img src="${path.relative(outputDir, path.join(screenshotsDir, img))}" loading="lazy" alt="${img}">
                 <div class="card-info">${img}</div>
             </div>
         `).join('')}

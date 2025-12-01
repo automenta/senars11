@@ -2,6 +2,7 @@
 
 import {chromium} from 'playwright';
 import fs from 'fs/promises';
+import path from 'path';
 
 class ScreenshotGenerator {
     constructor() {
@@ -9,13 +10,19 @@ class ScreenshotGenerator {
         this.context = null;
         this.page = null;
         this.screenshots = [];
+        this.outputDir = 'test-results/screenshots';
+        this.lastBuffer = null;
     }
 
-    async initialize() {
+    async initialize(outputDir) {
         console.log('Initializing screenshot generator (Playwright)...');
 
+        if (outputDir) {
+            this.outputDir = outputDir;
+        }
+
         // Create output directories
-        await fs.mkdir('test-results/screenshots', {recursive: true});
+        await fs.mkdir(this.outputDir, {recursive: true});
 
         // Launch browser
         this.browser = await chromium.launch({
@@ -28,7 +35,7 @@ class ScreenshotGenerator {
 
         this.page = await this.context.newPage();
 
-        console.log('✓ Screenshot generator initialized');
+        console.log(`✓ Screenshot generator initialized. Output: ${this.outputDir}`);
     }
 
     async captureScreenshots(url, duration = 30000, interval = 2000, prefix = 'screenshot') {
@@ -42,24 +49,31 @@ class ScreenshotGenerator {
 
         const startTime = Date.now();
         let count = 0;
+        let skipped = 0;
+        this.lastBuffer = null;
 
         while (Date.now() - startTime < duration) {
             const timestamp = Date.now();
-            const screenshotPath = `test-results/screenshots/${prefix}_${count.toString().padStart(3, '0')}_${timestamp}.png`;
+            const screenshotPath = path.join(this.outputDir, `${prefix}_${count.toString().padStart(3, '0')}_${timestamp}.png`);
 
-            await this.page.screenshot({
-                path: screenshotPath,
+            const buffer = await this.page.screenshot({
                 fullPage: true
             });
 
-            this.screenshots.push(screenshotPath);
-            console.log(`✓ Screenshot ${count + 1} saved: ${screenshotPath}`);
+            if (this.lastBuffer && buffer.equals(this.lastBuffer)) {
+                skipped++;
+            } else {
+                await fs.writeFile(screenshotPath, buffer);
+                this.screenshots.push(screenshotPath);
+                console.log(`✓ Screenshot ${count + 1} saved: ${screenshotPath}`);
+                this.lastBuffer = buffer;
+            }
 
             count++;
             await this.delay(interval);
         }
 
-        console.log(`\n📊 Captured ${count} screenshots`);
+        console.log(`\n📊 Captured ${this.screenshots.length} screenshots (skipped ${skipped} duplicates)`);
         return this.screenshots;
     }
 
@@ -76,11 +90,13 @@ class ScreenshotGenerator {
 
         const startTime = Date.now();
         let count = 0;
+        let skipped = 0;
+        this.lastBuffer = null;
 
         while (Date.now() - startTime < duration) {
             // Look for elements that show priority changes
             const timestamp = Date.now();
-            const screenshotPath = `test-results/screenshots/priority_fluctuation_${count.toString().padStart(3, '0')}_${timestamp}.png`;
+            const screenshotPath = path.join(this.outputDir, `priority_fluctuation_${count.toString().padStart(3, '0')}_${timestamp}.png`);
 
             // Highlight priority-related elements temporarily
             await this.page.evaluate(() => {
@@ -90,32 +106,9 @@ class ScreenshotGenerator {
                     el.style.border = '2px solid #ff0000';
                     el.style.backgroundColor = '#ffe6e6';
                 });
-
-                // Add a timestamp overlay
-                const overlay = document.createElement('div');
-                overlay.id = 'timestamp-overlay';
-                overlay.textContent = new Date().toLocaleTimeString();
-                overlay.style.position = 'fixed';
-                overlay.style.top = '10px';
-                overlay.style.right = '10px';
-                overlay.style.backgroundColor = 'rgba(255, 0, 0, 0.8)';
-                overlay.style.color = 'white';
-                overlay.style.padding = '5px 10px';
-                overlay.style.borderRadius = '5px';
-                overlay.style.zIndex = '9999';
-                overlay.style.fontFamily = 'Arial, sans-serif';
-                overlay.style.fontSize = '14px';
-                document.body.appendChild(overlay);
-
-                // Remove overlay after 1 second
-                setTimeout(() => {
-                    const overlay = document.getElementById('timestamp-overlay');
-                    if (overlay) overlay.remove();
-                }, 1000);
             });
 
-            await this.page.screenshot({
-                path: screenshotPath,
+            const buffer = await this.page.screenshot({
                 fullPage: true
             });
 
@@ -128,14 +121,20 @@ class ScreenshotGenerator {
                 });
             });
 
-            this.screenshots.push(screenshotPath);
-            console.log(`✓ Priority screenshot ${count + 1} saved: ${screenshotPath}`);
+            if (this.lastBuffer && buffer.equals(this.lastBuffer)) {
+                skipped++;
+            } else {
+                await fs.writeFile(screenshotPath, buffer);
+                this.screenshots.push(screenshotPath);
+                console.log(`✓ Priority screenshot ${count + 1} saved: ${screenshotPath}`);
+                this.lastBuffer = buffer;
+            }
 
             count++;
             await this.delay(1500); // 1.5 second interval for priority changes
         }
 
-        console.log(`\n📊 Captured ${count} priority fluctuation screenshots`);
+        console.log(`\n📊 Captured ${this.screenshots.length} priority fluctuation screenshots (skipped ${skipped} duplicates)`);
         return this.screenshots;
     }
 
@@ -152,10 +151,12 @@ class ScreenshotGenerator {
 
         const startTime = Date.now();
         let count = 0;
+        let skipped = 0;
+        this.lastBuffer = null;
 
         while (Date.now() - startTime < duration) {
             const timestamp = Date.now();
-            const screenshotPath = `test-results/screenshots/derivation_${count.toString().padStart(3, '0')}_${timestamp}.png`;
+            const screenshotPath = path.join(this.outputDir, `derivation_${count.toString().padStart(3, '0')}_${timestamp}.png`);
 
             // Highlight derivation-related elements
             await this.page.evaluate(() => {
@@ -165,31 +166,9 @@ class ScreenshotGenerator {
                     el.style.border = '2px solid #00ff00';
                     el.style.boxShadow = '0 0 10px rgba(0, 255, 0, 0.5)';
                 });
-
-                // Add timestamp overlay
-                const overlay = document.createElement('div');
-                overlay.id = 'derivation-timestamp';
-                overlay.textContent = `Derivation - ${new Date().toLocaleTimeString()}`;
-                overlay.style.position = 'fixed';
-                overlay.style.top = '10px';
-                overlay.style.left = '10px';
-                overlay.style.backgroundColor = 'rgba(0, 255, 0, 0.8)';
-                overlay.style.color = 'black';
-                overlay.style.padding = '5px 10px';
-                overlay.style.borderRadius = '5px';
-                overlay.style.zIndex = '9999';
-                overlay.style.fontFamily = 'Arial, sans-serif';
-                overlay.style.fontSize = '14px';
-                document.body.appendChild(overlay);
-
-                setTimeout(() => {
-                    const overlay = document.getElementById('derivation-timestamp');
-                    if (overlay) overlay.remove();
-                }, 1000);
             });
 
-            await this.page.screenshot({
-                path: screenshotPath,
+            const buffer = await this.page.screenshot({
                 fullPage: true
             });
 
@@ -202,14 +181,20 @@ class ScreenshotGenerator {
                 });
             });
 
-            this.screenshots.push(screenshotPath);
-            console.log(`✓ Derivation screenshot ${count + 1} saved: ${screenshotPath}`);
+            if (this.lastBuffer && buffer.equals(this.lastBuffer)) {
+                skipped++;
+            } else {
+                await fs.writeFile(screenshotPath, buffer);
+                this.screenshots.push(screenshotPath);
+                console.log(`✓ Derivation screenshot ${count + 1} saved: ${screenshotPath}`);
+                this.lastBuffer = buffer;
+            }
 
             count++;
             await this.delay(2000); // 2 second interval for derivations
         }
 
-        console.log(`\n📊 Captured ${count} derivation screenshots`);
+        console.log(`\n📊 Captured ${this.screenshots.length} derivation screenshots (skipped ${skipped} duplicates)`);
         return this.screenshots;
     }
 
@@ -240,43 +225,59 @@ async function runGenerator() {
     const generator = new ScreenshotGenerator();
 
     try {
-        await generator.initialize();
-
-        // Determine what to capture based on command line arguments
         const args = process.argv.slice(2);
-        const mode = args[0] || 'all';
-        const url = args[1] || 'http://localhost:5173';
+
+        let mode = 'all';
+        let url = 'http://localhost:5173';
+        let duration = 30000;
+        let interval = 2000;
+        let outputDir = null;
+
+        for (let i = 0; i < args.length; i++) {
+             if (args[i] === '--type' && args[i+1]) { mode = args[i+1]; i++; }
+             else if (args[i] === '--url' && args[i+1]) { url = args[i+1]; i++; }
+             else if (args[i] === '--duration' && args[i+1]) { duration = parseInt(args[i+1]); i++; }
+             else if (args[i] === '--interval' && args[i+1]) { interval = parseInt(args[i+1]); i++; }
+             else if (args[i] === '--output' && args[i+1]) { outputDir = args[i+1]; i++; }
+             // Backward compatibility for positional args if not flagged
+             else if (i === 0 && !args[i].startsWith('-')) { mode = args[i]; }
+             else if (i === 1 && !args[i].startsWith('-')) { url = args[i]; }
+        }
+
+        await generator.initialize(outputDir);
 
         switch (mode) {
             case 'screenshots':
-                await generator.captureScreenshots(url, 30000, 2000, 'demo');
+                await generator.captureScreenshots(url, duration, interval, 'demo');
                 break;
 
             case 'priority':
-                await generator.capturePriorityFluctuations(url, 30000);
+                await generator.capturePriorityFluctuations(url, duration);
                 break;
 
             case 'derivations':
-                await generator.captureDerivations(url, 30000);
+                await generator.captureDerivations(url, duration);
                 break;
 
             case 'movie':
                 // Treat movie requests as screenshot requests
                 console.log('Movie mode requested: generating screenshots only.');
-                await generator.captureScreenshots(url, 30000, 1000, 'movie_frame');
+                await generator.captureScreenshots(url, duration, 1000, 'movie_frame');
                 break;
 
             case 'gif':
                 console.log('GIF mode requested: generating screenshots only.');
-                await generator.captureScreenshots(url, 15000, 500, 'gif_frame');
+                await generator.captureScreenshots(url, duration/2, 500, 'gif_frame');
                 break;
 
             case 'all':
             default:
                 // Capture different types of visualizations
-                await generator.captureScreenshots(url, 10000, 2000, 'overview');
-                await generator.capturePriorityFluctuations(url, 10000);
-                await generator.captureDerivations(url, 10000);
+                // Note: 'all' mode might be tricky with deduplication and shared output dir,
+                // but we will proceed.
+                await generator.captureScreenshots(url, duration/3, interval, 'overview');
+                await generator.capturePriorityFluctuations(url, duration/3);
+                await generator.captureDerivations(url, duration/3);
                 break;
         }
 
