@@ -14,6 +14,8 @@ const args = process.argv.slice(2);
 const parallel = args.includes('--parallel') || args.includes('-p');
 const timedMode = args.includes('--timed') || args.includes('--time');
 const logOnlyMode = args.includes('--log-only') || args.includes('-l');
+const movieMode = args.includes('--movie');
+const graphMode = args.includes('--graph');
 
 const TOURS = [
     {id: 'basic-reasoning', duration: 30000},
@@ -75,15 +77,21 @@ async function runTour(tour, uiPort, wsPort) {
 
     const logStream = await fs.open(logFile, 'w');
 
-    // Start Server
-    const serverProcess = spawn('node', [
+    const serverArgs = [
         'scripts/ui/launcher.js',
         '--demo', tour.id,
         '--port', uiPort.toString(),
         '--ws-port', wsPort.toString(),
         '--provider', 'dummy',
         '--no-open'
-    ], {
+    ];
+
+    if (graphMode) {
+        serverArgs.push('--graph-ui');
+    }
+
+    // Start Server
+    const serverProcess = spawn('node', serverArgs, {
         cwd: rootDir,
         stdio: ['ignore', logStream.fd, logStream.fd]
     });
@@ -104,7 +112,15 @@ async function runTour(tour, uiPort, wsPort) {
              await waitForCompletion(wsPort, tour.id, tour.duration || 30000);
         } else {
             // Visualization
-            if (timedMode) {
+            if (movieMode) {
+                 await runCommand('node', [
+                    'scripts/utils/visualize.js',
+                    '--type', 'movie',
+                    '--duration', tour.duration.toString(),
+                    '--url', `http://localhost:${uiPort}`,
+                    '--output', outputDir
+                ], {cwd: rootDir});
+            } else if (timedMode) {
                 await runCommand('node', [
                     'scripts/utils/visualize.js',
                     '--type', 'screenshots',
@@ -114,6 +130,7 @@ async function runTour(tour, uiPort, wsPort) {
                     '--output', screenshotsDir
                 ], {cwd: rootDir});
             } else {
+                // Default: Event-driven screenshots
                 await runEventDrivenScreenshots(tour, screenshotsDir, wsPort, `http://localhost:${uiPort}`);
             }
         }

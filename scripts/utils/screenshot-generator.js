@@ -14,7 +14,7 @@ class ScreenshotGenerator {
         this.lastBuffer = null;
     }
 
-    async initialize(outputDir) {
+    async initialize(outputDir, options = {}) {
         console.log('Initializing screenshot generator (Playwright)...');
 
         if (outputDir) {
@@ -29,13 +29,33 @@ class ScreenshotGenerator {
             headless: true // Run headless for CI/server environments
         });
 
-        this.context = await this.browser.newContext({
+        const contextOptions = {
             viewport: {width: 1280, height: 720}
-        });
+        };
 
+        if (options.recordVideo) {
+            contextOptions.recordVideo = {
+                dir: this.outputDir,
+                size: { width: 1280, height: 720 }
+            };
+            console.log(`🎥 Video recording enabled in ${this.outputDir}`);
+        }
+
+        this.context = await this.browser.newContext(contextOptions);
         this.page = await this.context.newPage();
 
         console.log(`✓ Screenshot generator initialized. Output: ${this.outputDir}`);
+    }
+
+    async recordSession(url, duration) {
+        console.log(`Recording session from ${url} for ${duration}ms...`);
+        try {
+            await this.page.goto(url, {waitUntil: 'networkidle'});
+        } catch (e) {
+            console.log(`Navigation note: ${e.message}`);
+        }
+        await this.delay(duration);
+        console.log('Recording finished.');
     }
 
     async captureScreenshots(url, duration = 30000, interval = 2000, prefix = 'screenshot') {
@@ -268,7 +288,9 @@ async function runGenerator() {
              else if (i === 1 && !args[i].startsWith('-')) { url = args[i]; }
         }
 
-        await generator.initialize(outputDir);
+        await generator.initialize(outputDir, {
+            recordVideo: mode === 'movie'
+        });
 
         switch (mode) {
             case 'screenshots':
@@ -289,9 +311,7 @@ async function runGenerator() {
                 break;
 
             case 'movie':
-                // Treat movie requests as screenshot requests
-                console.log('Movie mode requested: generating screenshots only.');
-                await generator.captureScreenshots(url, duration, 1000, 'movie_frame');
+                await generator.recordSession(url, duration);
                 break;
 
             case 'gif':
