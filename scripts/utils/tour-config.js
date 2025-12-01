@@ -1,0 +1,13 @@
+
+export const TOURS = [
+    {id: 'basic-reasoning', duration: 30000},
+    {id: 'decision-making', duration: 30000},
+    {id: 'syllogistic-reasoning', duration: 30000},
+    {id: 'temporal-reasoning', duration: 30000},
+    {id: 'operator-examples', duration: 30000},
+    {id: 'multi-step-inference', duration: 40000},
+    {id: 'hybrid-reasoning', duration: 40000},
+    {id: 'procedural-learning', duration: 30000},
+    {id: 'causal-reasoning', duration: 30000},
+    {id: 'truth-value-reasoning', duration: 30000}
+];
