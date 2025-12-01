@@ -8,8 +8,6 @@ const DEFAULT_OPTIONS = Object.freeze({
     host: WEBSOCKET_CONFIG.defaultHost,
     path: WEBSOCKET_CONFIG.defaultPath,
     maxConnections: WEBSOCKET_CONFIG.maxConnections,
-    minBroadcastInterval: WEBSOCKET_CONFIG.minBroadcastInterval,
-    messageBufferSize: WEBSOCKET_CONFIG.messageBufferSize,
     rateLimitWindowMs: WEBSOCKET_CONFIG.rateLimitWindowMs,
     maxMessagesPerWindow: WEBSOCKET_CONFIG.maxMessagesPerWindow
 });
@@ -20,7 +18,6 @@ class WebSocketMonitor {
         this.host = options.host ?? DEFAULT_OPTIONS.host;
         this.path = options.path ?? DEFAULT_OPTIONS.path;
         this.maxConnections = options.maxConnections ?? DEFAULT_OPTIONS.maxConnections;
-        this.minBroadcastInterval = options.minBroadcastInterval ?? DEFAULT_OPTIONS.minBroadcastInterval;
         this.eventFilter = options.eventFilter ?? null;
 
         this.clients = new Set();
@@ -34,12 +31,9 @@ class WebSocketMonitor {
         this.clientRateLimiters = new Map();
         this.rateLimitWindowMs = options.rateLimitWindowMs ?? DEFAULT_OPTIONS.rateLimitWindowMs;
         this.maxMessagesPerWindow = options.maxMessagesPerWindow ?? DEFAULT_OPTIONS.maxMessagesPerWindow;
-        this.messageBufferSize = options.messageBufferSize ?? DEFAULT_OPTIONS.messageBufferSize;
 
         this.clientCapabilities = new Map();
 
-        // Add event buffer for batching
-        this.eventBuffer = [];
         this._replMessageHandler = null;
     }
 
@@ -127,28 +121,9 @@ class WebSocketMonitor {
             this.server.on('listening', () => {
                 console.log(`WebSocket monitoring server started on ws://${this.host}:${this.port}${this.path}`);
 
-                this._scheduleBatch();
-
                 resolve();
             });
         });
-    }
-
-    _scheduleBatch() {
-        this.batchTimer = setTimeout(() => {
-            if (this.eventBuffer.length > 0) {
-                const batch = [...this.eventBuffer]; // Create a copy of the buffer
-                this.eventBuffer = []; // Clear the buffer
-
-                // Broadcast the batch to all connected clients
-                this._broadcastToSubscribedClients({
-                    type: 'eventBatch',
-                    data: batch,
-                    timestamp: Date.now()
-                });
-            }
-            this._scheduleBatch();
-        }, this.minBroadcastInterval);
     }
 
     _isClientRateLimited(clientId) {
@@ -167,11 +142,6 @@ class WebSocketMonitor {
     }
 
     async stop() {
-        if (this.batchTimer) {
-            clearTimeout(this.batchTimer);
-            this.batchTimer = null;
-        }
-
         return new Promise((resolve) => {
             for (const client of this.clients) {
                 client.close(1001, 'Server shutting down');
@@ -350,8 +320,8 @@ class WebSocketMonitor {
     }
 
     /**
-     * Public API for buffering events for broadcast.
-     * Allows external components (like WebRepl) to utilize the batching mechanism
+     * Public API for broadcasting events.
+     * Allows external components to utilize the broadcast mechanism
      * without this class needing to know about NAR internals.
      */
     bufferEvent(eventType, data, options = {}) {
@@ -362,7 +332,7 @@ class WebSocketMonitor {
             }
         }
 
-        this.eventBuffer.push({
+        this._broadcastToSubscribedClients({
             type: eventType,
             data: data,
             timestamp: Date.now(),
@@ -375,8 +345,7 @@ class WebSocketMonitor {
         for (const client of this.clients) {
             // Check if the client is subscribed to 'all' or to specific event types
             const isSubscribed = !client.subscriptions || client.subscriptions.has('all') ||
-                (message.type.startsWith('eventBatch') ? client.subscriptions.has('all') :
-                    client.subscriptions.has(message.type) || client.subscriptions.has(message.type.split('/')[0]));
+                (client.subscriptions.has(message.type) || client.subscriptions.has(message.type.split('/')[0]));
 
             if (isSubscribed && client.readyState === client.OPEN) {
                 this._sendToClient(client, message);

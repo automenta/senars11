@@ -83,7 +83,7 @@ export class TestNARRemote {
                         await this.sendNarseseAndWait(inputStr);
                         break;
                     case 'command':
-                        await this.sendCommand(op.text, op.mode);
+                        await this.sendCommandAndWait(op.text, op.mode);
                         break;
                     case 'run':
                         for (let i = 0; i < op.cycles; i++) {
@@ -332,7 +332,7 @@ export class TestNARRemote {
         };
 
         const matcher = (msg) => {
-            if (msg.type === 'narsese.result' || msg.type === 'agent.result' || msg.type === 'narsese.error') {
+            if (msg.type === 'narsese.result' || msg.type === 'agent.result' || msg.type === 'narsese.error' || msg.type === 'error') {
                 return true;
             }
             return false;
