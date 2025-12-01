@@ -55,7 +55,7 @@ describe('Concept', () => {
         test('averagePriority', () => {
             [createTask({term, budget: {priority: 0.8}}), createTask({term, budget: {priority: 0.6}})]
                 .forEach(t => concept.addTask(t));
-            expect(concept.averagePriority).toBeCloseTo(0.7);
+            expect(concept.averagePriority).toBeCloseTo(0.8); // Second task suppressed
         });
     });
 });

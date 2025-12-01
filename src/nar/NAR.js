@@ -128,7 +128,7 @@ export class NAR extends BaseComponent {
         this._memory = new Memory(config.memory);
         this._parser = new NarseseParser(this._termFactory);
         this._focus = new Focus(config.focus);
-        this._taskManager = new TaskManager(this._memory, this._focus, config.taskManager);
+        this._taskManager = new TaskManager(this._memory, null, config.taskManager);
         this._evaluator = new EvaluationEngine(null, this._termFactory);
         this._lm = lmEnabled ? new LM() : null;
 
@@ -169,13 +169,15 @@ export class NAR extends BaseComponent {
 
     async _handleStreamDerivation(derivation) {
         try {
-            await this._inputTask(derivation, {traceId: 'stream'});
+            const added = await this._inputTask(derivation, {traceId: 'stream'});
 
-            this._eventBus.emit('reasoning.derivation', {
-                derivedTask: derivation,
-                source: 'streamReasoner.stream',
-                timestamp: Date.now()
-            });
+            if (added) {
+                this._eventBus.emit('reasoning.derivation', {
+                    derivedTask: derivation,
+                    source: 'streamReasoner.stream',
+                    timestamp: Date.now()
+                });
+            }
         } catch (error) {
             this.logError('Error handling stream derivation:', {
                 error: error.message,
@@ -268,41 +270,36 @@ export class NAR extends BaseComponent {
     }
 
     async _processNewTask(task, source, originalInput, parsed, options = {}) {
-        // Check if a semantically equivalent task already exists in memory
-        if (this._isTaskDuplicate(task)) {
-            return false;
-        }
+        this._taskManager.addTask(task);
 
-        const added = this._taskManager.addTask(task);
+        const addedTasks = await this._processPendingTasks(options.traceId);
+        const wasAdded = addedTasks.includes(task);
 
-        if (added) {
-            await this._emitTaskEvents(task, source, originalInput, parsed, options);
-        }
+        if (wasAdded) {
+            try {
+                this._eventBus.emit('task.input', {
+                    task,
+                    source,
+                    originalInput,
+                    parsed
+                }, {traceId: options.traceId});
 
-        return added;
-    }
+                // Now emit task.added since we confirmed it's in memory
+                this._eventBus.emit('task.added', {task}, {traceId: options.traceId});
 
-    async _emitTaskEvents(task, source, originalInput, parsed, options) {
-        try {
-            this._eventBus.emit('task.input', {
-                task,
-                source,
-                originalInput,
-                parsed
-            }, {traceId: options.traceId});
-
-            if (this._focus) {
-                const addedToFocus = this._focus.addTaskToFocus(task);
-                if (addedToFocus) {
-                    this._eventBus.emit('task.focus', task, {traceId: options.traceId});
+                if (this._focus) {
+                    const addedToFocus = this._focus.addTaskToFocus(task);
+                    if (addedToFocus) {
+                        this._eventBus.emit('task.focus', task, {traceId: options.traceId});
+                    }
                 }
+            } catch (error) {
+                this.logError('_processNewTask event emission failed:', error);
+                throw error;
             }
-
-            await this._processPendingTasks(options.traceId);
-        } catch (error) {
-            this.logError('_emitTaskEvents failed:', error);
-            throw error; // Re-throw to maintain error handling contract
         }
+
+        return wasAdded;
     }
 
     _createTask(parsed) {
@@ -343,7 +340,12 @@ export class NAR extends BaseComponent {
 
         this._startComponentsAsync();
         this._isRunning = true;
-        this._processPendingTasks(options.traceId);
+        const processed = this._processPendingTasks(options.traceId);
+        if (processed) {
+            for (const task of processed) {
+                this._eventBus.emit('task.added', {task}, {traceId: options.traceId});
+            }
+        }
 
         // Start the stream-based reasoner
         this._streamReasoner.start();
@@ -468,16 +470,21 @@ export class NAR extends BaseComponent {
 
         try {
             // Process all valid results with Promise.all for efficiency
-            const addPromises = validResults.map(result => this._inputTask(result, {traceId}));
-            await Promise.all(addPromises);
+            const addedResults = await Promise.all(validResults.map(async result => {
+                const added = await this._inputTask(result, {traceId});
+                return {result, added};
+            }));
 
             // Emit individual events to maintain compatibility with existing tests
-            for (const result of validResults) {
-                this._eventBus.emit('reasoning.derivation', {
-                    derivedTask: result,
-                    source: 'streamReasoner.step.method',
-                    timestamp: Date.now()
-                }, {traceId});
+            // Only emit if the task was actually added (not a duplicate)
+            for (const {result, added} of addedResults) {
+                if (added) {
+                    this._eventBus.emit('reasoning.derivation', {
+                        derivedTask: result,
+                        source: 'streamReasoner.step.method',
+                        timestamp: Date.now()
+                    }, {traceId});
+                }
             }
         } catch (error) {
             this.logError('_processDerivations failed:', {
@@ -728,18 +735,8 @@ export class NAR extends BaseComponent {
         return Math.min(PRIORITY.MAX_PRIORITY, basePriority + confidenceBoost + typeBoost);
     }
 
-    async _processPendingTasks(traceId) {
-        const pendingTasks = this._taskManager.processPendingTasks(Date.now());
-
-        // If there are no pending tasks, return early to avoid unnecessary operations
-        if (!pendingTasks.length) {
-            return;
-        }
-
-        // Emit all task events in a batch to reduce event emission overhead
-        for (const task of pendingTasks) {
-            this._eventBus.emit('task.added', {task}, {traceId});
-        }
+    _processPendingTasks(traceId) {
+        return this._taskManager.processPendingTasks(Date.now());
     }
 
     connectToWebSocketMonitor(monitor) {
@@ -896,21 +893,6 @@ export class NAR extends BaseComponent {
         timestamp: Date.now(),
         ...context
     });
-
-    // Check if a semantically equivalent task already exists in memory
-    _isTaskDuplicate(task) {
-        const existingConcept = this._memory.getConcept(task.term);
-        if (existingConcept) {
-            const storage = existingConcept._getStorage(task.type);
-            // Use for...of for better readability and proper iteration
-            for (const [existingTask] of storage._items) {
-                if (task.equals(existingTask)) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
 
     // Internal method to input an already-constructed Task object following the same
     // Input/Memory/Focus/Event process as the main input method
