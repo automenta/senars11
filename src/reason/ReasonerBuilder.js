@@ -1,3 +1,4 @@
+
 import {TaskBagPremiseSource} from './TaskBagPremiseSource.js';
 import {Strategy} from './Strategy.js';
 import {RuleExecutor} from './RuleExecutor.js';
@@ -131,7 +132,9 @@ export class ReasonerBuilder {
             streamSamplingObjectives: reasoningConfig.streamSamplingObjectives,
             streamStrategy: reasoningConfig.streamStrategy,
             streamRuleExecutor: reasoningConfig.streamRuleExecutor,
-            strategies: reasoningConfig.strategies
+            strategies: reasoningConfig.strategies,
+            executionMode: reasoningConfig.executionMode,
+            executionInterval: reasoningConfig.executionInterval
         };
 
         return new ReasonerBuilder(context)

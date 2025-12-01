@@ -14,6 +14,11 @@ export class WebSocketManager {
         this.reconnectDelay = Config.getConstants().RECONNECT_DELAY;
         this.messageHandlers = new Map();
         this.logger = new Logger();
+
+        // Performance optimization: Time-sliced event queue
+        this.eventQueue = [];
+        this.isProcessingQueue = false;
+        this.processSliceMs = 12; // Target ~60fps (16ms) - overhead to ensure responsiveness
     }
 
     /**
@@ -121,28 +126,59 @@ export class WebSocketManager {
     }
 
     /**
-     * Handle incoming messages
+     * Handle incoming messages by queueing them for time-sliced processing
      */
     handleMessage(message) {
-        if (!message) return; // Early return if message is null/undefined
+        if (!message) return;
 
-        // Handle batch events
         if (message.type === 'eventBatch') {
             const events = message.data || [];
             this.logger.log(`Received batch of ${events.length} events`, 'debug', '📦');
 
-            // Process events in batch to improve performance with many messages
-            const batchLimit = Config.getConstants().MESSAGE_BATCH_SIZE;
-            for (let i = 0; i < events.length; i += batchLimit) {
-                const batch = events.slice(i, i + batchLimit);
-                this.processBatch(batch);
-            }
-            return;
+            // Normalize batch events to standard message format
+            const normalized = events.map(e => ({
+                type: e.type,
+                payload: e.data,
+                timestamp: e.timestamp
+            }));
+            this.eventQueue.push(...normalized);
+        } else {
+            this.eventQueue.push(message);
         }
 
+        this.scheduleQueueProcessing();
+    }
+
+    scheduleQueueProcessing() {
+        if (this.isProcessingQueue) return;
+        this.isProcessingQueue = true;
+
+        // Yield to main thread immediately to ensure UI responsiveness
+        setTimeout(() => this.processQueue(), 0);
+    }
+
+    processQueue() {
+        const startTime = performance.now();
+
+        while (this.eventQueue.length > 0) {
+            // Check time budget
+            if (performance.now() - startTime > this.processSliceMs) {
+                // Yield and continue later
+                setTimeout(() => this.processQueue(), 0);
+                return;
+            }
+
+            const message = this.eventQueue.shift();
+            this.dispatchMessage(message);
+        }
+
+        this.isProcessingQueue = false;
+    }
+
+    dispatchMessage(message) {
         // Filter out noisy events
         if (message.type === 'cycle.start' || message.type === 'cycle.complete') {
-            return; // Too noisy for main log
+            return;
         }
 
         // Notify all handlers for this message type and general handlers
@@ -154,21 +190,6 @@ export class WebSocketManager {
             const handlerType = index < specificHandlers.length ? message.type : '*';
             this.tryHandleMessage(handler, message, handlerType);
         });
-    }
-
-    /**
-     * Process a batch of events
-     */
-    processBatch(batch) {
-        // Use for-of loop instead of forEach for better performance in hot paths
-        for (const event of batch) {
-            // Process individual events using internal logic to avoid double-handling
-            this.handleMessage({
-                type: event.type,
-                payload: event.data,
-                timestamp: event.timestamp
-            });
-        }
     }
 
     /**
@@ -201,7 +222,7 @@ export class WebSocketManager {
      */
     notifyStatusChange(status) {
         const statusHandlers = this.messageHandlers.get('connection.status') || [];
-        for (const handler of statusHandlers) { // Use for-of instead of forEach for better performance
+        for (const handler of statusHandlers) {
             this.tryExecuteHandler(handler, status, 'status handler');
         }
     }

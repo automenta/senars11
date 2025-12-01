@@ -16,7 +16,7 @@ Usage: node scripts/utils/visualize.js [options]
 Options:
   --help, -h             Show this help message
   --type <type>          Type: screenshots|priority|derivations|all|movie|gif (default: screenshots)
-  --url <url>            URL to capture from (default: http://localhost:5174)
+  --url <url>            URL to capture from (default: http://localhost:5173)
   --duration <ms>        Duration for captures (default: 30000)
   --interval <ms>        Interval between captures (default: 2000)
   --fps <fps>            Frames per second for movies (default: 2)
@@ -38,7 +38,7 @@ if (args.includes('--help') || args.includes('-h')) {
 
 // Set defaults
 let captureType = 'screenshots';
-let url = 'http://localhost:5174';
+let url = 'http://localhost:5173';
 let duration = '30000';
 let interval = '2000';
 let fps = '2';
