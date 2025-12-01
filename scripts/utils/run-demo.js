@@ -1,13 +1,15 @@
 #!/usr/bin/env node
 
-import {exec, spawn} from 'child_process';
-import {promisify} from 'util';
+import {spawn} from 'child_process';
 import fs from 'fs/promises';
 import path from 'path';
+import {fileURLToPath} from 'url';
 
-const execAsync = promisify(exec);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const rootDir = path.resolve(__dirname, '../..');
 
-const DEMO_CONFIG = Object.freeze({
+const DEMO_CONFIG = {
     WEBSOCKET_PORT: 8083,
     UI_PORT: 5176,
     DURATION: 60000, // 1 minute demo
@@ -19,11 +21,11 @@ const DEMO_CONFIG = Object.freeze({
     ],
     STARTUP_DELAYS: {
         server: 4000,
-        ui: 5000,
+        ui: 2000,
         automation: 5000
     },
     BASE_TERMS: ['cat', 'dog', 'bird', 'fish', 'animal', 'mammal', 'pet', 'living']
-});
+};
 
 const updateMetricsFromMessage = (demoData, message) => {
     if (message.includes('derivation') || message.includes('reasoning')) {
@@ -271,8 +273,9 @@ const createProcessWithLogging = (spawnArgs, logPrefix, processes, demoData) => 
 const setupDemoEnvironment = async () => {
     console.log('🚀 Setting up live demo environment...');
 
-    await fs.mkdir('demo-results', {recursive: true});
-    await fs.mkdir('demo-results/logs', {recursive: true});
+    const demoResultsDir = path.join(rootDir, 'demo-results');
+    await fs.mkdir(demoResultsDir, {recursive: true});
+    await fs.mkdir(path.join(demoResultsDir, 'logs'), {recursive: true});
 
     console.log('✅ Demo environment ready');
 
@@ -295,11 +298,10 @@ const startWebSocketServer = async (demoData, processes) => {
         ['node', ['scripts/ui/launcher.js', '--no-ui', '--ws-port', DEMO_CONFIG.WEBSOCKET_PORT.toString()], {
             env: {
                 ...process.env,
-                WS_PORT: DEMO_CONFIG.WEBSOCKET_PORT,
-                WS_HOST: 'localhost',
-                VITE_WS_PORT: DEMO_CONFIG.WEBSOCKET_PORT
+                WS_PORT: DEMO_CONFIG.WEBSOCKET_PORT.toString(),
+                WS_HOST: 'localhost'
             },
-            cwd: process.cwd(),
+            cwd: rootDir,
             stdio: ['pipe', 'pipe', 'pipe']
         }],
         'SERVER',
@@ -316,14 +318,15 @@ const startDemoUI = async (demoData, processes) => {
     console.log(`🖥️  Starting demo UI on port ${DEMO_CONFIG.UI_PORT}...`);
 
     createProcessWithLogging(
-        ['npx', ['vite', '-c', 'simple-uis/vite.config.js'], {
+        ['node', ['server.js'], {
             env: {
                 ...process.env,
-                PORT: DEMO_CONFIG.UI_PORT,
-                VITE_WS_PORT: DEMO_CONFIG.WEBSOCKET_PORT,
-                VITE_WS_HOST: 'localhost'
+                PORT: DEMO_CONFIG.UI_PORT.toString(),
+                WS_PORT: DEMO_CONFIG.WEBSOCKET_PORT.toString(), // For UI to connect to backend
+                BACKEND_WS_PORT: DEMO_CONFIG.WEBSOCKET_PORT.toString(), // Redundant but explicit
+                BACKEND_WS_HOST: 'localhost'
             },
-            cwd: path.join(process.cwd(), 'ui'),
+            cwd: path.join(rootDir, 'ui'),
             stdio: ['pipe', 'pipe', 'pipe']
         }],
         'UI',
@@ -340,7 +343,7 @@ const startDemoAutomation = async (demoData, processes) => {
     console.log('🤖 Starting demo automation...');
 
     const automationScript = createAutomationScript(DEMO_CONFIG.WEBSOCKET_PORT);
-    const automationPath = path.join(process.cwd(), 'demo-automation-tmp.js');
+    const automationPath = path.join(rootDir, 'demo-automation-tmp.js');
     await fs.writeFile(automationPath, automationScript);
 
     createProcessWithLogging(
@@ -369,10 +372,11 @@ const generateDemoReport = async (demoData) => {
         }
     };
 
-    const reportPath = path.join(process.cwd(), 'demo-results', 'demo-report.json');
+    const demoResultsDir = path.join(rootDir, 'demo-results');
+    const reportPath = path.join(demoResultsDir, 'demo-report.json');
     await fs.writeFile(reportPath, JSON.stringify(report, null, 2));
 
-    const summaryPath = path.join(process.cwd(), 'demo-results', 'demo-summary.txt');
+    const summaryPath = path.join(demoResultsDir, 'demo-summary.txt');
     const summary = `LIVE DEMO SUMMARY
 ================
 Start Time: ${new Date(demoData.startTime).toISOString()}
@@ -389,15 +393,15 @@ Total Events: ${report.summary.totalEvents}
 
 EVENT LOG
 =========
-${demoData.events.slice(-20).map(e => '[' + new Date(e.timestamp).toLocaleTimeString() + '] ' + e.source + ': ' + e.message).join('\\n')}
+${demoData.events.slice(-20).map(e => '[' + new Date(e.timestamp).toLocaleTimeString() + '] ' + e.source + ': ' + e.message).join('\n')}
 `;
 
     await fs.writeFile(summaryPath, summary);
 
-    console.log(`\\n📋 Demo report saved to: ${reportPath}`);
+    console.log(`\n📋 Demo report saved to: ${reportPath}`);
     console.log(`📋 Demo summary saved to: ${summaryPath}`);
 
-    console.log(`\\n🏆 Demo Results:`);
+    console.log(`\n🏆 Demo Results:`);
     console.log(`  • ${report.summary.tasksProcessed} tasks processed`);
     console.log(`  • ${report.summary.derivationsMade} derivations made`);
     console.log(`  • ${report.summary.priorityChanges} priority changes`);
@@ -405,16 +409,21 @@ ${demoData.events.slice(-20).map(e => '[' + new Date(e.timestamp).toLocaleTimeSt
 };
 
 const cleanupDemo = async (processes) => {
-    console.log('\\n🔄 Cleaning up demo processes...');
+    console.log('\n🔄 Cleaning up demo processes...');
 
-    processes.forEach(process => {
+    for (const process of processes) {
         if (!process.killed) {
-            process.kill();
+            try {
+                process.kill(); // SIGTERM
+                // Wait briefly for it to die?
+            } catch (e) {
+                console.error('Error killing process:', e.message);
+            }
         }
-    });
+    }
 
     try {
-        await fs.unlink(path.join(process.cwd(), 'demo-automation-tmp.js'));
+        await fs.unlink(path.join(rootDir, 'demo-automation-tmp.js'));
     } catch (err) {
         // Ignore if file doesn't exist
     }
@@ -426,11 +435,14 @@ const cleanupDemo = async (processes) => {
     const processes = [];
     let demoData;
 
-    process.on('SIGINT', async () => {
-        console.log('\\n⚠️  Received SIGINT, shutting down demo...');
+    const handleShutdown = async (signal) => {
+        console.log(`\n⚠️  Received ${signal}, shutting down demo...`);
         await cleanupDemo(processes);
         process.exit(0);
-    });
+    };
+
+    process.on('SIGINT', () => handleShutdown('SIGINT'));
+    process.on('SIGTERM', () => handleShutdown('SIGTERM'));
 
     try {
         demoData = await setupDemoEnvironment();
@@ -438,27 +450,27 @@ const cleanupDemo = async (processes) => {
         await startDemoUI(demoData, processes);
         await startDemoAutomation(demoData, processes);
 
-        console.log(`\\n🎯 Demo is now running!`);
+        console.log(`\n🎯 Demo is now running!`);
         console.log(`📡 WebSocket Server: ws://localhost:${DEMO_CONFIG.WEBSOCKET_PORT}`);
         console.log(`🌐 Demo UI: http://localhost:${DEMO_CONFIG.UI_PORT}`);
         console.log(`⏳ Demo duration: ${DEMO_CONFIG.DURATION / 1000} seconds`);
-        console.log(`\\n📋 Demonstrating:`);
+        console.log(`\n📋 Demonstrating:`);
         DEMO_CONFIG.DEMONSTRATION_TYPES.forEach(type => {
             console.log(`  • ${type.replace('-', ' ')}`);
         });
 
         await new Promise(resolve => setTimeout(resolve, DEMO_CONFIG.DURATION));
 
-        console.log('\\n📊 Generating demo report...');
+        console.log('\n📊 Generating demo report...');
         await generateDemoReport(demoData);
 
         const success = true;
-        console.log(`\\n🎉 Demo ${success ? 'COMPLETED SUCCESSFULLY' : 'FAILED'}`);
+        console.log(`\n🎉 Demo ${success ? 'COMPLETED SUCCESSFULLY' : 'FAILED'}`);
+        await cleanupDemo(processes);
         process.exit(success ? 0 : 1);
     } catch (error) {
         console.error('❌ Demo error:', error);
-        process.exit(1);
-    } finally {
         await cleanupDemo(processes);
+        process.exit(1);
     }
 })();

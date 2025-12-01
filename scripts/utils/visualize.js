@@ -38,7 +38,7 @@ if (args.includes('--help') || args.includes('-h')) {
 
 // Set defaults
 let captureType = 'screenshots';
-let url = 'http://localhost:5174';
+let url = 'http://localhost:5176';
 let duration = '30000';
 let interval = '2000';
 let fps = '2';
