@@ -14,6 +14,10 @@ export class WebSocketManager {
         this.reconnectDelay = Config.getConstants().RECONNECT_DELAY;
         this.messageHandlers = new Map();
         this.logger = new Logger();
+
+        // Queue for processing messages to avoid blocking the main thread
+        this.eventQueue = [];
+        this.isProcessingQueue = false;
     }
 
     /**
@@ -121,25 +125,67 @@ export class WebSocketManager {
     }
 
     /**
-     * Handle incoming messages
+     * Handle incoming messages by adding them to a queue
      */
     handleMessage(message) {
         if (!message) return; // Early return if message is null/undefined
 
-        // Handle batch events
         if (message.type === 'eventBatch') {
             const events = message.data || [];
             this.logger.log(`Received batch of ${events.length} events`, 'debug', '📦');
 
-            // Process events in batch to improve performance with many messages
-            const batchLimit = Config.getConstants().MESSAGE_BATCH_SIZE;
-            for (let i = 0; i < events.length; i += batchLimit) {
-                const batch = events.slice(i, i + batchLimit);
-                this.processBatch(batch);
+            // Unpack batch and queue individual events
+            for (const event of events) {
+                this.eventQueue.push({
+                    type: event.type,
+                    payload: event.data,
+                    timestamp: event.timestamp
+                });
             }
-            return;
+        } else {
+            // Queue single message
+            this.eventQueue.push(message);
         }
 
+        // Trigger queue processing
+        this.processQueue();
+    }
+
+    /**
+     * Process the event queue in chunks to avoid blocking the main thread
+     */
+    processQueue() {
+        if (this.isProcessingQueue) return;
+        this.isProcessingQueue = true;
+
+        const processChunk = () => {
+            const start = Date.now();
+            const TIME_BUDGET = 12; // ms (target ~60fps, leaving time for rendering)
+
+            try {
+                while (this.eventQueue.length > 0 && (Date.now() - start < TIME_BUDGET)) {
+                    const message = this.eventQueue.shift();
+                    this._dispatchMessage(message);
+                }
+            } catch (err) {
+                console.error('Error processing message queue:', err);
+            }
+
+            if (this.eventQueue.length > 0) {
+                // Schedule next chunk
+                setTimeout(processChunk, 0);
+            } else {
+                this.isProcessingQueue = false;
+            }
+        };
+
+        processChunk();
+    }
+
+    /**
+     * Internal method to dispatch a single message to handlers
+     */
+    _dispatchMessage(message) {
         // Filter out noisy events
         if (message.type === 'cycle.start' || message.type === 'cycle.complete') {
             return; // Too noisy for main log
@@ -154,21 +200,6 @@ export class WebSocketManager {
             const handlerType = index < specificHandlers.length ? message.type : '*';
             this.tryHandleMessage(handler, message, handlerType);
         });
-    }
-
-    /**
-     * Process a batch of events
-     */
-    processBatch(batch) {
-        // Use for-of loop instead of forEach for better performance in hot paths
-        for (const event of batch) {
-            // Process individual events using internal logic to avoid double-handling
-            this.handleMessage({
-                type: event.type,
-                payload: event.data,
-                timestamp: event.timestamp
-            });
-        }
     }
 
     /**
