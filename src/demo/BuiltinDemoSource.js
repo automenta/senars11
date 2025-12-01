@@ -37,6 +37,30 @@ const DEMOS = {
             {description: 'Inductive inference: <swan --> white>?', input: '<swan --> white>?'},
             {description: 'Inductive reasoning demo completed'}
         ]
+    },
+    tour: {
+        name: 'Comprehensive UI Tour',
+        description: 'A complete tour of NARS reasoning capabilities',
+        stepDelay: 1500,
+        steps: [
+            {description: '--- Basic Reasoning ---'},
+            {description: 'Adding belief: <cat --> animal>.', input: '<cat --> animal>.'},
+            {description: 'Adding belief: <dog --> animal>.', input: '<dog --> animal>.'},
+            {description: 'Question: <cat --> animal>?', input: '<cat --> animal>?'},
+            {description: 'Goal: <cat --> pet>!', input: '<cat --> pet>!'},
+            {description: '--- Syllogistic Reasoning ---'},
+            {description: 'Premise 1: <bird --> animal>.', input: '<bird --> animal>.'},
+            {description: 'Premise 2: <robin --> bird>.', input: '<robin --> bird>.'},
+            {description: 'Checking deduction: <robin --> animal>?'},
+            {description: 'Question: <robin --> animal>?', input: '<robin --> animal>?'},
+            {description: '--- Inductive Reasoning ---'},
+            {description: 'Observation 1: <swan1 --> white>.', input: '<swan1 --> white>.'},
+            {description: 'Observation 2: <swan2 --> white>.', input: '<swan2 --> white>.'},
+            {description: 'Observation 3: <swan3 --> white>.', input: '<swan3 --> white>.'},
+            {description: 'Induction: <swan --> white>?'},
+            {description: 'Question: <swan --> white>?', input: '<swan --> white>?'},
+            {description: 'Tour completed'}
+        ]
     }
 };
 
