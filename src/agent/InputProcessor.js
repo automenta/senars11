@@ -106,6 +106,9 @@ export class InputProcessor {
             // Explicit goal/question/belief punctuation at end
             /[>)]\s*[!?.]$/,
 
+            // Simple term with punctuation (e.g. "a.")
+            /^[\w\-\[\]]+\s*[!?.]$/,
+
             // Truth values
             /%[\d.]*(?:;[\d.]*)?%/,
 

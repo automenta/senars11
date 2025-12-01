@@ -92,6 +92,12 @@ export class SeNARSUI {
             // Early return if message is null/undefined
             if (!message) return;
 
+            // Handle eventBatch
+            if (message.type === 'eventBatch' && Array.isArray(message.data)) {
+                message.data.forEach(msg => this._handleMessage(msg));
+                return;
+            }
+
             // Update message count display
             this._updateMessageCount();
 

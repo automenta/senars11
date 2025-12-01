@@ -6,6 +6,7 @@
 import {spawn} from 'child_process';
 import {fileURLToPath} from 'url';
 import {dirname, join} from 'path';
+import {writeFile} from 'fs/promises';
 import {WebSocket} from 'ws';
 import {RemoteTaskMatch} from './TaskMatch.js';
 import {VirtualGraph} from '../ui/VirtualGraph.js';
@@ -67,8 +68,11 @@ export class TestNARRemote {
         return this;
     }
 
-    async execute() {
+    async execute(options = {}) {
+        const { verbose = false, recordPath = null } = options;
+        this.verbose = verbose;
         await this.setup();
+        let error = null;
 
         try {
             // Process operations
@@ -95,9 +99,33 @@ export class TestNARRemote {
                 await this.waitForExpectationsEventDriven(expectations);
             }
 
+        } catch (e) {
+            error = e;
+            throw e;
         } finally {
-            this.printLogs();
+            if (recordPath) {
+                await this.exportRecording(recordPath);
+            }
+            if (this.verbose || error) {
+                this.printLogs();
+            }
             await this.teardown();
+        }
+    }
+
+    async exportRecording(filepath) {
+        if (!filepath) return;
+        try {
+            const logs = this.virtualConsole.getLogs();
+            const output = {
+                timestamp: new Date().toISOString(),
+                operations: this.operations,
+                logs: logs
+            };
+            await writeFile(filepath, JSON.stringify(output, null, 2));
+            if (this.verbose) console.log(`Recording saved to ${filepath}`);
+        } catch (e) {
+            console.error(`Failed to save recording to ${filepath}:`, e);
         }
     }
 
@@ -255,6 +283,32 @@ export class TestNARRemote {
         });
     }
 
+    sendNarseseAndWait(narseseString) {
+        let message;
+        if (narseseString.startsWith('*')) {
+            message = {
+                sessionId: 'test',
+                type: `control/${narseseString.substring(1)}`,
+                payload: {}
+            };
+        } else {
+            message = {
+                sessionId: 'test',
+                type: 'reason/step',
+                payload: {text: narseseString}
+            };
+        }
+
+        const matcher = (msg) => {
+            if (msg.type === 'narsese.result' || msg.type === 'control.result' || msg.type === 'narsese.error') {
+                return true;
+            }
+            return false;
+        };
+
+        return this.sendMessageAndWait(message, matcher);
+    }
+
     sendCommand(command, mode) {
         return new Promise((resolve, reject) => {
             const messageType = mode === 'agent' ? 'agent/input' : 'narseseInput';
@@ -263,17 +317,71 @@ export class TestNARRemote {
                 payload: {input: command} // Check payload structure in ClientMessageHandlers
             };
 
-            // Wait, CommandProcessor sends: {type, payload}
-            // ClientMessageHandlers expects message.
-            // ClientMessageHandlers.handleNarseseInput delegates to ReplMessageHandler.
-            // ReplMessageHandler expects {type: 'narseseInput', payload: {input: '...'}}?
-            // CommandProcessor: this.webSocketManager.sendMessage(messageType, messageData);
-            // WebSocketManager: JSON.stringify({type, payload})
-            // So structure is correct.
-
             this.client.send(JSON.stringify(message), (error) => {
                 if (error) reject(error);
                 else resolve();
+            });
+        });
+    }
+
+    sendCommandAndWait(command, mode) {
+        const messageType = mode === 'agent' ? 'agent/input' : 'narseseInput';
+        const message = {
+            type: messageType,
+            payload: {input: command}
+        };
+
+        const matcher = (msg) => {
+            if (msg.type === 'narsese.result' || msg.type === 'agent.result' || msg.type === 'narsese.error') {
+                return true;
+            }
+            return false;
+        };
+
+        return this.sendMessageAndWait(message, matcher);
+    }
+
+    sendMessageAndWait(message, matcher, timeout = 10000) {
+        return new Promise((resolve, reject) => {
+            let listener = null;
+
+            const cleanup = () => {
+                if (listener) {
+                    this.client.removeListener('message', listener);
+                }
+                clearTimeout(timer);
+            };
+
+            const timer = setTimeout(() => {
+                cleanup();
+                reject(new Error(`Timeout waiting for response matching expectation`));
+            }, timeout);
+
+            listener = (data) => {
+                try {
+                    const msg = JSON.parse(data);
+                    // Handle batch
+                    const messages = msg.type === 'eventBatch' ? msg.data : [msg];
+
+                    for (const m of messages) {
+                        if (matcher(m)) {
+                            cleanup();
+                            resolve(m);
+                            return;
+                        }
+                    }
+                } catch (e) {
+                    // ignore
+                }
+            };
+
+            this.client.on('message', listener);
+
+            this.client.send(JSON.stringify(message), (err) => {
+                if (err) {
+                    cleanup();
+                    reject(err);
+                }
             });
         });
     }
@@ -304,11 +412,13 @@ export class TestNARRemote {
                     safeReject(new Error(`Expectation timeout: ${JSON.stringify(exp)}`));
                 }, 20000);
 
-                const checkState = () => {
+                const checkState = async () => {
                     // Check task queue (legacy)
                     if (exp.type === 'expect') {
+                        // console.error(`DEBUG: Checking queue (size ${this.taskQueue.length}) for ${exp.matcher.termFilter}`);
                         for (const task of this.taskQueue) {
-                            if (exp.matcher.matches(task)) {
+                            // console.error(`DEBUG: Inspecting task term: ${JSON.stringify(task.term)}`);
+                            if (await exp.matcher.matches(task)) {
                                 if (exp.shouldExist) {
                                     safeResolve();
                                     return;

@@ -189,8 +189,13 @@ export class RemoteTaskMatch extends TaskMatch {
 
             // Compare the parsed terms with strict equality only
             if (actualParsedTerm && expectedParsedTerm) {
-                return actualParsedTerm.equals(expectedParsedTerm);
+                const result = actualParsedTerm.equals(expectedParsedTerm);
+                if (!result) {
+                    // console.error(`Match failed: Expected ${expectedParsedTerm.toString()} vs Actual ${actualParsedTerm.toString()}`);
+                }
+                return result;
             } else {
+                // console.error(`Match failed: Parsed terms missing. Expected: ${!!expectedParsedTerm}, Actual: ${!!actualParsedTerm}`);
                 return false;
             }
         }
