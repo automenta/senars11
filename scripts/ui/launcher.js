@@ -46,7 +46,13 @@ async function startWebSocketServer(config) {
 
     const monitor = await _initializeWebSocketMonitor(config.webSocket);
     const serverAdapter = await _setupSessionServerAdapter(replEngine, monitor);
-    const demoWrapper = await _setupDemoWrapper(replEngine, monitor);
+
+    // Check for demo argument
+    const args = process.argv.slice(2);
+    const demoIndex = args.indexOf('--demo');
+    const demoName = demoIndex !== -1 ? args[demoIndex + 1] : null;
+
+    const demoWrapper = await _setupDemoWrapper(replEngine, monitor, demoName);
 
     console.log('WebSocket server started successfully');
 
@@ -83,13 +89,20 @@ async function _setupSessionServerAdapter(replEngine, monitor) {
     return serverAdapter;
 }
 
-async function _setupDemoWrapper(nar, monitor) {
+async function _setupDemoWrapper(nar, monitor, demoName) {
     const demoWrapper = new DemoWrapper();
     await demoWrapper.initialize(nar, monitor);
 
     await demoWrapper.sendDemoList();
     demoWrapper.runPeriodicMetricsUpdate();
     nar.start();
+
+    if (demoName) {
+        console.log(`Auto-starting demo: ${demoName}`);
+        setTimeout(() => {
+            demoWrapper.startDemo(demoName);
+        }, 1000);
+    }
 
     return demoWrapper;
 }
