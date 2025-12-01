@@ -1,0 +1,7 @@
+// title: Syllogistic Reasoning
+// description: Classic Socrates example
+
+(man --> mortal). %1.0;0.9%
+(Socrates --> man). %1.0;0.8%
+
+// Expect: (Socrates --> mortal)

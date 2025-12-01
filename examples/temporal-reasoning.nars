@@ -1,0 +1,7 @@
+// title: Temporal Reasoning
+// description: Temporal sequence reasoning
+
+(A =/> B). %0.9;0.8%
+(B =/> C). %0.9;0.7%
+
+// Expect: (A =/> C)

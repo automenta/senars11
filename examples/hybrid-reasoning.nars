@@ -1,0 +1,26 @@
+// title: Hybrid Reasoning
+// description: Combining NAL and LM
+
+// Symbolic reasoning
+(bird --> animal).
+(robin --> bird).
+
+// Expect: (robin --> animal)
+
+// Question (Hybrid)
+(robin --> animal)?
+
+// Complex
+(fly --> capability).
+(bird --> [can-fly]).
+
+// Question
+((?x & [can-fly]) --> ?y)?
+
+// Practical
+"student is a person"
+"person is a mortal"
+(study --> action).
+
+// Question
+((student & ?what) --> ?what)?
