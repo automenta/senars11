@@ -98,7 +98,16 @@ if (!validTypes.includes(captureType)) {
 console.log(`Capturing ${captureType} from ${url} for ${duration}ms...`);
 
 // Determine the appropriate mode based on parameters
-let generatorArgs = [captureType, url];
+let generatorArgs = [
+    '--type', captureType,
+    '--url', url,
+    '--duration', duration,
+    '--interval', interval
+];
+
+if (output) {
+    generatorArgs.push('--output', output);
+}
 
 // Run the screenshot generator with appropriate parameters
 const child = spawn('node', ['scripts/utils/screenshot-generator.js', ...generatorArgs], {

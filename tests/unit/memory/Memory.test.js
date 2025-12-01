@@ -33,7 +33,7 @@ describe('Memory', () => {
 
         memory.addTask(createTask({term, truth: TEST_CONSTANTS.TRUTH.MEDIUM})); // Duplicate task (concept exists)
         expect(memory.stats.totalConcepts).toBe(1);
-        expect(memory.stats.totalTasks).toBe(2);
+        expect(memory.stats.totalTasks).toBe(1); // Duplicate suppressed
 
         expect(memory.removeConcept(term)).toBe(true);
         expect(memory.stats.totalConcepts).toBe(0);
