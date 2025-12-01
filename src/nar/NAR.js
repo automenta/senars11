@@ -468,16 +468,21 @@ export class NAR extends BaseComponent {
 
         try {
             // Process all valid results with Promise.all for efficiency
-            const addPromises = validResults.map(result => this._inputTask(result, {traceId}));
-            await Promise.all(addPromises);
+            const addedResults = await Promise.all(validResults.map(async result => {
+                const added = await this._inputTask(result, {traceId});
+                return {result, added};
+            }));
 
             // Emit individual events to maintain compatibility with existing tests
-            for (const result of validResults) {
-                this._eventBus.emit('reasoning.derivation', {
-                    derivedTask: result,
-                    source: 'streamReasoner.step.method',
-                    timestamp: Date.now()
-                }, {traceId});
+            // Only emit if the task was actually added (not a duplicate)
+            for (const {result, added} of addedResults) {
+                if (added) {
+                    this._eventBus.emit('reasoning.derivation', {
+                        derivedTask: result,
+                        source: 'streamReasoner.step.method',
+                        timestamp: Date.now()
+                    }, {traceId});
+                }
             }
         } catch (error) {
             this.logError('_processDerivations failed:', {
