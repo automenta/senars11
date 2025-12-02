@@ -3,7 +3,18 @@ import {BaseProvider} from './BaseProvider.js';
 let pipelinePromise = null;
 const importPipeline = () => {
     if (!pipelinePromise) {
-        pipelinePromise = import('@xenova/transformers').then(mod => mod.pipeline);
+        pipelinePromise = import('@xenova/transformers').then(mod => {
+            // Configure env to reduce warnings
+            if (mod.env) {
+                // Ensure we try to download if not found locally
+                mod.env.allowLocalModels = false;
+                // Reduce logging verbosity if supported by the version
+                if (mod.env.backends && mod.env.backends.onnx) {
+                    mod.env.backends.onnx.logLevel = 'error';
+                }
+            }
+            return mod.pipeline;
+        });
     }
     return pipelinePromise;
 };

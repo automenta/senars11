@@ -150,6 +150,8 @@ export class Reasoner extends EventEmitter {
                     const processedResult = this._processDerivation(task, suppressEvents);
                     if (processedResult) results.push(processedResult);
                 }
+            } else {
+                this.ruleProcessor.dispatchAsyncRule(rule, primaryPremise, secondaryPremise);
             }
         }
 
