@@ -1,0 +1,10 @@
+// title: Operator Examples
+// description: Testing various NARS operators
+
+(a-->b).
+(a<->b).
+(a==>b).
+(a<=>b).
+(a=b).
+(a&&b).
+(a||b).

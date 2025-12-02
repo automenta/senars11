@@ -1,0 +1,6 @@
+// title: Goal Reasoning
+// description: Demonstrates simple goal achievement
+
+(cat --> animal).
+(animal --> [alive]).
+(cat --> [alive])!
