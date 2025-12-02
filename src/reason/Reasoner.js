@@ -182,11 +182,15 @@ export class Reasoner extends EventEmitter {
                     const processedResult = this._processDerivation(task, suppressEvents);
                     if (processedResult) results.push(processedResult);
                 }
-            } else if (this._isAsyncRule(rule) && rule.apply) {
-                //console.debug(`DEBUG: Executing async rule: ${rule.id || rule.name}`);
+            } else if (this._isAsyncRule(rule)) {
                 try {
-                    const derivedTasks = await rule.apply(primaryPremise, secondaryPremise);
-                    //console.debug(`DEBUG: Async rule ${rule.id || rule.name} produced ${derivedTasks.length} tasks: ${derivedTasks.map(t => t?.term).join(', ')}`);
+                    let derivedTasks = [];
+                    if (this.ruleProcessor && typeof this.ruleProcessor.executeAsyncRule === 'function') {
+                        derivedTasks = await this.ruleProcessor.executeAsyncRule(rule, primaryPremise, secondaryPremise);
+                    } else if (rule.apply) {
+                        derivedTasks = await rule.apply(primaryPremise, secondaryPremise);
+                    }
+
                     for (const task of derivedTasks) {
                         const processedResult = this._processDerivation(task, suppressEvents);
                         if (processedResult) results.push(processedResult);

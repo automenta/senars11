@@ -20,6 +20,11 @@ export class LMRule extends Rule {
                 ...config.lm_options,
             },
             singlePremise: config.singlePremise ?? false,
+            circuitBreaker: {
+                failureThreshold: 5,
+                resetTimeout: 60000,
+                ...config.circuitBreaker
+            },
             ...config,
         };
 
@@ -44,77 +49,69 @@ export class LMRule extends Rule {
             failedExecutions: 0,
             avgExecutionTime: 0
         };
+
+        this.circuit = {
+            state: 'CLOSED',
+            failures: 0,
+            lastFailure: 0,
+            nextTry: 0
+        };
     }
 
     static create(config) {
         const {id, lm, ...rest} = config;
         if (!id || !lm) {
-            throw new Error('LMRule.create: `id` and `lm` are required to create an LMRule.');
+            throw new Error('LMRule.create: `id` and `lm` are required.');
         }
         return new LMRule(id, lm, rest);
     }
 
     canApply(primaryPremise, secondaryPremise, context) {
         try {
+            if (this.circuit.state === 'OPEN' && Date.now() < this.circuit.nextTry) {
+                return false;
+            }
             return this.config.condition(primaryPremise, secondaryPremise, context);
         } catch (error) {
-            logError(error, {
-                ruleId: this.id,
-                context: 'condition_evaluation'
-            }, 'warn');
+            logError(error, {ruleId: this.id, context: 'condition_evaluation'}, 'warn');
             return false;
         }
     }
 
-    generatePrompt(primaryPremise, secondaryPremise, context) {
-        return this.config.prompt(primaryPremise, secondaryPremise, context);
-    }
-
-    processLMOutput(lmResponse, primaryPremise, secondaryPremise, context) {
-        return this.config.process(lmResponse, primaryPremise, secondaryPremise, context);
-    }
-
-    generateTasks(processedOutput, primaryPremise, secondaryPremise, context) {
-        return this.config.generate(processedOutput, primaryPremise, secondaryPremise, context);
-    }
-
     async apply(primaryPremise, secondaryPremise, context = {}) {
+        if (this.circuit.state === 'OPEN') {
+            if (Date.now() > this.circuit.nextTry) {
+                this.circuit.state = 'HALF_OPEN';
+            } else {
+                return [];
+            }
+        }
+
+        if (!this.canApply(primaryPremise, secondaryPremise, context)) {
+            return [];
+        }
+
         const startTime = Date.now();
         this.executionStats.totalExecutions++;
 
         try {
-            if (!this.canApply(primaryPremise, secondaryPremise, context)) {
-                //console.debug(`DEBUG: LMRule ${this.id} - canApply returned false`);
-                this._updateExecutionStats(false, Date.now() - startTime);
-                return [];
-            }
-
-            //console.debug(`DEBUG: LMRule ${this.id} - generating prompt for ${primaryPremise?.term}`);
             const prompt = await this.generatePrompt(primaryPremise, secondaryPremise, context);
-            //console.debug(`DEBUG: LMRule ${this.id} - generated prompt: ${prompt.substring(0, 100)}...`);
-
-            //console.debug(`DEBUG: LMRule ${this.id} - executing LM with prompt`);
             const lmResponse = await this.executeLM(prompt);
-            //console.debug(`DEBUG: LMRule ${this.id} - LM response: ${lmResponse}`);
 
             if (!lmResponse) {
-                //console.debug(`DEBUG: LMRule ${this.id} - no LM response, returning empty array`);
                 this._updateExecutionStats(false, Date.now() - startTime);
                 return [];
             }
 
-            //console.debug(`DEBUG: LMRule ${this.id} - processing LM output`);
             const processedOutput = this.processLMOutput(lmResponse, primaryPremise, secondaryPremise, context);
-            //console.debug(`DEBUG: LMRule ${this.id} - processed output: ${processedOutput}`);
-
-            //console.debug(`DEBUG: LMRule ${this.id} - generating tasks from processed output`);
             const newTasks = this.generateTasks(processedOutput, primaryPremise, secondaryPremise, context);
-            //console.debug(`DEBUG: LMRule ${this.id} - generated ${newTasks.length} tasks: ${newTasks.map(t => t?.term).join(', ')}`);
 
+            this._resetCircuit();
             this._updateExecutionStats(true, Date.now() - startTime);
             return newTasks;
         } catch (error) {
             console.error(`Error in LMRule ${this.id}:`, error);
+            this._recordFailure();
             this._updateExecutionStats(false, Date.now() - startTime);
             return [];
         }
@@ -125,13 +122,9 @@ export class LMRule extends Rule {
             throw new RuleExecutionError(`LM unavailable for rule ${this.id}`, this.id);
         }
 
-        //console.debug(`DEBUG: LMRule ${this.id} - About to execute LM with prompt length: ${prompt.length}`);
         const startTime = Date.now();
         const response = await this._callLMInterface(prompt);
-        const executionTime = Date.now() - startTime;
-        //console.debug(`DEBUG: LMRule ${this.id} - LM execution completed in ${executionTime}ms, response: ${response}`);
-
-        this._updateLMStats(prompt.length + (response?.length ?? 0), executionTime);
+        this._updateLMStats(prompt.length + (response?.length ?? 0), Date.now() - startTime);
         return response;
     }
 
@@ -142,7 +135,25 @@ export class LMRule extends Rule {
                 return this.lm[method](prompt, this.config.lm_options);
             }
         }
-        throw new Error(`LM does not have a compatible interface for rule ${this.id}. Expected one of: ${interfaces.join(', ')}`);
+        throw new Error(`LM compatible interface not found for rule ${this.id}`);
+    }
+
+    _recordFailure() {
+        this.circuit.failures++;
+        this.circuit.lastFailure = Date.now();
+        if (this.circuit.failures >= this.config.circuitBreaker.failureThreshold) {
+            this.circuit.state = 'OPEN';
+            this.circuit.nextTry = Date.now() + this.config.circuitBreaker.resetTimeout;
+            console.warn(`LMRule ${this.id}: Circuit OPEN. Paused for ${this.config.circuitBreaker.resetTimeout}ms`);
+        }
+    }
+
+    _resetCircuit() {
+        if (this.circuit.state !== 'CLOSED') {
+             console.log(`LMRule ${this.id}: Circuit CLOSED (recovered)`);
+        }
+        this.circuit.state = 'CLOSED';
+        this.circuit.failures = 0;
     }
 
     _updateLMStats(tokens, executionTime) {
@@ -164,10 +175,15 @@ export class LMRule extends Rule {
         this.executionStats.successRate = this.executionStats.successfulExecutions / total;
     }
 
+    generatePrompt(p, s, c) { return this.config.prompt(p, s, c); }
+    processLMOutput(r, p, s, c) { return this.config.process(r, p, s, c); }
+    generateTasks(o, p, s, c) { return this.config.generate(o, p, s, c); }
+
     getStats() {
         return {
             lm: {...this.lmStats},
             execution: {...this.executionStats},
+            circuit: {...this.circuit},
             ruleInfo: {
                 id: this.id,
                 name: this.name,
@@ -177,64 +193,43 @@ export class LMRule extends Rule {
         };
     }
 
-    _fillPromptTemplate(template, primaryPremise, secondaryPremise) {
-        let filledPrompt = template
-            .replace('{{taskTerm}}', primaryPremise.term?.toString?.() ?? String(primaryPremise.term ?? 'unknown'))
-            .replace('{{taskType}}', primaryPremise.punctuation ?? 'unknown')
-            .replace('{{taskTruth}}', primaryPremise.truth ?
-                `frequency: ${primaryPremise.truth.f}, confidence: ${primaryPremise.truth.c}` :
-                'unknown truth value');
-
-        if (secondaryPremise) {
-            filledPrompt = filledPrompt
-                .replace('{{secondaryTerm}}', secondaryPremise.term?.toString?.() ?? String(secondaryPremise.term ?? 'unknown'))
-                .replace('{{secondaryType}}', secondaryPremise.punctuation ?? 'unknown')
-                .replace('{{secondaryTruth}}', secondaryPremise.truth ?
-                    `frequency: ${secondaryPremise.truth.f}, confidence: ${secondaryPremise.truth.c}` :
-                    'unknown truth value');
-        }
-
-        return filledPrompt;
-    }
-
     _getDefaultCondition(config) {
-        return (primaryPremise, secondaryPremise, context) => {
-            return !!this.lm &&
-                primaryPremise?.term != null &&
-                (secondaryPremise != null || config.singlePremise === true);
-        };
+        return (primaryPremise, secondaryPremise) =>
+            !!this.lm && primaryPremise?.term != null && (secondaryPremise != null || config.singlePremise === true);
     }
 
     _getPromptFunction(config) {
-        return (primaryPremise, secondaryPremise, context) => {
-            if (typeof config.promptTemplate === 'string') {
-                return this._fillPromptTemplate(config.promptTemplate, primaryPremise, secondaryPremise);
-            } else if (typeof config.promptTemplate === 'function') {
-                return config.promptTemplate(primaryPremise, secondaryPremise, context);
-            }
-            throw new Error(`Prompt generation not implemented for rule: ${this.id}`);
-        };
+        if (typeof config.promptTemplate === 'string') {
+            return (p, s) => this._fillPromptTemplate(config.promptTemplate, p, s);
+        } else if (typeof config.promptTemplate === 'function') {
+            return config.promptTemplate;
+        }
+        return () => { throw new Error(`Prompt generation not implemented for rule: ${this.id}`); };
     }
 
     _getProcessFunction(config) {
-        return (lmResponse, primaryPremise, secondaryPremise, context) => {
-            if (typeof config.process === 'function') {
-                return config.process(lmResponse, primaryPremise, secondaryPremise, context);
-            } else if (typeof config.responseProcessor === 'function') {
-                return config.responseProcessor(lmResponse, primaryPremise, secondaryPremise, context);
-            }
-            return lmResponse ?? '';
-        };
+        if (typeof config.process === 'function') return config.process;
+        if (typeof config.responseProcessor === 'function') return config.responseProcessor;
+        return (r) => r ?? '';
     }
 
     _getGenerateFunction(config) {
-        return (processedOutput, primaryPremise, secondaryPremise, context) => {
-            if (typeof config.generate === 'function') {
-                return config.generate(processedOutput, primaryPremise, secondaryPremise, context);
-            } else if (typeof config.responseProcessor === 'function') {
-                return config.responseProcessor(processedOutput, primaryPremise, secondaryPremise, context);
-            }
-            return [];
-        };
+        if (typeof config.generate === 'function') return config.generate;
+        if (typeof config.responseProcessor === 'function') return config.responseProcessor;
+        return () => [];
+    }
+
+    _fillPromptTemplate(template, primaryPremise, secondaryPremise) {
+        const fill = (t, prefix, obj) => t
+            .replace(`{{${prefix}Term}}`, obj?.term?.toString?.() ?? String(obj?.term ?? 'unknown'))
+            .replace(`{{${prefix}Type}}`, obj?.punctuation ?? 'unknown')
+            .replace(`{{${prefix}Truth}}`, obj?.truth ?
+                `frequency: ${obj.truth.f}, confidence: ${obj.truth.c}` : 'unknown');
+
+        let res = fill(template, 'task', primaryPremise);
+        if (secondaryPremise) {
+            res = fill(res, 'secondary', secondaryPremise);
+        }
+        return res;
     }
 }

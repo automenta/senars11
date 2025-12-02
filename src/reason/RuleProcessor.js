@@ -31,9 +31,7 @@ export class RuleProcessor {
         const startTime = Date.now();
         try {
             for await (const [primaryPremise, secondaryPremise] of premisePairStream) {
-                if (signal?.aborted) {
-                    break;
-                }
+                if (signal?.aborted) break;
 
                 if (this._isTimeoutExceeded(startTime, timeoutMs)) {
                     console.debug(`RuleProcessor: timeout reached after ${timeoutMs}ms`);
@@ -45,9 +43,7 @@ export class RuleProcessor {
                 const candidateRules = this.ruleExecutor.getCandidateRules(primaryPremise, secondaryPremise);
 
                 for (const rule of candidateRules) {
-                    if (signal?.aborted) {
-                        break;
-                    }
+                    if (signal?.aborted) break;
 
                     if (this._isTimeoutExceeded(startTime, timeoutMs)) {
                         console.debug(`RuleProcessor: timeout reached after ${timeoutMs}ms`);
@@ -65,7 +61,6 @@ export class RuleProcessor {
                             ruleId: rule.id ?? rule.name,
                             context: 'rule_processing'
                         }, 'warn');
-                        continue;
                     }
                 }
 
@@ -79,18 +74,10 @@ export class RuleProcessor {
         }
     }
 
-    /**
-     * Helper to check if timeout has been exceeded
-     * @private
-     */
     _isTimeoutExceeded(startTime, timeoutMs) {
         return timeoutMs > 0 && (Date.now() - startTime) > timeoutMs;
     }
 
-    /**
-     * Process a synchronous rule and yield results
-     * @private
-     */
     async* _processSyncRule(rule, primaryPremise, secondaryPremise) {
         const results = this.processSyncRule(rule, primaryPremise, secondaryPremise);
         for (const result of results) {
@@ -107,6 +94,26 @@ export class RuleProcessor {
             const enrichedResult = this.enrichResult(result, rule);
             return this._processDerivation(enrichedResult);
         }).filter(Boolean);
+    }
+
+    async executeAsyncRule(rule, primaryPremise, secondaryPremise) {
+        this.asyncRuleExecutions++;
+        const context = this._createRuleContext();
+
+        try {
+            const results = await (rule.applyAsync?.(primaryPremise, secondaryPremise, context) ??
+                rule.apply?.(primaryPremise, secondaryPremise, context)) ?? [];
+
+            const resultsArray = Array.isArray(results) ? results : [results];
+
+            return resultsArray
+                .map(result => this.enrichResult(result, rule))
+                .map(this._processDerivation.bind(this))
+                .filter(Boolean);
+        } catch (error) {
+            logError(error, {ruleId: rule.id ?? rule.name, context: 'async_rule_execution'}, 'error');
+            return [];
+        }
     }
 
     enrichResult(result, rule) {
@@ -153,30 +160,15 @@ export class RuleProcessor {
     }
 
     _dispatchAsyncRule(rule, primaryPremise, secondaryPremise) {
-        this.asyncRuleExecutions++;
-
-        this._executeAsyncRule(rule, primaryPremise, secondaryPremise)
+        this.executeAsyncRule(rule, primaryPremise, secondaryPremise)
+            .then(results => {
+                for (const result of results) {
+                    this._enqueueAsyncResult(result);
+                }
+            })
             .catch(error => {
-                logError(error, {ruleId: rule.id ?? rule.name, context: 'async_rule_execution'}, 'error');
+                // Already logged in executeAsyncRule
             });
-    }
-
-    async _executeAsyncRule(rule, primaryPremise, secondaryPremise) {
-        try {
-            const results = await (rule.applyAsync?.(primaryPremise, secondaryPremise, this.config.context) ??
-                rule.apply?.(primaryPremise, secondaryPremise, this.config.context)) ?? [];
-            const resultsArray = Array.isArray(results) ? results : [results];
-            const processedResults = resultsArray
-                .map(result => this.enrichResult(result, rule))
-                .map(this._processDerivation.bind(this))
-                .filter(Boolean);
-
-            for (const processedResult of processedResults) {
-                this._enqueueAsyncResult(processedResult);
-            }
-        } catch (error) {
-            logError(error, {ruleId: rule.id ?? rule.name, context: 'async_rule_execution'}, 'error');
-        }
     }
 
     _processDerivation(result) {
@@ -192,18 +184,12 @@ export class RuleProcessor {
         }
     }
 
-    /**
-     * Process remaining async results after main processing
-     * @private
-     */
     async* _processRemainingAsyncResults(timeoutMs, startTime, signal = null) {
         let checkCount = 0;
         const initialRemainingTime = timeoutMs > 0 ? timeoutMs - (Date.now() - startTime) : 0;
 
         while (checkCount < this.config.maxChecks && (timeoutMs === 0 || initialRemainingTime > 0)) {
-            if (signal?.aborted) {
-                break;
-            }
+            if (signal?.aborted) break;
 
             if (this._isTimeoutExceeded(startTime, timeoutMs)) {
                 console.debug(`RuleProcessor: timeout reached after ${timeoutMs}ms (in async results loop)`);
@@ -211,7 +197,6 @@ export class RuleProcessor {
             }
 
             checkCount++;
-
             await sleep(this.config.asyncWaitInterval);
 
             if (this._getAsyncResultsCount() > 0) {
