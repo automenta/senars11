@@ -93,8 +93,10 @@ export class EmbeddingLayer {
         if (this.config.model && this.config.model !== 'mock' && !this.config.model.startsWith('mock')) {
              try {
                  if (!this._pipeline) {
+                     console.log(`EmbeddingLayer: Loading pipeline for model ${this.config.model}...`);
                      const { pipeline } = await import('@xenova/transformers');
                      this._pipeline = await pipeline('feature-extraction', this.config.model);
+                     console.log(`EmbeddingLayer: Pipeline loaded.`);
                  }
                  const output = await this._pipeline(text, { pooling: 'mean', normalize: true });
                  return Array.from(output.data);

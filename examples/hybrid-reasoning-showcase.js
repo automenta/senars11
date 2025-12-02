@@ -9,7 +9,7 @@ async function run() {
             lm: {
                 enabled: true,
                 provider: 'transformers',
-                model: 'Xenova/LaMini-Flan-T5-248M',
+                model: 'Xenova/flan-t5-small',
                 temperature: 0.7
             },
             embeddingLayer: {
@@ -17,6 +17,7 @@ async function run() {
                 model: 'Xenova/all-MiniLM-L6-v2', // Real embedding model
                 cacheSize: 1000
             },
+            functors: ['core-arithmetic', 'set-operations'],
             rules: ['syllogistic-core', 'temporal'], // Default rules
             memory: { enabled: true },
             focus: { enabled: true }
@@ -34,7 +35,9 @@ async function run() {
     console.log("   - Embedding-Augmented Analogy Rule");
 
     const app = new App(config);
+    console.log("   Starting App (this may take time to load models)...");
     const agent = await app.start();
+    console.log("   App Started.");
 
     // 1. Seed Memory with Known Concepts (for Analogy)
     console.log("\n📚 Seeding Memory with Known Concepts...");
@@ -84,8 +87,9 @@ async function run() {
     });
 
     // Run for some time
+    console.log("   Waiting for reasoning results (max 60s)...");
     for (let i = 0; i < 60; i++) { // Increased to 60s as models are slow
-        process.stdout.write(".");
+        if (i % 5 === 0) console.log(`   ... ${i}s elapsed`);
         await new Promise(r => setTimeout(r, 1000));
 
         // Check if we found solution
@@ -98,7 +102,6 @@ async function run() {
              break;
         }
     }
-    process.stdout.write("\n");
 
     console.log("\n📝 Final System State:");
     console.log(`   Total Beliefs: ${agent.getBeliefs().length}`);
