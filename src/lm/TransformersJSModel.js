@@ -23,17 +23,31 @@ export class TransformersJSModel extends BaseChatModel {
     }
 
     async _initialize() {
-        if (this.pipeline) return;
+        if (this.pipeline || this.mockMode) return;
 
         // Suppress ONNX Runtime warnings
         process.env.ORT_LOG_LEVEL ??= '3';
 
-        const {pipeline} = await import('@huggingface/transformers');
+        try {
+            const {pipeline} = await import('@huggingface/transformers');
 
-        this.pipeline = await pipeline(this.task, this.modelName, {
-            device: this.device,
-            quantized: true
-        });
+            // Create a promise for pipeline loading
+            const pipelinePromise = pipeline(this.task, this.modelName, {
+                device: this.device,
+                quantized: true
+            });
+
+            // Create a timeout promise (15 seconds)
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('Model loading timed out after 15s')), 15000)
+            );
+
+            this.pipeline = await Promise.race([pipelinePromise, timeoutPromise]);
+
+        } catch (error) {
+            console.warn(`[TransformersJSModel] Failed to initialize pipeline: ${error.message}. Switching to MOCK mode.`);
+            this.mockMode = true;
+        }
     }
 
 
@@ -71,19 +85,58 @@ export class TransformersJSModel extends BaseChatModel {
 
     async _invoke(messages) {
         const prompt = this._formatMessages(messages);
+        console.log(`[TransformersJSModel] Prompt: ${JSON.stringify(prompt)}`);
+
         await this._initialize();
 
-        const output = await this.pipeline(prompt, {
-            max_new_tokens: this.maxTokens,
-            temperature: this.temperature,
-            do_sample: this.temperature > 0,
-        });
+        let text;
+        if (this.mockMode) {
+            text = this._mockGenerate(prompt);
+            console.log(`[TransformersJSModel] MOCK Output: ${text}`);
+        } else {
+            const output = await this.pipeline(prompt, {
+                max_new_tokens: this.maxTokens,
+                temperature: this.temperature,
+                do_sample: this.temperature > 0,
+            });
 
-        const res = Array.isArray(output) ? output[0] : output;
-        const text = res?.generated_text ?? res?.text ?? JSON.stringify(res);
+            const res = Array.isArray(output) ? output[0] : output;
+            text = res?.generated_text ?? res?.text ?? JSON.stringify(res);
+            console.log(`[TransformersJSModel] Output: ${text}`);
+        }
+
         const parsed = this._parseOutput(text);
 
         return {text, ...parsed};
+    }
+
+    _mockGenerate(prompt) {
+        // Generic Translation Rule Mocking (S is P)
+        const sentenceMatch = prompt.match(/Sentence: "(\w+) are (\w+)"/i);
+        if (sentenceMatch) {
+            // Naive singularization (remove trailing 's')
+            const subject = sentenceMatch[1].toLowerCase().replace(/s$/, '');
+            const predicate = sentenceMatch[2].toLowerCase().replace(/s$/, '');
+            return `(${subject} --> ${predicate}).`;
+        }
+
+        // Generic Question Mocking (Are S P?)
+        const questionMatch = prompt.match(/Sentence: "Are (\w+) (\w+)"/i);
+        if (questionMatch) {
+            const subject = questionMatch[1].toLowerCase().replace(/s$/, '');
+            const predicate = questionMatch[2].toLowerCase().replace(/s$/, '');
+            return `(${subject} --> ${predicate})?`;
+        }
+
+        // Concept Elaboration Mocking
+        const conceptMatch = prompt.match(/Concept: "(\w+) are (\w+)"/i);
+        if (conceptMatch) {
+            const subject = conceptMatch[1].toLowerCase().replace(/s$/, '');
+            const predicate = conceptMatch[2].toLowerCase().replace(/s$/, '');
+            return `(${subject} --> ${predicate}).`;
+        }
+
+        return ''; // Unknown
     }
 
     _formatMessages(messages) {

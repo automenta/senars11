@@ -29,12 +29,19 @@ export const createNarseseTranslationRule = (dependencies) => {
 
             const name = term.name || term.toString();
             // Check if it is a quoted string
-            return name.startsWith('"') && name.endsWith('"');
+            const isQuoted = name.startsWith('"') && name.endsWith('"');
+
+            if (isQuoted) {
+                console.log(`[LMNarseseTranslationRule] Condition met for term: ${name}`);
+            }
+            return isQuoted;
         },
 
         prompt: (primaryPremise) => {
             const termStr = primaryPremise.term.name || primaryPremise.term.toString();
             const content = termStr.slice(1, -1); // Remove quotes
+
+            console.log(`[LMNarseseTranslationRule] Generating prompt for: ${content}`);
 
             return `Translate the following natural language sentence into Narsese (NARS Logic).
 The output must be a valid Narsese task (Term followed by punctuation).
@@ -44,6 +51,7 @@ Sentence: "${content}"`;
         },
 
         process: (lmResponse) => {
+             console.log(`[LMNarseseTranslationRule] Raw LM response: "${lmResponse}"`);
              return lmResponse?.trim() || '';
         },
 
@@ -58,6 +66,7 @@ Sentence: "${content}"`;
                 // Parse the Narsese string returned by LM
                 const parsed = parser.parse(processedOutput);
                 if (parsed) {
+                    console.log(`[LMNarseseTranslationRule] Successfully parsed: ${parsed.term ? parsed.term.toString() : parsed}`);
                      let term = parsed;
                      let punctuation = Punctuation.BELIEF;
                      let truth = null;
