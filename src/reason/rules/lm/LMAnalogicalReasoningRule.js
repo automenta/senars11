@@ -16,7 +16,7 @@ import {hasPattern, isGoal, isQuestion, KeywordPatterns} from '../../RuleHelpers
  * @returns {LMRule} A new LMRule instance for analogical reasoning.
  */
 export const createAnalogicalReasoningRule = (dependencies) => {
-    const {lm} = dependencies;
+    const {lm, memory, embeddingLayer} = dependencies;
     return LMRule.create({
         id: 'analogical-reasoning',
         lm,
@@ -34,11 +34,31 @@ export const createAnalogicalReasoningRule = (dependencies) => {
             return isGoalOrQuestion && priority > 0.6 && hasPattern(primaryPremise, KeywordPatterns.problemSolving);
         },
 
-        prompt: (primaryPremise, secondaryPremise, context) => {
+        prompt: async (primaryPremise, secondaryPremise, context) => {
             const termStr = primaryPremise.term?.toString?.() || String(primaryPremise.term || 'unknown');
-            return `Here is a problem: "${termStr}".
+            let contextStr = "";
 
-Think of a similar, well-understood problem. What is the analogy?
+            if (embeddingLayer && memory) {
+                try {
+                    const candidates = memory.getAllConcepts().map(c => c.term.toString());
+                    const uniqueCandidates = [...new Set(candidates)].filter(c => c !== termStr);
+
+                    if (uniqueCandidates.length > 0) {
+                        const similar = await embeddingLayer.findSimilar(termStr, uniqueCandidates, 0.6);
+                        const topSimilar = similar.slice(0, 3).map(r => r.item);
+
+                        if (topSimilar.length > 0) {
+                             contextStr = `\nContext: I recall these similar concepts/problems: ${topSimilar.join(", ")}\n`;
+                        }
+                    }
+                } catch (e) {
+                    console.warn("AnalogicalReasoningRule: Error retrieving embeddings:", e);
+                }
+            }
+
+            return `Here is a problem: "${termStr}".
+${contextStr}
+Think of a similar, well-understood problem (using the context if relevant). What is the analogy?
 Based on that analogy, describe a step-by-step solution for the original problem.`;
         },
 

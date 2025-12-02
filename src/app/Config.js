@@ -106,6 +106,19 @@ export class Config {
             ['--demo', (i) => {
                 config.demo = true;
                 return i;
+            }],
+            ['--embedding', (i) => {
+                config.subsystems = config.subsystems || {};
+                config.subsystems.embeddingLayer = config.subsystems.embeddingLayer || {};
+                config.subsystems.embeddingLayer.enabled = true;
+                return i;
+            }],
+            ['--embedding-model', (i) => {
+                config.subsystems = config.subsystems || {};
+                config.subsystems.embeddingLayer = config.subsystems.embeddingLayer || {};
+                config.subsystems.embeddingLayer.enabled = true;
+                config.subsystems.embeddingLayer.model = args[++i];
+                return i;
             }]
         ]);
 

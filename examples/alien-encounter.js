@@ -14,6 +14,7 @@ async function run() {
                 // model: 'Xenova/Qwen1.5-0.5B-Chat', // Alternative if supported
                 temperature: 0.7
             },
+            functors: ['core-arithmetic', 'set-operations'],
             rules: ['syllogistic-core', 'temporal'],
             // Ensure we use default memory and focus settings
             memory: { enabled: true },

@@ -1,0 +1,21 @@
+// title: Hybrid Reasoning Showcase
+// description: Demonstrates natural language translation and analogy reasoning with embeddings.
+
+// Seed Memory (Analogy Source)
+((clogged, pipe) --> problem).
+((use, snake) --> (fix, (clogged, pipe))).
+((bacterial, infection) --> problem).
+((take, antibiotics) --> (fix, (bacterial, infection))).
+
+// Wait a bit for processing
+20
+
+// Input Natural Language Question
+// "How do I fix a slow draining sink?"
+// Quoted string is parsed as atomic term (Belief)
+// The translation rule will pick it up and translate it.
+// If translated to a Question, the Analogy rule will pick it up.
+"How do I fix a slow draining sink?"
+
+// Wait for reasoning
+100

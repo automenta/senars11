@@ -19,5 +19,13 @@ export const TOURS = [
     {
         id: 'layers-demo',
         duration: 20000
+    },
+    {
+        id: 'hybrid-reasoning-showcase',
+        duration: 90000,
+        provider: 'transformers',
+        model: 'Xenova/flan-t5-small',
+        embedding: true,
+        embeddingModel: 'Xenova/all-MiniLM-L6-v2'
     }
 ];

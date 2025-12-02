@@ -63,6 +63,13 @@ export class TourRunner {
             serverArgs.push('--model', tour.model);
         }
 
+        if (tour.embedding) {
+            serverArgs.push('--embedding');
+        }
+        if (tour.embeddingModel) {
+            serverArgs.push('--embedding-model', tour.embeddingModel);
+        }
+
         if (this.graphMode) {
             serverArgs.push('--graph-ui');
         }

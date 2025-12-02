@@ -62,7 +62,13 @@ export class AgentBuilder {
     }
 
     withConfig(config) {
-        Object.assign(this.config, config);
+        if (config.subsystems && this.config.subsystems) {
+            const subsystems = {...this.config.subsystems, ...config.subsystems};
+            Object.assign(this.config, config);
+            this.config.subsystems = subsystems;
+        } else {
+            Object.assign(this.config, config);
+        }
         return this;
     }
 
