@@ -1,4 +1,3 @@
-
 import {EventEmitter} from 'eventemitter3';
 import {getHeapUsed} from '../util/common.js';
 import {SimpleRunner} from './runner/SimpleRunner.js';
@@ -57,40 +56,22 @@ export class Reasoner extends EventEmitter {
 
     async step(timeoutMs = 5000, suppressEvents = false) {
         const results = [];
-        //console.debug('DEBUG: Reasoner.step() called');
-
         try {
             const startTime = Date.now();
-            // Get tasks from focus component
             const focusTasks = this.premiseSource.focusComponent?.getTasks(1000) ?? [];
-            const taskCount = focusTasks.length;
+            if (focusTasks.length === 0) return results;
 
-            //console.debug(`DEBUG: step() found ${taskCount} tasks in focus:`, focusTasks.map(t => t?.term));
-
-            if (taskCount === 0) {
-                //console.debug('DEBUG: No tasks in focus, returning empty results');
-                return results;
-            }
-
-            // Shuffle tasks to ensure fairness as we might hit timeout before processing all pairs
             this._shuffleArray(focusTasks);
-
-            // Track processed term pairs to avoid redundant processing within this step
-            // We use term IDs because we care about the interaction of terms, not specific task instances
             const processedPairs = new Set();
 
-            // Process pairs with timeout protection
-            // Using nested loops directly avoids O(N^2) memory allocation for a pairs array
-            for (let i = 0; i < taskCount; i++) {
+            for (let i = 0; i < focusTasks.length; i++) {
                 if (Date.now() - startTime > timeoutMs) break;
 
                 const primaryPremise = focusTasks[i];
 
                 // Single premise processing (e.g. for LM rules)
                 try {
-                    //console.debug(`DEBUG: Getting candidate rules for single premise: ${primaryPremise?.term}`);
                     const candidateRules = this.ruleProcessor.ruleExecutor.getCandidateRules(primaryPremise, null);
-
                     const forwardResults = await this._processRuleBatch(
                         candidateRules,
                         primaryPremise,
@@ -106,28 +87,26 @@ export class Reasoner extends EventEmitter {
                     console.debug('Error processing single premise:', error.message);
                 }
 
-                for (let j = i + 1; j < taskCount; j++) {
-                    if (Date.now() - startTime > timeoutMs) break;
+                // Dual premise processing using Strategy
+                try {
+                    const secondaryPremises = await this.strategy.selectSecondaryPremises(primaryPremise);
 
-                    const secondaryPremise = focusTasks[j];
+                    for (const secondaryPremise of secondaryPremises) {
+                        if (Date.now() - startTime > timeoutMs) break;
 
-                    const primaryTermId = this._getTermId(primaryPremise);
-                    const secondaryTermId = this._getTermId(secondaryPremise);
+                        const primaryTermId = this._getTermId(primaryPremise);
+                        const secondaryTermId = this._getTermId(secondaryPremise);
 
-                    if (primaryTermId === secondaryTermId) continue; // Skip same term interaction
+                        if (primaryTermId === secondaryTermId) continue;
 
-                    // Create sorted pair ID to ensure (A,B) and (B,A) are treated as the same pair
-                    const pairId = primaryTermId < secondaryTermId
-                         ? `${primaryTermId}-${secondaryTermId}`
-                         : `${secondaryTermId}-${primaryTermId}`;
+                        const pairId = primaryTermId < secondaryTermId
+                             ? `${primaryTermId}-${secondaryTermId}`
+                             : `${secondaryTermId}-${primaryTermId}`;
 
-                    if (processedPairs.has(pairId)) continue;
-                    processedPairs.add(pairId);
+                        if (processedPairs.has(pairId)) continue;
+                        processedPairs.add(pairId);
 
-                    try {
-                        //console.debug(`DEBUG: Getting candidate rules for premise pair: ${primaryPremise?.term} and ${secondaryPremise?.term}`);
                         const candidateRules = this.ruleProcessor.ruleExecutor.getCandidateRules(primaryPremise, secondaryPremise);
-
                         const forwardResults = await this._processRuleBatch(
                             candidateRules,
                             primaryPremise,
@@ -139,16 +118,14 @@ export class Reasoner extends EventEmitter {
                         if (forwardResults.length > 0) {
                             results.push(...forwardResults.filter(Boolean));
                         }
-                    } catch (error) {
-                        console.debug('Error processing premise pair:', error.message);
                     }
+                } catch (error) {
+                    console.debug('Error processing premise pair:', error.message);
                 }
             }
         } catch (error) {
             console.debug('Error in step method:', error.message);
         }
-
-        //console.debug(`DEBUG: step() completed, returning ${results.length} results`);
         return results;
     }
 
@@ -169,24 +146,25 @@ export class Reasoner extends EventEmitter {
      */
     async _processRuleBatch(candidateRules, primaryPremise, secondaryPremise, startTime, maxTimeMs, suppressEvents = false) {
         const results = [];
-        //console.debug(`DEBUG: Processing ${candidateRules.length} candidate rules for premises: ${primaryPremise?.term}, ${secondaryPremise?.term}`);
 
         for (const rule of candidateRules) {
             if (Date.now() - startTime > maxTimeMs) break;
 
-            //console.debug(`DEBUG: Processing rule ${rule.id || rule.name} (type: ${rule.type || 'unknown'})`);
             if (this._isSynchronousRule(rule)) {
-                //console.debug(`DEBUG: Executing synchronous rule: ${rule.id || rule.name}`);
                 const derivedTasks = this.ruleProcessor.processSyncRule(rule, primaryPremise, secondaryPremise);
                 for (const task of derivedTasks) {
                     const processedResult = this._processDerivation(task, suppressEvents);
                     if (processedResult) results.push(processedResult);
                 }
-            } else if (this._isAsyncRule(rule) && rule.apply) {
-                //console.debug(`DEBUG: Executing async rule: ${rule.id || rule.name}`);
+            } else if (this._isAsyncRule(rule)) {
                 try {
-                    const derivedTasks = await rule.apply(primaryPremise, secondaryPremise);
-                    //console.debug(`DEBUG: Async rule ${rule.id || rule.name} produced ${derivedTasks.length} tasks: ${derivedTasks.map(t => t?.term).join(', ')}`);
+                    let derivedTasks = [];
+                    if (this.ruleProcessor && typeof this.ruleProcessor.executeAsyncRule === 'function') {
+                        derivedTasks = await this.ruleProcessor.executeAsyncRule(rule, primaryPremise, secondaryPremise);
+                    } else if (rule.apply) {
+                        derivedTasks = await rule.apply(primaryPremise, secondaryPremise);
+                    }
+
                     for (const task of derivedTasks) {
                         const processedResult = this._processDerivation(task, suppressEvents);
                         if (processedResult) results.push(processedResult);
@@ -196,8 +174,6 @@ export class Reasoner extends EventEmitter {
                 }
             }
         }
-
-        //console.debug(`DEBUG: _processRuleBatch returning ${results.length} results`);
         return results;
     }
 

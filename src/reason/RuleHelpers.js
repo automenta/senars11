@@ -115,6 +115,37 @@ export function isBelief(task) {
     return task?.punctuation === Punctuation.BELIEF;
 }
 
+export function tryParseNarsese(text, parser) {
+    if (!text || !parser) return null;
+
+    const match = text.match(/([<(])[^>)]+([>)])/);
+    const toParse = match ? match[0] : text;
+
+    try {
+        return parser.parse(toParse);
+    } catch {
+        return null;
+    }
+}
+
+export function createFallbackTerm(text, termFactory) {
+    if (!text) return null;
+
+    const cleanContent = text.replace(/"/g, '').trim();
+    if (!cleanContent) return null;
+
+    const termStr = `"${cleanContent}"`;
+
+    try {
+        if (termFactory?.atomic) {
+            return termFactory.atomic(termStr);
+        }
+        return termStr;
+    } catch {
+        return termStr;
+    }
+}
+
 export const KeywordPatterns = {
     problemSolving: [
         'solve', 'fix', 'repair', 'improve', 'handle', 'address', 'resolve', 'overcome', 'manage', 'operate',
