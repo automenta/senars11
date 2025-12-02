@@ -1,7 +1,6 @@
 /**
- * @file src/reason/rules/LMAnalogicalReasoningRule.js
- * @description Analogical reasoning rule that uses an LM to solve new problems by drawing analogies to known situations.
- * Based on the v9 implementation with enhancements for stream-based architecture.
+ * @file src/reason/rules/lm/LMAnalogicalReasoningRule.js
+ * @description Analogical reasoning rule that uses an LM and embeddings to solve new problems by drawing analogies.
  */
 
 import {LMRule} from '../../LMRule.js';
@@ -10,35 +9,65 @@ import {hasPattern, isGoal, isQuestion, KeywordPatterns} from '../../RuleHelpers
 
 /**
  * Creates an analogical reasoning rule using the enhanced LMRule.create method.
- * This rule identifies problem-solving goals and uses an LM to find analogous solutions.
  *
- * @param {object} dependencies - Object containing lm and other dependencies
+ * @param {object} dependencies - Object containing lm, embeddingLayer and other dependencies
  * @returns {LMRule} A new LMRule instance for analogical reasoning.
  */
 export const createAnalogicalReasoningRule = (dependencies) => {
-    const {lm} = dependencies;
+    const {lm, embeddingLayer, memory} = dependencies;
+
     return LMRule.create({
         id: 'analogical-reasoning',
         lm,
         name: 'Analogical Reasoning Rule',
-        description: 'Solves new problems by drawing analogies to known situations.',
+        description: 'Solves new problems by drawing analogies to known situations using embeddings.',
         priority: 0.7,
+        singlePremise: true,
 
-        condition: (primaryPremise, secondaryPremise, context) => {
+        condition: (primaryPremise) => {
             if (!primaryPremise) return false;
 
-            const termStr = primaryPremise.term?.toString?.() || String(primaryPremise.term || '');
             const isGoalOrQuestion = isGoal(primaryPremise) || isQuestion(primaryPremise);
             const priority = primaryPremise.getPriority?.() || primaryPremise.priority || 0;
 
-            return isGoalOrQuestion && priority > 0.6 && hasPattern(primaryPremise, KeywordPatterns.problemSolving);
+            // Trigger on high-priority goals/questions with problem-solving keywords
+            // Checking availability of embeddingLayer in condition as well to fail fast if not present
+            return !!embeddingLayer && isGoalOrQuestion && priority > 0.6 && hasPattern(primaryPremise, KeywordPatterns.problemSolving);
         },
 
-        prompt: (primaryPremise, secondaryPremise, context) => {
+        prompt: async (primaryPremise) => {
             const termStr = primaryPremise.term?.toString?.() || String(primaryPremise.term || 'unknown');
-            return `Here is a problem: "${termStr}".
+            let contextStr = '';
 
-Think of a similar, well-understood problem. What is the analogy?
+            try {
+                // Get concepts from memory if available
+                let candidates = [];
+                if (memory && typeof memory.getAllConcepts === 'function') {
+                    const concepts = memory.getAllConcepts();
+                    candidates = concepts
+                        .map(c => c.term.toString())
+                        .filter(t => t !== termStr);
+                }
+
+                if (candidates.length > 0) {
+                     // Leverage EmbeddingLayer
+                     const results = await embeddingLayer.findSimilar(termStr, candidates, {limit: 3});
+
+                     const analogies = results
+                         .map(r => r.term)
+                         .filter(t => t !== termStr);
+
+                     if (analogies.length > 0) {
+                          contextStr = `\nI recall these similar situations/concepts: ${analogies.join(', ')}.`;
+                     }
+                }
+            } catch (e) {
+                console.warn('AnalogicalReasoningRule: Embedding lookup failed', e);
+            }
+
+            return `Here is a problem: "${termStr}".${contextStr}
+
+Think of a similar, well-understood problem (an analogy).
 Based on that analogy, describe a step-by-step solution for the original problem.`;
         },
 
@@ -46,7 +75,7 @@ Based on that analogy, describe a step-by-step solution for the original problem
             return lmResponse?.trim() || '';
         },
 
-        generate: (processedOutput, primaryPremise, secondaryPremise, context) => {
+        generate: (processedOutput, primaryPremise) => {
             if (!processedOutput) return [];
 
             const newTerm = `solution_proposal_for_(${primaryPremise.term?.toString?.() || 'unknown'})`;
@@ -61,7 +90,7 @@ Based on that analogy, describe a step-by-step solution for the original problem
                 null,
                 {
                     originalTask: primaryPremise.term?.toString?.(),
-                    solutionProposal: processedOutput // Attach the detailed solution as metadata
+                    solutionProposal: processedOutput
                 }
             );
 

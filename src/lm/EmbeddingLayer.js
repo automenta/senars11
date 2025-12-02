@@ -2,14 +2,27 @@ export class EmbeddingLayer {
     constructor(config = {}) {
         this.config = {
             enabled: true,
-            model: config.model || 'text-embedding-ada-002',
+            model: config.model || 'Xenova/all-MiniLM-L6-v2',
             maxBatchSize: config.maxBatchSize || 10,
             cacheSize: config.cacheSize || 1000,
+            provider: config.provider || 'transformers',
             ...config
         };
 
         this.embeddingCache = new Map();
         this.enabled = this.config.enabled;
+        this.pipeline = null;
+    }
+
+    async _initialize() {
+        if (!this.pipeline && this.config.provider === 'transformers') {
+             try {
+                 const {pipeline} = await import('@xenova/transformers');
+                 this.pipeline = await pipeline('feature-extraction', this.config.model);
+             } catch (e) {
+                 console.warn('EmbeddingLayer: Failed to load transformers pipeline', e);
+             }
+        }
     }
 
     async getEmbedding(input) {
@@ -66,10 +79,17 @@ export class EmbeddingLayer {
         return {dotProduct, magnitude1, magnitude2};
     }
 
-    async findSimilar(input, candidates, threshold = 0.7) {
+    async findSimilar(input, candidates, options = {}) {
         if (!this.enabled) {
             return [];
         }
+
+        if (!Array.isArray(candidates)) {
+            return [];
+        }
+
+        const threshold = options.threshold ?? 0.7;
+        const limit = options.limit ?? 10;
 
         const inputEmbedding = await this.getEmbedding(input);
         const results = [];
@@ -81,17 +101,33 @@ export class EmbeddingLayer {
             if (similarity >= threshold) {
                 results.push({
                     item: candidate,
+                    term: candidate,
                     similarity
                 });
             }
         }
 
-        return results.sort((a, b) => b.similarity - a.similarity);
+        return results.sort((a, b) => b.similarity - a.similarity).slice(0, limit);
     }
 
     async _generateEmbedding(text) {
+        if (this.config.provider === 'transformers') {
+             await this._initialize();
+             if (this.pipeline) {
+                 try {
+                     const output = await this.pipeline(text, { pooling: 'mean', normalize: true });
+                     return Array.from(output.data);
+                 } catch (e) {
+                     console.warn('Embedding generation failed, falling back to dummy', e);
+                 }
+             }
+        }
+        return this._dummyEmbedding(text);
+    }
+
+    _dummyEmbedding(text) {
         const hash = this._simpleHash(text);
-        const embedding = new Array(1536).fill(0);
+        const embedding = new Array(384).fill(0);
 
         for (let i = 0; i < embedding.length; i++) {
             embedding[i] = Math.sin(hash + i) * 0.5 + 0.5;

@@ -157,13 +157,17 @@ export class TourRunner {
             ws.on('open', () => {
                 ws.send(JSON.stringify({
                     type: 'subscribe',
-                    eventTypes: ['demoState', 'nar.cycle.step', 'reasoning.derivation']
+                    eventTypes: ['demoState', 'nar.cycle.step', 'reasoning.derivation', 'demoStep']
                 }));
             });
 
             ws.on('message', async (data) => {
                 try {
                     const msg = JSON.parse(data.toString());
+
+                    if (msg.type === 'demoStep') {
+                        console.log(`[Demo Output] ${msg.payload.description}`);
+                    }
 
                     if (msg.type === 'demoState' && (msg.payload.state === 'completed' || msg.payload.state === 'error')) {
                         clearTimeout(timer);
