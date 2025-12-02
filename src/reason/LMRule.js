@@ -84,28 +84,37 @@ export class LMRule extends Rule {
 
         try {
             if (!this.canApply(primaryPremise, secondaryPremise, context)) {
+                //console.debug(`DEBUG: LMRule ${this.id} - canApply returned false`);
                 this._updateExecutionStats(false, Date.now() - startTime);
                 return [];
             }
 
+            //console.debug(`DEBUG: LMRule ${this.id} - generating prompt for ${primaryPremise?.term}`);
             const prompt = await this.generatePrompt(primaryPremise, secondaryPremise, context);
+            //console.debug(`DEBUG: LMRule ${this.id} - generated prompt: ${prompt.substring(0, 100)}...`);
+
+            //console.debug(`DEBUG: LMRule ${this.id} - executing LM with prompt`);
             const lmResponse = await this.executeLM(prompt);
+            //console.debug(`DEBUG: LMRule ${this.id} - LM response: ${lmResponse}`);
 
             if (!lmResponse) {
+                //console.debug(`DEBUG: LMRule ${this.id} - no LM response, returning empty array`);
                 this._updateExecutionStats(false, Date.now() - startTime);
                 return [];
             }
 
+            //console.debug(`DEBUG: LMRule ${this.id} - processing LM output`);
             const processedOutput = this.processLMOutput(lmResponse, primaryPremise, secondaryPremise, context);
+            //console.debug(`DEBUG: LMRule ${this.id} - processed output: ${processedOutput}`);
+
+            //console.debug(`DEBUG: LMRule ${this.id} - generating tasks from processed output`);
             const newTasks = this.generateTasks(processedOutput, primaryPremise, secondaryPremise, context);
+            //console.debug(`DEBUG: LMRule ${this.id} - generated ${newTasks.length} tasks: ${newTasks.map(t => t?.term).join(', ')}`);
 
             this._updateExecutionStats(true, Date.now() - startTime);
             return newTasks;
         } catch (error) {
-            logError(error, {
-                ruleId: this.id,
-                context: 'lm_rule_application'
-            }, 'error');
+            console.error(`Error in LMRule ${this.id}:`, error);
             this._updateExecutionStats(false, Date.now() - startTime);
             return [];
         }
@@ -116,9 +125,11 @@ export class LMRule extends Rule {
             throw new RuleExecutionError(`LM unavailable for rule ${this.id}`, this.id);
         }
 
+        //console.debug(`DEBUG: LMRule ${this.id} - About to execute LM with prompt length: ${prompt.length}`);
         const startTime = Date.now();
         const response = await this._callLMInterface(prompt);
         const executionTime = Date.now() - startTime;
+        //console.debug(`DEBUG: LMRule ${this.id} - LM execution completed in ${executionTime}ms, response: ${response}`);
 
         this._updateLMStats(prompt.length + (response?.length ?? 0), executionTime);
         return response;

@@ -12,9 +12,9 @@ export const TOURS = [
     {id: 'truth-value-reasoning', duration: 30000},
     {
         id: 'lm-demo',
-        duration: 60000,
+        duration: 120000,  // Increased to 2 minutes to allow for LM processing
         provider: 'transformers',
-        model: 'Xenova/LaMini-Flan-T5-248M'
+        model: 'Xenova/flan-t5-small'
     },
     {
         id: 'layers-demo',

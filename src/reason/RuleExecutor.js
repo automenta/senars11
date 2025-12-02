@@ -43,11 +43,14 @@ export class RuleExecutor {
      */
     _filterCandidates(candidates, primaryPremise, secondaryPremise) {
         const validRules = [];
+        //console.debug(`DEBUG: Checking ${candidates.length} candidates for premise: ${primaryPremise?.term}, secondary: ${secondaryPremise?.term}`);
 
         for (const rule of candidates) {
             try {
+                //console.debug(`DEBUG: Evaluating rule ${rule.id || rule.name} canApply: ${this._canRuleApply(rule, primaryPremise, secondaryPremise)}`);
                 if (this._canRuleApply(rule, primaryPremise, secondaryPremise)) {
                     validRules.push(rule);
+                    //console.debug(`DEBUG: Rule ${rule.id || rule.name} matched and added to candidates`);
                 }
             } catch (error) {
                 logError(error, {
@@ -57,6 +60,7 @@ export class RuleExecutor {
             }
         }
 
+        //console.debug(`DEBUG: Returning ${validRules.length} valid rules from ${candidates.length} candidates`);
         return validRules;
     }
 

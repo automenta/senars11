@@ -28,19 +28,37 @@ export const createNarseseTranslationRule = (dependencies) => {
             if (!isAtomic) return false;
 
             const name = term.name || term.toString();
-            // Check if it is a quoted string
-            return name.startsWith('"') && name.endsWith('"');
+            // Check if it is a quoted string - ensure name is a string before calling .startsWith()
+            return typeof name === 'string' && name.startsWith('"') && name.endsWith('"');
         },
 
         prompt: (primaryPremise) => {
             const termStr = primaryPremise.term.name || primaryPremise.term.toString();
             const content = termStr.slice(1, -1); // Remove quotes
 
-            return `Translate the following natural language sentence into Narsese (NARS Logic).
-The output must be a valid Narsese task (Term followed by punctuation).
-Example: "Cats are mammals." -> (cat --> mammal).
+            // Try to extract subject and predicate to make the task clearer
+            let subject, predicate;
+            if (content.includes(' are ')) {
+                const parts = content.split(' are ');
+                subject = parts[0].trim();
+                predicate = parts[1].trim();
+            } else if (content.includes(' is ')) {
+                const parts = content.split(' is ');
+                subject = parts[0].trim();
+                predicate = parts[1].trim();
+            } else {
+                // Generic handling
+                subject = content.split(' ')[0];
+                predicate = content.substring(content.indexOf(' ') + 1);
+            }
 
-Sentence: "${content}"`;
+            return `Translate to Narsese format. Output only the Narsese relation, nothing else.
+Use <subject --> predicate> format for categorical statements.
+Example: "Dogs are animals" -> <dog --> animal>
+Input: "${content}"
+Output (just the Narsese, no explanation): <${subject.toLowerCase()} --> ${predicate.toLowerCase()}>
+Input: "${content}"
+Output: `;
         },
 
         process: (lmResponse) => {
@@ -49,14 +67,14 @@ Sentence: "${content}"`;
 
         generate: (processedOutput, primaryPremise, secondaryPremise, context) => {
             if (!processedOutput) return [];
-            if (!parser) {
+            if (!dependencies.parser) {
                 console.warn('NarseseTranslationRule: Parser not available for translation result');
                 return [];
             }
 
             try {
                 // Parse the Narsese string returned by LM
-                const parsed = parser.parse(processedOutput);
+                const parsed = dependencies.parser.parse(processedOutput);
                 if (parsed) {
                      let term = parsed;
                      let punctuation = Punctuation.BELIEF;

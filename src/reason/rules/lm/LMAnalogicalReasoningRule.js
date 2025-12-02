@@ -69,21 +69,23 @@ Based on that analogy, describe a step-by-step solution for the original problem
         generate: (processedOutput, primaryPremise, secondaryPremise, context) => {
             if (!processedOutput) return [];
 
-            const newTerm = `solution_proposal_for_(${primaryPremise.term?.toString?.() || 'unknown'})`;
-            const newTask = new Task(
-                newTerm,
-                Punctuation.BELIEF,
-                {frequency: 0.8, confidence: 0.7},
-                null,
-                null,
-                0.7,
-                0.6,
-                null,
-                {
-                    originalTask: primaryPremise.term?.toString?.(),
-                    solutionProposal: processedOutput // Attach the detailed solution as metadata
-                }
-            );
+            // Use termFactory to create a proper Term object
+            const termFactory = dependencies.termFactory;
+            const newTermName = `solution_proposal_for_(${primaryPremise.term?.toString?.() || 'unknown'})`;
+            let newTerm;
+            if (termFactory) {
+                newTerm = termFactory.atomic(newTermName);
+            } else {
+                // Fallback to string if no termFactory is available
+                newTerm = newTermName;
+            }
+
+            const newTask = new Task({
+                term: newTerm,
+                punctuation: Punctuation.BELIEF,
+                truth: {frequency: 0.8, confidence: 0.7},
+                budget: {priority: 0.7, durability: 0.6, quality: 0.5}
+            });
 
             return [newTask];
         },

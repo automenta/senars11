@@ -2,7 +2,13 @@
 // description: Testing natural language input with transformers.js
 // Natural language input about cats
 "Cats are mammals".
+// Delay to allow LM processing
+100
 // Natural language input about mammals
 "Mammals are animals".
+// Delay to allow LM processing
+100
 // Question in natural language
 "Are cats animals"?
+// Final delay to allow for question processing and response
+200

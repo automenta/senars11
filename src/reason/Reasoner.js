@@ -57,6 +57,7 @@ export class Reasoner extends EventEmitter {
 
     async step(timeoutMs = 5000, suppressEvents = false) {
         const results = [];
+        //console.debug('DEBUG: Reasoner.step() called');
 
         try {
             const startTime = Date.now();
@@ -64,7 +65,12 @@ export class Reasoner extends EventEmitter {
             const focusTasks = this.premiseSource.focusComponent?.getTasks(1000) ?? [];
             const taskCount = focusTasks.length;
 
-            if (taskCount === 0) return results;
+            //console.debug(`DEBUG: step() found ${taskCount} tasks in focus:`, focusTasks.map(t => t?.term));
+
+            if (taskCount === 0) {
+                //console.debug('DEBUG: No tasks in focus, returning empty results');
+                return results;
+            }
 
             // Shuffle tasks to ensure fairness as we might hit timeout before processing all pairs
             this._shuffleArray(focusTasks);
@@ -82,6 +88,7 @@ export class Reasoner extends EventEmitter {
 
                 // Single premise processing (e.g. for LM rules)
                 try {
+                    //console.debug(`DEBUG: Getting candidate rules for single premise: ${primaryPremise?.term}`);
                     const candidateRules = this.ruleProcessor.ruleExecutor.getCandidateRules(primaryPremise, null);
 
                     const forwardResults = await this._processRuleBatch(
@@ -118,6 +125,7 @@ export class Reasoner extends EventEmitter {
                     processedPairs.add(pairId);
 
                     try {
+                        //console.debug(`DEBUG: Getting candidate rules for premise pair: ${primaryPremise?.term} and ${secondaryPremise?.term}`);
                         const candidateRules = this.ruleProcessor.ruleExecutor.getCandidateRules(primaryPremise, secondaryPremise);
 
                         const forwardResults = await this._processRuleBatch(
@@ -140,6 +148,7 @@ export class Reasoner extends EventEmitter {
             console.debug('Error in step method:', error.message);
         }
 
+        //console.debug(`DEBUG: step() completed, returning ${results.length} results`);
         return results;
     }
 
@@ -160,19 +169,24 @@ export class Reasoner extends EventEmitter {
      */
     async _processRuleBatch(candidateRules, primaryPremise, secondaryPremise, startTime, maxTimeMs, suppressEvents = false) {
         const results = [];
+        //console.debug(`DEBUG: Processing ${candidateRules.length} candidate rules for premises: ${primaryPremise?.term}, ${secondaryPremise?.term}`);
 
         for (const rule of candidateRules) {
             if (Date.now() - startTime > maxTimeMs) break;
 
+            //console.debug(`DEBUG: Processing rule ${rule.id || rule.name} (type: ${rule.type || 'unknown'})`);
             if (this._isSynchronousRule(rule)) {
+                //console.debug(`DEBUG: Executing synchronous rule: ${rule.id || rule.name}`);
                 const derivedTasks = this.ruleProcessor.processSyncRule(rule, primaryPremise, secondaryPremise);
                 for (const task of derivedTasks) {
                     const processedResult = this._processDerivation(task, suppressEvents);
                     if (processedResult) results.push(processedResult);
                 }
             } else if (this._isAsyncRule(rule) && rule.apply) {
+                //console.debug(`DEBUG: Executing async rule: ${rule.id || rule.name}`);
                 try {
                     const derivedTasks = await rule.apply(primaryPremise, secondaryPremise);
+                    //console.debug(`DEBUG: Async rule ${rule.id || rule.name} produced ${derivedTasks.length} tasks: ${derivedTasks.map(t => t?.term).join(', ')}`);
                     for (const task of derivedTasks) {
                         const processedResult = this._processDerivation(task, suppressEvents);
                         if (processedResult) results.push(processedResult);
@@ -183,6 +197,7 @@ export class Reasoner extends EventEmitter {
             }
         }
 
+        //console.debug(`DEBUG: _processRuleBatch returning ${results.length} results`);
         return results;
     }
 
