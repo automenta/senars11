@@ -226,7 +226,7 @@ export class RuleProcessor {
         this._dispatchAsyncRule(rule, primaryPremise, secondaryPremise);
     }
 
-    *yieldAsyncResults() {
+    async *yieldAsyncResults() {
         yield* this._yieldAsyncResults();
     }
 
