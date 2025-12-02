@@ -20,6 +20,11 @@ export class LMRule extends Rule {
                 ...config.lm_options,
             },
             singlePremise: config.singlePremise ?? false,
+            circuitBreaker: {
+                failureThreshold: 5,
+                resetTimeout: 60000,
+                ...config.circuitBreaker
+            },
             ...config,
         };
 
@@ -44,6 +49,14 @@ export class LMRule extends Rule {
             failedExecutions: 0,
             avgExecutionTime: 0
         };
+
+        // Circuit Breaker State
+        this.circuit = {
+            state: 'CLOSED', // CLOSED, OPEN, HALF_OPEN
+            failures: 0,
+            lastFailure: 0,
+            nextTry: 0
+        };
     }
 
     static create(config) {
@@ -56,6 +69,12 @@ export class LMRule extends Rule {
 
     canApply(primaryPremise, secondaryPremise, context) {
         try {
+            // If circuit is OPEN, don't even check condition unless it's time to try
+            if (this.circuit.state === 'OPEN') {
+                if (Date.now() < this.circuit.nextTry) {
+                    return false;
+                }
+            }
             return this.config.condition(primaryPremise, secondaryPremise, context);
         } catch (error) {
             logError(error, {
@@ -79,45 +98,64 @@ export class LMRule extends Rule {
     }
 
     async apply(primaryPremise, secondaryPremise, context = {}) {
+        // Check circuit breaker state first
+        if (this.circuit.state === 'OPEN') {
+            if (Date.now() > this.circuit.nextTry) {
+                this.circuit.state = 'HALF_OPEN';
+                console.log(`LMRule ${this.id}: Circuit HALF_OPEN, trying request...`);
+            } else {
+                return [];
+            }
+        }
+
+        // Check if rule is applicable
+        if (!this.canApply(primaryPremise, secondaryPremise, context)) {
+            return [];
+        }
+
         const startTime = Date.now();
         this.executionStats.totalExecutions++;
 
         try {
-            if (!this.canApply(primaryPremise, secondaryPremise, context)) {
-                //console.debug(`DEBUG: LMRule ${this.id} - canApply returned false`);
-                this._updateExecutionStats(false, Date.now() - startTime);
-                return [];
-            }
-
-            //console.debug(`DEBUG: LMRule ${this.id} - generating prompt for ${primaryPremise?.term}`);
             const prompt = await this.generatePrompt(primaryPremise, secondaryPremise, context);
-            //console.debug(`DEBUG: LMRule ${this.id} - generated prompt: ${prompt.substring(0, 100)}...`);
-
-            //console.debug(`DEBUG: LMRule ${this.id} - executing LM with prompt`);
             const lmResponse = await this.executeLM(prompt);
-            //console.debug(`DEBUG: LMRule ${this.id} - LM response: ${lmResponse}`);
 
             if (!lmResponse) {
-                //console.debug(`DEBUG: LMRule ${this.id} - no LM response, returning empty array`);
                 this._updateExecutionStats(false, Date.now() - startTime);
                 return [];
             }
 
-            //console.debug(`DEBUG: LMRule ${this.id} - processing LM output`);
             const processedOutput = this.processLMOutput(lmResponse, primaryPremise, secondaryPremise, context);
-            //console.debug(`DEBUG: LMRule ${this.id} - processed output: ${processedOutput}`);
-
-            //console.debug(`DEBUG: LMRule ${this.id} - generating tasks from processed output`);
             const newTasks = this.generateTasks(processedOutput, primaryPremise, secondaryPremise, context);
-            //console.debug(`DEBUG: LMRule ${this.id} - generated ${newTasks.length} tasks: ${newTasks.map(t => t?.term).join(', ')}`);
 
+            // Success - Reset circuit if it was HALF_OPEN
+            this._resetCircuit();
             this._updateExecutionStats(true, Date.now() - startTime);
             return newTasks;
         } catch (error) {
             console.error(`Error in LMRule ${this.id}:`, error);
+            this._recordFailure();
             this._updateExecutionStats(false, Date.now() - startTime);
             return [];
         }
+    }
+
+    _recordFailure() {
+        this.circuit.failures++;
+        this.circuit.lastFailure = Date.now();
+        if (this.circuit.failures >= this.config.circuitBreaker.failureThreshold) {
+            this.circuit.state = 'OPEN';
+            this.circuit.nextTry = Date.now() + this.config.circuitBreaker.resetTimeout;
+            console.warn(`LMRule ${this.id}: Circuit OPEN due to ${this.circuit.failures} failures. Paused for ${this.config.circuitBreaker.resetTimeout}ms`);
+        }
+    }
+
+    _resetCircuit() {
+        if (this.circuit.state !== 'CLOSED') {
+             console.log(`LMRule ${this.id}: Circuit CLOSED (recovered)`);
+        }
+        this.circuit.state = 'CLOSED';
+        this.circuit.failures = 0;
     }
 
     async executeLM(prompt) {
@@ -125,11 +163,9 @@ export class LMRule extends Rule {
             throw new RuleExecutionError(`LM unavailable for rule ${this.id}`, this.id);
         }
 
-        //console.debug(`DEBUG: LMRule ${this.id} - About to execute LM with prompt length: ${prompt.length}`);
         const startTime = Date.now();
         const response = await this._callLMInterface(prompt);
         const executionTime = Date.now() - startTime;
-        //console.debug(`DEBUG: LMRule ${this.id} - LM execution completed in ${executionTime}ms, response: ${response}`);
 
         this._updateLMStats(prompt.length + (response?.length ?? 0), executionTime);
         return response;
@@ -168,6 +204,7 @@ export class LMRule extends Rule {
         return {
             lm: {...this.lmStats},
             execution: {...this.executionStats},
+            circuit: {...this.circuit},
             ruleInfo: {
                 id: this.id,
                 name: this.name,

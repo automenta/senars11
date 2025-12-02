@@ -34,31 +34,13 @@ export const createNarseseTranslationRule = (dependencies) => {
 
         prompt: (primaryPremise) => {
             const termStr = primaryPremise.term.name || primaryPremise.term.toString();
-            const content = termStr.slice(1, -1); // Remove quotes
+            // Remove quotes safely
+            const content = termStr.replace(/^"|"$/g, '');
 
-            // Try to extract subject and predicate to make the task clearer
-            let subject, predicate;
-            if (content.includes(' are ')) {
-                const parts = content.split(' are ');
-                subject = parts[0].trim();
-                predicate = parts[1].trim();
-            } else if (content.includes(' is ')) {
-                const parts = content.split(' is ');
-                subject = parts[0].trim();
-                predicate = parts[1].trim();
-            } else {
-                // Generic handling
-                subject = content.split(' ')[0];
-                predicate = content.substring(content.indexOf(' ') + 1);
-            }
-
-            return `Translate to Narsese format. Output only the Narsese relation, nothing else.
-Use <subject --> predicate> format for categorical statements.
-Example: "Dogs are animals" -> <dog --> animal>
-Input: "${content}"
-Output (just the Narsese, no explanation): <${subject.toLowerCase()} --> ${predicate.toLowerCase()}>
-Input: "${content}"
-Output: `;
+            return `Translate the English sentence to a Narsese relation.
+"Dogs are animals" => <dog --> animal>.
+"Birds can fly" => <bird --> [fly]>.
+"${content}" => `;
         },
 
         process: (lmResponse) => {
@@ -73,8 +55,12 @@ Output: `;
             }
 
             try {
+                // Try to extract Narsese relation if embedded in text
+                const match = processedOutput.match(/<[^>]+>/);
+                const toParse = match ? match[0] : processedOutput;
+
                 // Parse the Narsese string returned by LM
-                const parsed = dependencies.parser.parse(processedOutput);
+                const parsed = dependencies.parser.parse(toParse);
                 if (parsed) {
                      let term = parsed;
                      let punctuation = Punctuation.BELIEF;
@@ -96,7 +82,7 @@ Output: `;
                      return [newTask];
                 }
             } catch (e) {
-                console.warn(`NarseseTranslationRule: Failed to parse translation "${processedOutput}":`, e);
+                console.warn(`NarseseTranslationRule: Failed to parse translation "${processedOutput}":`, e.message);
             }
             return [];
         }

@@ -2,6 +2,7 @@
 
 import path from 'path';
 import {fileURLToPath} from 'url';
+import fs from 'fs/promises';
 import {getFreePort} from './utils/network-utils.js';
 import {TOURS} from './utils/tour-config.js';
 import {TourRunner} from './utils/tour-runner.js';
@@ -16,6 +17,7 @@ const timedMode = args.includes('--timed') || args.includes('--time');
 const logOnlyMode = args.includes('--log-only') || args.includes('-l');
 const movieMode = args.includes('--movie');
 const graphMode = args.includes('--graph');
+const showLog = args.includes('--log');
 
 async function main() {
     const specified = args.filter(a => !a.startsWith('-'));
@@ -58,6 +60,19 @@ async function main() {
 
             promises.push(
                 runner.run(tour, uiPort, wsPort, trackProcess)
+                    .then(async () => {
+                        if (showLog) {
+                             const logPath = path.join(rootDir, 'test-results', tour.id, 'demo.log');
+                             try {
+                                 const content = await fs.readFile(logPath, 'utf8');
+                                 console.log(`\n--- Log for ${tour.id} ---`);
+                                 console.log(content);
+                                 console.log(`--- End of Log for ${tour.id} ---\n`);
+                             } catch (err) {
+                                 console.error(`Failed to read log for ${tour.id}:`, err.message);
+                             }
+                        }
+                    })
                     .catch(e => console.error(`Error in tour ${tour.id}:`, e))
             );
         }
@@ -68,6 +83,18 @@ async function main() {
             const wsPort = await getFreePort(8080);
             try {
                 await runner.run(tour, uiPort, wsPort, trackProcess);
+
+                if (showLog) {
+                    const logPath = path.join(rootDir, 'test-results', tour.id, 'demo.log');
+                    try {
+                        const content = await fs.readFile(logPath, 'utf8');
+                        console.log(`\n--- Log for ${tour.id} ---`);
+                        console.log(content);
+                        console.log(`--- End of Log for ${tour.id} ---\n`);
+                    } catch (err) {
+                        console.error(`Failed to read log for ${tour.id}:`, err.message);
+                    }
+                }
             } catch (e) {
                 console.error(`Error in tour ${tour.id}:`, e);
             }
