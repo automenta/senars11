@@ -2,6 +2,7 @@
 
 import path from 'path';
 import {fileURLToPath} from 'url';
+import fs from 'fs/promises';
 import {getFreePort} from './utils/network-utils.js';
 import {TOURS} from './utils/tour-config.js';
 import {TourRunner} from './utils/tour-runner.js';
@@ -16,6 +17,19 @@ const timedMode = args.includes('--timed') || args.includes('--time');
 const logOnlyMode = args.includes('--log-only') || args.includes('-l');
 const movieMode = args.includes('--movie');
 const graphMode = args.includes('--graph');
+const showLog = args.includes('--log');
+
+async function printLog(tourId) {
+    const logPath = path.join(rootDir, 'test-results', tourId, 'demo.log');
+    try {
+        const content = await fs.readFile(logPath, 'utf8');
+        console.log(`\n--- Log for ${tourId} ---`);
+        console.log(content);
+        console.log(`--- End of Log for ${tourId} ---\n`);
+    } catch (err) {
+        console.error(`Failed to read log for ${tourId}:`, err.message);
+    }
+}
 
 async function main() {
     const specified = args.filter(a => !a.startsWith('-'));
@@ -51,13 +65,15 @@ async function main() {
         let basePort = 3000;
 
         for (const tour of toursToRun) {
-            // Assign unique ports for each tour
             const uiPort = await getFreePort(basePort);
             const wsPort = await getFreePort(uiPort + 1);
             basePort = wsPort + 1;
 
             promises.push(
                 runner.run(tour, uiPort, wsPort, trackProcess)
+                    .then(async () => {
+                        if (showLog) await printLog(tour.id);
+                    })
                     .catch(e => console.error(`Error in tour ${tour.id}:`, e))
             );
         }
@@ -68,6 +84,7 @@ async function main() {
             const wsPort = await getFreePort(8080);
             try {
                 await runner.run(tour, uiPort, wsPort, trackProcess);
+                if (showLog) await printLog(tour.id);
             } catch (e) {
                 console.error(`Error in tour ${tour.id}:`, e);
             }

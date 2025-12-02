@@ -185,6 +185,11 @@ export class Reasoner extends EventEmitter {
             } else if (this._isAsyncRule(rule) && rule.apply) {
                 //console.debug(`DEBUG: Executing async rule: ${rule.id || rule.name}`);
                 try {
+                    // Update stats if ruleProcessor tracks them
+                    if (typeof this.ruleProcessor?.asyncRuleExecutions === 'number') {
+                         this.ruleProcessor.asyncRuleExecutions++;
+                    }
+
                     const derivedTasks = await rule.apply(primaryPremise, secondaryPremise);
                     //console.debug(`DEBUG: Async rule ${rule.id || rule.name} produced ${derivedTasks.length} tasks: ${derivedTasks.map(t => t?.term).join(', ')}`);
                     for (const task of derivedTasks) {
