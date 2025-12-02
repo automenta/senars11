@@ -94,7 +94,7 @@ export class EmbeddingLayer {
              try {
                  if (!this._pipeline) {
                      console.log(`EmbeddingLayer: Loading pipeline for model ${this.config.model}...`);
-                     const { pipeline } = await import('@xenova/transformers');
+                     const { pipeline } = await import('@huggingface/transformers');
                      this._pipeline = await pipeline('feature-extraction', this.config.model);
                      console.log(`EmbeddingLayer: Pipeline loaded.`);
                  }

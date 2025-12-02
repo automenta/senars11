@@ -28,7 +28,7 @@ export class TransformersJSModel extends BaseChatModel {
         // Suppress ONNX Runtime warnings
         process.env.ORT_LOG_LEVEL ??= '3';
 
-        const {pipeline} = await import('@xenova/transformers');
+        const {pipeline} = await import('@huggingface/transformers');
 
         this.pipeline = await pipeline(this.task, this.modelName, {
             device: this.device,
@@ -53,7 +53,7 @@ export class TransformersJSModel extends BaseChatModel {
     }
 
     async* _streamResponseChunks(messages, options, runManager) {
-        // TODO: Implement true streaming if possible with @xenova/transformers Streamer
+        // TODO: Implement true streaming if possible with @huggingface/transformers Streamer
         const {text, content, tool_calls} = await this._invoke(messages);
 
         if (tool_calls?.length > 0) {

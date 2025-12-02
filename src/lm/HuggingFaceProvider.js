@@ -22,7 +22,7 @@ export class HuggingFaceProvider extends BaseProvider {
         if (this.initialized) return;
 
         try {
-            const {pipeline, AutoTokenizer, AutoModelForCausalLM} = await import('@xenova/transformers');
+            const {pipeline, AutoTokenizer, AutoModelForCausalLM} = await import('@huggingface/transformers');
 
             switch (this.modelType) {
                 case 'smollm':
@@ -87,7 +87,7 @@ export class HuggingFaceProvider extends BaseProvider {
         await this._initializeModel();
 
         try {
-            const {pipeline} = await import('@xenova/transformers');
+            const {pipeline} = await import('@huggingface/transformers');
             const extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2', {device: this.device});
             const output = await extractor(text, {pooling: 'mean', normalize: true});
             return Array.from(output.data || output);

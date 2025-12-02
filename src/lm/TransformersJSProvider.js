@@ -3,7 +3,7 @@ import {BaseProvider} from './BaseProvider.js';
 let pipelinePromise = null;
 const importPipeline = () => {
     if (!pipelinePromise) {
-        pipelinePromise = import('@xenova/transformers').then(mod => mod.pipeline);
+        pipelinePromise = import('@huggingface/transformers').then(mod => mod.pipeline);
     }
     return pipelinePromise;
 };
