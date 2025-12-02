@@ -90,6 +90,19 @@ export class EmbeddingLayer {
     }
 
     async _generateEmbedding(text) {
+        if (this.config.model && this.config.model !== 'mock' && !this.config.model.startsWith('mock')) {
+             try {
+                 if (!this._pipeline) {
+                     const { pipeline } = await import('@xenova/transformers');
+                     this._pipeline = await pipeline('feature-extraction', this.config.model);
+                 }
+                 const output = await this._pipeline(text, { pooling: 'mean', normalize: true });
+                 return Array.from(output.data);
+             } catch (e) {
+                 console.warn(`EmbeddingLayer: Failed to load/use model ${this.config.model}, falling back to mock. Error: ${e.message}`);
+             }
+        }
+
         const hash = this._simpleHash(text);
         const embedding = new Array(1536).fill(0);
 
