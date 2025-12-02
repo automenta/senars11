@@ -232,7 +232,9 @@ export class NAR extends BaseComponent {
         if (!this._streamReasoner) return;
         await ReasonerBuilder.registerDefaultRules(this._streamReasoner, this.config, {
             parser: this._parser,
-            lm: this._lm
+            lm: this._lm,
+            embeddingLayer: this._embeddingLayer,
+            memory: this._memory
         });
     }
 

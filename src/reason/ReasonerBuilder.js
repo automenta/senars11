@@ -174,6 +174,13 @@ export class ReasonerBuilder {
                  parser: dependencies.parser
              });
              ruleExecutor.register(rule);
+
+             const {createConceptElaborationRule} = await import('./rules/lm/LMConceptElaborationRule.js');
+             const elaborationRule = createConceptElaborationRule({
+                 lm: dependencies.lm,
+                 parser: dependencies.parser
+             });
+             ruleExecutor.register(elaborationRule);
         }
     }
 }
