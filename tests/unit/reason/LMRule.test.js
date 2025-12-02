@@ -78,7 +78,7 @@ describe('LMRule', () => {
         expect(rule.canApply(otherTask, null, {})).toBe(false);
     });
 
-    test('should generate prompt using template', () => {
+    test('should generate prompt using template', async () => {
         const rule = LMRule.create({
             id: 'prompt-test',
             lm: mockLM,
@@ -88,7 +88,7 @@ describe('LMRule', () => {
         });
 
         const testTask = new Task('sample term', Punctuation.BELIEF);
-        const prompt = rule.generatePrompt(testTask, null, {});
+        const prompt = await rule.generatePrompt(testTask, null, {});
 
         expect(prompt).toBe('Process: sample term');
     });
@@ -153,14 +153,14 @@ describe('LMRule', () => {
         expect(stats.execution.successfulExecutions).toBe(1);
     });
 
-    test('should support backward compatibility with promptTemplate', () => {
+    test('should support backward compatibility with promptTemplate', async () => {
         const rule = new LMRule('compat-rule', mockLM, {
             promptTemplate: 'Template: {{taskTerm}}',
             responseProcessor: (response) => [new Task(response, Punctuation.BELIEF)]
         });
 
         const testTask = new Task('test-term', Punctuation.BELIEF);
-        const prompt = rule.generatePrompt(testTask, null, {});
+        const prompt = await rule.generatePrompt(testTask, null, {});
         expect(prompt).toBe('Template: test-term');
     });
 });
@@ -235,7 +235,7 @@ describe('Specific LM Rules from v9', () => {
     });
 
     test('AnalogicalReasoningRule should identify problem-solving goals', () => {
-        const rule = createAnalogicalReasoningRule({lm: mockLM});
+        const rule = createAnalogicalReasoningRule({lm: mockLM, embeddingLayer: {}});
 
         const goalTask = new Task('Solve this problem', Punctuation.GOAL);
         goalTask.priority = 0.7;

@@ -66,8 +66,8 @@ export class LMRule extends Rule {
         }
     }
 
-    generatePrompt(primaryPremise, secondaryPremise, context) {
-        return this.config.prompt(primaryPremise, secondaryPremise, context);
+    async generatePrompt(primaryPremise, secondaryPremise, context) {
+        return await this.config.prompt(primaryPremise, secondaryPremise, context);
     }
 
     processLMOutput(lmResponse, primaryPremise, secondaryPremise, context) {
@@ -88,7 +88,7 @@ export class LMRule extends Rule {
                 return [];
             }
 
-            const prompt = this.generatePrompt(primaryPremise, secondaryPremise, context);
+            const prompt = await this.generatePrompt(primaryPremise, secondaryPremise, context);
             const lmResponse = await this.executeLM(prompt);
 
             if (!lmResponse) {
