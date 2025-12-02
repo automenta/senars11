@@ -230,6 +230,38 @@ export class NAR extends BaseComponent {
     async _registerRulesWithStreamReasoner() {
         if (!this._streamReasoner) return;
         await ReasonerBuilder.registerDefaultRules(this._streamReasoner, this.config);
+
+        if (this._lm) {
+            try {
+                const {LMRuleFactory} = await import('../lm/LMRuleFactory.js');
+
+                const translationRule = LMRuleFactory.createTranslationRule({
+                    id: 'narsese-translation',
+                    lm: this._lm,
+                    parser: this._parser,
+                    priority: 1.0
+                });
+
+                this._streamReasoner.ruleProcessor.ruleExecutor.register(translationRule);
+
+                const commonRules = ['hypothesis-generation', 'causal-analysis', 'goal-decomposition', 'analogy'];
+                for (const ruleType of commonRules) {
+                    try {
+                        const rule = LMRuleFactory.createCommonRule(ruleType, {
+                            lm: this._lm,
+                            embeddingLayer: this._embeddingLayer
+                        }, {
+                            id: ruleType
+                        });
+                        this._streamReasoner.ruleProcessor.ruleExecutor.register(rule);
+                    } catch (e) {
+                        this.logWarn(`Failed to register LM rule ${ruleType}: ${e.message}`);
+                    }
+                }
+            } catch (e) {
+                this.logWarn('Failed to register LM rules:', e);
+            }
+        }
     }
 
     async input(input, options = {}) {
@@ -239,7 +271,16 @@ export class NAR extends BaseComponent {
             }
 
             const narseseString = input;
-            const parsed = this._parser.parse(narseseString);
+            let parsed = this._parser.parse(narseseString);
+
+            if (parsed && !parsed.term && (parsed.type || parsed.name)) {
+                parsed = {
+                    term: parsed,
+                    punctuation: '.',
+                    truthValue: null
+                };
+            }
+
             if (!parsed?.term) {
                 const error = new Error('Invalid parse result');
                 error.input = narseseString;

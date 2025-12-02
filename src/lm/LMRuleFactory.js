@@ -1,5 +1,7 @@
 import {LMRule} from '../reason/LMRule.js';
 import {LMRuleUtils} from '../reason/utils/LMRuleUtils.js';
+import {Task} from '../task/Task.js';
+import {Truth} from '../Truth.js';
 
 export class LMRuleFactory {
     static create(config) {
@@ -78,15 +80,66 @@ export class LMRuleFactory {
         return LMRuleUtils.createPriorityBasedRule(config);
     }
 
+    static createTranslationRule(config) {
+        const {parser} = config;
+
+        return LMRule.create({
+            ...config,
+            name: 'Narsese Translation Rule',
+            description: 'Translates quoted natural language terms into Narsese',
+            condition: (primary) => {
+                const name = primary?.term?.name;
+                return name && name.startsWith('"') && name.endsWith('"');
+            },
+            prompt: (primary) => {
+                const text = primary.term.name.slice(1, -1); // Strip quotes
+                return `Translate the following natural language sentence into Narsese representation: "${text}".\nRespond with only the Narsese string.`;
+            },
+            process: (lmResponse) => lmResponse.trim(),
+            generate: (processedOutput) => {
+                if (!processedOutput || !parser) return [];
+                try {
+                    let parsed = parser.parse(processedOutput);
+
+                    if (parsed && !parsed.term && (parsed.type || parsed.name)) {
+                        parsed = {
+                            term: parsed,
+                            punctuation: '.',
+                            truthValue: null
+                        };
+                    }
+
+                    if (!parsed?.term) return [];
+
+                    const {term, truthValue, punctuation} = parsed;
+                    const taskType = punctuation === '?' ? 'QUESTION' : (punctuation === '!' ? 'GOAL' : 'BELIEF');
+                    const truth = taskType === 'QUESTION' ? null : (truthValue ? new Truth(truthValue.frequency, truthValue.confidence) : new Truth(1.0, 0.9));
+
+                    const task = new Task({
+                        term,
+                        punctuation,
+                        truth,
+                        budget: {priority: 0.8}
+                    });
+
+                    return [task];
+                } catch (e) {
+                    return [];
+                }
+            }
+        });
+    }
+
     static builder() {
         return new LMRuleBuilder();
     }
 
     static createCommonRule(type, dependencies, config = {}) {
-        const {lm} = dependencies;
+        const {lm, embeddingLayer} = dependencies;
         const baseConfig = {
             id: config.id ?? `${type}`,
             lm,
+            embeddingLayer,
             name: config.name ?? this._getTitleCase(type.replace('-', ' ')) + ' Rule',
             description: config.description ?? this._getDescription(type),
             priority: config.priority ?? this._getDefaultPriority(type),
@@ -100,9 +153,15 @@ export class LMRuleFactory {
                 return this._createHypothesisRule(baseConfig);
             case 'causal-analysis':
                 return this._createCausalAnalysisRule(baseConfig);
+            case 'analogy':
+                return this._createAnalogyRule(baseConfig);
             default:
                 throw new Error(`Unknown common rule type: ${type}`);
         }
+    }
+
+    static createAnalogyRule(config) {
+        return this._createAnalogyRule(config);
     }
 
     static _getTitleCase(str) {
@@ -115,7 +174,8 @@ export class LMRuleFactory {
         const descriptions = {
             'goal-decomposition': 'Breaks down high-level goals into sub-goals',
             'hypothesis-generation': 'Generates hypotheses from beliefs',
-            'causal-analysis': 'Analyzes causal relationships'
+            'causal-analysis': 'Analyzes causal relationships',
+            'analogy': 'Generates analogy-based inferences'
         };
         return descriptions[type] ?? 'A common rule type';
     }
@@ -124,7 +184,8 @@ export class LMRuleFactory {
         const priorities = {
             'goal-decomposition': 0.9,
             'hypothesis-generation': 0.6,
-            'causal-analysis': 0.75
+            'causal-analysis': 0.75,
+            'analogy': 0.5
         };
         return priorities[type] ?? 0.5;
     }
@@ -163,6 +224,42 @@ export class LMRuleFactory {
             process: LMRuleUtils.createResponseProcessor('single'),
             generate: LMRuleUtils.createTaskGenerator('singleTask', {punctuation: '.'}),
             lm_options: {temperature: 0.4, max_tokens: 300, ...config.lm_options}
+        });
+    }
+
+    static _createAnalogyRule(config) {
+        const {embeddingLayer} = config;
+
+        return LMRule.create({
+            ...config,
+            condition: (primary) => primary?.punctuation === '.' &&
+                (primary.getPriority?.() ?? primary.priority ?? 0) > 0.6,
+            prompt: async (primary, secondary, context) => {
+                const term = primary.term ? primary.term.toString() : 'unknown';
+                let contextInfo = '';
+
+                if (embeddingLayer && context && context.memory) {
+                    try {
+                        const candidates = context.memory.getAllConcepts().map(c => c.term.toString());
+                        const filteredCandidates = candidates.filter(c => c !== term);
+
+                        if (filteredCandidates.length > 0) {
+                            const similar = await embeddingLayer.findSimilar(term, filteredCandidates, 0.7);
+                            if (similar.length > 0) {
+                                const similarTerms = similar.slice(0, 3).map(r => r.item).join(', ');
+                                contextInfo = `\nContext: Found semantically similar concepts in memory: ${similarTerms}.`;
+                            }
+                        }
+                    } catch (e) {
+                        // Ignore embedding errors
+                    }
+                }
+
+                return `Given the concept "${term}"${contextInfo}, provide an analogy or similarity in Narsese format (e.g., <${term} <-> OtherConcept>).`;
+            },
+            process: LMRuleUtils.createResponseProcessor('single'),
+            generate: LMRuleUtils.createTaskGenerator('singleTask', {punctuation: '.'}),
+            lm_options: {temperature: 0.7, max_tokens: 200, ...config.lm_options}
         });
     }
 }
