@@ -82,7 +82,7 @@ Concept: "${concept}"`;
 
                 // If it's natural language text or couldn't be parsed as formal Narsese,
                 // create a quoted atomic belief term
-                console.debug(`DEBUG: Creating quoted atomic belief from: "${processedOutput}"`);
+                //console.debug(`DEBUG: Creating quoted atomic belief from: "${processedOutput}"`);
 
                 // Create a new task with the natural language as a quoted atomic term
                 // Use termFactory to create a proper Term object
