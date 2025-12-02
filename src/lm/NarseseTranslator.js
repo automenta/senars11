@@ -33,8 +33,14 @@ export class NarseseTranslator {
             throw new Error('Input must be a string');
         }
 
+        // Clean up trailing punctuation to avoid double punctuation in replacement
+        let cleanText = text.trim();
+        if (cleanText.endsWith('.') || cleanText.endsWith('!') || cleanText.endsWith('?')) {
+            cleanText = cleanText.slice(0, -1);
+        }
+
         for (const pattern of this.patterns.forward) {
-            const match = text.match(pattern.regex);
+            const match = cleanText.match(pattern.regex);
             if (match) {
                 return pattern.replacement
                     .replace('$1', match[1].trim())
@@ -42,7 +48,7 @@ export class NarseseTranslator {
             }
         }
 
-        return `(${text.replace(/\s+/g, '_')} --> statement).`;
+        return `(${cleanText.replace(/\s+/g, '_')} --> statement).`;
     }
 
     fromNarsese(narsese) {

@@ -127,7 +127,14 @@ export class ComponentManager extends BaseComponent {
     }
 
     async _executeLifecycleOperation(operation, componentOrder, metricUpdate = null) {
-        this.logInfo(`${operation.charAt(0).toUpperCase() + operation.slice(1)}ing ${this._components.size} components...`);
+        const verbMap = {
+            initialize: 'Initializing',
+            start: 'Starting',
+            stop: 'Stopping',
+            dispose: 'Disposing'
+        };
+        const verb = verbMap[operation] || `${operation.charAt(0).toUpperCase() + operation.slice(1)}ing`;
+        this.logInfo(`${verb} ${this._components.size} components...`);
 
         const failedComponents = [];
         const operationMethod = operation;
@@ -163,10 +170,18 @@ export class ComponentManager extends BaseComponent {
     }
 
     _logOperationResult(operation, successful, total, failed) {
+        const pastMap = {
+            initialize: 'initialized',
+            start: 'started',
+            stop: 'stopped',
+            dispose: 'disposed'
+        };
+        const past = pastMap[operation] || `${operation}ed`;
+
         if (failed > 0) {
             this.logInfo(`${operation.charAt(0).toUpperCase() + operation.slice(1)}: ${successful}/${total} ${operation === 'init' ? 'OK' : 'successful'}, ${failed} failed`);
         } else {
-            this.logInfo(`All ${total} components ${operation === 'init' ? 'OK' : `${operation}ed successfully`}`);
+            this.logInfo(`All ${total} components ${operation === 'init' ? 'OK' : `${past} successfully`}`);
         }
     }
 

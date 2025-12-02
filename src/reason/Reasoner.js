@@ -145,27 +145,15 @@ export class Reasoner extends EventEmitter {
             if (Date.now() - startTime > maxTimeMs) break;
 
             if (this._isSynchronousRule(rule)) {
-                const ruleContext = this._createRuleContext();
-                const ruleResults = this.ruleProcessor.ruleExecutor.executeRule(rule, primaryPremise, secondaryPremise, ruleContext);
-
-                for (const result of ruleResults) {
-                    const processedResult = this._processDerivation(result, suppressEvents);
+                const derivedTasks = this.ruleProcessor.processSyncRule(rule, primaryPremise, secondaryPremise);
+                for (const task of derivedTasks) {
+                    const processedResult = this._processDerivation(task, suppressEvents);
                     if (processedResult) results.push(processedResult);
                 }
             }
         }
 
         return results;
-    }
-
-    /**
-     * Create rule execution context
-     * @private
-     */
-    _createRuleContext() {
-        return {
-            termFactory: this.ruleProcessor.config.termFactory ?? this.ruleProcessor.config.context?.termFactory ?? null
-        };
     }
 
     _isSynchronousRule(rule) {

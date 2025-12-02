@@ -1,6 +1,7 @@
 import {mergeConfig, processDerivation, sleep} from './utils/common.js';
 import {logError, ReasonerError} from './utils/error.js';
 import {Queue} from '../util/Queue.js';
+import {ArrayStamp} from '../Stamp.js';
 
 /**
  * RuleProcessor consumes premise pairs and processes them through rules.
@@ -91,14 +92,35 @@ export class RuleProcessor {
      * @private
      */
     async* _processSyncRule(rule, primaryPremise, secondaryPremise) {
+        const results = this.processSyncRule(rule, primaryPremise, secondaryPremise);
+        for (const result of results) {
+            yield result;
+        }
+    }
+
+    processSyncRule(rule, primaryPremise, secondaryPremise) {
         this.syncRuleExecutions++;
         const ruleContext = this._createRuleContext();
         const results = this.ruleExecutor.executeRule(rule, primaryPremise, secondaryPremise, ruleContext);
 
-        for (const result of results) {
-            const processedResult = this._processDerivation(result);
-            if (processedResult) yield processedResult;
-        }
+        return results.map(result => {
+            const enrichedResult = this.enrichResult(result, rule);
+            return this._processDerivation(enrichedResult);
+        }).filter(Boolean);
+    }
+
+    enrichResult(result, rule) {
+        if (!result || !result.stamp) return result;
+        const ruleName = rule.id || rule.name || 'UnknownRule';
+        return result.clone({
+            stamp: new ArrayStamp({
+                id: result.stamp.id,
+                creationTime: result.stamp.creationTime,
+                source: `DERIVED:${ruleName}`,
+                derivations: result.stamp.derivations,
+                depth: result.stamp.depth
+            })
+        });
     }
 
     _createRuleContext() {
@@ -145,6 +167,7 @@ export class RuleProcessor {
                 rule.apply?.(primaryPremise, secondaryPremise, this.config.context)) ?? [];
             const resultsArray = Array.isArray(results) ? results : [results];
             const processedResults = resultsArray
+                .map(result => this.enrichResult(result, rule))
                 .map(this._processDerivation.bind(this))
                 .filter(Boolean);
 

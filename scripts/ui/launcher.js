@@ -55,7 +55,9 @@ async function startWebSocketServer(config) {
     });
 
     replEngine.on('reasoning.derivation', (data) => {
-        console.log(`OUT: ${data.derivedTask}`);
+        const task = data.derivedTask;
+        const source = task.stamp ? task.stamp.source : 'UNKNOWN';
+        console.log(`OUT: ${task} [${source}]`);
     });
 
     replEngine.on('question.answered', (data) => {
@@ -153,6 +155,25 @@ function startUIServer(config) {
 }
 
 async function shutdownServices(webSocketServer) {
+    if (webSocketServer.replEngine) {
+        try {
+            const stats = webSocketServer.replEngine.getStats();
+            // Simplify stats for log readability
+            const simpleStats = {
+                cycleCount: stats.cycleCount,
+                memory: {
+                    concepts: stats.memoryStats?.conceptCount,
+                    tasks: stats.taskManagerStats?.totalTasks
+                },
+                termLayer: stats.termLayerStats,
+                streamReasoner: stats.streamReasonerStats
+            };
+            console.log('Final System Stats:', JSON.stringify(simpleStats, null, 2));
+        } catch (e) {
+            console.error('Error logging final stats:', e.message);
+        }
+    }
+
     const errors = [];
 
     if (webSocketServer.uiServer) {

@@ -1,0 +1,8 @@
+// title: LM Integration Demo
+// description: Testing natural language input with transformers.js
+// Natural language input about cats
+"Cats are mammals.
+// Natural language input about mammals
+"Mammals are animals.
+// Question in natural language
+"Are cats animals?

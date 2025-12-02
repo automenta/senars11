@@ -672,6 +672,7 @@ export class NAR extends BaseComponent {
             isRunning: this._isRunning,
             cycleCount: this._streamReasoner?.metrics?.totalDerivations || 0,
             memoryStats: this._memory.getDetailedStats(),
+            termLayerStats: this._termLayer ? this._termLayer.getStats() : null,
             taskManagerStats: this._taskManager.getTaskStats?.() ?? this._taskManager.stats,
             config: this.config,
             lmStats: this._lm?.getMetrics?.()
