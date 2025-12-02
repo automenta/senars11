@@ -14,7 +14,7 @@ import {hasPattern, isGoal, isQuestion, KeywordPatterns} from '../../RuleHelpers
  * @returns {LMRule} A new LMRule instance for analogical reasoning.
  */
 export const createAnalogicalReasoningRule = (dependencies) => {
-    const {lm, embeddingLayer} = dependencies;
+    const {lm, embeddingLayer, memory} = dependencies;
 
     return LMRule.create({
         id: 'analogical-reasoning',
@@ -40,17 +40,28 @@ export const createAnalogicalReasoningRule = (dependencies) => {
             let contextStr = '';
 
             try {
-                // Leverage EmbeddingLayer to find semantically similar concepts in memory
-                const results = await embeddingLayer.findSimilar(termStr, {limit: 3});
-                const analogies = results
-                    .map(r => r.term?.toString?.() || String(r.term))
-                    .filter(t => t !== termStr);
+                // Get concepts from memory if available
+                let candidates = [];
+                if (memory && typeof memory.getAllConcepts === 'function') {
+                    const concepts = memory.getAllConcepts();
+                    candidates = concepts
+                        .map(c => c.term.toString())
+                        .filter(t => t !== termStr);
+                }
 
-                if (analogies.length > 0) {
-                     contextStr = `\nI recall these similar situations/concepts: ${analogies.join(', ')}.`;
+                if (candidates.length > 0) {
+                     // Leverage EmbeddingLayer
+                     const results = await embeddingLayer.findSimilar(termStr, candidates, {limit: 3});
+
+                     const analogies = results
+                         .map(r => r.term)
+                         .filter(t => t !== termStr);
+
+                     if (analogies.length > 0) {
+                          contextStr = `\nI recall these similar situations/concepts: ${analogies.join(', ')}.`;
+                     }
                 }
             } catch (e) {
-                // If embedding lookup fails, proceed without analogies
                 console.warn('AnalogicalReasoningRule: Embedding lookup failed', e);
             }
 
