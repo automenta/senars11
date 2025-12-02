@@ -1,0 +1,10 @@
+// title: Alien Encounter - Hybrid Reasoning Demo
+// description: Testing natural language input with LM rules and NAL reasoning
+
+// Background Knowledge (Formal NAL)
+(UFO --> extraterrestrial_origin).
+(spaceship --> extraterrestrial_origin).
+(landed_in_backyard --> event).
+
+// Natural Language Input (will be processed by LM rules)
+"A shiny metal disc landed in the backyard".
