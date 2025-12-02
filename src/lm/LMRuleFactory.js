@@ -1,5 +1,7 @@
 import {LMRule} from '../reason/LMRule.js';
 import {LMRuleUtils} from '../reason/utils/LMRuleUtils.js';
+import {Task} from '../task/Task.js';
+import {Truth} from '../Truth.js';
 
 export class LMRuleFactory {
     static create(config) {
@@ -76,6 +78,56 @@ export class LMRuleFactory {
 
     static createPriorityBased(config) {
         return LMRuleUtils.createPriorityBasedRule(config);
+    }
+
+    static createTranslationRule(config) {
+        const {parser} = config;
+
+        return LMRule.create({
+            ...config,
+            name: 'Narsese Translation Rule',
+            description: 'Translates quoted natural language terms into Narsese',
+            condition: (primary) => {
+                const name = primary?.term?.name;
+                return name && name.startsWith('"') && name.endsWith('"');
+            },
+            prompt: (primary) => {
+                const text = primary.term.name.slice(1, -1); // Strip quotes
+                return `Translate the following natural language sentence into Narsese representation: "${text}".\nRespond with only the Narsese string.`;
+            },
+            process: (lmResponse) => lmResponse.trim(),
+            generate: (processedOutput) => {
+                if (!processedOutput || !parser) return [];
+                try {
+                    let parsed = parser.parse(processedOutput);
+
+                    if (parsed && !parsed.term && (parsed.type || parsed.name)) {
+                        parsed = {
+                            term: parsed,
+                            punctuation: '.',
+                            truthValue: null
+                        };
+                    }
+
+                    if (!parsed?.term) return [];
+
+                    const {term, truthValue, punctuation} = parsed;
+                    const taskType = punctuation === '?' ? 'QUESTION' : (punctuation === '!' ? 'GOAL' : 'BELIEF');
+                    const truth = taskType === 'QUESTION' ? null : (truthValue ? new Truth(truthValue.frequency, truthValue.confidence) : new Truth(1.0, 0.9));
+
+                    const task = new Task({
+                        term,
+                        punctuation,
+                        truth,
+                        budget: {priority: 0.8}
+                    });
+
+                    return [task];
+                } catch (e) {
+                    return [];
+                }
+            }
+        });
     }
 
     static builder() {
