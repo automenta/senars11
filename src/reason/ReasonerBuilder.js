@@ -167,20 +167,30 @@ export class ReasonerBuilder {
 
         // Register LM rules if enabled
         if (config.lm?.enabled && dependencies.lm) {
-             const {createNarseseTranslationRule} = await import('./rules/lm/LMNarseseTranslationRule.js');
-             const rule = createNarseseTranslationRule({
+             const {LMRuleFactory} = await import('../lm/LMRuleFactory.js');
+
+             const rule = LMRuleFactory.createNarseseTranslationRule({
                  lm: dependencies.lm,
                  termFactory: streamReasoner.ruleProcessor.termFactory,
                  parser: dependencies.parser
              });
              ruleExecutor.register(rule);
 
-             const {createConceptElaborationRule} = await import('./rules/lm/LMConceptElaborationRule.js');
-             const elaborationRule = createConceptElaborationRule({
+             const elaborationRule = LMRuleFactory.createConceptElaborationRule({
                  lm: dependencies.lm,
                  parser: dependencies.parser
              });
              ruleExecutor.register(elaborationRule);
+
+             // Register Analogy Rule if embedding layer is present
+             if (dependencies.embeddingLayer) {
+                 const analogyRule = LMRuleFactory.createAnalogicalReasoningRule({
+                     lm: dependencies.lm,
+                     embeddingLayer: dependencies.embeddingLayer,
+                     memory: dependencies.memory
+                 });
+                 ruleExecutor.register(analogyRule);
+             }
         }
     }
 }
