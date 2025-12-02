@@ -55,8 +55,28 @@ Sentence: "${content}"`;
             }
 
             try {
+                // Attempt to extract Narsese task from the output
+                // Look for the first occurrence of ( ... ) or < ... > followed by . ! or ?
+                let narsese = processedOutput.trim();
+                const start = narsese.search(/[\(<]/);
+
+                if (start !== -1) {
+                    const afterStart = narsese.substring(start);
+                    // Match until the first sentence-ending punctuation that likely closes the task
+                    // We look for a closing bracket/parenthesis followed optionally by spaces and then punctuation
+                    const match = afterStart.match(/([\)>;])\s*([.!?])/);
+
+                    if (match) {
+                        const end = match.index + match[0].length;
+                        narsese = afterStart.substring(0, end);
+                    } else {
+                        // Fallback: take the whole substring from start
+                        narsese = afterStart;
+                    }
+                }
+
                 // Parse the Narsese string returned by LM
-                const parsed = parser.parse(processedOutput);
+                const parsed = parser.parse(narsese);
                 if (parsed) {
                      let term = parsed;
                      let punctuation = Punctuation.BELIEF;
