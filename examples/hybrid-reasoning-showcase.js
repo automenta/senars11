@@ -19,8 +19,8 @@ async function run() {
         lm: {
             enabled: true,
             provider: 'transformers',
-            modelName: 'Xenova/LaMini-Flan-T5-248M',
-            temperature: 0.7,
+            modelName: 'Xenova/flan-t5-base',
+            temperature: 0.1,
             circuitBreaker: {
                 failureThreshold: 10,
                 timeout: 300000, // 5 minutes for model download
