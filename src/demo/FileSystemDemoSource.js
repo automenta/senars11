@@ -38,7 +38,8 @@ export class FileSystemDemoSource {
                         name: info.title || file,
                         description: info.description || (type === 'process' ? 'JavaScript Demo' : 'Narsese Script'),
                         path: filePath,
-                        type: type
+                        type: type,
+                        stepDelay: info.stepDelay
                     });
                 }
             }
@@ -54,9 +55,12 @@ export class FileSystemDemoSource {
         // Supports // title: ... and * title: ... (for JSDoc style)
         const titleMatch = content.match(/^\s*(?:\/\/|\*)\s*title:\s*(.*)$/m);
         const descriptionMatch = content.match(/^\s*(?:\/\/|\*)\s*description:\s*(.*)$/m);
+        const stepDelayMatch = content.match(/^\s*(?:\/\/|\*)\s*stepDelay:\s*(\d+)$/m);
+
         return {
             title: titleMatch ? titleMatch[1].trim() : null,
-            description: descriptionMatch ? descriptionMatch[1].trim() : null
+            description: descriptionMatch ? descriptionMatch[1].trim() : null,
+            stepDelay: stepDelayMatch ? parseInt(stepDelayMatch[1].trim(), 10) : null
         };
     }
 
@@ -80,7 +84,7 @@ export class FileSystemDemoSource {
 
             if (trimmed.startsWith('//')) {
                 const comment = trimmed.replace(/^\/\/\s*/, '');
-                if (!comment.startsWith('title:') && !comment.startsWith('description:')) {
+                if (!comment.startsWith('title:') && !comment.startsWith('description:') && !comment.startsWith('stepDelay:')) {
                     currentComment = comment;
                 }
             } else if (trimmed.startsWith('\'')) {

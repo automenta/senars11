@@ -84,6 +84,10 @@ export class Reasoner extends EventEmitter {
                 try {
                     const candidateRules = this.ruleProcessor.ruleExecutor.getCandidateRules(primaryPremise, null);
 
+                    if (candidateRules.length > 0) {
+                         // console.debug(`[Reasoner] Found ${candidateRules.length} candidate rules for ${primaryPremise}`);
+                    }
+
                     const forwardResults = await this._processRuleBatch(
                         candidateRules,
                         primaryPremise,
