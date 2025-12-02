@@ -34,7 +34,11 @@ Term "term"
   / CompoundTerm
   / Set
   / Variable
+  / QuotedTerm
   / AtomicTerm
+
+QuotedTerm "quoted term"
+  = '"' [^"]* '"' { return options.termFactory.atomic(text()); }
 
 CompoundTerm
   = "(" _ op:Operator _ ","? _ components:TermList _ ")" {
