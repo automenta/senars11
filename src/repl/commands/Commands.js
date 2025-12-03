@@ -298,11 +298,11 @@ export class TraceCommand extends AgentCommand {
     }
 
     async _executeImpl(agent, ...args) {
-        if (args[0] === 'on') agent.traceEnabled = true;
-        else if (args[0] === 'off') agent.traceEnabled = false;
-        else agent.traceEnabled = !agent.traceEnabled;
+        if (args[0] === 'on') agent.displaySettings.trace = true;
+        else if (args[0] === 'off') agent.displaySettings.trace = false;
+        else agent.displaySettings.trace = !agent.displaySettings.trace;
 
-        return `🔍 Trace: ${agent.traceEnabled ? 'ON' : 'OFF'}`;
+        return `🔍 Trace: ${agent.displaySettings.trace ? 'ON' : 'OFF'}`;
     }
 }
 
