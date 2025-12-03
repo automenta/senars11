@@ -1,10 +1,10 @@
 /**
- * @file src/reason/rules/LMTemporalCausalModelingRule.js
+ * @file src/reason/rules/lm/LMTemporalCausalModelingRule.js
  * @description Temporal and causal modeling rule that uses an LM to infer time order and causal relationships.
  */
 
 import {LMRule} from '../../LMRule.js';
-import {Punctuation, Task} from '../../utils/TaskUtils.js';
+import {Task, Punctuation} from '../../../task/Task.js';
 import {hasPattern, isBelief, KeywordPatterns} from '../../RuleHelpers.js';
 
 export const createTemporalCausalModelingRule = (dependencies) => {
@@ -19,8 +19,7 @@ export const createTemporalCausalModelingRule = (dependencies) => {
         condition: (primaryPremise) => {
             if (!primaryPremise) return false;
 
-            const priority = primaryPremise.getPriority?.() ?? primaryPremise.priority ?? 0;
-            const termStr = primaryPremise.term?.toString?.() ?? String(primaryPremise.term ?? '');
+            const priority = primaryPremise.budget?.priority ?? 0.5;
 
             return isBelief(primaryPremise) && priority > 0.7 && hasPattern(primaryPremise, KeywordPatterns.temporalCausal);
         },
@@ -39,14 +38,22 @@ If there is a time sequence, describe it.`;
             return match ? match[1] : (lmResponse?.trim() ?? '');
         },
 
-        generate: (processedOutput) => {
+        generate: (processedOutput, primaryPremise, secondaryPremise, context) => {
             if (!processedOutput) return [];
 
-            return [new Task(
-                processedOutput,
-                Punctuation.BELIEF,
-                {frequency: 0.9, confidence: 0.8}
-            )];
+            const termFactory = context?.termFactory || dependencies.termFactory;
+            if (!termFactory) return [];
+
+            const term = termFactory.atomic(processedOutput);
+
+            return [new Task({
+                term,
+                punctuation: Punctuation.BELIEF,
+                truth: {
+                    frequency: 0.9,
+                    confidence: (primaryPremise.truth?.c || 0.9) * 0.9
+                }
+            })];
         },
 
         lm_options: {

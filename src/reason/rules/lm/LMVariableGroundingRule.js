@@ -1,24 +1,17 @@
 /**
- * @file src/reason/rules/LMVariableGroundingRule.js
+ * @file src/reason/rules/lm/LMVariableGroundingRule.js
  * @description Variable grounding rule that uses an LM to suggest possible values for variables in statements.
  * Based on the v9 implementation with enhancements for stream-based architecture.
  */
 
 import {LMRule} from '../../LMRule.js';
-import {Task} from '../../utils/TaskUtils.js';
+import {Task} from '../../../task/Task.js';
 import {parseSubGoals} from '../../RuleHelpers.js';
 
 const hasVariable = (text) => {
     return /[\$\?]\w+/.test(text);
 };
 
-/**
- * Creates a variable grounding rule using the enhanced LMRule.create method.
- * This rule identifies statements with variables and uses an LM to propose concrete values.
- *
- * @param {object} dependencies - Object containing lm and other dependencies
- * @returns {LMRule} A new LMRule instance for variable grounding.
- */
 export const createVariableGroundingRule = (dependencies) => {
     const {lm} = dependencies;
     return LMRule.create({
@@ -32,7 +25,7 @@ export const createVariableGroundingRule = (dependencies) => {
             if (!primaryPremise) return false;
 
             const termStr = primaryPremise.term?.toString?.() || String(primaryPremise.term || '');
-            const priority = primaryPremise.getPriority?.() || primaryPremise.priority || 0;
+            const priority = primaryPremise.budget?.priority ?? 0.5;
 
             return priority > 0.7 && hasVariable(termStr);
         },
@@ -54,21 +47,28 @@ Provide only the values, one per line.`;
         generate: (processedOutput, primaryPremise, secondaryPremise, context) => {
             if (!processedOutput || processedOutput.length === 0) return [];
 
+            const termFactory = context?.termFactory || dependencies.termFactory;
+            if (!termFactory) return [];
+
             const originalTermStr = primaryPremise.term?.toString?.() || String(primaryPremise.term || '');
 
             return processedOutput.map(value => {
                 // Replace the first variable found with the proposed value
                 const newTermStr = originalTermStr.replace(/[\$\?]\w+/, value);
-                const newTask = new Task(
-                    newTermStr,
-                    primaryPremise.punctuation,
-                    {frequency: 0.6, confidence: 0.5}, // Grounded statements have moderate uncertainty
-                    null,
-                    null,
-                    0.6,
-                    0.4
-                );
-                return newTask;
+                const term = termFactory.atomic(newTermStr);
+
+                return new Task({
+                    term,
+                    punctuation: primaryPremise.punctuation,
+                    truth: {
+                        frequency: 0.6,
+                        confidence: (primaryPremise.truth?.c || 0.9) * 0.6
+                    },
+                    budget: {
+                        priority: 0.6,
+                        durability: 0.4
+                    }
+                });
             });
         },
 

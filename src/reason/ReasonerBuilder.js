@@ -195,6 +195,33 @@ export class ReasonerBuilder {
                  eventBus: dependencies.eventBus
              });
              ruleExecutor.register(analogyRule);
+
+             const {
+                 createGoalDecompositionRule,
+                 createHypothesisGenerationRule,
+                 createInteractiveClarificationRule,
+                 createExplanationGenerationRule
+             } = await import('./rules/lm/index.js');
+
+             ruleExecutor.register(createGoalDecompositionRule({
+                 lm: dependencies.lm,
+                 termFactory: dependencies.termFactory
+             }));
+
+             ruleExecutor.register(createHypothesisGenerationRule({
+                 lm: dependencies.lm,
+                 termFactory: dependencies.termFactory
+             }));
+
+             ruleExecutor.register(createInteractiveClarificationRule({
+                 lm: dependencies.lm,
+                 termFactory: dependencies.termFactory
+             }));
+
+             ruleExecutor.register(createExplanationGenerationRule({
+                 lm: dependencies.lm,
+                 termFactory: dependencies.termFactory
+             }));
         }
     }
 }

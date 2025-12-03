@@ -15,3 +15,5 @@ export {createSchemaInductionRule} from './LMSchemaInductionRule.js';
 export {createTemporalCausalModelingRule} from './LMTemporalCausalModelingRule.js';
 export {createUncertaintyCalibrationRule} from './LMUncertaintyCalibrationRule.js';
 export {createVariableGroundingRule} from './LMVariableGroundingRule.js';
+export {createConceptElaborationRule} from './LMConceptElaborationRule.js';
+export {createNarseseTranslationRule} from './LMNarseseTranslationRule.js';

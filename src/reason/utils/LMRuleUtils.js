@@ -4,7 +4,7 @@
  */
 
 import {LMRule} from '../LMRule.js';
-import {Task} from './TaskUtils.js';
+import {Task, Punctuation} from '../../task/Task.js';
 import {cleanSubGoal, hasPattern, isValidSubGoal, KeywordPatterns, parseSubGoals} from '../RuleHelpers.js';
 
 export class LMRuleUtils {
@@ -40,7 +40,7 @@ export class LMRuleUtils {
             priority: priority ?? 0.5,
 
             condition: (primaryPremise) => {
-                const taskPriority = primaryPremise.getPriority?.() ?? primaryPremise.priority ?? 0;
+                const taskPriority = primaryPremise.budget?.priority ?? 0.5;
                 return taskPriority >= minPriority;
             },
 
@@ -61,7 +61,7 @@ export class LMRuleUtils {
             priority: priority ?? 0.6,
 
             condition: (primaryPremise) => {
-                const taskPriority = primaryPremise.getPriority?.() ?? primaryPremise.priority ?? 0;
+                const taskPriority = primaryPremise.budget?.priority ?? 0.5;
                 const termStr = primaryPremise.term?.toString?.() ?? String(primaryPremise.term ?? '');
                 return taskPriority >= minPriority && hasPattern(primaryPremise, patterns);
             },
@@ -155,52 +155,84 @@ Focus on conveying the core meaning and implication of the statement.`;
     static createTaskGenerator(generatorType, options = {}) {
         switch (generatorType) {
             case 'multipleSubTasks':
-                return (processedOutput, originalTask) => {
+                return (processedOutput, originalTask, secondaryTask, context) => {
                     if (!Array.isArray(processedOutput) || !processedOutput.length) return [];
+                    const termFactory = context?.termFactory || options.termFactory;
+
+                    if (!termFactory) {
+                        console.warn('LMRuleUtils: termFactory not provided in context');
+                        return [];
+                    }
 
                     const confMult = options.confidenceMultiplier ?? 0.9;
                     const priorMult = options.priorityMultiplier ?? 0.9;
                     const durMult = options.durabilityMultiplier ?? 0.8;
 
-                    return processedOutput.map(output => new Task(
-                        output,
-                        originalTask.punctuation,
-                        {
-                            frequency: originalTask.truth.f,
-                            confidence: originalTask.truth.c * confMult
-                        },
-                        null,
-                        null,
-                        Math.max(0.1, (originalTask.priority ?? 0.5) * priorMult),
-                        originalTask.durability * durMult
-                    ));
+                    return processedOutput.map(output => {
+                        const term = termFactory.atomic(String(output));
+                        const punctuation = originalTask.punctuation;
+                        const truth = punctuation === Punctuation.QUESTION ? null : {
+                            frequency: originalTask.truth?.f || 0.5,
+                            confidence: (originalTask.truth?.c || 0.9) * confMult
+                        };
+
+                        return new Task({
+                            term,
+                            punctuation,
+                            truth,
+                            budget: {
+                                priority: Math.max(0.1, (originalTask.priority ?? 0.5) * priorMult),
+                                durability: (originalTask.durability ?? 0.5) * durMult,
+                                quality: originalTask.budget?.quality ?? 0.5
+                            }
+                        });
+                    });
                 };
 
             case 'singleTask':
-                return (processedOutput, originalTask) => {
+                return (processedOutput, originalTask, secondaryTask, context) => {
                     if (!processedOutput) return [];
+                    const termFactory = context?.termFactory || options.termFactory;
+
+                    if (!termFactory) {
+                        console.warn('LMRuleUtils: termFactory not provided in context');
+                        return [];
+                    }
 
                     const punctuation = options.punctuation ?? originalTask.punctuation;
-                    const freq = options.frequency ?? originalTask.truth.f;
-                    const conf = options.confidence ?? originalTask.truth.c * (options.confidenceMultiplier ?? 1.0);
+                    const freq = options.frequency ?? (originalTask.truth?.f || 0.5);
+                    const conf = options.confidence ?? ((originalTask.truth?.c || 0.9) * (options.confidenceMultiplier ?? 1.0));
                     const prior = options.priority ?? originalTask.priority * (options.priorityMultiplier ?? 1.0);
                     const dur = options.durability ?? originalTask.durability;
 
-                    return [new Task(
-                        processedOutput,
+                    const term = termFactory.atomic(String(processedOutput));
+                    const truth = punctuation === Punctuation.QUESTION ? null : {frequency: freq, confidence: conf};
+
+                    return [new Task({
+                        term,
                         punctuation,
-                        {frequency: freq, confidence: conf},
-                        null,
-                        null,
-                        prior,
-                        dur
-                    )];
+                        truth,
+                        budget: {
+                            priority: prior,
+                            durability: dur,
+                            quality: originalTask.budget?.quality ?? 0.5
+                        }
+                    })];
                 };
 
             default:
-                return (processedOutput, originalTask) => {
+                return (processedOutput, originalTask, secondaryTask, context) => {
                     if (!processedOutput) return [];
-                    return [new Task(processedOutput, originalTask.punctuation, originalTask.truth)];
+                    const termFactory = context?.termFactory || options.termFactory;
+                    if (!termFactory) return [];
+                    const term = termFactory.atomic(String(processedOutput));
+
+                    return [new Task({
+                        term,
+                        punctuation: originalTask.punctuation,
+                        truth: originalTask.truth,
+                        budget: originalTask.budget
+                    })];
                 };
         }
     }
