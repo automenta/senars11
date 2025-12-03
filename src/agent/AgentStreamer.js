@@ -1,5 +1,6 @@
 import {HumanMessage, ToolMessage} from "@langchain/core/messages";
 import {handleError} from '../util/ErrorHandler.js';
+import {AGENT_EVENTS} from './constants.js';
 
 export class AgentStreamer {
     constructor(agent) {
@@ -53,6 +54,13 @@ export class AgentStreamer {
     }
 
     async* _streamAssistantResponse(messages, provider) {
+        if (this.agent.emit) {
+            this.agent.emit(AGENT_EVENTS.LLM_PROMPT, {
+                messages: messages.map(m => ({type: m.constructor.name, content: m.content})),
+                provider: provider.modelName || provider.model?.name || 'unknown'
+            });
+        }
+
         let model = provider.model || provider;
         let stream;
 
@@ -79,6 +87,14 @@ export class AgentStreamer {
                 this._collectToolCalls(chunk.tool_calls);
             }
         }
+
+        if (this.agent.emit) {
+            this.agent.emit(AGENT_EVENTS.LLM_RESPONSE, {
+                content: assistantContent,
+                provider: provider.modelName || provider.model?.name || 'unknown'
+            });
+        }
+
         return assistantContent;
     }
 
@@ -89,6 +105,15 @@ export class AgentStreamer {
     async* _executeAllToolCalls(toolCalls, originalInput, assistantContent, provider) {
         for (const tc of toolCalls) {
             yield {type: "tool_call", name: tc.name, args: tc.args};
+
+            if (this.agent.emit) {
+                this.agent.emit(AGENT_EVENTS.TOOL_CALL, {
+                    name: tc.name,
+                    args: tc.args,
+                    id: tc.id
+                });
+            }
+
             const result = await this._executeTool(tc.name, tc.args, provider);
             yield {type: "tool_result", content: result};
 

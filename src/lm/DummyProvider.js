@@ -15,6 +15,19 @@ export class DummyProvider extends BaseProvider {
         return this.responseTemplate.replace('{prompt}', prompt);
     }
 
+    async invoke(prompt) {
+        return this.generateText(prompt);
+    }
+
+    async* streamText(prompt, options = {}) {
+        const text = await this.generateText(prompt, options);
+        const chunkSize = 5;
+        for (let i = 0; i < text.length; i += chunkSize) {
+            yield text.substring(i, Math.min(i + chunkSize, text.length));
+            if (this.latency > 0) await new Promise(resolve => setTimeout(resolve, 10));
+        }
+    }
+
     async generateEmbedding(text) {
         if (this.latency > 0) {
             await new Promise(resolve => setTimeout(resolve, this.latency));
