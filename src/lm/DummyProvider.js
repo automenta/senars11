@@ -23,7 +23,7 @@ export class DummyProvider extends BaseProvider {
         const text = await this.generateText(prompt, options);
         const chunkSize = 5;
         for (let i = 0; i < text.length; i += chunkSize) {
-            yield text.substring(i, Math.min(i + chunkSize, text.length));
+            yield text.slice(i, i + chunkSize);
             if (this.latency > 0) await new Promise(resolve => setTimeout(resolve, 10));
         }
     }
@@ -33,10 +33,7 @@ export class DummyProvider extends BaseProvider {
             await new Promise(resolve => setTimeout(resolve, this.latency));
         }
 
-        const embedding = [];
-        for (let i = 0; i < 16; i++) {
-            embedding.push(Math.sin(text.charCodeAt(i % text.length) + i));
-        }
-        return embedding;
+        // Generate deterministic embedding based on text
+        return Array.from({length: 16}, (_, i) => Math.sin(text.charCodeAt(i % text.length) + i));
     }
 }

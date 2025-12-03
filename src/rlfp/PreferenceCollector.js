@@ -1,13 +1,6 @@
 import fs from 'fs';
 import inquirer from 'inquirer';
 
-/**
- * Collects user preferences on reasoning trajectories.
- *
- * This component is responsible for presenting pairs of reasoning trajectories to the user
- * and collecting their feedback on which trajectory they prefer. This feedback is used
- * by the RLFPLearner to fine-tune the agent's language model.
- */
 class PreferenceCollector {
     constructor() {
         this.preferences = [];
@@ -25,12 +18,12 @@ class PreferenceCollector {
 
         console.log('\n==========================================');
         console.log('=== Trajectory A ===');
-        console.log(this._formatTrajectoryForDisplay(trajectoryA));
+        console.log(this._formatTrajectory(trajectoryA));
         console.log('\n=== Trajectory B ===');
-        console.log(this._formatTrajectoryForDisplay(trajectoryB));
+        console.log(this._formatTrajectory(trajectoryB));
         console.log('==========================================\n');
 
-        const answer = await inquirer.prompt([{
+        const { preference } = await inquirer.prompt([{
             type: 'list',
             name: 'preference',
             message: 'Which trajectory do you prefer?',
@@ -41,50 +34,46 @@ class PreferenceCollector {
             ]
         }]);
 
-        if (answer.preference === 'SKIP') return null;
+        if (preference === 'SKIP') return null;
 
-        const preferenceData = {
+        const data = {
             trajectoryA,
             trajectoryB,
-            preference: answer.preference,
+            preference,
             timestamp: Date.now(),
             files: {A: pathA, B: pathB}
         };
 
-        this.preferences.push(preferenceData);
-        return preferenceData;
+        this.preferences.push(data);
+        return data;
     }
 
-    async loadTrajectory(filePath) {
-        return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+    async loadTrajectory(path) {
+        return JSON.parse(fs.readFileSync(path, 'utf-8'));
     }
 
-    _formatTrajectoryForDisplay(trajectory) {
-        if (!Array.isArray(trajectory)) return "Invalid trajectory format";
+    _formatTrajectory(traj) {
+        if (!Array.isArray(traj)) return "Invalid trajectory";
 
-        return trajectory.map(step => {
-            let content = "";
+        return traj.map(step => {
             const ts = step.timestamp ? new Date(step.timestamp).toISOString().split('T')[1].split('.')[0] : '';
+            let content = JSON.stringify(step);
 
             if (step.type === 'llm_prompt') {
-                const msgContent = step.messages?.[0]?.content || step.messages || '';
-                const preview = typeof msgContent === 'string' ? msgContent.substring(0, 100) : JSON.stringify(msgContent);
-                content = `LLM Prompt: "${preview.replace(/\n/g, ' ')}..."`;
+                const msg = step.messages?.[0]?.content || step.messages || '';
+                const txt = typeof msg === 'string' ? msg.slice(0, 100) : JSON.stringify(msg);
+                content = `LLM Prompt: "${txt.replace(/\n/g, ' ')}..."`;
             } else if (step.type === 'tool_call') {
-                content = `Tool Call: ${step.name}(${JSON.stringify(step.args)})`;
+                content = `Tool: ${step.name}(${JSON.stringify(step.args)})`;
             } else if (step.type === 'lm_response') {
-                 // Assuming agent response or similar
                  content = `Response: ${JSON.stringify(step.content || step)}`;
-            } else {
-                content = JSON.stringify(step);
             }
             return `${ts} [${step.type}] ${content}`;
         }).join('\n');
     }
 
-    savePreferences(filePath) {
-        fs.writeFileSync(filePath, JSON.stringify(this.preferences, null, 2));
-        console.log(`Preferences saved to ${filePath}`);
+    savePreferences(path) {
+        fs.writeFileSync(path, JSON.stringify(this.preferences, null, 2));
     }
 }
 

@@ -54,12 +54,10 @@ export class AgentStreamer {
     }
 
     async* _streamAssistantResponse(messages, provider) {
-        if (this.agent.emit) {
-            this.agent.emit(AGENT_EVENTS.LLM_PROMPT, {
-                messages: messages.map(m => ({type: m.constructor.name, content: m.content})),
-                provider: provider.modelName || provider.model?.name || 'unknown'
-            });
-        }
+        this._emit(AGENT_EVENTS.LLM_PROMPT, {
+            messages: messages.map(m => ({type: m.constructor.name, content: m.content})),
+            provider: provider.modelName || provider.model?.name || 'unknown'
+        });
 
         let model = provider.model || provider;
         let stream;
@@ -88,12 +86,10 @@ export class AgentStreamer {
             }
         }
 
-        if (this.agent.emit) {
-            this.agent.emit(AGENT_EVENTS.LLM_RESPONSE, {
-                content: assistantContent,
-                provider: provider.modelName || provider.model?.name || 'unknown'
-            });
-        }
+        this._emit(AGENT_EVENTS.LLM_RESPONSE, {
+            content: assistantContent,
+            provider: provider.modelName || provider.model?.name || 'unknown'
+        });
 
         return assistantContent;
     }
@@ -106,13 +102,11 @@ export class AgentStreamer {
         for (const tc of toolCalls) {
             yield {type: "tool_call", name: tc.name, args: tc.args};
 
-            if (this.agent.emit) {
-                this.agent.emit(AGENT_EVENTS.TOOL_CALL, {
-                    name: tc.name,
-                    args: tc.args,
-                    id: tc.id
-                });
-            }
+            this._emit(AGENT_EVENTS.TOOL_CALL, {
+                name: tc.name,
+                args: tc.args,
+                id: tc.id
+            });
 
             const result = await this._executeTool(tc.name, tc.args, provider);
             yield {type: "tool_result", content: result};
@@ -152,6 +146,10 @@ export class AgentStreamer {
             console.error('Streaming execution error:', {error, input});
         }
         yield {type: "error", content: `❌ Streaming error: ${error.message}`};
+    }
+
+    _emit(event, payload) {
+        this.agent.emit?.(event, payload);
     }
 
     async processInputStreaming(input, onChunk, onStep) {
