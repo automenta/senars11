@@ -5,11 +5,12 @@ import {Truth} from '../../../Truth.js';
 import {Term} from '../../../term/Term.js';
 
 export const createConceptElaborationRule = (dependencies) => {
-    const {lm, parser, termFactory} = dependencies;
+    const {lm, parser, termFactory, eventBus} = dependencies;
 
     return LMRule.create({
         id: 'concept-elaboration',
         lm,
+        eventBus,
         name: 'Concept Elaboration Rule',
         description: 'Generates potential properties or classifications for a concept using commonsense knowledge.',
         priority: 0.7,
