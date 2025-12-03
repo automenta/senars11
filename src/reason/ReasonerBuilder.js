@@ -171,7 +171,8 @@ export class ReasonerBuilder {
              const rule = createNarseseTranslationRule({
                  lm: dependencies.lm,
                  termFactory: dependencies.termFactory,
-                 parser: dependencies.parser
+                 parser: dependencies.parser,
+                 eventBus: dependencies.eventBus
              });
              ruleExecutor.register(rule);
 
@@ -179,7 +180,9 @@ export class ReasonerBuilder {
              const elaborationRule = createConceptElaborationRule({
                  lm: dependencies.lm,
                  parser: dependencies.parser,
-                 termFactory: dependencies.termFactory
+                 termFactory: dependencies.termFactory,
+                 eventBus: dependencies.eventBus,
+                 memory: dependencies.memory
              });
              ruleExecutor.register(elaborationRule);
 
@@ -188,7 +191,8 @@ export class ReasonerBuilder {
                  lm: dependencies.lm,
                  memory: dependencies.memory,
                  embeddingLayer: dependencies.embeddingLayer,
-                 termFactory: dependencies.termFactory
+                 termFactory: dependencies.termFactory,
+                 eventBus: dependencies.eventBus
              });
              ruleExecutor.register(analogyRule);
         }

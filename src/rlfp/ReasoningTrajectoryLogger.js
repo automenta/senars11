@@ -16,6 +16,11 @@ class ReasoningTrajectoryLogger {
 
         this.eventBus.on(AGENT_EVENTS.LLM_PROMPT, (data) => this.logStep('llm_prompt', data));
         this.eventBus.on(AGENT_EVENTS.TOOL_CALL, (data) => this.logStep('tool_call', data));
+
+        // Listen to granular hybrid reasoning events
+        this.eventBus.on('lm.prompt', (data) => this.logStep('lm_prompt', data));
+        this.eventBus.on('lm.response', (data) => this.logStep('lm_response', data));
+        this.eventBus.on('lm.failure', (data) => this.logStep('lm_failure', data));
     }
 
     startTrajectory() {

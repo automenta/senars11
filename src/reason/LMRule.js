@@ -9,6 +9,7 @@ export class LMRule extends Rule {
     constructor(id, lm, config = {}) {
         super(id, 'lm', config.priority ?? 1.0, config);
         this.lm = lm;
+        this.eventBus = config.eventBus || null;
 
         this.config = {
             condition: this._getDefaultCondition(config),
@@ -89,8 +90,22 @@ export class LMRule extends Rule {
         try {
             const prompt = await this.generatePrompt(primaryPremise, secondaryPremise, context);
 
+            this._emitEvent('lm.prompt', {
+                ruleId: this.id,
+                prompt,
+                timestamp: Date.now()
+            });
+
             // Execute LM through Circuit Breaker
             const lmResponse = await this.circuitBreaker.execute(() => this.executeLM(prompt));
+
+            this._emitEvent('lm.response', {
+                ruleId: this.id,
+                prompt,
+                response: lmResponse,
+                duration: Date.now() - startTime,
+                timestamp: Date.now()
+            });
 
             if (!lmResponse) {
                 this._updateExecutionStats(false, Date.now() - startTime);
@@ -104,6 +119,14 @@ export class LMRule extends Rule {
             return newTasks;
         } catch (error) {
             console.error(`Error in LMRule ${this.id}:`, error);
+
+            this._emitEvent('lm.failure', {
+                ruleId: this.id,
+                error: error.message,
+                duration: Date.now() - startTime,
+                timestamp: Date.now()
+            });
+
             this._updateExecutionStats(false, Date.now() - startTime);
             return [];
         }
@@ -118,6 +141,12 @@ export class LMRule extends Rule {
         const response = await this._callLMInterface(prompt);
         this._updateLMStats(prompt.length + (response?.length ?? 0), Date.now() - startTime);
         return response;
+    }
+
+    _emitEvent(eventName, data) {
+        if (this.eventBus) {
+            this.eventBus.emit(eventName, data);
+        }
     }
 
     _callLMInterface(prompt) {
