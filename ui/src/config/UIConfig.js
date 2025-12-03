@@ -39,6 +39,13 @@ export const UIConfig = {
         sidebarPanel: 'sidebar-panel',
         mainPanel: 'main-panel',
 
+        // Metrics & Trace
+        metricsPanel: 'metrics-panel',
+        tracePanel: 'trace-panel',
+        btnToggleTrace: 'btn-toggle-trace', // Toggle between Log and Trace
+        logView: 'log-view-container', // Wrapper for logs
+        traceView: 'trace-view-container', // Wrapper for traces
+
         // Settings
         btnSave: 'btn-save',
         btnLoad: 'btn-load',

@@ -34,7 +34,10 @@ export class SessionServerAdapter {
             'reasoning.step', 'concept.created', 'task.completed', 'reasoning.derivation',
 
             // Logs
-            'log'
+            'log',
+
+            // Metrics
+            'metrics.updated', 'metrics.anomaly', 'metrics.threshold_alert', 'metrics.optimization_recommendations'
         ];
 
         forwardedEvents.forEach(event => {

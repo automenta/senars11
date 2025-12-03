@@ -47,4 +47,28 @@ export class ControlHandlers {
     handleClearLogs() {
         this.commandProcessor.processCommand('/clear');
     }
+
+    handleToggleTrace() {
+        const btn = this.uiElements.get('btnToggleTrace');
+        const logView = this.uiElements.get('logView');
+        const traceView = this.uiElements.get('traceView');
+
+        if (!logView || !traceView) return;
+
+        if (logView.classList.contains('active')) {
+            // Switch to Trace
+            logView.classList.remove('active');
+            logView.classList.add('hidden');
+            traceView.classList.remove('hidden');
+            traceView.classList.add('active');
+            if (btn) btn.textContent = 'Show Logs';
+        } else {
+            // Switch to Logs
+            traceView.classList.remove('active');
+            traceView.classList.add('hidden');
+            logView.classList.remove('hidden');
+            logView.classList.add('active');
+            if (btn) btn.textContent = 'Show Trace';
+        }
+    }
 }

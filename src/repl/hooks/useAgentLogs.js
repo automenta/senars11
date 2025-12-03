@@ -138,7 +138,16 @@ export const useAgentLogs = (engine) => {
             'command.error': (data) => addLog(`❌ Command Error: ${typeof data === 'object' && data.error ? data.error : (typeof data === 'string' ? data : JSON.stringify(data))}`, 'error'),
             'agent.action': (data) => handleGenericAgentEvent('🤖 AGENT ACTION', data),
             'agent.decision': (data) => handleGenericAgentEvent('🧠 AGENT DECISION', data),
-            'hybrid.reasoning': (data) => handleGenericAgentEvent('🔗 HYBRID REASONING', data)
+            'hybrid.reasoning': (data) => handleGenericAgentEvent('🔗 HYBRID REASONING', data),
+            'reasoning.derivation': (data) => {
+                // Only show if trace is enabled in agent settings (managed by TraceCommand)
+                if (engine.displaySettings?.trace) {
+                    const task = data.derivedTask;
+                    const taskStr = task && task.term ? task.term.toString() : JSON.stringify(task);
+                    const truth = task && task.truth ? `{${task.truth.frequency.toFixed(2)}, ${task.truth.confidence.toFixed(2)}}` : '';
+                    addLog(`🔍 TRACE: ${taskStr} ${truth} [${data.source}]`, 'trace');
+                }
+            }
         };
 
         Object.entries(handlers).forEach(([event, handler]) => engine.on(event, handler));
