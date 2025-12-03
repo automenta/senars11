@@ -63,6 +63,7 @@ export class LMRuleUtils {
             condition: (primaryPremise) => {
                 const taskPriority = primaryPremise.budget?.priority ?? 0.5;
                 const termStr = primaryPremise.term?.toString?.() ?? String(primaryPremise.term ?? '');
+                // console.log(`[LMRuleUtils] Checking condition: priority=${taskPriority}, min=${minPriority}, term=${termStr}, matches=${hasPattern(primaryPremise, patterns)}`);
                 return taskPriority >= minPriority && hasPattern(primaryPremise, patterns);
             },
 

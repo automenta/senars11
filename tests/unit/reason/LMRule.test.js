@@ -77,12 +77,12 @@ describe('LMRule', () => {
         const testTask = new Task({
             term: termFactory.atomic('test'),
             punctuation: Punctuation.BELIEF,
-            truth: new Truth(0.9, 0.9)
+            truth: {frequency: 0.9, confidence: 0.9}
         });
         const otherTask = new Task({
             term: termFactory.atomic('other'),
             punctuation: Punctuation.BELIEF,
-            truth: new Truth(0.9, 0.9)
+            truth: {frequency: 0.9, confidence: 0.9}
         });
 
         expect(rule.canApply(testTask, null, {})).toBe(true);
@@ -101,7 +101,7 @@ describe('LMRule', () => {
         const testTask = new Task({
             term: termFactory.atomic('sample term'),
             punctuation: Punctuation.BELIEF,
-            truth: new Truth(0.9, 0.9)
+            truth: {frequency: 0.9, confidence: 0.9}
         });
         const prompt = rule.generatePrompt(testTask, null, {});
 
@@ -118,11 +118,11 @@ describe('LMRule', () => {
             generate: (output) => output.map(item => new Task({
                 term: termFactory.atomic(item.trim()),
                 punctuation: Punctuation.BELIEF,
-                truth: new Truth(0.9, 0.9)
+                truth: {frequency: 0.9, confidence: 0.9}
             }))
         });
 
-        const result = await rule.apply(new Task({term: termFactory.atomic('test goal'), punctuation: Punctuation.GOAL, truth: new Truth(1.0, 0.9)}), null, {});
+        const result = await rule.apply(new Task({term: termFactory.atomic('test goal'), punctuation: Punctuation.GOAL, truth: {frequency: 1.0, confidence: 0.9}}), null, {});
 
         expect(result).toHaveLength(3);
         expect(result[0].term.name).toContain('Sub-goal: research topic');
@@ -146,11 +146,11 @@ describe('LMRule', () => {
             generate: (output) => [new Task({
                 term: termFactory.atomic(output),
                 punctuation: Punctuation.BELIEF,
-                truth: new Truth(0.9, 0.9)
+                truth: {frequency: 0.9, confidence: 0.9}
             })]
         });
 
-        const result = await rule.apply(new Task({term: termFactory.atomic('test'), punctuation: Punctuation.BELIEF, truth: new Truth(0.9, 0.9)}), null, {});
+        const result = await rule.apply(new Task({term: termFactory.atomic('test'), punctuation: Punctuation.BELIEF, truth: {frequency: 0.9, confidence: 0.9}}), null, {});
         expect(result).toEqual([]);
 
         consoleErrorSpy.mockRestore();
@@ -227,7 +227,7 @@ describe('LMRuleUtils', () => {
             term: termFactory.atomic('Solve the equation'),
             punctuation: Punctuation.GOAL,
             budget: {priority: 0.8},
-            truth: new Truth(1.0, 0.9)
+            truth: {frequency: 1.0, confidence: 0.9}
         });
 
         expect(rule.canApply(task)).toBe(true);
