@@ -1,6 +1,6 @@
-import {jest, describe, beforeAll, afterAll, test, expect} from '@jest/globals';
+import {afterAll, beforeAll, describe, expect, jest, test} from '@jest/globals';
 import {App} from '../../../src/app/App.js';
-import {Task, Punctuation} from '../../../src/task/Task.js';
+import {Punctuation, Task} from '../../../src/task/Task.js';
 import {TermFactory} from '../../../src/term/TermFactory.js';
 
 describe('Advanced Hybrid Reasoning (Mocked)', () => {

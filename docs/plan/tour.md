@@ -2,11 +2,13 @@
 
 ## Overview
 
-This proposal outlines comprehensive enhancements to the SeNARS tour system to improve functionality evaluation, execution speed, and API ergonomics for both developers and educational users.
+This proposal outlines comprehensive enhancements to the SeNARS tour system to improve functionality evaluation,
+execution speed, and API ergonomics for both developers and educational users.
 
 ## Current State Analysis
 
 The current `scripts/run-tour.js` system provides:
+
 - Timed screenshot capture mode
 - Event-driven screenshot capture (default)
 - Log-only mode for quick validation
@@ -24,6 +26,7 @@ The current `scripts/run-tour.js` system provides:
 ### 1. Comprehensive System Functionality Evaluation
 
 #### Specialized Demo Categories
+
 Create focused demo files for each system capability:
 
 - **Core Reasoning**: `basic-reasoning.nars`, `syllogistic-reasoning.nars`, `causal-reasoning.nars`
@@ -34,6 +37,7 @@ Create focused demo files for each system capability:
 - **Complex Inference**: `multi-step-inference.nars`, `hybrid-reasoning.nars`
 
 #### Automated Test Suite
+
 - **Regression Testing**: Compare outputs against expected baselines
 - **Performance Benchmarks**: Measure derivation throughput and memory usage
 - **Stress Testing**: Large input validation and stability checks
@@ -42,7 +46,9 @@ Create focused demo files for each system capability:
 ### 2. Performance and Asynchronous Optimizations
 
 #### Server Readiness Detection
+
 Replace fixed delays with dynamic readiness checks:
+
 ```javascript
 // Instead of 10s fixed wait, check actual server status
 async function waitForServerReady() {
@@ -53,14 +59,18 @@ async function waitForServerReady() {
 ```
 
 #### Parallel Processing
+
 Execute multiple evaluations concurrently:
+
 ```javascript
 // Run independent evaluations in parallel
 await Promise.all(tours.map(tour => runTour(tour, { parallel: true })));
 ```
 
 #### Intelligent Timeout Logic
+
 Implement event-based termination:
+
 ```javascript
 // Stop after specific conditions instead of time-based
 if (expectedDerivationsReceived || maxDerivationCountReached) {
@@ -69,6 +79,7 @@ if (expectedDerivationsReceived || maxDerivationCountReached) {
 ```
 
 #### Resource Optimization
+
 - Configure lightweight settings for evaluation
 - Reduce memory limits during tests
 - Disable non-essential components
@@ -77,6 +88,7 @@ if (expectedDerivationsReceived || maxDerivationCountReached) {
 ### 3. Enhanced API Ergonomics
 
 #### Simplified Command Interface
+
 ```bash
 # Quick evaluations
 node scripts/eval basic-reasoning                 # Default evaluation
@@ -86,23 +98,27 @@ node scripts/eval -t detailed-trace              # Step-by-step trace
 ```
 
 #### Interactive Evaluation Mode
+
 ```bash
 node scripts/eval -i                             # Real-time derivation display
 ```
 
 #### Output Enhancement
+
 - **HTML Reports**: Generate detailed visual reports
 - **Comparison Tables**: Show performance/behavior differences
 - **Visualization**: Graph representations of concept networks
 - **Timing Analysis**: Detailed execution time breakdowns
 
 #### Configuration Presets
+
 - `fast`: Minimal logging, optimized for speed
 - `detail`: Full diagnostic information
 - `demo`: Presentation-optimized display
 - `benchmark`: Performance-focused metrics
 
 #### Advanced Filtering
+
 ```bash
 # Filter by reasoning type
 node scripts/eval --type syllogistic             # Syllogistic demos only
@@ -111,6 +127,7 @@ node scripts/eval --compare baseline vs optimized # Compare modes
 ```
 
 #### Educational Enhancements
+
 ```bash
 node scripts/eval -e basic-reasoning             # Educational mode with explanations
 node scripts/eval -s step-by-step                # Detailed reasoning steps
@@ -118,6 +135,7 @@ node scripts/eval -x expert-mode                 # Advanced user features
 ```
 
 #### Programmatic API
+
 ```javascript
 import { evaluate, compare, benchmark } from './evaluation-api.js';
 
@@ -136,17 +154,20 @@ const comparison = await compare('event-driven', 'timed', {
 ### 4. Educational and Demonstration Features
 
 #### Step-by-Step Visualization
+
 - Show reasoning chain progression
 - Highlight concept activations
 - Display truth value changes over time
 
 #### Interactive Demonstrations
+
 - Pause/resume execution
 - Step through derivations manually
 - Modify inputs during execution
 - View internal state changes
 
 #### Comparison Tools
+
 - Side-by-side mode comparisons
 - Performance metric visualization
 - Memory usage over time
@@ -155,21 +176,25 @@ const comparison = await compare('event-driven', 'timed', {
 ## Implementation Priorities
 
 ### Phase 1: Foundation (Weeks 1-2)
+
 - Implement server readiness detection
 - Add parallel processing capabilities
 - Create specialized demo files
 
 ### Phase 2: API Enhancement (Weeks 3-4)
+
 - Develop simplified command interface
 - Add configuration presets
 - Implement advanced filtering
 
 ### Phase 3: Educational Features (Weeks 5-6)
+
 - Add step-by-step visualization
 - Implement interactive demo modes
 - Create educational enhancement tools
 
 ### Phase 4: Optimization and Testing (Weeks 7-8)
+
 - Performance benchmarking
 - Comprehensive test suite
 - Documentation and user guides
@@ -193,18 +218,21 @@ const comparison = await compare('event-driven', 'timed', {
 ## Additional Considerations
 
 ### Integration Testing vs Unit Tests
+
 - **Purpose**: This system complements existing unit/integration tests (`tests/`) with user-experience simulation
 - **Focus**: High-level integration testing that validates end-to-end user workflows
 - **Scope**: System behavior under realistic conditions rather than isolated component testing
 - **Validation**: Ensures components work together as expected from user perspective
 
 ### Realistic User Simulation
+
 - **Scenario Coverage**: Test real usage patterns and input sequences
 - **Error Handling**: Validate graceful degradation with malformed inputs
 - **Performance Under Load**: Simulate concurrent usage patterns
 - **Resource Management**: Monitor memory and CPU usage during realistic operations
 
 ### Educational and Demonstration Extensions
+
 - **Progressive Learning**: Beginner → Intermediate → Advanced demonstration paths
 - **Real-World Examples**: Use cases that mirror actual application scenarios
 - **Interactive Tutorials**: Guided walkthroughs with hands-on exercises
@@ -212,18 +240,21 @@ const comparison = await compare('event-driven', 'timed', {
 - **Comparison Examples**: Show before/after reasoning states
 
 ### Cross-Platform and Accessibility
+
 - **Platform Compatibility**: Ensure consistent behavior across operating systems
 - **Accessibility Features**: Screen reader compatibility, keyboard navigation
 - **Internationalization**: Support for multiple languages in educational content
 - **Mobile Adaptation**: Responsive design for demonstrations on various devices
 
 ### Monitoring and Analytics
+
 - **Usage Analytics**: Track which demos are most helpful for users
 - **Error Detection**: Automatically identify and report unexpected behaviors
 - **Performance Monitoring**: Continuous tracking of system responsiveness
 - **User Feedback Integration**: Collect and incorporate user suggestions
 
 ### Security and Isolation
+
 - **Safe Execution**: Isolated environments for demonstration scenarios
 - **Input Validation**: Prevent potentially harmful inputs during demos
 - **Resource Limits**: Prevent resource exhaustion during testing

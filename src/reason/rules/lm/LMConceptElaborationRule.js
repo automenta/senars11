@@ -61,17 +61,17 @@ export const createConceptElaborationRule = (dependencies) => {
 
             const parsed = tryParseNarsese(processedOutput, parser);
             if (parsed && (parsed.term || parsed instanceof Term)) {
-                 termToCreate = parsed.term || parsed;
-                 if (parsed.punctuation) punctuation = parsed.punctuation;
-                 if (parsed.truthValue) truth = new Truth(parsed.truthValue.frequency, parsed.truthValue.confidence);
+                termToCreate = parsed.term || parsed;
+                if (parsed.punctuation) punctuation = parsed.punctuation;
+                if (parsed.truthValue) truth = new Truth(parsed.truthValue.frequency, parsed.truthValue.confidence);
             }
 
             if (!termToCreate) {
-                 const fallback = createFallbackTerm(processedOutput, termFactory);
-                 if (fallback) {
-                     termToCreate = fallback;
-                     truth = new Truth(0.8, 0.7);
-                 }
+                const fallback = createFallbackTerm(processedOutput, termFactory);
+                if (fallback) {
+                    termToCreate = fallback;
+                    truth = new Truth(0.8, 0.7);
+                }
             }
 
             if (!termToCreate) return [];

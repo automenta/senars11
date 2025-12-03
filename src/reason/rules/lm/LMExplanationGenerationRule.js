@@ -5,7 +5,7 @@
  */
 
 import {LMRule} from '../../LMRule.js';
-import {Task, Punctuation} from '../../../task/Task.js';
+import {Punctuation, Task} from '../../../task/Task.js';
 import {isBelief, KeywordPatterns} from '../../RuleHelpers.js';
 
 export const createExplanationGenerationRule = (dependencies) => {

@@ -1,4 +1,3 @@
-
 import {jest} from '@jest/globals';
 import {Reasoner} from '../../../src/reason/Reasoner.js';
 import {Focus} from '../../../src/memory/Focus.js';
@@ -34,7 +33,8 @@ describe('Reasoner', () => {
             reasoner.start();
             expect(reasoner.isRunning).toBe(true);
 
-            const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+            const warn = jest.spyOn(console, 'warn').mockImplementation(() => {
+            });
             reasoner.start();
             expect(warn).toHaveBeenCalledWith('Reasoner is already running');
             warn.mockRestore();
@@ -57,7 +57,7 @@ describe('Reasoner', () => {
             reasoner = createTestReasoner({
                 focus: new Focus(),
                 memory: createTestMemory(),
-                config: { executionMode: 'pipeline' }
+                config: {executionMode: 'pipeline'}
             });
         });
 

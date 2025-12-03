@@ -1,4 +1,3 @@
-
 class ForgetPolicy {
     selectForRemoval(items, itemData, insertionOrder, accessTimes) {
     }

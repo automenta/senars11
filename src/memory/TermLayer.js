@@ -110,7 +110,9 @@ export class TermLayer extends Layer {
             target,
             data,
             budget: {priority: data.priority},
-            toString() { return this.id; }
+            toString() {
+                return this.id;
+            }
         };
     }
 

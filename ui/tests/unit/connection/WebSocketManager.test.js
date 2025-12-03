@@ -1,4 +1,3 @@
-
 import {jest} from '@jest/globals';
 import {WebSocketManager} from '../../../src/connection/WebSocketManager.js';
 import {Config} from '../../../src/config/Config.js';
@@ -13,8 +12,12 @@ global.WebSocket = class MockWebSocket {
             this.onopen?.();
         }, 10);
     }
-    send() {}
-    close() {}
+
+    send() {
+    }
+
+    close() {
+    }
 };
 global.WebSocket.OPEN = 1;
 

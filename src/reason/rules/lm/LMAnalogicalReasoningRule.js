@@ -5,7 +5,7 @@
  */
 
 import {LMRule} from '../../LMRule.js';
-import {Task, Punctuation} from '../../../task/Task.js';
+import {Punctuation, Task} from '../../../task/Task.js';
 import {hasPattern, isGoal, isQuestion, KeywordPatterns} from '../../RuleHelpers.js';
 
 /**
@@ -49,7 +49,7 @@ export const createAnalogicalReasoningRule = (dependencies) => {
                         const topSimilar = similar.slice(0, 3).map(r => r.item);
 
                         if (topSimilar.length > 0) {
-                             contextStr = `\nContext: I recall these similar concepts/problems: ${topSimilar.join(", ")}\n`;
+                            contextStr = `\nContext: I recall these similar concepts/problems: ${topSimilar.join(", ")}\n`;
                         }
                     }
                 } catch (e) {
@@ -72,8 +72,8 @@ Based on that analogy, describe a step-by-step solution for the original problem
 
             const termFactory = context?.termFactory || dependencies.termFactory;
             if (!termFactory) {
-                 console.warn('AnalogicalReasoning: No termFactory available');
-                 return [];
+                console.warn('AnalogicalReasoning: No termFactory available');
+                return [];
             }
 
             const newTermName = `solution_proposal_for_(${primaryPremise.term?.toString?.() || 'unknown'})`;

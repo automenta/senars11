@@ -5,7 +5,7 @@
  */
 
 import {LMRule} from '../../LMRule.js';
-import {Task, Punctuation} from '../../../task/Task.js';
+import {Punctuation, Task} from '../../../task/Task.js';
 import {hasPattern, isGoal, isQuestion, KeywordPatterns} from '../../RuleHelpers.js';
 
 export const createMetaReasoningGuidanceRule = (dependencies) => {

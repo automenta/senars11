@@ -10,7 +10,7 @@ describe('Metacognition', () => {
         eventBus = new EventBus();
         nar = {
             input: jest.fn(),
-            config: { get: jest.fn() },
+            config: {get: jest.fn()},
             logInfo: jest.fn(),
         };
     });
@@ -18,7 +18,7 @@ describe('Metacognition', () => {
     test('should load analyzers specified in the config', () => {
         metacognition = new Metacognition({
             analyzers: ['PerformanceAnalyzer'],
-            PerformanceAnalyzer: { avgCycleTimeThreshold: 50 },
+            PerformanceAnalyzer: {avgCycleTimeThreshold: 50},
         }, eventBus, nar);
 
         expect(metacognition.analyzers).toHaveLength(1);
@@ -26,7 +26,7 @@ describe('Metacognition', () => {
     });
 
     test('should handle events and trigger analyzers', () => {
-        metacognition = new Metacognition({ analyzers: ['PerformanceAnalyzer'] }, eventBus, nar);
+        metacognition = new Metacognition({analyzers: ['PerformanceAnalyzer']}, eventBus, nar);
         metacognition.start();
 
         const analyzeSpy = jest.spyOn(metacognition.analyzers[0], 'analyze');
@@ -38,7 +38,7 @@ describe('Metacognition', () => {
     test('should process findings and input them into NAR', () => {
         metacognition = new Metacognition({
             analyzers: ['PerformanceAnalyzer'],
-            PerformanceAnalyzer: { avgCycleTimeThreshold: 10 },
+            PerformanceAnalyzer: {avgCycleTimeThreshold: 10},
         }, eventBus, nar);
         metacognition.start();
 

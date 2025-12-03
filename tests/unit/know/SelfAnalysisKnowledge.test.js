@@ -1,5 +1,8 @@
 import {
-    DependencyGraphKnowledge, DirectoryStructureKnowledge, FileAnalysisKnowledge, TestResultKnowledge
+    DependencyGraphKnowledge,
+    DirectoryStructureKnowledge,
+    FileAnalysisKnowledge,
+    TestResultKnowledge
 } from '../../../src/know/SoftwareKnowledge.js';
 import {SoftwareKnowledgeFactory} from '../../../src/know/SoftwareKnowledgeFactory.js';
 

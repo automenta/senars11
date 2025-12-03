@@ -5,14 +5,19 @@ jest.setTimeout(30000);
 
 describe('Reasoner Integration Tests - Direct Components', () => {
     let nar;
-    const config = { reasoning: { useStreamReasoner: true, cpuThrottleInterval: 0, maxDerivationDepth: 5 }, cycle: { delay: 1 } };
+    const config = {
+        reasoning: {useStreamReasoner: true, cpuThrottleInterval: 0, maxDerivationDepth: 5},
+        cycle: {delay: 1}
+    };
 
     beforeEach(async () => {
         nar = new NAR(config);
         await nar.initialize();
     });
 
-    afterEach(async () => { if (nar) await nar.dispose(); });
+    afterEach(async () => {
+        if (nar) await nar.dispose();
+    });
 
     test('should process syllogistic reasoning with real components', async () => {
         await nar.input('(a ==> b). %0.9;0.9%');
@@ -45,7 +50,7 @@ describe('Reasoner Integration Tests - Direct Components', () => {
     });
 
     test('should respect derivation depth limits with real components', async () => {
-        const narLimited = new NAR({ ...config, reasoning: { ...config.reasoning, maxDerivationDepth: 1 } });
+        const narLimited = new NAR({...config, reasoning: {...config.reasoning, maxDerivationDepth: 1}});
         await narLimited.initialize();
 
         try {
@@ -75,7 +80,10 @@ describe('Reasoner Integration Tests - Direct Components', () => {
 
 describe('Reasoner Stream Components Integration', () => {
     test('should process tasks through the complete pipeline', async () => {
-        const nar = new NAR({ reasoning: { useStreamReasoner: true, cpuThrottleInterval: 0, maxDerivationDepth: 5 }, cycle: { delay: 1 } });
+        const nar = new NAR({
+            reasoning: {useStreamReasoner: true, cpuThrottleInterval: 0, maxDerivationDepth: 5},
+            cycle: {delay: 1}
+        });
         await nar.initialize();
 
         try {

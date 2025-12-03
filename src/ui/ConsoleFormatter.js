@@ -1,5 +1,3 @@
-import {UI_CONSTANTS} from '../util/UIConstants.js';
-
 const COLORS = {
     RED: '\x1b[31m',
     GREEN: '\x1b[32m',
@@ -29,17 +27,28 @@ export class ConsoleFormatter {
 
     static getColorForType(type) {
         switch (type) {
-            case 'error': return COLORS.RED;
-            case 'success': return COLORS.GREEN;
-            case 'warning': return COLORS.YELLOW;
-            case 'info': return COLORS.BLUE;
-            case 'debug': return COLORS.GRAY;
-            case 'input': return COLORS.CYAN;
-            case 'reasoning': return COLORS.MAGENTA;
-            case 'task': return COLORS.GREEN;
-            case 'concept': return COLORS.YELLOW;
-            case 'control': return COLORS.BOLD + COLORS.WHITE;
-            default: return COLORS.WHITE;
+            case 'error':
+                return COLORS.RED;
+            case 'success':
+                return COLORS.GREEN;
+            case 'warning':
+                return COLORS.YELLOW;
+            case 'info':
+                return COLORS.BLUE;
+            case 'debug':
+                return COLORS.GRAY;
+            case 'input':
+                return COLORS.CYAN;
+            case 'reasoning':
+                return COLORS.MAGENTA;
+            case 'task':
+                return COLORS.GREEN;
+            case 'concept':
+                return COLORS.YELLOW;
+            case 'control':
+                return COLORS.BOLD + COLORS.WHITE;
+            default:
+                return COLORS.WHITE;
         }
     }
 }

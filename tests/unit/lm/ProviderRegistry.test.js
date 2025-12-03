@@ -3,7 +3,9 @@ import {DummyProvider} from '../../../src/lm/DummyProvider.js';
 
 describe('ProviderRegistry', () => {
     let registry;
-    beforeEach(() => { registry = new ProviderRegistry(); });
+    beforeEach(() => {
+        registry = new ProviderRegistry();
+    });
 
     test('initialization', () => {
         expect(registry.size).toBe(0);

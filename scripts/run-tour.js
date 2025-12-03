@@ -197,10 +197,10 @@ async function runEventDrivenScreenshots(tour, screenshotsDir) {
                 // Capture screenshot on various NAR events, not just cycle steps
                 if (message.type &&
                     (message.type === 'nar.cycle.step' ||
-                     message.type === 'streamReasoner.step' ||
-                     message.type === 'reasoning.derivation' ||
-                     message.type === 'task.input' ||
-                     message.type === 'task.added')) {
+                        message.type === 'streamReasoner.step' ||
+                        message.type === 'reasoning.derivation' ||
+                        message.type === 'task.input' ||
+                        message.type === 'task.added')) {
 
                     screenshotCount++;
                     console.log(`Capturing screenshot #${screenshotCount} on ${message.type} event...`);

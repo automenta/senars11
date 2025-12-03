@@ -32,16 +32,16 @@ export class UIEventHandlers {
         // Define handler mapping to reduce duplication
         const handlerMap = {
             // Command Input handlers
-            'sendButton': { event: 'click', handler: () => this.commandHandlers.handleCommandSubmit() },
-            'commandInput': { event: 'keypress', handler: (e) => this.commandHandlers.handleCommandKeyPress(e) },
-            'execQuick': { event: 'click', handler: () => this.commandHandlers.handleQuickCommand() },
-            'showHistory': { event: 'click', handler: () => this.commandHandlers.showCommandHistory() },
+            'sendButton': {event: 'click', handler: () => this.commandHandlers.handleCommandSubmit()},
+            'commandInput': {event: 'keypress', handler: (e) => this.commandHandlers.handleCommandKeyPress(e)},
+            'execQuick': {event: 'click', handler: () => this.commandHandlers.handleQuickCommand()},
+            'showHistory': {event: 'click', handler: () => this.commandHandlers.showCommandHistory()},
 
             // Controls & Logs handlers
-            'clearLogs': { event: 'click', handler: () => this.controlHandlers.handleClearLogs() },
-            'refreshGraph': { event: 'click', handler: () => this.controlHandlers.handleRefresh() },
-            'toggleLive': { event: 'click', handler: () => this.controlHandlers.handleToggleLive() },
-            'runDemo': { event: 'click', handler: () => this.controlHandlers.handleRunDemo() },
+            'clearLogs': {event: 'click', handler: () => this.controlHandlers.handleClearLogs()},
+            'refreshGraph': {event: 'click', handler: () => this.controlHandlers.handleRefresh()},
+            'toggleLive': {event: 'click', handler: () => this.controlHandlers.handleToggleLive()},
+            'runDemo': {event: 'click', handler: () => this.controlHandlers.handleRunDemo()},
             'showTasksToggle': {
                 event: 'change',
                 handler: (e) => this.controlHandlers.handleTaskVisibility(e.target.checked)

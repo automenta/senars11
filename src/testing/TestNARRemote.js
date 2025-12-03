@@ -69,7 +69,7 @@ export class TestNARRemote {
     }
 
     async execute(options = {}) {
-        const { verbose = false, recordPath = null } = options;
+        const {verbose = false, recordPath = null} = options;
         this.verbose = verbose;
         await this.setup();
         let error = null;
@@ -464,8 +464,8 @@ export class TestNARRemote {
                 // Listen for updates
                 if (exp.shouldExist) {
                     listener = (data) => {
-                         // Trigger check
-                         checkState();
+                        // Trigger check
+                        checkState();
                     };
 
                     this.client.on('message', listener);

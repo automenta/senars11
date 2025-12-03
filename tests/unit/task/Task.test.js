@@ -2,7 +2,7 @@ import {Task} from '../../../src/task/Task.js';
 import {Stamp} from '../../../src/Stamp.js';
 import {TermFactory} from '../../../src/term/TermFactory.js';
 import {Truth} from '../../../src/Truth.js';
-import {createTask, createTerm, createTruth, TEST_CONSTANTS} from '../../support/factories.js';
+import {createTask, createTruth, TEST_CONSTANTS} from '../../support/factories.js';
 import {taskAssertions, testImmutability} from '../../support/testOrganizer.js';
 
 describe('Task', () => {
@@ -57,7 +57,11 @@ describe('Task', () => {
         });
 
         test('QUESTION prohibits truth', () => {
-            expect(() => new Task({term, punctuation: '?', truth: createTruth()})).toThrow(/Questions cannot have truth/);
+            expect(() => new Task({
+                term,
+                punctuation: '?',
+                truth: createTruth()
+            })).toThrow(/Questions cannot have truth/);
 
             const t = new Task({term, punctuation: '?', truth: null});
             expect(t.type).toBe('QUESTION');
@@ -89,7 +93,11 @@ describe('Task', () => {
             const t = createTask({term, punctuation: '.', truth: createTruth(0.9, 0.9)});
             expect(t.equals(createTask({term, punctuation: '.', truth: createTruth(0.9, 0.9)}))).toBe(true);
             expect(t.equals(createTask({term, punctuation: '.', truth: createTruth(0.8, 0.8)}))).toBe(false);
-            expect(t.equals(createTask({term: factory.atomic('B'), punctuation: '.', truth: createTruth(0.9, 0.9)}))).toBe(false);
+            expect(t.equals(createTask({
+                term: factory.atomic('B'),
+                punctuation: '.',
+                truth: createTruth(0.9, 0.9)
+            }))).toBe(false);
             expect(t.equals(createTask({term, punctuation: '!', truth: createTruth(0.9, 0.9)}))).toBe(false);
             expect(t.equals(null)).toBe(false);
         });

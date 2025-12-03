@@ -13,9 +13,9 @@ export * from './factories.js';
 export * from './testSuiteFactory.js';
 
 // For backward compatibility, provide the original exports as aliases
-import { FlexibleTestPatterns, StandardTestSuites, NARTestSuites } from './consolidatedTestSuites.js';
-import { errorHandlingTests, flexibleAssertions, truthAssertions } from './baseTestUtils.js';
-import { createTask, createTerm, createTruth } from './factories.js';
+import {FlexibleTestPatterns, NARTestSuites, StandardTestSuites} from './consolidatedTestSuites.js';
+import {errorHandlingTests, flexibleAssertions, truthAssertions} from './baseTestUtils.js';
+import {createTask, createTerm, createTruth} from './factories.js';
 
 export const EnhancedTestSuites = {
     dataModel: (config) => {

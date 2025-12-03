@@ -26,7 +26,9 @@ describe('CapabilityManager', () => {
 
     describe('Manager', () => {
         let mgr;
-        beforeEach(() => { mgr = new CapabilityManager(); });
+        beforeEach(() => {
+            mgr = new CapabilityManager();
+        });
 
         test('registration', async () => {
             const cap = new Capability(CapabilityTypes.FILE_SYSTEM_READ);

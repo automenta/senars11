@@ -8,16 +8,20 @@ describe('NAR Integration Tests', () => {
     const narProvider = () => nar;
 
     beforeAll(async () => {
-        nar = new NAR({ debug: {enabled: false}, cycle: {delay: 10, maxTasksPerCycle: 5} });
+        nar = new NAR({debug: {enabled: false}, cycle: {delay: 10, maxTasksPerCycle: 5}});
         if (nar.initialize) await nar.initialize();
     });
 
-    afterAll(async () => { if (nar) await nar.dispose(); });
-    afterEach(() => { if (nar) nar.reset(); });
+    afterAll(async () => {
+        if (nar) await nar.dispose();
+    });
+    afterEach(() => {
+        if (nar) nar.reset();
+    });
 
     comprehensiveTestSuites.inputOutputModuleTests('NAR',
         async () => {
-            const instance = new NAR({ debug: {enabled: false}, cycle: {delay: 10, maxTasksPerCycle: 5} });
+            const instance = new NAR({debug: {enabled: false}, cycle: {delay: 10, maxTasksPerCycle: 5}});
             if (instance.initialize) await instance.initialize();
             return {
                 process: async (input) => {
@@ -28,9 +32,24 @@ describe('NAR Integration Tests', () => {
             };
         },
         [
-            { description: 'handles simple belief input', input: 'cat.', expectedOutput: null, validator: (r) => r.some(b => b.term.toString().includes('cat') && b.type === 'BELIEF') },
-            { description: 'handles goal input', input: 'want_food!', expectedOutput: null, validator: (r) => r.some(b => b.term.toString().includes('want_food') && b.type === 'GOAL') },
-            { description: 'handles compound terms', input: '(&, A, B).', expectedOutput: null, validator: (r) => r.some(b => b.term.toString().includes('&')) }
+            {
+                description: 'handles simple belief input',
+                input: 'cat.',
+                expectedOutput: null,
+                validator: (r) => r.some(b => b.term.toString().includes('cat') && b.type === 'BELIEF')
+            },
+            {
+                description: 'handles goal input',
+                input: 'want_food!',
+                expectedOutput: null,
+                validator: (r) => r.some(b => b.term.toString().includes('want_food') && b.type === 'GOAL')
+            },
+            {
+                description: 'handles compound terms',
+                input: '(&, A, B).',
+                expectedOutput: null,
+                validator: (r) => r.some(b => b.term.toString().includes('&'))
+            }
         ]
     );
 

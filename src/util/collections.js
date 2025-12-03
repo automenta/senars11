@@ -38,7 +38,7 @@ export const chunk = (array, size) => {
     if (!Array.isArray(array) || size <= 0) return [];
 
     return Array.from(
-        { length: Math.ceil(array.length / size) },
+        {length: Math.ceil(array.length / size)},
         (_, i) => array.slice(i * size, i * size + size)
     );
 };
@@ -100,9 +100,9 @@ export const correlation = (values1, values2) => {
         diff2: values2[i] - avg2
     }));
 
-    const numerator = diffs.reduce((sum, { diff1, diff2 }) => sum + diff1 * diff2, 0);
-    const sumSq1 = diffs.reduce((sum, { diff1 }) => sum + diff1 * diff1, 0);
-    const sumSq2 = diffs.reduce((sum, { diff2 }) => sum + diff2 * diff2, 0);
+    const numerator = diffs.reduce((sum, {diff1, diff2}) => sum + diff1 * diff2, 0);
+    const sumSq1 = diffs.reduce((sum, {diff1}) => sum + diff1 * diff1, 0);
+    const sumSq2 = diffs.reduce((sum, {diff2}) => sum + diff2 * diff2, 0);
 
     const denominator = Math.sqrt(sumSq1 * sumSq2);
     return denominator === 0 ? 0 : numerator / denominator;

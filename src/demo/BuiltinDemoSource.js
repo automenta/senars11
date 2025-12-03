@@ -45,9 +45,15 @@ const DEMOS = {
         steps: [
             {description: 'Initializing hybrid reasoning demo (Ensure LM is enabled!)'},
             {description: '--- Natural Language Translation ---'},
-            {description: 'Inputting natural language sentence: "Cats are independent animals."', input: '"Cats are independent animals".'},
+            {
+                description: 'Inputting natural language sentence: "Cats are independent animals."',
+                input: '"Cats are independent animals".'
+            },
             {description: 'The system uses LMNarseseTranslationRule to parse this into Narsese.'},
-            {description: 'Verifying derived knowledge: <cat --> independent_animal>?', input: '<cat --> independent_animal>?'},
+            {
+                description: 'Verifying derived knowledge: <cat --> independent_animal>?',
+                input: '<cat --> independent_animal>?'
+            },
             {description: '--- Concept Elaboration ---'},
             {description: 'Inputting a concept to trigger elaboration: bird.', input: 'bird.'},
             {description: 'The system uses LMConceptElaborationRule to find properties of "bird".'},

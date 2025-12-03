@@ -1,4 +1,3 @@
-
 export const TOURS = [
     {id: 'basic-reasoning', duration: 30000},
     {id: 'decision-making', duration: 30000},

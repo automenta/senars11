@@ -1,7 +1,6 @@
-
-import { jest } from '@jest/globals';
-import { NAR } from '../../../src/nar/NAR.js';
-import { WebSocketMonitor } from '../../../src/server/WebSocketMonitor.js';
+import {jest} from '@jest/globals';
+import {NAR} from '../../../src/nar/NAR.js';
+import {WebSocketMonitor} from '../../../src/server/WebSocketMonitor.js';
 import WebSocket from 'ws';
 
 // Increase timeout for this suite
@@ -37,7 +36,7 @@ describe('Web UI Simulation Integration Test', () => {
             client.terminate();
         }
         if (monitor) {
-             await monitor.stop();
+            await monitor.stop();
         }
         if (nar) {
             await nar.dispose();
@@ -66,7 +65,7 @@ describe('Web UI Simulation Integration Test', () => {
         });
 
         // Subscribe to all events
-        client.send(JSON.stringify({ type: 'subscribe', channel: 'all' }));
+        client.send(JSON.stringify({type: 'subscribe', channel: 'all'}));
 
         // Wait a bit for subscription to be processed
         await new Promise(resolve => setTimeout(resolve, 50));
@@ -109,7 +108,7 @@ describe('Web UI Simulation Integration Test', () => {
             }
         });
 
-        client.send(JSON.stringify({ type: 'subscribe', channel: 'all' }));
+        client.send(JSON.stringify({type: 'subscribe', channel: 'all'}));
         await new Promise(resolve => setTimeout(resolve, 50));
 
         // Send multiple inputs rapidly
@@ -121,7 +120,7 @@ describe('Web UI Simulation Integration Test', () => {
 
         // Wait for messages
         await new Promise((resolve, reject) => {
-             const check = setInterval(() => {
+            const check = setInterval(() => {
                 const events = receivedBatches.flatMap(b => b.data);
                 const taskInputEvents = events.filter(e => e.type === 'task.input');
                 if (taskInputEvents.length >= 3) {

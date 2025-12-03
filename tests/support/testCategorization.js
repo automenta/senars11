@@ -17,26 +17,26 @@ export const TestCategorization = {
         BENCHMARK: 'benchmark',
         STRESS: 'stress',
         LOAD: 'load',
-        
+
         // Functionality categories
         UNIT: 'unit',
         INTEGRATION: 'integration',
         E2E: 'e2e',
         REGRESSION: 'regression',
-        
+
         // Quality attributes
         CORRECTNESS: 'correctness',
         RELIABILITY: 'reliability',
         ROBUSTNESS: 'robustness',
         ERROR_HANDLING: 'errorHandling',
-        
+
         // Feature categories
         CORE: 'core',
         MEMORY: 'memory',
         REASONING: 'reasoning',
         PARSING: 'parsing',
         COMMUNICATION: 'communication',
-        
+
         // Test methodology
         PARAMETERIZED: 'parameterized',
         PROPERTY_BASED: 'propertyBased',

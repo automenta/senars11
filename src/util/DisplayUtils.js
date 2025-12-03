@@ -233,9 +233,9 @@ export class DisplayUtils {
             // Prepare data rows
             const values = df.values || [];
             const displayRows = Math.min(rows, maxRows);
-            const dataRows = Array.from({ length: displayRows }, (_, i) => {
+            const dataRows = Array.from({length: displayRows}, (_, i) => {
                 const row = values[i] || [];
-                return Array.from({ length: displayColumns.length }, (_, j) => {
+                return Array.from({length: displayColumns.length}, (_, j) => {
                     let cell = row[j];
 
                     // Format cell value

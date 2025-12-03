@@ -12,7 +12,10 @@ It is being built to be substrate — the common seed for a future industrial ec
 
 The less complete it is right now, the more possibilities it can grow into.
 
-What matters is that the core reasoning stream, the observation contract, and the hybrid NAL–LM integration remain stable and extensible. Everything else is deliberately left rough, partial, or missing so that different groups can fork and mutate it toward radically different goals: minimal edge reasoners, high-agency planners, educational sandboxes, lifelong personal memory layers, distributed multi-agent societies, or entirely new logics.
+What matters is that the core reasoning stream, the observation contract, and the hybrid NAL–LM integration remain
+stable and extensible. Everything else is deliberately left rough, partial, or missing so that different groups can fork
+and mutate it toward radically different goals: minimal edge reasoners, high-agency planners, educational sandboxes,
+lifelong personal memory layers, distributed multi-agent societies, or entirely new logics.
 
 If something you need is not here yet, that is by design.
 

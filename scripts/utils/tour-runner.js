@@ -1,4 +1,3 @@
-
 import {spawn} from 'child_process';
 import path from 'path';
 import fs from 'fs/promises';
@@ -105,7 +104,7 @@ export class TourRunner {
         }
 
         if (!this.logOnlyMode) {
-             await this.generateComposite(outputDir, screenshotsDir, tour.id);
+            await this.generateComposite(outputDir, screenshotsDir, tour.id);
         }
     }
 

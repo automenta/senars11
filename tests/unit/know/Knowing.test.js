@@ -2,15 +2,28 @@ import {Knowing} from '../../../src/know/Knowing.js';
 import {Knowledge} from '../../../src/know/Knowledge.js';
 
 class SimpleTestKnowledge extends Knowledge {
-    async toTasks() { return this.data?.tasks || []; }
-    async getItems() { return this.data?.items || []; }
-    async getSummary() { return {data: this.data}; }
-    async createRelationships() { return this.data?.relationships || []; }
+    async toTasks() {
+        return this.data?.tasks || [];
+    }
+
+    async getItems() {
+        return this.data?.items || [];
+    }
+
+    async getSummary() {
+        return {data: this.data};
+    }
+
+    async createRelationships() {
+        return this.data?.relationships || [];
+    }
 }
 
 describe('Knowing System', () => {
     let knowing;
-    beforeEach(() => { knowing = new Knowing(); });
+    beforeEach(() => {
+        knowing = new Knowing();
+    });
 
     test('initialization', () => {
         expect(knowing.getStats()).toMatchObject({

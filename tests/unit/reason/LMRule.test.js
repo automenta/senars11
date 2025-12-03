@@ -1,21 +1,8 @@
 import {LMRule} from '../../../src/reason/LMRule.js';
-import {Task, Punctuation} from '../../../src/task/Task.js';
+import {Punctuation, Task} from '../../../src/task/Task.js';
 import {Truth} from '../../../src/Truth.js';
 import {TermFactory} from '../../../src/term/TermFactory.js';
-import {
-    createAnalogicalReasoningRule,
-    createBeliefRevisionRule,
-    createExplanationGenerationRule,
-    createGoalDecompositionRule,
-    createHypothesisGenerationRule,
-    createInteractiveClarificationRule,
-    createMetaReasoningGuidanceRule,
-    createSchemaInductionRule,
-    createTemporalCausalModelingRule,
-    createUncertaintyCalibrationRule,
-    createVariableGroundingRule
-} from '../../../src/reason/rules/lm/index.js';
-import {LMRuleFactory} from '../../../src/lm/LMRuleFactory.js';
+import {createGoalDecompositionRule, createHypothesisGenerationRule} from '../../../src/reason/rules/lm/index.js';
 import {LMRuleUtils} from '../../../src/reason/utils/LMRuleUtils.js';
 import {jest} from '@jest/globals';
 
@@ -122,14 +109,19 @@ describe('LMRule', () => {
             }))
         });
 
-        const result = await rule.apply(new Task({term: termFactory.atomic('test goal'), punctuation: Punctuation.GOAL, truth: {frequency: 1.0, confidence: 0.9}}), null, {});
+        const result = await rule.apply(new Task({
+            term: termFactory.atomic('test goal'),
+            punctuation: Punctuation.GOAL,
+            truth: {frequency: 1.0, confidence: 0.9}
+        }), null, {});
 
         expect(result).toHaveLength(3);
         expect(result[0].term.name).toContain('Sub-goal: research topic');
     });
 
     test('should handle errors gracefully', async () => {
-        const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+        const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {
+        });
 
         const errorLM = {
             generateText: () => {
@@ -150,7 +142,11 @@ describe('LMRule', () => {
             })]
         });
 
-        const result = await rule.apply(new Task({term: termFactory.atomic('test'), punctuation: Punctuation.BELIEF, truth: {frequency: 0.9, confidence: 0.9}}), null, {});
+        const result = await rule.apply(new Task({
+            term: termFactory.atomic('test'),
+            punctuation: Punctuation.BELIEF,
+            truth: {frequency: 0.9, confidence: 0.9}
+        }), null, {});
         expect(result).toEqual([]);
 
         consoleErrorSpy.mockRestore();
@@ -177,7 +173,7 @@ describe('Specific LM Rules', () => {
             "calibration": "0.75"
         });
         termFactory = new TermFactory();
-        context = { termFactory };
+        context = {termFactory};
     });
 
     test('GoalDecompositionRule should decompose goals', () => {

@@ -6,7 +6,10 @@ describe('Truth', () => {
         expect(new Truth()).toMatchObject({frequency: TRUTH.DEFAULT_FREQUENCY, confidence: TRUTH.DEFAULT_CONFIDENCE});
         expect(new Truth(0.8, 0.9)).toMatchObject({frequency: 0.8, confidence: 0.9});
         expect(new Truth(-0.5, 1.5)).toMatchObject({frequency: 0, confidence: 1});
-        expect(new Truth(NaN, NaN)).toMatchObject({frequency: TRUTH.DEFAULT_FREQUENCY, confidence: TRUTH.DEFAULT_CONFIDENCE});
+        expect(new Truth(NaN, NaN)).toMatchObject({
+            frequency: TRUTH.DEFAULT_FREQUENCY,
+            confidence: TRUTH.DEFAULT_CONFIDENCE
+        });
     });
 
     test('immutability', () => {

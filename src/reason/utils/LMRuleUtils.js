@@ -4,7 +4,7 @@
  */
 
 import {LMRule} from '../LMRule.js';
-import {Task, Punctuation} from '../../task/Task.js';
+import {Punctuation, Task} from '../../task/Task.js';
 import {cleanSubGoal, hasPattern, isValidSubGoal, KeywordPatterns, parseSubGoals} from '../RuleHelpers.js';
 
 export class LMRuleUtils {
