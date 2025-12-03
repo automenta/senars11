@@ -29,3 +29,8 @@ performance-results
 *storybook.log
 storybook-static
 test-results/
+
+# RLFP artifacts
+*.jsonl
+trajectory_*.json
+preferences.json

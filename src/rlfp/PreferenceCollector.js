@@ -1,28 +1,56 @@
+import fs from 'fs';
+import inquirer from 'inquirer';
+
 /**
  * Collects user preferences on reasoning trajectories.
  *
  * This component is responsible for presenting pairs of reasoning trajectories to the user
  * and collecting their feedback on which trajectory they prefer. This feedback is used
- import fs from 'fs';
  * by the RLFPLearner to fine-tune the agent's language model.
  */
 class PreferenceCollector {
-    constructor(reader) {
+    constructor() {
         this.preferences = [];
-        this.reader = reader;
     }
 
     async collectPreference(pathA, pathB) {
-        const trajectoryA = await this.loadTrajectory(pathA);
-        const trajectoryB = await this.loadTrajectory(pathB);
+        let trajectoryA, trajectoryB;
+        try {
+            trajectoryA = await this.loadTrajectory(pathA);
+            trajectoryB = await this.loadTrajectory(pathB);
+        } catch (e) {
+            console.error("Error loading trajectories:", e.message);
+            return null;
+        }
 
-        console.log('--- Trajectory A ---');
+        console.log('\n==========================================');
+        console.log('=== Trajectory A ===');
         console.log(this._formatTrajectoryForDisplay(trajectoryA));
-        console.log('--- Trajectory B ---');
+        console.log('\n=== Trajectory B ===');
         console.log(this._formatTrajectoryForDisplay(trajectoryB));
+        console.log('==========================================\n');
 
-        const preference = await this._getUserInput('Which trajectory is better? (A/B): ');
-        const preferenceData = {trajectoryA, trajectoryB, preference};
+        const answer = await inquirer.prompt([{
+            type: 'list',
+            name: 'preference',
+            message: 'Which trajectory do you prefer?',
+            choices: [
+                {name: 'Trajectory A', value: 'A'},
+                {name: 'Trajectory B', value: 'B'},
+                {name: 'Skip / Neither', value: 'SKIP'}
+            ]
+        }]);
+
+        if (answer.preference === 'SKIP') return null;
+
+        const preferenceData = {
+            trajectoryA,
+            trajectoryB,
+            preference: answer.preference,
+            timestamp: Date.now(),
+            files: {A: pathA, B: pathB}
+        };
+
         this.preferences.push(preferenceData);
         return preferenceData;
     }
@@ -32,15 +60,31 @@ class PreferenceCollector {
     }
 
     _formatTrajectoryForDisplay(trajectory) {
-        return trajectory.map(step => `[${step.type}] ${JSON.stringify(step)}`).join('\n');
+        if (!Array.isArray(trajectory)) return "Invalid trajectory format";
+
+        return trajectory.map(step => {
+            let content = "";
+            const ts = step.timestamp ? new Date(step.timestamp).toISOString().split('T')[1].split('.')[0] : '';
+
+            if (step.type === 'llm_prompt') {
+                const msgContent = step.messages?.[0]?.content || step.messages || '';
+                const preview = typeof msgContent === 'string' ? msgContent.substring(0, 100) : JSON.stringify(msgContent);
+                content = `LLM Prompt: "${preview.replace(/\n/g, ' ')}..."`;
+            } else if (step.type === 'tool_call') {
+                content = `Tool Call: ${step.name}(${JSON.stringify(step.args)})`;
+            } else if (step.type === 'lm_response') {
+                 // Assuming agent response or similar
+                 content = `Response: ${JSON.stringify(step.content || step)}`;
+            } else {
+                content = JSON.stringify(step);
+            }
+            return `${ts} [${step.type}] ${content}`;
+        }).join('\n');
     }
 
-    _getUserInput(prompt) {
-        return new Promise(resolve => {
-            this.reader.question(prompt, answer => {
-                resolve(answer.trim().toUpperCase());
-            });
-        });
+    savePreferences(filePath) {
+        fs.writeFileSync(filePath, JSON.stringify(this.preferences, null, 2));
+        console.log(`Preferences saved to ${filePath}`);
     }
 }
 
