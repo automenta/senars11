@@ -16,10 +16,11 @@ import {hasPattern, isGoal, isQuestion, KeywordPatterns} from '../../RuleHelpers
  * @returns {LMRule} A new LMRule instance for analogical reasoning.
  */
 export const createAnalogicalReasoningRule = (dependencies) => {
-    const {lm, memory, embeddingLayer} = dependencies;
+    const {lm, memory, embeddingLayer, eventBus} = dependencies;
     return LMRule.create({
         id: 'analogical-reasoning',
         lm,
+        eventBus,
         name: 'Analogical Reasoning Rule',
         description: 'Solves new problems by drawing analogies to known situations.',
         priority: 0.7,

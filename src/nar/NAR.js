@@ -1,23 +1,23 @@
-import {ConfigManager} from '../config/ConfigManager.js';
-import {TermFactory, Term} from '../term/TermFactory.js';
-import {Memory} from '../memory/Memory.js';
-import {TaskManager} from '../task/TaskManager.js';
-import {NarseseParser} from '../parser/NarseseParser.js';
 import {PRIORITY} from '../config/constants.js';
-import {BaseComponent} from '../util/BaseComponent.js';
-import {ComponentManager} from '../util/ComponentManager.js';
-import {Focus} from '../memory/Focus.js';
+import {ConfigManager} from '../config/ConfigManager.js';
+import {EmbeddingLayer} from '../lm/EmbeddingLayer.js';
 import {LM} from '../lm/LM.js';
-import {Task} from '../task/Task.js';
-import {Truth} from '../Truth.js';
-import {ToolIntegration} from '../tool/ToolIntegration.js';
-import {ExplanationService} from '../tool/ExplanationService.js';
+import {Focus} from '../memory/Focus.js';
+import {Memory} from '../memory/Memory.js';
+import {TermLayer} from '../memory/TermLayer.js';
+import {NarseseParser} from '../parser/NarseseParser.js';
 import {EvaluationEngine} from '../reason/EvaluationEngine.js';
 import {MetricsMonitor} from '../reason/MetricsMonitor.js';
-import {EmbeddingLayer} from '../lm/EmbeddingLayer.js';
-import {TermLayer} from '../memory/TermLayer.js';
-import {ReasoningAboutReasoning} from '../self/ReasoningAboutReasoning.js';
 import {ReasonerBuilder} from '../reason/index.js';
+import {ReasoningAboutReasoning} from '../self/ReasoningAboutReasoning.js';
+import {Task} from '../task/Task.js';
+import {TaskManager} from '../task/TaskManager.js';
+import {Term, TermFactory} from '../term/TermFactory.js';
+import {ExplanationService} from '../tool/ExplanationService.js';
+import {ToolIntegration} from '../tool/ToolIntegration.js';
+import {Truth} from '../Truth.js';
+import {BaseComponent} from '../util/BaseComponent.js';
+import {ComponentManager} from '../util/ComponentManager.js';
 
 export class NAR extends BaseComponent {
     constructor(config = {}) {
@@ -235,7 +235,8 @@ export class NAR extends BaseComponent {
             lm: this._lm,
             embeddingLayer: this._embeddingLayer,
             memory: this._memory,
-            termFactory: this._termFactory
+            termFactory: this._termFactory,
+            eventBus: this._eventBus
         });
     }
 

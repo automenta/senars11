@@ -42,6 +42,17 @@ export class TransformersJSModel extends BaseChatModel {
         return this;
     }
 
+    async generateText(prompt, options = {}) {
+        await this._initialize();
+        const output = await this.pipeline(prompt, {
+            max_new_tokens: this.maxTokens,
+            temperature: this.temperature,
+            do_sample: this.temperature > 0,
+        });
+        const res = Array.isArray(output) ? output[0] : output;
+        return res?.generated_text ?? res?.text ?? JSON.stringify(res);
+    }
+
     async _generate(messages, options, runManager) {
         const {text, content, tool_calls} = await this._invoke(messages);
         return {

@@ -14,8 +14,17 @@ class ReasoningTrajectoryLogger {
         this.trajectory = [];
         this.isLogging = false;
 
-        this.eventBus.on(AGENT_EVENTS.LLM_PROMPT, (data) => this.logStep('llm_prompt', data));
-        this.eventBus.on(AGENT_EVENTS.TOOL_CALL, (data) => this.logStep('tool_call', data));
+        const events = [
+            [AGENT_EVENTS.LLM_PROMPT, 'llm_prompt'],
+            [AGENT_EVENTS.TOOL_CALL, 'tool_call'],
+            ['lm.prompt', 'lm_prompt'],
+            ['lm.response', 'lm_response'],
+            ['lm.failure', 'lm_failure']
+        ];
+
+        events.forEach(([event, type]) =>
+            this.eventBus.on(event, (data) => this.logStep(type, data))
+        );
     }
 
     startTrajectory() {

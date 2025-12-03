@@ -5,11 +5,12 @@ import {Truth} from '../../../Truth.js';
 import {Term} from '../../../term/Term.js';
 
 export const createConceptElaborationRule = (dependencies) => {
-    const {lm, parser, termFactory} = dependencies;
+    const {lm, parser, termFactory, eventBus, memory} = dependencies;
 
     return LMRule.create({
         id: 'concept-elaboration',
         lm,
+        eventBus,
         name: 'Concept Elaboration Rule',
         description: 'Generates potential properties or classifications for a concept using commonsense knowledge.',
         priority: 0.7,
@@ -29,8 +30,21 @@ export const createConceptElaborationRule = (dependencies) => {
         },
 
         prompt: (primaryPremise) => {
-            const content = (primaryPremise.term.name || primaryPremise.term.toString()).replace(/^"|"$/g, '');
-            return `Concept property elaboration.
+            const term = primaryPremise.term;
+            const content = (term.name || term.toString()).replace(/^"|"$/g, '');
+
+            const concept = memory?.getConcept?.(term);
+            const beliefs = concept?.getBeliefs?.() ?? concept?.tasks ?? [];
+
+            const contextText = beliefs
+                .filter(t => t.punctuation === '.')
+                .slice(0, 3)
+                .map(t => t.toString())
+                .join('\n');
+
+            const context = contextText ? `\nContext (Known facts):\n${contextText}\n` : '';
+
+            return `Concept property elaboration.${context}
 "cat" => <cat --> animal>.
 "sun" => <sun --> [hot]>.
 "${content}" => `;
