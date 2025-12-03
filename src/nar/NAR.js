@@ -235,7 +235,8 @@ export class NAR extends BaseComponent {
             lm: this._lm,
             embeddingLayer: this._embeddingLayer,
             memory: this._memory,
-            termFactory: this._termFactory
+            termFactory: this._termFactory,
+            eventBus: this._eventBus
         });
     }
 

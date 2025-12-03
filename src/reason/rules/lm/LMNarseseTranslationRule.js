@@ -5,11 +5,12 @@ import {Task} from '../../../task/Task.js';
 import {Truth} from '../../../Truth.js';
 
 export const createNarseseTranslationRule = (dependencies) => {
-    const {lm, parser} = dependencies;
+    const {lm, parser, eventBus} = dependencies;
 
     return LMRule.create({
         id: 'narsese-translation',
         lm,
+        eventBus,
         name: 'Narsese Translation Rule',
         description: 'Translates natural language string concepts into formal Narsese.',
         priority: 0.9,

@@ -38,6 +38,23 @@ const DEMOS = {
             {description: 'Inductive reasoning demo completed'}
         ]
     },
+    'hybrid-reasoning': {
+        name: 'Hybrid Neurosymbolic Reasoning',
+        description: 'Demonstrates integration with Language Models',
+        stepDelay: 3000,
+        steps: [
+            {description: 'Initializing hybrid reasoning demo (Ensure LM is enabled!)'},
+            {description: '--- Natural Language Translation ---'},
+            {description: 'Inputting natural language sentence: "Cats are independent animals."', input: '"Cats are independent animals".'},
+            {description: 'The system uses LMNarseseTranslationRule to parse this into Narsese.'},
+            {description: 'Verifying derived knowledge: <cat --> independent_animal>?', input: '<cat --> independent_animal>?'},
+            {description: '--- Concept Elaboration ---'},
+            {description: 'Inputting a concept to trigger elaboration: bird.', input: 'bird.'},
+            {description: 'The system uses LMConceptElaborationRule to find properties of "bird".'},
+            {description: 'Checking for elaborated knowledge: <bird --> [fly]>?', input: '<bird --> [fly]?'},
+            {description: 'Hybrid reasoning demo completed'}
+        ]
+    },
     tour: {
         name: 'Comprehensive UI Tour',
         description: 'A complete tour of NARS reasoning capabilities',
