@@ -65,8 +65,8 @@ Provide only the values, one per line.`;
                         confidence: (primaryPremise.truth?.c || 0.9) * 0.6
                     },
                     budget: {
-                        priority: 0.6,
-                        durability: 0.4
+                        priority: 0.8,
+                        durability: 0.7
                     }
                 });
             });
