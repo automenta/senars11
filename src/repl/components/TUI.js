@@ -6,11 +6,13 @@ import {handleError} from '../../../src/util/ErrorHandler.js';
 import {ReplMessageHandler} from '../ReplMessageHandler.js';
 import {useCommandHistory} from '../hooks/useCommandHistory.js';
 import {useAgentLogs} from '../hooks/useAgentLogs.js';
+import {useAgentMetrics} from '../hooks/useAgentMetrics.js';
 import {LogEntry} from './LogEntry.js';
 
 // TUI component
 export const TUI = ({engine, app}) => {
     const {logs, status, addLog, setLogs, updateLog} = useAgentLogs(engine);
+    const metrics = useAgentMetrics(engine);
     const [inputValue, setInputValue] = useState('');
     const [mode, setMode] = useState('agent'); // 'agent' or 'narsese'
 
@@ -347,6 +349,8 @@ export const TUI = ({engine, app}) => {
                     bold: true
                 }, `${status.isRunning ? '🚀 RUNNING' : '⏸️ PAUSED'} `),
                 React.createElement(Text, {color: 'white'}, `| Cycle: ${status.cycle} `),
+                metrics.uptime > 0 && React.createElement(Text, {color: 'green'}, `| TP: ${metrics.throughput.toFixed(1)}/s `),
+                metrics.uptime > 0 && React.createElement(Text, {color: 'yellow'}, `| Mem: ${metrics.memory}MB `),
                 React.createElement(Text, {color: 'cyan'}, `| Agent: ${app?.activeAgentId ?? engine.id ?? 'default'} `)
             ),
             React.createElement(

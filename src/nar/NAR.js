@@ -24,6 +24,7 @@ export class NAR extends BaseComponent {
         super(config, 'NAR');
         this._initializeCoreComponents(config);
         this._debugMode = this.config.debug?.pipeline || false;
+        this.traceEnabled = false;
     }
 
     get config() {
@@ -172,7 +173,7 @@ export class NAR extends BaseComponent {
         try {
             const added = await this._inputTask(derivation, {traceId: 'stream'});
 
-            if (added) {
+            if (added && this.traceEnabled) {
                 this._eventBus.emit('reasoning.derivation', {
                     derivedTask: derivation,
                     source: 'streamReasoner.stream',
@@ -497,7 +498,7 @@ export class NAR extends BaseComponent {
             // Emit individual events to maintain compatibility with existing tests
             // Only emit if the task was actually added (not a duplicate)
             for (const {result, added} of addedResults) {
-                if (added) {
+                if (added && this.traceEnabled) {
                     this._eventBus.emit('reasoning.derivation', {
                         derivedTask: result,
                         source: 'streamReasoner.step.method',
