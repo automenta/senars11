@@ -1,6 +1,6 @@
-import {Bag} from '../../../src/memory/Bag.js';
-import {Task} from '../../../src/task/Task.js';
-import {TermFactory} from '../../../src/term/TermFactory.js';
+import {Bag} from '../../../core/src/memory/Bag.js';
+import {Task} from '../../../core/src/task/Task.js';
+import {TermFactory} from '../../../core/src/term/TermFactory.js';
 
 const tf = new TermFactory();
 const createAtom = name => tf.atomic(name);

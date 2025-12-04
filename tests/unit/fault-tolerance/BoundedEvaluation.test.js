@@ -1,5 +1,5 @@
-import {Task} from '../../../src/task/Task.js';
-import {TermFactory} from '../../../src/term/TermFactory.js';
+import {Task} from '../../../core/src/task/Task.js';
+import {TermFactory} from '../../../core/src/term/TermFactory.js';
 
 describe('Bounded Evaluation Tests', () => {
     const factory = new TermFactory();

@@ -1,7 +1,7 @@
-import {Task} from '../../../src/task/Task.js';
-import {Stamp} from '../../../src/Stamp.js';
-import {TermFactory} from '../../../src/term/TermFactory.js';
-import {Truth} from '../../../src/Truth.js';
+import {Task} from '../../../core/src/task/Task.js';
+import {Stamp} from '../../../core/src/Stamp.js';
+import {TermFactory} from '../../../core/src/term/TermFactory.js';
+import {Truth} from '../../../core/src/Truth.js';
 import {createTask, createTruth, TEST_CONSTANTS} from '../../support/factories.js';
 import {taskAssertions, testImmutability} from '../../support/testOrganizer.js';
 

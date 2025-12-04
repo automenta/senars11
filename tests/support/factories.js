@@ -1,10 +1,10 @@
-import {ArrayStamp} from '../../src/Stamp.js';
-import {TermFactory} from '../../src/term/TermFactory.js';
-import {Task} from '../../src/task/Task.js';
-import {Truth} from '../../src/Truth.js';
-import {TaskManager} from '../../src/task/TaskManager.js';
-import {Memory} from '../../src/memory/Memory.js';
-import {Focus} from '../../src/memory/Focus.js';
+import {ArrayStamp} from '../../core/src/Stamp.js';
+import {TermFactory} from '../../core/src/term/TermFactory.js';
+import {Task} from '../../core/src/task/Task.js';
+import {Truth} from '../../core/src/Truth.js';
+import {TaskManager} from '../../core/src/task/TaskManager.js';
+import {Memory} from '../../core/src/memory/Memory.js';
+import {Focus} from '../../core/src/memory/Focus.js';
 
 const termFactory = new TermFactory();
 
@@ -86,6 +86,6 @@ export const createMemory = (config = createMemoryConfig()) => new Memory(config
 export const createFocus = (config = {}) => new Focus(config);
 
 export const createTestNAR = async (config = {}) => {
-    const {NAR} = await import('../../src/nar/NAR.js');
+    const {NAR} = await import('../../core/src/nar/NAR.js');
     return new NAR(config);
 };

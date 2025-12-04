@@ -1,5 +1,5 @@
-import {Knowledge, TruthValueUtils} from '../../../src/know/Knowledge.js';
-import {DataTableKnowledge} from '../../../src/know/DataTableKnowledge.js';
+import {Knowledge, TruthValueUtils} from '../../../agent/src/know/Knowledge.js';
+import {DataTableKnowledge} from '../../../agent/src/know/DataTableKnowledge.js';
 
 describe('Knowledge System', () => {
     describe('TruthValueUtils', () => {

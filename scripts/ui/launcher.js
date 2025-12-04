@@ -4,10 +4,10 @@ import {spawn} from 'child_process';
 import {fileURLToPath} from 'url';
 import {dirname, join} from 'path';
 import {showUsageAndExit} from '../utils/script-utils.js';
-import {WebSocketMonitor} from '../../src/server/WebSocketMonitor.js';
-import {DemoWrapper} from '../../src/demo/DemoWrapper.js';
-import {Config} from '../../src/ui/Config.js';
-import {App} from '../../src/ui/App.js';
+import {WebSocketMonitor} from '../../agent/src/server/WebSocketMonitor.js';
+import {DemoWrapper} from '../../agent/src/demo/DemoWrapper.js';
+import {Config} from '../../agent/src/app/Config.js';
+import {App} from '../../agent/src/app/App.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -112,7 +112,7 @@ async function _initializeWebSocketMonitor(webSocketConfig) {
 }
 
 async function _setupSessionServerAdapter(replEngine, monitor) {
-    const {SessionServerAdapter} = await import('../../src/server/SessionServerAdapter.js');
+    const {SessionServerAdapter} = await import('../../agent/src/server/SessionServerAdapter.js');
     const serverAdapter = new SessionServerAdapter(replEngine, monitor);
 
     serverAdapter.registerWithWebSocketServer();

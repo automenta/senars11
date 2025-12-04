@@ -1,9 +1,9 @@
 // Import necessary modules
-import {NAR} from '../../../src/nar/NAR.js';
-import {DummyProvider} from '../../../src/lm/DummyProvider.js';
-import {LangChainProvider} from '../../../src/lm/LangChainProvider.js';
-import {HuggingFaceProvider} from '../../../src/lm/HuggingFaceProvider.js';
-import {AdvancedNarseseTranslator} from '../../../src/lm/AdvancedNarseseTranslator.js';
+import {NAR} from '../../../core/src/nar/NAR.js';
+import {DummyProvider} from '../../../core/src/lm/DummyProvider.js';
+import {LangChainProvider} from '../../../core/src/lm/LangChainProvider.js';
+import {HuggingFaceProvider} from '../../../core/src/lm/HuggingFaceProvider.js';
+import {AdvancedNarseseTranslator} from '../../../core/src/lm/AdvancedNarseseTranslator.js';
 
 describe('LM Integration Tests', () => {
     let nar;

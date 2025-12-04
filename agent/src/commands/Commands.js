@@ -2,11 +2,11 @@
  * Standardized Command Interface and Implementations
  */
 
-import {handleError} from '../../util/ErrorHandler.js';
+import {handleError} from '../../../core/src/util/ErrorHandler.js';
 import {fileURLToPath} from 'url';
 import {basename, dirname, join, resolve} from 'path';
 import {promises as fs} from 'fs';
-import {FormattingUtils} from '../../util/FormattingUtils.js';
+import {FormattingUtils} from '../../../core/src/util/FormattingUtils.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const EXAMPLES_DIR = resolve(__dirname, '../../../examples');

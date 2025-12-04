@@ -1,4 +1,4 @@
-import {MemoryValidator} from '../../../src/util/MemoryValidator.js';
+import {MemoryValidator} from '../../../core/src/util/MemoryValidator.js';
 
 describe('MemoryValidator', () => {
     let validator;

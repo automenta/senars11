@@ -1,4 +1,4 @@
-import {NarseseParser} from '../../../src/parser/NarseseParser.js';
+import {NarseseParser} from '../../../core/src/parser/NarseseParser.js';
 
 describe('NarseseParser - Regression Test for Parser Fix', () => {
     const parser = new NarseseParser();

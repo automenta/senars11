@@ -1,8 +1,8 @@
-import {ReasonerBuilder} from '../../../src/reason/ReasonerBuilder.js';
-import {TaskBagPremiseSource} from '../../../src/reason/TaskBagPremiseSource.js';
-import {Strategy} from '../../../src/reason/Strategy.js';
-import {RuleProcessor} from '../../../src/reason/RuleProcessor.js';
-import {Focus} from '../../../src/memory/Focus.js';
+import {ReasonerBuilder} from '../../../core/src/reason/ReasonerBuilder.js';
+import {TaskBagPremiseSource} from '../../../core/src/reason/TaskBagPremiseSource.js';
+import {Strategy} from '../../../core/src/reason/Strategy.js';
+import {RuleProcessor} from '../../../core/src/reason/RuleProcessor.js';
+import {Focus} from '../../../core/src/memory/Focus.js';
 import {createTestMemory} from '../../support/baseTestUtils.js';
 
 describe('ReasonerBuilder', () => {

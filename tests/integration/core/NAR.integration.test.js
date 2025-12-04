@@ -1,5 +1,5 @@
-import {NAR} from '../../../src/nar/NAR.js';
-import {TermFactory} from '../../../src/term/TermFactory.js';
+import {NAR} from '../../../core/src/nar/NAR.js';
+import {TermFactory} from '../../../core/src/term/TermFactory.js';
 import {completeNARIntegrationSuite, flexibleNARIntegrationSuite} from '../../support/commonTestSuites.js';
 import {comprehensiveTestSuites, flexibleAssertions} from '../../support/testOrganizer.js';
 

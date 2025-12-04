@@ -1,5 +1,5 @@
-import {NarseseParser} from '../../../src/parser/NarseseParser.js';
-import {Term} from '../../../src/term/Term.js';
+import {NarseseParser} from '../../../core/src/parser/NarseseParser.js';
+import {Term} from '../../../core/src/term/Term.js';
 
 describe('NarseseParser', () => {
     const parser = new NarseseParser();

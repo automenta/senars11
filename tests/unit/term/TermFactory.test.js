@@ -1,4 +1,4 @@
-import {TermFactory} from '../../../src/term/TermFactory.js';
+import {TermFactory} from '../../../core/src/term/TermFactory.js';
 
 describe('TermFactory', () => {
     let tf;

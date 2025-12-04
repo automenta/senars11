@@ -3,7 +3,7 @@
  * @description Unit tests for LangChainProvider
  */
 
-import {LangChainProvider} from '../../../src/lm/LangChainProvider.js';
+import {LangChainProvider} from '../../../core/src/lm/LangChainProvider.js';
 
 describe('LangChainProvider', () => {
     describe('constructor', () => {

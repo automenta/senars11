@@ -1,9 +1,9 @@
-import {LMRule} from '../../../src/reason/LMRule.js';
-import {Punctuation, Task} from '../../../src/task/Task.js';
-import {Truth} from '../../../src/Truth.js';
-import {TermFactory} from '../../../src/term/TermFactory.js';
-import {createGoalDecompositionRule, createHypothesisGenerationRule} from '../../../src/reason/rules/lm/index.js';
-import {LMRuleUtils} from '../../../src/reason/utils/LMRuleUtils.js';
+import {LMRule} from '../../../core/src/reason/LMRule.js';
+import {Punctuation, Task} from '../../../core/src/task/Task.js';
+import {Truth} from '../../../core/src/Truth.js';
+import {TermFactory} from '../../../core/src/term/TermFactory.js';
+import {createGoalDecompositionRule, createHypothesisGenerationRule} from '../../../core/src/reason/rules/lm/index.js';
+import {LMRuleUtils} from '../../../core/src/reason/utils/LMRuleUtils.js';
 import {jest} from '@jest/globals';
 
 class MockLM {

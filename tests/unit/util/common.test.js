@@ -1,5 +1,5 @@
 import {jest} from '@jest/globals';
-import {deepClone, formatNumber, safeAsync, safeGet} from '../../../src/util/common.js';
+import {deepClone, formatNumber, safeAsync, safeGet} from '../../../core/src/util/common.js';
 
 describe('Common Utils', () => {
     describe('safeGet', () => {

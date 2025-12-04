@@ -1,4 +1,4 @@
-import {UI_CONSTANTS} from '../../../src/util/UIConstants.js';
+import {UI_CONSTANTS} from '../../../core/src/util/UIConstants.js';
 import {LogViewer} from '../components/LogViewer.js';
 
 /**

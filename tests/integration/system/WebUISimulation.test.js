@@ -1,6 +1,6 @@
 import {jest} from '@jest/globals';
-import {NAR} from '../../../src/nar/NAR.js';
-import {WebSocketMonitor} from '../../../src/server/WebSocketMonitor.js';
+import {NAR} from '../../../core/src/nar/NAR.js';
+import {WebSocketMonitor} from '../../../agent/src/server/WebSocketMonitor.js';
 import WebSocket from 'ws';
 
 // Increase timeout for this suite

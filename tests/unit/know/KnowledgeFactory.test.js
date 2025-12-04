@@ -1,4 +1,4 @@
-import {Knowledge, KnowledgeFactory} from '../../../src/know/index.js';
+import {Knowledge, KnowledgeFactory} from '../../../agent/src/know/index.js';
 
 class TestKnowledge extends Knowledge {
     async toTasks() {

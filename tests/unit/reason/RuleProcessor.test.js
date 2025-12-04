@@ -1,7 +1,7 @@
 import {jest} from '@jest/globals';
-import {RuleProcessor} from '../../../src/reason/RuleProcessor.js';
-import {RuleExecutor} from '../../../src/reason/RuleExecutor.js';
-import {Rule} from '../../../src/reason/Rule.js';
+import {RuleProcessor} from '../../../core/src/reason/RuleProcessor.js';
+import {RuleExecutor} from '../../../core/src/reason/RuleExecutor.js';
+import {Rule} from '../../../core/src/reason/Rule.js';
 import {createTestTask} from '../../support/baseTestUtils.js';
 
 class TestRule extends Rule {

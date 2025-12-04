@@ -1,7 +1,7 @@
 import {WebSocketServer} from 'ws';
 import {EventEmitter} from 'events';
 import {ClientMessageHandlers} from './ClientMessageHandlers.js';
-import {DEFAULT_CLIENT_CAPABILITIES, WEBSOCKET_CONFIG} from '../config/constants.js';
+import {DEFAULT_CLIENT_CAPABILITIES, WEBSOCKET_CONFIG} from '../../core/src/config/constants.js';
 
 const DEFAULT_OPTIONS = Object.freeze({
     port: WEBSOCKET_CONFIG.defaultPort,

@@ -1,5 +1,5 @@
 import {afterAll, beforeAll, describe, expect, jest, test} from '@jest/globals';
-import {App} from '../../../src/ui/App.js';
+import {App} from '../../../agent/src/app/App.js';
 
 describe('Hybrid LM-NAL Reasoning Integration', () => {
     let app;

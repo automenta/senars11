@@ -7,8 +7,8 @@
 // (none in this file)
 
 // Local imports
-import {Truth} from '../../../src/Truth.js';
-import {NAR} from '../../../src/nar/NAR.js';
+import {Truth} from '../../../core/src/Truth.js';
+import {NAR} from '../../../core/src/nar/NAR.js';
 
 // Test helper imports
 // (none in this file - would be added if we used test helpers)

@@ -4,7 +4,7 @@
  * These templates provide consistent patterns for creating resilient tests
  */
 
-import {TaskMatch, TestNAR} from '../../src/testing/TestNAR.js';
+import {TaskMatch, TestNAR} from '../../core/src/testing/TestNAR.js';
 import {flexible} from './testOrganizer.js';
 
 /**

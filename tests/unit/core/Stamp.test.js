@@ -1,4 +1,4 @@
-import {ArrayStamp, Stamp} from '../../../src/Stamp.js';
+import {ArrayStamp, Stamp} from '../../../core/src/Stamp.js';
 
 describe('Stamp', () => {
     test('initialization', () => {

@@ -1,6 +1,6 @@
 import fc from 'fast-check';
-import {TermType} from '../../../src/term/Term.js';
-import {TermFactory} from '../../../src/term/TermFactory.js';
+import {TermType} from '../../../core/src/term/Term.js';
+import {TermFactory} from '../../../core/src/term/TermFactory.js';
 
 const tf = new TermFactory();
 

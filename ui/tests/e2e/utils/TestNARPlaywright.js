@@ -1,8 +1,8 @@
 import {expect} from '@playwright/test';
 import {NarPage} from './NarPage.js';
-import {TaskMatch} from '../../../../src/testing/TaskMatch.js';
-import {NarseseParser} from '../../../../src/parser/NarseseParser.js';
-import {TermFactory} from '../../../../src/term/TermFactory.js';
+import {TaskMatch} from '../../../../core/src/testing/TaskMatch.js';
+import {NarseseParser} from '../../../../core/src/parser/NarseseParser.js';
+import {TermFactory} from '../../../../core/src/term/TermFactory.js';
 
 /**
  * TestNARPlaywright - A fluent API for testing SeNARS via Playwright.

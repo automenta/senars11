@@ -1,5 +1,5 @@
-import {Knowing} from '../../../src/know/Knowing.js';
-import {Knowledge} from '../../../src/know/Knowledge.js';
+import {Knowing} from '../../../agent/src/know/Knowing.js';
+import {Knowledge} from '../../../agent/src/know/Knowledge.js';
 
 class SimpleTestKnowledge extends Knowledge {
     async toTasks() {

@@ -1,4 +1,4 @@
-import {TaskMatch, TestNAR} from '../../../src/testing/TestNAR.js';
+import {TaskMatch, TestNAR} from '../../../core/src/testing/TestNAR.js';
 import {flexible} from '../../support/testOrganizer.js';
 
 describe('Flexible Truth Matching Tests', () => {

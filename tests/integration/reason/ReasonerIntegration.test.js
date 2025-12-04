@@ -1,5 +1,5 @@
 import {jest} from '@jest/globals';
-import {NAR} from '../../../src/nar/NAR.js';
+import {NAR} from '../../../core/src/nar/NAR.js';
 
 jest.setTimeout(30000);
 

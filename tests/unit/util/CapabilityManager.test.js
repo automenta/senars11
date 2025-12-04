@@ -1,4 +1,4 @@
-import {Capability, CapabilityManager, CapabilityTypes} from '../../../src/util/CapabilityManager.js';
+import {Capability, CapabilityManager, CapabilityTypes} from '../../../core/src/util/CapabilityManager.js';
 
 describe('CapabilityManager', () => {
     describe('Capability', () => {

@@ -1,8 +1,8 @@
-import {ImplicationSyllogisticRule as SyllogisticRule} from '../../../../../src/reason/rules/nal/SyllogisticRule.js';
-import {Task} from '../../../../../src/task/Task.js';
-import {Truth} from '../../../../../src/Truth.js';
-import {ArrayStamp} from '../../../../../src/Stamp.js';
-import {TermFactory} from '../../../../../src/term/TermFactory.js';
+import {ImplicationSyllogisticRule as SyllogisticRule} from '../../../../../core/src/reason/rules/nal/SyllogisticRule.js';
+import {Task} from '../../../../../core/src/task/Task.js';
+import {Truth} from '../../../../../core/src/Truth.js';
+import {ArrayStamp} from '../../../../../core/src/Stamp.js';
+import {TermFactory} from '../../../../../core/src/term/TermFactory.js';
 
 describe('SyllogisticRule', () => {
     let termFactory;

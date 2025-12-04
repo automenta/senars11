@@ -1,4 +1,4 @@
-import {Memory} from '../../../src/memory/Memory.js';
+import {Memory} from '../../../core/src/memory/Memory.js';
 import {createMemoryConfig, createTask, createTerm, TEST_CONSTANTS} from '../../support/factories.js';
 import {memoryAssertions, TestSuiteFactory} from '../../support/testOrganizer.js';
 
