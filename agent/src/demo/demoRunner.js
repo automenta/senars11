@@ -4,7 +4,7 @@
  * Demo runner script for testing the demo wrapper functionality
  */
 
-import {NAR} from '../nar/NAR.js';
+import {NAR} from '../../core/src/nar/NAR.js';
 import {DemoWrapper} from './DemoWrapper.js';
 import {WebSocketMonitor} from '../server/WebSocketMonitor.js';
 

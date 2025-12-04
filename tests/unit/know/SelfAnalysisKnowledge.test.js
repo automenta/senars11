@@ -3,8 +3,8 @@ import {
     DirectoryStructureKnowledge,
     FileAnalysisKnowledge,
     TestResultKnowledge
-} from '../../../src/know/SoftwareKnowledge.js';
-import {SoftwareKnowledgeFactory} from '../../../src/know/SoftwareKnowledgeFactory.js';
+} from '../../../agent/src/know/SoftwareKnowledge.js';
+import {SoftwareKnowledgeFactory} from '../../../agent/src/know/SoftwareKnowledgeFactory.js';
 
 describe('Self-Analysis Knowledge', () => {
     const cases = [

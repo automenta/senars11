@@ -9,7 +9,7 @@ import {spawn} from 'child_process';
 import {fileURLToPath} from 'url';
 import {dirname, join} from 'path';
 import {WebSocketMonitor} from '../server/WebSocketMonitor.js';
-import {NAR} from '../nar/NAR.js';
+import {NAR} from '../../core/src/nar/NAR.js';
 import {DemoWrapper} from '../demo/DemoWrapper.js';
 
 const __filename = fileURLToPath(import.meta.url);

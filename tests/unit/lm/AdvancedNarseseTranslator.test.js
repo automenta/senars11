@@ -3,7 +3,7 @@
  * @description Unit tests for AdvancedNarseseTranslator
  */
 
-import {AdvancedNarseseTranslator} from '../../../src/lm/AdvancedNarseseTranslator.js';
+import {AdvancedNarseseTranslator} from '../../../core/src/lm/AdvancedNarseseTranslator.js';
 
 describe('AdvancedNarseseTranslator', () => {
     let translator;

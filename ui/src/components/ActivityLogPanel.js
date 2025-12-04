@@ -1,6 +1,6 @@
 import {Component} from './Component.js';
-import {ActivityViewModel} from '../../src/ui/model/ActivityViewModel.js';
-import {ActionRegistry} from '../../src/ui/model/ActionRegistry.js';
+import {ActivityViewModel} from '../../agent/src/app/model/ActivityViewModel.js';
+import {ActionRegistry} from '../../agent/src/app/model/ActionRegistry.js';
 
 export class ActivityLogPanel extends Component {
     constructor(containerId) {

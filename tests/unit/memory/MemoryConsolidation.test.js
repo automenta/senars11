@@ -1,8 +1,8 @@
-import {MemoryConsolidation} from '../../../src/memory/MemoryConsolidation.js';
-import {Memory} from '../../../src/memory/Memory.js';
-import {Concept} from '../../../src/memory/Concept.js';
-import {Task} from '../../../src/task/Task.js';
-import {TermFactory} from '../../../src/term/TermFactory.js';
+import {MemoryConsolidation} from '../../../core/src/memory/MemoryConsolidation.js';
+import {Memory} from '../../../core/src/memory/Memory.js';
+import {Concept} from '../../../core/src/memory/Concept.js';
+import {Task} from '../../../core/src/task/Task.js';
+import {TermFactory} from '../../../core/src/term/TermFactory.js';
 
 describe('MemoryConsolidation', () => {
     let consolidation, memory, tf;

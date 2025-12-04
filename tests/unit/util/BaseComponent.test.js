@@ -1,5 +1,5 @@
-import {BaseComponent} from '../../../src/util/BaseComponent.js';
-import {EventBus} from '../../../src/util/EventBus.js';
+import {BaseComponent} from '../../../core/src/util/BaseComponent.js';
+import {EventBus} from '../../../core/src/util/EventBus.js';
 
 class TestComponent extends BaseComponent {
     constructor(config = {}) {

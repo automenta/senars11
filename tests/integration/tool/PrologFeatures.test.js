@@ -1,6 +1,6 @@
-import {NAR} from '../../../src/nar/NAR.js';
-import {NARTool} from '../../../src/tool/NARTool.js';
-import {PrologStrategy} from '../../../src/reason/strategy/PrologStrategy.js';
+import {NAR} from '../../../core/src/nar/NAR.js';
+import {NARTool} from '../../../core/src/tool/NARTool.js';
+import {PrologStrategy} from '../../../core/src/reason/strategy/PrologStrategy.js';
 
 describe('Prolog Features Exploration', () => {
     let nar;

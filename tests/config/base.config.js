@@ -16,8 +16,9 @@ const baseConfig = {
         '^.+\\.js$': 'babel-jest',
     },
     collectCoverageFrom: [
-        'src/**/*.js',
-        '!src/**/*.test.js',
+        'core/src/**/*.js',
+        'agent/src/**/*.js',
+        '!**/*.test.js',
     ],
     coverageThreshold: {
         global: {

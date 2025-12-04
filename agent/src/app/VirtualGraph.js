@@ -1,4 +1,4 @@
-import {UI_CONSTANTS} from '../util/UIConstants.js';
+import {UI_CONSTANTS} from '../../core/src/util/UIConstants.js';
 
 export class VirtualGraph {
     constructor() {

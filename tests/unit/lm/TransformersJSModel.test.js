@@ -1,4 +1,4 @@
-import {TransformersJSModel} from '../../../src/lm/TransformersJSModel.js';
+import {TransformersJSModel} from '../../../core/src/lm/TransformersJSModel.js';
 import {HumanMessage} from '@langchain/core/messages';
 
 describe('TransformersJSModel', () => {

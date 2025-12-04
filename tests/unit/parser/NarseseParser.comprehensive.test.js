@@ -1,4 +1,4 @@
-import {NarseseParser} from '../../../src/parser/NarseseParser.js';
+import {NarseseParser} from '../../../core/src/parser/NarseseParser.js';
 
 describe('NarseseParser - Comprehensive Format Support', () => {
     const parser = new NarseseParser();

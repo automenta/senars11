@@ -1,4 +1,4 @@
-import {handleError, logError} from '../util/ErrorHandler.js';
+import {handleError, logError} from '../../core/src/util/ErrorHandler.js';
 import {AGENT_EVENTS} from './constants.js';
 
 export class InputProcessor {

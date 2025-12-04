@@ -1,6 +1,6 @@
-import {LM} from '../../../src/lm/LM.js';
-import {DummyProvider} from '../../../src/lm/DummyProvider.js';
-import {ProviderRegistry} from '../../../src/lm/ProviderRegistry.js';
+import {LM} from '../../../core/src/lm/LM.js';
+import {DummyProvider} from '../../../core/src/lm/DummyProvider.js';
+import {ProviderRegistry} from '../../../core/src/lm/ProviderRegistry.js';
 import {jest} from '@jest/globals';
 
 describe('LM System', () => {

@@ -1,5 +1,5 @@
-import {ProviderRegistry} from '../../../src/lm/ProviderRegistry.js';
-import {DummyProvider} from '../../../src/lm/DummyProvider.js';
+import {ProviderRegistry} from '../../../core/src/lm/ProviderRegistry.js';
+import {DummyProvider} from '../../../core/src/lm/DummyProvider.js';
 
 describe('ProviderRegistry', () => {
     let registry;

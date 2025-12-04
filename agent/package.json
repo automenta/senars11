@@ -1,0 +1,12 @@
+{
+  "name": "@senars/agent",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "src/index.js",
+  "dependencies": {
+    "@senars/core": "^1.0.0",
+    "@modelcontextprotocol/sdk": "^1.21.1",
+    "ws": "^8.18.3",
+    "node-fetch": "^3.3.2"
+  }
+}

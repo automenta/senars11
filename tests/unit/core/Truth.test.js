@@ -1,5 +1,5 @@
-import {TRUTH} from '../../../src/config/constants.js';
-import {Truth} from '../../../src/Truth.js';
+import {TRUTH} from '../../../core/src/config/constants.js';
+import {Truth} from '../../../core/src/Truth.js';
 
 describe('Truth', () => {
     test('initialization', () => {

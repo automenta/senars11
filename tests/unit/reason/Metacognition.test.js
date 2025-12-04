@@ -1,7 +1,7 @@
 import {jest} from '@jest/globals';
-import {Metacognition} from '../../../src/self/Metacognition.js';
-import {EventBus} from '../../../src/util/EventBus.js';
-import {IntrospectionEvents} from '../../../src/util/IntrospectionEvents.js';
+import {Metacognition} from '../../../core/src/self/Metacognition.js';
+import {EventBus} from '../../../core/src/util/EventBus.js';
+import {IntrospectionEvents} from '../../../core/src/util/IntrospectionEvents.js';
 
 describe('Metacognition', () => {
     let eventBus, metacognition, nar;

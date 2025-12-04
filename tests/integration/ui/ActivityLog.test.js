@@ -1,9 +1,9 @@
-import {AgentBuilder} from '../../../src/agent/AgentBuilder.js';
-import {ActivityModel} from '../../../src/ui/model/ActivityModel.js';
-import {ActivityMonitor} from '../../../src/ui/model/ActivityMonitor.js';
-import {ActionDispatcher} from '../../../src/ui/model/ActionDispatcher.js';
-import {PreferenceCollector} from '../../../src/rlfp/PreferenceCollector.js';
-import {ActionTypes, ActivityTypes} from '../../../src/ui/model/ActivityTypes.js';
+import {AgentBuilder} from '../../../agent/src/agent/AgentBuilder.js';
+import {ActivityModel} from '../../../agent/src/app/model/ActivityModel.js';
+import {ActivityMonitor} from '../../../agent/src/app/model/ActivityMonitor.js';
+import {ActionDispatcher} from '../../../agent/src/app/model/ActionDispatcher.js';
+import {PreferenceCollector} from '../../../agent/src/rlfp/PreferenceCollector.js';
+import {ActionTypes, ActivityTypes} from '../../../agent/src/app/model/ActivityTypes.js';
 
 describe('Activity Log Integration', () => {
     let agent, model, monitor, dispatcher, collector;

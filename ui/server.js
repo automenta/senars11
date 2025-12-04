@@ -36,9 +36,8 @@ const server = http.createServer((req, res) => {
 
     if (fs.existsSync(localPath) && fs.statSync(localPath).isFile()) {
         fullPath = localPath;
-    } else if (filePath.startsWith('/src/')) {
-        // Fallback to shared code from the parent src directory
-        // filePath includes /src/, so we join with parent of ui/ which is root
+    } else if (filePath.startsWith('/core/') || filePath.startsWith('/agent/')) {
+        // Serve from core and agent workspaces
         fullPath = path.join(__dirname, '..', filePath);
     } else {
         fullPath = localPath;

@@ -1,4 +1,4 @@
-import {Truth} from '../../../src/Truth.js';
+import {Truth} from '../../../core/src/Truth.js';
 import {createNARIntegrationTestSuite} from '../../support/narTestSetup.js';
 import {flexibleAssertions, runPerformanceTest} from '../../support/baseTestUtils.js';
 

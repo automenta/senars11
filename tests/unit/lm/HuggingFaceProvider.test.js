@@ -3,7 +3,7 @@
  * @description Unit tests for HuggingFaceProvider
  */
 
-import {HuggingFaceProvider} from '../../../src/lm/HuggingFaceProvider.js';
+import {HuggingFaceProvider} from '../../../core/src/lm/HuggingFaceProvider.js';
 
 describe('HuggingFaceProvider', () => {
     describe('constructor', () => {

@@ -1,8 +1,8 @@
-import {ImplicationSyllogisticRule} from '../../../src/reason/rules/nal/SyllogisticRule.js';
-import {ModusPonensRule} from '../../../src/reason/rules/nal/ModusPonensRule.js';
-import {Task} from '../../../src/task/Task.js';
-import {Truth} from '../../../src/Truth.js';
-import {TermFactory} from '../../../src/term/TermFactory.js';
+import {ImplicationSyllogisticRule} from '../../../core/src/reason/rules/nal/SyllogisticRule.js';
+import {ModusPonensRule} from '../../../core/src/reason/rules/nal/ModusPonensRule.js';
+import {Task} from '../../../core/src/task/Task.js';
+import {Truth} from '../../../core/src/Truth.js';
+import {TermFactory} from '../../../core/src/term/TermFactory.js';
 
 describe('Rule Application', () => {
     let tf, tA, tB, tC;

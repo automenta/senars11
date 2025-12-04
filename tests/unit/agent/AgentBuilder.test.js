@@ -1,6 +1,6 @@
-import {AgentBuilder} from '../../../src/agent/AgentBuilder.js';
-import {Agent} from '../../../src/agent/Agent.js';
-import {NAR} from '../../../src/nar/NAR.js';
+import {AgentBuilder} from '../../../agent/src/agent/AgentBuilder.js';
+import {Agent} from '../../../agent/src/agent/Agent.js';
+import {NAR} from '../../../core/src/nar/NAR.js';
 
 describe('AgentBuilder', () => {
     let agent;

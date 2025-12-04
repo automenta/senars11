@@ -1,5 +1,5 @@
 import {jest} from '@jest/globals';
-import {Strategy} from '../../../src/reason/Strategy.js';
+import {Strategy} from '../../../core/src/reason/Strategy.js';
 import {createTestTask} from '../../support/baseTestUtils.js';
 
 describe('Strategy', () => {

@@ -1,11 +1,11 @@
-import {Memory} from '../../../src/memory/Memory.js';
-import {Focus} from '../../../src/memory/Focus.js';
-import {FocusSetSelector} from '../../../src/memory/FocusSetSelector.js';
-import {MemoryIndex} from '../../../src/memory/MemoryIndex.js';
-import {MemoryConsolidation} from '../../../src/memory/MemoryConsolidation.js';
-import {Concept} from '../../../src/memory/Concept.js';
+import {Memory} from '../../../core/src/memory/Memory.js';
+import {Focus} from '../../../core/src/memory/Focus.js';
+import {FocusSetSelector} from '../../../core/src/memory/FocusSetSelector.js';
+import {MemoryIndex} from '../../../core/src/memory/MemoryIndex.js';
+import {MemoryConsolidation} from '../../../core/src/memory/MemoryConsolidation.js';
+import {Concept} from '../../../core/src/memory/Concept.js';
 import {createTask, createTerm} from '../../support/factories.js';
-import {TermFactory} from '../../../src/term/TermFactory.js';
+import {TermFactory} from '../../../core/src/term/TermFactory.js';
 
 describe('Memory Architecture', () => {
     let memory, focus, selector, index, consolidation, tf;

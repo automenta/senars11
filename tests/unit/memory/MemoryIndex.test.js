@@ -1,6 +1,6 @@
-import {MemoryIndex} from '../../../src/memory/MemoryIndex.js';
-import {Concept} from '../../../src/memory/Concept.js';
-import {TermFactory} from '../../../src/term/TermFactory.js';
+import {MemoryIndex} from '../../../core/src/memory/MemoryIndex.js';
+import {Concept} from '../../../core/src/memory/Concept.js';
+import {TermFactory} from '../../../core/src/term/TermFactory.js';
 
 describe('MemoryIndex', () => {
     let index, tf;

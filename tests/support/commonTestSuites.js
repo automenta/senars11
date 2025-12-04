@@ -196,7 +196,7 @@ export const narTestSetup = (config = {}) => {
     let nar;
 
     beforeEach(async () => {
-        const {NAR} = await import('../../src/nar/NAR.js');
+        const {NAR} = await import('../../core/src/nar/NAR.js');
         nar = new NAR(defaultConfig);
     });
 

@@ -1,4 +1,4 @@
-import {NarseseParser} from '../../../src/parser/NarseseParser.js';
+import {NarseseParser} from '../../../core/src/parser/NarseseParser.js';
 
 describe('NarseseParser - Variable Parsing', () => {
     const parser = new NarseseParser();

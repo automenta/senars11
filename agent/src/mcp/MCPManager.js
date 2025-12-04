@@ -84,7 +84,7 @@ export class MCPManager extends EventEmitter {
     async registerLocalTools(nar) {
         if (!this.server) return;
 
-        const {NARTool} = await import('../tool/NARTool.js');
+        const {NARTool} = await import('../../core/src/tool/NARTool.js');
         const narTool = new NARTool(nar);
         this.server.registerTool(narTool.name, narTool);
     }

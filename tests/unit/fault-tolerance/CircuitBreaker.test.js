@@ -1,5 +1,5 @@
 import {jest} from '@jest/globals';
-import {CircuitBreaker, withCircuitBreaker} from '../../../src/util/CircuitBreaker.js';
+import {CircuitBreaker, withCircuitBreaker} from '../../../core/src/util/CircuitBreaker.js';
 
 describe('CircuitBreaker', () => {
     let cb;

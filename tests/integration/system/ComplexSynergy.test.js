@@ -1,8 +1,8 @@
-import {NAR} from '../../../src/nar/NAR.js';
-import {NARTool} from '../../../src/tool/NARTool.js';
-import {PrologStrategy} from '../../../src/reason/strategy/PrologStrategy.js';
-import {Task} from '../../../src/task/Task.js';
-import {Truth} from '../../../src/Truth.js';
+import {NAR} from '../../../core/src/nar/NAR.js';
+import {NARTool} from '../../../core/src/tool/NARTool.js';
+import {PrologStrategy} from '../../../core/src/reason/strategy/PrologStrategy.js';
+import {Task} from '../../../core/src/task/Task.js';
+import {Truth} from '../../../core/src/Truth.js';
 
 describe('Neurosymbolic Synergy', () => {
     let nar, narTool, tf;

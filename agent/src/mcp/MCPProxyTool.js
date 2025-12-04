@@ -1,4 +1,4 @@
-import {BaseTool} from '../tool/BaseTool.js';
+import {BaseTool} from '../../core/src/tool/BaseTool.js';
 
 /**
  * Proxy tool that delegates execution to an MCP client
