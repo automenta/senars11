@@ -16,9 +16,25 @@ export const LOG_TYPES = {
 
 // Format log entry with color coding
 export const LogEntry = ({log}) => {
-    const {color, symbol} = LOG_TYPES[log.type] ?? LOG_TYPES.info;
     const timestamp = new Date(log.timestamp).toLocaleTimeString();
 
+    // Check if it's a rich view model log
+    if (log.title) {
+        return React.createElement(
+            Box,
+            {flexDirection: 'column', marginBottom: 0},
+            React.createElement(
+                Box,
+                {flexDirection: 'row'},
+                React.createElement(Text, {color: log.color, bold: true}, `${log.icon || '•'} [${timestamp}] ${log.title}: `),
+                React.createElement(Text, {color: log.color}, log.subtitle || '')
+            ),
+            log.details ? React.createElement(Text, {color: 'gray', dimColor: true, marginLeft: 2}, log.details) : null
+        );
+    }
+
+    // Legacy support
+    const {color, symbol} = LOG_TYPES[log.type] ?? LOG_TYPES.info;
     return React.createElement(
         Box,
         {flexDirection: 'row'},

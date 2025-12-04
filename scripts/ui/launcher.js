@@ -6,8 +6,8 @@ import {dirname, join} from 'path';
 import {showUsageAndExit} from '../utils/script-utils.js';
 import {WebSocketMonitor} from '../../src/server/WebSocketMonitor.js';
 import {DemoWrapper} from '../../src/demo/DemoWrapper.js';
-import {Config} from '../../src/app/Config.js';
-import {App} from '../../src/app/App.js';
+import {Config} from '../../src/ui/Config.js';
+import {App} from '../../src/ui/App.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -46,6 +46,33 @@ async function startWebSocketServer(config) {
 
     const monitor = await _initializeWebSocketMonitor(config.webSocket);
     const serverAdapter = await _setupSessionServerAdapter(replEngine, monitor);
+
+    // Hook up ActivityModel stream
+    if (app.activityModel) {
+        app.activityModel.subscribe((event, data) => {
+            if (event === 'add') {
+                monitor.bufferEvent('activity.new', data);
+            }
+        });
+    }
+
+    // Handle incoming actions
+    monitor.registerClientMessageHandler('activity.action', async (message, client) => {
+        if (app.actionDispatcher) {
+            const result = await app.actionDispatcher.dispatch(message.payload);
+            // Send result back
+            monitor._sendToClient(client, {
+                type: 'action.result',
+                payload: result,
+                requestId: message.id
+            });
+        } else {
+             monitor._sendToClient(client, {
+                type: 'error',
+                payload: 'ActionDispatcher not initialized'
+            });
+        }
+    });
 
     // Add logging listeners for demo tour
     replEngine.on('task.input', (data) => {

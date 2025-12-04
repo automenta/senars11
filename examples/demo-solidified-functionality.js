@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import {App} from './src/app/App.js';
+import {App} from './src/ui/App.js';
 import {NARControlTool} from './src/tool/NARControlTool.js';
 
 // Suppress ONNX runtime warnings
