@@ -4,7 +4,7 @@ import {fileURLToPath} from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const EXAMPLES_PATH = path.resolve(__dirname, '../../examples');
+const EXAMPLES_PATH = path.resolve(__dirname, '../../../examples');
 
 export class FileSystemDemoSource {
     constructor(basePath = EXAMPLES_PATH) {

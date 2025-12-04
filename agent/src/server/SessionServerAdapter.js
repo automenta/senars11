@@ -1,4 +1,4 @@
-import {ReplMessageHandler} from '../repl/ReplMessageHandler.js';
+import {ReplMessageHandler} from '../messaging/MessageHandler.js';
 
 export class SessionServerAdapter {
     /**
