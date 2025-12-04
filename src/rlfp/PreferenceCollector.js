@@ -48,6 +48,16 @@ class PreferenceCollector {
         return data;
     }
 
+    /**
+     * Programmatically add a preference (e.g. from UI)
+     */
+    addPreference(preferenceData) {
+        this.preferences.push({
+            ...preferenceData,
+            timestamp: Date.now()
+        });
+    }
+
     async loadTrajectory(path) {
         return JSON.parse(fs.readFileSync(path, 'utf-8'));
     }

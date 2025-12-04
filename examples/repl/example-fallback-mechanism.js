@@ -5,7 +5,7 @@
  * Demonstrates how the system properly routes input between LM and NARS
  */
 
-import {App} from '../../src/app/App.js';
+import {App} from '../../src/ui/App.js';
 
 async function runFallbackDemo() {
     console.log('🔄🤖 SeNARS LM Fallback Mechanism Demo');

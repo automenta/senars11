@@ -8,10 +8,11 @@ import {useCommandHistory} from '../hooks/useCommandHistory.js';
 import {useAgentLogs} from '../hooks/useAgentLogs.js';
 import {useAgentMetrics} from '../hooks/useAgentMetrics.js';
 import {LogEntry} from './LogEntry.js';
+import {ActionRegistry} from '../../ui/model/ActionRegistry.js';
 
 // TUI component
 export const TUI = ({engine, app}) => {
-    const {logs, status, addLog, setLogs, updateLog} = useAgentLogs(engine);
+    const {logs, status, addLog, setLogs, updateLog} = useAgentLogs(engine, app);
     const metrics = useAgentMetrics(engine);
     const [inputValue, setInputValue] = useState('');
     const [mode, setMode] = useState('agent'); // 'agent' or 'narsese'
@@ -178,6 +179,33 @@ export const TUI = ({engine, app}) => {
                         return;
                     } else if (cmdName === 'clear') {
                         handleClearCommand();
+                        return;
+                    } else if (cmdName === 'act') {
+                        // Demo: execute first action on last log
+                        const lastLog = logs[logs.length - 1];
+                        if (!lastLog || !lastLog.raw) {
+                            addLog('❌ No active log with raw data', 'error');
+                            return;
+                        }
+                        const actions = ActionRegistry.getActionsForActivity(lastLog.raw);
+                        if (actions.length === 0) {
+                            addLog('ℹ️ No actions for this activity', 'info');
+                            return;
+                        }
+
+                        // Execute first action for demo (or specific if arg provided)
+                        const actionDef = actions[0];
+                        addLog(`▶️ Executing action: ${actionDef.label}`, 'info');
+
+                        if (app.actionDispatcher) {
+                            await app.actionDispatcher.dispatch({
+                                type: actionDef.type,
+                                payload: actionDef.payload,
+                                context: { activityId: lastLog.raw.id, rawActivity: lastLog.raw }
+                            });
+                        } else {
+                            addLog('❌ ActionDispatcher not available', 'error');
+                        }
                         return;
                     }
 
