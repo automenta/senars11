@@ -8,6 +8,8 @@ import {UIEventHandlers} from './ui/UIEventHandlers.js';
 import {MessageHandler} from '../../src/ui/message-handlers/MessageHandler.js';
 import {capitalizeFirst} from './utils/Helpers.js';
 import {ControlPanel} from './ui/ControlPanel.js';
+import {SystemMetricsPanel} from './components/SystemMetricsPanel.js';
+import {ReasoningTracePanel} from './components/ReasoningTracePanel.js';
 
 /**
  * Main SeNARS UI Application class - orchestrator that combines all modules
@@ -23,6 +25,11 @@ export class SeNARSUI {
         this.commandProcessor = new CommandProcessor(this.webSocketManager, this.logger, this.graphManager);
         this.controlPanel = new ControlPanel(this.uiElements, this.commandProcessor, this.logger);
         this.demoManager = new DemoManager(this.uiElements, this.commandProcessor, this.logger);
+
+        // Observability Panels
+        this.metricsPanel = new SystemMetricsPanel(this.uiElements.get('metricsPanel'));
+        this.tracePanel = new ReasoningTracePanel(this.uiElements.get('tracePanel'));
+
         this.uiEventHandlers = new UIEventHandlers(
             this.uiElements,
             this.commandProcessor,
@@ -105,6 +112,13 @@ export class SeNARSUI {
 
             // Process message with appropriate handler
             const {content, type, icon} = this.messageHandler.processMessage(message);
+
+            // Update Observability Panels
+            if (message.type === 'metrics.updated') {
+                this.metricsPanel.update(message.payload);
+            } else if (message.type === 'reasoning.derivation') {
+                this.tracePanel.addTrace(message.payload);
+            }
 
             // Add log entry and update graph simultaneously
             this.logger.addLogEntry(content, type, icon);
