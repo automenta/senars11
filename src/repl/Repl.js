@@ -2,8 +2,8 @@
 
 import React from 'react';
 import {render} from 'ink';
-import {Config} from '../app/Config.js';
-import {App} from '../app/App.js';
+import {Config} from '../ui/Config.js';
+import {App} from '../ui/App.js';
 import {TUI} from './components/TUI.js';
 import {Logger} from '../util/Logger.js';
 

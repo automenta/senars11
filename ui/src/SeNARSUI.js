@@ -9,7 +9,7 @@ import {MessageHandler} from '../../src/ui/message-handlers/MessageHandler.js';
 import {capitalizeFirst} from './utils/Helpers.js';
 import {ControlPanel} from './ui/ControlPanel.js';
 import {SystemMetricsPanel} from './components/SystemMetricsPanel.js';
-import {ReasoningTracePanel} from './components/ReasoningTracePanel.js';
+import {ActivityLogPanel} from './components/ActivityLogPanel.js';
 
 /**
  * Main SeNARS UI Application class - orchestrator that combines all modules
@@ -30,7 +30,7 @@ export class SeNARSUI {
 
         // Observability Panels
         this.metricsPanel = new SystemMetricsPanel(this.uiElements.get('metricsPanel'));
-        this.tracePanel = new ReasoningTracePanel(this.uiElements.get('tracePanel'));
+        this.activityLogPanel = new ActivityLogPanel(this.uiElements.get('tracePanel'));
 
         this.uiEventHandlers = new UIEventHandlers(
             this.uiElements,
@@ -63,6 +63,15 @@ export class SeNARSUI {
 
         // Setup WebSocket message handlers
         this._setupWebSocketHandlers();
+
+        // Setup global action handler
+        document.addEventListener('senars:action', (e) => {
+            const {type, payload, context} = e.detail;
+            this.webSocketManager.sendMessage('activity.action', {
+                type, payload, context, id: Date.now()
+            });
+            this.logger.addLogEntry(`Action dispatched: ${type}`, 'info', '⚡');
+        });
 
         // Connect to WebSocket
         this.webSocketManager.connect();
@@ -118,8 +127,10 @@ export class SeNARSUI {
             // Update Observability Panels
             if (message.type === 'metrics.updated') {
                 this.metricsPanel.update(message.payload);
+            } else if (message.type === 'activity.new') {
+                this.activityLogPanel.addActivity(message.payload);
             } else if (message.type === 'reasoning.derivation') {
-                this.tracePanel.addTrace(message.payload);
+                // Legacy support if needed, but activity.new should cover it
             }
 
             // Add log entry and update graph simultaneously

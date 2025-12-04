@@ -1,5 +1,5 @@
 import {afterAll, beforeAll, describe, expect, jest, test} from '@jest/globals';
-import {App} from '../../../src/app/App.js';
+import {App} from '../../../src/ui/App.js';
 
 // Increase timeout for real LM
 jest.setTimeout(60000);
