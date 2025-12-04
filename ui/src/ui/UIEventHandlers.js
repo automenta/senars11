@@ -42,6 +42,7 @@ export class UIEventHandlers {
             'refreshGraph': {event: 'click', handler: () => this.controlHandlers.handleRefresh()},
             'toggleLive': {event: 'click', handler: () => this.controlHandlers.handleToggleLive()},
             'runDemo': {event: 'click', handler: () => this.controlHandlers.handleRunDemo()},
+            'btnToggleTrace': {event: 'click', handler: () => this.controlHandlers.handleToggleTrace()},
             'showTasksToggle': {
                 event: 'change',
                 handler: (e) => this.controlHandlers.handleTaskVisibility(e.target.checked)

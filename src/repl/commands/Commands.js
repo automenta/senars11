@@ -306,6 +306,27 @@ export class TraceCommand extends AgentCommand {
     }
 }
 
+export class MetricsCommand extends AgentCommand {
+    constructor() {
+        super('metrics', 'Control system metrics collection', 'metrics [on|off]');
+    }
+
+    async _executeImpl(agent, ...args) {
+        const monitor = agent.metricsMonitor;
+        if (!monitor) return '❌ Metrics monitor not available.';
+
+        if (args[0] === 'on') {
+            monitor.start();
+            return '📊 Metrics collection: ON';
+        } else if (args[0] === 'off') {
+            monitor.stop();
+            return '📊 Metrics collection: OFF';
+        }
+
+        return `📊 Metrics collection: ${monitor._reportingInterval ? 'ON' : 'OFF'}`;
+    }
+}
+
 export class ResetCommand extends AgentCommand {
     constructor() {
         super('reset', 'Reset the system', 'reset');

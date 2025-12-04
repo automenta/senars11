@@ -120,6 +120,13 @@ export class ControlPanel {
         if (this.commandProcessor.graphManager) {
             this.commandProcessor.graphManager.setUpdatesEnabled(this.isSidebarVisible);
         }
+
+        // Toggle Metrics collection on demand
+        if (this.isSidebarVisible) {
+            this.commandProcessor.processCommand('/metrics on');
+        } else {
+            this.commandProcessor.processCommand('/metrics off');
+        }
     }
 
     _setupResetModal() {

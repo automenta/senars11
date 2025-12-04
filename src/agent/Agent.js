@@ -21,7 +21,6 @@ export class Agent extends NAR {
         };
 
         this.displaySettings = {
-            trace: false,
             echo: false,
             quiet: false,
         };
@@ -158,8 +157,8 @@ export class Agent extends NAR {
         this.runState.isRunning = true;
         this.emit(AGENT_EVENTS.NAR_CYCLE_START, {reason: 'auto-step'});
 
-        if (!this.displaySettings.quiet && !this.displaySettings.trace) {
-            this.displaySettings.trace = true;
+        if (!this.displaySettings.quiet && !this.traceEnabled) {
+            this.traceEnabled = true;
             this.emit(AGENT_EVENTS.NAR_TRACE_ENABLE, {reason: 'auto-step session'});
         }
 
