@@ -6,6 +6,8 @@ describe('TUIRepl NAR Reasoning with Duplicate Suppression', () => {
 
     beforeEach(async () => {
         nar = new NAR();
+        // Enable tracing to capture reasoning derivation events
+        nar.traceEnabled = true;
         await nar.initialize();
     });
 

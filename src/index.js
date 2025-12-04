@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
 import {WebSocketMonitor} from './server/WebSocketMonitor.js';
-import {App} from './app/App.js';
+import {App} from './ui/App.js';
+import {Config} from './ui/Config.js';
 import {ReplMessageHandler} from './repl/ReplMessageHandler.js';
 
 const DEFAULT_CONFIG = Object.freeze({

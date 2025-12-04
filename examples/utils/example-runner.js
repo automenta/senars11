@@ -1,5 +1,5 @@
-import {App} from '../../src/app/App.js';
-import {Config} from '../../src/app/Config.js';
+import {App} from '../../src/ui/App.js';
+import {Config} from '../../src/ui/Config.js';
 
 process.env.ORT_LOG_LEVEL = 'error';
 

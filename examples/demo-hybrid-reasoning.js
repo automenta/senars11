@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import {App} from './src/app/App.js';
+import {App} from './src/ui/App.js';
 
 // Set environment variable to suppress ONNX runtime warnings
 process.env.ORT_LOG_LEVEL = '3';
