@@ -27,10 +27,11 @@ export const GraphConfig = {
                     'text-valign': 'bottom',
                     'text-halign': 'center',
                     'text-margin-y': 5,
-                    'font-size': '12px',
+                    'font-size': '14px',
+                    'font-weight': 'bold',
                     'text-background-color': '#000000',
-                    'text-background-opacity': 0.5,
-                    'text-background-padding': 3,
+                    'text-background-opacity': 0.7,
+                    'text-background-padding': 4,
                     'width': 'mapData(weight, 0, 100, 20, 80)',
                     'height': 'mapData(weight, 0, 100, 20, 80)'
                 }

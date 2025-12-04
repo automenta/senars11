@@ -23,11 +23,12 @@ body {
 
 /* Main Panel (REPL) */
 .log-panel {
-    flex: 1; /* Main view takes available space */
-    display: flex;
-    flex-direction: column;
+    flex: 1;
+    display: grid;
+    grid-template-rows: 50px auto 1fr auto; /* Header, Status, Content, Input */
     background: #252525;
-    min-width: 0; /* Prevent flex overflow */
+    min-width: 0;
+    height: 100%;
 }
 
 .panel-header {
@@ -225,7 +226,7 @@ body {
     padding: 12px 15px;
     background: #2a2a2a;
     border-top: 1px solid #3c3c3c;
-    flex-shrink: 0;
+    z-index: 10;
 }
 
 .input-mode-toggle {
@@ -888,4 +889,155 @@ select {
     border-top: 1px solid #333;
     background: #252526;
     text-align: right;
+}
+
+/* --- Observability Styles --- */
+
+.main-content-area {
+    position: relative;
+    overflow: hidden;
+    /* Grid item takes 1fr height automatically */
+}
+
+.view-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: none;
+    flex-direction: column;
+}
+
+.view-layer.active {
+    display: flex;
+}
+
+/* Ensure containers scroll internally, not the layer */
+.logs-container, .trace-container {
+    flex: 1;
+    overflow-y: auto;
+}
+
+/* Trace Panel */
+.trace-container {
+    padding: 10px;
+    background-color: #1e1e1e;
+    color: #d4d4d4;
+    font-family: 'Consolas', 'Monaco', monospace;
+}
+
+.trace-item {
+    border-bottom: 1px solid #333;
+    padding: 8px 0;
+}
+
+.trace-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8em;
+    color: #888;
+    margin-bottom: 4px;
+}
+
+.trace-source {
+    color: #569cd6;
+}
+
+.trace-term {
+    color: #ce9178;
+    margin-bottom: 2px;
+}
+
+.trace-truth {
+    color: #4ec9b0;
+    font-size: 0.9em;
+}
+
+.empty-state {
+    text-align: center;
+    color: #666;
+    margin-top: 50px;
+}
+
+/* Metrics Panel */
+.metrics-container {
+    background-color: #252526;
+    border-bottom: 1px solid #333;
+    padding: 10px;
+}
+
+.metrics-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.metric-item {
+    background-color: #1e1e1e;
+    padding: 8px;
+    border-radius: 4px;
+    text-align: center;
+}
+
+.metric-item.full-width {
+    grid-column: span 2;
+}
+
+.metric-label {
+    display: block;
+    font-size: 0.75em;
+    color: #888;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+}
+
+.metric-value {
+    font-size: 1.1em;
+    font-weight: bold;
+    color: #d4d4d4;
+}
+
+.metric-sub {
+    font-size: 0.8em;
+    color: #888;
+}
+
+/* Progress Bar */
+.progress-bar {
+    height: 4px;
+    background-color: #333;
+    border-radius: 2px;
+    margin: 4px 0;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background-color: #4ec9b0;
+    transition: width 0.3s ease;
+}
+
+.progress-fill.warning {
+    background-color: #cca700;
+}
+
+.progress-fill.danger {
+    background-color: #f14c4c;
+}
+
+/* View Toggles */
+.view-toggles button {
+    background: none;
+    border: 1px solid #333;
+    color: #888;
+    padding: 2px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 0.8em;
+}
+
+.view-toggles button:hover {
+    background-color: #333;
+    color: #ccc;
 }

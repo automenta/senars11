@@ -73,11 +73,25 @@ export class MetricsMonitor {
         this._setupAnomalyDetectors();
         this._setupThresholdAlerts();
 
-        if (this.config.reportingInterval > 0) {
-            this._reportingInterval = setInterval(() => {
-                this._updatePerformanceMetrics();
-                this._emitMetricsEvent();
-            }, this.config.reportingInterval);
+        // Start only if explicitly enabled in config, otherwise wait for start()
+        if (this.config.enabled && this.config.reportingInterval > 0) {
+            this.start();
+        }
+    }
+
+    start() {
+        if (this._reportingInterval || this.config.reportingInterval <= 0) return;
+
+        this._reportingInterval = setInterval(() => {
+            this._updatePerformanceMetrics();
+            this._emitMetricsEvent();
+        }, this.config.reportingInterval);
+    }
+
+    stop() {
+        if (this._reportingInterval) {
+            clearInterval(this._reportingInterval);
+            this._reportingInterval = null;
         }
     }
 

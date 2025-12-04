@@ -4,9 +4,10 @@ import {Config} from '../config/Config.js';
  * GraphManager handles the Cytoscape instance and graph operations
  */
 export class GraphManager {
-    constructor(uiElements = null) {
+    constructor(uiElements = null, callbacks = {}) {
         this.cy = null;
         this.uiElements = uiElements;
+        this.callbacks = callbacks;
         this.graphData = {
             nodes: new Map(),
             edges: new Map()
@@ -52,17 +53,39 @@ export class GraphManager {
             return false;
         }
 
+        // Add event delegation for details panel buttons
+        if (this.uiElements.graphDetails) {
+            this.uiElements.graphDetails.addEventListener('click', (e) => {
+                if (e.target.matches('button[data-action]')) {
+                    const action = e.target.dataset.action;
+                    const nodeId = e.target.dataset.id;
+                    const term = e.target.dataset.term;
+
+                    if (this.callbacks.onNodeAction) {
+                        this.callbacks.onNodeAction(action, {id: nodeId, term});
+                    }
+                }
+            });
+        }
+
         // Add click event for graph details
         this.cy.on('tap', 'node', (event) => {
             const node = event.target;
-            this.updateGraphDetails({
+            const data = {
                 type: 'node',
                 label: node.data('label'),
                 id: node.id(),
+                term: node.data('fullData')?.term || node.data('label'),
                 nodeType: node.data('type') || 'unknown',
                 weight: node.data('weight') || 0,
                 fullData: node.data('fullData')
-            });
+            };
+
+            this.updateGraphDetails(data);
+
+            if (this.callbacks.onNodeClick) {
+                this.callbacks.onNodeClick(data);
+            }
         });
 
         this.cy.on('tap', 'edge', (event) => {
@@ -341,6 +364,15 @@ export class GraphManager {
         }
 
         html += `<div style="margin-top:4px; font-size:0.8em; color:#666">ID: ${details.id}</div>`;
+
+        // Add actions
+        html += `
+            <div style="margin-top:8px; display:flex; gap:5px;">
+                <button data-action="focus" data-id="${details.id}" data-term="${details.term || details.label}" style="padding:2px 6px; font-size:0.8em; cursor:pointer;">Focus</button>
+                <button data-action="inspect" data-id="${details.id}" data-term="${details.term || details.label}" style="padding:2px 6px; font-size:0.8em; cursor:pointer;">Inspect</button>
+            </div>
+        `;
+
         return html;
     }
 
