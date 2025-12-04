@@ -3,7 +3,7 @@
 // Suppress ONNX runtime warnings more effectively
 process.env.ORT_LOG_LEVEL = '3';
 
-import {App} from './src/app/App.js';
+import {App} from './src/ui/App.js';
 
 async function demonstrateKeyFunctionality() {
     console.log('🎯 SeNARS + Transformers.js: Key Functionality Demo');

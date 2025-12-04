@@ -1,6 +1,10 @@
 import {AgentBuilder} from '../agent/AgentBuilder.js';
 import EventEmitter from 'events';
 import {Logger} from '../util/Logger.js';
+import {ActivityModel} from './model/ActivityModel.js';
+import {ActivityMonitor} from './model/ActivityMonitor.js';
+import {ActionDispatcher} from './model/ActionDispatcher.js';
+import {PreferenceCollector} from '../rlfp/PreferenceCollector.js';
 
 export class App extends EventEmitter {
     constructor(config = {}) {
@@ -9,6 +13,13 @@ export class App extends EventEmitter {
         this.agents = new Map();
         this.activeAgentId = null;
         this.log = Logger;
+
+        // Shared UI Model Infrastructure
+        this.activityModel = new ActivityModel();
+        this.preferenceCollector = new PreferenceCollector();
+        // ActionDispatcher needs an engine, but engine changes.
+        // We can create it lazily or make it dynamic.
+        this.actionDispatcher = null;
     }
 
     get agent() {
@@ -31,7 +42,23 @@ export class App extends EventEmitter {
         const agent = await new AgentBuilder(effectiveConfig).build();
         agent.id = id;
 
-        this.agents.set(id, {id, agent, createdAt: new Date(), lastAccessed: new Date(), config: effectiveConfig});
+        // Attach ActivityMonitor
+        const monitor = new ActivityMonitor(agent, this.activityModel);
+        monitor.start();
+
+        // Initialize ActionDispatcher for this agent if it's the first one
+        if (!this.actionDispatcher) {
+            this.actionDispatcher = new ActionDispatcher(agent, this.preferenceCollector);
+        }
+
+        this.agents.set(id, {
+            id,
+            agent,
+            monitor,
+            createdAt: new Date(),
+            lastAccessed: new Date(),
+            config: effectiveConfig
+        });
         this.activeAgentId ??= id;
 
         return agent;
@@ -101,6 +128,11 @@ export class App extends EventEmitter {
     async _cleanupAgent(agent, agentId) {
         if (!agent) return;
         try {
+            const entry = this.agents.get(agentId);
+            if (entry && entry.monitor) {
+                entry.monitor.stop();
+            }
+
             agent.stop?.();
             await agent.dispose?.();
         } catch (error) {

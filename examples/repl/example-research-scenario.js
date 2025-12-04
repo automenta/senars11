@@ -5,7 +5,7 @@
  * Simulates a complex AI research scenario with hybrid reasoning
  */
 
-import {App} from '../../src/app/App.js';
+import {App} from '../../src/ui/App.js';
 
 async function runResearchScenarioDemo() {
     console.log('🔬🤖 SeNARS Research Agent Scenario Demo');
