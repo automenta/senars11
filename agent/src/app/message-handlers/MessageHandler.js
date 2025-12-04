@@ -2,7 +2,7 @@ import {NarseseMessageHandler} from './NarseseMessageHandler.js';
 import {TaskConceptMessageHandler} from './TaskConceptMessageHandler.js';
 import {QuestionReasoningMessageHandler} from './QuestionReasoningMessageHandler.js';
 import {SystemMessageHandler} from './SystemMessageHandler.js';
-import {UI_CONSTANTS} from '../../../core/src/util/UIConstants.js';
+import {UI_CONSTANTS} from '../../../../core/src/util/UIConstants.js';
 
 /**
  * Main Message Handler class to process different message types

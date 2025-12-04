@@ -1,8 +1,8 @@
-import {NAR} from '../../core/src/nar/NAR.js';
-import {Input} from '../../core/src/task/Input.js';
+import {NAR} from '../../../core/src/nar/NAR.js';
+import {Input} from '../../../core/src/task/Input.js';
 import {PersistenceManager} from '../io/PersistenceManager.js';
-import {FormattingUtils} from '../../core/src/util/FormattingUtils.js';
-import * as Commands from '../repl/commands/Commands.js';
+import {FormattingUtils} from '../../../core/src/util/FormattingUtils.js';
+import * as Commands from '../commands/Commands.js';
 import {AGENT_EVENTS} from './constants.js';
 import {InputProcessor} from './InputProcessor.js';
 import {AgentStreamer} from './AgentStreamer.js';
