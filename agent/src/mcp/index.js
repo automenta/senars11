@@ -1,25 +1,13 @@
 /**
  * SeNARS MCP System - Main Entry Point
  */
-
-import {MCPManager} from './MCPManager.js';
 import {Client} from './Client.js';
 import {Server} from './Server.js';
 
-// Export core classes for direct usage
-export {MCPManager, Client, Server};
+export {Client, Server};
 
 /**
- * Factory function to create a configured MCP manager
- */
-export async function createMCPManager(options = {}) {
-    const manager = new MCPManager(options);
-    await manager.initialize();
-    return manager;
-}
-
-/**
- * Convenience function to connect as an MCP client using Stdio
+ * Connect as an MCP client using Stdio
  */
 export async function connectMCPClient(command, args, options = {}) {
     const client = new Client({command, args, ...options});
@@ -28,7 +16,7 @@ export async function connectMCPClient(command, args, options = {}) {
 }
 
 /**
- * Convenience function to setup an MCP server (Stdio)
+ * Setup an MCP server (Stdio)
  */
 export async function setupMCPServer(options = {}) {
     const server = new Server(options);
@@ -37,47 +25,36 @@ export async function setupMCPServer(options = {}) {
 }
 
 /**
- * Main SeNARS MCP system class that provides the unified interface
+ * Main SeNARS MCP system class
  */
 export class SeNARSMCPSystem {
     constructor(options = {}) {
         this.options = options;
-        this.manager = null;
-        this.mode = null; // 'client' or 'server'
+        this.client = null;
+        this.server = null;
     }
 
-    /**
-     * Initialize the SeNARS MCP system
-     */
     async initialize(mode = 'client', options = {}) {
-        this.mode = mode;
         this.options = {...this.options, ...options};
-
-        this.manager = new MCPManager(this.options);
-        await this.manager.initialize();
-
+        // Initialization logic if needed (e.g. create internal NAR if server mode)
         return this;
     }
 
-    /**
-     * Connect as client to consume external services
-     */
-    async connectAsClient(command, args = [], options = {}) {
-        if (!this.manager) throw new Error('SeNARS MCP System not initialized');
-        return await this.manager.connectAsClient(command, args);
+    async connectAsClient(command, args = []) {
+        this.client = new Client({ command, args });
+        await this.client.connect();
+        return this.client;
     }
 
-    /**
-     * Setup server to expose SeNARS services
-     */
     async setupAsServer(options = {}) {
-        if (!this.manager) throw new Error('SeNARS MCP System not initialized');
-        return await this.manager.setupServer(options);
+        this.server = new Server(options);
+        // Note: server.start() hijacks stdio, so typically not called in same process unless dedicated
+        return this.server;
     }
 
     async callTool(toolName, input) {
-        if (!this.manager) throw new Error('SeNARS MCP System not initialized');
-        return await this.manager.callMCPTool(toolName, input);
+        if (!this.client) throw new Error('Client not connected');
+        return await this.client.callTool(toolName, input);
     }
 }
 

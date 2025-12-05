@@ -1,16 +1,16 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
+import vm from "node:vm";
 
 /**
- * MCP Server for exposing SeNARS services as MCP tools using the official SDK
+ * MCP Server for exposing SeNARS services as MCP tools.
  */
 export class Server {
-    constructor(options = {}) {
+    constructor({ nar = null, ...options } = {}) {
         this.options = options;
-        this.nar = options.nar || null;
+        this.nar = nar;
 
-        // Initialize McpServer
         this.server = new McpServer({
             name: "SeNARS-MCP-Server",
             version: "1.0.0"
@@ -20,6 +20,8 @@ export class Server {
     }
 
     registerTools() {
+        this.server.tool("ping", {}, async () => ({ content: [{ type: "text", text: "pong" }] }));
+
         this.server.tool(
             "reason",
             {
@@ -27,71 +29,17 @@ export class Server {
                 goal: z.string().optional().describe("A goal to achieve or question to answer")
             },
             async ({ premises, goal }) => {
-                if (!this.nar) {
-                    return { content: [{ type: "text", text: "NAR instance not available." }] };
-                }
+                if (!this.nar) return this._error("NAR instance not available.");
 
                 try {
-                    const inputTasks = [];
-                    for (const premise of premises) {
-                        await this.nar.input(premise);
-                    }
-                    if (goal) {
-                        await this.nar.input(goal);
-                    }
+                    for (const premise of premises) await this.nar.input(premise);
+                    if (goal) await this.nar.input(goal);
 
-                    // Run a few cycles to process
                     const derivations = await this.nar.runCycles(10);
-
-                    // Deduplicate and format results
-                    const uniqueDerivations = new Map();
-
-                    derivations.flat().forEach(task => {
-                        if (task && task.term) {
-                            const termStr = task.term.toString();
-                            // Keep the one with highest confidence
-                            if (!uniqueDerivations.has(termStr) || (task.truth && uniqueDerivations.get(termStr).truth && task.truth.confidence > uniqueDerivations.get(termStr).truth.confidence)) {
-                                uniqueDerivations.set(termStr, task);
-                            }
-                        }
-                    });
-
-                    // Generate Rich Report
-                    const reportLines = ["### SeNARS Reasoning Trace"];
-                    reportLines.push(`**Input**: ${premises.length} premises` + (goal ? `, Goal: \`${goal}\`` : ""));
-                    reportLines.push(`**Cycles Executed**: 10`);
-                    reportLines.push("");
-
-                    if (uniqueDerivations.size > 0) {
-                        reportLines.push("**Derived Conclusions**:");
-                        let idx = 1;
-                        for (const task of uniqueDerivations.values()) {
-                            const termStr = task.term.toString();
-                            const truthStr = task.truth
-                                ? `_{f=${task.truth.frequency.toFixed(2)}, c=${task.truth.confidence.toFixed(2)}}_`
-                                : "";
-                            const typeStr = task.punctuation === '!' ? '[GOAL]' : task.punctuation === '?' ? '[QUESTION]' : '[BELIEF]';
-
-                            reportLines.push(`${idx}. **${typeStr}** \`${termStr}\` ${truthStr}`);
-                            idx++;
-                        }
-                    } else {
-                        reportLines.push("_No new conclusions derived in this window._");
-                    }
-
-                    const report = reportLines.join("\n");
-
-                    return {
-                        content: [{
-                            type: "text",
-                            text: report
-                        }]
-                    };
+                    const uniqueDerivations = this._deduplicateTasks(derivations.flat());
+                    return this._formatReasoningReport(premises, goal, uniqueDerivations);
                 } catch (error) {
-                    return {
-                        content: [{ type: "text", text: `Error during reasoning: ${error.message}` }],
-                        isError: true
-                    };
+                    return this._error(`Reasoning error: ${error.message}`);
                 }
             }
         );
@@ -99,41 +47,17 @@ export class Server {
         this.server.tool(
             "memory-query",
             {
-                query: z.string().describe("The concept to query from memory"),
-                limit: z.number().default(10).describe("Max number of results")
+                query: z.string().describe("Concept to query"),
+                limit: z.number().default(10).describe("Max results")
             },
             async ({ query, limit }) => {
-                if (!this.nar) {
-                     return { content: [{ type: "text", text: "NAR instance not available." }] };
-                }
+                if (!this.nar) return this._error("NAR instance not available.");
 
                 try {
-                    const results = this.nar.query(query);
-                    const sliced = (results || []).slice(0, limit);
-
-                    const reportLines = [`### Memory Query: \`${query}\``];
-                    reportLines.push(`Found ${sliced.length} results (limit: ${limit})`);
-                    reportLines.push("");
-
-                    sliced.forEach((task, i) => {
-                        const truthStr = task.truth
-                            ? `_{f=${task.truth.frequency.toFixed(2)}, c=${task.truth.confidence.toFixed(2)}}_`
-                            : "";
-                        const termStr = task.term ? task.term.toString() : 'unknown';
-                        reportLines.push(`${i+1}. \`${termStr}\` ${truthStr}`);
-                    });
-
-                    return {
-                        content: [{
-                            type: "text",
-                            text: reportLines.join("\n")
-                        }]
-                    };
+                    const results = (this.nar.query(query) || []).slice(0, limit);
+                    return this._formatMemoryReport(query, results, limit);
                 } catch (error) {
-                    return {
-                        content: [{ type: "text", text: `Error during memory query: ${error.message}` }],
-                        isError: true
-                    };
+                    return this._error(`Memory query error: ${error.message}`);
                 }
             }
         );
@@ -141,42 +65,104 @@ export class Server {
         this.server.tool(
             "execute-tool",
             {
-                toolName: z.string().describe("Name of the tool to execute"),
-                parameters: z.record(z.any()).describe("Parameters for the tool")
+                toolName: z.string().describe("Tool name"),
+                parameters: z.record(z.any()).describe("Parameters")
             },
             async ({ toolName, parameters }) => {
-                 if (!this.nar) {
-                     return { content: [{ type: "text", text: "NAR instance not available." }] };
-                }
+                if (!this.nar) return this._error("NAR instance not available.");
 
                 try {
                     const result = await this.nar.executeTool(toolName, parameters);
+                    return this._formatToolReport(toolName, result);
+                } catch (error) {
+                    return this._error(`Tool execution error: ${error.message}`);
+                }
+            }
+        );
+
+        this.server.tool(
+            "evaluate_js",
+            { code: z.string().describe("JavaScript code to evaluate (sandboxed)") },
+            async ({ code }) => {
+                try {
+                    const context = vm.createContext({ console, JSON, Math });
+                    const result = vm.runInContext(code, context, { timeout: 1000 });
                     return {
                         content: [{
                             type: "text",
-                            text: `### Tool Execution: ${toolName}\n` +
-                                  `**Success**: ${result.success !== false}\n` +
-                                  `**Result**: \n\`\`\`json\n${JSON.stringify(result.result ?? result, null, 2)}\n\`\`\``
+                            text: `### Code Execution Result\n\`\`\`json\n${JSON.stringify(result, null, 2)}\n\`\`\``
                         }]
                     };
                 } catch (error) {
-                     return {
-                        content: [{ type: "text", text: `Error executing tool: ${error.message}` }],
-                        isError: true
-                     };
+                    return this._error(`Code execution error: ${error.message}`);
                 }
             }
         );
     }
 
     async start() {
-        const transport = new StdioServerTransport();
-        await this.server.connect(transport);
-        // We log to stderr so we don't interfere with stdout (which is used for JSON-RPC)
+        await this.server.connect(new StdioServerTransport());
         console.error("SeNARS MCP Server started on Stdio");
     }
 
     async stop() {
         await this.server.close();
+    }
+
+    _deduplicateTasks(tasks) {
+        const unique = new Map();
+        for (const task of tasks) {
+            if (!task?.term) continue;
+            const termStr = task.term.toString();
+            // Retain highest confidence task for same term
+            if (!unique.has(termStr) || (task.truth?.confidence > unique.get(termStr).truth?.confidence)) {
+                unique.set(termStr, task);
+            }
+        }
+        return Array.from(unique.values());
+    }
+
+    _formatReasoningReport(premises, goal, tasks) {
+        const lines = ["### SeNARS Reasoning Trace"];
+        lines.push(`**Input**: ${premises.length} premises${goal ? `, Goal: \`${goal}\`` : ""}`);
+        lines.push("**Cycles Executed**: 10\n");
+
+        if (tasks.length > 0) {
+            lines.push("**Derived Conclusions**:");
+            tasks.forEach((task, i) => lines.push(this._formatTaskLine(task, i + 1)));
+        } else {
+            lines.push("_No new conclusions derived in this window._");
+        }
+
+        return { content: [{ type: "text", text: lines.join("\n") }] };
+    }
+
+    _formatMemoryReport(query, tasks, limit) {
+        const lines = [`### Memory Query: \`${query}\``];
+        lines.push(`Found ${tasks.length} results (limit: ${limit})\n`);
+        tasks.forEach((task, i) => lines.push(this._formatTaskLine(task, i + 1)));
+        return { content: [{ type: "text", text: lines.join("\n") }] };
+    }
+
+    _formatToolReport(toolName, result) {
+        return {
+            content: [{
+                type: "text",
+                text: `### Tool Execution: ${toolName}\n` +
+                      `**Success**: ${result.success !== false}\n` +
+                      `**Result**: \n\`\`\`json\n${JSON.stringify(result.result ?? result, null, 2)}\n\`\`\``
+            }]
+        };
+    }
+
+    _formatTaskLine(task, index) {
+        const termStr = task.term ? task.term.toString() : 'unknown';
+        const truthStr = task.truth ? `_{f=${task.truth.frequency.toFixed(2)}, c=${task.truth.confidence.toFixed(2)}}_` : "";
+        const typeStr = task.punctuation === '!' ? '[GOAL]' : task.punctuation === '?' ? '[QUESTION]' : '[BELIEF]';
+        return `${index}. **${typeStr}** \`${termStr}\` ${truthStr}`;
+    }
+
+    _error(message) {
+        return { content: [{ type: "text", text: message }], isError: true };
     }
 }

@@ -104,7 +104,8 @@ class DemoApp {
             console.log("1. Premade: 'Birds are animals. Tweety is a bird. Is Tweety an animal?'");
             console.log("2. Premade: 'Check memory for concept 'bird''");
             console.log("3. Custom Input");
-            console.log("4. Exit");
+            console.log("4. Test Suite (Verify MCP Functions)");
+            console.log("5. Exit");
 
             const choice = await ask("Select input: ");
             let input = "";
@@ -112,7 +113,11 @@ class DemoApp {
             if (choice === '1') input = "I know that birds are animals and Tweety is a bird. based on this, is Tweety an animal? Use the reason tool.";
             else if (choice === '2') input = "What do you know about 'bird' in your memory?";
             else if (choice === '3') input = await ask("Enter your prompt: ");
-            else if (choice === '4') break;
+            else if (choice === '4') {
+                await this.runTestSuite();
+                continue;
+            }
+            else if (choice === '5') break;
             else continue;
 
             console.log(`\nUser: ${input}`);
@@ -127,6 +132,41 @@ class DemoApp {
         }
 
         await this.shutdown();
+    }
+
+    async runTestSuite() {
+        console.log("\n=== Running MCP Test Suite ===");
+
+        try {
+            // 1. Ping
+            console.log("Test 1: Ping");
+            try {
+                const ping = await this.client.callTool('ping', {});
+                console.log("Result:", ping.content[0].text);
+            } catch (e) { console.log("Ping tool not found or failed"); }
+
+            // 2. Reason
+            console.log("\nTest 2: Reason (Simple Deduction)");
+            const reason = await this.client.callTool('reason', {
+                premises: ["<test_a --> test_b>.", "<test_b --> test_c>."],
+                goal: "<test_a --> test_c>?"
+            });
+            console.log("Result:\n" + reason.content[0].text);
+
+            // 3. Memory
+            console.log("\nTest 3: Memory Query");
+            const memory = await this.client.callTool('memory-query', { query: 'test_b' });
+            console.log("Result:\n" + memory.content[0].text);
+
+            // 4. Code Execution
+            console.log("\nTest 4: Code Execution (Math)");
+            const code = await this.client.callTool('evaluate_js', { code: "1 + 1" });
+            console.log("Result:\n" + code.content[0].text);
+
+            console.log("\n=== Test Suite Completed ===");
+        } catch (err) {
+            console.error("Test Suite Failed:", err);
+        }
     }
 
     async shutdown() {
