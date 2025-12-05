@@ -1,0 +1,246 @@
+import readline from 'readline';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { Client } from '../mcp/Client.js';
+import { ChatOpenAI } from "@langchain/openai";
+import { ChatOllama } from "@langchain/ollama";
+import { HumanMessage, SystemMessage, ToolMessage } from "@langchain/core/messages";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const SERVER_SCRIPT = path.resolve(__dirname, '../mcp/start-server.js');
+
+// Transformer.js import (dynamic)
+let pipeline;
+try {
+    const transformers = await import('@huggingface/transformers');
+    pipeline = transformers.pipeline;
+} catch (e) {
+    console.warn("Transformer.js not found, skipping local model option.");
+}
+
+const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+});
+
+function ask(question) {
+    return new Promise(resolve => rl.question(question, resolve));
+}
+
+class DemoApp {
+    constructor() {
+        this.client = null;
+        this.llm = null;
+        this.tools = [];
+    }
+
+    async start() {
+        console.log("=== SeNARS MCP Demo ===");
+
+        await this.setupServer();
+        await this.setupLLM();
+        await this.loop();
+    }
+
+    async setupServer() {
+        console.log("\nStarting SeNARS MCP Server...");
+        this.client = new Client({
+            command: "node",
+            args: [SERVER_SCRIPT]
+        });
+
+        try {
+            await this.client.connect();
+            console.log("Connected to SeNARS MCP Server.");
+
+            this.tools = await this.client.discoverTools();
+            console.log(`Discovered ${this.tools.length} tools: ${this.tools.map(t => t.name).join(', ')}`);
+        } catch (err) {
+            console.error("Failed to connect to server:", err);
+            process.exit(1);
+        }
+    }
+
+    async setupLLM() {
+        console.log("\nSelect LLM Provider:");
+        console.log("1. Transformer.js (Local, e.g. Xenova/Qwen1.5-0.5B-Chat)");
+        console.log("2. Ollama (e.g. llama3)");
+        console.log("3. OpenAI (e.g. gpt-4o)");
+
+        const choice = await ask("Choice (1-3): ");
+
+        if (choice === '1') {
+            if (!pipeline) {
+                console.error("Transformer.js not available.");
+                return await this.setupLLM();
+            }
+            const model = await ask("Enter model name (default: Xenova/Qwen1.5-0.5B-Chat): ") || "Xenova/Qwen1.5-0.5B-Chat";
+            this.llm = new LocalTransformerLLM(model);
+        } else if (choice === '2') {
+            const model = await ask("Enter Ollama model (default: llama3): ") || "llama3";
+            const baseUrl = await ask("Enter Base URL (default: http://localhost:11434): ") || "http://localhost:11434";
+            this.llm = new LangChainWrapper(new ChatOllama({ model, baseUrl }));
+        } else if (choice === '3') {
+            const apiKey = process.env.OPENAI_API_KEY || await ask("Enter OpenAI API Key: ");
+            const model = await ask("Enter model (default: gpt-4o): ") || "gpt-4o";
+            this.llm = new LangChainWrapper(new ChatOpenAI({ model, apiKey }));
+        } else {
+            console.log("Invalid choice.");
+            return await this.setupLLM();
+        }
+
+        await this.llm.initialize(this.tools);
+    }
+
+    async loop() {
+        while (true) {
+            console.log("\n--- New Interaction ---");
+            console.log("1. Premade: 'Birds are animals. Tweety is a bird. Is Tweety an animal?'");
+            console.log("2. Premade: 'Check memory for concept 'bird''");
+            console.log("3. Custom Input");
+            console.log("4. Exit");
+
+            const choice = await ask("Select input: ");
+            let input = "";
+
+            if (choice === '1') input = "I know that birds are animals and Tweety is a bird. based on this, is Tweety an animal? Use the reason tool.";
+            else if (choice === '2') input = "What do you know about 'bird' in your memory?";
+            else if (choice === '3') input = await ask("Enter your prompt: ");
+            else if (choice === '4') break;
+            else continue;
+
+            console.log(`\nUser: ${input}`);
+            console.log("Agent is thinking...");
+
+            try {
+                const response = await this.llm.chat(input, this.client);
+                console.log(`\nAgent: ${response}`);
+            } catch (err) {
+                console.error("Error during chat:", err);
+            }
+        }
+
+        await this.shutdown();
+    }
+
+    async shutdown() {
+        console.log("Shutting down...");
+        if (this.client) await this.client.disconnect();
+        rl.close();
+        process.exit(0);
+    }
+}
+
+class LocalTransformerLLM {
+    constructor(modelName) {
+        this.modelName = modelName;
+        this.generator = null;
+        this.tools = [];
+    }
+
+    async initialize(tools) {
+        console.log(`Loading local model ${this.modelName}...`);
+        this.generator = await pipeline('text-generation', this.modelName);
+        this.tools = tools;
+        console.log("Model loaded.");
+    }
+
+    async chat(input, mcpClient) {
+        // Simple ReAct-style prompt for local model
+        const toolDesc = this.tools.map(t => `${t.name}: ${t.description} (Schema: ${JSON.stringify(t.inputSchema)})`).join('\n');
+        const systemPrompt = `You are a helpful assistant with access to these tools:\n${toolDesc}\n\nIf you need to use a tool, output JSON: {"tool": "name", "args": {...}}.\nOtherwise just reply text.\n\nUser: ${input}\nAssistant:`;
+
+        const output = await this.generator(systemPrompt, { max_new_tokens: 200, return_full_text: false });
+        let text = output[0].generated_text.trim();
+
+        console.log(`[Raw Model Output]: ${text}`);
+
+        // Try to parse tool call
+        try {
+            // Find JSON in text
+            const start = text.indexOf('{');
+            const end = text.lastIndexOf('}');
+            if (start !== -1 && end !== -1 && end > start) {
+                const jsonStr = text.substring(start, end + 1);
+                const json = JSON.parse(jsonStr);
+                if (json.tool && json.args) {
+                    console.log(`[Tool Call]: ${json.tool} with args`, json.args);
+                    const result = await mcpClient.callTool(json.tool, json.args);
+                    const resultText = JSON.stringify(result);
+                    console.log(`[Tool Result]: ${resultText}`);
+
+                    // Feed back to model
+                    const followUpPrompt = `${systemPrompt}${text}\nSystem: Tool output: ${resultText}\nAssistant:`;
+                    const followUp = await this.generator(followUpPrompt, { max_new_tokens: 200, return_full_text: false });
+                    return followUp[0].generated_text.trim();
+                }
+            }
+        } catch (e) {
+            console.log("Failed to parse tool call or execute it:", e.message);
+        }
+
+        return text;
+    }
+}
+
+class LangChainWrapper {
+    constructor(model) {
+        this.model = model;
+        this.tools = [];
+    }
+
+    async initialize(tools) {
+        this.tools = tools;
+        // Bind tools to model
+        const formattedTools = tools.map(t => ({
+            type: "function",
+            function: {
+                name: t.name,
+                description: t.description,
+                parameters: t.inputSchema
+            }
+        }));
+
+        if (this.model.bindTools) {
+             this.model = this.model.bindTools(formattedTools);
+        }
+    }
+
+    async chat(input, mcpClient) {
+        const messages = [new HumanMessage(input)];
+        const result = await this.model.invoke(messages);
+
+        if (result.tool_calls && result.tool_calls.length > 0) {
+            console.log(`[Tool Calls]:`, result.tool_calls);
+            messages.push(result);
+
+            for (const call of result.tool_calls) {
+                const toolResult = await mcpClient.callTool(call.name, call.args);
+                console.log(`[Tool Result for ${call.name}]:`, JSON.stringify(toolResult));
+
+                // MCP SDK returns { content: [{ type: 'text', text: '...' }] }
+                // LangChain expects string content for ToolMessage
+                let content = "";
+                if (toolResult.content && toolResult.content[0]?.text) {
+                    content = toolResult.content[0].text;
+                } else {
+                    content = JSON.stringify(toolResult);
+                }
+
+                messages.push(new ToolMessage({
+                    tool_call_id: call.id || "call_1", // Ollama sometimes misses ID, but LangChain handles it usually
+                    content: content,
+                    name: call.name
+                }));
+            }
+
+            const final = await this.model.invoke(messages);
+            return final.content;
+        }
+
+        return result.content;
+    }
+}
+
+const app = new DemoApp();
+app.start().catch(err => console.error(err));
