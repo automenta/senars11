@@ -66,7 +66,8 @@ describe('SyllogisticRule', () => {
         });
 
         const rule = new SyllogisticRule();
-        const results = rule.apply(taskAB, taskBC);
+        const context = {termFactory};
+        const results = rule.apply(taskAB, taskBC, context);
 
         // Should produce (a ==> c)
         expect(results).toHaveLength(1);

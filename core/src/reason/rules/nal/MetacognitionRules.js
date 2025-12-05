@@ -35,7 +35,9 @@ export class AdjustCacheSizeRule extends Rule {
                 if (context.nar) {
                     // Adjust system configuration
                     context.nar.config.set('termFactory.maxCacheSize', newCacheSize);
-                    if (termFactory._maxCacheSize !== undefined) {
+                    if (typeof termFactory.setMaxCacheSize === 'function') {
+                        termFactory.setMaxCacheSize(newCacheSize);
+                    } else if (termFactory._maxCacheSize !== undefined) {
                         termFactory._maxCacheSize = newCacheSize;
                     }
                     context.nar.logInfo?.(`Adjusted TermFactory cache size to ${newCacheSize}`);

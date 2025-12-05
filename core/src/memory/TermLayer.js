@@ -5,23 +5,27 @@ export class TermLayer extends Layer {
     constructor(config = {}) {
         super(config);
 
-        this.linkBag = new Bag(this.capacity);
+        this.linkBag = new Bag(this.capacity, 'priority', (item) => this._onLinkRemoved(item));
         this.linkMap = new Map();
-        this.count = 0;
+    }
+
+    get count() {
+        return this.linkBag.size;
+    }
+
+    _onLinkRemoved(linkEntry) {
+        this._removeFromSimpleLinkMap(linkEntry);
     }
 
     add(source, target, data = {}) {
-        this._ensureCapacity();
-
         const sourceLinks = this._getOrCreateSourceMap(source.name);
-        const priority = data.priority ?? 1; // Using nullish coalescing for more robust default
+        const priority = data.priority ?? 1;
 
         const linkEntry = this._createLinkEntry(source, target, {...data, priority});
         const added = this.linkBag.add(linkEntry);
 
         if (added) {
             sourceLinks.set(target.name, linkEntry);
-            this.count++;
         }
 
         return added;
@@ -46,16 +50,11 @@ export class TermLayer extends Layer {
         if (!sourceLinks?.has(target.name)) return false;
 
         const linkEntry = sourceLinks.get(target.name);
-        sourceLinks.delete(target.name);
+        // We call bag.remove, which triggers _onLinkRemoved, which updates linkMap.
+        // But for clarity and explicit behavior in 'remove' method, we can leave it to the callback or do it here.
+        // Doing it via bag.remove ensures consistency.
 
-        if (sourceLinks.size === 0) {
-            this.linkMap.delete(source.name);
-        }
-
-        this.linkBag.remove(linkEntry);
-        this.count--;
-
-        return true;
+        return this.linkBag.remove(linkEntry);
     }
 
     has(source, target) {
@@ -66,7 +65,7 @@ export class TermLayer extends Layer {
     getSources() {
         return Array.from(this.linkMap.keys())
             .map(name => this._getSourceTermByName(name))
-            .filter(Boolean); // More concise than explicit undefined check
+            .filter(Boolean);
     }
 
     update(source, target, data) {
@@ -74,7 +73,7 @@ export class TermLayer extends Layer {
         if (!sourceLinks?.has(target.name)) return false;
 
         const linkEntry = sourceLinks.get(target.name);
-        Object.assign(linkEntry.data, data); // More concise than spread operator for extension
+        Object.assign(linkEntry.data, data);
 
         if (data.priority !== undefined) {
             this._updatePriorityInBag(linkEntry);
@@ -85,8 +84,9 @@ export class TermLayer extends Layer {
 
     clear() {
         this.linkMap.clear();
-        this.linkBag = new Bag(this.capacity);
-        this.count = 0;
+        this.linkBag.clear();
+        // Since we cleared bag, callback won't be called for each item (Bag.clear doesn't loop remove).
+        // That's correct because we cleared map manually.
     }
 
     getStats() {
@@ -124,35 +124,6 @@ export class TermLayer extends Layer {
         return {name};
     }
 
-    _removeLowestPriorityLink() {
-        const lowestItem = this._findLowestPriorityItem();
-        if (!lowestItem) return;
-
-        this.linkBag.remove(lowestItem);
-        this._removeFromSimpleLinkMap(lowestItem);
-        this.count--;
-    }
-
-    _findLowestPriorityItem() {
-        let lowestItem = null;
-        let lowestPriority = Infinity;
-
-        for (const [item, priority] of this.linkBag._items.entries()) {
-            if (priority < lowestPriority) {
-                lowestPriority = priority;
-                lowestItem = item;
-            }
-        }
-
-        return lowestItem;
-    }
-
-    _ensureCapacity() {
-        if (this.count >= this.capacity) {
-            this._removeLowestPriorityLink();
-        }
-    }
-
     _getOrCreateSourceMap(sourceName) {
         if (!this.linkMap.has(sourceName)) {
             this.linkMap.set(sourceName, new Map());
@@ -162,14 +133,31 @@ export class TermLayer extends Layer {
 
     _removeFromSimpleLinkMap(item) {
         const sourceLinks = this.linkMap.get(item.source.name);
-        sourceLinks?.delete(item.target.name);
-        if (sourceLinks?.size === 0) {
-            this.linkMap.delete(item.source.name);
+        if (sourceLinks) {
+            sourceLinks.delete(item.target.name);
+            if (sourceLinks.size === 0) {
+                this.linkMap.delete(item.source.name);
+            }
         }
     }
 
     _updatePriorityInBag(linkEntry) {
-        this.linkBag.remove(linkEntry);
+        // This remove/add might trigger callback.
+        // remove -> callback -> deletes from map
+        // add -> adds back to bag -> we MUST add back to map!
+
+        // Wait, update logic is tricky now.
+        // If I remove from bag, it triggers callback which removes from map.
+        // Then I add to bag.
+        // But I don't add to map in _updatePriorityInBag!
+
+        // So I need to fix _updatePriorityInBag.
+
+        this.linkBag.remove(linkEntry); // triggers map removal
         this.linkBag.add(linkEntry);
+
+        // Add back to map
+        const sourceLinks = this._getOrCreateSourceMap(linkEntry.source.name);
+        sourceLinks.set(linkEntry.target.name, linkEntry);
     }
 }

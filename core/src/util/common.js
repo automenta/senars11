@@ -43,13 +43,25 @@ export const capitalize = str => str ? str.charAt(0).toUpperCase() + str.slice(1
 export const kebabCase = str => str?.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase() ?? '';
 
 export const unique = arr => [...new Set(arr)];
-export const isEmpty = arr => !arr?.length;
+export const isEmpty = arr => !arr || (Array.isArray(arr) && arr.length === 0) || (typeof arr === 'object' && Object.keys(arr).length === 0);
 
 export const safeGet = (obj, path, defaultValue = undefined) => {
     if (!obj || typeof obj !== 'object' || !path) return defaultValue;
 
     return path.split('.').reduce((current, key) =>
         current?.[key] ?? defaultValue, obj) ?? defaultValue;
+};
+export const getNestedProperty = safeGet;
+
+export const setNestedProperty = (obj, path, value) => {
+    if (!obj || typeof path !== 'string') return;
+    const keys = path.split('.');
+    let current = obj;
+    for (let i = 0; i < keys.length - 1; i++) {
+        if (current[keys[i]] == null) current[keys[i]] = {};
+        current = current[keys[i]];
+    }
+    current[keys[keys.length - 1]] = value;
 };
 
 export const deepClone = (obj) => {
@@ -78,10 +90,56 @@ export const safeAsync = async (asyncFn, defaultValue = null) => {
     }
 };
 
-/**
- * Get process memory usage metrics
- * @returns {Object|null} Memory usage object or null if process.memoryUsage is not available
- */
+export const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+export const timeout = (ms, message = 'Operation timed out') => {
+    return new Promise((_, reject) => {
+        setTimeout(() => reject(new Error(message)), ms);
+    });
+};
+
+export const withTimeout = async (promise, ms, message = 'Operation timed out') => {
+    return Promise.race([
+        promise,
+        timeout(ms, message)
+    ]);
+};
+
+export async function* asyncIteratorWithDelay(items, delay = 0) {
+    for (const item of items) {
+        if (delay > 0) await sleep(delay);
+        yield item;
+    }
+}
+
+export const generateId = (prefix = 'id') => `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+export const formatTimestamp = (timestamp = Date.now()) => new Date(timestamp).toISOString();
+
+export function deepMerge(target, source) {
+    if (!source) return target;
+    if (!isObject(target) || !isObject(source)) return source;
+
+    const output = Object.assign({}, target);
+    if (isObject(target) && isObject(source)) {
+        Object.keys(source).forEach(key => {
+            if (isObject(source[key])) {
+                if (!(key in target)) Object.assign(output, { [key]: source[key] });
+                else output[key] = deepMerge(target[key], source[key]);
+            } else {
+                Object.assign(output, { [key]: source[key] });
+            }
+        });
+    }
+    return output;
+}
+
+const isObject = item => (item && typeof item === 'object' && !Array.isArray(item));
+
+export const deepMergeConfig = (base, ...overrides) => {
+    return overrides.reduce((acc, curr) => deepMerge(acc, curr), base);
+};
+
 export const getMemoryUsage = () => {
     if (typeof process !== 'undefined' && process.memoryUsage) {
         return process.memoryUsage();
@@ -89,23 +147,11 @@ export const getMemoryUsage = () => {
     return null;
 };
 
-/**
- * Get heap used memory in bytes, with fallback
- * @returns {number} Heap used memory in bytes or 0 if unavailable
- */
 export const getHeapUsed = () => {
     const memUsage = getMemoryUsage();
     return memUsage?.heapUsed ?? 0;
 };
 
-/**
- * Check if running in a Node.js environment
- * @returns {boolean} True if running in Node.js, false otherwise
- */
 export const isNodeEnvironment = () => typeof process !== 'undefined' && process.versions?.node;
 
-/**
- * Check if running in a browser environment
- * @returns {boolean} True if running in browser, false otherwise
- */
 export const isBrowserEnvironment = () => typeof window !== 'undefined';

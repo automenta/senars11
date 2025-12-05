@@ -17,6 +17,14 @@ export function extractTaskFromContext(primaryPremise, secondaryPremise, context
     return extractPrimaryTask(primaryPremise, secondaryPremise, context);
 }
 
+export function isSynchronousRule(rule) {
+    return (rule.type ?? '').toLowerCase().includes('nal');
+}
+
+export function isAsyncRule(rule) {
+    return (rule.type ?? '').toLowerCase().includes('lm');
+}
+
 export function parseListFromResponse(lmResponse) {
     if (!lmResponse) return [];
 
@@ -61,6 +69,24 @@ export function isValidText(text, minLength = 1, maxLength = 1000) {
 
     const lowerText = text.toLowerCase();
     return !['sorry', 'cannot', 'unable', 'no information'].some(pattern => lowerText.includes(pattern));
+}
+
+export function processDerivation(result, maxDerivationDepth) {
+    if (!result?.stamp) return result;
+
+    try {
+        const derivationDepth = result.stamp.depth ?? 0;
+
+        if (derivationDepth > maxDerivationDepth) {
+            console.debug(`Discarding derivation - exceeds max depth (${derivationDepth} > ${maxDerivationDepth})`);
+            return null;
+        }
+
+        return result;
+    } catch (error) {
+        console.debug('Error processing derivation:', error.message);
+        return null;
+    }
 }
 
 export function createDerivedTask(originalTask, newProps) {

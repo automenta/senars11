@@ -32,6 +32,18 @@ describe('TermFactory', () => {
             expect(t2.name).toBe('(=, A, A)');
             expect(t2.components).toHaveLength(2);
         });
+
+        test('parallel (||) commutativity', () => {
+            const t1 = tf.parallel(tf.atomic('A'), tf.atomic('B'));
+            const t2 = tf.parallel(tf.atomic('B'), tf.atomic('A'));
+            expect(t1).toBe(t2);
+        });
+
+        test('&& commutativity', () => {
+            const t1 = tf.create('&&', [tf.atomic('A'), tf.atomic('B')]);
+            const t2 = tf.create('&&', [tf.atomic('B'), tf.atomic('A')]);
+            expect(t1).toBe(t2);
+        });
     });
 
     describe('Convenience', () => {
@@ -47,6 +59,20 @@ describe('TermFactory', () => {
 
         test('atomic', () => {
             expect(tf.atomic('A')).toMatchObject({isAtomic: true, name: 'A'});
+        });
+    });
+
+    describe('Edge Cases', () => {
+        test('should distinguish between (A ==> B) and (B ==> A) inside a commutative operator', () => {
+            const A = tf.atomic('A');
+            const B = tf.atomic('B');
+
+            const imp1 = tf.implication(A, B); // (==>, A, B)
+            const imp2 = tf.implication(B, A); // (==>, B, A)
+
+            const conjunction = tf.conjunction(imp1, imp2);
+
+            expect(conjunction.components.length).toBe(2);
         });
     });
 });

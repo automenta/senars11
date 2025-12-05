@@ -2,6 +2,7 @@ import {EventEmitter} from 'eventemitter3';
 import {getHeapUsed} from '../util/common.js';
 import {SimpleRunner} from './runner/SimpleRunner.js';
 import {PipelineRunner} from './runner/PipelineRunner.js';
+import {isSynchronousRule, isAsyncRule} from './RuleHelpers.js';
 
 /**
  * The main Reasoner class that manages the continuous reasoning pipeline.
@@ -150,13 +151,13 @@ export class Reasoner extends EventEmitter {
         for (const rule of candidateRules) {
             if (Date.now() - startTime > maxTimeMs) break;
 
-            if (this._isSynchronousRule(rule)) {
+            if (isSynchronousRule(rule)) {
                 const derivedTasks = this.ruleProcessor.processSyncRule(rule, primaryPremise, secondaryPremise);
                 for (const task of derivedTasks) {
                     const processedResult = this._processDerivation(task, suppressEvents);
                     if (processedResult) results.push(processedResult);
                 }
-            } else if (this._isAsyncRule(rule)) {
+            } else if (isAsyncRule(rule)) {
                 try {
                     let derivedTasks = [];
                     if (this.ruleProcessor && typeof this.ruleProcessor.executeAsyncRule === 'function') {
@@ -175,14 +176,6 @@ export class Reasoner extends EventEmitter {
             }
         }
         return results;
-    }
-
-    _isSynchronousRule(rule) {
-        return (rule.type ?? '').toLowerCase().includes('nal');
-    }
-
-    _isAsyncRule(rule) {
-        return (rule.type ?? '').toLowerCase().includes('lm');
     }
 
     _processDerivation(derivation, suppressEvents = false) {
