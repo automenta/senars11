@@ -135,9 +135,9 @@ export class EvaluationEngine {
      * Update variable bindings
      */
     _updateVariableBindings(bindings) {
-        for (const [varName, value] of Object.entries(bindings)) {
+        Object.entries(bindings).forEach(([varName, value]) => {
             this.variableBindings.set(varName, value);
-        }
+        });
     }
 
     _evaluateTerm(term, bindings) {
@@ -240,22 +240,29 @@ export class EvaluationEngine {
     }
 
     /**
+     * Helper for comparisons
+     */
+    _performComparison(a, b, op) {
+        return (a != null && b != null) ? op(Number(a), Number(b)) : false;
+    }
+
+    /**
      * Perform comparison operations
      */
     _performGreaterThan(a, b) {
-        return (a != null && b != null) ? (Number(a) > Number(b)) : false;
+        return this._performComparison(a, b, (x, y) => x > y);
     }
 
     _performLessThan(a, b) {
-        return (a != null && b != null) ? (Number(a) < Number(b)) : false;
+        return this._performComparison(a, b, (x, y) => x < y);
     }
 
     _performGreaterEqual(a, b) {
-        return (a != null && b != null) ? (Number(a) >= Number(b)) : false;
+        return this._performComparison(a, b, (x, y) => x >= y);
     }
 
     _performLessEqual(a, b) {
-        return (a != null && b != null) ? (Number(a) <= Number(b)) : false;
+        return this._performComparison(a, b, (x, y) => x <= y);
     }
 
     _performEquality(a, b) {

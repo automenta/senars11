@@ -148,9 +148,7 @@ export class FunctorRegistry {
 
         // Register aliases if provided
         if (properties.aliases) {
-            for (const alias of properties.aliases) {
-                this.aliases.set(alias, name);
-            }
+            properties.aliases.forEach(alias => this.aliases.set(alias, name));
         }
 
         // Initialize execution statistics
@@ -168,12 +166,9 @@ export class FunctorRegistry {
      * Register a batch of functors
      */
     registerBatch(functorDefinitions) {
-        const results = [];
-        for (const [name, definition] of Object.entries(functorDefinitions)) {
-            const {fn, properties} = definition;
-            results.push(this.registerFunctorDynamic(name, fn, properties));
-        }
-        return results;
+        return Object.entries(functorDefinitions).map(([name, {fn, properties}]) =>
+            this.registerFunctorDynamic(name, fn, properties)
+        );
     }
 
     /**
@@ -274,42 +269,33 @@ export class FunctorRegistry {
     }
 
     /**
+     * Helper to get functors by filter
+     */
+    _getFunctorsBy(predicate) {
+        return Array.from(this.functors.entries())
+            .filter(([_, functor]) => predicate(functor))
+            .map(([name, functor]) => ({...functor, name}));
+    }
+
+    /**
      * Get functors with specific property
      */
     getFunctorsWithProperty(property) {
-        const result = [];
-        for (const [name, functor] of this.functors) {
-            if (functor[property]) {
-                result.push({...functor, name});
-            }
-        }
-        return result;
+        return this._getFunctorsBy(functor => functor[property]);
     }
 
     /**
      * Get functors by category
      */
     getFunctorsByCategory(category) {
-        const result = [];
-        for (const [name, functor] of this.functors) {
-            if (functor.category === category) {
-                result.push({...functor, name});
-            }
-        }
-        return result;
+        return this._getFunctorsBy(functor => functor.category === category);
     }
 
     /**
      * Get functors by arity
      */
     getFunctorsByArity(arity) {
-        const result = [];
-        for (const [name, functor] of this.functors) {
-            if (functor.arity === arity) {
-                result.push({...functor, name});
-            }
-        }
-        return result;
+        return this._getFunctorsBy(functor => functor.arity === arity);
     }
 
     /**
@@ -347,10 +333,8 @@ export class FunctorRegistry {
      * Get registry statistics
      */
     getStats() {
-        const functorNames = Array.from(this.functors.keys());
         const categoryCounts = {};
-
-        for (const [name, functor] of this.functors) {
+        for (const functor of this.functors.values()) {
             categoryCounts[functor.category] = (categoryCounts[functor.category] || 0) + 1;
         }
 
@@ -366,11 +350,7 @@ export class FunctorRegistry {
      * Get execution statistics for all functors
      */
     getExecutionStats() {
-        const stats = {};
-        for (const [name, stat] of this.executionStats) {
-            stats[name] = {...stat};
-        }
-        return stats;
+        return Object.fromEntries(this.executionStats);
     }
 
     /**
@@ -394,16 +374,14 @@ export class FunctorRegistry {
      * Bulk execute multiple functors and return results
      */
     executeBulk(functorCalls) {
-        const results = [];
-        for (const {name, args} of functorCalls) {
+        return functorCalls.map(({name, args}) => {
             try {
                 const result = this.execute(name, ...(args || []));
-                results.push({name, result, success: true});
+                return {name, result, success: true};
             } catch (error) {
-                results.push({name, result: null, success: false, error: error.message});
+                return {name, result: null, success: false, error: error.message};
             }
-        }
-        return results;
+        });
     }
 
     /**
