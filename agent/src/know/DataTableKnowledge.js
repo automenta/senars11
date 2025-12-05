@@ -20,16 +20,15 @@ export class DataTableKnowledge extends Knowledge {
     }
 
     flattenObject(obj, prefix = '') {
-        const flattened = {};
-        for (const [key, value] of Object.entries(obj)) {
+        return Object.entries(obj).reduce((acc, [key, value]) => {
             const newKey = prefix ? `${prefix}_${key}` : key;
             if (value && typeof value === 'object' && !Array.isArray(value)) {
-                Object.assign(flattened, this.flattenObject(value, newKey));
+                Object.assign(acc, this.flattenObject(value, newKey));
             } else {
-                flattened[newKey] = value;
+                acc[newKey] = value;
             }
-        }
-        return flattened;
+            return acc;
+        }, {});
     }
 
     async processData() {
@@ -41,17 +40,22 @@ export class DataTableKnowledge extends Knowledge {
         return this.df;
     }
 
+    _rowToObject(row, cols) {
+        return Object.fromEntries(
+            (cols || []).map((col, idx) => [col, (row || [])[idx]])
+        );
+    }
+
     async toTasks() {
         if (!this.df) await this.processData();
-        const tasks = [], rows = this.df?.values || [], cols = this.df?.columns || [];
-        for (let i = 0; i < (rows.length || 0); i++) {
-            const row = rows[i] || [];
-            const rowObj = {};
-            (cols || []).forEach((col, idx) => rowObj[col] = row[idx]);
-            const task = await this.rowToTask(rowObj, i);
-            if (task) tasks.push(task);
-        }
-        return tasks;
+        const rows = this.df?.values || [];
+        const cols = this.df?.columns || [];
+
+        const tasks = await Promise.all(
+            rows.map((row, i) => this.rowToTask(this._rowToObject(row, cols), i))
+        );
+
+        return tasks.filter(t => t !== null);
     }
 
     async rowToTask(row, index) {
@@ -67,59 +71,68 @@ export class DataTableKnowledge extends Knowledge {
 
     async getItems() {
         if (!this.df) await this.processData();
-        const rows = this.df?.values || [], cols = this.df?.columns || [];
-        return (rows || []).map(row => {
-            const item = {};
-            (cols || []).forEach((col, idx) => item[col] = (row || [])[idx]);
-            return item;
-        });
+        const rows = this.df?.values || [];
+        const cols = this.df?.columns || [];
+
+        return rows.map(row => this._rowToObject(row, cols));
     }
 
     async getSummary() {
         if (!this.df) await this.processData();
         const shape = this.df?.shape || [0, 0];
+        const allCols = this.df?.columns || [];
+
         const summary = {
             tableName: this.tableName,
             rowCount: shape[0],
             columnCount: shape[1],
-            columns: this.df?.columns || [],
+            columns: allCols,
             statistics: {}
         };
 
-        const numericCols = [];
-        const allCols = this.df?.columns || [];
-        for (const col of allCols) {
+        const numericCols = allCols.filter(col => {
             try {
                 const colData = this.df?.column?.(col);
-                if (colData && ['int32', 'float32', 'float64'].includes(colData.dtype)) {
-                    numericCols.push(col);
-                }
+                return colData && ['int32', 'float32', 'float64'].includes(colData.dtype);
             } catch (e) {
+                return false;
             }
-        }
+        });
 
-        for (const col of numericCols) {
+        const statsPromises = numericCols.map(async col => {
             try {
                 const colData = this.df?.column?.(col);
-                if (!colData) continue;
+                if (!colData) return null;
 
-                const mean = await colData.mean?.();
-                const std = await colData.std?.();
-                const min = await colData.min?.();
-                const max = await colData.max?.();
+                const [mean, std, min, max] = await Promise.all([
+                    colData.mean?.(),
+                    colData.std?.(),
+                    colData.min?.(),
+                    colData.max?.()
+                ]);
 
                 if (mean !== undefined && std !== undefined && min !== undefined && max !== undefined) {
-                    summary.statistics[col] = {
-                        mean: parseFloat(mean.toFixed(4)),
-                        std: parseFloat(std.toFixed(4)),
-                        min: parseFloat(min.toFixed(4)),
-                        max: parseFloat(max.toFixed(4))
+                    return {
+                        col,
+                        stats: {
+                            mean: parseFloat(mean.toFixed(4)),
+                            std: parseFloat(std.toFixed(4)),
+                            min: parseFloat(min.toFixed(4)),
+                            max: parseFloat(max.toFixed(4))
+                        }
                     };
                 }
             } catch (e) {
                 console.warn(`Could not calculate statistics for column ${col}: ${e.message}`);
             }
-        }
+            return null;
+        });
+
+        const results = await Promise.all(statsPromises);
+        results.forEach(res => {
+            if (res) summary.statistics[res.col] = res.stats;
+        });
+
         return summary;
     }
 

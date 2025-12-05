@@ -82,13 +82,7 @@ export class Concept extends BaseComponent {
 
     _calculateWeightedAveragePriority() {
         const bags = [this._beliefs, this._goals, this._questions];
-        const sizes = [this._beliefs.size, this._goals.size, this._questions.size];
-
-        let totalWeightedPriority = 0;
-        for (let i = 0; i < bags.length; i++) {
-            totalWeightedPriority += bags[i].getAveragePriority() * sizes[i];
-        }
-
+        const totalWeightedPriority = bags.reduce((sum, bag) => sum + (bag.getAveragePriority() * bag.size), 0);
         return totalWeightedPriority / this.totalTasks;
     }
 
@@ -137,8 +131,8 @@ export class Concept extends BaseComponent {
     }
 
     getTask(taskId) {
-        const allBags = [this._beliefs, this._goals, this._questions];
-        for (const bag of allBags) {
+        // Find early exit using loop is more efficient here than map/find combo
+        for (const bag of [this._beliefs, this._goals, this._questions]) {
             const task = bag.find(t => t.stamp.id === taskId);
             if (task) return task;
         }
@@ -265,11 +259,11 @@ export class Concept extends BaseComponent {
                 {dataKey: 'questions', bagKey: '_questions'}
             ];
 
-            for (const {dataKey, bagKey} of deserializationMap) {
+            await Promise.all(deserializationMap.map(async ({dataKey, bagKey}) => {
                 if (data[dataKey] && this[bagKey].deserialize) {
                     await this[bagKey].deserialize(data[dataKey], Task.fromJSON);
                 }
-            }
+            }));
 
             return true;
         } catch (error) {
