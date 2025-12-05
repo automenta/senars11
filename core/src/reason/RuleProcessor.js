@@ -2,6 +2,7 @@ import {mergeConfig, processDerivation, sleep} from './utils/common.js';
 import {logError, ReasonerError} from './utils/error.js';
 import {Queue} from '../util/Queue.js';
 import {ArrayStamp} from '../Stamp.js';
+import {isSynchronousRule} from './RuleHelpers.js';
 
 /**
  * RuleProcessor consumes premise pairs and processes them through rules.
@@ -51,7 +52,7 @@ export class RuleProcessor {
                     }
 
                     try {
-                        if (this._isSynchronousRule(rule)) {
+                        if (isSynchronousRule(rule)) {
                             yield* this._processSyncRule(rule, primaryPremise, secondaryPremise);
                         } else {
                             this._dispatchAsyncRule(rule, primaryPremise, secondaryPremise);
@@ -153,10 +154,6 @@ export class RuleProcessor {
 
     _enqueueAsyncResult(result) {
         this.asyncResultsQueue.enqueue(result);
-    }
-
-    _isSynchronousRule(rule) {
-        return (rule.type ?? '').toLowerCase().includes('nal');
     }
 
     _dispatchAsyncRule(rule, primaryPremise, secondaryPremise) {

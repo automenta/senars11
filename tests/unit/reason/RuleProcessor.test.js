@@ -27,9 +27,6 @@ describe('RuleProcessor', () => {
     });
 
     test('utils', () => {
-        expect(rp._isSynchronousRule({type: 'nal'})).toBe(true);
-        expect(rp._isSynchronousRule({type: 'lm'})).toBe(false);
-
         Object.assign(rp, {syncRuleExecutions: 5});
         expect(rp.getStats().syncRuleExecutions).toBe(5);
         rp.resetStats();

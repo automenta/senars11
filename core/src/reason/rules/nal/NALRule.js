@@ -70,12 +70,4 @@ export class NALRule extends Rule {
             quality
         };
     }
-
-    /**
-     * Legacy method for backward compatibility if needed, but should be replaced
-     * @deprecated Use createDerivedTask instead
-     */
-    createNALDerivedTask(term, truth, parentTasks, context, punctuation = '.') {
-        return this.createDerivedTask(term, truth, parentTasks, context, punctuation);
-    }
 }

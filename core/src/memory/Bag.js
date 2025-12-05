@@ -92,13 +92,14 @@ const POLICIES = Object.freeze({
 });
 
 export class Bag {
-    constructor(maxSize, forgetPolicy = DEFAULT_POLICY) {
+    constructor(maxSize, forgetPolicy = DEFAULT_POLICY, onItemRemoved = null) {
         this._items = new Map();
         this._itemKeys = new Map(); // Content Key -> Item
         this._maxSize = maxSize;
         this._insertionOrder = [];
         this._accessTimes = new Map();
         this.setForgetPolicy(forgetPolicy);
+        this.onItemRemoved = onItemRemoved;
     }
 
     get size() {
@@ -163,6 +164,14 @@ export class Bag {
 
             this._insertionOrder = this._insertionOrder.filter(i => i !== item);
             this._accessTimes.delete(item);
+
+            if (this.onItemRemoved) {
+                try {
+                    this.onItemRemoved(item);
+                } catch (e) {
+                    console.error('Error in Bag onItemRemoved callback:', e);
+                }
+            }
         }
         return result;
     }
@@ -207,6 +216,12 @@ export class Bag {
     applyDecay(decayRate) {
         for (const [item, priority] of this._items.entries()) {
             this._items.set(item, priority * (1 - decayRate));
+        }
+    }
+
+    pruneTo(targetSize) {
+        while (this.size > targetSize) {
+            this._removeItemByPolicy();
         }
     }
 

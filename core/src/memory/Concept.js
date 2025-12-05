@@ -119,15 +119,9 @@ export class Concept extends BaseComponent {
         Object.entries(CAPACITY_DISTRIBUTION).forEach(([type, factor]) => {
             const bag = this[`_${type.toLowerCase()}s`]; // Convert BELIEF to _beliefs
             if (bag) {
-                this._enforceBagCapacity(bag, maxTasksPerType * factor);
+                bag.pruneTo(maxTasksPerType * factor);
             }
         });
-    }
-
-    _enforceBagCapacity(bag, maxCount) {
-        while (bag.size > maxCount) {
-            bag._removeItemByPolicy();
-        }
     }
 
     getTask(taskId) {
