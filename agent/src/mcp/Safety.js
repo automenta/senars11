@@ -5,7 +5,7 @@
 export class Safety {
     constructor(config = {}) {
         this.config = {
-            piiDetection: config.piiDetection !== false,
+            piiDetection: config.piiDetection === true, // Disabled by default
             ...config
         };
     }

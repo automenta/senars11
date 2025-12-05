@@ -106,6 +106,20 @@ export class Server {
                 }
             }
         );
+
+        this.server.tool(
+            "get-focus",
+            { limit: z.number().default(10).describe("Max items") },
+            async ({ limit }) => {
+                if (!this.nar) return this._error("NAR instance not available.");
+                try {
+                    const tasks = this.nar.focus ? this.nar.focus.getTasks(limit) : [];
+                    return this._formatFocusReport(tasks, limit);
+                } catch (error) {
+                    return this._error(`Focus query error: ${error.message}`);
+                }
+            }
+        );
     }
 
     async start() {
@@ -149,6 +163,18 @@ export class Server {
         const lines = [`### Memory Query: \`${query}\``];
         lines.push(`Found ${tasks.length} results (limit: ${limit})\n`);
         tasks.forEach((task, i) => lines.push(this._formatTaskLine(task, i + 1)));
+        return { content: [{ type: "text", text: lines.join("\n") }] };
+    }
+
+    _formatFocusReport(tasks, limit) {
+        const lines = ["### Focus Buffer"];
+        lines.push(`Showing top ${tasks.length} items (limit: ${limit})\n`);
+        tasks.forEach((task, i) => {
+             const termStr = task.term ? task.term.toString() : 'unknown';
+             const priority = task.budget ? task.budget.priority.toFixed(2) : "0.00";
+             const typeStr = task.punctuation === '!' ? '[GOAL]' : task.punctuation === '?' ? '[QUESTION]' : '[BELIEF]';
+             lines.push(`${i+1}. **${typeStr}** \`${termStr}\` (p=${priority})`);
+        });
         return { content: [{ type: "text", text: lines.join("\n") }] };
     }
 
