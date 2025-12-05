@@ -1,4 +1,6 @@
-import {ImplicationSyllogisticRule as SyllogisticRule} from '../../../../../core/src/reason/rules/nal/SyllogisticRule.js';
+import {
+    ImplicationSyllogisticRule as SyllogisticRule
+} from '../../../../../core/src/reason/rules/nal/SyllogisticRule.js';
 import {Task} from '../../../../../core/src/task/Task.js';
 import {Truth} from '../../../../../core/src/Truth.js';
 import {ArrayStamp} from '../../../../../core/src/Stamp.js';

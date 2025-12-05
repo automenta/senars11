@@ -201,7 +201,7 @@ export const TUI = ({engine, app}) => {
                             await app.actionDispatcher.dispatch({
                                 type: actionDef.type,
                                 payload: actionDef.payload,
-                                context: { activityId: lastLog.raw.id, rawActivity: lastLog.raw }
+                                context: {activityId: lastLog.raw.id, rawActivity: lastLog.raw}
                             });
                         } else {
                             addLog('❌ ActionDispatcher not available', 'error');

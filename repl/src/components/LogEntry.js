@@ -26,7 +26,10 @@ export const LogEntry = ({log}) => {
             React.createElement(
                 Box,
                 {flexDirection: 'row'},
-                React.createElement(Text, {color: log.color, bold: true}, `${log.icon || '•'} [${timestamp}] ${log.title}: `),
+                React.createElement(Text, {
+                    color: log.color,
+                    bold: true
+                }, `${log.icon || '•'} [${timestamp}] ${log.title}: `),
                 React.createElement(Text, {color: log.color}, log.subtitle || '')
             ),
             log.details ? React.createElement(Text, {color: 'gray', dimColor: true, marginLeft: 2}, log.details) : null

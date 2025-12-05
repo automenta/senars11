@@ -97,7 +97,7 @@ export class ActivityViewModel {
             icon: '•'
         };
 
-        return { ...base, ...formatted };
+        return {...base, ...formatted};
     }
 
     static _truncate(str, len) {

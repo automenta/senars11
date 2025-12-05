@@ -1,6 +1,5 @@
 import {Component} from './Component.js';
-import {ActivityViewModel} from '@senars/agent';
-import {ActionRegistry} from '@senars/agent';
+import {ActionRegistry, ActivityViewModel} from '@senars/agent';
 
 export class ActivityLogPanel extends Component {
     constructor(containerId) {
@@ -88,7 +87,7 @@ export class ActivityLogPanel extends Component {
         const filtered = this.activities.filter(act => {
             if (!this.filterTerm) return true;
             return (act.title && act.title.toLowerCase().includes(this.filterTerm)) ||
-                   (act.subtitle && act.subtitle.toLowerCase().includes(this.filterTerm));
+                (act.subtitle && act.subtitle.toLowerCase().includes(this.filterTerm));
         });
 
         if (filtered.length === 0) {
@@ -187,14 +186,14 @@ export class ActivityLogPanel extends Component {
     dispatchAction(actionDef, activityViewModel) {
         console.log('Dispatching action:', actionDef.id);
         const event = new CustomEvent('senars:action', {
-             detail: {
-                 type: actionDef.type,
-                 payload: actionDef.payload,
-                 context: {
-                     activityId: activityViewModel.id,
-                     rawActivity: activityViewModel.raw
-                 }
-             }
+            detail: {
+                type: actionDef.type,
+                payload: actionDef.payload,
+                context: {
+                    activityId: activityViewModel.id,
+                    rawActivity: activityViewModel.raw
+                }
+            }
         });
         document.dispatchEvent(event);
     }

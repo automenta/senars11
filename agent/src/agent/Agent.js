@@ -1,7 +1,5 @@
-import {NAR} from '@senars/core';
-import {Input} from '@senars/core';
+import {FormattingUtils, Input, NAR} from '@senars/core';
 import {PersistenceManager} from '../io/PersistenceManager.js';
-import {FormattingUtils} from '@senars/core';
 import * as Commands from '../commands/Commands.js';
 import {AGENT_EVENTS} from './constants.js';
 import {InputProcessor} from './InputProcessor.js';

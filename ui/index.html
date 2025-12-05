@@ -39,16 +39,16 @@
                 <span id="message-count">0</span> msgs
             </div>
             <div class="view-toggles">
-                 <button id="btn-toggle-trace" title="Toggle Log/Trace View">Show Trace</button>
+                <button id="btn-toggle-trace" title="Toggle Log/Trace View">Show Trace</button>
             </div>
         </div>
 
         <div class="main-content-area">
-            <div id="log-view-container" class="view-layer active">
+            <div class="view-layer active" id="log-view-container">
                 <div class="logs-container" id="logs-container"></div>
             </div>
-            <div id="trace-view-container" class="view-layer hidden">
-                <div id="trace-panel" class="trace-container"></div>
+            <div class="view-layer hidden" id="trace-view-container">
+                <div class="trace-container" id="trace-panel"></div>
             </div>
         </div>
 
@@ -90,7 +90,7 @@
             <button class="icon-btn" id="btn-close-sidebar" title="Close Sidebar">×</button>
         </div>
 
-        <div id="metrics-panel" class="metrics-container"></div>
+        <div class="metrics-container" id="metrics-panel"></div>
 
         <div class="cytoscape-container" id="graph-container"></div>
         <div class="graph-controls">

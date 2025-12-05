@@ -2,10 +2,9 @@
 
 import React from 'react';
 import {render} from 'ink';
-import {Config} from '@senars/core';
+import {Config, Logger} from '@senars/core';
 import {App} from '@senars/agent';
 import {TUI} from './components/TUI.js';
-import {Logger} from '@senars/core';
 
 class Repl {
     constructor() {

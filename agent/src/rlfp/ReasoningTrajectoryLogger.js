@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { AGENT_EVENTS } from '../agent/constants.js';
+import {AGENT_EVENTS} from '../agent/constants.js';
 
 class ReasoningTrajectoryLogger {
     constructor(agent) {
@@ -28,7 +28,7 @@ class ReasoningTrajectoryLogger {
 
     logStep(type, data) {
         if (!this.isLogging) return;
-        this.trajectory.push({ timestamp: Date.now(), type, ...data });
+        this.trajectory.push({timestamp: Date.now(), type, ...data});
     }
 
     endTrajectory(filePath) {

@@ -10,6 +10,7 @@
             background: #111;
             overflow: auto;
         }
+
         .grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -17,6 +18,7 @@
             max-width: 1200px;
             margin: 0 auto;
         }
+
         .card {
             background: #252525;
             border: 1px solid #333;
@@ -26,6 +28,7 @@
             display: flex;
             flex-direction: column;
         }
+
         .card-header {
             font-weight: bold;
             color: #fff;
@@ -33,6 +36,7 @@
             padding-bottom: 10px;
             border-bottom: 1px solid #444;
         }
+
         .component-container {
             flex: 1;
             position: relative;
@@ -42,6 +46,7 @@
             display: flex; /* Key for flex children */
             flex-direction: column;
         }
+
         /* Override style.css log container strictness for test */
         .logs-container {
             flex: 1;
@@ -50,82 +55,82 @@
     </style>
 </head>
 <body>
-    <h1 style="text-align: center; margin-bottom: 20px;">Component Visual Test</h1>
+<h1 style="text-align: center; margin-bottom: 20px;">Component Visual Test</h1>
 
-    <div class="grid">
-        <!-- Metrics Panel -->
-        <div class="card">
-            <div class="card-header">System Metrics Panel</div>
-            <div id="metrics-test" class="component-container" style="display: block; padding: 10px;"></div>
-        </div>
-
-        <!-- Trace Panel -->
-        <div class="card">
-            <div class="card-header">Reasoning Trace Panel</div>
-            <div id="trace-test" class="component-container trace-container"></div>
-        </div>
-
-        <!-- Log Viewer -->
-        <div class="card" style="grid-column: span 2;">
-            <div class="card-header">Log Viewer (Flex Test)</div>
-            <div id="log-test" class="component-container"></div>
-        </div>
+<div class="grid">
+    <!-- Metrics Panel -->
+    <div class="card">
+        <div class="card-header">System Metrics Panel</div>
+        <div class="component-container" id="metrics-test" style="display: block; padding: 10px;"></div>
     </div>
 
-    <script type="module">
-        import {SystemMetricsPanel} from './src/components/SystemMetricsPanel.js';
-        import {ReasoningTracePanel} from './src/components/ReasoningTracePanel.js';
-        import {LogViewer} from './src/components/LogViewer.js';
+    <!-- Trace Panel -->
+    <div class="card">
+        <div class="card-header">Reasoning Trace Panel</div>
+        <div class="component-container trace-container" id="trace-test"></div>
+    </div>
 
-        // 1. Initialize Metrics
-        const metricsPanel = new SystemMetricsPanel('metrics-test');
+    <!-- Log Viewer -->
+    <div class="card" style="grid-column: span 2;">
+        <div class="card-header">Log Viewer (Flex Test)</div>
+        <div class="component-container" id="log-test"></div>
+    </div>
+</div>
 
-        // 2. Initialize Trace
-        const tracePanel = new ReasoningTracePanel('trace-test');
+<script type="module">
+    import {SystemMetricsPanel} from './src/components/SystemMetricsPanel.js';
+    import {ReasoningTracePanel} from './src/components/ReasoningTracePanel.js';
+    import {LogViewer} from './src/components/LogViewer.js';
 
-        // 3. Initialize LogViewer
-        // We manually create the container structure to mimic app
-        const logContainer = document.getElementById('log-test');
-        const viewerContent = document.createElement('div');
-        // viewerContent.className = 'logs-container'; // LogViewer adds this?
-        logContainer.appendChild(viewerContent);
+    // 1. Initialize Metrics
+    const metricsPanel = new SystemMetricsPanel('metrics-test');
 
-        const logViewer = new LogViewer(viewerContent);
-        logViewer.render(); // Adds class
+    // 2. Initialize Trace
+    const tracePanel = new ReasoningTracePanel('trace-test');
 
-        // Simulation Loop
-        let cycle = 0;
-        setInterval(() => {
-            cycle++;
+    // 3. Initialize LogViewer
+    // We manually create the container structure to mimic app
+    const logContainer = document.getElementById('log-test');
+    const viewerContent = document.createElement('div');
+    // viewerContent.className = 'logs-container'; // LogViewer adds this?
+    logContainer.appendChild(viewerContent);
 
-            // Update Metrics
-            metricsPanel.update({
-                performance: { throughput: Math.random() * 100 + 50, avgLatency: Math.random() * 10 },
-                resourceUsage: { heapUsed: 1024 * 1024 * (50 + Math.random() * 50), heapTotal: 1024 * 1024 * 200 },
-                taskProcessing: { totalProcessed: cycle * 10, successful: cycle * 9 },
-                reasoningSteps: cycle * 5,
-                uptime: cycle * 1000
-            });
+    const logViewer = new LogViewer(viewerContent);
+    logViewer.render(); // Adds class
 
-            // Update Trace
-            tracePanel.addTrace({
-                timestamp: Date.now(),
-                source: 'Inference',
-                derivedTask: {
-                    term: `<term_${cycle} --> concept_${cycle % 5}>`,
-                    truth: { frequency: Math.random(), confidence: 0.9 }
-                }
-            });
+    // Simulation Loop
+    let cycle = 0;
+    setInterval(() => {
+        cycle++;
 
-            // Update Logs
-            logViewer.addLog(`Cycle ${cycle}: Simulated log message.`, 'info');
-            if (cycle % 5 === 0) {
-                logViewer.addLog({ event: 'complex_object', data: { x: 1, y: 2 } }, 'debug');
+        // Update Metrics
+        metricsPanel.update({
+            performance: {throughput: Math.random() * 100 + 50, avgLatency: Math.random() * 10},
+            resourceUsage: {heapUsed: 1024 * 1024 * (50 + Math.random() * 50), heapTotal: 1024 * 1024 * 200},
+            taskProcessing: {totalProcessed: cycle * 10, successful: cycle * 9},
+            reasoningSteps: cycle * 5,
+            uptime: cycle * 1000
+        });
+
+        // Update Trace
+        tracePanel.addTrace({
+            timestamp: Date.now(),
+            source: 'Inference',
+            derivedTask: {
+                term: `<term_${cycle} --> concept_${cycle % 5}>`,
+                truth: {frequency: Math.random(), confidence: 0.9}
             }
+        });
 
-        }, 1000);
+        // Update Logs
+        logViewer.addLog(`Cycle ${cycle}: Simulated log message.`, 'info');
+        if (cycle % 5 === 0) {
+            logViewer.addLog({event: 'complex_object', data: {x: 1, y: 2}}, 'debug');
+        }
 
-        console.log('Test Bench Running');
-    </script>
+    }, 1000);
+
+    console.log('Test Bench Running');
+</script>
 </body>
 </html>

@@ -9,7 +9,7 @@ import {dirname, join} from 'path';
 import {writeFile} from 'fs/promises';
 import {WebSocket} from 'ws';
 import {RemoteTaskMatch} from './TaskMatch.js';
-import {VirtualGraph, VirtualConsole, ConsoleFormatter} from '@senars/agent';
+import {ConsoleFormatter, VirtualConsole, VirtualGraph} from '@senars/agent';
 
 export {RemoteTaskMatch};
 

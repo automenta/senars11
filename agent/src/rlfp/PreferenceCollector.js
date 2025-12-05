@@ -23,7 +23,7 @@ class PreferenceCollector {
         console.log(this._formatTrajectory(trajectoryB));
         console.log('==========================================\n');
 
-        const { preference } = await inquirer.prompt([{
+        const {preference} = await inquirer.prompt([{
             type: 'list',
             name: 'preference',
             message: 'Which trajectory do you prefer?',
@@ -76,7 +76,7 @@ class PreferenceCollector {
             } else if (step.type === 'tool_call') {
                 content = `Tool: ${step.name}(${JSON.stringify(step.args)})`;
             } else if (step.type === 'lm_response') {
-                 content = `Response: ${JSON.stringify(step.content || step)}`;
+                content = `Response: ${JSON.stringify(step.content || step)}`;
             }
             return `${ts} [${step.type}] ${content}`;
         }).join('\n');

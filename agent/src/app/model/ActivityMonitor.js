@@ -40,14 +40,14 @@ export class ActivityMonitor {
 
         // --- I/O & Goals ---
         this._addListener('task.input', data => {
-             const type = data.source === 'user' ? ActivityTypes.IO.USER_INPUT : ActivityTypes.REASONING.GOAL;
-             this._add(type, {
+            const type = data.source === 'user' ? ActivityTypes.IO.USER_INPUT : ActivityTypes.REASONING.GOAL;
+            this._add(type, {
                 text: data.task?.toString() || data.input,
                 term: data.task?.term?.toString()
             });
         });
 
-        this._addListener('narsese.output', data => this._add(ActivityTypes.IO.SYSTEM_OUTPUT, { text: data }));
+        this._addListener('narsese.output', data => this._add(ActivityTypes.IO.SYSTEM_OUTPUT, {text: data}));
 
         // --- Agent Cognitive Events ---
         this._addListener('agent.action', data => this._add(ActivityTypes.AGENT.ACTION, data));
@@ -93,20 +93,24 @@ export class ActivityMonitor {
         // Check if object keys are mostly numeric indices
         const keys = Object.keys(data).filter(k => k !== 'eventName' && k !== 'traceId');
         if (keys.length > 0 && keys.every(k => /^\d+$/.test(k))) {
-             return keys.sort((a, b) => parseInt(a) - parseInt(b)).map(k => data[k]).join('');
+            return keys.sort((a, b) => parseInt(a) - parseInt(b)).map(k => data[k]).join('');
         }
 
         return JSON.stringify(data);
     }
 
     _add(type, payload) {
-        this.model.addActivity({ type, payload });
+        this.model.addActivity({type, payload});
     }
 
     _addListener(event, handler) {
         if (!this.engine.on) return;
         const safeHandler = (data) => {
-            try { handler(data); } catch (e) { console.error(`Monitor error (${event}):`, e); }
+            try {
+                handler(data);
+            } catch (e) {
+                console.error(`Monitor error (${event}):`, e);
+            }
         };
         this.engine.on(event, safeHandler);
         this._handlers.set(event, safeHandler);

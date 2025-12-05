@@ -42,7 +42,7 @@ describe('Activity Log Integration', () => {
         // Trigger derivation (simulated event)
         // We simulate the event that ActivityMonitor listens to: 'reasoning.derivation'
         agent.emit('reasoning.derivation', {
-            derivedTask: { term: 'test', stamp: {} },
+            derivedTask: {term: 'test', stamp: {}},
             rule: 'test-rule'
         });
     });
@@ -50,8 +50,8 @@ describe('Activity Log Integration', () => {
     test('ActionDispatcher should record preference', async () => {
         const result = await dispatcher.dispatch({
             type: ActionTypes.RATE,
-            payload: { value: 1 },
-            context: { activityId: '123', rawActivity: { type: 'test' } }
+            payload: {value: 1},
+            context: {activityId: '123', rawActivity: {type: 'test'}}
         });
 
         expect(result.success).toBe(true);

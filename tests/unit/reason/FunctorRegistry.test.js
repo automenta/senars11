@@ -1,5 +1,4 @@
 import {FunctorRegistry} from '../../../core/src/reason/FunctorRegistry.js';
-import {ReasonerError} from '../../../core/src/reason/utils/error.js';
 
 describe('FunctorRegistry', () => {
     let registry;

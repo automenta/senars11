@@ -4,10 +4,8 @@ import {spawn} from 'child_process';
 import {fileURLToPath} from 'url';
 import {dirname, join} from 'path';
 import {showUsageAndExit} from '../utils/script-utils.js';
-import {WebSocketMonitor} from '@senars/agent';
-import {DemoWrapper} from '@senars/agent';
+import {App, DemoWrapper, WebSocketMonitor} from '@senars/agent';
 import {Config} from '@senars/core';
-import {App} from '@senars/agent';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -67,7 +65,7 @@ async function startWebSocketServer(config) {
                 requestId: message.id
             });
         } else {
-             monitor._sendToClient(client, {
+            monitor._sendToClient(client, {
                 type: 'error',
                 payload: 'ActionDispatcher not initialized'
             });

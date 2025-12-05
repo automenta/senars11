@@ -84,7 +84,7 @@ async function main() {
         learner.updateModel(preferenceData);
 
         if (fs.existsSync('rlfp_training_data.jsonl')) {
-             console.log("Success! rlfp_training_data.jsonl updated.");
+            console.log("Success! rlfp_training_data.jsonl updated.");
         }
     } else {
         console.log("No preference selected.");

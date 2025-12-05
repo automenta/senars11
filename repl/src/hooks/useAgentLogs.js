@@ -1,6 +1,5 @@
 import {useCallback, useEffect, useState} from 'react';
 import {v4 as uuidv4} from 'uuid';
-import {FormattingUtils} from '../../util/FormattingUtils.js';
 import {ActivityViewModel} from '../../ui/model/ActivityViewModel.js';
 
 export const useAgentLogs = (engine, app) => {
@@ -23,8 +22,8 @@ export const useAgentLogs = (engine, app) => {
 
             // Construct log object
             const newLog = (typeof content === 'object' && content !== null)
-                ? { id: uuidv4(), timestamp, ...content }
-                : { id: uuidv4(), timestamp, message: content, type };
+                ? {id: uuidv4(), timestamp, ...content}
+                : {id: uuidv4(), timestamp, message: content, type};
 
             // Check duplicates (simple check based on message/title)
             const isDuplicate = prevLogs.slice(-2).some(log =>
@@ -74,10 +73,10 @@ export const useAgentLogs = (engine, app) => {
         if (app?.activityModel) {
             const unsubscribeModel = app.activityModel.subscribe((event, data) => {
                 if (event === 'add') {
-                     const formatted = ActivityViewModel.format(data);
-                     setLogs(prev => [...prev, formatted].slice(-50));
+                    const formatted = ActivityViewModel.format(data);
+                    setLogs(prev => [...prev, formatted].slice(-50));
                 } else if (event === 'clear') {
-                     setLogs([]);
+                    setLogs([]);
                 }
             });
 

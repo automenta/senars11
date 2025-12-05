@@ -1,4 +1,4 @@
-import {ActivityTypes, ActionTypes} from './ActivityTypes.js';
+import {ActionTypes, ActivityTypes} from './ActivityTypes.js';
 
 /**
  * Registry of available actions for different activity types.
@@ -32,14 +32,14 @@ export class ActionRegistry {
                 id: 'rate_good',
                 label: 'Good Reasoning',
                 type: ActionTypes.RATE,
-                payload: { value: 1 },
+                payload: {value: 1},
                 icon: '👍'
             });
             actions.push({
                 id: 'rate_bad',
                 label: 'Bad Reasoning',
                 type: ActionTypes.RATE,
-                payload: { value: -1 },
+                payload: {value: -1},
                 icon: '👎'
             });
 
@@ -53,7 +53,7 @@ export class ActionRegistry {
 
         // LLM specific
         if (type === ActivityTypes.LLM.RESPONSE) {
-             actions.push({
+            actions.push({
                 id: 'rate_response',
                 label: 'Rate Response',
                 type: ActionTypes.RATE,
