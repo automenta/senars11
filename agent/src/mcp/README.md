@@ -11,7 +11,7 @@ It uses `stdio` transport, making it compatible with MCP clients like Claude Des
 
 - **Server**: Exposes SeNARS tools (`reason`, `memory-query`, `execute-tool`) via Stdio transport.
 - **Client**: Connects to the Server (e.g. via subprocess).
-- **Demo**: `agent/src/demo/mcp-demo.js` demonstrates an LLM (Ollama or Transformer.js) connecting to SeNARS MCP Server.
+- **Demo**: `examples/mcp-demo.js` demonstrates an LLM (Ollama or Transformer.js) connecting to SeNARS MCP Server.
 
 ## Usage
 
