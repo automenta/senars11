@@ -81,9 +81,15 @@ class DemoApp {
             const baseUrl = await ask("Enter Base URL (default: http://localhost:11434): ") || "http://localhost:11434";
             this.llm = new LangChainWrapper(new ChatOllama({ model, baseUrl }));
         } else if (choice === '3') {
-            const apiKey = process.env.OPENAI_API_KEY || await ask("Enter OpenAI API Key: ");
-            const model = await ask("Enter model (default: gpt-4o): ") || "gpt-4o";
-            this.llm = new LangChainWrapper(new ChatOpenAI({ model, apiKey }));
+            console.log("Configuring OpenAI-compatible provider (e.g. LM Studio, LocalAI, vLLM)...");
+            const baseUrl = await ask("Enter Base URL (e.g. http://localhost:1234/v1, leave empty for default): ");
+            const apiKey = process.env.OPENAI_API_KEY || await ask("Enter API Key (default: 'not-needed'): ") || "not-needed";
+            const model = await ask("Enter model name (default: local-model): ") || "local-model";
+
+            const config = { model, apiKey };
+            if (baseUrl) config.configuration = { baseURL: baseUrl };
+
+            this.llm = new LangChainWrapper(new ChatOpenAI(config));
         } else {
             console.log("Invalid choice.");
             return await this.setupLLM();
