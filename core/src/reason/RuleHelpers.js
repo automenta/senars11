@@ -17,6 +17,14 @@ export function extractTaskFromContext(primaryPremise, secondaryPremise, context
     return extractPrimaryTask(primaryPremise, secondaryPremise, context);
 }
 
+export function isSynchronousRule(rule) {
+    return (rule.type ?? '').toLowerCase().includes('nal');
+}
+
+export function isAsyncRule(rule) {
+    return (rule.type ?? '').toLowerCase().includes('lm');
+}
+
 export function parseListFromResponse(lmResponse) {
     if (!lmResponse) return [];
 

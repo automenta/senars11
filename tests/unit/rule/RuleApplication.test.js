@@ -26,7 +26,7 @@ describe('Rule Application', () => {
             expect(rule.canApply(t1, t2)).toBe(true);
             expect(rule.canApply(t2, t1)).toBe(true);
 
-            const res = rule.apply(t1, t2);
+            const res = rule.apply(t1, t2, {termFactory: tf});
             expect(res).toHaveLength(1);
             // Verify term structure: (a ==> c)
             const resTerm = res[0].term;

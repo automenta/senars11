@@ -6,6 +6,19 @@
 import {ToolEngine} from './ToolEngine.js';
 import {ToolRegistry} from './ToolRegistry.js';
 import {BaseComponent} from '../util/BaseComponent.js';
+import {FileOperationsTool} from './FileOperationsTool.js';
+import {CommandExecutorTool} from './CommandExecutorTool.js';
+import {WebAutomationTool} from './WebAutomationTool.js';
+import {MediaProcessingTool} from './MediaProcessingTool.js';
+import {EmbeddingTool} from './EmbeddingTool.js';
+
+const TOOL_CLASSES = {
+    FileOperationsTool,
+    CommandExecutorTool,
+    WebAutomationTool,
+    MediaProcessingTool,
+    EmbeddingTool
+};
 
 /**
  * Integration layer that connects tools to the reasoning core
@@ -44,11 +57,10 @@ export class ToolIntegration extends BaseComponent {
         if (!this.registry) throw new Error('Tool registry not enabled');
 
         try {
-            const toolModules = await import('./index.js');
             const toolConfigs = this._getToolConfigs();
 
             for (const {id, className, category, description} of toolConfigs) {
-                const toolClass = toolModules[className];
+                const toolClass = TOOL_CLASSES[className];
                 if (!toolClass) continue;
 
                 try {
