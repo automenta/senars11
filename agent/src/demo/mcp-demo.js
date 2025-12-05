@@ -166,11 +166,17 @@ class LocalTransformerLLM {
                 if (json.tool && json.args) {
                     console.log(`[Tool Call]: ${json.tool} with args`, json.args);
                     const result = await mcpClient.callTool(json.tool, json.args);
-                    const resultText = JSON.stringify(result);
-                    console.log(`[Tool Result]: ${resultText}`);
+
+                    let displayResult = "";
+                    if (result.content && result.content[0] && result.content[0].text) {
+                         displayResult = result.content[0].text;
+                    } else {
+                         displayResult = JSON.stringify(result, null, 2);
+                    }
+                    console.log(`\n=== SeNARS Output ===\n${displayResult}\n=====================\n`);
 
                     // Feed back to model
-                    const followUpPrompt = `${systemPrompt}${text}\nSystem: Tool output: ${resultText}\nAssistant:`;
+                    const followUpPrompt = `${systemPrompt}${text}\nSystem: Tool output: ${displayResult}\nAssistant:`;
                     const followUp = await this.generator(followUpPrompt, { max_new_tokens: 200, return_full_text: false });
                     return followUp[0].generated_text.trim();
                 }
@@ -216,10 +222,7 @@ class LangChainWrapper {
 
             for (const call of result.tool_calls) {
                 const toolResult = await mcpClient.callTool(call.name, call.args);
-                console.log(`[Tool Result for ${call.name}]:`, JSON.stringify(toolResult));
 
-                // MCP SDK returns { content: [{ type: 'text', text: '...' }] }
-                // LangChain expects string content for ToolMessage
                 let content = "";
                 if (toolResult.content && toolResult.content[0]?.text) {
                     content = toolResult.content[0].text;
@@ -227,8 +230,10 @@ class LangChainWrapper {
                     content = JSON.stringify(toolResult);
                 }
 
+                console.log(`\n=== SeNARS Output (${call.name}) ===\n${content}\n==============================\n`);
+
                 messages.push(new ToolMessage({
-                    tool_call_id: call.id || "call_1", // Ollama sometimes misses ID, but LangChain handles it usually
+                    tool_call_id: call.id || "call_1",
                     content: content,
                     name: call.name
                 }));

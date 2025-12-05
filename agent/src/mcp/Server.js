@@ -32,6 +32,7 @@ export class Server {
                 }
 
                 try {
+                    const inputTasks = [];
                     for (const premise of premises) {
                         await this.nar.input(premise);
                     }
@@ -42,23 +43,48 @@ export class Server {
                     // Run a few cycles to process
                     const derivations = await this.nar.runCycles(10);
 
-                    // Format results
-                    const conclusions = Array.from(new Set(
-                        derivations
-                            .flat()
-                            .filter(d => d && d.term)
-                            .map(d => d.term.toString())
-                    ));
+                    // Deduplicate and format results
+                    const uniqueDerivations = new Map();
 
-                    const resultData = {
-                        conclusions: conclusions.length > 0 ? conclusions : ["Processed premises, no immediate conclusions"],
-                        derivationSteps: [`Processed ${premises.length} premises`, `Ran 10 inference cycles`]
-                    };
+                    derivations.flat().forEach(task => {
+                        if (task && task.term) {
+                            const termStr = task.term.toString();
+                            // Keep the one with highest confidence
+                            if (!uniqueDerivations.has(termStr) || (task.truth && uniqueDerivations.get(termStr).truth && task.truth.confidence > uniqueDerivations.get(termStr).truth.confidence)) {
+                                uniqueDerivations.set(termStr, task);
+                            }
+                        }
+                    });
+
+                    // Generate Rich Report
+                    const reportLines = ["### SeNARS Reasoning Trace"];
+                    reportLines.push(`**Input**: ${premises.length} premises` + (goal ? `, Goal: \`${goal}\`` : ""));
+                    reportLines.push(`**Cycles Executed**: 10`);
+                    reportLines.push("");
+
+                    if (uniqueDerivations.size > 0) {
+                        reportLines.push("**Derived Conclusions**:");
+                        let idx = 1;
+                        for (const task of uniqueDerivations.values()) {
+                            const termStr = task.term.toString();
+                            const truthStr = task.truth
+                                ? `_{f=${task.truth.frequency.toFixed(2)}, c=${task.truth.confidence.toFixed(2)}}_`
+                                : "";
+                            const typeStr = task.punctuation === '!' ? '[GOAL]' : task.punctuation === '?' ? '[QUESTION]' : '[BELIEF]';
+
+                            reportLines.push(`${idx}. **${typeStr}** \`${termStr}\` ${truthStr}`);
+                            idx++;
+                        }
+                    } else {
+                        reportLines.push("_No new conclusions derived in this window._");
+                    }
+
+                    const report = reportLines.join("\n");
 
                     return {
                         content: [{
                             type: "text",
-                            text: JSON.stringify(resultData, null, 2)
+                            text: report
                         }]
                     };
                 } catch (error) {
@@ -83,16 +109,24 @@ export class Server {
 
                 try {
                     const results = this.nar.query(query);
-                    const formatted = (results || []).slice(0, limit).map(task => ({
-                        content: task.term ? task.term.toString() : 'unknown',
-                        confidence: task.truth ? task.truth.confidence : 0,
-                        timestamp: new Date().toISOString()
-                    }));
+                    const sliced = (results || []).slice(0, limit);
+
+                    const reportLines = [`### Memory Query: \`${query}\``];
+                    reportLines.push(`Found ${sliced.length} results (limit: ${limit})`);
+                    reportLines.push("");
+
+                    sliced.forEach((task, i) => {
+                        const truthStr = task.truth
+                            ? `_{f=${task.truth.frequency.toFixed(2)}, c=${task.truth.confidence.toFixed(2)}}_`
+                            : "";
+                        const termStr = task.term ? task.term.toString() : 'unknown';
+                        reportLines.push(`${i+1}. \`${termStr}\` ${truthStr}`);
+                    });
 
                     return {
                         content: [{
                             type: "text",
-                            text: JSON.stringify({ results: formatted, count: formatted.length }, null, 2)
+                            text: reportLines.join("\n")
                         }]
                     };
                 } catch (error) {
@@ -120,11 +154,9 @@ export class Server {
                     return {
                         content: [{
                             type: "text",
-                            text: JSON.stringify({
-                                result: result.result ?? result,
-                                success: result.success !== false,
-                                error: result.error
-                            }, null, 2)
+                            text: `### Tool Execution: ${toolName}\n` +
+                                  `**Success**: ${result.success !== false}\n` +
+                                  `**Result**: \n\`\`\`json\n${JSON.stringify(result.result ?? result, null, 2)}\n\`\`\``
                         }]
                     };
                 } catch (error) {

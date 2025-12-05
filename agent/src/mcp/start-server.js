@@ -2,10 +2,16 @@ import { NAR } from '@senars/core';
 import { Server } from './Server.js';
 
 async function main() {
-    // Initialize NAR with basic config
+    // Initialize NAR with advanced config
     const narConfig = {
         memory: {
             capacity: 1000
+        },
+        reasoningAboutReasoning: {
+            enabled: true
+        },
+        tools: {
+            enabled: true
         },
         logger: {
             level: 'error' // Reduce logging to avoid polluting stderr too much
