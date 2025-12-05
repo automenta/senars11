@@ -1,11 +1,13 @@
 import { Client as McpClient } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { EventEmitter } from 'events';
+import { Safety } from './Safety.js';
 
 export class Client extends EventEmitter {
     constructor(options = {}) {
         super();
         this.options = options;
+        this.safety = new Safety(options.safety);
         this.client = new McpClient({
             name: "SeNARS-MCP-Client",
             version: "1.0.0"
@@ -43,9 +45,10 @@ export class Client extends EventEmitter {
     }
 
     async callTool(toolName, input) {
+        const safeInput = this.safety.validateInput(input);
         return await this.client.callTool({
             name: toolName,
-            arguments: input
+            arguments: safeInput
         });
     }
 

@@ -2,6 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import vm from "node:vm";
+import { Safety } from "./Safety.js";
 
 /**
  * MCP Server for exposing SeNARS services as MCP tools.
@@ -10,6 +11,7 @@ export class Server {
     constructor({ nar = null, ...options } = {}) {
         this.options = options;
         this.nar = nar;
+        this.safety = new Safety(options.safety);
 
         this.server = new McpServer({
             name: "SeNARS-MCP-Server",
@@ -32,12 +34,16 @@ export class Server {
                 if (!this.nar) return this._error("NAR instance not available.");
 
                 try {
-                    for (const premise of premises) await this.nar.input(premise);
-                    if (goal) await this.nar.input(goal);
+                    // Safety: Scrub PII
+                    const safePremises = this.safety.validateInput(premises);
+                    const safeGoal = goal ? this.safety.validateInput(goal) : undefined;
+
+                    for (const premise of safePremises) await this.nar.input(premise);
+                    if (safeGoal) await this.nar.input(safeGoal);
 
                     const derivations = await this.nar.runCycles(10);
                     const uniqueDerivations = this._deduplicateTasks(derivations.flat());
-                    return this._formatReasoningReport(premises, goal, uniqueDerivations);
+                    return this._formatReasoningReport(safePremises, safeGoal, uniqueDerivations);
                 } catch (error) {
                     return this._error(`Reasoning error: ${error.message}`);
                 }
@@ -54,8 +60,9 @@ export class Server {
                 if (!this.nar) return this._error("NAR instance not available.");
 
                 try {
-                    const results = (this.nar.query(query) || []).slice(0, limit);
-                    return this._formatMemoryReport(query, results, limit);
+                    const safeQuery = this.safety.validateInput(query);
+                    const results = (this.nar.query(safeQuery) || []).slice(0, limit);
+                    return this._formatMemoryReport(safeQuery, results, limit);
                 } catch (error) {
                     return this._error(`Memory query error: ${error.message}`);
                 }
@@ -72,7 +79,8 @@ export class Server {
                 if (!this.nar) return this._error("NAR instance not available.");
 
                 try {
-                    const result = await this.nar.executeTool(toolName, parameters);
+                    // Supports MCR functionality (NARTool) via tool integration
+                    const result = await this.nar.executeTool(toolName, this.safety.validateInput(parameters));
                     return this._formatToolReport(toolName, result);
                 } catch (error) {
                     return this._error(`Tool execution error: ${error.message}`);

@@ -27,7 +27,7 @@ export async function setupMCPServer(options = {}) {
 /**
  * Main SeNARS MCP system class
  */
-export class SeNARSMCPSystem {
+export class MCPManager {
     constructor(options = {}) {
         this.options = options;
         this.client = null;
@@ -58,4 +58,4 @@ export class SeNARSMCPSystem {
     }
 }
 
-export default SeNARSMCPSystem;
+export default MCPManager;
