@@ -43,7 +43,6 @@ export class FileAnalysisKnowledge extends DataTableKnowledge {
             const fileName = row.path || row.file_path || `file_${index}`;
             const filePath = fileName.replace(/[^\w\s-]/g, '_').replace(/\s+/g, '_');
 
-            // Define metrics to process
             const metrics = [
                 {key: 'line_coverage', metric: 'coverage', min: 0, max: 100, confidence: 0.9},
                 {key: 'size', metric: 'size', min: 0, max: 10000, confidence: 0.8},
@@ -51,17 +50,16 @@ export class FileAnalysisKnowledge extends DataTableKnowledge {
                 {key: 'lines', metric: 'lines', min: 0, max: 1000, confidence: 0.8}
             ];
 
-            // Process each metric
-            for (const {key, metric, min, max, confidence} of metrics) {
-                if (row[key] !== undefined) {
-                    return await this.createTasksWithTemplate('file-analysis', {
-                        filePath,
-                        metric,
-                        value: row[key],
-                        min,
-                        max
-                    }, {confidence});
-                }
+            const metricConfig = metrics.find(({key}) => row[key] !== undefined);
+            if (metricConfig) {
+                const {key, metric, min, max, confidence} = metricConfig;
+                return await this.createTasksWithTemplate('file-analysis', {
+                    filePath,
+                    metric,
+                    value: row[key],
+                    min,
+                    max
+                }, {confidence});
             }
 
             return null;
@@ -74,27 +72,27 @@ export class FileAnalysisKnowledge extends DataTableKnowledge {
     async createRelationships() {
         if (!this.df) await this.processData();
 
-        const relationships = [], rows = this.df?.values || [], cols = this.df?.columns || [];
+        const rows = this.df?.values || [];
+        const cols = this.df?.columns || [];
 
-        for (let i = 0; i < (rows.length || 0); i++) {
-            const row = {};
-            (cols || []).forEach((col, idx) => row[col] = (rows[i] || [])[idx]);
-
+        const relationships = await Promise.all(rows.map(async (rowRaw, i) => {
+            const row = this._rowToObject(rowRaw, cols);
             const fileName = row.path || row.file_path || `file_${i}`;
             const filePath = fileName.replace(/[^\w\s-]/g, '_').replace(/\s+/g, '_');
 
             if (row.directory) {
                 const dirPath = row.directory.replace(/[^\w\s-]/g, '_').replace(/\s+/g, '_');
-                const rel = await this.createTasksWithTemplate('containment', {
+                return await this.createTasksWithTemplate('containment', {
                     container: dirPath,
                     contained: filePath,
                     relationship: 'in_directory',
                     truth: {frequency: 1.0, confidence: 0.9}
                 });
-                relationships.push(rel);
             }
-        }
-        return relationships;
+            return null;
+        }));
+
+        return relationships.filter(r => r !== null);
     }
 }
 
@@ -128,7 +126,6 @@ export class TestResultKnowledge extends DataTableKnowledge {
         try {
             const testName = (row.name || `test_${index}`).replace(/[^\w\s-]/g, '_').replace(/\s+/g, '_');
 
-            // Handle test status
             if (row.status) {
                 const isPass = row.status === 'passed' ? 1 : 0;
                 return await this.createTasksWithTemplate('test-result', {
@@ -138,11 +135,9 @@ export class TestResultKnowledge extends DataTableKnowledge {
                 });
             }
 
-            // Handle test duration
             if (row.duration !== undefined && row.duration > 0) {
                 const durationNorm = TruthValueUtils.normalizeMetric(row.duration, 0, 5000);
 
-                // Return slow/fast classification first
                 return await this.createTasksWithTemplate('test-result', {
                     testName,
                     status: row.duration > 1000 ? 'slow' : 'fast',
@@ -161,12 +156,12 @@ export class TestResultKnowledge extends DataTableKnowledge {
     async createRelationships() {
         if (!this.df) await this.processData();
 
-        const relationships = [], rows = this.df?.values || [], cols = this.df?.columns || [];
+        const rows = this.df?.values || [];
+        const cols = this.df?.columns || [];
 
-        for (let i = 0; i < (rows.length || 0); i++) {
-            const row = {};
-            (cols || []).forEach((col, idx) => row[col] = (rows[i] || [])[idx]);
-
+        const relationshipsDeep = await Promise.all(rows.map(async (rowRaw, i) => {
+            const row = this._rowToObject(rowRaw, cols);
+            const rels = [];
             const testName = (row.name || `test_${i}`).replace(/[^\w\s-]/g, '_').replace(/\s+/g, '_');
 
             const suiteRel = await this.createTasksWithTemplate('containment', {
@@ -175,7 +170,7 @@ export class TestResultKnowledge extends DataTableKnowledge {
                 relationship: 'in_suite',
                 truth: {frequency: 1.0, confidence: 0.9}
             });
-            relationships.push(suiteRel);
+            rels.push(suiteRel);
 
             if (row.directory) {
                 const dirName = row.directory.replace(/[^\w\s-]/g, '_').replace(/\s+/g, '_');
@@ -185,10 +180,12 @@ export class TestResultKnowledge extends DataTableKnowledge {
                     relationship: 'in_directory',
                     truth: {frequency: 1.0, confidence: 0.9}
                 });
-                relationships.push(dirRel);
+                rels.push(dirRel);
             }
-        }
-        return relationships;
+            return rels;
+        }));
+
+        return relationshipsDeep.flat().filter(r => r !== null);
     }
 }
 
@@ -223,24 +220,22 @@ export class DirectoryStructureKnowledge extends DataTableKnowledge {
         try {
             const dirName = (row.path || `directory_${index}`).replace(/[^\w\s-]/g, '_').replace(/\s+/g, '_');
 
-            // Define metrics to process
             const metrics = [
                 {key: 'files', metric: 'files', min: 0, max: 50, confidence: 0.8},
                 {key: 'lines', metric: 'lines', min: 0, max: 10000, confidence: 0.8},
                 {key: 'complexity', metric: 'complexity', min: 0, max: 100, confidence: 0.8}
             ];
 
-            // Process each metric
-            for (const {key, metric, min, max, confidence} of metrics) {
-                if (row[key] !== undefined) {
-                    return await this.createTasksWithTemplate('directory-analysis', {
-                        dirPath: dirName,
-                        metric,
-                        value: row[key],
-                        min,
-                        max
-                    }, {confidence});
-                }
+            const metricConfig = metrics.find(({key}) => row[key] !== undefined);
+            if (metricConfig) {
+                const {key, metric, min, max, confidence} = metricConfig;
+                return await this.createTasksWithTemplate('directory-analysis', {
+                    dirPath: dirName,
+                    metric,
+                    value: row[key],
+                    min,
+                    max
+                }, {confidence});
             }
 
             return null;
@@ -253,12 +248,12 @@ export class DirectoryStructureKnowledge extends DataTableKnowledge {
     async createRelationships() {
         if (!this.df) await this.processData();
 
-        const relationships = [], rows = this.df?.values || [], cols = this.df?.columns || [];
+        const rows = this.df?.values || [];
+        const cols = this.df?.columns || [];
 
-        for (let i = 0; i < (rows.length || 0); i++) {
-            const row = {};
-            (cols || []).forEach((col, idx) => row[col] = (rows[i] || [])[idx]);
-
+        const relationshipsDeep = await Promise.all(rows.map(async (rowRaw, i) => {
+            const row = this._rowToObject(rowRaw, cols);
+            const rels = [];
             const dirName = (row.path || `directory_${i}`).replace(/[^\w\s-]/g, '_').replace(/\s+/g, '_');
 
             if (row.parentDirectory) {
@@ -269,7 +264,7 @@ export class DirectoryStructureKnowledge extends DataTableKnowledge {
                     object: `child_of) --> "${parentDir}"`,
                     truth: {frequency: 1.0, confidence: 0.85}
                 });
-                relationships.push(childRel);
+                rels.push(childRel);
             }
 
             if (row.depth !== undefined) {
@@ -278,10 +273,12 @@ export class DirectoryStructureKnowledge extends DataTableKnowledge {
                     predicate: `depth_level) --> ${row.depth}`,
                     truth: {frequency: 1.0, confidence: 0.9}
                 });
-                relationships.push(depthRel);
+                rels.push(depthRel);
             }
-        }
-        return relationships;
+            return rels;
+        }));
+
+        return relationshipsDeep.flat().filter(r => r !== null);
     }
 }
 
@@ -293,18 +290,13 @@ export class DependencyGraphKnowledge extends DataTableKnowledge {
     async processData() {
         if (!this.df) {
             if (this.data && typeof this.data === 'object' && this.data.dependencyGraph) {
-                const flatData = [];
-                for (const [file, deps] of Object.entries(this.data.dependencyGraph)) {
-                    if (Array.isArray(deps)) {
-                        for (const dep of deps) {
-                            flatData.push({
-                                source: file,
-                                target: dep,
-                                type: 'dependency'
-                            });
-                        }
-                    }
-                }
+                const flatData = Object.entries(this.data.dependencyGraph).flatMap(([file, deps]) =>
+                    Array.isArray(deps) ? deps.map(dep => ({
+                        source: file,
+                        target: dep,
+                        type: 'dependency'
+                    })) : []
+                );
                 this.df = new dfd.DataFrame(flatData);
             } else {
                 await super.initDataTable(this.data);
@@ -332,11 +324,12 @@ export class DependencyGraphKnowledge extends DataTableKnowledge {
     async createRelationships() {
         if (!this.df) await this.processData();
 
-        const relationships = [], rows = this.df?.values || [], cols = this.df?.columns || [];
+        const rows = this.df?.values || [];
+        const cols = this.df?.columns || [];
 
-        for (let i = 0; i < (rows.length || 0); i++) {
-            const row = {};
-            (cols || []).forEach((col, idx) => row[col] = (rows[i] || [])[idx]);
+        const relationshipsDeep = await Promise.all(rows.map(async (rowRaw, i) => {
+            const row = this._rowToObject(rowRaw, cols);
+            const rels = [];
 
             if (row.source && row.target) {
                 const source = row.source.replace(/[^\w\s-]/g, '_').replace(/\s+/g, '_');
@@ -348,7 +341,7 @@ export class DependencyGraphKnowledge extends DataTableKnowledge {
                     object: `"${target}") --> depends_on`,
                     truth: {frequency: 1.0, confidence: 0.9}
                 });
-                relationships.push(dependsRel);
+                rels.push(dependsRel);
 
                 const dependedRel = await this.createTasksWithTemplate('relationship', {
                     subject: `"${target}"`,
@@ -356,10 +349,12 @@ export class DependencyGraphKnowledge extends DataTableKnowledge {
                     object: `"${source}") --> depended_by`,
                     truth: {frequency: 1.0, confidence: 0.9}
                 });
-                relationships.push(dependedRel);
+                rels.push(dependedRel);
             }
-        }
-        return relationships;
+            return rels;
+        }));
+
+        return relationshipsDeep.flat().filter(r => r !== null);
     }
 }
 
