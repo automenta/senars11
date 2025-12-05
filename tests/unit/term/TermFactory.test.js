@@ -49,4 +49,18 @@ describe('TermFactory', () => {
             expect(tf.atomic('A')).toMatchObject({isAtomic: true, name: 'A'});
         });
     });
+
+    describe('Edge Cases', () => {
+        test('should distinguish between (A ==> B) and (B ==> A) inside a commutative operator', () => {
+            const A = tf.atomic('A');
+            const B = tf.atomic('B');
+
+            const imp1 = tf.implication(A, B); // (==>, A, B)
+            const imp2 = tf.implication(B, A); // (==>, B, A)
+
+            const conjunction = tf.conjunction(imp1, imp2);
+
+            expect(conjunction.components.length).toBe(2);
+        });
+    });
 });
