@@ -30,18 +30,17 @@ export class TermFactory extends BaseComponent {
     constructor(config = {}, eventBus = null) {
         super(config, 'TermFactory', eventBus);
         this._cache = new Map();
-        this._complexityCache = new Map(); // Cache for computational complexity metrics
+        this._complexityCache = new Map();
         this._cognitiveDiversity = new CognitiveDiversity(this);
         this._cacheHits = 0;
         this._cacheMisses = 0;
-        this._maxCacheSize = this.config.maxCacheSize || 5000; // Limit cache size to prevent memory issues
-        this._accessTime = new Map(); // Track access times for LRU eviction
+        this._maxCacheSize = this.config.maxCacheSize || 5000;
+        this._accessTime = new Map();
     }
 
-    create(data, optionalComponents = undefined) {
-        // Handle (operator, components) signature
-        if (typeof data === 'string' && Array.isArray(optionalComponents)) {
-            return this._processCompound(data, optionalComponents);
+    create(data, components = undefined) {
+        if (typeof data === 'string' && Array.isArray(components)) {
+            return this._createCompound(data, components);
         }
 
         if (!data) throw new Error('TermFactory.create: data is required');
@@ -50,161 +49,90 @@ export class TermFactory extends BaseComponent {
             return this._getOrCreateAtomic(typeof data === 'string' ? data : data.name);
         }
 
-        const {operator, components} = this._normalizeTermData(data);
-        return this._processCanonicalAndCache(operator, components);
+        // Handle object input {operator, components}
+        const {operator, components: comps} = data;
+        return this._createCompound(operator, comps);
     }
 
-    _processCompound(operator, components) {
-        const {operator: op, components: comps} = this._normalizeTermData({operator, components});
-        return this._processCanonicalAndCache(op, comps);
+    _createCompound(operator, components) {
+        const normalized = this._normalizeTermData(operator, components);
+        return this._processCanonicalAndCache(normalized.operator, normalized.components);
     }
 
     _processCanonicalAndCache(operator, components) {
-        // Advanced canonicalization with proper commutativity and normalization
         const normalizedComponents = this._canonicalizeComponents(operator, components);
         const name = this._buildCanonicalName(operator, normalizedComponents);
-
-        // Check if term is already cached
-        const cachedTerm = this._cache.get(name);
         const currentTime = Date.now();
 
+        // Check cache
+        const cachedTerm = this._cache.get(name);
         if (cachedTerm) {
             this._cacheHits++;
             this._emitIntrospectionEvent(IntrospectionEvents.TERM_CACHE_HIT, {termName: name});
-            // Update access time for LRU
             this._accessTime.set(name, currentTime);
             return cachedTerm;
         }
 
         this._cacheMisses++;
         this._emitIntrospectionEvent(IntrospectionEvents.TERM_CACHE_MISS, {termName: name});
+
         const term = this._createAndCache(operator, normalizedComponents, name);
-
-        // Update access time for the new term
         this._accessTime.set(name, currentTime);
-
-        // Evict entries using LRU if cache is too large
         this._evictLRUEntries();
 
-        // Calculate and cache complexity metrics
         this._calculateComplexityMetrics(term, normalizedComponents);
-
-        // Register for cognitive diversity calculations
         this._cognitiveDiversity.registerTerm(term);
 
         return term;
     }
 
-    // Fluent interface for term construction following project-specific patterns
-    atomic(name) {
-        return this.create(name);
-    }
+    // Fluent interface
+    atomic(name) { return this.create(name); }
+    variable(name) { return this.create(name.startsWith('?') ? name : `?${name}`); }
 
-    variable(name) {
-        return this.create(name.startsWith('?') ? name : `?${name}`);
-    }
+    inheritance(sub, pred) { return this._createCompound('-->', [sub, pred]); }
+    similarity(sub, pred) { return this._createCompound('<->', [sub, pred]); }
+    implication(pre, post) { return this._createCompound('==>', [pre, post]); }
+    equivalence(left, right) { return this._createCompound('<=>', [left, right]); }
+    equality(left, right) { return this._createCompound('=', [left, right]); }
 
-    inheritance(sub, pred) {
-        return this._processCompound('-->', [sub, pred]);
-    }
+    conjunction(...terms) { return this._createCompound('&', this._flattenArgs(terms)); }
+    disjunction(...terms) { return this._createCompound('|', this._flattenArgs(terms)); }
+    parallel(...terms) { return this._createCompound('||', this._flattenArgs(terms)); }
+    sequence(...terms) { return this._createCompound('&/', this._flattenArgs(terms)); }
+    product(...terms) { return this._createCompound('*', this._flattenArgs(terms)); }
+    setExt(...terms) { return this._createCompound('{}', this._flattenArgs(terms)); }
+    setInt(...terms) { return this._createCompound('[]', this._flattenArgs(terms)); }
+    tuple(...terms) { return this._createCompound(',', this._flattenArgs(terms)); }
 
-    similarity(sub, pred) {
-        return this._processCompound('<->', [sub, pred]);
-    }
+    negation(term) { return this._createCompound('--', [term]); }
+    extImage(relation, ...terms) { return this._createCompound('/', [relation, ...this._flattenArgs(terms)]); }
+    intImage(relation, ...terms) { return this._createCompound('\\', [relation, ...this._flattenArgs(terms)]); }
+    predicate(pred, args) { return this._createCompound('^', [pred, args]); }
 
-    implication(pre, post) {
-        return this._processCompound('==>', [pre, post]);
-    }
-
-    equivalence(left, right) {
-        return this._processCompound('<=>', [left, right]);
-    }
-
-    equality(left, right) {
-        return this._processCompound('=', [left, right]);
-    }
-
-    conjunction(...terms) {
-        const comps = (terms.length === 1 && Array.isArray(terms[0])) ? terms[0] : terms;
-        return this._processCompound('&', comps);
-    }
-
-    disjunction(...terms) {
-        const comps = (terms.length === 1 && Array.isArray(terms[0])) ? terms[0] : terms;
-        return this._processCompound('|', comps);
-    }
-
-    parallel(...terms) {
-        const comps = (terms.length === 1 && Array.isArray(terms[0])) ? terms[0] : terms;
-        return this._processCompound('||', comps);
-    }
-
-    sequence(...terms) {
-        const comps = (terms.length === 1 && Array.isArray(terms[0])) ? terms[0] : terms;
-        return this._processCompound('&/', comps);
-    }
-
-    negation(term) {
-        return this._processCompound('--', [term]);
-    }
-
-    product(...terms) {
-        const comps = (terms.length === 1 && Array.isArray(terms[0])) ? terms[0] : terms;
-        return this._processCompound('*', comps);
-    }
-
-    setExt(...terms) {
-        const comps = (terms.length === 1 && Array.isArray(terms[0])) ? terms[0] : terms;
-        return this._processCompound('{}', comps);
-    }
-
-    setInt(...terms) {
-        const comps = (terms.length === 1 && Array.isArray(terms[0])) ? terms[0] : terms;
-        return this._processCompound('[]', comps);
-    }
-
-    extImage(relation, ...terms) {
-        const comps = (terms.length === 1 && Array.isArray(terms[0])) ? terms[0] : terms;
-        return this._processCompound('/', [relation, ...comps]);
-    }
-
-    intImage(relation, ...terms) {
-        const comps = (terms.length === 1 && Array.isArray(terms[0])) ? terms[0] : terms;
-        return this._processCompound('\\', [relation, ...comps]);
-    }
-
-    predicate(pred, args) {
-        return this._processCompound('^', [pred, args]);
-    }
-
-    tuple(...terms) {
-        const comps = (terms.length === 1 && Array.isArray(terms[0])) ? terms[0] : terms;
-        return this._processCompound(',', comps);
+    _flattenArgs(args) {
+        return (args.length === 1 && Array.isArray(args[0])) ? args[0] : args;
     }
 
     _getOrCreateAtomic(name) {
         let term = this._cache.get(name);
         const currentTime = Date.now();
 
-        if (!term) {
-            term = this._createAndCache(null, [], name);
-            // Atomic terms have complexity of 1
-            this._complexityCache.set(name, 1);
-
-            // Update access time for the new term
+        if (term) {
             this._accessTime.set(name, currentTime);
-
-            // Evict entries using LRU if cache is too large
-            this._evictLRUEntries();
-        } else {
-            // Update access time for existing term
-            this._accessTime.set(name, currentTime);
+            return term;
         }
+
+        term = this._createAndCache(null, [], name);
+        this._complexityCache.set(name, 1);
+        this._accessTime.set(name, currentTime);
+        this._evictLRUEntries();
 
         return term;
     }
 
     _createAndCache(operator, components, name) {
+        // Double check to avoid race conditions or redundant creation
         const existing = this._cache.get(name);
         if (existing) return existing;
 
@@ -219,19 +147,15 @@ export class TermFactory extends BaseComponent {
         return term;
     }
 
-    /**
-     * Advanced normalization with proper handling of commutativity and associativity
-     */
-    _normalizeTermData({operator, components}) {
+    _normalizeTermData(operator, components) {
         if (!Array.isArray(components)) {
             throw new Error('TermFactory._normalizeTermData: components must be an array');
         }
 
-        let normalizedComponents = components.map(comp =>
-            (typeof comp === 'string' || comp instanceof Term) ?
-                (typeof comp === 'string' ? this.create(comp) : comp) :
-                this.create(comp)
-        );
+        let normalizedComponents = components.map(comp => {
+            if (comp instanceof Term) return comp;
+            return this.create(comp);
+        });
 
         if (operator) {
             this._validateOperator(operator);
@@ -245,9 +169,6 @@ export class TermFactory extends BaseComponent {
                     ? normalizedComponents.sort((a, b) => this._compareTermsAlphabetically(a, b))
                     : this._normalizeCommutative(normalizedComponents);
             }
-
-            // Handle nested operators with same precedence
-            normalizedComponents = this._handleNestedOperators(operator, normalizedComponents);
         }
 
         return {operator, components: normalizedComponents};
@@ -258,183 +179,112 @@ export class TermFactory extends BaseComponent {
     }
 
     _flatten(op, comps) {
-        if (!Array.isArray(comps)) throw new Error('TermFactory._flatten: components must be an array');
         return comps.flatMap(c => c?.operator === op ? c.components : [c]);
     }
 
-    /**
-     * Enhanced normalization that handles commutativity with better ordering logic
-     */
     _normalizeCommutative(comps) {
-        return this._removeRedundancy(comps.sort((a, b) => this._compareTermsAlphabetically(a, b)));
+        const sorted = comps.sort((a, b) => this._compareTermsAlphabetically(a, b));
+        return this._removeRedundancy(sorted);
     }
 
-    /**
-     * Compare terms alphabetically by name for standard commutative operators
-     */
     _compareTermsAlphabetically(termA, termB) {
         return termA.name.localeCompare(termB.name);
     }
 
-    /**
-     * Calculate structural complexity (depth of the term tree)
-     */
     _getStructuralComplexity(term) {
-        if (!term?.components?.length) return 1; // Atomic terms have depth 1
-
+        if (!term?.components?.length) return 1;
         return 1 + Math.max(...term.components.map(comp =>
             comp?.components?.length ? this._getStructuralComplexity(comp) : 1
         ));
     }
 
-    /**
-     * Canonicalize components with advanced logic for ordering and normalization
-     */
     _canonicalizeComponents(operator, components) {
-        if (!operator) return components; // Atomic terms don't need canonicalization
+        if (!operator) return components;
 
-        // Special handling for operators with specific canonicalization rules
-        const canonicalizer = this._getCanonicalizer(operator);
-        return canonicalizer ? canonicalizer.call(this, components) : [...components];
-    }
+        if (['<->', '<=>', '='].includes(operator)) {
+            return this._canonicalizeEquivalence(components);
+        }
+        if (operator === '-->') {
+            return this._canonicalizeImplication(components);
+        }
 
-    /**
-     * Get canonicalizer function for the given operator
-     */
-    _getCanonicalizer(operator) {
-        const canonicalizers = {
-            '<->': this._canonicalizeEquivalence,
-            '<=>': this._canonicalizeEquivalence,
-            '-->': this._canonicalizeImplication,
-            '=': this._canonicalizeEquivalence  // Also commutative like equivalence operators
-        };
-
-        // Handle commutative operators with a default approach
+        // Commutative check
         if (COMMUTATIVE_OPERATORS.has(operator)) {
-            // Special case for '=' operator: don't remove redundancy
-            // because (5=5) and (5=3) both need 2 components
-            return operator === '='
-                ? (components) => [...components].sort((a, b) => this._compareTermsAlphabetically(a, b))
-                : (components) => this._removeRedundancy(this._normalizeCommutative([...components]));
+             return operator === '='
+                ? [...components].sort((a, b) => this._compareTermsAlphabetically(a, b))
+                : this._removeRedundancy(this._normalizeCommutative([...components]));
         }
 
-        return canonicalizers[operator] || null;
+        return [...components];
     }
 
-    /**
-     * Canonicalize equivalence operators ensuring consistent ordering
-     */
     _canonicalizeEquivalence(components) {
-        // For equivalence operators, we expect exactly 2 components
-        // For property-based testing, if we have fewer than 2, just return as-is
-        if (components.length < 2) {
-            return components; // Return as-is if not enough components for equivalence
-        }
+        if (components.length < 2) return components;
 
         const validComponents = components.length > 2 ? components.slice(0, 2) : components;
 
-        // Sort components by structural complexity, putting more complex terms first
-        // If equal complexity, sort alphabetically by name
         return validComponents.sort((a, b) => {
             const complexityA = this._getStructuralComplexity(a);
             const complexityB = this._getStructuralComplexity(b);
-            return complexityA !== complexityB ? complexityB - complexityA : a.name.localeCompare(b.name); // More complex first
+            return complexityA !== complexityB ? complexityB - complexityA : a.name.localeCompare(b.name);
         });
     }
 
-    /**
-     * Canonicalize implication operators
-     */
     _canonicalizeImplication(components) {
-        // For implication (A --> B), we expect exactly 2 components
-        // For property-based testing, if we have fewer than 2, just return as-is
-        return components.length < 2 ? components : components.slice(0, 2); // Don't reorder for implication
+        return components.length < 2 ? components : components.slice(0, 2);
     }
 
     _removeRedundancy(comps) {
-        if (!Array.isArray(comps)) throw new Error('TermFactory._removeRedundancy: components must be an array');
         const seen = new Set();
         return comps.filter(c => {
             if (!c || typeof c.name !== 'string') {
                 throw new Error('TermFactory._removeRedundancy: component must have a name property');
             }
-
-            // Create a unique identifier based on the term's structural properties
             const uniqueId = this._getTermUniqueId(c);
-
-            return seen.has(uniqueId) ? false : !!(seen.add(uniqueId));
+            if (seen.has(uniqueId)) return false;
+            seen.add(uniqueId);
+            return true;
         });
     }
 
-    /**
-     * Generate a unique identifier for a term based on its structure
-     */
     _getTermUniqueId(term) {
-        if (!term.operator) {
-            // For atomic terms, use the name directly
-            return term.name;
+        if (!term.operator) return term.name;
+
+        // FIX: Only sort components if the operator is commutative!
+        const isCommutative = COMMUTATIVE_OPERATORS.has(term.operator);
+
+        let componentIds = term.components.map(c => this._getTermUniqueId(c));
+
+        if (isCommutative) {
+            componentIds.sort();
         }
 
-        // For compound terms, create a structural hash
-        const componentsHash = term.components.map(c => this._getTermUniqueId(c)).sort().join('|');
-        return `${term.operator}_${componentsHash}`;
+        return `${term.operator}_${componentIds.join('|')}`;
     }
 
     _buildCanonicalName(op, comps) {
         if (!op) return comps[0].toString();
-
         const names = comps.map(c => c.name);
         return CANONICAL_NAME_PATTERNS[op]?.(names) || `(${op}, ${names.join(', ')})`;
     }
 
-    /**
-     * Enhanced canonicalization that handles nested operators properly
-     */
-    _handleNestedOperators(operator, components) {
-        // For nested operators with same precedence, ensure they are properly normalized
-        if (ASSOCIATIVE_OPERATORS.has(operator) || COMMUTATIVE_OPERATORS.has(operator)) {
-            return components; // Already handled by _flatten or _normalizeCommutative
-        }
-
-        // For non-commutative operators, preserve original order
-        return components;
-    }
-
-    /**
-     * Calculate and cache complexity metrics for a term
-     */
     _calculateComplexityMetrics(term, components) {
         if (!term) return 0;
-
-        let complexity = 1; // Base complexity for the term itself
-
-        if (components && components.length > 0) {
-            // Add complexity based on number of components
+        let complexity = 1;
+        if (components?.length > 0) {
             complexity += components.length;
-
-            // Add complexity based on nested terms
             complexity += components.reduce((sum, comp) => sum + (this.getComplexity(comp) || 0), 0);
         }
-
         this._complexityCache.set(term.name, complexity);
         return complexity;
     }
 
-    /**
-     * Evict entries from cache using LRU (Least Recently Used) strategy
-     * @private
-     */
     _evictLRUEntries() {
-        // If cache is under size limit, no eviction needed
         if (this._cache.size <= this._maxCacheSize) return;
-
-        // Calculate number of entries to remove
         const entriesToRemove = this._cache.size - this._maxCacheSize;
-
-        // Get oldest entries by access time and remove them
         const sortedEntries = Array.from(this._accessTime.entries())
-            .sort((a, b) => a[1] - b[1]) // Sort by access time, oldest first
-            .slice(0, entriesToRemove);   // Take only the number we need to remove
+            .sort((a, b) => a[1] - b[1])
+            .slice(0, entriesToRemove);
 
         for (const [key] of sortedEntries) {
             this._cache.delete(key);
@@ -444,24 +294,13 @@ export class TermFactory extends BaseComponent {
         }
     }
 
-    /**
-     * Get the computational complexity of a term
-     */
     getComplexity(term) {
         const key = typeof term === 'string' ? term : (term?.name);
         return this._complexityCache.get(key) ?? 1;
     }
 
-    /**
-     * Get the size of the term cache
-     */
-    getCacheSize() {
-        return this._cache.size;
-    }
+    getCacheSize() { return this._cache.size; }
 
-    /**
-     * Clear the term cache
-     */
     clearCache() {
         this._cache.clear();
         this._complexityCache.clear();
@@ -469,13 +308,9 @@ export class TermFactory extends BaseComponent {
         this._cognitiveDiversity.clear();
     }
 
-    /**
-     * Get statistics about the factory
-     */
     getStats() {
         const totalRequests = this._cacheMisses + this._cacheHits;
         const cacheHitRate = totalRequests > 0 ? this._cacheHits / totalRequests : 0;
-
         return {
             cacheSize: this._cache.size,
             complexityCacheSize: this._complexityCache.size,
@@ -488,19 +323,11 @@ export class TermFactory extends BaseComponent {
         };
     }
 
-    /**
-     * Create a new term with cognitive diversity considerations
-     */
     createWithDiversity(data, diversityFactor = 0.1) {
         const term = this.create(data);
-
-        // Calculate cognitive diversity impact
         const complexity = this.getComplexity(term);
         const diversityMetrics = this._cognitiveDiversity.evaluateDiversity(term);
-
-        // Adjust based on diversity factor to promote variety in term types
         const diversityScore = complexity * (1 + diversityFactor) * diversityMetrics.normalizationFactor;
-
         return {
             term,
             diversityScore,
@@ -509,78 +336,34 @@ export class TermFactory extends BaseComponent {
         };
     }
 
-    /**
-     * Get most complex terms in cache (for cognitive diversity analysis)
-     */
     getMostComplexTerms(limit = 10) {
         return Array.from(this._complexityCache.entries())
-            .sort((a, b) => b[1] - a[1])  // Sort by complexity descending
+            .sort((a, b) => b[1] - a[1])
             .slice(0, limit)
             .map(([name, complexity]) => ({name, complexity}));
     }
 
-    /**
-     * Get least complex terms in cache (for simplicity analysis)
-     */
     getSimplestTerms(limit = 10) {
         return Array.from(this._complexityCache.entries())
-            .sort((a, b) => a[1] - b[1])  // Sort by complexity ascending
+            .sort((a, b) => a[1] - b[1])
             .slice(0, limit)
             .map(([name, complexity]) => ({name, complexity}));
     }
 
-    /**
-     * Calculate average complexity of terms in cache
-     */
     getAverageComplexity() {
         if (this._complexityCache.size === 0) return 0;
-
         const totalComplexity = Array.from(this._complexityCache.values())
             .reduce((sum, complexity) => sum + complexity, 0);
-
         return totalComplexity / this._complexityCache.size;
     }
 
-    /**
-     * Get cognitive diversity metrics for the current terms
-     */
-    getCognitiveDiversityMetrics() {
-        return this._cognitiveDiversity.getMetrics();
-    }
+    getCognitiveDiversityMetrics() { return this._cognitiveDiversity.getMetrics(); }
+    calculateCognitiveDiversity() { return this._cognitiveDiversity.calculateDiversity(); }
 
-    /**
-     * Add computational complexity metrics for cognitive diversity calculations
-     */
-    calculateCognitiveDiversity() {
-        return this._cognitiveDiversity.calculateDiversity();
-    }
+    createTrue() { return this._getOrCreateAtomic('True'); }
+    createFalse() { return this._getOrCreateAtomic('False'); }
+    createNull() { return this._getOrCreateAtomic('Null'); }
 
-    /**
-     * Create or get the special True atom
-     */
-    createTrue() {
-        return this._getOrCreateAtomic('True');
-    }
-
-    /**
-     * Create or get the special False atom
-     */
-    createFalse() {
-        return this._getOrCreateAtomic('False');
-    }
-
-    /**
-     * Create or get the special Null atom
-     */
-    createNull() {
-        return this._getOrCreateAtomic('Null');
-    }
-
-    /**
-     * Check if a term is a special system atom (True, False, Null)
-     * @param {Term} term - The term to check
-     * @returns {boolean} - True if the term is a system atom
-     */
     isSystemAtom(term) {
         return term?.isAtomic && ['True', 'False', 'Null'].includes(term.name);
     }
