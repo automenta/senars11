@@ -43,10 +43,12 @@ export class Server {
                     const derivations = await this.nar.runCycles(10);
 
                     // Format results
-                    const conclusions = derivations
-                        .flat()
-                        .filter(d => d && d.term)
-                        .map(d => d.term.toString());
+                    const conclusions = Array.from(new Set(
+                        derivations
+                            .flat()
+                            .filter(d => d && d.term)
+                            .map(d => d.term.toString())
+                    ));
 
                     const resultData = {
                         conclusions: conclusions.length > 0 ? conclusions : ["Processed premises, no immediate conclusions"],
