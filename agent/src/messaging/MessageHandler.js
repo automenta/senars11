@@ -1,5 +1,5 @@
 import {EventEmitter} from 'events';
-import {MESSAGE_TYPES} from '../../core/src/util/MessageTypes.js';
+import {MESSAGE_TYPES} from '@senars/core';
 
 const CMD_MAP = {'start': 'run', 'stop': 'stop', 'step': 'next'};
 

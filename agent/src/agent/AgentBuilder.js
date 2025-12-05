@@ -1,7 +1,7 @@
 import {Agent} from './Agent.js';
-import {PluginManager} from '../../core/src/util/Plugin.js';
+import {PluginManager} from '@senars/core';
 import {FunctorProvider} from './FunctorProvider.js';
-import {LMProviderBuilder} from '../../core/src/lm/LMProviderBuilder.js';
+import {LMProviderBuilder} from '@senars/core';
 
 export class AgentBuilder {
     constructor(initialConfig = {}) {

@@ -1,5 +1,5 @@
-import {App} from '../../src/ui/App.js';
-import {Config} from '../../src/ui/Config.js';
+import {App} from '@senars/agent';
+import {Config} from '@senars/core';
 
 process.env.ORT_LOG_LEVEL = 'error';
 

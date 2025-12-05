@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import {App} from './src/ui/App.js';
+import {App} from '@senars/agent';
 import {NARControlTool} from './src/tool/NARControlTool.js';
 import {MCPManager} from './src/mcp/MCPManager.js';
 

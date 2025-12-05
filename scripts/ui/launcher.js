@@ -4,10 +4,10 @@ import {spawn} from 'child_process';
 import {fileURLToPath} from 'url';
 import {dirname, join} from 'path';
 import {showUsageAndExit} from '../utils/script-utils.js';
-import {WebSocketMonitor} from '../../agent/src/server/WebSocketMonitor.js';
-import {DemoWrapper} from '../../agent/src/demo/DemoWrapper.js';
-import {Config} from '../../agent/src/app/Config.js';
-import {App} from '../../agent/src/app/App.js';
+import {WebSocketMonitor} from '@senars/agent';
+import {DemoWrapper} from '@senars/agent';
+import {Config} from '@senars/core';
+import {App} from '@senars/agent';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

@@ -1,6 +1,6 @@
 import {AgentBuilder} from '../agent/AgentBuilder.js';
 import EventEmitter from 'events';
-import {Logger} from '../../core/src/util/Logger.js';
+import {Logger} from '@senars/core';
 import {ActivityModel} from './model/ActivityModel.js';
 import {ActivityMonitor} from './model/ActivityMonitor.js';
 import {ActionDispatcher} from './model/ActionDispatcher.js';

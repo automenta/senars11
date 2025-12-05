@@ -9,9 +9,7 @@ import {dirname, join} from 'path';
 import {writeFile} from 'fs/promises';
 import {WebSocket} from 'ws';
 import {RemoteTaskMatch} from './TaskMatch.js';
-import {VirtualGraph} from '../ui/VirtualGraph.js';
-import {VirtualConsole} from '../ui/VirtualConsole.js';
-import {ConsoleFormatter} from '../ui/ConsoleFormatter.js';
+import {VirtualGraph, VirtualConsole, ConsoleFormatter} from '@senars/agent';
 
 export {RemoteTaskMatch};
 
@@ -152,13 +150,13 @@ export class TestNARRemote {
 
     startServer() {
         return new Promise((resolve, reject) => {
-            this.serverProcess = spawn('node', [join(__dirname, '../index.js')], {
+            this.serverProcess = spawn('node', [join(__dirname, '../../../scripts/ui/launcher.js'), '--no-ui', '--ws-port', this.port.toString()], {
                 stdio: 'pipe',
-                env: {...process.env, WS_PORT: this.port.toString(), NODE_ENV: 'test'},
+                env: {...process.env, NODE_ENV: 'test'},
             });
 
             this.serverProcess.stdout.on('data', (data) => {
-                if (data.toString().includes('Server running')) {
+                if (data.toString().includes('WebSocket server started successfully')) {
                     resolve();
                 }
             });

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import {App} from './src/ui/App.js';
+import {App} from '@senars/agent';
 
 // Set environment variable to suppress ONNX runtime warnings
 process.env.ORT_LOG_LEVEL = '3';

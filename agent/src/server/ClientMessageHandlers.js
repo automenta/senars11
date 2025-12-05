@@ -1,7 +1,7 @@
 /**
  * ClientMessageHandlers - Modular handlers for WebSocket client messages
  */
-import {SUPPORTED_MESSAGE_TYPES} from '../../core/src/config/constants.js';
+import {SUPPORTED_MESSAGE_TYPES} from '@senars/core';
 
 export class ClientMessageHandlers {
     constructor(webSocketMonitor) {
