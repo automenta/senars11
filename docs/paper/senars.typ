@@ -11,8 +11,9 @@
   margin: 0.75in,
   columns: 2,
   header: context {
-    if counter(page).get().first() > 1 [
-      #text(size: 9pt, fill: gray)[SeNARS: Neuro-Symbolic Cognitive Architecture #h(1fr) #counter(page).display()]
+    let page-num = counter(page).get().first()
+    if page-num > 1 [
+      #text(size: 9pt, fill: gray)[SeNARS: Neuro-Symbolic Cognitive Architecture #h(1fr) #page-num]
     ]
   },
 )
@@ -74,9 +75,16 @@
 
 #place(top + center, float: true, scope: "parent")[
   #block(fill: luma(248), inset: 1em, radius: 4pt, width: 100%)[
-    *Abstract.* #senars is a hybrid neuro-symbolic cognitive architecture integrating Non-Axiomatic Logic (NAL) with Large Language Models through a streaming pipeline. Beliefs carry explicit uncertainty that revises as evidence accumulates; LLMs contribute pattern recognition and world knowledge. The architecture processes premise streams into conclusion streams, executing symbolic rules synchronously while dispatching neural queries asynchronously.
+    *Abstract.* #senars is a hybrid neuro-symbolic cognitive architecture that integrates Non-Axiomatic Logic (NAL) with Large Language Models through a streaming dataflow pipeline. The system implements epistemic grounding: all beliefs carry explicit uncertainty (frequency and confidence) that propagates through inference and revises as evidence accumulates. LLMs contribute pattern recognition and world knowledge through asynchronous, circuit-breaker-protected queries.
 
-    The prototype implements dual memory, pluggable strategies, and real-time visualization. Yet #senars is _deliberately incomplete_: designed as substrate rather than product, it invites diverse forks. This incompleteness is the central innovation---finished systems calcify; open substrates enable ecosystems.
+    The architecture processes continuous premise streams into conclusion streams, executing symbolic NAL rules synchronously while dispatching neural queries asynchronously---enabling real-time responsiveness without sacrificing formal rigor. Dual memory separates short-term attention from long-term storage with automated consolidation.
+
+    Yet #senars is _deliberately incomplete_: designed as substrate rather than product, it provides stable primitives while inviting diverse forks. This incompleteness is the central innovation---finished systems calcify; open substrates enable ecosystems.
+
+    #v(0.5em)
+    #text(size: 9pt)[
+      *Keywords:* neuro-symbolic AI, cognitive architecture, non-axiomatic logic, streaming inference, hybrid reasoning, epistemic uncertainty, language model integration
+    ]
   ]
 ]
 
@@ -124,7 +132,7 @@ Imagine a future where cognitive architectures are as diverse as biological spec
 
 #senars builds on Pei Wang's foundational work on Non-Axiomatic Logic (NAL). NARS was designed for reasoning under the _Assumption of Insufficient Knowledge and Resources_ (AIKR)---the premise that any real agent faces incomplete information and limited computation.
 
-Where classical logics require complete, consistent axiom sets, NAL operates on partial evidence. Every statement carries a _truth value_ comprising frequency (how often true) and confidence (evidential strength). Truth values propagate through inference: conclusions inherit uncertainty from premises, and new evidence revises existing beliefs. NAL provides six layers of increasing expressiveness, from basic inheritance through temporal reasoning.
+Where classical logics require complete, consistent axiom sets, NAL operates on partial evidence. Every statement carries a _truth value_ comprising frequency (how often true) and confidence (evidential strength). Truth values propagate through inference: conclusions inherit uncertainty from premises, and new evidence revises existing beliefs.
 
 OpenNARS demonstrated these principles in research settings. ANSNA explored a minimal implementation for embedded systems. #senars continues this lineage, reimagining the architecture for modern streaming systems and neural integration.
 
@@ -132,12 +140,21 @@ OpenNARS demonstrated these principles in research settings. ANSNA explored a mi
 
 == The AIKR Principle
 
-The *Assumption of Insufficient Knowledge and Resources* (AIKR) acknowledges that any real intelligent agent operates under fundamental constraints: incomplete information, finite computation, and real-time demands. This has profound implications for system design:
+The *Assumption of Insufficient Knowledge and Resources* (AIKR) is the foundational premise of NAL. Unlike classical logics that assume complete, consistent knowledge, AIKR acknowledges that any real intelligent agent operates under fundamental constraints:
 
-- *Graded truth*: Beliefs carry explicit uncertainty rather than binary true/false values
+#block(inset: (left: 0.5em))[
+  *Insufficient Knowledge.* The agent never has complete information. Facts may be unknown, uncertain, or contradictory.
+
+  *Insufficient Resources.* Computation, memory, and time are always finite. Exhaustive search is impossible.
+
+  *Real-time Demands.* Decisions must be made before complete analysis is possible.
+]
+
+AIKR has profound implications for system design:
+- *Graded truth*: Beliefs carry explicit uncertainty rather than binary true/false
 - *Evidence accumulation*: New observations revise rather than replace existing beliefs
-- *Anytime reasoning*: Inference produces useful partial results at any interruption point
-- *Resource-bounded*: Computation is allocated by importance rather than exhaustive search
+- *Anytime reasoning*: Inference produces useful partial results at any interruption
+- *Resource-bounded*: Computation allocated by importance, not exhaustive search
 - *Graceful degradation*: Quality degrades smoothly under resource pressure
 
 Every architectural decision in #senars reflects AIKR: truth values quantify uncertainty, priority-based sampling allocates attention, bounded Focus forces consolidation, streaming produces conclusions continuously, and circuit breakers ensure responsiveness.
@@ -176,33 +193,15 @@ All foundational data structures are *immutable* and *canonically normalized*, e
 
 == The Streaming Pipeline
 
-#figure(
-  caption: [The #senars streaming pipeline with feedback loop.],
-  box(
-    fill: luma(250),
-    inset: 0.8em,
-    radius: 4pt,
-    width: 100%,
-  )[
-    #align(center)[
-      #text(size: 9pt)[
-        *Memory* → *Premise Source* → *Strategy* → *Rule Processor* → *Output*
-        #v(0.2em)
-        #text(size: 8pt, fill: gray)[↳ NAL (sync) + LM (async) → feedback ↲]
-      ]
-    ]
-  ]
-)
-
 The reasoning engine operates as a continuous pipeline:
 
 / 1. PremiseSource: Samples Tasks from Memory according to configurable objectives: _priority_, _recency_, _novelty_, _punctuation_, or _dynamic_ (adaptive).
 
-/ 2. Strategy: Pairs primary premises with secondary premises. Implementations: BagStrategy, PrologStrategy, ExhaustiveStrategy, ResolutionStrategy.
+/ 2. Strategy: Pairs primary premises with secondary premises. Implementations: *BagStrategy* (NARS-style priority sampling), *PrologStrategy* (goal-driven backward chaining), *ExhaustiveStrategy* (comprehensive search), *ResolutionStrategy* (Prolog-like resolution).
 
-/ 3. RuleProcessor: Executes inference rules. Synchronous NAL rules execute immediately; asynchronous LM rules dispatch without blocking.
+/ 3. RuleProcessor: Executes inference rules. Synchronous NAL rules execute immediately; asynchronous LM rules dispatch without blocking. A `RuleExecutor` indexes rules by guard conditions for efficient matching.
 
-/ 4. Output Stream: Unified stream merging results from both rule types.
+/ 4. Output Stream: Unified stream merging results from both rule types. Conclusions feed back to Memory for further inference.
 
 #v(0.5em)
 
@@ -283,39 +282,63 @@ The current #senars prototype is implemented in JavaScript (Node.js), chosen for
 
 == Codebase Architecture
 
-The #senars codebase is organized into modular components. Table 1 details the source code structure.
-
 #figure(
   caption: [Source Code Directory Structure],
   table(
-    columns: (auto, auto, 1fr),
+    columns: (auto, 1fr),
     inset: 4pt,
-    align: (left, left, left),
+    align: (left, left),
     stroke: 0.5pt + luma(200),
     fill: (_, y) => if y == 0 { luma(240) },
-    [*Directory*], [*Files*], [*Purpose*],
-    table.cell(colspan: 3, fill: luma(230))[_Core Library (core/src/)_],
-    [`reason/`], [18+], [Reasoner, RuleProcessor, Strategy, PremiseSource],
-    [`  rules/`], [21], [NAL inference rules (deduction, induction, etc.)],
-    [`  strategy/`], [7], [BagStrategy, PrologStrategy, ExhaustiveStrategy],
-    [`memory/`], [20+], [Memory, Focus, Bag, Concept, MemoryIndex],
-    [`  indexes/`], [6], [Specialized term/task indexes],
-    [`lm/`], [21], [LM providers, NarseseTranslator, EmbeddingLayer],
-    [`term/`], [4], [Term, TermFactory, normalization],
-    [`task/`], [3], [Task, priority, punctuation],
-    [`parser/`], [5], [Narsese tokenizer, parser, AST],
-    [`config/`], [7], [Configuration management],
-    [`util/`], [35], [Logging, EventBus, CircuitBreaker, metrics],
-    [`tool/`], [41], [External tool integrations],
-    [`self/`], [3], [Self-model, introspection],
-    [`testing/`], [7], [Test utilities, fixtures],
-    table.cell(colspan: 3, fill: luma(230))[_External Interfaces_],
-    [`ui/`], [79], [React web UI for visualization],
-    [`repl/`], [16], [Interactive command-line interface],
-    [`tests/`], [107], [Unit, integration, e2e tests],
-    [`examples/`], [62], [Usage examples and demos],
-    [`agent/`], [65], [Autonomous agent implementations],
-    [`scripts/`], [26], [Build, deploy, analysis scripts],
+    [*Directory*], [*Purpose*],
+    table.cell(colspan: 2, fill: luma(230))[_Core Library (core/src/)_],
+    [`reason/`], [Reasoner, RuleProcessor, Strategy, PremiseSource],
+    [`  rules/`], [NAL inference rules (deduction, induction, etc.)],
+    [`  strategy/`], [BagStrategy, PrologStrategy, ExhaustiveStrategy],
+    [`memory/`], [Memory, Focus, Bag, Concept, MemoryIndex],
+    [`  indexes/`], [Specialized term/task indexes],
+    [`lm/`], [LM providers, NarseseTranslator, EmbeddingLayer],
+    [`term/`], [Term, TermFactory, normalization],
+    [`task/`], [Task, priority, punctuation],
+    [`parser/`], [Narsese tokenizer, parser, AST],
+    [`config/`], [Configuration management],
+    [`util/`], [Logging, EventBus, CircuitBreaker, metrics],
+    table.cell(colspan: 2, fill: luma(230))[_External Interfaces_],
+    [`ui/`], [React web UI for visualization],
+    [`repl/`], [Interactive command-line interface],
+    [`tests/`], [Unit, integration, e2e tests],
+    [`examples/`], [Usage examples and demos],
+  )
+)
+
+#v(0.5em)
+
+== Performance Metrics
+
+#figure(
+  caption: [Key metrics for evaluating #senars deployments.],
+  table(
+    columns: (auto, 1fr),
+    inset: 4pt,
+    align: (left, left),
+    stroke: 0.5pt + luma(200),
+    fill: (_, y) => if y == 0 { luma(240) },
+    [*Metric*], [*Relevance*],
+    table.cell(colspan: 2, fill: luma(235))[_Reasoning Efficiency_],
+    [Inferences/sec], [Raw symbolic reasoning throughput],
+    [Rule match rate], [Fraction yielding valid conclusions],
+    [Derivation depth], [Average chain length],
+    table.cell(colspan: 2, fill: luma(235))[_Memory Management_],
+    [Concept count], [Knowledge breadth in long-term memory],
+    [Focus utilization], [Attention efficiency],
+    [Cache hit ratio], [Term normalization effectiveness],
+    table.cell(colspan: 2, fill: luma(235))[_Hybrid Integration_],
+    [LM query latency], [Neural responsiveness],
+    [LM success rate], [Query reliability],
+    [Circuit breaker trips], [External service stability],
+    table.cell(colspan: 2, fill: luma(235))[_System Responsiveness_],
+    [End-to-end latency], [Time from input to first output],
+    [Memory footprint], [Deployment constraints],
   )
 )
 
@@ -355,6 +378,23 @@ Derived: (robin --> animal){0.855, 0.81}.
 
 The derived truth value reflects the frequency and confidence of the premises, reduced through inference to reflect the evidential chain.
 
+#v(0.5em)
+
+== Example: Knowledge Discovery
+
+```
+Input:  (salmon --> fish){0.95, 0.90}.
+Input:  (fish --> aquatic){0.90, 0.85}.
+Input:  (salmon --> pink){0.80, 0.70}.
+Query:  (salmon --> ?what)?
+
+Derived: (salmon --> aquatic){0.855, 0.77}.
+LM Elaboration: (salmon --> edible){0.85, 0.60}.
+LM Elaboration: (salmon --> migratory){0.90, 0.55}.
+```
+
+The system combines deductive inference (salmon is aquatic) with LM-derived knowledge (edible, migratory). LM contributions carry lower confidence, reflecting their external source---they can be revised as direct evidence accumulates.
+
 // ==============================================================================
 // 5. DELIBERATE INCOMPLETENESS
 // ==============================================================================
@@ -369,7 +409,7 @@ This section articulates the central innovation of #senars: *deliberate incomple
 
 History shows that "finished" systems tend to ossify. Once a platform presents itself as complete, the friction required to modify it increases dramatically. Users depend on specific behaviors; documentation hardens into dogma; innovation migrates to workarounds rather than foundations.
 
-Early Unix succeeded precisely because it was _unfinished_---minimal primitives that invited completion. The Linux kernel remains perpetually incomplete, enabling everything from supercomputers to embedded devices.
+Early Unix succeeded precisely because it was _unfinished_---minimal primitives that invited completion. The Linux kernel remains perpetually incomplete, enabling everything from supercomputers to embedded devices. In AI, the most influential contributions are often frameworks rather than finished products: OpenAI Gym, Transformers, JAX---each enabled diverse completions while preserving a common core.
 
 #v(0.5em)
 
@@ -396,6 +436,7 @@ We envision multiple #senars lineages:
 / Educational Sandboxes: Interactive environments for teaching AI
 / Personal Memory Layers: Lifelong persistent context
 / Multi-Agent Societies: Distributed reasoning across agent networks
+/ Alternative Logics: New formal systems building on the stream architecture
 
 All would share the core pipeline, enabling cross-pollination.
 
@@ -420,13 +461,13 @@ _Fork it and grow it into the species you need._
 
 == RLFP and Embodiment
 
-The belief/goal distinction naturally supports *Reinforcement Learning from Preferences*. Future work might integrate with robotics platforms to ground symbols in sensorimotor experience.
+The belief/goal distinction naturally supports *Reinforcement Learning from Preferences*. Rather than hand-crafted reward functions, the system could learn from qualitative comparisons. Future work might integrate with robotics platforms to ground symbols in sensorimotor experience.
 
 #v(0.3em)
 
 == Lifelong Learning
 
-Open questions: How should retention balance against forgetting? How can new learning integrate without catastrophic interference?
+Open questions: How should retention balance against forgetting? How can new learning integrate without catastrophic interference? How should the system detect and adapt to distributional shift?
 
 #v(0.3em)
 
