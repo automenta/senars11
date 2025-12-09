@@ -925,11 +925,11 @@ The system provides a fluent API for easy test creation.
 
 ## Performance and Scalability
 
-- **Fast Operations**: <1ms for Term processing, <2ms for Task processing, <5ms for Memory operations
-- **High Throughput**: 10,000+ operations per second
+- **Fast Operations**: < N ms for Term processing, < N ms for Task processing, < N ms for Memory operations
+- **High Throughput**: N operations per second
 - **Memory Efficient**: Smart caching reduces memory growth as knowledge base expands
 - **Scalable**: Can distribute across multiple nodes
-- **Resource Management**: Configurable limits prevent resource exhaustion (default: 512MB memory, 100ms per cycle)
+- **Resource Management**: Configurable limits prevent resource exhaustion (default: X MB memory, N ms per cycle)
 
 ---
 
@@ -1046,7 +1046,7 @@ knowledge while goals drive exploration toward desired outcomes.
 
 **Performance Optimization:**
 
-- Performance targets (<1ms operations) require optimization in the full NARS reasoning cycle
+- Performance targets require optimization in the full NARS reasoning cycle
 - Extensive validation and metrics collection may impact runtime performance
 - Complex reasoning chains with multiple rule applications may require algorithmic improvements
 
