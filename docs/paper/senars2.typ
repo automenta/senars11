@@ -73,18 +73,16 @@
 // ABSTRACT
 // ==============================================================================
 
-#place(top + center, float: true, scope: "parent")[
-  #block(fill: luma(248), inset: 1em, radius: 4pt, width: 100%)[
-    *Abstract.* #senars is a hybrid neuro-symbolic reasoning system that integrates Non-Axiomatic Logic (NAL) with large language models (LLMs) to create an observable, stream-based platform for cognitive architecture research. Unlike pure symbolic systems that struggle with real-world ambiguity, or pure neural approaches that lack interpretability and consistency, #senars combines the formal rigor of NAL with the pattern recognition capabilities of modern language models.
+#block(fill: luma(248), inset: 1em, radius: 4pt, width: 100%)[
+  *Abstract.* #senars is a hybrid neuro-symbolic reasoning system that integrates Non-Axiomatic Logic (NAL) with large language models (LLMs) to create an observable, stream-based platform for cognitive architecture research. Unlike pure symbolic systems that struggle with real-world ambiguity, or pure neural approaches that lack interpretability and consistency, #senars combines the formal rigor of NAL with the pattern recognition capabilities of modern language models.
 
-    The architecture implements a continuous, non-blocking dataflow pipeline that processes streams of premises into conclusions while maintaining epistemic stability through explicit truth values and evidence tracking. Symbolic NAL rules execute synchronously with rigorous truth-value propagation; LLM queries dispatch asynchronously through circuit-breaker-protected channels. Dual memory separates short-term attention from long-term storage with automated consolidation.
+  The architecture implements a continuous, non-blocking dataflow pipeline that processes streams of premises into conclusions while maintaining epistemic stability through explicit truth values and evidence tracking. Symbolic NAL rules execute synchronously with rigorous truth-value propagation; LLM queries dispatch asynchronously through circuit-breaker-protected channels. Dual memory separates short-term attention from long-term storage with automated consolidation.
 
-    Crucially, this paper describes a _deliberately incomplete_ system---designed as substrate for an ecosystem of cognitive architectures rather than a finished application. We argue that minimal, extensible foundations enable more diverse and innovative applications than complete but rigid systems.
+  Crucially, this paper describes a _deliberately incomplete_ system---designed as substrate for an ecosystem of cognitive architectures rather than a finished application. We argue that minimal, extensible foundations enable more diverse and innovative applications than complete but rigid systems.
 
-    #v(0.5em)
-    #text(size: 9pt)[
-      *Keywords:* neuro-symbolic AI, cognitive architecture, non-axiomatic logic, hybrid reasoning, stream processing, deliberate incompleteness, epistemic uncertainty
-    ]
+  #v(0.5em)
+  #text(size: 9pt)[
+    *Keywords:* neuro-symbolic AI, cognitive architecture, non-axiomatic logic, hybrid reasoning, stream processing, deliberate incompleteness, epistemic uncertainty
   ]
 ]
 
@@ -157,7 +155,7 @@ NAL represents knowledge through *terms* connected by *copulas*, with associated
 - *Similarity (↔)*: Bidirectional similarity relationship
 - *Implication (⇒)*: Conditional relationship between statements
 
-*Truth values* consist of two components:
+Additional copulas and connectors exist and may be added in future extensions. *Truth values* consist of two components:
 - *Frequency (f)*: The proportion of positive evidence (range 0--1)
 - *Confidence (c)*: The reliability of the frequency estimate (range 0--1)
 
@@ -232,34 +230,25 @@ These techniques demonstrate that LLMs can _simulate_ structured reasoning. But 
 
 == The Streaming Pipeline
 
-#figure(
-  caption: [The #senars streaming dataflow pipeline.],
-  block(fill: luma(248), inset: 0.8em, radius: 4pt, width: 100%)[
-    #align(center)[
-      #text(size: 9pt, font: "Fira Code")[
-        PremiseSource → Strategy → RuleProcessor → Output Stream \
-        #h(1.5em)↓ #h(3.5em) ↓ #h(4em) ↓ \
-        #h(0.5em)Memory #h(1.5em) Pairing #h(2em) NAL/LM Rules
-      ]
-    ]
-  ]
-)
+The reasoning pipeline operates as a continuous dataflow system. Tasks enter through a *PremiseSource* that samples from memory according to configurable objectives: priority-based sampling favors high-importance tasks, recency-based sampling prefers recently updated information, punctuation-focused sampling prioritizes goals or questions, and novelty sampling favors tasks with fewer derivation steps. Selected tasks flow to a *Strategy* component that creates premise pairs---combining the primary premise with relevant secondary premises from memory. These pairs proceed to the *RuleProcessor*, which executes both synchronous NAL rules and asynchronous LM rules in parallel. Results merge into a unified output stream that feeds back into memory, completing the cycle.
 
-*PremiseSource* generates tasks from memory using configurable sampling objectives:
-- Priority-based sampling (higher priority tasks selected more often)
-- Recency-based sampling (favor recently updated information)
-- Punctuation-focused sampling (prioritize goals or questions)
-- Novelty sampling (favor tasks with fewer derivation steps)
+#v(0.5em)
 
-*Strategy* components create premise pairs for reasoning:
-- *BagStrategy*: NARS-style priority-sampled approach for anytime reasoning
-- *ExhaustiveStrategy*: Comprehensive search for all related beliefs
-- *PrologStrategy*: Goal-driven backward chaining with unification
-- *ResolutionStrategy*: Prolog-like resolution for question answering
+== Stream Reasoner Strategies
+
+The Strategy component is responsible for pairing primary premises with appropriate secondary premises. #senars provides four distinct strategies, each suited to different reasoning scenarios:
+
+*BagStrategy* implements NARS-style priority-sampled reasoning. It maintains an internal bag of limited capacity, adding new tasks and evicting lowest-priority items when the bag overflows. This approach supports "anytime" reasoning under resource constraints---the system produces useful partial results regardless of when computation is interrupted. Priority-based sampling ensures that more important tasks receive preferential treatment without starving lower-priority items entirely.
+
+*ExhaustiveStrategy* performs comprehensive search for all related beliefs. For each primary premise, it scans available tasks looking for common variables, structural similarity, or term inclusion. This strategy is thorough but computationally expensive, making it suitable for situations where complete analysis is preferred over speed. It identifies tasks that share predicates, have overlapping term structures, or contain/are contained by the primary premise.
+
+*PrologStrategy* implements goal-driven backward chaining with full unification and backtracking. Unlike strategies that merely approximate Prolog behavior, PrologStrategy is designed to achieve *complete computational parity* with the Prolog programming language. It maintains a knowledge base of facts and rules, standardizes variables to prevent collisions during recursion, and implements the full unification algorithm including occurs-check. Built-in predicates for arithmetic evaluation (`is`, comparison operators) and correct handling of rule body conjunction enable expressing arbitrary Prolog programs. The strategy supports configurable depth limits and maximum solution counts to bound computation while preserving semantic correctness.
+
+*ResolutionStrategy* provides goal-driven backward chaining specifically optimized for question answering. When processing goals or questions (tasks with `!` or `?` punctuation), it searches for supporting premises that could help achieve the goal---either directly matching beliefs or implications whose consequent matches the goal. For non-goal premises, it falls back to standard premise selection. This hybrid approach efficiently handles mixed workloads.
 
 *RuleProcessor* executes inference rules in a hybrid manner:
-- Synchronous NAL rules execute immediately
-- Asynchronous LM rules dispatch without blocking
+- Synchronous NAL rules execute immediately with rigorous truth propagation
+- Asynchronous LM rules dispatch without blocking the reasoning cycle
 - Results merge into a unified output stream
 
 #v(0.5em)
@@ -275,11 +264,19 @@ These techniques demonstrate that LLMs can _simulate_ structured reasoning. But 
     stroke: 0.5pt + luma(200),
     fill: (_, y) => if y == 0 { luma(240) },
     [*Rule*], [*Function*],
-    [Elaboration], [Generate related beliefs from a concept],
-    [WorldKnowledge], [Query factual knowledge to fill gaps],
-    [Translation], [Convert natural language to Narsese],
-    [Explanation], [Generate natural language from derivations],
-    [Disambiguation], [Resolve ambiguous terms using context],
+    [Concept Elaboration], [Generate properties/classifications using commonsense knowledge],
+    [Narsese Translation], [Convert natural language to formal Narsese syntax],
+    [Hypothesis Generation], [Generate related hypotheses from existing beliefs],
+    [Uncertainty Calibration], [Map qualitative uncertainty to quantitative truth values],
+    [Temporal/Causal Modeling], [Infer time order and causal relationships from text],
+    [Explanation Generation], [Generate natural language explanations from derivations],
+    [Belief Revision], [Update beliefs based on new evidence via LM reasoning],
+    [Goal Decomposition], [Break complex goals into achievable subgoals],
+    [Interactive Clarification], [Request clarification for ambiguous inputs],
+    [Meta-Reasoning Guidance], [Guide reasoning strategy selection],
+    [Schema Induction], [Discover patterns and schemas from examples],
+    [Variable Grounding], [Ground abstract variables to concrete instances],
+    [Analogical Reasoning], [Find and apply analogies between domains],
   )
 )
 
@@ -338,43 +335,6 @@ Where LLMs are fluid and context-dependent, #senars provides the _anchor_---stab
 = Prototype Implementation
 
 The current #senars prototype is implemented in JavaScript (Node.js), emphasizing accessibility and rapid iteration.
-
-#v(0.5em)
-
-== Technology Stack
-
-/ Core Engine: Stream-based reasoning pipeline with configurable components
-/ Memory System: Dual-layer architecture with automated consolidation
-/ LM Integration: Provider registry supporting OpenAI, Anthropic, Ollama, HuggingFace
-/ Parser: Complete Narsese parser for NAL syntax
-/ Web UI: React-based visualization for reasoning traces
-/ Monitoring: WebSocket-based event streaming
-
-#v(0.5em)
-
-== Component Status
-
-#figure(
-  caption: [Core component implementation status.],
-  table(
-    columns: (1fr, auto),
-    inset: 4pt,
-    align: (left, center),
-    stroke: 0.5pt + luma(200),
-    fill: (_, y) => if y == 0 { luma(240) },
-    [*Component*], [*Status*],
-    [Core reasoning engine (NAR)], [Complete],
-    [Stream reasoner pipeline], [Complete],
-    [Dual memory architecture], [Complete],
-    [Truth value operations], [Complete],
-    [Narsese parser], [Complete],
-    [Multiple strategies (Bag, Prolog, Resolution)], [Complete],
-    [LM provider integration], [Complete],
-    [Circuit breaker pattern], [Complete],
-    [Event-driven architecture], [Complete],
-    [Layer system (Term, Embedding)], [Complete],
-  )
-)
 
 #v(0.5em)
 
@@ -585,7 +545,7 @@ _If something you need is not here yet, that is by design. Fork it and grow it i
 == Technical Challenges
 
 *Performance Optimization:*
-- Achieving <1ms targets across complete reasoning cycles
+- Achieving sub-1ms targets across complete reasoning cycles
 - Optimizing memory consolidation for larger knowledge bases
 - Reducing latency for LLM integration without sacrificing robustness
 
@@ -603,9 +563,13 @@ _If something you need is not here yet, that is by design. Fork it and grow it i
 
 == RLFP: Reinforcement Learning from Preferences
 
-#senars incorporates a Reinforcement Learning from Preferences (RLFP) framework: trajectory logging records complete reasoning episodes; preference collection gathers qualitative comparisons between reasoning paths; policy learning guides decision-making in task selection and rule application.
+#senars incorporates a Reinforcement Learning from Preferences (RLFP) framework that enables the system to learn _how_ to think, not just _what_ to think. This approach optimizes the discretionary choices made during reasoning: which task to select from focus memory, which inference rule to apply, whether to invoke symbolic or neural reasoning, and how to allocate attention across active goals.
 
-The belief/goal distinction naturally supports this approach. Rather than hand-crafted reward functions, the system learns from qualitative comparisons: "reasoning path A was clearer than path B." This enables learning _how_ to think more effectively, not just _what_ to think.
+The architecture introduces four modular components. The *ReasoningTrajectoryLogger* listens to the event bus and records complete reasoning episodes---sequences of state-action pairs from problem to conclusion---with metadata including cycle counts and LM invocations. The *PreferenceCollector* gathers both explicit feedback (users comparing reasoning traces side-by-side) and implicit signals (accepted conclusions, rejected LM outputs, high-confidence revisions). The *RLFPLearner* trains a preference model that predicts expected preference scores for candidate actions, effectively internalizing human standards of "good thinking." The *ReasoningPolicyAdapter* bridges learning and execution, querying the preference model for action distributions and blending learned policies with heuristic baselines at configurable weights.
+
+Training proceeds in three phases. *Bootstrapping* creates initial training data by perturbing heuristic choices and having a teacher LM or domain expert label trajectory comparisons. *Online Learning* integrates real user preferences, gradually increasing the learned policy's influence. *Meta-Reasoning Optimization* extends the framework to optimize the learning process itself---when to reflect on past reasoning, when to adjust policy weights, when to request user feedback.
+
+The RLFP framework preserves core #senars principles: components are modular and testable; all activity is logged and observable; circuit breakers ensure graceful degradation to heuristic-only operation; core data structures remain immutable. The result is a system that learns to reason in ways aligned with human preferences for clarity, efficiency, and insight.
 
 #v(0.3em)
 
