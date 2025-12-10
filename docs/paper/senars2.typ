@@ -280,7 +280,7 @@ The Strategy component is responsible for pairing primary premises with appropri
   )
 )
 
-#v(0.5em)
+#pagebreak(weak: true)
 
 == Dual Memory Architecture
 
@@ -398,7 +398,7 @@ The current #senars prototype is implemented in JavaScript (Node.js), emphasizin
     table.cell(colspan: 2, fill: luma(235))[_Memory Management_],
     [Concept count], [Knowledge breadth in long-term memory],
     [Focus utilization], [Attention efficiency],
-    [Cache hit ratio], [Term normalization effectiveness],
+    [Term cache hit ratio], [Term normalization effectiveness],
     table.cell(colspan: 2, fill: luma(235))[_Hybrid Integration_],
     [LM query latency], [Neural responsiveness],
     [LM success rate], [Query reliability],
@@ -435,35 +435,6 @@ What works today:
 
 #v(0.5em)
 
-== Example: Transitive Inference
-
-```
-Input:  (bird --> animal){0.90, 0.90}.
-Input:  (robin --> bird){0.95, 0.90}.
-
-Derived: (robin --> animal){0.855, 0.81}.
-  Rule: Deduction
-  From: robin-->bird, bird-->animal
-```
-
-The derived truth value reflects both the frequency and confidence of the premises, reduced through inference to reflect the evidential chain.
-
-#v(0.5em)
-
-== Example: Knowledge Discovery
-
-```
-Input:  (salmon --> fish){0.95, 0.90}.
-Input:  (fish --> aquatic){0.90, 0.85}.
-Query:  (salmon --> ?what)?
-
-Derived: (salmon --> aquatic){0.855, 0.77}.
-LM Elaboration: (salmon --> edible){0.85, 0.60}.
-LM Elaboration: (salmon --> migratory){0.90, 0.55}.
-```
-
-The system combines deductive inference (salmon is aquatic) with LM-derived knowledge (edible, migratory). LM contributions carry lower confidence, reflecting their external source---they can be revised as direct evidence accumulates.
-
 // ==============================================================================
 // 5. DELIBERATE INCOMPLETENESS
 // ==============================================================================
@@ -474,17 +445,11 @@ This section presents what we believe to be a novel contribution to AI system de
 
 #v(0.5em)
 
-== The Anti-Completeness Manifesto
-
 #block(inset: (left: 1.5em, right: 1.5em), fill: luma(248), radius: 4pt)[
   _"This is not being built to be a finished application. It is being built to be substrate---the common seed for a future industrial ecosystem of cognitive architectures. The less complete it is right now, the more possibilities it can grow into."_
 ]
 
 This philosophy represents a deliberate inversion of typical software development practices. Rather than maximizing features before release, #senars intentionally leaves aspects "rough, partial, or missing" to enable diverse applications.
-
-#v(0.5em)
-
-== The Calcification Problem
 
 History shows that "finished" systems tend to ossify. Once a platform presents itself as complete, the friction required to modify it increases dramatically:
 - Users depend on specific behaviors
@@ -638,23 +603,6 @@ Clone the repository and explore `examples/`. The Web UI provides immediate visi
 #senars represents a practical approach to hybrid neuro-symbolic AI that addresses the complementary weaknesses of pure symbolic and pure neural systems. By combining the formal rigor and consistency of Non-Axiomatic Logic with the pattern recognition and natural language capabilities of large language models, we provide a foundation for cognitive architectures that are both powerful and transparent.
 
 The system's stream-based architecture, dual memory system, multiple reasoning strategies, and robust LM integration offer a flexible platform for exploring advanced AI reasoning. Importantly, our principle of deliberate incompleteness positions #senars not as a finished product but as a _substrate_---a seed for an ecosystem of cognitive architectures tailored to diverse applications.
-
-We release #senars as a public good. We welcome contributions, forks, experiments, and critiques. The goal is not to build the perfect system, but to cultivate the conditions for many perfect systems to emerge.
-
-#align(center)[
-  #text(style: "italic")[
-    Fork it, strip it, break it, grow it. \
-    Build the species you need.
-  ]
-]
-
-// ==============================================================================
-// ACKNOWLEDGMENTS
-// ==============================================================================
-
-#v(0.5em)
-
-*Acknowledgments.* We acknowledge the foundational work of Pei Wang on Non-Axiomatic Logic and NARS, which provides the theoretical basis for #senars. We also thank the broader AGI and neuro-symbolic AI research communities for ongoing discussions that have shaped this work.
 
 // ==============================================================================
 // REFERENCES
