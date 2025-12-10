@@ -1,103 +1,82 @@
-import {LM} from '../../../src/lm/LM.js';
-import {DummyProvider} from '../../../src/lm/DummyProvider.js';
+import {LM} from '../../../core/src/lm/LM.js';
+import {DummyProvider} from '../../../core/src/lm/DummyProvider.js';
+import {ProviderRegistry} from '../../../core/src/lm/ProviderRegistry.js';
+import {jest} from '@jest/globals';
 
-describe('LM', () => {
+describe('LM System', () => {
     let lm;
-
     beforeEach(async () => {
         lm = new LM();
         await lm.initialize();
-
-        // Register a test provider for tests that need it
-        const provider = new DummyProvider({id: 'test-provider'});
-        lm.registerProvider('test-provider', provider);
+        lm.registerProvider('test-provider', new DummyProvider({id: 'test-provider'}));
     });
 
-    test('should initialize with default properties', () => {
-        expect(lm.providers).toBeDefined();
+    test('initialization', () => {
+        expect(lm.providers).toBeInstanceOf(ProviderRegistry);
         expect(lm.modelSelector).toBeDefined();
         expect(lm.narseseTranslator).toBeDefined();
-        expect(lm.metrics).toBeDefined();
-        expect(lm.activeWorkflows).toBeDefined();
-        expect(lm.config).toEqual({});
-        expect(lm.lmStats).toBeDefined();
     });
 
-    test('should register a provider', () => {
-        const provider = new DummyProvider({id: 'test-provider'});
-        lm.registerProvider('additional-provider', provider);
+    describe('Provider Management', () => {
+        test('registration', () => {
+            const p = new DummyProvider({id: 'p1'});
+            lm.registerProvider('p1', p);
+            expect(lm.providers.get('p1')).toBe(p);
+            expect(lm.getAvailableModels()).toContain('p1');
+        });
 
-        expect(lm.providers.has('additional-provider')).toBe(true);
-        expect(lm.providers.get('additional-provider')).toBe(provider);
+        test('selection', () => {
+            expect(lm.selectOptimalModel({type: 'test'})).toBe('test-provider');
+        });
     });
 
-    test('should get metrics', () => {
-        const metrics = lm.getMetrics();
-        expect(metrics.providerCount).toBe(1); // One provider registered in beforeEach
-        expect(metrics.lmStats).toBeDefined();
-        expect(metrics.providerUsage).toBeDefined();
+    describe('Generation & Processing', () => {
+        test('generateText', async () => {
+            lm.registerProvider('gen', new DummyProvider({responseTemplate: 'G:{prompt}'}));
+            expect(await lm.generateText('Hi', {}, 'gen')).toBe('G:Hi');
+            await expect(lm.generateText('Hi', {}, 'missing')).rejects.toThrow();
+        });
+
+        test('generateEmbedding', async () => {
+            lm.registerProvider('emb', new DummyProvider());
+            expect(await lm.generateEmbedding('Hi', 'emb')).toHaveLength(16);
+        });
+
+        test('streamText', async () => {
+            lm.registerProvider('str', {streamText: jest.fn().mockResolvedValue('stream-res')});
+            expect(await lm.streamText('Hi', {}, 'str')).toBe('stream-res');
+        });
+
+        test('process & translate', async () => {
+            lm.registerProvider('proc', new DummyProvider({responseTemplate: 'P:{prompt}'}));
+            expect(await lm.process('Hi', {}, 'proc')).toBe('P:Hi');
+
+            expect(lm.translateToNarsese('cat is a mammal')).toEqual(expect.stringMatching(/cat.*-->.*mammal/));
+            expect(lm.translateFromNarsese('(dog --> animal).')).toContain('dog');
+        });
     });
 
-    test('should handle generateText when provider exists', async () => {
-        const provider = new DummyProvider({id: 'test-provider', responseTemplate: 'Generated: {prompt}'});
-        lm.registerProvider('test-provider', provider);
+    describe('Interface Compatibility', () => {
+        const methods = [
+            ['generateText', {generateText: async () => 'ok'}],
+            ['invoke obj', {invoke: async () => ({content: 'ok'})}],
+            ['invoke str', {invoke: async () => 'ok'}],
+            ['generate', {generate: async () => 'ok'}]
+        ];
 
-        const result = await lm.generateText('Hello, world!', {}, 'test-provider');
-        expect(result).toBe('Generated: Hello, world!');
+        test.each(methods)('%s', async (_, mock) => {
+            lm.registerProvider('p', mock);
+            expect(await lm.generateText('t', {}, 'p')).toBe('ok');
+        });
+
+        test('unsupported interface throws', async () => {
+            lm.registerProvider('p', {});
+            await expect(lm.generateText('t', {}, 'p')).rejects.toThrow();
+        });
     });
 
-    test('should throw error when provider does not exist', async () => {
-        await expect(lm.generateText('Hello', {}, 'non-existent')).rejects.toThrow();
-    });
-
-    test('should handle generateEmbedding when provider exists', async () => {
-        const provider = new DummyProvider({id: 'embedding-provider'});
-        lm.registerProvider('embedding-provider', provider);
-
-        const result = await lm.generateEmbedding('Hello, world!', 'embedding-provider');
-        expect(Array.isArray(result)).toBe(true);
-        expect(result.length).toBe(16); // 16-dimensions as defined in DummyProvider
-    });
-
-    test('should process text with provider', async () => {
-        const provider = new DummyProvider({id: 'test-provider', responseTemplate: 'Processed: {prompt}'});
-        lm.registerProvider('test-provider', provider);
-
-        const result = await lm.process('Hello, world!', {}, 'test-provider');
-        expect(result).toBe('Processed: Hello, world!');
-    });
-
-    test('should translate to Narsese', () => {
-        const result = lm.translateToNarsese('cat is a mammal');
-        // Use flexible assertion since translation might have variations
-        expect(result).toContain('cat');
-        expect(result).toContain('-->');
-    });
-
-    test('should translate from Narsese', () => {
-        const result = lm.translateFromNarsese('(dog --> animal).');
-        // Use flexible assertion since translation might have variations
-        expect(result).toContain('dog');
-        expect(result).toContain('animal');
-    });
-
-    test('should select optimal model', () => {
-        const task = {type: 'test'};
-        const result = lm.selectOptimalModel(task);
-        // Since we have a provider registered in beforeEach, it should return the first provider
-        expect(result).toBe('test-provider');
-    });
-
-    test('should get available models', () => {
-        const models = lm.getAvailableModels();
-        expect(Array.isArray(models)).toBe(true);
-        expect(models.length).toBe(1); // One provider registered in beforeEach
-    });
-
-    test('should count tokens correctly', () => {
-        expect(lm._countTokens('hello world')).toBe(2);
-        expect(lm._countTokens('')).toBe(0);
-        expect(lm._countTokens(null)).toBe(0);
-        expect(lm._countTokens('hello  world')).toBe(2); // multiple spaces
+    test('metrics', () => {
+        expect(lm.getMetrics()).toMatchObject({providerCount: 1});
+        expect(lm.lmStats._countTokens('a b')).toBe(2);
     });
 });

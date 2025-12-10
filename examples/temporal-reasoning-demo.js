@@ -1,6 +1,6 @@
 /**
- * NAL-only Reasoning Demonstration: Temporal Reasoning
- * Demonstrates temporal relationship reasoning in NAL
+ * title: Temporal Reasoning Demo
+ * description: Demonstrates temporal relationship reasoning in NAL
  */
 
 import {NAR} from '../src/nar/NAR.js';

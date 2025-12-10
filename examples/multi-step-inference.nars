@@ -1,0 +1,8 @@
+// title: Multi-step Inference
+// description: Reasoning with mixed inputs
+
+"red_button is a dangerous_thing"
+"green_button is a safe_thing"
+"safe_thing is a desirable_thing"
+"dangerous_thing is a undesirable_thing"
+(?x --> desirable_thing)?

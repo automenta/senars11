@@ -1,5 +1,11 @@
-import {NAR} from '../../src/nar/NAR.js';
+import {NAR} from '../../core/src/nar/NAR.js';
+import {Task} from '../../core/src/task/Task.js';
+import {Truth} from '../../core/src/Truth.js';
+import {TermFactory} from '../../core/src/term/TermFactory.js';
+import {ReasonerBuilder} from '../../core/src/reason/ReasonerBuilder.js';
 import {createTask, createTerm, createTruth, TEST_CONSTANTS} from './factories.js';
+
+const termFactory = new TermFactory();
 
 /**
  * Base test setup for NAR integration tests
@@ -20,10 +26,13 @@ export class NARTestSetup {
         return this.nar;
     }
 
-    teardown() {
-        if (this.nar && this.nar.isRunning) {
+    async teardown() {
+        if (this.nar && typeof this.nar.dispose === 'function') {
+            await this.nar.dispose();
+        } else if (this.nar && this.nar.isRunning) {
             this.nar.stop();
         }
+        this.nar = null;
     }
 
     async reset() {
@@ -50,7 +59,10 @@ export class ComponentTestSetup {
         return this.instance;
     }
 
-    teardown() {
+    async teardown() {
+        if (this.instance && typeof this.instance.dispose === 'function') {
+            await this.instance.dispose();
+        }
         this.instance = null;
     }
 }
@@ -91,50 +103,50 @@ export const taskAssertions = {
      * Asserts that a task has the expected properties
      */
     expectTask: (task, expected) => {
-        if (expected.term) expect(task.term).toEqual(expected.term);
-        if (expected.type) expect(task.type).toBe(expected.type);
-        if (expected.truth) expect(task.truth).toEqual(expected.truth);
-        if (expected.budget) expect(task.budget).toEqual(expected.budget);
-        if (expected.stamp) expect(task.stamp).toEqual(expected.stamp);
+        const props = ['term', 'type', 'truth', 'budget', 'stamp'];
+        props.forEach(prop => {
+            if (expected?.[prop]) expect(task?.[prop]).toEqual(expected[prop]);
+        });
     },
 
     /**
      * Asserts that a task is of a specific type
      */
     expectTaskType: (task, type) => {
-        switch (type.toUpperCase()) {
-            case 'BELIEF':
-                expect(task.isBelief()).toBe(true);
-                break;
-            case 'GOAL':
-                expect(task.isGoal()).toBe(true);
-                break;
-            case 'QUESTION':
-                expect(task.isQuestion()).toBe(true);
-                break;
-            default:
-                throw new Error(`Unknown task type: ${type}`);
-        }
+        const typeMap = {
+            'BELIEF': 'isBelief',
+            'GOAL': 'isGoal',
+            'QUESTION': 'isQuestion'
+        };
+
+        const method = typeMap[type.toUpperCase()];
+        if (!method) throw new Error(`Unknown task type: ${type}`);
+
+        expect(task[method]()).toBe(true);
     },
 
     /**
      * Asserts task punctuation
      */
     expectTaskPunctuation: (task, punctuation) => {
-        const expectedType = punctuation === '.' ? 'BELIEF' :
-            punctuation === '!' ? 'GOAL' :
-                punctuation === '?' ? 'QUESTION' : '';
-        expect(task.punctuation).toBe(punctuation);
-        expect(task.type).toBe(expectedType);
+        const expectedType = {
+            '.': 'BELIEF',
+            '!': 'GOAL',
+            '?': 'QUESTION'
+        }[punctuation] || '';
+
+        expect(task?.punctuation).toBe(punctuation);
+        expect(task?.type).toBe(expectedType);
     },
 
     /**
      * Finds a task by term in a collection
      */
     findTaskByTerm: (tasks, searchTerm) => {
-        return tasks.find(t =>
-            t.term.toString().toLowerCase().includes(searchTerm.toLowerCase()) ||
-            t.term.name?.toLowerCase().includes(searchTerm.toLowerCase())
+        const lowerSearch = searchTerm?.toLowerCase();
+        return tasks?.find(t =>
+            t?.term?.toString()?.toLowerCase()?.includes(lowerSearch) ||
+            t?.term?.name?.toLowerCase()?.includes(lowerSearch)
         );
     }
 };
@@ -165,7 +177,17 @@ export const flexibleAssertions = {
      * Checks if collection has 'at least' a certain number of items (not exact count)
      */
     expectAtLeast: (collection, minCount, description = '') => {
-        const count = Array.isArray(collection) ? collection.length : collection.size || collection.length || Object.keys(collection).length;
+        let count;
+        if (Array.isArray(collection)) {
+            count = collection.length;
+        } else if (collection?.size !== undefined) {
+            count = collection.size;
+        } else if (collection?.length !== undefined) {
+            count = collection.length;
+        } else {
+            count = Object.keys(collection || {}).length;
+        }
+
         const message = description ? ` (${description})` : '';
         expect(count).toBeGreaterThanOrEqual(minCount);
     },
@@ -174,16 +196,16 @@ export const flexibleAssertions = {
      * Flexible comparison for objects that allows for implementation changes
      */
     expectObjectContainingFlexible: (actual, expectedSubset, tolerance = 0.01) => {
-        Object.entries(expectedSubset).forEach(([key, expectedValue]) => {
-            if (typeof expectedValue === 'number' && typeof actual[key] === 'number') {
+        for (const [key, expectedValue] of Object.entries(expectedSubset ?? {})) {
+            if (typeof expectedValue === 'number' && typeof actual?.[key] === 'number') {
                 // Use tolerance-based comparison for numbers
                 const diff = Math.abs(actual[key] - expectedValue);
                 expect(diff).toBeLessThanOrEqual(tolerance);
             } else {
                 // Use exact comparison for non-numbers
-                expect(actual[key]).toEqual(expectedValue);
+                expect(actual?.[key]).toEqual(expectedValue);
             }
-        });
+        }
     }
 };
 
@@ -196,15 +218,15 @@ export const memoryAssertions = {
      */
     expectConceptContains: (concept, expectedTerm) => {
         expect(concept).toBeDefined();
-        expect(concept.term).toBeDefined();
-        expect(concept.term.toString().toLowerCase()).toContain(expectedTerm.toLowerCase());
+        expect(concept?.term).toBeDefined();
+        expect(concept?.term?.toString()?.toLowerCase()).toContain(expectedTerm?.toLowerCase());
     },
 
     /**
      * Asserts that memory contains a specific number of concepts
      */
     expectMemoryConcepts: (memory, expectedCount) => {
-        const allConcepts = memory.getAllConcepts();
+        const allConcepts = memory?.getAllConcepts() ?? [];
         expect(allConcepts.length).toBe(expectedCount);
     },
 
@@ -212,9 +234,9 @@ export const memoryAssertions = {
      * Asserts that a memory contains tasks with a specific term
      */
     expectMemoryContainsTerm: (memory, termName) => {
-        const concepts = memory.getAllConcepts();
+        const concepts = memory?.getAllConcepts() ?? [];
         const matchingConcept = concepts.find(c =>
-            c.term.toString().toLowerCase().includes(termName.toLowerCase())
+            c?.term?.toString()?.toLowerCase()?.includes(termName?.toLowerCase())
         );
         expect(matchingConcept).toBeDefined();
     }
@@ -346,7 +368,7 @@ export const errorHandlingTests = {
         test.each(invalidInputs.map(input => [input]))(
             'throws error for invalid input: %s',
             (invalidInput) => {
-                expect(() => testFunction(invalidInput)).toThrow(errorType);
+                expect(() => testFunction?.(invalidInput)).toThrow(errorType);
             }
         );
     },
@@ -356,7 +378,7 @@ export const errorHandlingTests = {
      */
     asyncErrorHandling: async (testFunction, invalidInputs, errorType = Error) => {
         for (const invalidInput of invalidInputs) {
-            await expect(testFunction(invalidInput)).rejects.toThrow(errorType);
+            await expect(testFunction?.(invalidInput)).rejects.toThrow(errorType);
         }
     },
 
@@ -364,7 +386,7 @@ export const errorHandlingTests = {
      * Tests error message content
      */
     errorWithMessage: (testFunction, invalidInput, expectedMessage) => {
-        expect(() => testFunction(invalidInput)).toThrow(expectedMessage);
+        expect(() => testFunction?.(invalidInput)).toThrow(expectedMessage);
     }
 };
 
@@ -525,16 +547,22 @@ export const narTestScenarios = {
  */
 export const waitForCondition = async (condition, timeoutMs = 1000, intervalMs = 10) => {
     return new Promise((resolve, reject) => {
+        const startTime = Date.now();
         const interval = setInterval(() => {
-            if (condition()) {
+            try {
+                if (condition()) {
+                    clearInterval(interval);
+                    resolve();
+                }
+            } catch (error) {
                 clearInterval(interval);
-                resolve();
+                reject(new Error(`Error in condition check: ${error.message}`));
             }
         }, intervalMs);
 
         setTimeout(() => {
             clearInterval(interval);
-            reject(new Error('Timeout waiting for condition'));
+            reject(new Error(`Timeout waiting for condition after ${timeoutMs}ms`));
         }, timeoutMs);
     });
 };
@@ -543,11 +571,17 @@ export const waitForCondition = async (condition, timeoutMs = 1000, intervalMs =
  * Runs performance tests with time measurement
  */
 export const runPerformanceTest = async (testFn, maxDurationMs = 5000, description = 'Performance test') => {
+    if (typeof testFn !== 'function') {
+        throw new Error('testFn must be a function');
+    }
+
     const startTime = Date.now();
     const result = await testFn();
     const duration = Date.now() - startTime;
 
-    expect(duration).toBeLessThan(maxDurationMs);
+    if (duration > maxDurationMs) {
+        throw new Error(`Performance test "${description}" exceeded maximum duration: ${duration}ms > ${maxDurationMs}ms`);
+    }
 
     return result;
 };
@@ -560,7 +594,7 @@ export const parameterizedTests = {
      * Run tests with multiple parameter combinations
      */
     runWithParams: (testCases, testFn) => {
-        test.each(testCases.map((testCase, i) => [i, testCase]))(
+        test.each(testCases?.map((testCase, i) => [i, testCase]) ?? [])(
             'test case %i: %s',
             (index, testCase) => {
                 testFn(testCase);
@@ -572,7 +606,7 @@ export const parameterizedTests = {
      * Run async tests with multiple parameter combinations
      */
     runAsyncWithParams: async (testCases, testFn) => {
-        for (const [index, testCase] of testCases.entries()) {
+        for (const [index, testCase] of (testCases ?? []).entries()) {
             await test(`${index}: ${JSON.stringify(testCase)}`, () => testFn(testCase));
         }
     }
@@ -781,15 +815,158 @@ export const robustNARTests = {
 };
 
 /**
+ * Performance optimization utilities for faster test execution
+ */
+export const performanceOptimization = {
+    /**
+     * Cache for expensive test setup operations
+     */
+    testCache: new Map(),
+
+    /**
+     * Get cached test setup or create and cache it
+     */
+    getCachedSetup: async (cacheKey, setupFn) => {
+        if (performanceOptimization.testCache.has(cacheKey)) {
+            return performanceOptimization.testCache.get(cacheKey);
+        }
+
+        const result = await setupFn();
+        performanceOptimization.testCache.set(cacheKey, result);
+        return result;
+    },
+
+    /**
+     * Clear test cache (use in afterEach or after tests)
+     */
+    clearCache: () => {
+        performanceOptimization.testCache.clear();
+    },
+
+    /**
+     * Batch operations for better performance
+     */
+    batchProcess: async (items, processor, batchSize = 10) => {
+        const results = [];
+        for (let i = 0; i < items.length; i += batchSize) {
+            const batch = items.slice(i, i + batchSize);
+            const batchResults = await Promise.all(batch.map(processor));
+            results.push(...batchResults);
+        }
+        return results;
+    },
+
+    /**
+     * Efficiently collect multiple test results
+     */
+    collectResults: async (operations) => {
+        // Use Promise.all for parallel execution when safe
+        return await Promise.all(operations.map(op => op()));
+    },
+
+    /**
+     * Performance-optimized collection search
+     */
+    findInCollectionOptimized: (collection, predicate) => {
+        if (Array.isArray(collection)) {
+            return collection.find(predicate);
+        } else if (collection && typeof collection[Symbol.iterator] === 'function') {
+            for (const item of collection) {
+                if (predicate(item)) {
+                    return item;
+                }
+            }
+        } else if (collection && typeof collection.forEach === 'function') {
+            let result = null;
+            collection.forEach(item => {
+                if (result === null && predicate(item)) {
+                    result = item;
+                }
+            });
+            return result;
+        }
+        return null;
+    }
+};
+
+/**
+ * Utility for creating optimized test patterns
+ */
+export const optimizedTestPatterns = {
+    /**
+     * Optimized NAR setup that reuses instances when safe
+     */
+    createOptimizedNARSetup: (config = {}) => {
+        return new class {
+            constructor(config) {
+                this.config = config;
+                this.nar = null;
+            }
+
+            async setup() {
+                if (!this.nar) {
+                    this.nar = new NAR(this.config);
+                }
+                return this.nar;
+            }
+
+            async teardown() {
+                if (this.nar && typeof this.nar.dispose === 'function') {
+                    await this.nar.dispose();
+                }
+                this.nar = null;
+            }
+        }(config);
+    },
+
+    /**
+     * Optimized test data generator to avoid repeated object creation
+     */
+    testDataGenerator: {
+        truthCache: [],
+        taskCache: [],
+
+        getTruth: (f, c) => {
+            // Use cached instances when possible
+            const cached = optimizedTestPatterns.testDataGenerator.truthCache
+                .find(t => Math.abs(t.f - f) < 0.001 && Math.abs(t.c - c) < 0.001);
+            if (cached) return cached;
+
+            const newTruth = new Truth(f, c);
+            optimizedTestPatterns.testDataGenerator.truthCache.push(newTruth);
+            return newTruth;
+        },
+
+        getTask: (config = {}) => {
+            const term = config.term || createTerm('A');
+            const punctuation = config.punctuation || '.';
+            const truth = config.truth || (punctuation !== '?' ? optimizedTestPatterns.testDataGenerator.getTruth(0.9, 0.8) : null);
+            const budget = config.budget || TEST_CONSTANTS.BUDGET.DEFAULT;
+
+            const task = new Task({term, punctuation, truth, budget});
+            return task;
+        }
+    }
+};
+
+/**
  * Common test pattern for property immutability
  * @param {Object} instance - The instance to test
  * @param {Object} properties - Object with {propertyName: value} pairs to attempt to modify
  * @returns {void}
  */
 export const testImmutability = (instance, properties) => {
-    Object.keys(properties).forEach(propertyName => {
+    if (!instance || typeof instance !== 'object') {
+        throw new Error('instance must be an object');
+    }
+
+    if (!properties || typeof properties !== 'object') {
+        throw new Error('properties must be an object');
+    }
+
+    Object.entries(properties).forEach(([propertyName, value]) => {
         expect(() => {
-            instance[propertyName] = properties[propertyName];
+            instance[propertyName] = value;
         }).toThrow();
     });
 };
@@ -801,25 +978,7 @@ export const testImmutability = (instance, properties) => {
  * @param {*} differentObj - Object that should not equal obj1
  * @returns {void}
  */
-export const testEqualityMethod = (obj1, obj2, differentObj) => {
-    if (obj2 !== undefined) {
-        expect(obj1.equals(obj2)).toBe(true);
-        expect(obj2.equals(obj1)).toBe(true);
-    }
-    if (differentObj) {
-        expect(obj1.equals(differentObj)).toBe(false);
-        expect(differentObj.equals(obj1)).toBe(false);
-    }
-};
 
-/**
- * Common assertion for object string representations
- * @param {Object} obj - Object to test
- * @param {string} expectedString - Expected string representation
- */
-export const testStringRepresentation = (obj, expectedString) => {
-    expect(obj.toString()).toBe(expectedString);
-};
 
 /**
  * Common setup for memory-related tests
@@ -844,6 +1003,136 @@ export const COMMON_TRUTH_VALUES = [
     {f: 0.1, c: 0.2, name: 'low'},
     {f: 0.0, c: 0.1, name: 'false'}
 ];
+
+/**
+ * Creates a test task with specified parameters
+ * @param {string|Object} termStr - Term string or task configuration object
+ * @param {string} type - Task type (BELIEF, GOAL, QUESTION)
+ * @param {number} frequency - Truth frequency (0-1)
+ * @param {number} confidence - Truth confidence (0-1)
+ * @param {number} priority - Task priority (0-1)
+ * @returns {Task} A test task instance
+ */
+export function createTestTask(termStr, type = 'BELIEF', frequency = 0.9, confidence = 0.9, priority = 0.5) {
+    let term, punctuation, truth = null;
+
+    if (typeof termStr === 'object') {
+        // Handle the case where a configuration object is passed
+        const config = termStr;
+        term = config.term || createTerm('A');
+        if (typeof term === 'string') {
+            term = termFactory.atomic(term);
+        }
+        type = config.type || type;
+        frequency = config.frequency !== undefined ? config.frequency : frequency;
+        confidence = config.confidence !== undefined ? config.confidence : confidence;
+        priority = config.priority !== undefined ? config.priority : priority;
+        punctuation = config.punctuation || (type === 'GOAL' ? '!' : type === 'QUESTION' ? '?' : '.');
+    } else {
+        // Handle the case where a string is passed
+        term = typeof termStr === 'string' ? termFactory.atomic(termStr) : termStr;
+        punctuation = type === 'GOAL' ? '!' : type === 'QUESTION' ? '?' : '.';
+    }
+
+    // Questions don't have truth values, so only create truth for BELIEF and GOAL
+    if (type !== 'QUESTION') {
+        truth = new Truth(frequency, confidence);
+    }
+
+    const budget = {
+        priority,
+        durability: 0.7,
+        quality: 0.8
+    };
+
+    return new Task({
+        term,
+        punctuation,
+        truth,
+        budget
+    });
+}
+
+/**
+ * Creates a test memory-like object for testing
+ * @param {Object} options - Configuration options for the test memory
+ * @returns {Object} A mock memory object
+ */
+export function createTestMemory(options = {}) {
+    const tasks = options.tasks || [];
+
+    return {
+        taskBag: {
+            tasks: Array.isArray(tasks) ? tasks : [],
+            take: function () {
+                return this.tasks.shift() || null;
+            },
+            add: function (task) {
+                this.tasks.push(task);
+            },
+            size: function () {
+                return this.tasks.length;
+            }
+        },
+        addTask: function (task) {
+            this.taskBag.add(task);
+        },
+        getTask: function () {
+            return this.taskBag.take();
+        }
+    };
+}
+
+/**
+ * Creates a test task bag for testing
+ * @param {Array} tasks - Array of tasks to include in the bag
+ * @returns {Object} A mock task bag object
+ */
+export function createTestTaskBag(tasks = []) {
+    return {
+        tasks: tasks,
+        take: function () {
+            return this.tasks.shift() || null;
+        },
+        add: function (task) {
+            this.tasks.push(task);
+        },
+        size: function () {
+            return this.tasks.length;
+        },
+        peek: function () {
+            return this.tasks[0] || null;
+        }
+    };
+}
+
+/**
+ * Creates a test reasoner with simplified configuration
+ * @param {Object} options - Configuration options
+ * @returns {Reasoner} Configured reasoner
+ */
+export function createTestReasoner(options = {}) {
+    const memory = options.memory || createTestMemory();
+    // Use provided focus or create a minimal mock
+    const focus = options.focus || {
+        getTasks: () => [],
+        addTaskToFocus: () => {
+        }
+    };
+    const termFactory = options.termFactory || {};
+
+    const context = {focus, memory, termFactory};
+
+    const builder = new ReasonerBuilder(context)
+        .withConfig(options.config || {});
+
+    // Allow overriding components if passed in options
+    if (options.premiseSource) builder.withPremiseSource(options.premiseSource);
+    if (options.strategy) builder.withStrategy(options.strategy);
+    if (options.ruleProcessor) builder.withRuleProcessor(options.ruleProcessor);
+
+    return builder.build();
+}
 
 export const COMMON_BUDGET_VALUES = [
     {priority: 0.9, durability: 0.8, quality: 0.7, name: 'high'},

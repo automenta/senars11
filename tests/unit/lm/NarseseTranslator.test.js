@@ -1,4 +1,4 @@
-import {NarseseTranslator} from '../../../src/lm/NarseseTranslator.js';
+import {NarseseTranslator} from '../../../core/src/lm/NarseseTranslator.js';
 
 describe('NarseseTranslator', () => {
     let translator;
@@ -18,8 +18,7 @@ describe('NarseseTranslator', () => {
         });
 
         test('handles unknown patterns gracefully', () => {
-            const result = translator.toNarsese('An unknown pattern');
-            expect(result).toBe('(An_unknown_pattern --> statement).');
+            expect(translator.toNarsese('An unknown pattern')).toBe('(An_unknown_pattern --> statement).');
         });
 
         test('throws an error for non-string input', () => {

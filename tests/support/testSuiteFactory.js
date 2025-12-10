@@ -177,6 +177,70 @@ export const TestSuiteFactory = {
     },
 
     /**
+     * Create comprehensive NAR integration test suites
+     */
+    createNARIntegrationSuite: (config) => {
+        const {
+            className = 'NAR',
+            narProvider,
+            testBasic = true,
+            testCompound = true,
+            testLifecycle = true,
+            testErrorHandling = true,
+            additionalTests = []
+        } = config;
+
+        describe(`${className} Integration Tests`, () => {
+            if (testBasic) {
+                StandardTestSuites.basicFunctionality(narProvider);
+            }
+
+            if (testCompound) {
+                StandardTestSuites.compoundTerms(narProvider);
+            }
+
+            if (testLifecycle) {
+                StandardTestSuites.lifecycle(narProvider);
+            }
+
+            if (testErrorHandling) {
+                StandardTestSuites.errorHandling(narProvider);
+            }
+
+            // Run additional custom tests if provided
+            if (additionalTests.length > 0) {
+                describe(`${className} - Additional Integration Tests`, () => {
+                    additionalTests.forEach(({name, testFn}) => {
+                        test(name, testFn);
+                    });
+                });
+            }
+        });
+    },
+
+    /**
+     * Create performance benchmarking test suites
+     */
+    createPerformanceSuite: (config) => {
+        const {
+            className,
+            benchmarkTests,
+            maxDurationMs = 5000
+        } = config;
+
+        describe(`${className} Performance Benchmarks`, () => {
+            benchmarkTests.forEach(({name, testFn}) => {
+                test(name, async () => {
+                    const startTime = Date.now();
+                    await testFn();
+                    const duration = Date.now() - startTime;
+                    expect(duration).toBeLessThan(maxDurationMs);
+                });
+            });
+        });
+    },
+
+    /**
      * Get assertion utilities based on class type
      */
     getAssertions: (type) => {
@@ -208,7 +272,9 @@ export const {
     createTruthRelatedSuite,
     createMemoryRelatedSuite,
     createParameterizedSuite,
-    createAgileSuite
+    createAgileSuite,
+    createNARIntegrationSuite,
+    createPerformanceSuite
 } = TestSuiteFactory;
 
 // Default export

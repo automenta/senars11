@@ -1,5 +1,5 @@
 # Dependencies
-/node_modules
+node_modules/
 
 # Logs
 logs
@@ -18,3 +18,19 @@ lerna-debug.log*
 .idea
 benchmark-results-*
 agent.json
+
+# Test artifacts
+ui/playwright-report/
+ui/test-results/
+ui/test-results.json
+coverage
+performance-results
+
+*storybook.log
+storybook-static
+test-results/
+
+# RLFP artifacts
+*.jsonl
+trajectory_*.json
+preferences.json

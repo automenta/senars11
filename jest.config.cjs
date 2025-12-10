@@ -1,8 +1,11 @@
 module.exports = {
     testEnvironment: 'node',
     testPathIgnorePatterns: [
-        'v8/.*',
-        'v9/.*',
+        'ui/',
+        'exp'
+    ],
+    modulePathIgnorePatterns: [
+        '<rootDir>/ui/'
     ],
     transform: {
         '^.+\\.js$': 'babel-jest',
@@ -10,6 +13,8 @@ module.exports = {
     collectCoverageFrom: [
         'src/**/*.js',
         '!src/**/*.test.js',
+        'ui2/**/*.js',
+        '!ui2/**/*.test.js'
     ],
     coverageThreshold: {
         global: {

@@ -1,0 +1,125 @@
+import crypto from 'crypto';
+import {freeze} from '../util/common.js';
+
+export const TermType = Object.freeze({
+    ATOM: 'atom',
+    COMPOUND: 'compound',
+});
+
+export const SemanticType = Object.freeze({
+    BOOLEAN: 'boolean',
+    NUMERIC: 'numeric',
+    VARIABLE: 'variable',
+    NAL_CONCEPT: 'nal_concept',
+    UNKNOWN: 'unknown'
+});
+
+export class Term {
+    constructor(type, name, components = [], operator = null) {
+        this._type = type;
+        this._name = name;
+        this._operator = operator;
+        // Optimization: Handle atomic terms with empty components efficiently
+        this._components = freeze(type === TermType.ATOM && !components.length ? [name] : components);
+
+        this._complexity = this._calculateComplexity();
+        this._id = type === TermType.ATOM ? name : `${operator}_${name}`;
+        this._hash = Term.hash(this._id);
+        this._semanticType = this._determineSemanticType();
+
+        return freeze(this);
+    }
+
+    get type() { return this._type; }
+    get name() { return this._name; }
+    get operator() { return this._operator; }
+    get components() { return this._components; }
+    get complexity() { return this._complexity; }
+    get hash() { return this._hash; }
+    get id() { return this._id; }
+    get semanticType() { return this._semanticType; }
+
+    get isAtomic() { return this._type === TermType.ATOM; }
+    get isCompound() { return this._type === TermType.COMPOUND; }
+    get isBoolean() { return this._semanticType === SemanticType.BOOLEAN; }
+    get isNumeric() { return this._semanticType === SemanticType.NUMERIC; }
+    get isVariable() { return this._semanticType === SemanticType.VARIABLE; }
+    get isNALConcept() { return this._semanticType === SemanticType.NAL_CONCEPT; }
+
+    static hash(str) {
+        return crypto.createHash('sha256').update(str).digest('hex');
+    }
+
+    static fromJSON(data) {
+        if (!data) throw new Error('Term.fromJSON requires valid data object');
+        const {type, name, components = [], operator} = data;
+        return new Term(type, name, components, operator);
+    }
+
+    _determineSemanticType() {
+        if (this._type !== TermType.ATOM) return SemanticType.NAL_CONCEPT;
+
+        const name = this._name;
+        if (['True', 'False', 'Null'].includes(name)) return SemanticType.BOOLEAN;
+        if (name?.startsWith('?')) return SemanticType.VARIABLE;
+        if (!isNaN(Number(name))) return SemanticType.NUMERIC;
+
+        return SemanticType.NAL_CONCEPT;
+    }
+
+    _calculateComplexity() {
+        return this._type === TermType.ATOM
+            ? 1
+            : 1 + this._components.reduce((sum, c) => sum + (c?.complexity ?? 0), 0);
+    }
+
+    equals(other) {
+        if (!(other instanceof Term) ||
+            this._type !== other._type ||
+            this._operator !== other._operator ||
+            this._name !== other._name) return false;
+
+        if (this._type !== TermType.COMPOUND) return true;
+
+        if (this._components.length !== other._components.length) return false;
+
+        for (let i = 0; i < this._components.length; i++) {
+            if (!this._components[i].equals(other._components[i])) return false;
+        }
+        return true;
+    }
+
+    toString() {
+        return this._name;
+    }
+
+    visit(visitor, order = 'pre-order') {
+        if (order === 'pre-order') visitor(this);
+        for (const c of this._components) {
+            if (c instanceof Term) c.visit(visitor, order);
+        }
+        if (order === 'post-order') visitor(this);
+    }
+
+    reduce(fn, acc) {
+        let result = fn(acc, this);
+        for (const c of this._components) {
+            if (c instanceof Term) result = c.reduce(fn, result);
+        }
+        return result;
+    }
+
+    serialize() {
+        return {
+            type: this._type,
+            name: this._name,
+            operator: this._operator,
+            components: this._components.map(c => c?.serialize?.() ?? c.toString()),
+            complexity: this._complexity,
+            id: this._id,
+            hash: this._hash,
+            semanticType: this._semanticType,
+            version: '1.0.0'
+        };
+    }
+}
