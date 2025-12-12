@@ -24,6 +24,9 @@ export const IntrospectionEvents = Object.freeze({
     RULE_FIRED: 'rule:fired',
     RULE_NOT_FIRED: 'rule:not_fired',
 
+    // Reasoning
+    REASONING_DERIVATION: 'reasoning:derivation',
+
     // Metacognition
     META_PATTERN_DETECTED: 'meta:pattern:detected',
     META_SELF_OPTIMIZATION: 'meta:self_optimization',

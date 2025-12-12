@@ -1,12 +1,12 @@
-import {Concept} from './Concept.js';
-import {MemoryIndex} from './MemoryIndex.js';
-import {MemoryConsolidation} from './MemoryConsolidation.js';
-import {Bag} from './Bag.js';
-import {BaseComponent} from '../util/BaseComponent.js';
-import {MemoryValidator} from '../util/MemoryValidator.js';
-import {IntrospectionEvents} from '../util/IntrospectionEvents.js';
-import {Statistics} from '../util/Statistics.js';
-import {MemoryScorer} from './MemoryScorer.js';
+import { Concept } from './Concept.js';
+import { MemoryIndex } from './MemoryIndex.js';
+import { MemoryConsolidation } from './MemoryConsolidation.js';
+import { Bag } from './Bag.js';
+import { BaseComponent } from '../util/BaseComponent.js';
+import { MemoryValidator } from '../util/MemoryValidator.js';
+import { IntrospectionEvents } from '../util/IntrospectionEvents.js';
+import { MemoryStatistics } from './MemoryStatistics.js';
+import { MemoryScorer } from './MemoryScorer.js';
 
 export class Memory extends BaseComponent {
     static CONSOLIDATION_THRESHOLDS = Object.freeze({
@@ -33,7 +33,7 @@ export class Memory extends BaseComponent {
         });
 
         // Merge configs using object spread for performance and clarity
-        const mergedConfig = {...defaultConfig, ...config};
+        const mergedConfig = { ...defaultConfig, ...config };
 
         super(mergedConfig, 'Memory');
         this._config = mergedConfig;
@@ -79,7 +79,7 @@ export class Memory extends BaseComponent {
     }
 
     get config() {
-        return {...this._config};
+        return { ...this._config };
     }
 
     get concepts() {
@@ -91,7 +91,7 @@ export class Memory extends BaseComponent {
     }
 
     get stats() {
-        return {...this._stats};
+        return { ...this._stats };
     }
 
     getConfigValue(key, defaultVal) {
@@ -110,7 +110,7 @@ export class Memory extends BaseComponent {
 
         const added = concept.addTask(task);
         if (added) {
-            this._emitIntrospectionEvent(IntrospectionEvents.MEMORY_TASK_ADDED, {task: task.serialize()});
+            this._emitIntrospectionEvent(IntrospectionEvents.MEMORY_TASK_ADDED, { task: task.serialize() });
             this._stats.totalTasks++;
             this._updateResourceUsage(concept, 1);
 
@@ -135,7 +135,7 @@ export class Memory extends BaseComponent {
         this._concepts.set(term, concept);
         this._index.addConcept(concept);
         this._stats.totalConcepts++;
-        this._emitIntrospectionEvent(IntrospectionEvents.MEMORY_CONCEPT_CREATED, {concept: concept.serialize()});
+        this._emitIntrospectionEvent(IntrospectionEvents.MEMORY_CONCEPT_CREATED, { concept: concept.serialize() });
         return concept;
     }
 
@@ -145,7 +145,7 @@ export class Memory extends BaseComponent {
         const concept = this._concepts.get(term) || this._findConceptByEquality(term);
 
         if (concept) {
-            this._emitIntrospectionEvent(IntrospectionEvents.MEMORY_CONCEPT_ACCESSED, {concept: concept.serialize()});
+            this._emitIntrospectionEvent(IntrospectionEvents.MEMORY_CONCEPT_ACCESSED, { concept: concept.serialize() });
         }
 
         return concept;
@@ -247,18 +247,18 @@ export class Memory extends BaseComponent {
     _getMostActiveConceptsByScoring(limit, weights, limits, type, options = {}) {
         const concepts = this.getAllConcepts();
         const scoredConcepts = concepts.map(concept => {
-            const score = MemoryScorer.calculateDetailedConceptScore(concept, {...weights, ...options}).compositeScore;
-            return {concept, score};
+            const score = MemoryScorer.calculateDetailedConceptScore(concept, { ...weights, ...options }).compositeScore;
+            return { concept, score };
         });
 
         scoredConcepts.sort((a, b) => b.score - a.score);
         return scoredConcepts.slice(0, limit).map(sc => sc.concept);
     }
 
-    getConceptsByCompositeScoring({limit = 10, minScore = 0, scoringOptions = {}, sortBy = 'composite'} = {}) {
+    getConceptsByCompositeScoring({ limit = 10, minScore = 0, scoringOptions = {}, sortBy = 'composite' } = {}) {
         const concepts = this.getAllConcepts();
         const scoredConcepts = concepts
-            .map(concept => ({concept, score: MemoryScorer.calculateDetailedConceptScore(concept, scoringOptions)}))
+            .map(concept => ({ concept, score: MemoryScorer.calculateDetailedConceptScore(concept, scoringOptions) }))
             .filter(item => item.score.compositeScore >= minScore);
 
         return scoredConcepts
@@ -274,14 +274,14 @@ export class Memory extends BaseComponent {
         this._stats.lastConsolidation = currentTime;
         this._lastConsolidationTime = currentTime;
 
-        this._emitIntrospectionEvent(IntrospectionEvents.MEMORY_CONSOLIDATION_START, {timestamp: currentTime});
+        this._emitIntrospectionEvent(IntrospectionEvents.MEMORY_CONSOLIDATION_START, { timestamp: currentTime });
 
         const results = this._consolidation.consolidate(this, currentTime);
         this.applyActivationDecay();
         this._cleanupResourceTracker();
         this._updateFocusConceptsCount();
 
-        this._emitIntrospectionEvent(IntrospectionEvents.MEMORY_CONSOLIDATION_END, {timestamp: Date.now(), results});
+        this._emitIntrospectionEvent(IntrospectionEvents.MEMORY_CONSOLIDATION_END, { timestamp: Date.now(), results });
 
         return results;
     }
@@ -302,52 +302,12 @@ export class Memory extends BaseComponent {
     }
 
     getDetailedStats() {
-        const conceptStats = this.getAllConcepts().map(c => c.getStats());
-        const hasConcepts = conceptStats.length > 0;
-        const stats = hasConcepts ? this._calculateConceptStatistics(conceptStats) : this._getDefaultStats();
-
-        const timestamps = hasConcepts ? conceptStats.map(s => s.createdAt) : [];
-
-        return {
-            ...this._stats,
-            conceptStats,
-            memoryUsage: {
-                concepts: this._concepts.size,
-                focusConcepts: this._focusConcepts.size,
-                totalTasks: this._stats.totalTasks
-            },
-            indexStats: this._index.getStats(),
-            oldestConcept: hasConcepts ? Math.min(...timestamps) : null,
-            newestConcept: hasConcepts ? Math.max(...timestamps) : null,
-            ...stats,
-            conceptCount: hasConcepts ? conceptStats.length : 0
-        };
+        const stats = MemoryStatistics.getDetailedStats(this, this._stats);
+        stats.indexStats = this._index.getStats();
+        return stats;
     }
 
-    _getDefaultStats() {
-        return {
-            averageActivation: 0,
-            averageQuality: 0,
-            activationStd: 0,
-            qualityStd: 0,
-            activationMedian: 0,
-            qualityMedian: 0
-        };
-    }
 
-    _calculateConceptStatistics(conceptStats) {
-        const activations = conceptStats.map(s => s.activation);
-        const qualities = conceptStats.map(s => s.quality);
-
-        return {
-            averageActivation: Statistics.mean(activations),
-            averageQuality: Statistics.mean(qualities),
-            activationStd: Statistics.stdDev(activations),
-            qualityStd: Statistics.stdDev(qualities),
-            activationMedian: Statistics.median(activations),
-            qualityMedian: Statistics.median(qualities)
-        };
-    }
 
     getHealthMetrics() {
         return this._consolidation.calculateHealthMetrics(this);
@@ -414,7 +374,7 @@ export class Memory extends BaseComponent {
             5
         );
 
-        Array.from({length: conceptsToForget}, () => this._applyConceptForgetting());
+        Array.from({ length: conceptsToForget }, () => this._applyConceptForgetting());
     }
 
     getMemoryPressureStats() {
@@ -467,7 +427,7 @@ export class Memory extends BaseComponent {
 
     validateMemory() {
         if (!this._memoryValidator) {
-            return {valid: true, message: 'Memory validation is disabled'};
+            return { valid: true, message: 'Memory validation is disabled' };
         }
 
         const validations = this._getValidationTargets();
@@ -478,7 +438,7 @@ export class Memory extends BaseComponent {
             return this._handleValidationFailures(invalidResults, results.length);
         }
 
-        return {valid: true, message: 'Memory validation passed'};
+        return { valid: true, message: 'Memory validation passed' };
     }
 
     _getValidationTargets() {
@@ -515,7 +475,7 @@ export class Memory extends BaseComponent {
 
     getMemoryValidationStats() {
         if (!this._memoryValidator) {
-            return {validationEnabled: false};
+            return { validationEnabled: false };
         }
 
         return {
@@ -569,7 +529,7 @@ export class Memory extends BaseComponent {
             this.clear();
 
             if (data.config) {
-                this._config = {...this._config, ...data.config};
+                this._config = { ...this._config, ...data.config };
             }
 
             for (const conceptData of data.concepts) {
@@ -611,7 +571,7 @@ export class Memory extends BaseComponent {
             }
 
             if (data.stats) {
-                this._stats = {...data.stats};
+                this._stats = { ...data.stats };
             }
 
             if (data.resourceTracker) {

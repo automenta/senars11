@@ -1,9 +1,10 @@
-import {Term, TermType} from './Term.js';
-import {CognitiveDiversity} from './CognitiveDiversity.js';
-import {BaseComponent} from '../util/BaseComponent.js';
-import {IntrospectionEvents} from '../util/IntrospectionEvents.js';
+import { Term, TermType } from './Term.js';
+import { CognitiveDiversity } from './CognitiveDiversity.js';
+import { BaseComponent } from '../util/BaseComponent.js';
+import { IntrospectionEvents } from '../util/IntrospectionEvents.js';
+import { TermCache } from './TermCache.js';
 
-export {Term};
+export { Term };
 
 const COMMUTATIVE_OPERATORS = new Set(['&', '|', '+', '*', '<->', '=', '||', '&&']);
 const ASSOCIATIVE_OPERATORS = new Set(['&', '|', '||', '&&']);
@@ -29,13 +30,9 @@ const CANONICAL_NAME_PATTERNS = {
 export class TermFactory extends BaseComponent {
     constructor(config = {}, eventBus = null) {
         super(config, 'TermFactory', eventBus);
-        this._cache = new Map();
+        this._cache = new TermCache({ maxSize: this.config.maxCacheSize || 5000 });
         this._complexityCache = new Map();
         this._cognitiveDiversity = new CognitiveDiversity(this);
-        this._cacheHits = 0;
-        this._cacheMisses = 0;
-        this._maxCacheSize = this.config.maxCacheSize || 5000;
-        this._accessTime = new Map();
     }
 
     create(data, components = undefined) {
@@ -50,7 +47,7 @@ export class TermFactory extends BaseComponent {
         }
 
         // Handle object input {operator, components}
-        const {operator, components: comps} = data;
+        const { operator, components: comps } = data;
         return this._createCompound(operator, comps);
     }
 
@@ -62,24 +59,17 @@ export class TermFactory extends BaseComponent {
     _processCanonicalAndCache(operator, components) {
         const normalizedComponents = this._canonicalizeComponents(operator, components);
         const name = this._buildCanonicalName(operator, normalizedComponents);
-        const currentTime = Date.now();
 
         // Check cache
         const cachedTerm = this._cache.get(name);
         if (cachedTerm) {
-            this._cacheHits++;
-            this._emitIntrospectionEvent(IntrospectionEvents.TERM_CACHE_HIT, {termName: name});
-            this._accessTime.set(name, currentTime);
+            this._emitIntrospectionEvent(IntrospectionEvents.TERM_CACHE_HIT, { termName: name });
             return cachedTerm;
         }
 
-        this._cacheMisses++;
-        this._emitIntrospectionEvent(IntrospectionEvents.TERM_CACHE_MISS, {termName: name});
+        this._emitIntrospectionEvent(IntrospectionEvents.TERM_CACHE_MISS, { termName: name });
 
         const term = this._createAndCache(operator, normalizedComponents, name);
-        this._accessTime.set(name, currentTime);
-        this._evictLRUEntries();
-
         this._calculateComplexityMetrics(term, normalizedComponents);
         this._cognitiveDiversity.registerTerm(term);
 
@@ -116,17 +106,13 @@ export class TermFactory extends BaseComponent {
 
     _getOrCreateAtomic(name) {
         let term = this._cache.get(name);
-        const currentTime = Date.now();
 
         if (term) {
-            this._accessTime.set(name, currentTime);
             return term;
         }
 
         term = this._createAndCache(null, [], name);
         this._complexityCache.set(name, 1);
-        this._accessTime.set(name, currentTime);
-        this._evictLRUEntries();
 
         return term;
     }
@@ -142,8 +128,15 @@ export class TermFactory extends BaseComponent {
             components,
             operator
         );
-        this._cache.set(name, term);
-        this._emitIntrospectionEvent(IntrospectionEvents.TERM_CREATED, {term: term.serialize()});
+
+        // Use setWithEviction to get evicted key for cleanup
+        const evictedKey = this._cache.setWithEviction(name, term);
+        if (evictedKey) {
+            this._complexityCache.delete(evictedKey);
+            this._cognitiveDiversity.unregisterTerm(evictedKey);
+        }
+
+        this._emitIntrospectionEvent(IntrospectionEvents.TERM_CREATED, { term: term.serialize() });
         return term;
     }
 
@@ -171,7 +164,7 @@ export class TermFactory extends BaseComponent {
             }
         }
 
-        return {operator, components: normalizedComponents};
+        return { operator, components: normalizedComponents };
     }
 
     _validateOperator(op) {
@@ -210,7 +203,7 @@ export class TermFactory extends BaseComponent {
 
         // Commutative check
         if (COMMUTATIVE_OPERATORS.has(operator)) {
-             return operator === '='
+            return operator === '='
                 ? [...components].sort((a, b) => this._compareTermsAlphabetically(a, b))
                 : this._removeRedundancy(this._normalizeCommutative([...components]));
         }
@@ -264,8 +257,10 @@ export class TermFactory extends BaseComponent {
 
     _buildCanonicalName(op, comps) {
         if (!op) return comps[0].toString();
-        const names = comps.map(c => c.name);
-        return CANONICAL_NAME_PATTERNS[op]?.(names) || `(${op}, ${names.join(', ')})`;
+        if (op === ',') {
+            return `(${comps.map(c => c.toString()).join(', ')})`;
+        }
+        return `(${op}, ${comps.map(c => c.toString()).join(', ')})`;
     }
 
     _calculateComplexityMetrics(term, components) {
@@ -279,20 +274,7 @@ export class TermFactory extends BaseComponent {
         return complexity;
     }
 
-    _evictLRUEntries() {
-        if (this._cache.size <= this._maxCacheSize) return;
-        const entriesToRemove = this._cache.size - this._maxCacheSize;
-        const sortedEntries = Array.from(this._accessTime.entries())
-            .sort((a, b) => a[1] - b[1])
-            .slice(0, entriesToRemove);
 
-        for (const [key] of sortedEntries) {
-            this._cache.delete(key);
-            this._accessTime.delete(key);
-            this._complexityCache.delete(key);
-            this._cognitiveDiversity.unregisterTerm(key);
-        }
-    }
 
     getComplexity(term) {
         const key = typeof term === 'string' ? term : (term?.name);
@@ -301,8 +283,7 @@ export class TermFactory extends BaseComponent {
 
     setMaxCacheSize(size) {
         if (typeof size !== 'number' || size <= 0) return;
-        this._maxCacheSize = size;
-        this._evictLRUEntries();
+        this._cache.setMaxSize(size);
     }
 
     getCacheSize() { return this._cache.size; }
@@ -310,22 +291,20 @@ export class TermFactory extends BaseComponent {
     clearCache() {
         this._cache.clear();
         this._complexityCache.clear();
-        this._accessTime.clear();
         this._cognitiveDiversity.clear();
     }
 
     getStats() {
-        const totalRequests = this._cacheMisses + this._cacheHits;
-        const cacheHitRate = totalRequests > 0 ? this._cacheHits / totalRequests : 0;
+        const cacheStats = this._cache.stats;
         return {
             cacheSize: this._cache.size,
             complexityCacheSize: this._complexityCache.size,
             cognitiveDiversityStats: this._cognitiveDiversity.getMetrics(),
-            cacheHits: this._cacheHits,
-            cacheMisses: this._cacheMisses,
-            cacheHitRate: cacheHitRate,
-            efficiency: cacheHitRate,
-            maxCacheSize: this._maxCacheSize
+            cacheHits: cacheStats.hits,
+            cacheMisses: cacheStats.misses,
+            cacheHitRate: cacheStats.hitRate,
+            efficiency: cacheStats.hitRate,
+            maxCacheSize: cacheStats.maxSize
         };
     }
 
@@ -346,14 +325,14 @@ export class TermFactory extends BaseComponent {
         return Array.from(this._complexityCache.entries())
             .sort((a, b) => b[1] - a[1])
             .slice(0, limit)
-            .map(([name, complexity]) => ({name, complexity}));
+            .map(([name, complexity]) => ({ name, complexity }));
     }
 
     getSimplestTerms(limit = 10) {
         return Array.from(this._complexityCache.entries())
             .sort((a, b) => a[1] - b[1])
             .slice(0, limit)
-            .map(([name, complexity]) => ({name, complexity}));
+            .map(([name, complexity]) => ({ name, complexity }));
     }
 
     getAverageComplexity() {
