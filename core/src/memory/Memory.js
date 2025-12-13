@@ -7,6 +7,8 @@ import { MemoryValidator } from '../util/MemoryValidator.js';
 import { IntrospectionEvents } from '../util/IntrospectionEvents.js';
 import { MemoryStatistics } from './MemoryStatistics.js';
 import { MemoryScorer } from './MemoryScorer.js';
+import { MemoryResourceManager } from './MemoryResourceManager.js';
+import { ForgettingStrategyFactory } from './forgetting/ForgettingStrategyFactory.js';
 
 export class Memory extends BaseComponent {
     static CONSOLIDATION_THRESHOLDS = Object.freeze({
@@ -44,6 +46,10 @@ export class Memory extends BaseComponent {
         this._index = new MemoryIndex();
         this._consolidation = new MemoryConsolidation();
 
+        // Initialize resource manager and forgetting strategy
+        this._resourceManager = new MemoryResourceManager(this._config);
+        this._forgettingStrategy = ForgettingStrategyFactory.create(this._config.forgetPolicy);
+
         this._memoryValidator = this._config.enableMemoryValidation
             ? new MemoryValidator({
                 enableChecksums: true,
@@ -59,14 +65,10 @@ export class Memory extends BaseComponent {
             lastConsolidation: Date.now(),
             conceptsForgotten: 0,
             tasksForgotten: 0,
-            totalResourceUsage: 0,
-            peakResourceUsage: 0,
-            memoryPressureEvents: 0,
             memoryCorruptionEvents: 0,
             validationFailures: 0
         };
         this._cyclesSinceConsolidation = 0;
-        this._resourceTracker = new Map();
         this._lastConsolidationTime = Date.now();
     }
 
@@ -112,15 +114,15 @@ export class Memory extends BaseComponent {
         if (added) {
             this._emitIntrospectionEvent(IntrospectionEvents.MEMORY_TASK_ADDED, { task: task.serialize() });
             this._stats.totalTasks++;
-            this._updateResourceUsage(concept, 1);
+            this._resourceManager.updateResourceUsage(concept, 1);
 
             if (task.budget.priority >= this._config.priorityThreshold) {
                 this._focusConcepts.add(concept);
                 this._updateFocusConceptsCount();
             }
 
-            if (this._config.enableAdaptiveForgetting && this._isUnderMemoryPressure()) {
-                this._applyAdaptiveForgetting();
+            if (this._config.enableAdaptiveForgetting && this._resourceManager.isUnderMemoryPressure(this._stats)) {
+                this._resourceManager.applyAdaptiveForgetting(this);
             }
         }
         return added;
@@ -152,39 +154,14 @@ export class Memory extends BaseComponent {
     }
 
     _applyConceptForgetting() {
-        const strategies = {
-            priority: () => this._forgetByCriteria(c => c.activation ?? 0.1, (a, b) => a < b),
-            lru: () => this._forgetByCriteria(c => c.lastAccessed, (a, b) => a < b),
-            fifo: () => {
-                const first = this._concepts.keys().next().value;
-                if (first) {
-                    this.removeConcept(first);
-                    this._stats.conceptsForgotten++;
-                }
-            }
-        };
-
-        const strategy = strategies[this._config.forgetPolicy] || strategies.priority;
-        strategy();
-    }
-
-    _forgetByCriteria(metricFn, compareFn) {
-        let targetTerm = null;
-        let targetVal = null;
-
-        for (const [term, concept] of this._concepts) {
-            const val = metricFn(concept);
-            if (targetVal === null || compareFn(val, targetVal)) {
-                targetVal = val;
-                targetTerm = term;
-            }
-        }
-
-        if (targetTerm) {
-            this.removeConcept(targetTerm);
+        const termToForget = this._forgettingStrategy.forget(this._concepts, this._stats);
+        if (termToForget) {
+            this.removeConcept(termToForget);
             this._stats.conceptsForgotten++;
         }
     }
+
+
 
     removeConcept(term) {
         const concept = this._concepts.get(term);
@@ -278,7 +255,7 @@ export class Memory extends BaseComponent {
 
         const results = this._consolidation.consolidate(this, currentTime);
         this.applyActivationDecay();
-        this._cleanupResourceTracker();
+        this._resourceManager.cleanup(this._concepts);
         this._updateFocusConceptsCount();
 
         this._emitIntrospectionEvent(IntrospectionEvents.MEMORY_CONSOLIDATION_END, { timestamp: Date.now(), results });
@@ -345,50 +322,8 @@ export class Memory extends BaseComponent {
         );
     }
 
-    _updateResourceUsage(concept, change) {
-        const conceptKey = concept.term.toString();
-        const currentUsage = this._resourceTracker.get(conceptKey) || 0;
-        const newUsage = Math.max(0, currentUsage + change);
-
-        this._resourceTracker.set(conceptKey, newUsage);
-        this._stats.totalResourceUsage += change;
-
-        if (this._stats.totalResourceUsage > this._stats.peakResourceUsage) {
-            this._stats.peakResourceUsage = this._stats.totalResourceUsage;
-        }
-    }
-
-    _isUnderMemoryPressure() {
-        const conceptPressure = this._stats.totalConcepts / this._config.maxConcepts;
-        const resourcePressure = this._stats.totalResourceUsage / this._config.resourceBudget;
-        const taskPressure = this._stats.totalTasks / (this._config.maxConcepts * this._config.maxTasksPerConcept);
-
-        return Math.max(conceptPressure, resourcePressure, taskPressure) >= this._config.memoryPressureThreshold;
-    }
-
-    _applyAdaptiveForgetting() {
-        this._stats.memoryPressureEvents++;
-
-        const conceptsToForget = Math.min(
-            Math.floor(this._stats.totalConcepts * 0.1),
-            5
-        );
-
-        Array.from({ length: conceptsToForget }, () => this._applyConceptForgetting());
-    }
-
     getMemoryPressureStats() {
-        const totalPossibleTasks = this._config.maxConcepts * this._config.maxTasksPerConcept;
-        return {
-            conceptPressure: this._stats.totalConcepts / this._config.maxConcepts,
-            taskPressure: this._stats.totalTasks / totalPossibleTasks,
-            resourcePressure: this._stats.totalResourceUsage / this._config.resourceBudget,
-            memoryPressureEvents: this._stats.memoryPressureEvents,
-            isUnderPressure: this._isUnderMemoryPressure(),
-            resourceBudget: this._config.resourceBudget,
-            currentResourceUsage: this._stats.totalResourceUsage,
-            peakResourceUsage: this._stats.peakResourceUsage
-        };
+        return this._resourceManager.getMemoryPressureStats(this._stats);
     }
 
     applyActivationDecay() {
@@ -399,30 +334,7 @@ export class Memory extends BaseComponent {
     }
 
     getConceptsByResourceUsage(ascending = false) {
-        const concepts = Array.from(this._concepts.entries()).map(([term, concept]) => ({
-            term,
-            concept,
-            resourceUsage: this._resourceTracker.get(term.toString()) || 0
-        }));
-
-        concepts.sort((a, b) => ascending ? a.resourceUsage - b.resourceUsage : b.resourceUsage - a.resourceUsage);
-        return concepts;
-    }
-
-    _cleanupResourceTracker() {
-        for (const [termStr, usage] of this._resourceTracker.entries()) {
-            if (!this._conceptExistsWithTerm(termStr)) {
-                this._resourceTracker.delete(termStr);
-                this._stats.totalResourceUsage -= usage;
-            }
-        }
-    }
-
-    _conceptExistsWithTerm(termStr) {
-        for (const key of this._concepts.keys()) {
-            if (key.toString() === termStr) return true;
-        }
-        return false;
+        return this._resourceManager.getConceptsByResourceUsage(this._concepts, ascending);
     }
 
     validateMemory() {
@@ -513,7 +425,8 @@ export class Memory extends BaseComponent {
             focusConcepts: Array.from(this._focusConcepts).map(c => c.term.toString()),
             index: this._index.serialize ? this._index.serialize() : null,
             stats: this._stats,
-            resourceTracker: Object.fromEntries(this._resourceTracker),
+            resourceTracker: Object.fromEntries(this._resourceManager.getResourceTracker()),
+            resourceManagerStats: this._resourceManager.getStats(),
             cyclesSinceConsolidation: this._cyclesSinceConsolidation,
             lastConsolidationTime: this._lastConsolidationTime,
             version: '1.0.0'
@@ -575,7 +488,7 @@ export class Memory extends BaseComponent {
             }
 
             if (data.resourceTracker) {
-                this._resourceTracker = new Map(Object.entries(data.resourceTracker));
+                this._resourceManager.setResourceTracker(new Map(Object.entries(data.resourceTracker)));
             }
 
             this._cyclesSinceConsolidation = data.cyclesSinceConsolidation || 0;
