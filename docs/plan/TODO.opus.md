@@ -1,12 +1,15 @@
 # SeNARS: Strategic Transformation Plan
 
-*A living blueprint for evolving the Semantic Non-Axiomatic Reasoning System into a transformative force for transparent AI*
+*A living blueprint for evolving the Semantic Non-Axiomatic Reasoning System into a transformative force for transparent
+AI*
 
 ---
 
 ## Existential Purpose
 
-SeNARS exists to prove that **artificial intelligence can be both powerful and transparent**—that we need not choose between capability and comprehensibility. We are building the substrate from which an ecosystem of trustworthy cognitive systems will grow.
+SeNARS exists to prove that **artificial intelligence can be both powerful and transparent**—that we need not choose
+between capability and comprehensibility. We are building the substrate from which an ecosystem of trustworthy cognitive
+systems will grow.
 
 > **We are not building an AI. We are building the seedbed for a new kind of thinking.**
 
@@ -16,12 +19,12 @@ SeNARS exists to prove that **artificial intelligence can be both powerful and t
 
 ### Phase Mapping
 
-| Phase | Timeline | Focus | Success Criteria |
-|-------|----------|-------|------------------|
-| **Phase 1** | 0-3 mo | Cognitive IDE Prototype | 10-min brilliance experience; "Agent Debugging" demo complete |
-| **Phase 2** | 3-6 mo | Researcher's Sandbox | Session save/load; TRB benchmark published; 100 community members |
-| **Phase 3** | 6-12 mo | Platform Foundation | Headless API; spacegraphjs spinoff; first commercial pilot |
-| **Phase 4** | 12+ mo | Autonomous Evolution | RLFP learning active; self-improvement measurable |
+| Phase       | Timeline | Focus                   | Success Criteria                                                  |
+|-------------|----------|-------------------------|-------------------------------------------------------------------|
+| **Phase 1** | 0-3 mo   | Cognitive IDE Prototype | 10-min brilliance experience; "Agent Debugging" demo complete     |
+| **Phase 2** | 3-6 mo   | Researcher's Sandbox    | Session save/load; TRB benchmark published; 100 community members |
+| **Phase 3** | 6-12 mo  | Platform Foundation     | Headless API; spacegraphjs spinoff; first commercial pilot        |
+| **Phase 4** | 12+ mo   | Autonomous Evolution    | RLFP learning active; self-improvement measurable                 |
 
 ### Immediate Priorities (This Week)
 
@@ -59,7 +62,8 @@ Session Persist ─► Knowledge Editor
 
 ### 1.1 Core Visualization System
 
-- [ ] **Thought Graph Canvas** — Interactive force-directed graph showing live concept activation, belief connections, and inference flows
+- [ ] **Thought Graph Canvas** — Interactive force-directed graph showing live concept activation, belief connections,
+  and inference flows
 - [ ] **Temporal Scrubber** — Rewind/replay reasoning sequences to any point; "time travel" through the thought process
 - [ ] **Derivation Tree Overlays** — Expand any conclusion to see the full proof tree, color-coded by rule types
 - [ ] **Attention Heatmap** — Visualize where cognitive resources are allocated across the knowledge graph
@@ -78,7 +82,8 @@ Session Persist ─► Knowledge Editor
 - [ ] **Belief Surgery** — Directly inject, modify, or suppress beliefs with full audit trail
 - [ ] **Rule Toggles** — Dynamically enable/disable specific inference rules during execution
 - [ ] **Priority Override Panel** — Manually boost or suppress concept priorities to guide attention
-- [ ] **Counterfactual Sandbox** — "What if?" branches that explore alternative reasoning paths without affecting main state
+- [ ] **Counterfactual Sandbox** — "What if?" branches that explore alternative reasoning paths without affecting main
+  state
 - [ ] **Goal Injection Interface** — Natural language goal specification with automatic Narsese translation
 
 ### 1.4 The 10-Minute Brilliance Experience
@@ -457,16 +462,17 @@ Session Persist ─► Knowledge Editor
 
 *How SeNARS differentiates from alternatives.*
 
-| System | Strength | SeNARS Advantage |
-|--------|----------|------------------|
-| **LangChain** | LLM orchestration | We provide *verifiable reasoning*, not just chaining |
-| **AutoGPT** | Task automation | Our reasoning is *debuggable and steerable* |
-| **Prolog/Datalog** | Pure logic | We add *LM creativity* and *learning* |
-| **OpenNARS** | NAL foundation | Modern JS, better UX, active development |
-| **Cyc** | Knowledge scale | *Open source*, accessible, extensible |
-| **Neuro-symbolic hybrids** | Research focus | Practical *developer tooling*, not just papers |
+| System                     | Strength          | SeNARS Advantage                                     |
+|----------------------------|-------------------|------------------------------------------------------|
+| **LangChain**              | LLM orchestration | We provide *verifiable reasoning*, not just chaining |
+| **AutoGPT**                | Task automation   | Our reasoning is *debuggable and steerable*          |
+| **Prolog/Datalog**         | Pure logic        | We add *LM creativity* and *learning*                |
+| **OpenNARS**               | NAL foundation    | Modern JS, better UX, active development             |
+| **Cyc**                    | Knowledge scale   | *Open source*, accessible, extensible                |
+| **Neuro-symbolic hybrids** | Research focus    | Practical *developer tooling*, not just papers       |
 
-**Our Unique Position:** The only system combining NAL symbolic reasoning + LM neural reasoning + observable debugging + preference-based learning.
+**Our Unique Position:** The only system combining NAL symbolic reasoning + LM neural reasoning + observable debugging +
+preference-based learning.
 
 ---
 
@@ -474,15 +480,15 @@ Session Persist ─► Knowledge Editor
 
 *Potential challenges and mitigation strategies.*
 
-| Risk | Probability | Impact | Mitigation |
-|------|-------------|--------|------------|
-| **Complexity overwhelms new users** | High | High | Progressive disclosure UI; 10-min demo focus |
-| **LM integration instability** | Medium | Medium | Circuit breakers; graceful degradation |
-| **Performance at scale** | Medium | High | Early benchmarking; lazy evaluation patterns |
-| **Community doesn't materialize** | Medium | High | Strong docs; personal outreach; show value fast |
-| **Scope creep dilutes focus** | High | Medium | Phase gates; "not now" list; clear priorities |
-| **Key contributor burnout** | Medium | High | Sustainable pace; celebrate wins; share load |
-| **Security vulnerabilities** | Low | High | Regular audits; sandboxing; minimal permissions |
+| Risk                                | Probability | Impact | Mitigation                                      |
+|-------------------------------------|-------------|--------|-------------------------------------------------|
+| **Complexity overwhelms new users** | High        | High   | Progressive disclosure UI; 10-min demo focus    |
+| **LM integration instability**      | Medium      | Medium | Circuit breakers; graceful degradation          |
+| **Performance at scale**            | Medium      | High   | Early benchmarking; lazy evaluation patterns    |
+| **Community doesn't materialize**   | Medium      | High   | Strong docs; personal outreach; show value fast |
+| **Scope creep dilutes focus**       | High        | Medium | Phase gates; "not now" list; clear priorities   |
+| **Key contributor burnout**         | Medium      | High   | Sustainable pace; celebrate wins; share load    |
+| **Security vulnerabilities**        | Low         | High   | Regular audits; sandboxing; minimal permissions |
 
 ---
 

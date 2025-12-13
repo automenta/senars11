@@ -1,13 +1,12 @@
-import { TestNAR } from './src/testing/TestNAR.js';
-import { TermFactory } from './src/term/TermFactory.js';
-import { TermCache } from './src/term/TermCache.js';
+import {TestNAR} from './src/testing/TestNAR.js';
+import {TermFactory} from './src/term/TermFactory.js';
 
 async function verify() {
     console.log('Starting verification...');
 
     // 1. Verify TermFactory and TermCache
     console.log('Verifying TermFactory and TermCache...');
-    const termFactory = new TermFactory({ maxCacheSize: 100 });
+    const termFactory = new TermFactory({maxCacheSize: 100});
     const term1 = termFactory.create('cat');
     const term2 = termFactory.create('cat');
 

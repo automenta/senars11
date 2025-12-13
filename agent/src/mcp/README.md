@@ -45,8 +45,8 @@ Add this to your Claude Desktop config:
 ### Tools
 
 - `reason`: Performs logical inference using SeNARS.
-  - Inputs: `premises` (array of strings), `goal` (optional string)
+    - Inputs: `premises` (array of strings), `goal` (optional string)
 - `memory-query`: Queries SeNARS memory.
-  - Inputs: `query` (string)
+    - Inputs: `query` (string)
 - `execute-tool`: Executes internal SeNARS tools.
-  - Inputs: `toolName` (string), `parameters` (object)
+    - Inputs: `toolName` (string), `parameters` (object)

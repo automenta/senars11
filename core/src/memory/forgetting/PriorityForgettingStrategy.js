@@ -1,4 +1,4 @@
-import { ForgettingStrategy } from './ForgettingStrategy.js';
+import {ForgettingStrategy} from './ForgettingStrategy.js';
 
 /**
  * Forgetting strategy that removes concepts with the lowest activation/priority.
@@ -7,7 +7,7 @@ import { ForgettingStrategy } from './ForgettingStrategy.js';
 export class PriorityForgettingStrategy extends ForgettingStrategy {
     /**
      * Find and return the concept with the lowest activation value.
-     * 
+     *
      * @param {Map} concepts - Map of terms to Concept instances
      * @param {Object} stats - Memory statistics (unused for this strategy)
      * @returns {*|null} The term of the concept with lowest activation, or null if no concepts

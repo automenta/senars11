@@ -1,10 +1,10 @@
 import readline from 'readline';
 import path from 'path';
-import { fileURLToPath } from 'url';
-import { Client } from '../agent/src/mcp/Client.js';
-import { ChatOpenAI } from "@langchain/openai";
-import { ChatOllama } from "@langchain/ollama";
-import { HumanMessage, SystemMessage, ToolMessage } from "@langchain/core/messages";
+import {fileURLToPath} from 'url';
+import {Client} from '../agent/src/mcp/Client.js';
+import {ChatOpenAI} from "@langchain/openai";
+import {ChatOllama} from "@langchain/ollama";
+import {HumanMessage, ToolMessage} from "@langchain/core/messages";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SERVER_SCRIPT = path.resolve(__dirname, '../agent/src/mcp/start-server.js');
@@ -79,15 +79,15 @@ class DemoApp {
         } else if (choice === '2') {
             const model = await ask("Enter Ollama model (default: llama3): ") || "llama3";
             const baseUrl = await ask("Enter Base URL (default: http://localhost:11434): ") || "http://localhost:11434";
-            this.llm = new LangChainWrapper(new ChatOllama({ model, baseUrl }));
+            this.llm = new LangChainWrapper(new ChatOllama({model, baseUrl}));
         } else if (choice === '3') {
             console.log("Configuring OpenAI-compatible provider (e.g. LM Studio, LocalAI, vLLM)...");
             const baseUrl = await ask("Enter Base URL (e.g. http://localhost:1234/v1, leave empty for default): ");
             const apiKey = process.env.OPENAI_API_KEY || await ask("Enter API Key (default: 'not-needed'): ") || "not-needed";
             const model = await ask("Enter model name (default: local-model): ") || "local-model";
 
-            const config = { model, apiKey };
-            if (baseUrl) config.configuration = { baseURL: baseUrl };
+            const config = {model, apiKey};
+            if (baseUrl) config.configuration = {baseURL: baseUrl};
 
             this.llm = new LangChainWrapper(new ChatOpenAI(config));
         } else {
@@ -116,8 +116,7 @@ class DemoApp {
             else if (choice === '4') {
                 await this.runTestSuite();
                 continue;
-            }
-            else if (choice === '5') break;
+            } else if (choice === '5') break;
             else continue;
 
             console.log(`\nUser: ${input}`);
@@ -143,7 +142,9 @@ class DemoApp {
             try {
                 const ping = await this.client.callTool('ping', {});
                 console.log("Result:", ping.content[0].text);
-            } catch (e) { console.log("Ping tool not found or failed"); }
+            } catch (e) {
+                console.log("Ping tool not found or failed");
+            }
 
             // 2. Reason
             console.log("\nTest 2: Reason (Simple Deduction)");
@@ -155,12 +156,12 @@ class DemoApp {
 
             // 3. Memory
             console.log("\nTest 3: Memory Query");
-            const memory = await this.client.callTool('memory-query', { query: 'test_b' });
+            const memory = await this.client.callTool('memory-query', {query: 'test_b'});
             console.log("Result:\n" + memory.content[0].text);
 
             // 4. Code Execution
             console.log("\nTest 4: Code Execution (Math)");
-            const code = await this.client.callTool('evaluate_js', { code: "1 + 1" });
+            const code = await this.client.callTool('evaluate_js', {code: "1 + 1"});
             console.log("Result:\n" + code.content[0].text);
 
             console.log("\n=== Test Suite Completed ===");
@@ -196,7 +197,7 @@ class LocalTransformerLLM {
         const toolDesc = this.tools.map(t => `${t.name}: ${t.description} (Schema: ${JSON.stringify(t.inputSchema)})`).join('\n');
         const systemPrompt = `You are a helpful assistant with access to these tools:\n${toolDesc}\n\nIf you need to use a tool, output JSON: {"tool": "name", "args": {...}}.\nOtherwise just reply text.\n\nUser: ${input}\nAssistant:`;
 
-        const output = await this.generator(systemPrompt, { max_new_tokens: 200, return_full_text: false });
+        const output = await this.generator(systemPrompt, {max_new_tokens: 200, return_full_text: false});
         let text = output[0].generated_text.trim();
 
         console.log(`[Raw Model Output]: ${text}`);
@@ -215,15 +216,18 @@ class LocalTransformerLLM {
 
                     let displayResult = "";
                     if (result.content && result.content[0] && result.content[0].text) {
-                         displayResult = result.content[0].text;
+                        displayResult = result.content[0].text;
                     } else {
-                         displayResult = JSON.stringify(result, null, 2);
+                        displayResult = JSON.stringify(result, null, 2);
                     }
                     console.log(`\n=== SeNARS Output ===\n${displayResult}\n=====================\n`);
 
                     // Feed back to model
                     const followUpPrompt = `${systemPrompt}${text}\nSystem: Tool output: ${displayResult}\nAssistant:`;
-                    const followUp = await this.generator(followUpPrompt, { max_new_tokens: 200, return_full_text: false });
+                    const followUp = await this.generator(followUpPrompt, {
+                        max_new_tokens: 200,
+                        return_full_text: false
+                    });
                     return followUp[0].generated_text.trim();
                 }
             }
@@ -254,7 +258,7 @@ class LangChainWrapper {
         }));
 
         if (this.model.bindTools) {
-             this.model = this.model.bindTools(formattedTools);
+            this.model = this.model.bindTools(formattedTools);
         }
     }
 

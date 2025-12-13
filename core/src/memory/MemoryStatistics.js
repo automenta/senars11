@@ -1,4 +1,4 @@
-import { Statistics } from '../util/Statistics.js';
+import {Statistics} from '../util/Statistics.js';
 
 export class MemoryStatistics {
     static getDetailedStats(memory, stats) {

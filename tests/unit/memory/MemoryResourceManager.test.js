@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach } from '@jest/globals';
-import { MemoryResourceManager } from '../../../core/src/memory/MemoryResourceManager.js';
+import {beforeEach, describe, expect, it} from '@jest/globals';
+import {MemoryResourceManager} from '../../../core/src/memory/MemoryResourceManager.js';
 
 describe('MemoryResourceManager', () => {
     let manager;
@@ -28,7 +28,7 @@ describe('MemoryResourceManager', () => {
 
     describe('updateResourceUsage', () => {
         it('should track resource usage for a concept', () => {
-            const concept = { term: { toString: () => 'A' } };
+            const concept = {term: {toString: () => 'A'}};
 
             manager.updateResourceUsage(concept, 10);
 
@@ -38,7 +38,7 @@ describe('MemoryResourceManager', () => {
         });
 
         it('should accumulate resource usage', () => {
-            const concept = { term: { toString: () => 'A' } };
+            const concept = {term: {toString: () => 'A'}};
 
             manager.updateResourceUsage(concept, 10);
             manager.updateResourceUsage(concept, 5);
@@ -49,7 +49,7 @@ describe('MemoryResourceManager', () => {
         });
 
         it('should track peak resource usage', () => {
-            const concept = { term: { toString: () => 'A' } };
+            const concept = {term: {toString: () => 'A'}};
 
             manager.updateResourceUsage(concept, 50);
             expect(manager.getStats().peakResourceUsage).toBe(50);
@@ -60,7 +60,7 @@ describe('MemoryResourceManager', () => {
         });
 
         it('should not allow negative resource usage for a concept', () => {
-            const concept = { term: { toString: () => 'A' } };
+            const concept = {term: {toString: () => 'A'}};
 
             manager.updateResourceUsage(concept, 10);
             manager.updateResourceUsage(concept, -20); // Try to go negative
@@ -69,8 +69,8 @@ describe('MemoryResourceManager', () => {
         });
 
         it('should track multiple concepts separately', () => {
-            const conceptA = { term: { toString: () => 'A' } };
-            const conceptB = { term: { toString: () => 'B' } };
+            const conceptA = {term: {toString: () => 'A'}};
+            const conceptB = {term: {toString: () => 'B'}};
 
             manager.updateResourceUsage(conceptA, 10);
             manager.updateResourceUsage(conceptB, 20);
@@ -101,7 +101,7 @@ describe('MemoryResourceManager', () => {
         });
 
         it('should return true when resource usage exceeds threshold', () => {
-            const concept = { term: { toString: () => 'A' } };
+            const concept = {term: {toString: () => 'A'}};
             manager.updateResourceUsage(concept, 850); // 850/1000 = 0.85 > 0.8
 
             const memoryStats = {
@@ -127,7 +127,7 @@ describe('MemoryResourceManager', () => {
                 totalTasks: 700     // 0.7
             };
 
-            const concept = { term: { toString: () => 'A' } };
+            const concept = {term: {toString: () => 'A'}};
             manager.updateResourceUsage(concept, 900); // 0.9 (highest)
 
             expect(manager.isUnderMemoryPressure(memoryStats)).toBe(true);
@@ -137,8 +137,9 @@ describe('MemoryResourceManager', () => {
     describe('applyAdaptiveForgetting', () => {
         it('should increment memory pressure event counter', () => {
             const mockMemory = {
-                stats: { totalConcepts: 100 },
-                _applyConceptForgetting: () => { }
+                stats: {totalConcepts: 100},
+                _applyConceptForgetting: () => {
+                }
             };
 
             manager.applyAdaptiveForgetting(mockMemory);
@@ -149,8 +150,10 @@ describe('MemoryResourceManager', () => {
         it('should trigger forgetting based on concept count', () => {
             let forgetCount = 0;
             const mockMemory = {
-                stats: { totalConcepts: 50 },
-                _applyConceptForgetting: () => { forgetCount++; }
+                stats: {totalConcepts: 50},
+                _applyConceptForgetting: () => {
+                    forgetCount++;
+                }
             };
 
             manager.applyAdaptiveForgetting(mockMemory);
@@ -162,8 +165,10 @@ describe('MemoryResourceManager', () => {
         it('should cap forgetting at 5 concepts maximum', () => {
             let forgetCount = 0;
             const mockMemory = {
-                stats: { totalConcepts: 100 }, // Would be 10, but caps at 5
-                _applyConceptForgetting: () => { forgetCount++; }
+                stats: {totalConcepts: 100}, // Would be 10, but caps at 5
+                _applyConceptForgetting: () => {
+                    forgetCount++;
+                }
             };
 
             manager.applyAdaptiveForgetting(mockMemory);
@@ -174,9 +179,9 @@ describe('MemoryResourceManager', () => {
 
     describe('cleanup', () => {
         it('should remove resource tracking for non-existent concepts', () => {
-            const conceptA = { term: { toString: () => 'A' } };
-            const conceptB = { term: { toString: () => 'B' } };
-            const conceptC = { term: { toString: () => 'C' } };
+            const conceptA = {term: {toString: () => 'A'}};
+            const conceptB = {term: {toString: () => 'B'}};
+            const conceptC = {term: {toString: () => 'C'}};
 
             manager.updateResourceUsage(conceptA, 10);
             manager.updateResourceUsage(conceptB, 20);
@@ -198,7 +203,7 @@ describe('MemoryResourceManager', () => {
 
     describe('getMemoryPressureStats', () => {
         it('should provide detailed pressure statistics', () => {
-            const concept = { term: { toString: () => 'A' } };
+            const concept = {term: {toString: () => 'A'}};
             manager.updateResourceUsage(concept, 500);
 
             const memoryStats = {
@@ -221,13 +226,13 @@ describe('MemoryResourceManager', () => {
 
     describe('getConceptsByResourceUsage', () => {
         it('should return concepts sorted by resource usage descending', () => {
-            const termA = { toString: () => 'A' };
-            const termB = { toString: () => 'B' };
-            const termC = { toString: () => 'C' };
+            const termA = {toString: () => 'A'};
+            const termB = {toString: () => 'B'};
+            const termC = {toString: () => 'C'};
 
-            const conceptA = { term: termA };
-            const conceptB = { term: termB };
-            const conceptC = { term: termC };
+            const conceptA = {term: termA};
+            const conceptB = {term: termB};
+            const conceptC = {term: termC};
 
             manager.updateResourceUsage(conceptA, 10);
             manager.updateResourceUsage(conceptB, 30);
@@ -247,11 +252,11 @@ describe('MemoryResourceManager', () => {
         });
 
         it('should return concepts sorted by resource usage ascending', () => {
-            const termA = { toString: () => 'A' };
-            const termB = { toString: () => 'B' };
+            const termA = {toString: () => 'A'};
+            const termB = {toString: () => 'B'};
 
-            const conceptA = { term: termA };
-            const conceptB = { term: termB };
+            const conceptA = {term: termA};
+            const conceptB = {term: termB};
 
             manager.updateResourceUsage(conceptA, 10);
             manager.updateResourceUsage(conceptB, 30);
@@ -270,7 +275,7 @@ describe('MemoryResourceManager', () => {
 
     describe('serialization', () => {
         it('should get and set resource tracker', () => {
-            const concept = { term: { toString: () => 'A' } };
+            const concept = {term: {toString: () => 'A'}};
             manager.updateResourceUsage(concept, 100);
 
             const tracker = manager.getResourceTracker();
@@ -279,7 +284,7 @@ describe('MemoryResourceManager', () => {
             const newManager = new MemoryResourceManager(config);
             newManager.setResourceTracker(tracker);
 
-            expect(newManager.getResourceUsage({ toString: () => 'A' })).toBe(100);
+            expect(newManager.getResourceUsage({toString: () => 'A'})).toBe(100);
             expect(newManager.getStats().totalResourceUsage).toBe(100);
         });
     });

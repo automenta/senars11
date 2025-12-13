@@ -9,6 +9,7 @@
 **Everything you've built is scaffolding. The future requires burning it down.**
 
 The current trajectory assumes:
+
 - We must implement NAL rules manually
 - We must design reasoning strategies ourselves
 - We must build complex UIs for transparency
@@ -22,7 +23,8 @@ The current trajectory assumes:
 
 ### Shift 1: From Implementation to Synthesis
 
-**Current Reality**: You're hand-coding NAL rules, memory systems, focus management, and inference pipelines in JavaScript.
+**Current Reality**: You're hand-coding NAL rules, memory systems, focus management, and inference pipelines in
+JavaScript.
 
 **Paradigm Leap**: Let AI write the reasoner.
 
@@ -44,6 +46,7 @@ The current trajectory assumes:
 ```
 
 **How**:
+
 1. Express NAL rules in a formal DSL or annotated natural language
 2. Use LLMs to synthesize TypeScript/Rust implementations
 3. Verify with property-based tests (also LLM-generated)
@@ -56,7 +59,8 @@ The current trajectory assumes:
 
 ### Shift 2: From Custom UI to Universal Protocol
 
-**Current Reality**: Building a custom "Cognitive IDE" with force-directed graphs, temporal scrubbers, breakpoint systems.
+**Current Reality**: Building a custom "Cognitive IDE" with force-directed graphs, temporal scrubbers, breakpoint
+systems.
 
 **Paradigm Leap**: Expose reasoning as a standard protocol; let existing tools visualize.
 
@@ -86,13 +90,13 @@ The current trajectory assumes:
 
 **Standard Protocols to Implement**:
 
-| Protocol | What It Provides | Effort |
-|----------|------------------|--------|
-| **DAP** (Debug Adapter Protocol) | Step/Break/Inspect in any debugger | 1 week |
-| **OpenTelemetry** | Distributed tracing, metrics, logging | 3 days |
-| **LSP** (Language Server Protocol) | Narsese editing in any editor | 1 week |
-| **GraphQL Subscriptions** | Real-time knowledge graph streaming | 3 days |
-| **JSON-RPC 2.0 + WebSocket** | Universal RPC for any client | 2 days |
+| Protocol                           | What It Provides                      | Effort |
+|------------------------------------|---------------------------------------|--------|
+| **DAP** (Debug Adapter Protocol)   | Step/Break/Inspect in any debugger    | 1 week |
+| **OpenTelemetry**                  | Distributed tracing, metrics, logging | 3 days |
+| **LSP** (Language Server Protocol) | Narsese editing in any editor         | 1 week |
+| **GraphQL Subscriptions**          | Real-time knowledge graph streaming   | 3 days |
+| **JSON-RPC 2.0 + WebSocket**       | Universal RPC for any client          | 2 days |
 
 **Result**: Zero custom UI code. Infinite visualization options.
 
@@ -134,12 +138,14 @@ The current trajectory assumes:
 ```
 
 **Kernel Responsibilities** (immutable, ~500 LOC):
+
 - Canonical Term representation (structural hashing, normalization)
 - Async message passing / event bus
 - Module discovery and hot-reloading
 - Capability-based security
 
 **Everything Else** (hot-loadable, versioned, swappable):
+
 - NAL rule sets
 - Memory backends (in-memory, SQLite, DuckDB, vector DB)
 - Reasoning strategies
@@ -147,6 +153,7 @@ The current trajectory assumes:
 - LM orchestration
 
 **Benefits**:
+
 - **Forkability**: Fork and replace any module without touching kernel
 - **Performance**: Compile modules to WASM; kernel stays minimal
 - **Evolution**: Rules and strategies evolve without breaking core
@@ -158,25 +165,25 @@ The current trajectory assumes:
 
 ### The 2025-2030 Compute Landscape
 
-| Trend | Implication for SeNARS |
-|-------|------------------------|
-| **LLM as Compiler** | Stop hand-coding; describe, synthesize, verify |
-| **WASM Everywhere** | Single binary runs in browser, Node, Cloudflare, Deno |
-| **Edge AI** | Reasoning runs locally on phone/laptop, no cloud needed |
-| **Agentic Standards** | MCP, AgentProtocol will unify agent communication |
-| **Vector Everything** | Hybrid retrieval: semantic + symbolic is table stakes |
-| **Observability First** | OpenTelemetry is the universal tracing language |
+| Trend                   | Implication for SeNARS                                  |
+|-------------------------|---------------------------------------------------------|
+| **LLM as Compiler**     | Stop hand-coding; describe, synthesize, verify          |
+| **WASM Everywhere**     | Single binary runs in browser, Node, Cloudflare, Deno   |
+| **Edge AI**             | Reasoning runs locally on phone/laptop, no cloud needed |
+| **Agentic Standards**   | MCP, AgentProtocol will unify agent communication       |
+| **Vector Everything**   | Hybrid retrieval: semantic + symbolic is table stakes   |
+| **Observability First** | OpenTelemetry is the universal tracing language         |
 
 ### Specific Tech Bets
 
-| Technology | Use Case | Why Now |
-|------------|----------|---------|
-| **Rust + wasm-pack** | Compile kernel to WASM | Performance + safety + universal |
-| **Effect-TS / Zod** | Type-safe, composable effects | Better DX than raw JS |
-| **DuckDB-WASM** | Analytical queries on knowledge | SQL over reasoning traces |
-| **Qdrant/LanceDB** | Vector similarity for terms | Semantic layers done right |
-| **tRPC / Hono** | Type-safe APIs | Better than raw HTTP |
-| **Chumsky/pest** | Parser combinators in Rust | Generate parsers from specs |
+| Technology           | Use Case                        | Why Now                          |
+|----------------------|---------------------------------|----------------------------------|
+| **Rust + wasm-pack** | Compile kernel to WASM          | Performance + safety + universal |
+| **Effect-TS / Zod**  | Type-safe, composable effects   | Better DX than raw JS            |
+| **DuckDB-WASM**      | Analytical queries on knowledge | SQL over reasoning traces        |
+| **Qdrant/LanceDB**   | Vector similarity for terms     | Semantic layers done right       |
+| **tRPC / Hono**      | Type-safe APIs                  | Better than raw HTTP             |
+| **Chumsky/pest**     | Parser combinators in Rust      | Generate parsers from specs      |
 
 ---
 
@@ -184,34 +191,34 @@ The current trajectory assumes:
 
 ### Month 1: The Microkernel
 
-| Week | Focus | Deliverable |
-|------|-------|-------------|
-| 1 | Kernel extraction | 500-line core: Terms, Events, Loader |
-| 2 | Module system | Hot-load any NAL rule set as ESM/WASM |
-| 3 | Protocol adapters | MCP + JSON-RPC over stdio and WebSocket |
-| 4 | Memory abstraction | Pluggable backends: in-memory, SQLite, DuckDB |
+| Week | Focus              | Deliverable                                   |
+|------|--------------------|-----------------------------------------------|
+| 1    | Kernel extraction  | 500-line core: Terms, Events, Loader          |
+| 2    | Module system      | Hot-load any NAL rule set as ESM/WASM         |
+| 3    | Protocol adapters  | MCP + JSON-RPC over stdio and WebSocket       |
+| 4    | Memory abstraction | Pluggable backends: in-memory, SQLite, DuckDB |
 
 **Exit Criteria**: Different memory backends, different rule sets, same kernel.
 
 ### Month 2: AI-Synthesized Everything
 
-| Week | Focus | Deliverable |
-|------|-------|-------------|
-| 1 | NAL DSL | Formal spec for NAL rules in YAML/TOML |
-| 2 | LLM compilation | Claude generates TypeScript from specs |
-| 3 | Property verification | Fast-check tests generated from invariants |
-| 4 | Continuous synthesis | AI refactors modules on every change |
+| Week | Focus                 | Deliverable                                |
+|------|-----------------------|--------------------------------------------|
+| 1    | NAL DSL               | Formal spec for NAL rules in YAML/TOML     |
+| 2    | LLM compilation       | Claude generates TypeScript from specs     |
+| 3    | Property verification | Fast-check tests generated from invariants |
+| 4    | Continuous synthesis  | AI refactors modules on every change       |
 
 **Exit Criteria**: NAL rules described in 200 lines of spec, compiled to 2000 lines of verified TypeScript.
 
 ### Month 3: Protocol-Native Transparency
 
-| Week | Focus | Deliverable |
-|------|-------|-------------|
-| 1 | DAP implementation | VS Code debugs reasoning with breakpoints |
-| 2 | OpenTelemetry spans | Jaeger shows reasoning traces automatically |
-| 3 | GraphQL subscriptions | Real-time knowledge graph in any client |
-| 4 | LSP for Narsese | Syntax highlighting, completion, diagnostics |
+| Week | Focus                 | Deliverable                                  |
+|------|-----------------------|----------------------------------------------|
+| 1    | DAP implementation    | VS Code debugs reasoning with breakpoints    |
+| 2    | OpenTelemetry spans   | Jaeger shows reasoning traces automatically  |
+| 3    | GraphQL subscriptions | Real-time knowledge graph in any client      |
+| 4    | LSP for Narsese       | Syntax highlighting, completion, diagnostics |
 
 **Exit Criteria**: Full debugging and observability with zero custom UI code.
 
@@ -221,13 +228,13 @@ The current trajectory assumes:
 
 **Delete, don't iterate.** These are time sinks that protocol-native transparency obsoletes:
 
-| Stop | Why |
-|------|-----|
+| Stop                                    | Why                                                |
+|-----------------------------------------|----------------------------------------------------|
 | Building custom force-directed graph UI | Use Obsidian, Neo4j Browser, or any GraphQL client |
-| Designing temporal scrubbers | OpenTelemetry Jaeger has trace timelines built-in |
-| Implementing watch expressions | DAP gives you variable watches in VS Code |
-| Creating belief surgery UIs | API endpoints + any REST client |
-| Crafting tutorial mode | LSP + good docs + example workspaces |
+| Designing temporal scrubbers            | OpenTelemetry Jaeger has trace timelines built-in  |
+| Implementing watch expressions          | DAP gives you variable watches in VS Code          |
+| Creating belief surgery UIs             | API endpoints + any REST client                    |
+| Crafting tutorial mode                  | LSP + good docs + example workspaces               |
 
 **Freed Resources**: ~40% of current roadmap becomes unnecessary.
 
@@ -235,13 +242,13 @@ The current trajectory assumes:
 
 ## V. The New Success Metrics
 
-| Old Metric | New Metric | Why Better |
-|------------|------------|------------|
-| Lines of code | Lines of *specification* | Measure what's necessary, not what's written |
-| Test coverage % | Properties verified | Correctness, not coverage theater |
-| UI polish rating | Protocol compatibility score | Integration surface, not visuals |
-| Features shipped | Modules contributed (by community) | Ecosystem health, not core bloat |
-| "10-minute brilliance" | "1-minute working" | Lower barrier, faster value |
+| Old Metric             | New Metric                         | Why Better                                   |
+|------------------------|------------------------------------|----------------------------------------------|
+| Lines of code          | Lines of *specification*           | Measure what's necessary, not what's written |
+| Test coverage %        | Properties verified                | Correctness, not coverage theater            |
+| UI polish rating       | Protocol compatibility score       | Integration surface, not visuals             |
+| Features shipped       | Modules contributed (by community) | Ecosystem health, not core bloat             |
+| "10-minute brilliance" | "1-minute working"                 | Lower barrier, faster value                  |
 
 ---
 
@@ -309,9 +316,11 @@ docker run jaegertracing/all-in-one
 ## VII. Developer Experience Revolution
 
 ### Current DX (from package.json)
+
 27 npm scripts, multiple workspaces, complex test configurations.
 
 ### New DX
+
 ```bash
 # Everything you need
 npx @senars/cli init    # Scaffold a new reasoner
@@ -345,42 +354,42 @@ npx @senars/cli verify  # Auto-generates and runs tests
 
 ### For Developers
 
-| What They Get | How We Deliver |
-|---------------|----------------|
+| What They Get                         | How We Deliver                            |
+|---------------------------------------|-------------------------------------------|
 | **Joy**: work on interesting problems | AI writes boilerplate; humans write specs |
-| **Speed**: ship in hours, not weeks | Protocol compliance = instant ecosystem |
-| **Pride**: code that matters | 500-line kernel, not 50k-line sprawl |
-| **Growth**: skills that transfer | Standard protocols, not proprietary APIs |
+| **Speed**: ship in hours, not weeks   | Protocol compliance = instant ecosystem   |
+| **Pride**: code that matters          | 500-line kernel, not 50k-line sprawl      |
+| **Growth**: skills that transfer      | Standard protocols, not proprietary APIs  |
 
 ### For Users
 
-| What They Get | How We Deliver |
-|---------------|----------------|
-| **Transparency**: see every step | OpenTelemetry → any observability tool |
-| **Control**: steer reasoning | DAP breakpoints, API injection |
-| **Integration**: works with their tools | LSP, GraphQL, MCP |
-| **Privacy**: runs anywhere | WASM in browser, no cloud required |
+| What They Get                           | How We Deliver                         |
+|-----------------------------------------|----------------------------------------|
+| **Transparency**: see every step        | OpenTelemetry → any observability tool |
+| **Control**: steer reasoning            | DAP breakpoints, API injection         |
+| **Integration**: works with their tools | LSP, GraphQL, MCP                      |
+| **Privacy**: runs anywhere              | WASM in browser, no cloud required     |
 
 ### For Society
 
-| What They Get | How We Deliver |
-|---------------|----------------|
-| **Trust**: verifiable AI reasoning | Every inference has a traceable derivation |
-| **Access**: powerful tools for all | Local-first, open source, no API keys needed |
+| What They Get                            | How We Deliver                               |
+|------------------------------------------|----------------------------------------------|
+| **Trust**: verifiable AI reasoning       | Every inference has a traceable derivation   |
+| **Access**: powerful tools for all       | Local-first, open source, no API keys needed |
 | **Safety**: bounded, inspectable systems | Capability-based security, sandboxed modules |
-| **Progress**: compound contributions | Module ecosystem grows beyond core team |
+| **Progress**: compound contributions     | Module ecosystem grows beyond core team      |
 
 ---
 
 ## IX. Risk Mitigation for Radical Change
 
-| Risk | Probability | Mitigation |
-|------|-------------|------------|
-| **AI synthesis unreliable** | Medium | Property-based verification; human review for specs |
-| **Protocol overhead** | Low | Protocols are thin; WASM is fast |
-| **Community doesn't adopt modules** | Medium | Seed with 10 high-quality modules; excellent docs |
-| **Standards change** | Low | Kernel is protocol-agnostic; adapters are swappable |
-| **Existing code investment lost** | High | Extract specifications from current implementation |
+| Risk                                | Probability | Mitigation                                          |
+|-------------------------------------|-------------|-----------------------------------------------------|
+| **AI synthesis unreliable**         | Medium      | Property-based verification; human review for specs |
+| **Protocol overhead**               | Low         | Protocols are thin; WASM is fast                    |
+| **Community doesn't adopt modules** | Medium      | Seed with 10 high-quality modules; excellent docs   |
+| **Standards change**                | Low         | Kernel is protocol-agnostic; adapters are swappable |
+| **Existing code investment lost**   | High        | Extract specifications from current implementation  |
 
 ---
 
@@ -395,13 +404,13 @@ npx @senars/cli verify  # Auto-generates and runs tests
 
 ### What Changes Everything
 
-| From | To |
-|------|-----|
-| Building software | Composing capabilities |
-| Hand-coding rules | Specifying invariants |
-| Custom visualization | Standard protocols |
-| Monolithic repo | Microkernel + modules |
-| Roadmap of features | Ecosystem of contributions |
+| From                 | To                         |
+|----------------------|----------------------------|
+| Building software    | Composing capabilities     |
+| Hand-coding rules    | Specifying invariants      |
+| Custom visualization | Standard protocols         |
+| Monolithic repo      | Microkernel + modules      |
+| Roadmap of features  | Ecosystem of contributions |
 
 ---
 
@@ -420,21 +429,25 @@ Before any work, ask:
 ## XII. The 1-Year Horizon
 
 ### By Q2 2025: The Microkernel
+
 - 500-line frozen kernel in TypeScript
 - 5 reference modules (NAL, Memory, LM, Protocols)
 - Working DAP + MCP + OpenTelemetry integration
 
 ### By Q4 2025: AI-Native Development
+
 - NAL rules fully specified in DSL
 - LLM-synthesized implementations with property verification
 - Community contributes 20+ modules
 
 ### By Q2 2026: Protocol Standard
+
 - SeNARS DAP/OpenTelemetry patterns adopted by other reasoners
 - "Transparent Reasoning Protocol" RFC draft
 - First commercial deployments using module ecosystem
 
 ### By Q4 2026: Cognitive Interoperability
+
 - Multiple reasoning backends share protocols
 - Federated knowledge across instances
 - SeNARS as reference implementation for transparent AI

@@ -7,11 +7,13 @@
 
 ## The Radical Insight
 
-SeNARS is over-engineered for emergence. The README describes a sophisticated cognitive architecture with pipelines, layers, strategies, consolidation mechanisms, and federated engines—all waiting for "intelligence to emerge."
+SeNARS is over-engineered for emergence. The README describes a sophisticated cognitive architecture with pipelines,
+layers, strategies, consolidation mechanisms, and federated engines—all waiting for "intelligence to emerge."
 
 **But emergence doesn't need infrastructure. It needs iteration.**
 
-The single most valuable thing SeNARS can do *right now* is **run reasoning loops faster and expose them to humans/LLMs for feedback**. Everything else is premature optimization.
+The single most valuable thing SeNARS can do *right now* is **run reasoning loops faster and expose them to humans/LLMs
+for feedback**. Everything else is premature optimization.
 
 ---
 
@@ -22,15 +24,18 @@ The single most valuable thing SeNARS can do *right now* is **run reasoning loop
 **Delete complexity. Keep the heartbeat.**
 
 The entire value of SeNARS fits in ~500 lines:
+
 - **Term** (immutable knowledge atoms)
 - **Task** (what to think about)
 - **Truth** (how confident)
 - **A rule that fires** (deduction, abduction—pick one)
 - **A loop that runs it**
 
-Everything else—Memory consolidation, Focus sets, Bag strategies, Layer systems, Event buses, Circuit breakers—is infrastructure for a problem you don't have yet.
+Everything else—Memory consolidation, Focus sets, Bag strategies, Layer systems, Event buses, Circuit breakers—is
+infrastructure for a problem you don't have yet.
 
-**Action**: Create `src/core.minimal.js`—a single file containing the complete reasoning loop. No dependencies except Node.js. If it can't reason in 100 lines, question whether the abstractions are helping.
+**Action**: Create `src/core.minimal.js`—a single file containing the complete reasoning loop. No dependencies except
+Node.js. If it can't reason in 100 lines, question whether the abstractions are helping.
 
 ```javascript
 // Target API (5 lines to cognition):
@@ -47,7 +52,9 @@ console.log(nar.step()); // [{ term: "(robin --> animal)", truth: {...} }]
 
 **The LLM doesn't enhance reasoning. The LLM IS the reasoning.**
 
-Stop treating LLMs as "enhancers" of symbolic reasoning via async rules and circuit breakers. Modern LLMs (GPT-4o, Claude 3.5, Gemini 2.0) are better at:
+Stop treating LLMs as "enhancers" of symbolic reasoning via async rules and circuit breakers. Modern LLMs (GPT-4o,
+Claude 3.5, Gemini 2.0) are better at:
+
 - Parsing natural language into logical forms
 - Evaluating plausibility of inferences
 - Selecting which rule to apply next
@@ -67,7 +74,8 @@ What is the most logical inference? Respond with Narsese.`;
 }
 ```
 
-This inverts the architecture: **NAL becomes the type system for LLM outputs**, not the other way around. The LLM generates candidate inferences; NAL validates their logical structure.
+This inverts the architecture: **NAL becomes the type system for LLM outputs**, not the other way around. The LLM
+generates candidate inferences; NAL validates their logical structure.
 
 ---
 
@@ -75,7 +83,8 @@ This inverts the architecture: **NAL becomes the type system for LLM outputs**, 
 
 **Thought is a stream, not a request-response.**
 
-The architecture describes "Stream Reasoner" but the API is still `step()` and `input()`. Real cognitive systems are continuous.
+The architecture describes "Stream Reasoner" but the API is still `step()` and `input()`. Real cognitive systems are
+continuous.
 
 **Action**: Expose reasoning as an async iterator:
 
@@ -97,6 +106,7 @@ for await (const thought of reason([...])) {
 ```
 
 This enables:
+
 - **Real-time UI** (React/Svelte can bind directly to the stream)
 - **Human-in-the-loop** (inject beliefs mid-reasoning)
 - **LLM collaboration** (LLM and NAL reason in parallel streams, merge results)
@@ -107,7 +117,8 @@ This enables:
 
 **The system should learn from every interaction.**
 
-Every time a human or LLM evaluates an inference, that's training data. The README mentions RLFP but it's complex. Simpler:
+Every time a human or LLM evaluates an inference, that's training data. The README mentions RLFP but it's complex.
+Simpler:
 
 **Action**: Create `src/learning.js`:
 
@@ -122,7 +133,8 @@ function learn(inference, feedback) {
 }
 ```
 
-This is **meta-learning**: the system learns which of its own reasoning patterns work. No neural networks, no complex training—just truth value revision applied to rules instead of beliefs.
+This is **meta-learning**: the system learns which of its own reasoning patterns work. No neural networks, no complex
+training—just truth value revision applied to rules instead of beliefs.
 
 ---
 
@@ -130,7 +142,8 @@ This is **meta-learning**: the system learns which of its own reasoning patterns
 
 **SeNARS should be a tool that LLMs already know how to use.**
 
-The Model Context Protocol (MCP) is the emerging standard for LLM-tool interaction. SeNARS should be an MCP server, not a standalone application.
+The Model Context Protocol (MCP) is the emerging standard for LLM-tool interaction. SeNARS should be an MCP server, not
+a standalone application.
 
 **Action**: Create `src/mcp-server.js`:
 
@@ -157,7 +170,8 @@ export const tools = [
 ];
 ```
 
-Now Claude, GPT-4, or any MCP-compatible agent can use SeNARS as a **persistent reasoning memory**. The LLM provides the natural language interface; SeNARS provides the logical backbone.
+Now Claude, GPT-4, or any MCP-compatible agent can use SeNARS as a **persistent reasoning memory**. The LLM provides the
+natural language interface; SeNARS provides the logical backbone.
 
 ---
 
@@ -165,14 +179,14 @@ Now Claude, GPT-4, or any MCP-compatible agent can use SeNARS as a **persistent 
 
 ### Use What Exists
 
-| Need | Don't Build | Use This |
-|------|-------------|----------|
-| Parsing | Custom Narsese parser | PEG.js or tree-sitter (10 min setup) |
-| Persistence | Custom Memory/Consolidation | SQLite + JSON columns (5 min setup) |
-| Embeddings | EmbeddingLayer | OpenAI Embeddings API (2 lines) |
-| UI | Custom TUI/Web UI | Gradio (Python) or Vercel AI SDK |
-| Visualization | Custom graph layouts | Observable Plot or D3.js |
-| Distribution | Custom node protocol | NATS or Redis Streams |
+| Need          | Don't Build                 | Use This                             |
+|---------------|-----------------------------|--------------------------------------|
+| Parsing       | Custom Narsese parser       | PEG.js or tree-sitter (10 min setup) |
+| Persistence   | Custom Memory/Consolidation | SQLite + JSON columns (5 min setup)  |
+| Embeddings    | EmbeddingLayer              | OpenAI Embeddings API (2 lines)      |
+| UI            | Custom TUI/Web UI           | Gradio (Python) or Vercel AI SDK     |
+| Visualization | Custom graph layouts        | Observable Plot or D3.js             |
+| Distribution  | Custom node protocol        | NATS or Redis Streams                |
 
 ---
 
@@ -181,6 +195,7 @@ Now Claude, GPT-4, or any MCP-compatible agent can use SeNARS as a **persistent 
 ### Day 7 Demo
 
 A working system where:
+
 1. **Human** types: "Birds can fly. Penguins are birds. Can penguins fly?"
 2. **LLM** translates to Narsese, feeds to SeNARS
 3. **SeNARS** runs 3 reasoning steps, produces `(penguin --> fly) {0.9, 0.4}`
@@ -195,13 +210,13 @@ A working system where:
 
 ## Anti-Patterns to Avoid
 
-| Trap | Why It Feels Productive | Why It's Not |
-|------|-------------------------|--------------|
-| "Optimize the Bag sampler" | Engineering challenge | Nobody uses it yet |
-| "Add more NAL rules" | Completeness feels good | 3 rules cover 80% of reasoning |
-| "Build visualization" | Demo-able | Visualization of nothing is nothing |
-| "Implement RLFP framework" | Sounds advanced | Simpler feedback loops work first |
-| "Add distributed reasoning" | Scale feels necessary | You have 0 users, scale is irrelevant |
+| Trap                        | Why It Feels Productive | Why It's Not                          |
+|-----------------------------|-------------------------|---------------------------------------|
+| "Optimize the Bag sampler"  | Engineering challenge   | Nobody uses it yet                    |
+| "Add more NAL rules"        | Completeness feels good | 3 rules cover 80% of reasoning        |
+| "Build visualization"       | Demo-able               | Visualization of nothing is nothing   |
+| "Implement RLFP framework"  | Sounds advanced         | Simpler feedback loops work first     |
+| "Add distributed reasoning" | Scale feels necessary   | You have 0 users, scale is irrelevant |
 
 ---
 
@@ -209,6 +224,7 @@ A working system where:
 
 **Not**: Lines of code, test coverage, component modularity  
 **Yes**:
+
 - [ ] Can I get an answer in < 100ms?
 - [ ] Can an LLM use SeNARS without custom integration?
 - [ ] Does a reasoning session produce useful output in 5 minutes?

@@ -1,7 +1,7 @@
-import { Client as McpClient } from "@modelcontextprotocol/sdk/client/index.js";
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { EventEmitter } from 'events';
-import { Safety } from './Safety.js';
+import {Client as McpClient} from "@modelcontextprotocol/sdk/client/index.js";
+import {StdioClientTransport} from "@modelcontextprotocol/sdk/client/stdio.js";
+import {EventEmitter} from 'events';
+import {Safety} from './Safety.js';
 
 export class Client extends EventEmitter {
     constructor(options = {}) {

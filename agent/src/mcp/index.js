@@ -41,7 +41,7 @@ export class MCPManager {
     }
 
     async connectAsClient(command, args = []) {
-        this.client = new Client({ command, args });
+        this.client = new Client({command, args});
         await this.client.connect();
         return this.client;
     }

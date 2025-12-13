@@ -8,7 +8,8 @@
 
 **SeNARS exists to prove that artificial intelligence can be both powerful and transparent.**
 
-We are building the cognitive substrate—the foundational layer from which an ecosystem of trustworthy, steerable AI systems will emerge. This is not merely software; it is the seed for a new kind of thinking.
+We are building the cognitive substrate—the foundational layer from which an ecosystem of trustworthy, steerable AI
+systems will emerge. This is not merely software; it is the seed for a new kind of thinking.
 
 > *"The goal is not to build a machine that thinks, but to build a machine that helps us think."*
 
@@ -29,13 +30,13 @@ We are building the cognitive substrate—the foundational layer from which an e
 
 ### Immediate Focus (0-3 Months): The Cognitive IDE Prototype
 
-| Priority | Objective | Success Metric |
-|----------|-----------|----------------|
-| P0 | Flawless setup experience | `npm run dev` works on fresh clone |
-| P0 | Interactive Graph UI | Force-directed concept visualization live |
-| P0 | Debugger controls | Run/Pause/Step connected to reasoning cycle |
-| P1 | Linked panel system | Selection syncs Task List, Trace, Inspector |
-| P1 | "Agent Debugging" demo | Gasoline/water scenario end-to-end |
+| Priority | Objective                 | Success Metric                              |
+|----------|---------------------------|---------------------------------------------|
+| P0       | Flawless setup experience | `npm run dev` works on fresh clone          |
+| P0       | Interactive Graph UI      | Force-directed concept visualization live   |
+| P0       | Debugger controls         | Run/Pause/Step connected to reasoning cycle |
+| P1       | Linked panel system       | Selection syncs Task List, Trace, Inspector |
+| P1       | "Agent Debugging" demo    | Gasoline/water scenario end-to-end          |
 
 ### Near-Term (3-6 Months): The Researcher's Sandbox
 
@@ -348,13 +349,13 @@ We are building the cognitive substrate—the foundational layer from which an e
 
 ### 10.2 Success Metrics
 
-| Category | Metric |
-|----------|--------|
-| Technical | Autonomy score, self-improvement rate, reasoning efficiency |
-| User Experience | Goal achievement rate, time-to-insight, satisfaction |
-| Community | Contributors, forks, dependent projects, discussion activity |
-| Impact | Citations, deployments, testimonials |
-| Financial | Revenue, runway, cost per user, growth rate |
+| Category        | Metric                                                       |
+|-----------------|--------------------------------------------------------------|
+| Technical       | Autonomy score, self-improvement rate, reasoning efficiency  |
+| User Experience | Goal achievement rate, time-to-insight, satisfaction         |
+| Community       | Contributors, forks, dependent projects, discussion activity |
+| Impact          | Citations, deployments, testimonials                         |
+| Financial       | Revenue, runway, cost per user, growth rate                  |
 
 ---
 
@@ -424,15 +425,15 @@ We are building the cognitive substrate—the foundational layer from which an e
 
 ## XIII. Risk Management
 
-| Risk | Probability | Impact | Mitigation |
-|------|-------------|--------|------------|
-| Complexity overwhelms new users | High | High | Progressive disclosure; 10-min demo focus |
-| LM integration instability | Medium | Medium | Circuit breakers; graceful degradation |
-| Performance at scale | Medium | High | Early benchmarking; lazy evaluation |
-| Community doesn't materialize | Medium | High | Strong docs; personal outreach; show value fast |
-| Scope creep dilutes focus | High | Medium | Phase gates; "not now" list; clear priorities |
-| Key contributor burnout | Medium | High | Sustainable pace; celebrate wins; share load |
-| Security vulnerabilities | Low | High | Regular audits; sandboxing; minimal permissions |
+| Risk                            | Probability | Impact | Mitigation                                      |
+|---------------------------------|-------------|--------|-------------------------------------------------|
+| Complexity overwhelms new users | High        | High   | Progressive disclosure; 10-min demo focus       |
+| LM integration instability      | Medium      | Medium | Circuit breakers; graceful degradation          |
+| Performance at scale            | Medium      | High   | Early benchmarking; lazy evaluation             |
+| Community doesn't materialize   | Medium      | High   | Strong docs; personal outreach; show value fast |
+| Scope creep dilutes focus       | High        | Medium | Phase gates; "not now" list; clear priorities   |
+| Key contributor burnout         | Medium      | High   | Sustainable pace; celebrate wins; share load    |
+| Security vulnerabilities        | Low         | High   | Regular audits; sandboxing; minimal permissions |
 
 ---
 

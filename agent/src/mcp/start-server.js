@@ -1,5 +1,5 @@
-import { NAR } from '@senars/core';
-import { Server } from './Server.js';
+import {NAR} from '@senars/core';
+import {Server} from './Server.js';
 
 async function main() {
     // Initialize NAR with advanced config
@@ -23,7 +23,7 @@ async function main() {
     await nar.start();
 
     // Initialize and start MCP Server
-    const server = new Server({ nar });
+    const server = new Server({nar});
     await server.start();
 
     // Handle cleanup

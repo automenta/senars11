@@ -1282,7 +1282,8 @@ improvement.
 
 ## Summary
 
-SeNARS is a sophisticated hybrid neuro-symbolic reasoning system that combines the precision of formal logic with the flexibility of neural language models. Built on immutable data structures and a component-based architecture, it
+SeNARS is a sophisticated hybrid neuro-symbolic reasoning system that combines the precision of formal logic with the
+flexibility of neural language models. Built on immutable data structures and a component-based architecture, it
 provides an observable platform for advanced AI reasoning with:
 
 - **Hybrid Intelligence**: Seamless integration of symbolic (NAL) and neural (LM) reasoning
@@ -1294,11 +1295,12 @@ provides an observable platform for advanced AI reasoning with:
 The system's architecture enables compound intelligence where each addition enhances overall capabilities, making it
 suitable for research, education, and production applications requiring transparent and adaptable AI reasoning.
 
-
 ## References
+
 - Wang, P. (2013). _Non-Axiomatic Logic: A Model of Intelligent Reasoning_. World Scientific.
 - OpenNARS https://github.com/opennars
 - NARchy http://github.com/narchy
 - NARS-GPT https://github.com/opennars/NARS-GPT
-- Hammer, P. and Lofthouse, T. (2020). ANSNA: An attention-driven non-axiomatic semantic navigation architecture. _AGI_ https://github.com/patham9/ANSNA
+- Hammer, P. and Lofthouse, T. (2020). ANSNA: An attention-driven non-axiomatic semantic navigation architecture.
+  _AGI_ https://github.com/patham9/ANSNA
 - NARCES - https://www.proquest.com/openview/65226a4235b1b3f45a155267d08e7994/1?pq-origsite=gscholar&cbl=18750

@@ -30,21 +30,61 @@ export class Term {
         return freeze(this);
     }
 
-    get type() { return this._type; }
-    get name() { return this._name; }
-    get operator() { return this._operator; }
-    get components() { return this._components; }
-    get complexity() { return this._complexity; }
-    get hash() { return this._hash; }
-    get id() { return this._id; }
-    get semanticType() { return this._semanticType; }
+    get type() {
+        return this._type;
+    }
 
-    get isAtomic() { return this._type === TermType.ATOM; }
-    get isCompound() { return this._type === TermType.COMPOUND; }
-    get isBoolean() { return this._semanticType === SemanticType.BOOLEAN; }
-    get isNumeric() { return this._semanticType === SemanticType.NUMERIC; }
-    get isVariable() { return this._semanticType === SemanticType.VARIABLE; }
-    get isNALConcept() { return this._semanticType === SemanticType.NAL_CONCEPT; }
+    get name() {
+        return this._name;
+    }
+
+    get operator() {
+        return this._operator;
+    }
+
+    get components() {
+        return this._components;
+    }
+
+    get complexity() {
+        return this._complexity;
+    }
+
+    get hash() {
+        return this._hash;
+    }
+
+    get id() {
+        return this._id;
+    }
+
+    get semanticType() {
+        return this._semanticType;
+    }
+
+    get isAtomic() {
+        return this._type === TermType.ATOM;
+    }
+
+    get isCompound() {
+        return this._type === TermType.COMPOUND;
+    }
+
+    get isBoolean() {
+        return this._semanticType === SemanticType.BOOLEAN;
+    }
+
+    get isNumeric() {
+        return this._semanticType === SemanticType.NUMERIC;
+    }
+
+    get isVariable() {
+        return this._semanticType === SemanticType.VARIABLE;
+    }
+
+    get isNALConcept() {
+        return this._semanticType === SemanticType.NAL_CONCEPT;
+    }
 
     static hash(str) {
         return crypto.createHash('sha256').update(str).digest('hex');

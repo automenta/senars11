@@ -1,14 +1,14 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { z } from "zod";
+import {McpServer} from "@modelcontextprotocol/sdk/server/mcp.js";
+import {StdioServerTransport} from "@modelcontextprotocol/sdk/server/stdio.js";
+import {z} from "zod";
 import vm from "node:vm";
-import { Safety } from "./Safety.js";
+import {Safety} from "./Safety.js";
 
 /**
  * MCP Server for exposing SeNARS services as MCP tools.
  */
 export class Server {
-    constructor({ nar = null, ...options } = {}) {
+    constructor({nar = null, ...options} = {}) {
         this.options = options;
         this.nar = nar;
         this.safety = new Safety(options.safety);
@@ -22,7 +22,7 @@ export class Server {
     }
 
     registerTools() {
-        this.server.tool("ping", {}, async () => ({ content: [{ type: "text", text: "pong" }] }));
+        this.server.tool("ping", {}, async () => ({content: [{type: "text", text: "pong"}]}));
 
         this.server.tool(
             "reason",
@@ -30,7 +30,7 @@ export class Server {
                 premises: z.array(z.string()).describe("A list of premises in Narsese or natural language"),
                 goal: z.string().optional().describe("A goal to achieve or question to answer")
             },
-            async ({ premises, goal }) => {
+            async ({premises, goal}) => {
                 if (!this.nar) return this._error("NAR instance not available.");
 
                 try {
@@ -56,7 +56,7 @@ export class Server {
                 query: z.string().describe("Concept to query"),
                 limit: z.number().default(10).describe("Max results")
             },
-            async ({ query, limit }) => {
+            async ({query, limit}) => {
                 if (!this.nar) return this._error("NAR instance not available.");
 
                 try {
@@ -75,7 +75,7 @@ export class Server {
                 toolName: z.string().describe("Tool name"),
                 parameters: z.record(z.any()).describe("Parameters")
             },
-            async ({ toolName, parameters }) => {
+            async ({toolName, parameters}) => {
                 if (!this.nar) return this._error("NAR instance not available.");
 
                 try {
@@ -90,11 +90,11 @@ export class Server {
 
         this.server.tool(
             "evaluate_js",
-            { code: z.string().describe("JavaScript code to evaluate (sandboxed)") },
-            async ({ code }) => {
+            {code: z.string().describe("JavaScript code to evaluate (sandboxed)")},
+            async ({code}) => {
                 try {
-                    const context = vm.createContext({ console, JSON, Math });
-                    const result = vm.runInContext(code, context, { timeout: 1000 });
+                    const context = vm.createContext({console, JSON, Math});
+                    const result = vm.runInContext(code, context, {timeout: 1000});
                     return {
                         content: [{
                             type: "text",
@@ -109,8 +109,8 @@ export class Server {
 
         this.server.tool(
             "get-focus",
-            { limit: z.number().default(10).describe("Max items") },
-            async ({ limit }) => {
+            {limit: z.number().default(10).describe("Max items")},
+            async ({limit}) => {
                 if (!this.nar) return this._error("NAR instance not available.");
                 try {
                     const tasks = this.nar.focus ? this.nar.focus.getTasks(limit) : [];
@@ -156,26 +156,26 @@ export class Server {
             lines.push("_No new conclusions derived in this window._");
         }
 
-        return { content: [{ type: "text", text: lines.join("\n") }] };
+        return {content: [{type: "text", text: lines.join("\n")}]};
     }
 
     _formatMemoryReport(query, tasks, limit) {
         const lines = [`### Memory Query: \`${query}\``];
         lines.push(`Found ${tasks.length} results (limit: ${limit})\n`);
         tasks.forEach((task, i) => lines.push(this._formatTaskLine(task, i + 1)));
-        return { content: [{ type: "text", text: lines.join("\n") }] };
+        return {content: [{type: "text", text: lines.join("\n")}]};
     }
 
     _formatFocusReport(tasks, limit) {
         const lines = ["### Focus Buffer"];
         lines.push(`Showing top ${tasks.length} items (limit: ${limit})\n`);
         tasks.forEach((task, i) => {
-             const termStr = task.term ? task.term.toString() : 'unknown';
-             const priority = task.budget ? task.budget.priority.toFixed(2) : "0.00";
-             const typeStr = task.punctuation === '!' ? '[GOAL]' : task.punctuation === '?' ? '[QUESTION]' : '[BELIEF]';
-             lines.push(`${i+1}. **${typeStr}** \`${termStr}\` (p=${priority})`);
+            const termStr = task.term ? task.term.toString() : 'unknown';
+            const priority = task.budget ? task.budget.priority.toFixed(2) : "0.00";
+            const typeStr = task.punctuation === '!' ? '[GOAL]' : task.punctuation === '?' ? '[QUESTION]' : '[BELIEF]';
+            lines.push(`${i + 1}. **${typeStr}** \`${termStr}\` (p=${priority})`);
         });
-        return { content: [{ type: "text", text: lines.join("\n") }] };
+        return {content: [{type: "text", text: lines.join("\n")}]};
     }
 
     _formatToolReport(toolName, result) {
@@ -183,8 +183,8 @@ export class Server {
             content: [{
                 type: "text",
                 text: `### Tool Execution: ${toolName}\n` +
-                      `**Success**: ${result.success !== false}\n` +
-                      `**Result**: \n\`\`\`json\n${JSON.stringify(result.result ?? result, null, 2)}\n\`\`\``
+                    `**Success**: ${result.success !== false}\n` +
+                    `**Result**: \n\`\`\`json\n${JSON.stringify(result.result ?? result, null, 2)}\n\`\`\``
             }]
         };
     }
@@ -197,6 +197,6 @@ export class Server {
     }
 
     _error(message) {
-        return { content: [{ type: "text", text: message }], isError: true };
+        return {content: [{type: "text", text: message}], isError: true};
     }
 }

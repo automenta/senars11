@@ -1,8 +1,8 @@
-import { BaseComponent } from '../util/BaseComponent.js';
-import { Task } from '../task/Task.js';
-import { Truth } from '../Truth.js';
-import { Term } from '../term/TermFactory.js';
-import { PRIORITY } from '../config/constants.js';
+import {BaseComponent} from '../util/BaseComponent.js';
+import {Task} from '../task/Task.js';
+import {Truth} from '../Truth.js';
+import {Term} from '../term/TermFactory.js';
+import {PRIORITY} from '../config/constants.js';
 
 export class InputProcessor extends BaseComponent {
     constructor(config = {}, components = {}) {
@@ -94,7 +94,7 @@ export class InputProcessor extends BaseComponent {
      * @returns {Task} Created task
      */
     createTask(parsed, options = {}) {
-        const { term, truthValue, punctuation } = parsed;
+        const {term, truthValue, punctuation} = parsed;
 
         if (!term) {
             throw new Error('Cannot create task without a term');
@@ -108,7 +108,7 @@ export class InputProcessor extends BaseComponent {
             term,
             punctuation: punctuation || '.',
             truth,
-            budget: { priority },
+            budget: {priority},
         });
     }
 
@@ -135,7 +135,7 @@ export class InputProcessor extends BaseComponent {
      * @private
      */
     _calculateInputPriority(parsed) {
-        const { truthValue, taskType } = parsed;
+        const {truthValue, taskType} = parsed;
         const basePriority = this._inputConfig.defaultPriority || PRIORITY.DEFAULT;
 
         if (!truthValue) return basePriority;

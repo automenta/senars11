@@ -2,7 +2,7 @@ import {EventEmitter} from 'eventemitter3';
 import {getHeapUsed} from '../util/common.js';
 import {SimpleRunner} from './runner/SimpleRunner.js';
 import {PipelineRunner} from './runner/PipelineRunner.js';
-import {isSynchronousRule, isAsyncRule} from './RuleHelpers.js';
+import {isAsyncRule, isSynchronousRule} from './RuleHelpers.js';
 
 /**
  * The main Reasoner class that manages the continuous reasoning pipeline.

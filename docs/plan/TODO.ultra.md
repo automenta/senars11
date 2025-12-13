@@ -8,17 +8,18 @@
 
 **SeNARS becomes the trusted bridge between human reasoning and AI capability.**
 
-Not a replacement for thought—an amplifier. Not a black box—a glass box. Not software alone—a movement toward AI that earns trust through transparency.
+Not a replacement for thought—an amplifier. Not a black box—a glass box. Not software alone—a movement toward AI that
+earns trust through transparency.
 
 ---
 
 ## Core Commitments
 
-| For Developers | For Users | For Society |
-|----------------|-----------|-------------|
-| Joy in craft, sustainable pace | Clarity of thought, trustworthy AI | Democratized access, privacy preserved |
-| Clean architecture, AI-assisted workflow | Simple defaults, depth when needed | Open standards, verifiable reasoning |
-| Growth through contribution | Control over their cognitive tools | Counter to black-box AI opacity |
+| For Developers                           | For Users                          | For Society                            |
+|------------------------------------------|------------------------------------|----------------------------------------|
+| Joy in craft, sustainable pace           | Clarity of thought, trustworthy AI | Democratized access, privacy preserved |
+| Clean architecture, AI-assisted workflow | Simple defaults, depth when needed | Open standards, verifiable reasoning   |
+| Growth through contribution              | Control over their cognitive tools | Counter to black-box AI opacity        |
 
 ---
 
@@ -26,13 +27,15 @@ Not a replacement for thought—an amplifier. Not a black box—a glass box. Not
 
 ### The Insight
 
-Modern LLMs are powerful but opaque. Traditional symbolic AI is transparent but brittle. **SeNARS occupies the gap**: transparent reasoning that works with LLMs, not against them.
+Modern LLMs are powerful but opaque. Traditional symbolic AI is transparent but brittle. **SeNARS occupies the gap**:
+transparent reasoning that works with LLMs, not against them.
 
 ### The 10x Opportunity
 
 Instead of building everything, we focus on **one irreplaceable capability**:
 
-> **Verified Reasoning Traces**: Given any claim, produce a step-by-step derivation that can be audited, challenged, and trusted.
+> **Verified Reasoning Traces**: Given any claim, produce a step-by-step derivation that can be audited, challenged, and
+> trusted.
 
 This is what LLMs cannot reliably do. This is our moat.
 
@@ -44,12 +47,12 @@ This is what LLMs cannot reliably do. This is our moat.
 
 **Goal**: A working MCP tool that provides verified reasoning.
 
-| Deliverable | Description | Effort |
-|-------------|-------------|--------|
+| Deliverable      | Description                           | Effort  |
+|------------------|---------------------------------------|---------|
 | `reasoning-core` | ~3,000 lines: Terms, Truth, Inference | 2 weeks |
-| MCP Server | Expose as Claude-compatible tool | 1 week |
-| Test Suite | Property-based tests for correctness | 1 week |
-| Documentation | How it works, how to use it | 1 week |
+| MCP Server       | Expose as Claude-compatible tool      | 1 week  |
+| Test Suite       | Property-based tests for correctness  | 1 week  |
+| Documentation    | How it works, how to use it           | 1 week  |
 
 **Success Metric**: Claude Desktop users can ask "Verify this reasoning" and get auditable traces.
 
@@ -57,12 +60,12 @@ This is what LLMs cannot reliably do. This is our moat.
 
 **Goal**: LLM generates hypotheses, SeNARS verifies.
 
-| Deliverable | Description | Effort |
-|-------------|-------------|--------|
-| LLM Integration | Clean interface to any provider | 2 weeks |
-| Hypothesis Pipeline | LLM suggests → SeNARS checks | 2 weeks |
-| Contradiction Detection | Flag inconsistencies in beliefs | 1 week |
-| Memory Layer | Persistent knowledge across sessions | 2 weeks |
+| Deliverable             | Description                          | Effort  |
+|-------------------------|--------------------------------------|---------|
+| LLM Integration         | Clean interface to any provider      | 2 weeks |
+| Hypothesis Pipeline     | LLM suggests → SeNARS checks         | 2 weeks |
+| Contradiction Detection | Flag inconsistencies in beliefs      | 1 week  |
+| Memory Layer            | Persistent knowledge across sessions | 2 weeks |
 
 **Success Metric**: System catches logical errors in LLM outputs with >90% accuracy.
 
@@ -70,12 +73,12 @@ This is what LLMs cannot reliably do. This is our moat.
 
 **Goal**: Others build on SeNARS easily.
 
-| Deliverable | Description | Effort |
-|-------------|-------------|--------|
-| Plugin Architecture | Add custom rules, domains, providers | 3 weeks |
-| Headless API | Full programmatic control | 2 weeks |
-| Embedding Support | Vector similarity for semantic links | 2 weeks |
-| Performance Optimization | Sub-millisecond operations | 2 weeks |
+| Deliverable              | Description                          | Effort  |
+|--------------------------|--------------------------------------|---------|
+| Plugin Architecture      | Add custom rules, domains, providers | 3 weeks |
+| Headless API             | Full programmatic control            | 2 weeks |
+| Embedding Support        | Vector similarity for semantic links | 2 weeks |
+| Performance Optimization | Sub-millisecond operations           | 2 weeks |
 
 **Success Metric**: Third-party applications built on SeNARS; npm downloads growing.
 
@@ -83,12 +86,12 @@ This is what LLMs cannot reliably do. This is our moat.
 
 **Goal**: Self-sustaining growth through community.
 
-| Deliverable | Description | Effort |
-|-------------|-------------|--------|
-| Knowledge Modules | Shareable domain packages | Ongoing |
-| Visual Tools | Optional UI for those who want it | Community |
-| Academic Partnerships | Research collaborations | Outreach |
-| Commercial Pilots | Real-world validation | BD |
+| Deliverable           | Description                       | Effort    |
+|-----------------------|-----------------------------------|-----------|
+| Knowledge Modules     | Shareable domain packages         | Ongoing   |
+| Visual Tools          | Optional UI for those who want it | Community |
+| Academic Partnerships | Research collaborations           | Outreach  |
+| Commercial Pilots     | Real-world validation             | BD        |
 
 **Success Metric**: Community contributions exceed core team output.
 
@@ -98,32 +101,32 @@ This is what LLMs cannot reliably do. This is our moat.
 
 ### What We Build
 
-| Component | Why Essential |
-|-----------|---------------|
-| Term representation | Canonical, immutable knowledge atoms |
-| Truth values | Confidence tracking that LLMs lack |
-| Inference engine | Verifiable step-by-step derivation |
-| Stamp/evidence tracking | Provenance for every conclusion |
-| MCP interface | Universal integration point |
+| Component               | Why Essential                        |
+|-------------------------|--------------------------------------|
+| Term representation     | Canonical, immutable knowledge atoms |
+| Truth values            | Confidence tracking that LLMs lack   |
+| Inference engine        | Verifiable step-by-step derivation   |
+| Stamp/evidence tracking | Provenance for every conclusion      |
+| MCP interface           | Universal integration point          |
 
 ### What We Leverage (Not Build)
 
-| Need | Solution |
-|------|----------|
-| LLM access | Vercel AI SDK / LangChain |
-| Storage | SQLite / DuckDB / Turso |
-| Vector search | Existing embedding APIs |
+| Need          | Solution                    |
+|---------------|-----------------------------|
+| LLM access    | Vercel AI SDK / LangChain   |
+| Storage       | SQLite / DuckDB / Turso     |
+| Vector search | Existing embedding APIs     |
 | Visualization | D3 / Cytoscape / Observable |
-| Parsing | PEG.js (already have) |
+| Parsing       | PEG.js (already have)       |
 
 ### What We Defer
 
-| Feature | Rationale |
-|---------|-----------|
-| Custom UI framework | Headless-first; UI is optional |
-| Multiple strategy engines | One universal approach first |
-| Enterprise features | Prove value before adding complexity |
-| Multi-language support | English MVP, expand later |
+| Feature                   | Rationale                            |
+|---------------------------|--------------------------------------|
+| Custom UI framework       | Headless-first; UI is optional       |
+| Multiple strategy engines | One universal approach first         |
+| Enterprise features       | Prove value before adding complexity |
+| Multi-language support    | English MVP, expand later            |
 
 ---
 
@@ -142,21 +145,21 @@ This is what LLMs cannot reliably do. This is our moat.
 
 ### Modern Stack Choices
 
-| Choice | Reason |
-|--------|--------|
-| ES Modules | Clean, tree-shakeable, modern |
-| TypeScript strict mode | Eliminate entire error classes |
+| Choice                 | Reason                               |
+|------------------------|--------------------------------------|
+| ES Modules             | Clean, tree-shakeable, modern        |
+| TypeScript strict mode | Eliminate entire error classes       |
 | Property-based testing | Prove correctness, not just examples |
-| MCP-first | Where agent ecosystem is going |
+| MCP-first              | Where agent ecosystem is going       |
 
 ### Future-Ready Decisions
 
-| Trajectory | How We Prepare |
-|------------|----------------|
-| LLMs get smarter | Focus on verification, not generation |
-| Edge AI grows | Keep core small enough for browsers |
-| Agents standardize | MCP compliance from day one |
-| Privacy concerns rise | Local-first architecture |
+| Trajectory            | How We Prepare                        |
+|-----------------------|---------------------------------------|
+| LLMs get smarter      | Focus on verification, not generation |
+| Edge AI grows         | Keep core small enough for browsers   |
+| Agents standardize    | MCP compliance from day one           |
+| Privacy concerns rise | Local-first architecture              |
 
 ---
 
@@ -234,13 +237,13 @@ const result = reasoner.query('Are dogs warm-blooded?');
 
 ### Concrete Benefits
 
-| Benefit | Mechanism |
-|---------|-----------|
-| **Reduced AI Harm** | Catch flawed reasoning before action |
-| **Increased Trust** | Show work, enable verification |
-| **Democratized AI** | Powerful tools that run anywhere |
-| **AI Safety Research** | Open platform for alignment work |
-| **Digital Literacy** | Teach critical thinking about AI |
+| Benefit                | Mechanism                            |
+|------------------------|--------------------------------------|
+| **Reduced AI Harm**    | Catch flawed reasoning before action |
+| **Increased Trust**    | Show work, enable verification       |
+| **Democratized AI**    | Powerful tools that run anywhere     |
+| **AI Safety Research** | Open platform for alignment work     |
+| **Digital Literacy**   | Teach critical thinking about AI     |
 
 ### Commitments
 
@@ -256,30 +259,30 @@ const result = reasoner.query('Are dogs warm-blooded?');
 
 ### For Core Team
 
-| Principle | Implementation |
-|-----------|----------------|
-| Sustainable pace | No crunch culture; quality over speed |
-| Clear scope | Phase gates prevent scope creep |
-| Manageable complexity | Delete code aggressively |
-| Joy in work | Time for exploration and learning |
+| Principle             | Implementation                        |
+|-----------------------|---------------------------------------|
+| Sustainable pace      | No crunch culture; quality over speed |
+| Clear scope           | Phase gates prevent scope creep       |
+| Manageable complexity | Delete code aggressively              |
+| Joy in work           | Time for exploration and learning     |
 
 ### For Contributors
 
-| Principle | Implementation |
-|-----------|----------------|
-| Low friction | Easy setup, clear guidelines |
-| Recognition | All contributors acknowledged |
-| Growth paths | Mentorship for those who want it |
-| Autonomy | Own features from design to deploy |
+| Principle    | Implementation                     |
+|--------------|------------------------------------|
+| Low friction | Easy setup, clear guidelines       |
+| Recognition  | All contributors acknowledged      |
+| Growth paths | Mentorship for those who want it   |
+| Autonomy     | Own features from design to deploy |
 
 ### For Community
 
-| Principle | Implementation |
-|-----------|----------------|
-| Responsiveness | Issues acknowledged within 48h |
-| Transparency | Public roadmap, open discussions |
-| Inclusivity | Code of conduct, welcoming language |
-| Shared ownership | Community shapes direction |
+| Principle        | Implementation                      |
+|------------------|-------------------------------------|
+| Responsiveness   | Issues acknowledged within 48h      |
+| Transparency     | Public roadmap, open discussions    |
+| Inclusivity      | Code of conduct, welcoming language |
+| Shared ownership | Community shapes direction          |
 
 ---
 
@@ -287,43 +290,43 @@ const result = reasoner.query('Are dogs warm-blooded?');
 
 ### Technical Health
 
-| Metric | Target |
-|--------|--------|
-| Test coverage | >90% for core |
-| Core size | <5,000 lines |
-| Operation speed | <1ms for inference step |
-| Zero open criticals | Always |
+| Metric              | Target                  |
+|---------------------|-------------------------|
+| Test coverage       | >90% for core           |
+| Core size           | <5,000 lines            |
+| Operation speed     | <1ms for inference step |
+| Zero open criticals | Always                  |
 
 ### Adoption Health
 
-| Metric | Target |
-|--------|--------|
-| Weekly npm downloads | Growing month over month |
-| GitHub stars | Vanity but validates interest |
-| Issues with engagement | Community actively helps |
-| Third-party integrations | Others building on us |
+| Metric                   | Target                        |
+|--------------------------|-------------------------------|
+| Weekly npm downloads     | Growing month over month      |
+| GitHub stars             | Vanity but validates interest |
+| Issues with engagement   | Community actively helps      |
+| Third-party integrations | Others building on us         |
 
 ### Impact Health
 
-| Metric | Target |
-|--------|--------|
-| Academic citations | Papers using SeNARS |
-| Educational adoptions | Courses teaching with it |
-| User testimonials | Real problems solved |
-| Safety contributions | Measurable harm prevention |
+| Metric                | Target                     |
+|-----------------------|----------------------------|
+| Academic citations    | Papers using SeNARS        |
+| Educational adoptions | Courses teaching with it   |
+| User testimonials     | Real problems solved       |
+| Safety contributions  | Measurable harm prevention |
 
 ---
 
 ## X. Risk Management
 
-| Risk | Mitigation |
-|------|------------|
-| Complexity creep | Strict "delete before add" culture |
-| Burnout | Sustainable pace, shared load |
-| Technology shifts | Small core, easy to adapt |
-| Adoption failure | Early user feedback, pivot fast |
-| Security issues | Regular audits, minimal surface |
-| Community toxicity | Clear CoC, proactive moderation |
+| Risk               | Mitigation                         |
+|--------------------|------------------------------------|
+| Complexity creep   | Strict "delete before add" culture |
+| Burnout            | Sustainable pace, shared load      |
+| Technology shifts  | Small core, easy to adapt          |
+| Adoption failure   | Early user feedback, pivot fast    |
+| Security issues    | Regular audits, minimal surface    |
+| Community toxicity | Clear CoC, proactive moderation    |
 
 ---
 
@@ -411,7 +414,8 @@ If no to any → reconsider.
 
 ---
 
-*This plan is a living commitment, updated as we learn. The goal is not perfection—it's progress toward AI that earns trust.*
+*This plan is a living commitment, updated as we learn. The goal is not perfection—it's progress toward AI that earns
+trust.*
 
 ---
 

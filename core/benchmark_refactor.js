@@ -1,6 +1,5 @@
-
-import { NAR } from './src/nar/NAR.js';
-import { performance } from 'perf_hooks';
+import {NAR} from './src/nar/NAR.js';
+import {performance} from 'perf_hooks';
 
 async function runBenchmark() {
     console.log('Starting benchmark...');

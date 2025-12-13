@@ -1,6 +1,7 @@
 # Java to JavaScript NARS Migration Plan
 
-Complete migration guide organized with non-temporal functionality in primary phases and temporal support deferred to final phases.
+Complete migration guide organized with non-temporal functionality in primary phases and temporal support deferred to
+final phases.
 
 ---
 
@@ -9,6 +10,7 @@ Complete migration guide organized with non-temporal functionality in primary ph
 ### 1.1 Current JavaScript Architecture Review
 
 **`Term.js` Structure:**
+
 ```javascript
 class Term {
     constructor(type, name, components = [], operator = null) {
@@ -22,6 +24,7 @@ class Term {
 ```
 
 **`TermFactory.js` Operator Handling:**
+
 ```javascript
 const COMMUTATIVE_OPERATORS = new Set(['&', '|', '+', '*', '<->', '=', '||', '&&']);
 const ASSOCIATIVE_OPERATORS = new Set(['&', '|', '||', '&&']);
@@ -29,55 +32,58 @@ const ASSOCIATIVE_OPERATORS = new Set(['&', '|', '||', '&&']);
 ```
 
 **`narsese.peggy` Parser:**
+
 - Supports: `-->`, `<->`, `==>`, `<=>`, `=/>', `=|`, `=/=`, `=`, `&&`, `||`, `&|`, `&/`
 - Missing: Temporal deltas (`&&+5`), pattern variables (`%`), budget, occurrence time
 - Punctuation: Only `.!?` (missing `@` QUEST and `;` COMMAND)
 
 ### 1.2 Critical Incompatibilities to Address
 
-| Issue | Current State | Required Change | Phase |
-|-------|--------------|-----------------|-------|
-| **No `dt` field in Term** | Term has no temporal delta | Add optional `dt` property | Temporal |
-| **Missing operators** | 9 operators | Add 10 more from Op.java | Primary |
-| **Pattern variable `%`** | Not parsed | Add to Variable rule | Primary |
-| **Negation syntax** | No `--` prefix support | Add negation rule | Primary |
-| **QUEST/COMMAND punc** | Missing `@` and `;` | Add to Punctuation | Primary |
-| **Image placeholders** | Not implemented | Add `\` and `/` atomics | Primary |
-| **Equality operator** | `=` exists but limited | Extend `EQ` handling | Primary |
-| **DIFF operator** | Not implemented | Add `<~>` | Primary |
-| **DELTA operator** | Not implemented | Add `Δ` and `/\` | Primary |
-| **INT term type** | Not implemented | Add numeric term type | Primary |
-| **Functor form** | Partial (`func(args)`) | Ensure parity | Primary |
-| **Compact INH** | Not implemented | Add `pred:subj` syntax | Primary |
-| **Temporal operators** | `&|`, `&/` listed | Full temporal support | Temporal |
-| **Time deltas** | Not implemented | Add `&&+N` parsing | Temporal |
-| **Occurrence time** | Not implemented | Add `\|`, `now` | Temporal |
-| **Budget values** | Not implemented | Add `$0.5$` | Temporal |
+| Issue                     | Current State              | Required Change            | Phase                 |
+|---------------------------|----------------------------|----------------------------|-----------------------|
+| **No `dt` field in Term** | Term has no temporal delta | Add optional `dt` property | Temporal              |
+| **Missing operators**     | 9 operators                | Add 10 more from Op.java   | Primary               |
+| **Pattern variable `%`**  | Not parsed                 | Add to Variable rule       | Primary               |
+| **Negation syntax**       | No `--` prefix support     | Add negation rule          | Primary               |
+| **QUEST/COMMAND punc**    | Missing `@` and `;`        | Add to Punctuation         | Primary               |
+| **Image placeholders**    | Not implemented            | Add `\` and `/` atomics    | Primary               |
+| **Equality operator**     | `=` exists but limited     | Extend `EQ` handling       | Primary               |
+| **DIFF operator**         | Not implemented            | Add `<~>`                  | Primary               |
+| **DELTA operator**        | Not implemented            | Add `Δ` and `/\`           | Primary               |
+| **INT term type**         | Not implemented            | Add numeric term type      | Primary               |
+| **Functor form**          | Partial (`func(args)`)     | Ensure parity              | Primary               |
+| **Compact INH**           | Not implemented            | Add `pred:subj` syntax     | Primary               |
+| **Temporal operators**    | `&                         | `, `&/` listed             | Full temporal support | Temporal |
+| **Time deltas**           | Not implemented            | Add `&&+N` parsing         | Temporal              |
+| **Occurrence time**       | Not implemented            | Add `\|`, `now`            | Temporal              |
+| **Budget values**         | Not implemented            | Add `$0.5$`                | Temporal              |
 
 ### 1.3 Rule File Compatibility Analysis
 
 **Current JS Rules (4 files):**
+
 - `SyllogisticRule.js` - Inheritance/Implication deduction
 - `ModusPonensRule.js` - Basic modus ponens
 - `MetacognitionRules.js` - Meta-level rules
 - `NALRule.js` - Base class
 
 **Java NAL Rules (24 enabled):**
+
 - Use `.nal` DSL with preconditions and truth functions
 - Reference temporal operators in many rules
 - Many rules can work without temporal support
 
 **Classification of Rule Files:**
 
-| Category | Files | Can Migrate Without Temporal |
-|----------|-------|------------------------------|
-| **Structural** | `inh.nal`, `sim.nal` | ✅ Yes |
-| **Sets** | `set.*.nal` (3 files) | ✅ Yes |
-| **Conversion** | `conversion.nal`, `contraposition.nal` | ✅ Yes |
-| **Analogy** | `analogy.*.nal` (3 files) | ⚠️ Partial (some use temporal) |
-| **Implication** | `impl.syl.nal`, `impl.strong.nal` | ⚠️ Partial |
-| **Decomposition** | `cond.decompose.*.nal` (5 files) | ❌ Heavy temporal |
-| **Composition** | `impl.compose.nal` | ⚠️ Partial |
+| Category          | Files                                  | Can Migrate Without Temporal   |
+|-------------------|----------------------------------------|--------------------------------|
+| **Structural**    | `inh.nal`, `sim.nal`                   | ✅ Yes                          |
+| **Sets**          | `set.*.nal` (3 files)                  | ✅ Yes                          |
+| **Conversion**    | `conversion.nal`, `contraposition.nal` | ✅ Yes                          |
+| **Analogy**       | `analogy.*.nal` (3 files)              | ⚠️ Partial (some use temporal) |
+| **Implication**   | `impl.syl.nal`, `impl.strong.nal`      | ⚠️ Partial                     |
+| **Decomposition** | `cond.decompose.*.nal` (5 files)       | ❌ Heavy temporal               |
+| **Composition**   | `impl.compose.nal`                     | ⚠️ Partial                     |
 
 ---
 
@@ -304,23 +310,23 @@ export class NALRuleParser {
 
 **Fully Migratable (no temporal references):**
 
-| File | Rules | Description |
-|------|-------|-------------|
-| `inh.nal` | ~10 | Inheritance deduction/abduction (filter temporal) |
-| `sim.nal` | ~8 | Similarity rules |
-| `conversion.nal` | ~4 | Conversion rules |
-| `contraposition.nal` | ~4 | Contraposition |
-| `set.compose.nal` | ~6 | Set composition |
-| `set.decompose.nal` | ~5 | Set decomposition |
-| `set.guess.nal` | ~7 | Set guessing |
+| File                 | Rules | Description                                       |
+|----------------------|-------|---------------------------------------------------|
+| `inh.nal`            | ~10   | Inheritance deduction/abduction (filter temporal) |
+| `sim.nal`            | ~8    | Similarity rules                                  |
+| `conversion.nal`     | ~4    | Conversion rules                                  |
+| `contraposition.nal` | ~4    | Contraposition                                    |
+| `set.compose.nal`    | ~6    | Set composition                                   |
+| `set.decompose.nal`  | ~5    | Set decomposition                                 |
+| `set.guess.nal`      | ~7    | Set guessing                                      |
 
 **Partially Migratable (extract non-temporal rules):**
 
-| File | Non-temporal % | Approach |
-|------|----------------|----------|
-| `impl.syl.nal` | ~40% | Extract eternal-only rules |
-| `impl.strong.nal` | ~30% | Filter `Time:Union` rules |
-| `analogy.*.nal` | ~50% | Skip temporal analogy |
+| File              | Non-temporal % | Approach                   |
+|-------------------|----------------|----------------------------|
+| `impl.syl.nal`    | ~40%           | Extract eternal-only rules |
+| `impl.strong.nal` | ~30%           | Filter `Time:Union` rules  |
+| `analogy.*.nal`   | ~50%           | Skip temporal analogy      |
 
 ### 4.3 Rule Preconditions to Implement
 
@@ -391,6 +397,7 @@ export class TermSerializer {
 ### 5.2 Update Existing Rules for New Operators
 
 Audit and update existing rule files:
+
 - `SyllogisticRule.js` - Ensure works with new OP constants
 - `ModusPonensRule.js` - Add support for new operators
 
@@ -401,6 +408,7 @@ Audit and update existing rule files:
 ### 6.1 Unit Tests
 
 **Test commands:**
+
 ```bash
 # Run all tests
 npm test
@@ -415,23 +423,23 @@ npm test -- --grep "NALRule"
 **Tests to add:**
 
 1. **Operator Tests** (`test/term/operators.test.js`)
-   - Test each new operator creation
-   - Test canonical name generation
-   - Test equality for commutative operators
+    - Test each new operator creation
+    - Test canonical name generation
+    - Test equality for commutative operators
 
 2. **Parser Tests** (`test/parser/narsese.test.js`)
-   - Test pattern variable parsing
-   - Test negation syntax
-   - Test compact inheritance
-   - Test all punctuation types
+    - Test pattern variable parsing
+    - Test negation syntax
+    - Test compact inheritance
+    - Test all punctuation types
 
 3. **Truth Function Tests** (`test/Truth.test.js`)
-   - Test intersection, union, difference
-   - Test exemplification
-   - Test structural functions
+    - Test intersection, union, difference
+    - Test exemplification
+    - Test structural functions
 
 4. **Rule Tests** (`test/reason/rules/*.test.js`)
-   - Test each migrated rule against expected outputs
+    - Test each migrated rule against expected outputs
 
 ### 6.2 Integration Tests
 
@@ -505,19 +513,19 @@ static conduct(t1, t2, weak = false) { /* ... */ }
 
 ### 8.1 Breaking Changes Risk
 
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| Term structure change | All existing terms | Keep backward compatible; dt defaults to null |
-| Operator string changes | Term matching | Use constants, not hardcoded strings |
-| Parser changes | Existing NARsese | Ensure backward compatible parsing |
+| Risk                    | Impact             | Mitigation                                    |
+|-------------------------|--------------------|-----------------------------------------------|
+| Term structure change   | All existing terms | Keep backward compatible; dt defaults to null |
+| Operator string changes | Term matching      | Use constants, not hardcoded strings          |
+| Parser changes          | Existing NARsese   | Ensure backward compatible parsing            |
 
 ### 8.2 Performance Concerns
 
-| Concern | Mitigation |
-|---------|------------|
-| Larger Term objects | Only add dt if temporal |
-| More complex parsing | Profile critical paths |
-| Truth function overhead | Use static methods |
+| Concern                 | Mitigation              |
+|-------------------------|-------------------------|
+| Larger Term objects     | Only add dt if temporal |
+| More complex parsing    | Profile critical paths  |
+| Truth function overhead | Use static methods      |
 
 ### 8.3 Testing Strategy
 
@@ -531,56 +539,57 @@ static conduct(t1, t2, weak = false) { /* ... */ }
 
 ### Primary Phases (Non-Temporal)
 
-| File | Action | Changes |
-|------|--------|---------|
-| `core/src/config/constants.js` | Extend | Add OP, PUNCTUATION, SYNTAX |
-| `core/src/term/Term.js` | Minimal | No changes needed for non-temporal |
-| `core/src/term/TermFactory.js` | Extend | Add operators, methods |
-| `core/src/parser/narsese.peggy` | Extend | Add pattern var, negation, etc. |
-| `core/src/Truth.js` | Extend | Add 15+ truth functions |
-| `core/src/term/TermSerializer.js` | **NEW** | Term-to-string conversion |
-| `core/src/reason/rules/nal/NALRuleParser.js` | **NEW** | .nal file parser |
-| `core/src/reason/rules/nal/Preconditions.js` | **NEW** | Rule preconditions |
-| `core/src/reason/rules/nal/*.js` | **NEW** | Migrated rule files |
+| File                                         | Action  | Changes                            |
+|----------------------------------------------|---------|------------------------------------|
+| `core/src/config/constants.js`               | Extend  | Add OP, PUNCTUATION, SYNTAX        |
+| `core/src/term/Term.js`                      | Minimal | No changes needed for non-temporal |
+| `core/src/term/TermFactory.js`               | Extend  | Add operators, methods             |
+| `core/src/parser/narsese.peggy`              | Extend  | Add pattern var, negation, etc.    |
+| `core/src/Truth.js`                          | Extend  | Add 15+ truth functions            |
+| `core/src/term/TermSerializer.js`            | **NEW** | Term-to-string conversion          |
+| `core/src/reason/rules/nal/NALRuleParser.js` | **NEW** | .nal file parser                   |
+| `core/src/reason/rules/nal/Preconditions.js` | **NEW** | Rule preconditions                 |
+| `core/src/reason/rules/nal/*.js`             | **NEW** | Migrated rule files                |
 
 ### Temporal Phases (Deferred)
 
-| File | Action | Changes |
-|------|--------|---------|
-| `core/src/term/Term.js` | Extend | Add optional dt property |
-| `core/src/config/constants.js` | Extend | Add TEMPORAL constants |
-| `core/src/parser/narsese.peggy` | Extend | Add temporal parsing |
-| `core/src/Truth.js` | Extend | Add temporal truth functions |
+| File                            | Action | Changes                      |
+|---------------------------------|--------|------------------------------|
+| `core/src/term/Term.js`         | Extend | Add optional dt property     |
+| `core/src/config/constants.js`  | Extend | Add TEMPORAL constants       |
+| `core/src/parser/narsese.peggy` | Extend | Add temporal parsing         |
+| `core/src/Truth.js`             | Extend | Add temporal truth functions |
 
 ---
 
 ## 10. Native (Non-.nal) Rules from NARS.java
 
-These are Java rules implemented as classes, not loaded from `.nal` files. They are excellent candidates for native JavaScript implementation.
+These are Java rules implemented as classes, not loaded from `.nal` files. They are excellent candidates for native
+JavaScript implementation.
 
 ### 10.1 Core Rules (Always Enabled via `core()`)
 
-| Class | Purpose | Temporal? | Priority |
-|-------|---------|-----------|----------|
-| `BeliefResolve` | Resolves beliefs for premise matching | No | High |
-| `Decompose1` | Generic compound decomposition | No | **High** |
-| `DecomposeStatement(INH, SIM)` | Extract subject/predicate from statements | No | **High** |
-| `DecomposeImpl` | Implication decomposition (subj/pred extraction) | ⚠️ Partial | Medium |
-| `DecomposeCond` | Condition decomposition from conjunctions | ⚠️ Partial | Medium |
-| `TermLinking` | Build term linkage graph via `BagAdjacentTerms` | No | **High** |
-| `VariableIntroduction` | Introduce `$` and `#` variables to generalize | No | **High** |
-| `Evaluate` | Execute functors/functions on terms | No | **High** |
+| Class                          | Purpose                                          | Temporal?  | Priority |
+|--------------------------------|--------------------------------------------------|------------|----------|
+| `BeliefResolve`                | Resolves beliefs for premise matching            | No         | High     |
+| `Decompose1`                   | Generic compound decomposition                   | No         | **High** |
+| `DecomposeStatement(INH, SIM)` | Extract subject/predicate from statements        | No         | **High** |
+| `DecomposeImpl`                | Implication decomposition (subj/pred extraction) | ⚠️ Partial | Medium   |
+| `DecomposeCond`                | Condition decomposition from conjunctions        | ⚠️ Partial | Medium   |
+| `TermLinking`                  | Build term linkage graph via `BagAdjacentTerms`  | No         | **High** |
+| `VariableIntroduction`         | Introduce `$` and `#` variables to generalize    | No         | **High** |
+| `Evaluate`                     | Execute functors/functions on terms              | No         | **High** |
 
 ### 10.2 Optional Rules
 
-| Class | Method | Purpose | Temporal? | Priority |
-|-------|--------|---------|-----------|----------|
-| `STMLinker` | `stm()` | Short-term memory linking | Yes | Deferred |
-| `ImageUnfold` | `images()` | Unfold image terms to relations | No | Low |
-| `ImageAlign.ImageAlignBidi` | `images()` | Bidirectional image alignment | No | Low |
-| `TemporalInduction.ConjInduction` | `temporalInduction()` | Conjunction from temporal observation | Yes | Deferred |
-| `TemporalInduction.DisjInduction` | `temporalInduction()` | Disjunction from temporal observation | Yes | Deferred |
-| `TemporalInduction.ImplInduction` | `temporalInduction()` | Implication from temporal sequence | Yes | Deferred |
+| Class                             | Method                | Purpose                               | Temporal? | Priority |
+|-----------------------------------|-----------------------|---------------------------------------|-----------|----------|
+| `STMLinker`                       | `stm()`               | Short-term memory linking             | Yes       | Deferred |
+| `ImageUnfold`                     | `images()`            | Unfold image terms to relations       | No        | Low      |
+| `ImageAlign.ImageAlignBidi`       | `images()`            | Bidirectional image alignment         | No        | Low      |
+| `TemporalInduction.ConjInduction` | `temporalInduction()` | Conjunction from temporal observation | Yes       | Deferred |
+| `TemporalInduction.DisjInduction` | `temporalInduction()` | Disjunction from temporal observation | Yes       | Deferred |
+| `TemporalInduction.ImplInduction` | `temporalInduction()` | Implication from temporal sequence    | Yes       | Deferred |
 
 ### 10.3 Recommended Native JavaScript Implementation
 
@@ -655,12 +664,12 @@ These are Java rules implemented as classes, not loaded from `.nal` files. They 
 
 ### 12.1 Assessment Summary
 
-| Question | Answer |
-|----------|--------|
-| **Is it worth doing?** | Yes, with focused scope |
-| **Total effort (non-temporal)** | ~2 weeks |
-| **Total effort (with temporal)** | ~4 weeks |
-| **Recommended approach** | Native implementation over .nal parsing |
+| Question                         | Answer                                  |
+|----------------------------------|-----------------------------------------|
+| **Is it worth doing?**           | Yes, with focused scope                 |
+| **Total effort (non-temporal)**  | ~2 weeks                                |
+| **Total effort (with temporal)** | ~4 weeks                                |
+| **Recommended approach**         | Native implementation over .nal parsing |
 
 ### 12.2 Recommended Minimal Viable Migration
 
@@ -675,14 +684,14 @@ This gets ~80% of inference capability in ~1 week.
 
 ### 12.3 Concerns and Caveats
 
-| Item | Concern | Recommendation |
-|------|---------|----------------|
-| `DELTA` (Δ) | Low usage, unclear value | Defer unless needed |
-| `DIFF` (<~>) | Rarely used in enabled rules | Low priority |
-| `IMG` (/) | NAL4-specific, complex | Skip unless relational reasoning needed |
-| `.nal` parser | Significant effort for 40 rules | Manual translation faster |
-| 50+ truth functions | Many are variants | Start with 15 core, add on demand |
-| Pattern variable `%` | Internal rule matching only | May not need in user-facing parser |
+| Item                 | Concern                         | Recommendation                          |
+|----------------------|---------------------------------|-----------------------------------------|
+| `DELTA` (Δ)          | Low usage, unclear value        | Defer unless needed                     |
+| `DIFF` (<~>)         | Rarely used in enabled rules    | Low priority                            |
+| `IMG` (/)            | NAL4-specific, complex          | Skip unless relational reasoning needed |
+| `.nal` parser        | Significant effort for 40 rules | Manual translation faster               |
+| 50+ truth functions  | Many are variants               | Start with 15 core, add on demand       |
+| Pattern variable `%` | Internal rule matching only     | May not need in user-facing parser      |
 
 ### 12.4 Alternative Approaches Considered
 
@@ -694,12 +703,12 @@ This gets ~80% of inference capability in ~1 week.
 
 ## 13. Document History
 
-| Version | Date | Changes |
-|---------|------|---------|
-| 1.0 | 2025-12-10 | Initial draft with gap analysis |
-| 2.0 | 2025-12-10 | Added complete operator/parsing/printing specs |
-| 3.0 | 2025-12-10 | Separated temporal phases, added compatibility analysis |
-| 4.0 | 2025-12-10 | Added native rules, final assessment, recommendations |
+| Version | Date       | Changes                                                 |
+|---------|------------|---------------------------------------------------------|
+| 1.0     | 2025-12-10 | Initial draft with gap analysis                         |
+| 2.0     | 2025-12-10 | Added complete operator/parsing/printing specs          |
+| 3.0     | 2025-12-10 | Separated temporal phases, added compatibility analysis |
+| 4.0     | 2025-12-10 | Added native rules, final assessment, recommendations   |
 
 ---
 

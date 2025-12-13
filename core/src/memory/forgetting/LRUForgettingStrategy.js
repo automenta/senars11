@@ -1,4 +1,4 @@
-import { ForgettingStrategy } from './ForgettingStrategy.js';
+import {ForgettingStrategy} from './ForgettingStrategy.js';
 
 /**
  * Least Recently Used (LRU) forgetting strategy.
@@ -7,7 +7,7 @@ import { ForgettingStrategy } from './ForgettingStrategy.js';
 export class LRUForgettingStrategy extends ForgettingStrategy {
     /**
      * Find and return the concept with the oldest lastAccessed timestamp.
-     * 
+     *
      * @param {Map} concepts - Map of terms to Concept instances
      * @param {Object} stats - Memory statistics (unused for this strategy)
      * @returns {*|null} The term of the least recently used concept, or null if no concepts

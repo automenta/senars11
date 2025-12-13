@@ -13,6 +13,21 @@ export class TermCache extends BaseComponent {
         this._misses = 0;
     }
 
+    get size() {
+        return this._cache.size;
+    }
+
+    get stats() {
+        const total = this._hits + this._misses;
+        return {
+            size: this._cache.size,
+            maxSize: this._maxSize,
+            hits: this._hits,
+            misses: this._misses,
+            hitRate: total > 0 ? this._hits / total : 0
+        };
+    }
+
     get(key) {
         const item = this._cache.get(key);
         if (item) {
@@ -34,7 +49,7 @@ export class TermCache extends BaseComponent {
             // Evict oldest (first in Map)
             const oldestKey = this._cache.keys().next().value;
             this._cache.delete(oldestKey);
-            // Note: We might want to emit an event here if needed, 
+            // Note: We might want to emit an event here if needed,
             // but for pure cache logic, we just drop it.
             // If TermFactory needs to do cleanup (like unregistering from diversity),
             // it should probably handle that via a callback or event if strictly necessary,
@@ -59,21 +74,6 @@ export class TermCache extends BaseComponent {
         this._misses = 0;
     }
 
-    get size() {
-        return this._cache.size;
-    }
-
-    get stats() {
-        const total = this._hits + this._misses;
-        return {
-            size: this._cache.size,
-            maxSize: this._maxSize,
-            hits: this._hits,
-            misses: this._misses,
-            hitRate: total > 0 ? this._hits / total : 0
-        };
-    }
-
     setMaxSize(size) {
         this._maxSize = size;
         while (this._cache.size > this._maxSize) {
@@ -81,12 +81,12 @@ export class TermCache extends BaseComponent {
             this._cache.delete(oldestKey);
         }
     }
-    
+
     // Helper to get oldest key for external cleanup if needed
     getOldestKey() {
         return this._cache.keys().next().value;
     }
-    
+
     // Specialized set that returns evicted key if any
     setWithEviction(key, value) {
         let evictedKey = null;

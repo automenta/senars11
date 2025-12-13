@@ -22,7 +22,7 @@ export class MemoryResourceManager {
 
     /**
      * Update resource usage for a concept.
-     * 
+     *
      * @param {Concept} concept - The concept being updated
      * @param {number} change - Resource usage change (positive or negative)
      */
@@ -41,7 +41,7 @@ export class MemoryResourceManager {
 
     /**
      * Check if memory is under pressure based on various metrics.
-     * 
+     *
      * @param {Object} memoryStats - Current memory statistics
      * @param {number} memoryStats.totalConcepts - Current number of concepts
      * @param {number} memoryStats.totalTasks - Current number of tasks
@@ -59,7 +59,7 @@ export class MemoryResourceManager {
 
     /**
      * Apply adaptive forgetting when memory is under pressure.
-     * 
+     *
      * @param {Memory} memory - The Memory instance to apply forgetting to
      */
     applyAdaptiveForgetting(memory) {
@@ -79,7 +79,7 @@ export class MemoryResourceManager {
 
     /**
      * Clean up resource tracker by removing entries for non-existent concepts.
-     * 
+     *
      * @param {Map} conceptMap - Map of current concepts (term -> Concept)
      */
     cleanup(conceptMap) {
@@ -98,7 +98,7 @@ export class MemoryResourceManager {
 
     /**
      * Get detailed memory pressure statistics.
-     * 
+     *
      * @param {Object} memoryStats - Current memory statistics
      * @returns {Object} Detailed pressure statistics
      */
@@ -119,7 +119,7 @@ export class MemoryResourceManager {
 
     /**
      * Get concepts sorted by resource usage.
-     * 
+     *
      * @param {Map} conceptMap - Map of concepts (term -> Concept)
      * @param {boolean} ascending - Sort in ascending order (default: false = descending)
      * @returns {Array<{term, concept, resourceUsage}>} Sorted array of concept info
@@ -140,7 +140,7 @@ export class MemoryResourceManager {
 
     /**
      * Get resource usage for a specific concept.
-     * 
+     *
      * @param {*} term - The concept's term
      * @returns {number} Resource usage for the concept
      */
@@ -150,16 +150,16 @@ export class MemoryResourceManager {
 
     /**
      * Get internal statistics.
-     * 
+     *
      * @returns {Object} Resource manager statistics
      */
     getStats() {
-        return { ...this._stats };
+        return {...this._stats};
     }
 
     /**
      * Get the resource tracker map (for serialization).
-     * 
+     *
      * @returns {Map} Resource tracker map
      */
     getResourceTracker() {
@@ -168,7 +168,7 @@ export class MemoryResourceManager {
 
     /**
      * Set the resource tracker map (for deserialization).
-     * 
+     *
      * @param {Map} tracker - Resource tracker map to restore
      */
     setResourceTracker(tracker) {

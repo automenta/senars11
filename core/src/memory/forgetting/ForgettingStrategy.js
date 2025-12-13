@@ -5,7 +5,7 @@
 export class ForgettingStrategy {
     /**
      * Select a concept to forget from the given concept map.
-     * 
+     *
      * @param {Map} concepts - Map of terms to Concept instances
      * @param {Object} stats - Memory statistics for decision making
      * @returns {*|null} The term of the concept to forget, or null if none found
@@ -17,7 +17,7 @@ export class ForgettingStrategy {
 
     /**
      * Get the strategy name (derived from class name).
-     * 
+     *
      * @returns {string} Strategy name in lowercase (e.g., 'priority', 'lru', 'fifo')
      */
     getName() {

@@ -8,4 +8,5 @@ export {processDerivation} from '../RuleHelpers.js';
 
 // Backward compatibility: reasoner expected recursive merge
 import {deepMergeConfig} from '../../util/common.js';
+
 export {deepMergeConfig as mergeConfig};
