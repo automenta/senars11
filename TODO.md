@@ -33,9 +33,9 @@
 
 | Principle | Description | Implication |
 |-----------|-------------|-------------|
-| **NAL First, LM Assist** | Formal NAL semantics; LM enhances | Every LM call must map to NAL constructs |
+| **NAL First, LM Assist** | Formal NAL semantics; LM enhances | LM augments reasoning, not replaces it |
 | **Composable Everything** | Plug-and-play components | Standard interfaces, no hidden coupling |
-| **Observable Reasoning** | Every derivation traceable | Emit events, support replay |
+| **Observable Reasoning** | Derivations traceable where feasible | Emit events, bounded retention |
 | **Resource-Aware (AIKR)** | Finite resources, infinite problems | Budgets, timeouts, graceful degradation |
 | **Test-Driven** | New rules need tests | No untested inference paths |
 | **Substrate Mindset** | Enable many futures | Prefer generic over specific |
@@ -51,11 +51,11 @@
 **Insight**: Negation is encoded in truth frequency, not in term structure. This eliminates the need for a separate `NegationRule` and `NegationPairingStrategy`.
 
 ```
-Input:   (-- bird --> flyer). %0.9;0.8%
+Input:   --(bird --> flyer). %0.9;0.8%
 Stored:  (bird --> flyer). %0.1;0.8%    ← Frequency inverted (1 - 0.9 = 0.1)
 
-Display: If f < 0.5, print as (-- term) with f' = 1-f
-         (bird --> flyer). %0.1;0.8%  → "(-- bird --> flyer). %0.9;0.8%"
+Display: If f < 0.5, print as --(term) with f' = 1-f
+         (bird --> flyer). %0.1;0.8%  → "--(bird --> flyer). %0.9;0.8%"
 ```
 
 **Eliminated by this simplification**:
@@ -91,7 +91,7 @@ graph TD
         NAL6[NAL-6: Variables]
         NAL7[NAL-7: Temporal]
         NAL8[NAL-8: Goals/Planning]
-        NEG[Negation & Contradiction]
+        NEG[Contradiction Detection]
     end
 
     subgraph Strategy["🎯 PREMISE STRATEGIES"]
@@ -223,7 +223,7 @@ All Foundations ──> MCP Server, Web Playground
 
 | Task | Value | Effort |
 |------|-------|--------|
-| `ExemplificationRule` + `AnalogyRule` | Complete NAL-4 | 1 day |
+| `ExemplificationRule` + `AnalogyRule` + `ComparisonRule` | Complete NAL-4 | 1 day |
 | Contradiction detection | Same-term f-value comparison | 4-8 hrs |
 | NAL-JSON serialization | Foundation for API | 1-2 days |
 | Term interning | Memory efficiency | 2-3 days |
@@ -774,6 +774,7 @@ WS   /api/v1/stream    # Real-time derivations
 
 | Target | Current | Goal | Benefit |
 |--------|---------|------|---------|
+| ✅ Negation | Separate rule/operator | Truth frequency | Eliminated complexity |
 | Rule interface | Multiple | Single `execute()` | Consistency |
 | API | Verbose | Fluent builder | Usability |
 | Config | Many required | Zero-config | Onboarding |
