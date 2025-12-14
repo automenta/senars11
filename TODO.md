@@ -300,35 +300,13 @@ export class RuleExecutor {
 
 ---
 
-## Next Actions
-
-> **Focus**: Highest-ROI items that leverage existing infrastructure
-
-### Immediate (< 1 day each)
-
-| # | Task | Effort | How | Unlocks |
-|---|------|--------|-----|--------|
-| 1 | **Unifier.js extraction** | 2 hrs | Copy `_unify*` from PrologStrategy, add `match()` | NAL-6, AnalogicalStrategy |
-| 2 | **SemanticStrategy** | 2 hrs | Wrap EmbeddingLayer (50 lines) | Fuzzy matching |
-| 3 | **Negation in parser** | 2 hrs | Detect `--`, call `Truth.negation()` | Simplification |
-| 4 | **Wire remaining truth functions** | 2 hrs | Add PatternRules for comparison, analogy, exemplification | NAL-4 completeness |
-
-### Short-term (< 1 week each)
-
-| # | Task | Effort | How | Unlocks |
-|---|------|--------|-----|--------|
-| 5 | **NAL-6 Query matching** | 4 hrs | Unifier + ResolutionStrategy integration | Questions |
-| 6 | **GoalDrivenStrategy** | 4 hrs | Thin wrapper around PrologStrategy backward-chaining | NAL-8 basics |
-| 7 | **Derivation Tracing** | 1 day | Wrap rule execution with trace events | Debugger, Explainer |
-| 8 | **AnalogicalStrategy** | 3 days | Use Unifier for structure mapping | Cross-domain reasoning |
-
 ---
 
 ## Roadmap
 
 > **Phasing Rationale**: Temporal functionality (NAL-7) is deferred to Phase 3 because it requires specifying temporal representations. NAL-6 (Variables) and NAL-8 (Goals) can proceed independently.
 
-### Phase 2: Variables & Goals (3-4 weeks)
+### Phase 2: Variables & Goals (**COMPLETE**)
 
 | Task | Effort | Shortcut | Unlocks |
 |------|--------|----------|---------|
@@ -390,7 +368,7 @@ class VectorIndex {
 }
 ```
 
-### Event/Temporal Buffer (Deferred)
+### Event/Temporal Buffer
 
 *Enables: NAL-7 temporal, Temporal strategies, Causality*
 
@@ -462,7 +440,7 @@ Implement via `PatternRule` definitions in JS, compiled at startup:
 | Unification | ⚠️ | [PrologStrategy.js#L288](file:///home/me/senars10/core/src/reason/strategy/PrologStrategy.js#L288) |
 | Query matching | ❌ | Needs Unifier extraction |
 
-### NAL-7: Temporal (Deferred)
+### NAL-7: Temporal
 
 *Implementation: `PatternRule` definitions compiled by `RuleCompiler`*
 
