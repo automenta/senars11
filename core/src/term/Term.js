@@ -46,6 +46,14 @@ export class Term {
         return this._components;
     }
 
+    comp(index) {
+        return this._components[index];
+    }
+
+    compName(index) {
+        return this._components[index]?.name;
+    }
+
     get complexity() {
         return this._complexity;
     }

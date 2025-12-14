@@ -101,6 +101,18 @@ describe('Term', () => {
         });
     });
 
+    describe('Macros', () => {
+        test('comp and compName', () => {
+            const t = tf.inheritance(atomA, atomB);
+            expect(t.comp(0)).toBe(atomA);
+            expect(t.comp(1)).toBe(atomB);
+            expect(t.compName(0)).toBe('A');
+            expect(t.compName(1)).toBe('B');
+            expect(t.comp(2)).toBeUndefined();
+            expect(t.compName(2)).toBeUndefined();
+        });
+    });
+
     describe('Property-Based', () => {
         const createTerm = (name) => tf.atomic(name);
         const createCompoundTerm = (operator, components) => tf.create(operator, components);

@@ -33,7 +33,7 @@ export class TermSerializer {
     }
 
     printStatement(term) {
-        return `<${this.stringify(term.components[0])} ${term.operator} ${this.stringify(term.components[1])}>`;
+        return `(${this.stringify(term.components[0])} ${term.operator} ${this.stringify(term.components[1])})`;
     }
 
     printSet(term, open, close) {

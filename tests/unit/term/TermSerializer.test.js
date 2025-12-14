@@ -23,7 +23,7 @@ describe('TermSerializer', () => {
 
     test('should serialize inheritance', () => {
         const t = factory.inheritance(factory.atomic('A'), factory.atomic('B'));
-        expect(serializer.stringify(t)).toBe('<A --> B>');
+        expect(serializer.stringify(t)).toBe('(A --> B)');
     });
 
     test('should serialize set', () => {
