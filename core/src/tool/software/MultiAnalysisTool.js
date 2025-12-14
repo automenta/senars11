@@ -3,8 +3,8 @@
  * @description Tool for coordinating multiple analysis tools
  */
 
-import { SoftwareAnalysisTool } from './SoftwareAnalysisTool.js';
-import { Logger } from '../../util/Logger.js';
+import {SoftwareAnalysisTool} from './SoftwareAnalysisTool.js';
+import {Logger} from '../../util/Logger.js';
 
 
 /**
@@ -64,7 +64,7 @@ export class MultiAnalysisTool extends SoftwareAnalysisTool {
      * @returns {Promise<any>} - Analysis result
      */
     async performAnalysis(params, context) {
-        const { analyses, verbose = false, concurrency = 2 } = params;
+        const {analyses, verbose = false, concurrency = 2} = params;
         const results = {};
 
         // Analysis to tool mapping
@@ -105,7 +105,7 @@ export class MultiAnalysisTool extends SoftwareAnalysisTool {
 
                     if (!toolData) {
                         Logger.warn(`⚠️  Tool ${toolId} not found for analysis: ${analysis}`);
-                        results[analysis] = { error: `Tool ${toolId} not found` };
+                        results[analysis] = {error: `Tool ${toolId} not found`};
                         return;
                     }
 
@@ -113,7 +113,7 @@ export class MultiAnalysisTool extends SoftwareAnalysisTool {
                     const tool = toolData.instance;
                     if (!tool || typeof tool.execute !== 'function') {
                         Logger.warn(`⚠️  Tool ${toolId} does not have a valid execute method for analysis: ${analysis}`);
-                        results[analysis] = { error: `Tool ${toolId} has no execute method` };
+                        results[analysis] = {error: `Tool ${toolId} has no execute method`};
                         return;
                     }
 
@@ -121,15 +121,15 @@ export class MultiAnalysisTool extends SoftwareAnalysisTool {
                         Logger.info(`🔍 Executing ${analysis} analysis...`);
                     }
 
-                    const result = await tool.execute({ verbose }, { ...context, analysisType: analysis });
+                    const result = await tool.execute({verbose}, {...context, analysisType: analysis});
                     results[analysis] = result;
 
                     if (verbose) {
                         Logger.info(`✅ ${analysis} analysis completed`);
                     }
                 } catch (error) {
-                    Logger.error(`❌ ${analysis} analysis failed:`, { message: error.message });
-                    results[analysis] = { error: `Analysis failed: ${error.message}`, details: error };
+                    Logger.error(`❌ ${analysis} analysis failed:`, {message: error.message});
+                    results[analysis] = {error: `Analysis failed: ${error.message}`, details: error};
                 }
             });
 
@@ -152,7 +152,7 @@ export class MultiAnalysisTool extends SoftwareAnalysisTool {
      */
     validate(params) {
         const schema = this.getParameterSchema();
-        if (!schema) return { isValid: true, errors: [] };
+        if (!schema) return {isValid: true, errors: []};
 
         const errors = [];
 
@@ -194,7 +194,7 @@ export class MultiAnalysisTool extends SoftwareAnalysisTool {
             }
         }
 
-        return { isValid: errors.length === 0, errors };
+        return {isValid: errors.length === 0, errors};
     }
 
     /**

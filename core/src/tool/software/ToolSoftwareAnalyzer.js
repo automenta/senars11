@@ -4,19 +4,19 @@
  */
 
 // Local imports - alphabetically sorted
-import { AnalyzerError, ConfigurationError } from '../../util/AnalyzerErrors.js';
-import { ArchitectureAnalysisTool } from './ArchitectureAnalysisTool.js';
-import { CoverageAnalysisTool } from './CoverageAnalysisTool.js';
-import { Logger } from '../../util/Logger.js';
-import { MultiAnalysisTool } from './MultiAnalysisTool.js';
-import { ResultDisplay } from './analyzers/ResultDisplay.js';
-import { SoftwareAnalyzerConfig } from './analyzers/SoftwareAnalyzerConfig.js';
-import { StaticAnalysisTool } from './StaticAnalysisTool.js';
-import { TechnicalDebtAnalysisTool } from './TechnicalDebtAnalysisTool.js';
-import { TestAnalysisTool } from './TestAnalysisTool.js';
-import { TestCoverageAnalysisTool } from './TestCoverageAnalysisTool.js';
-import { ToolIntegration } from '../ToolIntegration.js';
-import { ToolRegistry } from '../ToolRegistry.js';
+import {AnalyzerError, ConfigurationError} from '../../util/AnalyzerErrors.js';
+import {ArchitectureAnalysisTool} from './ArchitectureAnalysisTool.js';
+import {CoverageAnalysisTool} from './CoverageAnalysisTool.js';
+import {Logger} from '../../util/Logger.js';
+import {MultiAnalysisTool} from './MultiAnalysisTool.js';
+import {ResultDisplay} from './analyzers/ResultDisplay.js';
+import {SoftwareAnalyzerConfig} from './analyzers/SoftwareAnalyzerConfig.js';
+import {StaticAnalysisTool} from './StaticAnalysisTool.js';
+import {TechnicalDebtAnalysisTool} from './TechnicalDebtAnalysisTool.js';
+import {TestAnalysisTool} from './TestAnalysisTool.js';
+import {TestCoverageAnalysisTool} from './TestCoverageAnalysisTool.js';
+import {ToolIntegration} from '../ToolIntegration.js';
+import {ToolRegistry} from '../ToolRegistry.js';
 
 /**
  * Tool-based implementation of SeNARS Self Analyzer
@@ -232,7 +232,7 @@ export class ToolSoftwareAnalyzer {
         const multiAnalysisToolData = this.toolEngine.getTool('multi-analysis');
         if (!multiAnalysisToolData) {
             Logger.error('❌ MultiAnalysisTool not found in tool engine');
-            Logger.error('Available tools:', { tools: this.toolEngine.listTools ? this.toolEngine.listTools() : 'listTools method not available' });
+            Logger.error('Available tools:', {tools: this.toolEngine.listTools ? this.toolEngine.listTools() : 'listTools method not available'});
             throw new AnalyzerError('MultiAnalysisTool not available', 'tool_not_found');
         }
 
@@ -245,7 +245,7 @@ export class ToolSoftwareAnalyzer {
 
         if (typeof multiAnalysisTool.execute !== 'function') {
             Logger.error('❌ MultiAnalysisTool does not have execute method');
-            Logger.error('Tool object:', { type: typeof multiAnalysisTool, name: multiAnalysisTool.constructor?.name });
+            Logger.error('Tool object:', {type: typeof multiAnalysisTool, name: multiAnalysisTool.constructor?.name});
             throw new AnalyzerError('MultiAnalysisTool execute method not found', 'execute_not_found');
         }
 
@@ -267,7 +267,7 @@ export class ToolSoftwareAnalyzer {
             // Update tool usage stats
             this._updateToolUsageStats(toolParams.analyses, Date.now());
         } catch (error) {
-            Logger.error('❌ Error executing MultiAnalysisTool:', { message: error.message });
+            Logger.error('❌ Error executing MultiAnalysisTool:', {message: error.message});
             throw new AnalyzerError('Failed to execute analysis via tools', 'tool_execution', error);
         }
 
@@ -316,7 +316,7 @@ export class ToolSoftwareAnalyzer {
                 Logger.info(`🎯 Added ${goalStatements.length} improvement goals to NAR`);
             }
         } catch (error) {
-            Logger.error('❌ Error integrating with NAR:', { message: error.message });
+            Logger.error('❌ Error integrating with NAR:', {message: error.message});
         }
     }
 
@@ -431,7 +431,7 @@ export class ToolSoftwareAnalyzer {
      * @private
      */
     _createSummary(results) {
-        const { tests, coverage, static: staticResults, technicaldebt, architecture } = results;
+        const {tests, coverage, static: staticResults, technicaldebt, architecture} = results;
 
         return {
             ...(tests && !tests.error && {
@@ -504,7 +504,7 @@ export class ToolSoftwareAnalyzer {
         for (const analysis of analyses) {
             const toolName = `${analysis}-analysis`;
             if (!this.toolUsageStats.has(toolName)) {
-                this.toolUsageStats.set(toolName, { count: 0, totalExecutionTime: 0 });
+                this.toolUsageStats.set(toolName, {count: 0, totalExecutionTime: 0});
             }
 
             const stats = this.toolUsageStats.get(toolName);
@@ -523,7 +523,7 @@ export class ToolSoftwareAnalyzer {
         Logger.info('\n🔍 TEST COVERAGE ANALYSIS:');
 
         if (testCoverageResults.summary) {
-            const { totalTests, passedTests, failedTests, coveragePercentage } = testCoverageResults.summary;
+            const {totalTests, passedTests, failedTests, coveragePercentage} = testCoverageResults.summary;
             Logger.info(`  Total Tests: ${totalTests}`);
             Logger.info(`  Passed: ${passedTests}`);
             Logger.info(`  Failed: ${failedTests}`);
@@ -556,7 +556,7 @@ export class ToolSoftwareAnalyzer {
 
         // Display causal analysis
         if (testCoverageResults.causalAnalysis) {
-            const { highCausalFiles, lowCausalFiles } = testCoverageResults.causalAnalysis;
+            const {highCausalFiles, lowCausalFiles} = testCoverageResults.causalAnalysis;
 
             if (highCausalFiles && highCausalFiles.length > 0) {
                 Logger.info('\n🔗 HIGH COVERAGE FILES (Most tested, Top 5):');

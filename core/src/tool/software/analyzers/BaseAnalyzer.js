@@ -1,4 +1,4 @@
-import { Logger } from '../../../util/Logger.js';
+import {Logger} from '../../../util/Logger.js';
 
 export class BaseAnalyzer {
     constructor(options, verbose) {
@@ -10,7 +10,7 @@ export class BaseAnalyzer {
         try {
             return await analysisFunction();
         } catch (error) {
-            if (this.verbose) Logger.error(`❌ ${errorMessage}:`, { message: error.message });
+            if (this.verbose) Logger.error(`❌ ${errorMessage}:`, {message: error.message});
             return {
                 status: 'error',
                 error: `${errorMessage}: ${error.message}`,

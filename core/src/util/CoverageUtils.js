@@ -1,6 +1,6 @@
-import { spawnSync } from 'child_process';
+import {spawnSync} from 'child_process';
 import fs from 'fs';
-import { Logger } from './Logger.js';
+import {Logger} from './Logger.js';
 
 export class CoverageUtils {
     static findCoverageFile() {

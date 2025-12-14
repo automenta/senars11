@@ -52,7 +52,7 @@ export class Strategy {
                 } catch (error) {
                     console.error('Error processing primary premise in Strategy:', error);
                     // Continue to next premise rather than failing completely
-                    continue;
+
                 }
             }
         } catch (error) {

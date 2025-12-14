@@ -19,7 +19,7 @@ export class TermSerializer {
 
         // Handle statements
         if (this.isStatement(term)) {
-             return this.printStatement(term);
+            return this.printStatement(term);
         }
 
         // Handle general compounds

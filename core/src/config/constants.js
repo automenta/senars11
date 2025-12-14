@@ -124,33 +124,33 @@ export const DEMO_COMMANDS = Object.freeze({
 // Add operator constants (non-temporal subset)
 export const OP = Object.freeze({
     // Atomic types
-    ATOM: { str: '.', arity: [0,0] },
-    INT: { str: '+', arity: [0,0] },
-    BOOL: { str: 'B', arity: [0,0] },
-    IMG: { str: '/', arity: [0,0] },
+    ATOM: {str: '.', arity: [0, 0]},
+    INT: {str: '+', arity: [0, 0]},
+    BOOL: {str: 'B', arity: [0, 0]},
+    IMG: {str: '/', arity: [0, 0]},
 
     // Variables
-    VAR_INDEP: { str: '$', ch: '$' },
-    VAR_DEP: { str: '#', ch: '#' },
-    VAR_QUERY: { str: '?', ch: '?' },
-    VAR_PATTERN: { str: '%', ch: '%' },
+    VAR_INDEP: {str: '$', ch: '$'},
+    VAR_DEP: {str: '#', ch: '#'},
+    VAR_QUERY: {str: '?', ch: '?'},
+    VAR_PATTERN: {str: '%', ch: '%'},
 
     // Statements (binary, non-temporal)
-    INH: { str: '-->', arity: [2,2], statement: true },
-    SIM: { str: '<->', arity: [2,2], statement: true, commutative: true },
-    EQ: { str: '=', arity: [2,2], commutative: true },
-    DIFF: { str: '<~>', arity: [2,2], commutative: true },
+    INH: {str: '-->', arity: [2, 2], statement: true},
+    SIM: {str: '<->', arity: [2, 2], statement: true, commutative: true},
+    EQ: {str: '=', arity: [2, 2], commutative: true},
+    DIFF: {str: '<~>', arity: [2, 2], commutative: true},
 
     // Compounds
-    NEG: { str: '--', arity: [1,1] },
-    PROD: { str: '*', arity: [0,Infinity] },
-    SETi: { str: '[', ch: '[', arity: [1,Infinity], commutative: true },
-    SETe: { str: '{', ch: '{', arity: [1,Infinity], commutative: true },
-    DELTA: { str: 'Δ', ch: 'Δ', arity: [1,1] },
+    NEG: {str: '--', arity: [1, 1]},
+    PROD: {str: '*', arity: [0, Infinity]},
+    SETi: {str: '[', ch: '[', arity: [1, Infinity], commutative: true},
+    SETe: {str: '{', ch: '{', arity: [1, Infinity], commutative: true},
+    DELTA: {str: 'Δ', ch: 'Δ', arity: [1, 1]},
 
     // Deferred temporal operators (defined but not fully implemented)
-    CONJ: { str: '&&', arity: [2,Infinity], commutative: true, temporal: true },
-    IMPL: { str: '==>', arity: [2,2], statement: true, temporal: true },
+    CONJ: {str: '&&', arity: [2, Infinity], commutative: true, temporal: true},
+    IMPL: {str: '==>', arity: [2, 2], statement: true, temporal: true},
 });
 
 // Punctuation

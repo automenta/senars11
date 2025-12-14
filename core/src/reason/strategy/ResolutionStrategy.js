@@ -9,7 +9,7 @@
  * Future Enhancement: Achieve functional parity with Datalog, Prolog, ProbLog, etc.
  * Planned improvements include: unification algorithms, backward chaining, query optimization.
  */
-import { Strategy } from '../Strategy.js';
+import {Strategy} from '../Strategy.js';
 
 export class ResolutionStrategy extends Strategy {
     /**
@@ -50,7 +50,7 @@ export class ResolutionStrategy extends Strategy {
                 }
             } catch (error) {
                 console.error('Error processing primary premise in ResolutionStrategy:', error);
-                continue;
+
             }
         }
     }

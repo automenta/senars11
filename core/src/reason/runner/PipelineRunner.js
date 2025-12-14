@@ -68,7 +68,7 @@ export class PipelineRunner extends Runner {
             }
         } catch (error) {
             console.debug('Error in output stream creation:', error.message);
-            return;
+
         }
     }
 

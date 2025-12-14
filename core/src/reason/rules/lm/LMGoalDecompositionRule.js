@@ -3,12 +3,12 @@
  * @description Goal decomposition rule that uses an LM to break down high-level goals into concrete sub-goals.
  */
 
-import { LMRule } from '../../LMRule.js';
-import { Punctuation, Task } from '../../../task/Task.js';
-import { cleanText, isGoal, isValidSubGoal, parseSubGoals } from '../../RuleHelpers.js';
+import {LMRule} from '../../LMRule.js';
+import {Punctuation, Task} from '../../../task/Task.js';
+import {cleanText, isGoal, isValidSubGoal, parseSubGoals} from '../../RuleHelpers.js';
 
 export const createGoalDecompositionRule = (dependencies, config = {}) => {
-    const { lm } = dependencies;
+    const {lm} = dependencies;
     const finalConfig = {
         id: 'goal-decomposition',
         name: 'Goal Decomposition Rule',
