@@ -329,10 +329,10 @@ export class SemanticStrategy extends PremiseFormationStrategy {
 
 | Task | Effort | Unlocks |
 |------|--------|---------|
-| TermUtils.js | 1 hr | Clean APIs |
-| Negation in parser | 2-4 hrs | Simplification |
-| **Unifier.js extraction** | 4-6 hrs | Pattern Rules |
-| SemanticStrategy | 2-4 hrs | Fuzzy matching |
+| TermUtils.js | 1 hr | Clean APIs ✅ |
+| Negation in parser | 2-4 hrs | Simplification ✅ |
+| **Unifier.js extraction** | 4-6 hrs | Pattern Rules ✅ |
+| SemanticStrategy | 2-4 hrs | Fuzzy matching ✅ |
 
 ### Phase 1: Rule Engine (1-2 weeks)
 

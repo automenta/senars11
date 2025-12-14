@@ -224,6 +224,15 @@ export class ReasonerBuilder {
             maxLinks: options.maxLinks ?? 20
         }));
 
+        // SemanticStrategy: uses embeddings for fuzzy matching
+        if (this.context.embeddingLayer) {
+            import('./strategy/SemanticStrategy.js').then(({ SemanticStrategy }) => {
+                strategy.addFormationStrategy(new SemanticStrategy(this.context.embeddingLayer, {
+                    priority: options.semanticPriority ?? 0.7
+                }));
+            });
+        }
+
         return this;
     }
 

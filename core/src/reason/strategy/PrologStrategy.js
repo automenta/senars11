@@ -4,12 +4,14 @@
  * using the PrologParser to convert between Prolog and SeNARS representations.
  */
 
-import {Strategy} from '../Strategy.js';
-import {PrologParser} from '../../parser/PrologParser.js';
-import {Task} from '../../task/Task.js';
-import {Truth} from '../../Truth.js';
-import {TermFactory} from '../../term/TermFactory.js';
-import {isQuestion} from '../RuleHelpers.js';
+import { Strategy } from '../Strategy.js';
+import { PrologParser } from '../../parser/PrologParser.js';
+import { Task } from '../../task/Task.js';
+import { Truth } from '../../Truth.js';
+import { TermFactory } from '../../term/TermFactory.js';
+import { Unifier } from '../../term/Unifier.js';
+import { isQuestion } from '../RuleHelpers.js';
+import { isVariable, isCompound, termsEqual, getComponents, getOperator, getVariableName } from '../../term/TermUtils.js';
 
 export class PrologStrategy extends Strategy {
     constructor(config = {}) {
@@ -17,6 +19,7 @@ export class PrologStrategy extends Strategy {
         this.name = 'PrologStrategy';
         this.prologParser = new PrologParser(config.termFactory || new TermFactory());
         this.termFactory = this.prologParser.termFactory;
+        this.unifier = new Unifier(this.termFactory);
         this.goalStack = []; // For backtracking
         this.knowledgeBase = new Map(); // Store facts and rules for resolution
         this.substitutionStack = []; // Track variable bindings during resolution
@@ -67,9 +70,9 @@ export class PrologStrategy extends Strategy {
 
         for (const rule of applicableRules) {
             // Standardize variables apart to prevent collisions in recursion
-            const {head, body, isFact} = this._standardizeRuleVariables(rule);
+            const { head, body, isFact } = this._standardizeRuleVariables(rule);
 
-            const {success, substitution: newSubstitution} = this._unify(goalTask.term, head, substitution);
+            const { success, substitution: newSubstitution } = this.unifier.unify(goalTask.term, head, substitution);
 
             if (success) {
                 if (isFact) {
@@ -99,17 +102,17 @@ export class PrologStrategy extends Strategy {
     }
 
     _getPredicateArgs(term) {
-        const components = this._getTermComponents(term);
+        const components = getComponents(term);
         // Handle PrologParser structure (^, Pred, ArgsTuple)
         if (term.operator === '^' && components.length === 2) {
-            return this._getTermComponents(components[1]);
+            return getComponents(components[1]);
         }
         return components;
     }
 
     _solveBuiltIn(goalTask, substitution) {
         // Apply current substitution to resolve any bound variables before evaluation
-        const term = this._applySubstitutionToTerm(goalTask.term, substitution);
+        const term = this.unifier.applySubstitution(goalTask.term, substitution);
         const pred = this._getPredicateName(term);
         const args = this._getPredicateArgs(term);
 
@@ -123,7 +126,7 @@ export class PrologStrategy extends Strategy {
                 const value = this._evalExpression(arg2);
                 const valueTerm = this.termFactory.atomic(String(value));
 
-                const unification = this._unify(arg1, valueTerm, substitution);
+                const unification = this.unifier.unify(arg1, valueTerm, substitution);
                 if (unification.success) {
                     return [{
                         substitution: unification.substitution,
@@ -160,7 +163,7 @@ export class PrologStrategy extends Strategy {
             }
 
             if (success) {
-                return [{substitution, task: goalTask}];
+                return [{ substitution, task: goalTask }];
             }
             return [];
 
@@ -176,7 +179,7 @@ export class PrologStrategy extends Strategy {
         if (!isNaN(val)) return val;
 
         // Compound expression
-        if (this._isCompound(term)) {
+        if (isCompound(term)) {
             const pred = this._getPredicateName(term);
             const args = this._getPredicateArgs(term); // Use getPredicateArgs to handle ^ structure in expressions too!
 
@@ -208,15 +211,15 @@ export class PrologStrategy extends Strategy {
 
         const standardize = (term) => {
             if (!term) return term;
-            if (this._isVariable(term)) {
-                const name = this._getVariableName(term);
+            if (isVariable(term)) {
+                const name = getVariableName(term);
                 if (!mapping[name]) {
                     mapping[name] = `${name}${suffix}`;
                 }
                 return this.termFactory.variable(mapping[name]);
             }
-            if (this._isCompound(term)) {
-                const components = this._getTermComponents(term).map(standardize);
+            if (isCompound(term)) {
+                const components = getComponents(term).map(standardize);
                 return this.termFactory.create(term.operator, components);
             }
             return term;
@@ -238,7 +241,7 @@ export class PrologStrategy extends Strategy {
         if (goals.length === 0) return [initialSubstitution];
 
         const [firstGoal, ...remainingGoals] = goals;
-        const firstGoalTerm = this._applySubstitutionToTerm(firstGoal, initialSubstitution);
+        const firstGoalTerm = this.unifier.applySubstitution(firstGoal, initialSubstitution);
         const firstGoalTask = this._createTaskFromTerm(firstGoalTerm, '?');
 
         const firstSolutions = await this._resolveGoal(firstGoalTask, currentDepth, initialSubstitution);
@@ -281,155 +284,7 @@ export class PrologStrategy extends Strategy {
             ?? 'unknown';
     }
 
-    /**
-     * Unify two terms and return the substitution
-     * @private
-     */
-    _unify(term1, term2, substitution = {}) {
-        const t1 = this._applySubstitutionToTerm(term1, substitution);
-        const t2 = this._applySubstitutionToTerm(term2, substitution);
 
-        if (this._isVariable(t1)) return this._unifyVariable(t1, t2, substitution);
-        if (this._isVariable(t2)) return this._unifyVariable(t2, t1, substitution);
-
-        if (this._termsEqual(t1, t2)) return {success: true, substitution};
-
-        if (this._isCompound(t1) && this._isCompound(t2)) {
-            if (this._getTermArity(t1) !== this._getTermArity(t2)) {
-                return {success: false, substitution: {}};
-            }
-
-            if ((t1.operator || '') !== (t2.operator || '')) {
-                return {success: false, substitution: {}};
-            }
-
-            let currentSubstitution = substitution;
-            const components1 = this._getTermComponents(t1);
-            const components2 = this._getTermComponents(t2);
-
-            for (let i = 0; i < components1.length; i++) {
-                const result = this._unify(components1[i], components2[i], currentSubstitution);
-                if (!result.success) return {success: false, substitution: {}};
-                currentSubstitution = result.substitution;
-            }
-            return {success: true, substitution: currentSubstitution};
-        }
-        return {success: false, substitution: {}};
-    }
-
-    _unifyVariable(variable, term, substitution) {
-        const varName = this._getVariableName(variable);
-        if (substitution[varName]) {
-            return this._unify(substitution[varName], term, substitution);
-        }
-
-        const termVarName = this._getVariableName(term);
-        if (this._isVariable(term) && substitution[termVarName]) {
-            return this._unify(variable, substitution[termVarName], substitution);
-        }
-
-        if (this._occursCheck(varName, term, substitution)) {
-            return {success: false, substitution: {}};
-        }
-
-        return {success: true, substitution: {...substitution, [varName]: term}};
-    }
-
-    /**
-     * Check if a term is compound (has components)
-     * @private
-     */
-    _isCompound(term) {
-        if (!term) return false;
-        if (typeof term.isCompound === 'boolean') return term.isCompound;
-        return !!(term.operator || (term.args && Array.isArray(term.args)));
-    }
-
-    /**
-     * Get the arity (number of arguments) of a term
-     * @private
-     */
-    _getTermArity(term) {
-        return this._getTermComponents(term).length;
-    }
-
-    /**
-     * Get the components of a term.
-     * Normalized to include all structural components.
-     * @private
-     */
-    _getTermComponents(term) {
-        return term.components || term.args || [];
-    }
-
-    /**
-     * Check if two terms are equal under a substitution
-     * @private
-     */
-    _termsEqual(term1, term2) {
-        if (!term1 || !term2) return false;
-        if (typeof term1.equals === 'function') return term1.equals(term2);
-        if (term1.name && term2.name) return term1.name === term2.name;
-        return term1.toString() === term2.toString();
-    }
-
-    /**
-     * Check if a term represents a variable
-     * @private
-     */
-    _isVariable(term) {
-        if (!term) return false;
-        const name = term.name || term._name || '';
-        return name.startsWith('?') || name.startsWith('_') || /^[A-Z]/.test(name);
-    }
-
-    /**
-     * Get variable name
-     * @private
-     */
-    _getVariableName(term) {
-        return term.name || term._name || 'unknown';
-    }
-
-    /**
-     * Perform occurs check to prevent circular substitutions
-     * @private
-     */
-    _occursCheck(varName, term, substitution) {
-        if (this._isVariable(term) && this._getVariableName(term) === varName) return true;
-
-        if (this._isCompound(term)) {
-            return this._getTermComponents(term).some(comp => this._occursCheck(varName, comp, substitution));
-        }
-
-        return false;
-    }
-
-    /**
-     * Apply substitution to a single term
-     * @private
-     */
-    _applySubstitutionToTerm(term, substitution) {
-        if (!term) return term;
-
-        if (this._isVariable(term)) {
-            const varName = this._getVariableName(term);
-            if (substitution[varName]) {
-                return this._applySubstitutionToTerm(substitution[varName], substitution);
-            }
-            return term;
-        }
-
-        if (this._isCompound(term)) {
-            const newComponents = this._getTermComponents(term).map(comp =>
-                this._applySubstitutionToTerm(comp, substitution)
-            );
-
-            return this.termFactory.create(term.operator, newComponents);
-        }
-
-        return term;
-    }
 
     /**
      * Apply substitution to a task
@@ -439,10 +294,10 @@ export class PrologStrategy extends Strategy {
         if (!task || !substitution) return task;
 
         return new Task({
-            term: this._applySubstitutionToTerm(task.term, substitution),
+            term: this.unifier.applySubstitution(task.term, substitution),
             punctuation: task.punctuation,
             truth: task.truth ? new Truth(task.truth.frequency, task.truth.confidence) : undefined,
-            budget: task.budget ? {...task.budget} : undefined
+            budget: task.budget ? { ...task.budget } : undefined
         });
     }
 
@@ -455,7 +310,7 @@ export class PrologStrategy extends Strategy {
             term: term,
             punctuation: punctuation,
             truth: punctuation === '?' ? null : truth || new Truth(1.0, 0.9),
-            budget: {priority: 0.8, durability: 0.7, quality: 0.8}
+            budget: { priority: 0.8, durability: 0.7, quality: 0.8 }
         });
     }
 
