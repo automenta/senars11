@@ -33,7 +33,7 @@ export class TermSerializer {
     }
 
     printStatement(term) {
-        return `(${this.stringify(term.components[0])} ${term.operator} ${this.stringify(term.components[1])})`;
+        return `(${this.stringify(term.comp(0))} ${term.operator} ${this.stringify(term.comp(1))})`;
     }
 
     printSet(term, open, close) {
@@ -41,13 +41,13 @@ export class TermSerializer {
     }
 
     printNegation(term) {
-        const inner = term.components[0];
+        const inner = term.comp(0);
         // Standard Narsese --A
         return `--${this.stringify(inner)}`;
     }
 
     printDelta(term) {
-        return `Δ${this.stringify(term.components[0])}`;
+        return `Δ${this.stringify(term.comp(0))}`;
     }
 
     printCompound(term) {
