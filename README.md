@@ -275,6 +275,31 @@ premises using various selection algorithms. Different strategy implementations 
 - **PrologStrategy**: Goal-driven backward chaining with Prolog-style unification and resolution
 - **ResolutionStrategy**: Goal-driven backward chaining for Prolog-like resolution, e.g., question answering
 
+#### Premise Formation Strategies
+
+The system uses a **composable, modular premise formation architecture** that can be extended for any reasoning paradigm:
+
+| Strategy | Pattern | Priority |
+|----------|---------|----------|
+| `TaskMatchStrategy` | Syllogistic patterns (shared subject/predicate/middle) | 1.0 |
+| `DecompositionStrategy` | Extract subterms from compound statements | 0.8 |
+| `TermLinkStrategy` | Associative links via TermLayer | 0.6 |
+
+Custom strategies can be added by extending `PremiseFormationStrategy` and implementing `async* generateCandidates()`.
+
+#### NAL Inference Rules
+
+The rule executor applies NAL inference patterns with corresponding truth functions:
+
+| Rule | Pattern | Truth Function |
+|------|---------|----------------|
+| `SyllogisticRule` | (A→M), (M→B) ⇒ (A→B) | `Truth.deduction` |
+| `ModusPonensRule` | (A⇒B), A ⇒ B | detachment |
+| `InductionRule` | (M→P), (M→S) ⇒ (S→P) | `Truth.induction` |
+| `AbductionRule` | (P→M), (S→M) ⇒ (S→P) | `Truth.abduction` |
+| `ConversionRule` | (P→S) ⇒ (S→P) | `Truth.conversion` |
+| `ContrapositionRule` | (S⇒P) ⇒ (¬P⇒¬S) | `Truth.structuralReduction` |
+
 #### RuleExecutor
 
 The `RuleExecutor` indexes all registered rules for fast retrieval and performs symbolic guard analysis to optimize rule
