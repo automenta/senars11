@@ -24,14 +24,7 @@ describe('NarseseParser Operators & Syntax', () => {
     });
 
     test('should parse compact inheritance A:B', () => {
-        const result = parser.parse('A:B.'); // B --> A (instance:type -> type:instance in grammar pred:subj)
-        // Grammar: pred:AtomicTerm ":" subj:Term { return inheritance(subj, pred); }
-        // Input: A:B.
-        // pred: A, subj: B.
-        // inheritance(B, A) -> (B --> A).
-        // Wait, if A:B means "Type A has instance B", then (B --> A) is correct.
-        // Usually, variable:Type. "x:Integer" -> (x --> Integer).
-        // So pred=Integer, subj=x.
+        const result = parser.parse('A:B.'); // B --> A
         expect(result.term.operator).toBe('-->');
         expect(result.term.components[0].name).toBe('B');
         expect(result.term.components[1].name).toBe('A');

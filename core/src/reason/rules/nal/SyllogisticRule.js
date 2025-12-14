@@ -46,10 +46,10 @@ export class SyllogisticRule extends NALRule {
         if (comp1.length !== 2 || comp2.length !== 2) return false;
 
         // Find potential matching middle terms using the proper Term.equals method
-        // Pattern 1: (S --> M) + (M --> P) where comp1[1] === comp2[0]
-        // Pattern 2: (M --> P) + (S --> M) where comp2[1] === comp1[0]
-        const matchesPattern1 = comp1[1]?.equals && comp1[1].equals(comp2[0]); // term1.object === term2.subject
-        const matchesPattern2 = comp2[1]?.equals && comp2[1].equals(comp1[0]); // term2.object === term1.subject
+        // Pattern 1: (S --> M) + (M --> P) where term1.predicate === term2.subject
+        // Pattern 2: (M --> P) + (S --> M) where term2.predicate === term1.subject
+        const matchesPattern1 = term1.predicateEquals(term2.subject);
+        const matchesPattern2 = term2.predicateEquals(term1.subject);
 
         return matchesPattern1 || matchesPattern2;
     }
@@ -76,14 +76,14 @@ export class SyllogisticRule extends NALRule {
         const termFactory = context?.termFactory;
 
         // Pattern 1: (S --> M) + (M --> P) => (S --> P)
-        if (comp1[1].equals && comp1[1].equals(comp2[0])) {
-            // subject = comp1[0], middle = comp1[1], predicate = comp2[1]
-            return this._createDerivedTask(primaryPremise, secondaryPremise, comp1[0], comp2[1], this.operator, termFactory);
+        if (term1.predicateEquals(term2.subject)) {
+            // subject = term1.subject, middle = term1.predicate, predicate = term2.predicate
+            return this._createDerivedTask(primaryPremise, secondaryPremise, term1.subject, term2.predicate, this.operator, termFactory);
         }
         // Pattern 2: (M --> P) + (S --> M) => (S --> P)
-        else if (comp2[1].equals && comp2[1].equals(comp1[0])) {
-            // subject = comp2[0], middle = comp2[1], predicate = comp1[1]
-            return this._createDerivedTask(primaryPremise, secondaryPremise, comp2[0], comp1[1], this.operator, termFactory);
+        else if (term2.predicateEquals(term1.subject)) {
+            // subject = term2.subject, middle = term2.predicate, predicate = term1.predicate
+            return this._createDerivedTask(primaryPremise, secondaryPremise, term2.subject, term1.predicate, this.operator, termFactory);
         }
 
         return []; // No valid pattern found

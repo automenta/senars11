@@ -28,7 +28,6 @@ describe('TermSerializer', () => {
 
     test('should serialize set', () => {
         const t = factory.setExt([factory.atomic('A'), factory.atomic('B')]);
-        // Set order is commutative, TermFactory sorts. A, B.
         expect(serializer.stringify(t)).toBe('{A, B}');
     });
 

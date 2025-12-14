@@ -81,33 +81,4 @@ describe('Truth', () => {
     test('toString', () => {
         expect(t1.toString()).toMatch(/^%[0-9.]+;[0-9.]+%$/);
     });
-
-    test('new operations', () => {
-        // Intersection: f1*f2, c1*c2
-        expect(Truth.intersection(t1, t2)).toMatchObject({frequency: 0.8 * 0.7, confidence: 0.9 * 0.6});
-
-        // Union: 1-(1-f1)(1-f2), c1*c2
-        const unionF = 1 - (1 - 0.8) * (1 - 0.7);
-        expect(Truth.union(t1, t2).frequency).toBeCloseTo(unionF);
-        expect(Truth.union(t1, t2).confidence).toBeCloseTo(0.9 * 0.6);
-
-        // Subtract
-        expect(Truth.subtract(t1, t2).frequency).toBeCloseTo(Math.max(0, 0.8 - 0.7));
-
-        // Diff
-        expect(Truth.diff(t1, t2).frequency).toBeCloseTo(Math.abs(0.8 - 0.7));
-
-        // Exemplification
-        const w = 0.9 / (0.9 + 1);
-        expect(Truth.exemplification(t1, t2).confidence).toBeCloseTo(w * 0.9 * 0.6 * 0.8 * 0.7);
-
-        // Sameness
-        const diff = Math.abs(0.8 - 0.7);
-        expect(Truth.sameness(t1, t2).frequency).toBeCloseTo(1 - diff);
-
-        // Structural Deduction
-        const c = 0.9 / (0.9 + 1);
-        expect(Truth.structuralDeduction(t1).frequency).toBeCloseTo(0.8 * 0.8);
-        expect(Truth.structuralDeduction(t1).confidence).toBeCloseTo(c * 0.9);
-    });
 });

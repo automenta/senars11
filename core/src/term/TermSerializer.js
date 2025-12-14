@@ -33,7 +33,7 @@ export class TermSerializer {
     }
 
     printStatement(term) {
-        return `(${this.stringify(term.comp(0))} ${term.operator} ${this.stringify(term.comp(1))})`;
+        return `(${this.stringify(term.subject)} ${term.operator} ${this.stringify(term.predicate)})`;
     }
 
     printSet(term, open, close) {
@@ -52,14 +52,6 @@ export class TermSerializer {
 
     printCompound(term) {
         if (!term.operator) return this.printTuple(term);
-
-        // Special case for product (*) which is sometimes infix? No, usually (*, A, B)
-        // What about & and |?
-        // (&, A, B) or (A & B)?
-        // Narsese typically uses (&, ...) prefix form for compounds, except statements.
-        // But (A & B) is also valid? Parser accepts `(A & B)`.
-        // Let's stick to prefix for standard CompoundTerm unless it's a statement.
-
         return `(${term.operator}, ${term.components.map(c => this.stringify(c)).join(', ')})`;
     }
 

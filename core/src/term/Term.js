@@ -54,6 +54,47 @@ export class Term {
         return this._components[index]?.name;
     }
 
+    compEquals(index, term) {
+        const c = this._components[index];
+        return !!(c && c.equals && c.equals(term));
+    }
+
+    get subject() {
+        return this._components[0];
+    }
+
+    get predicate() {
+        return this._components[1];
+    }
+
+    isOp(op) {
+        return this._operator === op;
+    }
+
+    get isInheritance() {
+        return this._operator === '-->';
+    }
+
+    get isImplication() {
+        return this._operator === '==>';
+    }
+
+    get isSimilarity() {
+        return this._operator === '<->';
+    }
+
+    get isEquivalence() {
+        return this._operator === '<=>';
+    }
+
+    subjectEquals(term) {
+        return this.compEquals(0, term);
+    }
+
+    predicateEquals(term) {
+        return this.compEquals(1, term);
+    }
+
     get complexity() {
         return this._complexity;
     }

@@ -715,24 +715,3 @@ This gets ~80% of inference capability in ~1 week.
 *Document Version: 4.0 (Final)*  
 *Created: 2025-12-10*  
 *Status: Complete - Ready for Execution*
-
-## 14. Status Update (December 2025)
-
-### Completed Items
-- **Operators**: Updated `constants.js` with all non-temporal operators.
-- **Parser**: Updated `narsese.peggy` with new syntax (negation `--`, compact inheritance `:`, delta `Δ`, pattern vars `%`, all punctuation). Rebuilt parser.
-- **Truth Functions**: Implemented missing truth functions in `Truth.js` (intersection, union, exemplification, structural deduction, etc.).
-- **Serialization**: Created `TermSerializer.js` with support for new syntax (parenthesized statements).
-- **Term Macros**: Added `comp(i)` and `compName(i)` to `Term.js` for cleaner code.
-- **Native Rules**: Implemented `Decompose1` (structural decomposition).
-- **Verification**: Added comprehensive unit tests for all new components.
-
-### Implementation Decisions
-- **Rule Parser**: Decided to skip `NALRuleParser` and `.nal` file loading in favor of native JavaScript implementation of key rules, to reduce complexity and dependency on external DSL files.
-- **Native Rules**: Focused on `Decompose1` as the primary structural rule. Skipped `TermLinking` and `Evaluate` temporarily to ensure stability and avoid incomplete implementations (`BagAdjacentTerms` dependency missing).
-- **Formatting**: Switched default statement serialization from `<S --> P>` to `(S --> P)` per preference.
-
-### Next Steps
-1.  **Temporal Logic**: Proceed with Temporal Phases (T1, T2, T3) as outlined in Section 7.
-2.  **Additional Rules**: Implement `DecomposeStatement`, `VariableIntroduction`, and `Evaluate` once dependencies (like Term Linking graph support) are clarified.
-3.  **Integration**: Ensure the new `Decompose1` rule is registered and active in the `Reasoner`.

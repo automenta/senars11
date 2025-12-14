@@ -111,6 +111,31 @@ describe('Term', () => {
             expect(t.comp(2)).toBeUndefined();
             expect(t.compName(2)).toBeUndefined();
         });
+
+        test('compEquals', () => {
+            const t = tf.inheritance(atomA, atomB);
+            expect(t.compEquals(0, atomA)).toBe(true);
+            expect(t.compEquals(1, atomB)).toBe(true);
+            expect(t.compEquals(0, atomB)).toBe(false);
+            expect(t.compEquals(1, atomA)).toBe(false);
+            expect(t.compEquals(2, atomA)).toBe(false);
+            expect(t.compEquals(0, null)).toBe(false);
+        });
+
+        test('new macros', () => {
+            const t = tf.inheritance(atomA, atomB); // (A --> B)
+            expect(t.subject).toBe(atomA);
+            expect(t.predicate).toBe(atomB);
+            expect(t.isOp('-->')).toBe(true);
+            expect(t.isInheritance).toBe(true);
+            expect(t.isImplication).toBe(false);
+            expect(t.subjectEquals(atomA)).toBe(true);
+            expect(t.predicateEquals(atomB)).toBe(true);
+            expect(t.predicateEquals(atomA)).toBe(false);
+
+            const impl = tf.implication(atomA, atomB);
+            expect(impl.isImplication).toBe(true);
+        });
     });
 
     describe('Property-Based', () => {

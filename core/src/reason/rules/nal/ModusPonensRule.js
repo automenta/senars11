@@ -29,8 +29,8 @@ export class ModusPonensRule extends NALRule {
 
         const isAntecedentMatch = (implicationTerm, otherTerm) => {
             if (!isImplication(implicationTerm) || !implicationTerm.components) return false;
-            return implicationTerm.comp(0)?.equals &&
-                implicationTerm.comp(0).equals(otherTerm);
+            return implicationTerm.components[0]?.equals &&
+                implicationTerm.components[0].equals(otherTerm);
         };
 
         const primaryTerm = primaryPremise.term;
@@ -66,13 +66,13 @@ export class ModusPonensRule extends NALRule {
             let implicationPremise, antecedentPremise;
 
             if (primaryPremise.term.operator === '==>' &&
-                primaryPremise.term.comp(0)?.equals &&
-                primaryPremise.term.comp(0).equals(secondaryPremise.term)) {
+                primaryPremise.term.components[0]?.equals &&
+                primaryPremise.term.components[0].equals(secondaryPremise.term)) {
                 implicationPremise = primaryPremise;
                 antecedentPremise = secondaryPremise;
             } else if (secondaryPremise.term.operator === '==>' &&
-                secondaryPremise.term.comp(0)?.equals &&
-                secondaryPremise.term.comp(0).equals(primaryPremise.term)) {
+                secondaryPremise.term.components[0]?.equals &&
+                secondaryPremise.term.components[0].equals(primaryPremise.term)) {
                 implicationPremise = secondaryPremise;
                 antecedentPremise = primaryPremise;
             } else {
@@ -80,8 +80,8 @@ export class ModusPonensRule extends NALRule {
             }
 
             // Extract components: implication is (P ==> Q), antecedent is P
-            // const P = implicationPremise.term.comp(0);  // Antecedent
-            const Q = implicationPremise.term.comp(1);  // Consequent
+            // const P = implicationPremise.term.components[0];  // Antecedent
+            const Q = implicationPremise.term.components[1];  // Consequent
             const implicationTruth = implicationPremise.truth;
             const antecedentTruth = antecedentPremise.truth;
 
