@@ -1,6 +1,6 @@
 # SeNARS Development Roadmap
 
-> **Status**: Living document  
+> **Status**: Living vision document  
 > **Last Updated**: 2025-12-14  
 > **Foundation**: Stream reasoner, modular premise formation, 7 NAL rules, 99.8% test pass rate
 
@@ -9,20 +9,22 @@
 ## Table of Contents
 
 1. [Principles](#principles)
-2. [Simplifications](#simplifications)
-3. [Rule Engine Architecture](#rule-engine-architecture)
-4. [Implemented](#implemented)
-5. [Extractions](#extractions)
-6. [Roadmap](#roadmap)
-7. [Quick Wins](#quick-wins)
-8. [Foundation](#foundation)
-9. [NAL](#nal)
-10. [Strategies](#strategies)
-11. [Memory](#memory)
-12. [LM](#lm)
-13. [Cross-Cutting](#cross-cutting)
-14. [Ecosystem](#ecosystem)
-15. [Speculative](#speculative)
+2. [Development Tree](#development-tree)
+3. [Simplifications](#simplifications)
+4. [Rule Engine Architecture](#rule-engine-architecture)
+5. [Implemented](#implemented)
+6. [Extractions](#extractions)
+7. [Roadmap](#roadmap)
+8. [Quick Wins](#quick-wins)
+9. [Foundation](#foundation)
+10. [NAL](#nal)
+11. [Strategies](#strategies)
+12. [Memory](#memory)
+13. [LM](#lm)
+14. [Cross-Cutting](#cross-cutting)
+15. [Ecosystem](#ecosystem)
+16. [Domain Applications](#domain-applications)
+17. [Speculative](#speculative)
 
 ---
 
@@ -36,6 +38,93 @@
 | **Composable** | Standard interfaces, plug-and-play |
 | **Observable** | Emit events, bounded retention |
 | **Resource-Aware** | Budgets, timeouts, graceful degradation |
+
+---
+
+## Development Tree
+
+> **Dependency Map** — Foundational components unlock multiple downstream capabilities
+
+```mermaid
+graph TD
+    subgraph Foundation["🏗️ FOUNDATIONAL COMPONENTS"]
+        UNI[Unification Engine]
+        EMB[Embedding Infrastructure]
+        IDX[Advanced Indexing]
+        EVT[Event/Temporal Buffer]
+        TRC[Derivation Tracing]
+        SER[Serialization Layer]
+    end
+
+    subgraph NAL["📐 NAL CAPABILITIES"]
+        NAL6[NAL-6: Variables]
+        NAL7[NAL-7: Temporal]
+        NAL8[NAL-8: Goals/Planning]
+        NEG[Negation & Contradiction]
+    end
+
+    subgraph Strategy["🎯 PREMISE STRATEGIES"]
+        SEM[Semantic Similarity]
+        ANA[Analogical Reasoning]
+        GOAL[Goal-Driven]
+        TEMP[Temporal Chaining]
+    end
+
+    subgraph ML["🧠 ML INTEGRATION"]
+        HOP[Hopfield Memory]
+        GNN[Graph Neural Nets]
+        RL[Reinforcement Learning]
+        DIFF[Differentiable Logic]
+    end
+
+    subgraph DX["🛠️ DEVELOPER EXPERIENCE"]
+        VIS[Visual Debugger]
+        WHY[Why-Not Explainer]
+        PLAY[Web Playground]
+        BENCH[Benchmark Suite]
+    end
+
+    subgraph Eco["🌐 ECOSYSTEM"]
+        API[REST/GraphQL API]
+        MCP[MCP Server]
+        NL[NL Query Interface]
+        INGEST[Knowledge Ingestion]
+    end
+
+    UNI --> NAL6
+    EVT --> NAL7
+    NAL6 --> NAL8
+    NAL7 --> NAL8
+    EMB --> SEM
+    UNI --> ANA
+    EVT --> TEMP
+    NAL8 --> GOAL
+    EMB --> HOP
+    IDX --> GNN
+    TRC --> RL
+    UNI --> DIFF
+    TRC --> VIS
+    TRC --> WHY
+    SER --> PLAY
+    IDX --> BENCH
+    SER --> API
+    API --> MCP
+    EMB --> NL
+    SER --> INGEST
+    NEG --> WHY
+    NAL7 --> TEMP
+```
+
+### Dependency Summary
+
+| Foundation | Unlocks | Effort | Impact | ROI |
+|------------|---------|--------|--------|-----|
+| **Unification Engine** | NAL-6, Analogical, Differentiable | 🟡 Medium | 🔴 Critical | ⭐⭐⭐ |
+| **Embedding Infrastructure** | Semantic, Hopfield, NL queries | 🟡 Medium | 🔴 Critical | ⭐⭐⭐ |
+| **Event/Temporal Buffer** | NAL-7, Temporal chaining | 🟢 Low | 🟡 High | ⭐⭐⭐ |
+| **Advanced Indexing** | GNN, Benchmarks, Scaling | 🔴 High | 🟡 High | ⭐⭐ |
+| **Derivation Tracing** | Debugger, Explainer, RL | 🟢 Low | 🟢 Medium | ⭐⭐⭐ |
+| **Serialization Layer** | API, Playground, Ingestion | 🟢 Low | 🟢 Medium | ⭐⭐⭐ |
 
 ---
 
@@ -167,6 +256,8 @@ export class RuleExecutor {
 
 **Critical Dependency**: `Unifier.js` (for the final binding step).
 
+> **Future-Proofing**: This architecture naturally extends to NAL-7 (Temporal) by adding temporal constraints to the Decision Tree, and NAL-8 (Goals) by allowing the tree to be traversed in reverse (finding rules that produce a desired conclusion).
+
 ---
 
 ## Implemented
@@ -263,6 +354,23 @@ export class Unifier {
     // ...
   }
 }
+```
+
+**Test Cases**:
+```javascript
+// Basic unification
+unify(parse("(?x → animal)"), parse("(bird → animal)"))
+  → { "?x": Term("bird") }
+
+// Nested unification  
+unify(parse("((?x → ?y) → mammal)"), parse("((cat → animal) → mammal)"))
+  → { "?x": "cat", "?y": "animal" }
+
+// Failure case
+unify(parse("(?x → ?x)"), parse("(a → b)")) → null
+
+// Occurs check
+unify(parse("?x"), parse("(foo → ?x)")) → null // Infinite term
 ```
 
 **Effort**: 4-6 hours  
@@ -382,6 +490,72 @@ export class SemanticStrategy extends PremiseFormationStrategy {
 
 ---
 
+## Foundation
+
+### Unification Engine
+
+*Enables: NAL-6, Analogical reasoning, Differentiable logic, Prolog interop*
+
+See [Extractions](#extractions) for implementation details.
+
+### Embedding Infrastructure
+
+*Enables: Semantic similarity, Hopfield memory, NL queries*
+
+**Interface**:
+```javascript
+class EmbeddingService {
+  async embed(text) → Float32Array
+  async embedBatch(texts) → Float32Array[]
+  async findSimilar(query, k, threshold?) → Array<{term, score}>
+}
+
+class VectorIndex {
+  add(id, vector) → void
+  remove(id) → void
+  search(query, k) → Array<{id, distance}>
+  size() → number
+}
+```
+
+### Event/Temporal Buffer
+
+*Enables: NAL-7 temporal, Temporal strategies, Causality*
+
+**Interface**:
+```javascript
+class TemporalBuffer {
+  constructor(windowSize, resolution)
+  
+  add(event, timestamp?) → void
+  getWindow(start, end) → Event[]
+  findSequences(pattern, minGap, maxGap) → Sequence[]
+  detectCausality(a, b, threshold) → {correlation, lag}
+}
+
+class STMLinker {
+  link(event1, event2, relationType) → TemporalLink
+  getTemporalContext(event) → TemporalLink[]
+}
+```
+
+### Derivation Tracing
+
+*Enables: Debugger, Explainer, RL rewards*
+
+**Interface**:
+```javascript
+class DerivationTracer {
+  startTrace(task) → TraceId
+  recordStep(traceId, {rule, premises, conclusion, truthBefore, truthAfter})
+  recordSkip(traceId, {rule, reason})
+  endTrace(traceId) → DerivationGraph
+  export(traceId, format: 'json' | 'dot' | 'mermaid') → string
+}
+```
+
+---
+
 ## NAL
 
 ### Implemented Rules
@@ -415,20 +589,38 @@ Implement via `PatternRule` definitions in JS, compiled at startup:
 | Query matching | ❌ | Needs Unifier extraction |
 
 ### NAL-7: Temporal
+*Implementation: `PatternRule` definitions compiled by `RuleCompiler`*
 
 - [ ] Operators: `=/>`, `=|>`, `=\>`
-- [ ] TemporalBuffer
-- [ ] TemporalInductionRule
+- [ ] TemporalBuffer (Event window)
+- [ ] TemporalInductionRule (Pattern: `(A, t1), (B, t2) ⊢ (A =/> B)`)
 
 ### NAL-8: Goals
+*Implementation: Backward-chaining via `RuleExecutor` or `PrologStrategy`*
 
-- [ ] Goal representation
-- [ ] Plan synthesis
-- [ ] Execution monitoring
+- [ ] Goal representation (`Term` with desire value)
+- [ ] Plan synthesis (Reverse derivation)
+- [ ] Execution monitoring (Feedback loop)
 
 ---
 
 ## Strategies
+
+### Strategy Interface
+
+```javascript
+class PremiseFormationStrategy {
+  constructor(config)
+  
+  // Yield candidate premise pairs
+  async* generateCandidates(task, memory, context) {
+    yield { premise1, premise2, priority, source: this.name }
+  }
+  
+  get name() → string
+  get priority() → number // 0-1, higher = try first
+}
+```
 
 ### Implemented
 
@@ -444,28 +636,59 @@ Implement via `PatternRule` definitions in JS, compiled at startup:
 
 ### Planned
 
-| Strategy | Depends | Priority |
-|----------|---------|----------|
-| SemanticStrategy | EmbeddingLayer ✅ | High |
-| AnalogicalStrategy | Unifier | High |
-| GoalDrivenStrategy | NAL-8 | Medium |
-| CausalStrategy | NAL-7 | Medium |
+| Strategy | Depends | Priority | Purpose | Implementation Note |
+|----------|---------|----------|---------|---------------------|
+| SemanticStrategy | EmbeddingLayer ✅ | High | Fuzzy matching | Uses `EmbeddingLayer` to find semantically similar terms for premise matching. |
+| AnalogicalStrategy | Unifier | High | Cross-domain mapping | Uses `Unifier` to map structures between domains `(S↔M)`. |
+| GoalDrivenStrategy | NAL-8 | Medium | Backward from goals | Will use `RuleExecutor` in backward-chaining mode or enhance `PrologStrategy`. |
+| CausalStrategy | NAL-7 | Medium | Multi-hop temporal | Consumes `TemporalBuffer` events; applies temporal `PatternRule` definitions. |
+
+### Composition Pattern
+
+```javascript
+const composite = new CompositeStrategy([
+  { strategy: new TaskMatchStrategy(), weight: 1.0 },
+  { strategy: new SemanticSimilarityStrategy(), weight: 0.5 },
+  { strategy: new NegationPairingStrategy(), weight: 0.8 }
+]);
+```
 
 ---
 
 ## Memory
 
-| Component | Location | Purpose |
-|-----------|----------|---------|
-| Bag | [Bag.js](file:///home/me/senars10/core/src/memory/Bag.js) | Priority-based collection |
-| Concept | [Concept.js](file:///home/me/senars10/core/src/memory/Concept.js) | Task grouping |
-| Focus | [Focus.js](file:///home/me/senars10/core/src/memory/Focus.js) | Short-term attention |
-| Memory | [Memory.js](file:///home/me/senars10/core/src/memory/Memory.js) | Central store |
-| Index | [MemoryIndex.js](file:///home/me/senars10/core/src/memory/MemoryIndex.js) | Fast lookup |
-| Consolidation | [MemoryConsolidation.js](file:///home/me/senars10/core/src/memory/MemoryConsolidation.js) | STM→LTM |
-| Forgetting | [ForgettingPolicy.js](file:///home/me/senars10/core/src/memory/ForgettingPolicy.js) | Resource management |
-| Layer | [Layer.js](file:///home/me/senars10/core/src/memory/Layer.js) | Abstract associations |
-| TermLayer | [TermLayer.js](file:///home/me/senars10/core/src/memory/TermLayer.js) | Term associations |
+### Scaling Tiers
+
+| Scale | Strategy | Data Structures |
+|-------|----------|-----------------|
+| <10K | In-memory | Map, Set |
+| 10K-100K | Indexed | Trie, B-Tree, LRU |
+| 100K-1M | Sharded | Web Workers |
+| 1M+ | Distributed | External store |
+
+### Memory Optimizations
+
+| Optimization | Technique | Benefit |
+|--------------|-----------|---------|
+| Term interning | WeakMap cache | 40-60% memory |
+| Flyweight | Shared substructures | 20-30% memory |
+| Lazy parsing | Parse on access | Faster load |
+| LRU eviction | Bounded caches | Predictable memory |
+
+### Advanced Indexing
+
+**Interface**:
+```javascript
+class TermIndex {
+  // Structure-based lookup
+  findByPattern(pattern) → Term[]
+  findByOperator(op) → Term[]
+  findContaining(subterm) → Term[]
+  
+  // Priority-based
+  topK(k, filter?) → Term[]
+}
+```
 
 **Needed**:
 - TemporalBuffer — NAL-7 event sequences
@@ -474,6 +697,30 @@ Implement via `PatternRule` definitions in JS, compiled at startup:
 ---
 
 ## LM
+
+### Integration Architecture
+
+```
+┌─────────────┐     ┌─────────────┐
+│  NAL Core   │◄───►│   Bridge    │◄───►│  LM Service │
+└─────────────┘     └─────────────┘     └─────────────┘
+     │                    │
+     ▼                    ▼
+ Derivations         Translation
+ Truth values        Calibration
+ Consistency         Explanations
+```
+
+### Bridge Operations
+
+| Operation | Direction | Implementation |
+|-----------|-----------|----------------|
+| Premise ranking | LM→NAL | Embed + cosine |
+| Truth calibration | LM→NAL | Learned mapping |
+| NL explanation | NAL→LM | Template + LM |
+| NL ingestion | NL→NAL | LM + parser |
+
+### Components
 
 | Component | Location | Purpose |
 |-----------|----------|---------|
@@ -486,6 +733,24 @@ Implement via `PatternRule` definitions in JS, compiled at startup:
 ---
 
 ## Cross-Cutting
+
+### Performance & Scalability
+
+**Optimization Tiers**:
+
+| Tier | Threshold | Techniques |
+|------|-----------|------------|
+| 0 | Always | Algorithms, caching |
+| 1 | 1K ops/s | Object pooling, typed arrays |
+| 2 | 10K ops/s | Web Workers |
+| 3 | 100K ops/s | WASM, SIMD |
+| 4 | Matrix ops | WebGPU |
+
+**Benchmarks to Track**:
+- Derivations per second
+- Memory per 1K concepts
+- Cold start time
+- LM call latency
 
 ### Observability
 
@@ -511,6 +776,21 @@ Implement via `PatternRule` definitions in JS, compiled at startup:
 
 ## Ecosystem
 
+### Serialization Layer
+
+**Interface**:
+```javascript
+class Serializer {
+  static toJSON(task) → object
+  static fromJSON(json) → Task
+  static toNarsese(task) → string
+  static fromNarsese(str) → Task
+  static detect(input) → 'json' | 'narsese' | 'rdf'
+}
+```
+
+### Components
+
 | Component | Status |
 |-----------|--------|
 | NARTool | ✅ [tool/NARTool.js](file:///home/me/senars10/core/src/tool/NARTool.js) |
@@ -523,7 +803,40 @@ Implement via `PatternRule` definitions in JS, compiled at startup:
 
 ---
 
+## Domain Applications
+
+| Domain | Foundation Requirements | Demo |
+|--------|------------------------|------|
+| Legal | Unification + Tracing | Precedent search |
+| Medical | Embeddings + Temporal | Diagnosis assistant |
+| Game AI | Temporal + Goals | NPC behaviors |
+| Education | Tracing + Serialization | Interactive tutor |
+
+---
+
 ## Speculative
+
+### ML Technique Integration
+
+**Layer Interface**:
+```javascript
+class MLLayer extends Layer {
+  constructor(config)
+  async addLink(source, target, priority)
+  async getLinks(term, limit, minPriority)
+  async findSimilar(query, k)
+  async train(data)
+  async save(path)
+  static async load(path)
+}
+```
+
+**Technique Priority**:
+1. **Hopfield** — Associative retrieval, builds on embeddings
+2. **Bayesian** — Principled uncertainty, no prerequisites
+3. **RL** — Adaptive behavior, builds on tracing
+4. **GNN** — Graph learning, requires indexing
+5. **Differentiable** — End-to-end, requires mature unification
 
 ### Near-Term
 
