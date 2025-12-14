@@ -5,7 +5,7 @@
  * Extracted from PrologStrategy.js to support general-purpose rule matching.
  */
 
-import { isVariable, isCompound, termsEqual, getComponents, getOperator } from './TermUtils.js';
+import { isVariable, isCompound, termsEqual, getComponents, getOperator, getVariableName } from './TermUtils.js';
 
 export class Unifier {
     constructor(termFactory) {
@@ -100,7 +100,7 @@ export class Unifier {
     }
 
     _unifyVariable(variable, term, substitution) {
-        const varName = this._getVariableName(variable);
+        const varName = getVariableName(variable);
 
         // If variable is already bound, unify the binding with the term
         if (substitution[varName]) {
@@ -108,7 +108,7 @@ export class Unifier {
         }
 
         // If term is a variable and already bound, unify variable with term's binding
-        const termVarName = this._getVariableName(term);
+        const termVarName = getVariableName(term);
         if (isVariable(term) && substitution[termVarName]) {
             return this.unify(variable, substitution[termVarName], substitution);
         }
@@ -126,7 +126,7 @@ export class Unifier {
     }
 
     _occursCheck(varName, term, substitution) {
-        if (isVariable(term) && this._getVariableName(term) === varName) return true;
+        if (isVariable(term) && getVariableName(term) === varName) return true;
 
         if (isCompound(term)) {
             return getComponents(term).some(comp => this._occursCheck(varName, comp, substitution));
@@ -139,7 +139,7 @@ export class Unifier {
         if (!term) return term;
 
         if (isVariable(term)) {
-            const varName = this._getVariableName(term);
+            const varName = getVariableName(term);
             if (substitution[varName]) {
                 return this.applySubstitution(substitution[varName], substitution);
             }
@@ -147,16 +147,19 @@ export class Unifier {
         }
 
         if (isCompound(term)) {
-            const newComponents = getComponents(term).map(comp =>
-                this.applySubstitution(comp, substitution)
-            );
-            return this.termFactory.create(getOperator(term), newComponents);
+            const components = getComponents(term);
+            let changed = false;
+            const newComponents = components.map(comp => {
+                const newComp = this.applySubstitution(comp, substitution);
+                if (newComp !== comp) changed = true;
+                return newComp;
+            });
+
+            if (changed) {
+                return this.termFactory.create(getOperator(term), newComponents);
+            }
         }
 
         return term;
-    }
-
-    _getVariableName(term) {
-        return term.name || term._name || 'unknown';
     }
 }

@@ -7,9 +7,10 @@
 import { getOperator, getComponents } from '../../../term/TermUtils.js';
 
 export class RuleExecutor {
-    constructor(compiledTree, unifier) {
+    constructor(compiledTree, unifier, discriminators = []) {
         this.tree = compiledTree;
         this.unifier = unifier;
+        this.discriminators = discriminators;
     }
 
     /**
@@ -50,27 +51,17 @@ export class RuleExecutor {
     }
 
     query(pTerm, sTerm) {
-        // Traverse the tree based on the standardized levels
-        // Level 1: Op(p)
-        // Level 2: Op(s)
-        // Level 3: Arity(p)
-        // Level 4: Arity(s)
-
-        const values = [
-            getOperator(pTerm) || null,
-            getOperator(sTerm) || null,
-            getComponents(pTerm).length,
-            getComponents(sTerm).length
-        ];
-
+        const values = this.discriminators.map(d => d.getInstanceValue(pTerm, sTerm));
         return this._collectRules(this.tree, values, 0);
     }
 
-    _collectRules(node, values, depth) {
-        let rules = [...node.rules];
+    _collectRules(node, values, depth, target = []) {
+        if (node.rules.length > 0) {
+            target.push(...node.rules);
+        }
 
         if (depth >= values.length) {
-            return rules;
+            return target;
         }
 
         const val = values[depth];
@@ -78,15 +69,15 @@ export class RuleExecutor {
         // Check specific branch
         const child = node.children.get(val);
         if (child) {
-            rules = rules.concat(this._collectRules(child, values, depth + 1));
+            this._collectRules(child, values, depth + 1, target);
         }
 
         // Check wildcard branch ('*')
         const wildcard = node.children.get('*');
         if (wildcard) {
-            rules = rules.concat(this._collectRules(wildcard, values, depth + 1));
+            this._collectRules(wildcard, values, depth + 1, target);
         }
 
-        return rules;
+        return target;
     }
 }

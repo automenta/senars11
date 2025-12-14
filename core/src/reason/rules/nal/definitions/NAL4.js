@@ -46,11 +46,7 @@ export const NAL4 = [
             const P = bindings['?$P'];
             const M = bindings['?$M'];
 
-            // ((T & P) --> M) - Wait, Union in extension is usually (T | P) --> M ?
-            // NAL: (T --> M) & (P --> M) |- ((T & P) --> M) : IntExt
-            // (T --> M) & (P --> M) |- ((T | P) --> M) : UniExt
-
-            // Let's implement Union (Intension) for now as example
+            // Union (Extension): (T --> M) & (P --> M) |- ((T | P) --> M)
             const compound = termFactory.disjunction(T, P); // |
             const term = termFactory.inheritance(compound, M);
             const truth = Truth.union(p.truth, s.truth);

@@ -6,6 +6,7 @@ import { isSynchronousRule } from './RuleHelpers.js';
 import { RuleCompiler } from './rules/compiler/RuleCompiler.js';
 import { RuleExecutor as PatternRuleExecutor } from './rules/executor/RuleExecutor.js';
 import { Unifier } from '../term/Unifier.js';
+import { StandardDiscriminators } from './rules/Discriminators.js';
 import { NAL4 } from './rules/nal/definitions/NAL4.js';
 import { NAL5 } from './rules/nal/definitions/NAL5.js';
 
@@ -36,12 +37,12 @@ export class RuleProcessor {
         const termFactory = this.config.termFactory;
         if (termFactory) {
             this.unifier = new Unifier(termFactory);
-            this.ruleCompiler = new RuleCompiler(termFactory);
+            this.ruleCompiler = new RuleCompiler(termFactory, StandardDiscriminators);
 
             // Compile NAL-4 and NAL-5 rules
             const rules = [...NAL4, ...NAL5];
             const decisionTree = this.ruleCompiler.compile(rules);
-            this.patternExecutor = new PatternRuleExecutor(decisionTree, this.unifier);
+            this.patternExecutor = new PatternRuleExecutor(decisionTree, this.unifier, StandardDiscriminators);
         }
     }
 
@@ -90,17 +91,6 @@ export class RuleProcessor {
                         const results = this.patternExecutor.execute(primaryPremise, secondaryPremise, context);
 
                         for (const result of results) {
-                            // Pattern rules return { term, truth, punctuation }
-                            // We need to wrap them in Task/Derivation structure
-                            // But wait, RuleExecutor returns objects, not Tasks?
-                            // Let's check RuleExecutor implementation.
-                            // It returns whatever rule.conclusion returns.
-                            // NAL4/5 conclusions return { term, truth, punctuation }.
-
-                            // We need to convert this to a derived Task.
-                            // We can reuse enrichResult logic if we wrap it first.
-
-                            // Actually, let's make a helper to create the derived task.
                             const derivedTask = this._createDerivedTask(result, primaryPremise, secondaryPremise, 'PatternRule');
                             if (derivedTask) {
                                 yield this._processDerivation(derivedTask);
