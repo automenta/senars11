@@ -6,7 +6,7 @@ import {TermCache} from './TermCache.js';
 
 export {Term};
 
-const COMMUTATIVE_OPERATORS = new Set(['&', '|', '+', '*', '<->', '=', '||', '&&']);
+const COMMUTATIVE_OPERATORS = new Set(['&', '|', '+', '*', '<->', '=', '||', '&&', '<~>', '{}', '[]']);
 const ASSOCIATIVE_OPERATORS = new Set(['&', '|', '||', '&&']);
 
 const CANONICAL_NAME_PATTERNS = {
@@ -19,6 +19,8 @@ const CANONICAL_NAME_PATTERNS = {
     '==>': (n) => `(==>, ${n[0]}, ${n[1]})`,
     '<=>': (n) => `(<=>, ${n[0]}, ${n[1]})`,
     '=': (n) => `(=, ${n[0]}, ${n[1]})`,
+    '<~>': (n) => `(<~>, ${n[0]}, ${n[1]})`,
+    'Δ': (n) => `Δ${n[0]}`,
     '^': (n) => `(^, ${n[0]}, ${n[1]})`,
     '{{--': (n) => `({{--, ${n[0]}, ${n[1]})`,
     '--}}': (n) => `(--}}, ${n[0]}, ${n[1]})`,
@@ -139,6 +141,14 @@ export class TermFactory extends BaseComponent {
 
     negation(term) {
         return this._createCompound('--', [term]);
+    }
+
+    difference(a, b) {
+        return this._createCompound('<~>', [a, b]);
+    }
+
+    delta(term) {
+        return this._createCompound('Δ', [term]);
     }
 
     extImage(relation, ...terms) {

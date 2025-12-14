@@ -4,16 +4,22 @@ start
 
 Task "task"
   = term:Term punc:Punctuation truth:TruthValue? {
+      let taskType = 'BELIEF';
+      if (punc === '?') taskType = 'QUESTION';
+      else if (punc === '!') taskType = 'GOAL';
+      else if (punc === '@') taskType = 'QUEST';
+      else if (punc === ';') taskType = 'COMMAND';
+
       return {
         term: term,
         punctuation: punc,
         truthValue: truth,
-        taskType: punc === '?' ? 'QUESTION' : (punc === '!' ? 'GOAL' : 'BELIEF')
+        taskType: taskType
       };
     }
 
 Punctuation
-  = _ punc:[.!?] { return punc; }
+  = _ punc:[.!?@;] { return punc; }
 
 TruthValue
   = _ "%" _ f:Float _ ";" _ c:Float _ "%" {
@@ -31,10 +37,30 @@ TruthValue
 
 Term "term"
   = Statement
+  / CompactInheritance
+  / NegationTerm
+  / DeltaTerm
   / CompoundTerm
   / Set
   / Variable
+  / ImagePlaceholder
   / AtomicTerm
+
+CompactInheritance
+  = pred:AtomicTerm ":" subj:Term {
+      return options.termFactory.inheritance(subj, pred);
+    }
+
+NegationTerm
+  = "--" term:Term { return options.termFactory.negation(term); }
+
+DeltaTerm
+  = "Δ" term:Term { return options.termFactory.delta(term); }
+  / "/\\" term:Term { return options.termFactory.delta(term); }
+
+ImagePlaceholder
+  = "\\" { return options.termFactory.atomic('\\'); }
+  / "/" { return options.termFactory.atomic('/'); }
 
 CompoundTerm
   = "(" _ op:Operator _ ","? _ components:TermList _ ")" {
@@ -62,10 +88,10 @@ ParenthesizedStatement
     }
 
 Operator
-  = op:("-->" / "<->" / "==>" / "<=>" / "=/>" / "=|" / "=/=" / "=" / "&&" / "||" / "&|" / "&/" / "&," / "|," / "-->," / "<->," / "==>," / "<=>,") { return op.endsWith(',') ? op.slice(0, -1) : op; }
+  = op:("-->" / "<->" / "==>" / "<=>" / "<~>" / "=/>" / "=|" / "=/=" / "=" / "&&" / "||" / "&|" / "&/" / "&," / "|," / "-->," / "<->," / "==>," / "<=>,") { return op.endsWith(',') ? op.slice(0, -1) : op; }
 
 InfixOperator
-  = op:("-->" / "<->" / "==>" / "<=>" / "=/>" / "=|" / "=/=" / "=" / "&&" / "||" / "&|" / "&/") { return op; }
+  = op:("-->" / "<->" / "==>" / "<=>" / "<~>" / "=/>" / "=|" / "=/=" / "=" / "&&" / "||" / "&|" / "&/") { return op; }
 
 Set
   = "{" _ components:TermList? _ "}" { return options.termFactory.setExt(components || []); }
@@ -84,13 +110,13 @@ TermList
 
 AtomicTerm "atomic term"
   = StringLiteral
-  / chars:$([^(){}<>.,!%?; \t\n\r=&/|>-]+) { return options.termFactory.atomic(chars); }
+  / chars:$([^(){}<>.,!%?;:@ \t\n\r=&/|>-]+) { return options.termFactory.atomic(chars); }
 
 StringLiteral
   = '"' chars:$([^"]*) '"' { return options.termFactory.atomic('"' + chars + '"'); }
 
 Variable "variable"
-  = varName:$([?$#*][^(){}<>.,!%?; \t\n\r=&/|>-]*) { return options.termFactory.atomic(varName); }
+  = varName:$([?$#*%][^(){}<>.,!%?; \t\n\r=&/|>-]*) { return options.termFactory.atomic(varName); }
 
 Float "float"
   = val:$("-"? [0-9]+ ("." [0-9]+)?) { return parseFloat(val); }

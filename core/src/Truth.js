@@ -120,6 +120,56 @@ export class Truth {
         });
     }
 
+    static intersection(t1, t2) {
+        return Truth.binaryOperation(t1, t2, (t, u) =>
+            new Truth(t.frequency * u.frequency, t.confidence * u.confidence));
+    }
+
+    static union(t1, t2) {
+        return Truth.binaryOperation(t1, t2, (t, u) =>
+            new Truth(1 - (1 - t.frequency) * (1 - u.frequency), t.confidence * u.confidence));
+    }
+
+    static subtract(t1, t2) {
+        return Truth.binaryOperation(t1, t2, (t, u) =>
+            new Truth(Math.max(0, t.frequency - u.frequency), t.confidence * u.confidence));
+    }
+
+    static diff(t1, t2) {
+        return Truth.binaryOperation(t1, t2, (t, u) =>
+            new Truth(Math.abs(t.frequency - u.frequency), t.confidence * u.confidence));
+    }
+
+    static exemplification(t1, t2) {
+        return Truth.binaryOperation(t1, t2, (t, u) => {
+            const w = t.confidence / (t.confidence + 1); // weakening factor
+            return new Truth(t.frequency * u.frequency, w * t.confidence * u.confidence * t.frequency * u.frequency);
+        });
+    }
+
+    static sameness(t1, t2) {
+        return Truth.binaryOperation(t1, t2, (t, u) => {
+            const diff = Math.abs(t.frequency - u.frequency);
+            return new Truth(1 - diff, t.confidence * u.confidence);
+        });
+    }
+
+    static deductionWeak(t1, t2) {
+        const result = Truth.deduction(t1, t2);
+        return result ? new Truth(result.f, Truth.weak(result.c)) : null;
+    }
+
+    static structuralDeduction(t) {
+        if (!t) return null;
+        const c = t.confidence / (t.confidence + 1);
+        return new Truth(t.frequency * t.frequency, c * t.confidence);
+    }
+
+    static structuralReduction(t) {
+        if (!t) return null;
+        return new Truth(t.frequency, Truth.weak(t.confidence));
+    }
+
     static isStronger(t1, t2) {
         return Truth.expectation(t1) > Truth.expectation(t2);
     }
