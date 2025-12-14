@@ -50,10 +50,16 @@ export class ReasonerBuilder {
         } = await import('./rules/nal/SyllogisticRule.js');
         const { ModusPonensRule } = await import('./rules/nal/ModusPonensRule.js');
         const { MetacognitionRules } = await import('./rules/nal/MetacognitionRules.js');
+        const { InductionRule, AbductionRule } = await import('./rules/nal/InductionAbductionRule.js');
+        const { ConversionRule, ContrapositionRule } = await import('./rules/nal/ConversionRule.js');
 
         ruleExecutor.register(new InheritanceSyllogisticRule());
         ruleExecutor.register(new ImplicationSyllogisticRule());
         ruleExecutor.register(new ModusPonensRule());
+        ruleExecutor.register(new InductionRule());
+        ruleExecutor.register(new AbductionRule());
+        ruleExecutor.register(new ConversionRule());
+        ruleExecutor.register(new ContrapositionRule());
 
         // Register metacognition rules if enabled
         if (config.metacognition?.selfOptimization?.enabled) {
