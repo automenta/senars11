@@ -273,7 +273,9 @@ premises using various selection algorithms. Different strategy implementations 
 - **BagStrategy**: NARS-style priority-sampled bag approach for anytime reasoning
 - **ExhaustiveStrategy**: Comprehensive search for all related beliefs for a given task
 - **PrologStrategy**: Goal-driven backward chaining with Prolog-style unification and resolution
-- **ResolutionStrategy**: Goal-driven backward chaining for Prolog-like resolution, e.g., question answering
+- **ResolutionStrategy**: NAL-6 query matching with variable unification for question answering
+- **GoalDrivenStrategy**: NAL-8 goal achievement through backward chaining and plan synthesis
+- **AnalogicalStrategy**: NAL-6 cross-domain knowledge transfer via structure mapping
 
 #### Premise Formation Strategies
 
@@ -299,6 +301,12 @@ The rule executor applies NAL inference patterns with corresponding truth functi
 | `AbductionRule` | (P→M), (S→M) ⇒ (S→P) | `Truth.abduction` |
 | `ConversionRule` | (P→S) ⇒ (S→P) | `Truth.conversion` |
 | `ContrapositionRule` | (S⇒P) ⇒ (¬P⇒¬S) | `Truth.structuralReduction` |
+
+**Advanced Reasoning Capabilities**:
+
+- **Variable Unification**: Queries with variables like `(bird --> ?X)?` resolve to specific bindings, enabling pattern-based question answering
+- **Goal-Driven Reasoning**: Tasks with `!` punctuation represent goals to achieve, e.g., `(self --> happy)!`, with backward chaining to synthesize plans
+- **Analogical Transfer**: Knowledge transfers across domains via similarity relations, e.g., `(bird <-> airplane)` enables inferring `(airplane --> flyer)` from `(bird --> flyer)` with confidence adjustment
 
 #### RuleExecutor
 
