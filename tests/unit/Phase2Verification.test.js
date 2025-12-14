@@ -6,13 +6,13 @@
  */
 
 import { describe, it, expect, beforeEach } from '@jest/globals';
-import { TermFactory } from '../../../src/term/TermFactory.js';
-import { Unifier } from '../../../src/term/Unifier.js';
-import { ResolutionStrategy } from '../../../src/reason/strategy/ResolutionStrategy.js';
-import { GoalDrivenStrategy } from '../../../src/reason/strategy/GoalDrivenStrategy.js';
-import { AnalogicalStrategy } from '../../../src/reason/strategy/AnalogicalStrategy.js';
-import { Task } from '../../../src/task/Task.js';
-import { Truth } from '../../../src/Truth.js';
+import { TermFactory } from '../../core/src/term/TermFactory.js';
+import { Unifier } from '../../core/src/term/Unifier.js';
+import { ResolutionStrategy } from '../../core/src/reason/strategy/ResolutionStrategy.js';
+import { GoalDrivenStrategy } from '../../core/src/reason/strategy/GoalDrivenStrategy.js';
+import { AnalogicalStrategy } from '../../core/src/reason/strategy/AnalogicalStrategy.js';
+import { Task } from '../../core/src/task/Task.js';
+import { Truth } from '../../core/src/Truth.js';
 
 describe('Phase 2: Variables & Goals', () => {
     let tf;
@@ -46,7 +46,7 @@ describe('Phase 2: Variables & Goals', () => {
             // Test unification
             const match = unifier.match(queryTerm, beliefTerm);
             expect(match.success).toBe(true);
-            expect(match.substitution['X'].name).toBe('animal');
+            expect(match.substitution['?X'].name).toBe('animal');
         });
 
         it('should match complex queries with multiple variables', () => {
@@ -58,8 +58,8 @@ describe('Phase 2: Variables & Goals', () => {
 
             const match = unifier.match(queryTerm, beliefTerm);
             expect(match.success).toBe(true);
-            expect(match.substitution['S'].name).toBe('bird');
-            expect(match.substitution['P'].name).toBe('animal');
+            expect(match.substitution['?S'].name).toBe('bird');
+            expect(match.substitution['?P'].name).toBe('animal');
         });
 
         it('should use ResolutionStrategy with Unifier for query answering', () => {

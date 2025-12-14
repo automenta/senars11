@@ -2,10 +2,10 @@
  * Unit tests for PrologStrategy
  */
 
-import {PrologStrategy} from './PrologStrategy.js';
-import {Task} from '../../task/Task.js';
-import {Truth} from '../../Truth.js';
-import {TermFactory} from '../../term/TermFactory.js';
+import { PrologStrategy } from '../../../../core/src/reason/strategy/PrologStrategy.js';
+import { Task } from '../../../../core/src/task/Task.js';
+import { Truth } from '../../../../core/src/Truth.js';
+import { TermFactory } from '../../../../core/src/term/TermFactory.js';
 
 describe('PrologStrategy', () => {
     let strategy;
@@ -13,7 +13,7 @@ describe('PrologStrategy', () => {
 
     beforeEach(() => {
         termFactory = new TermFactory();
-        strategy = new PrologStrategy({termFactory});
+        strategy = new PrologStrategy({ termFactory });
     });
 
     test('should initialize correctly with default config', () => {

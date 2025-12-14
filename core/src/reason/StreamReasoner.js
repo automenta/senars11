@@ -1,5 +1,5 @@
-import {BaseComponent} from '../util/BaseComponent.js';
-import {IntrospectionEvents} from '../util/IntrospectionEvents.js';
+import { BaseComponent } from '../util/BaseComponent.js';
+import { IntrospectionEvents } from '../util/IntrospectionEvents.js';
 
 export class StreamReasoner extends BaseComponent {
     constructor(memory, ruleProcessor, config = {}, eventBus = null) {
@@ -34,7 +34,7 @@ export class StreamReasoner extends BaseComponent {
 
         // 2. Select beliefs (premises)
         const beliefs = concept.getTasksByType('BELIEF');
-        // console.log(`[StreamReasoner] Found ${beliefs.length || 0} beliefs`);
+
 
         // 3. Feed to RuleProcessor
         for (const belief of beliefs) {
@@ -44,12 +44,12 @@ export class StreamReasoner extends BaseComponent {
                 const derivations = this.ruleProcessor.processSyncRule(rule, task, belief);
                 for (const derived of derivations) {
                     this.memory.addTask(derived);
-                    this._emitIntrospectionEvent(IntrospectionEvents.REASONING_DERIVATION, {task: derived.serialize()});
+                    this._emitIntrospectionEvent(IntrospectionEvents.REASONING_DERIVATION, { task: derived.serialize() });
                     // Emit legacy event for tests
                     if (this.eventBus) {
                         this.eventBus.emit('reasoning.derivation', derived);
                         // Also emit task.input as some tests expect derived tasks to appear there
-                        this.eventBus.emit('task.input', {task: derived, source: 'reasoning'});
+                        this.eventBus.emit('task.input', { task: derived, source: 'reasoning' });
                     }
                 }
             }

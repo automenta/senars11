@@ -1,7 +1,7 @@
-import {PremiseSource} from './PremiseSource.js';
-import {randomWeightedSelect} from './utils/randomWeightedSelect.js';
-import {mergeConfig, sleep} from './utils/common.js';
-import {logError, ReasonerError} from './utils/error.js';
+import { PremiseSource } from './PremiseSource.js';
+import { randomWeightedSelect } from './utils/randomWeightedSelect.js';
+import { mergeConfig, sleep } from './utils/common.js';
+import { logError, ReasonerError } from './utils/error.js';
 
 /**
  * A PremiseSource that draws from a TaskBag with configurable sampling objectives.
@@ -54,10 +54,10 @@ export class TaskBagPremiseSource extends PremiseSource {
 
         // Performance tracking for dynamic adaptation
         this.performanceStats = {
-            priority: {count: 0, effectiveness: 0},
-            recency: {count: 0, effectiveness: 0},
-            punctuation: {count: 0, effectiveness: 0},
-            novelty: {count: 0, effectiveness: 0}
+            priority: { count: 0, effectiveness: 0 },
+            recency: { count: 0, effectiveness: 0 },
+            punctuation: { count: 0, effectiveness: 0 },
+            novelty: { count: 0, effectiveness: 0 }
         };
 
         this.dynamicAdaptation = defaults.dynamic;
@@ -107,7 +107,7 @@ export class TaskBagPremiseSource extends PremiseSource {
                 }
             } catch (error) {
                 if (signal?.aborted) break;
-                logError(error, {context: 'premise_source_stream'}, 'warn');
+                logError(error, { context: 'premise_source_stream' }, 'warn');
                 // Wait before continuing to avoid tight error loop
                 await this._waitForTask();
                 continue;
@@ -157,7 +157,7 @@ export class TaskBagPremiseSource extends PremiseSource {
 
             return selectedTask;
         } catch (error) {
-            logError(error, {context: 'task_sampling'}, 'error');
+            logError(error, { context: 'task_sampling' }, 'error');
             return null;
         }
     }
@@ -248,43 +248,27 @@ export class TaskBagPremiseSource extends PremiseSource {
         if (allTasks.length === 0) return null;
         if (allTasks.length === 1) return allTasks[0];
 
-        // Log all available tasks for debugging
-        /*
-        console.log(`[PREMISE DEBUG] Available tasks in focus: ${allTasks.length}`);
-        for (let i = 0; i < allTasks.length; i++) {
-            const termName = allTasks[i].term?._name || allTasks[i].term || 'unknown';
-            const priority = allTasks[i].budget?.priority || 0;
-            console.log(`[PREMISE DEBUG] Task ${i}: ${termName} (priority: ${priority})`);
-        }
-        */
-
         // Use fair roulette sampling: each task's selection probability is proportional to its priority
         const totalPriority = allTasks.reduce((sum, task) => sum + (task.budget?.priority || 0), 0);
 
         if (totalPriority <= 0) {
             // If no priorities, do uniform random selection
             const randomIndex = Math.floor(Math.random() * allTasks.length);
-            const selectedTask = allTasks[randomIndex];
-            //console.log(`[PREMISE SELECT] Random (no priority) - Selected: ${selectedTask.term?._name || selectedTask.term || 'unknown'}`);
-            return selectedTask;
+            return allTasks[randomIndex];
         }
 
         // Perform roulette wheel selection
         let randomValue = Math.random() * totalPriority;
         for (const task of allTasks) {
             const taskPriority = task.budget?.priority || 0;
-            //console.log(`[PREMISE SELECT] Considering ${task.term?._name || task.term || 'unknown'} with priority ${taskPriority}`);
             if (randomValue < taskPriority) {
-                //console.log(`[PREMISE SELECT] SELECTED: ${task.term?._name || task.term || 'unknown'} with priority ${taskPriority}`);
                 return task;
             }
             randomValue -= taskPriority;
         }
 
         // Fallback (shouldn't reach here if totalPriority calculation is correct)
-        const fallbackTask = allTasks[allTasks.length - 1];
-        //console.log(`[PREMISE SELECT] Fallback - Selected: ${fallbackTask.term?._name || fallbackTask.term || 'unknown'}`);
-        return fallbackTask;
+        return allTasks[allTasks.length - 1];
     }
 
     /**
@@ -470,7 +454,7 @@ export class TaskBagPremiseSource extends PremiseSource {
             const depth = task.stamp?.depth ?? 0;
             // Higher novelty score for lower depth values
             const novelty = 1 / (depth + 1); // Add 1 to avoid division by zero
-            return {task, novelty};
+            return { task, novelty };
         });
 
         // Sort by novelty (highest novelty first)
@@ -493,7 +477,7 @@ export class TaskBagPremiseSource extends PremiseSource {
             const depth = task.stamp?.depth ?? 0;
             // Higher novelty score for lower depth values
             const novelty = 1 / (depth + 1); // Add 1 to avoid division by zero
-            return {task, novelty};
+            return { task, novelty };
         });
 
         // Sort by novelty (highest novelty first)

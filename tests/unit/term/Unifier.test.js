@@ -6,8 +6,8 @@
  */
 
 import { describe, it, expect, beforeEach } from '@jest/globals';
-import { Unifier } from '../../../src/term/Unifier.js';
-import { TermFactory } from '../../../src/term/TermFactory.js';
+import { Unifier } from '../../../core/src/term/Unifier.js';
+import { TermFactory } from '../../../core/src/term/TermFactory.js';
 
 describe('Unifier', () => {
     let unifier;
@@ -39,7 +39,7 @@ describe('Unifier', () => {
             const t = tf.atomic('bird');
             const result = unifier.unify(v, t);
             expect(result.success).toBe(true);
-            expect(result.substitution['X']).toEqual(t);
+            expect(result.substitution['?X']).toEqual(t);
         });
 
         it('should unify two different variables', () => {
@@ -47,7 +47,7 @@ describe('Unifier', () => {
             const v2 = tf.variable('Y');
             const result = unifier.unify(v1, v2);
             expect(result.success).toBe(true);
-            expect(result.substitution['X'] || result.substitution['Y']).toBeDefined();
+            expect(result.substitution['?X'] || result.substitution['?Y']).toBeDefined();
         });
 
         it('should unify compound terms with matching structure', () => {
@@ -69,7 +69,7 @@ describe('Unifier', () => {
             const t2 = tf.inheritance(tf.atomic('bird'), tf.atomic('animal'));
             const result = unifier.unify(t1, t2);
             expect(result.success).toBe(true);
-            expect(result.substitution['X'].name).toBe('bird');
+            expect(result.substitution['?X'].name).toBe('bird');
         });
 
         it('should unify multiple variables consistently', () => {
@@ -78,25 +78,25 @@ describe('Unifier', () => {
             const t2 = tf.inheritance(tf.atomic('bird'), tf.atomic('animal'));
             const result = unifier.unify(t1, t2);
             expect(result.success).toBe(true);
-            expect(result.substitution['X'].name).toBe('bird');
-            expect(result.substitution['Y'].name).toBe('animal');
+            expect(result.substitution['?X'].name).toBe('bird');
+            expect(result.substitution['?Y'].name).toBe('animal');
         });
 
         it('should respect existing substitution', () => {
             const v = tf.variable('X');
             const t1 = tf.atomic('bird');
             const t2 = tf.atomic('bird');
-            const existingSub = { 'X': t1 };
+            const existingSub = { '?X': t1 };
             const result = unifier.unify(v, t2, existingSub);
             expect(result.success).toBe(true);
-            expect(result.substitution['X']).toEqual(t1);
+            expect(result.substitution['?X']).toEqual(t1);
         });
 
         it('should fail when variable is bound to different term', () => {
             const v = tf.variable('X');
             const t1 = tf.atomic('bird');
             const t2 = tf.atomic('cat');
-            const existingSub = { 'X': t1 };
+            const existingSub = { '?X': t1 };
             const result = unifier.unify(v, t2, existingSub);
             expect(result.success).toBe(false);
         });
@@ -121,7 +121,7 @@ describe('Unifier', () => {
             );
             const result = unifier.unify(t1, t2);
             expect(result.success).toBe(true);
-            expect(result.substitution['X'].name).toBe('bird');
+            expect(result.substitution['?X'].name).toBe('bird');
         });
 
         it('should fail to unify compound terms with different arity', () => {
@@ -155,7 +155,7 @@ describe('Unifier', () => {
             const term = tf.atomic('bird');
             const result = unifier.match(pattern, term);
             expect(result.success).toBe(true);
-            expect(result.substitution['X']).toEqual(term);
+            expect(result.substitution['?X']).toEqual(term);
         });
 
         it('should treat variables in concrete term as constants', () => {
@@ -170,7 +170,7 @@ describe('Unifier', () => {
             const term = tf.inheritance(tf.atomic('bird'), tf.atomic('animal'));
             const result = unifier.match(pattern, term);
             expect(result.success).toBe(true);
-            expect(result.substitution['X'].name).toBe('bird');
+            expect(result.substitution['?X'].name).toBe('bird');
         });
 
         it('should match multiple variables in pattern', () => {
@@ -178,8 +178,8 @@ describe('Unifier', () => {
             const term = tf.inheritance(tf.atomic('bird'), tf.atomic('animal'));
             const result = unifier.match(pattern, term);
             expect(result.success).toBe(true);
-            expect(result.substitution['S'].name).toBe('bird');
-            expect(result.substitution['P'].name).toBe('animal');
+            expect(result.substitution['?S'].name).toBe('bird');
+            expect(result.substitution['?P'].name).toBe('animal');
         });
 
         it('should not bind variables in the concrete term', () => {
@@ -188,15 +188,15 @@ describe('Unifier', () => {
             const result = unifier.match(pattern, term);
             expect(result.success).toBe(true);
             // X should be bound to Y as a constant
-            expect(result.substitution['X']).toEqual(term);
+            expect(result.substitution['?X']).toEqual(term);
             // Y should NOT be in substitution
-            expect(result.substitution['Y']).toBeUndefined();
+            expect(result.substitution['?Y']).toBeUndefined();
         });
 
         it('should respect existing substitution in pattern matching', () => {
             const pattern = tf.variable('X');
             const term = tf.atomic('bird');
-            const existingSub = { 'X': tf.atomic('bird') };
+            const existingSub = { '?X': tf.atomic('bird') };
             const result = unifier.match(pattern, term, existingSub);
             expect(result.success).toBe(true);
         });
@@ -204,7 +204,7 @@ describe('Unifier', () => {
         it('should fail when pattern variable is bound to different term', () => {
             const pattern = tf.variable('X');
             const term = tf.atomic('cat');
-            const existingSub = { 'X': tf.atomic('bird') };
+            const existingSub = { '?X': tf.atomic('bird') };
             const result = unifier.match(pattern, term, existingSub);
             expect(result.success).toBe(false);
         });
@@ -220,15 +220,15 @@ describe('Unifier', () => {
             );
             const result = unifier.match(pattern, term);
             expect(result.success).toBe(true);
-            expect(result.substitution['X'].name).toBe('bird');
-            expect(result.substitution['Y'].name).toBe('belief');
+            expect(result.substitution['?X'].name).toBe('bird');
+            expect(result.substitution['?Y'].name).toBe('belief');
         });
     });
 
     describe('applySubstitution', () => {
         it('should apply substitution to variable', () => {
             const v = tf.variable('X');
-            const sub = { 'X': tf.atomic('bird') };
+            const sub = { '?X': tf.atomic('bird') };
             const result = unifier.applySubstitution(v, sub);
             expect(result.name).toBe('bird');
         });
@@ -236,8 +236,8 @@ describe('Unifier', () => {
         it('should apply substitution recursively', () => {
             const v = tf.variable('X');
             const sub = {
-                'X': tf.variable('Y'),
-                'Y': tf.atomic('bird')
+                '?X': tf.variable('Y'),
+                '?Y': tf.atomic('bird')
             };
             const result = unifier.applySubstitution(v, sub);
             expect(result.name).toBe('bird');
@@ -245,7 +245,7 @@ describe('Unifier', () => {
 
         it('should apply substitution to compound terms', () => {
             const term = tf.inheritance(tf.variable('X'), tf.atomic('animal'));
-            const sub = { 'X': tf.atomic('bird') };
+            const sub = { '?X': tf.atomic('bird') };
             const result = unifier.applySubstitution(term, sub);
             expect(result.components[0].name).toBe('bird');
             expect(result.components[1].name).toBe('animal');
@@ -253,17 +253,17 @@ describe('Unifier', () => {
 
         it('should not modify term when no substitution applies', () => {
             const term = tf.atomic('bird');
-            const sub = { 'X': tf.atomic('cat') };
+            const sub = { '?X': tf.atomic('cat') };
             const result = unifier.applySubstitution(term, sub);
             expect(result).toEqual(term);
         });
 
         it('should apply partial substitutions in compound terms', () => {
             const term = tf.inheritance(tf.variable('X'), tf.variable('Y'));
-            const sub = { 'X': tf.atomic('bird') };
+            const sub = { '?X': tf.atomic('bird') };
             const result = unifier.applySubstitution(term, sub);
             expect(result.components[0].name).toBe('bird');
-            expect(result.components[1].name).toBe('Y');
+            expect(result.components[1].name).toBe('?Y');
         });
     });
 
@@ -282,9 +282,9 @@ describe('Unifier', () => {
             const result2 = unifier.match(pattern2, premise2, result1.substitution);
             expect(result2.success).toBe(true);
 
-            expect(result2.substitution['S'].name).toBe('bird');
-            expect(result2.substitution['M'].name).toBe('animal');
-            expect(result2.substitution['P'].name).toBe('living');
+            expect(result2.substitution['?S'].name).toBe('bird');
+            expect(result2.substitution['?M'].name).toBe('animal');
+            expect(result2.substitution['?P'].name).toBe('living');
         });
 
         it('should handle variable renaming in rule application', () => {
@@ -303,8 +303,8 @@ describe('Unifier', () => {
             let r1 = unifier.match(pattern1, p1a);
             let r2 = unifier.match(pattern2, p2a, r1.substitution);
 
-            expect(r2.substitution['X'].name).toBe('bird');
-            expect(r2.substitution['Z'].name).toBe('living');
+            expect(r2.substitution['?X'].name).toBe('bird');
+            expect(r2.substitution['?Z'].name).toBe('living');
 
             // Second application (independent)
             const p1b = tf.inheritance(tf.atomic('cat'), tf.atomic('animal'));
@@ -313,8 +313,8 @@ describe('Unifier', () => {
             r1 = unifier.match(pattern1, p1b);
             r2 = unifier.match(pattern2, p2b, r1.substitution);
 
-            expect(r2.substitution['X'].name).toBe('cat');
-            expect(r2.substitution['Z'].name).toBe('moving');
+            expect(r2.substitution['?X'].name).toBe('cat');
+            expect(r2.substitution['?Z'].name).toBe('moving');
         });
     });
 });

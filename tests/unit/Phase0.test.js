@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from '@jest/globals';
 import { TermFactory } from '../../core/src/term/TermFactory.js';
 import { Unifier } from '../../core/src/term/Unifier.js';
 import { NarseseParser } from '../../core/src/parser/NarseseParser.js';

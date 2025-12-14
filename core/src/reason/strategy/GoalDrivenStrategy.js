@@ -9,6 +9,7 @@ export class GoalDrivenStrategy extends PrologStrategy {
             maxPlanDepth: config.maxPlanDepth ?? 10,
             maxPlanSteps: config.maxPlanSteps ?? 20,
         });
+        this.name = 'GoalDrivenStrategy';
         this.planCache = new Map();
     }
 

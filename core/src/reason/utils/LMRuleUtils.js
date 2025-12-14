@@ -3,13 +3,13 @@
  * @description Utilities for working with LM rules, with patterns adapted from v9 implementation.
  */
 
-import {LMRule} from '../LMRule.js';
-import {Punctuation, Task} from '../../task/Task.js';
-import {cleanText, hasPattern, isValidSubGoal, KeywordPatterns, parseSubGoals} from '../RuleHelpers.js';
+import { LMRule } from '../LMRule.js';
+import { Punctuation, Task } from '../../task/Task.js';
+import { cleanText, hasPattern, isValidSubGoal, KeywordPatterns, parseSubGoals } from '../RuleHelpers.js';
 
 export class LMRuleUtils {
     static createPunctuationBasedRule(config) {
-        const {id, lm, name, description, priority, punctuation, conditionFn, ...rest} = config;
+        const { id, lm, name, description, priority, punctuation, conditionFn, ...rest } = config;
 
         return LMRule.create({
             id,
@@ -30,7 +30,7 @@ export class LMRuleUtils {
     }
 
     static createPriorityBasedRule(config) {
-        const {id, lm, name, description, priority, minPriority = 0.5, ...rest} = config;
+        const { id, lm, name, description, priority, minPriority = 0.5, ...rest } = config;
 
         return LMRule.create({
             id,
@@ -49,7 +49,7 @@ export class LMRuleUtils {
     }
 
     static createPatternBasedRule(config) {
-        const {id, lm, name, description, priority, patternType, minPriority = 0.5, ...rest} = config;
+        const { id, lm, name, description, priority, patternType, minPriority = 0.5, ...rest } = config;
 
         const patterns = KeywordPatterns[patternType] ?? [];
 
@@ -63,7 +63,7 @@ export class LMRuleUtils {
             condition: (primaryPremise) => {
                 const taskPriority = primaryPremise.budget?.priority ?? 0.5;
                 const termStr = primaryPremise.term?.toString?.() ?? String(primaryPremise.term ?? '');
-                // console.log(`[LMRuleUtils] Checking condition: priority=${taskPriority}, min=${minPriority}, term=${termStr}, matches=${hasPattern(primaryPremise, patterns)}`);
+
                 return taskPriority >= minPriority && hasPattern(primaryPremise, patterns);
             },
 
@@ -76,7 +76,7 @@ export class LMRuleUtils {
             minSubGoals: 2,
             maxSubGoals: 5
         };
-        const opts = {...defaults, ...options};
+        const opts = { ...defaults, ...options };
 
         switch (templateType) {
             case 'goalDecomposition':
@@ -118,7 +118,7 @@ Focus on conveying the core meaning and implication of the statement.`;
             maxLength: 200,
             maxItems: 10
         };
-        const opts = {...defaults, ...options};
+        const opts = { ...defaults, ...options };
 
         switch (processorType) {
             case 'list':
@@ -207,7 +207,7 @@ Focus on conveying the core meaning and implication of the statement.`;
                     const dur = options.durability ?? originalTask.durability;
 
                     const term = termFactory.atomic(String(processedOutput));
-                    const truth = punctuation === Punctuation.QUESTION ? null : {frequency: freq, confidence: conf};
+                    const truth = punctuation === Punctuation.QUESTION ? null : { frequency: freq, confidence: conf };
 
                     return [new Task({
                         term,

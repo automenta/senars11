@@ -6,6 +6,16 @@
  */
 
 import { getOperator, getComponents, isVariable, getVariableName } from '../../../term/TermUtils.js';
+import { Term } from '../../../term/Term.js';
+
+/**
+ * Check if an object is already a Term instance or a mock term object
+ */
+function isTermInstance(obj) {
+    return obj instanceof Term ||
+        (obj && typeof obj._type === 'string' && typeof obj._name === 'string') ||
+        (obj && obj.isTerm === true);
+}
 
 class DecisionNode {
     constructor(check = null) {
@@ -37,12 +47,11 @@ export class RuleCompiler {
 
         for (const rule of rules) {
             // Hydrate pattern objects into Terms if needed
-            if (!rule.pattern.p.isTerm && this.termFactory) {
-                rule.pattern.p = this.hydratePattern(rule.pattern.p);
-            }
-            if (!rule.pattern.s.isTerm && this.termFactory) {
-                rule.pattern.s = this.hydratePattern(rule.pattern.s);
-            }
+            ['p', 's'].forEach(key => {
+                if (!isTermInstance(rule.pattern[key]) && this.termFactory) {
+                    rule.pattern[key] = this.hydratePattern(rule.pattern[key]);
+                }
+            });
 
             this.insert(this.root, rule);
         }
@@ -51,12 +60,26 @@ export class RuleCompiler {
     }
 
     hydratePattern(patternObj) {
+        // If already a Term instance, return as-is
+        if (isTermInstance(patternObj)) {
+            return patternObj;
+        }
+
         if (typeof patternObj === 'string') {
+            // Guard: skip hydration if termFactory lacks required methods
+            if (!this.termFactory?.variable || !this.termFactory?.atomic) {
+                return { isTerm: true, name: patternObj, toString: () => patternObj };
+            }
             if (patternObj.startsWith('$')) return this.termFactory.variable(patternObj);
             return this.termFactory.atomic(patternObj);
         }
 
         if (patternObj.operator) {
+            // Guard: skip hydration if termFactory lacks required methods
+            if (!this.termFactory?.create) {
+                return { isTerm: true, name: JSON.stringify(patternObj), toString: () => JSON.stringify(patternObj) };
+            }
+
             // Assuming binary operators for now if subject/predicate are present
             if (patternObj.subject && patternObj.predicate) {
                 const subject = this.hydratePattern(patternObj.subject);

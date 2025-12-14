@@ -42,27 +42,25 @@ export function parseListFromResponse(lmResponse, options = {}) {
 // Alias for backward compatibility - use parseListFromResponse instead
 export const parseSubGoals = (lmResponse) => parseListFromResponse(lmResponse, { removeEmpty: false });
 
-export function isValidSubGoal(goal, minLength, maxLength) {
-    if (!goal || goal.length < minLength || goal.length > maxLength) {
-        return false;
-    }
-    const lowerGoal = goal.toLowerCase();
-    return !['sorry', 'cannot', 'unable'].some(pattern => lowerGoal.includes(pattern));
-}
+const INVALID_PATTERNS = ['sorry', 'cannot', 'unable'];
+const INVALID_TEXT_PATTERNS = [...INVALID_PATTERNS, 'no information'];
+
+const isValidLength = (text, min, max) =>
+    text && text.length >= min && text.length <= max;
+
+const hasInvalidPattern = (text, patterns) =>
+    patterns.some(pattern => text.toLowerCase().includes(pattern));
+
+export const isValidSubGoal = (goal, minLength, maxLength) =>
+    isValidLength(goal, minLength, maxLength) && !hasInvalidPattern(goal, INVALID_PATTERNS);
 
 export function cleanText(text) {
     if (!text) return '';
     return text.replace(/^["']|["']$/g, '').replace(/[.,;!?]+$/, '').trim();
 }
 
-export function isValidText(text, minLength = 1, maxLength = 1000) {
-    if (!text || text.length < minLength || text.length > maxLength) {
-        return false;
-    }
-
-    const lowerText = text.toLowerCase();
-    return !['sorry', 'cannot', 'unable', 'no information'].some(pattern => lowerText.includes(pattern));
-}
+export const isValidText = (text, minLength = 1, maxLength = 1000) =>
+    isValidLength(text, minLength, maxLength) && !hasInvalidPattern(text, INVALID_TEXT_PATTERNS);
 
 export function processDerivation(result, maxDerivationDepth) {
     if (!result?.stamp) return result;

@@ -4,7 +4,7 @@
  * Verifies the flexibility of the Rule Engine abstraction using Discriminators.
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from '@jest/globals';
 import { RuleCompiler } from '../../core/src/reason/rules/compiler/RuleCompiler.js';
 import { RuleExecutor } from '../../core/src/reason/rules/executor/RuleExecutor.js';
 import { Unifier } from '../../core/src/term/Unifier.js';

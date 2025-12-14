@@ -1,8 +1,9 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from '@jest/globals';
 import { TermFactory } from '../../core/src/term/TermFactory.js';
 import { Unifier } from '../../core/src/term/Unifier.js';
 import { RuleCompiler } from '../../core/src/reason/rules/compiler/RuleCompiler.js';
 import { RuleExecutor } from '../../core/src/reason/rules/executor/RuleExecutor.js';
+import { StandardDiscriminators } from '../../core/src/reason/rules/Discriminators.js';
 import { NAL4 } from '../../core/src/reason/rules/nal/definitions/NAL4.js';
 import { NAL5 } from '../../core/src/reason/rules/nal/definitions/NAL5.js';
 import { Truth } from '../../core/src/Truth.js';
@@ -16,7 +17,7 @@ describe('Phase 1: Rule Engine', () => {
     beforeEach(() => {
         termFactory = new TermFactory();
         unifier = new Unifier(termFactory);
-        compiler = new RuleCompiler();
+        compiler = new RuleCompiler(termFactory, StandardDiscriminators);
     });
 
     describe('RuleCompiler', () => {
@@ -31,7 +32,7 @@ describe('Phase 1: Rule Engine', () => {
         beforeEach(() => {
             const rules = [...NAL4, ...NAL5];
             const tree = compiler.compile(rules);
-            executor = new RuleExecutor(tree, unifier);
+            executor = new RuleExecutor(tree, unifier, StandardDiscriminators);
         });
 
         it('should execute Intersection rule (NAL-4)', () => {
@@ -61,7 +62,7 @@ describe('Phase 1: Rule Engine', () => {
             // Expected: (bird --> (flyer & animal))
             expect(result.term.operator).toBe('-->');
             expect(result.term.components[0].name).toBe('bird');
-            expect(result.term.components[1].operator).toBe('&&');
+            expect(result.term.components[1].operator).toBe('&');
         });
 
         it('should execute Implication Deduction rule (NAL-5)', () => {
