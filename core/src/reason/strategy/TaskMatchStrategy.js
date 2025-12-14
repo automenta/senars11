@@ -26,11 +26,12 @@ export class TaskMatchStrategy extends PremiseFormationStrategy {
      */
     constructor(config = {}) {
         super(config);
-
-        this.maxTasks = config.maxTasks ?? 100;
-        this.highCompatibilityScore = config.highCompatibilityScore ?? 0.95;
-        this.mediumCompatibilityScore = config.mediumCompatibilityScore ?? 0.7;
-        this.lowCompatibilityScore = config.lowCompatibilityScore ?? 0.3;
+        Object.assign(this, {
+            maxTasks: config.maxTasks ?? 100,
+            highCompatibilityScore: config.highCompatibilityScore ?? 0.95,
+            mediumCompatibilityScore: config.mediumCompatibilityScore ?? 0.7,
+            lowCompatibilityScore: config.lowCompatibilityScore ?? 0.3
+        });
     }
 
     /**
@@ -71,15 +72,11 @@ export class TaskMatchStrategy extends PremiseFormationStrategy {
      * @private
      */
     _getAvailableTasks(focus, memory) {
-        if (focus?.getTasks) {
-            return focus.getTasks(this.maxTasks);
-        }
-        if (memory?.getAllConcepts) {
-            return memory.getAllConcepts()
+        return focus?.getTasks?.(this.maxTasks)
+            ?? memory?.getAllConcepts?.()
                 .flatMap(c => c.getAllTasks?.() || [])
-                .slice(0, this.maxTasks);
-        }
-        return [];
+                .slice(0, this.maxTasks)
+            ?? [];
     }
 
     /**
@@ -87,52 +84,31 @@ export class TaskMatchStrategy extends PremiseFormationStrategy {
      * @private
      */
     _scoreCompatibility(primary, secondary) {
-        const p = primary.term;
-        const s = secondary.term;
+        const { term: p } = primary;
+        const { term: s } = secondary;
 
-        // Both must be compounds with subject/predicate
-        if (!p?.isCompound || !s?.isCompound) {
-            return this.lowCompatibilityScore;
-        }
+        if (!p?.isCompound || !s?.isCompound) return this.lowCompatibilityScore;
 
-        const pSubj = p.subject;
-        const pPred = p.predicate;
-        const sSubj = s.subject;
-        const sPred = s.predicate;
+        const { subject: pSubj, predicate: pPred } = p;
+        const { subject: sSubj, predicate: sPred } = s;
 
-        if (!pSubj || !pPred || !sSubj || !sPred) {
-            return this.lowCompatibilityScore;
-        }
+        if (!pSubj || !pPred || !sSubj || !sPred) return this.lowCompatibilityScore;
 
-        // Pattern 1: Syllogistic chain (A->M) + (M->B) => (A->B)
-        // Primary predicate matches secondary subject
-        if (this._termsEqual(pPred, sSubj)) {
+        // Syllogistic chains: (A→M) + (M→B) or reverse
+        if (this._termsEqual(pPred, sSubj) || this._termsEqual(sPred, pSubj)) {
             return this.highCompatibilityScore;
         }
 
-        // Pattern 2: Reverse chain (M->B) + (A->M) => (A->B)
-        // Secondary predicate matches primary subject
-        if (this._termsEqual(sPred, pSubj)) {
-            return this.highCompatibilityScore;
-        }
+        // Shared subject: enables abduction
+        if (this._termsEqual(pSubj, sSubj)) return this.mediumCompatibilityScore;
 
-        // Pattern 3: Shared subject - enables abduction
-        if (this._termsEqual(pSubj, sSubj)) {
-            return this.mediumCompatibilityScore;
-        }
+        // Shared predicate: enables induction  
+        if (this._termsEqual(pPred, sPred)) return this.mediumCompatibilityScore;
 
-        // Pattern 4: Shared predicate - enables induction
-        if (this._termsEqual(pPred, sPred)) {
-            return this.mediumCompatibilityScore;
-        }
-
-        // Pattern 5: Any term overlap
-        if (this._termsEqual(pSubj, sPred) || this._termsEqual(pPred, sSubj)) {
-            return this.mediumCompatibilityScore * 0.8;
-        }
-
-        // No useful pattern found
-        return this.lowCompatibilityScore;
+        // Any term overlap
+        return (this._termsEqual(pSubj, sPred) || this._termsEqual(pPred, sSubj))
+            ? this.mediumCompatibilityScore * 0.8
+            : this.lowCompatibilityScore;
     }
 
     /**
@@ -140,11 +116,8 @@ export class TaskMatchStrategy extends PremiseFormationStrategy {
      * @private
      */
     _termsEqual(t1, t2) {
-        if (!t1 || !t2) return false;
-        if (typeof t1.equals === 'function') {
-            return t1.equals(t2);
-        }
-        return (t1.name || t1._name) === (t2.name || t2._name);
+        return t1?.equals?.(t2)
+            ?? (t1?.name || t1?._name) === (t2?.name || t2?._name);
     }
 
     toString() {

@@ -39,13 +39,14 @@ export class DecompositionStrategy extends PremiseFormationStrategy {
      */
     constructor(config = {}) {
         super(config);
-
-        this.operators = config.operators ?? ALL_DECOMPOSABLE;
-        this.includeSubject = config.includeSubject ?? true;
-        this.includePredicate = config.includePredicate ?? true;
-        this.subjectPriority = config.subjectPriority ?? 0.85;
-        this.predicatePriority = config.predicatePriority ?? 0.85;
-        this.componentPriority = config.componentPriority ?? 0.7;
+        Object.assign(this, {
+            operators: config.operators ?? ALL_DECOMPOSABLE,
+            includeSubject: config.includeSubject ?? true,
+            includePredicate: config.includePredicate ?? true,
+            subjectPriority: config.subjectPriority ?? 0.85,
+            predicatePriority: config.predicatePriority ?? 0.85,
+            componentPriority: config.componentPriority ?? 0.7
+        });
     }
 
     /**
@@ -58,19 +59,11 @@ export class DecompositionStrategy extends PremiseFormationStrategy {
         if (!this.enabled) return;
 
         const term = primaryTask?.term;
-        if (!term || !term.isCompound) return;
+        if (!term?.isCompound || !this.operators.has(term.operator)) return;
 
-        const operator = term.operator;
-        if (!this.operators.has(operator)) return;
-
-        // Handle statements: extract subject and predicate
-        if (STATEMENT_OPERATORS.has(operator)) {
-            yield* this._decomposeStatement(term);
-        }
-        // Handle compounds: extract all components
-        else if (COMPOUND_OPERATORS.has(operator)) {
-            yield* this._decomposeCompound(term);
-        }
+        yield* STATEMENT_OPERATORS.has(term.operator)
+            ? this._decomposeStatement(term)
+            : this._decomposeCompound(term);
     }
 
     /**
@@ -78,8 +71,7 @@ export class DecompositionStrategy extends PremiseFormationStrategy {
      * @private
      */
     *_decomposeStatement(term) {
-        const subject = term.subject;
-        const predicate = term.predicate;
+        const { subject, predicate, operator } = term;
 
         if (this.includeSubject && subject) {
             this._recordCandidate();
@@ -88,7 +80,7 @@ export class DecompositionStrategy extends PremiseFormationStrategy {
                 type: 'decomposed-subject',
                 priority: this.subjectPriority * this.priority,
                 decompositionType: 'subject',
-                operator: term.operator
+                operator
             };
         }
 
@@ -99,7 +91,7 @@ export class DecompositionStrategy extends PremiseFormationStrategy {
                 type: 'decomposed-predicate',
                 priority: this.predicatePriority * this.priority,
                 decompositionType: 'predicate',
-                operator: term.operator
+                operator
             };
         }
     }
@@ -110,10 +102,9 @@ export class DecompositionStrategy extends PremiseFormationStrategy {
      */
     *_decomposeCompound(term) {
         const components = term.components;
-        if (!components || components.length === 0) return;
+        if (!components?.length) return;
 
-        for (let i = 0; i < components.length; i++) {
-            const comp = components[i];
+        for (const [i, comp] of components.entries()) {
             if (!comp) continue;
 
             this._recordCandidate();

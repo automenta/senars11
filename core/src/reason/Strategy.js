@@ -226,7 +226,7 @@ export class Strategy {
             term: term,
             punctuation: '.',
             truth: syntheticTruth,
-            stamp: Stamp.createDerived([primaryPremise?.stamp]),
+            stamp: Stamp.derive([primaryPremise?.stamp].filter(Boolean)),
             budget: { priority, durability: 0.5, quality: 0.5 },
             isSynthetic: true // Mark as synthetic for debugging
         });

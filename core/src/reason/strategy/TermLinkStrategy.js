@@ -22,9 +22,10 @@ export class TermLinkStrategy extends PremiseFormationStrategy {
      */
     constructor(config = {}) {
         super(config);
-
-        this.maxLinks = config.maxLinks ?? 20;
-        this.minLinkPriority = config.minLinkPriority ?? 0.1;
+        Object.assign(this, {
+            maxLinks: config.maxLinks ?? 20,
+            minLinkPriority: config.minLinkPriority ?? 0.1
+        });
     }
 
     /**
@@ -37,22 +38,16 @@ export class TermLinkStrategy extends PremiseFormationStrategy {
         if (!this.enabled) return;
 
         const { termLayer } = context;
-        if (!termLayer) return;
-
         const term = primaryTask?.term;
-        if (!term) return;
+        if (!termLayer || !term) return;
 
         // Get direct links from the primary term
         yield* this._getLinksForTerm(term, termLayer);
 
         // Also get links from subject/predicate if compound
         if (term.isCompound) {
-            if (term.subject) {
-                yield* this._getLinksForTerm(term.subject, termLayer);
-            }
-            if (term.predicate) {
-                yield* this._getLinksForTerm(term.predicate, termLayer);
-            }
+            if (term.subject) yield* this._getLinksForTerm(term.subject, termLayer);
+            if (term.predicate) yield* this._getLinksForTerm(term.predicate, termLayer);
         }
     }
 
