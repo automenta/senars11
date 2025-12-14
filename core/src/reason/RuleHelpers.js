@@ -3,7 +3,8 @@
  * @description Shared helper functions for reasoning rules, enhanced for stream-based architecture.
  */
 
-import {Punctuation} from '../task/Task.js';
+import { Logger } from '../util/Logger.js';
+import { Punctuation } from '../task/Task.js';
 
 export function extractPrimaryTask(primaryPremise, secondaryPremise, context) {
     return primaryPremise ?? null;
@@ -25,29 +26,21 @@ export function isAsyncRule(rule) {
     return (rule.type ?? '').toLowerCase().includes('lm');
 }
 
-export function parseListFromResponse(lmResponse) {
+export function parseListFromResponse(lmResponse, options = {}) {
+    const { removeEmpty = true } = options;
     if (!lmResponse) return [];
 
-    return lmResponse
+    const lines = lmResponse
         .split('\n')
         .map(line => line.trim())
         .filter(line => line.length > 0)
-        .map(line => line.replace(/^\s*\d+[\.)]\s*|^[-*]\s*/, '').trim())
-        .filter(item => item.length > 0);
+        .map(line => line.replace(/^\s*\d+[\.)]|\s*|^[-*]\s*/, '').trim());
+
+    return removeEmpty ? lines.filter(item => item.length > 0) : lines;
 }
 
-export function parseSubGoals(lmResponse) {
-    return lmResponse
-        .split('\n')
-        .map(line => line.trim())
-        .filter(line => line.length > 0)
-        .map(line => line.replace(/^\s*\d+[\.)]\s*|^[-*]\s*/, '').trim());
-}
-
-export function cleanSubGoal(goal) {
-    if (!goal) return '';
-    return goal.replace(/^["']|["']$/g, '').replace(/[.,;!?]+$/, '').trim();
-}
+// Alias for backward compatibility - use parseListFromResponse instead
+export const parseSubGoals = (lmResponse) => parseListFromResponse(lmResponse, { removeEmpty: false });
 
 export function isValidSubGoal(goal, minLength, maxLength) {
     if (!goal || goal.length < minLength || goal.length > maxLength) {
@@ -99,7 +92,7 @@ export function createDerivedTask(originalTask, newProps) {
 
 export function deriveTruthValue(originalTruth, confidenceMultiplier = 0.9) {
     if (!originalTruth) {
-        return {frequency: 0.5, confidence: 0.9};
+        return { frequency: 0.5, confidence: 0.9 };
     }
 
     return {
@@ -149,7 +142,8 @@ export function tryParseNarsese(text, parser) {
 
     try {
         return parser.parse(toParse);
-    } catch {
+    } catch (error) {
+        Logger.debug('Failed to parse Narsese text', { text: toParse, error: error.message });
         return null;
     }
 }
@@ -167,7 +161,8 @@ export function createFallbackTerm(text, termFactory) {
             return termFactory.atomic(termStr);
         }
         return termStr;
-    } catch {
+    } catch (error) {
+        Logger.debug('Failed to create atomic term', { termStr, error: error.message });
         return termStr;
     }
 }

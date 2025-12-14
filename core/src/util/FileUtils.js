@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { Logger } from './Logger.js';
 
 export class FileUtils {
     static readonlyExclusions = new Set([
@@ -39,12 +40,12 @@ export class FileUtils {
         try {
             const content = fs.readFileSync(filePath, 'utf8');
             if (!content.trim()) {
-                console.log(`⚠️ Empty content when parsing JSON from: ${filePath}`);
+                Logger.warn(`Empty content when parsing JSON from: ${filePath}`);
                 return null;
             }
             return JSON.parse(content);
         } catch (error) {
-            console.log(`❌ Error parsing JSON from ${filePath}:`, error.message);
+            Logger.error(`Error parsing JSON from ${filePath}:`, { message: error.message });
             return null;
         }
     }
@@ -59,12 +60,12 @@ export class FileUtils {
             try {
                 const fileContent = fs.readFileSync(coverageDetailPath, 'utf8');
                 if (!fileContent.trim()) {
-                    console.log('❌ Coverage file is empty');
+                    Logger.error('Coverage file is empty');
                     return [];
                 }
                 coverageDetail = JSON.parse(fileContent);
             } catch (parseError) {
-                console.log('❌ Error parsing coverage-final.json:', parseError.message);
+                Logger.error('Error parsing coverage-final.json:', { message: parseError.message });
                 return [];
             }
 
@@ -87,7 +88,7 @@ export class FileUtils {
 
                     // Validate coverage structure before accessing properties
                     if (!coverage || typeof coverage !== 'object' || !coverage.s) {
-                        if (verbose) console.log(`⚠️ Invalid coverage structure for file: ${filePath}`);
+                        if (verbose) Logger.warn(`Invalid coverage structure for file: ${filePath}`);
                         continue;
                     }
 
@@ -124,7 +125,7 @@ export class FileUtils {
                     });
                 } catch (fileError) {
                     // Skip this file if there's an error processing it
-                    if (verbose) console.log(`⚠️ Error processing coverage for ${filePath}:`, fileError.message);
+                    if (verbose) Logger.warn(`Error processing coverage for ${filePath}:`, { message: fileError.message });
                     continue;
                 }
             }
@@ -141,7 +142,7 @@ export class FileUtils {
 
             return files.slice(0, TOP_N);
         } catch (error) {
-            console.log('❌ Error in analyzeCoverageByFile:', error.message);
+            Logger.error('Error in analyzeCoverageByFile:', { message: error.message });
             return [];
         }
     }

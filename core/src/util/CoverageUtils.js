@@ -1,5 +1,6 @@
-import {spawnSync} from 'child_process';
+import { spawnSync } from 'child_process';
 import fs from 'fs';
+import { Logger } from './Logger.js';
 
 export class CoverageUtils {
     static findCoverageFile() {
@@ -19,7 +20,7 @@ export class CoverageUtils {
     }
 
     static async generateCoverage() {
-        console.log('📦 Generating coverage data...');
+        Logger.info('📦 Generating coverage data...');
 
         // Try different methods to generate coverage
         const methods = [
@@ -42,16 +43,16 @@ export class CoverageUtils {
                 const result = method();
                 if (result.status === 0 || result.status === 1) { // 1 might mean tests passed with coverage
                     if (this.findCoverageFile()) {
-                        console.log('✅ Coverage generated successfully');
+                        Logger.info('✅ Coverage generated successfully');
                         return true;
                     }
                 }
             } catch (error) {
-                console.log(`⚠️ Coverage generation method failed: ${error.message}`);
+                Logger.warn(`Coverage generation method failed: ${error.message}`);
             }
         }
 
-        console.log('❌ Failed to generate coverage data');
+        Logger.error('Failed to generate coverage data');
         return false;
     }
 }

@@ -1,3 +1,5 @@
+import { Logger } from '../../../util/Logger.js';
+
 export class BaseAnalyzer {
     constructor(options, verbose) {
         this.options = options;
@@ -8,7 +10,7 @@ export class BaseAnalyzer {
         try {
             return await analysisFunction();
         } catch (error) {
-            if (this.verbose) console.log(`❌ ${errorMessage}: ${error.message}`);
+            if (this.verbose) Logger.error(`❌ ${errorMessage}:`, { message: error.message });
             return {
                 status: 'error',
                 error: `${errorMessage}: ${error.message}`,
@@ -33,9 +35,9 @@ export class BaseAnalyzer {
         const fullMessage = `${emoji} [${timestamp}] ${message}`;
 
         if (Object.keys(meta).length > 0) {
-            console.log(fullMessage, meta);
+            Logger.info(fullMessage, meta);
         } else {
-            console.log(fullMessage);
+            Logger.info(fullMessage);
         }
     }
 

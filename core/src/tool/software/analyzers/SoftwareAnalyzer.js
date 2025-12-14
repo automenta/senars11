@@ -1,7 +1,8 @@
-import {AnalyzerFactory} from './AnalyzerFactory.js';
-import {SoftwareAnalyzerConfig} from './SoftwareAnalyzerConfig.js';
-import {ResultDisplay} from './ResultDisplay.js';
-import {AnalysisError, ConfigurationError} from '../../../util/AnalyzerErrors.js';
+import { AnalyzerFactory } from './AnalyzerFactory.js';
+import { SoftwareAnalyzerConfig } from './SoftwareAnalyzerConfig.js';
+import { ResultDisplay } from './ResultDisplay.js';
+import { AnalysisError, ConfigurationError } from '../../../util/AnalyzerErrors.js';
+import { Logger } from '../../../util/Logger.js';
 
 // For integration with NAR system
 let NAR = null;
@@ -90,7 +91,7 @@ export class SoftwareAnalyzer {
             const age = Date.now() - cachedTime;
             if (age < this.config.get('cacheTTL')) {
                 if (this.config.get('verbose')) {
-                    console.log(`📊 Using cached results (age: ${(age / 1000).toFixed(1)}s)`);
+                    Logger.info(`📊 Using cached results (age: ${(age / 1000).toFixed(1)}s)`);
                 }
                 return cachedResults;
             } else {
@@ -162,7 +163,7 @@ export class SoftwareAnalyzer {
 
             // Run analysis if not cached
             if (!this.config.get('summaryOnly') && !this.config.get('verbose')) {
-                console.log('🔍 SeNARS Self-Analysis');
+                Logger.info('🔍 SeNARS Self-Analysis');
             }
 
             const results = {};
@@ -220,7 +221,7 @@ export class SoftwareAnalyzer {
                 await this.nar.input(statement);
             }
 
-            console.log(`📊 Integrated ${narseseStatements.length} analysis facts with NAR`);
+            Logger.info(`📊 Integrated ${narseseStatements.length} analysis facts with NAR`);
 
             // Additionally, convert actionable insights to goals
             const goalStatements = this._convertInsightsToGoals(results);
@@ -229,13 +230,13 @@ export class SoftwareAnalyzer {
             }
 
             if (goalStatements.length > 0) {
-                console.log(`🎯 Added ${goalStatements.length} improvement goals to NAR`);
+                Logger.info(`🎯 Added ${goalStatements.length} improvement goals to NAR`);
             }
         } catch (error) {
             const analysisError = new AnalysisError('Failed to integrate with NAR', 'integration', error);
-            console.error('❌ Error integrating with NAR:', analysisError.message);
+            Logger.error('Error integrating with NAR:', { message: analysisError.message });
             if (this.config.get('verbose')) {
-                console.error(analysisError.stack);
+                Logger.error('Stack trace:', { stack: analysisError.stack });
             }
             // Don't throw here as integration failure shouldn't break the main analysis
         }
@@ -247,7 +248,7 @@ export class SoftwareAnalyzer {
      */
     _convertToNarsese(results) {
         const statements = [];
-        const {tests, coverage, static: staticResults, technicaldebt, architecture} = results;
+        const { tests, coverage, static: staticResults, technicaldebt, architecture } = results;
 
         // Convert test results
         if (tests && !tests.error) {
@@ -306,7 +307,7 @@ export class SoftwareAnalyzer {
      * @private
      */
     _convertInsightsToGoals(results) {
-        const {tests, coverage, static: staticResults, technicaldebt, architecture} = results;
+        const { tests, coverage, static: staticResults, technicaldebt, architecture } = results;
 
         // Use array of condition-action pairs to make the code more functional
         const goals = [];
@@ -358,7 +359,7 @@ export class SoftwareAnalyzer {
      */
     _createSummary(results) {
         // Use object destructuring and nullish coalescing for cleaner code
-        const {tests, coverage, static: staticResults, technicaldebt} = results;
+        const { tests, coverage, static: staticResults, technicaldebt } = results;
 
         return {
             ...(tests && !tests.error && {
@@ -401,19 +402,19 @@ export class SoftwareAnalyzer {
     async _runAnalyses(results) {
         const categoriesToRun = Object.entries(this.analyzers)
             .filter(([category, analyzer]) => this.config.get('all') || this.config.get(category))
-            .map(([category, analyzer]) => ({category, analyzer}));
+            .map(([category, analyzer]) => ({ category, analyzer }));
 
         if (this.config.get('analyzeConcurrency') > 1) {
             // Run analyses in parallel (up to the concurrency limit)
             // Split into batches based on concurrency
             for (let i = 0; i < categoriesToRun.length; i += this.config.get('analyzeConcurrency')) {
                 const batch = categoriesToRun.slice(i, i + this.config.get('analyzeConcurrency'));
-                const batchPromises = batch.map(async ({category, analyzer}) => {
+                const batchPromises = batch.map(async ({ category, analyzer }) => {
                     try {
                         const result = await analyzer.analyze();
                         results[category] = result;
                     } catch (error) {
-                        results[category] = {error: `Analysis failed: ${error.message}`, details: error};
+                        results[category] = { error: `Analysis failed: ${error.message}`, details: error };
                     }
                 });
 
@@ -426,7 +427,7 @@ export class SoftwareAnalyzer {
                     try {
                         results[category] = await analyzer.analyze();
                     } catch (error) {
-                        results[category] = {error: `Analysis failed: ${error.message}`, details: error};
+                        results[category] = { error: `Analysis failed: ${error.message}`, details: error };
                     }
                 }
             }

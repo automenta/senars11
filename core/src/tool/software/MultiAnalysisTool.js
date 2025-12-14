@@ -3,7 +3,9 @@
  * @description Tool for coordinating multiple analysis tools
  */
 
-import {SoftwareAnalysisTool} from './SoftwareAnalysisTool.js';
+import { SoftwareAnalysisTool } from './SoftwareAnalysisTool.js';
+import { Logger } from '../../util/Logger.js';
+
 
 /**
  * Tool for coordinating multiple analysis tools
@@ -62,7 +64,7 @@ export class MultiAnalysisTool extends SoftwareAnalysisTool {
      * @returns {Promise<any>} - Analysis result
      */
     async performAnalysis(params, context) {
-        const {analyses, verbose = false, concurrency = 2} = params;
+        const { analyses, verbose = false, concurrency = 2 } = params;
         const results = {};
 
         // Analysis to tool mapping
@@ -85,7 +87,7 @@ export class MultiAnalysisTool extends SoftwareAnalysisTool {
 
         // Log the analyses being run
         if (verbose) {
-            console.log(`🔄 Running analyses: ${requestedAnalyses.join(', ')}`);
+            Logger.info(`🔄 Running analyses: ${requestedAnalyses.join(', ')}`);
         }
 
         // Run analyses with specified concurrency
@@ -93,7 +95,7 @@ export class MultiAnalysisTool extends SoftwareAnalysisTool {
             const batch = requestedAnalyses.slice(i, i + concurrency);
 
             if (verbose) {
-                console.log(`🔄 Running batch: ${batch.join(', ')}`);
+                Logger.info(`🔄 Running batch: ${batch.join(', ')}`);
             }
 
             const batchPromises = batch.map(async (analysis) => {
@@ -102,32 +104,32 @@ export class MultiAnalysisTool extends SoftwareAnalysisTool {
                     const toolData = this.toolEngine.getTool(toolId);
 
                     if (!toolData) {
-                        console.warn(`⚠️  Tool ${toolId} not found for analysis: ${analysis}`);
-                        results[analysis] = {error: `Tool ${toolId} not found`};
+                        Logger.warn(`⚠️  Tool ${toolId} not found for analysis: ${analysis}`);
+                        results[analysis] = { error: `Tool ${toolId} not found` };
                         return;
                     }
 
                     // Get the actual tool instance from the tool data
                     const tool = toolData.instance;
                     if (!tool || typeof tool.execute !== 'function') {
-                        console.warn(`⚠️  Tool ${toolId} does not have a valid execute method for analysis: ${analysis}`);
-                        results[analysis] = {error: `Tool ${toolId} has no execute method`};
+                        Logger.warn(`⚠️  Tool ${toolId} does not have a valid execute method for analysis: ${analysis}`);
+                        results[analysis] = { error: `Tool ${toolId} has no execute method` };
                         return;
                     }
 
                     if (verbose) {
-                        console.log(`🔍 Executing ${analysis} analysis...`);
+                        Logger.info(`🔍 Executing ${analysis} analysis...`);
                     }
 
-                    const result = await tool.execute({verbose}, {...context, analysisType: analysis});
+                    const result = await tool.execute({ verbose }, { ...context, analysisType: analysis });
                     results[analysis] = result;
 
                     if (verbose) {
-                        console.log(`✅ ${analysis} analysis completed`);
+                        Logger.info(`✅ ${analysis} analysis completed`);
                     }
                 } catch (error) {
-                    console.error(`❌ ${analysis} analysis failed:`, error.message);
-                    results[analysis] = {error: `Analysis failed: ${error.message}`, details: error};
+                    Logger.error(`❌ ${analysis} analysis failed:`, { message: error.message });
+                    results[analysis] = { error: `Analysis failed: ${error.message}`, details: error };
                 }
             });
 
@@ -137,7 +139,7 @@ export class MultiAnalysisTool extends SoftwareAnalysisTool {
         // Log summary
         if (verbose) {
             const successCount = Object.values(results).filter(r => !r.error).length;
-            console.log(`📊 Analysis summary: ${successCount}/${requestedAnalyses.length} analyses completed successfully`);
+            Logger.info(`📊 Analysis summary: ${successCount}/${requestedAnalyses.length} analyses completed successfully`);
         }
 
         return results;
@@ -150,7 +152,7 @@ export class MultiAnalysisTool extends SoftwareAnalysisTool {
      */
     validate(params) {
         const schema = this.getParameterSchema();
-        if (!schema) return {isValid: true, errors: []};
+        if (!schema) return { isValid: true, errors: [] };
 
         const errors = [];
 
@@ -192,7 +194,7 @@ export class MultiAnalysisTool extends SoftwareAnalysisTool {
             }
         }
 
-        return {isValid: errors.length === 0, errors};
+        return { isValid: errors.length === 0, errors };
     }
 
     /**

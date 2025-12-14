@@ -10,10 +10,20 @@ export class MeTTaParser {
 
     /**
      * Parse MeTTa syntax and convert to SeNARS tasks (beliefs/goals)
+     * 
+     * @param {string} mettaInput - MeTTa syntax input
+     * @returns {Array} - Array of parsed tasks (currently empty - stub implementation)
+     * 
+     * LIMITATION: MeTTa parsing is not yet implemented.
+     * Future implementation should:
+     * - Parse MeTTa expressions into AST
+     * - Convert MeTTa atoms/symbols to Narsese terms
+     * - Handle MeTTa-specific constructs (meta-level expressions)
+     * - Map MeTTa types to truth values and confidence
      */
     parseMeTTa(mettaInput) {
-        // TODO: Implement MeTTa parsing logic
-        // This is a stub implementation
+        // Stub implementation - returns empty array
+        // MeTTa parsing requires grammar definition and semantic mapping
         return [];
     }
 }

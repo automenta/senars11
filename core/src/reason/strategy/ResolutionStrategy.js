@@ -1,11 +1,15 @@
 /**
+ * @file src/reason/strategy/ResolutionStrategy.js
+ * @description Resolution-based reasoning strategy
+ *
  * ResolutionStrategy: Goal-driven backward chaining for Prolog-like resolution, ex: question answering.
  * This strategy focuses on goal-driven reasoning, attempting to prove a Question
  * by finding rules and beliefs that satisfy it using backward chaining.
  *
- * TODO achieve functional parity with Datalog, Prolog, ProbLog, etc...
+ * Future Enhancement: Achieve functional parity with Datalog, Prolog, ProbLog, etc.
+ * Planned improvements include: unification algorithms, backward chaining, query optimization.
  */
-import {Strategy} from '../Strategy.js';
+import { Strategy } from '../Strategy.js';
 
 export class ResolutionStrategy extends Strategy {
     /**

@@ -3,18 +3,20 @@
  * @description Tool-based implementation of SeNARS Self Analyzer
  */
 
-import {ToolIntegration} from '../ToolIntegration.js';
-import {ToolRegistry} from '../ToolRegistry.js';
-import {TestAnalysisTool} from './TestAnalysisTool.js';
-import {CoverageAnalysisTool} from './CoverageAnalysisTool.js';
-import {StaticAnalysisTool} from './StaticAnalysisTool.js';
-import {TechnicalDebtAnalysisTool} from './TechnicalDebtAnalysisTool.js';
-import {ArchitectureAnalysisTool} from './ArchitectureAnalysisTool.js';
-import {TestCoverageAnalysisTool} from './TestCoverageAnalysisTool.js';
-import {MultiAnalysisTool} from './MultiAnalysisTool.js';
-import {ResultDisplay} from './analyzers/ResultDisplay.js';
-import {SoftwareAnalyzerConfig} from './analyzers/SoftwareAnalyzerConfig.js';
-import {AnalyzerError, ConfigurationError} from '../../util/AnalyzerErrors.js';
+// Local imports - alphabetically sorted
+import { AnalyzerError, ConfigurationError } from '../../util/AnalyzerErrors.js';
+import { ArchitectureAnalysisTool } from './ArchitectureAnalysisTool.js';
+import { CoverageAnalysisTool } from './CoverageAnalysisTool.js';
+import { Logger } from '../../util/Logger.js';
+import { MultiAnalysisTool } from './MultiAnalysisTool.js';
+import { ResultDisplay } from './analyzers/ResultDisplay.js';
+import { SoftwareAnalyzerConfig } from './analyzers/SoftwareAnalyzerConfig.js';
+import { StaticAnalysisTool } from './StaticAnalysisTool.js';
+import { TechnicalDebtAnalysisTool } from './TechnicalDebtAnalysisTool.js';
+import { TestAnalysisTool } from './TestAnalysisTool.js';
+import { TestCoverageAnalysisTool } from './TestCoverageAnalysisTool.js';
+import { ToolIntegration } from '../ToolIntegration.js';
+import { ToolRegistry } from '../ToolRegistry.js';
 
 /**
  * Tool-based implementation of SeNARS Self Analyzer
@@ -81,9 +83,9 @@ export class ToolSoftwareAnalyzer {
         const multiAnalysisTool = new MultiAnalysisTool(this.toolEngine);
         const multiToolRegistrationResult = this.toolEngine.registerTool('multi-analysis', multiAnalysisTool);
 
-        console.log(`🔧 Registered ${toolsToRegister.length + 1} analysis tools with Tool Engine`);
-        console.log(`📋 MultiAnalysisTool registered: ${!!multiAnalysisTool}, execute method: ${typeof multiAnalysisTool.execute}`);
-        console.log(`📋 Tool engine has multi-analysis: ${!!this.toolEngine.getTool('multi-analysis')}`);
+        Logger.info(`🔧 Registered ${toolsToRegister.length + 1} analysis tools with Tool Engine`);
+        Logger.info(`📋 MultiAnalysisTool registered: ${!!multiAnalysisTool}, execute method: ${typeof multiAnalysisTool.execute}`);
+        Logger.info(`📋 Tool engine has multi-analysis: ${!!this.toolEngine.getTool('multi-analysis')}`);
     }
 
     /**
@@ -127,7 +129,7 @@ export class ToolSoftwareAnalyzer {
             const age = Date.now() - cachedTime;
             if (age < this.config.get('cacheTTL')) {
                 if (this.config.get('verbose')) {
-                    console.log(`📊 Using cached results (age: ${(age / 1000).toFixed(1)}s)`);
+                    Logger.info(`📊 Using cached results (age: ${(age / 1000).toFixed(1)}s)`);
                 }
                 return cachedResults;
             } else {
@@ -202,7 +204,7 @@ export class ToolSoftwareAnalyzer {
 
         // Run analysis if not cached
         if (!this.config.get('summaryOnly') && !this.config.get('verbose')) {
-            console.log('🔍 SeNARS Self-Analysis (Tool-Based)');
+            Logger.info('🔍 SeNARS Self-Analysis (Tool-Based)');
         }
 
         // Determine which analyses to run based on configuration
@@ -229,21 +231,21 @@ export class ToolSoftwareAnalyzer {
         // Use the multi-analysis tool to coordinate
         const multiAnalysisToolData = this.toolEngine.getTool('multi-analysis');
         if (!multiAnalysisToolData) {
-            console.error('❌ MultiAnalysisTool not found in tool engine');
-            console.error('Available tools:', this.toolEngine.listTools ? this.toolEngine.listTools() : 'listTools method not available');
+            Logger.error('❌ MultiAnalysisTool not found in tool engine');
+            Logger.error('Available tools:', { tools: this.toolEngine.listTools ? this.toolEngine.listTools() : 'listTools method not available' });
             throw new AnalyzerError('MultiAnalysisTool not available', 'tool_not_found');
         }
 
         // Get the actual tool instance from the tool data
         const multiAnalysisTool = multiAnalysisToolData.instance;
         if (!multiAnalysisTool) {
-            console.error('❌ MultiAnalysisTool instance not found in tool data');
+            Logger.error('❌ MultiAnalysisTool instance not found in tool data');
             throw new AnalyzerError('MultiAnalysisTool instance not available', 'tool_instance_not_found');
         }
 
         if (typeof multiAnalysisTool.execute !== 'function') {
-            console.error('❌ MultiAnalysisTool does not have execute method');
-            console.error('Tool object:', typeof multiAnalysisTool, multiAnalysisTool.constructor?.name);
+            Logger.error('❌ MultiAnalysisTool does not have execute method');
+            Logger.error('Tool object:', { type: typeof multiAnalysisTool, name: multiAnalysisTool.constructor?.name });
             throw new AnalyzerError('MultiAnalysisTool execute method not found', 'execute_not_found');
         }
 
@@ -265,7 +267,7 @@ export class ToolSoftwareAnalyzer {
             // Update tool usage stats
             this._updateToolUsageStats(toolParams.analyses, Date.now());
         } catch (error) {
-            console.error('❌ Error executing MultiAnalysisTool:', error);
+            Logger.error('❌ Error executing MultiAnalysisTool:', { message: error.message });
             throw new AnalyzerError('Failed to execute analysis via tools', 'tool_execution', error);
         }
 
@@ -302,7 +304,7 @@ export class ToolSoftwareAnalyzer {
                 await this.nar.input(statement);
             }
 
-            console.log(`📊 Integrated ${narseseStatements.length} analysis facts with NAR`);
+            Logger.info(`📊 Integrated ${narseseStatements.length} analysis facts with NAR`);
 
             // Additionally, convert actionable insights to goals
             const goalStatements = this._convertInsightsToGoals(results);
@@ -311,10 +313,10 @@ export class ToolSoftwareAnalyzer {
             }
 
             if (goalStatements.length > 0) {
-                console.log(`🎯 Added ${goalStatements.length} improvement goals to NAR`);
+                Logger.info(`🎯 Added ${goalStatements.length} improvement goals to NAR`);
             }
         } catch (error) {
-            console.error('❌ Error integrating with NAR:', error);
+            Logger.error('❌ Error integrating with NAR:', { message: error.message });
         }
     }
 
@@ -429,7 +431,7 @@ export class ToolSoftwareAnalyzer {
      * @private
      */
     _createSummary(results) {
-        const {tests, coverage, static: staticResults, technicaldebt, architecture} = results;
+        const { tests, coverage, static: staticResults, technicaldebt, architecture } = results;
 
         return {
             ...(tests && !tests.error && {
@@ -502,7 +504,7 @@ export class ToolSoftwareAnalyzer {
         for (const analysis of analyses) {
             const toolName = `${analysis}-analysis`;
             if (!this.toolUsageStats.has(toolName)) {
-                this.toolUsageStats.set(toolName, {count: 0, totalExecutionTime: 0});
+                this.toolUsageStats.set(toolName, { count: 0, totalExecutionTime: 0 });
             }
 
             const stats = this.toolUsageStats.get(toolName);
@@ -518,55 +520,55 @@ export class ToolSoftwareAnalyzer {
     _displayTestCoverageAnalysis(testCoverageResults) {
         if (!testCoverageResults || testCoverageResults.error) return;
 
-        console.log('\n🔍 TEST COVERAGE ANALYSIS:');
+        Logger.info('\n🔍 TEST COVERAGE ANALYSIS:');
 
         if (testCoverageResults.summary) {
-            const {totalTests, passedTests, failedTests, coveragePercentage} = testCoverageResults.summary;
-            console.log(`  Total Tests: ${totalTests}`);
-            console.log(`  Passed: ${passedTests}`);
-            console.log(`  Failed: ${failedTests}`);
-            console.log(`  Coverage: ${coveragePercentage ? coveragePercentage.toFixed(2) + '%' : 'N/A'}`);
+            const { totalTests, passedTests, failedTests, coveragePercentage } = testCoverageResults.summary;
+            Logger.info(`  Total Tests: ${totalTests}`);
+            Logger.info(`  Passed: ${passedTests}`);
+            Logger.info(`  Failed: ${failedTests}`);
+            Logger.info(`  Coverage: ${coveragePercentage ? coveragePercentage.toFixed(2) + '%' : 'N/A'}`);
         }
 
         // Display culprits of failing tests
         if (testCoverageResults.failingTestCulprits && testCoverageResults.failingTestCulprits.length > 0) {
-            console.log('\n❌ CULPRITS OF FAILING TESTS (Top 5):');
+            Logger.info('\n❌ CULPRITS OF FAILING TESTS (Top 5):');
             testCoverageResults.failingTestCulprits.slice(0, 5).forEach((culprit, index) => {
-                console.log(`  ${index + 1}. ${culprit.sourceFile} (${culprit.failingTestCount} failing tests)`);
+                Logger.info(`  ${index + 1}. ${culprit.sourceFile} (${culprit.failingTestCount} failing tests)`);
             });
         }
 
         // Display supports of passing tests (top)
         if (testCoverageResults.passingTestSupports?.topSupports && testCoverageResults.passingTestSupports.topSupports.length > 0) {
-            console.log('\n✅ SUPPORTS OF PASSING TESTS (Top 5):');
+            Logger.info('\n✅ SUPPORTS OF PASSING TESTS (Top 5):');
             testCoverageResults.passingTestSupports.topSupports.slice(0, 5).forEach((support, index) => {
-                console.log(`  ${index + 1}. ${support.sourceFile} (${support.passingTestCount} passing tests)`);
+                Logger.info(`  ${index + 1}. ${support.sourceFile} (${support.passingTestCount} passing tests)`);
             });
         }
 
         // Display supports of passing tests (bottom)
         if (testCoverageResults.passingTestSupports?.bottomSupports && testCoverageResults.passingTestSupports.bottomSupports.length > 0) {
-            console.log('\n📉 LEAST TESTED FILES (Bottom 5):');
+            Logger.info('\n📉 LEAST TESTED FILES (Bottom 5):');
             testCoverageResults.passingTestSupports.bottomSupports.slice(0, 5).forEach((support, index) => {
-                console.log(`  ${index + 1}. ${support.sourceFile} (${support.passingTestCount} passing tests)`);
+                Logger.info(`  ${index + 1}. ${support.sourceFile} (${support.passingTestCount} passing tests)`);
             });
         }
 
         // Display causal analysis
         if (testCoverageResults.causalAnalysis) {
-            const {highCausalFiles, lowCausalFiles} = testCoverageResults.causalAnalysis;
+            const { highCausalFiles, lowCausalFiles } = testCoverageResults.causalAnalysis;
 
             if (highCausalFiles && highCausalFiles.length > 0) {
-                console.log('\n🔗 HIGH COVERAGE FILES (Most tested, Top 5):');
+                Logger.info('\n🔗 HIGH COVERAGE FILES (Most tested, Top 5):');
                 highCausalFiles.slice(0, 5).forEach((file, index) => {
-                    console.log(`  ${index + 1}. ${file.sourceFile} (${file.testCount} tests)`);
+                    Logger.info(`  ${index + 1}. ${file.sourceFile} (${file.testCount} tests)`);
                 });
             }
 
             if (lowCausalFiles && lowCausalFiles.length > 0) {
-                console.log('\n⚠️  LOW COVERAGE FILES (Least tested, Bottom 5):');
+                Logger.info('\n⚠️  LOW COVERAGE FILES (Least tested, Bottom 5):');
                 lowCausalFiles.slice(0, 5).forEach((file, index) => {
-                    console.log(`  ${index + 1}. ${file.sourceFile} (${file.testCount} tests)`);
+                    Logger.info(`  ${index + 1}. ${file.sourceFile} (${file.testCount} tests)`);
                 });
             }
         }

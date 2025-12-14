@@ -1,18 +1,20 @@
 /**
  * Argument Parser utility for SeNARS Self-Analyzer
  */
+import { Logger } from './Logger.js';
+
 export class ArgParser {
     static getOptionsDefinition() {
         return {
-            tests: {flags: ['--tests', '-t'], description: 'Run only test analysis'},
-            coverage: {flags: ['--coverage', '-c'], description: 'Run only coverage analysis'},
+            tests: { flags: ['--tests', '-t'], description: 'Run only test analysis' },
+            coverage: { flags: ['--coverage', '-c'], description: 'Run only coverage analysis' },
             testcoverage: {
                 flags: ['--testcoverage', '--tc'],
                 description: 'Run test coverage analysis with causal relationships'
             },
-            static: {flags: ['--static', '-s'], description: 'Run only static code analysis'},
-            project: {flags: ['--project', '-p'], description: 'Run only project info analysis'},
-            requirements: {flags: ['--requirements', '-r'], description: 'Run only requirements analysis'},
+            static: { flags: ['--static', '-s'], description: 'Run only static code analysis' },
+            project: { flags: ['--project', '-p'], description: 'Run only project info analysis' },
+            requirements: { flags: ['--requirements', '-r'], description: 'Run only requirements analysis' },
             featurespecs: {
                 flags: ['--features', '--featurespecs', '-f'],
                 description: 'Run only feature specifications analysis'
@@ -29,11 +31,11 @@ export class ArgParser {
                 flags: ['--planning', '--plan', '-pl'],
                 description: 'Run only planning indicators analysis'
             },
-            slowest: {flags: ['--slowest', '-sl'], description: 'Show slowest tests analysis'},
-            verbose: {flags: ['--verbose', '-v'], description: 'Verbose output'},
-            summaryOnly: {flags: ['--summary-only', '-S'], description: 'Show only summary output'},
-            all: {flags: ['--all', '-a'], description: 'Run all analyses (default behavior)'},
-            help: {flags: ['--help', '-h'], description: 'Show this help message'}
+            slowest: { flags: ['--slowest', '-sl'], description: 'Show slowest tests analysis' },
+            verbose: { flags: ['--verbose', '-v'], description: 'Verbose output' },
+            summaryOnly: { flags: ['--summary-only', '-S'], description: 'Show only summary output' },
+            all: { flags: ['--all', '-a'], description: 'Run all analyses (default behavior)' },
+            help: { flags: ['--help', '-h'], description: 'Show this help message' }
         };
     }
 
@@ -60,7 +62,7 @@ export class ArgParser {
             }
 
             if (!matched) {
-                console.log(`❌ Unknown option: ${arg}`);
+                Logger.error(`Unknown option: ${arg}`);
                 options.help = true;
                 break;
             }

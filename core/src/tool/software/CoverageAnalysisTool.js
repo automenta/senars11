@@ -3,10 +3,11 @@
  * @description Tool for analyzing code coverage metrics
  */
 
-import {SoftwareAnalysisTool} from './SoftwareAnalysisTool.js';
+import { SoftwareAnalysisTool } from './SoftwareAnalysisTool.js';
+import { Logger } from '../../util/Logger.js';
 import fs from 'fs';
 import path from 'path';
-import {FileUtils} from '../../util/FileUtils.js';
+import { FileUtils } from '../../util/FileUtils.js';
 
 /**
  * Tool for analyzing code coverage metrics
@@ -56,21 +57,21 @@ export class CoverageAnalysisTool extends SoftwareAnalysisTool {
      * @returns {Promise<any>} - Analysis result
      */
     async performAnalysis(params, context) {
-        const {verbose = false} = params;
+        const { verbose = false } = params;
 
-        if (verbose) console.log('ℹ️ [CoverageAnalysisTool] Collecting Coverage Data...');
+        if (verbose) Logger.info('ℹ️ [CoverageAnalysisTool] Collecting Coverage Data...');
 
         // Load coverage summary
         const summaryPath = './coverage/coverage-summary.json';
         if (!fs.existsSync(summaryPath)) {
-            if (verbose) console.log('❌ Coverage summary file not found');
-            return {available: false, error: 'Coverage summary file not found'};
+            if (verbose) Logger.warn('❌ Coverage summary file not found');
+            return { available: false, error: 'Coverage summary file not found' };
         }
 
         const coverageSummary = FileUtils.readJSONFile(summaryPath);
         if (!coverageSummary || !coverageSummary.total) {
-            if (verbose) console.log('❌ Invalid coverage summary format');
-            return {available: false, error: 'Invalid coverage summary format'};
+            if (verbose) Logger.warn('❌ Invalid coverage summary format');
+            return { available: false, error: 'Invalid coverage summary format' };
         }
 
         const summary = coverageSummary.total;
@@ -100,7 +101,7 @@ export class CoverageAnalysisTool extends SoftwareAnalysisTool {
         coverageStats.detailedAnalysis = this._analyzeDetailedCoverageFromSummary(coverageSummary);
 
         if (verbose) {
-            console.log(`📊 Coverage: Lines: ${coverageStats.lines}%, Functions: ${coverageStats.functions}%, Branches: ${coverageStats.branches}%`);
+            Logger.info(`📊 Coverage: Lines: ${coverageStats.lines}%, Functions: ${coverageStats.functions}%, Branches: ${coverageStats.branches}%`);
         }
 
         return coverageStats;
@@ -120,7 +121,7 @@ export class CoverageAnalysisTool extends SoftwareAnalysisTool {
 
             // Validate coverage structure before accessing properties
             if (!coverage || typeof coverage !== 'object' || !coverage.lines) {
-                if (verbose) console.log(`⚠️ Invalid coverage structure for file: ${filePath}`);
+                if (verbose) Logger.warn(`⚠️ Invalid coverage structure for file: ${filePath}`);
                 continue;
             }
 
@@ -243,7 +244,7 @@ export class CoverageAnalysisTool extends SoftwareAnalysisTool {
 
         // Sort directories by coverage percentage (ascending)
         detailedAnalysis.directoriesSorted = Object.entries(detailedAnalysis.coverageByDirectory)
-            .map(([dir, stats]) => ({directory: dir, ...stats}))
+            .map(([dir, stats]) => ({ directory: dir, ...stats }))
             .sort((a, b) => a.coveragePercent - b.coveragePercent);
 
         return detailedAnalysis;

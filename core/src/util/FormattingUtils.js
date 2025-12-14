@@ -1,4 +1,4 @@
-const PUNCTUATION_MAP = {'BELIEF': '.', 'GOAL': '!', 'QUESTION': '?'};
+const PUNCTUATION_MAP = { 'BELIEF': '.', 'GOAL': '!', 'QUESTION': '?' };
 const DEFAULT_TRUTH = ' %1.000,0.900%';
 const DEFAULT_PRIORITY = '';
 const DEFAULT_TERM = 'Unknown';
@@ -50,7 +50,6 @@ export class FormattingUtils {
         if (!input) return 'N/A';
 
         const inputStr = String(input);
-        const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
 
         // Calculate hash using reduce instead of traditional loop
         let hash = Array.from(inputStr).reduce((acc, char) => {
@@ -60,14 +59,14 @@ export class FormattingUtils {
 
         hash = Math.abs(hash);
 
-        if (hash === 0) return chars[0];
+        if (hash === 0) return ID_CHARS[0];
 
         let result = '';
-        const base = chars.length;
+        const base = ID_CHARS.length;
         let num = hash;
 
         while (num > 0) {
-            result = chars[num % base] + result;
+            result = ID_CHARS[num % base] + result;
             num = Math.floor(num / base);
         }
 

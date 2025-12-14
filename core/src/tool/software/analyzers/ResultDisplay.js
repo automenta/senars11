@@ -1,4 +1,5 @@
-import {DisplayUtils} from '../../../util/DisplayUtils.js';
+import { Logger } from '../../../util/Logger.js';
+import { DisplayUtils } from '../../../util/DisplayUtils.js';
 import path from 'path';
 
 export class ResultDisplay {
@@ -19,73 +20,72 @@ export class ResultDisplay {
     }
 
     printSummary(results) {
-        console.log('📋 PROJECT SUMMARY:');
+        Logger.info('📋 PROJECT SUMMARY:');
 
         if (results.project && !results.project.error) {
-            console.log(`  📦 ${results.project.name} v${results.project.version}`);
-            console.log(`     Dependencies: ${DisplayUtils.formatNumber(results.project.dependencies)} regular, ${DisplayUtils.formatNumber(results.project.devDependencies)} dev`);
+            Logger.info(`  📦 ${results.project.name} v${results.project.version}`);
+            Logger.info(`     Dependencies: ${DisplayUtils.formatNumber(results.project.dependencies)} regular, ${DisplayUtils.formatNumber(results.project.devDependencies)} dev`);
         }
 
         if (results.tests && !results.tests.error) {
             const passRate = Math.round((results.tests.passedTests / Math.max(results.tests.totalTests, 1)) * 100);
             const statusEmoji = passRate >= 95 ? '✅' : passRate >= 80 ? '⚠️' : '❌';
-            console.log(`  🧪 Tests: ${DisplayUtils.formatNumber(results.tests.passedTests)}/${DisplayUtils.formatNumber(results.tests.totalTests)} (${DisplayUtils.formatPercentage(passRate / 100)}) ${statusEmoji}`);
+            Logger.info(`  🧪 Tests: ${DisplayUtils.formatNumber(results.tests.passedTests)}/${DisplayUtils.formatNumber(results.tests.totalTests)} (${DisplayUtils.formatPercentage(passRate / 100)}) ${statusEmoji}`);
 
             if (results.tests.failedTests > 0) {
-                console.log(`     ⚠️  ${DisplayUtils.formatNumber(results.tests.failedTests)} failed tests need attention`);
-            }
-            if (results.tests.failedTests === 0 && results.tests.passedTests > 0) {
-                console.log(`     ✅ All tests passing - good stability`);
+                Logger.info(`     ⚠️  ${DisplayUtils.formatNumber(results.tests.failedTests)} failed tests need attention`);
+            } else {
+                Logger.info(`     ✅ All tests passing - good stability`);
             }
         }
 
         if (results.coverage && !results.coverage.error && results.coverage.available !== false) {
             const coverageStatus = results.coverage.lines >= 80 ? '✅' : results.coverage.lines >= 50 ? '⚠️' : '❌';
-            console.log(`  📊 Coverage: ${DisplayUtils.formatPercentage(results.coverage.lines / 100)} lines ${coverageStatus}`);
+            Logger.info(`  📊 Coverage: ${DisplayUtils.formatPercentage(results.coverage.lines / 100)} lines ${coverageStatus}`);
 
-            if (results.coverage.lines < 80) {
-                console.log(`     ⚠️  Consider adding more tests for better coverage`);
-            } else {
-                console.log(`     ✅ Good test coverage - code reliability likely high`);
+            if (results.coverage.lines < 50) {
+                Logger.info(`     ⚠️  Consider adding more tests for better coverage`);
+            } else if (results.coverage.lines >= 80) {
+                Logger.info(`     ✅ Good test coverage - code reliability likely high`);
             }
         }
 
         if (results.static && !results.static.error) {
-            console.log(`  📁 Code: ${DisplayUtils.formatNumber(results.static.jsFiles)} files, ~${DisplayUtils.formatNumber(results.static.totalLines)} lines`);
-            console.log(`     Avg: ${results.static.avgLinesPerFile}/file, ${DisplayUtils.formatNumber(results.static.directories)} dirs`);
+            Logger.info(`  📁 Code: ${DisplayUtils.formatNumber(results.static.jsFiles)} files, ~${DisplayUtils.formatNumber(results.static.totalLines)} lines`);
+            Logger.info(`     Avg: ${results.static.avgLinesPerFile}/file, ${DisplayUtils.formatNumber(results.static.directories)} dirs`);
 
             // Add insights about code health
             if (results.static.avgLinesPerFile > 300) {
-                console.log(`     ⚠️  High avg lines per file - consider refactoring large files`);
+                Logger.info(`     ⚠️  High avg lines per file - consider refactoring large files`);
             } else {
-                console.log(`     ✅ Reasonable file sizes - good maintainability`);
+                Logger.info(`     ✅ Reasonable file sizes - good maintainability`);
             }
 
             // Identify potentially risky areas
             if (results.static.largestFile && results.static.largestFile.lines > 1000) {
-                console.log(`     ⚠️  Largest file: ${results.static.largestFile.path} (${DisplayUtils.formatNumber(results.static.largestFile.lines)} lines) - potential refactoring target`);
+                Logger.info(`     ⚠️  Largest file: ${results.static.largestFile.path} (${DisplayUtils.formatNumber(results.static.largestFile.lines)} lines) - potential refactoring target`);
             }
 
             if (results.static.largestDirectories && results.static.largestDirectories.length > 0) {
                 const largestDir = results.static.largestDirectories[0];
-                console.log(`     🏗️  Largest directory: ${largestDir.path} (${DisplayUtils.formatNumber(largestDir.lines)} lines) - major code area`);
+                Logger.info(`     🏗️  Largest directory: ${largestDir.path} (${DisplayUtils.formatNumber(largestDir.lines)} lines) - major code area`);
             }
 
-            if (results.static.avgComplexity && results.static.avgComplexity > 20) {
-                console.log(`     ⚠️  High avg complexity (${results.static.avgComplexity.toFixed(2)}) - consider simplification`);
-            } else if (results.static.avgComplexity) {
-                console.log(`     ✅ Reasonable complexity (${results.static.avgComplexity.toFixed(2)}) - good maintainability`);
+            if (results.static.avgComplexity && results.static.avgComplexity > 30) {
+                Logger.info(`     ⚠️  High avg complexity (${results.static.avgComplexity.toFixed(2)}) - consider simplification`);
+            } else if (results.static.avgComplexity && results.static.avgComplexity <= 15) {
+                Logger.info(`     ✅ Reasonable complexity (${results.static.avgComplexity.toFixed(2)}) - good maintainability`);
             }
         }
 
         if (results.requirements && !results.requirements.error) {
             const complianceStatus = results.requirements.complianceScore >= 90 ? '✅' : results.requirements.complianceScore >= 70 ? '⚠️' : '❌';
-            console.log(`  📋 README: ${DisplayUtils.formatPercentage(results.requirements.complianceScore / 100)} compliance ${complianceStatus}`);
+            Logger.info(`  📋 README: ${DisplayUtils.formatPercentage(results.requirements.complianceScore / 100)} compliance ${complianceStatus}`);
 
-            if (results.requirements.complianceScore < 80) {
-                console.log(`     ⚠️  Consider improving documentation coverage`);
-            } else {
-                console.log(`     ✅ Good documentation coverage - project well-documented`);
+            if (results.requirements.complianceScore < 50) {
+                Logger.info(`     ⚠️  Consider improving documentation coverage`);
+            } else if (results.requirements.complianceScore >= 80) {
+                Logger.info(`     ✅ Good documentation coverage - project well-documented`);
             }
         }
 
@@ -204,7 +204,7 @@ export class ResultDisplay {
             }
 
             if (tc.causalAnalysis) {
-                const {highCausalFiles, lowCausalFiles} = tc.causalAnalysis;
+                const { highCausalFiles, lowCausalFiles } = tc.causalAnalysis;
                 if (highCausalFiles?.length > 0) {
                     const topCausalFile = highCausalFiles[0];
                     insights.push(`Most tested file: ${path.basename(topCausalFile.sourceFile)} (${topCausalFile.testCount} tests)`);
@@ -475,7 +475,7 @@ export class ResultDisplay {
 
             // Causal analysis
             if (testCoverage.causalAnalysis) {
-                const {highCausalFiles, lowCausalFiles} = testCoverage.causalAnalysis;
+                const { highCausalFiles, lowCausalFiles } = testCoverage.causalAnalysis;
 
                 if (highCausalFiles && highCausalFiles.length > 0) {
                     console.log(`  Most Tested Files:`);
@@ -524,7 +524,7 @@ export class ResultDisplay {
                 if (dirCoverage) {
                     console.log(`  Coverage by directory:`);
                     const sortedDirs = Object.entries(dirCoverage)
-                        .map(([dir, stats]) => ({directory: dir, ...stats}))
+                        .map(([dir, stats]) => ({ directory: dir, ...stats }))
                         .sort((a, b) => a.coveragePercent - b.coveragePercent);
 
                     sortedDirs.slice(0, 5).forEach(dir => {
@@ -557,7 +557,7 @@ export class ResultDisplay {
             // Show directory statistics if available
             if (results.static.directoryStats) {
                 console.log(`  Directory Statistics:`);
-                const dirs = Object.entries(results.static.directoryStats).map(([path, stats]) => ({path, ...stats}));
+                const dirs = Object.entries(results.static.directoryStats).map(([path, stats]) => ({ path, ...stats }));
 
                 // Show largest directories by lines
                 if (results.static.largestDirectories && results.static.largestDirectories.length > 0) {

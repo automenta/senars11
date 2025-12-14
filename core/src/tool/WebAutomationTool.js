@@ -3,7 +3,8 @@
  * @description Tool for web automation and web-based operations with safety features
  */
 
-import {BaseTool} from './BaseTool.js';
+import { BaseTool } from './BaseTool.js';
+import { Logger } from '../util/Logger.js';
 
 /**
  * Tool for web automation including navigation, scraping, and basic interactions
@@ -38,7 +39,7 @@ export class WebAutomationTool extends BaseTool {
      * @returns {Promise<any>} - Web automation result
      */
     async execute(params, context) {
-        const {operation, url, method = 'GET', headers = {}, body, options = {}} = params;
+        const { operation, url, method = 'GET', headers = {}, body, options = {} } = params;
 
         if (!operation) throw new Error('Operation is required');
 
@@ -46,19 +47,19 @@ export class WebAutomationTool extends BaseTool {
             case 'get':
             case 'fetch':
                 if (!url) throw new Error('URL is required for fetch operation');
-                return await this._fetchUrl(url, {method: 'GET', headers, ...options});
+                return await this._fetchUrl(url, { method: 'GET', headers, ...options });
             case 'post':
                 if (!url) throw new Error('URL is required for POST operation');
-                return await this._fetchUrl(url, {method: 'POST', headers, body, ...options});
+                return await this._fetchUrl(url, { method: 'POST', headers, body, ...options });
             case 'scrape':
                 if (!url) throw new Error('URL is required for scrape operation');
-                return await this._scrapeUrl(url, {headers, ...options});
+                return await this._scrapeUrl(url, { headers, ...options });
             case 'check':
                 if (!url) throw new Error('URL is required for check operation');
-                return await this._checkUrl(url, {headers, ...options});
+                return await this._checkUrl(url, { headers, ...options });
             case 'head':
                 if (!url) throw new Error('URL is required for HEAD operation');
-                return await this._headRequest(url, {headers, ...options});
+                return await this._headRequest(url, { headers, ...options });
             default:
                 throw new Error(`Unsupported operation: ${operation}. Supported operations: get, post, scrape, check, head`);
         }
@@ -116,7 +117,7 @@ export class WebAutomationTool extends BaseTool {
      * @private
      */
     async _scrapeUrl(url, options = {}) {
-        const result = await this._fetchUrl(url, {...options, method: 'GET'});
+        const result = await this._fetchUrl(url, { ...options, method: 'GET' });
 
         if (!result.success) {
             return result;
@@ -308,7 +309,7 @@ export class WebAutomationTool extends BaseTool {
                 headers: {
                     type: 'object',
                     description: 'Request headers',
-                    additionalProperties: {type: 'string'}
+                    additionalProperties: { type: 'string' }
                 },
                 body: {
                     type: 'object',
@@ -346,7 +347,7 @@ export class WebAutomationTool extends BaseTool {
             }
         }
 
-        return {isValid: errors.length === 0, errors};
+        return { isValid: errors.length === 0, errors };
     }
 
     /**
@@ -425,8 +426,9 @@ export class WebAutomationTool extends BaseTool {
         const links = linkMatches.map(match => {
             try {
                 const href = match.split('=')[1].replace(/["']/g, '');
-                return new URL(href, 'https://example.com').href; // Use base URL for relative links
-            } catch {
+                return new URL(href, 'https://example.com').href;
+            } catch (error) {
+                Logger.debug('Failed to parse link href', { match });
                 return null;
             }
         }).filter(Boolean);
@@ -437,7 +439,8 @@ export class WebAutomationTool extends BaseTool {
             try {
                 const src = match.split('=')[1].replace(/["']/g, '');
                 return new URL(src, 'https://example.com').href;
-            } catch {
+            } catch (error) {
+                Logger.debug('Failed to parse image src', { match });
                 return null;
             }
         }).filter(Boolean);

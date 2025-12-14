@@ -1,3 +1,5 @@
+import { Logger } from './Logger.js';
+
 export const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 export const normalize = (value, max) => Math.min(value / max, 1);
 export const isBetween = (value, min, max) => value >= min && value <= max;
@@ -34,7 +36,7 @@ export const clampAndFreeze = (obj, min = 0, max = 1) =>
             ])
         ));
 
-export const mergeConfig = (base, ...overrides) => freeze({...base, ...Object.assign({}, ...overrides)});
+export const mergeConfig = (base, ...overrides) => freeze({ ...base, ...Object.assign({}, ...overrides) });
 
 export const isNumber = value => typeof value === 'number' && !isNaN(value);
 export const round = (value, decimals = 2) => Number(Math.round(value + 'e' + decimals) + 'e-' + decimals);
@@ -85,7 +87,7 @@ export const safeAsync = async (asyncFn, defaultValue = null) => {
     try {
         return await asyncFn();
     } catch (error) {
-        console.error('Error in safeAsync:', error?.message || error);
+        Logger.error('Error in safeAsync', { message: error?.message || error });
         return defaultValue;
     }
 };
@@ -124,10 +126,10 @@ export function deepMerge(target, source) {
     if (isObject(target) && isObject(source)) {
         Object.keys(source).forEach(key => {
             if (isObject(source[key])) {
-                if (!(key in target)) Object.assign(output, {[key]: source[key]});
+                if (!(key in target)) Object.assign(output, { [key]: source[key] });
                 else output[key] = deepMerge(target[key], source[key]);
             } else {
-                Object.assign(output, {[key]: source[key]});
+                Object.assign(output, { [key]: source[key] });
             }
         });
     }

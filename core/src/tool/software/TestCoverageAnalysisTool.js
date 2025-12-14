@@ -3,7 +3,8 @@
  * @description Tool for analyzing test coverage and source code relationships
  */
 
-import {SoftwareAnalysisTool} from './SoftwareAnalysisTool.js';
+import { SoftwareAnalysisTool } from './SoftwareAnalysisTool.js';
+import { Logger } from '../../util/Logger.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -64,7 +65,7 @@ export class TestCoverageAnalysisTool extends SoftwareAnalysisTool {
      * @returns {Promise<any>} - Analysis result
      */
     async performAnalysis(params, context) {
-        const {verbose = false, topN = 10, includeFailing = true, includePassing = true} = params;
+        const { verbose = false, topN = 10, includeFailing = true, includePassing = true } = params;
 
         // Collect test file relationships and coverage data
         const testResults = await this._collectTestResults();
@@ -115,11 +116,11 @@ export class TestCoverageAnalysisTool extends SoftwareAnalysisTool {
         results.causalAnalysis = await this._performCausalAnalysis(sourceMappings, topN);
 
         if (verbose) {
-            console.log('🔍 Test Coverage Analysis completed');
-            console.log(`📊 Total tests: ${results.summary.totalTests}`);
-            console.log(`✅ Passed: ${results.summary.passedTests}`);
-            console.log(`❌ Failed: ${results.summary.failedTests}`);
-            console.log(`📈 Coverage: ${results.summary.coveragePercentage}%`);
+            Logger.info('🔍 Test Coverage Analysis completed');
+            Logger.info(`📊 Total tests: ${results.summary.totalTests}`);
+            Logger.info(`✅ Passed: ${results.summary.passedTests}`);
+            Logger.info(`❌ Failed: ${results.summary.failedTests}`);
+            Logger.info(`📈 Coverage: ${results.summary.coveragePercentage}%`);
         }
 
         return results;
@@ -150,7 +151,7 @@ export class TestCoverageAnalysisTool extends SoftwareAnalysisTool {
             }
 
             // If no existing test report, try to run tests to get results
-            const {spawnSync} = await import('child_process');
+            const { spawnSync } = await import('child_process');
             // Try different possible config file names
             const possibleConfigs = ['jest.config.cjs', 'jest.config.js', 'jest.config.json', 'package.json'];
 
@@ -221,7 +222,7 @@ export class TestCoverageAnalysisTool extends SoftwareAnalysisTool {
                 }
             }
 
-            console.log('⚠️ No test results file found and jest execution did not produce results');
+            Logger.warn('⚠️ No test results file found and jest execution did not produce results');
             return {
                 totalTests: 0,
                 passedTests: 0,
@@ -229,8 +230,7 @@ export class TestCoverageAnalysisTool extends SoftwareAnalysisTool {
                 passedTestDetails: []
             };
         } catch (error) {
-            console.error('❌ Error collecting test results:', error.message);
-            console.error('Stack:', error.stack);
+            Logger.error('❌ Error collecting test results:', { message: error.message, stack: error.stack });
             return {
                 totalTests: 0,
                 passedTests: 0,
@@ -308,7 +308,7 @@ export class TestCoverageAnalysisTool extends SoftwareAnalysisTool {
             }
             return null;
         } catch (error) {
-            console.error('❌ Error collecting coverage data:', error.message);
+            Logger.error('❌ Error collecting coverage data:', { message: error.message });
             return null;
         }
     }
@@ -465,7 +465,7 @@ export class TestCoverageAnalysisTool extends SoftwareAnalysisTool {
      * @private
      */
     _scanDirectory(dir, callback) {
-        const items = fs.readdirSync(dir, {withFileTypes: true});
+        const items = fs.readdirSync(dir, { withFileTypes: true });
 
         for (const item of items) {
             const fullPath = path.join(dir, item.name);
@@ -588,12 +588,12 @@ export class TestCoverageAnalysisTool extends SoftwareAnalysisTool {
 
         analysis.highCausalFiles = sortedFiles
             .slice(0, topN)
-            .map(([sourceFile, count]) => ({sourceFile, testCount: count}));
+            .map(([sourceFile, count]) => ({ sourceFile, testCount: count }));
 
         analysis.lowCausalFiles = sortedFiles
             .slice(Math.max(0, sortedFiles.length - topN))
             .reverse()
-            .map(([sourceFile, count]) => ({sourceFile, testCount: count}));
+            .map(([sourceFile, count]) => ({ sourceFile, testCount: count }));
 
         return analysis;
     }
@@ -632,7 +632,7 @@ export class TestCoverageAnalysisTool extends SoftwareAnalysisTool {
             return;
         }
 
-        const items = fs.readdirSync(dir, {withFileTypes: true});
+        const items = fs.readdirSync(dir, { withFileTypes: true });
 
         for (const item of items) {
             const fullPath = path.join(dir, item.name);
