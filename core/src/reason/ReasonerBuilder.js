@@ -1,8 +1,11 @@
-import {TaskBagPremiseSource} from './TaskBagPremiseSource.js';
-import {Strategy} from './Strategy.js';
-import {RuleExecutor} from './RuleExecutor.js';
-import {RuleProcessor} from './RuleProcessor.js';
-import {Reasoner as StreamReasoner} from './Reasoner.js';
+import { TaskBagPremiseSource } from './TaskBagPremiseSource.js';
+import { Strategy } from './Strategy.js';
+import { RuleExecutor } from './RuleExecutor.js';
+import { RuleProcessor } from './RuleProcessor.js';
+import { Reasoner as StreamReasoner } from './Reasoner.js';
+import { DecompositionStrategy } from './strategy/DecompositionStrategy.js';
+import { TermLinkStrategy } from './strategy/TermLinkStrategy.js';
+import { TaskMatchStrategy } from './strategy/TaskMatchStrategy.js';
 
 export class ReasonerBuilder {
     constructor(context = {}) {
@@ -28,7 +31,8 @@ export class ReasonerBuilder {
             streamRuleExecutor: reasoningConfig.streamRuleExecutor,
             strategies: reasoningConfig.strategies,
             executionMode: reasoningConfig.executionMode,
-            executionInterval: reasoningConfig.executionInterval
+            executionInterval: reasoningConfig.executionInterval,
+            useFormationStrategies: reasoningConfig.useFormationStrategies ?? true
         };
 
         return new ReasonerBuilder(context)
@@ -44,8 +48,8 @@ export class ReasonerBuilder {
             InheritanceSyllogisticRule,
             ImplicationSyllogisticRule
         } = await import('./rules/nal/SyllogisticRule.js');
-        const {ModusPonensRule} = await import('./rules/nal/ModusPonensRule.js');
-        const {MetacognitionRules} = await import('./rules/nal/MetacognitionRules.js');
+        const { ModusPonensRule } = await import('./rules/nal/ModusPonensRule.js');
+        const { MetacognitionRules } = await import('./rules/nal/MetacognitionRules.js');
 
         ruleExecutor.register(new InheritanceSyllogisticRule());
         ruleExecutor.register(new ImplicationSyllogisticRule());
@@ -61,7 +65,7 @@ export class ReasonerBuilder {
 
         // Register LM rules if enabled
         if (config.lm?.enabled && dependencies.lm) {
-            const {createNarseseTranslationRule} = await import('./rules/lm/LMNarseseTranslationRule.js');
+            const { createNarseseTranslationRule } = await import('./rules/lm/LMNarseseTranslationRule.js');
             const rule = createNarseseTranslationRule({
                 lm: dependencies.lm,
                 termFactory: dependencies.termFactory,
@@ -70,7 +74,7 @@ export class ReasonerBuilder {
             });
             ruleExecutor.register(rule);
 
-            const {createConceptElaborationRule} = await import('./rules/lm/LMConceptElaborationRule.js');
+            const { createConceptElaborationRule } = await import('./rules/lm/LMConceptElaborationRule.js');
             const elaborationRule = createConceptElaborationRule({
                 lm: dependencies.lm,
                 parser: dependencies.parser,
@@ -80,7 +84,7 @@ export class ReasonerBuilder {
             });
             ruleExecutor.register(elaborationRule);
 
-            const {createAnalogicalReasoningRule} = await import('./rules/lm/LMAnalogicalReasoningRule.js');
+            const { createAnalogicalReasoningRule } = await import('./rules/lm/LMAnalogicalReasoningRule.js');
             const analogyRule = createAnalogicalReasoningRule({
                 lm: dependencies.lm,
                 memory: dependencies.memory,
@@ -120,7 +124,7 @@ export class ReasonerBuilder {
     }
 
     withConfig(config) {
-        this.config = {...this.config, ...config};
+        this.config = { ...this.config, ...config };
         return this;
     }
 
@@ -145,9 +149,9 @@ export class ReasonerBuilder {
     }
 
     useDefaultPremiseSource(options = {}) {
-        const {focus} = this.context;
-        const config = {...this.config, ...options};
-        const streamSamplingObjectives = config.streamSamplingObjectives || {priority: true};
+        const { focus } = this.context;
+        const config = { ...this.config, ...options };
+        const streamSamplingObjectives = config.streamSamplingObjectives || { priority: true };
 
         this.components.premiseSource = new TaskBagPremiseSource(
             focus,
@@ -157,34 +161,76 @@ export class ReasonerBuilder {
     }
 
     useDefaultStrategy(options = {}) {
-        const {focus, memory} = this.context;
-        const config = {...this.config, ...options};
+        const { focus, memory, termFactory } = this.context;
+        const config = { ...this.config, ...options };
 
         this.components.strategy = new Strategy({
             ...config.streamStrategy,
             focus: focus,
-            memory: memory
+            memory: memory,
+            termFactory: termFactory
         });
 
-        // Add strategies from config
+        // Add legacy strategies from config
         if (config.strategies) {
             for (const s of config.strategies) {
                 this.components.strategy.addStrategy(s);
             }
         }
 
+        // Add default formation strategies unless disabled
+        if (config.useFormationStrategies !== false) {
+            this.useDefaultFormationStrategies();
+        }
+
         return this;
     }
 
+    /**
+     * Add default premise formation strategies to the current strategy.
+     * 
+     * Default strategies:
+     * - TaskMatchStrategy (1.0): Pairs with existing tasks from focus
+     * - DecompositionStrategy (0.8): Extracts subterms from compounds
+     * - TermLinkStrategy (0.6): Uses TermLayer associations
+     */
+    useDefaultFormationStrategies(options = {}) {
+        if (!this.components.strategy) {
+            throw new Error('Strategy must be set before adding formation strategies');
+        }
+
+        const strategy = this.components.strategy;
+
+        // TaskMatchStrategy: pairs with existing tasks (core NARS behavior)
+        strategy.addFormationStrategy(new TaskMatchStrategy({
+            priority: options.taskMatchPriority ?? 1.0,
+            maxTasks: options.maxTasks ?? 100
+        }));
+
+        // DecompositionStrategy: extracts subterms for premise pairing (Java NARS style)
+        strategy.addFormationStrategy(new DecompositionStrategy({
+            priority: options.decompositionPriority ?? 0.8
+        }));
+
+        // TermLinkStrategy: uses conceptual associations
+        strategy.addFormationStrategy(new TermLinkStrategy({
+            priority: options.termLinkPriority ?? 0.6,
+            maxLinks: options.maxLinks ?? 20
+        }));
+
+        return this;
+    }
+
+
     useDefaultRuleExecutor(options = {}) {
-        const config = {...this.config, ...options};
+        const config = { ...this.config, ...options };
         this.components.ruleExecutor = new RuleExecutor(config.streamRuleExecutor || {});
         return this;
     }
 
     useDefaultRuleProcessor(options = {}) {
-        const {termFactory} = this.context;
-        const config = {...this.config, ...options};
+        const { termFactory } = this.context;
+        const config = { ...this.config, ...options };
 
         if (!this.components.ruleExecutor) {
             this.useDefaultRuleExecutor(options);

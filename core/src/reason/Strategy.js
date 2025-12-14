@@ -1,25 +1,60 @@
+import { Bag } from '../memory/Bag.js';
+import { Task } from '../task/Task.js';
+import { Truth } from '../Truth.js';
+import { Stamp } from '../Stamp.js';
+
 /**
  * Strategy component handles premise pairing and budget management.
+ * 
+ * Supports multiple premise formation strategies:
+ * - DecompositionStrategy: extracts subterms for pairing
+ * - TermLinkStrategy: uses conceptual associations
+ * - TaskMatchStrategy: pairs with existing tasks
+ * 
+ * Strategies are mixed via priority-weighted Bag sampling.
  */
 export class Strategy {
     /**
      * @param {object} config - Configuration options
+     * @param {number} config.maxSecondaryPremises - Max secondary premises per primary
+     * @param {number} config.candidateBagSize - Size of candidate collection bag
+     * @param {boolean} config.adaptivePriorities - Enable adaptive strategy priority adjustment
      */
     constructor(config = {}) {
         this.config = {
             maxSecondaryPremises: config.maxSecondaryPremises || 10,
+            candidateBagSize: config.candidateBagSize || 50,
+            adaptivePriorities: config.adaptivePriorities ?? true,
             ...config
         };
 
         // Store the focus or memory reference if provided in config
         this.focus = config.focus || null;
         this.memory = config.memory || null;
+        this.termFactory = config.termFactory || null;
+
+        // Legacy sub-strategies (for backward compatibility)
         this.strategies = [];
+
+        // NEW: Premise formation strategies with priority-weighted sampling
+        this.formationStrategies = [];
+
+        // NEW: Candidate bag for priority-sampled collection
+        this.candidateBag = new Bag(this.config.candidateBagSize, 'priority');
+    }
+
+    /**
+     * Add a premise formation strategy.
+     * @param {PremiseFormationStrategy} strategy - The formation strategy
+     */
+    addFormationStrategy(strategy) {
+        this.formationStrategies.push(strategy);
     }
 
     addStrategy(strategy) {
         this.strategies.push(strategy);
     }
+
 
     async ask(task) {
         for (const strategy of this.strategies) {
@@ -63,40 +98,140 @@ export class Strategy {
     }
 
     /**
-     * Select secondary premises for a given primary premise
+     * Select secondary premises for a given primary premise.
+     * Uses premise formation strategies with Bag-based priority sampling.
      * @param {Task} primaryPremise - The primary premise
      * @returns {Promise<Array<Task>>} - Array of secondary premises
      */
     async selectSecondaryPremises(primaryPremise) {
         try {
-            const results = [];
+            // Clear previous candidates
+            this.candidateBag.clear();
 
-            // 1. Delegate to sub-strategies
-            for (const strategy of this.strategies) {
-                if (typeof strategy.selectSecondaryPremises === 'function') {
-                    const strategyResults = await strategy.selectSecondaryPremises(primaryPremise);
-                    if (strategyResults && strategyResults.length > 0) {
-                        results.push(...strategyResults);
+            const context = this._getFormationContext();
+
+            // Phase 1: Collect candidates from formation strategies
+            if (this.formationStrategies.length > 0) {
+                for (const strategy of this.formationStrategies) {
+                    if (!strategy.enabled) continue;
+
+                    try {
+                        for await (const candidate of strategy.generateCandidates(primaryPremise, context)) {
+                            // Add candidate to bag with priority
+                            const candidateEntry = {
+                                ...candidate,
+                                strategy: strategy,
+                                budget: { priority: candidate.priority || 0.5 },
+                                toString: () => candidate.term?.name || 'candidate'
+                            };
+                            this.candidateBag.add(candidateEntry);
+                        }
+                    } catch (strategyError) {
+                        console.debug(`Formation strategy error: ${strategyError.message}`);
                     }
                 }
             }
 
-            // 2. Base strategy logic
-            if (this.config.premiseSelector) {
-                const selectorResults = await this.config.premiseSelector.select(primaryPremise);
-                if (selectorResults) results.push(...selectorResults);
-            } else {
-                results.push(...this._selectDefaultSecondaryPremises(primaryPremise));
+            // Phase 2: Legacy delegate to sub-strategies (backward compatibility)
+            const legacyResults = [];
+            for (const strategy of this.strategies) {
+                if (typeof strategy.selectSecondaryPremises === 'function') {
+                    const strategyResults = await strategy.selectSecondaryPremises(primaryPremise);
+                    if (strategyResults?.length > 0) {
+                        legacyResults.push(...strategyResults);
+                    }
+                }
             }
 
-            // Limit to maxSecondaryPremises if specified
-            return results.slice(0, this.config.maxSecondaryPremises || 20); // Increased default
+            // Phase 3: Fallback to default selection if no formation strategies or candidates
+            if (this.candidateBag.size === 0 && legacyResults.length === 0) {
+                if (this.config.premiseSelector) {
+                    const selectorResults = await this.config.premiseSelector.select(primaryPremise);
+                    if (selectorResults) return selectorResults.slice(0, this.config.maxSecondaryPremises);
+                }
+                return this._selectDefaultSecondaryPremises(primaryPremise);
+            }
+
+            // Phase 4: Convert candidates to tasks and merge with legacy results
+            const candidateTasks = this.candidateBag.getItemsInPriorityOrder()
+                .slice(0, this.config.maxSecondaryPremises)
+                .map(candidate => this._candidateToTask(candidate, primaryPremise))
+                .filter(Boolean);
+
+            // Merge with legacy results, prioritizing formation strategy candidates
+            const allResults = [...candidateTasks, ...legacyResults];
+
+            // Deduplicate by term name
+            const seen = new Set();
+            const uniqueResults = allResults.filter(task => {
+                const key = task?.term?.name || task?.term?.toString?.() || '';
+                if (seen.has(key)) return false;
+                seen.add(key);
+                return true;
+            });
+
+            return uniqueResults.slice(0, this.config.maxSecondaryPremises || 20);
         } catch (error) {
             console.error('Error in selectSecondaryPremises:', error);
-            // Return empty array to continue processing instead of failing
             return [];
         }
     }
+
+    /**
+     * Get context for formation strategies.
+     * @private
+     */
+    _getFormationContext() {
+        return {
+            termFactory: this.termFactory || this.config.termFactory,
+            memory: this.memory,
+            focus: this.focus,
+            termLayer: this.memory?.termLayer
+        };
+    }
+
+    /**
+     * Convert a candidate to a Task for use as a secondary premise.
+     * @private
+     */
+    _candidateToTask(candidate, primaryPremise) {
+        // If candidate has sourceTask, use it directly (from TaskMatchStrategy)
+        if (candidate.sourceTask) {
+            return candidate.sourceTask;
+        }
+
+        // Create a synthetic "belief" task from the term (from DecompositionStrategy)
+        if (candidate.term) {
+            return this._createSyntheticPremise(candidate.term, primaryPremise, candidate);
+        }
+
+        return null;
+    }
+
+    /**
+     * Create a synthetic premise task from a term.
+     * Used when decomposition yields a term without an existing task.
+     * @private
+     */
+    _createSyntheticPremise(term, primaryPremise, candidate = {}) {
+        // Derive truth and budget from the primary premise
+        const primaryTruth = primaryPremise?.truth;
+        const syntheticTruth = primaryTruth
+            ? new Truth(primaryTruth.frequency, Truth.weak(primaryTruth.confidence))
+            : new Truth(1.0, 0.5);
+
+        const priority = candidate.priority || 0.5;
+
+        return new Task({
+            term: term,
+            punctuation: '.',
+            truth: syntheticTruth,
+            stamp: Stamp.createDerived([primaryPremise?.stamp]),
+            budget: { priority, durability: 0.5, quality: 0.5 },
+            isSynthetic: true // Mark as synthetic for debugging
+        });
+    }
+
 
     /**
      * Default selection logic for NAL premises
@@ -157,13 +292,13 @@ export class Strategy {
         const [primarySubject, primaryObject] = primaryComponents;
 
         // Use reduce to categorize tasks in a single pass for better performance
-        const {highlyCompatible, compatible, lessCompatible} = secondaryTasks.reduce(
+        const { highlyCompatible, compatible, lessCompatible } = secondaryTasks.reduce(
             (acc, task) => {
                 const category = this._categorizeTaskCompatibility(task, primarySubject, primaryObject);
                 acc[category].push(task);
                 return acc;
             },
-            {highlyCompatible: [], compatible: [], lessCompatible: []}
+            { highlyCompatible: [], compatible: [], lessCompatible: [] }
         );
 
         // Return in order: highly compatible first, then compatible, then less compatible
