@@ -9,22 +9,23 @@
 ## Table of Contents
 
 1. [Guiding Principles](#guiding-principles)
-2. [Development Tree](#development-tree)
-3. [Phased Roadmap](#phased-roadmap)
-4. [Quick Wins](#quick-wins)
-5. [Foundational Components](#foundational-components)
-6. [Cross-Cutting Concerns](#cross-cutting-concerns)
-7. [NAL Completion](#nal-completion)
-8. [Premise Formation & Strategy](#premise-formation--strategy)
-9. [Memory & Knowledge Architecture](#memory--knowledge-architecture)
-10. [LM-NAL Integration](#lm-nal-integration)
-11. [ML Technique Integration](#ml-technique-integration)
-12. [Performance & Scalability](#performance--scalability)
-13. [Developer Experience](#developer-experience)
-14. [Ecosystem & Interoperability](#ecosystem--interoperability)
-15. [Domain Applications](#domain-applications)
-16. [Speculative & Experimental](#speculative--experimental)
-17. [What's Already Built](#whats-already-built-)
+2. [Key Simplifications](#key-simplifications)
+3. [Development Tree](#development-tree)
+4. [Phased Roadmap](#phased-roadmap)
+5. [Quick Wins](#quick-wins)
+6. [Foundational Components](#foundational-components)
+7. [Cross-Cutting Concerns](#cross-cutting-concerns)
+8. [NAL Completion](#nal-completion)
+9. [Premise Formation & Strategy](#premise-formation--strategy)
+10. [Memory & Knowledge Architecture](#memory--knowledge-architecture)
+11. [LM-NAL Integration](#lm-nal-integration)
+12. [ML Technique Integration](#ml-technique-integration)
+13. [Performance & Scalability](#performance--scalability)
+14. [Developer Experience](#developer-experience)
+15. [Ecosystem & Interoperability](#ecosystem--interoperability)
+16. [Domain Applications](#domain-applications)
+17. [Speculative & Experimental](#speculative--experimental)
+18. [What's Already Built](#whats-already-built-)
 
 ---
 
@@ -38,6 +39,36 @@
 | **Resource-Aware (AIKR)** | Finite resources, infinite problems | Budgets, timeouts, graceful degradation |
 | **Test-Driven** | New rules need tests | No untested inference paths |
 | **Substrate Mindset** | Enable many futures | Prefer generic over specific |
+
+---
+
+## Key Simplifications
+
+> **Reduce complexity where obvious**
+
+### ✅ Negation via Truth Values (Not Separate Terms)
+
+**Insight**: Negation is encoded in truth frequency, not in term structure. This eliminates the need for a separate `NegationRule` and `NegationPairingStrategy`.
+
+```
+Input:   (-- bird --> flyer). %0.9;0.8%
+Stored:  (bird --> flyer). %0.1;0.8%    ← Frequency inverted (1 - 0.9 = 0.1)
+
+Display: If f < 0.5, print as (-- term) with f' = 1-f
+         (bird --> flyer). %0.1;0.8%  → "(-- bird --> flyer). %0.9;0.8%"
+```
+
+**Eliminated by this simplification**:
+- ~~`NegationRule`~~ — Truth frequency handles negation directly
+- ~~`NegationPairingStrategy`~~ — Same term with conflicting f values = contradiction
+- ~~Negation operator in internal Term~~ — Not needed in storage representation
+
+**Implementation required**:
+- [ ] Input parser: Detect `--` prefix, invert frequency, store positive term
+- [ ] Output formatter: If f < 0.5, display with `--` prefix and inverted f
+- [ ] Contradiction detection: Same term with |f1 - f2| > threshold (e.g., 0.5)
+
+**Files to modify**: `core/src/parser/NarseseParser.js`, `core/src/task/Task.js`
 
 ---
 
@@ -133,8 +164,9 @@ graph TD
 ### Phase 0: Quick Wins (Now)
 *No dependencies, immediate value*
 
-- [ ] Complete NAL-4 rules (Exemplification, Analogy, Comparison, Negation)
-- [ ] `NegationPairingStrategy` for contradiction detection
+- [ ] Complete NAL-4 rules (Exemplification, Analogy, Comparison)
+- [ ] Negation-via-truth normalization in input/output (see Key Simplifications)
+- [ ] Contradiction detection via same-term frequency comparison
 - [ ] Basic derivation logging (precursor to tracing)
 - [ ] Property-based tests for existing rules
 
@@ -182,7 +214,7 @@ All Foundations ──> MCP Server, Web Playground
 
 | Task | Value | Effort |
 |------|-------|--------|
-| `NegationRule` | Enables contradictions | 2-4 hrs |
+| Negation normalization | Input f-inversion, output display | 2-4 hrs |
 | Basic derivation logger | Precursor to tracing | 2-4 hrs |
 | Property-based tests | Find edge cases | 4-8 hrs |
 | REPL tab completion | Dev productivity | 2-4 hrs |
@@ -192,7 +224,7 @@ All Foundations ──> MCP Server, Web Playground
 | Task | Value | Effort |
 |------|-------|--------|
 | `ExemplificationRule` + `AnalogyRule` | Complete NAL-4 | 1 day |
-| `NegationPairingStrategy` | Contradiction detection | 1 day |
+| Contradiction detection | Same-term f-value comparison | 4-8 hrs |
 | NAL-JSON serialization | Foundation for API | 1-2 days |
 | Term interning | Memory efficiency | 2-3 days |
 
@@ -480,7 +512,7 @@ class Serializer {
 | `ExemplificationRule` | (S→P), (M→S) ⊢ (M→P) | `Truth.exemplification` |
 | `AnalogyRule` | (S↔M), (M→P) ⊢ (S→P) | `Truth.analogy` |
 | `ComparisonRule` | Shared terms → similarity | `Truth.comparison` |
-| `NegationRule` | `(--S)` patterns | `Truth.negation` |
+| ~~`NegationRule`~~ | — | Eliminated (see Key Simplifications) |
 | `SetOperationRules` | Union/intersection/difference | Various |
 
 ### NAL-5: Higher-Order
@@ -544,7 +576,7 @@ class PremiseFormationStrategy {
 | `TaskMatchStrategy` | — | Syllogistic patterns ✅ |
 | `DecompositionStrategy` | — | Extract subterms ✅ |
 | `TermLinkStrategy` | — | Associative links ✅ |
-| `NegationPairingStrategy` | NegationRule | Contradictions |
+| ~~`NegationPairingStrategy`~~ | — | Eliminated (contradiction via f-values) |
 | `SemanticSimilarityStrategy` | Embeddings | Fuzzy matching |
 | `AnalogicalStrategy` | Unification | Cross-domain |
 | `GoalDrivenStrategy` | NAL-8 | Backward chaining |
@@ -556,7 +588,7 @@ class PremiseFormationStrategy {
 const composite = new CompositeStrategy([
   { strategy: new TaskMatchStrategy(), weight: 1.0 },
   { strategy: new SemanticSimilarityStrategy(), weight: 0.5 },
-  { strategy: new NegationPairingStrategy(), weight: 0.8 }
+  // Contradiction detection handled via f-value comparison, not a separate strategy
 ]);
 ```
 
