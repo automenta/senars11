@@ -10,7 +10,7 @@
 
 1. [Principles](#principles)
 2. [Simplifications](#simplifications)
-3. [Abstractions](#abstractions)
+3. [Rule Engine Architecture](#rule-engine-architecture)
 4. [Implemented](#implemented)
 5. [Extractions](#extractions)
 6. [Roadmap](#roadmap)
@@ -31,11 +31,11 @@
 | Principle | Implication |
 |-----------|-------------|
 | **NAL First** | LM augments, not replaces formal semantics |
+| **Declarative** | Logic defined by patterns, not imperative code |
+| **Compiled** | Patterns compiled to optimized decision trees |
 | **Composable** | Standard interfaces, plug-and-play |
 | **Observable** | Emit events, bounded retention |
 | **Resource-Aware** | Budgets, timeouts, graceful degradation |
-| **Test-Driven** | No untested inference paths |
-| **Substrate** | Enable many futures; prefer generic |
 
 ---
 
@@ -57,8 +57,6 @@ Display: f < 0.5 → show as --(term)
 3. Store positive term with inverted frequency
 4. `Task.toString()`: If f < 0.5, display with `--` prefix
 
-**Test**: `nar.input("--(bird --> flyer). %0.9%"); expect(memory.get("(bird --> flyer)").truth.f).toBe(0.1)`
-
 ---
 
 ### 2. Use Existing Term Predicates
@@ -72,181 +70,102 @@ Term.js already provides these — replace all reimplementations:
 | `term.equals(other)` | [Term.js#L165](file:///home/me/senars10/core/src/term/Term.js#L165) | `_termsEqual(t1, t2)` |
 | `term.subject` | [Term.js#L49](file:///home/me/senars10/core/src/term/Term.js#L49) | `term.components[0]` |
 | `term.predicate` | [Term.js#L53](file:///home/me/senars10/core/src/term/Term.js#L53) | `term.components[1]` |
-| `term.isInheritance` | [Term.js#L57](file:///home/me/senars10/core/src/term/Term.js#L57) | `term.operator === '-->'` |
-| `term.isImplication` | [Term.js#L61](file:///home/me/senars10/core/src/term/Term.js#L61) | `term.operator === '==>'` |
-
-**Files with duplication**:
-- [Strategy.js#L312](file:///home/me/senars10/core/src/reason/Strategy.js#L312) — `_termsEqual`
-- [TaskMatchStrategy.js#L118](file:///home/me/senars10/core/src/reason/strategy/TaskMatchStrategy.js#L118) — `_termsEqual`
-- [PrologStrategy.js#L369](file:///home/me/senars10/core/src/reason/strategy/PrologStrategy.js#L369) — `_termsEqual`, `_isVariable`, `_isCompound`
-- [VariableIntroduction.js#L179](file:///home/me/senars10/core/src/reason/rules/nal/VariableIntroduction.js#L179) — `_termsEqual`
 
 ---
 
-## Abstractions
+## Rule Engine Architecture
 
-> **Rule patterns that enable DRY implementations**
+> **Insight**: 72+ `.nal` files imply hundreds of rules. Linear matching is too slow.
+> **Solution**: A **Rule Compiler** that transforms declarative patterns into an optimized **Discrimination Tree** (Rete-like).
 
-### Three Rule Pattern Categories
+### 1. Pattern Definitions (JS)
 
-| Pattern | Premises | Example Rules | Truth Fn |
-|---------|----------|---------------|----------|
-| **Syllogistic** | 2, shared middle | Deduction | `Truth.deduction` |
-| **Shared-Term** | 2, shared subject/predicate | Induction, Abduction, Comparison | `Truth.induction`, etc. |
-| **Unary** | 1 | Conversion, Contraposition | `Truth.conversion` |
-| **Detachment** | 2, implication + antecedent | ModusPonens | `Truth.detachment` |
-
-### 1. SyllogisticRule Pattern (EXISTS)
-
-Already parameterized by operator in [SyllogisticRule.js](file:///home/me/senars10/core/src/reason/rules/nal/SyllogisticRule.js):
+Rules are defined as data, porting logic from `.nal` files:
 
 ```javascript
-class SyllogisticRule extends NALRule {
-  constructor(id, operator, priority, config) {
-    this.operator = operator;  // '-->' or '==>'
-  }
-  // Pattern: (S→M), (M→P) ⊢ (S→P)
-}
-
-// Instantiated as:
-new InheritanceSyllogisticRule()  // operator = '-->'
-new ImplicationSyllogisticRule()  // operator = '==>'
+// core/src/reason/rules/nal/definitions/NAL4.js
+export const Exemplification = {
+  id: 'exemplification',
+  pattern: {
+    p: { operator: '-->', subject: '$S', predicate: '$M' },
+    s: { operator: '-->', subject: '$M', predicate: '$P' }
+  },
+  conclusion: (b, tf) => tf.inheritance(b.get('$P'), b.get('$S')),
+  truth: Truth.exemplification
+};
 ```
 
----
+### 2. Rule Compiler (The Brain)
 
-### 2. SharedTermRule Pattern (PROPOSED)
+Transforms a list of Patterns into an executable Decision Tree.
 
-Generalizes Induction/Abduction/Comparison/Exemplification:
+**Responsibilities**:
+1.  **Guard Extraction**: Decompose patterns into atomic checks (e.g., `op==-->`, `arity==2`, `p.pred==s.subj`).
+2.  **Ranking**: Order checks by cost (cheap first) and selectivity (fail fast).
+    *   *Tier 1*: Operator checks, Literal equality (O(1))
+    *   *Tier 2*: Variable absorption/equality (O(1) pointer check)
+    *   *Tier 3*: Structural unification (Recursive)
+3.  **Deduplication**: Merge common prefixes. If 50 rules check `op==-->`, check it once.
+4.  **Tree Construction**: Build the execution graph.
 
 ```javascript
-// core/src/reason/rules/nal/SharedTermRule.js
-import { NALRule } from './NALRule.js';
-
-export class SharedTermRule extends NALRule {
-  /**
-   * @param {string} id - Rule identifier
-   * @param {'subject'|'predicate'} sharedPosition - Which position is shared
-   * @param {Function} truthFn - Truth function: (t1, t2) => truth
-   * @param {Function} conclusionFn - (p, s, tf) => term
-   * @param {number} priority - Rule priority
-   */
-  constructor(id, sharedPosition, truthFn, conclusionFn, priority = 0.8, config = {}) {
-    super(id, 'nal', priority, config);
-    this.sharedPosition = sharedPosition;
-    this.truthFn = truthFn;
-    this.conclusionFn = conclusionFn;
+// core/src/reason/rules/compiler/RuleCompiler.js
+export class RuleCompiler {
+  compile(patterns) {
+    const root = new DecisionNode();
+    for (const pat of patterns) {
+      const guards = this.extractGuards(pat);
+      this.insertIntoTree(root, guards, pat);
+    }
+    return root; // Executable strategy pattern
   }
 
-  canApply(p, s, ctx) {
-    if (!p?.term?.isInheritance || !s?.term?.isInheritance) return false;
-    
-    const shared = this.sharedPosition === 'subject'
-      ? p.term.subject?.equals?.(s.term.subject)
-      : p.term.predicate?.equals?.(s.term.predicate);
-    
-    const different = this.sharedPosition === 'subject'
-      ? !p.term.predicate?.equals?.(s.term.predicate)
-      : !p.term.subject?.equals?.(s.term.subject);
-    
-    return shared && different;
-  }
-
-  apply(p, s, ctx) {
-    if (!this.canApply(p, s, ctx)) return [];
-    
-    const truth = this.truthFn(p.truth, s.truth);
-    if (!truth) return [];
-    
-    const term = this.conclusionFn(p, s, ctx.termFactory);
-    const task = this.createDerivedTask(term, truth, [p, s], ctx);
-    return task ? [task] : [];
+  extractGuards(pattern) {
+    // 1. Static Checks
+    const checks = [
+      { type: 'op', target: 'p', val: pattern.p.operator },
+      { type: 'op', target: 's', val: pattern.s.operator }
+    ];
+    // 2. Variable Topology (Absorption)
+    // If $M is in p.pred and s.subj, add equality constraint
+    if (pattern.p.predicate === pattern.s.subject) {
+      checks.push({ type: 'eq', t1: 'p.pred', t2: 's.subj' });
+    }
+    return this.rankChecks(checks);
   }
 }
-
-// Instantiations:
-export const InductionRule = () => new SharedTermRule(
-  'induction', 'subject', Truth.induction,
-  (p, s, tf) => tf.inheritance(s.term.predicate, p.term.predicate),
-  0.9
-);
-
-export const AbductionRule = () => new SharedTermRule(
-  'abduction', 'predicate', Truth.abduction,
-  (p, s, tf) => tf.inheritance(s.term.subject, p.term.subject),
-  0.9
-);
-
-export const ComparisonRule = () => new SharedTermRule(
-  'comparison', 'subject', Truth.comparison,
-  (p, s, tf) => tf.similarity(s.term.predicate, p.term.predicate),
-  0.7
-);
 ```
 
-**Effort**: 2-4 hours  
-**Unlocks**: DRY implementation for 4+ rules, easier to add new shared-term rules
+### 3. Runtime Execution
 
----
-
-### 3. UnaryRule Pattern (PROPOSED)
-
-Generalizes Conversion/Contraposition:
+The `RuleExecutor` traverses the compiled tree.
 
 ```javascript
-// core/src/reason/rules/nal/UnaryRule.js
-import { NALRule } from './NALRule.js';
-
-export class UnaryRule extends NALRule {
-  /**
-   * @param {string} id - Rule identifier
-   * @param {string} operator - Required operator ('-->' or '==>')
-   * @param {Function} truthFn - (truth) => newTruth
-   * @param {Function} conclusionFn - (term, tf) => newTerm
-   * @param {number} priority
-   */
-  constructor(id, operator, truthFn, conclusionFn, priority = 0.7, config = {}) {
-    super(id, 'nal', priority, config);
-    this.operator = operator;
-    this.truthFn = truthFn;
-    this.conclusionFn = conclusionFn;
+// core/src/reason/rules/RuleExecutor.js
+export class RuleExecutor {
+  constructor(compiledTree, unifier) {
+    this.tree = compiledTree;
+    this.unifier = unifier;
   }
 
-  canApply(p, s, ctx) {
-    if (s) return false;  // Unary: no secondary premise
-    return p?.term?.isCompound && p.term.operator === this.operator;
-  }
-
-  apply(p, s, ctx) {
-    if (!this.canApply(p, s, ctx)) return [];
+  execute(p, s, ctx) {
+    // 1. Fast Traversal (Guards)
+    const candidates = this.tree.query(p, s); 
     
-    const truth = this.truthFn(p.truth);
-    if (!truth) return [];
-    
-    const term = this.conclusionFn(p.term, ctx.termFactory);
-    const task = this.createDerivedTask(term, truth, [p], ctx);
-    return task ? [task] : [];
+    // 2. Full Unification (Only on survivors)
+    const results = [];
+    for (const rule of candidates) {
+      const match = this.unifier.match(rule.pattern, p, s);
+      if (match.success) {
+        results.push(rule.apply(match.bindings, ctx));
+      }
+    }
+    return results;
   }
 }
-
-// Instantiations:
-export const ConversionRule = () => new UnaryRule(
-  'conversion', '-->',
-  Truth.conversion,
-  (t, tf) => tf.inheritance(t.predicate, t.subject),
-  0.7
-);
-
-export const ContrapositionRule = () => new UnaryRule(
-  'contraposition', '==>',
-  Truth.structuralReduction,
-  (t, tf) => tf.implication(tf.negation(t.predicate), tf.negation(t.subject)),
-  0.6
-);
 ```
 
-**Effort**: 2 hours  
-**Unlocks**: DRY for unary rules
+**Critical Dependency**: `Unifier.js` (for the final binding step).
 
 ---
 
@@ -276,13 +195,9 @@ export const ContrapositionRule = () => new UnaryRule(
 | `revision` | [L71](file:///home/me/senars10/core/src/Truth.js#L71) | ✅ Memory |
 | `negation` | [L85](file:///home/me/senars10/core/src/Truth.js#L85) | ❌ Wire to parser |
 | `conversion` | [L89](file:///home/me/senars10/core/src/Truth.js#L89) | ✅ ConversionRule |
-| `comparison` | [L97](file:///home/me/senars10/core/src/Truth.js#L97) | ❌ Create rule |
-| `analogy` | [L105](file:///home/me/senars10/core/src/Truth.js#L105) | ❌ Create rule |
-| `contraposition` | [L115](file:///home/me/senars10/core/src/Truth.js#L115) | — |
-| `intersection` | [L123](file:///home/me/senars10/core/src/Truth.js#L123) | ❌ Create rule |
-| `union` | [L128](file:///home/me/senars10/core/src/Truth.js#L128) | ❌ Create rule |
-| `exemplification` | [L143](file:///home/me/senars10/core/src/Truth.js#L143) | ❌ Create rule |
-| `structuralReduction` | [L168](file:///home/me/senars10/core/src/Truth.js#L168) | ✅ ContrapositionRule |
+| `comparison` | [L97](file:///home/me/senars10/core/src/Truth.js#L97) | ❌ PatternRule |
+| `analogy` | [L105](file:///home/me/senars10/core/src/Truth.js#L105) | ❌ PatternRule |
+| `exemplification` | [L143](file:///home/me/senars10/core/src/Truth.js#L143) | ❌ PatternRule |
 
 ### Unification (in PrologStrategy)
 
@@ -294,8 +209,6 @@ Full unification exists in [PrologStrategy.js](file:///home/me/senars10/core/src
 | `_unifyVariable` | L320-336 | Variable binding with occurs check |
 | `_occursCheck` | L394-406 | Infinite term prevention |
 | `_applySubstitutionToTerm` | L412-432 | Apply bindings |
-| `_isVariable` | L380-384 | Variable detection |
-| `_standardizeRuleVariables` | L205-230 | Alpha-renaming |
 
 ---
 
@@ -310,10 +223,6 @@ Thin wrappers + consistent API for term operations:
 export const termsEqual = (t1, t2) => t1?.equals?.(t2) ?? false;
 export const isVariable = (term) => term?.isVariable ?? false;
 export const isCompound = (term) => term?.isCompound ?? false;
-export const isInheritance = (term) => term?.isInheritance ?? false;
-export const isImplication = (term) => term?.isImplication ?? false;
-export const getSubject = (term) => term?.subject;
-export const getPredicate = (term) => term?.predicate;
 export const getComponents = (term) => term?.components ?? [];
 ```
 
@@ -324,7 +233,7 @@ export const getComponents = (term) => term?.components ?? [];
 
 ### 2. Unifier.js (EXTRACT)
 
-Extract from PrologStrategy for reuse:
+Extract from PrologStrategy for reuse. **MUST** support pattern matching (one-way unification).
 
 ```javascript
 // core/src/term/Unifier.js
@@ -341,93 +250,53 @@ export class Unifier {
    * @returns {{ success: boolean, bindings: Map<string, Term> }}
    */
   unify(term1, term2, bindings = new Map()) {
-    const t1 = this.substitute(term1, bindings);
-    const t2 = this.substitute(term2, bindings);
-
-    if (isVariable(t1)) return this._unifyVar(t1, t2, bindings);
-    if (isVariable(t2)) return this._unifyVar(t2, t1, bindings);
-    if (termsEqual(t1, t2)) return { success: true, bindings };
-
-    if (isCompound(t1) && isCompound(t2)) {
-      const c1 = getComponents(t1), c2 = getComponents(t2);
-      if (c1.length !== c2.length || t1.operator !== t2.operator) {
-        return { success: false, bindings: new Map() };
-      }
-      let current = bindings;
-      for (let i = 0; i < c1.length; i++) {
-        const result = this.unify(c1[i], c2[i], current);
-        if (!result.success) return { success: false, bindings: new Map() };
-        current = result.bindings;
-      }
-      return { success: true, bindings: current };
-    }
-    return { success: false, bindings: new Map() };
+    // ... (existing logic from PrologStrategy) ...
   }
-
-  substitute(term, bindings) {
-    if (!term) return term;
-    if (isVariable(term)) {
-      const name = term.name;
-      return bindings.has(name) ? this.substitute(bindings.get(name), bindings) : term;
-    }
-    if (isCompound(term)) {
-      const comps = getComponents(term).map(c => this.substitute(c, bindings));
-      return this.termFactory.create(term.operator, comps);
-    }
-    return term;
-  }
-
-  occursIn(varName, term, bindings = new Map()) {
-    if (isVariable(term)) {
-      if (term.name === varName) return true;
-      if (bindings.has(term.name)) return this.occursIn(varName, bindings.get(term.name), bindings);
-      return false;
-    }
-    if (isCompound(term)) {
-      return getComponents(term).some(c => this.occursIn(varName, c, bindings));
-    }
-    return false;
-  }
-
-  _unifyVar(variable, term, bindings) {
-    const varName = variable.name;
-    if (bindings.has(varName)) return this.unify(bindings.get(varName), term, bindings);
-    if (isVariable(term) && bindings.has(term.name)) return this.unify(variable, bindings.get(term.name), bindings);
-    if (this.occursIn(varName, term, bindings)) return { success: false, bindings: new Map() };
-    
-    const newBindings = new Map(bindings);
-    newBindings.set(varName, term);
-    return { success: true, bindings: newBindings };
-  }
-
-  /** Alpha-rename variables to prevent collision */
-  standardize(term) {
-    const suffix = `_${this._varCounter++}`;
-    const mapping = {};
-    
-    const rename = (t) => {
-      if (!t) return t;
-      if (isVariable(t)) {
-        if (!mapping[t.name]) mapping[t.name] = `${t.name}${suffix}`;
-        return this.termFactory.variable(mapping[t.name]);
-      }
-      if (isCompound(t)) {
-        return this.termFactory.create(t.operator, getComponents(t).map(rename));
-      }
-      return t;
-    };
-    
-    return rename(term);
+  
+  /** 
+   * Match term against pattern (one-way unification)
+   * Used for PatternRule matching
+   */
+  match(pattern, term, bindings = new Map()) {
+    // Treat pattern variables ($S, $P) as variables to be bound
+    // Treat term variables as constants (unless unifying two variables)
+    // ...
   }
 }
 ```
 
 **Effort**: 4-6 hours  
-**Unlocks**: NAL-6 query matching, AnalogicalStrategy, ResolutionStrategy can share, differentiable logic
+**Unlocks**: PatternRules, NAL-6 query matching, AnalogicalStrategy
 
 ---
 
-### 3. SemanticStrategy (WIRE)
+### 3. RuleCompiler (NEW)
+
+The optimization engine.
+
+```javascript
+// core/src/reason/rules/compiler/RuleCompiler.js
+export class RuleCompiler {
+  /**
+   * Compiles patterns into an optimized decision tree.
+   * @param {Array<PatternRule>} rules
+   * @returns {DecisionNode} Root of the execution tree
+   */
+  compile(rules) {
+    // 1. Extract guards for each rule
+    // 2. Rank guards (cheap -> expensive)
+    // 3. Build Trie (deduplicate common prefixes)
+    // 4. Return root
+  }
+}
+```
+
+**Effort**: 6-8 hours  
+**Unlocks**: Scalable NAL-4+ support (hundreds of rules with O(1) lookup)
+
+---
+
+### 4. SemanticStrategy (WIRE)
 
 Wrap existing EmbeddingLayer:
 
@@ -444,26 +313,7 @@ export class SemanticStrategy extends PremiseFormationStrategy {
   }
 
   async* generateCandidates(primaryTask, context) {
-    if (!this.embeddings?.enabled || !context?.memory) return;
-    
-    const taskStr = primaryTask.term?.toString();
-    if (!taskStr) return;
-    
-    const terms = [];
-    for (const [term] of context.memory.getConcepts()) {
-      terms.push(term.toString());
-    }
-    
-    const similar = await this.embeddings.findSimilar(taskStr, terms, this.threshold);
-    
-    for (const { item, similarity } of similar) {
-      const concept = context.memory.getConcept(item);
-      const belief = concept?.getTopBelief?.();
-      if (belief) {
-        this._recordCandidate();
-        yield { term: belief.term, priority: similarity, sourceTask: belief, type: 'semantic' };
-      }
-    }
+    // ... findSimilar() ... yield candidates ...
   }
 }
 ```
@@ -475,34 +325,30 @@ export class SemanticStrategy extends PremiseFormationStrategy {
 
 ## Roadmap
 
-### Phase 0: Consolidation (Now)
+### Phase 0: Foundation (Now)
 
 | Task | Effort | Unlocks |
 |------|--------|---------|
 | TermUtils.js | 1 hr | Clean APIs |
 | Negation in parser | 2-4 hrs | Simplification |
-| SharedTermRule base | 2-4 hrs | DRY rules |
-| ComparisonRule | 1 hr | NAL-4 |
-| ExemplificationRule | 1 hr | NAL-4 |
-| AnalogyRule | 1 hr | NAL-4 |
-| SetOperationRule | 2 hrs | NAL-4 |
-
-### Phase 1: Variables (1-2 weeks)
-
-| Task | Effort | Unlocks |
-|------|--------|---------|
-| Unifier.js extraction | 4-6 hrs | NAL-6, reuse |
+| **Unifier.js extraction** | 4-6 hrs | Pattern Rules |
 | SemanticStrategy | 2-4 hrs | Fuzzy matching |
-| Query variable matching | 4 hrs | Questions |
-| AnalogicalStrategy | 4 hrs | Cross-domain |
 
-### Phase 2: Temporal (2-4 weeks)
+### Phase 1: Rule Engine (1-2 weeks)
 
 | Task | Effort | Unlocks |
 |------|--------|---------|
+| RuleCompiler | 6-8 hrs | Optimized matching |
+| RuleExecutor | 2 hrs | Tree traversal |
+| Define NAL-4 rules (JS) | 2 hrs | NAL-4 completion |
+| Define NAL-5 rules (JS) | 2 hrs | NAL-5 completion |
+
+### Phase 2: Variables & Temporal (2-4 weeks)
+
+| Task | Effort | Unlocks |
+|------|--------|---------|
+| NAL-6 Query matching | 4 hrs | Questions |
 | TemporalBuffer | 1 week | NAL-7 |
-| Temporal operators in parser | 4 hrs | `=/>`, `=|>` |
-| TemporalInductionRule | 4 hrs | Sequence learning |
 | CausalStrategy | 4 hrs | Multi-hop |
 
 ### Phase 3: Goals (4-8 weeks)
@@ -511,7 +357,6 @@ export class SemanticStrategy extends PremiseFormationStrategy {
 |------|--------|---------|
 | Goal task handling | 1 week | NAL-8 |
 | GoalDrivenStrategy | 1 week | Backward chaining |
-| Plan synthesis | 2 weeks | Action sequences |
 
 ---
 
@@ -521,19 +366,16 @@ export class SemanticStrategy extends PremiseFormationStrategy {
 
 | Task | Effort | How |
 |------|--------|-----|
-| TermUtils.js | 1 hr | Copy snippet above, update imports |
-| ComparisonRule | 1 hr | Use SharedTermRule pattern |
-| ExemplificationRule | 1 hr | Pattern: p.subject === s.predicate |
-| AnalogyRule | 1 hr | Pattern: similarity + inheritance |
+| TermUtils.js | 1 hr | Copy snippet above |
+| Negation parser | 2-4 hrs | Detect `--`, call `Truth.negation()` |
+| SemanticStrategy | 2-4 hrs | Copy snippet, register in ReasonerBuilder |
 
 ### Short (1-3 days)
 
 | Task | Effort | How |
 |------|--------|-----|
-| Negation parser | 2-4 hrs | Detect `--`, call `Truth.negation()` |
-| SharedTermRule base | 2-4 hrs | Copy snippet above |
-| Unifier.js | 4-6 hrs | Copy snippet, update PrologStrategy |
-| SemanticStrategy | 2-4 hrs | Copy snippet, register in ReasonerBuilder |
+| **Unifier.js** | 4-6 hrs | Extract from PrologStrategy |
+| RuleCompiler | 6-8 hrs | Implement decision tree builder |
 
 ---
 
@@ -551,20 +393,14 @@ export class SemanticStrategy extends PremiseFormationStrategy {
 | ModusPonensRule | [ModusPonensRule.js](file:///home/me/senars10/core/src/reason/rules/nal/ModusPonensRule.js) | Detachment |
 | VariableIntroduction | [VariableIntroduction.js](file:///home/me/senars10/core/src/reason/rules/nal/VariableIntroduction.js) | Generalization |
 
-### NAL-4 Remaining
+### NAL-4+ (Compiled Patterns)
 
-| Rule | Pattern | Truth Fn | Priority |
-|------|---------|----------|----------|
-| ComparisonRule | Shared subject → similarity | `Truth.comparison` | 0.7 |
-| ExemplificationRule | p.subject === s.predicate | `Truth.exemplification` | 0.6 |
-| AnalogyRule | (S↔M), (M→P) ⊢ (S→P) | `Truth.analogy` | 0.7 |
-| SetOperationRule | Set terms | `Truth.intersection`/`union` | 0.8 |
+Implement via `PatternRule` definitions in JS, compiled at startup:
 
-### NAL-5: Higher-Order
-
-- [ ] Nested: `((A→B) → C)`
-- [ ] Product: `(×, A, B)`
-- [ ] Image: `(/,R,_,B)`, `(\,R,A,_)`
+- `Comparison`: Shared subject → similarity
+- `Exemplification`: p.subject === s.predicate
+- `Analogy`: (S↔M), (M→P) ⊢ (S→P)
+- `Intersection`/`Union`/`Difference`
 
 ### NAL-6: Variables
 
@@ -586,11 +422,6 @@ export class SemanticStrategy extends PremiseFormationStrategy {
 - [ ] Goal representation
 - [ ] Plan synthesis
 - [ ] Execution monitoring
-
-### NAL-9: Introspection
-
-- [ ] Self-referential statements
-- [ ] MetacognitionRules exists: [MetacognitionRules.js](file:///home/me/senars10/core/src/reason/rules/nal/MetacognitionRules.js)
 
 ---
 
