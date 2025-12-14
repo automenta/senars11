@@ -20,13 +20,12 @@ export class ResolutionStrategy extends Strategy {
      */
     constructor(config = {}) {
         super({
-            goalMatcher: config.goalMatcher || null,
-            maxResolutionDepth: config.maxResolutionDepth || 5,
-            termFactory: config.termFactory || null,
+            goalMatcher: config.goalMatcher ?? null,
+            maxResolutionDepth: config.maxResolutionDepth ?? 5,
+            termFactory: config.termFactory ?? null,
             ...config
         });
 
-        // Initialize Unifier for NAL-6 query matching
         if (this.config.termFactory) {
             this.unifier = new Unifier(this.config.termFactory);
         }
