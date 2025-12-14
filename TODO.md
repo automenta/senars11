@@ -44,6 +44,8 @@
 ## Development Tree
 
 > **Dependency Map** — Foundational components unlock multiple downstream capabilities
+> 
+> **Note**: Temporal functionality (NAL-7, TemporalBuffer, CausalStrategy) is deferred until temporal representations are specified. All other NAL levels can proceed independently.
 
 ```mermaid
 graph TD
@@ -51,22 +53,31 @@ graph TD
         UNI[Unification Engine]
         EMB[Embedding Infrastructure]
         IDX[Advanced Indexing]
-        EVT[Event/Temporal Buffer]
         TRC[Derivation Tracing]
         SER[Serialization Layer]
     end
 
+    subgraph FoundationDeferred["🏗️ DEFERRED FOUNDATION"]
+        EVT[Event/Temporal Buffer]
+    end
+
     subgraph NAL["📐 NAL CAPABILITIES"]
         NAL6[NAL-6: Variables]
-        NAL7[NAL-7: Temporal]
         NAL8[NAL-8: Goals/Planning]
         NEG[Negation & Contradiction]
+    end
+
+    subgraph NALDeferred["📐 DEFERRED NAL"]
+        NAL7[NAL-7: Temporal]
     end
 
     subgraph Strategy["🎯 PREMISE STRATEGIES"]
         SEM[Semantic Similarity]
         ANA[Analogical Reasoning]
         GOAL[Goal-Driven]
+    end
+
+    subgraph StrategyDeferred["🎯 DEFERRED STRATEGIES"]
         TEMP[Temporal Chaining]
     end
 
@@ -92,12 +103,9 @@ graph TD
     end
 
     UNI --> NAL6
-    EVT --> NAL7
     NAL6 --> NAL8
-    NAL7 --> NAL8
     EMB --> SEM
     UNI --> ANA
-    EVT --> TEMP
     NAL8 --> GOAL
     EMB --> HOP
     IDX --> GNN
@@ -112,19 +120,24 @@ graph TD
     EMB --> NL
     SER --> INGEST
     NEG --> WHY
-    NAL7 --> TEMP
+    
+    %% Deferred temporal dependencies
+    EVT -.-> NAL7
+    NAL7 -.-> NAL8
+    EVT -.-> TEMP
+    NAL7 -.-> TEMP
 ```
 
 ### Dependency Summary
 
-| Foundation | Unlocks | Effort | Impact | ROI |
-|------------|---------|--------|--------|-----|
-| **Unification Engine** | NAL-6, Analogical, Differentiable | 🟡 Medium | 🔴 Critical | ⭐⭐⭐ |
-| **Embedding Infrastructure** | Semantic, Hopfield, NL queries | 🟡 Medium | 🔴 Critical | ⭐⭐⭐ |
-| **Event/Temporal Buffer** | NAL-7, Temporal chaining | 🟢 Low | 🟡 High | ⭐⭐⭐ |
-| **Advanced Indexing** | GNN, Benchmarks, Scaling | 🔴 High | 🟡 High | ⭐⭐ |
-| **Derivation Tracing** | Debugger, Explainer, RL | 🟢 Low | 🟢 Medium | ⭐⭐⭐ |
-| **Serialization Layer** | API, Playground, Ingestion | 🟢 Low | 🟢 Medium | ⭐⭐⭐ |
+| Foundation | Unlocks | Effort | Impact | ROI | Phase |
+|------------|---------|--------|--------|-----|-------|
+| **Unification Engine** | NAL-6, Analogical, Differentiable | 🟡 Medium | 🔴 Critical | ⭐⭐⭐ | 0 |
+| **Embedding Infrastructure** | Semantic, Hopfield, NL queries | 🟡 Medium | 🔴 Critical | ⭐⭐⭐ | 0 |
+| **Derivation Tracing** | Debugger, Explainer, RL | 🟢 Low | 🟢 Medium | ⭐⭐⭐ | 1 |
+| **Serialization Layer** | API, Playground, Ingestion | 🟢 Low | � Medium | ⭐⭐⭐ | 1 |
+| **Advanced Indexing** | GNN, Benchmarks, Scaling | 🔴 High | 🟡 High | ⭐⭐ | 3 |
+| **Event/Temporal Buffer** | NAL-7, Temporal chaining | 🟢 Low | � High | ⭐⭐⭐ | 4 (Deferred) |
 
 ---
 
@@ -433,6 +446,8 @@ export class SemanticStrategy extends PremiseFormationStrategy {
 
 ## Roadmap
 
+> **Phasing Rationale**: Temporal functionality (NAL-7, TemporalBuffer, CausalStrategy) is deferred to Phase 4 because it requires specifying temporal representations (event timestamps, intervals, temporal operators like `=/>`, `=|>`, `=\>`). NAL-6 (Variables) and NAL-8 (Goals) can proceed independently since goals use desire values, not temporal semantics.
+
 ### Phase 0: Foundation (Now)
 
 | Task | Effort | Unlocks |
@@ -452,22 +467,34 @@ export class SemanticStrategy extends PremiseFormationStrategy {
 | [x] **RuleProcessor Integration** | 2 hrs | End-to-end flow |
 | [x] **Discriminator Abstraction** | 2 hrs | Metaprogramming/Flexibility |
 
-### Phase 2: Variables & Temporal (2-4 weeks)
+### Phase 2: Variables (2-3 weeks)
 
 | Task | Effort | Unlocks |
 |------|--------|---------|
-| Temporal Discriminators | 2 hrs | NAL-7 support |
 | NAL-6 Query matching | 4 hrs | Questions |
-| TemporalBuffer | 1 week | NAL-7 |
-| CausalStrategy | 4 hrs | Multi-hop |
+| Variable scope handling | 4 hrs | Nested quantifiers |
+| AnalogicalStrategy | 1 week | Cross-domain mapping |
 
-### Phase 3: Goals & Control (4-8 weeks)
+### Phase 3: Goals & Control (3-6 weeks)
 
 | Task | Effort | Unlocks |
 |------|--------|---------|
 | Dynamic Discriminators | 4 hrs | Meta-cognition |
 | Goal task handling | 1 week | NAL-8 |
 | GoalDrivenStrategy | 1 week | Backward chaining |
+| Plan synthesis | 1 week | Multi-step goals |
+
+### Phase 4: Temporal (6-10 weeks, Deferred)
+
+> **Prerequisite**: Define temporal representations—timestamps, intervals, temporal operators (`=/>`, `=|>`, `=\>`), event ordering semantics.
+
+| Task | Effort | Unlocks |
+|------|--------|---------|
+| Temporal representation design | 1 week | Foundation |
+| Temporal Discriminators | 2 hrs | NAL-7 support |
+| TemporalBuffer | 1 week | Event sequences |
+| NAL-7 operators | 1 week | Temporal rules |
+| CausalStrategy | 4 hrs | Multi-hop temporal |
 
 ---
 
@@ -518,11 +545,13 @@ class VectorIndex {
 }
 ```
 
-### Event/Temporal Buffer
+### Event/Temporal Buffer (Phase 4 — Deferred)
 
 *Enables: NAL-7 temporal, Temporal strategies, Causality*
 
-**Interface**:
+> **Deferred**: Requires temporal representation design. See [Phase 4](#phase-4-temporal-6-10-weeks-deferred).
+
+**Interface** (Tentative):
 ```javascript
 class TemporalBuffer {
   constructor(windowSize, resolution)
@@ -588,9 +617,17 @@ Implement via `PatternRule` definitions in JS, compiled at startup:
 | Unification | ⚠️ | [PrologStrategy.js#L288](file:///home/me/senars10/core/src/reason/strategy/PrologStrategy.js#L288) |
 | Query matching | ❌ | Needs Unifier extraction |
 
-### NAL-7: Temporal
+### NAL-7: Temporal (Phase 4 — Deferred)
+
 *Implementation: `PatternRule` definitions compiled by `RuleCompiler`*
 
+> **Deferred**: Requires temporal representation design before implementation. See [Phase 4 Roadmap](#phase-4-temporal-6-10-weeks-deferred).
+
+**Prerequisites**:
+- [ ] Temporal representation specification (timestamps, intervals, ordering)
+- [ ] Temporal operator semantics (`=/>` predictive, `=|>` concurrent, `=\>` retrospective)
+
+**Implementation Tasks**:
 - [ ] Operators: `=/>`, `=|>`, `=\>`
 - [ ] TemporalBuffer (Event window)
 - [ ] TemporalInductionRule (Pattern: `(A, t1), (B, t2) ⊢ (A =/> B)`)
@@ -636,12 +673,12 @@ class PremiseFormationStrategy {
 
 ### Planned
 
-| Strategy | Depends | Priority | Purpose | Implementation Note |
-|----------|---------|----------|---------|---------------------|
-| SemanticStrategy | EmbeddingLayer ✅ | High | Fuzzy matching | Uses `EmbeddingLayer` to find semantically similar terms for premise matching. |
-| AnalogicalStrategy | Unifier | High | Cross-domain mapping | Uses `Unifier` to map structures between domains `(S↔M)`. |
-| GoalDrivenStrategy | NAL-8 | Medium | Backward from goals | Will use `RuleExecutor` in backward-chaining mode or enhance `PrologStrategy`. |
-| CausalStrategy | NAL-7 | Medium | Multi-hop temporal | Consumes `TemporalBuffer` events; applies temporal `PatternRule` definitions. |
+| Strategy | Depends | Priority | Phase | Purpose | Implementation Note |
+|----------|---------|----------|-------|---------|---------------------|
+| SemanticStrategy | EmbeddingLayer ✅ | High | 0 | Fuzzy matching | Uses `EmbeddingLayer` to find semantically similar terms for premise matching. |
+| AnalogicalStrategy | Unifier | High | 2 | Cross-domain mapping | Uses `Unifier` to map structures between domains `(S↔M)`. |
+| GoalDrivenStrategy | NAL-8 | Medium | 3 | Backward from goals | Will use `RuleExecutor` in backward-chaining mode or enhance `PrologStrategy`. |
+| CausalStrategy | NAL-7 | Low | 4 | Multi-hop temporal | Consumes `TemporalBuffer` events; applies temporal `PatternRule` definitions. **Deferred**: Requires temporal representations. |
 
 ### Composition Pattern
 
@@ -691,8 +728,8 @@ class TermIndex {
 ```
 
 **Needed**:
-- TemporalBuffer — NAL-7 event sequences
-- VectorIndex — Semantic similarity queries
+- VectorIndex — Semantic similarity queries (Phase 0-1)
+- TemporalBuffer — NAL-7 event sequences (Phase 4, Deferred)
 
 ---
 
@@ -805,12 +842,12 @@ class Serializer {
 
 ## Domain Applications
 
-| Domain | Foundation Requirements | Demo |
-|--------|------------------------|------|
-| Legal | Unification + Tracing | Precedent search |
-| Medical | Embeddings + Temporal | Diagnosis assistant |
-| Game AI | Temporal + Goals | NPC behaviors |
-| Education | Tracing + Serialization | Interactive tutor |
+| Domain | Foundation Requirements | Demo | Phase |
+|--------|------------------------|------|-------|
+| Legal | Unification + Tracing | Precedent search | 2 |
+| Education | Tracing + Serialization | Interactive tutor | 2 |
+| Medical | Embeddings + Temporal | Diagnosis assistant | 4 (requires Temporal) |
+| Game AI | Temporal + Goals | NPC behaviors | 4 (requires Temporal) |
 
 ---
 
