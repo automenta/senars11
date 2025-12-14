@@ -1,8 +1,9 @@
-import {EventEmitter} from 'eventemitter3';
-import {getHeapUsed} from '../util/common.js';
-import {SimpleRunner} from './runner/SimpleRunner.js';
-import {PipelineRunner} from './runner/PipelineRunner.js';
-import {isAsyncRule, isSynchronousRule} from './RuleHelpers.js';
+import { EventEmitter } from 'eventemitter3';
+import { Logger } from '../util/Logger.js';
+import { getHeapUsed } from '../util/common.js';
+import { SimpleRunner } from './runner/SimpleRunner.js';
+import { PipelineRunner } from './runner/PipelineRunner.js';
+import { isAsyncRule, isSynchronousRule } from './RuleHelpers.js';
 
 /**
  * The main Reasoner class that manages the continuous reasoning pipeline.
@@ -45,7 +46,7 @@ export class Reasoner extends EventEmitter {
 
     start() {
         if (this.runner.isRunning) {
-            console.warn('Reasoner is already running');
+            Logger.warn('Reasoner is already running');
             return;
         }
         this.runner.start();
@@ -85,7 +86,7 @@ export class Reasoner extends EventEmitter {
                         results.push(...forwardResults.filter(Boolean));
                     }
                 } catch (error) {
-                    console.debug('Error processing single premise:', error.message);
+                    Logger.debug('Error processing single premise:', error.message);
                 }
 
                 // Dual premise processing using Strategy
@@ -121,11 +122,11 @@ export class Reasoner extends EventEmitter {
                         }
                     }
                 } catch (error) {
-                    console.debug('Error processing premise pair:', error.message);
+                    Logger.debug('Error processing premise pair:', error.message);
                 }
             }
         } catch (error) {
-            console.debug('Error in step method:', error.message);
+            Logger.debug('Error in step method:', error.message);
         }
         return results;
     }
@@ -171,7 +172,7 @@ export class Reasoner extends EventEmitter {
                         if (processedResult) results.push(processedResult);
                     }
                 } catch (error) {
-                    console.error(`Error executing async rule ${rule.id}:`, error);
+                    Logger.error(`Error executing async rule ${rule.id}:`, error);
                 }
             }
         }
@@ -210,7 +211,7 @@ export class Reasoner extends EventEmitter {
                         queueLength: 0 // Simplification for now
                     });
                 } catch (error) {
-                    console.error('Error in consumer feedback handler:', error);
+                    Logger.error('Error in consumer feedback handler:', error);
                 }
             });
         }
@@ -252,10 +253,10 @@ export class Reasoner extends EventEmitter {
 
         if (typeof component.getStatus === 'function') {
             try {
-                return {...status, ...component.getStatus()};
+                return { ...status, ...component.getStatus() };
             } catch (e) {
-                console.warn(`Error getting ${componentName} status:`, e.message);
-                return {...status, error: e.message};
+                Logger.warn(`Error getting ${componentName} status:`, e.message);
+                return { ...status, error: e.message };
             }
         }
 

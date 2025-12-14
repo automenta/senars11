@@ -2,6 +2,7 @@ import { Bag } from '../memory/Bag.js';
 import { Task } from '../task/Task.js';
 import { Truth } from '../Truth.js';
 import { Stamp } from '../Stamp.js';
+import { Logger } from '../util/Logger.js';
 
 /**
  * Strategy component handles premise pairing and budget management.
@@ -85,13 +86,13 @@ export class Strategy {
                         yield [primaryPremise, secondaryPremise];
                     }
                 } catch (error) {
-                    console.error('Error processing primary premise in Strategy:', error);
+                    Logger.error('Error processing primary premise in Strategy:', error);
                     // Continue to next premise rather than failing completely
 
                 }
             }
         } catch (error) {
-            console.error('Error in Strategy generatePremisePairs:', error);
+            Logger.error('Error in Strategy generatePremisePairs:', error);
             // Re-throw to allow upstream handling
             throw error;
         }
@@ -127,7 +128,7 @@ export class Strategy {
                             this.candidateBag.add(candidateEntry);
                         }
                     } catch (strategyError) {
-                        console.debug(`Formation strategy error: ${strategyError.message}`);
+                        Logger.debug(`Formation strategy error: ${strategyError.message}`);
                     }
                 }
             }
@@ -172,7 +173,7 @@ export class Strategy {
 
             return uniqueResults.slice(0, this.config.maxSecondaryPremises || 20);
         } catch (error) {
-            console.error('Error in selectSecondaryPremises:', error);
+            Logger.error('Error in selectSecondaryPremises:', error);
             return [];
         }
     }

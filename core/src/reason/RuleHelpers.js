@@ -69,13 +69,13 @@ export function processDerivation(result, maxDerivationDepth) {
         const derivationDepth = result.stamp.depth ?? 0;
 
         if (derivationDepth > maxDerivationDepth) {
-            //console.debug(`Discarding derivation - exceeds max depth (${derivationDepth} > ${maxDerivationDepth})`);
+            Logger.debug(`Discarding derivation - exceeds max depth (${derivationDepth} > ${maxDerivationDepth})`);
             return null;
         }
 
         return result;
     } catch (error) {
-        console.debug('Error processing derivation:', error.message);
+        Logger.debug('Error processing derivation:', error.message);
         return null;
     }
 }

@@ -1,4 +1,5 @@
 import { mergeConfig, processDerivation, sleep } from './utils/common.js';
+import { Logger } from '../util/Logger.js';
 import { logError, ReasonerError } from './utils/error.js';
 import { Queue } from '../util/Queue.js';
 import { ArrayStamp } from '../Stamp.js';
@@ -53,7 +54,7 @@ export class RuleProcessor {
                 if (signal?.aborted) break;
 
                 if (this._isTimeoutExceeded(startTime, timeoutMs)) {
-                    console.debug(`RuleProcessor: timeout reached after ${timeoutMs}ms`);
+                    Logger.debug(`RuleProcessor: timeout reached after ${timeoutMs}ms`);
                     break;
                 }
 
@@ -66,7 +67,7 @@ export class RuleProcessor {
                     if (signal?.aborted) break;
 
                     if (this._isTimeoutExceeded(startTime, timeoutMs)) {
-                        console.debug(`RuleProcessor: timeout reached after ${timeoutMs}ms`);
+                        Logger.debug(`RuleProcessor: timeout reached after ${timeoutMs}ms`);
                         break;
                     }
 
@@ -250,7 +251,7 @@ export class RuleProcessor {
             if (signal?.aborted) break;
 
             if (this._isTimeoutExceeded(startTime, timeoutMs)) {
-                console.debug(`RuleProcessor: timeout reached after ${timeoutMs}ms (in async results loop)`);
+                Logger.debug(`RuleProcessor: timeout reached after ${timeoutMs}ms (in async results loop)`);
                 break;
             }
 

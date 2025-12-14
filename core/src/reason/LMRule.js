@@ -1,6 +1,7 @@
-import {Rule} from './Rule.js';
-import {logError, RuleExecutionError} from './utils/error.js';
-import {CircuitBreaker} from '../util/CircuitBreaker.js';
+import { Rule } from './Rule.js';
+import { Logger } from '../util/Logger.js';
+import { logError, RuleExecutionError } from './utils/error.js';
+import { CircuitBreaker } from '../util/CircuitBreaker.js';
 
 /**
  * Language Model Rule for the stream reasoner system.
@@ -56,7 +57,7 @@ export class LMRule extends Rule {
     }
 
     static create(config) {
-        const {id, lm, ...rest} = config;
+        const { id, lm, ...rest } = config;
         if (!id || !lm) {
             throw new Error('LMRule.create: `id` and `lm` are required.');
         }
@@ -70,7 +71,7 @@ export class LMRule extends Rule {
             }
             return this.config.condition(primaryPremise, secondaryPremise, context);
         } catch (error) {
-            logError(error, {ruleId: this.id, context: 'condition_evaluation'}, 'warn');
+            logError(error, { ruleId: this.id, context: 'condition_evaluation' }, 'warn');
             return false;
         }
     }
@@ -118,7 +119,7 @@ export class LMRule extends Rule {
             this._updateExecutionStats(true, Date.now() - startTime);
             return newTasks;
         } catch (error) {
-            console.error(`Error in LMRule ${this.id}:`, error);
+            Logger.error(`Error in LMRule ${this.id}:`, error);
 
             this._emitEvent('lm.failure', {
                 ruleId: this.id,
@@ -192,8 +193,8 @@ export class LMRule extends Rule {
 
     getStats() {
         return {
-            lm: {...this.lmStats},
-            execution: {...this.executionStats},
+            lm: { ...this.lmStats },
+            execution: { ...this.executionStats },
             circuit: this.circuitBreaker.getState(),
             ruleInfo: {
                 id: this.id,
