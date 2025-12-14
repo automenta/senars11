@@ -9,22 +9,20 @@
 ## Table of Contents
 
 1. [Principles](#principles)
-2. [Development Tree](#development-tree)
-3. [Simplifications](#simplifications)
-4. [Rule Engine Architecture](#rule-engine-architecture)
-5. [Implemented](#implemented)
-6. [Extractions](#extractions)
+2. [Leverage](#leverage)
+3. [Development Tree](#development-tree)
+4. [Simplifications](#simplifications)
+5. [Rule Engine Architecture](#rule-engine-architecture)
+6. [Next Actions](#next-actions)
 7. [Roadmap](#roadmap)
-8. [Quick Wins](#quick-wins)
-9. [Foundation](#foundation)
-10. [NAL](#nal)
-11. [Strategies](#strategies)
-12. [Memory](#memory)
-13. [LM](#lm)
-14. [Cross-Cutting](#cross-cutting)
-15. [Ecosystem](#ecosystem)
-16. [Domain Applications](#domain-applications)
-17. [Speculative](#speculative)
+8. [NAL](#nal)
+9. [Strategies](#strategies)
+10. [Memory](#memory)
+11. [LM](#lm)
+12. [Cross-Cutting](#cross-cutting)
+13. [Ecosystem](#ecosystem)
+14. [Domain Applications](#domain-applications)
+15. [Speculative](#speculative)
 
 ---
 
@@ -38,6 +36,34 @@
 | **Composable** | Standard interfaces, plug-and-play |
 | **Observable** | Emit events, bounded retention |
 | **Resource-Aware** | Budgets, timeouts, graceful degradation |
+
+---
+
+## Leverage
+
+> **80/20 Principle**: Maximum impact from what's already built
+
+### Already Have (Use It!)
+
+| Asset | Location | Reuse For |
+|-------|----------|----------|
+| **Full Unification** | [PrologStrategy.js#L288](file:///home/me/senars10/core/src/reason/strategy/PrologStrategy.js#L288) | Extract → Unifier.js (2 hrs, not 6) |
+| **Backward Chaining** | [PrologStrategy.js](file:///home/me/senars10/core/src/reason/strategy/PrologStrategy.js) | GoalDrivenStrategy = thin wrapper |
+| **Embeddings** | [EmbeddingLayer.js](file:///home/me/senars10/core/src/lm/EmbeddingLayer.js) | SemanticStrategy = 50 lines |
+| **Term Predicates** | [Term.js](file:///home/me/senars10/core/src/term/Term.js) | Stop reimplementing `isVariable`, `equals` |
+| **RuleCompiler** | [RuleCompiler.js](file:///home/me/senars10/core/src/reason/rules/compiler/RuleCompiler.js) | ✅ Done |
+| **RuleExecutor** | [RuleExecutor.js](file:///home/me/senars10/core/src/reason/rules/executor/RuleExecutor.js) | ✅ Done |
+| **Discriminators** | [Discriminator.js](file:///home/me/senars10/core/src/reason/rules/compiler/Discriminator.js) | Extensible pattern matching |
+
+### Shortcuts
+
+| Task | Naive Effort | Shortcut | Actual Effort |
+|------|--------------|----------|---------------|
+| Unifier.js | 6 hrs (rewrite) | Extract from PrologStrategy | **2 hrs** |
+| GoalDrivenStrategy | 1 week (new) | Wrap PrologStrategy | **4 hrs** |
+| SemanticStrategy | 4 hrs (design) | Copy snippet, wire EmbeddingLayer | **2 hrs** |
+| Query matching | 4 hrs | Unifier + existing ResolutionStrategy | **2 hrs** |
+| NAL-8 basics | 1 week | Goal = Task with desire value, reuse planner | **2 days** |
 
 ---
 
@@ -130,14 +156,15 @@ graph TD
 
 ### Dependency Summary
 
-| Foundation | Unlocks | Effort | Impact | ROI | Phase |
-|------------|---------|--------|--------|-----|-------|
-| **Unification Engine** | NAL-6, Analogical, Differentiable | 🟡 Medium | 🔴 Critical | ⭐⭐⭐ | 0 |
-| **Embedding Infrastructure** | Semantic, Hopfield, NL queries | 🟡 Medium | 🔴 Critical | ⭐⭐⭐ | 0 |
-| **Derivation Tracing** | Debugger, Explainer, RL | 🟢 Low | 🟢 Medium | ⭐⭐⭐ | 1 |
-| **Serialization Layer** | API, Playground, Ingestion | 🟢 Low | � Medium | ⭐⭐⭐ | 1 |
-| **Advanced Indexing** | GNN, Benchmarks, Scaling | 🔴 High | 🟡 High | ⭐⭐ | 3 |
-| **Event/Temporal Buffer** | NAL-7, Temporal chaining | 🟢 Low | � High | ⭐⭐⭐ | 4 (Deferred) |
+| Foundation | Status | Unlocks | ROI |
+|------------|--------|---------|-----|
+| **Unification Engine** | ✅ In PrologStrategy | NAL-6, Analogical, Differentiable | ⭐⭐⭐ |
+| **Embedding Infrastructure** | ✅ EmbeddingLayer | Semantic, Hopfield, NL queries | ⭐⭐⭐ |
+| **Rule Compiler** | ✅ Done | Pattern matching, NAL-4+ | ⭐⭐⭐ |
+| **Derivation Tracing** | 🟡 Needed | Debugger, Explainer, RL | ⭐⭐⭐ |
+| **Serialization Layer** | 🟡 Needed | API, Playground, Ingestion | ⭐⭐⭐ |
+| **Advanced Indexing** | Phase 4 | GNN, Benchmarks, Scaling | ⭐⭐ |
+| **Event/Temporal Buffer** | Deferred | NAL-7, Temporal chaining | ⭐⭐⭐ |
 
 ---
 
@@ -273,218 +300,46 @@ export class RuleExecutor {
 
 ---
 
-## Implemented
+## Next Actions
 
-### Core Components
+> **Focus**: Highest-ROI items that leverage existing infrastructure
 
-| Component | Location | Lines |
-|-----------|----------|-------|
-| Stream Reasoner | [Reasoner.js](file:///home/me/senars10/core/src/reason/Reasoner.js) | 365 |
-| Strategy | [Strategy.js](file:///home/me/senars10/core/src/reason/Strategy.js) | 365 |
-| NAL Rules (7) | [rules/nal/](file:///home/me/senars10/core/src/reason/rules/nal) | 9 files |
-| Strategies (8) | [strategy/](file:///home/me/senars10/core/src/reason/strategy) | 8 files |
-| Memory | [memory/](file:///home/me/senars10/core/src/memory) | 22 files |
-| Term | [term/](file:///home/me/senars10/core/src/term) | 6 files |
-| LM | [lm/](file:///home/me/senars10/core/src/lm) | 21 files |
-| Tools | [tool/](file:///home/me/senars10/core/src/tool) | 16 files |
+### Immediate (< 1 day each)
 
-### Truth Functions
+| # | Task | Effort | How | Unlocks |
+|---|------|--------|-----|--------|
+| 1 | **Unifier.js extraction** | 2 hrs | Copy `_unify*` from PrologStrategy, add `match()` | NAL-6, AnalogicalStrategy |
+| 2 | **SemanticStrategy** | 2 hrs | Wrap EmbeddingLayer (50 lines) | Fuzzy matching |
+| 3 | **Negation in parser** | 2 hrs | Detect `--`, call `Truth.negation()` | Simplification |
+| 4 | **Wire remaining truth functions** | 2 hrs | Add PatternRules for comparison, analogy, exemplification | NAL-4 completeness |
 
-| Function | Line | Has Rule? |
-|----------|------|-----------|
-| `deduction` | [L50](file:///home/me/senars10/core/src/Truth.js#L50) | ✅ SyllogisticRule |
-| `induction` | [L56](file:///home/me/senars10/core/src/Truth.js#L56) | ✅ InductionRule |
-| `abduction` | [L61](file:///home/me/senars10/core/src/Truth.js#L61) | ✅ AbductionRule |
-| `detachment` | [L66](file:///home/me/senars10/core/src/Truth.js#L66) | ✅ ModusPonensRule |
-| `revision` | [L71](file:///home/me/senars10/core/src/Truth.js#L71) | ✅ Memory |
-| `negation` | [L85](file:///home/me/senars10/core/src/Truth.js#L85) | ❌ Wire to parser |
-| `conversion` | [L89](file:///home/me/senars10/core/src/Truth.js#L89) | ✅ ConversionRule |
-| `comparison` | [L97](file:///home/me/senars10/core/src/Truth.js#L97) | ❌ PatternRule |
-| `analogy` | [L105](file:///home/me/senars10/core/src/Truth.js#L105) | ❌ PatternRule |
-| `exemplification` | [L143](file:///home/me/senars10/core/src/Truth.js#L143) | ❌ PatternRule |
+### Short-term (< 1 week each)
 
-### Unification (in PrologStrategy)
-
-Full unification exists in [PrologStrategy.js](file:///home/me/senars10/core/src/reason/strategy/PrologStrategy.js):
-
-| Function | Line | Purpose |
-|----------|------|---------|
-| `_unify` | L288-318 | Recursive unification |
-| `_unifyVariable` | L320-336 | Variable binding with occurs check |
-| `_occursCheck` | L394-406 | Infinite term prevention |
-| `_applySubstitutionToTerm` | L412-432 | Apply bindings |
-
----
-
-## Extractions
-
-### 1. TermUtils.js (NEW)
-
-Thin wrappers + consistent API for term operations:
-
-```javascript
-// core/src/term/TermUtils.js
-export const termsEqual = (t1, t2) => t1?.equals?.(t2) ?? false;
-export const isVariable = (term) => term?.isVariable ?? false;
-export const isCompound = (term) => term?.isCompound ?? false;
-export const getComponents = (term) => term?.components ?? [];
-```
-
-**Effort**: 1 hour  
-**Update files**: Strategy.js, TaskMatchStrategy.js, PrologStrategy.js, VariableIntroduction.js
-
----
-
-### 2. Unifier.js (EXTRACT)
-
-Extract from PrologStrategy for reuse. **MUST** support pattern matching (one-way unification).
-
-```javascript
-// core/src/term/Unifier.js
-import { isVariable, isCompound, termsEqual, getComponents } from './TermUtils.js';
-
-export class Unifier {
-  constructor(termFactory) {
-    this.termFactory = termFactory;
-    this._varCounter = 0;
-  }
-
-  /**
-   * Unify two terms.
-   * @returns {{ success: boolean, bindings: Map<string, Term> }}
-   */
-  unify(term1, term2, bindings = new Map()) {
-    // ... (existing logic from PrologStrategy) ...
-  }
-  
-  /** 
-   * Match term against pattern (one-way unification)
-   * Used for PatternRule matching
-   */
-  match(pattern, term, bindings = new Map()) {
-    // Treat pattern variables ($S, $P) as variables to be bound
-    // Treat term variables as constants (unless unifying two variables)
-    // ...
-  }
-}
-```
-
-**Test Cases**:
-```javascript
-// Basic unification
-unify(parse("(?x → animal)"), parse("(bird → animal)"))
-  → { "?x": Term("bird") }
-
-// Nested unification  
-unify(parse("((?x → ?y) → mammal)"), parse("((cat → animal) → mammal)"))
-  → { "?x": "cat", "?y": "animal" }
-
-// Failure case
-unify(parse("(?x → ?x)"), parse("(a → b)")) → null
-
-// Occurs check
-unify(parse("?x"), parse("(foo → ?x)")) → null // Infinite term
-```
-
-**Effort**: 4-6 hours  
-**Unlocks**: PatternRules, NAL-6 query matching, AnalogicalStrategy
-
----
-
-### 3. RuleCompiler (NEW)
-
-The optimization engine.
-
-```javascript
-// core/src/reason/rules/compiler/RuleCompiler.js
-export class RuleCompiler {
-  /**
-   * Compiles patterns into an optimized decision tree.
-   * @param {Array<PatternRule>} rules
-   * @returns {DecisionNode} Root of the execution tree
-   */
-  compile(rules) {
-    // 1. Extract guards for each rule
-    // 2. Rank guards (cheap -> expensive)
-    // 3. Build Trie (deduplicate common prefixes)
-    // 4. Return root
-  }
-}
-```
-
-**Effort**: 6-8 hours  
-**Unlocks**: Scalable NAL-4+ support (hundreds of rules with O(1) lookup)
-
----
-
-### 4. SemanticStrategy (WIRE)
-
-Wrap existing EmbeddingLayer:
-
-```javascript
-// core/src/reason/strategy/SemanticStrategy.js
-import { PremiseFormationStrategy } from './PremiseFormationStrategy.js';
-
-export class SemanticStrategy extends PremiseFormationStrategy {
-  constructor(embeddingLayer, config = {}) {
-    super({ priority: config.priority ?? 0.7, ...config });
-    this._name = 'Semantic';
-    this.embeddings = embeddingLayer;
-    this.threshold = config.threshold ?? 0.7;
-  }
-
-  async* generateCandidates(primaryTask, context) {
-    // ... findSimilar() ... yield candidates ...
-  }
-}
-```
-
-**Effort**: 2-4 hours  
-**Unlocks**: Fuzzy premise matching
+| # | Task | Effort | How | Unlocks |
+|---|------|--------|-----|--------|
+| 5 | **NAL-6 Query matching** | 4 hrs | Unifier + ResolutionStrategy integration | Questions |
+| 6 | **GoalDrivenStrategy** | 4 hrs | Thin wrapper around PrologStrategy backward-chaining | NAL-8 basics |
+| 7 | **Derivation Tracing** | 1 day | Wrap rule execution with trace events | Debugger, Explainer |
+| 8 | **AnalogicalStrategy** | 3 days | Use Unifier for structure mapping | Cross-domain reasoning |
 
 ---
 
 ## Roadmap
 
-> **Phasing Rationale**: Temporal functionality (NAL-7, TemporalBuffer, CausalStrategy) is deferred to Phase 4 because it requires specifying temporal representations (event timestamps, intervals, temporal operators like `=/>`, `=|>`, `=\>`). NAL-6 (Variables) and NAL-8 (Goals) can proceed independently since goals use desire values, not temporal semantics.
+> **Phasing Rationale**: Temporal functionality (NAL-7) is deferred to Phase 3 because it requires specifying temporal representations. NAL-6 (Variables) and NAL-8 (Goals) can proceed independently.
 
-### Phase 0: Foundation (Now)
+### Phase 2: Variables & Goals (3-4 weeks)
 
-| Task | Effort | Unlocks |
-|------|--------|---------|
-| TermUtils.js | 1 hr | Clean APIs ✅ |
-| Negation in parser | 2-4 hrs | Simplification ✅ |
-| [x] **Unifier.js extraction** | 4-6 hrs | Pattern Rules ✅ |
-| SemanticStrategy | 2-4 hrs | Fuzzy matching ✅ |
+| Task | Effort | Shortcut | Unlocks |
+|------|--------|----------|---------|
+| NAL-6 Query matching | 4 hrs | Unifier + ResolutionStrategy | Questions |
+| Variable scope handling | 4 hrs | Track scope in bindings Map | Nested quantifiers |
+| Goal task handling | 2 days | Task with `desire` field | NAL-8 basics |
+| GoalDrivenStrategy | 4 hrs | Wrap PrologStrategy | Backward chaining |
+| AnalogicalStrategy | 3 days | Unifier structure mapping | Cross-domain |
+| Plan synthesis | 1 week | Chain GoalDrivenStrategy calls | Multi-step goals |
 
-### Phase 1: Rule Engine (Now)
-
-| Task | Effort | Unlocks |
-|---|---|---|
-| [x] **RuleCompiler.js** | 4 hrs | Efficient matching |
-| [x] **RuleExecutor.js** | 4 hrs | Rule execution |
-| [x] **NAL-4/5 Definitions** | 2 hrs | Core logic |
-| [x] **RuleProcessor Integration** | 2 hrs | End-to-end flow |
-| [x] **Discriminator Abstraction** | 2 hrs | Metaprogramming/Flexibility |
-
-### Phase 2: Variables (2-3 weeks)
-
-| Task | Effort | Unlocks |
-|------|--------|---------|
-| NAL-6 Query matching | 4 hrs | Questions |
-| Variable scope handling | 4 hrs | Nested quantifiers |
-| AnalogicalStrategy | 1 week | Cross-domain mapping |
-
-### Phase 3: Goals & Control (3-6 weeks)
-
-| Task | Effort | Unlocks |
-|------|--------|---------|
-| Dynamic Discriminators | 4 hrs | Meta-cognition |
-| Goal task handling | 1 week | NAL-8 |
-| GoalDrivenStrategy | 1 week | Backward chaining |
-| Plan synthesis | 1 week | Multi-step goals |
-
-### Phase 4: Temporal (6-10 weeks, Deferred)
+### Phase 3: Temporal (Deferred until representations defined)
 
 > **Prerequisite**: Define temporal representations—timestamps, intervals, temporal operators (`=/>`, `=|>`, `=\>`), event ordering semantics.
 
@@ -496,24 +351,14 @@ export class SemanticStrategy extends PremiseFormationStrategy {
 | NAL-7 operators | 1 week | Temporal rules |
 | CausalStrategy | 4 hrs | Multi-hop temporal |
 
----
+### Phase 4: Polish & Scale (Ongoing)
 
-## Quick Wins
-
-### Immediate (< 4 hours)
-
-| Task | Effort | How |
-|------|--------|-----|
-| TermUtils.js | 1 hr | Copy snippet above |
-| Negation parser | 2-4 hrs | Detect `--`, call `Truth.negation()` |
-| SemanticStrategy | 2-4 hrs | Copy snippet, register in ReasonerBuilder |
-
-### Short (1-3 days)
-
-| Task | Effort | How |
-|------|--------|-----|
-| **Unifier.js** | 4-6 hrs | Extract from PrologStrategy |
-| RuleCompiler | 6-8 hrs | Implement decision tree builder |
+| Task | Effort | Unlocks |
+|------|--------|---------|
+| Advanced Indexing | 1-2 weeks | 100K+ concepts |
+| Web Playground | 1 week | Developer adoption |
+| REST API | 3 days | Integration |
+| Benchmark Suite | 3 days | Performance validation |
 
 ---
 
@@ -523,7 +368,7 @@ export class SemanticStrategy extends PremiseFormationStrategy {
 
 *Enables: NAL-6, Analogical reasoning, Differentiable logic, Prolog interop*
 
-See [Extractions](#extractions) for implementation details.
+**Status**: ✅ Exists in [PrologStrategy.js#L288](file:///home/me/senars10/core/src/reason/strategy/PrologStrategy.js#L288) — extract to `Unifier.js` (2 hrs)
 
 ### Embedding Infrastructure
 
@@ -545,11 +390,11 @@ class VectorIndex {
 }
 ```
 
-### Event/Temporal Buffer (Phase 4 — Deferred)
+### Event/Temporal Buffer (Deferred)
 
 *Enables: NAL-7 temporal, Temporal strategies, Causality*
 
-> **Deferred**: Requires temporal representation design. See [Phase 4](#phase-4-temporal-6-10-weeks-deferred).
+> **Deferred**: Requires temporal representation design. See [Phase 3](#phase-3-temporal-deferred-until-representations-defined).
 
 **Interface** (Tentative):
 ```javascript
@@ -617,11 +462,11 @@ Implement via `PatternRule` definitions in JS, compiled at startup:
 | Unification | ⚠️ | [PrologStrategy.js#L288](file:///home/me/senars10/core/src/reason/strategy/PrologStrategy.js#L288) |
 | Query matching | ❌ | Needs Unifier extraction |
 
-### NAL-7: Temporal (Phase 4 — Deferred)
+### NAL-7: Temporal (Deferred)
 
 *Implementation: `PatternRule` definitions compiled by `RuleCompiler`*
 
-> **Deferred**: Requires temporal representation design before implementation. See [Phase 4 Roadmap](#phase-4-temporal-6-10-weeks-deferred).
+> **Deferred**: Requires temporal representation design before implementation. See [Phase 3 Roadmap](#phase-3-temporal-deferred-until-representations-defined).
 
 **Prerequisites**:
 - [ ] Temporal representation specification (timestamps, intervals, ordering)
@@ -675,18 +520,19 @@ class PremiseFormationStrategy {
 
 | Strategy | Depends | Priority | Phase | Purpose | Implementation Note |
 |----------|---------|----------|-------|---------|---------------------|
-| SemanticStrategy | EmbeddingLayer ✅ | High | 0 | Fuzzy matching | Uses `EmbeddingLayer` to find semantically similar terms for premise matching. |
+| SemanticStrategy | EmbeddingLayer ✅ | High | 2 | Fuzzy matching | Wrap `EmbeddingLayer.findSimilar()` — 50 lines. |
 | AnalogicalStrategy | Unifier | High | 2 | Cross-domain mapping | Uses `Unifier` to map structures between domains `(S↔M)`. |
-| GoalDrivenStrategy | NAL-8 | Medium | 3 | Backward from goals | Will use `RuleExecutor` in backward-chaining mode or enhance `PrologStrategy`. |
-| CausalStrategy | NAL-7 | Low | 4 | Multi-hop temporal | Consumes `TemporalBuffer` events; applies temporal `PatternRule` definitions. **Deferred**: Requires temporal representations. |
+| GoalDrivenStrategy | NAL-8 | High | 2 | Backward from goals | Thin wrapper around `PrologStrategy` backward-chaining. |
+| CausalStrategy | NAL-7 | Low | 3 | Multi-hop temporal | **Deferred**: Requires temporal representations. |
 
 ### Composition Pattern
 
 ```javascript
+// Negation handled via truth inversion, not separate strategy
 const composite = new CompositeStrategy([
   { strategy: new TaskMatchStrategy(), weight: 1.0 },
-  { strategy: new SemanticSimilarityStrategy(), weight: 0.5 },
-  { strategy: new NegationPairingStrategy(), weight: 0.8 }
+  { strategy: new SemanticStrategy(embeddingLayer), weight: 0.7 },
+  { strategy: new AnalogicalStrategy(unifier), weight: 0.5 }
 ]);
 ```
 
@@ -728,8 +574,8 @@ class TermIndex {
 ```
 
 **Needed**:
-- VectorIndex — Semantic similarity queries (Phase 0-1)
-- TemporalBuffer — NAL-7 event sequences (Phase 4, Deferred)
+- VectorIndex — Semantic similarity queries (Phase 2)
+- TemporalBuffer — NAL-7 event sequences (Deferred)
 
 ---
 
@@ -846,8 +692,8 @@ class Serializer {
 |--------|------------------------|------|-------|
 | Legal | Unification + Tracing | Precedent search | 2 |
 | Education | Tracing + Serialization | Interactive tutor | 2 |
-| Medical | Embeddings + Temporal | Diagnosis assistant | 4 (requires Temporal) |
-| Game AI | Temporal + Goals | NPC behaviors | 4 (requires Temporal) |
+| Medical | Embeddings + Temporal | Diagnosis assistant | 3 (requires Temporal) |
+| Game AI | Temporal + Goals | NPC behaviors | 3 (requires Temporal) |
 
 ---
 
@@ -902,6 +748,23 @@ class MLLayer extends Layer {
 | [PrologStrategy.js](file:///home/me/senars10/core/src/reason/strategy/PrologStrategy.js) | Unification source |
 | [EmbeddingLayer.js](file:///home/me/senars10/core/src/lm/EmbeddingLayer.js) | Embeddings |
 | [ReasonerBuilder.js](file:///home/me/senars10/core/src/reason/ReasonerBuilder.js) | Registration |
+
+---
+
+## Completeness Checklist
+
+> Ensure nothing is missed across the full NAL hierarchy
+
+| Level | Core | Rules | Strategy | Status |
+|-------|------|-------|----------|--------|
+| NAL-1 | Inheritance | ✅ Syllogistic | ✅ TaskMatch | Done |
+| NAL-2 | Similarity | ✅ Conversion | ✅ TaskMatch | Done |
+| NAL-3 | Compounds | ✅ Decomposition | ✅ Decomposition | Done |
+| NAL-4 | Relations | 🟡 PatternRule | ✅ RuleCompiler | Phase 2 |
+| NAL-5 | Implication | ✅ ModusPonens | ✅ TaskMatch | Done |
+| NAL-6 | Variables | 🟡 Unifier | 🟡 Analogical | Phase 2 |
+| NAL-7 | Temporal | ❌ Deferred | ❌ Causal | Phase 3 |
+| NAL-8 | Goals | 🟡 Planned | 🟡 GoalDriven | Phase 2 |
 
 ---
 
