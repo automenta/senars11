@@ -19,10 +19,10 @@ function isTermInstance(obj) {
 
 class DecisionNode {
     constructor(check = null) {
-        this.check = check; // { type: 'op'|'arity'|'eq', target: 'p'|'s', val: ... }
-        this.children = new Map(); // val -> DecisionNode
-        this.rules = []; // Rules that match at this node
-        this.fallback = null; // Node to check if specific value doesn't match (for variables)
+        this.check = check;
+        this.children = new Map();
+        this.rules = [];
+        this.fallback = null;
     }
 
     addChild(value, node) {
@@ -66,7 +66,6 @@ export class RuleCompiler {
         }
 
         if (typeof patternObj === 'string') {
-            // Guard: skip hydration if termFactory lacks required methods
             if (!this.termFactory?.variable || !this.termFactory?.atomic) {
                 return { isTerm: true, name: patternObj, toString: () => patternObj };
             }
@@ -75,7 +74,6 @@ export class RuleCompiler {
         }
 
         if (patternObj.operator) {
-            // Guard: skip hydration if termFactory lacks required methods
             if (!this.termFactory?.create) {
                 return { isTerm: true, name: JSON.stringify(patternObj), toString: () => JSON.stringify(patternObj) };
             }
@@ -86,7 +84,7 @@ export class RuleCompiler {
                 const predicate = this.hydratePattern(patternObj.predicate);
                 return this.termFactory.create(patternObj.operator, [subject, predicate]);
             }
-            // Handle other cases if necessary (e.g. components array)
+
             if (patternObj.components) {
                 const components = patternObj.components.map(c => this.hydratePattern(c));
                 return this.termFactory.create(patternObj.operator, components);
@@ -111,27 +109,9 @@ export class RuleCompiler {
     }
 
     getOrCreateChild(node, checkType, value) {
-        // The node itself stores the check type it *performed* to get here? 
-        // No, the parent decides the check.
-        // Let's say Root is "Check Op(p)".
-        // Its children are mapped by values of Op(p).
-
-        // But we need to store *what* check to perform at this node.
-        // If we enforce a standard order, we can implicitly know:
-        // Depth 0: Op(p)
-        // Depth 1: Op(s)
-        // Depth 2: Arity(p)
-        // Depth 3: Arity(s)
-
-        // So we don't need to store the check type on the node if it's implicit.
-        // However, storing it makes it explicit and debuggable.
-
         if (!node.check) {
-            node.check = { type: checkType }; // This node is responsible for this check
+            node.check = { type: checkType };
         }
-
-        // If the node already has a check but it's different... 
-        // With standardized levels, this shouldn't happen for the same depth.
 
         let child = node.children.get(value);
         if (!child) {
