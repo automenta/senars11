@@ -1,511 +1,431 @@
-# SeNARS Roadmap: The Ultimate Hybrid NARS/LM Reasoning System
+# SeNARS Development Roadmap
 
-> **Status**: Vision document for review and refinement
-> **Created**: 2025-12-14
-> **Context**: After completing Java→JS migration, modular premise formation, and 7 NAL inference rules
-
----
-
-## 🚀 Functionality Multipliers
-
-### Knowledge Ingestion Pipelines
-- [ ] **Wikipedia/Wikidata Loader** - Bulk import structured knowledge
-- [ ] **PDF/Doc Parser** - Extract statements from documents
-- [ ] **Code AST Ingestion** - Represent code structure as NAL statements
-- [ ] **RSS/API Polling** - Continuous knowledge stream from web
-- [ ] **Image Captioning → NAL** - Visual knowledge via CLIP/BLIP
-
-### Query & Retrieval
-- [ ] **Natural Language Questions** - "What do you know about X?"
-- [ ] **Explanation Generator** - Show full derivation chain for any belief
-- [ ] **Hypothetical Reasoning** - "What if A were true?"
-- [ ] **Counterfactual Analysis** - "What would change if A were false?"
-- [ ] **Nearest Neighbors** - "What's similar to X?"
-
-### Goal & Planning
-- [ ] **Goal Stack Manager** - Hierarchical goal decomposition
-- [ ] **Plan Synthesis** - Generate action sequences for goals
-- [ ] **Plan Monitoring** - Track progress, replan on failure
-- [ ] **Preference Learning** - Learn user goals from feedback
-
-### External Integrations
-- [ ] **MCP Server** - Expose NARS as Model Context Protocol tool
-- [ ] **REST/GraphQL API** - Standard query interface
-- [ ] **WebSocket Streaming** - Real-time derivation feed
-- [ ] **LangChain Tool** - Plug NARS into LangChain agents
-- [ ] **Obsidian Plugin** - Personal knowledge management
-- [ ] **Discord/Slack Bot** - Conversational interface
-
-### Domain Applications
-- [ ] **Legal Reasoning** - Case law, statute analysis
-- [ ] **Medical Diagnosis** - Symptom→condition inference
-- [ ] **Game AI** - NPC decision-making, world modeling
-- [ ] **Educational Tutor** - Adaptive problem generation
-- [ ] **Code Review** - Analyze logic, suggest improvements
+> **Status**: Living vision document  
+> **Last Updated**: 2025-12-14  
+> **Foundation**: Java→JS migration complete, modular premise formation, 7 NAL inference rules, 99.8% test pass rate
 
 ---
 
-## ⚡ Performance Optimizations
+## Table of Contents
 
-### Compute
-- [ ] **Web Workers** - Parallel rule execution in browser
-- [ ] **WASM Rules** - Compile hot paths to WebAssembly
-- [ ] **SharedArrayBuffer** - Zero-copy between workers
-- [ ] **GPU via WebGPU** - Matrix ops for embeddings
-- [ ] **SIMD** - Vectorized truth calculations
-
-### Memory
-- [ ] **Term Interning** - Deduplicate identical term structures
-- [ ] **Flyweight Patterns** - Share common substructures
-- [ ] **Lazy Term Parsing** - Don't expand until needed
-- [ ] **LRU Caches** - Bound memory for caches
-- [ ] **WeakRef for Links** - GC-friendly link storage
-
-### Indexing
-- [ ] **Trie for Terms** - O(k) term lookup by structure
-- [ ] **Inverted Index** - Fast "find statements containing X"
-- [ ] **Bloom Filters** - Fast negative lookups
-- [ ] **LSH for Embeddings** - Approximate nearest neighbors
-- [ ] **B-Trees for Priority** - Efficient top-k selection
-
-### Algorithm
-- [ ] **Incremental Unification** - Cache partial unification results
-- [ ] **Rule Compilation** - JIT compile rule guards
-- [ ] **Batch Inference** - Process multiple premises together
-- [ ] **Derivation Memoization** - Cache recent derivations
-- [ ] **Smart Backpressure** - Adaptive throttling based on queue depth
-
-### Profiling
-- [ ] **Flame Graphs** - Identify hot paths
-- [ ] **Derivation Metrics** - Track time per rule
-- [ ] **Memory Snapshots** - Understand growth patterns
+1. [Guiding Principles](#guiding-principles)
+2. [Immediate Priorities](#immediate-priorities)
+3. [NAL Completion](#nal-completion)
+4. [Premise Formation & Strategy](#premise-formation--strategy)
+5. [Memory & Knowledge Architecture](#memory--knowledge-architecture)
+6. [LM-NAL Integration](#lm-nal-integration)
+7. [ML Technique Integration](#ml-technique-integration)
+8. [Performance & Scalability](#performance--scalability)
+9. [Developer Experience](#developer-experience)
+10. [Ecosystem & Interoperability](#ecosystem--interoperability)
+11. [Domain Applications](#domain-applications)
+12. [Speculative & Experimental](#speculative--experimental)
 
 ---
 
-## 🧹 Simplification Opportunities
+## Guiding Principles
 
-### Code Consolidation
-- [ ] **Merge Strategy Classes** - One `CompositeStrategy` with plugins
-- [ ] **Unified Rule Interface** - Single `Rule.execute(premises)` pattern
-- [ ] **Configuration Simplification** - Sensible defaults, less boilerplate
-- [ ] **Remove Dead Code** - Audit unused exports
-
-### Architecture Simplification
-- [ ] **Single Event Loop** - Remove complex async coordination
-- [ ] **Immutable Everything** - Eliminate mutation tracking
-- [ ] **Functional Core** - Pure functions for all logic
-- [ ] **Effect Boundary** - All I/O at edges only
-
-### API Simplification
-- [ ] **Fluent Builder** - `nars.believe("A→B").ask("A→?").run()`
-- [ ] **Single Entry Point** - One `NARS.create(config)` factory
-- [ ] **Auto-Discovery** - Rules/strategies self-register
-- [ ] **Smart Defaults** - Works out-of-box with zero config
-
-### Dependency Reduction
-- [ ] **Zero-Dep Core** - Core reasoning with no npm deps
-- [ ] **Optional Everything** - LM, embeddings, UI all optional
-- [ ] **Tree-Shakeable** - Only ship what's used
-
-### Conceptual Simplification
-- [ ] **Single Truth Model** - Unify probability/frequency/confidence
-- [ ] **Universal Links** - One link type with metadata
-- [ ] **Flat Memory** - Remove focus/long-term distinction if unhelpful
-- [ ] **Sync-First** - Make async the exception, not rule
+| Principle | Description |
+|-----------|-------------|
+| **NAL First, LM Assist** | Keep formal NAL semantics; LM enhances, doesn't replace |
+| **Composable Everything** | Rules, strategies, and layers should be plug-and-play |
+| **Observable Reasoning** | Every derivation should be traceable and explainable |
+| **Resource-Aware (AIKR)** | Work within limits, not beyond them |
+| **Test-Driven** | Every new rule needs test coverage |
 
 ---
 
-## 🔧 Developer Productivity
+## Immediate Priorities
 
-### Testing
-- [ ] **Property-Based Tests** - Generate random NAL statements
-- [ ] **Snapshot Testing** - Capture derivation outputs
-- [ ] **Fuzz Testing** - Random input to find edge cases
-- [ ] **Benchmark Suite** - Regression testing for performance
+> **Next session focus areas** — highest-impact, most urgent items
 
-### Debugging
-- [ ] **Time-Travel Debugger** - Replay reasoning steps
-- [ ] **Why-Not Explainer** - "Why didn't rule X fire?"
-- [ ] **Belief Diff** - Show memory changes between cycles
-- [ ] **Visual Graph** - Interactive concept/term graph
+### 1. NAL Rule Completion
+- [ ] `ExemplificationRule` — Reverse syllogism: (S→P), (M→S) ⊢ (M→P)
+- [ ] `AnalogyRule` — Similarity-based: (S↔M), (M→P) ⊢ (S→P)
+- [ ] `ComparisonRule` — Derive similarity from shared terms
+- [ ] `NegationRule` — Handle `(--S)` patterns
 
-### Iteration Speed
-- [ ] **Hot Reload Rules** - Change rules without restart
-- [ ] **REPL Enhancements** - Tab completion, history
-- [ ] **Watch Mode** - Auto-run tests on file change
-- [ ] **Playground** - Web-based experimentation
+### 2. Temporal Foundation
+- [ ] Event buffering mechanism for temporal pairing
+- [ ] `STMLinker` for short-term memory temporal context
+- [ ] Basic temporal operators: `=/>`, `=|>`, `=\>`
 
----
+### 3. Contradiction Detection
+- [ ] `NegationPairingStrategy` — Match `A` with `(--A)`
+- [ ] Contradiction density metric for system health
 
-## 🌐 Ecosystem Plays
-
-### Interoperability
-- [ ] **OpenNARS Compatibility** - Import/export `.nal` files
-- [ ] **OWL/RDF Bridge** - Semantic web integration
-- [ ] **Prolog Transpile** - Convert Prolog to NAL
-- [ ] **SMT-LIB Export** - Verify with Z3/CVC5
-- [ ] **PDDL Export** - Classical planning compatibility
-
-### Community
-- [ ] **Rule Marketplace** - Share rule packages
-- [ ] **Strategy Library** - Pre-built premise strategies
-- [ ] **Benchmark Leaderboard** - Compare implementations
-- [ ] **Tutorial Series** - "NARS in 10 Minutes"
-
-### Standards
-- [ ] **Narsese 2.0** - Formalize syntax with PEG grammar
-- [ ] **NAL-JSON** - Canonical JSON representation
-- [ ] **Derivation Logs** - Standard trace format
+### 4. Debugging & Observability
+- [ ] Derivation graph visualizer (TUI or web)
+- [ ] "Why-not" explainer — show why a rule didn't fire
 
 ---
 
-## 💡 Unconventional Ideas
+## NAL Completion
 
-### Compression as Reasoning
-- [ ] **Belief Compression** - Kolmogorov complexity for term simplification
-- [ ] **Minimum Description Length** - Prefer simpler explanations
-- [ ] **Grammar Induction** - Learn Narsese patterns from use
+### NAL-4: Remaining Rules
+- [ ] `ExemplificationRule` — Reverse syllogism
+- [ ] `AnalogyRule` — Similarity-based inference
+- [ ] `ComparisonRule` — Derive similarity from shared terms
+- [ ] `NegationRule` — Negation patterns
+- [ ] `SetOperationRules` — Union, intersection, difference
 
-### Biological Inspiration
-- [ ] **Sleep/Consolidation** - Offline memory reorganization
-- [ ] **Dreaming** - Random belief recombination for creativity
-- [ ] **Emotional Valence** - Priority modulation by "affect"
+### NAL-5: Higher-Order Statements
+- [ ] Handle `((A→B) → C)` nested inheritance
+- [ ] Meta-level inference patterns
 
-### Self-Modification
-- [ ] **Rule Learning** - Induce new rules from derivations
-- [ ] **Strategy Evolution** - Genetic programming for strategies
-- [ ] **Architecture Search** - NAS for pipeline components
+### NAL-6: Variable Unification
+- [ ] Variable binding: `(?x → animal)`
+- [ ] Substitution engine
+- [ ] Constraint propagation
 
-### Distributed Intelligence
-- [ ] **Peer-to-Peer NARS** - Gossip protocol for beliefs
-- [ ] **Federated Learning** - Train ML components across instances
-- [ ] **Blockchain Anchoring** - Immutable belief provenance
-
-### Human-in-the-Loop
-- [ ] **Active Learning** - Ask user for missing beliefs
-- [ ] **Debate Mode** - Present competing derivations for judgment
-- [ ] **Crowdsourced Truth** - Aggregate human confidence ratings
-
----
-
-
-
-## What We Built Today
-
-### Foundation Completed ✅
-- **Modular Premise Formation**: `TaskMatchStrategy`, `DecompositionStrategy`, `TermLinkStrategy`
-- **NAL Inference Rules**: Deduction, Induction, Abduction, Conversion, Contraposition, ModusPonens
-- **Stream Architecture**: Async generators with backpressure
-- **Java Parity**: Non-temporal rules migrated from OpenNARS
-- **Tests**: 491/492 passing (99.8%)
-
-### Key Design Decisions
-- Rules are composable via `NALRule.apply()`
-- Strategies yield candidates via `async* generateCandidates()`
-- Truth functions are pure static methods
-- All registered in `ReasonerBuilder.registerDefaultRules()`
-
----
-
-## Phase 1: Complete NAL Coverage
-
-### Remaining NAL Rules
-- [ ] `ExemplificationRule` - Reverse syllogism: (S→P), (M→S) ⊢ (M→P)
-- [ ] `AnalogyRule` - Similarity-based: (S↔M), (M→P) ⊢ (S→P)
-- [ ] `ComparisonRule` - Derive similarity from shared terms
-- [ ] `NegationRule` - Handle `(--S)` patterns
-- [ ] `SetOperationRules` - Union, intersection, difference
-
-### NAL Levels
-- [ ] **NAL-5**: Higher-order statements `((A→B) → C)`
-- [ ] **NAL-6**: Variable unification `(?x → animal)`
-- [ ] **NAL-7**: Temporal (see Phase 3)
-- [ ] **NAL-8**: Procedural/goals
-- [ ] **NAL-9**: Self-reference/introspection
-
-### Reference
-- OpenNARS `impl.syl.nal`, `impl.strong.nal`, `conversion.nal`
-- [NAL Book](https://www.worldscientific.com/worldscibooks/10.1142/8665)
-
----
-
-## Phase 2: Premise Formation Innovation
-
-### New Strategies
-- [ ] **SemanticSimilarityStrategy** - Use EmbeddingLayer for semantic premise matching
-- [ ] **NegationPairingStrategy** - Match `A` with `(--A)` for contradiction detection
-- [ ] **AnalogicalStrategy** - Find structurally similar patterns from different domains
-- [ ] **GoalDrivenStrategy** - Backward-chain from goals to find supporting premises
-- [ ] **CausalChainStrategy** - Follow implication chains for multi-hop reasoning
-- [ ] **AttentionStrategy** - LM-guided focus on "interesting" premise pairs
-
-### Concerns
-- Premise explosion: Need smart pruning/ranking
-- Semantic vs structural: Balance embedding similarity with logical structure
-- Cycle detection: Avoid redundant derivations
-
----
-
-## Phase 3: Temporal Reasoning
-
-### Core Features
-- [ ] `TemporalInductionRule` - Derive temporal patterns from sequences
-- [ ] `STMLinker` - Short-term memory linking for temporal context
-- [ ] `IntervalAlgebra` - Allen's interval relations (before, during, overlaps)
+### NAL-7: Temporal Reasoning
+- [ ] `TemporalInductionRule` — Derive patterns from sequences
+- [ ] Allen's interval algebra (before, during, overlaps)
 - [ ] Temporal operators: `=/>`, `=|>`, `=\>`
+- [ ] Causality vs correlation distinction
 
-### Challenges
-- Event buffering: How long to hold events for temporal pairing?
-- Time granularity: Discrete vs continuous time
-- Causality: Distinguishing correlation from causation
+### NAL-8: Procedural & Goals
+- [ ] Goal decomposition
+- [ ] Action planning
+- [ ] Goal satisfaction tracking
 
-### Reference
+### NAL-9: Self-Reference & Introspection
+- [ ] Self-referential statements
+- [ ] Reasoning about own beliefs
+
+### Reference Materials
+- OpenNARS: `impl.syl.nal`, `impl.strong.nal`, `conversion.nal`
+- [NAL Book](https://www.worldscientific.com/worldscibooks/10.1142/8665)
 - OpenNARS `TemporalInductionRules.java`
-- Java NARS `core()` and `stm()` integration
 
 ---
 
-## Phase 4: LM-NAL Deep Integration
+## Premise Formation & Strategy
 
-### Current State
-- LM rules exist but are keyword-triggered
-- No systematic NAL↔LM bridge
+### New Premise Strategies
 
-### Vision
-- [ ] **LM-Guided Premise Selection** - "Which of these premises are most relevant?"
-- [ ] **LM-Assisted Unification** - Handle fuzzy variable bindings
-- [ ] **LM Truth Calibration** - Adjust confidence based on LM certainty
-- [ ] **NAL-to-NL Explanations** - Explain inference chains in natural language
-- [ ] **NL-to-NAL Ingestion** - Parse natural language into structured beliefs
-- [ ] **Abductive Hypothesis Generation** - LM proposes, NAL validates
+| Strategy | Description | Notes |
+|----------|-------------|-------|
+| `SemanticSimilarityStrategy` | EmbeddingLayer-based semantic matching | Leverage existing Layer infra |
+| `NegationPairingStrategy` | Match `A` with `(--A)` | Contradiction detection |
+| `AnalogicalStrategy` | Structural patterns across domains | Cross-domain transfer |
+| `GoalDrivenStrategy` | Backward-chain from goals | Planning support |
+| `CausalChainStrategy` | Follow implication chains | Multi-hop reasoning |
+| `AttentionStrategy` | LM-guided focus on "interesting" pairs | Hybrid enhancement |
 
-### Key Questions
-- When should NAL defer to LM? (Threshold-based? Context-based?)
-- How to maintain NAL's uncertainty semantics with LM's soft probabilities?
-- Can LM learn NAL truth function patterns?
+### Architecture Concerns
+- **Premise explosion** — Need smart pruning/ranking
+- **Semantic vs structural balance** — Embedding similarity + logical structure
+- **Cycle detection** — Avoid redundant derivations
+- **Strategy composition** — Combine strategies with weighted voting
 
----
-
-## Phase 5: Meta-Reasoning & Self-Improvement
-
-### Metacognition
-- [ ] **Rule Priority Learning** - Adjust rule priorities based on derivation success
-- [ ] **Strategy Efficiency Tracking** - Which strategies yield useful premises?
-- [ ] **Attention Budget Optimization** - Learn optimal focus allocation
-- [ ] **Derivation Quality Scoring** - Rate derivations for later replay
-
-### Self-Reflection
-- [ ] Detect unproductive reasoning loops
-- [ ] Recognize knowledge gaps and form targeted questions
-- [ ] Monitor contradiction density as health metric
-
-### Reference
-- OpenNARS `MetaCognition.java`
-- RLFP framework already in SeNARS README
+### Strategy Evolution
+- [ ] Meta-learning: Which strategies yield useful premises?
+- [ ] Reinforcement learning for strategy selection
+- [ ] Genetic programming for strategy optimization
 
 ---
 
-## Phase 6: Memory & Knowledge Architecture
+## Memory & Knowledge Architecture
 
 ### Term Layer Enhancements
-- [ ] **Weighted Links** - Decay old links, strengthen frequently-used ones
-- [ ] **Bidirectional Links** - If A→B then also B←A for reverse lookup
-- [ ] **Type-Specific Indexes** - Fast lookup by operator type
+- [ ] **Weighted links** — Decay old links, strengthen used ones
+- [ ] **Bidirectional links** — If A→B, also B←A for reverse lookup
+- [ ] **Type-specific indexes** — Fast lookup by operator type
 
-### Concept/Belief Management
-- [ ] **Belief Revision** - NAL-style revision when contradictions found
-- [ ] **Concept Activation Spreading** - Priming related concepts
-- [ ] **Forgetting Curves** - Time-based priority decay
+### Concept & Belief Management
+- [ ] **Belief revision** — NAL-style revision on contradictions
+- [ ] **Activation spreading** — Priming related concepts
+- [ ] **Forgetting curves** — Time-based priority decay
 
-### Scaling Concerns
+### Memory Optimization
+- [ ] **Term interning** — Deduplicate identical term structures
+- [ ] **Flyweight patterns** — Share common substructures
+- [ ] **Lazy term parsing** — Don't expand until needed
+- [ ] **LRU caches** — Bound memory for caches
+- [ ] **WeakRef for links** — GC-friendly link storage
+
+### Scaling Challenges
 - In-memory limits: What if concept count exceeds 100K?
 - Distributed memory: Shard concepts across workers?
 - Persistence: Event sourcing vs snapshot-based?
----
-
-## Phase 6b: ML Technique Integration (Beyond LM)
-
-The Layer abstraction (`Layer.js`) enables pluggable ML backends. Each technique becomes a specialized Layer or Strategy.
-
-### Dense Associative Memory / Modern Hopfield Networks
-
-**Concept**: Continuous Hopfield networks with exponential storage capacity. Perfect for content-addressable memory.
-
-- [ ] **HopfieldLayer** - Extends `Layer` for associative term retrieval
-  - Store term embeddings as patterns
-  - Query: Given partial pattern, retrieve complete pattern (term completion)
-  - Use for: "What term is most associated with this context?"
-- [ ] **HopfieldPremiseStrategy** - Use attention mechanism to find relevant premises
-  - Input: query term → softmax over stored premise embeddings
-  - Returns: top-k most "associated" premises
-- [ ] **Implementation**: Use `transformers.js` Hopfield attention or custom JS port
-- [ ] **Paper**: [Hopfield Networks is All You Need (2020)](https://arxiv.org/abs/2008.02217)
-
-**Why it fits NARS**: Pattern completion = finding missing premises, Hebbian-style association = belief/term linking
 
 ---
 
-### Graph Neural Networks (GNNs)
+## LM-NAL Integration
 
-**Concept**: Learn over the structure of the term/concept graph.
+> **Current State**: LM rules exist but are keyword-triggered; no systematic NAL↔LM bridge
 
-- [ ] **GNNConceptLayer** - Message passing over concept graph
-  - Nodes = Terms/Concepts
-  - Edges = Inheritance/Similarity/Implication links
-  - Output: Learned concept representations
-- [ ] **GNNPremiseScorer** - Score premise pairs based on graph context
-- [ ] **Link Prediction** - Predict missing `A → B` relationships
-- [ ] **Node Classification** - Classify term types/relevance
+### Vision: Deep Bidirectional Integration
 
-**Architectures to consider**:
-- GCN (Graph Convolutional Networks)
-- GAT (Graph Attention Networks) - attention over neighbors
-- GraphSAGE - inductive, works on unseen nodes
+| Feature | Direction | Purpose |
+|---------|-----------|---------|
+| LM-Guided Premise Selection | LM→NAL | "Which premises are most relevant?" |
+| LM-Assisted Unification | LM→NAL | Fuzzy variable bindings |
+| LM Truth Calibration | LM→NAL | Adjust confidence from LM certainty |
+| NAL-to-NL Explanations | NAL→LM | Explain chains in natural language |
+| NL-to-NAL Ingestion | NL→NAL | Parse natural language to beliefs |
+| Abductive Hypothesis | LM→NAL | LM proposes, NAL validates |
 
-**Why it fits NARS**: NARS is fundamentally a labeled graph; GNNs learn graph structure natively
-
----
-
-### Probabilistic / Bayesian Methods
-
-- [ ] **BayesianBeliefLayer** - Maintain probability distributions over uncertain terms
-- [ ] **VariationalTruth** - Learn latent truth distributions instead of point estimates
-- [ ] **UncertaintyQuantification** - Epistemic vs aleatoric uncertainty separation
-- [ ] **Bayesian Belief Revision** - Principled update when new evidence arrives
-
-**Why it fits NARS**: NAL already has uncertainty; Bayesian methods formalize it
+### Key Integration Questions
+- **When defer to LM?** Threshold-based? Context-based?
+- **Uncertainty semantics** — How to reconcile NAL confidence with LM soft probabilities?
+- **Pattern learning** — Can LM learn NAL truth function patterns?
 
 ---
 
-### Reinforcement Learning Integration
+## ML Technique Integration
 
-- [ ] **RLRulePrioritizer** - Learn rule selection policy via RL
-  - State: current focus, derivation history
-  - Action: which rule to apply
-  - Reward: derivation usefulness, goal satisfaction
-- [ ] **RLStrategySelector** - Learn which premise formation strategy to use
-- [ ] **Inverse RL** - Learn user preferences from observed derivations
-- [ ] **Multi-Armed Bandit** - Simpler: UCB/Thompson sampling for rule selection
+> **Design Pattern**: All ML integrations extend the `Layer` interface
 
-**Why it fits NARS**: NARS already has goal-driven behavior; RL optimizes the meta-level
+### Associative & Memory Networks
 
----
+| Technique | Use Case | Key Benefit |
+|-----------|----------|-------------|
+| **Hopfield/Modern Hopfield** | Content-addressable memory | Pattern completion for missing premises |
+| **Sparse Distributed Memory (SDM)** | Robust belief storage | Graceful degradation with noise |
+| **Neural Turing Machines** | Explicit read/write memory | Learn complex memory patterns |
 
-### Differentiable Logic / Neural Theorem Provers
+### Graph-Based Learning
 
-- [ ] **NeuralUnificationLayer** - Soft unification via embeddings
-- [ ] **DifferentiableSyllogism** - Gradient-friendly inference rules
-- [ ] **Neural Logic Programming** (e.g., TensorLog, DeepProbLog)
-- [ ] **Proof Attention** - Learn which inference path to follow
+| Technique | Use Case | Key Benefit |
+|-----------|----------|-------------|
+| **GCN (Graph Convolutional)** | Learn over term/concept graph | Structure-aware representations |
+| **GAT (Graph Attention)** | Attention over neighbors | Focus on relevant connections |
+| **GraphSAGE** | Inductive learning | Works on unseen nodes |
+| **Link Prediction** | Predict missing A→B relationships | Knowledge completion |
 
-**Papers**:
-- [Neural Theorem Provers](https://arxiv.org/abs/1705.11040)
-- [DeepProbLog](https://arxiv.org/abs/1805.10872)
+### Probabilistic Methods
+- [ ] BayesianBeliefLayer — Probability distributions over uncertain terms
+- [ ] VariationalTruth — Learn latent truth distributions
+- [ ] Uncertainty quantification — Epistemic vs aleatoric separation
+- [ ] Bayesian belief revision — Principled evidence updates
 
-**Why it fits NARS**: Bridging symbolic NAL rules with gradient-based learning
+### Reinforcement Learning
+- [ ] RLRulePrioritizer — Learn rule selection policy via RL
+- [ ] RLStrategySelector — Learn which premise strategy to use
+- [ ] Multi-Armed Bandit — UCB/Thompson sampling for rule selection
+- [ ] Inverse RL — Learn user preferences from observed derivations
 
----
+### Self-Supervised Learning
+- [ ] ContrastiveTermEncoder — Learn term representations via contrast
+- [ ] MaskedBeliefPrediction — Mask statement parts, predict rest
+- [ ] TemporalContrastive — Learn sequence patterns
 
-### Memory-Augmented Networks
+### Differentiable Logic
+- [ ] NeuralUnificationLayer — Soft unification via embeddings
+- [ ] DifferentiableSyllogism — Gradient-friendly rules
+- [ ] Neural Logic Programming (TensorLog, DeepProbLog)
+- [ ] Proof Attention — Learn which inference path to follow
 
-- [ ] **NTMLayer** - Neural Turing Machine for explicit read/write memory
-- [ ] **DNCLayer** - Differentiable Neural Computer for complex memory ops
-- [ ] **MemoryAttention** - Attention over belief memory bank
+### Priority Order
+1. **Hopfield/Associative** — Most natural fit, fast prototype
+2. **GNN Link Prediction** — Leverage graph structure
+3. **RL Rule Selection** — Meta-level optimization
+4. **Contrastive Term Encoding** — Better embeddings
 
-**Why it fits NARS**: NARS has explicit memory; MANNs learn to use memory
-
----
-
-### Self-Supervised / Contrastive Learning
-
-- [ ] **ContrastiveTermEncoder** - Learn term representations via contrast
-  - Positive pairs: related terms (same concept)
-  - Negative pairs: unrelated terms
-- [ ] **MaskedBeliefPrediction** - Mask part of statement, predict rest
-- [ ] **TemporalContrastive** - Learn sequence patterns via contrastive loss
-
-**Why it fits NARS**: Self-supervision = learning from structure without labels
-
----
-
-### Sparse Distributed Memory (SDM)
-
-**Concept**: Kanerva's SDM - high-dimensional sparse binary memory
-
-- [ ] **SDMLayer** - Store/retrieve beliefs in high-D binary space
-- [ ] Auto-associative retrieval for similar beliefs
-- [ ] Graceful degradation with noise
-
-**Why it fits NARS**: SDM shares DNA with Hopfield; good for robustness
-
----
-
-### Clustering / Concept Formation
-
-- [ ] **OnlineClusteringLayer** - Dynamic concept grouping
-- [ ] **HierarchicalConcepts** - Learn concept taxonomies automatically
-- [ ] **PrototypeNetworks** - Few-shot concept learning
-
-**Why it fits NARS**: Concept formation is core to NARS; clustering automates it
-
----
-
-### Fast Feedforward Networks
-
-- [ ] **FFNRuleClassifier** - Fast rule applicability check via FFN
-- [ ] **FFNTruthPredictor** - Predict derived truth values directly
-- [ ] Use for: Speed up guard checks, pre-filter non-applicable rules
-
-**Why it fits NARS**: Performance optimization for hot paths
-
----
-
-### Implementation Pattern
-
-All ML integrations follow the Layer interface:
-
-```javascript
-class HopfieldLayer extends Layer {
-  async addLink(source, target, priority) { /* store pattern */ }
-  async getLinks(term, limit, minPriority) { /* pattern retrieval */ }
-  async findSimilar(queryEmbed, k) { /* attention-based search */ }
-}
-```
-
-### Concerns & Trade-offs
+### Trade-offs Summary
 
 | Technique | Pros | Cons |
 |-----------|------|------|
-| Hopfield | Fast retrieval, no training | Fixed capacity, preprocessing |
-| GNN | Structure-aware | Requires graph batching, training |
-| RL | Adaptive | Sparse rewards, stability |
+| Hopfield | Fast retrieval, no training | Fixed capacity |
+| GNN | Structure-aware | Requires training |
+| RL | Adaptive | Sparse rewards |
 | Bayesian | Principled uncertainty | Computational cost |
 | Neural Provers | End-to-end differentiable | Black-box reasoning |
 
-### Priority Order for ML Integration
+---
 
-1. **Hopfield/Associative** - Most natural fit, fast prototype
-2. **GNN Link Prediction** - Leverage graph structure
-3. **RL Rule Selection** - Meta-level optimization
-4. **Contrastive Term Encoding** - Better embeddings
+## Performance & Scalability
+
+### Compute Optimizations
+- [ ] **Web Workers** — Parallel rule execution in browser
+- [ ] **WASM Rules** — Compile hot paths to WebAssembly
+- [ ] **SharedArrayBuffer** — Zero-copy between workers
+- [ ] **GPU via WebGPU** — Matrix ops for embeddings
+- [ ] **SIMD** — Vectorized truth calculations
+
+### Indexing Strategies
+- [ ] **Trie for Terms** — O(k) term lookup by structure
+- [ ] **Inverted Index** — Fast "find statements containing X"
+- [ ] **Bloom Filters** — Fast negative lookups
+- [ ] **LSH for Embeddings** — Approximate nearest neighbors
+- [ ] **B-Trees for Priority** — Efficient top-k selection
+
+### Algorithm Optimizations
+- [ ] **Incremental Unification** — Cache partial results
+- [ ] **Rule Compilation** — JIT compile rule guards
+- [ ] **Batch Inference** — Process multiple premises together
+- [ ] **Derivation Memoization** — Cache recent derivations
+- [ ] **Smart Backpressure** — Adaptive throttling by queue depth
+
+### Profiling & Observability
+- [ ] Flame graphs for hot paths
+- [ ] Derivation metrics — time per rule
+- [ ] Memory snapshots — growth patterns
 
 ---
 
+## Developer Experience
 
+### Testing Infrastructure
+- [ ] **Property-Based Tests** — Generate random NAL statements
+- [ ] **Snapshot Testing** — Capture derivation outputs
+- [ ] **Fuzz Testing** — Random input to find edge cases
+- [ ] **Benchmark Suite** — Regression testing for performance
 
-### Agent Communication
+### Debugging Tools
+- [ ] **Time-Travel Debugger** — Replay reasoning steps
+- [ ] **Why-Not Explainer** — "Why didn't rule X fire?"
+- [ ] **Belief Diff** — Show memory changes between cycles
+- [ ] **Visual Graph** — Interactive concept/term graph
+
+### Iteration Speed
+- [ ] **Hot Reload Rules** — Change rules without restart
+- [ ] **REPL Enhancements** — Tab completion, history
+- [ ] **Watch Mode** — Auto-run tests on file change
+- [ ] **Web Playground** — Browser-based experimentation
+
+### Documentation
+- [ ] Rule catalog with examples
+- [ ] Strategy extension guide
+- [ ] Truth function reference
+- [ ] Migration guide from other NARS implementations
+
+---
+
+## Ecosystem & Interoperability
+
+### External Integrations
+- [ ] **MCP Server** — Expose NARS as Model Context Protocol tool
+- [ ] **REST/GraphQL API** — Standard query interface
+- [ ] **WebSocket Streaming** — Real-time derivation feed
+- [ ] **LangChain Tool** — Plug NARS into LangChain agents
+- [ ] **Obsidian Plugin** — Personal knowledge management
+- [ ] **Discord/Slack Bot** — Conversational interface
+
+### Knowledge Ingestion Pipelines
+- [ ] **Wikipedia/Wikidata Loader** — Bulk import structured knowledge
+- [ ] **PDF/Doc Parser** — Extract statements from documents
+- [ ] **Code AST Ingestion** — Represent code structure as NAL
+- [ ] **RSS/API Polling** — Continuous knowledge stream
+- [ ] **Image Captioning → NAL** — Visual knowledge via CLIP/BLIP
+
+### Query & Retrieval
+- [ ] **Natural Language Questions** — "What do you know about X?"
+- [ ] **Explanation Generator** — Show full derivation chain
+- [ ] **Hypothetical Reasoning** — "What if A were true?"
+- [ ] **Counterfactual Analysis** — "What would change if A were false?"
+- [ ] **Nearest Neighbors** — "What's similar to X?"
+
+### Interoperability Standards
+- [ ] **OpenNARS Compatibility** — Import/export `.nal` files
+- [ ] **OWL/RDF Bridge** — Semantic web integration
+- [ ] **Prolog Transpile** — Convert Prolog to NAL
+- [ ] **SMT-LIB Export** — Verify with Z3/CVC5
+- [ ] **PDDL Export** — Classical planning compatibility
+
+### Community & Standards
+- [ ] Rule marketplace — Share rule packages
+- [ ] Strategy library — Pre-built premise strategies
+- [ ] Benchmark leaderboard — Compare implementations
+- [ ] **Narsese 2.0** — Formalize syntax with PEG grammar
+- [ ] **NAL-JSON** — Canonical JSON representation
+- [ ] **Derivation Logs** — Standard trace format
+
+### Multi-Agent & Distributed
 - [ ] Belief sharing between NARS instances
 - [ ] Collective reasoning (swarm intelligence)
 - [ ] Distributed inference (task partitioning)
-
-### Protocols
-- [ ] Standardize inter-agent message format (Narsese over JSON?)
+- [ ] Standardized inter-agent message format
 - [ ] Trust metrics for external beliefs
 - [ ] Conflict resolution across agents
 
 ---
 
-## Phase 8: Evaluation & Benchmarks
+## Domain Applications
+
+| Domain | Application | Key Features |
+|--------|-------------|--------------|
+| **Legal** | Case law, statute analysis | Precedent reasoning, rule chains |
+| **Medical** | Symptom→condition inference | Uncertainty handling, evidence fusion |
+| **Game AI** | NPC decision-making, world modeling | Real-time, resource-constrained |
+| **Education** | Adaptive tutoring, problem generation | Explainable reasoning |
+| **Code Review** | Logic analysis, improvement suggestions | AST integration |
+| **Personal Assistant** | Long-term memory, preference learning | Continuous operation |
+
+---
+
+## Speculative & Experimental
+
+> **Wild Ideas** — High risk, high reward
+
+### Compression & Information Theory
+- [ ] **Belief Compression** — Kolmogorov complexity for term simplification
+- [ ] **Minimum Description Length** — Prefer simpler explanations
+- [ ] **Grammar Induction** — Learn Narsese patterns from use
+
+### Biological Inspiration
+- [ ] **Sleep/Consolidation** — Offline memory reorganization
+- [ ] **Dreaming** — Random belief recombination for creativity
+- [ ] **Emotional Valence** — Priority modulation by "affect"
+
+### Self-Modification
+- [ ] **Rule Learning** — Induce new rules from derivations
+- [ ] **Strategy Evolution** — Genetic programming for strategies
+- [ ] **Architecture Search** — NAS for pipeline components
+
+### Human-in-the-Loop
+- [ ] **Active Learning** — Ask user for missing beliefs
+- [ ] **Debate Mode** — Present competing derivations for judgment
+- [ ] **Crowdsourced Truth** — Aggregate human confidence ratings
+
+### Advanced Architectures
+- [ ] **NAL Compiler** — Compile rule chains to WASM
+- [ ] **Neuromorphic NARS** — Spiking neural network implementation
+- [ ] **NAL-in-Context** — Feed NAL rules to LLM as system prompt
+- [ ] **Prolog Interop** — SWI-Prolog integration via WASM
+- [ ] **Theorem Proving Bridge** — Export to Lean/Coq for verification
+- [ ] **Embodied NARS** — Robotics integration via ROS2
+
+---
+
+## Simplification Opportunities
+
+> **Less is more** — Reduce complexity where possible
+
+### Code Consolidation
+- [ ] Merge strategy classes into one `CompositeStrategy` with plugins
+- [ ] Unified rule interface: single `Rule.execute(premises)` pattern
+- [ ] Configuration simplification: sensible defaults, less boilerplate
+- [ ] Audit and remove unused exports
+
+### Architecture Simplification
+- [ ] Single event loop — Remove complex async coordination
+- [ ] Immutable everything — Eliminate mutation tracking overhead
+- [ ] Functional core — Pure functions for all reasoning logic
+- [ ] Effect boundary — All I/O at edges only
+
+### API Simplification
+- [ ] Fluent builder: `nars.believe("A→B").ask("A→?").run()`
+- [ ] Single entry point: `NARS.create(config)` factory
+- [ ] Auto-discovery: Rules/strategies self-register
+- [ ] Smart defaults: Works out-of-box with zero config
+
+### Dependency Reduction
+- [ ] Zero-dep core: Core reasoning with no npm deps
+- [ ] Optional everything: LM, embeddings, UI all optional
+- [ ] Tree-shakeable: Only ship what's used
+
+### Conceptual Simplification
+- [ ] Single truth model: Unify probability/frequency/confidence
+- [ ] Universal links: One link type with metadata
+- [ ] Flat memory: Remove focus/long-term distinction if unhelpful
+- [ ] Sync-first: Make async the exception, not rule
+
+---
+
+## Benchmarks & Evaluation
 
 ### NAL Benchmarks
 - [ ] Standard syllogistic problems
@@ -526,65 +446,35 @@ class HopfieldLayer extends Layer {
 
 ---
 
-## Phase 9: Developer Experience
-
-### Tooling
-- [ ] Visual derivation graph explorer
-- [ ] Rule debugging mode (show why rule fired/didn't fire)
-- [ ] Premise formation trace
-- [ ] TUI enhancements for live reasoning
-
-### Documentation
-- [ ] Rule catalog with examples
-- [ ] Strategy extension guide
-- [ ] Truth function reference
-- [ ] Migration guide from other NARS implementations
-
----
-
-## Wild Ideas 🚀
-
-### Speculative/Experimental
-- [ ] **NAL Compiler** - Compile rule chains to WASM for speed
-- [ ] **Neuromorphic NARS** - Implement on spiking neural networks
-- [ ] **NAL-in-Context** - Feed NAL rules to LLM as system prompt
-- [ ] **Prolog Interop** - Direct SWI-Prolog integration via WASM
-- [ ] **Theorem Proving Bridge** - Export to Lean/Coq for formal verification
-- [ ] **Game AI** - NARS for game agent reasoning (Minecraft, etc.)
-- [ ] **Embodied NARS** - Robotics integration via ROS2
-- [ ] **Personal Assistant Core** - Long-term memory + preference learning
-
----
-
-## Immediate Next Steps (Priority Order)
-
-1. **Finish NAL-4**: Exemplification, Analogy, Comparison rules
-2. **Temporal Foundation**: Event buffering and STMLinker
-3. **LM Premise Guidance**: Let LM rank premise candidates
-4. **Contradiction Detection**: NegationPairingStrategy
-5. **Visual Debugging**: Derivation graph in TUI or web UI
-
----
-
 ## Files to Watch
 
-| File | Reason |
-|------|--------|
+> **Key entry points** for development
+
+| File | Purpose |
+|------|---------|
 | `core/src/reason/Strategy.js` | Premise formation orchestration |
-| `core/src/reason/rules/nal/` | All NAL rule implementations |
+| `core/src/reason/rules/nal/` | NAL rule implementations |
 | `core/src/Truth.js` | Truth function library |
 | `core/src/reason/ReasonerBuilder.js` | Rule registration |
-| `docs/java/java_to_js.md` | Migration reference |
+| `core/src/memory/Layer.js` | Layer abstraction for ML integration |
+| `docs/java/java_to_js.md` | OpenNARS migration reference |
 
 ---
 
-## Principles
+## What's Already Built ✅
 
-1. **NAL First, LM Assist** - Keep formal semantics; LM enhances, doesn't replace
-2. **Composable Everything** - Rules, strategies, and layers should be plug-and-play
-3. **Observable Reasoning** - Every derivation should be explainable
-4. **Resource-Aware** - AIKR principle: work within limits, not beyond
-5. **Test-Driven** - Every new rule needs test coverage
+### Foundation (Complete)
+- **Modular Premise Formation**: `TaskMatchStrategy`, `DecompositionStrategy`, `TermLinkStrategy`
+- **NAL Inference Rules**: Deduction, Induction, Abduction, Conversion, Contraposition, ModusPonens
+- **Stream Architecture**: Async generators with backpressure
+- **Java Parity**: Non-temporal rules migrated from OpenNARS
+- **Tests**: 491/492 passing (99.8%)
+
+### Key Design Decisions
+- Rules are composable via `NALRule.apply()`
+- Strategies yield candidates via `async* generateCandidates()`
+- Truth functions are pure static methods
+- All registered in `ReasonerBuilder.registerDefaultRules()`
 
 ---
 
