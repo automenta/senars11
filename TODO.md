@@ -331,7 +331,7 @@ export class SemanticStrategy extends PremiseFormationStrategy {
 |------|--------|---------|
 | TermUtils.js | 1 hr | Clean APIs ✅ |
 | Negation in parser | 2-4 hrs | Simplification ✅ |
-| **Unifier.js extraction** | 4-6 hrs | Pattern Rules ✅ |
+| [x] **Unifier.js extraction** | 4-6 hrs | Pattern Rules ✅ |
 | SemanticStrategy | 2-4 hrs | Fuzzy matching ✅ |
 
 ### Phase 1: Rule Engine (Now)
@@ -341,20 +341,23 @@ export class SemanticStrategy extends PremiseFormationStrategy {
 | [x] **RuleCompiler.js** | 4 hrs | Efficient matching |
 | [x] **RuleExecutor.js** | 4 hrs | Rule execution |
 | [x] **NAL-4/5 Definitions** | 2 hrs | Core logic |
-| [x] **RuleProcessor Integration** | 2 hrs | End-to-end flow |mpletion |
+| [x] **RuleProcessor Integration** | 2 hrs | End-to-end flow |
+| [x] **Discriminator Abstraction** | 2 hrs | Metaprogramming/Flexibility |
 
 ### Phase 2: Variables & Temporal (2-4 weeks)
 
 | Task | Effort | Unlocks |
 |------|--------|---------|
+| Temporal Discriminators | 2 hrs | NAL-7 support |
 | NAL-6 Query matching | 4 hrs | Questions |
 | TemporalBuffer | 1 week | NAL-7 |
 | CausalStrategy | 4 hrs | Multi-hop |
 
-### Phase 3: Goals (4-8 weeks)
+### Phase 3: Goals & Control (4-8 weeks)
 
 | Task | Effort | Unlocks |
 |------|--------|---------|
+| Dynamic Discriminators | 4 hrs | Meta-cognition |
 | Goal task handling | 1 week | NAL-8 |
 | GoalDrivenStrategy | 1 week | Backward chaining |
 
