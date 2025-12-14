@@ -109,6 +109,20 @@ export class PremiseFormationStrategy {
     }
 
     /**
+     * Get status information about the strategy.
+     * @returns {object} Status information
+     */
+    getStatus() {
+        return {
+            type: this.constructor.name,
+            priority: this._priority,
+            enabled: this._enabled,
+            stats: this.stats,
+            effectiveness: this.effectiveness
+        };
+    }
+
+    /**
      * Get a string representation for debugging.
      */
     toString() {
