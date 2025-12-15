@@ -81,12 +81,10 @@ export class NativeBackend extends TensorBackend {
             result._parents = [a, b];
             result._gradFn = () => {
                 if (a.requiresGrad) {
-                    const gradA = this.matmul(result.grad, this.transpose(b));
-                    a.grad = a.grad ? this.add(a.grad, gradA) : gradA;
+                    this._accumulateGrad(a, this.matmul(result.grad, this.transpose(b)));
                 }
                 if (b.requiresGrad) {
-                    const gradB = this.matmul(this.transpose(a), result.grad);
-                    b.grad = b.grad ? this.add(b.grad, gradB) : gradB;
+                    this._accumulateGrad(b, this.matmul(this.transpose(a), result.grad));
                 }
             };
         }
@@ -101,16 +99,14 @@ export class NativeBackend extends TensorBackend {
 
     sub(a, b) {
         // ∂L/∂a = ∂L/∂out, ∂L/∂b = -∂L/∂out
-        return this._elementwise(a, b, (x, y) => x - y, (grad, a, b, backend) => {
-            return [grad, backend.neg(grad)];
-        });
+        return this._elementwise(a, b, (x, y) => x - y, (grad, a, b, backend) =>
+            [grad, backend.neg(grad)]);
     }
 
     mul(a, b) {
         // ∂L/∂a = ∂L/∂out ⊙ b, ∂L/∂b = ∂L/∂out ⊙ a
-        return this._elementwise(a, b, (x, y) => x * y, (grad, a, b, backend) => {
-            return [backend.mul(grad, b), backend.mul(grad, a)];
-        });
+        return this._elementwise(a, b, (x, y) => x * y, (grad, a, b, backend) =>
+            [backend.mul(grad, b), backend.mul(grad, a)]);
     }
 
     div(a, b) {
@@ -152,24 +148,30 @@ export class NativeBackend extends TensorBackend {
             throw new Error(`Broadcasting not supported for shapes ${a.shape} and ${b.shape}`);
         }
 
-        // Gradient tracking
         if (a.requiresGrad || b.requiresGrad) {
             result.requiresGrad = true;
             result._parents = [a, b];
             result._gradFn = () => {
                 if (gradOp) {
                     const [gradA, gradB] = gradOp(result.grad, a, b, this);
-                    if (a.requiresGrad) {
-                        a.grad = a.grad ? this.add(a.grad, gradA) : gradA;
-                    }
-                    if (b.requiresGrad) {
-                        b.grad = b.grad ? this.add(b.grad, gradB) : gradB;
-                    }
+                    if (a.requiresGrad) this._accumulateGrad(a, gradA);
+                    if (b.requiresGrad) this._accumulateGrad(b, gradB);
                 }
             };
         }
 
         return result;
+    }
+
+    _accumulateGrad(tensor, grad) {
+        tensor.grad = tensor.grad ? this.add(tensor.grad, grad) : grad;
+    }
+
+    _createTensor(data, shape) {
+        const tensor = new Tensor(0, { backend: this });
+        tensor.data = data;
+        tensor.shape = shape;
+        return tensor;
     }
 
     // === Unary operations ===
@@ -201,20 +203,14 @@ export class NativeBackend extends TensorBackend {
 
     relu(a) {
         if (!(a instanceof Tensor)) a = new Tensor([a], { backend: this });
-        const result = new Tensor(0, { backend: this });
-        result.data = a.data.map(x => Math.max(0, x));
-        result.shape = a.shape.slice();
+        const result = this._createTensor(a.data.map(x => Math.max(0, x)), a.shape.slice());
 
-        // Gradient: ∂ReLU/∂x = 1 if x > 0, else 0
         if (a.requiresGrad) {
             result.requiresGrad = true;
             result._parents = [a];
             result._gradFn = () => {
-                const mask = new Tensor(0, { backend: this });
-                mask.data = a.data.map(x => x > 0 ? 1 : 0);
-                mask.shape = a.shape.slice();
-                const gradA = this.mul(result.grad, mask);
-                a.grad = a.grad ? this.add(a.grad, gradA) : gradA;
+                const mask = this._createTensor(a.data.map(x => x > 0 ? 1 : 0), a.shape.slice());
+                this._accumulateGrad(a, this.mul(result.grad, mask));
             };
         }
 
@@ -223,20 +219,14 @@ export class NativeBackend extends TensorBackend {
 
     sigmoid(a) {
         if (!(a instanceof Tensor)) a = new Tensor([a], { backend: this });
-        const result = new Tensor(0, { backend: this });
-        result.data = a.data.map(x => 1 / (1 + Math.exp(-x)));
-        result.shape = a.shape.slice();
+        const result = this._createTensor(a.data.map(x => 1 / (1 + Math.exp(-x))), a.shape.slice());
 
-        // Gradient: ∂σ/∂x = σ(x) * (1 - σ(x))
         if (a.requiresGrad) {
             result.requiresGrad = true;
             result._parents = [a];
             result._gradFn = () => {
-                const oneMinusSigmoid = new Tensor(0, { backend: this });
-                oneMinusSigmoid.data = result.data.map(s => 1 - s);
-                oneMinusSigmoid.shape = result.shape.slice();
-                const gradA = this.mul(result.grad, this.mul(result, oneMinusSigmoid));
-                a.grad = a.grad ? this.add(a.grad, gradA) : gradA;
+                const oneMinusSigmoid = this._createTensor(result.data.map(s => 1 - s), result.shape.slice());
+                this._accumulateGrad(a, this.mul(result.grad, this.mul(result, oneMinusSigmoid)));
             };
         }
 
@@ -245,19 +235,15 @@ export class NativeBackend extends TensorBackend {
 
     tanh(a) {
         if (!(a instanceof Tensor)) a = new Tensor([a], { backend: this });
-        const result = new Tensor(0, { backend: this });
-        result.data = a.data.map(x => Math.tanh(x));
-        result.shape = a.shape.slice();
+        const result = this._createTensor(a.data.map(x => Math.tanh(x)), a.shape.slice());
 
-        // Gradient: ∂tanh/∂x = 1 - tanh²(x)
         if (a.requiresGrad) {
             result.requiresGrad = true;
             result._parents = [a];
             result._gradFn = () => {
                 const tanhSquared = this.mul(result, result);
                 const oneMinus = this.sub(this.ones(result.shape), tanhSquared);
-                const gradA = this.mul(result.grad, oneMinus);
-                a.grad = a.grad ? this.add(a.grad, gradA) : gradA;
+                this._accumulateGrad(a, this.mul(result.grad, oneMinus));
             };
         }
 
@@ -304,20 +290,15 @@ export class NativeBackend extends TensorBackend {
         if (!(a instanceof Tensor)) a = new Tensor([a], { backend: this });
 
         if (axis === null) {
-            // Sum all elements
             const value = a.data.reduce((sum, val) => sum + val, 0);
             const result = new Tensor([value], { backend: this });
 
-            // Gradient: broadcast gradient to input shape
             if (a.requiresGrad) {
                 result.requiresGrad = true;
                 result._parents = [a];
                 result._gradFn = () => {
-                    // Broadcast scalar gradient to match input shape
-                    const gradA = new Tensor(0, { backend: this });
-                    gradA.data = new Array(a.size).fill(result.grad.data[0]);
-                    gradA.shape = a.shape.slice();
-                    a.grad = a.grad ? this.add(a.grad, gradA) : gradA;
+                    const gradA = this._createTensor(new Array(a.size).fill(result.grad.data[0]), a.shape.slice());
+                    this._accumulateGrad(a, gradA);
                 };
             }
 
@@ -335,16 +316,13 @@ export class NativeBackend extends TensorBackend {
             const value = sum / a.size;
             const result = new Tensor([value], { backend: this });
 
-            // Gradient: broadcast gradient / size to input shape
             if (a.requiresGrad) {
                 result.requiresGrad = true;
                 result._parents = [a];
                 result._gradFn = () => {
                     const gradValue = result.grad.data[0] / a.size;
-                    const gradA = new Tensor(0, { backend: this });
-                    gradA.data = new Array(a.size).fill(gradValue);
-                    gradA.shape = a.shape.slice();
-                    a.grad = a.grad ? this.add(a.grad, gradA) : gradA;
+                    const gradA = this._createTensor(new Array(a.size).fill(gradValue), a.shape.slice());
+                    this._accumulateGrad(a, gradA);
                 };
             }
 

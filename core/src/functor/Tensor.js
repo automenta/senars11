@@ -183,69 +183,36 @@ export class Tensor {
 
     // === Autograd (Tier 2) ===
 
-    /**
-     * Compute gradients via reverse-mode automatic differentiation
-     * Uses topological sort to traverse computation graph
-     */
     backward() {
-        if (!this.requiresGrad) {
-            return;
-        }
+        if (!this.requiresGrad) return;
 
-        // Initialize output gradient to ones (∂L/∂L = 1)
         if (this.grad === null) {
-            this.grad = this.backend ? this.backend.ones(this.shape) : new Tensor(new Array(this.size).fill(1), { backend: this.backend });
-            this.grad.shape = this.shape.slice();
+            this.grad = this.backend?.ones(this.shape) ??
+                Object.assign(new Tensor(new Array(this.size).fill(1), { backend: this.backend }),
+                    { shape: this.shape.slice() });
         }
 
-        // Topological sort: visit children before parents for backprop
-        const topo = this._topologicalSort();
-
-        // Execute gradient functions in reverse topological order
-        for (const tensor of topo) {
-            if (tensor._gradFn) {
-                tensor._gradFn();
-            }
-        }
+        this._topologicalSort().forEach(tensor => tensor._gradFn?.());
     }
 
-    /**
-     * Build topological ordering of computation graph
-     * Returns tensors in order: children before parents
-     */
     _topologicalSort() {
         const topo = [];
         const visited = new Set();
 
         const dfs = (tensor) => {
-            if (visited.has(tensor) || !tensor.requiresGrad) {
-                return;
-            }
+            if (visited.has(tensor) || !tensor.requiresGrad) return;
             visited.add(tensor);
-
-            // Visit parents first
-            for (const parent of (tensor._parents || [])) {
-                dfs(parent);
-            }
-
+            tensor._parents?.forEach(dfs);
             topo.push(tensor);
         };
 
         dfs(this);
-        return topo.reverse();  // Reverse for parent-first traversal in backward
+        return topo.reverse();
     }
 
-    /**
-     * Clear accumulated gradients
-     */
     zeroGrad() {
         this.grad = null;
-        // Optionally clear gradients of parents
-        for (const parent of (this._parents || [])) {
-            if (parent.zeroGrad) {
-                parent.zeroGrad();
-            }
-        }
+        this._parents?.forEach(parent => parent.zeroGrad?.());
     }
 }
 
