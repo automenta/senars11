@@ -3,11 +3,11 @@
  * @description Simple test framework for NAR functionality
  */
 
-import {TaskMatch} from './TaskMatch.js';
+import { TaskMatch } from './TaskMatch.js';
 
 // Re-export TaskMatch as before to maintain backward compatibility
 //export { SharedTaskMatch as TaskMatch };
-export {TaskMatch as TaskMatch};
+export { TaskMatch as TaskMatch };
 
 /**
  * Simplified test framework for NAR
@@ -31,12 +31,12 @@ export class TestNAR {
     }
 
     input(termStr, freq = 0.9, conf = 0.9) {
-        this.operations.push({type: 'input', termStr, freq, conf});
+        this.operations.push({ type: 'input', termStr, freq, conf });
         return this;
     }
 
     run(cycles = 1) {
-        this.operations.push({type: 'run', cycles});
+        this.operations.push({ type: 'run', cycles });
         return this;
     }
 
@@ -44,7 +44,7 @@ export class TestNAR {
         // If termStr is already a TaskMatch instance, use it directly
         // Otherwise, create a new TaskMatch with the provided term string
         const matcher = termStr instanceof TaskMatch ? termStr : new TaskMatch(termStr);
-        this.operations.push({type: 'expect', matcher, shouldExist: true});
+        this.operations.push({ type: 'expect', matcher, shouldExist: true });
         return this;
     }
 
@@ -52,7 +52,7 @@ export class TestNAR {
         // If termStr is already a TaskMatch instance, use it directly
         // Otherwise, create a new TaskMatch with the provided term string
         const matcher = termStr instanceof TaskMatch ? termStr : new TaskMatch(termStr);
-        this.operations.push({type: 'expect', matcher, shouldExist: false});
+        this.operations.push({ type: 'expect', matcher, shouldExist: false });
         return this;
     }
 
@@ -71,7 +71,7 @@ export class TestNAR {
 
     async execute() {
         // Dynamically import NAR to avoid circular dependencies
-        const {NAR} = await import('../nar/NAR.js');
+        const { NAR } = await import('../nar/NAR.js');
 
         // Use optimized config for tests to improve performance
         const config = {
@@ -97,6 +97,15 @@ export class TestNAR {
         };
 
         this.nar = new NAR(config);
+        if (this.trace) {
+            this.nar.traceEnabled = true;
+            this.nar.on('reasoning.derivation', (data) => {
+                console.log(`[TRACE] Derivation: ${data.derivedTask.toString()} from ${data.derivedTask.stamp?.source || data.source}`);
+            });
+            this.nar.on('task.input', (data) => {
+                console.log(`[TRACE] Input: ${data.task.toString()}`);
+            });
+        }
 
         try {
             await this.nar.initialize(); // Initialize the NAR to ensure components are set up
@@ -182,7 +191,7 @@ export class TestNAR {
 
             // Validate expectations
             for (const exp of expectations) {
-                const {matcher, shouldExist} = exp;
+                const { matcher, shouldExist } = exp;
 
                 let found = false;
                 for (const task of allTasks) {

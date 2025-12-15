@@ -1,10 +1,10 @@
-import {Term, TermType} from './Term.js';
-import {CognitiveDiversity} from './CognitiveDiversity.js';
-import {BaseComponent} from '../util/BaseComponent.js';
-import {IntrospectionEvents} from '../util/IntrospectionEvents.js';
-import {TermCache} from './TermCache.js';
+import { Term, TermType } from './Term.js';
+import { CognitiveDiversity } from './CognitiveDiversity.js';
+import { BaseComponent } from '../util/BaseComponent.js';
+import { IntrospectionEvents } from '../util/IntrospectionEvents.js';
+import { TermCache } from './TermCache.js';
 
-export {Term};
+export { Term };
 
 const COMMUTATIVE_OPERATORS = new Set(['&', '|', '+', '*', '<->', '=', '||', '&&', '<~>', '{}', '[]']);
 const ASSOCIATIVE_OPERATORS = new Set(['&', '|', '||', '&&']);
@@ -32,7 +32,7 @@ const CANONICAL_NAME_PATTERNS = {
 export class TermFactory extends BaseComponent {
     constructor(config = {}, eventBus = null) {
         super(config, 'TermFactory', eventBus);
-        this._cache = new TermCache({maxSize: this.config.maxCacheSize || 5000});
+        this._cache = new TermCache({ maxSize: this.config.maxCacheSize || 5000 });
         this._complexityCache = new Map();
         this._cognitiveDiversity = new CognitiveDiversity(this);
     }
@@ -49,13 +49,34 @@ export class TermFactory extends BaseComponent {
         }
 
         // Handle object input {operator, components}
-        const {operator, components: comps} = data;
+        const { operator, components: comps } = data;
         return this._createCompound(operator, comps);
     }
 
     _createCompound(operator, components) {
         const normalized = this._normalizeTermData(operator, components);
-        return this._processCanonicalAndCache(normalized.operator, normalized.components);
+        const { operator: op, components: comps } = normalized;
+
+        // Reduction 1: Double Negation
+        if (op === '--' && comps.length === 1) {
+            const inner = comps[0];
+            if (inner.operator === '--' && inner.components.length > 0) {
+                return inner.components[0];
+            }
+        }
+
+        // Reduction 2: Implication Negation (a ==> (--, b)) -> (--, (a ==> b))
+        if (op === '==>' && comps.length === 2) {
+            const [subject, predicate] = comps;
+            if (predicate.operator === '--' && predicate.components.length > 0) {
+                const b = predicate.components[0];
+                // (--, (a ==> b))
+                const innerImp = this._createCompound('==>', [subject, b]);
+                return this._createCompound('--', [innerImp]);
+            }
+        }
+
+        return this._processCanonicalAndCache(op, comps);
     }
 
     _processCanonicalAndCache(operator, components) {
@@ -65,11 +86,11 @@ export class TermFactory extends BaseComponent {
         // Check cache
         const cachedTerm = this._cache.get(name);
         if (cachedTerm) {
-            this._emitIntrospectionEvent(IntrospectionEvents.TERM_CACHE_HIT, {termName: name});
+            this._emitIntrospectionEvent(IntrospectionEvents.TERM_CACHE_HIT, { termName: name });
             return cachedTerm;
         }
 
-        this._emitIntrospectionEvent(IntrospectionEvents.TERM_CACHE_MISS, {termName: name});
+        this._emitIntrospectionEvent(IntrospectionEvents.TERM_CACHE_MISS, { termName: name });
 
         const term = this._createAndCache(operator, normalizedComponents, name);
         this._calculateComplexityMetrics(term, normalizedComponents);
@@ -199,7 +220,7 @@ export class TermFactory extends BaseComponent {
             this._cognitiveDiversity.unregisterTerm(evictedKey);
         }
 
-        this._emitIntrospectionEvent(IntrospectionEvents.TERM_CREATED, {term: term.serialize()});
+        this._emitIntrospectionEvent(IntrospectionEvents.TERM_CREATED, { term: term.serialize() });
         return term;
     }
 
@@ -227,7 +248,7 @@ export class TermFactory extends BaseComponent {
             }
         }
 
-        return {operator, components: normalizedComponents};
+        return { operator, components: normalizedComponents };
     }
 
     _validateOperator(op) {
@@ -389,14 +410,14 @@ export class TermFactory extends BaseComponent {
         return Array.from(this._complexityCache.entries())
             .sort((a, b) => b[1] - a[1])
             .slice(0, limit)
-            .map(([name, complexity]) => ({name, complexity}));
+            .map(([name, complexity]) => ({ name, complexity }));
     }
 
     getSimplestTerms(limit = 10) {
         return Array.from(this._complexityCache.entries())
             .sort((a, b) => a[1] - b[1])
             .slice(0, limit)
-            .map(([name, complexity]) => ({name, complexity}));
+            .map(([name, complexity]) => ({ name, complexity }));
     }
 
     getAverageComplexity() {

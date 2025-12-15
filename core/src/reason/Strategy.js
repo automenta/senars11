@@ -201,36 +201,52 @@ export class Strategy {
             return candidate.sourceTask;
         }
 
-        // Create a synthetic "belief" task from the term (from DecompositionStrategy)
+        // For decomposed terms, we MUST find an existing task.
+        // We cannot create a synthetic belief because decomposition does not imply truth.
+        // e.g. (A ==> B) decomposes to A and B, but does not imply A or B is true.
         if (candidate.term) {
-            return this._createSyntheticPremise(candidate.term, primaryPremise, candidate);
+            return this._findTaskForTerm(candidate.term);
         }
 
         return null;
     }
 
     /**
-     * Create a synthetic premise task from a term.
-     * Used when decomposition yields a term without an existing task.
+     * Find an existing task for a term in focus or memory.
      * @private
      */
-    _createSyntheticPremise(term, primaryPremise, candidate = {}) {
-        // Derive truth and budget from the primary premise
-        const primaryTruth = primaryPremise?.truth;
-        const syntheticTruth = primaryTruth
-            ? new Truth(primaryTruth.frequency, Truth.weak(primaryTruth.confidence))
-            : new Truth(1.0, 0.5);
+    _findTaskForTerm(term) {
+        // Check focus first
+        if (this.focus) {
+            // This assumes focus has a way to get a task by term, or we iterate.
+            // focus.getTask(term) would be ideal.
+            // If not, we might need to iterate or rely on Term's unique ID if focus is a Map.
+            // For now, let's assume we can't easily query focus by term without iteration
+            // unless we add a method to Focus.
+            // But we can check the candidateBag if it was populated by TaskMatchStrategy?
+            // No, TaskMatchStrategy populates based on matching.
 
-        const priority = candidate.priority || 0.5;
+            // Let's try to find it in the available tasks (which might be expensive but correct)
+            // Optimization: Focus usually has a limited size.
+            const tasks = this.focus.getTasks();
+            const found = tasks.find(t => t.term.equals(term));
+            if (found) return found;
+        }
 
-        return new Task({
-            term: term,
-            punctuation: '.',
-            truth: syntheticTruth,
-            stamp: Stamp.derive([primaryPremise?.stamp].filter(Boolean)),
-            budget: { priority, durability: 0.5, quality: 0.5 },
-            isSynthetic: true // Mark as synthetic for debugging
-        });
+        // Check memory
+        if (this.memory) {
+            // Memory usually has concepts indexed by term.
+            // concept = memory.getConcept(term)
+            if (this.memory.getConcept) {
+                const concept = this.memory.getConcept(term);
+                if (concept) {
+                    // Return the most relevant task from the concept (e.g. highest confidence belief)
+                    return concept.getBelief ? concept.getBelief() : null;
+                }
+            }
+        }
+
+        return null;
     }
 
 
