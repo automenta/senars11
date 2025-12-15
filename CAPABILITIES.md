@@ -1,489 +1,369 @@
-# SeNARS Capabilities
+# SeNARS Development Plan
 
-> **Semantic Non-Axiomatic Reasoning System**
-> 
-> Tested capabilities + development roadmap + theoretical foundations.
-> 
-> 105 tests verify this system. This document is the successor to TODO.md.
+> **Semantic Non-Axiomatic Reasoning System**  
+> **Status**: Living development document  
+> **Foundation**: Stream reasoner, 7 NAL rules, 105 tests (99.8% pass)
 
 ---
 
-## System Identity
+## Table of Contents
 
-SeNARS unifies three AI paradigms into substrate for cognitive architectures:
-
-| Paradigm | What It Does | Current Status |
-|----------|--------------|----------------|
-| **NAL** | Uncertain reasoning with `%frequency;confidence%` | ✅ NAL-1 to NAL-6 |
-| **LM** | Neural text ↔ formal logic translation | ✅ Bidirectional |
-| **Prolog** | Deterministic backward chaining + unification | ✅ Full |
-
-**Design Philosophy**: This is substrate. Fork it, break it, grow it into the species you need.
-
----
-
-# Part I: Proven Capabilities
-
-## 1. Core Primitives
-
-### 1.1 Terms (Immutable Knowledge Atoms)
-
-```javascript
-const tf = new TermFactory();
-
-tf.atomic('bird');                     // Atom
-tf.variable('?x');                     // Query variable  
-tf.inheritance(a, b);                  // <a --> b>
-tf.similarity(a, b);                   // <a <-> b>
-tf.implication(a, b);                  // (a ==> b)
-tf.conjunction([a, b]);                // (&, a, b)
-tf.disjunction([a, b]);                // (|, a, b)
-tf.product(a, b);                      // (a * b)
-```
-
-**Verified Properties:**
-- Immutability: Terms frozen after creation
-- Normalization: `(&, B, A)` → `(&, A, B)`, duplicates removed
-- Traversal: Pre/post-order visitors, reduce operations
-- Property-based testing: Idempotent normalization, equality equivalence
-
-### 1.2 Truth Values (NAL Uncertainty)
-
-All 11 NAL truth functions tested ([Truth.test.js](file:///home/me/senars10/tests/unit/core/Truth.test.js)):
-
-| Function | Formula | Purpose |
-|----------|---------|---------|
-| **Deduction** | `f = f₁ × f₂, c = c₁ × c₂` | Chain inference |
-| **Induction** | `f = f₂, c = c₁ × c₂` | Shared subject |
-| **Abduction** | `f = f₁, c = min(c₁c₂, c₂)` | Shared predicate |
-| **Revision** | Weighted average by confidence | Merge beliefs |
-| **Negation** | `f = 1 - f, c = c` | Invert belief |
-| **Conversion** | `f = f, c = f × c` | Direction swap |
-| **Contraposition** | `f = (1-f₂)(1-f₁)/...` | Negated consequent |
-| **Detachment** | `f = f₂, c = f₁ × c₁ × c₂` | Modus Ponens |
-| **Analogy** | `f = f₁ × f₂, c = c₁ × c₂ × f₂` | Similarity transfer |
-| **Comparison** | Frequency product ratio | Compare beliefs |
-| **Expectation** | `e = f × c` | Decision weight |
-
-### 1.3 Unification Engine
-
-```javascript
-const unifier = new Unifier(tf);
-
-// Two-way unification
-unifier.unify(pattern, term);  
-// → { success: true, substitution: { '?X': bird } }
-
-// One-way pattern matching (pattern vars only bind)
-unifier.match(pattern, term);
-
-// Syllogistic chain matching
-const r1 = unifier.match(tf.inheritance(tf.variable('S'), tf.variable('M')), premise1);
-const r2 = unifier.match(tf.inheritance(tf.variable('M'), tf.variable('P')), premise2, r1.substitution);
-// r2.substitution = { '?S': bird, '?M': animal, '?P': living }
-```
-
-**Verified**: Occurs check, transitive chains, variable renaming
-
-### 1.4 Stamps (Provenance)
-
-```javascript
-const derived = Stamp.derive([parent1, parent2]);
-// derived.depth = max(parent.depth) + 1
-// derived.derivations = merged from all parents
-```
+1. [Principles](#principles)
+2. [Foundation Status](#foundation-status)
+3. [Proven Capabilities](#proven-capabilities)
+4. [Development Tree](#development-tree)
+5. [Phase 4: Polish & Scale](#phase-4-polish--scale)
+6. [Phase 5: ML as Terms](#phase-5-ml-as-terms)
+7. [Phase 6: Temporal](#phase-6-temporal-deferred)
+8. [Ecosystem](#ecosystem)
+9. [Key Files](#key-files)
 
 ---
 
-## 2. Reasoning Engine
-
-### 2.1 NAL Inference Rules
-
-| Rule | Pattern | Evidence |
-|------|---------|----------|
-| **Modus Ponens** | (a ==> b), a ⊢ b | [ModusPonens.test.js](file:///home/me/senars10/tests/integration/reason/rules/ModusPonens.test.js) |
-| **Syllogism** | (a ==> b), (b ==> c) ⊢ (a ==> c) | [SyllogisticReasoning.test.js](file:///home/me/senars10/tests/integration/reason/rules/SyllogisticReasoning.test.js) |
-| **Induction** | (M→P), (M→S) ⊢ (S→P) | ✅ |
-| **Abduction** | (P→M), (S→M) ⊢ (S→P) | ✅ |
-| **Conversion** | (P→S) ⊢ (S→P) with c_new = f × c | ✅ |
-| **Contraposition** | (S⇒P) ⊢ (¬P⇒¬S) | ✅ |
-
-### 2.2 Negation Handling
-
-```javascript
-// Negation via truth inversion (not separate operator)
-// Input:  (--, A). %0.1;0.9%  
-// Stored: A. %0.9;0.9%  (f' = 1 - f)
-
-// Smart reductions:
-// (--, (--, x)) → x           (double negation)
-// (a ==> (--, b)) → (--, (a ==> b))  (implication negation)
-```
-
-### 2.3 Premise Formation Strategies
-
-| Strategy | Pattern | Priority |
-|----------|---------|----------|
-| `TaskMatchStrategy` | Syllogistic shared terms | 1.0 |
-| `DecompositionStrategy` | Extract subterms | 0.8 |
-| `TermLinkStrategy` | Associative links | 0.6 |
-
-### 2.4 Execution Modes
-
-- **SimpleRunner**: Synchronous, basic control flow
-- **PipelineRunner**: Adaptive backpressure, consumer feedback, dynamic throttling
-
----
-
-## 3. Memory Architecture
-
-### 3.1 Dual Memory System
-
-```javascript
-// Long-term memory
-memory.addTask(task);
-memory.getConcept(term);
-memory.consolidate();
-
-// Working memory (Focus)
-focus.createFocusSet('goal-processing', 10);
-focus.addTaskToFocus(task);  // Priority-based eviction
-focus.applyDecay();          // Attention fades over time
-```
-
-### 3.2 Resource Management
-
-```javascript
-const manager = new MemoryResourceManager({
-    maxConcepts: 100,
-    memoryPressureThreshold: 0.8
-});
-
-manager.isUnderMemoryPressure(stats);
-manager.applyAdaptiveForgetting(memory);  // ~10% of concepts
-manager.getConceptsByResourceUsage(conceptMap);  // Sorted by usage
-```
-
-**Scaling Tiers:**
-
-| Scale | Strategy |
-|-------|----------|
-| <10K | In-memory Maps |
-| 10K-100K | Trie, B-Tree, LRU |
-| 100K-1M | Web Workers (sharded) |
-| 1M+ | External store |
-
----
-
-## 4. LM Integration
-
-### 4.1 Provider Ecosystem
-
-```javascript
-lm.registerProvider('hf', new HuggingFaceProvider({...}));
-lm.registerProvider('tfjs', new TransformersJSModel({...}));
-
-await lm.generateText(prompt, options, 'provider');
-await lm.generateEmbedding(text, 'provider');
-await lm.streamText(prompt, options, 'provider');
-```
-
-### 4.2 Bidirectional Translation
-
-```javascript
-lm.translateToNarsese('cat is a mammal');    // → (cat --> mammal)
-lm.translateFromNarsese('(dog --> animal).');  // → "A dog is an animal"
-```
-
-### 4.3 LM Rules
-
-| Rule | Trigger | Output |
-|------|---------|--------|
-| NarseseTranslation | Quoted NL | Formal logic |
-| ConceptElaboration | Atomic concept | Properties |
-| GoalDecomposition | High-priority goal | Sub-goals |
-| HypothesisGeneration | Belief | Testable questions |
-| VariableGrounding | Term with `$X` | Concrete values |
-| AnalogicalReasoning | Problem goal | Analogy solution |
-
-### 4.4 Bidirectional Cycles
-
-```
-LM → NAL → LM:
-1. "Birds can fly" → <bird --> fly>
-2. <canary --> bird> → NAL syllogism → <canary --> fly>
-3. LM elaborates derived knowledge
-
-NAL → LM → NAL:
-1. (exercise → activity), (activity → healthy) → (exercise → healthy)
-2. LM generates hypothesis
-3. NAL applies Modus Ponens
-```
-
----
-
-## 5. Prolog Integration
-
-```javascript
-await narTool.execute({ action: 'assert_prolog', content: 'parent(alice, bob).' });
-await narTool.execute({ action: 'assert_prolog', 
-    content: 'ancestor(X,Y) :- parent(X,Z), ancestor(Z,Y).' });
-await narTool.execute({ action: 'query_prolog', content: 'ancestor(alice, charlie)?' });
-```
-
-**Neurosymbolic Synergy**: Prolog handles recursive ancestry, NAL handles probabilistic trait inheritance.
-
----
-
-## 6. Infrastructure
-
-### 6.1 EventBus
-
-```javascript
-bus.on('taskDerived', handler);
-bus.once('startup', onceHandler);
-bus.use(async (data) => ({ ...data, enriched: true }));  // Middleware
-bus.onError((err, phase, ctx) => log(err));
-```
-
-### 6.2 Circuit Breaker
-
-```javascript
-const cb = new CircuitBreaker({ failureThreshold: 3, resetTimeout: 5000 });
-// CLOSED → (failures) → OPEN → (timeout) → HALF_OPEN → (success) → CLOSED
-```
-
-### 6.3 CapabilityManager
-
-```javascript
-await mgr.registerCapability('file-read', capability);
-await mgr.grantCapabilities('tool', ['file-read'], { approved: true });
-await mgr.addPolicyRule('deny-dangerous', { type: 'deny', tools: [...] });
-```
-
----
-
-# Part II: Theoretical Foundations
-
-## Tensor Logic Integration
-
-> Based on "Tensor Logic: The Language of AI" (Domingos, 2024)
-
-### Core Insight
-
-**Logical rules and Einstein summation are the same operation.**
-
-A Datalog rule like `Aunt(x,z) :- Sister(x,y), Parent(y,z)` is equivalent to:
-
-```
-A[x,z] = H(S[x,y] × P[y,z])
-```
-
-Where `H` is the Heaviside step function and repeated indices are summed (Einstein convention).
-
-### Why This Matters for SeNARS
-
-| Tensor Logic Concept | SeNARS Implementation Path |
-|---------------------|---------------------------|
-| **Rules = Einsums** | Compile NAL rules to tensor operations |
-| **Relations = Sparse Boolean Tensors** | Store beliefs as sparse tensors |
-| **Tensor Join = DB Join** | Unify inference with database operations |
-| **Embeddings + Rules** | Reasoning in embedding space |
-
-### Sound Reasoning in Embedding Space
-
-**Current approach** (SeNARS today):
-- Embeddings for similarity search only
-- Reasoning happens in symbolic space
-
-**Tensor Logic approach** (roadmap):
-```javascript
-// Embed relations as tensor products
-EmbR[i,j] = Σ_tuples Emb[x,i] × Emb[y,j]
-
-// Inference via tensor operations
-Result = EmbR[i,j] × Emb[query_x, i] × Emb[query_y, j]
-
-// Temperature controls deduction vs analogy:
-// T = 0: Pure deduction (no hallucination)
-// T > 0: Analogical (similar examples borrow inferences)
-```
-
-**Error bound**: Decreases with embedding dimension D. At high D, reasoning is provably sound.
-
-### Implementation Plan
-
-**Phase 1: Tensor Representation**
-```javascript
-class TensorRelation {
-    constructor(embedding_dim) { this.dim = embedding_dim; }
-    embed(term) → Float32Array  // d-dimensional
-    embedTuple(terms) → outerProduct(terms.map(embed))
-    embedRelation(tuples) → sum(tuples.map(embedTuple))
-}
-```
-
-**Phase 2: Tensor Inference**
-```javascript
-class TensorInference {
-    // Forward chaining: execute equations sequentially
-    forward(program, data);
-    
-    // Backward chaining: goal-directed query
-    backward(query, rules, depth);
-    
-    // Temperature-controlled sigmoid
-    apply(equation, T) {
-        const result = einsum(equation);
-        return T === 0 ? step(result) : sigmoid(result / T);
-    }
-}
-```
-
-**Phase 3: Hybrid Mode**
-- T=0 for mathematical truths (no hallucination guarantee)
-- Higher T for weak evidence accumulation
-- Per-rule temperature settings
-
----
-
-# Part III: Development Roadmap
-
-## Design Principles
+## Principles
 
 | Principle | Implication |
 |-----------|-------------|
 | **NAL First** | LM augments, not replaces formal semantics |
 | **Declarative** | Logic defined by patterns, not imperative code |
-| **Tensor Compiled** | Rules compiled to optimized tensor operations |
+| **Compiled** | Patterns compiled to optimized decision trees |
+| **Composable** | Standard interfaces, plug-and-play |
 | **Observable** | Emit events, bounded retention |
 | **Resource-Aware** | Budgets, timeouts, graceful degradation |
 
 ---
 
-## Phase 3: Temporal & Goals
+## Foundation Status
 
-> **Status**: Deferred until temporal representations defined
+### Assets Already Built
 
-| Task | Effort | Unlocks |
-|------|--------|---------|
-| Temporal representation spec | 1 week | Foundation |
-| Operators: `=/>`, `=|>`, `=\>` | 1 week | NAL-7 |
-| TemporalBuffer | 1 week | Event sequences |
-| CausalStrategy | 4 hrs | Multi-hop temporal |
+| Asset | Location | Status |
+|-------|----------|--------|
+| **Unification** | [Unifier.js](file:///home/me/senars10/core/src/term/Unifier.js) | ✅ |
+| **Backward Chaining** | [PrologStrategy.js](file:///home/me/senars10/core/src/reason/strategy/PrologStrategy.js) | ✅ |
+| **Embeddings** | [EmbeddingLayer.js](file:///home/me/senars10/core/src/lm/EmbeddingLayer.js) | ✅ |
+| **RuleCompiler** | [RuleCompiler.js](file:///home/me/senars10/core/src/reason/rules/compiler/RuleCompiler.js) | ✅ |
+| **RuleExecutor** | [RuleExecutor.js](file:///home/me/senars10/core/src/reason/rules/executor/RuleExecutor.js) | ✅ |
+| **SemanticStrategy** | [SemanticStrategy.js](file:///home/me/senars10/core/src/reason/strategy/SemanticStrategy.js) | ✅ |
+| **AnalogicalStrategy** | [AnalogicalStrategy.js](file:///home/me/senars10/core/src/reason/strategy/AnalogicalStrategy.js) | ✅ |
+| **GoalDrivenStrategy** | [GoalDrivenStrategy.js](file:///home/me/senars10/core/src/reason/strategy/GoalDrivenStrategy.js) | ✅ |
+
+### Needed Foundations
+
+| Foundation | Unlocks | Effort | Priority |
+|------------|---------|--------|----------|
+| **Derivation Tracing** | Debugger, Explainer, RL | 1 week | ⭐⭐⭐ |
+| **Serialization Layer** | API, Playground, Ingestion | 3 days | ⭐⭐⭐ |
+| **Advanced Indexing** | 100K+ concepts, GNN | 1-2 weeks | ⭐⭐ |
+
+---
+
+## Proven Capabilities
+
+### Core (Tested)
+
+| Component | Evidence |
+|-----------|----------|
+| **Terms** | Immutability, normalization, traversal, macros |
+| **Truth** | All 11 NAL functions |
+| **Unifier** | Two-way, one-way, occurs check, transitive chains |
+| **Stamps** | Provenance, derivation depth |
+| **Tasks** | Validation, cloning, type checking |
+
+### Reasoning (Tested)
+
+| Rule | Pattern |
+|------|---------|
+| Modus Ponens | (a ==> b), a ⊢ b |
+| Syllogism | (a→b), (b→c) ⊢ (a→c) |
+| Induction | (M→P), (M→S) ⊢ (S→P) |
+| Abduction | (P→M), (S→M) ⊢ (S→P) |
+| Conversion | (P→S) ⊢ (S→P) |
+| Contraposition | (S⇒P) ⊢ (¬P⇒¬S) |
+
+### Strategies (Tested)
+
+| Strategy | Implementation | Status |
+|----------|----------------|--------|
+| TaskMatchStrategy | Syllogistic patterns | ✅ |
+| DecompositionStrategy | Extract subterms | ✅ |
+| TermLinkStrategy | Associative links | ✅ |
+| **SemanticStrategy** | Embedding similarity | ✅ |
+| **AnalogicalStrategy** | Structure mapping via unifier | ✅ |
+| **GoalDrivenStrategy** | Backward chaining + plan synthesis | ✅ |
+| PrologStrategy | Full Prolog + recursion | ✅ |
+
+### Memory (Tested)
+
+| Component | Capability |
+|-----------|------------|
+| Memory | Concepts, consolidation, resource management |
+| Focus | Working memory, attention decay, priority eviction |
+| ResourceManager | Pressure detection, adaptive forgetting |
+
+### LM (Tested)
+
+| Capability | Status |
+|------------|--------|
+| Bidirectional translation | ✅ |
+| Provider ecosystem | ✅ |
+| LM rules (elaboration, decomposition, hypothesis) | ✅ |
+
+### Infrastructure (Tested)
+
+| Component | Status |
+|-----------|--------|
+| EventBus (middleware, error handling) | ✅ |
+| CircuitBreaker | ✅ |
+| CapabilityManager (security) | ✅ |
+
+---
+
+## Development Tree
+
+```mermaid
+graph TD
+    subgraph Done["✅ DONE (NAL-1 to NAL-6, Phase 3)"]
+        UNI[Unifier]
+        EMB[EmbeddingLayer]
+        RC[RuleCompiler]
+        NAL16[NAL-1 to NAL-6]
+        SEM[SemanticStrategy]
+        ANA[AnalogicalStrategy]
+        GOAL[GoalDrivenStrategy]
+    end
+
+    subgraph Phase4["🛠️ PHASE 4: Polish & Scale"]
+        TRC[Derivation Tracing]
+        SER[Serialization]
+        IDX[Advanced Indexing]
+        API[REST API]
+        PLAY[Playground]
+    end
+
+    subgraph Phase5["🧠 PHASE 5: ML as Terms"]
+        TFUNC[TensorFunctor]
+        MLTERM[ML Execution]
+    end
+
+    subgraph Phase6["⏱️ PHASE 6: Temporal (Deferred)"]
+        NAL7[NAL-7]
+        TEMP[TemporalBuffer]
+    end
+
+    TRC --> API
+    SER --> PLAY
+    SER --> API
+    TFUNC --> MLTERM
+```
 
 ---
 
 ## Phase 4: Polish & Scale
 
-| Task | Effort | Unlocks |
-|------|--------|---------|
-| Advanced Indexing | 1-2 weeks | 100K+ concepts |
-| Web Playground | 1 week | Developer adoption |
-| REST/GraphQL API | 3 days | Integration |
-| Benchmark Suite | 3 days | Performance validation |
+### Derivation Tracing
+**Effort**: 1 week  
+**Unlocks**: Debugger, Explainer, RL  
+**Location**: `core/src/util/DerivationTracer.js`
 
----
-
-## Phase 5: Tensor Logic (NEW)
-
-| Task | Effort | Unlocks |
-|------|--------|---------|
-| TensorRelation class | 3 days | Embeddings as sparse tensors |
-| Tensor join/projection | 1 week | DB-like operations on embeddings |
-| TensorInference engine | 2 weeks | Einsum-based rule execution |
-| Temperature parameter | 2 days | Deduction ↔ Analogy control |
-| Tucker decomposition | 1 week | GPU scaling |
-| Hybrid symbolic-tensor mode | 2 weeks | Best of both |
-
-**Benefits:**
-- No hallucination at T=0 (provable soundness)
-- Analogical transfer at T>0
-- GPU parallelization via einsums
-- Error bounds controlled by embedding dimension
-
----
-
-## Planned Strategies
-
-| Strategy | Depends | Phase |
-|----------|---------|-------|
-| SemanticStrategy | EmbeddingLayer ✅ | 3 |
-| AnalogicalStrategy | Unifier ✅ | 3 |
-| GoalDrivenStrategy | NAL-8 | 3 |
-| TensorInferenceStrategy | Phase 5 | 5 |
-| CausalStrategy | NAL-7 | 4 |
-
----
-
-## ML Integration Roadmap
-
-| Technique | Priority | Prerequisites |
-|-----------|----------|---------------|
-| **Tensor Logic** | ⭐⭐⭐ | EmbeddingLayer ✅ |
-| **Hopfield** | ⭐⭐⭐ | Embeddings ✅ |
-| **RLFP** | ⭐⭐ | Derivation tracing |
-| **GNN** | ⭐⭐ | Advanced indexing |
-| **Differentiable** | ⭐ | Tensor Logic |
-
-### RLFP (Reinforcement Learning from Preferences)
-
-Learn *how* to think from qualitative feedback:
-
+```javascript
+class DerivationTracer {
+    startTrace(task) → TraceId
+    recordStep(traceId, {rule, premises, conclusion, truth})
+    recordSkip(traceId, {rule, reason})
+    endTrace(traceId) → DerivationGraph
+    export(traceId, 'mermaid' | 'json' | 'dot')
+}
 ```
-1. ReasoningTrajectoryLogger records episodes
-2. PreferenceCollector: "Path A was better than B"
-3. RLFPLearner trains preference model
-4. ReasoningPolicyAdapter guides Focus, RuleEngine
+
+**Use cases:**
+- Visual debugger showing reasoning chains
+- "Why-not" explainer for failed inferences
+- RL reward signals from derivation quality
+
+---
+
+### Serialization Layer
+**Effort**: 3 days  
+**Unlocks**: API, Playground, Ingestion  
+**Location**: `core/src/util/Serializer.js`
+
+```javascript
+class Serializer {
+    static toJSON(task) → object
+    static fromJSON(json) → Task
+    static toNarsese(task) → string
+    static fromNarsese(str) → Task
+    static detect(input) → 'json' | 'narsese' | 'rdf'
+}
+```
+
+---
+
+### Advanced Indexing
+**Effort**: 1-2 weeks  
+**Unlocks**: 100K+ concepts  
+**Location**: `core/src/memory/TermIndex.js`
+
+```javascript
+class TermIndex {
+    findByPattern(pattern) → Term[]
+    findByOperator(op) → Term[]
+    findContaining(subterm) → Term[]
+    topK(k, filter?) → Term[]
+}
+```
+
+**Scaling Tiers**:
+
+| Scale | Strategy |
+|-------|----------|
+| <10K | In-memory Map |
+| 10K-100K | Trie, B-Tree, LRU |
+| 100K-1M | Web Workers |
+| 1M+ | External store |
+
+---
+
+### API & Playground
+
+| Task | Effort | Location |
+|------|--------|----------|
+| REST API | 3 days | `server/api/` |
+| GraphQL API | 2 days | `server/graphql/` |
+| Web Playground | 1 week | `ui/` |
+| Benchmark Suite | 3 days | `benchmarks/` |
+
+---
+
+## Phase 5: ML as Terms
+
+> Execute ML models as Prolog-like Terms via TensorFunctor.
+
+### Motivation
+- **Unified language**: Models = Terms = Knowledge
+- **Introspection**: Query model structure with Prolog
+- **Composition**: Symbolic rules + neural layers
+- **Existing infra**: PrologStrategy, unification, functors
+
+---
+
+### TensorFunctor
+**Effort**: 3 days  
+**Location**: `core/src/functor/TensorFunctor.js`
+
+```javascript
+class TensorFunctor extends Functor {
+    evaluate(term, bindings) {
+        switch (term.operator) {
+            case 'matmul': return matmul(this.resolve(term.comp(0)), this.resolve(term.comp(1)));
+            case 'add':    return add(this.resolve(term.comp(0)), this.resolve(term.comp(1)));
+            case 'relu':   return relu(this.resolve(term.comp(0)));
+            case 'sigmoid': return sigmoid(this.resolve(term.comp(0)));
+            case 'layer':   return this.chain(term.components);
+        }
+    }
+    
+    resolve(term) {
+        return term.isVariable ? this.bindings[term.name] : term;
+    }
+}
+```
+
+---
+
+### MLP as Terms
+
+```prolog
+% Architecture definition
+mlp(Input, Output) :-
+    layer(Input, H1, w1, b1, relu),
+    layer(H1, H2, w2, b2, relu),
+    layer(H2, Output, w3, b3, sigmoid).
+
+layer(In, Out, W, B, Act) :-
+    Out is Act(add(matmul(W, In), B)).
+
+% Forward pass
+?- mlp(InputData, Prediction).
+```
+
+---
+
+### Implementation Plan
+
+| Task | Effort | Depends |
+|------|--------|---------|
+| TensorFunctor base | 3 days | Existing Functor pattern |
+| Core ops (matmul, add) | 2 days | TensorFunctor |
+| Activations (relu, sigmoid) | 1 day | Core ops |
+| Gradient tracking | 1 week | Core ops |
+| Backprop via term differentiation | 2 weeks | Gradient tracking |
+| Integration tests | 3 days | All above |
+
+**Total**: ~4 weeks
+
+---
+
+## Phase 6: Temporal (Deferred)
+
+> **Prerequisite**: Define temporal representations (timestamps, intervals, operators)
+
+| Task | Effort |
+|------|--------|
+| Temporal representation spec | 1 week |
+| Operators: `=/>`, `=|>`, `=\>` | 1 week |
+| TemporalBuffer | 1 week |
+| NAL-7 rules | 1 week |
+| CausalStrategy | 4 hrs |
+
+```javascript
+// Tentative interface
+class TemporalBuffer {
+    add(event, timestamp?)
+    getWindow(start, end)
+    findSequences(pattern, minGap, maxGap)
+    detectCausality(a, b, threshold)
+}
 ```
 
 ---
 
 ## Ecosystem
 
-| Component | Status |
-|-----------|--------|
-| NARTool | ✅ |
-| EmbeddingTool | ✅ |
-| ExplanationService | ✅ |
-| ToolRegistry | ✅ |
-| REST API | ❌ |
-| Web Playground | ❌ |
-| Obsidian Plugin | ❌ |
+| Component | Status | Phase |
+|-----------|--------|-------|
+| NARTool | ✅ | Done |
+| EmbeddingTool | ✅ | Done |
+| ExplanationService | ✅ | Done |
+| ToolRegistry | ✅ | Done |
+| REST API | ❌ | 4 |
+| GraphQL API | ❌ | 4 |
+| Web Playground | ❌ | 4 |
+| MCP Server | ❌ | 4 |
+| Obsidian Plugin | ❌ | Future |
 
 ---
 
-## Domain Applications
-
-| Domain | Requirements | Phase |
-|--------|--------------|-------|
-| **Research Assistant** | LM + Focus + Tracing | Now |
-| **Legal Reasoning** | Unification + Tracing | 3 |
-| **Education** | Serialization + Tracing | 3 |
-| **Medical Diagnosis** | Temporal + Embeddings | 4 |
-| **Reliable AI** | Tensor Logic (T=0) | 5 |
-
----
-
-# Part IV: Summary
-
-## NAL Level Completion
+## NAL Completion Matrix
 
 | Level | Core | Rules | Strategy | Status |
 |-------|------|-------|----------|--------|
-| NAL-1 | Inheritance | ✅ | ✅ | Done |
-| NAL-2 | Similarity | ✅ | ✅ | Done |
-| NAL-3 | Compounds | ✅ | ✅ | Done |
-| NAL-4 | Relations | ✅ | ✅ | Done |
-| NAL-5 | Implication | ✅ | ✅ | Done |
-| NAL-6 | Variables | ✅ | ✅ | Done |
-| NAL-7 | Temporal | ❌ | ❌ | Phase 4 |
-| NAL-8 | Goals | 🟡 | ✅ | Phase 3 |
+| NAL-1 | Inheritance | ✅ | ✅ | ✅ Done |
+| NAL-2 | Similarity | ✅ | ✅ | ✅ Done |
+| NAL-3 | Compounds | ✅ | ✅ | ✅ Done |
+| NAL-4 | Relations | ✅ | ✅ | ✅ Done |
+| NAL-5 | Implication | ✅ | ✅ | ✅ Done |
+| NAL-6 | Variables | ✅ | ✅ | ✅ Done |
+| NAL-7 | Temporal | ❌ | ❌ | Phase 6 |
+| NAL-8 | Goals | ✅ | ✅ | ✅ Done |
+
+---
 
 ## Test Coverage
 
-| Category | Files | Pass Rate |
-|----------|-------|-----------|
+| Category | Files | Status |
+|----------|-------|--------|
 | Core | 7 | ✅ |
 | Memory | 12 | ✅ |
 | Reasoning | 22 | ✅ |
@@ -500,12 +380,15 @@ Learn *how* to think from qualitative feedback:
 | File | Purpose |
 |------|---------|
 | [Truth.js](file:///home/me/senars10/core/src/Truth.js) | All truth functions |
-| [Term.js](file:///home/me/senars10/core/src/term/Term.js) | Term predicates |
+| [Term.js](file:///home/me/senars10/core/src/term/Term.js) | Term predicates, macros |
 | [Unifier.js](file:///home/me/senars10/core/src/term/Unifier.js) | Pattern matching |
 | [PrologStrategy.js](file:///home/me/senars10/core/src/reason/strategy/PrologStrategy.js) | Backward chaining |
-| [EmbeddingLayer.js](file:///home/me/senars10/core/src/lm/EmbeddingLayer.js) | Vector embeddings |
+| [GoalDrivenStrategy.js](file:///home/me/senars10/core/src/reason/strategy/GoalDrivenStrategy.js) | Plan synthesis |
+| [SemanticStrategy.js](file:///home/me/senars10/core/src/reason/strategy/SemanticStrategy.js) | Embedding similarity |
+| [AnalogicalStrategy.js](file:///home/me/senars10/core/src/reason/strategy/AnalogicalStrategy.js) | Structure mapping |
+| [EmbeddingLayer.js](file:///home/me/senars10/core/src/lm/EmbeddingLayer.js) | Vectors |
 | [RuleCompiler.js](file:///home/me/senars10/core/src/reason/rules/compiler/RuleCompiler.js) | Decision trees |
 
 ---
 
-*Living document. Rules = Einsums. Fork it, tensor it, grow it.*
+*Living document. Phase 3 complete. Next: Derivation tracing.*
