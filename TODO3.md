@@ -535,29 +535,37 @@ class LMConfig {
 | Serializer | `core/src/util/Serializer.js` | 2 hrs | API, Import/Export |
 | LMConfig | `core/src/lm/LMConfig.js` | 2 hrs | Provider switching |
 | **Total** | | **~8 hrs** | |
-
 ---
 
-## Phase 5: Prolog Enhancements — Functor Infrastructure
+## Phase 5: Prolog Enhancements — Refactor & Extend
 
-> **Goal**: Establish extensible Prolog infrastructure for Phase 6 Tensor Logic  
-> **Effort**: ~1 week  
-> **Unlocks**: Custom functors, builtin operations, `is` operator, meta-programming
+> **Goal**: Extract and extend existing PrologStrategy builtins into modular Functor system  
+> **Effort**: ~2 days (refactor, not greenfield)  
+> **Unlocks**: Custom functors, extensible builtins, Phase 6 Tensor Logic
+
+### Existing Code to Leverage
+
+**PrologStrategy.js already has**:
+- `_isBuiltIn()` — Checks for `is`, `>`, `<`, `>=`, `<=`, `=`, `\=` (line 99-102)
+- `_solveBuiltIn()` — Handles `is` operator and comparisons (line 113-173)
+- `_evalExpression()` — Evaluates `+`, `-`, `*`, `/` (line 176-202)
+
+**Strategy**: Extract → Generalize → Extend (not rebuild)
 
 ### Why Before Tensor Logic?
 
 Phase 6 (Tensor Logic) requires:
 - **Functor interface** — TensorFunctor extends this base
 - **`is` operator** — Tensor expressions use `Out is matmul(A, B)`
-- **Builtin operations** — Arithmetic, comparison, type predicates
-- **PrologStrategy extensibility** — Hook points for custom evaluators
+- **Registry pattern** — Plugin system for custom evaluators
+- **Extended operations** — sqrt, pow, sin, cos, etc.
 
 ### Design Principles
 
-1. **Extensible Functor Pattern**: Abstract base for custom evaluators
-2. **Minimal Core**: Small set of builtins, everything else pluggable
-3. **Type Safety**: Runtime type checking for operations
-4. **Lazy Evaluation**: Compute only when unified/queried
+1. **Refactor First**: Extract existing code into Functor classes
+2. **Backward Compatible**: PrologStrategy continues to work unchanged
+3. **Extensible**: Registry pattern for runtime functor registration
+4. **Minimal Disruption**: Keep existing tests passing
 5. **Trace Integration**: All operations emit introspection events
 
 ---
@@ -870,12 +878,24 @@ class PrologStrategy {
 
 ---
 
-## Phase 6: Tensor Logic — Pure Neuro-Symbolic Unification
+## Phase 6: Tensor Logic — Tiered Implementation
 
 > **Goal**: Implement [Tensor Logic](https://arxiv.org/abs/2510.12269) (Domingos, 2024) for unified neuro-symbolic AI  
-> **Effort**: ~2-3 weeks  
+> **Effort**: ~2-3 weeks (tiered approach)  
 > **Prereqs**: Phase 5 (Functor infrastructure)  
 > **Unlocks**: Sound reasoning in embedding space, differentiable reasoning, RLFP ML strategies
+
+### Tiered Implementation Strategy
+
+| Tier | Scope | Effort | Deliverable |
+|------|-------|--------|-------------|
+| **Tier 1** | Forward-Only Ops | 1 week | TensorFunctor with matmul, relu, etc. |
+| **Tier 2** | Basic Autograd | 1 week | Gradient tracking for simple graphs |
+| **Tier 3** | Advanced (Future) | 2+ weeks | Einstein summation, full differentiable logic |
+
+**Rationale**: Start with working forward pass, add gradients incrementally. Each tier is independently valuable.
+
+---
 
 ### Tensor Logic Foundation
 
